@@ -1,0 +1,30 @@
+name: PR metadata
+on:
+  pull_request:
+    types: [opened, edited, reopened, synchronize]
+# PR text is fetched as data by Node. This workflow never installs dependencies
+# and has no write permission, secrets, or pull_request_target execution context.
+permissions:
+  contents: read
+  pull-requests: read
+# Body edits do not change the commit. Cancel older runs for the same PR, then
+# read the live body even when an old event is manually rerun out of order.
+concurrency:
+  group: pr-metadata-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+jobs:
+  metadata:
+    name: PR metadata
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Validate current PR evidence
+        run: node tooling/pr-metadata.mjs --github-event
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

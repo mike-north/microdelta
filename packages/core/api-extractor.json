@@ -1,0 +1,37 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/api-extractor/v7/api-extractor.schema.json",
+  "mainEntryPointFilePath": "<projectFolder>/dist/src/index.d.ts",
+  "apiReport": {
+    "enabled": true,
+    "reportFileName": "microdelta",
+    "reportFolder": "<projectFolder>/etc",
+    "reportTempFolder": "<projectFolder>/dist/api-temp"
+  },
+  "dtsRollup": {
+    "enabled": true,
+    "untrimmedFilePath": "<projectFolder>/dist/api/microdelta.untrimmed.d.ts",
+    "alphaTrimmedFilePath": "<projectFolder>/dist/api/microdelta.alpha.d.ts",
+    "betaTrimmedFilePath": "<projectFolder>/dist/api/microdelta.beta.d.ts",
+    "publicTrimmedFilePath": "<projectFolder>/dist/api/microdelta.public.d.ts"
+  },
+  "messages": {
+    "extractorMessageReporting": {
+      "ae-missing-release-tag": {
+        "logLevel": "error",
+        "addToApiReportFile": false
+      },
+      "ae-internal-missing-underscore": {
+        "logLevel": "error",
+        "addToApiReportFile": false
+      },
+      "ae-incompatible-release-tags": {
+        "logLevel": "error",
+        "addToApiReportFile": false
+      }
+    }
+  },
+  "docModel": {
+    "enabled": false
+  },
+  "newlineKind": "lf"
+}

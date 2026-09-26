@@ -1,6 +1,6 @@
 import tseslint from 'typescript-eslint';
 
-import { dependencyBoundaries } from './tooling/dependencies.mjs';
+import { contextImports } from './tooling/context-imports.mjs';
 import { documentedSuppressions } from './tooling/documented-suppressions.mjs';
 
 /** Both assertion spellings can launder an unvalidated value through unknown. */
@@ -10,18 +10,18 @@ const assertionKinds = ['TSAsExpression', 'TSTypeAssertion'];
 export default [
   { ignores: ['**/dist/**', '**/.test-build/**', '**/node_modules/**', 'docs/archive/**'] },
   {
-    files: ['packages/**/*.ts', 'experiments/**/*.ts'],
+    files: ['packages/**/*.ts', 'experiments/**/*.ts', 'fixtures/declarations/producer/**/*.ts'],
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
     },
     plugins: {
       '@typescript-eslint': tseslint.plugin,
-      microdelta: { rules: { 'dependency-boundaries': dependencyBoundaries, 'documented-suppressions': documentedSuppressions } },
+      microdelta: { rules: { 'context-imports': contextImports, 'documented-suppressions': documentedSuppressions } },
     },
     linterOptions: { reportUnusedDisableDirectives: 'error' },
     rules: {
-      'microdelta/dependency-boundaries': 'error',
+      'microdelta/context-imports': 'error',
       'microdelta/documented-suppressions': 'error',
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-floating-promises': 'error',

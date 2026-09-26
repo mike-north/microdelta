@@ -1,23 +1,19 @@
 {
-  "name": "microdelta",
+  "name": "@microdelta/definition",
   "version": "0.0.0",
   "private": true,
-  "description": "Persisted incremental analysis; implementation in progress",
+  "description": "Existing definition context capability; implementation incomplete",
   "license": "UNLICENSED",
   "type": "module",
   "engines": {
     "node": ">=20"
   },
   "main": "./dist/src/index.js",
-  "types": "./dist/api/microdelta.public.d.ts",
+  "types": "./dist/api/definition.public.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/api/microdelta.public.d.ts",
+      "types": "./dist/api/definition.public.d.ts",
       "import": "./dist/src/index.js"
-    },
-    "./conformance/store": {
-      "types": "./dist/test/conformance/store/index.d.ts",
-      "import": "./dist/test/conformance/store/index.js"
     }
   },
   "files": [
@@ -28,13 +24,11 @@
     "check": "concurrently --success all --names types,lint \"npm run check:types\" \"npm run check:lint\"",
     "check:types": "tsc --noEmit -p tsconfig.json",
     "check:lint": "eslint .",
-    "test": "npm run test:types",
+    "test": "npm run test:unit && npm run test:types",
+    "test:unit": "tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --runInBand",
     "test:types": "tsd"
   },
   "tsd": {
     "directory": "test-d"
-  },
-  "dependencies": {
-    "@microdelta/history": "0.0.0"
   }
 }

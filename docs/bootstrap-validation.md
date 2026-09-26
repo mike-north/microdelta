@@ -34,3 +34,22 @@ runtime, paid-provider integration, or package release is claimed by these resul
 The existing GitHub workflow runs checks, tests, and build on Node 20, 22, and 24.
 Its remote result must be inspected after the import is pushed; the local results
 above do not stand in for a GitHub Actions run.
+
+## Clean-checkout consumer correction
+
+The initial GitHub Actions run failed its package-identity fixture because the
+fixture assumed Node would resolve an unbuilt workspace export through a physical
+`packages/core` path. In an isolated checkout with no `dist`, `npm ci` succeeded,
+then the original tooling test failed: Node resolved the package through
+`node_modules/microdelta/dist/src/index.js`.
+
+The corrected tooling command builds the workspace package before running its
+consumer fixture. The fixture imports the public `microdelta` entry and verifies
+`createMemoryStore` is exported. It resolves `microdelta/conformance/store` and
+reads the built module; that Jest-specific entry is not imported in a plain Node
+test because it requires Jest globals. The revised assertion failed with a
+missing built module before the build prerequisite was added. From that clean
+install, `npm run test:tooling` passed five tests; `npm run check`, `npm test`
+(69 runtime tests, tsd, five tooling tests), and `npm run build` passed on local
+Node 24.14.0. This is local evidence; the Node 20/22/24 GitHub matrix still needs
+its own result on the fix commit.

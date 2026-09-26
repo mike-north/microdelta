@@ -1,0 +1,22 @@
+source_area,active_artifact,requirement_or_suite,disposition
+rev9 purpose and scope,domain.md,DOM-1 to DOM-6,preserved with latest authoring decisions
+rev9 identity and memoization,execution.md,RES-001 and REUSE-008,superseded implicit identity and advisory source change
+rev9 tracking and collection grain,tracking.md,TRK-1 to COL-4,refined by September 17-26 decisions
+rev9 retained results,execution.md,RES-002 to RES-007,preserved and separated attempts from completed results
+rev9 evaluation and middleware,execution.md,REUSE-001 to REUSE-009,preserved with current source policy and graph boundaries
+rev9 workers claims leases,execution.md,PUB-001 to PUB-006,protocol deferred with mandatory fencing and crash evidence
+rev9 progress and permits,operations.md,RUN-002 and RUN-015,preserved
+rev9 explain and dry run,operations.md,CLI-001 to CLI-004,qualified unknown future work
+rev9 stress and scale,acceptance.md,A-01 to A-19 and TEST-3 to TEST-6,updated to current semantics
+old component dependency graph,architecture.md,ARC-001 to ARC-009,replaced by six contexts
+core-package-spec proposed interfaces,experiments.md,EXP-1 to EXP-8,old schemas not normative
+September 15 operational decisions,operations.md,RUN-001 to ACC-008,consolidated
+September 16 source finality and retention,execution.md,REUSE-002 to REUSE-004,settled current hook supersedes stored flags
+September 17 version decision,execution.md,REUSE-008,positive integer per memo default1 rollback accepted
+September 22 higher-order decisions,composition.md,CMP-1 to CMP-9,fixed topology with dynamic observations
+September 26 unified tracking,tracking.md,TRK-1 to TRK-4,automatic tracked implementation evidence
+September 26 package visibility,package-boundaries.md,PKG-001 to PKG-007,alpha sibling declarations internal package-only
+roster and contribution scenarios,acceptance.md,TEST-3 and TEST-4,application policies separated from framework
+resource estimate scenario,operations.md,ACC-005 and ACC-006,preserved unknown currency and reporting gaps
+former implementation plans,../milestones.md,M0 to M7,replaced with experiment gates and named CLI checkpoint
+formal and CML consultation,experiments.md,EXP-5 to EXP-7,bounded pilots not adopted toolchains

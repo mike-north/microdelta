@@ -1,0 +1,28 @@
+{
+  "name": "@microdelta/workspace",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "check": "concurrently --success all --names packages,workspace \"npm run check:packages\" \"npm run check:workspace\"",
+    "check:packages": "npm run check --workspaces",
+    "check:workspace": "npm run check:dependencies",
+    "check:dependencies": "eslint packages/core/src",
+    "test": "npm run test:tooling && npm run test --workspaces",
+    "test:tooling": "node --test tooling/*.test.mjs"
+  },
+  "devDependencies": {
+    "@jest/globals": "30.5.1",
+    "@types/node": "20.19.43",
+    "concurrently": "9.2.4",
+    "eslint": "10.10.0",
+    "jest": "30.5.1",
+    "tsd": "0.33.0",
+    "typescript": "5.9.3",
+    "typescript-eslint": "8.70.0"
+  }
+}

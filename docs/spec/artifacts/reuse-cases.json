@@ -1,0 +1,389 @@
+{
+  "artifactVersion": 1,
+  "status": "specified-not-executed",
+  "purpose": "Language-neutral acceptance scenarios, not a storage or public API schema",
+  "assumptions": [
+    "Independent process for every run",
+    "All unmentioned observations and policies unchanged",
+    "Bodies return valid complete output",
+    "No execution gate refuses required work",
+    "References are compared by exact snapshot locator, not output equality"
+  ],
+  "cases": [
+    {
+      "id": "F-01",
+      "suite": "A-02",
+      "requirements": [
+        "TRK-5",
+        "RES-004",
+        "REUSE-001"
+      ],
+      "before": {
+        "pr": {
+          "id": "42",
+          "title": "Fix parser",
+          "labels": [
+            "bug"
+          ]
+        }
+      },
+      "after": {
+        "pr": {
+          "id": "42",
+          "title": "Fix parser",
+          "labels": [
+            "bug",
+            "reviewed"
+          ]
+        }
+      },
+      "consumed": [
+        {
+          "binding": "pr",
+          "segments": [
+            {
+              "property": "title"
+            }
+          ],
+          "operation": "value"
+        }
+      ],
+      "expected": {
+        "consumerBodyCallsOnSecondRun": 0,
+        "sameConsumerResultReference": true
+      }
+    },
+    {
+      "id": "F-02",
+      "suite": "A-02",
+      "requirements": [
+        "TRK-5",
+        "REUSE-001"
+      ],
+      "before": {
+        "pr": {
+          "id": "42",
+          "title": "Fix parser"
+        }
+      },
+      "after": {
+        "pr": {
+          "id": "42",
+          "title": "Rewrite parser"
+        }
+      },
+      "consumed": [
+        {
+          "binding": "pr",
+          "segments": [
+            {
+              "property": "title"
+            }
+          ],
+          "operation": "value"
+        }
+      ],
+      "expected": {
+        "consumerBodyCallsOnSecondRun": 1,
+        "sameConsumerResultReference": false
+      }
+    },
+    {
+      "id": "F-03",
+      "suite": "A-04",
+      "requirements": [
+        "TRK-6",
+        "RES-007"
+      ],
+      "before": {
+        "pr": {
+          "author": {
+            "id": "alice",
+            "name": "Sam"
+          }
+        }
+      },
+      "after": {
+        "pr": {
+          "author": {
+            "id": "bob",
+            "name": "Sam"
+          }
+        }
+      },
+      "then": {
+        "pr": {
+          "author": {
+            "id": "bob",
+            "name": "Samuel"
+          }
+        }
+      },
+      "consumed": [
+        {
+          "binding": "pr",
+          "segments": [
+            {
+              "property": "author"
+            },
+            {
+              "property": "name"
+            }
+          ],
+          "operation": "value"
+        }
+      ],
+      "expected": {
+        "consumerBodyCallsOnSecondRun": 0,
+        "sameConsumerResultReference": true,
+        "consumerBodyCallsOnThirdRun": 1,
+        "historicalAuthor": "alice",
+        "currentVerificationAuthorAfterSecondRun": "bob"
+      }
+    },
+    {
+      "id": "F-04",
+      "suite": "A-05",
+      "requirements": [
+        "CMP-5",
+        "REUSE-005"
+      ],
+      "before": {
+        "childInput": {
+          "prompt": "v1"
+        },
+        "childOutput": {
+          "score": 3,
+          "explanation": "Old"
+        }
+      },
+      "after": {
+        "childInput": {
+          "prompt": "v2"
+        },
+        "childOutput": {
+          "score": 3,
+          "explanation": "New"
+        }
+      },
+      "consumed": [
+        {
+          "binding": "child",
+          "segments": [
+            {
+              "property": "score"
+            }
+          ],
+          "operation": "value"
+        }
+      ],
+      "expected": {
+        "childBodyCallsOnSecondRun": 1,
+        "consumerBodyCallsOnSecondRun": 0,
+        "sameConsumerResultReference": true,
+        "sameChildResultReference": false
+      }
+    },
+    {
+      "id": "F-05",
+      "suite": "A-05",
+      "requirements": [
+        "CMP-5",
+        "REUSE-005"
+      ],
+      "before": {
+        "childOutput": {
+          "score": 3
+        }
+      },
+      "after": {
+        "childOutput": {
+          "score": 4
+        }
+      },
+      "consumed": [
+        {
+          "binding": "child",
+          "segments": [
+            {
+              "property": "score"
+            }
+          ],
+          "operation": "value"
+        }
+      ],
+      "expected": {
+        "consumerBodyCallsOnSecondRun": 1,
+        "sameConsumerResultReference": false
+      }
+    },
+    {
+      "id": "F-06",
+      "suite": "A-02",
+      "requirements": [
+        "RES-001",
+        "COL-1"
+      ],
+      "before": {
+        "members": [
+          "alice",
+          "bob"
+        ],
+        "displayName": "Assess PR"
+      },
+      "after": {
+        "members": [
+          "bob",
+          "alice"
+        ],
+        "displayName": "Score PR"
+      },
+      "consumed": [
+        {
+          "binding": "member",
+          "operation": "keyed-field",
+          "field": "unchanged-assessment-input"
+        }
+      ],
+      "expected": {
+        "consumerBodyCallsOnSecondRun": 0,
+        "sameConsumerResultReference": true
+      }
+    },
+    {
+      "id": "F-07",
+      "suite": "A-03",
+      "requirements": [
+        "RES-004",
+        "REUSE-002",
+        "REUSE-004"
+      ],
+      "before": {
+        "sourceReference": "source-A",
+        "sourceValue": {
+          "title": "Same"
+        }
+      },
+      "after": {
+        "sourcePolicy": "fresh-fetch",
+        "sourceValue": {
+          "title": "Same"
+        }
+      },
+      "consumed": [
+        {
+          "binding": "source",
+          "segments": [
+            {
+              "property": "title"
+            }
+          ],
+          "operation": "value"
+        }
+      ],
+      "expected": {
+        "consumerBodyCallsOnSecondRun": 0,
+        "sameConsumerResultReference": true,
+        "sameSourceResultReference": false,
+        "sourceRequestsOnSecondRun": 1
+      }
+    },
+    {
+      "id": "F-08",
+      "suite": "A-03",
+      "requirements": [
+        "RES-004",
+        "REUSE-002"
+      ],
+      "before": {
+        "sourceReference": "source-A",
+        "sourceValue": {
+          "title": "Same"
+        }
+      },
+      "after": {
+        "currentFinalityHook": true
+      },
+      "consumed": [
+        {
+          "binding": "source",
+          "segments": [
+            {
+              "property": "title"
+            }
+          ],
+          "operation": "value"
+        }
+      ],
+      "expected": {
+        "consumerBodyCallsOnSecondRun": 0,
+        "sameConsumerResultReference": true,
+        "sameSourceResultReference": true,
+        "sourceRequestsOnSecondRun": 0,
+        "currentHookInvoked": true
+      }
+    },
+    {
+      "id": "F-09",
+      "suite": "A-02",
+      "requirements": [
+        "REUSE-008"
+      ],
+      "before": {
+        "version": 1,
+        "implementation": "impl-A",
+        "inputs": "inputs-A"
+      },
+      "after": {
+        "version": 2,
+        "implementation": "impl-B",
+        "inputs": "inputs-A"
+      },
+      "then": {
+        "version": 1,
+        "implementation": "impl-A",
+        "inputs": "inputs-A"
+      },
+      "consumed": [
+        {
+          "binding": "step",
+          "operation": "implementation"
+        }
+      ],
+      "expected": {
+        "consumerBodyCallsOnSecondRun": 1,
+        "consumerBodyCallsOnThirdRun": 0,
+        "thirdRunReferenceEqualsFirstRun": true,
+        "version2ResultStillRetained": true
+      }
+    },
+    {
+      "id": "F-10",
+      "suite": "A-02",
+      "requirements": [
+        "REUSE-008",
+        "TRK-2"
+      ],
+      "before": {
+        "version": 1,
+        "implementation": "impl-A",
+        "inputs": "inputs-A"
+      },
+      "after": {
+        "version": 1,
+        "implementation": "impl-B",
+        "inputs": "inputs-A"
+      },
+      "consumed": [
+        {
+          "binding": "step",
+          "operation": "implementation"
+        }
+      ],
+      "expected": {
+        "consumerBodyCallsOnSecondRun": 1,
+        "sameConsumerResultReference": false
+      }
+    }
+  ]
+}

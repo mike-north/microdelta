@@ -46,3 +46,55 @@ normative specification changes, evidence assessment, and merge decisions with
 the supervisor; seek focused Astra consultation for consequential unresolved
 questions. Avoid repeated review reasoning for properties a deterministic check
 can enforce.
+
+## Executable PR evidence gate
+
+Keep the PR template's five level-two headings and replace every instruction with
+concrete content. Under **Governing issue and contracts**, include a line beginning
+`Refs #N` with a positive issue number. Under **Attribution**, use separate
+`Implementer:` and `Agent assistance:` lines with values; `Agent assistance: None`
+is valid when accurate. The acceptance section maps criteria to named tests or
+artifacts, including the observed test-first failure and exact commands/results.
+State risks explicitly, even when none were identified within the issue scope.
+Review may still be pending when the PR is opened.
+
+Validate a saved Markdown body locally before creating or editing the PR:
+
+```sh
+npm run check:pr-metadata -- --body-file /path/to/pr-body.md
+node --test tooling/pr-metadata.test.mjs
+```
+
+The standalone command exits nonzero with field-specific diagnostics for missing
+content or untouched placeholders. It is intentionally separate from `npm run
+check`: push-only baseline CI has no PR body. Its tests are included in `npm test`.
+Local validation and hooks do not replace the required PR workflow.
+
+The exact intended required check names on `main` are **PR metadata**, **core
+(20)**, **core (22)**, and **core (24)**. The three core jobs run `npm ci`, `npm run
+check`, `npm test`, and `npm run build`. Require a pull request, current passing
+checks against an up-to-date base, resolved review conversations, and application
+of these rules to administrators without bypass entries. These are the intended
+settings, not evidence that live repository protection has been configured. The
+supervisor must configure and read back the live rule, recording the result or a
+specific platform limitation in the governing issue before closing it.
+
+`PR metadata` runs on PR creation, body edits, reopening, and synchronization.
+Every run fetches the current body using a token limited to contents and PR read
+access. Cancellation groups use the PR number, so a newer run cancels an older
+run on the same commit. A rerun of an old event reads today's body; if its head
+has moved it fails closed. The workflow never interpolates PR text into shell,
+installs dependencies, or uses `pull_request_target`. Normal `pull_request`
+execution runs the proposed checker, with no write permission; the supervisor
+must review changes to workflows and enforcement code before merging them.
+The ordinary push workflow remains unchanged and needs no PR payload.
+
+GitHub schedules these checks asynchronously. After a body edit, wait for its
+new metadata run; do not merge against an earlier success while the replacement
+run is still being scheduled. The supervisor checks the current body and current
+commit, confirms the latest applicable checks, assesses evidence and declaration
+changes, and accounts for review comments before deciding to merge. Metadata
+completeness cannot prove the truth of evidence, semantic correctness, completed
+review, or independent agent identities sharing one GitHub account. No completed
+review claim is required by this checker, and it grants no merge authority.
+Implementers continue to stop at PR-open.

@@ -20,5 +20,9 @@ State unresolved concerns or explicitly say none identified within the issue sco
 
 ## Attribution
 
-Identify the implementer and any agent assistance accurately. The supervisor
-records substantive review separately; do not claim a review that has not occurred.
+Implementer: TODO
+Agent assistance: TODO
+
+<!-- Name the implementer and describe agent assistance, or explicitly write None.
+The supervisor records substantive review separately. Review may be pending;
+do not claim review that has not occurred. Replace all template instructions. -->

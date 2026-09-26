@@ -15,7 +15,8 @@
     "test": "npm run test:tooling && npm run test --workspaces",
     "test:tooling": "npm run build --workspace microdelta && node --test tooling/*.test.mjs",
     "check:experiments": "tsc --noEmit -p tsconfig.json && eslint experiments --no-error-on-unmatched-pattern",
-    "check:suppressions": "node tooling/check-suppressions.mjs"
+    "check:suppressions": "node tooling/check-suppressions.mjs",
+    "check:pr-metadata": "node tooling/pr-metadata.mjs"
   },
   "devDependencies": {
     "@jest/globals": "30.5.1",

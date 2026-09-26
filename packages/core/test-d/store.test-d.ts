@@ -14,6 +14,7 @@ expectError(store.casSubject(key, 0, { key }));
 expectError(store.casSubject(key, 0, { version: 5 }));
 expectError(store.updateGeneration(key, 1, { key }));
 expectError(store.updateGeneration(key, 1, { generation: 2 }));
+// eslint-disable-next-line @typescript-eslint/no-unsafe-call -- This negative tsd case intentionally calls a method absent from the declared type.
 expectError(store.deleteGeneration(key, 1));
 
 // The shipped suite and public backend must share the same opaque digest type.

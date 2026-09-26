@@ -4,8 +4,22 @@ import path from 'node:path';
 import test from 'node:test';
 
 import { ESLint } from 'eslint';
+import tseslint from 'typescript-eslint';
 
-import { dependencies } from './dependencies.mjs';
+import { dependencies, dependencyBoundaries } from './dependencies.mjs';
+
+/** Virtual graph probes isolate the import rule; type-aware integration uses real files. */
+function graphProbeLinter() {
+  return new ESLint({
+    overrideConfigFile: true,
+    overrideConfig: [{
+      files: ['**/*.ts'],
+      languageOptions: { parser: tseslint.parser },
+      plugins: { microdelta: { rules: { 'dependency-boundaries': dependencyBoundaries } } },
+      rules: { 'microdelta/dependency-boundaries': 'error' },
+    }],
+  });
+}
 
 test('DR-1: the enforced graph equals the governing component graph', async () => {
   const source = await readFile(new URL('../docs/source/incremental-analysis-components.md', import.meta.url), 'utf8');
@@ -21,7 +35,7 @@ test('DR-1: the enforced graph equals the governing component graph', async () =
 });
 
 test('DR-1: imports, re-exports and dynamic imports cannot bypass the graph', async () => {
-  const eslint = new ESLint();
+  const eslint = graphProbeLinter();
   for (const source of [
     'import { x } from "../store/index.js";',
     'export { x } from "../store/index.js";',
@@ -49,7 +63,7 @@ test('package identity: consumers load the public entry and resolve the Jest con
 });
 
 test('DR-1: unlisted components cannot hide imports outside the configured graph', async () => {
-  const eslint = new ESLint();
+  const eslint = graphProbeLinter();
   for (const relative of ['unlisted.ts', 'unlisted/index.ts', 'types.ts']) {
     const [result] = await eslint.lintText('import { x } from "./store/index.js";', {
       filePath: path.resolve(`packages/core/src/${relative}`),
@@ -59,7 +73,7 @@ test('DR-1: unlisted components cannot hide imports outside the configured graph
 });
 
 test('DR-1: shared types and schema-only claim imports are permitted', async () => {
-  const eslint = new ESLint();
+  const eslint = graphProbeLinter();
   for (const [owner, source, valid] of [
     ['name', 'import type { Identity } from "../types.js";', true],
     ['claim', 'import type { Repository } from "../repository/index.js";', true],

@@ -37,11 +37,15 @@ test('DR-1: imports, re-exports and dynamic imports cannot bypass the graph', as
   }
 });
 
-test('package identity: consumer entry points resolve through microdelta', () => {
-  for (const specifier of ['microdelta', 'microdelta/conformance/store']) {
-    const resolved = import.meta.resolve(specifier);
-    assert.match(resolved, /\/packages\/core\/dist\//, specifier);
-  }
+test('package identity: consumers load the public entry and resolve the Jest conformance entry', async () => {
+  const { createMemoryStore } = await import('microdelta');
+  assert.equal(typeof createMemoryStore, 'function');
+
+  // The conformance entry uses Jest globals and must be loaded by Jest; this
+  // consumer check proves its package export names an existing built module.
+  const conformanceEntry = import.meta.resolve('microdelta/conformance/store');
+  const source = await readFile(new URL(conformanceEntry));
+  assert.ok(source.byteLength > 0);
 });
 
 test('DR-1: unlisted components cannot hide imports outside the configured graph', async () => {

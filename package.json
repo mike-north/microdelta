@@ -13,7 +13,7 @@
     "check:workspace": "npm run check:dependencies",
     "check:dependencies": "eslint packages/core/src",
     "test": "npm run test:tooling && npm run test --workspaces",
-    "test:tooling": "node --test tooling/*.test.mjs"
+    "test:tooling": "npm run build --workspace microdelta && node --test tooling/*.test.mjs"
   },
   "devDependencies": {
     "@jest/globals": "30.5.1",

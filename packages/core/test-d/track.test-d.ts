@@ -17,7 +17,9 @@ expectError(consume({ __tag: Symbol('forged') }));
 expectError(tag.__tag = Symbol('replacement'));
 expectError(tag.value);
 expectError(tag.revision);
+// eslint-disable-next-line @typescript-eslint/no-unsafe-call -- This negative tsd case intentionally calls a method absent from the declared type.
 expectError(withFrame(() => {}).consumed.add(tag));
 expectError(cell(1).set('wrong type'));
+// eslint-disable-next-line @typescript-eslint/no-unsafe-call -- This negative tsd case intentionally calls a method absent from the declared type.
 expectError(derived(() => 1).set(2));
 expectError(withFrameAsync(() => 1));

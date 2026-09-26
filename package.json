@@ -10,10 +10,12 @@
     "build": "npm run build --workspaces",
     "check": "concurrently --success all --names packages,workspace \"npm run check:packages\" \"npm run check:workspace\"",
     "check:packages": "npm run check --workspaces",
-    "check:workspace": "npm run check:dependencies",
+    "check:workspace": "concurrently --success all --names dependencies,experiments,suppressions \"npm run check:dependencies\" \"npm run check:experiments\" \"npm run check:suppressions\"",
     "check:dependencies": "eslint packages/core/src",
     "test": "npm run test:tooling && npm run test --workspaces",
-    "test:tooling": "npm run build --workspace microdelta && node --test tooling/*.test.mjs"
+    "test:tooling": "npm run build --workspace microdelta && node --test tooling/*.test.mjs",
+    "check:experiments": "tsc --noEmit -p tsconfig.json && eslint experiments --no-error-on-unmatched-pattern",
+    "check:suppressions": "node tooling/check-suppressions.mjs"
   },
   "devDependencies": {
     "@jest/globals": "30.5.1",

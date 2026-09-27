@@ -148,5 +148,5 @@ their intended resolution paths. Run Machine capability conformance tests on
 the Node implementation for every capability present. If a capability has a
 failure/unsupported mode, verify that outcome explicitly. Record any known
 baseline violation as a failure; do not label the gate complete until repaired.
-This evidence precedes runtime experiments and is independent of EXP-5 CML
-adoption.
+This evidence precedes runtime experiments and remains independent of the
+retired EXP-5 CML result (see PKG-006).

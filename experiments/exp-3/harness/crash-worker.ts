@@ -2,7 +2,7 @@
  * Fresh processes run fixed protocol scenarios and expose only JSON state traces.
  * SIGKILL cases intentionally bypass JavaScript cleanup to exercise SQLite recovery.
  */
-import { appendFileSync } from 'node:fs';
+import { appendFileSync, existsSync } from 'node:fs';
 import { createPublicationRepository, type IAttempt } from '../src/index.js';
 import { openNodeSqlite, type INodeSqliteDatabase } from './node-sqlite.js';
 import type { ISqliteCapability } from '../src/sqlite.js';
@@ -46,6 +46,16 @@ switch (command) {
     terminateProcess();
     break;
   }
+  case 'allocate-before-commit-then-kill': {
+    const writer = acquire(database, 'interrupted', 10);
+    createPublicationRepository(killBeforeTransactionCommit(database)).allocateAttempt({
+      ...writer,
+      attemptKey: 'interrupted-allocation',
+      subjectKey: 'subject',
+      nowMs: 10,
+    });
+    break;
+  }
   case 'stage-then-kill': {
     const writer = acquire(database, 'interrupted', 10);
     const attempt = allocate(writer, 'interrupted-stage', 10);
@@ -53,11 +63,88 @@ switch (command) {
     terminateProcess();
     break;
   }
+  case 'stage-before-commit-then-kill': {
+    const writer = acquire(database, 'interrupted', 10);
+    const attempt = allocate(writer, 'interrupted-stage', 10);
+    createPublicationRepository(killBeforeTransactionCommit(database)).stageAttempt({
+      ...writer,
+      attemptId: attempt.attemptId,
+      payloadJson: '{"value":"incomplete"}',
+      fingerprint: 'fixture-fingerprint',
+      provenanceJson: '{"producer":"crash-worker"}',
+      nowMs: 10,
+    });
+    break;
+  }
+  case 'stage-stable-key-then-kill': {
+    const bodyCounterPath = args[0];
+    if (bodyCounterPath === undefined) {
+      throw new Error('staged recovery setup requires its body-call counter path');
+    }
+    const writer = acquire(database, 'interrupted', 10);
+    const attempt = allocate(writer, 'stable-recovery-key', 10);
+    // This marker records the original candidate computation; takeover must not repeat it.
+    appendFileSync(bodyCounterPath, 'body\n', 'utf8');
+    repository.stageAttempt({
+      ...writer,
+      attemptId: attempt.attemptId,
+      payloadJson: '{"value":"retained-candidate"}',
+      fingerprint: 'retained-fingerprint',
+      provenanceJson: '{"producer":"staged-recovery"}',
+      nowMs: 10,
+    });
+    terminateProcess();
+    break;
+  }
+  case 'publish-staged-stable-key': {
+    const bodyCounterPath = args[0];
+    if (bodyCounterPath === undefined) {
+      throw new Error('staged recovery requires its body-call counter path');
+    }
+    const prior = repository.findAttempt('stable-recovery-key');
+    if (prior === null || prior.state !== 'staged') {
+      throw new Error('expected staged stable-key attempt after reopen');
+    }
+    const priorWriter = repository.currentWriter();
+    if (priorWriter === null) {
+      throw new Error('expected the prior writer lease to remain until expiry');
+    }
+    const writer = acquire(database, 'staged-recovery', 20);
+    const rebound = repository.allocateAttempt({
+      ...writer,
+      attemptKey: 'stable-recovery-key',
+      subjectKey: 'subject',
+      nowMs: 20,
+    });
+    let staleAuthorityRejected = false;
+    try {
+      repository.publishAttempt({
+        ...priorWriter, attemptId: prior.attemptId, nowMs: 20,
+      });
+    } catch (error: unknown) {
+      if (!(error instanceof Error) || error.message !== 'stale writer fence') {
+        throw error;
+      }
+      staleAuthorityRejected = true;
+    }
+    const reference = repository.publishAttempt({
+      ...writer, attemptId: rebound.attemptId, nowMs: 20,
+    });
+    process.stdout.write(`${JSON.stringify({
+      prior,
+      rebound,
+      staleAuthorityRejected,
+      result: repository.readResult(reference),
+      current: repository.readCurrent('subject'),
+      bodyMarkerPresent: existsSync(bodyCounterPath),
+    })}\n`);
+    break;
+  }
   case 'publish-before-commit-then-kill': {
     const writer = acquire(database, 'interrupted', 10);
     const attempt = allocate(writer, 'interrupted-publication', 10);
     stage(writer, attempt, '{"value":"unpublished"}', 10);
-    const crashAtCommit = killBeforePublicationCommit(database);
+    const crashAtCommit = killBeforeTransactionCommit(database);
     createPublicationRepository(crashAtCommit).publishAttempt({
       ...writer,
       attemptId: attempt.attemptId,
@@ -158,10 +245,10 @@ function terminateProcess(): never {
 
 /**
  * @internal
- * Kills after publication SQL ran but before the adapter commits, proving the
- * snapshot, current pointer, and completed state cannot be split by a crash.
+ * Kills after a repository operation's SQL callback but before SQLite commits,
+ * so independent child cases can probe transaction rollback at different states.
  */
-function killBeforePublicationCommit(databaseToWrap: INodeSqliteDatabase): ISqliteCapability {
+function killBeforeTransactionCommit(databaseToWrap: INodeSqliteDatabase): ISqliteCapability {
   return {
     exec: (sql) => databaseToWrap.exec(sql),
     queryOne: (sql, parameters) => databaseToWrap.queryOne(sql, parameters),

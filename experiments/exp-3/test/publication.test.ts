@@ -1,10 +1,10 @@
 /**
- * These assertions define History's bounded publication behavior before the
- * SQLite candidate exists; real process exits and reopen are part of the proof.
+ * These Jest scenarios exercise EXP-3 publication outcomes across file-backed
+ * SQLite reopen and real child-process exits; they do not define production History.
  */
 import { afterEach, describe, expect, test } from '@jest/globals';
 import { spawnSync } from 'node:child_process';
-import { appendFileSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -163,6 +163,34 @@ describe('EXP-3 SQLite publication protocol', () => {
     expect(next.generation).toBe(3);
   });
 
+  test('death after allocation writes but before its transaction commits leaves no attempt or consumed generation', () => {
+    const databasePath = createDatabasePath();
+    expect(runWorker(databasePath, 'seed-old').status).toBe(0);
+
+    const killed = runWorker(databasePath, 'allocate-before-commit-then-kill');
+    expect(killed.signal).toBe('SIGKILL');
+
+    const reopened = runWorker(databasePath, 'inspect');
+    expect(reopened.status).toBe(0);
+    expect(readJsonOutput(reopened)).toMatchObject({
+      current: { reference: { generation: 1 }, payload: { value: 'old' } },
+      latestAttempt: null,
+    });
+
+    const db = openDatabase(databasePath);
+    const repository = createPublicationRepository(db);
+    repository.initialize();
+    const writer = repository.acquireWriter({ holderId: 'after-allocation-abort', nowMs: 30, leaseMs: 10 });
+    if (writer.kind !== 'acquired') {
+      throw new Error('Expected reclaimed writer');
+    }
+    const next = repository.allocateAttempt({
+      attemptKey: 'after-allocation-abort', subjectKey: 'subject',
+      holderId: 'after-allocation-abort', fencingToken: writer.fencingToken, nowMs: 30,
+    });
+    expect(next.generation).toBe(2);
+  });
+
   test('a staged payload is not a completed result and cannot become current after a crash', () => {
     const databasePath = createDatabasePath();
     expect(runWorker(databasePath, 'seed-old').status).toBe(0);
@@ -176,6 +204,60 @@ describe('EXP-3 SQLite publication protocol', () => {
       current: { reference: { generation: 1 }, payload: { value: 'old' } },
       latestAttempt: { generation: 2, state: 'staged' },
     });
+  });
+
+  test('death after staging writes but before its transaction commits preserves the allocated attempt and old current result', () => {
+    const databasePath = createDatabasePath();
+    expect(runWorker(databasePath, 'seed-old').status).toBe(0);
+
+    const killed = runWorker(databasePath, 'stage-before-commit-then-kill');
+    expect(killed.signal).toBe('SIGKILL');
+
+    const reopened = runWorker(databasePath, 'inspect');
+    expect(reopened.status).toBe(0);
+    expect(readJsonOutput(reopened)).toMatchObject({
+      current: { reference: { generation: 1 }, payload: { value: 'old' } },
+      latestAttempt: { generation: 2, state: 'allocated' },
+    });
+  });
+
+  test('a new authority publishes the retained staged candidate for the same key without rerunning its body', () => {
+    const databasePath = createDatabasePath();
+    const bodyCounterPath = `${databasePath}.calls`;
+    expect(runWorker(databasePath, 'seed-old').status).toBe(0);
+
+    const staged = runWorker(databasePath, 'stage-stable-key-then-kill', [bodyCounterPath]);
+    expect(staged.signal).toBe('SIGKILL');
+    expect(readFileSync(bodyCounterPath, 'utf8')).toBe('body\n');
+
+    const recovered = runWorker(databasePath, 'publish-staged-stable-key', [bodyCounterPath]);
+    expect(recovered.status).toBe(0);
+    expect(readJsonOutput(recovered)).toEqual({
+      prior: {
+        attemptId: 'subject:2', attemptKey: 'stable-recovery-key', subjectKey: 'subject',
+        generation: 2, state: 'staged', resultReference: null,
+      },
+      rebound: {
+        attemptId: 'subject:2', attemptKey: 'stable-recovery-key', subjectKey: 'subject',
+        generation: 2, state: 'staged', resultReference: null,
+      },
+      staleAuthorityRejected: true,
+      result: {
+        reference: { subjectKey: 'subject', generation: 2 },
+        payload: { value: 'retained-candidate' },
+        fingerprint: 'retained-fingerprint',
+        provenance: { producer: 'staged-recovery' },
+      },
+      current: {
+        reference: { subjectKey: 'subject', generation: 2 },
+        payload: { value: 'retained-candidate' },
+        fingerprint: 'retained-fingerprint',
+        provenance: { producer: 'staged-recovery' },
+      },
+      bodyMarkerPresent: true,
+    });
+    expect(existsSync(bodyCounterPath)).toBe(true);
+    expect(readFileSync(bodyCounterPath, 'utf8')).toBe('body\n');
   });
 
   test('publication is one commit: death just before commit leaves the staged attempt unpublished', () => {
@@ -261,27 +343,88 @@ describe('EXP-3 SQLite publication protocol', () => {
     if (first.kind !== 'acquired') {
       throw new Error('Expected first lease');
     }
+    const seed = repository.allocateAttempt({
+      attemptKey: 'current-result', subjectKey: 'subject', holderId: 'first',
+      fencingToken: first.fencingToken, nowMs: 0,
+    });
+    repository.stageAttempt({
+      attemptId: seed.attemptId, payloadJson: '{"value":"current"}',
+      fingerprint: 'current-fingerprint', provenanceJson: '{"source":"seed"}',
+      holderId: 'first', fencingToken: first.fencingToken, nowMs: 0,
+    });
+    const currentReference = repository.publishAttempt({
+      attemptId: seed.attemptId, holderId: 'first', fencingToken: first.fencingToken, nowMs: 0,
+    });
     const attempt = repository.allocateAttempt({
       attemptKey: 'attempt-old', subjectKey: 'subject', holderId: 'first',
       fencingToken: first.fencingToken, nowMs: 0,
+    });
+    repository.stageAttempt({
+      attemptId: attempt.attemptId, payloadJson: '{"value":"protected-candidate"}',
+      fingerprint: 'protected-fingerprint', provenanceJson: '{"source":"before-reclaim"}',
+      holderId: 'first', fencingToken: first.fencingToken, nowMs: 0,
     });
     const reclaimed = repository.acquireWriter({ holderId: 'second', nowMs: 11, leaseMs: 10 });
     expect(reclaimed.kind).toBe('acquired');
     if (reclaimed.kind !== 'acquired') {
       throw new Error('Expected reclaimed lease');
     }
+    repository.renewWriter({
+      holderId: 'second', fencingToken: reclaimed.fencingToken, nowMs: 12, leaseMs: 20,
+    });
+    const successor = repository.currentWriter();
+    const retainedCurrent = repository.readCurrent('subject');
+    const retainedAttempt = repository.readAttempt(attempt.attemptId);
+    // The public attempt projection omits staged candidate columns, so compare their stored bytes too.
+    const retainedStagedRow = db.queryOne('SELECT * FROM attempts WHERE attempt_id = ?', [attempt.attemptId]);
+    expect(successor).toEqual({
+      holderId: 'second', fencingToken: reclaimed.fencingToken, expiresAtMs: 32,
+    });
     const stale = { holderId: 'first', fencingToken: first.fencingToken, nowMs: 12 };
+    const expectSuccessorStatePreserved = (): void => {
+      expect(repository.currentWriter()).toEqual(successor);
+      expect(repository.readCurrent('subject')).toEqual(retainedCurrent);
+      expect(repository.readAttempt(attempt.attemptId)).toEqual(retainedAttempt);
+      expect(db.queryOne('SELECT * FROM attempts WHERE attempt_id = ?', [attempt.attemptId])).toEqual(retainedStagedRow);
+    };
     expect(() => repository.renewWriter({ ...stale, leaseMs: 10 })).toThrow('stale writer fence');
+    expectSuccessorStatePreserved();
     expect(() => repository.allocateAttempt({
       ...stale, attemptKey: 'stale-allocation', subjectKey: 'subject',
     })).toThrow('stale writer fence');
+    expectSuccessorStatePreserved();
     expect(() => repository.stageAttempt({
       ...stale, attemptId: attempt.attemptId, payloadJson: '{"value":"stale"}',
       fingerprint: 'stale-fingerprint', provenanceJson: '{"source":"stale"}',
     })).toThrow('stale writer fence');
+    expectSuccessorStatePreserved();
     expect(() => repository.publishAttempt({ ...stale, attemptId: attempt.attemptId })).toThrow('stale writer fence');
+    expectSuccessorStatePreserved();
     expect(() => repository.releaseWriter(stale)).toThrow('stale writer fence');
-    expect(repository.currentWriter()?.holderId).toBe('second');
+    expectSuccessorStatePreserved();
+    expect(repository.currentWriter()?.fencingToken).toBe(reclaimed.fencingToken);
+    expect(repository.readCurrent('subject')?.reference).toEqual(currentReference);
+
+    const successorAttempt = repository.allocateAttempt({
+      attemptKey: 'successor-positive-control', subjectKey: 'subject', holderId: 'second',
+      fencingToken: reclaimed.fencingToken, nowMs: 12,
+    });
+    repository.stageAttempt({
+      attemptId: successorAttempt.attemptId, payloadJson: '{"value":"successor"}',
+      fingerprint: 'successor-fingerprint', provenanceJson: '{"source":"current-authority"}',
+      holderId: 'second', fencingToken: reclaimed.fencingToken, nowMs: 12,
+    });
+    const successorReference = repository.publishAttempt({
+      attemptId: successorAttempt.attemptId, holderId: 'second',
+      fencingToken: reclaimed.fencingToken, nowMs: 12,
+    });
+    expect(repository.readCurrent('subject')).toMatchObject({
+      reference: successorReference, payload: { value: 'successor' },
+    });
+    repository.releaseWriter({ holderId: 'second', fencingToken: reclaimed.fencingToken, nowMs: 12 });
+    expect(repository.currentWriter()).toBeNull();
+    const afterRelease = repository.acquireWriter({ holderId: 'third', nowMs: 12, leaseMs: 10 });
+    expect(afterRelease).toEqual({ kind: 'acquired', fencingToken: reclaimed.fencingToken + 1, expiresAtMs: 22 });
   });
 
   test('retry after an observer loses the committed acknowledgment returns the same result without rerunning work', () => {
@@ -337,8 +480,9 @@ describe('EXP-3 SQLite publication protocol', () => {
   });
 
   test('exact older references remain readable after a newer result becomes current', () => {
-    const db = openDatabase(':memory:');
-    const repository = createPublicationRepository(db);
+    const databasePath = createDatabasePath();
+    let db = openDatabase(databasePath);
+    let repository = createPublicationRepository(db);
     repository.initialize();
     const owner = repository.acquireWriter({ holderId: 'writer', nowMs: 0, leaseMs: 100 });
     if (owner.kind !== 'acquired') {
@@ -361,6 +505,13 @@ describe('EXP-3 SQLite publication protocol', () => {
     const first = publish('first', '{"value":"old"}');
     const second = publish('second', '{"value":"new"}');
     expect(second.generation).toBeGreaterThan(first.generation);
+
+    db.close();
+    databases.pop();
+    db = openDatabase(databasePath);
+    repository = createPublicationRepository(db);
+    repository.initialize();
+
     expect(repository.readCurrent('subject')?.reference).toEqual(second);
     expect(repository.readResult(first)).toEqual({
       reference: first, payload: { value: 'old' }, fingerprint: 'first-fingerprint', provenance: { key: 'first' },

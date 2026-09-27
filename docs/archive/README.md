@@ -20,6 +20,7 @@ Those fixtures are evidence of limited earlier probes, not new acceptance tests.
 - [Scoped-context plan](pre-consolidation/scoped-context-implementation-plan.md)
 - [Earlier authoring exploration](pre-consolidation/exploration/authoring-surface.md)
 - [Earlier roster API fixture](pre-consolidation/exploration/roster-example/README.md)
+- [EXP-5 bounded CML correspondence record](experiments/exp-5.md)
 
 The sole old graph at `docs/source/incremental-analysis-components.md` is a minimal,
 labeled input fixture for existing tooling tests. Its presence is not an exemption

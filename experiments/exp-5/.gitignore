@@ -1,6 +1,0 @@
-# Parser, TypeScript and Jest outputs are reproducible evidence, not source authority.
-.gradle/
-build/
-.test-build/
-fixture/node_modules/
-fixture/packages/*/dist/

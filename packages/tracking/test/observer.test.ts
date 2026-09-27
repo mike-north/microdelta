@@ -160,6 +160,36 @@ describe('semantic tracking observer', () => {
     }).kind).toBe('incompatible');
   });
 
+  test('classifies unsupported selected provider payloads as incompatible', () => {
+    const captured = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
+    const malformed = {
+      operation: 'value',
+      address: [{ kind: 'property', key: 'name' }],
+      fact: () => 'functions are not selected value data',
+    };
+
+    expect(observer.compareCurrent(captured, {
+      resolve: () => ({ kind: 'available', fact: malformed }),
+    }).kind).toBe('incompatible');
+  });
+
+  test('classifies malformed selected envelopes and addresses as incompatible', () => {
+    const captured = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
+    const sparseAddress = new Array<unknown>(1);
+    const malformed: unknown[] = [
+      { operation: 'not-an-operation', address: [{ kind: 'property', key: 'name' }], fact: 'Ada' },
+      { operation: 'value', address: sparseAddress, fact: 'Ada' },
+      { operation: 'value', address: [{ kind: 'index', index: -1 }], fact: 'Ada' },
+      { operation: 'value', address: [{ kind: 'property', key: 'name', extra: true }], fact: 'Ada' },
+    ];
+
+    for (const fact of malformed) {
+      expect(observer.compareCurrent(captured, {
+        resolve: () => ({ kind: 'available', fact }),
+      }).kind).toBe('incompatible');
+    }
+  });
+
   test('compares an exact compatible fingerprint request without asking for payload and rejects mismatched metadata descriptors', () => {
     const captured = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
     const expected = captured.observations[0];
@@ -220,6 +250,7 @@ describe('semantic tracking observer', () => {
       expect(observer.compareCurrent(captured, {
         resolve: () => ({ kind: 'available', fact }),
       }).kind).toBe('incompatible');
+
     }
     expect(getterCalls).toBe(0);
   });
@@ -337,6 +368,77 @@ describe('semantic tracking observer', () => {
 
     expect(() => isolated.compareCurrent(capture, {
       resolve: () => ({ kind: 'available', fact: replacement }),
+    })).toThrow(failure);
+  });
+
+  test('classifies unsupported materialized output as incompatible', () => {
+    const outputCapture = observer.capture(() => observer.snapshotOutput(observer.tracked({ result: 'Ada' }, binding)));
+
+    expect(observer.compareCurrent(outputCapture, {
+      resolve: () => ({ kind: 'available', fact: () => 'functions are not materialized data' }),
+    }).kind).toBe('incompatible');
+  });
+
+  test('classifies unsupported collection order as incompatible', () => {
+    const orderCapture = observer.capture(() => observer.materialization.recordCollectionOrder(binding, ['member-a', 'member-b']));
+    const unsupportedOrder = ['member-a', 'member-b'];
+    Object.defineProperty(unsupportedOrder, 'hidden', { value: 'outside selected order data' });
+
+    expect(observer.compareCurrent(orderCapture, {
+      resolve: () => ({ kind: 'available', fact: unsupportedOrder }),
+    }).kind).toBe('incompatible');
+  });
+
+  test('materialized output and collection order digest failures remain host errors', () => {
+    const failure = new TypeError('host digest failed');
+    let digestUnavailable = false;
+    const host: IMachine = {
+      ...machine,
+      sha256(input: string): string {
+        if (digestUnavailable) {
+          throw failure;
+        }
+        return machine.sha256(input);
+      },
+    };
+    const isolated = createTrackingObserver(host);
+    const tracked = isolated.tracked({ result: 'Ada' }, binding);
+    const outputCapture = isolated.capture(() => isolated.snapshotOutput(tracked));
+    const orderCapture = isolated.capture(() => isolated.materialization.recordCollectionOrder(binding, ['member-a', 'member-b']));
+    digestUnavailable = true;
+
+    expect(() => isolated.compareCurrent(outputCapture, {
+      resolve: () => ({ kind: 'available', fact: { result: 'Ada' } }),
+    })).toThrow(failure);
+    expect(() => isolated.compareCurrent(orderCapture, {
+      resolve: () => ({ kind: 'available', fact: ['member-a', 'member-b'] }),
+    })).toThrow(failure);
+  });
+
+  test('selected fact digest failures remain host errors', () => {
+    const failure = new TypeError('host digest failed');
+    let digestUnavailable = false;
+    const host: IMachine = {
+      ...machine,
+      sha256(input: string): string {
+        if (digestUnavailable) {
+          throw failure;
+        }
+        return machine.sha256(input);
+      },
+    };
+    const isolated = createTrackingObserver(host);
+    const tracked = isolated.tracked({ name: 'Ada' }, binding);
+    const capture = isolated.capture(() => tracked.name);
+    const currentFact = {
+      operation: 'value',
+      address: [{ kind: 'property', key: 'name' }],
+      fact: 'Ada',
+    };
+    digestUnavailable = true;
+
+    expect(() => isolated.compareCurrent(capture, {
+      resolve: () => ({ kind: 'available', fact: currentFact }),
     })).toThrow(failure);
   });
 

@@ -31,9 +31,19 @@ npm run changeset:version
 
 The add command records package names, bump levels, and a summary in
 `.changeset/`. Status displays the pending release plan. Version applies that
-plan to package manifests and changelogs and consumes the corresponding
-changeset files. Inspect the full diff before committing it. This command does
-not publish packages or create tags.
+plan to package manifests and changelogs, consumes the corresponding changeset
+files, and refreshes the npm workspace lockfile without running install scripts
+or publishing. Inspect the full diff before committing it. The automation uses
+the Changesets v1.9.0 action at commit
+[`a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d`](https://github.com/changesets/action/tree/a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d).
+The reviewed [manifest](https://github.com/changesets/action/blob/a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d/action.yml)
+defines the `version`, optional `publish`, and `createGithubReleases` inputs,
+plus the `pullRequestNumber` output. Its
+[entry point](https://github.com/changesets/action/blob/a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d/src/index.ts)
+dispatches to versioning when changesets are present and no publish command is
+configured; its [version runner](https://github.com/changesets/action/blob/a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d/src/run.ts)
+selects the CLI `version` command for Changesets 2.x. The workflow sets
+`createGithubReleases: false` and omits `publish`.
 
 The `Prepare release PR` workflow runs after pushes to `main` and can also be
 started manually. It uses the same version operation and creates or updates one

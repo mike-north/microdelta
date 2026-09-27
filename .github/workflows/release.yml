@@ -15,6 +15,9 @@ jobs:
   version:
     runs-on: ubuntu-latest
     steps:
+      - name: Require the release base branch
+        if: github.ref != 'refs/heads/main'
+        run: echo 'Release preparation must run from main.' >&2; exit 1
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
@@ -29,14 +32,16 @@ jobs:
           RELEASE_PLAN_PATH: ${{ runner.temp }}/release-plan.json
       - name: Create or update the version PR
         id: changesets
-        uses: changesets/action/version@v1
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d
         with:
-          script: npm run changeset:version
+          version: npm run changeset:version
+          branch: main
+          createGithubReleases: false
       - name: Apply the evidence template and dispatch required checks
-        if: steps.changesets.outputs.pr-number != ''
+        if: steps.changesets.outputs.pullRequestNumber != ''
         uses: actions/github-script@v7
         env:
-          PR_NUMBER: ${{ steps.changesets.outputs.pr-number }}
+          PR_NUMBER: ${{ steps.changesets.outputs.pullRequestNumber }}
           BODY_PATH: ${{ runner.temp }}/release-pr-body.md
         with:
           script: |

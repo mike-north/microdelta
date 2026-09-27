@@ -29,7 +29,7 @@
     "test:exp3": "tsc -p experiments/exp-3/tsconfig.test.json && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config experiments/exp-3/jest.config.mjs --runInBand --runTestsByPath .test-build/experiments/exp-3/test/sqlite-capability.test.js && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config experiments/exp-3/jest.config.mjs --runInBand --runTestsByPath .test-build/experiments/exp-3/test/publication.test.js",
     "changeset:add": "changeset",
     "changeset:status": "changeset status",
-    "changeset:version": "changeset version"
+    "changeset:version": "changeset version && npm install --package-lock-only --ignore-scripts --no-audit --no-fund"
   },
   "devDependencies": {
     "@changesets/cli": "2.31.1",

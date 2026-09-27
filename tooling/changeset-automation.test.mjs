@@ -55,6 +55,11 @@ async function fixture() {
     'Correct the base package behavior.',
     '',
   ].join('\n'));
+  const initialLock = spawnSync('npm', ['install', '--package-lock-only', '--ignore-scripts', '--offline'], {
+    cwd: directory,
+    encoding: 'utf8',
+  });
+  assert.equal(initialLock.status, 0, initialLock.stderr);
   const git = (...args) => spawnSync('git', args, { cwd: directory, encoding: 'utf8' });
   for (const args of [['init', '-b', 'main'], ['config', 'user.email', 'fixture@example.test'], ['config', 'user.name', 'Fixture'], ['add', '.'], ['commit', '-m', 'fixture base']]) {
     const result = git(...args);
@@ -78,6 +83,7 @@ test('workspace pins a Node 20-compatible Changesets CLI and names reviewable ta
   assert.match(workspace.scripts['changeset:add'], /changeset/u);
   assert.match(workspace.scripts['changeset:status'], /changeset status/u);
   assert.match(workspace.scripts['changeset:version'], /changeset version/u);
+  assert.match(workspace.scripts['changeset:version'], /npm install --package-lock-only --ignore-scripts --no-audit --no-fund/u);
 });
 
 test('manual release preparation creates a version PR without publishing', async () => {
@@ -85,8 +91,12 @@ test('manual release preparation creates a version PR without publishing', async
   assert.match(workflow, /workflow_dispatch:/u);
   assert.match(workflow, /contents:\s*write/u);
   assert.match(workflow, /pull-requests:\s*write/u);
-  assert.match(workflow, /changesets\/action\/version@v1/u);
-  assert.match(workflow, /script:\s*npm run changeset:version/u);
+  assert.match(workflow, /changesets\/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d/u);
+  assert.match(workflow, /version:\s*npm run changeset:version/u);
+  assert.match(workflow, /createGithubReleases:\s*false/u);
+  assert.doesNotMatch(workflow, /^\s*publish:/mu);
+  assert.match(workflow, /branch:\s*main/u);
+  assert.match(workflow, /github\.ref != 'refs\/heads\/main'/u);
   assert.doesNotMatch(workflow, /pull_request_target|npm run changeset:publish|changeset publish|npm publish|id-token:\s*write/u);
 });
 
@@ -102,10 +112,28 @@ test('automatic version PRs request checks against their exact generated branch'
   assert.match(workflow, /actions\/github-script@v7/u);
   assert.match(workflow, /createWorkflowDispatch/u);
   assert.match(workflow, /ref: pull\.head\.ref/u);
+  assert.match(workflow, /outputs\.pullRequestNumber/u);
+  assert.match(workflow, /changesets\/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d/u);
   assert.match(check, /on: \[push, pull_request, workflow_dispatch\]/u);
   assert.match(metadata, /workflow_dispatch:/u);
   assert.match(metadata, /pr_number:/u);
   assert.doesNotMatch(workflow, /npm (?:run )?publish|changeset publish|npm publish|pull_request_target|auto-merge|enable-pull-request-automerge/iu);
+});
+
+test('release workflow uses the documented version-only v1.9.0 action interface', async () => {
+  const workflow = await readFile(path.join(root, '.github/workflows/release.yml'), 'utf8');
+  const guide = await readFile(path.join(root, 'docs/releasing.md'), 'utf8');
+  const actionSha = 'a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d';
+  assert.match(guide, new RegExp(`changesets/action/tree/${actionSha}`, 'u'));
+  assert.match(guide, new RegExp(`changesets/action/blob/${actionSha}/action\\.yml`, 'u'));
+  assert.match(guide, /`version`, optional `publish`, and `createGithubReleases` inputs/u);
+  assert.match(guide, /`pullRequestNumber` output/u);
+  assert.match(guide, /selects the CLI `version` command for Changesets 2\.x/u);
+  assert.match(workflow, new RegExp(`changesets/action@${actionSha}`, 'u'));
+  assert.match(workflow, /version:\s*npm run changeset:version/u);
+  assert.match(workflow, /outputs\.pullRequestNumber/u);
+  assert.match(workflow, /createGithubReleases:\s*false/u);
+  assert.doesNotMatch(workflow, /^\s*publish:/mu);
 });
 
 test('release PR generation records its package plan in the standard PR evidence shape', async () => {
@@ -194,10 +222,21 @@ test('private packages receive versions and changelogs and internal ranges stay 
 
     const version = run(directory, 'version');
     assert.equal(version.status, 0, version.stderr);
+    const lockUpdate = spawnSync('npm', ['install', '--package-lock-only', '--ignore-scripts', '--offline'], {
+      cwd: directory,
+      encoding: 'utf8',
+    });
+    assert.equal(lockUpdate.status, 0, lockUpdate.stderr);
     const base = JSON.parse(await readFile(path.join(directory, 'packages/base/package.json'), 'utf8'));
     const consumer = JSON.parse(await readFile(path.join(directory, 'packages/consumer/package.json'), 'utf8'));
     assert.equal(base.version, '1.0.1');
     assert.equal(consumer.dependencies['@fixture/base'], '1.0.1');
+    const lock = JSON.parse(await readFile(path.join(directory, 'package-lock.json'), 'utf8'));
+    assert.equal(lock.packages['packages/base'].version, '1.0.1');
+    assert.equal(lock.packages['packages/consumer'].version, '1.0.1');
+    assert.equal(lock.packages['packages/consumer'].dependencies['@fixture/base'], '1.0.1');
+    const install = spawnSync('npm', ['ci', '--ignore-scripts', '--offline'], { cwd: directory, encoding: 'utf8' });
+    assert.equal(install.status, 0, install.stderr);
     assert.match(await readFile(path.join(directory, 'packages/base/CHANGELOG.md'), 'utf8'), /Correct the base package behavior/u);
     assert.match(await readFile(path.join(directory, 'packages/consumer/CHANGELOG.md'), 'utf8'), /@fixture\/base/u);
   } finally {

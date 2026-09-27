@@ -706,7 +706,10 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
     return proxy;
   }
 
-  /** Wrap a callable while preserving ordinary invocation and return values. */
+  /**
+   * Keep callable behavior observable only at invocation boundaries while hiding ordinary function reflection.
+   * Promise assimilation is the narrow exception: its `then` probe must see an ordinary non-thenable value.
+   */
   function wrapFunction<T extends object>(binding: IBindingRecord, root: object, target: T, address: readonly IAddressSegment[]): T {
     if (typeof target !== 'function') {
       throw new TypeError('Tracked callable has an unsupported runtime value');
@@ -719,7 +722,16 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
       construct(): never {
         throw new TypeError('Tracked functions support ordinary calls, not construction');
       },
-      get(): never {
+      get(fn, key): unknown {
+        // Promise resolution needs a neutral `then` result, but a fixed own data property cannot be hidden by a Proxy.
+        if (key === 'then') {
+          const descriptor = Reflect.getOwnPropertyDescriptor(fn, key);
+          if (descriptor !== undefined && !descriptor.configurable && 'value' in descriptor && !descriptor.writable && descriptor.value !== undefined) {
+            throw new TypeError('Tracked functions with a non-configurable then property are unsupported');
+          }
+          // Inspect descriptors only: a custom getter or thenable must never run during assimilation.
+          return undefined;
+        }
         throw new TypeError('Tracked function properties and metadata are unsupported');
       },
       set(): never {
@@ -836,6 +848,11 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
     return { kind: 'equal' };
   }
 
+  /**
+   * These capabilities belong to this observer's capture and fact-recording
+   * state. Keep those references lexical so a capability remains valid when
+   * destructured or passed as a callback; its caller is not a receiver contract.
+   */
   const materialization: ITrackingMaterialization = Object.freeze({
     assertFrameOpen(): void {
       const frame = captures.getStore();
@@ -858,7 +875,7 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
       return value[key];
     },
     recordSelected(binding: ITrackingBinding, fact: ISelectedFact): void {
-      this.assertFrameOpen();
+      materialization.assertFrameOpen();
       const encoded = encodeSelectedFact(fact);
       const request: ICurrentFactRequest = {
         kind: 'selected',
@@ -869,14 +886,14 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
       recordExternal(copyBinding(binding), request, 'fact', fact.operation, encoded);
     },
     recordProjection(binding: ITrackingBinding, fact: IValueProjectionFact): void {
-      this.assertFrameOpen();
+      materialization.assertFrameOpen();
       const encoded = encodeProjectionFact(fact);
       const descriptor = copyProjectionDescriptor(fact.descriptor);
       const request: ICurrentFactRequest = { kind: 'projection', descriptor, encodingVersion: 'MDP1' };
       recordExternal(copyBinding(binding), request, 'projection', 'projection', encoded);
     },
     recordCollectionOrder(binding: ITrackingBinding, keys: readonly string[]): void {
-      this.assertFrameOpen();
+      materialization.assertFrameOpen();
       if (!isUniqueStringSequence(keys)) {
         throw new TypeError('Collection order needs a unique ordered sequence of string keys');
       }

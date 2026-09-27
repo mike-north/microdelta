@@ -3,7 +3,8 @@
 This experiment answers [EXP-2](../../docs/spec/experiments.md) for the
 literal facts in [TRK-5 and VAL-1/2](../../docs/spec/tracking.md). It proposes
 a mechanism; it does not establish M2 behavior or a durable storage format.
-The supervisor decides whether to adopt or amend the governing contract.
+The supervisor selects the bounded encoding/evidence mechanisms and records
+the partial access outcome in the owning Tracking contract.
 
 ## Supported-domain decision matrix
 
@@ -120,9 +121,9 @@ npm test
 npm run build
 ```
 
-**Candidate result: Pass within the declared JSON-like and synchronous-access
-scope.** Explicit async preparation passes only for declared prepared fields
-and is rejected as a general ordinary-getter solution. Adoption requires the
-supervisor's contract decision and integration with current bindings, Tracking,
-History, and Machine. No stored payload migration is inferred from v1; unknown
-formats fail closed.
+**Decision: Pass for the declared value/evidence encodings and top-level scalar
+synchronous access; reject async preparation as a general ordinary-getter
+solution; nested lazy access remains unproven.** The owning Tracking contract
+records that bounded selection. Integration with current bindings, Tracking,
+History, and Machine is still required. No stored payload migration is inferred
+from v1; unknown formats fail closed.

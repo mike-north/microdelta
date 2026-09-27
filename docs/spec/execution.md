@@ -386,6 +386,31 @@ a complete concurrent-worker proof. EXP-7 evaluates the selected transition
 model; M5 still requires implementation concurrency evidence before any such
 claim. A model or transaction test does not qualify other storage backends.
 
+**EXP-7 evidence selection:** retain the finite TLA+ publication model as optional
+protocol-review evidence. Its checked instance contains one subject, two
+contenders, three stable attempt keys, generations through 3, fences through 2,
+and logical time through 2. It includes current-authority publication, retained
+complete references, lease rejection, monotonic allocation, crash/restart,
+rebound attempts, bounded pre-commit retry, and lost acknowledgment. The
+known-bad configuration removes holder/fence equality while retaining a live
+lease; its stale-writer counterexample must fail the independent authority
+invariant. The corrected configuration must exhaust the same finite bounds.
+
+The [model and implementation mapping](../../experiments/exp-7/README.md) are
+supporting evidence for PUB-001 through PUB-004, not proof of TypeScript or SQL.
+Payload/fingerprint/provenance content is abstracted to a staged phase;
+publication and rollback are atomic model steps. Time is globally monotonic in
+the model, while the prototype receives caller-supplied operation times. Model
+acknowledgments and high-water witnesses are ghost observations, not additional
+persistence requirements. There is no liveness/fairness or unbounded-concurrency
+claim. Real process termination, exact references, and reopened fence allocation
+remain independently tested in EXP-3.
+
+TLC is not required in unrelated CI. Changes to these protocol transitions or
+authority rules require reassessing the model's correspondence and rerunning both
+configurations when using it as evidence; expanding concurrency still requires
+M5's implementation tests. An exhausted finite model cannot waive those gates.
+
 ### PUB-005 — Contention and waiting report facts accurately
 
 An acquisition result meaning “held” must correspond to an observed applicable

@@ -1,7 +1,8 @@
 # microdelta specification — start here
 
 **Status: consolidated design baseline, 2026-09-26. M0.5 accepted;
-M1 experiment evidence is under review. Runtime implementation remains incomplete.**
+M1 bounded experiment decisions are recorded; final acceptance follows the
+[M1 evidence record](../validation/m1-2026-09-26.md). Runtime implementation remains incomplete.**
 This specification describes the target, not an assertion that the current
 scaffold implements it.
 
@@ -79,8 +80,9 @@ Stable IDs are searchable literal strings. Links are relative and readable in a
 plain checkout. Mermaid/ASCII figures explain the adjacent normative tables; they
 do not independently redefine them. The JSON [reuse fixtures](artifacts/reuse-cases.json)
 are language-neutral scenario data with expected outcomes, not a persistence or
-public API schema. CML and formal proof files will be added only by the relevant
-experiments using their real parsers/checkers; placeholder syntax is not authority.
+public API schema. CML and formal proof artifacts are supplied by the relevant experiments using
+their real parsers/checkers. Their selected subsets and optional status are
+recorded in the owning contracts; placeholder syntax is not authority.
 
 The [validation record](validation.md) documents M0 checks and their limits.
 
@@ -101,6 +103,8 @@ map](../package-map.md) records implemented and absent roles without placeholder
 APIs. API Extractor rollups/reports and checked import edges are present, and the
 Machine boundary is implemented. The [M0.5 acceptance record](../validation/foundation-2026-09-26.md)
 links the accepted tooling, package, Machine, CI, and repository-protection evidence.
-M1 candidates require their own review and owning-contract decisions; foundation
-acceptance does not establish durable runtime behavior. [Historical validation](../validation.md)
+The [M1 evidence record](../validation/m1-2026-09-26.md) links the six bounded
+experiment results and their owning-contract decisions. It also defines the final
+CI and issue-acceptance gate. Neither foundation nor experiment acceptance
+establishes a complete durable runtime. [Historical validation](../validation.md)
 remains dated evidence, not a fresh run.

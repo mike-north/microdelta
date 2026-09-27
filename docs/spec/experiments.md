@@ -1,9 +1,20 @@
 # Bounded experiments and mechanism gates
 
-Status: planned, none executed by specification consolidation. This is the work
-queue after M0.5 establishes the tooling and Machine foundation. Requirement IDs in the
-linked contracts govern expected behavior; an experiment may reject a mechanism,
-not quietly weaken the behavior to make its prototype pass.
+Status: M0.5 foundation is accepted and the six M1 experiment decisions are
+recorded below. [The M1 evidence record](../validation/m1-2026-09-26.md) defines
+final delivery acceptance and links implementation, review, and CI evidence.
+EXP-4 and EXP-8 remain deferred to their dependent milestones. Requirement IDs
+in the linked contracts govern behavior; a rejected mechanism does not weaken
+the required behavior.
+
+| Experiment | Bounded result and owning decision |
+| --- | --- |
+| EXP-1 | Select structural current binding and synchronous observed implementation/scalar evidence; [CMP-6](composition.md), TRK-2, REUSE-006/008. Arbitrary closure soundness remains excluded. |
+| EXP-2 | Select unordered equality, separate order-preserving snapshot transport, observations/projections, and top-level scalar access; [VAL-1/2/3 and COL-2](tracking.md). Reject async preparation as a general getter solution; nested lazy access remains unproven. |
+| EXP-3 | Select the single-file, single-active-writer SQLite protocol shape under process-kill/reopen evidence; [PUB-004](execution.md). Broader durability/concurrency claims remain unproven. |
+| EXP-5 | Retain the native CML/API-model mapping subset as optional evidence; [PKG-006](package-boundaries.md). Unsupported structures remain explicit; Java is not mandatory for unrelated CI. |
+| EXP-6 | Retain the checked flat-record theorem and finite TypeScript comparison as optional evidence; [VAL-2](tracking.md). Model proof and implementation agreement remain separate. |
+| EXP-7 | Retain the finite publication model, stale-writer control, and implementation mapping as optional evidence; [PUB-004](execution.md). No unbounded, SQL, or liveness proof is claimed. |
 
 ## Common experiment contract
 

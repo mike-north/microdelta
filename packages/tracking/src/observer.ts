@@ -253,6 +253,7 @@ function copyAddress(address: readonly IAddressSegment[]): readonly IAddressSegm
     : { kind: 'index' as const, index: segment.index })));
 }
 
+/** Preserve present undefined values separately from missing or accessor properties. */
 interface IOwnDataProperty {
   /** The descriptor value is copied without evaluating a caller-defined accessor. */
   readonly value: unknown;

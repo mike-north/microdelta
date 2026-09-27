@@ -826,6 +826,14 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
             if (!isProjectionFact(fact)) {
               return { kind: 'incompatible', observation };
             }
+            // Value accepts null-prototype records as the same projection meaning as ordinary records.
+            // Normalize supported descriptor records before comparing with the stored selection.
+            const descriptor = copyProjectionDescriptor(fact.descriptor);
+            // A valid projection can still answer a different address or traversal question.
+            // Canonical request equality ignores record insertion order but preserves ordered coverage keys.
+            if (!sameRequest({ kind: 'projection', descriptor, encodingVersion: 'MDP1' }, observation.selection)) {
+              return { kind: 'incompatible', observation };
+            }
             const encoded = encodeCurrentValue(() => encodeProjectionFact(fact));
             if (encoded === undefined) {
               return { kind: 'incompatible', observation };

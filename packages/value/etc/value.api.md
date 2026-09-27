@@ -62,9 +62,7 @@ export interface IValueProjectionDescriptor {
 
 // @alpha
 export interface IValueProjectionFact {
-    // (undocumented)
     readonly descriptor: IValueProjectionDescriptor;
-    // (undocumented)
     readonly members: readonly IValueProjectionMember[];
 }
 
@@ -80,6 +78,9 @@ export type IValueProjectionTraversal = {
     readonly complete: false;
     readonly keys: readonly string[];
 };
+
+// @alpha
+export function normalizeProjectionDescriptor(value: unknown): IValueProjectionDescriptor;
 
 // @alpha
 export function normalizeProjectionFact(fact: IValueProjectionFact): IValueProjectionFact;

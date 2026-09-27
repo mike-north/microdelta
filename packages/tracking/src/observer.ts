@@ -388,9 +388,29 @@ function sameRequest(left: ICurrentFactRequest, right: ICurrentFactRequest): boo
   }
 }
 
-/** Check that a provider's selected fact answers the exact requested scalar question. */
+/**
+ * Compare the selected operation and each address segment by its semantic key
+ * or index; JavaScript record member insertion order is not part of a path.
+ */
 function matchesSelectedRequest(fact: ISelectedFact, request: Extract<ICurrentFactRequest, { kind: 'selected' }>): boolean {
-  return fact.operation === request.operation && JSON.stringify(fact.address) === JSON.stringify(request.address);
+  if (fact.operation !== request.operation || fact.address.length !== request.address.length) {
+    return false;
+  }
+  for (let index = 0; index < fact.address.length; index += 1) {
+    const actual = fact.address[index];
+    const expected = request.address[index];
+    if (actual === undefined || expected === undefined || actual.kind !== expected.kind) {
+      return false;
+    }
+    if (actual.kind === 'property') {
+      if (expected.kind !== 'property' || actual.key !== expected.key) {
+        return false;
+      }
+    } else if (expected.kind !== 'index' || actual.index !== expected.index) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /** Keep provider key sequences finite, unique, dense, and free of coercion. */

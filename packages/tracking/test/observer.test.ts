@@ -3,10 +3,9 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 
 import { describe, expect, test } from '@jest/globals';
 import type { IMachine } from '@microdelta/machine';
-import { observe } from '@microdelta/value';
+import { observe, type ISelectedFact, type IValueProjectionFact } from '@microdelta/value';
 import { createTrackingObserver } from '../src/index.js';
-import type { ICurrentFactRequest, ICurrentFactResolution, ITrackingBinding } from '../src/index.js';
-import type { IValueProjectionFact } from '@microdelta/value';
+import type { ICurrentFactRequest, ICurrentFactResolution, IObservationCapture, ITrackingBinding } from '../src/index.js';
 
 /** Supply only host facilities; this test adapter has no Tracking policy. */
 const machine: IMachine = {
@@ -131,6 +130,34 @@ describe('semantic tracking observer', () => {
     expect(captured.observations[0]?.encoded).toContain('Ada');
     expect(observer.compareCurrent(captured, { resolve: () => ({ kind: 'unavailable' }) }).kind).toBe('unavailable');
     expect(observer.compareCurrent(captured, { resolve: () => ({ kind: 'ambiguous' }) }).kind).toBe('ambiguous');
+  });
+
+  test('matches selected addresses by segment meaning rather than object member order', () => {
+    const propertyCapture = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
+    const indexCapture = observer.capture(() => observer.tracked(['Ada'], binding)[0]);
+    const compareFact = <T,>(capture: IObservationCapture<T>, fact: ISelectedFact) => observer.compareCurrent(capture, {
+      resolve: () => ({ kind: 'available', fact }),
+    });
+
+    expect(compareFact(propertyCapture, {
+      operation: 'value', address: [{ key: 'name', kind: 'property' }], fact: 'Ada',
+    }).kind).toBe('equal');
+    expect(compareFact(indexCapture, {
+      operation: 'value', address: [{ index: 0, kind: 'index' }], fact: 'Ada',
+    }).kind).toBe('equal');
+
+    expect(compareFact(propertyCapture, {
+      operation: 'value', address: [{ key: 'other', kind: 'property' }], fact: 'Ada',
+    }).kind).toBe('incompatible');
+    expect(compareFact(propertyCapture, {
+      operation: 'value', address: [{ index: 0, kind: 'index' }], fact: 'Ada',
+    }).kind).toBe('incompatible');
+    expect(compareFact(indexCapture, {
+      operation: 'value', address: [{ index: 1, kind: 'index' }], fact: 'Ada',
+    }).kind).toBe('incompatible');
+    expect(compareFact(indexCapture, {
+      operation: 'value', address: [{ key: '0', kind: 'property' }], fact: 'Ada',
+    }).kind).toBe('incompatible');
   });
 
   test('compares an exact compatible fingerprint request without asking for payload and rejects mismatched metadata descriptors', () => {

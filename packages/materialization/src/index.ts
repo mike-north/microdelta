@@ -213,7 +213,7 @@ function requireProjectionFact(value: unknown): IValueProjectionFact {
   };
 }
 
-/** Clone validated selected content into ordinary frozen Value data for the caller. */
+/** Validate selected content and detach it as Value-owned canonical immutable data. */
 function detachProjection(fact: IValueProjectionFact): IMaterializedProjection {
   return normalizeProjectionFact(fact);
 }
@@ -273,17 +273,15 @@ export function createMaterialization(options: IMaterializationOptions): IMateri
     project(binding: ITrackingBinding, fact: IValueProjectionFact): IMaterializedProjection {
       options.tracking.materialization.assertFrameOpen();
       const copiedBinding = copyBinding(binding);
-      let encoded: string;
+      let detached: IMaterializedProjection;
       try {
-        encoded = encodeProjectionFact(fact);
+        detached = detachProjection(fact);
       } catch (error: unknown) {
         const context = copiedBinding.path.length === 0 ? '<root>' : copiedBinding.path.join('.');
         const detail = error instanceof Error ? error.message : 'invalid projection fact';
         throw new TypeError(`Invalid projection for collection ${context}: ${detail}`);
       }
-      const detached = detachProjection(fact);
       options.tracking.materialization.recordProjection(copiedBinding, fact);
-      void encoded;
       return detached;
     },
     projectFrom(

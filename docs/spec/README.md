@@ -2,9 +2,12 @@
 
 **Status: consolidated design baseline, 2026-09-26. M0.5 accepted;
 M1 bounded experiment decisions are recorded; final acceptance follows the
-[M1 evidence record](../validation/m1-2026-09-26.md). Runtime implementation remains incomplete.**
-This specification describes the target, not an assertion that the current
-scaffold implements it.
+[M1 evidence record](../validation/m1-2026-09-26.md). M2 bounded tracking and
+package components are implemented; their [evidence record](../validation/m2-2026-09-27.md)
+and [acceptance issue](https://github.com/mike-north/microdelta/issues/32) record delivery and verification.
+The complete durable runtime remains unimplemented.**
+This specification describes the full target; the current checkout implements
+only the capabilities listed below.
 
 microdelta keeps analyses current across complete process shutdown while reusing
 retained expensive results when the evidence they actually consumed remains
@@ -110,10 +113,10 @@ capture boundary are checked by executable tooling. They do not establish
 arbitrary JavaScript closure soundness. The new components do not provide durable
 memoization, a production completed-result reader, general fanout, or scale proof.
 
-M2 is not accepted. The [M2 evidence record](../validation/m2-2026-09-27.md)
-separates component and local integration evidence from current-head review,
-required GitHub checks, merge, and default-branch verification. Code present on a
-feature branch is not evidence of default-branch delivery. The
+The [M2 evidence record](../validation/m2-2026-09-27.md) maps these bounded
+capabilities to current-head reviews, integrated checks, component merges, and
+default-branch verification. The [acceptance issue](https://github.com/mike-north/microdelta/issues/32)
+records the final milestone decision and the documentation delivery result. The
 [M0.5 acceptance record](../validation/foundation-2026-09-26.md) and
 [M1 evidence record](../validation/m1-2026-09-26.md) retain their bounded evidence;
 [historical validation](../validation.md) remains dated evidence, not a fresh run.

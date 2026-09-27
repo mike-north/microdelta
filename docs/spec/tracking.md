@@ -147,6 +147,26 @@ edge and the wire grammar. Extending that domain requires explicit semantics and
 negative/roundtrip assertions before implementation. These fixture encodings do
 not establish a deployed persistence format or authorize implicit migration.
 
+**EXP-6 decision — optional proof evidence.** Retain the
+[flat-record Lean theorem and differential fixture](../../experiments/exp-6/README.md)
+as bounded review evidence. For unique-key, flat, null-prototype records of
+scalar atoms, equality of the modeled sorted normal forms implies equal value
+and own-presence reads at one Property key. Lookup is defined independently of
+normalization. Missing and present-undefined fields may have equal value reads
+while own presence differs; explicit key enumeration remains order-sensitive
+and outside this implication.
+
+The model uses UTF-16 code-unit keys, Unicode-scalar text values, and opaque
+canonical numeric tokens. Its translation rejects unsupported data and
+lone-surrogate text values; the broader EXP-2 domain is unchanged. The checked
+proof uses the documented standard Lean assumptions with no new axiom or
+`sorry`. Its finite generated comparisons provide sampled TypeScript evidence,
+not proof of the TypeScript implementation, canonical-byte completeness, hash
+collision freedom, or runtime reuse. Review the bridge and rerun the artifact
+when its modeled meaning or toolchain changes. Arrays, prototypes, nested paths,
+and materialization remain outside this theorem. The setup and maintenance cost
+do not justify a required Lean dependency for unrelated CI.
+
 **VAL-3 — Immutability and retention.** Stored values are immutable snapshots.
 Input inspection and materialization must not mutate stored history. In-memory
 changes are new observed facts; they cannot mutate a retained result in place.

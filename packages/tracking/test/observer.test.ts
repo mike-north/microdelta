@@ -3,10 +3,9 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 
 import { describe, expect, test } from '@jest/globals';
 import type { IMachine } from '@microdelta/machine';
-import { observe } from '@microdelta/value';
-import type { IAddressSegment, IOperation } from '@microdelta/value';
+import { encodeProjectionFact, observe, type ISelectedFact, type IValueProjectionFact } from '@microdelta/value';
 import { createTrackingObserver } from '../src/index.js';
-import type { ICurrentFactResolution, ITrackingBinding } from '../src/index.js';
+import type { ICurrentFactRequest, ICurrentFactResolution, IObservationCapture, ITrackingBinding } from '../src/index.js';
 
 /** Supply only host facilities; this test adapter has no Tracking policy. */
 const machine: IMachine = {
@@ -18,23 +17,26 @@ const machine: IMachine = {
 /** A caller-owned binding catalog supplies the current source fact by structural binding. */
 function createProvider(): {
   readonly provider: {
-    resolve(binding: ITrackingBinding, address: readonly IAddressSegment[], operation: IOperation | 'implementation'): ICurrentFactResolution;
+      resolve(binding: ITrackingBinding, request: ICurrentFactRequest): ICurrentFactResolution;
   };
   readonly set: (binding: string, root: unknown) => void;
 } {
   const roots = new Map<string, unknown>();
   return {
     provider: {
-      resolve(binding, address, operation): ICurrentFactResolution {
+      resolve(binding, request): ICurrentFactResolution {
         const key = binding.path.join('/');
         const root = roots.get(key);
         if (root === undefined) {
           return { kind: 'unavailable' };
         }
-        if (operation === 'implementation') {
+        if (request.kind === 'implementation') {
           return { kind: 'available', fact: root };
         }
-        return { kind: 'available', fact: observe(root, address, operation) };
+        if (request.kind === 'selected') {
+          return { kind: 'available', fact: observe(root, request.address, request.operation) };
+        }
+        return { kind: 'unavailable' };
       },
     },
     set(binding, root) {
@@ -82,6 +84,150 @@ describe('semantic tracking observer', () => {
       .toThrow(/observer-owned|owned/i);
     expect(() => { Reflect.apply(observer.materialization.read, observer.materialization, [foreign, 'name']); })
       .toThrow(/observer-owned|owned/i);
+  });
+
+  test('detached materialization record capabilities retain selected facts, projections, and collection order', () => {
+    const { recordSelected, recordProjection, recordCollectionOrder } = observer.materialization;
+    const selected: ISelectedFact = {
+      operation: 'value',
+      address: [{ kind: 'property', key: 'name' }],
+      fact: 'Ada',
+    };
+    const projection: IValueProjectionFact = {
+      descriptor: {
+        address: [{ kind: 'property', key: 'name' }],
+        operation: 'value',
+        traversal: { kind: 'exhaustive', complete: true },
+      },
+      members: [['user-a', 'Ada']],
+    };
+    const captures = [
+      observer.capture(() => recordSelected(binding, selected)),
+      observer.capture(() => recordProjection(binding, projection)),
+      observer.capture(() => recordCollectionOrder(binding, ['user-a', 'user-b'])),
+    ];
+
+    expect(captures.map(capture => capture.observations.length)).toEqual([1, 1, 1]);
+    expect(captures.map(capture => capture.observations[0]?.kind))
+      .toEqual(['fact', 'projection', 'collection-order']);
+    expect(captures[0]?.observations[0]).toMatchObject({
+      address: selected.address,
+      operation: 'value',
+      selection: { kind: 'selected', operation: 'value', address: selected.address },
+    });
+    expect(captures[1]?.observations[0]).toMatchObject({
+      selection: { kind: 'projection', descriptor: projection.descriptor },
+    });
+    expect(captures[2]?.observations[0]).toMatchObject({
+      selection: { kind: 'collection-order', keys: ['user-a', 'user-b'] },
+    });
+  });
+
+  test('materialization record capabilities leave inputs untouched when no capture frame is active', () => {
+    let digestCalls = 0;
+    let inspections = 0;
+    const host: IMachine = {
+      ...machine,
+      sha256(input: string): string {
+        digestCalls += 1;
+        return machine.sha256(input);
+      },
+    };
+    const isolated = createTrackingObserver(host);
+    const inspectable = <T extends object>(value: T): T => new Proxy(value, {
+      get(target, property, receiver): unknown {
+        inspections += 1;
+        return Reflect.get(target, property, receiver);
+      },
+      getOwnPropertyDescriptor(target, property): PropertyDescriptor | undefined {
+        inspections += 1;
+        return Reflect.getOwnPropertyDescriptor(target, property);
+      },
+      ownKeys(target): Array<string | symbol> {
+        inspections += 1;
+        return Reflect.ownKeys(target);
+      },
+    });
+    const { recordSelected, recordProjection, recordCollectionOrder } = isolated.materialization;
+    const selected: ISelectedFact = inspectable({
+      operation: 'value',
+      address: [{ kind: 'property', key: 'name' }],
+      fact: 'Ada',
+    });
+    const projection: IValueProjectionFact = inspectable({
+      descriptor: {
+        address: [{ kind: 'property', key: 'name' }],
+        operation: 'value',
+        traversal: { kind: 'exhaustive', complete: true },
+      },
+      members: [['author-1', 'Ada']],
+    });
+    const keys = inspectable(['author-1']);
+    const suppliedBinding: ITrackingBinding = inspectable({ path: ['analysis', 'author'] });
+
+    expect(() => recordSelected(suppliedBinding, selected)).not.toThrow();
+    expect(() => recordProjection(suppliedBinding, projection)).not.toThrow();
+    expect(() => recordCollectionOrder(suppliedBinding, keys)).not.toThrow();
+    expect(inspections).toBe(0);
+    expect(digestCalls).toBe(0);
+  });
+
+  test('detached materialization record capabilities reject closed inherited frames before inspecting content', async () => {
+    let digestCalls = 0;
+    let contentReads = 0;
+    const host: IMachine = {
+      ...machine,
+      sha256(input: string): string {
+        digestCalls += 1;
+        return machine.sha256(input);
+      },
+    };
+    const isolated = createTrackingObserver(host);
+    const { recordSelected, recordProjection, recordCollectionOrder } = isolated.materialization;
+    const selected: ISelectedFact = {
+      get operation(): 'value' { contentReads += 1; return 'value'; },
+      address: [{ kind: 'property', key: 'name' }],
+      fact: 'Ada',
+    };
+    const projection: IValueProjectionFact = {
+      get descriptor(): IValueProjectionFact['descriptor'] {
+        contentReads += 1;
+        return {
+          address: [{ kind: 'property', key: 'name' }],
+          operation: 'value',
+          traversal: { kind: 'exhaustive', complete: true },
+        };
+      },
+      members: [['user-a', 'Ada']],
+    };
+    const keys = new Proxy(['user-a', 'user-b'], {
+      get(target, property, receiver): unknown {
+        contentReads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    let detached: Promise<readonly unknown[]> = Promise.resolve([]);
+
+    await isolated.captureAsync(async () => {
+      detached = (async () => {
+        await gate;
+        const attempts: Array<Promise<unknown>> = [
+          Promise.resolve().then(() => recordSelected(binding, selected)),
+          Promise.resolve().then(() => recordProjection(binding, projection)),
+          Promise.resolve().then(() => recordCollectionOrder(binding, keys)),
+        ];
+        return Promise.all(attempts.map(attempt => attempt.catch((error: unknown) => error)));
+      })();
+    });
+
+    release();
+    const errors = await detached;
+    expect(errors).toHaveLength(3);
+    expect(errors.every(error => error instanceof Error && /closed/i.test(error.message))).toBe(true);
+    expect(contentReads).toBe(0);
+    expect(digestCalls).toBe(0);
   });
 
   test('synchronous capture rejects promises and ordinary thenable results', () => {
@@ -196,86 +342,127 @@ describe('semantic tracking observer', () => {
     expect(observer.compareCurrent(captured, source.provider).kind).toBe('equal');
   });
 
-  test('current fact validation rejects accessors without invoking envelope or address getters', () => {
-    const tracked = observer.tracked({ name: 'Ada' }, binding);
-    const capture = observer.capture(() => tracked.name);
-    let getterCalls = 0;
-    const getter = () => { getterCalls += 1; return 'value'; };
-    const cases: unknown[] = [
-      Object.defineProperty({ address: [], fact: 'Ada' }, 'operation', { get: getter }),
-      Object.defineProperty({ operation: 'value', fact: 'Ada' }, 'address', { get: getter }),
-      Object.defineProperty({ operation: 'value', address: [] }, 'fact', { get: getter }),
-      {
-        operation: 'value',
-        address: [Object.defineProperty({ key: 'name' }, 'kind', { get: getter })],
-        fact: 'Ada',
-      },
-      {
-        operation: 'value',
-        address: [Object.defineProperty({ kind: 'property' }, 'key', { get: getter })],
-        fact: 'Ada',
-      },
-      {
-        operation: 'value',
-        address: [Object.defineProperty({ kind: 'index' }, 'index', { get: getter })],
-        fact: 'Ada',
-      },
+  test('matches selected addresses by segment meaning rather than object member order', () => {
+    const propertyCapture = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
+    const indexCapture = observer.capture(() => observer.tracked(['Ada'], binding)[0]);
+    const compareFact = <T,>(capture: IObservationCapture<T>, fact: ISelectedFact) => observer.compareCurrent(capture, {
+      resolve: () => ({ kind: 'available', fact }),
+    });
+
+    expect(compareFact(propertyCapture, {
+      operation: 'value', address: [{ key: 'name', kind: 'property' }], fact: 'Ada',
+    }).kind).toBe('equal');
+    expect(compareFact(indexCapture, {
+      operation: 'value', address: [{ index: 0, kind: 'index' }], fact: 'Ada',
+    }).kind).toBe('equal');
+
+    expect(compareFact(propertyCapture, {
+      operation: 'value', address: [{ key: 'other', kind: 'property' }], fact: 'Ada',
+    }).kind).toBe('incompatible');
+    expect(compareFact(propertyCapture, {
+      operation: 'value', address: [{ index: 0, kind: 'index' }], fact: 'Ada',
+    }).kind).toBe('incompatible');
+    expect(compareFact(indexCapture, {
+      operation: 'value', address: [{ index: 1, kind: 'index' }], fact: 'Ada',
+    }).kind).toBe('incompatible');
+    expect(compareFact(indexCapture, {
+      operation: 'value', address: [{ key: '0', kind: 'property' }], fact: 'Ada',
+    }).kind).toBe('incompatible');
+  });
+
+  test('classifies unsupported selected provider payloads as incompatible', () => {
+    const captured = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
+    const malformed = {
+      operation: 'value',
+      address: [{ kind: 'property', key: 'name' }],
+      fact: () => 'functions are not selected value data',
+    };
+
+    expect(observer.compareCurrent(captured, {
+      resolve: () => ({ kind: 'available', fact: malformed }),
+    }).kind).toBe('incompatible');
+  });
+
+  test('classifies malformed selected envelopes and addresses as incompatible', () => {
+    const captured = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
+    const sparseAddress = new Array<unknown>(1);
+    const malformed: unknown[] = [
+      { operation: 'not-an-operation', address: [{ kind: 'property', key: 'name' }], fact: 'Ada' },
+      { operation: 'value', address: sparseAddress, fact: 'Ada' },
+      { operation: 'value', address: [{ kind: 'index', index: -1 }], fact: 'Ada' },
+      { operation: 'value', address: [{ kind: 'property', key: 'name', extra: true }], fact: 'Ada' },
     ];
 
-    for (const fact of cases) {
-      expect(observer.compareCurrent(capture, {
+    for (const fact of malformed) {
+      expect(observer.compareCurrent(captured, {
         resolve: () => ({ kind: 'available', fact }),
-      }).kind).toBe('unavailable');
+      }).kind).toBe('incompatible');
+    }
+  });
+
+  test('compares an exact compatible fingerprint request without asking for payload and rejects mismatched metadata descriptors', () => {
+    const captured = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
+    const expected = captured.observations[0];
+    if (expected === undefined) { throw new Error('Expected selected evidence'); }
+    let resolutions = 0;
+    const sameSelection: ICurrentFactResolution = {
+      kind: 'compatible-fingerprint',
+      selection: expected.selection,
+      encodingVersion: 'MDO1',
+      fingerprint: expected.fingerprint,
+    };
+    const equal = observer.compareCurrent(captured, {
+      resolve(_binding, request) {
+        resolutions += 1;
+        expect(request).toEqual(expected.selection);
+        return sameSelection;
+      },
+    });
+    expect(equal.kind).toBe('equal');
+    expect(resolutions).toBe(1);
+
+    const differentFingerprint = `${expected.fingerprint.startsWith('0') ? '1' : '0'}${expected.fingerprint.slice(1)}`;
+    expect(observer.compareCurrent(captured, {
+      resolve(_binding, request) {
+        return { kind: 'compatible-fingerprint', selection: request, encodingVersion: 'MDO1', fingerprint: differentFingerprint };
+      },
+    }).kind).toBe('changed');
+    expect(observer.compareCurrent(captured, {
+      resolve(_binding, request) {
+        return {
+          kind: 'compatible-fingerprint',
+          selection: { ...request, address: [{ kind: 'property', key: 'other' }] },
+          encodingVersion: 'MDO1',
+          fingerprint: expected.fingerprint,
+        };
+      },
+    }).kind).toBe('incompatible');
+  });
+
+  test('rejects accessor-backed current fact envelopes without invoking provider getters', () => {
+    const captured = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
+    let getterCalls = 0;
+    const badOperation = Object.defineProperties({}, {
+      operation: { enumerable: true, get() { getterCalls += 1; return 'value'; } },
+      address: { enumerable: true, value: [{ kind: 'property', key: 'name' }] },
+      fact: { enumerable: true, value: 'Ada' },
+    });
+    const badSegment = {
+      operation: 'value',
+      address: [{
+        get kind(): 'property' { getterCalls += 1; return 'property'; },
+        key: 'name',
+      }],
+      fact: 'Ada',
+    };
+
+    for (const fact of [badOperation, badSegment]) {
+      expect(observer.compareCurrent(captured, {
+        resolve: () => ({ kind: 'available', fact }),
+      }).kind).toBe('incompatible');
+
     }
     expect(getterCalls).toBe(0);
-  });
-
-  test('malformed and unsupported current facts are unavailable instead of throwing', () => {
-    const tracked = observer.tracked({ name: 'Ada' }, binding);
-    const capture = observer.capture(() => tracked.name);
-    const sparseAddress = new Array<unknown>(1);
-    const unsupportedRecord = Object.defineProperty({}, 'secret', {
-      enumerable: true,
-      get() { throw new Error('unsupported data getter was invoked'); },
-    });
-    const cases: unknown[] = [
-      { operation: 'value', address: [{ kind: 'index', index: -1 }], fact: 'Ada' },
-      { operation: 'own', address: [], fact: 'not-a-boolean' },
-      { operation: 'value', address: sparseAddress, fact: 'Ada' },
-      { operation: 'value', address: [], fact: unsupportedRecord },
-      { operation: 'value', address: [], fact: () => 'unsupported data function' },
-    ];
-
-    for (const fact of cases) {
-      expect(observer.compareCurrent(capture, {
-        resolve: () => ({ kind: 'available', fact }),
-      }).kind).toBe('unavailable');
-    }
-  });
-
-  test('current fact comparison preserves Machine SHA failures', () => {
-    const failure = new TypeError('host digest failed');
-    let digestUnavailable = false;
-    const host: IMachine = {
-      ...machine,
-      sha256(input: string): string {
-        if (digestUnavailable) {
-          throw failure;
-        }
-        return machine.sha256(input);
-      },
-    };
-    const isolated = createTrackingObserver(host);
-    const tracked = isolated.tracked({ name: 'Ada' }, binding);
-    const capture = isolated.capture(() => tracked.name);
-    digestUnavailable = true;
-
-    expect(() => isolated.compareCurrent(capture, {
-      resolve: () => ({
-        kind: 'available',
-        fact: { operation: 'value', address: [{ kind: 'property', key: 'name' }], fact: 'Ada' },
-      }),
-    })).toThrow(failure);
   });
 
   test('rebinding an intermediate object keeps equal consumed values and compares later changes at the new path', () => {
@@ -394,6 +581,77 @@ describe('semantic tracking observer', () => {
     })).toThrow(failure);
   });
 
+  test('classifies unsupported materialized output as incompatible', () => {
+    const outputCapture = observer.capture(() => observer.snapshotOutput(observer.tracked({ result: 'Ada' }, binding)));
+
+    expect(observer.compareCurrent(outputCapture, {
+      resolve: () => ({ kind: 'available', fact: () => 'functions are not materialized data' }),
+    }).kind).toBe('incompatible');
+  });
+
+  test('classifies unsupported collection order as incompatible', () => {
+    const orderCapture = observer.capture(() => observer.materialization.recordCollectionOrder(binding, ['member-a', 'member-b']));
+    const unsupportedOrder = ['member-a', 'member-b'];
+    Object.defineProperty(unsupportedOrder, 'hidden', { value: 'outside selected order data' });
+
+    expect(observer.compareCurrent(orderCapture, {
+      resolve: () => ({ kind: 'available', fact: unsupportedOrder }),
+    }).kind).toBe('incompatible');
+  });
+
+  test('materialized output and collection order digest failures remain host errors', () => {
+    const failure = new TypeError('host digest failed');
+    let digestUnavailable = false;
+    const host: IMachine = {
+      ...machine,
+      sha256(input: string): string {
+        if (digestUnavailable) {
+          throw failure;
+        }
+        return machine.sha256(input);
+      },
+    };
+    const isolated = createTrackingObserver(host);
+    const tracked = isolated.tracked({ result: 'Ada' }, binding);
+    const outputCapture = isolated.capture(() => isolated.snapshotOutput(tracked));
+    const orderCapture = isolated.capture(() => isolated.materialization.recordCollectionOrder(binding, ['member-a', 'member-b']));
+    digestUnavailable = true;
+
+    expect(() => isolated.compareCurrent(outputCapture, {
+      resolve: () => ({ kind: 'available', fact: { result: 'Ada' } }),
+    })).toThrow(failure);
+    expect(() => isolated.compareCurrent(orderCapture, {
+      resolve: () => ({ kind: 'available', fact: ['member-a', 'member-b'] }),
+    })).toThrow(failure);
+  });
+
+  test('selected fact digest failures remain host errors', () => {
+    const failure = new TypeError('host digest failed');
+    let digestUnavailable = false;
+    const host: IMachine = {
+      ...machine,
+      sha256(input: string): string {
+        if (digestUnavailable) {
+          throw failure;
+        }
+        return machine.sha256(input);
+      },
+    };
+    const isolated = createTrackingObserver(host);
+    const tracked = isolated.tracked({ name: 'Ada' }, binding);
+    const capture = isolated.capture(() => tracked.name);
+    const currentFact = {
+      operation: 'value',
+      address: [{ kind: 'property', key: 'name' }],
+      fact: 'Ada',
+    };
+    digestUnavailable = true;
+
+    expect(() => isolated.compareCurrent(capture, {
+      resolve: () => ({ kind: 'available', fact: currentFact }),
+    })).toThrow(failure);
+  });
+
   test('function-source fingerprints preserve distinct unpaired UTF-16 surrogate code units', () => {
     const highSurrogate = String.fromCharCode(0xd800);
     const lowSurrogate = String.fromCharCode(0xd801);
@@ -460,6 +718,274 @@ describe('semantic tracking observer', () => {
     const cachedFailure = observer.capture(() => catching.get());
     expect(firstFailure.value).toBe('caught');
     expect(firstFailure.observations.map(item => item.fingerprint)).toEqual(cachedFailure.observations.map(item => item.fingerprint));
+  });
+
+  test('cached derivations replay materialized output, projection, and order facts on both success and failure', () => {
+    const source = observer.tracked({ profile: { name: 'Ada' } }, binding);
+    const projection = {
+      descriptor: {
+        address: [{ kind: 'property' as const, key: 'name' }],
+        operation: 'value' as const,
+        traversal: { kind: 'exhaustive' as const, complete: true as const },
+      },
+      members: [['user-a', 'Ada']] as const,
+    };
+    const keys = ['user-a', 'user-b'];
+    let successCalls = 0;
+    const success = observer.derived(() => {
+      successCalls += 1;
+      observer.snapshotOutput(source.profile);
+      observer.materialization.recordProjection(binding, projection);
+      observer.materialization.recordCollectionOrder(binding, keys);
+      return 'complete';
+    });
+    const firstSuccess = observer.capture(() => success.get());
+    const cachedSuccess = observer.capture(() => success.get());
+
+    expect(firstSuccess.value).toBe('complete');
+    expect(firstSuccess.observations.map(item => item.kind).sort())
+      .toEqual(['collection-order', 'materialized-output', 'projection']);
+    expect(cachedSuccess.observations.map(item => item.fingerprint))
+      .toEqual(firstSuccess.observations.map(item => item.fingerprint));
+    expect(successCalls).toBe(1);
+
+    const failure = new Error('cached selected projection failed');
+    let failureCalls = 0;
+    const failed = observer.derived(() => {
+      failureCalls += 1;
+      observer.snapshotOutput(source.profile);
+      observer.materialization.recordProjection(binding, projection);
+      observer.materialization.recordCollectionOrder(binding, keys);
+      throw failure;
+    });
+    const captureFailure = () => observer.capture(() => {
+      try {
+        failed.get();
+      } catch (error: unknown) {
+        if (error !== failure) { throw error; }
+      }
+      return 'caught';
+    });
+    const firstFailure = captureFailure();
+    const cachedFailure = captureFailure();
+
+    expect(firstFailure.value).toBe('caught');
+    expect(firstFailure.observations.map(item => item.kind).sort())
+      .toEqual(['collection-order', 'materialized-output', 'projection']);
+    expect(cachedFailure.observations.map(item => item.fingerprint))
+      .toEqual(firstFailure.observations.map(item => item.fingerprint));
+    expect(failureCalls).toBe(1);
+  });
+
+  test('retains only projection descriptor and digest while keeping visited coverage explicit', () => {
+    const selectedPayload = 'SELECTED-MEMBER-PAYLOAD-'.concat('x'.repeat(256));
+    const exhaustive: IValueProjectionFact = {
+      descriptor: {
+        address: [{ kind: 'property' as const, key: 'name' }],
+        operation: 'value',
+        traversal: { kind: 'exhaustive', complete: true },
+      },
+      members: Array.from({ length: 64 }, (_unused, index) => [`member-${index}`, `${selectedPayload}-${index}`] as const),
+    };
+    const captured = observer.capture(() => observer.materialization.recordProjection(binding, exhaustive));
+    expect(captured.observations).toHaveLength(1);
+    const projection = captured.observations[0];
+    expect(projection?.kind).toBe('projection');
+    expect(projection?.fingerprint).toMatch(/^[0-9a-f]{64}$/u);
+    expect(projection && 'encoded' in projection).toBe(false);
+    expect(JSON.stringify(projection)).not.toContain(selectedPayload);
+
+    const small: IValueProjectionFact = { ...exhaustive, members: exhaustive.members.slice(0, 1) };
+    const capturedSmall = observer.capture(() => observer.materialization.recordProjection(binding, small));
+    expect(JSON.stringify(capturedSmall.observations[0])).toHaveLength(JSON.stringify(projection).length);
+    const current = (fact: IValueProjectionFact): { resolve: (_binding: ITrackingBinding, request: ICurrentFactRequest) => ICurrentFactResolution } => ({
+      resolve(_binding, request) {
+        return request.kind === 'projection' ? { kind: 'available', fact } : { kind: 'unavailable' };
+      },
+    });
+    expect(observer.compareCurrent(captured, current(exhaustive)).kind).toBe('equal');
+    expect(observer.compareCurrent(captured, current({ ...exhaustive, members: [...exhaustive.members, ['new-member', 'new value']] })).kind)
+      .toBe('changed');
+
+    const visited: IValueProjectionFact = {
+      descriptor: {
+        ...exhaustive.descriptor,
+        traversal: { kind: 'visited', complete: false, keys: ['member-7', 'member-2'] },
+      },
+      members: [['member-7', selectedPayload], ['member-2', `${selectedPayload}-2`]],
+    };
+    const capturedVisited = observer.capture(() => observer.materialization.recordProjection(binding, visited));
+    expect(capturedVisited.observations).toHaveLength(1);
+    expect(capturedVisited.observations[0]?.selection).toMatchObject({
+      kind: 'projection',
+      descriptor: { traversal: { kind: 'visited', complete: false, keys: ['member-7', 'member-2'] } },
+    });
+    expect(JSON.stringify(capturedVisited.observations[0])).not.toContain(selectedPayload);
+  });
+
+  test('classifies a valid projection with a different selected address or traversal as incompatible before hashing', () => {
+    const failure = new TypeError('projection comparison must not hash a mismatched selection');
+    let digestUnavailable = false;
+    const host: IMachine = {
+      ...machine,
+      sha256(input: string): string {
+        if (digestUnavailable) {
+          throw failure;
+        }
+        return machine.sha256(input);
+      },
+    };
+    const isolated = createTrackingObserver(host);
+    const exhaustive: IValueProjectionFact = {
+      descriptor: {
+        address: [
+          { kind: 'property', key: 'profile' },
+          { kind: 'property', key: 'name' },
+        ],
+        operation: 'value',
+        traversal: { kind: 'exhaustive', complete: true },
+      },
+      members: [['member-a', 'Ada'], ['member-b', 'Bo']],
+    };
+    const capture = isolated.capture(() => isolated.materialization.recordProjection(binding, exhaustive));
+    digestUnavailable = true;
+    const changedAddress: IValueProjectionFact = {
+      ...exhaustive,
+      descriptor: {
+        ...exhaustive.descriptor,
+        address: [
+          { kind: 'property', key: 'profile' },
+          { kind: 'property', key: 'age' },
+        ],
+      },
+    };
+    const changedTraversal: IValueProjectionFact = {
+      ...exhaustive,
+      descriptor: {
+        ...exhaustive.descriptor,
+        traversal: { kind: 'visited', complete: false, keys: ['member-a'] },
+      },
+      members: [['member-a', 'Ada']],
+    };
+
+    for (const fact of [changedAddress, changedTraversal]) {
+      expect(isolated.compareCurrent(capture, {
+        resolve: () => ({ kind: 'available', fact }),
+      }).kind).toBe('incompatible');
+    }
+  });
+
+  test('projection descriptors compare semantically while matching changed content still hashes', () => {
+    const failure = new TypeError('projection digest failed');
+    let digestUnavailable = false;
+    const host: IMachine = {
+      ...machine,
+      sha256(input: string): string {
+        if (digestUnavailable) {
+          throw failure;
+        }
+        return machine.sha256(input);
+      },
+    };
+    const isolated = createTrackingObserver(host);
+    const capturedFact: IValueProjectionFact = {
+      descriptor: {
+        address: [{ kind: 'property', key: 'name' }],
+        operation: 'value',
+        traversal: { kind: 'exhaustive', complete: true },
+      },
+      members: [['member-a', 'Ada'], ['member-b', 'Bo']],
+    };
+    const capture = isolated.capture(() => isolated.materialization.recordProjection(binding, capturedFact));
+    const semanticallyEqual: IValueProjectionFact = {
+      descriptor: {
+        traversal: { complete: true, kind: 'exhaustive' },
+        operation: 'value',
+        address: [{ key: 'name', kind: 'property' }],
+      },
+      members: [['member-b', 'Bo'], ['member-a', 'Ada']],
+    };
+    const changedContent: IValueProjectionFact = {
+      ...semanticallyEqual,
+      members: [['member-b', 'Bo'], ['member-a', 'Grace']],
+    };
+    const compare = (fact: IValueProjectionFact) => isolated.compareCurrent(capture, {
+      resolve: () => ({ kind: 'available', fact }),
+    });
+
+    expect(compare(semanticallyEqual).kind).toBe('equal');
+    expect(compare(changedContent).kind).toBe('changed');
+    digestUnavailable = true;
+    expect(() => compare(changedContent)).toThrow(failure);
+  });
+
+  test('projection descriptor comparison accepts Value-normalized null-prototype records', () => {
+    const ordinary: IValueProjectionFact = {
+      descriptor: {
+        address: [{ kind: 'property', key: 'name' }],
+        operation: 'value',
+        traversal: { kind: 'exhaustive', complete: true },
+      },
+      members: [['member-a', 'Ada']],
+    };
+    const segment: IValueProjectionFact['descriptor']['address'][number] = { kind: 'property', key: 'name' };
+    const traversal: IValueProjectionFact['descriptor']['traversal'] = { kind: 'exhaustive', complete: true };
+    Object.setPrototypeOf(segment, null);
+    Object.setPrototypeOf(traversal, null);
+    const descriptor: IValueProjectionFact['descriptor'] = {
+      address: [segment],
+      operation: 'value',
+      traversal,
+    };
+    Object.setPrototypeOf(descriptor, null);
+    const nullPrototype: IValueProjectionFact = { descriptor, members: [['member-a', 'Ada']] };
+    const capture = observer.capture(() => observer.materialization.recordProjection(binding, ordinary));
+
+    expect(encodeProjectionFact(nullPrototype)).toBe(encodeProjectionFact(ordinary));
+    expect(observer.compareCurrent(capture, {
+      resolve: () => ({ kind: 'available', fact: nullPrototype }),
+    }).kind).toBe('equal');
+  });
+
+  test('visited projection selection preserves ordered keys, membership, and completion semantics', () => {
+    const selected: IValueProjectionFact = {
+      descriptor: {
+        address: [{ kind: 'property', key: 'name' }],
+        operation: 'value',
+        traversal: { kind: 'visited', complete: false, keys: ['member-a', 'member-b'] },
+      },
+      members: [['member-a', 'Ada'], ['member-b', 'Bo']],
+    };
+    const capture = observer.capture(() => observer.materialization.recordProjection(binding, selected));
+    const reorderedVisitedKeys: IValueProjectionFact = {
+      ...selected,
+      descriptor: {
+        ...selected.descriptor,
+        traversal: { kind: 'visited', complete: false, keys: ['member-b', 'member-a'] },
+      },
+      members: [['member-b', 'Bo'], ['member-a', 'Ada']],
+    };
+    const differentVisitedMembers: IValueProjectionFact = {
+      ...selected,
+      descriptor: {
+        ...selected.descriptor,
+        traversal: { kind: 'visited', complete: false, keys: ['member-a', 'member-c'] },
+      },
+      members: [['member-a', 'Ada'], ['member-c', 'Cy']],
+    };
+    const exhaustive: IValueProjectionFact = {
+      ...selected,
+      descriptor: {
+        ...selected.descriptor,
+        traversal: { kind: 'exhaustive', complete: true },
+      },
+    };
+
+    for (const fact of [reorderedVisitedKeys, differentVisitedMembers, exhaustive]) {
+      expect(observer.compareCurrent(capture, {
+        resolve: () => ({ kind: 'available', fact }),
+      }).kind).toBe('incompatible');
+    }
   });
 
   test('local replacement invalidates tags and replaces the semantic branch observations', () => {

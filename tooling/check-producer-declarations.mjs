@@ -4,7 +4,7 @@
  * this check makes that failure explicit and forbids source aliases in any
  * checked package or declaration-consumer tsconfig.
  */
-import { readdir, stat } from 'node:fs/promises';
+import { readdir, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -83,7 +83,10 @@ async function inspectConfig(filename) {
         problems.push(`Missing producer declaration: ${filename}: ${alias} -> ${absolute}`);
       } else {
         const expected = expectedDeclaration(alias, owner);
-        if (!expected || absolute !== expected) {
+        const approvedSymlink = expected !== null && await realpath(absolute).then(async actual =>
+          actual === await realpath(expected).catch(() => ''),
+        ).catch(() => false);
+        if (!expected || (absolute !== expected && !approvedSymlink)) {
           problems.push(`Unapproved declared package alias or tier: ${filename}: ${alias} -> ${absolute}`);
         }
       }

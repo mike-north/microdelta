@@ -11,6 +11,9 @@ export function decodeSnapshot(encoded: string): unknown;
 export function decodeValue(encoded: string): unknown;
 
 // @alpha
+export function encodeProjectionFact(fact: IValueProjectionFact): string;
+
+// @alpha
 export function encodeSelectedFact(selectedFact: ISelectedFact): string;
 
 // @alpha
@@ -49,6 +52,38 @@ export interface ISelectedFact {
 export interface ISha256Capability {
     sha256(input: string): string;
 }
+
+// @alpha
+export interface IValueProjectionDescriptor {
+    readonly address: readonly IAddressSegment[];
+    readonly operation: 'value';
+    readonly traversal: IValueProjectionTraversal;
+}
+
+// @alpha
+export interface IValueProjectionFact {
+    readonly descriptor: IValueProjectionDescriptor;
+    readonly members: readonly IValueProjectionMember[];
+}
+
+// @alpha
+export type IValueProjectionMember = readonly [key: string, value: unknown];
+
+// @alpha
+export type IValueProjectionTraversal = {
+    readonly kind: 'exhaustive';
+    readonly complete: true;
+} | {
+    readonly kind: 'visited';
+    readonly complete: false;
+    readonly keys: readonly string[];
+};
+
+// @alpha
+export function normalizeProjectionDescriptor(value: unknown): IValueProjectionDescriptor;
+
+// @alpha
+export function normalizeProjectionFact(fact: IValueProjectionFact): IValueProjectionFact;
 
 // @alpha
 export function observe(root: unknown, address: readonly IAddressSegment[], operation: IOperation): ISelectedFact;

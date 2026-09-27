@@ -34,6 +34,11 @@ test('implemented contexts and facade follow their directed package edges', asyn
     ['packages/tracking', "import type { Store } from '@microdelta/history';", false],
     ['packages/history', "import { nameOf } from '@microdelta/definition';", false],
     ['packages/history', "import type { Store } from 'microdelta';", false],
+    ['packages/materialization', "import type { ICompletedResultReader } from '@microdelta/history';", true],
+    ['packages/materialization', "import type { ITrackingObserver } from '@microdelta/tracking';", true],
+    ['packages/materialization', "import type { IValue } from '@microdelta/value';", true],
+    ['packages/materialization', "import type { ISha256Capability } from '@microdelta/machine';", false],
+    ['packages/materialization', "import { createMemoryStore } from 'microdelta';", false],
   ]) {
     const messages = await diagnostics(owner, source);
     assert.deepEqual(messages.map(message => message.ruleId), allowed ? [] : [rule], `${owner}: ${source}: ${JSON.stringify(messages)}`);

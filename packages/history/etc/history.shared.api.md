@@ -85,6 +85,36 @@ export interface GenerationRow {
 // @public
 export type GenerationState = 'claimed' | 'current' | 'superseded' | 'abandoned';
 
+// @alpha
+export type IAddressSegment =
+/** A literal string-keyed record lookup, including keys containing punctuation. */
+    {
+    readonly kind: 'property';
+    readonly key: string;
+}
+/** A positional array lookup; it does not designate a logical member identity. */
+| {
+    readonly kind: 'index';
+    readonly index: number;
+};
+
+// @alpha
+export interface ICompletedProjectionReader {
+    readProjection(reference: ICompletedResultReference, descriptor: IValueProjectionDescriptor): IValueProjectionFact;
+}
+
+// @alpha
+export interface ICompletedResultReader {
+    readSelected(reference: ICompletedResultReference, request: ISelectedReadRequest): ISelectedFact;
+    resolveFingerprint(reference: ICompletedResultReference, request: ISelectedFingerprintRequest): ISelectedFingerprintResolution;
+}
+
+// @alpha
+export interface ICompletedResultReference {
+    readonly kind: 'completed-result';
+    readonly locator: string;
+}
+
 // @public
 export type Identity = {
     kind: 'type';
@@ -108,6 +138,76 @@ export type Identity = {
 export class InvalidStorePatchError extends Error {
     constructor(message?: string);
 }
+
+// @alpha
+export type IOperation = 'value' | 'own' | 'membership' | 'length' | 'keys';
+
+// @alpha
+export interface ISelectedFact {
+    readonly address: readonly IAddressSegment[];
+    readonly fact: unknown;
+    readonly operation: IOperation;
+}
+
+// @alpha
+export type ISelectedFingerprintRequest = {
+    readonly kind: 'selected';
+    readonly operation: IOperation;
+    readonly address: readonly IAddressSegment[];
+    readonly encoding: 'MDO1';
+} | {
+    readonly kind: 'projection';
+    readonly descriptor: IValueProjectionDescriptor;
+    readonly encoding: 'MDP1';
+} | {
+    readonly kind: 'materialized-output';
+    readonly address: readonly IAddressSegment[];
+    readonly encoding: 'MDS1';
+};
+
+// @alpha
+export type ISelectedFingerprintResolution = {
+    readonly kind: 'compatible';
+    readonly fingerprint: string;
+} | {
+    readonly kind: 'unavailable';
+} | {
+    readonly kind: 'incompatible';
+} | {
+    readonly kind: 'ambiguous';
+};
+
+// @alpha
+export interface ISelectedReadRequest {
+    readonly address: readonly IAddressSegment[];
+    readonly operation: IOperation;
+}
+
+// @alpha
+export interface IValueProjectionDescriptor {
+    readonly address: readonly IAddressSegment[];
+    readonly operation: 'value';
+    readonly traversal: IValueProjectionTraversal;
+}
+
+// @alpha
+export interface IValueProjectionFact {
+    readonly descriptor: IValueProjectionDescriptor;
+    readonly members: readonly IValueProjectionMember[];
+}
+
+// @alpha
+export type IValueProjectionMember = readonly [key: string, value: unknown];
+
+// @alpha
+export type IValueProjectionTraversal = {
+    readonly kind: 'exhaustive';
+    readonly complete: true;
+} | {
+    readonly kind: 'visited';
+    readonly complete: false;
+    readonly keys: readonly string[];
+};
 
 // @public
 export interface MemoryStoreOptions {

@@ -34,10 +34,10 @@ export function missingFoundationGates({ workspace, packages, workflow, extracto
     includes('check:workspace', scripts['check:workspace'], `npm run ${gate}`);
   }
   for (const [gate, commands] of Object.entries({
-    'check:imports': ['eslint -c tooling/context-imports.config.mjs packages'],
+    'check:imports': ['eslint -c tooling/context-imports.config.mjs packages experiments'],
     'check:declarations': ['node tooling/check-producer-declarations.mjs', 'node tooling/history-declaration-shims.mjs --check'],
     'check:fixtures': ['tsc --noEmit -p fixtures/declarations/producer/tsconfig.json', 'eslint fixtures/declarations/producer/src'],
-    'check:experiments': ['tsc --noEmit -p tsconfig.json', 'eslint experiments'],
+    'check:experiments': ['tsc --noEmit -p tsconfig.json', 'tsc --noEmit -p experiments/exp-1/tsconfig.portable.json', 'eslint experiments'],
     'check:suppressions': ['node tooling/check-suppressions.mjs'],
     'check:wiring': ['node tooling/foundation-wiring.mjs'],
   })) {
@@ -45,12 +45,16 @@ export function missingFoundationGates({ workspace, packages, workflow, extracto
       includes(gate, scripts[gate], command);
     }
   }
-  for (const command of ['npm run build', 'npm run test:tooling', 'npm run test --workspaces']) {
+  for (const command of ['npm run build', 'npm run test:tooling', 'npm run test --workspaces', 'npm run test:experiments']) {
     includes('test', scripts.test, command);
   }
   includes('test:tooling', scripts['test:tooling'], 'node --test tooling/*.test.mjs');
   includes('build', scripts.build, 'npm run build:packages');
   includes('build', scripts.build, 'npm run build:fixtures');
+  includes('build', scripts.build, 'npm run build:experiments');
+  includes('build:experiments', scripts['build:experiments'], 'tsc -p experiments/exp-1/tsconfig.test.json');
+  includes('test:experiments', scripts['test:experiments'], 'tsd --typings experiments/exp-1/src/protocol.ts');
+  includes('test:experiments', scripts['test:experiments'], 'jest');
   includes('build:fixtures', scripts['build:fixtures'], 'api-extractor run --config fixtures/declarations/producer/api-extractor.json');
   if ((scripts['build:fixtures'] ?? '').includes('--local')) {
     problems.push('build:fixtures uses local API report rewriting');

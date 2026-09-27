@@ -119,6 +119,29 @@ test('Node boundary permits shadowed names, ECMAScript globals, tests, tooling, 
   }
 });
 
+test('portable experiment source rejects Node access while its explicit test harness may use it', async () => {
+  for (const owner of ['experiments/exp-1', 'experiments/exp-2']) {
+    for (const source of [
+      "import { readFile } from 'node:fs/promises';",
+      "export { serialize } from 'v8';",
+      'void process.env;',
+      'void globalThis.Buffer;',
+      "import '../test/process-entry.js';",
+      "import { internal } from '@microdelta/tracking/src/index.js';",
+      "import { internal } from '@microdelta/unknown';",
+    ]) {
+      const messages = await diagnostics(owner, source);
+      assert.ok(messages.some(message => message.ruleId === rule), `${owner}: ${source}: ${JSON.stringify(messages)}`);
+    }
+    const portable = await diagnostics(owner, 'void Object.keys({ value: 1 });');
+    assert.deepEqual(portable.map(message => message.ruleId), []);
+    const declaredPackage = await diagnostics(owner, "import type { ITracking } from '@microdelta/tracking';");
+    assert.deepEqual(declaredPackage.map(message => message.ruleId), []);
+  }
+  const harness = await diagnostics('experiments/exp-1/test', "import { readFile } from 'node:fs/promises'; void readFile;");
+  assert.ok(harness.every(message => message.ruleId !== rule));
+});
+
 test('Tracking and History production builds exclude ambient Node declarations', async () => {
   for (const packageName of ['tracking', 'history']) {
     const config = JSON.parse(await readFile(path.join(root, `packages/${packageName}/tsconfig.portable.json`), 'utf8'));

@@ -8,5 +8,6 @@
     }
   },
   "files": ["packages/core/src/index.ts"],
-  "include": ["experiments/**/*.ts"]
+  "include": ["experiments/**/*.ts"],
+  "exclude": ["experiments/**/test-d/**"]
 }

@@ -1,0 +1,44 @@
+{
+  "contexts": {
+    "ProducerContext": "@microdelta/exp5-producer",
+    "ConsumerContext": "@microdelta/exp5-consumer"
+  },
+  "objects": {
+    "ProducerContext.Records.RecordEntity": "RecordEntity",
+    "ConsumerContext.Reports.ReportService": "ReportService"
+  },
+  "types": {
+    "String": "string",
+    "RecordEntity": "RecordEntity"
+  },
+  "references": {
+    "RecordEntity": "@microdelta/exp5-producer!RecordEntity:class"
+  },
+  "operations": {
+    "ProducerContext.Records.RecordEntity": ["rename", "_localCode"],
+    "ConsumerContext.Reports.ReportService": ["formatRecord"]
+  },
+  "artifacts": [
+    {
+      "name": "@microdelta/exp5-producer",
+      "entrypoint": ".",
+      "apiJson": "fixture/packages/producer/dist/producer.api.json",
+      "declaration": "fixture/packages/producer/dist/src/index.d.ts"
+    },
+    {
+      "name": "@microdelta/exp5-consumer",
+      "entrypoint": ".",
+      "apiJson": "fixture/packages/consumer/dist/consumer.api.json",
+      "declaration": "fixture/packages/consumer/dist/src/index.d.ts"
+    }
+  ],
+  "unsupported": [
+    "Entity versus Service semantic role",
+    "entity attributes",
+    "standalone function",
+    "interface",
+    "type alias",
+    "protected/private/# class members",
+    "beta/alpha release tiers"
+  ]
+}

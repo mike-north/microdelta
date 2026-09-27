@@ -1,0 +1,8 @@
+{
+  "name": "@microdelta/exp5-consumer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "types": "./dist/api/consumer.public.d.ts",
+  "dependencies": { "@microdelta/exp5-producer": "0.0.0" }
+}

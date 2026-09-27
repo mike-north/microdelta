@@ -103,8 +103,11 @@ describe('semantic tracking observer', () => {
       members: [['user-a', 'Ada']],
     };
     const captures = [
+      // eslint-disable-next-line microdelta/tracked-captures -- The runtime fixture verifies an extracted materialization recorder retains its observer context.
       observer.capture(() => recordSelected(binding, selected)),
+      // eslint-disable-next-line microdelta/tracked-captures -- The runtime fixture verifies an extracted materialization recorder retains its observer context.
       observer.capture(() => recordProjection(binding, projection)),
+      // eslint-disable-next-line microdelta/tracked-captures -- The runtime fixture verifies an extracted materialization recorder retains its observer context.
       observer.capture(() => recordCollectionOrder(binding, ['user-a', 'user-b'])),
     ];
 
@@ -164,12 +167,17 @@ describe('semantic tracking observer', () => {
 
     await isolated.captureAsync(async () => {
       detached = (async () => {
+        // eslint-disable-next-line microdelta/tracked-captures -- This deferred test barrier runs recorder attempts only after the owning capture closes.
         await gate;
-        const attempts: Array<Promise<unknown>> = [
+        const attempts = [
+          // eslint-disable-next-line microdelta/tracked-captures -- This test deliberately calls an extracted recorder after its capture frame closes.
           Promise.resolve().then(() => recordSelected(binding, selected)),
+          // eslint-disable-next-line microdelta/tracked-captures -- This test deliberately calls an extracted recorder after its capture frame closes.
           Promise.resolve().then(() => recordProjection(binding, projection)),
+          // eslint-disable-next-line microdelta/tracked-captures -- This test deliberately calls an extracted recorder after its capture frame closes.
           Promise.resolve().then(() => recordCollectionOrder(binding, keys)),
         ];
+        // eslint-disable-next-line microdelta/tracked-captures -- Native promise aggregation is only test scheduling for late recorder rejection.
         return Promise.all(attempts.map(attempt => attempt.catch((error: unknown) => error)));
       })();
     });
@@ -200,6 +208,7 @@ describe('semantic tracking observer', () => {
     let ownThenReads = 0;
     let ownThenCalls = 0;
     const implementation = () => { calls += 1; return 'called'; };
+    // eslint-disable-next-line microdelta/tracked-captures -- The test tracks a side-effecting callable to verify Promise assimilation does not invoke it.
     const trackedFunction = observer.tracked(implementation, binding);
     const accessorImplementation = () => { calls += 1; return 'accessor called'; };
     // A configurable custom then getter stays opaque and must not run during Promise assimilation.
@@ -210,10 +219,14 @@ describe('semantic tracking observer', () => {
         return () => { ownThenCalls += 1; };
       },
     });
+    // eslint-disable-next-line microdelta/tracked-captures -- The test tracks an accessor-bearing callable to verify Promise assimilation does not inspect it.
     const trackedAccessorFunction = observer.tracked(accessorImplementation, binding);
     const direct = await observer.captureAsync(async () => trackedFunction);
+    // eslint-disable-next-line microdelta/tracked-captures -- Native Promise resolution is the runtime assimilation path under test.
     const resolved = await observer.captureAsync(async () => Promise.resolve(trackedFunction));
+    // eslint-disable-next-line microdelta/tracked-captures -- Native Promise chaining is the runtime assimilation path under test.
     const chained = await observer.captureAsync(async () => Promise.resolve('ready').then(() => trackedFunction));
+    // eslint-disable-next-line microdelta/tracked-captures -- Native Promise resolution is the runtime assimilation path under test.
     const accessor = await observer.captureAsync(async () => Promise.resolve(trackedAccessorFunction));
 
     for (const capture of [direct, resolved, chained]) {
@@ -232,6 +245,7 @@ describe('semantic tracking observer', () => {
     let calls = 0;
     const implementation = () => { calls += 1; return 'called'; };
     Object.defineProperty(implementation, 'then', { configurable: false, value: () => undefined });
+    // eslint-disable-next-line microdelta/tracked-captures -- The test tracks a callable with a non-configurable then property to verify assimilation rejection.
     const trackedFunction = observer.tracked(implementation, binding);
 
     expect(trackedFunction()).toBe('called');
@@ -276,7 +290,8 @@ describe('semantic tracking observer', () => {
 
   test('membership evidence ignores unrelated additions and changes when the selected member is removed', () => {
     const source = createProvider();
-    const captured = observer.capture(() => 'a' in observer.tracked({ a: 1 }, binding));
+    const tracked = observer.tracked({ a: 1 }, binding);
+    const captured = observer.capture(() => 'a' in tracked);
 
     source.set('analysis/author', { a: 1, b: 2 });
     expect(observer.compareCurrent(captured, source.provider).kind).toBe('equal');
@@ -287,7 +302,8 @@ describe('semantic tracking observer', () => {
 
   test('explicit identity reads ignore unread names but change when the identity changes', () => {
     const source = createProvider();
-    const captured = observer.capture(() => observer.tracked({ id: 'author-1', name: 'Ada' }, binding).id);
+    const tracked = observer.tracked({ id: 'author-1', name: 'Ada' }, binding);
+    const captured = observer.capture(() => tracked.id);
 
     source.set('analysis/author', { id: 'author-2', name: 'Ada' });
     expect(observer.compareCurrent(captured, source.provider).kind).toBe('changed');

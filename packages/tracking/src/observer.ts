@@ -149,13 +149,16 @@ export interface ITrackingMaterialization {
   /** Identify wrappers by this observer's private ownership, not by the type brand. */
   owns(value: unknown): value is ITracked<object>;
   /**
-   * Read one materializable member through the ordinary observer operation. The
-   * nominal brand is a compile-time marker, not a source property that can be read.
+   * Read a materializable member through the ordinary observer operation. The
+   * nominal brand is a compile-time marker, not a source property; open indexes
+   * retain possible absence while known members keep their exact value types.
    */
-  read<V extends ITracked<object>, K extends Exclude<keyof V, keyof ITrackedBrand>>(
+  read<V extends ITracked<object>, K extends keyof V>(
     value: V,
-    key: K,
-  ): V[K];
+    key: K & (Extract<K, keyof ITrackedBrand> extends never ? unknown : never),
+  ): V[K]
+    | (K extends string ? string extends keyof V ? undefined : never : never)
+    | (K extends number ? number extends keyof V ? undefined : never : never);
 }
 
 interface IBindingRecord {
@@ -595,12 +598,10 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
     },
     /**
      * Route a selected member read through the wrapper proxy so evaluation records
-     * its fact; the compile-time brand is not a materialized source member.
+     * its fact; open indexes may be absent and the compile-time brand is not a
+     * materialized source member.
      */
-    read<V extends ITracked<object>, K extends Exclude<keyof V, keyof ITrackedBrand>>(
-      value: V,
-      key: K,
-    ): V[K] {
+    read<V extends ITracked<object>, K extends keyof V>(value: V, key: K): V[K] {
       if (!ownership.has(value)) {
         throw new TypeError('Materialization reads require an observer-owned tracked value');
       }

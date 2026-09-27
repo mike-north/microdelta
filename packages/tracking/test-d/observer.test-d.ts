@@ -29,8 +29,11 @@ expectType<ITracked<{ name: string }> | undefined>(optionalAuthor.author);
 const roster = observer.tracked([{ name: 'Ada' }], binding);
 expectType<ITracked<{ name: string }> | undefined>(roster[0]);
 expectType<number>(roster.length);
-expectType<ITracked<{ name: string }>>(observer.materialization.read(roster, 0));
+expectType<ITracked<{ name: string }> | undefined>(observer.materialization.read(roster, 0));
+expectType<ITracked<{ name: string }> | undefined>(observer.materialization.read(roster, 99));
 expectType<number>(observer.materialization.read(roster, 'length'));
+const sparseRoster = observer.tracked(new Array<{ name: string }>(2), binding);
+expectType<ITracked<{ name: string }> | undefined>(observer.materialization.read(sparseRoster, 1));
 expectError(() => {
   roster[0] = { name: 'Grace' };
 });
@@ -43,8 +46,15 @@ const pair = observer.tracked([{ name: 'Ada' }, 'selected'] as const, binding);
 expectType<ITracked<{ readonly name: 'Ada' }>>(pair[0]);
 expectType<'selected'>(pair[1]);
 expectType<2>(pair.length);
+expectType<ITracked<{ readonly name: 'Ada' }>>(observer.materialization.read(pair, '0'));
+expectType<'selected'>(observer.materialization.read(pair, '1'));
 const nested = observer.tracked({ profile: { name: 'Ada' } }, binding);
 expectType<ITracked<{ name: string }>>(observer.materialization.read(nested, 'profile'));
+const dictionary = observer.tracked<Record<string, number>>({ count: 1 }, binding);
+expectType<number | undefined>(observer.materialization.read(dictionary, 'count'));
+const dictionaryKey: string = 'count';
+expectType<number | undefined>(observer.materialization.read(dictionary, dictionaryKey));
+expectError(observer.materialization.read(dictionary, '__microdeltaTracked'));
 function readImportedDeclaration(input: ITracked<{ count: number; enabled: boolean }>): number {
   return input.count;
 }

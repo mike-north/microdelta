@@ -63,22 +63,33 @@ export function validateBody(body) {
 
 /**
  * Webhooks identify the PR, not its current body. Every run, including a rerun
- * of an older event, reads live metadata so stale passing event text is useless.
- * A moved head fails closed rather than attributing evidence to another commit.
+ * of an older event or a dispatch for an automation-created PR, reads live
+ * metadata. A moved head fails closed rather than attributing evidence to
+ * another commit.
  */
-export async function validateEvent(eventName, event, fetchPullRequest) {
+export async function validateEvent(eventName, event, fetchPullRequest, workflowSha) {
   if (eventName === 'push') return [];
-  if (eventName !== 'pull_request') throw new Error('Unsupported metadata event.');
-  if (!Number.isSafeInteger(event?.number) || event.number < 1 ||
-      typeof event?.pull_request?.head?.sha !== 'string') {
+  let number;
+  let eventHead;
+  if (eventName === 'pull_request') {
+    number = event?.number;
+    eventHead = event?.pull_request?.head?.sha;
+  } else if (eventName === 'workflow_dispatch') {
+    // The dispatch ref must be the PR's current head, not a caller-supplied SHA.
+    number = Number(event?.inputs?.pr_number);
+    eventHead = workflowSha;
+  } else {
+    throw new Error('Unsupported metadata event.');
+  }
+  if (!Number.isSafeInteger(number) || number < 1 || typeof eventHead !== 'string') {
     throw new Error('PR event payload is missing its number or head.');
   }
-  const current = await fetchPullRequest(event.number);
-  if (current?.number !== event.number || typeof current?.head?.sha !== 'string' ||
+  const current = await fetchPullRequest(number);
+  if (current?.number !== number || typeof current?.head?.sha !== 'string' ||
       !(typeof current.body === 'string' || current.body === null)) {
     throw new Error('Invalid PR API response.');
   }
-  if (current.head.sha !== event.pull_request.head.sha) {
+  if (current.head.sha !== eventHead) {
     throw new Error('PR head changed; wait for the synchronize run on the current head.');
   }
   return validateBody(current.body);
@@ -113,7 +124,7 @@ async function main(args) {
     const eventName = process.env.GITHUB_EVENT_NAME;
     // Push checks remain runnable without either an event file or API credentials.
     const event = eventName === 'push' ? {} : JSON.parse(await readFile(process.env.GITHUB_EVENT_PATH, 'utf8'));
-    problems = await validateEvent(eventName, event, fetchCurrentPullRequest);
+    problems = await validateEvent(eventName, event, fetchCurrentPullRequest, process.env.GITHUB_SHA);
   } else {
     throw new Error('Usage: node tooling/pr-metadata.mjs --body-file PATH | --github-event');
   }

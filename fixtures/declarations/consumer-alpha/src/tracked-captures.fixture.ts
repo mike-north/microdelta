@@ -1,8 +1,10 @@
 import type { ITracked, ITrackingObserver } from '@microdelta/tracking';
+import type { IMaterialization } from '@microdelta/materialization';
 import type { ITrackedCaptureConfig } from '@microdelta/capture-producer';
 import { forged } from '../../forged/dist/api/forged.alpha.js';
 
 declare const observer: ITrackingObserver;
+declare const materialization: IMaterialization;
 declare const configuration: ITrackedCaptureConfig;
 // Producer declarations must preserve Tracking's actual generated declaration identity.
 const canonicalInput: ITracked<{
@@ -42,6 +44,11 @@ observer.capture(() => trackedCallable(true));
 observer.capture(() => [tracked.nested.count, tracked.optional?.value, tracked.rows[0]?.name]);
 observer.capture(() => importedInput.enabled && importedInput.rows[0]?.name);
 observer.capture(() => importedCallable(importedInput.enabled));
+const lazyMaterialized = materialization.materialize<{ readonly total: number; readonly nested: { readonly value: number } }>(
+  { kind: 'completed-result', locator: 'fixture' },
+  { path: ['fixture'] },
+);
+observer.capture(() => lazyMaterialized.total);
 // eslint-disable-next-line microdelta/tracked-captures -- An alpha-looking declaration is not Tracking's canonical brand.
 observer.capture(() => forged.value);
 observer.capture(() => tracked.enabled && 'enabled' in tracked);

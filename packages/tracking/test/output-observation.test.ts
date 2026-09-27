@@ -36,6 +36,7 @@ describe('explicit tracked-output observation', () => {
     const source = Object.assign(Object.create(prototype) as { readonly before?: string; readonly sparse: number[]; readonly after: string }, { after: 'end', sparse });
     Object.defineProperty(source, 'before', { value: 'first', enumerable: true, configurable: true, writable: true });
     const keys = Object.keys(source);
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime test verifies plain local output is copied without claiming a tracked dependency.
     const capture = observer.capture(() => observer.snapshotOutput(source));
 
     expect(capture.observations).toHaveLength(0);
@@ -64,6 +65,7 @@ describe('explicit tracked-output observation', () => {
     ]) {
       const capture = observer.capture(() => {
         try {
+          // eslint-disable-next-line microdelta/tracked-captures -- This runtime test invokes each deliberately invalid output to prove validation rejects it before recording evidence.
           return rejected();
         } catch (error: unknown) {
           return error;
@@ -97,7 +99,9 @@ describe('explicit tracked-output observation', () => {
       members: [['user-a', 'Ada'], ['user-b', 'Grace']],
     };
     const capture = observer.capture(() => {
+      // eslint-disable-next-line microdelta/tracked-captures -- This runtime test records a deliberately assembled Value fact through Tracking's internal port.
       observer.materialization.recordProjection(binding, projection);
+      // eslint-disable-next-line microdelta/tracked-captures -- This runtime test records explicit member order through Tracking's internal port.
       observer.materialization.recordCollectionOrder(binding, ['user-a', 'user-b']);
       return 'done';
     });

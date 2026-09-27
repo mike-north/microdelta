@@ -14,13 +14,15 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const fixture = path.join(root, 'fixtures/declarations/consumer-alpha/src/tracked-captures.fixture.ts');
 const consumerConfig = path.join(root, 'fixtures/declarations/consumer-alpha/tsconfig.json');
 
-test('alpha consumer resolves real generated producer and Tracking declarations', () => {
+test('alpha consumer resolves real generated Tracking, Materialization, Value, and producer declarations', () => {
   const config = ts.readConfigFile(consumerConfig, ts.sys.readFile.bind(ts.sys));
   assert.equal(config.error, undefined);
   const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, path.dirname(consumerConfig), undefined, consumerConfig);
   const program = ts.createProgram(parsed.fileNames, parsed.options);
   const sources = program.getSourceFiles().map(source => source.fileName.replaceAll('\\\\', '/'));
   assert.ok(sources.some(source => source.endsWith('/packages/tracking/dist/api/tracking.alpha.d.ts')), sources.join('\n'));
+  assert.ok(sources.some(source => source.endsWith('/packages/materialization/dist/api/materialization.alpha.d.ts')), sources.join('\n'));
+  assert.ok(sources.some(source => source.endsWith('/packages/value/dist/api/value.alpha.d.ts')), sources.join('\n'));
   assert.ok(sources.some(source => source.endsWith('/fixtures/declarations/capture-producer/dist/api/capture.alpha.d.ts')), sources.join('\n'));
   assert.ok(sources.some(source => source.endsWith('/fixtures/declarations/forged/dist/api/forged.alpha.d.ts')), sources.join('\n'));
 });
@@ -118,6 +120,77 @@ test('literal-computed canonical observer boundaries are diagnosed as unsupporte
   assert.match(result.messages[0]?.message ?? '', /outside the linted direct-callback syntax/u);
 });
 
+test('canonical snapshot and Materialization observation receivers are allowed with branded inputs', async () => {
+  const eslint = new ESLint({ cwd: root });
+  const source = [
+    "import type { ITracked, ITrackingObserver } from '@microdelta/tracking';",
+    "import type { IMaterialization } from '@microdelta/materialization';",
+    'declare const observer: ITrackingObserver;',
+    'declare const materialization: IMaterialization;',
+    'declare const tracked: ITracked<{ readonly total: number }>;',
+    'observer.capture(() => observer.snapshotOutput(tracked));',
+    'observer.capture(() => materialization.materializeOutput(tracked));',
+    "observer.capture(() => materialization.project({ path: ['report'] }, { descriptor: { address: [], operation: 'value', traversal: { kind: 'exhaustive', complete: true } }, members: [] }));",
+    "observer.capture(() => materialization.projectFrom({ kind: 'completed-result', locator: 'result' }, { path: ['report'] }, { address: [], operation: 'value', traversal: { kind: 'exhaustive', complete: true } }));",
+    "observer.capture(() => materialization.observeMemberOrder({ path: ['report'] }, ['first']));",
+  ].join('\n');
+  const [result] = await eslint.lintText(source, { filePath: fixture });
+  assert.ok(result);
+  assert.deepEqual(result.messages, [], JSON.stringify(result.messages, null, 2));
+});
+
+test('Materialization lazy scalar views preserve Tracking brands while detached outputs do not', async () => {
+  const eslint = new ESLint({ cwd: root });
+  const source = [
+    "import type { ITracked, ITrackingObserver } from '@microdelta/tracking';",
+    "import type { IMaterialization } from '@microdelta/materialization';",
+    'declare const observer: ITrackingObserver;',
+    'declare const materialization: IMaterialization;',
+    'declare const tracked: ITracked<{ readonly total: number }>;',
+    "const lazy = materialization.materialize<{ readonly total: number; readonly nested: { readonly value: number } }>({ kind: 'completed-result', locator: 'result' }, { path: ['report'] });",
+    'observer.capture(() => lazy.total);',
+    'const detached = materialization.materializeOutput(tracked);',
+    'observer.capture(() => detached.total);',
+  ].join('\n');
+  const [result] = await eslint.lintText(source, { filePath: fixture });
+  assert.ok(result);
+  assert.equal(result.messages.length, 1, JSON.stringify(result.messages, null, 2));
+  assert.match(result.messages[0]?.message ?? '', /External influence 'detached'/u);
+});
+
+test('same-spelled fake Materialization methods do not grant receiver authority', async () => {
+  const eslint = new ESLint({ cwd: root });
+  const source = [
+    "import type { IDetachedOutput, ITracked, ITrackingObserver } from '@microdelta/tracking';",
+    'declare const observer: ITrackingObserver;',
+    'declare const tracked: ITracked<{ readonly total: number }>;',
+    'declare const fakeMaterialization: { materializeOutput<T>(output: T): IDetachedOutput<T> };',
+    'observer.capture(() => fakeMaterialization.materializeOutput(tracked));',
+  ].join('\n');
+  const [result] = await eslint.lintText(source, { filePath: fixture });
+  assert.ok(result);
+  assert.equal(result.messages.length, 1, JSON.stringify(result.messages, null, 2));
+  assert.match(result.messages[0]?.message ?? '', /External influence 'fakeMaterialization'/u);
+});
+
+test('Materialization receiver authority does not cover unrelated methods or unbranded arguments', async () => {
+  const eslint = new ESLint({ cwd: root });
+  const source = [
+    "import type { ITrackingObserver } from '@microdelta/tracking';",
+    "import type { IMaterialization } from '@microdelta/materialization';",
+    'declare const observer: ITrackingObserver;',
+    'declare const materialization: IMaterialization;',
+    'declare const externalOutput: { readonly total: number };',
+    'observer.capture(() => materialization.materializeOutput(externalOutput));',
+    'observer.capture(() => materialization.currentProvider);',
+  ].join('\n');
+  const [result] = await eslint.lintText(source, { filePath: fixture });
+  assert.ok(result);
+  assert.equal(result.messages.length, 2, JSON.stringify(result.messages, null, 2));
+  assert.ok(result.messages.some(message => /External influence 'externalOutput'/u.test(message.message)));
+  assert.ok(result.messages.some(message => /External influence 'materialization'/u.test(message.message)));
+});
+
 test('Tracking source programs retain capture checks when the separate ITracking declaration is present', async () => {
   const eslint = new ESLint({ cwd: root });
   const source = [
@@ -132,4 +205,21 @@ test('Tracking source programs retain capture checks when the separate ITracking
   assert.ok(result);
   assert.equal(result.messages.length, 1, JSON.stringify(result.messages, null, 2));
   assert.match(result.messages[0]?.message ?? '', /External influence 'untracked'/u);
+});
+
+test('an unresolved Materialization receiver has no capability authority without its owner declaration', async () => {
+  const eslint = new ESLint({ cwd: root });
+  const source = [
+    "import type { ITrackingObserver } from '../src/index.js';",
+    'declare const observer: ITrackingObserver;',
+    'declare const unresolvedMaterialization: {};',
+    'observer.capture(() => unresolvedMaterialization.materializeOutput(1));',
+  ].join('\n');
+  const [result] = await eslint.lintText(source, {
+    filePath: path.join(root, 'packages/tracking/test/observer.test.ts'),
+  });
+  assert.ok(result);
+  const findings = result.messages.filter(message => message.ruleId === 'microdelta/tracked-captures');
+  assert.equal(findings.length, 1, JSON.stringify(result.messages, null, 2));
+  assert.match(findings[0]?.message ?? '', /External influence 'unresolvedMaterialization'/u);
 });

@@ -11,8 +11,10 @@ import ts from 'typescript';
 import { fileURLToPath } from 'node:url';
 
 /** Observer capabilities and deterministic scalar functions have narrow authority. */
-const observerMethods = new Set(['tracked', 'capture', 'captureAsync', 'derived', 'keys', 'hasOwn']);
+const observerMethods = new Set(['tracked', 'capture', 'captureAsync', 'derived', 'snapshotOutput', 'keys', 'hasOwn']);
 const captureMethods = new Set(['tracked', 'capture', 'captureAsync', 'derived']);
+/** Only operations that express observations may use Materialization's receiver capability. */
+const materializationMethods = new Set(['materializeOutput', 'project', 'projectFrom', 'observeMemberOrder']);
 const builtinMethods = new Set([
   'Math.abs', 'Math.ceil', 'Math.floor', 'Math.max', 'Math.min', 'Math.round',
   'Math.sign', 'Math.trunc', 'Math.sqrt', 'Math.pow',
@@ -25,24 +27,38 @@ const trackingOwnerFiles = new Set([
   path.resolve(fileURLToPath(new URL('../packages/tracking/src/observer.ts', import.meta.url))),
   path.resolve(fileURLToPath(new URL('../packages/tracking/dist/api/tracking.alpha.d.ts', import.meta.url))),
 ]);
+/** These exact declarations own the bounded cross-context observation receiver. */
+const materializationOwnerFiles = new Set([
+  path.resolve(fileURLToPath(new URL('../packages/materialization/src/index.ts', import.meta.url))),
+  path.resolve(fileURLToPath(new URL('../packages/materialization/dist/api/materialization.alpha.d.ts', import.meta.url))),
+]);
 
-/** Resolve canonical symbols only from Tracking's own source or generated alpha view. */
+/** Resolve canonical symbols only from each owning source or generated alpha view. */
 function canonicalTypes(program, checker) {
   const declarations = new Map();
   const brandProperties = new Set();
+  let materializationSymbol;
   for (const sourceFile of program.getSourceFiles()) {
     const filename = path.resolve(sourceFile.fileName);
-    if (!trackingOwnerFiles.has(filename)) {
+    const isTrackingOwner = trackingOwnerFiles.has(filename);
+    const isMaterializationOwner = materializationOwnerFiles.has(filename);
+    if (!isTrackingOwner && !isMaterializationOwner) {
       continue;
     }
     const fileDeclarations = new Map();
     const visit = node => {
       if ((ts.isInterfaceDeclaration(node) || ts.isTypeAliasDeclaration(node)) &&
-          ['ITrackedBrand', 'ITrackingObserver', 'ITracking', 'ITracked'].includes(node.name.text)) {
+          ((isTrackingOwner && ['ITrackedBrand', 'ITrackingObserver', 'ITracking', 'ITracked'].includes(node.name.text)) ||
+            (isMaterializationOwner && node.name.text === 'IMaterialization'))) {
         const symbol = checker.getSymbolAtLocation(node.name);
         if (symbol) {
-          fileDeclarations.set(node.name.text, symbol);
-          declarations.set(node.name.text, symbol);
+          if (isTrackingOwner) {
+            fileDeclarations.set(node.name.text, symbol);
+            declarations.set(node.name.text, symbol);
+          }
+          if (isMaterializationOwner && node.name.text === 'IMaterialization') {
+            materializationSymbol = symbol;
+          }
         }
       }
       ts.forEachChild(node, visit);
@@ -65,6 +81,9 @@ function canonicalTypes(program, checker) {
     ])),
     localMember: observerSymbol && checker.getDeclaredTypeOfSymbol(observerSymbol).getProperty('local'),
     cellMember: trackingSymbol && checker.getDeclaredTypeOfSymbol(trackingSymbol).getProperty('cell'),
+    materializationMembers: new Map([...materializationMethods].map(name => [
+      name, materializationSymbol && checker.getDeclaredTypeOfSymbol(materializationSymbol).getProperty(name),
+    ])),
   };
 }
 
@@ -173,6 +192,14 @@ export const trackedCaptures = {
       return member?.type === 'MemberExpression' && !member.computed && member.property.name === name &&
         propertySymbol(member) === canonical.observerMembers.get(name);
     };
+    /** Materialization's receiver is trusted only for its four named observation operations. */
+    const actualMaterializationMethod = (call, name) => {
+      const member = call?.callee;
+      const canonicalMember = canonical.materializationMembers.get(name);
+      return Boolean(canonicalMember && materializationMethods.has(name) && member?.type === 'MemberExpression' &&
+        !member.computed && member.property.name === name &&
+        propertySymbol(member) === canonicalMember);
+    };
 
     const visit = node => {
       allNodes.push(node);
@@ -266,6 +293,10 @@ export const trackedCaptures = {
       if (member.parent?.type === 'CallExpression' && member.parent.callee === member &&
           observerMethods.has(member.property.name)) {
         return actualObserverMethod(member.parent, member.property.name);
+      }
+      if (member.parent?.type === 'CallExpression' && member.parent.callee === member &&
+          materializationMethods.has(member.property.name)) {
+        return actualMaterializationMethod(member.parent, member.property.name);
       }
       const cell = member.parent;
       const local = cell?.type === 'MemberExpression' && !cell.computed ? cell.object : undefined;

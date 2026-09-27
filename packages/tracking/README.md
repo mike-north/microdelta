@@ -23,8 +23,7 @@ by a Proxy and produces an explicit unsupported diagnostic. Ordinary function
 calls are unchanged.
 
 `compareCurrent()` asks a caller-owned provider to resolve each binding and its
-current full path before comparing facts. Its equal/changed/unavailable/incompatible/ambiguous
-result is evidence only: it does not decide reuse, establish source freshness, or
+current full path before comparing facts. Its comparison result is evidence only: it does not decide reuse, establish source freshness, or
 reconstruct a durable definition. A called function contributes emitted
 `Function.prototype.toString()` evidence and observed tracked reads; this does
 not make arbitrary closure captures sound, and wrapping a function does not

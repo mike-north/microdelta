@@ -392,6 +392,7 @@ describe('semantic tracking observer', () => {
   });
 
   test('classifies unsupported materialized output as incompatible', () => {
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime fixture captures materialized output to test unsupported current payload classification.
     const outputCapture = observer.capture(() => observer.snapshotOutput(observer.tracked({ result: 'Ada' }, binding)));
 
     expect(observer.compareCurrent(outputCapture, {
@@ -400,6 +401,7 @@ describe('semantic tracking observer', () => {
   });
 
   test('classifies unsupported collection order as incompatible', () => {
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime fixture captures collection order to test unsupported current order data.
     const orderCapture = observer.capture(() => observer.materialization.recordCollectionOrder(binding, ['member-a', 'member-b']));
     const unsupportedOrder = ['member-a', 'member-b'];
     Object.defineProperty(unsupportedOrder, 'hidden', { value: 'outside selected order data' });
@@ -424,6 +426,7 @@ describe('semantic tracking observer', () => {
     const isolated = createTrackingObserver(host);
     const tracked = isolated.tracked({ result: 'Ada' }, binding);
     const outputCapture = isolated.capture(() => isolated.snapshotOutput(tracked));
+    // eslint-disable-next-line microdelta/tracked-captures -- This host-failure fixture must record collection-order evidence through the real capture path.
     const orderCapture = isolated.capture(() => isolated.materialization.recordCollectionOrder(binding, ['member-a', 'member-b']));
     digestUnavailable = true;
 

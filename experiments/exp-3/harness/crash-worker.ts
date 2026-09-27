@@ -20,8 +20,9 @@ if (databasePath === undefined || command === undefined) {
   throw new Error('worker requires a database path and command');
 }
 
-/** @internal The driver and all file control remain outside the portable candidate. */
+/** @internal The driver owns durability settings and native file lifetime for this process. */
 const database = openNodeSqlite(databasePath);
+/** @internal Each scenario exercises the candidate through its narrow repository contract. */
 const repository = createPublicationRepository(database);
 repository.initialize();
 

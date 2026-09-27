@@ -9,9 +9,12 @@ import { join } from 'node:path';
 import { openNodeSqlite } from '../harness/node-sqlite.js';
 import type { ISqliteCapability } from '../src/sqlite.js';
 
+/** File-backed probes own private directories until cleanup removes their database sidecars. */
 const directories: string[] = [];
+/** Native handles stay tracked so failed assertions cannot leave SQLite files open. */
 const databases: Array<{ close(): void }> = [];
 
+/** Conformance cleanup closes all handles before deleting database roots. */
 afterEach(() => {
   for (const database of databases.splice(0)) {
     database.close();
@@ -21,12 +24,14 @@ afterEach(() => {
   }
 });
 
+/** Creates one isolated durable file for tests that must survive a fresh open. */
 function createPath(): string {
   const directory = mkdtempSync(join(tmpdir(), 'microdelta-sqlite-conformance-'));
   directories.push(directory);
   return join(directory, 'conformance.sqlite');
 }
 
+/** Tracks the Node driver handle while exposing only the portable capability surface. */
 function open(path: string): ISqliteCapability & { close(): void } {
   const database = openNodeSqlite(path);
   databases.push(database);

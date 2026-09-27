@@ -3,20 +3,24 @@
  * SQLite candidate exists; real process exits and reopen are part of the proof.
  */
 import { afterEach, describe, expect, test } from '@jest/globals';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { appendFileSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import {
   createPublicationRepository,
+  type IPublicationRepository,
   type IResultReference,
 } from '../src/index.js';
 import { openNodeSqlite } from '../harness/node-sqlite.js';
 
+/** Temporary roots keep file-backed durability tests isolated from each other. */
 const directories: string[] = [];
+/** Open handles are closed before their owning temporary roots are removed. */
 const databases: Array<{ close(): void }> = [];
 
+/** Each test relinquishes native handles before deleting the SQLite files. */
 afterEach(() => {
   for (const database of databases.splice(0)) {
     database.close();
@@ -26,18 +30,21 @@ afterEach(() => {
   }
 });
 
+/** Creates a unique file-backed database so reopen assertions cross handle boundaries. */
 function createDatabasePath(): string {
   const directory = mkdtempSync(join(tmpdir(), 'microdelta-exp3-'));
   directories.push(directory);
   return join(directory, 'history.sqlite');
 }
 
+/** Tracks native connections so Jest cleanup also closes a failed test's handles. */
 function openDatabase(path: string) {
   const database = openNodeSqlite(path);
   databases.push(database);
   return database;
 }
 
+/** Starts one bounded child-process scenario against the same durable database file. */
 function runWorker(databasePath: string, command: string, args: readonly string[] = []): ReturnType<typeof spawnSync> {
   const workerPath = fileURLToPath(new URL('../harness/crash-worker.js', import.meta.url));
   const processResult = spawnSync(process.execPath, [workerPath, databasePath, command, ...args], {
@@ -47,11 +54,50 @@ function runWorker(databasePath: string, command: string, args: readonly string[
   return processResult;
 }
 
+/** Parses the worker's single JSON trace without trusting child-process output types. */
 function readJsonOutput(result: ReturnType<typeof spawnSync>): unknown {
   if (typeof result.stdout !== 'string') {
     throw new Error('Expected UTF-8 worker output');
   }
   return JSON.parse(result.stdout) as unknown;
+}
+
+/** Identifies one execution across a lost acknowledgment without granting a new fence. */
+interface IStableExecutionRequest {
+  readonly attemptKey: string;
+  readonly subjectKey: string;
+  readonly holderId: string;
+  readonly fencingToken: number;
+  readonly nowMs: number;
+}
+
+/** Carries the serialized result and its identity metadata to the publication boundary. */
+interface IExecutionOutput {
+  readonly payloadJson: string;
+  readonly fingerprint: string;
+  readonly provenanceJson: string;
+}
+
+/**
+ * Resolves completed keys before repeating work and acknowledges new results only
+ * after publication commits, so observer failure exercises the lost-ack boundary.
+ */
+function executeWithStableKey(
+  repository: IPublicationRepository,
+  request: IStableExecutionRequest,
+  executeBody: () => IExecutionOutput,
+  observePublished: (reference: IResultReference) => void,
+): IResultReference {
+  const known = repository.findAttempt(request.attemptKey);
+  if (known?.state === 'completed' && known.resultReference !== null) {
+    return known.resultReference;
+  }
+  const attempt = known ?? repository.allocateAttempt(request);
+  const output = executeBody();
+  repository.stageAttempt({ ...request, attemptId: attempt.attemptId, ...output });
+  const reference = repository.publishAttempt({ ...request, attemptId: attempt.attemptId });
+  observePublished(reference);
+  return reference;
 }
 
 describe('EXP-3 SQLite publication protocol', () => {
@@ -220,45 +266,56 @@ describe('EXP-3 SQLite publication protocol', () => {
     expect(repository.currentWriter()?.holderId).toBe('second');
   });
 
-  test('stable attempt keys resolve a committed result after a lost acknowledgment without rerunning work', () => {
+  test('retry after an observer loses the committed acknowledgment returns the same result without rerunning work', () => {
     const databasePath = createDatabasePath();
+    /** The marker survives reopening so it records actual body calls, not local counters. */
+    const bodyCounterPath = `${databasePath}.calls`;
     let db = openDatabase(databasePath);
-    const repository = createPublicationRepository(db);
+    let repository = createPublicationRepository(db);
     repository.initialize();
     const owner = repository.acquireWriter({ holderId: 'writer', nowMs: 0, leaseMs: 100 });
     if (owner.kind !== 'acquired') {
       throw new Error('Expected writer lease');
     }
-    const calls = { body: 0 };
-    const run = (): IResultReference => {
-      const known = repository.findAttempt('stable-key');
-      if (known?.state === 'completed' && known.resultReference !== null) {
-        return known.resultReference;
-      }
-      const attempt = known ?? repository.allocateAttempt({
-        attemptKey: 'stable-key', subjectKey: 'subject', holderId: 'writer',
-        fencingToken: owner.fencingToken, nowMs: 0,
-      });
-      calls.body += 1;
-      repository.stageAttempt({
-        attemptId: attempt.attemptId, payloadJson: '{"value":"done"}',
-        fingerprint: 'done-fingerprint', provenanceJson: '{"run":"stable-key"}',
-        holderId: 'writer', fencingToken: owner.fencingToken, nowMs: 0,
-      });
-      return repository.publishAttempt({
-        attemptId: attempt.attemptId, holderId: 'writer', fencingToken: owner.fencingToken, nowMs: 0,
-      });
+    const request = {
+      attemptKey: 'stable-key',
+      subjectKey: 'subject',
+      holderId: 'writer',
+      fencingToken: owner.fencingToken,
+      nowMs: 0,
     };
-    const first = run();
-    expect(() => { throw new Error('observer failed after commit'); }).toThrow('observer failed after commit');
+    let committedReference: IResultReference | null = null;
+    const executeBody = (): IExecutionOutput => {
+      appendFileSync(bodyCounterPath, 'body\n', 'utf8');
+      return {
+        payloadJson: '{"value":"done"}',
+        fingerprint: 'done-fingerprint',
+        provenanceJson: '{"run":"stable-key"}',
+      };
+    };
+
+    expect(() => executeWithStableKey(repository, request, executeBody, (reference) => {
+      committedReference = reference;
+      expect(repository.readResult(reference)).not.toBeNull();
+      throw new Error('observer failed after commit');
+    })).toThrow('observer failed after commit');
+    expect(committedReference).not.toBeNull();
+
     db.close();
     databases.pop();
     db = openDatabase(databasePath);
-    const afterReopen = createPublicationRepository(db);
-    afterReopen.initialize();
-    expect(afterReopen.findAttempt('stable-key')?.resultReference).toEqual(first);
-    expect(afterReopen.findAttempt('stable-key')?.state).toBe('completed');
-    expect(calls.body).toBe(1);
+    repository = createPublicationRepository(db);
+    repository.initialize();
+
+    const retried = executeWithStableKey(repository, request, executeBody, () => {
+      throw new Error('completed attempt must not notify publication again');
+    });
+    expect(retried).toEqual(committedReference);
+    expect(repository.findAttempt('stable-key')).toMatchObject({
+      state: 'completed', resultReference: retried,
+    });
+    expect(repository.readResult(retried)).not.toBeNull();
+    expect(readFileSync(bodyCounterPath, 'utf8')).toBe('body\n');
   });
 
   test('exact older references remain readable after a newer result becomes current', () => {

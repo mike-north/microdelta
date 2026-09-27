@@ -84,15 +84,29 @@ written first. After implementation, `npm run test:exp3` passed the capability
 suite first (5 tests), then the protocol suite (12 tests), on Node 24.14.0 with
 better-sqlite3 12.9.0. `npm ci` completed from the lockfile with zero reported
 vulnerabilities; the install-script allowance is pinned to better-sqlite3 12.9.0.
-`npm run check` and `npm test` both exited successfully; `npm test` also passed
-the 76 tooling tests and the existing package suites.
+The exact candidate pin is `better-sqlite3` 12.9.0 in both the root manifest and
+lockfile, and its install-script allowance uses that same version. The
+supervisor accepted 12.9.0 as the experiment dependency.
 
-The assigned candidate pin, better-sqlite3 12.9.1, is not a published registry
-version (`npm install` returned `ETARGET`). The fixture uses the nearest prior
-published release, 12.9.0, until the supervisor resolves that version mismatch.
-The local run therefore does not establish evidence for the originally requested
-12.9.1 pin. CI on Node 20, 22, and 24 remains required before accepting the
-candidate across the repository's supported runtime matrix.
+The retry regression injects an observer failure only after `publishAttempt`
+returns its committed reference, closes and reopens the database, then retries
+through the same stable-key lookup. It asserts that the exact reference is
+returned, the completed record resolves, and a file-backed body-call marker
+still contains one invocation. Before the observer call was added, the test
+failed because no post-commit exception was raised.
+
+The portable source check compiles only `src/` with `types: []`, keeping Node host
+declarations out of the candidate while the Node adapter and child-process
+harness remain test-only. A negative compiler probe confirms that `NodeJS`
+declarations are unavailable under that source configuration.
+
+Before this fix, the pull request's Node 20, 22, and 24 checks passed at the
+previous reviewed head. At the scoped fix head, the supervisor ran `npm run
+check`, `npm test`, and `npm run build` in sequence; all exited successfully.
+The new `npm test` run passed all 77 tooling tests, the five SQLite capability
+tests, the twelve publication tests, and the package suites. Fresh GitHub CI for
+the scoped fix head remains pending before acceptance across the supported
+runtime matrix.
 
 ## Evidence limits
 
@@ -105,7 +119,6 @@ single SQLite transaction establishes the tested publication boundary, not
 general backend qualification or production History correctness.
 
 **Recommendation:** provisional pass for the tested single-file,
-single-active-writer candidate shape on Node 24 with 12.9.0. Keep the requested
-12.9.1 pin discrepancy, Node 20/22 CI, concurrent worker safety, and all listed
-durability limits open. The History owning contract and adoption decision remain
-with the supervisor.
+single-active-writer candidate shape on Node 24 with 12.9.0. Node 20/22 runtime
+evidence, concurrent worker safety, and all listed durability limits remain open.
+The History owning contract and adoption decision remain with the supervisor.

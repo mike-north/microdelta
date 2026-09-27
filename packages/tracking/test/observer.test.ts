@@ -166,6 +166,7 @@ describe('semantic tracking observer', () => {
   });
 
   test('classifies unsupported selected provider payloads as incompatible', () => {
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime fixture captures a value to test malformed current provider payloads.
     const captured = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
     const malformed = {
       operation: 'value',
@@ -179,6 +180,7 @@ describe('semantic tracking observer', () => {
   });
 
   test('classifies malformed selected envelopes and addresses as incompatible', () => {
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime fixture captures a value to test malformed current provider metadata.
     const captured = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
     const sparseAddress = new Array<unknown>(1);
     const malformed: unknown[] = [

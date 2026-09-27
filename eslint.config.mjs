@@ -2,6 +2,7 @@ import tseslint from 'typescript-eslint';
 
 import { contextImports } from './tooling/context-imports.mjs';
 import { documentedSuppressions } from './tooling/documented-suppressions.mjs';
+import { trackedCaptures } from './tooling/tracked-captures.mjs';
 
 /** Both assertion spellings can launder an unvalidated value through unknown. */
 const assertionKinds = ['TSAsExpression', 'TSTypeAssertion'];
@@ -10,19 +11,24 @@ const assertionKinds = ['TSAsExpression', 'TSTypeAssertion'];
 export default [
   { ignores: ['**/dist/**', '**/.test-build/**', '**/node_modules/**', 'docs/archive/**', 'experiments/**/test-d/**'] },
   {
-    files: ['packages/**/*.ts', 'experiments/**/*.ts', 'fixtures/declarations/producer/**/*.ts'],
+    files: ['packages/**/*.ts', 'experiments/**/*.ts', 'fixtures/declarations/**/*.ts'],
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },
     },
     plugins: {
       '@typescript-eslint': tseslint.plugin,
-      microdelta: { rules: { 'context-imports': contextImports, 'documented-suppressions': documentedSuppressions } },
+      microdelta: { rules: {
+        'context-imports': contextImports,
+        'documented-suppressions': documentedSuppressions,
+        'tracked-captures': trackedCaptures,
+      } },
     },
     linterOptions: { reportUnusedDisableDirectives: 'error' },
     rules: {
       'microdelta/context-imports': 'error',
       'microdelta/documented-suppressions': 'error',
+      'microdelta/tracked-captures': 'error',
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-unsafe-assignment': 'error',

@@ -8,7 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /** Script references are intentionally explicit so a missing gate is reviewable. */
-export function missingFoundationGates({ workspace, packages, workflow, extractors }) {
+export function missingFoundationGates({ workspace, packages, workflow, extractors, eslintConfig }) {
   const problems = [];
   const scripts = workspace.scripts ?? {};
   const includes = (label, command, fragment) => {
@@ -16,6 +16,7 @@ export function missingFoundationGates({ workspace, packages, workflow, extracto
       problems.push(`${label} skips ${fragment}`);
     }
   };
+  includes('root typed ESLint config', eslintConfig, "'microdelta/tracked-captures': 'error'");
   for (const command of ['npm ci', 'npm run check', 'npm test', 'npm run build']) {
     if (!workflow.includes(`- run: ${command}`)) {
       problems.push(`CI skips ${command}`);
@@ -36,7 +37,14 @@ export function missingFoundationGates({ workspace, packages, workflow, extracto
   for (const [gate, commands] of Object.entries({
     'check:imports': ['eslint -c tooling/context-imports.config.mjs packages experiments'],
     'check:declarations': ['node tooling/check-producer-declarations.mjs', 'node tooling/history-declaration-shims.mjs --check'],
-    'check:fixtures': ['tsc --noEmit -p fixtures/declarations/producer/tsconfig.json', 'eslint fixtures/declarations/producer/src'],
+    'check:fixtures': [
+      'tsc --noEmit -p fixtures/declarations/producer/tsconfig.json',
+      'tsc --noEmit -p fixtures/declarations/capture-producer/tsconfig.json',
+      'tsc --noEmit -p fixtures/declarations/forged/tsconfig.json',
+      'tsc --noEmit -p fixtures/declarations/consumer-alpha/tsconfig.json',
+      'node tooling/check-capture-public-tier.mjs',
+      'eslint fixtures/declarations/producer/src fixtures/declarations/capture-producer/src fixtures/declarations/forged/src fixtures/declarations/consumer-alpha/src',
+    ],
     'check:experiments': ['tsc --noEmit -p tsconfig.json', 'tsc --noEmit -p experiments/exp-1/tsconfig.portable.json', 'eslint experiments'],
     'check:suppressions': ['node tooling/check-suppressions.mjs'],
     'check:wiring': ['node tooling/foundation-wiring.mjs'],
@@ -56,6 +64,9 @@ export function missingFoundationGates({ workspace, packages, workflow, extracto
   includes('test:experiments', scripts['test:experiments'], 'tsd --typings experiments/exp-1/src/protocol.ts');
   includes('test:experiments', scripts['test:experiments'], 'jest');
   includes('build:fixtures', scripts['build:fixtures'], 'api-extractor run --config fixtures/declarations/producer/api-extractor.json');
+  includes('build:fixtures', scripts['build:fixtures'], 'api-extractor run --config fixtures/declarations/capture-producer/api-extractor.json');
+  includes('build:fixtures', scripts['build:fixtures'], 'tsc -p fixtures/declarations/forged/tsconfig.json');
+  includes('build:fixtures', scripts['build:fixtures'], 'api-extractor run --config fixtures/declarations/forged/api-extractor.json');
   if ((scripts['build:fixtures'] ?? '').includes('--local')) {
     problems.push('build:fixtures uses local API report rewriting');
   }
@@ -107,11 +118,12 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const names = ['core', 'definition', 'tracking', 'history', 'value', 'materialization'];
   const packages = Object.fromEntries(await Promise.all(names.map(async name => [name, await readJson(`packages/${name}/package.json`)])));
   const filenames = names.map(name => `packages/${name}/api-extractor.json`);
-  filenames.push('packages/core/api-extractor-conformance.json', 'packages/history/api-extractor-conformance.json', 'packages/history/api-extractor-shared.json', 'fixtures/declarations/producer/api-extractor.json');
+  filenames.push('packages/core/api-extractor-conformance.json', 'packages/history/api-extractor-conformance.json', 'packages/history/api-extractor-shared.json', 'fixtures/declarations/producer/api-extractor.json', 'fixtures/declarations/capture-producer/api-extractor.json', 'fixtures/declarations/forged/api-extractor.json');
   const extractors = Object.fromEntries(await Promise.all(filenames.map(async filename => [filename, await readJson(filename)])));
   const problems = missingFoundationGates({
     workspace: await readJson('package.json'), packages, extractors,
     workflow: await readFile(path.join(root, '.github/workflows/check.yml'), 'utf8'),
+    eslintConfig: await readFile(path.join(root, 'eslint.config.mjs'), 'utf8'),
   });
   if (problems.length) {
     process.stderr.write(`${problems.join('\n')}\n`);

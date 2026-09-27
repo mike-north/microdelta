@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "include": ["src/**/*.ts", "test/**/*.ts"],
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "@microdelta/machine": ["../machine/dist/api/machine.alpha.d.ts"]
+    }
+  }
+}

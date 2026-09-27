@@ -16,7 +16,12 @@ export interface IAsyncContextCapability {
 }
 
 // @alpha
-export interface IMachine extends IAsyncContextCapability, ISnapshotCapability {
+export interface IMachine extends IAsyncContextCapability, ISnapshotCapability, ISha256Capability {
+}
+
+// @alpha
+export interface ISha256Capability {
+    sha256(input: string): string;
 }
 
 // @public

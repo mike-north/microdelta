@@ -17,7 +17,7 @@
     "check:experiments": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p experiments/exp-1/tsconfig.portable.json && tsc -p experiments/exp-2/tsconfig.portable.json && tsc --noEmit -p experiments/exp-3/tsconfig.portable.json && eslint experiments --no-error-on-unmatched-pattern",
     "check:suppressions": "node tooling/check-suppressions.mjs",
     "check:pr-metadata": "node tooling/pr-metadata.mjs",
-    "build:packages": "npm run build --workspace @microdelta/machine && npm run build --workspace @microdelta/machine-node && npm run build --workspace @microdelta/definition && npm run build --workspace @microdelta/tracking && npm run build --workspace @microdelta/history && npm run build --workspace microdelta",
+    "build:packages": "npm run build --workspace @microdelta/machine && npm run build --workspace @microdelta/value && npm run build --workspace @microdelta/machine-node && npm run build --workspace @microdelta/definition && npm run build --workspace @microdelta/tracking && npm run build --workspace @microdelta/history && npm run build --workspace microdelta",
     "build:fixtures": "tsc -p fixtures/declarations/producer/tsconfig.json && api-extractor run --config fixtures/declarations/producer/api-extractor.json",
     "build:experiments": "tsc -p experiments/exp-1/tsconfig.test.json",
     "check:imports": "eslint -c tooling/context-imports.config.mjs packages experiments --quiet",
@@ -25,9 +25,13 @@
     "check:fixtures": "tsc --noEmit -p fixtures/declarations/producer/tsconfig.json && eslint fixtures/declarations/producer/src",
     "check:wiring": "node tooling/foundation-wiring.mjs",
     "test:exp2": "tsc -p experiments/exp-2/tsconfig.json && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-2/jest.config.mjs --runInBand",
-    "test:exp3": "tsc -p experiments/exp-3/tsconfig.test.json && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config experiments/exp-3/jest.config.mjs --runInBand --runTestsByPath .test-build/experiments/exp-3/test/sqlite-capability.test.js && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config experiments/exp-3/jest.config.mjs --runInBand --runTestsByPath .test-build/experiments/exp-3/test/publication.test.js"
+    "test:exp3": "tsc -p experiments/exp-3/tsconfig.test.json && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config experiments/exp-3/jest.config.mjs --runInBand --runTestsByPath .test-build/experiments/exp-3/test/sqlite-capability.test.js && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config experiments/exp-3/jest.config.mjs --runInBand --runTestsByPath .test-build/experiments/exp-3/test/publication.test.js",
+    "changeset:add": "changeset",
+    "changeset:status": "changeset status",
+    "changeset:version": "changeset version && npm install --package-lock-only --ignore-scripts --no-audit --no-fund"
   },
   "devDependencies": {
+    "@changesets/cli": "2.31.1",
     "@jest/globals": "30.5.1",
     "@microsoft/api-extractor": "7.59.2",
     "@types/better-sqlite3": "7.6.13",

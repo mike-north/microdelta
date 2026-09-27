@@ -1,0 +1,70 @@
+# Versioning is automatic after main changes and can also be requested manually.
+name: Prepare release PR
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  actions: write
+  contents: write
+  pull-requests: write
+concurrency:
+  group: prepare-release-pr
+  cancel-in-progress: false
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Require the release base branch
+        if: github.ref != 'refs/heads/main'
+        run: echo 'Release preparation must run from main.' >&2; exit 1
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Capture the current Changesets plan
+        run: npm run changeset:status -- --output "$RUNNER_TEMP/release-plan.json"
+      - name: Generate reviewable PR evidence
+        run: node tooling/release-pr-body.mjs > "$RUNNER_TEMP/release-pr-body.md"
+        env:
+          RELEASE_PLAN_PATH: ${{ runner.temp }}/release-plan.json
+      - name: Create or update the version PR
+        id: changesets
+        uses: changesets/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d
+        with:
+          version: npm run changeset:version
+          branch: main
+          createGithubReleases: false
+      - name: Apply the evidence template and dispatch required checks
+        if: steps.changesets.outputs.pullRequestNumber != ''
+        uses: actions/github-script@v7
+        env:
+          PR_NUMBER: ${{ steps.changesets.outputs.pullRequestNumber }}
+          BODY_PATH: ${{ runner.temp }}/release-pr-body.md
+        with:
+          script: |
+            const fs = require('node:fs');
+            const pull_number = Number(process.env.PR_NUMBER);
+            const { owner, repo } = context.repo;
+            if (!Number.isSafeInteger(pull_number) || pull_number < 1) {
+              throw new Error('Changesets did not return a valid version PR number.');
+            }
+            const { data: pull } = await github.rest.pulls.get({ owner, repo, pull_number });
+            if (pull.state !== 'open' || pull.base.ref !== 'main' || !pull.head.ref.startsWith('changeset-release/')) {
+              throw new Error('Changesets returned a PR outside the expected version branch.');
+            }
+            const body = fs.readFileSync(process.env.BODY_PATH, 'utf8');
+            await github.rest.pulls.update({ owner, repo, pull_number, body });
+            // GitHub suppresses pull_request events caused by GITHUB_TOKEN writes.
+            // Dispatch the existing read-only checks against the generated head ref.
+            for (const workflow_id of ['check.yml', 'pr-metadata.yml']) {
+              await github.rest.actions.createWorkflowDispatch({
+                owner,
+                repo,
+                workflow_id,
+                ref: pull.head.ref,
+                ...(workflow_id === 'pr-metadata.yml' ? { inputs: { pr_number: String(pull_number) } } : {}),
+              });
+            }

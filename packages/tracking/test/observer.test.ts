@@ -904,6 +904,7 @@ describe('semantic tracking observer', () => {
       },
       members: [['member-a', 'Ada'], ['member-b', 'Bo']],
     };
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime fixture directly records supplied projection facts to test incompatibility before hashing.
     const capture = isolated.capture(() => isolated.materialization.recordProjection(binding, exhaustive));
     digestUnavailable = true;
     const changedAddress: IValueProjectionFact = {
@@ -953,6 +954,7 @@ describe('semantic tracking observer', () => {
       },
       members: [['member-a', 'Ada'], ['member-b', 'Bo']],
     };
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime fixture directly records supplied projection facts to test structural descriptor comparison and content hashing.
     const capture = isolated.capture(() => isolated.materialization.recordProjection(binding, capturedFact));
     const semanticallyEqual: IValueProjectionFact = {
       descriptor: {
@@ -996,6 +998,7 @@ describe('semantic tracking observer', () => {
     };
     Object.setPrototypeOf(descriptor, null);
     const nullPrototype: IValueProjectionFact = { descriptor, members: [['member-a', 'Ada']] };
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime fixture supplies an ordinary projection fact to compare against its Value-normalized null-prototype equivalent.
     const capture = observer.capture(() => observer.materialization.recordProjection(binding, ordinary));
 
     expect(encodeProjectionFact(nullPrototype)).toBe(encodeProjectionFact(ordinary));
@@ -1013,6 +1016,7 @@ describe('semantic tracking observer', () => {
       },
       members: [['member-a', 'Ada'], ['member-b', 'Bo']],
     };
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime fixture supplies a visited projection fact to verify key order, membership, and completion semantics.
     const capture = observer.capture(() => observer.materialization.recordProjection(binding, selected));
     const reorderedVisitedKeys: IValueProjectionFact = {
       ...selected,

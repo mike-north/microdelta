@@ -7,6 +7,7 @@ export {
   encodeSnapshot,
   encodeValue,
   fingerprint,
+  normalizeProjectionDescriptor,
   normalizeProjectionFact,
   observe,
   recordFromEntries,

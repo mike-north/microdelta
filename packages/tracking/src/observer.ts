@@ -5,11 +5,19 @@
  * @packageDocumentation
  */
 import type { IAsyncContextCapability, ISha256Capability } from '@microdelta/machine';
-import { decodeSnapshot, encodeSelectedFact, encodeSnapshot, fingerprint, observe } from '@microdelta/value';
-import type { IAddressSegment, IOperation, ISelectedFact } from '@microdelta/value';
+import { decodeSnapshot, encodeProjectionFact, encodeSelectedFact, encodeSnapshot, encodeValue, fingerprint, observe } from '@microdelta/value';
+import type {
+  IAddressSegment,
+  IOperation,
+  ISelectedFact,
+  IValueProjectionDescriptor,
+  IValueProjectionFact,
+} from '@microdelta/value';
 
 import { createTracking } from './index.js';
 import type { ITracking } from './index.js';
+import { createOutputObservationPort } from './output-observation.js';
+import type { IDetachedOutput, IOutputFact } from './output-observation.js';
 
 /**
  * A copied composition address; it is correspondence input, never a tracking
@@ -59,18 +67,34 @@ export type ITrackedView<T> = T extends (...arguments_: never[]) => unknown
  */
 export type ITracked<T extends object> = ITrackedView<T>;
 
-/** Portable evidence for one consumed value fact or one actually invoked implementation. @alpha */
+/**
+ * One versioned selection that a current-fact provider must resolve exactly.
+ * Content fingerprints answer the same selected question and never imply reuse.
+ * @alpha
+ */
+export type ICurrentFactRequest =
+  | { readonly kind: 'selected'; readonly operation: IOperation; readonly address: readonly IAddressSegment[]; readonly encodingVersion: 'MDO1' }
+  | { readonly kind: 'implementation'; readonly address: readonly IAddressSegment[]; readonly encodingVersion: 'MDF1' }
+  | { readonly kind: 'materialized-output'; readonly address: readonly IAddressSegment[]; readonly encodingVersion: 'MDS1' }
+  | { readonly kind: 'projection'; readonly descriptor: IValueProjectionDescriptor; readonly encodingVersion: 'MDP1' }
+  | { readonly kind: 'collection-order'; readonly keys: readonly string[]; readonly encodingVersion: 'MDV1' };
+
+/** Portable evidence for one selected fact, explicit output, projection, order, or implementation. @alpha */
 export interface ITrackingObservation {
   /** The structural binding registered with the tracked root. */
   readonly binding: ITrackingBinding;
-  /** Address within the currently bound value; function code uses the same path. */
+  /** Address within the bound value; collection order has no member address. */
   readonly address: readonly IAddressSegment[];
-  /** Keep code evidence separate from Value's supported selected-fact operations. */
-  readonly kind: 'fact' | 'implementation';
-  /** Value operation, or `implementation` for called function code. */
-  readonly operation: IOperation | 'implementation';
-  /** Versioned canonical observation text, suitable for transfer but not a locator. */
-  readonly encoded: string;
+  /** Which exact semantic selection this record represents. */
+  readonly selection: ICurrentFactRequest;
+  /** Operation-specific category keeps selected facts separate from code evidence. */
+  readonly kind: 'fact' | 'implementation' | 'materialized-output' | 'projection' | 'collection-order';
+  /** Operation identity is repeated for compact inspection; the request is authoritative. */
+  readonly operation: IOperation | 'implementation' | 'materialized-output' | 'projection' | 'collection-order';
+  /** Explicit selected-fact wire version retained alongside the digest. */
+  readonly encodingVersion: ICurrentFactRequest['encodingVersion'];
+  /** Canonical text is retained when the selection stays bounded; aggregate projection text is transient. */
+  readonly encoded?: string;
   /** SHA-256 content evidence for the encoded observation. */
   readonly fingerprint: string;
 }
@@ -93,18 +117,21 @@ export interface IObservationCapture<T> {
  * @alpha
  */
 export interface ICurrentFactProvider {
-  /** Resolve a captured binding and then its current operation at the full address. */
-  resolve(
-    binding: ITrackingBinding,
-    address: readonly IAddressSegment[],
-    operation: IOperation | 'implementation',
-  ): ICurrentFactResolution;
+  /** Resolve the exact requested fact or return compatible indexed content metadata. */
+  resolve(binding: ITrackingBinding, request: ICurrentFactRequest): ICurrentFactResolution;
 }
 
 /** Provider outcomes distinguish lost correspondence from an actual changed fact. @alpha */
 export type ICurrentFactResolution =
   | { readonly kind: 'available'; readonly fact: unknown }
+  | {
+      readonly kind: 'compatible-fingerprint';
+      readonly selection: ICurrentFactRequest;
+      readonly encodingVersion: ICurrentFactRequest['encodingVersion'];
+      readonly fingerprint: string;
+    }
   | { readonly kind: 'unavailable' }
+  | { readonly kind: 'incompatible' }
   | { readonly kind: 'ambiguous' };
 
 /** Content comparison is evidence only; it does not authorize cache reuse. @alpha */
@@ -112,6 +139,7 @@ export type ICurrentComparison =
   | { readonly kind: 'equal' }
   | { readonly kind: 'changed'; readonly observation: ITrackingObservation }
   | { readonly kind: 'unavailable'; readonly observation: ITrackingObservation }
+  | { readonly kind: 'incompatible'; readonly observation: ITrackingObservation }
   | { readonly kind: 'ambiguous'; readonly observation: ITrackingObservation };
 
 /**
@@ -130,6 +158,8 @@ export interface ITrackingObserver {
   captureAsync<T>(callback: () => Promise<T>): Promise<IObservationCapture<T>>;
   /** Compare captured content against facts selected by current correspondence. */
   compareCurrent(capture: IObservationCapture<unknown>, provider: ICurrentFactProvider): ICurrentComparison;
+  /** Explicitly detach an output graph and observe only its observer-owned subtrees. */
+  snapshotOutput<T>(output: T): IDetachedOutput<T>;
   /** Explicit ordered record-key enumeration; native reflection remains rejected. */
   keys(value: ITracked<object>): readonly string[];
   /** Explicit own-member presence without conflating it with inherited membership. */
@@ -146,10 +176,18 @@ export interface ITrackingObserver {
  * @alpha
  */
 export interface ITrackingMaterialization {
+  /** Reject explicit materialization work inherited from a capture that has ended. */
+  assertFrameOpen(): void;
   /** Identify wrappers by this observer's private ownership, not by the type brand. */
   owns(value: unknown): value is ITracked<object>;
   /** Read one selected field through the ordinary observer operation. */
   read<T extends object, K extends keyof ITracked<T>>(value: ITracked<T>, key: K): ITracked<T>[K];
+  /** Retain a selected fact read from a completed-result source. */
+  recordSelected(binding: ITrackingBinding, fact: ISelectedFact): void;
+  /** Retain one aggregate selected keyed-member projection. */
+  recordProjection(binding: ITrackingBinding, fact: IValueProjectionFact): void;
+  /** Retain order only when a consumer uses the collection's key sequence. */
+  recordCollectionOrder(binding: ITrackingBinding, keys: readonly string[]): void;
 }
 
 interface IBindingRecord {
@@ -235,26 +273,140 @@ function copyAddress(address: readonly IAddressSegment[]): readonly IAddressSegm
     : { kind: 'index' as const, index: segment.index })));
 }
 
+/** Copy a Value descriptor so provider requests cannot mutate retained evidence. */
+function copyProjectionDescriptor(descriptor: IValueProjectionDescriptor): IValueProjectionDescriptor {
+  const traversal = descriptor.traversal.kind === 'exhaustive'
+    ? Object.freeze({ kind: 'exhaustive' as const, complete: true as const })
+    : Object.freeze({ kind: 'visited' as const, complete: false as const, keys: Object.freeze([...descriptor.traversal.keys]) });
+  return Object.freeze({ address: copyAddress(descriptor.address), operation: 'value', traversal });
+}
+
+/** Retain exact request semantics while copying every caller-owned array boundary. */
+function copyRequest(request: ICurrentFactRequest): ICurrentFactRequest {
+  switch (request.kind) {
+    case 'selected':
+    case 'implementation':
+    case 'materialized-output':
+      return Object.freeze({ ...request, address: copyAddress(request.address) });
+    case 'projection':
+      return Object.freeze({ ...request, descriptor: copyProjectionDescriptor(request.descriptor) });
+    case 'collection-order':
+      return Object.freeze({ ...request, keys: Object.freeze([...request.keys]) });
+    default: {
+      const exhaustive: never = request;
+      return exhaustive;
+    }
+  }
+}
+
+/** Select the path carried by each request variant for its observation envelope. */
+function requestAddress(request: ICurrentFactRequest): readonly IAddressSegment[] {
+  return request.kind === 'projection' ? request.descriptor.address
+    : request.kind === 'collection-order' ? []
+      : request.address;
+}
+
 /** Validate provider-selected data before treating it as a Value-owned fact. */
 function isSelectedFact(value: unknown): value is ISelectedFact {
-  if (value === null || typeof value !== 'object' || !('operation' in value) || !('address' in value) || !('fact' in value)) {
+  if (value === null || typeof value !== 'object') {
     return false;
   }
-  const operation = value.operation;
+  const keys = Reflect.ownKeys(value);
+  if (keys.length !== 3 || keys.some((key) => key !== 'operation' && key !== 'address' && key !== 'fact')) {
+    return false;
+  }
+  const operationField = ownDataField(value, 'operation');
+  const addressField = ownDataField(value, 'address');
+  const factField = ownDataField(value, 'fact');
+  if (!operationField.present || !addressField.present || !factField.present) {
+    return false;
+  }
+  const operation = operationField.value;
   if (operation !== 'value' && operation !== 'own' && operation !== 'membership' && operation !== 'length' && operation !== 'keys') {
     return false;
   }
-  if (!Array.isArray(value.address)) {
+  const address = addressField.value;
+  if (!Array.isArray(address)) {
     return false;
   }
-  return value.address.every((segment: unknown) => {
-    if (segment === null || typeof segment !== 'object' || !('kind' in segment)) {
+  for (let index = 0; index < address.length; index += 1) {
+    const slot = ownDataField(address, String(index));
+    if (!slot.present || slot.value === null || typeof slot.value !== 'object') {
       return false;
     }
-    return segment.kind === 'property'
-      ? 'key' in segment && typeof segment.key === 'string'
-      : segment.kind === 'index' && 'index' in segment && typeof segment.index === 'number' && Number.isSafeInteger(segment.index);
-  });
+    const segment = slot.value;
+    const segmentKeys = Reflect.ownKeys(segment);
+    if (segmentKeys.length !== 2 || segmentKeys.some((key) => key !== 'kind' && key !== 'key' && key !== 'index')) {
+      return false;
+    }
+    const kind = ownDataField(segment, 'kind');
+    if (!kind.present) {
+      return false;
+    }
+    const memberKey = ownDataField(segment, 'key');
+    const memberIndex = ownDataField(segment, 'index');
+    if (kind.value === 'property' && memberKey.present && typeof memberKey.value === 'string') {
+      continue;
+    }
+    if (kind.value === 'index' && memberIndex.present && typeof memberIndex.value === 'number'
+      && Number.isSafeInteger(memberIndex.value) && memberIndex.value >= 0) {
+      continue;
+    }
+    return false;
+  }
+  return true;
+}
+
+/** Read data-property contents as unknown; PropertyDescriptor.value is typed as any. */
+function ownDataField(value: object, key: string): { readonly present: boolean; readonly value: unknown } {
+  const descriptor = Object.getOwnPropertyDescriptor(value, key);
+  if (descriptor === undefined || !('value' in descriptor)) {
+    return { present: false, value: undefined };
+  }
+  return { present: true, value: descriptor.value as unknown };
+}
+
+/** Accept a current projection only when the Value-owned content encoder validates its full shape. */
+function isProjectionFact(value: unknown): value is IValueProjectionFact {
+  if (value === null || typeof value !== 'object' || !('descriptor' in value) || !('members' in value)) {
+    return false;
+  }
+  try {
+    Reflect.apply(encodeProjectionFact, undefined, [value]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Compare copied provider selections structurally without relying on object identity. */
+function sameRequest(left: ICurrentFactRequest, right: ICurrentFactRequest): boolean {
+  try {
+    return encodeValue(left) === encodeValue(right);
+  } catch {
+    return false;
+  }
+}
+
+/** Check that a provider's selected fact answers the exact requested scalar question. */
+function matchesSelectedRequest(fact: ISelectedFact, request: Extract<ICurrentFactRequest, { kind: 'selected' }>): boolean {
+  return fact.operation === request.operation && JSON.stringify(fact.address) === JSON.stringify(request.address);
+}
+
+/** Keep provider key sequences finite, unique, dense, and free of coercion. */
+function isUniqueStringSequence(value: unknown): value is readonly string[] {
+  if (!Array.isArray(value)) {
+    return false;
+  }
+  const keys = new Set<string>();
+  for (let index = 0; index < value.length; index += 1) {
+    const slot = Object.getOwnPropertyDescriptor(value, String(index));
+    if (slot === undefined || !('value' in slot) || typeof slot.value !== 'string' || keys.has(slot.value)) {
+      return false;
+    }
+    keys.add(slot.value);
+  }
+  return true;
 }
 
 /** Classes are not ordinary callable steps or supported plain-data records. */
@@ -313,7 +465,8 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
     const digest = fingerprint(encoded, machine);
     const key = observationKey(binding, address, operation, digest);
     if (!frame.observations.has(key)) {
-      frame.observations.set(key, freezeObservation({ binding, address, kind: 'fact', operation, encoded, digest }));
+      const selection: ICurrentFactRequest = { kind: 'selected', operation, address, encodingVersion: 'MDO1' };
+      frame.observations.set(key, freezeObservation({ binding, selection, kind: 'fact', operation, encoded, digest }));
     }
     return selected;
   }
@@ -335,28 +488,82 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
     const { encoded, digest } = encodeImplementation(target, machine);
     const key = observationKey(binding, address, 'implementation', digest);
     if (!frame.observations.has(key)) {
-      frame.observations.set(key, freezeObservation({ binding, address, kind: 'implementation', operation: 'implementation', encoded, digest }));
+      const selection: ICurrentFactRequest = { kind: 'implementation', address, encodingVersion: 'MDF1' };
+      frame.observations.set(key, freezeObservation({ binding, selection, kind: 'implementation', operation: 'implementation', encoded, digest }));
     }
   }
 
-  /** Detach all exposed semantic descriptors before the frame can be mutated or closed. */
+  /** Detach semantic metadata while projection payload text stays transient and represented by its digest. */
   function freezeObservation(input: {
     readonly binding: IBindingRecord;
-    readonly address: readonly IAddressSegment[];
-    readonly kind: 'fact' | 'implementation';
-    readonly operation: IOperation | 'implementation';
+    readonly selection: ICurrentFactRequest;
+    readonly kind: ITrackingObservation['kind'];
+    readonly operation: ITrackingObservation['operation'];
     readonly encoded: string;
     readonly digest: string;
   }): ITrackingObservation {
+    const selection = copyRequest(input.selection);
     return Object.freeze({
       binding: input.binding.descriptor,
-      address: copyAddress(input.address),
+      address: copyAddress(requestAddress(selection)),
+      selection,
       kind: input.kind,
       operation: input.operation,
-      encoded: input.encoded,
+      encodingVersion: selection.encodingVersion,
+      ...(input.kind === 'projection' ? {} : { encoded: input.encoded }),
       fingerprint: input.digest,
     });
   }
+
+  /** Add already selected semantics to an open frame without retaining mutable payload references. */
+  function recordExternal(
+    binding: IBindingRecord,
+    selection: ICurrentFactRequest,
+    kind: ITrackingObservation['kind'],
+    operation: ITrackingObservation['operation'],
+    encoded: string,
+  ): void {
+    const frame = captures.getStore();
+    if (frame === undefined) {
+      return;
+    }
+    if (!frame.open) {
+      throw new Error('Cannot record selected materialization after its capture frame closed');
+    }
+    const address = requestAddress(selection);
+    const digest = fingerprint(encoded, machine);
+    const key = observationKey(binding, address, operation, digest);
+    if (!frame.observations.has(key)) {
+      frame.observations.set(key, freezeObservation({ binding, selection, kind, operation, encoded, digest }));
+    }
+  }
+
+  /** The focused output module sees wrapper-owned values only through this closed-over lookup. */
+  const outputObservation = createOutputObservationPort({
+    assertFrameOpen(): void {
+      const frame = captures.getStore();
+      if (frame !== undefined && !frame.open) {
+        throw new Error('Cannot materialize output after its capture frame closed');
+      }
+    },
+    ownershipOf(value) {
+      const owned = ownership.get(value);
+      return owned === undefined ? undefined : {
+        binding: owned.binding.descriptor,
+        address: owned.address,
+        value: owned.value,
+      };
+    },
+    record(fact: IOutputFact): void {
+      const binding = copyBinding(fact.ownership.binding);
+      const selection: ICurrentFactRequest = {
+        kind: 'materialized-output',
+        address: fact.ownership.address,
+        encodingVersion: 'MDS1',
+      };
+      recordExternal(binding, selection, 'materialized-output', 'materialized-output', fact.encoded);
+    },
+  }, machine);
 
   /** Select an object or array member without turning navigation into a whole-value fact. */
   function wrapContainer(binding: IBindingRecord, root: object, value: object, address: readonly IAddressSegment[]): object {
@@ -488,25 +695,51 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
   /** Current-value consumers use operation semantics and digest equality only. */
   function compareCurrent(capture: IObservationCapture<unknown>, provider: ICurrentFactProvider): ICurrentComparison {
     for (const observation of capture.observations) {
-      const resolved = provider.resolve(observation.binding, observation.address, observation.operation);
-      if (resolved.kind !== 'available') {
+      const resolved = provider.resolve(observation.binding, observation.selection);
+      if (resolved.kind === 'unavailable' || resolved.kind === 'ambiguous' || resolved.kind === 'incompatible') {
         return { kind: resolved.kind, observation };
       }
-      let encoded: string;
       let currentFingerprint: string;
-      if (observation.kind === 'implementation') {
-        if (typeof resolved.fact !== 'function') {
-          return { kind: 'unavailable', observation };
+      if (resolved.kind === 'compatible-fingerprint') {
+        if (resolved.encodingVersion !== observation.encodingVersion || !sameRequest(resolved.selection, observation.selection)
+          || !/^[0-9a-f]{64}$/.test(resolved.fingerprint)) {
+          return { kind: 'incompatible', observation };
         }
-        const implementation = encodeImplementation(resolved.fact, machine);
-        encoded = implementation.encoded;
-        currentFingerprint = implementation.digest;
+        currentFingerprint = resolved.fingerprint;
       } else {
-        if (!isSelectedFact(resolved.fact)) {
-          return { kind: 'unavailable', observation };
+        switch (observation.selection.kind) {
+          case 'selected':
+            if (!isSelectedFact(resolved.fact) || !matchesSelectedRequest(resolved.fact, observation.selection)) {
+              return { kind: 'incompatible', observation };
+            }
+            currentFingerprint = fingerprint(encodeSelectedFact(resolved.fact), machine);
+            break;
+          case 'implementation':
+            if (typeof resolved.fact !== 'function') {
+              return { kind: 'unavailable', observation };
+            }
+            currentFingerprint = encodeImplementation(resolved.fact, machine).digest;
+            break;
+          case 'materialized-output':
+            currentFingerprint = fingerprint(encodeSnapshot(resolved.fact), machine);
+            break;
+          case 'projection':
+            if (!isProjectionFact(resolved.fact)) {
+              return { kind: 'incompatible', observation };
+            }
+            currentFingerprint = fingerprint(encodeProjectionFact(resolved.fact), machine);
+            break;
+          case 'collection-order':
+            if (!isUniqueStringSequence(resolved.fact)) {
+              return { kind: 'incompatible', observation };
+            }
+            currentFingerprint = fingerprint(encodeValue(resolved.fact), machine);
+            break;
+          default: {
+            const exhaustive: never = observation.selection;
+            return exhaustive;
+          }
         }
-        encoded = encodeSelectedFact(resolved.fact);
-        currentFingerprint = fingerprint(encoded, machine);
       }
       if (currentFingerprint !== observation.fingerprint) {
         return { kind: 'changed', observation };
@@ -516,6 +749,12 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
   }
 
   const materialization: ITrackingMaterialization = Object.freeze({
+    assertFrameOpen(): void {
+      const frame = captures.getStore();
+      if (frame !== undefined && !frame.open) {
+        throw new Error('Cannot materialize selected content after its capture frame closed');
+      }
+    },
     owns(value: unknown): value is ITracked<object> {
       return value !== null && (typeof value === 'object' || typeof value === 'function') && ownership.has(value);
     },
@@ -524,6 +763,34 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
         throw new TypeError('Materialization reads require an observer-owned tracked value');
       }
       return value[key];
+    },
+    recordSelected(binding: ITrackingBinding, fact: ISelectedFact): void {
+      this.assertFrameOpen();
+      const encoded = encodeSelectedFact(fact);
+      const request: ICurrentFactRequest = {
+        kind: 'selected',
+        operation: fact.operation,
+        address: fact.address,
+        encodingVersion: 'MDO1',
+      };
+      recordExternal(copyBinding(binding), request, 'fact', fact.operation, encoded);
+    },
+    recordProjection(binding: ITrackingBinding, fact: IValueProjectionFact): void {
+      this.assertFrameOpen();
+      const encoded = encodeProjectionFact(fact);
+      const descriptor = copyProjectionDescriptor(fact.descriptor);
+      const request: ICurrentFactRequest = { kind: 'projection', descriptor, encodingVersion: 'MDP1' };
+      recordExternal(copyBinding(binding), request, 'projection', 'projection', encoded);
+    },
+    recordCollectionOrder(binding: ITrackingBinding, keys: readonly string[]): void {
+      this.assertFrameOpen();
+      if (!isUniqueStringSequence(keys)) {
+        throw new TypeError('Collection order needs a unique ordered sequence of string keys');
+      }
+      const copiedKeys = Object.freeze([...keys]);
+      const encoded = encodeValue(copiedKeys);
+      const request: ICurrentFactRequest = { kind: 'collection-order', keys: copiedKeys, encodingVersion: 'MDV1' };
+      recordExternal(copyBinding(binding), request, 'collection-order', 'collection-order', encoded);
     },
   });
 
@@ -587,6 +854,7 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
       });
     },
     compareCurrent,
+    snapshotOutput: outputObservation.snapshotOutput,
     keys(value: ITracked<object>): readonly string[] {
       const owned = ownership.get(value);
       if (owned === undefined || Array.isArray(owned.value)) {

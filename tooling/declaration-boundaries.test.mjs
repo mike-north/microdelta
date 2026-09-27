@@ -394,6 +394,34 @@ test('real package configs reject wrong sibling tiers and forbidden context edge
   }
 });
 
+/** Node module symlinks retain external package identity while resolving to the exact generated alpha artifact. */
+test('Materialization package aliases through workspace node_modules remain pinned to generated tiers', async () => {
+  const gate = path.join(root, 'tooling/check-producer-declarations.mjs');
+  const actualConfig = path.join(root, 'packages/materialization/tsconfig.json');
+  const accepted = spawnSync(process.execPath, [gate, '--config', actualConfig], { cwd: root, encoding: 'utf8' });
+  assert.equal(accepted.status, 0, `Generated node_modules alpha aliases should pass: ${accepted.stdout}${accepted.stderr}`);
+
+  const config = path.join(root, 'packages/materialization/.tsconfig-declaration-negative.json');
+  try {
+    await writeFile(config, JSON.stringify({ compilerOptions: { paths: {
+      '@microdelta/history': [path.join(root, 'packages/history/dist/api/history.untrimmed.d.ts')],
+      '@microdelta/machine': [path.join(root, 'packages/machine/dist/api/machine.alpha.d.ts')],
+    } }, files: [] }));
+    const wrongTier = spawnSync(process.execPath, [gate, '--config', config], { cwd: root, encoding: 'utf8' });
+    assert.notEqual(wrongTier.status, 0, 'A real generated but forbidden declaration tier must remain rejected');
+    assert.match(wrongTier.stdout + wrongTier.stderr, /unapproved.*alias or tier/iu);
+
+    await writeFile(config, JSON.stringify({ compilerOptions: { paths: {
+      '@microdelta/history': [path.join(root, 'packages/history/src/index.ts')],
+    } }, files: [] }));
+    const source = spawnSync(process.execPath, [gate, '--config', config], { cwd: root, encoding: 'utf8' });
+    assert.notEqual(source.status, 0, 'A source path must remain rejected');
+    assert.match(source.stdout + source.stderr, /source alias bypasses/iu);
+  } finally {
+    await rm(config, { force: true });
+  }
+});
+
 /** A package with no source imports still needs an explicitly owned role. */
 test('unknown package compiler config fails closed', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'microdelta-unknown-owner-'));

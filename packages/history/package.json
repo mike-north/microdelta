@@ -44,6 +44,7 @@
     }
   },
   "dependencies": {
-    "@microdelta/machine": "0.0.0"
+    "@microdelta/machine": "0.0.0",
+    "@microdelta/value": "0.0.0"
   }
 }

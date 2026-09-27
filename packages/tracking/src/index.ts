@@ -15,6 +15,7 @@ export type { IAddressSegment, IOperation } from '@microdelta/value';
 export { createTrackingObserver } from './observer.js';
 export type {
   ICurrentComparison,
+  ICurrentFactRequest,
   ICurrentFactProvider,
   ICurrentFactResolution,
   IObservationCapture,
@@ -27,6 +28,7 @@ export type {
   ITrackingObserver,
   ITrackingObserverHost,
 } from './observer.js';
+export type { IDetachedOutput } from './output-observation.js';
 
 /**
  * Opaque identity for one process-local reactive dependency.

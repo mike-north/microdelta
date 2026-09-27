@@ -22,6 +22,14 @@ export type {
 export { createMemoryStore } from './store/memory/index.js';
 export type { MemoryStoreOptions } from './store/memory/index.js';
 export type {
+  ICompletedProjectionReader,
+  ICompletedResultReader,
+  ICompletedResultReference,
+  ISelectedFingerprintRequest,
+  ISelectedFingerprintResolution,
+  ISelectedReadRequest,
+} from './completed-results.js';
+export type {
   Divergence,
   Fingerprint,
   GenerationState,

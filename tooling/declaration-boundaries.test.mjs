@@ -23,6 +23,7 @@ const packages = [
   { directory: 'value', basename: 'value' },
 ];
 const fixture = path.join(root, 'fixtures/declarations/producer');
+const captureFixture = path.join(root, 'fixtures/declarations/capture-producer');
 const tsc = path.join(root, 'node_modules/typescript/bin/tsc');
 const tiers = ['untrimmed', 'alpha', 'beta', 'public'];
 
@@ -75,7 +76,7 @@ function rejected(result, label) {
   assert.match(result.stdout + result.stderr, /TS2305/u, `${label}: ${result.stdout}${result.stderr}`);
 }
 
-test('actual packages and fixture producer generate all release views and API reports', () => {
+test('actual packages and fixture producers generate all release views and API reports', () => {
   for (const { directory, basename } of packages) {
     for (const tier of tiers) {
       const filename = path.join(root, `packages/${directory}/dist/api/${basename}.${tier}.d.ts`);
@@ -85,8 +86,10 @@ test('actual packages and fixture producer generate all release views and API re
   }
   for (const tier of tiers) {
     assert.ok(existsSync(path.join(fixture, `dist/api/fixture.${tier}.d.ts`)), `Fixture ${tier} view`);
+    assert.ok(existsSync(path.join(captureFixture, `dist/api/capture.${tier}.d.ts`)), `Capture fixture ${tier} view`);
   }
   assert.ok(existsSync(path.join(fixture, 'etc/fixture.api.md')), 'Fixture API report');
+  assert.ok(existsSync(path.join(captureFixture, 'etc/capture.api.md')), 'Capture fixture API report');
 });
 
 /** A public compatibility subpath is a reviewed declaration surface as well. */

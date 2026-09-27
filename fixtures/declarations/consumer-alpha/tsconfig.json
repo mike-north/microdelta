@@ -1,0 +1,11 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "include": ["src/**/*.ts"],
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "@microdelta/tracking": ["../../../packages/tracking/dist/api/tracking.alpha.d.ts"],
+      "@microdelta/capture-producer": ["../capture-producer/dist/api/capture.alpha.d.ts"]
+    }
+  }
+}

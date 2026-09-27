@@ -1,8 +1,9 @@
 # microdelta specification — start here
 
-**Status: consolidated design baseline, 2026-09-26. Implementation incomplete;
-experiments below have not been run.** This specification describes the target,
-not an assertion that the current scaffold implements it.
+**Status: consolidated design baseline, 2026-09-26. M0.5 accepted;
+M1 experiment evidence is under review. Runtime implementation remains incomplete.**
+This specification describes the target, not an assertion that the current
+scaffold implements it.
 
 microdelta keeps analyses current across complete process shutdown while reusing
 retained expensive results when the evidence they actually consumed remains
@@ -98,7 +99,8 @@ receive their capabilities through injection, and the facade supplies the Node
 adapter while preserving `createMemoryStore(options?)`. The [implementation
 map](../package-map.md) records implemented and absent roles without placeholder
 APIs. API Extractor rollups/reports and checked import edges are present, and the
-Machine boundary is implemented. The complete M0.5 gate remains open pending the
-remaining foundation requirements, including repository protection. [Historical
-validation](../validation.md) is dated evidence, not a fresh run or satisfaction
-of those remaining requirements.
+Machine boundary is implemented. The [M0.5 acceptance record](../validation/foundation-2026-09-26.md)
+links the accepted tooling, package, Machine, CI, and repository-protection evidence.
+M1 candidates require their own review and owning-contract decisions; foundation
+acceptance does not establish durable runtime behavior. [Historical validation](../validation.md)
+remains dated evidence, not a fresh run.

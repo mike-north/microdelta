@@ -42,7 +42,7 @@ that run and review its exact commit before merge. The observed failure followed
 by recovery demonstrates that a passing body check did not remain the applicable
 result after the deliberate incomplete-body edit.
 
-## Live merge protection remains pending
+## Initial protection checkpoint — authentication pending
 
 The supervisor prepared a classic `main` rule requiring a PR, all four checks
 from GitHub Actions (`PR metadata`, `core (20)`, `core (22)`, `core (24)`), an
@@ -61,3 +61,21 @@ Metadata completeness cannot establish truthful evidence, semantic correctness,
 or distinct identities behind a shared account. This record claims no completed
 human review and grants no merge authority. GitHub's asynchronous event scheduling
 still requires the supervisor to wait for the latest body/head checks.
+
+## Final acceptance — 2026-09-27 UTC (2026-09-26 Pacific)
+
+The authentication dependency above was resolved. The supervisor verified the
+saved [main rule 83790652](https://github.com/mike-north/microdelta/settings/branch_protection_rules/83790652)
+and recorded [issue #4 acceptance](https://github.com/mike-north/microdelta/issues/4#issuecomment-5851704619).
+The approved CLI helper read back PR required, all four required checks, strict
+up-to-date base, administrator enforcement, and resolved conversations. Saved-rule
+inspection additionally verified GitHub Actions as the allowed app for each check,
+bypass disabled, force pushes disabled, and deletions disabled. The rule requires
+zero independent approvals because the agents share one GitHub identity; substantive
+supervisory review remains required and no independent-human review is claimed.
+
+The synchronized head [metadata run](https://github.com/mike-north/microdelta/actions/runs/36279753305)
+and subsequent [body-edit run](https://github.com/mike-north/microdelta/actions/runs/36279772370)
+passed before PR #14 merged. Its [default-branch run](https://github.com/mike-north/microdelta/actions/runs/36279896367)
+passed all three Node versions. Issue #4 is closed. These are dated observations;
+the supervisor must still check the applicable head, body, and CI at each merge.

@@ -1,9 +1,11 @@
 # Delivery milestones
 
 Authority: [specification entry point](spec/README.md). Status: M0 consolidation
-complete (see [validation](spec/validation.md)); M0.5 and all experiment/runtime
-milestones are planned and unproven. A milestone is a quality checkpoint,
-including experiments; it need not be a user-facing release.
+complete (see [validation](spec/validation.md)); M0.5 accepted on 2026-09-27 UTC
+(2026-09-26 Pacific; see [foundation evidence](validation/foundation-2026-09-26.md)).
+M1 experiments are under review; no M1 or later runtime milestone is complete.
+A milestone is a quality checkpoint, including experiments; it need not be a
+user-facing release.
 
 ## M0 — Consolidated, agent-legible specification
 

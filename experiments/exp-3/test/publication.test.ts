@@ -1,6 +1,6 @@
 /**
- * These assertions define History's bounded publication behavior before the
- * SQLite candidate exists; real process exits and reopen are part of the proof.
+ * These Jest scenarios exercise EXP-3 publication outcomes across file-backed
+ * SQLite reopen and real child-process exits; they do not define production History.
  */
 import { afterEach, describe, expect, test } from '@jest/globals';
 import { spawnSync } from 'node:child_process';
@@ -226,8 +226,9 @@ describe('EXP-3 SQLite publication protocol', () => {
     const bodyCounterPath = `${databasePath}.calls`;
     expect(runWorker(databasePath, 'seed-old').status).toBe(0);
 
-    const staged = runWorker(databasePath, 'stage-stable-key-then-kill');
+    const staged = runWorker(databasePath, 'stage-stable-key-then-kill', [bodyCounterPath]);
     expect(staged.signal).toBe('SIGKILL');
+    expect(readFileSync(bodyCounterPath, 'utf8')).toBe('body\n');
 
     const recovered = runWorker(databasePath, 'publish-staged-stable-key', [bodyCounterPath]);
     expect(recovered.status).toBe(0);
@@ -253,9 +254,10 @@ describe('EXP-3 SQLite publication protocol', () => {
         fingerprint: 'retained-fingerprint',
         provenance: { producer: 'staged-recovery' },
       },
-      bodyMarkerPresent: false,
+      bodyMarkerPresent: true,
     });
-    expect(existsSync(bodyCounterPath)).toBe(false);
+    expect(existsSync(bodyCounterPath)).toBe(true);
+    expect(readFileSync(bodyCounterPath, 'utf8')).toBe('body\n');
   });
 
   test('publication is one commit: death just before commit leaves the staged attempt unpublished', () => {

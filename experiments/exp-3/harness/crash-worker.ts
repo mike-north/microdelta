@@ -77,8 +77,14 @@ switch (command) {
     break;
   }
   case 'stage-stable-key-then-kill': {
+    const bodyCounterPath = args[0];
+    if (bodyCounterPath === undefined) {
+      throw new Error('staged recovery setup requires its body-call counter path');
+    }
     const writer = acquire(database, 'interrupted', 10);
     const attempt = allocate(writer, 'stable-recovery-key', 10);
+    // This marker records the original candidate computation; takeover must not repeat it.
+    appendFileSync(bodyCounterPath, 'body\n', 'utf8');
     repository.stageAttempt({
       ...writer,
       attemptId: attempt.attemptId,

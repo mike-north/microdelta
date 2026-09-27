@@ -128,7 +128,9 @@ advancement remain positive controls.
 The staged-key recovery case reopens after a committed stage, rebinds the same
 key to the same attempt/generation, rejects the old holder, and publishes the
 retained payload, fingerprint, and provenance under current authority without a
-body marker. The exact-reference case now closes/reopens a file-backed database
+second body call. A file-backed marker records one candidate computation before
+the staged-process kill and remains exactly one call after recovery. The
+exact-reference case now closes/reopens a file-backed database
 before asserting that generation 1 retains its original content while
 generation 2 remains current.
 

@@ -71,7 +71,7 @@ mandatory in unrelated CI.
 
 **Unblocks:** M2/M3 supported data and durable binding/publication. M0.5 already
 establishes baseline package enforcement; no parallel architecture model is
-required to delay it.
+required.
 The exact nested-argument cases in EXP-4 and operational details in EXP-8 can wait
 until their dependent milestones. No broad product questionnaire is required.
 

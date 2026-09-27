@@ -1,0 +1,46 @@
+{
+  "name": "@microdelta/history",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Existing history context capability; implementation incomplete",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "./dist/src/index.js",
+  "types": "./dist/api/history.public.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/api/history.public.d.ts",
+      "import": "./dist/src/index.js"
+    },
+    "./conformance/store": {
+      "types": "./dist/api/history.conformance.store.public.d.ts",
+      "import": "./dist/test/conformance/store/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json && api-extractor run --config api-extractor-conformance.json && api-extractor run --config api-extractor-shared.json && node ../../tooling/history-declaration-shims.mjs",
+    "check": "concurrently --success all --names types,lint \"npm run check:types\" \"npm run check:lint\"",
+    "check:types": "tsc --noEmit -p tsconfig.json",
+    "check:lint": "eslint .",
+    "test": "npm run test:unit && npm run test:types",
+    "test:unit": "tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --runInBand",
+    "test:types": "tsd"
+  },
+  "tsd": {
+    "directory": "test-d"
+  },
+  "peerDependencies": {
+    "@jest/globals": "^30.5.1"
+  },
+  "peerDependenciesMeta": {
+    "@jest/globals": {
+      "optional": true
+    }
+  }
+}

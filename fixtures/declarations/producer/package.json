@@ -1,0 +1,14 @@
+{
+  "name": "@microdelta/fixture-producer",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./dist/src/index.js",
+  "types": "./dist/api/fixture.public.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/api/fixture.public.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  }
+}

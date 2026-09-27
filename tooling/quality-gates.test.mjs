@@ -19,8 +19,8 @@ const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
 
 /** Each scope must have compiler and lint coverage, including future experiments. */
 const scopes = [
-  { name: 'production', directory: 'packages/core/src/name', project: 'packages/core/tsconfig.json' },
-  { name: 'test', directory: 'packages/core/test', project: 'packages/core/tsconfig.json' },
+  { name: 'production', directory: 'packages/definition/src', project: 'packages/definition/tsconfig.json' },
+  { name: 'test', directory: 'packages/history/test', project: 'packages/history/tsconfig.json' },
   { name: 'experiment', directory: 'experiments', project: 'tsconfig.json' },
 ];
 
@@ -194,9 +194,9 @@ test('suppression scan ignores template, regexp, and explanatory prose text', as
 
 /** Production lint combines type information with the existing import boundary. */
 test('configured type-aware lint retains component dependency enforcement', async () => {
-  await withProbe(scopes[0], 'import { x } from "../store/index.js";\nvoid x;\n', async file => {
+  await withProbe(scopes[0], 'import { createMemoryStore } from "@microdelta/history";\nvoid createMemoryStore;\n', async file => {
     const rules = await lint(file);
-    assert.ok(rules.includes('microdelta/dependency-boundaries'), `${rules}`);
+    assert.ok(rules.includes('microdelta/context-imports'), `${rules}`);
   });
 });
 

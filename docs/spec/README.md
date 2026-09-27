@@ -88,11 +88,12 @@ design area is covered. Historical docs are not part of the normal reading path.
 
 ## Current checkout
 
-`packages/core` contains an in-memory Store, naming utility, internal tracking
-facade, and their tests. It does not contain an assembled durable runtime. Its
-single-package layout and old component import checker precede the six-context
-architecture. Its current `AsyncLocalStorage` and `node:v8` imports are not yet
-isolated behind Machine. [Historical validation](../validation.md) is dated
-evidence, not a fresh run or satisfaction of these new requirements. Start new
-software work at milestone M0.5; do not treat the old schemas or name-derived
-identity as constraints.
+The `microdelta` facade explicitly reexports the existing public History Store
+contract. `@microdelta/definition`, `@microdelta/tracking`, and
+`@microdelta/history` own the current diagnostic naming, process-local tracking,
+and legacy row Store code respectively. The [implementation map](../package-map.md)
+records accepted but absent roles without adding placeholder APIs. API Extractor
+rollups/reports and checked import edges are present; the complete M0.5 gate is
+still open. Current direct `AsyncLocalStorage` and `node:v8` runtime imports have
+not yet been isolated behind Machine. [Historical validation](../validation.md)
+is dated evidence, not a fresh run or satisfaction of the remaining requirements.

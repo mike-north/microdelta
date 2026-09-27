@@ -17,19 +17,28 @@ define claims, acceptance evidence, supervisory review, and merge authority.
 
 ## Current checkout
 
-The private `microdelta` package in `packages/core` contains an in-memory Store,
-naming utility, internal tracking facade and tests. It does not yet provide an
-assembled durable runtime. The accepted six-context architecture and declaration
-tiers are targets; the current single-package scaffold does not enforce them yet.
-The Node-first [Machine host boundary](docs/spec/architecture.md) is also a target;
-runtime `AsyncLocalStorage` and `node:v8` dependencies are not yet isolated.
+The private `microdelta` facade reexports the existing public Store contract from
+`@microdelta/history`. The implemented owner packages are
+`@microdelta/definition` (diagnostic naming), `@microdelta/tracking`
+(process-local observation utilities), and `@microdelta/history` (legacy row
+Store, memory adapter, and conformance suite). The [package map](docs/package-map.md)
+records their ports, release tiers, and the explicitly absent contexts.
 
-[Historical validation](docs/validation.md) records earlier checks and their limits.
-The [repository bootstrap record](docs/bootstrap-validation.md) records the current
-import's local checks and distinguishes them from the unimplemented foundation.
-The Store conformance suite establishes single-row CAS/snapshot behavior, not
-cross-row publication, restart recovery or stale-worker fencing. The memory backend
-cannot persist across process exits. See [store conformance](packages/core/test/conformance/store/README.md).
+API Extractor generates four declaration tiers and reviewed reports for each
+implemented package's root entry and the two public Store conformance subpaths.
+History's two entries select names from one canonical declaration per tier, so
+their branded Store types compose in ordinary package consumers.
+The checked source-import registry enforces directed context edges, and the facade
+consumes History through generated alpha declarations. The full M0.5 foundation
+is still incomplete: the Node-first
+[Machine host boundary](docs/spec/architecture.md) is issue #3, and direct
+`AsyncLocalStorage` and `node:v8` imports remain known baseline violations.
+The memory backend cannot persist across process exits or prove cross-row
+publication. See [store conformance](packages/history/test/conformance/store/README.md).
+
+[Historical validation](docs/validation.md) and the
+[repository bootstrap record](docs/bootstrap-validation.md) are dated evidence,
+not a claim that the remaining foundation gates pass.
 
 ## Development
 
@@ -40,14 +49,12 @@ npm test
 npm run build
 ```
 
-Runtime tests use Jest over compiled TypeScript ESM; type tests use tsd. The existing
-ESLint component graph and its fixture describe the old scaffold only. Migrating
-that checker to the new package/context contracts, adding type-aware lint and
-API Extractor declaration checks, and enforcing the Node boundary are the
-[M0.5 foundation](docs/milestones.md). The commands above describe the current
-scaffold, not evidence that this gate already passes.
+Runtime tests use Jest over compiled TypeScript ESM; type tests use tsd.
+The checked declaration fixtures compile own untrimmed, sibling alpha, normal
+external public, and explicitly selected beta package views. No package is
+published, and release-tier trimming is a TypeScript contract boundary rather
+than a JavaScript security sandbox.
 
 Write tests from the governing requirements before implementing functionality,
-and comment durable intent for modules and all software abstractions. Runtime
-experiment work starts at [M1](docs/milestones.md) after M0.5; it must not
-silently implement an archived API.
+and comment durable intent for modules and software abstractions. Runtime
+experiment work starts at [M1](docs/milestones.md) after M0.5.

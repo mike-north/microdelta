@@ -1,3 +1,5 @@
+> Historical scaffold component map. The active context edges are in the [architecture specification](../spec/architecture.md) and the checked [package map](../package-map.md).
+
 # Historical component graph — tooling fixture only
 
 This is the frozen graph consumed by `tooling/dependencies.test.mjs` for the

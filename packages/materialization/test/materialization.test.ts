@@ -86,6 +86,70 @@ function recordKeys(value: unknown): readonly string[] {
 }
 
 describe('selected materialization', () => {
+  test('rejects bigint and symbol scalar reads before Tracking can ignore an out-of-frame fact', () => {
+    for (const unsupported of [1n, Symbol('unsupported scalar')]) {
+      let reads = 0;
+      let hashes = 0;
+      const countedMachine: ITrackingObserverHost = {
+        createAsyncContext<T>() { return new AsyncLocalStorage<T>(); },
+        sha256(input: string): string {
+          hashes += 1;
+          return createHash('sha256').update(input, 'utf8').digest('hex');
+        },
+      };
+      const tracking = createTrackingObserver(countedMachine);
+      const base = createExactReader();
+      const reader: ICompletedResultReader = {
+        ...base.reader,
+        readSelected(_reference, request): ISelectedFact {
+          reads += 1;
+          return { operation: request.operation, address: request.address, fact: unsupported };
+        },
+      };
+      const materialization = createMaterialization({ tracking, reader });
+      const scalar = materialization.materialize<object>(
+        { kind: 'completed-result', locator: 'A' }, { path: ['step'] },
+      );
+
+      expect(() => { Reflect.get(scalar, 'selected'); }).toThrow(/scalar|unsupported/i);
+      const captured = tracking.capture((): unknown => {
+        try {
+          const result: unknown = Reflect.get(scalar, 'selected');
+          return result;
+        }
+        catch (error: unknown) { return error; }
+      });
+      expect(captured.value).toBeInstanceOf(TypeError);
+      expect(captured.observations).toHaveLength(0);
+      expect(reads).toBe(2);
+      expect(hashes).toBe(0);
+    }
+  });
+
+  test('continues to expose each supported scalar value through selected reads', () => {
+    for (const selected of [undefined, null, false, 0, 'Ada']) {
+      const tracking = createTrackingObserver(machine);
+      const base = createExactReader();
+      const reader: ICompletedResultReader = {
+        ...base.reader,
+        readSelected(_reference, request): ISelectedFact {
+          return { operation: request.operation, address: request.address, fact: selected };
+        },
+      };
+      const materialization = createMaterialization({ tracking, reader });
+      const scalar = materialization.materialize<object>(
+        { kind: 'completed-result', locator: 'A' }, { path: ['step'] },
+      );
+      const capture = tracking.capture((): unknown => {
+        const result: unknown = Reflect.get(scalar, 'selected');
+        return result;
+      });
+
+      expect(capture.value).toBe(selected);
+      expect(capture.observations).toHaveLength(1);
+    }
+  });
+
   test('compatible metadata comparisons dispatch against current exact references without payload fallback', () => {
     const tracking = createTrackingObserver(machine);
     const exact = createExactReader();
@@ -310,6 +374,148 @@ describe('selected materialization', () => {
     expect(capture.value.members).toEqual([['user-a', 'Ada']]);
     expect(capture.observations).toHaveLength(1);
     expect(capture.observations[0]?.kind).toBe('projection');
+  });
+
+  test('validates malformed projection selections before invoking the projection reader', () => {
+    let hashes = 0;
+    const countedMachine: ITrackingObserverHost = {
+      createAsyncContext<T>() { return new AsyncLocalStorage<T>(); },
+      sha256(input: string): string {
+        hashes += 1;
+        return createHash('sha256').update(input, 'utf8').digest('hex');
+      },
+    };
+    const tracking = createTrackingObserver(countedMachine);
+    const reference: ICompletedResultReference = { kind: 'completed-result', locator: 'saved-A' };
+    let readerCalls = 0;
+    let getterCalls = 0;
+    const projectionReader = {
+      readProjection(_exact: ICompletedResultReference, descriptor: IValueProjectionDescriptor): IValueProjectionFact {
+        readerCalls += 1;
+        return { descriptor, members: [] };
+      },
+    };
+    const materialization = createMaterialization({ tracking, reader: createExactReader().reader, projectionReader });
+    const sparseAddress: IAddressSegment[] = new Array<IAddressSegment>(1);
+    const sparseCoverage: string[] = new Array<string>(1);
+    const getterBacked = Object.create(null) as object;
+    Object.defineProperties(getterBacked, {
+      address: { enumerable: true, get() { getterCalls += 1; return []; } },
+      operation: { enumerable: true, value: 'value' },
+      traversal: { enumerable: true, value: { kind: 'exhaustive', complete: true } },
+    });
+    const invalidDescriptors: readonly unknown[] = [
+      getterBacked,
+      { address: sparseAddress, operation: 'value', traversal: { kind: 'exhaustive', complete: true } },
+      { address: [], operation: 'value', traversal: { kind: 'visited', complete: false, keys: sparseCoverage } },
+    ];
+
+    const outcomes = tracking.capture((): readonly unknown[] => invalidDescriptors.map((descriptor) => {
+      try {
+        const result: unknown = Reflect.apply(materialization.projectFrom, materialization, [reference, { path: ['roster'] }, descriptor]);
+        return result;
+      } catch (error: unknown) {
+        return error;
+      }
+    }));
+
+    expect(outcomes.value).toHaveLength(invalidDescriptors.length);
+    expect(outcomes.value.every((outcome) => outcome instanceof TypeError)).toBe(true);
+    expect(outcomes.observations).toHaveLength(0);
+    expect(readerCalls).toBe(0);
+    expect(getterCalls).toBe(0);
+    expect(hashes).toBe(0);
+  });
+
+  test('dispatches a detached frozen descriptor and validates against its stable meaning', () => {
+    const tracking = createTrackingObserver(machine);
+    const reference: ICompletedResultReference = { kind: 'completed-result', locator: 'saved-A' };
+    const callerDescriptor = {
+      address: [{ kind: 'property' as const, key: 'name' }],
+      operation: 'value' as const,
+      traversal: { kind: 'visited' as const, complete: false as const, keys: ['user-a'] },
+    };
+    let dispatched: IValueProjectionDescriptor | undefined;
+    let dispatchedIsFrozen = false;
+    let addressIsFrozen = false;
+    let segmentIsFrozen = false;
+    let traversalIsFrozen = false;
+    let coverageIsFrozen = false;
+    let readerMutationSucceeded = true;
+    const projectionReader = {
+      readProjection(_exact: ICompletedResultReference, descriptor: IValueProjectionDescriptor): IValueProjectionFact {
+        dispatched = descriptor;
+        dispatchedIsFrozen = Object.isFrozen(descriptor);
+        addressIsFrozen = Object.isFrozen(descriptor.address);
+        traversalIsFrozen = Object.isFrozen(descriptor.traversal);
+        const segment = descriptor.address[0];
+        if (segment !== undefined) {
+          segmentIsFrozen = Object.isFrozen(segment);
+          readerMutationSucceeded = Reflect.set(segment, 'key', 'reader mutation');
+        }
+        if (descriptor.traversal.kind === 'visited') {
+          coverageIsFrozen = Object.isFrozen(descriptor.traversal.keys);
+        }
+        const callerSegment = callerDescriptor.address[0];
+        if (callerSegment !== undefined) {
+          callerSegment.key = 'caller mutation during dispatch';
+        }
+        return { descriptor, members: [['user-a', 'Ada']] };
+      },
+    };
+    const materialization = createMaterialization({ tracking, reader: createExactReader().reader, projectionReader });
+
+    const result = tracking.capture(() => materialization.projectFrom(
+      reference, { path: ['roster'] }, callerDescriptor,
+    ));
+    const callerSegment = callerDescriptor.address[0];
+    if (callerSegment !== undefined) {
+      callerSegment.key = 'caller mutation after dispatch';
+    }
+
+    expect(dispatched).not.toBe(callerDescriptor);
+    expect(dispatchedIsFrozen).toBe(true);
+    expect(addressIsFrozen).toBe(true);
+    expect(segmentIsFrozen).toBe(true);
+    expect(traversalIsFrozen).toBe(true);
+    expect(coverageIsFrozen).toBe(true);
+    expect(readerMutationSucceeded).toBe(false);
+    expect(dispatched?.address).toEqual([{ kind: 'property', key: 'name' }]);
+    expect(result.value.descriptor.address).toEqual([{ kind: 'property', key: 'name' }]);
+    expect(result.value.descriptor.traversal).toEqual({ kind: 'visited', complete: false, keys: ['user-a'] });
+    expect(result.observations).toHaveLength(1);
+  });
+
+  test('accepts semantically equivalent null-prototype projection descriptors from the reader', () => {
+    const tracking = createTrackingObserver(machine);
+    const reference: ICompletedResultReference = { kind: 'completed-result', locator: 'saved-A' };
+    const requested: IValueProjectionDescriptor = {
+      address: [{ kind: 'property', key: 'name' }], operation: 'value',
+      traversal: { kind: 'exhaustive', complete: true },
+    };
+    const equivalentSegment = { key: 'name', kind: 'property' as const };
+    Object.setPrototypeOf(equivalentSegment, null);
+    const equivalentTraversal = { complete: true as const, kind: 'exhaustive' as const };
+    Object.setPrototypeOf(equivalentTraversal, null);
+    const equivalentDescriptor: IValueProjectionDescriptor = {
+      traversal: equivalentTraversal,
+      operation: 'value' as const,
+      address: [equivalentSegment],
+    };
+    Object.setPrototypeOf(equivalentDescriptor, null);
+    const projectionReader = {
+      readProjection(_exact: ICompletedResultReference, _descriptor: IValueProjectionDescriptor): IValueProjectionFact {
+        return { descriptor: equivalentDescriptor, members: [] };
+      },
+    };
+    const materialization = createMaterialization({ tracking, reader: createExactReader().reader, projectionReader });
+
+    const capture = tracking.capture(() => materialization.projectFrom(
+      reference, { path: ['roster'] }, requested,
+    ));
+
+    expect(capture.value.descriptor).toEqual(requested);
+    expect(capture.observations).toHaveLength(1);
   });
 
   test('returns nested selected records in the same canonical order as their content fact', () => {

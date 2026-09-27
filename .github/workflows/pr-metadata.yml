@@ -2,6 +2,12 @@ name: PR metadata
 on:
   pull_request:
     types: [opened, edited, reopened, synchronize]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: Pull request whose current body should be checked
+        required: true
+        type: number
 # PR text is fetched as data by Node. This workflow never installs dependencies
 # and has no write permission, secrets, or pull_request_target execution context.
 permissions:
@@ -10,7 +16,7 @@ permissions:
 # Body edits do not change the commit. Cancel older runs for the same PR, then
 # read the live body even when an old event is manually rerun out of order.
 concurrency:
-  group: pr-metadata-${{ github.event.pull_request.number }}
+  group: pr-metadata-${{ github.event.pull_request.number || inputs.pr_number }}
   cancel-in-progress: true
 jobs:
   metadata:

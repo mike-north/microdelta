@@ -118,7 +118,9 @@ or device failure, network filesystems, clock skew, or distributed hosts. A
 single SQLite transaction establishes the tested publication boundary, not
 general backend qualification or production History correctness.
 
-**Recommendation:** provisional pass for the tested single-file,
-single-active-writer candidate shape on Node 24 with 12.9.0. Node 20/22 runtime
-evidence, concurrent worker safety, and all listed durability limits remain open.
-The History owning contract and adoption decision remain with the supervisor.
+**Decision:** select the tested single-file, single-active-writer SQLite protocol
+shape for the initial durable backend, as recorded in PUB-004. The corrected
+source passed the supervisor's canonical Node 24 checks; the final PR head still
+requires the Node 20/22/24 CI matrix before merge. Concurrent worker safety and
+all listed durability limits remain outside this evidence. This selection does
+not establish a production History backend or permanent Machine SQLite API.

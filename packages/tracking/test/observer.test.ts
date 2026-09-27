@@ -86,6 +86,101 @@ describe('semantic tracking observer', () => {
       .toThrow(/observer-owned|owned/i);
   });
 
+  test('detached materialization record capabilities retain selected facts, projections, and collection order', () => {
+    const { recordSelected, recordProjection, recordCollectionOrder } = observer.materialization;
+    const selected: ISelectedFact = {
+      operation: 'value',
+      address: [{ kind: 'property', key: 'name' }],
+      fact: 'Ada',
+    };
+    const projection: IValueProjectionFact = {
+      descriptor: {
+        address: [{ kind: 'property', key: 'name' }],
+        operation: 'value',
+        traversal: { kind: 'exhaustive', complete: true },
+      },
+      members: [['user-a', 'Ada']],
+    };
+    const captures = [
+      observer.capture(() => recordSelected(binding, selected)),
+      observer.capture(() => recordProjection(binding, projection)),
+      observer.capture(() => recordCollectionOrder(binding, ['user-a', 'user-b'])),
+    ];
+
+    expect(captures.map(capture => capture.observations.length)).toEqual([1, 1, 1]);
+    expect(captures.map(capture => capture.observations[0]?.kind))
+      .toEqual(['fact', 'projection', 'collection-order']);
+    expect(captures[0]?.observations[0]).toMatchObject({
+      address: selected.address,
+      operation: 'value',
+      selection: { kind: 'selected', operation: 'value', address: selected.address },
+    });
+    expect(captures[1]?.observations[0]).toMatchObject({
+      selection: { kind: 'projection', descriptor: projection.descriptor },
+    });
+    expect(captures[2]?.observations[0]).toMatchObject({
+      selection: { kind: 'collection-order', keys: ['user-a', 'user-b'] },
+    });
+  });
+
+  test('detached materialization record capabilities reject closed inherited frames before inspecting content', async () => {
+    let digestCalls = 0;
+    let contentReads = 0;
+    const host: IMachine = {
+      ...machine,
+      sha256(input: string): string {
+        digestCalls += 1;
+        return machine.sha256(input);
+      },
+    };
+    const isolated = createTrackingObserver(host);
+    const { recordSelected, recordProjection, recordCollectionOrder } = isolated.materialization;
+    const selected: ISelectedFact = {
+      get operation(): 'value' { contentReads += 1; return 'value'; },
+      address: [{ kind: 'property', key: 'name' }],
+      fact: 'Ada',
+    };
+    const projection: IValueProjectionFact = {
+      get descriptor(): IValueProjectionFact['descriptor'] {
+        contentReads += 1;
+        return {
+          address: [{ kind: 'property', key: 'name' }],
+          operation: 'value',
+          traversal: { kind: 'exhaustive', complete: true },
+        };
+      },
+      members: [['user-a', 'Ada']],
+    };
+    const keys = new Proxy(['user-a', 'user-b'], {
+      get(target, property, receiver): unknown {
+        contentReads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    let detached: Promise<readonly unknown[]> = Promise.resolve([]);
+
+    await isolated.captureAsync(async () => {
+      detached = (async () => {
+        await gate;
+        const attempts: Array<Promise<unknown>> = [
+          Promise.resolve().then(() => recordSelected(binding, selected)),
+          Promise.resolve().then(() => recordProjection(binding, projection)),
+          Promise.resolve().then(() => recordCollectionOrder(binding, keys)),
+        ];
+        return Promise.all(attempts.map(attempt => attempt.catch((error: unknown) => error)));
+      })();
+    });
+
+    release();
+    const errors = await detached;
+    expect(errors).toHaveLength(3);
+    expect(errors.every(error => error instanceof Error && /closed/i.test(error.message))).toBe(true);
+    expect(contentReads).toBe(0);
+    expect(digestCalls).toBe(0);
+  });
+
   test('synchronous capture rejects promises and ordinary thenable results', () => {
     expect(() => observer.capture(() => Promise.resolve('later'))).toThrow(/captureAsync/i);
     expect(() => observer.capture(() => ({ then: () => undefined }))).toThrow(/captureAsync/i);
@@ -96,6 +191,50 @@ describe('semantic tracking observer', () => {
     const capture = await observer.captureAsync(async () => tracked);
     expect(capture.value).toBe(tracked);
     expect(capture.observations.map(item => item.address)).toEqual([[{ kind: 'property', key: 'then' }]]);
+  });
+
+  test('async capture passes tracked functions through without invoking or observing them', async () => {
+    let calls = 0;
+    let ownThenReads = 0;
+    let ownThenCalls = 0;
+    const implementation = () => { calls += 1; return 'called'; };
+    const trackedFunction = observer.tracked(implementation, binding);
+    const accessorImplementation = () => { calls += 1; return 'accessor called'; };
+    // A configurable custom then getter stays opaque and must not run during Promise assimilation.
+    Object.defineProperty(accessorImplementation, 'then', {
+      configurable: true,
+      get() {
+        ownThenReads += 1;
+        return () => { ownThenCalls += 1; };
+      },
+    });
+    const trackedAccessorFunction = observer.tracked(accessorImplementation, binding);
+    const direct = await observer.captureAsync(async () => trackedFunction);
+    const resolved = await observer.captureAsync(async () => Promise.resolve(trackedFunction));
+    const chained = await observer.captureAsync(async () => Promise.resolve('ready').then(() => trackedFunction));
+    const accessor = await observer.captureAsync(async () => Promise.resolve(trackedAccessorFunction));
+
+    for (const capture of [direct, resolved, chained]) {
+      expect(capture.value).toBe(trackedFunction);
+      expect(capture.observations).toHaveLength(0);
+    }
+    expect(accessor.value).toBe(trackedAccessorFunction);
+    expect(accessor.observations).toHaveLength(0);
+    expect(calls).toBe(0);
+    expect(ownThenReads).toBe(0);
+    expect(ownThenCalls).toBe(0);
+    expect(Reflect.get(trackedFunction, 'then')).toBeUndefined();
+  });
+
+  test('rejects non-configurable own then lookup without changing ordinary function calls', async () => {
+    let calls = 0;
+    const implementation = () => { calls += 1; return 'called'; };
+    Object.defineProperty(implementation, 'then', { configurable: false, value: () => undefined });
+    const trackedFunction = observer.tracked(implementation, binding);
+
+    expect(trackedFunction()).toBe('called');
+    await expect(observer.captureAsync(async () => trackedFunction)).rejects.toThrow(/non-configurable then/i);
+    expect(calls).toBe(1);
   });
 
   test('copies registration bindings and retained facts so later source mutation cannot retarget evidence', () => {
@@ -130,6 +269,28 @@ describe('semantic tracking observer', () => {
     expect(captured.observations[0]?.encoded).toContain('Ada');
     expect(observer.compareCurrent(captured, { resolve: () => ({ kind: 'unavailable' }) }).kind).toBe('unavailable');
     expect(observer.compareCurrent(captured, { resolve: () => ({ kind: 'ambiguous' }) }).kind).toBe('ambiguous');
+  });
+
+  test('membership evidence ignores unrelated additions and changes when the selected member is removed', () => {
+    const source = createProvider();
+    const captured = observer.capture(() => 'a' in observer.tracked({ a: 1 }, binding));
+
+    source.set('analysis/author', { a: 1, b: 2 });
+    expect(observer.compareCurrent(captured, source.provider).kind).toBe('equal');
+
+    source.set('analysis/author', { b: 2 });
+    expect(observer.compareCurrent(captured, source.provider).kind).toBe('changed');
+  });
+
+  test('explicit identity reads ignore unread names but change when the identity changes', () => {
+    const source = createProvider();
+    const captured = observer.capture(() => observer.tracked({ id: 'author-1', name: 'Ada' }, binding).id);
+
+    source.set('analysis/author', { id: 'author-2', name: 'Ada' });
+    expect(observer.compareCurrent(captured, source.provider).kind).toBe('changed');
+
+    source.set('analysis/author', { id: 'author-1', name: 'Grace' });
+    expect(observer.compareCurrent(captured, source.provider).kind).toBe('equal');
   });
 
   test('matches selected addresses by segment meaning rather than object member order', () => {

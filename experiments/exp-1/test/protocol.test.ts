@@ -103,6 +103,78 @@ describe('EXP-1 structural correspondence and actual observations', () => {
     expect(() => tracked(object)).toThrow(TypeError);
   });
 
+  test('thenable results cannot move tracked reads outside the synchronous capture frame', () => {
+    const config = tracked({ factor: 2 });
+    const registry = createRegistry();
+    registry.register(configSlot, config);
+    let thenCalls = 0;
+    const thenable = {
+      then(resolve: (value: number) => void): void {
+        thenCalls++;
+        resolve(config.factor);
+      },
+    };
+    expect(() => capture(registry, () => thenable)).toThrow(/synchronous/u);
+    expect(thenCalls).toBe(0);
+    expect(capture(registry, () => ({ then: 'label', value: 7 })).value).toEqual({ then: 'label', value: 7 });
+  });
+
+  test('a then accessor is rejected without invoking it during capture', () => {
+    let getterCalls = 0;
+    const thenable = Object.defineProperty({}, 'then', {
+      get(): (resolve: (value: number) => void) => void {
+        getterCalls++;
+        return resolve => resolve(7);
+      },
+    });
+    expect(() => capture(createRegistry(), () => thenable)).toThrow(/synchronous/u);
+    expect(getterCalls).toBe(0);
+  });
+
+  test('discarding a tracked asynchronous helper result cannot produce a captured scalar', async () => {
+    const config = tracked({ factor: 2 });
+    let lateReads = 0;
+    const helper = tracked(async (): Promise<number> => {
+      await Promise.resolve();
+      lateReads++;
+      return config.factor;
+    });
+    const consumer = tracked((): number => {
+      void helper();
+      return 7;
+    });
+    const registry = createRegistry();
+    registry.register(configSlot, config);
+    registry.register(helperSlot, helper);
+    registry.register(consumerSlot, consumer);
+    expect(() => capture(registry, consumer)).toThrow(/synchronous/u);
+    await Promise.resolve();
+    expect(lateReads).toBe(1);
+  });
+
+  test('an object changed to an accessor after wrapping is rejected before getter execution', () => {
+    const raw = { factor: 2 };
+    const config = tracked(raw);
+    const consumer = tracked((): number => config.factor * 7);
+    const registry = createRegistry();
+    registry.register(configSlot, config);
+    registry.register(consumerSlot, consumer);
+    const initial = capture(registry, consumer);
+    const candidate: ICandidate = { subject: 'accessor-change', version: 1, reference: 'old', observations: initial.observations };
+    let getterCalls = 0;
+    Object.defineProperty(raw, 'factor', {
+      enumerable: true,
+      get(): number {
+        getterCalls++;
+        return 2;
+      },
+    });
+    expect(() => capture(registry, consumer)).toThrow(/unsupported field/u);
+    expect(getterCalls).toBe(0);
+    expect(validate(registry, candidate)).toMatchObject({ status: 'miss', reason: 'changed-evidence', descriptor: configSlot });
+    expect(getterCalls).toBe(0);
+  });
+
   test('default compatibility version is one and invalid numeric versions fail', () => {
     expect(compatibilityVersion()).toBe(1);
     expect(compatibilityVersion(2)).toBe(2);

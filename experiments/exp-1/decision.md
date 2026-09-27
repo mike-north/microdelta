@@ -39,8 +39,14 @@ file/process I/O is confined to `test/`. Portable `src/` also passes
 `types: []` checking and the checked Node-access rule.
 
 Only synchronous calls and plain string-keyed objects with flat own finite
-scalar fields are supported. Accessors, user symbol keys, and nonplain
-objects are rejected. Undefined, nested values, inherited property
+scalar fields are supported. Promise and thenable results from the capture body
+or any tracked call are rejected before the capture frame closes, even when a
+caller discards the returned work; an accessor named `then` is rejected without invoking
+it because its value cannot be classified safely. A noncallable own `then` data
+field remains an ordinary synchronous result. Accessors, user symbol keys,
+and nonplain tracked objects are rejected. A tracked field changed to an
+accessor after wrapping is rejected during capture without invoking its getter,
+and current validation reports changed evidence. Undefined, nested values, inherited property
 semantics, collections, canonical hashing, and selected loading belong to
 EXP-2. The current JSON fixture format is not a chosen persisted schema.
 
@@ -53,7 +59,13 @@ The separate-process assertions then ran against an empty driver:
 **11 restart failures, 7 unit passes**. Later negative accessor and null
 version assertions each failed before their handling was implemented.
 The context-import rule and CI wiring each had a failing negative fixture
-before their extensions. All now pass.
+before their extensions. A later peer review added three assertions first:
+a returned callable thenable, an accessor `then`, and a tracked field replaced
+with an accessor after wrapping. All three failed against the previous
+implementation and now pass without executing either getter or then method.
+A fourth assertion showed that a discarded async tracked helper still allowed
+a scalar result to be captured; it failed first and now rejects that call.
+All now pass.
 
 | Process B variant | Exact references after validation | Consumer bodies in B | Evidence |
 | --- | --- | ---: | --- |
@@ -78,7 +90,7 @@ current pointer. Fresh execution and publication are separate decisions.
 The local commands `npm run check`, `npm test`, and `npm run build`
 passed on Node 24.14.0 after `npm ci --offline` refreshed this
 worktree's stale workspace links. `npm test` included 77 tooling tests,
-the existing package suites, and 20 EXP-1 Jest cases plus its tsd
+the existing package suites, and 24 EXP-1 Jest cases plus its tsd
 contract. CI's configured Node 20/22/24 matrix remains a separate
 PR check. Directly invoking the emitted process driver with `A` then
 `B` and `unchanged` reported `producerExecutions=2` in both

@@ -82,6 +82,26 @@ function scalar(value: unknown): value is IScalar {
     || (typeof value === 'number' && Number.isFinite(value) && !Object.is(value, -0));
 }
 
+/**
+ * A returned thenable escapes this synchronous frame when a caller assimilates it.
+ * Inspect descriptors along the actual lookup chain so author `then` getters are
+ * never invoked merely to decide whether the result is safe to capture.
+ */
+function hasAsyncResultBoundary(value: unknown): boolean {
+  if (value === null || (typeof value !== 'object' && typeof value !== 'function')) {
+    return false;
+  }
+  let current: object | null = value;
+  while (current !== null) {
+    const property = Object.getOwnPropertyDescriptor(current, 'then');
+    if (property !== undefined) {
+      return !('value' in property) || typeof property.value === 'function';
+    }
+    current = Object.getPrototypeOf(current) as object | null;
+  }
+  return false;
+}
+
 /** Unwrapped source text is evidence only after the declared slot resolves. */
 function implementationSource(value: object): string | undefined {
   const original = currentTargets.get(value);
@@ -100,8 +120,9 @@ function observedDescriptor(frame: IFrame, value: object): IBindingDescriptor {
 /**
  * Wrap one imported plain object or function once at declaration. Ordinary reads
  * and calls then collect only the facts actually consumed by an active frame.
- * The wrapper has no durable identity, no async behavior, and no broad native
- * value support; unsupported fields fail visibly during capture.
+ * The wrapper has no durable identity or broad native value support. An
+ * asynchronous result from any tracked call cannot escape a live capture frame;
+ * unsupported fields fail visibly during capture.
  * @internal
  */
 export function tracked<T extends object>(value: T): T {
@@ -112,15 +133,17 @@ export function tracked<T extends object>(value: T): T {
   }
   const wrapper: T = new Proxy(value, {
     get(target, property, receiver): unknown {
-      const fact: unknown = Reflect.get(target, property, receiver);
       const frame = activeFrame;
       if (frame && typeof target !== 'function' && typeof property === 'string') {
-        if (!Object.hasOwn(target, property) || !scalar(fact)) {
+        const current = Object.getOwnPropertyDescriptor(target, property);
+        if (!current || !('value' in current) || !scalar(current.value)) {
           throw new TypeError(`EXP-1 cannot observe unsupported field ${property}`);
         }
+        const fact = current.value;
         frame.observations.push({ kind: 'field', descriptor: observedDescriptor(frame, wrapper), field: property, value: fact });
+        return fact;
       }
-      return fact;
+      return Reflect.get(target, property, receiver);
     },
     apply(target, thisArg, args): unknown {
       const frame = activeFrame;
@@ -134,7 +157,11 @@ export function tracked<T extends object>(value: T): T {
       if (typeof target !== 'function') {
         throw new TypeError('Only functions can be invoked');
       }
-      return Reflect.apply(target, thisArg, args);
+      const result: unknown = Reflect.apply(target, thisArg, args);
+      if (frame && hasAsyncResultBoundary(result)) {
+        throw new TypeError('EXP-1 capture is synchronous');
+      }
+      return result;
     },
   });
   currentTargets.set(wrapper, value);
@@ -212,7 +239,7 @@ export function capture<T>(registry: IRegistry, invoke: () => T): { readonly val
   activeFrame = frame;
   try {
     const value = invoke();
-    if (value instanceof Promise) {
+    if (hasAsyncResultBoundary(value)) {
       throw new TypeError('EXP-1 capture is synchronous');
     }
     return { value, observations: Object.freeze([...frame.observations]) };

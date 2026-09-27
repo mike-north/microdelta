@@ -368,4 +368,24 @@ describe('selected materialization', () => {
       expect(capture.observations).toHaveLength(0);
     }
   });
+
+  test('preserves collection context and records nothing when projection content is unsupported', () => {
+    const tracking = createTrackingObserver(machine);
+    const materialization = createMaterialization({ tracking, reader: createExactReader().reader });
+    const fact: IValueProjectionFact = {
+      descriptor: { address: [], operation: 'value', traversal: { kind: 'exhaustive', complete: true } },
+      members: [['user-a', () => 'unsupported data function']],
+    };
+    const capture = tracking.capture(() => {
+      try {
+        return materialization.project({ path: ['step', 'roster'] }, fact);
+      } catch (error: unknown) {
+        return error;
+      }
+    });
+
+    expect(capture.value).toBeInstanceOf(TypeError);
+    expect((capture.value as Error).message).toMatch(/Invalid projection for collection step\.roster: Unsupported value/u);
+    expect(capture.observations).toHaveLength(0);
+  });
 });

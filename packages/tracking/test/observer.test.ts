@@ -3,10 +3,9 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 
 import { describe, expect, test } from '@jest/globals';
 import type { IMachine } from '@microdelta/machine';
-import { observe } from '@microdelta/value';
+import { observe, type ISelectedFact, type IValueProjectionFact } from '@microdelta/value';
 import { createTrackingObserver } from '../src/index.js';
-import type { ICurrentFactRequest, ICurrentFactResolution, ITrackingBinding } from '../src/index.js';
-import type { IValueProjectionFact } from '@microdelta/value';
+import type { ICurrentFactRequest, ICurrentFactResolution, IObservationCapture, ITrackingBinding } from '../src/index.js';
 
 /** Supply only host facilities; this test adapter has no Tracking policy. */
 const machine: IMachine = {
@@ -131,6 +130,34 @@ describe('semantic tracking observer', () => {
     expect(captured.observations[0]?.encoded).toContain('Ada');
     expect(observer.compareCurrent(captured, { resolve: () => ({ kind: 'unavailable' }) }).kind).toBe('unavailable');
     expect(observer.compareCurrent(captured, { resolve: () => ({ kind: 'ambiguous' }) }).kind).toBe('ambiguous');
+  });
+
+  test('matches selected addresses by segment meaning rather than object member order', () => {
+    const propertyCapture = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
+    const indexCapture = observer.capture(() => observer.tracked(['Ada'], binding)[0]);
+    const compareFact = <T,>(capture: IObservationCapture<T>, fact: ISelectedFact) => observer.compareCurrent(capture, {
+      resolve: () => ({ kind: 'available', fact }),
+    });
+
+    expect(compareFact(propertyCapture, {
+      operation: 'value', address: [{ key: 'name', kind: 'property' }], fact: 'Ada',
+    }).kind).toBe('equal');
+    expect(compareFact(indexCapture, {
+      operation: 'value', address: [{ index: 0, kind: 'index' }], fact: 'Ada',
+    }).kind).toBe('equal');
+
+    expect(compareFact(propertyCapture, {
+      operation: 'value', address: [{ key: 'other', kind: 'property' }], fact: 'Ada',
+    }).kind).toBe('incompatible');
+    expect(compareFact(propertyCapture, {
+      operation: 'value', address: [{ index: 0, kind: 'index' }], fact: 'Ada',
+    }).kind).toBe('incompatible');
+    expect(compareFact(indexCapture, {
+      operation: 'value', address: [{ index: 1, kind: 'index' }], fact: 'Ada',
+    }).kind).toBe('incompatible');
+    expect(compareFact(indexCapture, {
+      operation: 'value', address: [{ key: '0', kind: 'property' }], fact: 'Ada',
+    }).kind).toBe('incompatible');
   });
 
   test('compares an exact compatible fingerprint request without asking for payload and rejects mismatched metadata descriptors', () => {
@@ -270,6 +297,47 @@ describe('semantic tracking observer', () => {
     expect(observer.compareCurrent(capture, source.provider).kind).toBe('equal');
     source.set('analysis/author', (value: number) => value + 2);
     expect(observer.compareCurrent(capture, source.provider).kind).toBe('changed');
+  });
+
+  test('uninspectable current implementation replacements are unavailable without executing them', () => {
+    let replacementCalls = 0;
+    const original = observer.tracked(() => 'original', binding);
+    const capture = observer.capture(() => original());
+    const boundReplacement = function replacement(): string {
+      replacementCalls += 1;
+      return 'replacement';
+    }.bind(undefined);
+
+    for (const replacement of [Math.max, boundReplacement]) {
+      const comparison = observer.compareCurrent(capture, {
+        resolve: () => ({ kind: 'available', fact: replacement }),
+      });
+      expect(comparison.kind).toBe('unavailable');
+    }
+    expect(replacementCalls).toBe(0);
+  });
+
+  test('current implementation comparison preserves host digest failures', () => {
+    const failure = new TypeError('host digest failed');
+    let digestUnavailable = false;
+    const host: IMachine = {
+      ...machine,
+      sha256(input: string): string {
+        if (digestUnavailable) {
+          throw failure;
+        }
+        return machine.sha256(input);
+      },
+    };
+    const isolated = createTrackingObserver(host);
+    const tracked = isolated.tracked(() => 'original', binding);
+    const capture = isolated.capture(() => tracked());
+    const replacement = (): string => 'replacement';
+    digestUnavailable = true;
+
+    expect(() => isolated.compareCurrent(capture, {
+      resolve: () => ({ kind: 'available', fact: replacement }),
+    })).toThrow(failure);
   });
 
   test('function-source fingerprints preserve distinct unpaired UTF-16 surrogate code units', () => {

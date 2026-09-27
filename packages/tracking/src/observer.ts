@@ -34,16 +34,20 @@ export interface ITrackedBrand {
 }
 
 /**
- * Object children remain nominally tracked when navigation reaches their wrappers;
- * readonly properties mirror the observer's detached immutable snapshot. Callable
- * values keep their original call contract because invoking them, not their return
- * shape, is the observed operation.
+ * The readonly type exposed by navigating a wrapper. Object children remain
+ * branded when navigation reaches their wrappers, while scalar leaves and callable
+ * signatures retain their normal types. Arrays expose only numeric positions and
+ * `length`, matching operations the observer can capture without claiming native methods.
+ * @alpha
  */
-/** The recursive readonly type exposed by navigating an observation-aware wrapper. @alpha */
 export type ITrackedView<T> = T extends (...arguments_: never[]) => unknown
   ? T & ITrackedBrand
   : T extends readonly unknown[]
-    ? { readonly [K in keyof T]: ITrackedView<T[K]> } & ITrackedBrand
+    ? number extends T['length']
+      ? { readonly [index: number]: ITrackedView<T[number]>; readonly length: number } & ITrackedBrand
+      : { readonly [K in keyof T as K extends `${number}` ? K : never]: ITrackedView<T[K]> }
+        & { readonly length: T['length'] }
+        & ITrackedBrand
     : T extends object
       ? { readonly [K in keyof T]: ITrackedView<T[K]> } & ITrackedBrand
       : T;
@@ -516,6 +520,9 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
       return value !== null && (typeof value === 'object' || typeof value === 'function') && ownership.has(value);
     },
     read<T extends object, K extends keyof ITracked<T>>(value: ITracked<T>, key: K): ITracked<T>[K] {
+      if (!ownership.has(value)) {
+        throw new TypeError('Materialization reads require an observer-owned tracked value');
+      }
       return value[key];
     },
   });
@@ -636,12 +643,12 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
       });
       return Object.freeze({
         get(): T {
-          const outcome = cached.get();
           const current = captures.getStore();
+          if (current !== undefined && !current.open) {
+            throw new Error('Cannot replay tracked derivation after its capture frame closed');
+          }
+          const outcome = cached.get();
           if (current !== undefined) {
-            if (!current.open) {
-              throw new Error('Cannot replay tracked derivation after its capture frame closed');
-            }
             for (const observation of outcome.observations) {
               const key = observationKey({ descriptor: observation.binding, path: observation.binding.path }, observation.address, observation.operation, observation.fingerprint);
               if (!current.observations.has(key)) {

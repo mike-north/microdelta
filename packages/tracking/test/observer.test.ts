@@ -74,9 +74,26 @@ describe('semantic tracking observer', () => {
     expect(output.observations).toHaveLength(1);
   });
 
+  test('materialization reads reject unowned and foreign-observer values', () => {
+    const untracked = { name: 'untracked' };
+    const otherObserver = createTrackingObserver(machine);
+    const foreign = otherObserver.tracked({ name: 'foreign' }, binding);
+    expect(() => { Reflect.apply(observer.materialization.read, observer.materialization, [untracked, 'name']); })
+      .toThrow(/observer-owned|owned/i);
+    expect(() => { Reflect.apply(observer.materialization.read, observer.materialization, [foreign, 'name']); })
+      .toThrow(/observer-owned|owned/i);
+  });
+
   test('synchronous capture rejects promises and ordinary thenable results', () => {
     expect(() => observer.capture(() => Promise.resolve('later'))).toThrow(/captureAsync/i);
     expect(() => observer.capture(() => ({ then: () => undefined }))).toThrow(/captureAsync/i);
+  });
+
+  test('async wrapper pass-through preserves Promise assimilation reads as actual observations', async () => {
+    const tracked = observer.tracked({ name: 'Ada' }, binding);
+    const capture = await observer.captureAsync(async () => tracked);
+    expect(capture.value).toBe(tracked);
+    expect(capture.observations.map(item => item.address)).toEqual([[{ kind: 'property', key: 'then' }]]);
   });
 
   test('copies registration bindings and retained facts so later source mutation cannot retarget evidence', () => {
@@ -264,6 +281,38 @@ describe('semantic tracking observer', () => {
     const second = observer.capture(() => output.get());
     expect(second.value).toBe('no');
     expect(first.observations.map(item => item.address)).not.toEqual(second.observations.map(item => item.address));
+  });
+
+  test('closed inherited frames reject first and dirty derived evaluation before callbacks run', async () => {
+    let firstCalls = 0;
+    const first = observer.derived(() => { firstCalls += 1; return firstCalls; });
+    const state = observer.local.cell('initial');
+    let dirtyCalls = 0;
+    const dirty = observer.derived(() => { dirtyCalls += 1; return state.get(); });
+    expect(dirty.get()).toBe('initial');
+    state.set('updated');
+
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((resolve) => { release = resolve; });
+    const detached: Promise<void>[] = [];
+    const errors: unknown[] = [];
+    await observer.captureAsync(async () => {
+      detached.push((async () => {
+        await gate;
+        try { first.get(); } catch (error: unknown) { errors.push(error); }
+      })());
+      detached.push((async () => {
+        await gate;
+        try { dirty.get(); } catch (error: unknown) { errors.push(error); }
+      })());
+    });
+
+    release();
+    await Promise.all(detached);
+    expect(errors).toHaveLength(2);
+    expect(errors.every((error) => error instanceof Error && /closed/i.test(error.message))).toBe(true);
+    expect(firstCalls).toBe(0);
+    expect(dirtyCalls).toBe(1);
   });
 
   test('async capture isolates concurrent frames and rejects detached reads after closure', async () => {

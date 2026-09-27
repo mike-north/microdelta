@@ -33,6 +33,12 @@ expectError(() => {
 expectError(() => {
   roster.length = 0;
 });
+expectError(roster.map);
+expectError(roster.filter);
+const pair = observer.tracked([{ name: 'Ada' }, 'selected'] as const, binding);
+expectType<ITracked<{ readonly name: 'Ada' }>>(pair[0]);
+expectType<'selected'>(pair[1]);
+expectType<2>(pair.length);
 function readImportedDeclaration(input: ITracked<{ count: number; enabled: boolean }>): number {
   return input.count;
 }

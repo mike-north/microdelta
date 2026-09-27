@@ -13,6 +13,11 @@ also does not make its contents an output dependency. A materializer can use the
 narrow `materialization.owns()` and `materialization.read()` bridge to select
 output fields without obtaining a raw source object.
 
+An `async` callback that returns a tracked wrapper is subject to JavaScript Promise
+thenable assimilation. The runtime's `then` property lookup is therefore captured
+as the actual consumed fact (including an absent `then`); the observer does not
+special-case this language-level read.
+
 `compareCurrent()` asks a caller-owned provider to resolve each binding and its
 current full path before comparing facts. Its equal/changed/unavailable/ambiguous
 result is evidence only: it does not decide reuse, establish source freshness, or

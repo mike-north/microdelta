@@ -87,8 +87,13 @@ export interface ITrackedBrand {
 }
 
 // @alpha
-export type ITrackedView<T> = T extends (...arguments_: never[]) => unknown ? T & ITrackedBrand : T extends readonly unknown[] ? {
-    readonly [K in keyof T]: ITrackedView<T[K]>;
+export type ITrackedView<T> = T extends (...arguments_: never[]) => unknown ? T & ITrackedBrand : T extends readonly unknown[] ? number extends T['length'] ? {
+    readonly [index: number]: ITrackedView<T[number]>;
+    readonly length: number;
+} & ITrackedBrand : {
+    readonly [K in keyof T as K extends `${number}` ? K : never]: ITrackedView<T[K]>;
+} & {
+    readonly length: T['length'];
 } & ITrackedBrand : T extends object ? {
     readonly [K in keyof T]: ITrackedView<T[K]>;
 } & ITrackedBrand : T;

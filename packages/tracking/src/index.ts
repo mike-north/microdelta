@@ -10,7 +10,15 @@ import type { Signal } from '@preact/signals-core';
 import type { IAsyncContextCapability } from '@microdelta/machine';
 
 export type { IAsyncContext, IAsyncContextCapability, ISha256Capability } from '@microdelta/machine';
-export type { IAddressSegment, IOperation } from '@microdelta/value';
+export type {
+  IAddressSegment,
+  IOperation,
+  ISelectedFact,
+  IValueProjectionDescriptor,
+  IValueProjectionFact,
+  IValueProjectionMember,
+  IValueProjectionTraversal,
+} from '@microdelta/value';
 
 export { createTrackingObserver } from './observer.js';
 export type {

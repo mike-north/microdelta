@@ -86,15 +86,25 @@ export interface GenerationRow {
 export type GenerationState = 'claimed' | 'current' | 'superseded' | 'abandoned';
 
 // @alpha
+export type IAddressSegment =
+/** A literal string-keyed record lookup, including keys containing punctuation. */
+    {
+    readonly kind: 'property';
+    readonly key: string;
+}
+/** A positional array lookup; it does not designate a logical member identity. */
+| {
+    readonly kind: 'index';
+    readonly index: number;
+};
+
+// @alpha
 export interface ICompletedProjectionReader {
-    // Warning: (ae-forgotten-export) The symbol "IValueProjectionDescriptor" needs to be exported by the entry point api-surface.d.ts
-    // Warning: (ae-forgotten-export) The symbol "IValueProjectionFact" needs to be exported by the entry point api-surface.d.ts
     readProjection(reference: ICompletedResultReference, descriptor: IValueProjectionDescriptor): IValueProjectionFact;
 }
 
 // @alpha
 export interface ICompletedResultReader {
-    // Warning: (ae-forgotten-export) The symbol "ISelectedFact" needs to be exported by the entry point api-surface.d.ts
     readSelected(reference: ICompletedResultReference, request: ISelectedReadRequest): ISelectedFact;
     resolveFingerprint(reference: ICompletedResultReference, request: ISelectedFingerprintRequest): ISelectedFingerprintResolution;
 }
@@ -130,6 +140,16 @@ export class InvalidStorePatchError extends Error {
 }
 
 // @alpha
+export type IOperation = 'value' | 'own' | 'membership' | 'length' | 'keys';
+
+// @alpha
+export interface ISelectedFact {
+    readonly address: readonly IAddressSegment[];
+    readonly fact: unknown;
+    readonly operation: IOperation;
+}
+
+// @alpha
 export type ISelectedFingerprintRequest = {
     readonly kind: 'selected';
     readonly operation: IOperation;
@@ -162,6 +182,34 @@ export interface ISelectedReadRequest {
     readonly address: readonly IAddressSegment[];
     readonly operation: IOperation;
 }
+
+// @alpha
+export interface IValueProjectionDescriptor {
+    readonly address: readonly IAddressSegment[];
+    readonly operation: 'value';
+    readonly traversal: IValueProjectionTraversal;
+}
+
+// @alpha
+export interface IValueProjectionFact {
+    // (undocumented)
+    readonly descriptor: IValueProjectionDescriptor;
+    // (undocumented)
+    readonly members: readonly IValueProjectionMember[];
+}
+
+// @alpha
+export type IValueProjectionMember = readonly [key: string, value: unknown];
+
+// @alpha
+export type IValueProjectionTraversal = {
+    readonly kind: 'exhaustive';
+    readonly complete: true;
+} | {
+    readonly kind: 'visited';
+    readonly complete: false;
+    readonly keys: readonly string[];
+};
 
 // @public
 export interface MemoryStoreOptions {
@@ -309,10 +357,5 @@ export interface ValueReadProbe {
     // (undocumented)
     reset(): void;
 }
-
-// Warnings were encountered during analysis:
-//
-// src/completed-results.ts:45:7 - (ae-forgotten-export) The symbol "IOperation" needs to be exported by the entry point api-surface.d.ts
-// src/completed-results.ts:46:7 - (ae-forgotten-export) The symbol "IAddressSegment" needs to be exported by the entry point api-surface.d.ts
 
 ```

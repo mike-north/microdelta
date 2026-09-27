@@ -114,6 +114,13 @@ export interface IObservationCapture<T> {
 export type IOperation = 'value' | 'own' | 'membership' | 'length' | 'keys';
 
 // @alpha
+export interface ISelectedFact {
+    readonly address: readonly IAddressSegment[];
+    readonly fact: unknown;
+    readonly operation: IOperation;
+}
+
+// @alpha
 export interface ISha256Capability {
     sha256(input: string): string;
 }
@@ -174,9 +181,7 @@ export interface ITrackingMaterialization {
     owns(value: unknown): value is ITracked<object>;
     read<T extends object, K extends keyof ITracked<T>>(value: ITracked<T>, key: K): ITracked<T>[K];
     recordCollectionOrder(binding: ITrackingBinding, keys: readonly string[]): void;
-    // Warning: (ae-forgotten-export) The symbol "IValueProjectionFact" needs to be exported by the entry point index.d.ts
     recordProjection(binding: ITrackingBinding, fact: IValueProjectionFact): void;
-    // Warning: (ae-forgotten-export) The symbol "ISelectedFact" needs to be exported by the entry point index.d.ts
     recordSelected(binding: ITrackingBinding, fact: ISelectedFact): void;
 }
 
@@ -213,6 +218,34 @@ export interface ITrackingObserverHost extends IAsyncContextCapability, ISha256C
 }
 
 // @alpha
+export interface IValueProjectionDescriptor {
+    readonly address: readonly IAddressSegment[];
+    readonly operation: 'value';
+    readonly traversal: IValueProjectionTraversal;
+}
+
+// @alpha
+export interface IValueProjectionFact {
+    // (undocumented)
+    readonly descriptor: IValueProjectionDescriptor;
+    // (undocumented)
+    readonly members: readonly IValueProjectionMember[];
+}
+
+// @alpha
+export type IValueProjectionMember = readonly [key: string, value: unknown];
+
+// @alpha
+export type IValueProjectionTraversal = {
+    readonly kind: 'exhaustive';
+    readonly complete: true;
+} | {
+    readonly kind: 'visited';
+    readonly complete: false;
+    readonly keys: readonly string[];
+};
+
+// @alpha
 export type Revision = number;
 
 // @alpha
@@ -220,10 +253,6 @@ export interface Tag {
     // (undocumented)
     readonly __tag: unique symbol;
 }
-
-// Warnings were encountered during analysis:
-//
-// src/observer.ts:79:36 - (ae-forgotten-export) The symbol "IValueProjectionDescriptor" needs to be exported by the entry point index.d.ts
 
 // (No @packageDocumentation comment for this package)
 

@@ -1,6 +1,28 @@
 import { expectAssignable, expectError, expectType } from 'tsd';
 import { createTrackingObserver } from '../dist/api/tracking.alpha.js';
-import type { IDetachedOutput, ITracked, ITrackedView, ITrackingObserver, ITrackingObserverHost } from '../dist/api/tracking.alpha.js';
+import type {
+  IAddressSegment as ITrackingAddressSegment,
+  IDetachedOutput,
+  IOperation as ITrackingOperation,
+  ISelectedFact as ITrackingSelectedFact,
+  ITracked,
+  ITrackedView,
+  ITrackingObserver,
+  ITrackingObserverHost,
+  IValueProjectionDescriptor as ITrackingProjectionDescriptor,
+  IValueProjectionFact as ITrackingProjectionFact,
+  IValueProjectionMember as ITrackingProjectionMember,
+  IValueProjectionTraversal as ITrackingProjectionTraversal,
+} from '../dist/api/tracking.alpha.js';
+import type {
+  IAddressSegment,
+  IOperation,
+  ISelectedFact,
+  IValueProjectionDescriptor,
+  IValueProjectionFact,
+  IValueProjectionMember,
+  IValueProjectionTraversal,
+} from '@microdelta/value';
 
 const machine: ITrackingObserverHost = {
   createAsyncContext: () => ({
@@ -11,6 +33,36 @@ const machine: ITrackingObserverHost = {
 };
 const observer: ITrackingObserver = createTrackingObserver(machine);
 const binding = { path: ['analysis', 'config'] } as const;
+const address: IAddressSegment = { kind: 'property', key: 'profile.name' };
+const trackingAddress: ITrackingAddressSegment = address;
+expectAssignable<IAddressSegment>(trackingAddress);
+expectAssignable<ITrackingAddressSegment>(address);
+const operation: IOperation = 'value';
+const trackingOperation: ITrackingOperation = operation;
+expectAssignable<IOperation>(trackingOperation);
+expectAssignable<ITrackingOperation>(operation);
+const selectedFact: ISelectedFact = { operation, address: [address], fact: 'Ada' };
+const trackingSelectedFact: ITrackingSelectedFact = selectedFact;
+expectAssignable<ISelectedFact>(trackingSelectedFact);
+expectAssignable<ITrackingSelectedFact>(selectedFact);
+const projectionDescriptor: IValueProjectionDescriptor = {
+  address: [address], operation: 'value', traversal: { kind: 'exhaustive', complete: true },
+};
+const trackingProjectionDescriptor: ITrackingProjectionDescriptor = projectionDescriptor;
+expectAssignable<IValueProjectionDescriptor>(trackingProjectionDescriptor);
+expectAssignable<ITrackingProjectionDescriptor>(projectionDescriptor);
+const projectionFact: IValueProjectionFact = { descriptor: projectionDescriptor, members: [['user-1', 'Ada']] };
+const trackingProjectionFact: ITrackingProjectionFact = projectionFact;
+expectAssignable<IValueProjectionFact>(trackingProjectionFact);
+expectAssignable<ITrackingProjectionFact>(projectionFact);
+const projectionMember: IValueProjectionMember = ['user-1', 'Ada'];
+const trackingProjectionMember: ITrackingProjectionMember = projectionMember;
+expectAssignable<IValueProjectionMember>(trackingProjectionMember);
+expectAssignable<ITrackingProjectionMember>(projectionMember);
+const projectionTraversal: IValueProjectionTraversal = { kind: 'visited', complete: false, keys: ['user-1'] };
+const trackingProjectionTraversal: ITrackingProjectionTraversal = projectionTraversal;
+expectAssignable<IValueProjectionTraversal>(trackingProjectionTraversal);
+expectAssignable<ITrackingProjectionTraversal>(projectionTraversal);
 const config = observer.tracked({ count: 2, enabled: true }, binding);
 expectType<ITracked<{ count: number; enabled: boolean }>>(config);
 expectType<number>(config.count);

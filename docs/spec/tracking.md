@@ -16,9 +16,19 @@ through every consumer. Classes are deferred, not silently supported as plain da
 fingerprint and the tracked values/functions it consumes. Tracking a function does
 not, by itself, memoize its output. Automatic implementation change detection is
 selected; routine manual version bumps are not the only way code changes propagate.
-`Function.prototype.toString()` is a candidate fingerprint input, not a semantic
-identity or proof that captured influences were included. Current declaration
-reconnection, build stability, and explicit-version interaction are EXP-1 obligations.
+EXP-1 selects the actual called function's emitted
+`Function.prototype.toString()` text as a bounded implementation-evidence input,
+compared only after current structural correspondence is established. A runtime
+must declare its build-artifact policy; compiler, bundler, or minifier changes may
+conservatively invalidate this evidence. The text is neither semantic identity
+nor proof that captured influences were included. Pair it with actual tracked
+reads/calls; an uncalled helper contributes no implementation observation.
+
+The [EXP-1 counterexample](../../experiments/exp-1/decision.md) rejects source-text
+equality as arbitrary closure soundness: an untracked captured scalar can change
+while the text remains equal. Its synchronous fixture rejects asynchronous and
+thenable calls and accessors without claiming the production async tracking
+contract is implemented. TRK-3 and TRK-4 remain obligations of that implementation.
 
 **TRK-3 — Scoped collection.** Async and concurrent tracking frames must isolate
 observations, restore surrounding context on success/failure, and reject late work

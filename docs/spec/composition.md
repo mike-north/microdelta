@@ -1,6 +1,7 @@
 # Composition, binding, and higher-order work
 
-Status: normative boundaries; binding representation is EXP-1/EXP-4 work.
+Status: normative boundaries; EXP-1 selects bounded structural correspondence.
+General nested arguments and higher-order reconstruction remain EXP-4 work.
 Owner: Definition & Binding, collaborating with Reuse Resolution.
 
 ## Two graphs
@@ -21,11 +22,12 @@ execution's observed dependency evidence.
 
 **CMP-3 — Higher-order composition.** Steps/composites may receive step definitions
 and composition factories may return reusable groups, including staged factories.
-Their abstract graph must be fully bound before runtime data is resolved. Named,
-typed structural callable slots are the proposed mechanism for reconnecting a
-supplied implementation, such as `assessor`, across restarts. This does not require
-a globally public step ID or manually declared field dependencies. The slot/registry
-representation must earn adoption through EXP-1 and EXP-4.
+Their abstract graph must be fully bound before runtime data is resolved.
+Structurally declared callable slots are the selected bounded mechanism for
+reconnecting a supplied implementation, such as `assessor`, across restarts.
+This does not require a globally public step ID or manually declared field
+dependencies. EXP-1 establishes direct current-slot correspondence; EXP-4 still
+owns general nested arguments and higher-order reconstruction.
 
 **CMP-4 — Fanout template.** Build the declared member template once with a symbolic
 member input, then instantiate it for actual member keys. Do not rerun a topology
@@ -48,6 +50,20 @@ cannot identify the current implementation. Neither source text, display name,
 execution ordinal, nor process-local object identity is a valid substitute for
 proven current correspondence. Changed graph shape without correspondence yields
 an honest miss, not a guessed remapping.
+
+**EXP-1 mechanism selection:** a fresh registry binds the declared composition
+scope, input/callable/step role, slot, and member key where applicable to current
+declarations. Each consumed historical slot must resolve to exactly one current
+declaration. Missing and multiply occupied slots produce distinct miss diagnostics.
+A process-local reverse map may discover the slot actually consumed, but only
+structural descriptors and observed facts enter retained evidence. API spelling
+and descriptor wire encoding remain separate implementation choices.
+
+For example, registering member `b` before `a` after restart must reconnect each
+member's own observations and exact retained reference; it cannot exchange their
+results. The [EXP-1 restart fixture](../../experiments/exp-1/decision.md) proves this
+for direct supplied callables and flat scalar inputs in separate processes. It
+does not establish arbitrary nested argument reconstruction or closure persistence.
 
 **CMP-7 — Arguments.** Forwarded current bindings can be resolved directly. A stored
 derived argument is usable only with sufficient supporting evidence that it still

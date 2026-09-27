@@ -227,10 +227,13 @@ evidence. A derived argument is not inherently invalid merely because it was
 computed inside the previous parent execution. However, do not assume arbitrary
 closures can be serialized or reconstruct an argument from its subject alone.
 
-**Experiment:** select the durable binding/address and argument-evidence
-representation. Named structural callable slots are a candidate mechanism, not
-a requirement for globally registered public step IDs. Demonstrate separate
-process reconstruction; unchanged in-process object identity is not evidence.
+**EXP-1 selection:** use the current structural registry described in CMP-6 for
+direct input, callable, and step-slot correspondence. Only a unique current
+declaration can satisfy a historical consumed slot; names, source text, hashes,
+and call order are not fallback locators. The separate-process fixture establishes
+this bounded case. Durable wire encoding and general derived-argument evidence
+remain distinct work; EXP-4 owns the latter. No globally registered public step ID
+is required.
 
 ### REUSE-007 — Unproven reconstruction yields an honest outer miss
 
@@ -261,10 +264,17 @@ other-version results ineligible; returning from version 2 to version 1 permits
 reuse of retained version-1 results only after normal current validation.
 
 Automatic implementation and input evidence still participate: rolling back the
-number alone must not conceal incompatible current code or inputs. The exact
-record/lookup protocol reconciling these controls is EXP-1 work. The settled
-scope, integer representation, default and rollback permission are not open
-questions. Tests must cover both explicit control and automatic evidence.
+number alone must not conceal incompatible current code or inputs. EXP-1 selects
+a history lookup by complete scoped subject and compatibility group followed by
+ordinary current implementation/input validation. A rollback hit returns the old
+exact reference; accepting it does not itself rewind the current publication
+pointer or delete newer history. The JavaScript representation rejects values
+outside positive safe integers, avoiding rounded group identities.
+
+The [EXP-1 evidence](../../experiments/exp-1/decision.md) covers version 2 followed
+by unchanged and changed-input version-1 rollback, alongside automatic evidence.
+Its fixture records are not a selected production schema, and the history lookup
+does not bypass source acceptance or other current eligibility obligations.
 
 ### REUSE-009 — Execution admission and protected lifecycle
 

@@ -6,6 +6,7 @@
  * @packageDocumentation
  */
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { createHash } from 'node:crypto';
 import { deserialize, serialize } from 'node:v8';
 
 import type { IMachine } from '@microdelta/machine';
@@ -20,6 +21,9 @@ export function _createNodeMachineImplementation(): IMachine {
       // The generic API promises a round-trip of T within V8's supported
       // structural domain; serialization changes representation, not schema.
       return deserialize(serialize(value)) as T;
+    },
+    sha256(input: string): string {
+      return createHash('sha256').update(input, 'utf8').digest('hex');
     },
   });
 }

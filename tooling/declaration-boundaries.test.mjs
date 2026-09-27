@@ -13,13 +13,14 @@ import { fileURLToPath } from 'node:url';
 
 import { verifyHistoryShims } from './history-declaration-shims.mjs';
 
-/** The package matrix covers the facade and every implemented owner. */
+/** The package matrix covers the facade, implemented owners, and Value support contract. */
 const root = fileURLToPath(new URL('../', import.meta.url));
 const packages = [
   { directory: 'core', basename: 'microdelta' },
   { directory: 'definition', basename: 'definition' },
   { directory: 'tracking', basename: 'tracking' },
   { directory: 'history', basename: 'history' },
+  { directory: 'value', basename: 'value' },
 ];
 const fixture = path.join(root, 'fixtures/declarations/producer');
 const tsc = path.join(root, 'node_modules/typescript/bin/tsc');
@@ -277,6 +278,25 @@ test('missing producer declarations and test-only source aliases fail explicitly
   }
 });
 
+/** Value's sibling path is checked against the generated alpha artifact. */
+test('a missing Value alpha declaration fails for its declared package path', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'microdelta-value-alpha-'));
+  try {
+    const packageDir = path.join(directory, 'packages', 'tracking');
+    await mkdir(packageDir, { recursive: true });
+    const config = path.join(packageDir, 'tsconfig.json');
+    const gate = path.join(root, 'tooling/check-producer-declarations.mjs');
+    await writeFile(config, JSON.stringify({ compilerOptions: { paths: {
+      '@microdelta/value': ['./missing/value.alpha.d.ts'],
+    } }, files: [] }));
+    const result = spawnSync(process.execPath, [gate, '--config', config], { cwd: root, encoding: 'utf8' });
+    assert.notEqual(result.status, 0, 'Missing Value alpha declaration unexpectedly passed preflight');
+    assert.match(result.stdout + result.stderr, /missing producer declaration.*value\.alpha\.d\.ts/iu);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 /** A compiler's effective config and import spelling must agree with its owner. */
 test('inherited paths and invented aliases cannot expose sibling source or untrimmed declarations', async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), 'microdelta-path-bypass-'));
@@ -317,21 +337,25 @@ test('facade compiler maps both History imports to generated alpha declarations'
 });
 
 /** Public context declarations must remain usable without ambient Node types. */
-test('generated Machine, Tracking, and History declarations compile as portable consumers', async () => {
+test('generated Machine, Tracking, History, and Value declarations compile as portable consumers', async () => {
   const source = [
     "import { createTracking } from '@microdelta/tracking';",
     "import { createMemoryStore } from '@microdelta/history';",
     "import { createNodeMachine } from '@microdelta/machine-node';",
+    "import { encodeValue, fingerprint, type ISha256Capability } from '@microdelta/value';",
     "import type { IAsyncContextCapability } from '@microdelta/machine';",
     'const host = createNodeMachine();',
     'const context: IAsyncContextCapability = host;',
+    'const hasher: ISha256Capability = host;',
     'createTracking(context);',
     'createMemoryStore(host);',
+    "fingerprint(encodeValue('Ada'), hasher);",
   ].join('\n');
   const api = path.join(root, 'packages');
   const result = await compile(source, { types: [], pathMap: {
     '@microdelta/machine': [path.join(api, 'machine/dist/api/machine.alpha.d.ts')],
     '@microdelta/machine-node': [path.join(api, 'machine-node/dist/api/machine-node.alpha.d.ts')],
+    '@microdelta/value': [path.join(api, 'value/dist/api/value.alpha.d.ts')],
     '@microdelta/tracking': [path.join(api, 'tracking/dist/api/tracking.alpha.d.ts')],
     '@microdelta/history': [path.join(api, 'history/dist/api/history.alpha.d.ts')],
   } });

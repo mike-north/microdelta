@@ -12,4 +12,5 @@ expectType<string | undefined>(context.getStore());
 expectType<Promise<number>>(context.run('scope', async () => 1));
 expectType<{ value: number }>(snapshotCapability.snapshot({ value: 1 }));
 expectType<IMachine>(machine);
+expectType<string>(machine.sha256('canonical input'));
 expectError(context.run(1, () => 1));

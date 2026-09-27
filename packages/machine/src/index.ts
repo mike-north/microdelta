@@ -46,8 +46,20 @@ export interface ISnapshotCapability {
 }
 
 /**
- * The small host contract required by current tracking and memory-store code.
- * Contexts receive only the capability they use; assembly selects an adapter.
+ * Computes SHA-256 over the UTF-8 bytes of supplied canonical evidence.
+ * Machine supplies hashing only; callers define the meaning and framing of
+ * the input before it crosses this host boundary.
  * @alpha
  */
-export interface IMachine extends IAsyncContextCapability, ISnapshotCapability {}
+export interface ISha256Capability {
+  /** Return the lowercase hexadecimal SHA-256 digest of the input text. */
+  sha256(input: string): string;
+}
+
+/**
+ * The host contract aggregates the capabilities selected by current runtime
+ * consumers. Assembly supplies the adapter; canonical meaning remains owned by
+ * Value Semantics and other context contracts.
+ * @alpha
+ */
+export interface IMachine extends IAsyncContextCapability, ISnapshotCapability, ISha256Capability {}

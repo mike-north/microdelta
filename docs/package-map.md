@@ -14,9 +14,9 @@ registry is [`tooling/package-architecture.mjs`](../tooling/package-architecture
 | Reuse Resolution | No package yet | Candidate-validation and source-policy ports remain unimplemented | Definition, Tracking, History, Materialization |
 | Run Supervision | No package yet | Admission, progress, retry, and cancellation ports remain unimplemented | Definition, Resolution, Accounting |
 | Resource Accounting | No package yet | Observation and acknowledgment ports remain unimplemented | None |
-| Value Semantics | No package yet | Future canonical encoding, structured paths, and fingerprint port; EXP-2 owns the decision | None |
+| Value Semantics | `@microdelta/value` (`packages/value`) | Supported canonical equality/snapshot encoding, structured observation addresses, selected facts, and fingerprints through Machine's SHA-256 capability | Machine |
 | Materialization | No package yet | Future selected-load and observation bridge | History, Tracking, Value Semantics |
-| Machine host contract | `@microdelta/machine` (`packages/machine`) | Portable async-context and detached-snapshot capability contracts | Supporting contract; consumed by Tracking, History, and the Node adapter |
+| Machine host contract | `@microdelta/machine` (`packages/machine`) | Portable async-context, detached-snapshot, and SHA-256 capability contracts | Supporting contract; consumed by Tracking, History, Value Semantics, and the Node adapter |
 | Node Machine adapter | `@microdelta/machine-node` (`packages/machine-node`) | Implements the contracts with Node async hooks and V8 structured serialization | `@microdelta/machine`; selected by the facade assembly |
 
 History's `types.ts` preserves the old row schema and the facade's existing

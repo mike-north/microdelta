@@ -94,7 +94,7 @@ async function inspectConfig(filename) {
 
 /** Default expectations cover every generated production and fixture tier. */
 const required = [
-  ['core', 'microdelta'], ['definition', 'definition'], ['tracking', 'tracking'], ['history', 'history'],
+  ['core', 'microdelta'], ['definition', 'definition'], ['tracking', 'tracking'], ['history', 'history'], ['value', 'value'],
 ].flatMap(([directory, basename]) => ['untrimmed', 'alpha', 'beta', 'public'].map(tier =>
   path.join(root, `packages/${directory}/dist/api/${basename}.${tier}.d.ts`)));
 required.push(...['untrimmed', 'alpha', 'beta', 'public'].map(tier =>

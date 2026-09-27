@@ -152,16 +152,17 @@ and derive expected behavior from requirements, not production internals.
 
 ## ARC-009 — Architecture model and adaptation
 
-The accepted ownership above governs the implementation. CML integration is a
-bounded experiment using established syntax, not an already-validated source of
-generated architecture rules. No speculative normative CML file is required by
-this section. The experiment must establish explicit package/port mappings and
-distinguish structural correspondence from behavioral proof.
+The accepted ownership above governs implementation. Deliberately shaped package
+surfaces, encapsulation, generated declaration tiers, API Extractor reports,
+compiler checks, and import-boundary checks are the selected architecture/API
+contract; a parallel CML model or correspondence checker is not adopted. Those
+structural checks do not substitute for behavioral tests owned by each context.
 
-Once adopted, model-derived views must not become separately maintained competing
-maps. A boundary change updates its owned invariants, ports, mapping and contract
-tests together before dependent implementation. The historical twelve-component
-adjacency list is not an exception to the accepted context boundaries.
+A boundary change updates its owned invariants, ports, package/API surfaces, and
+contract tests together before dependent implementation. Do not create separately
+maintained maps that compete with those contracts. The historical twelve-component
+adjacency list is not an exception to the accepted context boundaries. See
+[PKG-006](package-boundaries.md) for the superseding tooling decision.
 
 ## ARC-010 — Machine is the host boundary
 

@@ -19,4 +19,4 @@ September 26 package visibility,package-boundaries.md,PKG-001 to PKG-007,alpha s
 roster and contribution scenarios,acceptance.md,TEST-3 and TEST-4,application policies separated from framework
 resource estimate scenario,operations.md,ACC-005 and ACC-006,preserved unknown currency and reporting gaps
 former implementation plans,../milestones.md,M0 to M7,replaced with experiment gates and named CLI checkpoint
-formal and CML consultation,experiments.md,EXP-5 to EXP-7,bounded pilots not adopted toolchains
+formal and CML consultation,experiments.md,EXP-5 to EXP-7,CML retired Lean dormant and TLA selectively maps invariants to code and CI tests

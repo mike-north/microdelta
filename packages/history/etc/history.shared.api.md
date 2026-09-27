@@ -85,6 +85,26 @@ export interface GenerationRow {
 // @public
 export type GenerationState = 'claimed' | 'current' | 'superseded' | 'abandoned';
 
+// @alpha
+export interface ICompletedProjectionReader {
+    // Warning: (ae-forgotten-export) The symbol "IValueProjectionDescriptor" needs to be exported by the entry point api-surface.d.ts
+    // Warning: (ae-forgotten-export) The symbol "IValueProjectionFact" needs to be exported by the entry point api-surface.d.ts
+    readProjection(reference: ICompletedResultReference, descriptor: IValueProjectionDescriptor): IValueProjectionFact;
+}
+
+// @alpha
+export interface ICompletedResultReader {
+    // Warning: (ae-forgotten-export) The symbol "ISelectedFact" needs to be exported by the entry point api-surface.d.ts
+    readSelected(reference: ICompletedResultReference, request: ISelectedReadRequest): ISelectedFact;
+    resolveFingerprint(reference: ICompletedResultReference, request: ISelectedFingerprintRequest): ISelectedFingerprintResolution;
+}
+
+// @alpha
+export interface ICompletedResultReference {
+    readonly kind: 'completed-result';
+    readonly locator: string;
+}
+
 // @public
 export type Identity = {
     kind: 'type';
@@ -107,6 +127,40 @@ export type Identity = {
 // @public
 export class InvalidStorePatchError extends Error {
     constructor(message?: string);
+}
+
+// @alpha
+export type ISelectedFingerprintRequest = {
+    readonly kind: 'selected';
+    readonly operation: IOperation;
+    readonly address: readonly IAddressSegment[];
+    readonly encoding: 'MDO1';
+} | {
+    readonly kind: 'projection';
+    readonly descriptor: IValueProjectionDescriptor;
+    readonly encoding: 'MDP1';
+} | {
+    readonly kind: 'materialized-output';
+    readonly address: readonly IAddressSegment[];
+    readonly encoding: 'MDS1';
+};
+
+// @alpha
+export type ISelectedFingerprintResolution = {
+    readonly kind: 'compatible';
+    readonly fingerprint: string;
+} | {
+    readonly kind: 'unavailable';
+} | {
+    readonly kind: 'incompatible';
+} | {
+    readonly kind: 'ambiguous';
+};
+
+// @alpha
+export interface ISelectedReadRequest {
+    readonly address: readonly IAddressSegment[];
+    readonly operation: IOperation;
 }
 
 // @public
@@ -255,5 +309,10 @@ export interface ValueReadProbe {
     // (undocumented)
     reset(): void;
 }
+
+// Warnings were encountered during analysis:
+//
+// src/completed-results.ts:45:7 - (ae-forgotten-export) The symbol "IOperation" needs to be exported by the entry point api-surface.d.ts
+// src/completed-results.ts:46:7 - (ae-forgotten-export) The symbol "IAddressSegment" needs to be exported by the entry point api-surface.d.ts
 
 ```

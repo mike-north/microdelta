@@ -123,6 +123,55 @@ describe('semantic tracking observer', () => {
     });
   });
 
+  test('materialization record capabilities leave inputs untouched when no capture frame is active', () => {
+    let digestCalls = 0;
+    let inspections = 0;
+    const host: IMachine = {
+      ...machine,
+      sha256(input: string): string {
+        digestCalls += 1;
+        return machine.sha256(input);
+      },
+    };
+    const isolated = createTrackingObserver(host);
+    const inspectable = <T extends object>(value: T): T => new Proxy(value, {
+      get(target, property, receiver): unknown {
+        inspections += 1;
+        return Reflect.get(target, property, receiver);
+      },
+      getOwnPropertyDescriptor(target, property): PropertyDescriptor | undefined {
+        inspections += 1;
+        return Reflect.getOwnPropertyDescriptor(target, property);
+      },
+      ownKeys(target): Array<string | symbol> {
+        inspections += 1;
+        return Reflect.ownKeys(target);
+      },
+    });
+    const { recordSelected, recordProjection, recordCollectionOrder } = isolated.materialization;
+    const selected: ISelectedFact = inspectable({
+      operation: 'value',
+      address: [{ kind: 'property', key: 'name' }],
+      fact: 'Ada',
+    });
+    const projection: IValueProjectionFact = inspectable({
+      descriptor: {
+        address: [{ kind: 'property', key: 'name' }],
+        operation: 'value',
+        traversal: { kind: 'exhaustive', complete: true },
+      },
+      members: [['author-1', 'Ada']],
+    });
+    const keys = inspectable(['author-1']);
+    const suppliedBinding: ITrackingBinding = inspectable({ path: ['analysis', 'author'] });
+
+    expect(() => recordSelected(suppliedBinding, selected)).not.toThrow();
+    expect(() => recordProjection(suppliedBinding, projection)).not.toThrow();
+    expect(() => recordCollectionOrder(suppliedBinding, keys)).not.toThrow();
+    expect(inspections).toBe(0);
+    expect(digestCalls).toBe(0);
+  });
+
   test('detached materialization record capabilities reject closed inherited frames before inspecting content', async () => {
     let digestCalls = 0;
     let contentReads = 0;

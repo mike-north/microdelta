@@ -191,11 +191,20 @@ export interface ITrackingMaterialization {
   ): V[K]
     | (K extends string ? string extends keyof V ? undefined : never : never)
     | (K extends number ? number extends keyof V ? undefined : never : never);
-  /** Retain a selected fact read from a completed-result source. */
+  /**
+   * Retain a selected fact read from a completed-result source in an active capture.
+   * Calls outside a capture are no-ops; calls inherited from a closed capture reject before inspecting content.
+   */
   recordSelected(binding: ITrackingBinding, fact: ISelectedFact): void;
-  /** Retain one aggregate selected keyed-member projection. */
+  /**
+   * Retain one aggregate selected keyed-member projection in an active capture.
+   * Calls outside a capture are no-ops; calls inherited from a closed capture reject before inspecting content.
+   */
   recordProjection(binding: ITrackingBinding, fact: IValueProjectionFact): void;
-  /** Retain order only when a consumer uses the collection's key sequence. */
+  /**
+   * Retain order only when a consumer uses the collection's key sequence and an active capture exists.
+   * Calls outside a capture are no-ops; calls inherited from a closed capture reject before inspecting content.
+   */
   recordCollectionOrder(binding: ITrackingBinding, keys: readonly string[]): void;
 }
 
@@ -875,6 +884,9 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
       return value[key];
     },
     recordSelected(binding: ITrackingBinding, fact: ISelectedFact): void {
+      if (captures.getStore() === undefined) {
+        return;
+      }
       materialization.assertFrameOpen();
       const encoded = encodeSelectedFact(fact);
       const request: ICurrentFactRequest = {
@@ -886,6 +898,9 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
       recordExternal(copyBinding(binding), request, 'fact', fact.operation, encoded);
     },
     recordProjection(binding: ITrackingBinding, fact: IValueProjectionFact): void {
+      if (captures.getStore() === undefined) {
+        return;
+      }
       materialization.assertFrameOpen();
       const encoded = encodeProjectionFact(fact);
       const descriptor = copyProjectionDescriptor(fact.descriptor);
@@ -893,6 +908,9 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
       recordExternal(copyBinding(binding), request, 'projection', 'projection', encoded);
     },
     recordCollectionOrder(binding: ITrackingBinding, keys: readonly string[]): void {
+      if (captures.getStore() === undefined) {
+        return;
+      }
       materialization.assertFrameOpen();
       if (!isUniqueStringSequence(keys)) {
         throw new TypeError('Collection order needs a unique ordered sequence of string keys');

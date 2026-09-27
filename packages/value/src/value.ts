@@ -398,13 +398,22 @@ export function recordFromEntries(entries: readonly (readonly [string, unknown])
   return record;
 }
 
-/** Resolve one supported own or inherited data lookup without invoking getters. */
-function lookup(record: object, key: string, depth = 0): { readonly present: boolean; readonly own: boolean; readonly value: unknown } {
-  assertRecordSurface(record, key);
+/**
+ * Resolve one own or inherited data lookup without invoking getters. The caller
+ * first validates this record's complete supported prototype chain with
+ * {@link assertRecordChain}; repeating surface validation here would rescan
+ * unrelated keys and could report a key as if it were a source location.
+ */
+function lookupValidated(
+  record: object,
+  key: string,
+  path: string,
+  depth = 0,
+): { readonly present: boolean; readonly own: boolean; readonly value: unknown } {
   if (depth > MAX_CUSTOM_PROTOTYPES) {
-    unsupported(key, 'prototype depth');
+    unsupported(path, 'prototype depth');
   }
-  const own = ownData(record, key, key);
+  const own = ownData(record, key, `${path}.${key}`);
   if (own.present) {
     return { present: true, own: true, value: own.value };
   }
@@ -414,15 +423,82 @@ function lookup(record: object, key: string, depth = 0): { readonly present: boo
   }
   if (prototype === Object.prototype) {
     if (Object.prototype.hasOwnProperty.call(Object.prototype, key)) {
-      unsupported(key, 'intrinsic inherited data');
+      unsupported(`${path}.${key}`, 'intrinsic inherited data');
     }
     return { present: false, own: false, value: undefined };
   }
   if (typeof prototype !== 'object') {
-    unsupported(key, 'prototype');
+    unsupported(`${path}[[Prototype]]`, 'prototype');
   }
-  const inherited = lookup(prototype, key, depth + 1);
+  const inherited = lookupValidated(prototype, key, `${path}[[Prototype]]`, depth + 1);
   return { present: inherited.present, own: false, value: inherited.value };
+}
+
+/** Extend a diagnostic location using the address operation's container-aware syntax. */
+function childPath(path: string, segment: IAddressSegment): string {
+  return segment.kind === 'index' ? `${path}[${segment.index}]` : `${path}.${segment.key}`;
+}
+
+/**
+ * Select one fact while carrying its original caller-relative location through
+ * nested navigation. This path is diagnostic context only; the structured
+ * address remains the semantic location and no sibling is traversed.
+ */
+function observeAt(
+  root: unknown,
+  address: readonly IAddressSegment[],
+  operation: IOperation,
+  rootPath: string,
+): ISelectedFact {
+  let targetPath = rootPath;
+  if (operation === 'length' || operation === 'keys') {
+    let target = root;
+    for (const segment of address) {
+      target = observeAt(target, [segment], 'value', targetPath).fact;
+      targetPath = childPath(targetPath, segment);
+    }
+    if (operation === 'length') {
+      if (!Array.isArray(target)) {
+        unsupported(targetPath, 'length needs an array');
+      }
+      assertArraySurface(target, targetPath);
+      return { operation, address, fact: target.length };
+    }
+    if (target === null || typeof target !== 'object' || Array.isArray(target)) {
+      unsupported(targetPath, 'keys needs a record');
+    }
+    assertRecordChain(target, targetPath);
+    return { operation, address, fact: Object.keys(target) };
+  }
+  if (address.length === 0) {
+    unsupported(rootPath, 'member operation needs an address');
+  }
+  let parent = root;
+  for (const segment of address.slice(0, -1)) {
+    parent = observeAt(parent, [segment], 'value', targetPath).fact;
+    targetPath = childPath(targetPath, segment);
+  }
+  const last = address[address.length - 1];
+  if (last === undefined) {
+    unsupported(rootPath, 'missing address');
+  }
+  const selectedPath = childPath(targetPath, last);
+  if (last.kind === 'index') {
+    if (!Array.isArray(parent) || !Number.isSafeInteger(last.index) || last.index < 0) {
+      unsupported(selectedPath, 'index needs array and nonnegative integer');
+    }
+    assertArraySurface(parent, targetPath);
+    const selected = ownData(parent, String(last.index), selectedPath);
+    const fact = operation === 'value' ? selected.value : selected.present;
+    return { operation, address, fact };
+  }
+  if (parent === null || typeof parent !== 'object' || Array.isArray(parent)) {
+    unsupported(targetPath, 'property needs record');
+  }
+  assertRecordChain(parent, targetPath);
+  const selected = lookupValidated(parent, last.key, targetPath);
+  const fact = operation === 'value' ? selected.value : operation === 'own' ? selected.own : selected.present;
+  return { operation, address, fact };
 }
 
 /** Observe exactly the requested fact; no sibling or whole-tree read is implied. */
@@ -434,51 +510,7 @@ function lookup(record: object, key: string, depth = 0): { readonly present: boo
  * @alpha
  */
 export function observe(root: unknown, address: readonly IAddressSegment[], operation: IOperation): ISelectedFact {
-  if (operation === 'length' || operation === 'keys') {
-    let target = root;
-    for (const segment of address) {
-      target = observe(target, [segment], 'value').fact;
-    }
-    if (operation === 'length') {
-      if (!Array.isArray(target)) {
-        unsupported('$', 'length needs an array');
-      }
-      assertArraySurface(target, '$');
-      return { operation, address, fact: target.length };
-    }
-    if (target === null || typeof target !== 'object' || Array.isArray(target)) {
-      unsupported('$', 'keys needs a record');
-    }
-    assertRecordChain(target, '$');
-    return { operation, address, fact: Object.keys(target) };
-  }
-  if (address.length === 0) {
-    unsupported('$', 'member operation needs an address');
-  }
-  let parent = root;
-  for (const segment of address.slice(0, -1)) {
-    parent = observe(parent, [segment], 'value').fact;
-  }
-  const last = address[address.length - 1];
-  if (last === undefined) {
-    unsupported('$', 'missing address');
-  }
-  if (last.kind === 'index') {
-    if (!Array.isArray(parent) || !Number.isSafeInteger(last.index) || last.index < 0) {
-      unsupported('$', 'index needs array and nonnegative integer');
-    }
-    assertArraySurface(parent, '$');
-    const selected = ownData(parent, String(last.index), '$');
-    const fact = operation === 'value' ? selected.value : selected.present;
-    return { operation, address, fact };
-  }
-  if (parent === null || typeof parent !== 'object' || Array.isArray(parent)) {
-    unsupported('$', 'property needs record');
-  }
-  assertRecordChain(parent, '$');
-  const selected = lookup(parent, last.key);
-  const fact = operation === 'value' ? selected.value : operation === 'own' ? selected.own : selected.present;
-  return { operation, address, fact };
+  return observeAt(root, address, operation, '$');
 }
 
 /** Encode operation and structural address independently from the selected fact. */

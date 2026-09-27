@@ -12,9 +12,9 @@ the required behavior.
 | EXP-1 | Select structural current binding and synchronous observed implementation/scalar evidence; [CMP-6](composition.md), TRK-2, REUSE-006/008. Arbitrary closure soundness remains excluded. |
 | EXP-2 | Select unordered equality, separate order-preserving snapshot transport, observations/projections, and top-level scalar access; [VAL-1/2/3 and COL-2](tracking.md). Reject async preparation as a general getter solution; nested lazy access remains unproven. |
 | EXP-3 | Select the single-file, single-active-writer SQLite protocol shape under process-kill/reopen evidence; [PUB-004](execution.md). Broader durability/concurrency claims remain unproven. |
-| EXP-5 | Retain the native CML/API-model mapping subset as optional evidence; [PKG-006](package-boundaries.md). Unsupported structures remain explicit; Java is not mandatory for unrelated CI. |
-| EXP-6 | Retain the checked flat-record theorem and finite TypeScript comparison as optional evidence; [VAL-2](tracking.md). Model proof and implementation agreement remain separate. |
-| EXP-7 | Retain the finite publication model, stale-writer control, and implementation mapping as optional evidence; [PUB-004](execution.md). No unbounded, SQL, or liveness proof is claimed. |
+| EXP-5 | Historical bounded CML correspondence only; superseded by [PKG-006](package-boundaries.md). No CML model, parser, checker, or fixture is an active tool or gate. |
+| EXP-6 | Historical flat-record theorem and finite TypeScript comparison; [VAL-2](tracking.md). Lean is dormant unless a concrete need justifies renewed use. |
+| EXP-7 | Historical finite publication model; [PUB-004](execution.md) defines selective model-to-code-and-test review. No unbounded, liveness, or SQLite proof is claimed. |
 
 ## Common experiment contract
 
@@ -36,8 +36,10 @@ escalate only a conflict with settled behavior or a material product tradeoff.
 views, fail-closed import checks, deterministic CI, and Node Machine boundary are
 in force before runtime experiments EXP-1/2/3. Each new host capability used in
 an experiment has a contract and Node conformance test before its result counts
-as runtime evidence. EXP-5 investigates CML correspondence separately; its
-outcome does not decide whether baseline API Extractor enforcement exists.
+as runtime evidence. EXP-5's historical outcome did not decide whether baseline
+API Extractor enforcement exists. The 2026-09-27 decision retires its runnable
+source; see PKG-006 and the archive
+record. Package/API gates remain the primary architecture contract.
 
 ## EXP-1 — Current binding and implementation evidence after restart
 
@@ -143,93 +145,41 @@ No general closure serialization or result-created topology.
 **Gate:** M4. Can follow the small durable MVP; it does not delay M2 for arbitrary
 nested cases.
 
-## EXP-5 — Native CML correspondence to established package contracts
+## EXP-5 — Retired CML correspondence pilot
 
-**Question:** which existing CML subset maps faithfully to our package/context,
-class structure and exported contract models, at acceptable tooling cost?
+EXP-5 ran and produced bounded evidence, but the 2026-09-27 formal-policy decision
+retired its fixture, parser bridge, and checker from active source and normal
+build/check/test paths. Its findings and Git provenance are recorded in the
+[historical archive](../archive/experiments/exp-5.md). PKG-006 now selects shaped
+package surfaces, generated declarations, API Extractor reports, compiler checks,
+and import checks as the architecture/API contract. CML is not an optional active
+tooling path or an implementation requirement.
 
-**Scope:** two tiny workspace packages, own/sibling/external/beta consumers, one
-class with native TS modifiers and `#` members, standalone function/interface/type
-exports, and internal declarations. Reuse the M0.5 public/beta/alpha/untrimmed
-API Extractor rollups and read `.api.json` with its maintained model library. Explicit sibling
-`paths` point at alpha declarations. CML syntax is unchanged; use its official
-parser/library, not a handwritten full-language parser. Java tooling is a build
-concern only. Generic text/JSON export is a candidate bridge, not selected runtime
-infrastructure.
+## EXP-6 — Dormant Lean evidence
 
-**Assertions first:** take the passing PKG-007 consumer boundaries, underscore
-enforcement, missing-declaration failure, and release-tier independence as
-baseline fixtures, then test the additional CML mapping. A TypeScript public
-alpha member remains project-private; `#` privacy is not collapsed into a
-release tag. Compare represented names, parameters, return
-types, ownership and permitted type references. Deliberately mutate each represented
-fact and show the checker detects it. TypeScript-only structures with no faithful
-CML counterpart produce explicit unsupported coverage, never a false match.
+The checked flat-record theorem and finite differential fixture remain historical
+evidence under [VAL-2](tracking.md), with their original scope and assumptions.
+Do not rerun, expand, install, or add Lean to routine CI by default. Resume Lean
+only when a concrete correctness question has a mathematical invariant for which
+this tool offers a material benefit over bounded executable properties and tests.
+Any renewed work must state the invariant, domain, assumptions, trusted toolchain,
+and relation to implementation checks before it begins. A theorem about a model
+does not establish TypeScript implementation behavior.
 
-**Decision outputs:** a mapping table from native CML concepts to compiler/API facts;
-explicit bounded-context→package/port mapping; parser-validated `.cml`; extraction
-artifact and conformance checks; cost/setup assessment; adopted subset and omissions.
-Do not force generic unions, overloads or internal implementation detail into an
-inaccurate CML equivalent. Release-tier metadata representation is an experiment
-outcome. CML relationship arrows alone do not define TypeScript import permission.
+## EXP-7 — Selective publication state-model review
 
-**Gate:** decide whether a bounded native CML model adds reliable architecture
-correspondence after basic API Extractor and import enforcement already pass.
-The chosen semantic package tiers remain requirements even if the CML
-experiment is rejected. It cannot block M1 runtime experiments or M2 merely
-because CML lacks a faithful counterpart for a TypeScript construct.
-
-Primary references: [CML library](https://contextmapper.org/docs/library/),
-[tactical syntax](https://contextmapper.org/docs/tactic-ddd/),
-[generic generator](https://contextmapper.org/docs/generic-freemarker-generator/),
-[API Extractor configuration](https://api-extractor.com/pages/configs/api-extractor_json/).
-
-## EXP-6 — Lean semantic pilot
-
-**Question:** does a small proof model help keep structured paths, projections and
-observation normalization correct enough to justify ongoing maintenance?
-
-**Scope:** choose one independently stated theorem, such as normalization preserving
-observation meaning over the chosen bounded value algebra. Model explicit assumptions
-and error cases. Do not model the whole runtime or pretend memoized LLM work is
-mathematically deterministic.
-
-**Assertions/proof target first:** accepted/rejected counterexamples from TRK-5 and
-VAL-1/2; a theorem over all modeled values under explicit assumptions; no `sorry` or
-unreviewed new axioms. Hash collision resistance is an assumption, not value equality.
-If an executable Lean oracle is practical, compare independently generated cases
-with the TypeScript experiment; do not copy production branches into the oracle.
-
-**Decision outputs:** checked proof, assumptions and trust boundary, differential
-fixture, toolchain/reproduction and maintenance assessment. Proof of the model is
-not proof of TypeScript implementation; distinguish oracle agreement from theorem.
-
-**Gate:** adopt or decline the proof artifact before making it a required CI tool.
-It is not a prerequisite for every unrelated context. Reference:
-[Lean proof validation](https://lean-lang.org/doc/reference/latest/ValidatingProofs/).
-
-## EXP-7 — Publication state-model pilot
-
-**Question:** can a compact TLA+/PlusCal model expose protocol errors around claim
-expiry, stale workers, crashes and acknowledgment before concurrency implementation?
-
-**Scope:** minimal contender count and finite state instance for TLC; explicit
-safety invariants and any liveness/fairness assumptions. Couple model actions to
-EXP-3 protocol boundaries, not to an independently invented publication algorithm.
-
-**Assertions first:** only authorized current holder publishes; no incomplete
-snapshot reachable; acknowledged completed history remains readable; expired holder
-cannot renew/release another holder; counters/fences survive restart. Include a
-known-bad interleaving as positive control for the model checker.
-
-**Decision outputs:** machine-checked model, counterexample traces, explored bounds,
-assumptions, and implementation-test mapping. TLC checking is scoped to the model
-instance; do not call it a general proof. TLA+ itself is not limited to bounded
-checking. P is an alternative for a later event-oriented supervision study, not
-an additional mandatory framework; PObserve would need a complete event contract.
-
-**Gate:** decide value before requiring formal tooling for M5. If declined, retain
-explicit protocol transition tables and deterministic interleaving/crash tests.
+The finite publication model and its stale-writer control remain supporting
+historical evidence for [PUB-004](execution.md). For a concrete correctness
+question where state exploration adds value, record the state, transitions,
+invariants, bounds, abstraction assumptions, and meaningful faulty control.
+Then independently map model invariants and counterexamples to actual
+implementation code and named test assertions. Classify each mapping as aligned,
+divergent, missing, insufficient, or ambiguous; turn actionable gaps into
+test-first implementation tests that run in ordinary CI. Record residual
+model-only assumptions and unproven properties. The model checker itself need not
+run in CI, and bounded safety results establish neither unbounded behavior,
+liveness, nor SQLite correctness. No model audit of the existing EXP-7/EXP-3
+artifacts is claimed by this policy edit.
 
 ## EXP-8 — Operational policy details
 

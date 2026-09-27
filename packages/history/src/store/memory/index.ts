@@ -12,6 +12,7 @@ import type {
   SubjectPatch,
   SubjectRow,
 } from '../index.js';
+import type { ISnapshotCapability } from '@microdelta/machine';
 import type { Fingerprint, Path, ResultKey } from '../../types.js';
 
 /** Options for the isolated, non-durable test backend. @public */
@@ -32,13 +33,9 @@ function address(key: ResultKey, generation?: number, fieldPath?: Path): string 
   ]);
 }
 
-/** Snapshot caller-owned data before entering an atomic Map operation. */
-function copy<T>(value: T): T {
-  // V8 serialization rejects raw shared memory and copies typed-array contents.
-  // structuredClone preserves SharedArrayBuffer backing memory, which would let
-  // caller mutations silently change retained values without new fingerprints.
-  // The cast expresses a serialization round-trip of T, not a schema conversion.
-  return deserialize(serialize(value)) as T;
+/** Delegate detached-copy semantics without taking ownership of the codec. */
+function copy<T>(capability: ISnapshotCapability, value: T): T {
+  return capability.snapshot(value);
 }
 
 /** CAS tokens must advance exactly, including at JavaScript's integer boundary. */
@@ -60,15 +57,15 @@ function guardPatch(patch: SubjectPatch | GenerationPatch, managed: 'version' | 
  * Each mutation snapshots its arguments before checking and changing the maps;
  * the qualifying check and write have no await or caller callback between them.
  * Values and fingerprints have separate indexes, so verification never touches
- * payloads. Inputs must support V8 serialization: functions, symbols and raw
- * shared buffers reject; buffer views are copied into private storage. This is
- * a test backend, not durable or shared across processes.
+ * payloads. The injected snapshot capability owns its supported value domain
+ * and failure behavior. This is a test backend, not durable or shared across
+ * processes.
  *
  * Only row storage is implemented here. Publication across multiple rows,
  * generation allocation, lease ownership, and reclamation belong to higher layers.
  * @public
  */
-export function createMemoryStore(options: MemoryStoreOptions = {}): Store {
+export function createMemoryStore(capability: ISnapshotCapability, options: MemoryStoreOptions = {}): Store {
   const fingerprintAlgorithm = 'sha256';
   if (options.fingerprintAlgorithm !== undefined && options.fingerprintAlgorithm !== fingerprintAlgorithm) {
     throw new FingerprintAlgorithmMismatchError(options.fingerprintAlgorithm, fingerprintAlgorithm);
@@ -86,11 +83,11 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): Store {
     },
 
     async getSubject(key) {
-      return copy(subjects.get(address(key)));
+      return copy(capability, subjects.get(address(key)));
     },
 
     async putSubject(row) {
-      const snapshot = copy(row);
+      const snapshot = copy(capability, row);
       validateVersion(snapshot.version);
       const id = address(snapshot.key);
       if (subjects.has(id)) { throw new DuplicateRowError(); }
@@ -100,7 +97,7 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): Store {
     async casSubject(key, expectedVersion, patch) {
       const id = address(key);
       guardPatch(patch, 'version');
-      const snapshot = copy(patch);
+      const snapshot = copy(capability, patch);
       // Snapshotting can invoke getters. Read the row afterwards, keeping the
       // compare and set indivisible even under reentrant caller-owned accessors.
       const existing = subjects.get(id);
@@ -113,18 +110,18 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): Store {
     },
 
     async getGeneration(key, generation) {
-      return copy(generations.get(address(key, generation)));
+      return copy(capability, generations.get(address(key, generation)));
     },
 
     async listGenerations(key) {
       const id = address(key);
       return [...generations.values()]
         .filter(row => address(row.key) === id)
-        .map(row => copy(row));
+        .map(row => copy(capability, row));
     },
 
     async putGeneration(row) {
-      const snapshot = copy(row);
+      const snapshot = copy(capability, row);
       const id = address(snapshot.key, snapshot.generation);
       if (generations.has(id)) { throw new DuplicateRowError(); }
       generations.set(id, snapshot);
@@ -133,7 +130,7 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): Store {
     async updateGeneration(key, generation, patch) {
       const id = address(key, generation);
       guardPatch(patch, 'generation');
-      const snapshot = copy(patch);
+      const snapshot = copy(capability, patch);
       const existing = generations.get(id);
       if (existing === undefined) { throw new MissingRowError(); }
       generations.set(id, { ...existing, ...snapshot });
@@ -142,7 +139,7 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): Store {
     async putFields(rows) {
       // Validate the whole detached batch before writing either index. A clone
       // failure or duplicate address cannot leave a partially inserted batch.
-      const snapshots = copy(rows);
+      const snapshots = copy(capability, rows);
       const ids = new Set<string>();
       for (const row of snapshots) {
         const id = address(row.key, row.generation, row.path);
@@ -164,7 +161,7 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): Store {
         const header = fieldHeaders.get(id);
         if (header !== undefined) {
           onValueRead?.();
-          result.push(copy({ ...header, value: fieldValues.get(id) }));
+          result.push(copy(capability, { ...header, value: fieldValues.get(id) }));
         }
       }
       return result;
@@ -184,7 +181,7 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): Store {
         .filter(row => row.claim !== null && row.claim.leaseUntil < now)
         .sort((left, right) => (left.claim?.leaseUntil ?? 0) - (right.claim?.leaseUntil ?? 0))
         .slice(0, Math.max(0, limit))
-        .map(row => copy(row));
+        .map(row => copy(capability, row));
     },
 
     async close() {
@@ -192,4 +189,3 @@ export function createMemoryStore(options: MemoryStoreOptions = {}): Store {
     },
   };
 }
-import { deserialize, serialize } from 'node:v8';

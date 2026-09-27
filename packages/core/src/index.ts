@@ -1,15 +1,30 @@
 /**
- * The stable microdelta entry keeps the scaffold's public History surface.
- * Assembly may use History's declared package contract; context code may not
- * route through this facade to evade its own dependency direction.
+ * The stable microdelta entry preserves the scaffold's public Store factory
+ * while composing its required host capability at the application boundary.
+ * Context code may use owner contracts directly, never this assembly facade.
  * @packageDocumentation
  */
+import { createMemoryStore as createHistoryMemoryStore } from '@microdelta/history';
+import type { MemoryStoreOptions, Store } from '@microdelta/history';
+import { createNodeMachine } from '@microdelta/machine-node';
+
+/** The default facade's host is selected once by assembly and passed explicitly. */
+const machine = createNodeMachine();
+
+/**
+ * Create the existing non-durable memory store with Node's detached snapshot
+ * capability supplied by assembly.
+ * @public
+ */
+export function createMemoryStore(options: MemoryStoreOptions = {}): Store {
+  return createHistoryMemoryStore(machine, options);
+}
+
 export {
   DuplicateRowError,
   FingerprintAlgorithmMismatchError,
   InvalidStorePatchError,
   MissingRowError,
-  createMemoryStore,
 } from '@microdelta/history';
 export type {
   Divergence,

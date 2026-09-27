@@ -1,9 +1,19 @@
+import { AsyncLocalStorage } from 'node:async_hooks';
+
 import { serialize } from 'node:v8';
 
 import { describe, expect, test } from '@jest/globals';
 import { signal } from '@preact/signals-core';
 
-import { cell, consume, createTag, derived, dirty, isValid, snapshot, withFrame, withFrameAsync } from '../src/index.js';
+import { createTracking } from '../src/index.js';
+
+/** This package test supplies the host context explicitly, as assembly will. */
+const tracking = createTracking({
+  createAsyncContext<T>() {
+    return new AsyncLocalStorage<T>();
+  },
+});
+const { cell, consume, createTag, derived, dirty, isValid, snapshot, withFrame, withFrameAsync } = tracking;
 
 /** Coordinate interleaving with explicit events instead of timing assumptions. */
 function deferred(): { promise: Promise<void>; release(): void } {
@@ -13,6 +23,20 @@ function deferred(): { promise: Promise<void>; release(): void } {
 }
 
 describe('track', () => {
+  test('TK-2/A-20: each injected tracker owns isolated tags and capture context', () => {
+    const other = createTracking({
+      createAsyncContext<T>() {
+        return new AsyncLocalStorage<T>();
+      },
+    });
+    const ownTag = createTag();
+    const otherTag = other.createTag();
+
+    expect(withFrame(() => { consume(ownTag); }).consumed).toEqual(new Set([ownTag]));
+    expect(other.withFrame(() => { other.consume(otherTag); }).consumed).toEqual(new Set([otherTag]));
+    expect(() => other.consume(ownTag)).toThrow('process-local tag');
+  });
+
   test('TK-1: tags are distinct frozen opaque tokens with no signal state', () => {
     const first = createTag();
     const second = createTag();

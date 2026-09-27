@@ -5,16 +5,17 @@
  * does not transfer the other role's invariants or grant source access.
  */
 export const roles = Object.freeze({
-  facade: { directory: 'core', packageName: 'microdelta', kind: 'assembly', uses: ['definition', 'tracking', 'resolution', 'history', 'supervision', 'accounting', 'value', 'materialization'] },
+  facade: { directory: 'core', packageName: 'microdelta', kind: 'assembly', uses: ['definition', 'tracking', 'resolution', 'history', 'supervision', 'accounting', 'value', 'materialization', 'machine-node'] },
   definition: { directory: 'definition', packageName: '@microdelta/definition', kind: 'context', uses: ['value'] },
-  tracking: { directory: 'tracking', packageName: '@microdelta/tracking', kind: 'context', uses: ['value'] },
+  tracking: { directory: 'tracking', packageName: '@microdelta/tracking', kind: 'context', uses: ['value', 'machine'] },
   resolution: { directory: null, packageName: '@microdelta/resolution', kind: 'context', uses: ['definition', 'tracking', 'history', 'materialization'] },
-  history: { directory: 'history', packageName: '@microdelta/history', kind: 'context', uses: ['value'] },
+  history: { directory: 'history', packageName: '@microdelta/history', kind: 'context', uses: ['value', 'machine'] },
   supervision: { directory: null, packageName: '@microdelta/supervision', kind: 'context', uses: ['definition', 'resolution', 'accounting'] },
   accounting: { directory: null, packageName: '@microdelta/accounting', kind: 'context', uses: [] },
   value: { directory: null, packageName: '@microdelta/value', kind: 'support', uses: [] },
   materialization: { directory: null, packageName: '@microdelta/materialization', kind: 'support', uses: ['history', 'tracking', 'value'] },
-  machine: { directory: null, packageName: '@microdelta/machine', kind: 'host-boundary', uses: [] },
+  machine: { directory: 'machine', packageName: '@microdelta/machine', kind: 'host-contract', uses: [] },
+  'machine-node': { directory: 'machine-node', packageName: '@microdelta/machine-node', kind: 'host-implementation', uses: ['machine'] },
 });
 
 /** Reverse lookup makes an unknown workspace package fail closed. */

@@ -1,11 +1,13 @@
 import { expectAssignable, expectError, expectType } from 'tsd';
 
 import { createMemoryStore } from '../dist/src/index.js';
+import type { ISnapshotCapability } from '@microdelta/machine';
 import type { GenerationPatch, ResultKey, Store, SubjectPatch } from '../dist/src/index.js';
 import type { StoreConformanceOptions } from '../dist/test/conformance/store/index.js';
 
 const key: ResultKey = { step: 'summarize', revision: 1, subjectHash: 'stable' };
-const store = createMemoryStore();
+const snapshotCapability: ISnapshotCapability = { snapshot: value => value };
+const store = createMemoryStore(snapshotCapability);
 expectType<Store>(store);
 expectType<Promise<boolean>>(store.casSubject(key, 0, { currentGeneration: 1 }));
 expectAssignable<SubjectPatch>({ claim: null, durations: [10] });
@@ -18,4 +20,7 @@ expectError(store.updateGeneration(key, 1, { generation: 2 }));
 expectError(store.deleteGeneration(key, 1));
 
 // The shipped suite and public backend must share the same opaque digest type.
-expectAssignable<StoreConformanceOptions>({ create: createMemoryStore, fingerprintAlgorithm: 'sha256' });
+expectAssignable<StoreConformanceOptions>({
+  create: options => createMemoryStore(snapshotCapability, options),
+  fingerprintAlgorithm: 'sha256',
+});

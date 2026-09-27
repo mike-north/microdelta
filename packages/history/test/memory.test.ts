@@ -6,6 +6,7 @@ import type { Fingerprint, ResultKey } from '../src/types.js';
 
 import { storeConformance } from './conformance/store/index.js';
 import type { ValueReadProbe } from './conformance/store/index.js';
+import { testSnapshotCapability } from './snapshot.js';
 
 // Counters live in the harness, not in persisted rows or the public Store contract.
 const probes = new WeakMap<Store, ValueReadProbe>();
@@ -14,7 +15,7 @@ storeConformance('memory', {
   fingerprintAlgorithm: 'sha256',
   create(options) {
     let valueReads = 0;
-    const store = createMemoryStore({
+    const store = createMemoryStore(testSnapshotCapability, {
       ...options,
       _onValueRead: () => { valueReads += 1; },
     });
@@ -66,7 +67,7 @@ describe('memory snapshot regressions', () => {
   test.each(['typed-array view', 'DataView', 'nested typed-array view'])(
     '%s over shared memory is rejected or stored as detached bytes',
     async (kind) => {
-      const store = createMemoryStore();
+      const store = createMemoryStore(testSnapshotCapability);
       const buffer = new SharedArrayBuffer(8);
       const original = new Uint8Array(buffer);
       original[0] = 1;
@@ -94,7 +95,7 @@ describe('memory snapshot regressions', () => {
   );
 
   test.each(sharedMemoryFixtures)('rejects $name before inserting any member of a field batch', async ({ value }) => {
-    const store = createMemoryStore();
+    const store = createMemoryStore(testSnapshotCapability);
     try {
       const payload = value(new SharedArrayBuffer(8));
       await expect(store.putFields([snapshotField({ plain: true }, 'first'), snapshotField(payload)]))
@@ -107,7 +108,7 @@ describe('memory snapshot regressions', () => {
   });
 
   test('rejects shared-memory progress in subject insertion and CAS without retaining or changing the row', async () => {
-    const store = createMemoryStore();
+    const store = createMemoryStore(testSnapshotCapability);
     const row: SubjectRow = {
       key: fixtureKey,
       subject: { kind: 'step', name: 'snapshot', inputs: [] },

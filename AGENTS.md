@@ -7,6 +7,9 @@
 - Start with [the specification entry point](docs/spec/README.md), then the owning
   contract and its acceptance criteria. [Milestones](docs/milestones.md) define
   delivery order. Archived material is historical evidence, not another active spec.
+- Use the [ubiquitous language](docs/spec/glossary.md) for domain terms
+  in code, tests, issues, and discussion; update definitions with their owning
+  contracts when their meaning changes.
 - Explain an abstraction's meaning, purpose, responsibilities, relationships, and
   invariants before choosing its representation. Challenge it with concrete consumer
   questions and realistic variation. Do not invent future requirements or reopen

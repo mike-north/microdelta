@@ -284,3 +284,149 @@ test('status adapter rejects a write response that did not confirm the requested
     targetUrl: 'https://github.com/mike-north/microdelta/pull/34#issuecomment-123',
   }), /did not confirm/u);
 });
+
+/** Exercise every production-adapter method with the ambient CLI unavailable. */
+test('all GitHub adapter operations use the injected runner with their original arguments', async () => {
+  const calls = [];
+  const pullRequestUrl = 'https://github.com/mike-north/microdelta/pull/34';
+  const originalPath = process.env.PATH;
+  process.env.PATH = '';
+  const api = createGitHubApi('mike-north/microdelta', (args, acceptedExitCodes) => {
+    calls.push({ args, acceptedExitCodes });
+    if (args[0] === 'api' && args[1] === 'repos/mike-north/microdelta') {
+      return { full_name: 'mike-north/microdelta', default_branch: 'main' };
+    }
+    if (args[0] === 'api' && args[1] === 'repos/mike-north/microdelta/branches/main/protection') {
+      return {
+        required_pull_request_reviews: {},
+        required_status_checks: { strict: true, contexts: ['core (20)'], checks: [{ context: 'core (20)', app_id: 15368 }] },
+        enforce_admins: { enabled: true },
+        required_conversation_resolution: { enabled: true },
+      };
+    }
+    if (args[0] === 'pr') return [{ name: 'core (20)', bucket: 'pass' }];
+    if (args[0] === 'api' && args[1] === 'repos/mike-north/microdelta/issues/34/comments') {
+      return { html_url: `${pullRequestUrl}#issuecomment-123` };
+    }
+    if (args[0] === 'api' && args[1] === `repos/mike-north/microdelta/statuses/${reviewedHead}`) {
+      return { context: REQUIRED_STATUS_CONTEXT, state: 'success' };
+    }
+    if (args[0] === 'api' && args[1] === `repos/mike-north/microdelta/commits/${reviewedHead}/status`) {
+      return { sha: reviewedHead, statuses: [{ context: REQUIRED_STATUS_CONTEXT, state: 'success' }] };
+    }
+    if (args[0] === 'api' && args[1] === 'graphql') {
+      const query = args.find(value => value.startsWith('query=') || value.startsWith('mutation='));
+      const after = args.find(value => value.startsWith('after='))?.slice('after='.length);
+      if (query?.includes('reviewThreads(first:100')) {
+        return { data: { repository: { pullRequest: {
+          id: 'PR_NODE', number: prNumber, title: 'Fix runtime behavior', state: 'OPEN', isDraft: false,
+          baseRefName: 'main', headRefName: 'fix-runtime', headRefOid: reviewedHead, url: pullRequestUrl,
+          mergedAt: null, autoMergeRequest: null,
+          reviewThreads: {
+            nodes: after === 'thread-cursor' ? [{ isResolved: false }] : [{ isResolved: true }],
+            pageInfo: after === 'thread-cursor'
+              ? { hasNextPage: false, endCursor: null }
+              : { hasNextPage: true, endCursor: 'thread-cursor' },
+          },
+        } } } };
+      }
+      if (query?.includes('reviews(first:100')) {
+        const pagedReview = after === 'review-cursor';
+        return { data: { repository: { pullRequest: {
+          reviews: {
+            nodes: [{
+              state: pagedReview ? 'APPROVED' : 'COMMENTED',
+              submittedAt: '2026-09-27T00:00:00Z',
+              commit: { oid: reviewedHead },
+              author: { login: pagedReview ? 'reviewer' : 'copilot-pull-request-reviewer[bot]', __typename: pagedReview ? 'User' : 'Bot' },
+            }],
+            pageInfo: pagedReview
+              ? { hasNextPage: false, endCursor: null }
+              : { hasNextPage: true, endCursor: 'review-cursor' },
+          },
+          reviewRequests: { nodes: [], pageInfo: { hasNextPage: false } },
+        } } } };
+      }
+      if (query?.includes('enablePullRequestAutoMerge')) {
+        return { data: { enablePullRequestAutoMerge: { pullRequest: { headRefOid: reviewedHead, autoMergeRequest: { enabledAt: '2026-09-27T00:00:00Z' } } } } };
+      }
+      if (query?.includes('mergedAt autoMergeRequest')) {
+        return { data: { repository: { pullRequest: { headRefOid: reviewedHead, mergedAt: null, autoMergeRequest: { enabledAt: '2026-09-27T00:00:00Z' } } } } };
+      }
+      if (query?.includes('pullRequest(number:$number){id}')) {
+        return { data: { repository: { pullRequest: { id: 'PR_NODE' } } } };
+      }
+      throw new Error(`Unexpected GraphQL operation: ${query}`);
+    }
+    throw new Error(`Unexpected GitHub command: ${args.join(' ')}`);
+  });
+
+  try {
+    assert.deepEqual(await api.readRepository(), { nameWithOwner: 'mike-north/microdelta', defaultBranch: 'main' });
+    assert.deepEqual(await api.readProtection('main'), {
+      branch: 'main', requiresPullRequest: true, strict: true, enforceAdmins: true,
+      resolveConversations: true, requiredContexts: ['core (20)'], checkSources: { 'core (20)': 'github-actions' },
+    });
+    assert.deepEqual(await api.readPullRequest(prNumber), {
+      number: prNumber, state: 'OPEN', isDraft: false, baseRefName: 'main', headRefName: 'fix-runtime',
+      headRefOid: reviewedHead, url: pullRequestUrl, nodeId: 'PR_NODE', unresolvedThreads: 1,
+      autoMergeEnabled: false, merged: false, isReleaseVersion: false,
+    });
+    assert.deepEqual(await api.readRequiredChecks(prNumber), [{ name: 'core (20)', bucket: 'pass' }]);
+    assert.deepEqual(await api.readCopilotReviews(prNumber), {
+      reviews: [
+        { authorLogin: 'copilot-pull-request-reviewer[bot]', authorType: 'Bot', commitOid: reviewedHead, state: 'COMMENTED', submitted: true },
+        { authorLogin: 'reviewer', authorType: 'User', commitOid: reviewedHead, state: 'APPROVED', submitted: true },
+      ],
+      pendingRequests: [], pendingRequestsUnread: false,
+    });
+    assert.equal(await api.createReviewRecord({ pullRequestNumber: prNumber, body: 'Reviewed.' }), `${pullRequestUrl}#issuecomment-123`);
+    assert.deepEqual(await api.setCommitStatus({
+      sha: reviewedHead, context: REQUIRED_STATUS_CONTEXT, state: 'success', description: 'Reviewed.', targetUrl: pullRequestUrl,
+    }), { sha: reviewedHead, context: REQUIRED_STATUS_CONTEXT, state: 'success' });
+    assert.deepEqual(await api.readCommitStatus(reviewedHead, REQUIRED_STATUS_CONTEXT), {
+      sha: reviewedHead, context: REQUIRED_STATUS_CONTEXT, state: 'success',
+    });
+    assert.deepEqual(await api.enableAutoMerge({ pullRequestNumber: prNumber, expectedHeadOid: reviewedHead }), {
+      enabled: true, expectedHeadOid: reviewedHead,
+    });
+    assert.deepEqual(await api.readOutcome(prNumber), {
+      headRefOid: reviewedHead, autoMergeEnabled: true, merged: false,
+    });
+  } finally {
+    if (originalPath === undefined) delete process.env.PATH;
+    else process.env.PATH = originalPath;
+  }
+
+  assert.deepEqual(calls[0], { args: ['api', 'repos/mike-north/microdelta'], acceptedExitCodes: undefined });
+  assert.deepEqual(calls[1], { args: ['api', 'repos/mike-north/microdelta/branches/main/protection'], acceptedExitCodes: undefined });
+  assert.deepEqual(calls[2].args.slice(0, 3), ['api', 'graphql', '-f']);
+  assert.ok(calls[2].args.includes('after=null'));
+  assert.ok(calls[3].args.includes('after=thread-cursor'));
+  assert.deepEqual(calls[4], {
+    args: ['pr', 'checks', String(prNumber), '--repo', 'mike-north/microdelta', '--required', '--json', 'name,bucket'],
+    acceptedExitCodes: [0, 8],
+  });
+  const graphCalls = calls.filter(call => call.args[0] === 'api' && call.args[1] === 'graphql');
+  assert.equal(graphCalls.length, 7);
+  assert.ok(graphCalls.some(call => call.args.includes('after=review-cursor')));
+  assert.deepEqual(calls[7], {
+    args: ['api', 'repos/mike-north/microdelta/issues/34/comments', '-X', 'POST', '-f', 'body=Reviewed.'],
+    acceptedExitCodes: undefined,
+  });
+  assert.deepEqual(calls[8], {
+    args: [
+      'api', `repos/mike-north/microdelta/statuses/${reviewedHead}`, '-X', 'POST',
+      '-f', `state=success`, '-f', `context=${REQUIRED_STATUS_CONTEXT}`,
+      '-f', 'description=Reviewed.', '-f', `target_url=${pullRequestUrl}`,
+    ],
+    acceptedExitCodes: undefined,
+  });
+  assert.deepEqual(calls[9], {
+    args: ['api', `repos/mike-north/microdelta/commits/${reviewedHead}/status`],
+    acceptedExitCodes: undefined,
+  });
+  assert.ok(graphCalls[4].args.includes('number=34'));
+  assert.ok(graphCalls[5].args.includes(`expectedHeadOid=${reviewedHead}`));
+  assert.ok(graphCalls.every(call => call.acceptedExitCodes === undefined));
+});

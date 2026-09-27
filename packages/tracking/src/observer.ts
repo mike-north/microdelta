@@ -188,15 +188,33 @@ type IOutcome<T> =
 /** Version emitted implementation source before its portable SHA-256 content digest. */
 const IMPLEMENTATION_VERSION = 'MDF1|';
 
-/** JSON string escaping preserves UTF-16 code units before the host's UTF-8 hash. */
-function encodeImplementation(target: object, machine: ISha256Capability): { readonly encoded: string; readonly digest: string } {
+/**
+ * Return source text only when the runtime exposes inspectable implementation
+ * evidence; callers decide whether an uninspectable callable is rejected or
+ * treated as unavailable current evidence.
+ */
+function inspectImplementationSource(target: object): string | undefined {
   const source = Function.prototype.toString.call(target);
   if (isNativeFunctionSource(source)) {
-    throw new TypeError('Tracked callables need inspectable implementation source');
+    return undefined;
   }
+  return source;
+}
+
+/** JSON string escaping preserves UTF-16 code units before the host's UTF-8 hash. */
+function encodeImplementationSource(source: string, machine: ISha256Capability): { readonly encoded: string; readonly digest: string } {
   const sourceDigest = fingerprint(JSON.stringify(source), machine);
   const encoded = `${IMPLEMENTATION_VERSION}${sourceDigest}`;
   return { encoded, digest: fingerprint(encoded, machine) };
+}
+
+/** Capture requires inspectable code; hash failures remain operational failures. */
+function encodeImplementation(target: object, machine: ISha256Capability): { readonly encoded: string; readonly digest: string } {
+  const source = inspectImplementationSource(target);
+  if (source === undefined) {
+    throw new TypeError('Tracked callables need inspectable implementation source');
+  }
+  return encodeImplementationSource(source, machine);
 }
 
 /** Freeze external correspondence at registration so later mutation cannot retarget evidence. */
@@ -498,7 +516,11 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
         if (typeof resolved.fact !== 'function') {
           return { kind: 'unavailable', observation };
         }
-        const implementation = encodeImplementation(resolved.fact, machine);
+        const source = inspectImplementationSource(resolved.fact);
+        if (source === undefined) {
+          return { kind: 'unavailable', observation };
+        }
+        const implementation = encodeImplementationSource(source, machine);
         encoded = implementation.encoded;
         currentFingerprint = implementation.digest;
       } else {
@@ -536,7 +558,7 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
       if (isClassConstructor(value)) {
         throw new TypeError('Class constructors are unsupported tracked inputs');
       }
-      if (typeof value === 'function' && isNativeFunctionSource(Function.prototype.toString.call(value))) {
+      if (typeof value === 'function' && inspectImplementationSource(value) === undefined) {
         throw new TypeError('Tracked callables need inspectable implementation source');
       }
       const copied = copyBinding(binding);

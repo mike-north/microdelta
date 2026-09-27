@@ -85,7 +85,7 @@ test('source, deep, re-export, facade, and unknown-path bypasses fail closed', a
   }
 });
 
-  test('Node builtins and host globals are confined to the Node implementation', async () => {
+test('Node builtins and host globals are confined to the Node implementation', async () => {
   const forbidden = [
     "import { AsyncLocalStorage } from 'node:async_hooks';",
     "import { serialize } from 'v8';",

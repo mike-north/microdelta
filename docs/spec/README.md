@@ -26,6 +26,7 @@ Read this entry point, then only the contracts relevant to the task:
 
 | Artifact | Owns | Read when |
 | --- | --- | --- |
+| [Ubiquitous language](glossary.md) | Shared terms, distinctions, relationships, and ownership | Learning or changing domain vocabulary |
 | [Domain](domain.md) | Purpose, vocabulary, scope, governing distinctions | Always on first entry |
 | [Architecture](architecture.md) | Six contexts, ownership, dependency directions, Machine host boundary, supporting modules | Crossing or changing boundaries |
 | [Package boundaries](package-boundaries.md) | Declaration tiers, visibility, compiler/API enforcement and separate CML mapping | Package/API/tooling work |

@@ -3,10 +3,9 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-/** Keep the retirement guard scoped to executable project configuration, not historical records. */
+/** Keep the retirement guard scoped to all executable package scripts and project tooling, not historical records. */
 function assertNoRetiredFormalToolEntrypoints(root, eslint, tsconfig) {
   const executableScripts = Object.entries(root.scripts)
-    .filter(([name]) => name.startsWith('build') || name.startsWith('check') || name.startsWith('test'))
     .map(([name, command]) => `${name}\n${command}`)
     .join('\n');
   const retiredFormalTool = /exp-5|exp5|cml/iu;
@@ -54,6 +53,27 @@ test('active formal-tool entrypoint guard includes script names and rejects case
     /eslint/iu,
     'lint configuration references must be rejected without case sensitivity',
   );
+});
+
+/** npm lifecycle and namespaced scripts are executable entrypoints even without a build/check/test prefix. */
+test('formal-tool guard rejects retired references in every package script, including lifecycle hooks', async () => {
+  const root = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8'));
+  const eslint = await readFile(new URL('../eslint.config.mjs', import.meta.url), 'utf8');
+  const tsconfig = JSON.parse(await readFile(new URL('../tsconfig.json', import.meta.url), 'utf8'));
+  const mutations = [
+    ['prebuild', 'node tooling/generate-cml-fixture.mjs'],
+    ['posttest', 'node tooling/ordinary-hook.mjs --mode CML'],
+    ['prebuild:fixtures', 'node tooling/ordinary-hook.mjs --mode cml'],
+  ];
+
+  for (const [name, command] of mutations) {
+    const mutatedRoot = { ...root, scripts: { ...root.scripts, [name]: command } };
+    assert.throws(
+      () => assertNoRetiredFormalToolEntrypoints(mutatedRoot, eslint, tsconfig),
+      /package scripts/u,
+      `${name} must be checked even though it is not a top-level build/check/test script`,
+    );
+  }
 });
 
 /** Removing the experiment must leave the package declaration-contract gate in ordinary builds. */

@@ -445,6 +445,7 @@ function isUniqueStringSequence(value: unknown): value is readonly string[] {
     keys.add(slot.value);
   }
   return true;
+
 }
 
 /** Classes are not ordinary callable steps or supported plain-data records. */
@@ -750,7 +751,17 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
             if (!isSelectedFact(resolved.fact) || !matchesSelectedRequest(resolved.fact, observation.selection)) {
               return { kind: 'incompatible', observation };
             }
-            currentFingerprint = fingerprint(encodeSelectedFact(resolved.fact), machine);
+            let encoded: string;
+            try {
+              encoded = encodeSelectedFact(resolved.fact);
+            } catch (error: unknown) {
+              // A Value TypeError means the selected content is outside its supported canonical domain.
+              if (error instanceof TypeError) {
+                return { kind: 'incompatible', observation };
+              }
+              throw error;
+            }
+            currentFingerprint = fingerprint(encoded, machine);
             break;
           case 'implementation':
             if (typeof resolved.fact !== 'function') {

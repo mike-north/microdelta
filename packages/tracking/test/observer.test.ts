@@ -165,6 +165,36 @@ describe('semantic tracking observer', () => {
     }).kind).toBe('incompatible');
   });
 
+  test('classifies unsupported selected provider payloads as incompatible', () => {
+    const captured = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
+    const malformed = {
+      operation: 'value',
+      address: [{ kind: 'property', key: 'name' }],
+      fact: () => 'functions are not selected value data',
+    };
+
+    expect(observer.compareCurrent(captured, {
+      resolve: () => ({ kind: 'available', fact: malformed }),
+    }).kind).toBe('incompatible');
+  });
+
+  test('classifies malformed selected envelopes and addresses as incompatible', () => {
+    const captured = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
+    const sparseAddress = new Array<unknown>(1);
+    const malformed: unknown[] = [
+      { operation: 'not-an-operation', address: [{ kind: 'property', key: 'name' }], fact: 'Ada' },
+      { operation: 'value', address: sparseAddress, fact: 'Ada' },
+      { operation: 'value', address: [{ kind: 'index', index: -1 }], fact: 'Ada' },
+      { operation: 'value', address: [{ kind: 'property', key: 'name', extra: true }], fact: 'Ada' },
+    ];
+
+    for (const fact of malformed) {
+      expect(observer.compareCurrent(captured, {
+        resolve: () => ({ kind: 'available', fact }),
+      }).kind).toBe('incompatible');
+    }
+  });
+
   test('compares an exact compatible fingerprint request without asking for payload and rejects mismatched metadata descriptors', () => {
     // eslint-disable-next-line microdelta/tracked-captures -- This runtime case creates its tracked wrapper inside capture to exercise fingerprint-only comparison.
     const captured = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
@@ -227,6 +257,7 @@ describe('semantic tracking observer', () => {
       expect(observer.compareCurrent(captured, {
         resolve: () => ({ kind: 'available', fact }),
       }).kind).toBe('incompatible');
+
     }
     expect(getterCalls).toBe(0);
   });
@@ -355,6 +386,33 @@ describe('semantic tracking observer', () => {
 
     expect(() => isolated.compareCurrent(capture, {
       resolve: () => ({ kind: 'available', fact: replacement }),
+    })).toThrow(failure);
+  });
+
+  test('selected fact digest failures remain host errors', () => {
+    const failure = new TypeError('host digest failed');
+    let digestUnavailable = false;
+    const host: IMachine = {
+      ...machine,
+      sha256(input: string): string {
+        if (digestUnavailable) {
+          throw failure;
+        }
+        return machine.sha256(input);
+      },
+    };
+    const isolated = createTrackingObserver(host);
+    const tracked = isolated.tracked({ name: 'Ada' }, binding);
+    const capture = isolated.capture(() => tracked.name);
+    const currentFact = {
+      operation: 'value',
+      address: [{ kind: 'property', key: 'name' }],
+      fact: 'Ada',
+    };
+    digestUnavailable = true;
+
+    expect(() => isolated.compareCurrent(capture, {
+      resolve: () => ({ kind: 'available', fact: currentFact }),
     })).toThrow(failure);
   });
 

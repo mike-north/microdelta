@@ -247,13 +247,16 @@ function ghJson(args, acceptedExitCodes = [0]) {
   }
 }
 
-/** Create the CLI-backed API adapter while keeping HTTP details outside the review state machine. */
+/**
+ * Keep GitHub command execution behind one injectable boundary so adapter tests cannot
+ * accidentally reach the ambient account and production operations share one CLI path.
+ */
 export function createGitHubApi(repositoryName, runJson = ghJson) {
   const [owner, name] = repositoryName.split('/');
   const restPrefix = `repos/${owner}/${name}`;
   /** Execute one GraphQL operation and reject partial responses before making gate decisions. */
   const graph = (query, variables) => {
-    const result = ghJson([
+    const result = runJson([
       'api', 'graphql', '-f', `query=${query}`,
       ...Object.entries(variables).flatMap(([key, value]) => ['-F', `${key}=${value}`]),
     ]);
@@ -264,12 +267,12 @@ export function createGitHubApi(repositoryName, runJson = ghJson) {
   return {
     /** Read canonical repository identity and default branch for all subsequent gate checks. */
     async readRepository() {
-      const result = ghJson(['api', restPrefix]);
+      const result = runJson(['api', restPrefix]);
       return { nameWithOwner: result.full_name, defaultBranch: result.default_branch };
     },
     /** Read branch protection and normalize required contexts and their producing app identity. */
     async readProtection(branch) {
-      const rule = ghJson(['api', `${restPrefix}/branches/${branch}/protection`]);
+      const rule = runJson(['api', `${restPrefix}/branches/${branch}/protection`]);
       const checks = rule.required_status_checks;
       const contexts = checks?.contexts ?? [];
       const checksWithSources = checks?.checks ?? [];
@@ -322,7 +325,7 @@ export function createGitHubApi(repositoryName, runJson = ghJson) {
     /** Read current required CI buckets while preserving gh's pending exit code as data. */
     async readRequiredChecks(number) {
       // gh pr checks uses exit code 8 for pending checks while still returning JSON.
-      const rows = ghJson(['pr', 'checks', String(number), '--repo', repositoryName, '--required', '--json', 'name,bucket'], [0, 8]);
+      const rows = runJson(['pr', 'checks', String(number), '--repo', repositoryName, '--required', '--json', 'name,bucket'], [0, 8]);
       return rows.filter(row => row.name !== REQUIRED_STATUS_CONTEXT).map(row => ({ name: row.name, bucket: row.bucket }));
     },
     /** Read submitted reviews and outstanding requests without confusing a request with a review. */
@@ -353,7 +356,7 @@ export function createGitHubApi(repositoryName, runJson = ghJson) {
     },
     /** Preserve the supervisor's own scope and evidence in a PR comment. */
     async createReviewRecord(record) {
-      const result = ghJson(['api', `${restPrefix}/issues/${record.pullRequestNumber}/comments`, '-X', 'POST', '-f', `body=${record.body}`]);
+      const result = runJson(['api', `${restPrefix}/issues/${record.pullRequestNumber}/comments`, '-X', 'POST', '-f', `body=${record.body}`]);
       return result.html_url;
     },
     /** Publish status only to the supplied commit and context. */

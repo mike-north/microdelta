@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "include": ["src/**/*.ts", "test/**/*.ts"],
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "@microdelta/history": ["../../node_modules/@microdelta/history/dist/api/history.alpha.d.ts"],
+      "@microdelta/tracking": ["../../node_modules/@microdelta/tracking/dist/api/tracking.alpha.d.ts"],
+      "@microdelta/value": ["../../node_modules/@microdelta/value/dist/api/value.alpha.d.ts"]
+    }
+  }
+}

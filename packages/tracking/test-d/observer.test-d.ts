@@ -1,6 +1,6 @@
 import { expectAssignable, expectError, expectType } from 'tsd';
 import { createTrackingObserver } from '../dist/api/tracking.alpha.js';
-import type { ITracked, ITrackedView, ITrackingObserver, ITrackingObserverHost } from '../dist/api/tracking.alpha.js';
+import type { IDetachedOutput, ITracked, ITrackedView, ITrackingObserver, ITrackingObserverHost } from '../dist/api/tracking.alpha.js';
 
 const machine: ITrackingObserverHost = {
   createAsyncContext: () => ({
@@ -55,3 +55,37 @@ expectError(observer.tracked(2, binding));
 expectError(observer.tracked('text', binding));
 expectError(observer.tracked(true, binding));
 expectError(observer.captureAsync(() => 2));
+
+const detached = observer.snapshotOutput(config);
+expectType<number>(detached.count);
+expectError(readImportedDeclaration(detached));
+const detachedNumbers = observer.snapshotOutput([1, 2]);
+expectType<number>(detachedNumbers[0]!);
+const mappedDetachedNumbers = detachedNumbers.map(value => value + 1);
+expectType<number>(mappedDetachedNumbers[0]!);
+// eslint-disable-next-line @typescript-eslint/no-unsafe-call -- This negative tsd case intentionally calls a mutator absent from the declared array type.
+expectError(detachedNumbers.push(3));
+// eslint-disable-next-line @typescript-eslint/no-unsafe-call -- This negative tsd case intentionally calls a mutator absent from the declared array type.
+expectError(detachedNumbers.splice(0, 1));
+const detachedPair = observer.snapshotOutput(observer.tracked([1, 'selected'] as const, binding));
+expectType<1>(detachedPair[0]);
+expectType<'selected'>(detachedPair[1]);
+// eslint-disable-next-line @typescript-eslint/no-unsafe-call -- This negative tsd case intentionally calls a mutator absent from the declared tuple type.
+expectError(detachedPair.push(2));
+// eslint-disable-next-line @typescript-eslint/no-unsafe-call -- This negative tsd case intentionally calls a mutator absent from the declared tuple type.
+expectError(detachedPair.splice(0, 1));
+declare const detachedRawPair: IDetachedOutput<[number, string]>;
+expectType<number>(detachedRawPair[0]);
+expectType<string>(detachedRawPair[1]);
+// eslint-disable-next-line @typescript-eslint/no-unsafe-call -- This negative tsd case intentionally calls a mutator absent from the declared tuple type.
+expectError(detachedRawPair.push(2));
+// eslint-disable-next-line @typescript-eslint/no-unsafe-call -- This negative tsd case intentionally calls a mutator absent from the declared tuple type.
+expectError(detachedRawPair.splice(0, 1));
+expectError(() => {
+  const branded: ITracked<readonly [1, 'selected']> = detachedPair;
+  return branded;
+});
+expectType<never>(observer.snapshotOutput((value: number) => value));
+const mixedDetached = observer.snapshotOutput({ config, label: 'local' });
+expectType<string>(mixedDetached.label);
+expectError(readImportedDeclaration(mixedDetached.config));

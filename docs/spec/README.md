@@ -1,6 +1,6 @@
 # microdelta specification — start here
 
-**Status: consolidated design baseline, 2026-09-26. M0.5 accepted;
+**Status as of 2026-09-27: consolidated design baseline; M0.5 accepted;
 M1 bounded experiment decisions are recorded; final acceptance follows the
 [M1 evidence record](../validation/m1-2026-09-26.md). M2 bounded tracking and
 package components are implemented; their [evidence record](../validation/m2-2026-09-27.md)

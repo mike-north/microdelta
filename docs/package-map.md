@@ -32,8 +32,9 @@ never a durable subject key or current-binding locator.
 The Tracking observer is bounded M2 owner functionality: it stores no binding
 catalog or History rows and does not decide source freshness or reusable results.
 Its explicit output snapshot records consumed data and returns detached immutable
-values; Materialization composes that operation with History reading ports. Its structural binding descriptor is supplied by another
-owner and resolved through the current-fact provider. It does not establish
+values; Materialization composes that operation with History reading ports.
+Its structural binding descriptor is supplied by another owner and resolved through
+the current-fact provider. It does not establish
 arbitrary JavaScript closure soundness.
 
 Each implemented package generates untrimmed, alpha, beta, and public declaration

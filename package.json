@@ -10,7 +10,7 @@
     "build": "npm run build:packages && npm run build:fixtures",
     "check": "npm run build && concurrently --success all --names packages,workspace \"npm run check:packages\" \"npm run check:workspace\"",
     "check:packages": "npm run check --workspaces",
-    "check:workspace": "concurrently --success all --names imports,experiments,suppressions,declarations,fixtures \"npm run check:imports\" \"npm run check:experiments\" \"npm run check:suppressions\" \"npm run check:declarations\" \"npm run check:fixtures\"",
+    "check:workspace": "concurrently --success all --names imports,experiments,suppressions,declarations,fixtures,wiring \"npm run check:imports\" \"npm run check:experiments\" \"npm run check:suppressions\" \"npm run check:declarations\" \"npm run check:fixtures\" \"npm run check:wiring\"",
     "test": "npm run build && npm run test:tooling && npm run test --workspaces",
     "test:tooling": "node --test tooling/*.test.mjs",
     "check:experiments": "tsc --noEmit -p tsconfig.json && eslint experiments --no-error-on-unmatched-pattern",
@@ -19,8 +19,9 @@
     "build:packages": "npm run build --workspace @microdelta/definition && npm run build --workspace @microdelta/tracking && npm run build --workspace @microdelta/history && npm run build --workspace microdelta",
     "build:fixtures": "tsc -p fixtures/declarations/producer/tsconfig.json && api-extractor run --config fixtures/declarations/producer/api-extractor.json",
     "check:imports": "eslint -c tooling/context-imports.config.mjs packages --quiet",
-    "check:declarations": "node tooling/check-producer-declarations.mjs",
-    "check:fixtures": "tsc --noEmit -p fixtures/declarations/producer/tsconfig.json && eslint fixtures/declarations/producer/src"
+    "check:declarations": "node tooling/check-producer-declarations.mjs && node tooling/history-declaration-shims.mjs --check",
+    "check:fixtures": "tsc --noEmit -p fixtures/declarations/producer/tsconfig.json && eslint fixtures/declarations/producer/src",
+    "check:wiring": "node tooling/foundation-wiring.mjs"
   },
   "devDependencies": {
     "@jest/globals": "30.5.1",

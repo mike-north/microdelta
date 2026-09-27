@@ -4,7 +4,7 @@
  */
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { cp, mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdtemp, mkdir, readFile, rm, symlink, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
@@ -99,5 +99,39 @@ test('signature and release-tag drift fail the checked API report', async () => 
       assert.notEqual(result.status, 0, 'Unreviewed contract mutation passed');
       assert.match(result.stdout + result.stderr, /changed the API signature/iu);
     });
+  }
+});
+
+/** The Jest compatibility entry has its own reviewed public contract. */
+test('conformance subpath signature and tier changes fail its checked API report', async () => {
+  const history = path.join(root, 'packages/history');
+  for (const mutate of [
+    source => source.replace('count(): number;', 'count(): string;'),
+    source => source.replace(' * @public\n */\nexport interface ValueReadProbe', ' * @beta\n */\nexport interface ValueReadProbe'),
+  ]) {
+    const directory = await mkdtemp(path.join(os.tmpdir(), 'microdelta-conformance-api-'));
+    try {
+      await cp(path.join(history, 'dist'), path.join(directory, 'dist'), { recursive: true });
+      await cp(path.join(history, 'etc'), path.join(directory, 'etc'), { recursive: true });
+      await cp(path.join(history, 'package.json'), path.join(directory, 'package.json'));
+      await writeFile(path.join(directory, 'tsconfig.json'), JSON.stringify({ compilerOptions: {
+        target: 'ES2022', module: 'NodeNext', moduleResolution: 'NodeNext', strict: true, types: [],
+      }, files: ['dist/test/conformance/store/index.d.ts'] }));
+      await cp(path.join(history, 'api-extractor-conformance.json'), path.join(directory, 'api-extractor-conformance.json'));
+      await symlink(path.join(root, 'node_modules'), path.join(directory, 'node_modules'), 'dir');
+      const config = path.join(directory, 'api-extractor-conformance.json');
+      const baseline = spawnSync(process.execPath, [extractor, 'run', '--config', config], { cwd: root, encoding: 'utf8' });
+      assert.equal(baseline.status, 0, baseline.stdout + baseline.stderr);
+      const entry = path.join(directory, 'dist/test/conformance/store/index.d.ts');
+      const before = await readFile(entry, 'utf8');
+      const after = mutate(before);
+      assert.notEqual(after, before, 'The conformance contract mutation did not apply');
+      await writeFile(entry, after);
+      const result = spawnSync(process.execPath, [extractor, 'run', '--config', config], { cwd: root, encoding: 'utf8' });
+      assert.notEqual(result.status, 0, 'Changed conformance subpath escaped API review');
+      assert.match(result.stdout + result.stderr, /changed the API signature|ae-incompatible-release-tags/iu);
+    } finally {
+      await rm(directory, { recursive: true, force: true });
+    }
   }
 });

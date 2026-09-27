@@ -16,7 +16,7 @@
       "import": "./dist/src/index.js"
     },
     "./conformance/store": {
-      "types": "./dist/test/conformance/store/index.d.ts",
+      "types": "./dist/api/microdelta.conformance.store.public.d.ts",
       "import": "./dist/test/conformance/store/index.js"
     }
   },
@@ -24,7 +24,7 @@
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json",
+    "build": "tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json && api-extractor run --config api-extractor-conformance.json",
     "check": "concurrently --success all --names types,lint \"npm run check:types\" \"npm run check:lint\"",
     "check:types": "tsc --noEmit -p tsconfig.json",
     "check:lint": "eslint .",

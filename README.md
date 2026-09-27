@@ -25,8 +25,12 @@ Store, memory adapter, and conformance suite). The [package map](docs/package-ma
 records their ports, release tiers, and the explicitly absent contexts.
 
 API Extractor generates four declaration tiers and reviewed reports for each
-implemented package. The checked source-import registry enforces directed context
-edges. The full M0.5 foundation is still incomplete: the Node-first
+implemented package's root entry and the two public Store conformance subpaths.
+History's two entries select names from one canonical declaration per tier, so
+their branded Store types compose in ordinary package consumers.
+The checked source-import registry enforces directed context edges, and the facade
+consumes History through generated alpha declarations. The full M0.5 foundation
+is still incomplete: the Node-first
 [Machine host boundary](docs/spec/architecture.md) is issue #3, and direct
 `AsyncLocalStorage` and `node:v8` imports remain known baseline violations.
 The memory backend cannot persist across process exits or prove cross-row

@@ -1,21 +1,18 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/api-extractor/v7/api-extractor.schema.json",
-  "mainEntryPointFilePath": "<projectFolder>/dist/src/index.d.ts",
-  "compiler": {
-    "tsconfigFilePath": "<projectFolder>/tsconfig.extractor.json"
-  },
+  "mainEntryPointFilePath": "<projectFolder>/dist/test/conformance/store/index.d.ts",
   "apiReport": {
     "enabled": true,
-    "reportFileName": "microdelta",
+    "reportFileName": "history.conformance.store",
     "reportFolder": "<projectFolder>/etc",
     "reportTempFolder": "<projectFolder>/dist/api-temp"
   },
   "dtsRollup": {
     "enabled": true,
-    "untrimmedFilePath": "<projectFolder>/dist/api/microdelta.untrimmed.d.ts",
-    "alphaTrimmedFilePath": "<projectFolder>/dist/api/microdelta.alpha.d.ts",
-    "betaTrimmedFilePath": "<projectFolder>/dist/api/microdelta.beta.d.ts",
-    "publicTrimmedFilePath": "<projectFolder>/dist/api/microdelta.public.d.ts"
+    "untrimmedFilePath": "<projectFolder>/dist/api/history.conformance.store.raw.untrimmed.d.ts",
+    "alphaTrimmedFilePath": "<projectFolder>/dist/api/history.conformance.store.raw.alpha.d.ts",
+    "betaTrimmedFilePath": "<projectFolder>/dist/api/history.conformance.store.raw.beta.d.ts",
+    "publicTrimmedFilePath": "<projectFolder>/dist/api/history.conformance.store.raw.public.d.ts"
   },
   "messages": {
     "extractorMessageReporting": {

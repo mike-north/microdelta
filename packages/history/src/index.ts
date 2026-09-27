@@ -1,6 +1,7 @@
 /**
  * Existing row Store, memory adapter, and compatibility schema belong to
- * Result History. This package does not yet implement atomic publication.
+ * Result History. This entry exposes row-storage contracts and does not define
+ * publication transitions or candidate-validity policy.
  * @packageDocumentation
  */
 export {

@@ -1,0 +1,4 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "files": ["dist/src/index.d.ts", "dist/test/conformance/store/index.d.ts"]
+}

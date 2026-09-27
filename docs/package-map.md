@@ -27,6 +27,17 @@ never a durable subject key or current-binding locator.
 Each implemented package generates untrimmed, alpha, beta, and public declaration
 rollups plus a reviewed API report. Definition and Tracking's current exports are
 project-private `@alpha`; History's existing facade exports remain `@public`.
+History and the facade each generate the same four views and a separate API report
+for the exported `conformance/store` compatibility subpath; package metadata points
+external consumers to the public rollup, and the facade resolves History's
+subpath through its alpha rollup. These are declaration surfaces, not runtime
+privacy controls.
+History's root and conformance reports check their own export sets. Their published
+declaration shims select those sets from one additional canonical History rollup
+per tier, so a `Fingerprint` or `Store` used across the two entries retains one
+TypeScript identity. The build verifies exact export parity and the checked gate
+rejects a missing canonical view or a shim pointing at the wrong tier. The
+runtime JS entries remain distinct; the root does not export the Jest suite.
 The only `@internal` production member is the memory backend's `_onValueRead`
 conformance probe. No production beta API exists. The fixture-only producer under
 `fixtures/declarations/` exercises all four distinct tiers and selected beta
@@ -37,5 +48,7 @@ TypeScript, type-aware ESLint, source-import enforcement, declaration-path
 preflight, API report comparison, and fixture checks. `npm test` runs outcome
 fixtures, Jest owner behavior, and tsd type contracts. Source imports must use
 approved package names and directed edges; TypeScript paths used by a sibling
-must name generated alpha declarations. Runtime ESM imports resolve built package
-exports independently of those TypeScript mappings.
+must name generated alpha declarations. The preflight resolves inherited compiler
+paths and rejects aliases, forbidden edges, wrong tiers, or missing producers.
+The CI wiring check fails if a required aggregate command or API report is omitted.
+Runtime ESM imports resolve built package exports independently of TypeScript mappings.

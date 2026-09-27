@@ -1,21 +1,18 @@
 {
   "$schema": "https://developer.microsoft.com/json-schemas/api-extractor/v7/api-extractor.schema.json",
-  "mainEntryPointFilePath": "<projectFolder>/dist/src/index.d.ts",
-  "compiler": {
-    "tsconfigFilePath": "<projectFolder>/tsconfig.extractor.json"
-  },
+  "mainEntryPointFilePath": "<projectFolder>/api-surface.d.ts",
   "apiReport": {
     "enabled": true,
-    "reportFileName": "microdelta",
+    "reportFileName": "history.shared",
     "reportFolder": "<projectFolder>/etc",
     "reportTempFolder": "<projectFolder>/dist/api-temp"
   },
   "dtsRollup": {
     "enabled": true,
-    "untrimmedFilePath": "<projectFolder>/dist/api/microdelta.untrimmed.d.ts",
-    "alphaTrimmedFilePath": "<projectFolder>/dist/api/microdelta.alpha.d.ts",
-    "betaTrimmedFilePath": "<projectFolder>/dist/api/microdelta.beta.d.ts",
-    "publicTrimmedFilePath": "<projectFolder>/dist/api/microdelta.public.d.ts"
+    "untrimmedFilePath": "<projectFolder>/dist/api/history.shared.untrimmed.d.ts",
+    "alphaTrimmedFilePath": "<projectFolder>/dist/api/history.shared.alpha.d.ts",
+    "betaTrimmedFilePath": "<projectFolder>/dist/api/history.shared.beta.d.ts",
+    "publicTrimmedFilePath": "<projectFolder>/dist/api/history.shared.public.d.ts"
   },
   "messages": {
     "extractorMessageReporting": {

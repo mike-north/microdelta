@@ -11,6 +11,8 @@ import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
+import { verifyHistoryShims } from './history-declaration-shims.mjs';
+
 /** The package matrix covers the facade and every implemented owner. */
 const root = fileURLToPath(new URL('../', import.meta.url));
 const packages = [
@@ -41,13 +43,20 @@ async function compile(source, options = {}) {
       }
       await writeFile(path.join(packageDir, 'package.json'), `${JSON.stringify(manifest)}\n`);
     }
+    for (const installedPackage of options.externalPackages ?? (options.externalPackage ? [options.externalPackage] : [])) {
+      const packageName = installedPackage === 'core' ? 'microdelta' : '@microdelta/history';
+      const packageDir = path.join(directory, 'node_modules', packageName);
+      await mkdir(packageDir, { recursive: true });
+      await cp(path.join(root, 'packages', installedPackage, 'dist'), path.join(packageDir, 'dist'), { recursive: true });
+      await cp(path.join(root, 'packages', installedPackage, 'package.json'), path.join(packageDir, 'package.json'));
+    }
     const compilerOptions = {
       target: 'ES2022', module: 'NodeNext', moduleResolution: 'NodeNext',
       strict: true, noEmit: true, skipLibCheck: false,
     };
-    if (options.paths) {
+    if (options.paths || options.pathMap) {
       compilerOptions.baseUrl = directory;
-      compilerOptions.paths = { [options.pathPackage ?? '@microdelta/fixture-producer']: [options.paths] };
+      compilerOptions.paths = options.pathMap ?? { [options.pathPackage ?? '@microdelta/fixture-producer']: [options.paths] };
     }
     await writeFile(path.join(directory, 'tsconfig.json'), JSON.stringify({ compilerOptions, files: ['consumer.ts'] }));
     return spawnSync(process.execPath, [tsc, '-p', directory], { cwd: root, encoding: 'utf8' });
@@ -74,6 +83,57 @@ test('actual packages and fixture producer generate all release views and API re
     assert.ok(existsSync(path.join(fixture, `dist/api/fixture.${tier}.d.ts`)), `Fixture ${tier} view`);
   }
   assert.ok(existsSync(path.join(fixture, 'etc/fixture.api.md')), 'Fixture API report');
+});
+
+/** A public compatibility subpath is a reviewed declaration surface as well. */
+test('Store conformance subpaths use closed generated release tiers', async () => {
+  for (const { directory, basename } of packages.filter(({ directory }) => ['core', 'history'].includes(directory))) {
+    const packageDir = path.join(root, 'packages', directory);
+    const manifest = JSON.parse(await readFile(path.join(packageDir, 'package.json'), 'utf8'));
+    const publicPath = `./dist/api/${basename}.conformance.store.public.d.ts`;
+    assert.equal(manifest.exports['./conformance/store'].types, publicPath);
+    for (const tier of tiers) {
+      assert.ok(existsSync(path.join(packageDir, `dist/api/${basename}.conformance.store.${tier}.d.ts`)), `${basename} conformance ${tier} view`);
+    }
+    assert.ok(existsSync(path.join(packageDir, `etc/${basename}.conformance.store.api.md`)), `${basename} conformance API report`);
+    const publicView = await readFile(path.join(packageDir, publicPath), 'utf8');
+    assert.doesNotMatch(publicView, /\.\.\/.*(?:src|test)\//u, `${basename} conformance public types escape their rollup`);
+  }
+});
+
+/** A normal consumer resolves the published subpath, not compiler test output. */
+test('external Store conformance consumers use the public package export', async () => {
+  for (const [directory, packageName] of [['core', 'microdelta'], ['history', '@microdelta/history']]) {
+    const result = await compile(`import { storeConformance, type StoreConformanceOptions } from '${packageName}/conformance/store';\nconst options: StoreConformanceOptions | undefined = undefined;\nvoid storeConformance;\nvoid options;\n`, { externalPackages: directory === 'core' ? ['core', 'history'] : ['history'] });
+    assert.equal(result.status, 0, `${packageName} conformance public import: ${result.stdout}${result.stderr}`);
+  }
+});
+
+/** The facade and its compatibility subpath preserve History's opaque brand. */
+test('normal package consumers compose facade, History, and conformance types', async () => {
+  const source = [
+    "import { createMemoryStore, type Fingerprint as FacadeFingerprint, type Store as FacadeStore } from 'microdelta';",
+    "import { type Fingerprint as HistoryFingerprint, type Store as HistoryStore } from '@microdelta/history';",
+    "import { storeConformance } from 'microdelta/conformance/store';",
+    "import { storeConformance as historyConformance } from '@microdelta/history/conformance/store';",
+    'declare const fingerprint: HistoryFingerprint;',
+    'const facadeFingerprint: FacadeFingerprint = fingerprint;',
+    'const facadeStore: FacadeStore = createMemoryStore();',
+    'const historyStore: HistoryStore = createMemoryStore();',
+    "storeConformance('consumer', { fingerprintAlgorithm: 'sha256', create: () => createMemoryStore() });",
+    "historyConformance('consumer', { fingerprintAlgorithm: 'sha256', create: () => createMemoryStore() });",
+    'void facadeFingerprint; void facadeStore; void historyStore;',
+  ].join('\n');
+  const result = await compile(source, { externalPackages: ['core', 'history'] });
+  assert.equal(result.status, 0, `Public Store type identity diverged: ${result.stdout}${result.stderr}`);
+  for (const packageName of ['microdelta', '@microdelta/history']) {
+    for (const symbol of ['storeConformance', 'StoreConformanceOptions', 'ValueReadProbe']) {
+      rejected(await compile(`import { ${symbol} } from '${packageName}';\nvoid ${symbol};\n`, { externalPackages: ['core', 'history'] }), `${packageName} root gained ${symbol}`);
+    }
+  }
+  const bareString = await compile("import { type Fingerprint } from '@microdelta/history';\nconst fingerprint: Fingerprint = 'ordinary string';\nvoid fingerprint;\n", { externalPackages: ['history'] });
+  assert.notEqual(bareString.status, 0, 'The History fingerprint brand accepted an ordinary string');
+  assert.match(bareString.stdout + bareString.stderr, /TS2322/u);
 });
 
 test('own untrimmed consumer sees internal exports but not unexported source', async () => {
@@ -132,6 +192,57 @@ test('each actual package declaration view typechecks without hidden references'
       assert.equal(result.status, 0, `${packageName}/${tier}: ${result.stdout}${result.stderr}`);
     }
   }
+  for (const [directory, basename] of [['core', 'microdelta'], ['history', 'history']]) {
+    const packageName = directory === 'core' ? 'microdelta' : '@microdelta/history';
+    for (const tier of tiers) {
+      const view = path.join(root, `packages/${directory}/dist/api/${basename}.conformance.store.${tier}.d.ts`);
+      const alias = `${packageName}/conformance/store`;
+      const source = `type ISurface = typeof import('${alias}');\nconst surface: ISurface | undefined = undefined;\nvoid surface;\n`;
+      const result = await compile(source, { paths: view, pathPackage: alias });
+      assert.equal(result.status, 0, `${alias}/${tier}: ${result.stdout}${result.stderr}`);
+    }
+  }
+});
+
+/** Both History entries in one tier resolve the same opaque Store identity. */
+test('each History release tier composes root and conformance callbacks', async () => {
+  for (const tier of tiers) {
+    const api = path.join(root, 'packages/history/dist/api');
+    const result = await compile("import { createMemoryStore } from '@microdelta/history';\nimport { storeConformance } from '@microdelta/history/conformance/store';\nstoreConformance('tier', { fingerprintAlgorithm: 'sha256', create: () => createMemoryStore() });\n", {
+      pathMap: {
+        '@microdelta/history': [path.join(api, `history.${tier}.d.ts`)],
+        '@microdelta/history/conformance/store': [path.join(api, `history.conformance.store.${tier}.d.ts`)],
+      },
+    });
+    assert.equal(result.status, 0, `${tier} History entries diverged: ${result.stdout}${result.stderr}`);
+  }
+});
+
+/** Checked shims cannot point at a more permissive or missing shared tier. */
+test('History entry shims fail closed on wrong tier, missing canonical, and export drift', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'microdelta-history-shims-'));
+  try {
+    const api = path.join(directory, 'dist/api');
+    await mkdir(path.dirname(api), { recursive: true });
+    await cp(path.join(root, 'packages/history/dist/api'), api, { recursive: true });
+    await verifyHistoryShims(directory);
+    const shim = path.join(api, 'history.public.d.ts');
+    const original = await readFile(shim, 'utf8');
+    await writeFile(shim, original.replace('history.shared.public.js', 'history.shared.untrimmed.js'));
+    await assert.rejects(verifyHistoryShims(directory), /wrong tier|does not match/iu);
+    await writeFile(shim, original);
+    await rm(path.join(api, 'history.shared.public.d.ts'));
+    await assert.rejects(verifyHistoryShims(directory), /ENOENT|missing canonical/iu);
+    await cp(path.join(root, 'packages/history/dist/api/history.shared.public.d.ts'), path.join(api, 'history.shared.public.d.ts'));
+    const raw = path.join(api, 'history.root.raw.public.d.ts');
+    const rawOriginal = await readFile(raw, 'utf8');
+    await writeFile(raw, `${rawOriginal}\nexport declare const invented: string;\n`);
+    await assert.rejects(verifyHistoryShims(directory), /absent or mismatched/iu);
+    await writeFile(raw, `${rawOriginal}\nexport { ResultKey as AlternateResultKey };\n`);
+    await assert.rejects(verifyHistoryShims(directory), /Unsupported declaration re-export/iu);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
 });
 
 /** Compiler paths must exist before resolution and never point at sibling source. */
@@ -156,6 +267,81 @@ test('missing producer declarations and test-only source aliases fail explicitly
     result = spawnSync(process.execPath, [gate, '--config', config], { cwd: root, encoding: 'utf8' });
     assert.notEqual(result.status, 0, 'Test-only alias reached sibling source');
     assert.match(result.stdout + result.stderr, /source alias|sibling source/iu);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+/** A compiler's effective config and import spelling must agree with its owner. */
+test('inherited paths and invented aliases cannot expose sibling source or untrimmed declarations', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'microdelta-path-bypass-'));
+  try {
+    const gate = path.join(root, 'tooling/check-producer-declarations.mjs');
+    const history = path.join(root, 'packages/history/dist/api/history.untrimmed.d.ts');
+    const config = path.join(directory, 'tsconfig.json');
+    const shared = path.join(directory, 'shared-options.json');
+    await writeFile(path.join(directory, 'sibling.ts'), 'export const privateValue = 1;\n');
+    await writeFile(shared, JSON.stringify({ compilerOptions: { paths: {
+      'private-history': ['./sibling.ts'],
+    } } }));
+    await writeFile(config, JSON.stringify({ extends: './shared-options.json', files: [] }));
+    let result = spawnSync(process.execPath, [gate, '--config', config], { cwd: root, encoding: 'utf8' });
+    assert.notEqual(result.status, 0, 'Inherited source alias escaped declaration preflight');
+    assert.match(result.stdout + result.stderr, /source alias|approved package|declared package/iu);
+
+    await writeFile(config, JSON.stringify({ compilerOptions: { paths: {
+      'private-history': [history],
+    } }, files: [] }));
+    result = spawnSync(process.execPath, [gate, '--config', config], { cwd: root, encoding: 'utf8' });
+    assert.notEqual(result.status, 0, 'Invented alias exposed an existing untrimmed declaration');
+    assert.match(result.stdout + result.stderr, /approved package|declared package|alias/iu);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+/** Actual facade source consumes History's approved alpha entry and subpath. */
+test('facade compiler maps both History imports to generated alpha declarations', async () => {
+  const config = JSON.parse(await readFile(path.join(root, 'packages/core/tsconfig.json'), 'utf8'));
+  assert.deepEqual(config.compilerOptions.paths, {
+    '@microdelta/history': ['../history/dist/api/history.alpha.d.ts'],
+    '@microdelta/history/conformance/store': ['../history/dist/api/history.conformance.store.alpha.d.ts'],
+  });
+});
+
+/** A generated declaration is still forbidden when its tier or edge is wrong. */
+test('real package configs reject wrong sibling tiers and forbidden context edges', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'microdelta-wrong-tier-'));
+  try {
+    const gate = path.join(root, 'tooling/check-producer-declarations.mjs');
+    const view = path.join(root, 'packages/history/dist/api/history.untrimmed.d.ts');
+    for (const [owner, target] of [['core', view], ['tracking', path.join(root, 'packages/history/dist/api/history.alpha.d.ts')]]) {
+      const packageDir = path.join(directory, 'packages', owner);
+      await mkdir(packageDir, { recursive: true });
+      const config = path.join(packageDir, 'tsconfig.json');
+      await writeFile(config, JSON.stringify({ compilerOptions: { paths: {
+        '@microdelta/history': [target],
+      } }, files: [] }));
+      const result = spawnSync(process.execPath, [gate, '--config', config], { cwd: root, encoding: 'utf8' });
+      assert.notEqual(result.status, 0, `${owner} imported History through an unapproved edge or tier`);
+      assert.match(result.stdout + result.stderr, /unapproved.*alias or tier/iu);
+    }
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+/** A package with no source imports still needs an explicitly owned role. */
+test('unknown package compiler config fails closed', async () => {
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'microdelta-unknown-owner-'));
+  try {
+    const packageDir = path.join(directory, 'packages/unknown');
+    await mkdir(packageDir, { recursive: true });
+    const config = path.join(packageDir, 'tsconfig.json');
+    await writeFile(config, JSON.stringify({ files: [] }));
+    const result = spawnSync(process.execPath, [path.join(root, 'tooling/check-producer-declarations.mjs'), '--config', config], { cwd: root, encoding: 'utf8' });
+    assert.notEqual(result.status, 0, 'Unknown package config escaped owner registry');
+    assert.match(result.stdout + result.stderr, /unknown package or context/iu);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

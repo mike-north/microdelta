@@ -1,6 +1,6 @@
 /**
  * Existing function-name inspection for presentation and diagnostics only.
- * Definition identity and binding correspondence require explicit future contracts.
+ * Function names do not establish Definition identity or binding correspondence.
  * @packageDocumentation
  */
 /**

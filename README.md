@@ -128,12 +128,15 @@ let currentPR = {
   author: { id: 'u-2', name: 'Ada' },
 };
 let currentAssess = assess;
+// A shared path prefix is not identity; current facts belong to one exact structural binding.
+const sameBinding = (candidate, expected) => candidate.path.length === expected.path.length
+  && candidate.path.every((segment, index) => segment === expected.path[index]);
 const provider = {
   resolve(binding, selection) {
-    if (selection.kind === 'implementation' && binding.path[0] === 'assessors') {
+    if (selection.kind === 'implementation' && sameBinding(binding, assessorBinding)) {
       return { kind: 'available', fact: currentAssess };
     }
-    if (selection.kind === 'selected') {
+    if (selection.kind === 'selected' && sameBinding(binding, sourceBinding)) {
       return { kind: 'available', fact: observe(currentPR, selection.address, selection.operation) };
     }
     return { kind: 'unavailable' };
@@ -141,6 +144,24 @@ const provider = {
 };
 const unreadChange = observer.compareCurrent(first, provider);
 assert.equal(unreadChange.kind, 'equal');
+
+const otherPR = observer.tracked({
+  title: 'Add retry support',
+  labels: ['ready', 'backend'],
+  author: { id: 'u-2', name: 'Ada' },
+}, { path: ['pull-requests', '43'] });
+const unknownSourceCapture = observer.capture(() => otherPR.title);
+const unknownSourceIdentity = observer.compareCurrent(unknownSourceCapture, provider);
+
+const unknownAssess = (pr) => `unrelated assessor: ${pr.title}`;
+const trackedUnknownAssess = observer.tracked(unknownAssess, { path: ['assessors', 'detail'] });
+const unknownAssessorCapture = observer.capture(() => trackedUnknownAssess(trackedPR));
+const unknownAssessorIdentity = observer.compareCurrent(unknownAssessorCapture, provider);
+assert.deepEqual(
+  [unknownSourceIdentity.kind, unknownAssessorIdentity.kind],
+  ['unavailable', 'unavailable'],
+  'bindings with a shared prefix but different final path segments are unknown',
+);
 
 currentPR = { ...currentPR, author: { id: 'u-2', name: 'Grace' } };
 const changedRead = observer.compareCurrent(first, provider);
@@ -168,7 +189,7 @@ console.log(JSON.stringify({
 NODE
 ```
 
-The probe returns `Add retry support: Ada`; it records the assessor
+The printed JSON's `result` field is `Add retry support: Ada`; it records the assessor
 implementation, `title`, and `author.name`. Changing only labels and author ID
 compares `equal`; changing the consumed name or called implementation compares
 `changed`. Calling the tracked assessor twice increments its call count twice.

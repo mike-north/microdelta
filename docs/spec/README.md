@@ -92,20 +92,24 @@ design area is covered. Historical docs are not part of the normal reading path.
 
 ## Current checkout
 
-The `microdelta` facade explicitly reexports the existing public History Store
-contract. `@microdelta/definition`, `@microdelta/tracking`, and
-`@microdelta/history` own the current diagnostic naming, process-local tracking,
-and legacy row Store code respectively. The portable `@microdelta/machine`
-contracts cover async context propagation and detached snapshots; the
-`@microdelta/machine-node` adapter owns the Node bindings. Tracking and History
-receive their capabilities through injection, and the facade supplies the Node
-adapter while preserving `createMemoryStore(options?)`. The [implementation
-map](../package-map.md) records implemented and absent roles without placeholder
-APIs. API Extractor rollups/reports and checked import edges are present, and the
-Machine boundary is implemented. The [M0.5 acceptance record](../validation/foundation-2026-09-26.md)
-links the accepted tooling, package, Machine, CI, and repository-protection evidence.
-The [M1 evidence record](../validation/m1-2026-09-26.md) links the six bounded
-experiment results and their owning-contract decisions. It also defines the final
-CI and issue-acceptance gate. Neither foundation nor experiment acceptance
-establishes a complete durable runtime. [Historical validation](../validation.md)
-remains dated evidence, not a fresh run.
+The `microdelta` facade preserves its public History Store API. The checked-out
+packages also contain bounded project-private alpha components: Value equality,
+snapshot and projection semantics; Tracking's semantic observer, called-function
+evidence, scoped capture and replay; History's exact selected-reading ports; and
+Materialization's selected scalar views, explicit detached output, and keyed
+projections. Machine supplies injected host capabilities, with the Node adapter
+owning async context, snapshots, and SHA-256. The [implementation map](../package-map.md)
+records each owner's current scope and missing roles.
+
+Generated declaration tiers, API reports, package edges, and the supported typed
+capture boundary are checked by executable tooling. They do not establish
+arbitrary JavaScript closure soundness. The new components do not provide durable
+memoization, a production completed-result reader, general fanout, or scale proof.
+
+M2 is not accepted. The [M2 evidence record](../validation/m2-2026-09-27.md)
+separates component and local integration evidence from current-head review,
+required GitHub checks, merge, and default-branch verification. Code present on a
+feature branch is not evidence of default-branch delivery. The
+[M0.5 acceptance record](../validation/foundation-2026-09-26.md) and
+[M1 evidence record](../validation/m1-2026-09-26.md) retain their bounded evidence;
+[historical validation](../validation.md) remains dated evidence, not a fresh run.

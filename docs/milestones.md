@@ -88,6 +88,9 @@ collection projection semantics within supported scope,
 branch/pass-through cases, isolated async frames, and no live tags in durable
 records. Run required source/type/import checks. This is not durable memoization.
 
+**Evidence:** [M2 component and integration record](validation/m2-2026-09-27.md).
+M2 remains unaccepted until its review, merge, and default-branch gates are recorded.
+
 ## M3 — Tiny durable analysis MVP
 
 Implement the real authoring path over the chosen durable backend: nonmemoized

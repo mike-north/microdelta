@@ -71,7 +71,7 @@ for review completion, feedback disposition, required checks and merge authority
 
 GitHub supports repository instructions in `.github/copilot-instructions.md` and
 path-scoped instructions under `.github/instructions/*.instructions.md` using
-`applyTo` patterns. Its current documentation says review reads instructions from
-the PR head, allowing these instructions to be evaluated in their own PR. See
+`applyTo` patterns. According to GitHub's documentation, Copilot code review reads
+these instructions from the PR head, allowing them to be evaluated in their own PR. See
 [GitHub's review customization documentation](https://docs.github.com/en/copilot/tutorials/customize-code-review)
 and [supported instruction types](https://docs.github.com/en/copilot/reference/custom-instructions-support).

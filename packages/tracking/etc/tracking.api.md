@@ -4,10 +4,99 @@
 
 ```ts
 
-// Warning: (ae-forgotten-export) The symbol "IAsyncContextCapability" needs to be exported by the entry point index.d.ts
-//
 // @alpha
 export function createTracking(capability: IAsyncContextCapability): ITracking;
+
+// @alpha
+export function createTrackingObserver(machine: ITrackingObserverHost): ITrackingObserver;
+
+// @alpha
+export type IAddressSegment =
+/** A literal string-keyed record lookup, including keys containing punctuation. */
+    {
+    readonly kind: 'property';
+    readonly key: string;
+}
+/** A positional array lookup; it does not designate a logical member identity. */
+| {
+    readonly kind: 'index';
+    readonly index: number;
+};
+
+// @alpha
+export interface IAsyncContext<T> {
+    getStore(): T | undefined;
+    run<TResult>(value: T, callback: () => TResult): TResult;
+}
+
+// @alpha
+export interface IAsyncContextCapability {
+    createAsyncContext<T>(): IAsyncContext<T>;
+}
+
+// @alpha
+export type ICurrentComparison = {
+    readonly kind: 'equal';
+} | {
+    readonly kind: 'changed';
+    readonly observation: ITrackingObservation;
+} | {
+    readonly kind: 'unavailable';
+    readonly observation: ITrackingObservation;
+} | {
+    readonly kind: 'ambiguous';
+    readonly observation: ITrackingObservation;
+};
+
+// @alpha
+export interface ICurrentFactProvider {
+    resolve(binding: ITrackingBinding, address: readonly IAddressSegment[], operation: IOperation | 'implementation'): ICurrentFactResolution;
+}
+
+// @alpha
+export type ICurrentFactResolution = {
+    readonly kind: 'available';
+    readonly fact: unknown;
+} | {
+    readonly kind: 'unavailable';
+} | {
+    readonly kind: 'ambiguous';
+};
+
+// @alpha
+export interface IObservationCapture<T> {
+    readonly observations: readonly ITrackingObservation[];
+    readonly value: T;
+}
+
+// @alpha
+export type IOperation = 'value' | 'own' | 'membership' | 'length' | 'keys';
+
+// @alpha
+export interface ISha256Capability {
+    sha256(input: string): string;
+}
+
+// @alpha
+export type ITracked<T extends object> = ITrackedView<T>;
+
+// @alpha
+export interface ITrackedBrand {
+    // (undocumented)
+    readonly __microdeltaTracked: unique symbol;
+}
+
+// @alpha
+export type ITrackedView<T> = T extends (...arguments_: never[]) => unknown ? T & ITrackedBrand : T extends readonly unknown[] ? number extends T['length'] ? {
+    readonly [index: number]: ITrackedView<T[number]>;
+    readonly length: number;
+} & ITrackedBrand : {
+    readonly [K in keyof T as K extends `${number}` ? K : never]: ITrackedView<T[K]>;
+} & {
+    readonly length: T['length'];
+} & ITrackedBrand : T extends object ? {
+    readonly [K in keyof T]: ITrackedView<T[K]>;
+} & ITrackedBrand : T;
 
 // @alpha
 export interface ITracking {
@@ -31,6 +120,46 @@ export interface ITracking {
         value: T;
         consumed: ReadonlySet<Tag>;
     }>;
+}
+
+// @alpha
+export interface ITrackingBinding {
+    readonly path: readonly string[];
+}
+
+// @alpha
+export interface ITrackingMaterialization {
+    owns(value: unknown): value is ITracked<object>;
+    read<V extends ITracked<object>, K extends keyof V>(value: V, key: K & (Extract<K, keyof ITrackedBrand> extends never ? unknown : never)): V[K] | (K extends string ? string extends keyof V ? undefined : never : never) | (K extends number ? number extends keyof V ? undefined : never : never);
+}
+
+// @alpha
+export interface ITrackingObservation {
+    readonly address: readonly IAddressSegment[];
+    readonly binding: ITrackingBinding;
+    readonly encoded: string;
+    readonly fingerprint: string;
+    readonly kind: 'fact' | 'implementation';
+    readonly operation: IOperation | 'implementation';
+}
+
+// @alpha
+export interface ITrackingObserver {
+    capture<T>(callback: () => T): IObservationCapture<T>;
+    captureAsync<T>(callback: () => Promise<T>): Promise<IObservationCapture<T>>;
+    compareCurrent(capture: IObservationCapture<unknown>, provider: ICurrentFactProvider): ICurrentComparison;
+    derived<T>(callback: () => T): {
+        get(): T;
+    };
+    hasOwn(value: ITracked<object>, key: string): boolean;
+    keys(value: ITracked<object>): readonly string[];
+    readonly local: ITracking;
+    readonly materialization: ITrackingMaterialization;
+    tracked<T extends object>(value: T, binding: ITrackingBinding): ITracked<T>;
+}
+
+// @alpha
+export interface ITrackingObserverHost extends IAsyncContextCapability, ISha256Capability {
 }
 
 // @alpha

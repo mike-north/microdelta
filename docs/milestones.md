@@ -3,7 +3,9 @@
 Authority: [specification entry point](spec/README.md). Status: M0 consolidation
 complete (see [validation](spec/validation.md)); M0.5 accepted on 2026-09-27 UTC
 (2026-09-26 Pacific; see [foundation evidence](validation/foundation-2026-09-26.md)).
-M1 experiments are under review; no M1 or later runtime milestone is complete.
+M1 experiment decisions are recorded in the [M1 evidence record](validation/m1-2026-09-26.md);
+its final CI and issue-acceptance conditions determine completion. No M2 or later
+runtime milestone is complete.
 A milestone is a quality checkpoint, including experiments; it need not be a
 user-facing release.
 
@@ -59,6 +61,11 @@ publication mechanism must still meet its invariants with or without formal tool
 chosen mechanisms or explicit rejection, updated owning contracts. Real process
 restart and generated declaration consumers are required where applicable. Do not
 build a second miniature product or expand all speculative native-type support.
+
+**Acceptance record:** [M1 evidence and final delivery conditions](validation/m1-2026-09-26.md).
+The selected/rejected mechanisms are recorded in their owning contracts. CML,
+Lean, and TLC remain optional bounded evidence; their successful checks do not
+prove production behavior or make the tools mandatory in unrelated CI.
 
 **Unblocks:** M2/M3 supported data and durable binding/publication. M0.5 already
 establishes baseline package enforcement; EXP-5 can refine architecture-model

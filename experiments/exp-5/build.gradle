@@ -1,0 +1,15 @@
+// Official CML parser facts are extracted separately from TypeScript API models.
+plugins { id 'java' }
+
+repositories { mavenCentral() }
+
+dependencies { implementation 'org.contextmapper:context-mapper-dsl:6.10.0' }
+
+java { toolchain { languageVersion = JavaLanguageVersion.of(17) } }
+
+// The CLI input/output paths are explicit so tests can mutate a real parsed model.
+tasks.register('extractCml', JavaExec) {
+  classpath = sourceSets.main.runtimeClasspath
+  mainClass = 'org.microdelta.exp5.CmlFacts'
+  args = [project.property('cmlFile'), project.property('outputFile')]
+}

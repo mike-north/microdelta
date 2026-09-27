@@ -114,6 +114,7 @@ describe('selected materialization', () => {
       expect(() => { Reflect.get(scalar, 'selected'); }).toThrow(/scalar|unsupported/i);
       const captured = tracking.capture((): unknown => {
         try {
+          // eslint-disable-next-line microdelta/tracked-captures -- This runtime fixture reads an unsupported scalar through the Materialization proxy to verify rejection before observation.
           const result: unknown = Reflect.get(scalar, 'selected');
           return result;
         }
@@ -141,6 +142,7 @@ describe('selected materialization', () => {
         { kind: 'completed-result', locator: 'A' }, { path: ['step'] },
       );
       const capture = tracking.capture((): unknown => {
+        // eslint-disable-next-line microdelta/tracked-captures -- This runtime fixture reads supported scalar values through the lazy Materialization proxy, the public behavior under test.
         const result: unknown = Reflect.get(scalar, 'selected');
         return result;
       });
@@ -410,8 +412,10 @@ describe('selected materialization', () => {
       { address: [], operation: 'value', traversal: { kind: 'visited', complete: false, keys: sparseCoverage } },
     ];
 
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime fixture checks a finite table of deliberately malformed reader descriptors inside one capture.
     const outcomes = tracking.capture((): readonly unknown[] => invalidDescriptors.map((descriptor) => {
       try {
+        // eslint-disable-next-line microdelta/tracked-captures -- Reflect.apply passes unknown malformed descriptor inputs through the real reader boundary under test.
         const result: unknown = Reflect.apply(materialization.projectFrom, materialization, [reference, { path: ['roster'] }, descriptor]);
         return result;
       } catch (error: unknown) {
@@ -466,6 +470,7 @@ describe('selected materialization', () => {
     const materialization = createMaterialization({ tracking, reader: createExactReader().reader, projectionReader });
 
     const result = tracking.capture(() => materialization.projectFrom(
+      // eslint-disable-next-line microdelta/tracked-captures -- This runtime fixture passes caller-owned reference and descriptor values to verify copying before reader mutation.
       reference, { path: ['roster'] }, callerDescriptor,
     ));
     const callerSegment = callerDescriptor.address[0];
@@ -511,6 +516,7 @@ describe('selected materialization', () => {
     const materialization = createMaterialization({ tracking, reader: createExactReader().reader, projectionReader });
 
     const capture = tracking.capture(() => materialization.projectFrom(
+      // eslint-disable-next-line microdelta/tracked-captures -- This runtime fixture supplies a null-prototype descriptor to verify semantic comparison with the caller's request.
       reference, { path: ['roster'] }, requested,
     ));
 

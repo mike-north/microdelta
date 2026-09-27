@@ -7,19 +7,22 @@ registry is [`tooling/package-architecture.mjs`](../tooling/package-architecture
 
 | Role | Package now | Existing capability and port | Declared edges |
 | --- | --- | --- | --- |
-| Author facade / assembly | `microdelta` (`packages/core`) | Explicitly reexports History's existing Store errors, types, memory factory, and Jest conformance entry | Composition may consume approved owner contracts; contexts cannot import through the facade |
+| Author facade / assembly | `microdelta` (`packages/core`) | Supplies the Node Machine to History's memory factory; preserves `createMemoryStore(options?)` and exports the existing Store errors, types, and Jest conformance entry | Composition may consume approved owner contracts and `@microdelta/machine-node`; contexts cannot import through the facade |
 | Definition & Binding | `@microdelta/definition` | Function-name inspection for labels and diagnostics only; no binding or identity port yet | Value Semantics contract when implemented |
-| Tracking & Observation | `@microdelta/tracking` | Current process-local tags, capture frames, cells, and derivations; no durable observation encoding | Value Semantics contract when implemented |
-| Result History & Publication | `@microdelta/history` | Existing row Store contract, memory adapter, compatibility row schema, and Store conformance suite; no cross-row publication operation | Value Semantics contract when implemented |
+| Tracking & Observation | `@microdelta/tracking` | Current process-local tags, capture frames, cells, and derivations; `createTracking(capability)` injects async context; no durable observation encoding | Value Semantics contract when implemented; `@microdelta/machine` |
+| Result History & Publication | `@microdelta/history` | Existing row Store contract and compatibility row schema; memory adapter receives a snapshot capability; no cross-row publication operation | Value Semantics contract when implemented; `@microdelta/machine` |
 | Reuse Resolution | No package yet | Candidate-validation and source-policy ports remain unimplemented | Definition, Tracking, History, Materialization |
 | Run Supervision | No package yet | Admission, progress, retry, and cancellation ports remain unimplemented | Definition, Resolution, Accounting |
 | Resource Accounting | No package yet | Observation and acknowledgment ports remain unimplemented | None |
 | Value Semantics | No package yet | Future canonical encoding, structured paths, and fingerprint port; EXP-2 owns the decision | None |
 | Materialization | No package yet | Future selected-load and observation bridge | History, Tracking, Value Semantics |
-| Machine host boundary | No package yet | Node capability contract and implementation are issue #3 | Not a bounded context |
+| Machine host contract | `@microdelta/machine` (`packages/machine`) | Portable async-context and detached-snapshot capability contracts | Supporting contract; consumed by Tracking, History, and the Node adapter |
+| Node Machine adapter | `@microdelta/machine-node` (`packages/machine-node`) | Implements the contracts with Node async hooks and V8 structured serialization | `@microdelta/machine`; selected by the facade assembly |
 
 History's `types.ts` preserves the old row schema and the facade's existing
-exports. `Path` addresses rows in that Store; it is not the future structured
+exports. Direct History memory-store construction accepts a snapshot capability;
+the facade keeps its existing `createMemoryStore(options?)` signature by
+supplying the Node adapter at assembly. `Path` addresses rows in that Store; it is not the future structured
 semantic address. `Identity`, `Subject`, and `RecordedRead` remain compatibility
 shapes, not ratification of the target domain model. `nameOf` supplies a label,
 never a durable subject key or current-binding locator.
@@ -44,7 +47,8 @@ conformance probe. No production beta API exists. The fixture-only producer unde
 package metadata without publishing a package.
 
 `npm run check` builds producers before checking consumers, then runs strict
-TypeScript, type-aware ESLint, source-import enforcement, declaration-path
+TypeScript, including `types: []`/`skipLibCheck: false` checks for portable
+Tracking and History source, type-aware ESLint, source-import enforcement, declaration-path
 preflight, API report comparison, and fixture checks. `npm test` runs outcome
 fixtures, Jest owner behavior, and tsd type contracts. Source imports must use
 approved package names and directed edges; TypeScript paths used by a sibling

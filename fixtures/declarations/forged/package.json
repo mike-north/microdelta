@@ -1,0 +1,13 @@
+{
+  "name": "@microdelta/forged",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "types": "./dist/api/forged.public.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/api/forged.public.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  }
+}

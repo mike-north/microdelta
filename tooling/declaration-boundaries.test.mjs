@@ -24,6 +24,7 @@ const packages = [
 ];
 const fixture = path.join(root, 'fixtures/declarations/producer');
 const captureFixture = path.join(root, 'fixtures/declarations/capture-producer');
+const forgedFixture = path.join(root, 'fixtures/declarations/forged');
 const tsc = path.join(root, 'node_modules/typescript/bin/tsc');
 const tiers = ['untrimmed', 'alpha', 'beta', 'public'];
 
@@ -87,9 +88,11 @@ test('actual packages and fixture producers generate all release views and API r
   for (const tier of tiers) {
     assert.ok(existsSync(path.join(fixture, `dist/api/fixture.${tier}.d.ts`)), `Fixture ${tier} view`);
     assert.ok(existsSync(path.join(captureFixture, `dist/api/capture.${tier}.d.ts`)), `Capture fixture ${tier} view`);
+    assert.ok(existsSync(path.join(forgedFixture, `dist/api/forged.${tier}.d.ts`)), `Forged-brand fixture ${tier} view`);
   }
   assert.ok(existsSync(path.join(fixture, 'etc/fixture.api.md')), 'Fixture API report');
   assert.ok(existsSync(path.join(captureFixture, 'etc/capture.api.md')), 'Capture fixture API report');
+  assert.ok(existsSync(path.join(forgedFixture, 'etc/forged.api.md')), 'Forged-brand fixture API report');
 });
 
 /** A public compatibility subpath is a reviewed declaration surface as well. */

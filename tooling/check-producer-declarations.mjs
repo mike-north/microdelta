@@ -110,6 +110,8 @@ required.push(...['untrimmed', 'alpha', 'beta', 'public'].map(tier =>
   path.join(root, `fixtures/declarations/producer/dist/api/fixture.${tier}.d.ts`)));
 required.push(...['untrimmed', 'alpha', 'beta', 'public'].map(tier =>
   path.join(root, `fixtures/declarations/capture-producer/dist/api/capture.${tier}.d.ts`)));
+required.push(...['untrimmed', 'alpha', 'beta', 'public'].map(tier =>
+  path.join(root, `fixtures/declarations/forged/dist/api/forged.${tier}.d.ts`)));
 for (const [directory, basename] of [['core', 'microdelta'], ['history', 'history']]) {
   required.push(...['untrimmed', 'alpha', 'beta', 'public'].map(tier =>
     path.join(root, `packages/${directory}/dist/api/${basename}.conformance.store.${tier}.d.ts`)));

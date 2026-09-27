@@ -16,7 +16,7 @@ const readJson = async filename => JSON.parse(await readFile(path.join(root, fil
 async function extractors() {
   const names = ['core', 'definition', 'tracking', 'history', 'value'];
   const files = names.map(name => `packages/${name}/api-extractor.json`);
-  files.push('packages/core/api-extractor-conformance.json', 'packages/history/api-extractor-conformance.json', 'packages/history/api-extractor-shared.json', 'fixtures/declarations/producer/api-extractor.json', 'fixtures/declarations/capture-producer/api-extractor.json');
+  files.push('packages/core/api-extractor-conformance.json', 'packages/history/api-extractor-conformance.json', 'packages/history/api-extractor-shared.json', 'fixtures/declarations/producer/api-extractor.json', 'fixtures/declarations/capture-producer/api-extractor.json', 'fixtures/declarations/forged/api-extractor.json');
   return Object.fromEntries(await Promise.all(files.map(async filename => [filename, await readJson(filename)])));
 }
 
@@ -118,6 +118,10 @@ test('skipping an import, declaration, or API report checker is detected', async
   noCaptureExtractor.workspace.scripts['build:fixtures'] = noCaptureExtractor.workspace.scripts['build:fixtures']
     .replace(' && api-extractor run --config fixtures/declarations/capture-producer/api-extractor.json', '');
   assert.match(missingFoundationGates(noCaptureExtractor).join('\n'), /build:fixtures.*capture-producer/u);
+  const noForgedExtractor = copied();
+  noForgedExtractor.workspace.scripts['build:fixtures'] = noForgedExtractor.workspace.scripts['build:fixtures']
+    .replace(' && api-extractor run --config fixtures/declarations/forged/api-extractor.json', '');
+  assert.match(missingFoundationGates(noForgedExtractor).join('\n'), /build:fixtures.*forged/u);
   const noCaptureLint = copied();
   noCaptureLint.eslintConfig = noCaptureLint.eslintConfig.replace("'microdelta/tracked-captures': 'error',", "'microdelta/tracked-captures': 'off',");
   assert.match(missingFoundationGates(noCaptureLint).join('\n'), /root typed ESLint config.*microdelta\/tracked-captures/u);
@@ -129,6 +133,10 @@ test('skipping an import, declaration, or API report checker is detected', async
   noCaptureProducer.workspace.scripts['check:fixtures'] = noCaptureProducer.workspace.scripts['check:fixtures']
     .replace('tsc --noEmit -p fixtures/declarations/capture-producer/tsconfig.json && ', '');
   assert.match(missingFoundationGates(noCaptureProducer).join('\n'), /check:fixtures.*capture-producer/u);
+  const noForgedFixture = copied();
+  noForgedFixture.workspace.scripts['check:fixtures'] = noForgedFixture.workspace.scripts['check:fixtures']
+    .replace('tsc --noEmit -p fixtures/declarations/forged/tsconfig.json && ', '');
+  assert.match(missingFoundationGates(noForgedFixture).join('\n'), /check:fixtures.*forged/u);
   const noExperimentImportGate = copied();
   noExperimentImportGate.workspace.scripts['check:imports'] = noExperimentImportGate.workspace.scripts['check:imports'].replace('packages experiments', 'packages');
   assert.match(missingFoundationGates(noExperimentImportGate).join('\n'), /check:imports.*experiments/u);

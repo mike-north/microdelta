@@ -108,6 +108,43 @@ tests, the twelve publication tests, and the package suites. Fresh GitHub CI for
 the scoped fix head remains pending before acceptance across the supported
 runtime matrix.
 
+## Post-audit assertion mapping — Issue 40
+
+The follow-up Jest assertions map to the contract/model boundaries without
+changing the candidate protocol. The allocation and staging child cases kill
+after their SQL callback but before SQLite commits, then inspect the reopened
+file: an aborted allocation leaves no generation or attempt, while an aborted
+stage leaves the committed attempt allocated and the prior complete result
+current ([`publication.test.ts`](./test/publication.test.ts), allocation and
+staging pre-commit cases; [`crash-worker.ts`](./harness/crash-worker.ts),
+transaction fault seam). Existing post-commit allocation coverage continues to
+prove an abandoned committed generation is consumed.
+
+The stale-authority case now seeds current and a staged candidate, renews the
+successor lease, and compares the complete lease, current result, and staged
+attempt identity plus stored candidate columns after each stale reject.
+Current-authority renew, allocate, stage, publish, release, and subsequent fence
+advancement remain positive controls.
+The staged-key recovery case reopens after a committed stage, rebinds the same
+key to the same attempt/generation, rejects the old holder, and publishes the
+retained payload, fingerprint, and provenance under current authority without a
+second body call. A file-backed marker records one candidate computation before
+the staged-process kill and remains exactly one call after recovery, so
+publication adds no second body marker. The
+exact-reference case now closes/reopens a file-backed database
+before asserting that generation 1 retains its original content while
+generation 2 remains current.
+
+Tests were written before harness changes. The initial compiled `npm run
+test:exp3` run had the three new process cases fail because their child commands
+were not yet implemented; the expanded stale-state and reopened exact-reference
+assertions passed against the existing candidate. After adding only the
+test-harness crash boundary and staged-recovery scenario, `npm run test:exp3`
+passed both suites (5 capability tests and 16 publication tests). This is
+candidate-fixture evidence on the declared local SQLite setup, not production
+History behavior, policy selection, or a broader durability claim. The unchanged
+TLA+ model was not rerun.
+
 ## Evidence limits
 
 The kill tests run real Node child processes against one local file with WAL,

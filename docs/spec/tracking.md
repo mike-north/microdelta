@@ -1,6 +1,7 @@
 # Tracking, values, and observations
 
-Status: normative semantics; supported encodings are gated by EXP-2.
+Status: normative semantics with the bounded EXP-2 encoding selection below.
+The full tracked materialization surface remains implementation work.
 Owners: Tracking & Observation and Value Semantics in [architecture](architecture.md).
 
 ## Unified author surface
@@ -101,10 +102,11 @@ operation kind, not a dotted string. A dictionary property named `"0"`, an array
 index `0`, and a keyed member identity are distinguishable concepts. Determine
 property-vs-index from container/operation: JavaScript does not preserve whether
 source syntax used `[0]` or `['0']`. Property names containing dots or brackets
-must not alias multiple segments. Exact JSON/binary encoding is EXP-2 work.
+must not alias multiple segments. The bounded EXP-2 selection below encodes
+operation and ordered structured segments independently from the selected fact.
 
 **VAL-2 — Canonical supported values.** SHA-256 is the selected content fingerprint.
-Define a versioned canonical encoding before durable writes. Equal supported
+Durable writes must identify the selected encoding version. Equal supported
 values under a specified observation must encode consistently across processes;
 semantically different observations must not collapse through JSON omissions or
 coercions. Encode operation, structured address, selected value and relevant
@@ -119,11 +121,51 @@ Date/Map/Set/class instances. This is a bounded support decision, not a requirem
 to support all of them. Framework branding symbols are distinct from user symbol
 keys; ignoring unsupported user data silently is forbidden.
 
+**EXP-2 encoding selection:** separate normalized equality from snapshot transport.
+The bounded candidate uses `MDV1` tagged equality input, `MDS1` order-preserving
+snapshot transport, and `MDO1` operation/address/selected-fact evidence. An equality
+decoder produces a normal form, not a snapshot suitable for later order-sensitive
+reads. For example, records inserted as `b,a` and `a,b` have equal unordered value
+evidence; transporting the first snapshot must still let an explicit `keys` read
+observe `b,a`. Unknown versions, malformed nodes, duplicate keys, and lossy or
+noncanonical records fail closed rather than migrate by guessing.
+
+The selected candidate domain contains undefined, null, booleans, UTF-16 strings,
+finite numbers, canonical NaN, infinities, distinct negative zero, sparse arrays
+with explicit holes/length, and string-keyed plain records. It supports at most
+two custom plain-data prototype levels ending in null or Object.prototype;
+selected intrinsic prototype member values are rejected. Arrays use the standard
+Array prototype and indexed data slots. Snapshot decoding freezes the decoded
+data while preserving supported lookup and enumeration meaning.
+
+Cycles/shared references, accessors, nonenumerable data, bigint, user symbols,
+data functions, Date/Map/Set, and class instances are rejected explicitly. Function
+implementation evidence is a separate observation, not serializable data-function
+support. No framework-brand exemption is inferred from this fixture. The
+[EXP-2 matrix and assertions](../../experiments/exp-2/README.md) define each tested
+edge and the wire grammar. Extending that domain requires explicit semantics and
+negative/roundtrip assertions before implementation. These fixture encodings do
+not establish a deployed persistence format or authorize implicit migration.
+
 **VAL-3 — Immutability and retention.** Stored values are immutable snapshots.
 Input inspection and materialization must not mutate stored history. In-memory
 changes are new observed facts; they cannot mutate a retained result in place.
 Strong ownership of all loaded payloads is not required: a field may be evicted and
 loaded again without losing its durable identity or observation semantics.
+
+**EXP-2 access decision:** an indexed synchronous source can supply an unexpected
+selected scalar without a payload-wide read. The tested view covers top-level
+scalars only and rejects nested values, presence/enumeration, and prototype
+operations; it is not the complete TRK-5 facade. Its observations are immutable
+copies. Fingerprint-only verification reads no payload, with an instrumented
+scalar-read positive control proving the backing reader is observable.
+
+Explicit asynchronous preparation supports ordinary scalar reads of prepared
+fields. It is rejected as a general solution to unexpected ordinary getter reads
+from an async-only source: an unprepared field must fail visibly, never fabricate
+a scalar or claim the read was observed. DOM-3 and TRK-5 are unchanged. Nested lazy
+materialization, production cache/eviction policy, and scale behavior remain
+unproven; the selected-loading evidence is bounded to the operations above.
 
 ## Collections
 
@@ -141,6 +183,14 @@ fingerprint. This does not promise constant-size evidence for arbitrary conditio
 or early-stop loops. Preserve guards and actual coverage; do not pretend unread
 members were consumed. Exact storage addresses and collection projections are
 separate concepts.
+
+EXP-2 selects a versioned projection fact containing collection binding, selected
+field, completion status, and keyed selected values in canonical key order. An
+exhaustive uniform projection retains one logical digest dependency, while its
+construction still takes O(n) selected reads and temporary data. An early-stop
+projection keeps O(k) visited-key coverage and remains incomplete. A digest alone
+does not establish arbitrary guarded-loop reuse; guards and coverage remain
+Tracking and Composition obligations.
 
 **COL-3 — Order.** Arrays/explicit ordered results preserve relevant order. Dictionary
 key insertion/serialization order is not semantic data or member identity; an

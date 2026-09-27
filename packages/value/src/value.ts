@@ -84,6 +84,111 @@ export interface IValueProjectionFact {
   readonly members: readonly IValueProjectionMember[];
 }
 
+/**
+ * Copy a descriptor whose complete Value graph has already been validated into
+ * the representation used at reader and encoding boundaries. This preserves
+ * address and visited-key order while severing every caller-owned reference.
+ */
+function copyValidatedProjectionDescriptor(value: unknown): IValueProjectionDescriptor {
+  if (value === null || typeof value !== 'object'
+    || (Object.getPrototypeOf(value) !== Object.prototype && Object.getPrototypeOf(value) !== null)) {
+    throw new TypeError('Projection descriptor must be a plain record');
+  }
+  const descriptorKeys = Object.keys(value).sort();
+  if (descriptorKeys.length !== 3 || descriptorKeys[0] !== 'address' || descriptorKeys[1] !== 'operation'
+    || descriptorKeys[2] !== 'traversal') {
+    throw new TypeError('Projection descriptor has unsupported fields');
+  }
+  const addressField = ownData(value, 'address', 'projection descriptor.address');
+  const operationField = ownData(value, 'operation', 'projection descriptor.operation');
+  const traversalField = ownData(value, 'traversal', 'projection descriptor.traversal');
+  if (!addressField.present || !Array.isArray(addressField.value)) {
+    throw new TypeError('Projection address must be structured segments');
+  }
+  if (!operationField.present || operationField.value !== 'value') {
+    throw new TypeError('Projection operation must select member values');
+  }
+
+  const address: IAddressSegment[] = [];
+  for (let index = 0; index < addressField.value.length; index += 1) {
+    const slot = Object.getOwnPropertyDescriptor(addressField.value, String(index));
+    if (slot === undefined || !('value' in slot)) {
+      throw new TypeError('Projection address must be a dense sequence of structured segments');
+    }
+    const segmentValue: unknown = slot.value;
+    if (segmentValue === null || typeof segmentValue !== 'object') {
+      throw new TypeError('Projection address must be a dense sequence of structured segments');
+    }
+    const segment = segmentValue;
+    if (Object.getPrototypeOf(segment) !== Object.prototype && Object.getPrototypeOf(segment) !== null) {
+      throw new TypeError('Projection address segments must be plain records');
+    }
+    const segmentKeys = Object.keys(segment).sort();
+    const kindField = ownData(segment, 'kind', 'projection address segment.kind');
+    const keyField = ownData(segment, 'key', 'projection address segment.key');
+    const indexField = ownData(segment, 'index', 'projection address segment.index');
+    if (kindField.value === 'property' && keyField.present && typeof keyField.value === 'string'
+      && !indexField.present && segmentKeys.length === 2 && segmentKeys[0] === 'key' && segmentKeys[1] === 'kind') {
+      address.push(Object.freeze({ kind: 'property', key: keyField.value }));
+    } else if (kindField.value === 'index' && indexField.present && typeof indexField.value === 'number'
+      && Number.isSafeInteger(indexField.value) && indexField.value >= 0 && !keyField.present
+      && segmentKeys.length === 2 && segmentKeys[0] === 'index' && segmentKeys[1] === 'kind') {
+      address.push(Object.freeze({ kind: 'index', index: indexField.value }));
+    } else {
+      throw new TypeError('Projection address contains an unsupported segment');
+    }
+  }
+
+  const traversalValue = traversalField.value;
+  if (!traversalField.present || traversalValue === null || typeof traversalValue !== 'object'
+    || (Object.getPrototypeOf(traversalValue) !== Object.prototype && Object.getPrototypeOf(traversalValue) !== null)) {
+    throw new TypeError('Projection traversal must be a plain record');
+  }
+  const traversalKeys = Object.keys(traversalValue).sort();
+  const kindField = ownData(traversalValue, 'kind', 'projection traversal.kind');
+  const completeField = ownData(traversalValue, 'complete', 'projection traversal.complete');
+  let traversal: IValueProjectionTraversal;
+  if (kindField.value === 'exhaustive' && completeField.value === true
+    && traversalKeys.length === 2 && traversalKeys[0] === 'complete' && traversalKeys[1] === 'kind') {
+    traversal = Object.freeze({ kind: 'exhaustive', complete: true });
+  } else {
+    const keysField = ownData(traversalValue, 'keys', 'projection traversal.keys');
+    if (kindField.value !== 'visited' || completeField.value !== false || !keysField.present
+      || !Array.isArray(keysField.value) || traversalKeys.length !== 3
+      || traversalKeys[0] !== 'complete' || traversalKeys[1] !== 'keys' || traversalKeys[2] !== 'kind') {
+      throw new TypeError('Projection traversal completeness does not match its kind');
+    }
+    const keys: string[] = [];
+    const seenKeys = new Set<string>();
+    for (let index = 0; index < keysField.value.length; index += 1) {
+      const slot = Object.getOwnPropertyDescriptor(keysField.value, String(index));
+      if (slot === undefined || !('value' in slot) || typeof slot.value !== 'string' || seenKeys.has(slot.value)) {
+        throw new TypeError('Visited projection coverage needs unique ordered string keys');
+      }
+      seenKeys.add(slot.value);
+      keys.push(slot.value);
+    }
+    traversal = Object.freeze({ kind: 'visited', complete: false, keys: Object.freeze(keys) });
+  }
+
+  return Object.freeze({ address: Object.freeze(address), operation: 'value', traversal });
+}
+
+/**
+ * Validate and detach a projection selection before it crosses a component or
+ * reader boundary. Plain and null-prototype records have the same Value meaning;
+ * address and visited-key order remain semantically significant.
+ * @alpha
+ */
+export function normalizeProjectionDescriptor(value: unknown): IValueProjectionDescriptor {
+  if (value === null || typeof value !== 'object') {
+    throw new TypeError('Projection descriptor must be an object');
+  }
+  // The Value graph walk rejects accessors, cycles, and unsupported prototypes; the copy below also enforces dense arrays and descriptor shape without invoking getters.
+  encodeValue(value);
+  return copyValidatedProjectionDescriptor(value);
+}
+
 /** Reject unsupported data with a location instead of JSON-style omission. */
 function unsupported(path: string, reason: string): never {
   throw new TypeError(`Unsupported value at ${path}: ${reason}`);
@@ -597,78 +702,12 @@ export function encodeProjectionFact(fact: IValueProjectionFact): string {
   if (factKeys.length !== 2 || factKeys[0] !== 'descriptor' || factKeys[1] !== 'members') {
     throw new TypeError('Projection fact has unsupported fields');
   }
-  const descriptor = fact.descriptor;
-  if (descriptor === null || typeof descriptor !== 'object'
-    || (Object.getPrototypeOf(descriptor) !== Object.prototype && Object.getPrototypeOf(descriptor) !== null)) {
-    throw new TypeError('Projection descriptor must be a plain record');
-  }
-  const descriptorKeys = Object.keys(descriptor).sort();
-  if (descriptorKeys.length !== 3 || descriptorKeys[0] !== 'address' || descriptorKeys[1] !== 'operation'
-    || descriptorKeys[2] !== 'traversal') {
-    throw new TypeError('Projection descriptor has unsupported fields');
-  }
-  if (descriptor.operation !== 'value') {
-    throw new TypeError('Projection operation must select member values');
-  }
-  if (!Array.isArray(descriptor.address)) {
-    throw new TypeError('Projection address must be structured segments');
-  }
-  const address: IAddressSegment[] = [];
-  for (let index = 0; index < descriptor.address.length; index += 1) {
-    const segment: unknown = Object.getOwnPropertyDescriptor(descriptor.address, String(index))?.value;
-    if (segment === null || typeof segment !== 'object') {
-      throw new TypeError('Projection address must be a dense sequence of structured segments');
-    }
-    if (Object.getPrototypeOf(segment) !== Object.prototype && Object.getPrototypeOf(segment) !== null) {
-      throw new TypeError('Projection address segments must be plain records');
-    }
-    if ('kind' in segment && segment.kind === 'property' && 'key' in segment && typeof segment.key === 'string') {
-      const keys = Object.keys(segment).sort();
-      if (keys.length !== 2 || keys[0] !== 'key' || keys[1] !== 'kind') {
-        throw new TypeError('Projection property address has unsupported fields');
-      }
-      address.push({ kind: 'property', key: segment.key });
-    } else if ('kind' in segment && segment.kind === 'index' && 'index' in segment
-      && typeof segment.index === 'number' && Number.isSafeInteger(segment.index) && segment.index >= 0) {
-      const keys = Object.keys(segment).sort();
-      if (keys.length !== 2 || keys[0] !== 'index' || keys[1] !== 'kind') {
-        throw new TypeError('Projection index address has unsupported fields');
-      }
-      address.push({ kind: 'index', index: segment.index });
-    } else {
-      throw new TypeError('Projection address contains an unsupported segment');
-    }
-  }
-
-  const traversal = descriptor.traversal;
-  if (traversal === null || typeof traversal !== 'object'
-    || (Object.getPrototypeOf(traversal) !== Object.prototype && Object.getPrototypeOf(traversal) !== null)) {
-    throw new TypeError('Projection traversal must be a plain record');
-  }
-  const traversalKeys = Object.keys(traversal).sort();
-  let normalizedTraversal: IValueProjectionTraversal;
-  let visitedKeys: readonly string[] | undefined;
-  if (traversal.kind === 'exhaustive' && traversal.complete === true
-    && traversalKeys.length === 2 && traversalKeys[0] === 'complete' && traversalKeys[1] === 'kind') {
-    normalizedTraversal = { kind: 'exhaustive', complete: true };
-  } else if (traversal.kind === 'visited' && traversal.complete === false
-    && traversalKeys.length === 3 && traversalKeys[0] === 'complete' && traversalKeys[1] === 'keys' && traversalKeys[2] === 'kind'
-    && Array.isArray(traversal.keys)) {
-    const keys: string[] = [];
-    const seenKeys = new Set<string>();
-    for (let index = 0; index < traversal.keys.length; index += 1) {
-      const slot = Object.getOwnPropertyDescriptor(traversal.keys, String(index));
-      if (slot === undefined || !('value' in slot) || typeof slot.value !== 'string' || seenKeys.has(slot.value)) {
-        throw new TypeError('Visited projection coverage needs unique ordered string keys');
-      }
-      seenKeys.add(slot.value);
-      keys.push(slot.value);
-    }
-    visitedKeys = keys;
-    normalizedTraversal = { kind: 'visited', complete: false, keys: Object.freeze(keys) };
-  } else {
-    throw new TypeError('Projection traversal completeness does not match its kind');
-  }
+  // The whole-fact walk above validates descriptors and values together; copy
+  // the already validated selection without a second graph traversal.
+  const normalizedDescriptor = copyValidatedProjectionDescriptor(fact.descriptor);
+  const visitedKeys = normalizedDescriptor.traversal.kind === 'visited'
+    ? normalizedDescriptor.traversal.keys
+    : undefined;
 
   if (!Array.isArray(fact.members)) {
     throw new TypeError('Projection members must be a dense keyed sequence');
@@ -702,11 +741,7 @@ export function encodeProjectionFact(fact: IValueProjectionFact): string {
   }
   const canonicalMembers = members.sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0);
   const normalized: IValueProjectionFact = {
-    descriptor: {
-      address,
-      operation: 'value',
-      traversal: normalizedTraversal,
-    },
+    descriptor: normalizedDescriptor,
     members: canonicalMembers,
   };
   return `${PROJECTION_VERSION}${encodeValue(normalized)}`;

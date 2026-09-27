@@ -12,7 +12,7 @@ import type {
   ISelectedFingerprintResolution,
   ISelectedReadRequest,
 } from '@microdelta/history';
-import { encodeProjectionFact, encodeValue, normalizeProjectionFact } from '@microdelta/value';
+import { encodeValue, normalizeProjectionDescriptor, normalizeProjectionFact } from '@microdelta/value';
 import type {
   IAddressSegment,
   ISelectedFact,
@@ -185,11 +185,11 @@ function validateSelectedFact(value: unknown, request: ISelectedReadRequest): IS
 /** Verify that a projection reader answered the requested relative selection. */
 function validateProjectionFact(value: unknown, descriptor: IValueProjectionDescriptor): IValueProjectionFact {
   const candidate = requireProjectionFact(value);
-  encodeProjectionFact(candidate);
-  if (encodeValue(candidate.descriptor) !== encodeValue(descriptor)) {
+  const normalized = normalizeProjectionFact(candidate);
+  if (encodeValue(normalized.descriptor) !== encodeValue(descriptor)) {
     throw new TypeError('Projection reader returned a mismatched descriptor');
   }
-  return candidate;
+  return normalized;
 }
 
 /** Validate outer projection ownership without reading through a caller accessor. */
@@ -237,6 +237,10 @@ function createScalarView<T extends object>(
       const fact = validateSelectedFact(reader.readSelected(reference, request), request);
       if (fact.fact !== null && (typeof fact.fact === 'object' || typeof fact.fact === 'function')) {
         return fail('nested value access');
+      }
+      // Tracking skips recordSelected outside captures, so enforce the scalar domain before that boundary.
+      if (typeof fact.fact === 'bigint' || typeof fact.fact === 'symbol') {
+        return fail('unsupported scalar access');
       }
       tracking.materialization.recordSelected(binding, fact);
       return fact.fact;
@@ -295,10 +299,11 @@ export function createMaterialization(options: IMaterializationOptions): IMateri
         throw new TypeError('This completed-result reader does not support keyed projections');
       }
       const copiedBinding = copyBinding(binding);
-      const source = options.projectionReader.readProjection(exactReference, descriptor);
-      const fact = validateProjectionFact(source, descriptor);
-      const detached = detachProjection(fact);
-      options.tracking.materialization.recordProjection(copiedBinding, fact);
+      // Value detaches the selection before reader code can mutate its request or the caller's descriptor.
+      const selection = normalizeProjectionDescriptor(descriptor);
+      const source = options.projectionReader.readProjection(exactReference, selection);
+      const detached = validateProjectionFact(source, selection);
+      options.tracking.materialization.recordProjection(copiedBinding, detached);
       return detached;
     },
     observeMemberOrder(binding: ITrackingBinding, keys: readonly string[]): readonly string[] {

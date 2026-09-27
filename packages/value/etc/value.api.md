@@ -80,6 +80,9 @@ export type IValueProjectionTraversal = {
 };
 
 // @alpha
+export function normalizeProjectionDescriptor(value: unknown): IValueProjectionDescriptor;
+
+// @alpha
 export function normalizeProjectionFact(fact: IValueProjectionFact): IValueProjectionFact;
 
 // @alpha

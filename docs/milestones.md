@@ -4,8 +4,10 @@ Authority: [specification entry point](spec/README.md). Status: M0 consolidation
 complete (see [validation](spec/validation.md)); M0.5 accepted on 2026-09-27 UTC
 (2026-09-26 Pacific; see [foundation evidence](validation/foundation-2026-09-26.md)).
 M1 experiment decisions are recorded in the [M1 evidence record](validation/m1-2026-09-26.md);
-its final CI and issue-acceptance conditions determine completion. No M2 or later
-runtime milestone is complete.
+its final CI and issue-acceptance conditions determine completion. M2 bounded
+tracking and package components are implemented; the [M2 evidence record](validation/m2-2026-09-27.md)
+and [acceptance issue](https://github.com/mike-north/microdelta/issues/32) record delivery and verification.
+No M3 or later runtime milestone is complete.
 A milestone is a quality checkpoint, including experiments; it need not be a
 user-facing release.
 
@@ -89,6 +91,11 @@ their Node implementation against the contract.
 collection projection semantics within supported scope,
 branch/pass-through cases, isolated async frames, and no live tags in durable
 records. Run required source/type/import checks. This is not durable memoization.
+
+**Evidence:** [M2 component and integration record](validation/m2-2026-09-27.md).
+The record maps the bounded implementation to its component reviews, integrated
+checks, and default-branch results. The [acceptance issue](https://github.com/mike-north/microdelta/issues/32)
+records the final milestone decision after documentation delivery and verification.
 
 ## M3 — Tiny durable analysis MVP
 

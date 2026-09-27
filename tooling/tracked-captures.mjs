@@ -112,14 +112,33 @@ function isWithin(scope, ancestor) {
   return false;
 }
 
-/** Unsupported receiver syntax remains within the callback's lexical boundary. */
-function isAstDescendant(node, ancestor) {
-  for (let current = node; current; current = current.parent) {
-    if (current === ancestor) {
-      return true;
+/** Find every receiver occurrence in one callback subtree, including nested functions. */
+function findThisExpressions(root, visitorKeys) {
+  const pending = [root];
+  const found = [];
+  while (pending.length > 0) {
+    const node = pending.pop();
+    if (node.type === 'ThisExpression') {
+      found.push(node);
+    }
+    const children = [];
+    for (const key of visitorKeys[node.type] ?? []) {
+      const value = node[key];
+      if (Array.isArray(value)) {
+        for (const child of value) {
+          if (child && typeof child.type === 'string') {
+            children.push(child);
+          }
+        }
+      } else if (value && typeof value.type === 'string') {
+        children.push(value);
+      }
+    }
+    for (let index = children.length - 1; index >= 0; index--) {
+      pending.push(children[index]);
     }
   }
-  return false;
+  return found;
 }
 
 /** The type-aware rule keeps each exemption attached to declarations, not spellings. */
@@ -360,17 +379,14 @@ export const trackedCaptures = {
         }
 
         const directCallbacks = new Set(candidates.map(candidate => candidate.callback));
-        const validCallbacks = new Set();
-        for (const { callback, callbackNode } of candidates) {
+        for (const { callbackNode } of candidates) {
           const callbackScope = sourceCode.getScope(callbackNode);
           if (!callbackScope) {
             unsupported.add(callbackNode);
             continue;
           }
-          for (const candidate of allNodes) {
-            if (candidate.type === 'ThisExpression' && isAstDescendant(candidate, callbackNode)) {
-              unsupported.add(candidate);
-            }
+          for (const thisExpression of findThisExpressions(callbackNode, sourceCode.visitorKeys)) {
+            unsupported.add(thisExpression);
           }
           const scopes = [];
           const collect = scope => {
@@ -380,7 +396,6 @@ export const trackedCaptures = {
             }
           };
           collect(callbackScope);
-          let valid = true;
           for (const scope of scopes) {
             for (const reference of scope.references) {
               if (!reference.isRead()) {
@@ -418,12 +433,8 @@ export const trackedCaptures = {
                   continue;
                 }
               }
-              valid = false;
               context.report({ node: identifier, messageId: 'capture', data: { name: identifier.name } });
             }
-          }
-          if (valid) {
-            validCallbacks.add(callback);
           }
         }
         for (const node of unsupported) {

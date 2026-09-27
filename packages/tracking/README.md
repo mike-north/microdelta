@@ -14,18 +14,21 @@ narrow `materialization.owns()` and `materialization.read()` bridge to select
 output fields without obtaining a raw source object.
 
 An `async` callback that returns a tracked wrapper is subject to JavaScript Promise
-thenable assimilation. The runtime's `then` property lookup is therefore captured
-as the actual consumed fact (including an absent `then`); the observer does not
-special-case this language-level read.
+thenable assimilation. For object and array wrappers, the runtime's `then` lookup
+is captured as an actual consumed fact, including an absent `then`. Function
+wrappers instead treat that probe as neutral: they return `undefined` without
+recording an observation or invoking custom metadata. A non-configurable,
+non-writable own data `then` with a non-`undefined` value cannot legally be hidden
+by a Proxy and produces an explicit unsupported diagnostic. Ordinary function
+calls are unchanged.
 
 `compareCurrent()` asks a caller-owned provider to resolve each binding and its
-current full path before comparing facts. Its equal/changed/unavailable/ambiguous
-result is evidence only: it does not decide reuse, establish source freshness, or
+current full path before comparing facts. Its comparison result is evidence only: it does not decide reuse, establish source freshness, or
 reconstruct a durable definition. A called function contributes emitted
 `Function.prototype.toString()` evidence and observed tracked reads; this does
 not make arbitrary closure captures sound, and wrapping a function does not
 memoize it. Only ordinary calls are supported: native or bound functions,
-construction, and function metadata/property access fail visibly. Explicit
+construction, and other function metadata/property access fail visibly. Explicit
 `keys()` and `hasOwn()` helpers capture those operations. Native reflection,
 unsupported Value inputs, native array methods, and unobservable object
 identity/coercion are outside this bounded surface.

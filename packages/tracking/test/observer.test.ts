@@ -3,10 +3,9 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 
 import { describe, expect, test } from '@jest/globals';
 import type { IMachine } from '@microdelta/machine';
-import { observe } from '@microdelta/value';
+import { observe, type ISelectedFact, type IValueProjectionFact } from '@microdelta/value';
 import { createTrackingObserver } from '../src/index.js';
-import type { ICurrentFactRequest, ICurrentFactResolution, ITrackingBinding } from '../src/index.js';
-import type { IValueProjectionFact } from '@microdelta/value';
+import type { ICurrentFactRequest, ICurrentFactResolution, IObservationCapture, ITrackingBinding } from '../src/index.js';
 
 /** Supply only host facilities; this test adapter has no Tracking policy. */
 const machine: IMachine = {
@@ -88,6 +87,158 @@ describe('semantic tracking observer', () => {
       .toThrow(/observer-owned|owned/i);
   });
 
+  test('detached materialization record capabilities retain selected facts, projections, and collection order', () => {
+    const { recordSelected, recordProjection, recordCollectionOrder } = observer.materialization;
+    const selected: ISelectedFact = {
+      operation: 'value',
+      address: [{ kind: 'property', key: 'name' }],
+      fact: 'Ada',
+    };
+    const projection: IValueProjectionFact = {
+      descriptor: {
+        address: [{ kind: 'property', key: 'name' }],
+        operation: 'value',
+        traversal: { kind: 'exhaustive', complete: true },
+      },
+      members: [['user-a', 'Ada']],
+    };
+    const captures = [
+      // eslint-disable-next-line microdelta/tracked-captures -- The runtime fixture verifies an extracted materialization recorder retains its observer context.
+      observer.capture(() => recordSelected(binding, selected)),
+      // eslint-disable-next-line microdelta/tracked-captures -- The runtime fixture verifies an extracted materialization recorder retains its observer context.
+      observer.capture(() => recordProjection(binding, projection)),
+      // eslint-disable-next-line microdelta/tracked-captures -- The runtime fixture verifies an extracted materialization recorder retains its observer context.
+      observer.capture(() => recordCollectionOrder(binding, ['user-a', 'user-b'])),
+    ];
+
+    expect(captures.map(capture => capture.observations.length)).toEqual([1, 1, 1]);
+    expect(captures.map(capture => capture.observations[0]?.kind))
+      .toEqual(['fact', 'projection', 'collection-order']);
+    expect(captures[0]?.observations[0]).toMatchObject({
+      address: selected.address,
+      operation: 'value',
+      selection: { kind: 'selected', operation: 'value', address: selected.address },
+    });
+    expect(captures[1]?.observations[0]).toMatchObject({
+      selection: { kind: 'projection', descriptor: projection.descriptor },
+    });
+    expect(captures[2]?.observations[0]).toMatchObject({
+      selection: { kind: 'collection-order', keys: ['user-a', 'user-b'] },
+    });
+  });
+
+  test('materialization record capabilities leave inputs untouched when no capture frame is active', () => {
+    let digestCalls = 0;
+    let inspections = 0;
+    const host: IMachine = {
+      ...machine,
+      sha256(input: string): string {
+        digestCalls += 1;
+        return machine.sha256(input);
+      },
+    };
+    const isolated = createTrackingObserver(host);
+    const inspectable = <T extends object>(value: T): T => new Proxy(value, {
+      get(target, property, receiver): unknown {
+        inspections += 1;
+        return Reflect.get(target, property, receiver);
+      },
+      getOwnPropertyDescriptor(target, property): PropertyDescriptor | undefined {
+        inspections += 1;
+        return Reflect.getOwnPropertyDescriptor(target, property);
+      },
+      ownKeys(target): Array<string | symbol> {
+        inspections += 1;
+        return Reflect.ownKeys(target);
+      },
+    });
+    const { recordSelected, recordProjection, recordCollectionOrder } = isolated.materialization;
+    const selected: ISelectedFact = inspectable({
+      operation: 'value',
+      address: [{ kind: 'property', key: 'name' }],
+      fact: 'Ada',
+    });
+    const projection: IValueProjectionFact = inspectable({
+      descriptor: {
+        address: [{ kind: 'property', key: 'name' }],
+        operation: 'value',
+        traversal: { kind: 'exhaustive', complete: true },
+      },
+      members: [['author-1', 'Ada']],
+    });
+    const keys = inspectable(['author-1']);
+    const suppliedBinding: ITrackingBinding = inspectable({ path: ['analysis', 'author'] });
+
+    expect(() => recordSelected(suppliedBinding, selected)).not.toThrow();
+    expect(() => recordProjection(suppliedBinding, projection)).not.toThrow();
+    expect(() => recordCollectionOrder(suppliedBinding, keys)).not.toThrow();
+    expect(inspections).toBe(0);
+    expect(digestCalls).toBe(0);
+  });
+
+  test('detached materialization record capabilities reject closed inherited frames before inspecting content', async () => {
+    let digestCalls = 0;
+    let contentReads = 0;
+    const host: IMachine = {
+      ...machine,
+      sha256(input: string): string {
+        digestCalls += 1;
+        return machine.sha256(input);
+      },
+    };
+    const isolated = createTrackingObserver(host);
+    const { recordSelected, recordProjection, recordCollectionOrder } = isolated.materialization;
+    const selected: ISelectedFact = {
+      get operation(): 'value' { contentReads += 1; return 'value'; },
+      address: [{ kind: 'property', key: 'name' }],
+      fact: 'Ada',
+    };
+    const projection: IValueProjectionFact = {
+      get descriptor(): IValueProjectionFact['descriptor'] {
+        contentReads += 1;
+        return {
+          address: [{ kind: 'property', key: 'name' }],
+          operation: 'value',
+          traversal: { kind: 'exhaustive', complete: true },
+        };
+      },
+      members: [['user-a', 'Ada']],
+    };
+    const keys = new Proxy(['user-a', 'user-b'], {
+      get(target, property, receiver): unknown {
+        contentReads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    let detached: Promise<readonly unknown[]> = Promise.resolve([]);
+
+    await isolated.captureAsync(async () => {
+      detached = (async () => {
+        // eslint-disable-next-line microdelta/tracked-captures -- This deferred test barrier runs recorder attempts only after the owning capture closes.
+        await gate;
+        const attempts = [
+          // eslint-disable-next-line microdelta/tracked-captures -- This test deliberately calls an extracted recorder after its capture frame closes.
+          Promise.resolve().then(() => recordSelected(binding, selected)),
+          // eslint-disable-next-line microdelta/tracked-captures -- This test deliberately calls an extracted recorder after its capture frame closes.
+          Promise.resolve().then(() => recordProjection(binding, projection)),
+          // eslint-disable-next-line microdelta/tracked-captures -- This test deliberately calls an extracted recorder after its capture frame closes.
+          Promise.resolve().then(() => recordCollectionOrder(binding, keys)),
+        ];
+        // eslint-disable-next-line microdelta/tracked-captures -- Native promise aggregation is only test scheduling for late recorder rejection.
+        return Promise.all(attempts.map(attempt => attempt.catch((error: unknown) => error)));
+      })();
+    });
+
+    release();
+    const errors = await detached;
+    expect(errors).toHaveLength(3);
+    expect(errors.every(error => error instanceof Error && /closed/i.test(error.message))).toBe(true);
+    expect(contentReads).toBe(0);
+    expect(digestCalls).toBe(0);
+  });
+
   test('synchronous capture rejects promises and ordinary thenable results', () => {
     // eslint-disable-next-line microdelta/tracked-captures -- This runtime negative case passes a native Promise through the synchronous boundary to prove rejection.
     expect(() => observer.capture(() => Promise.resolve('later'))).toThrow(/captureAsync/i);
@@ -99,6 +250,56 @@ describe('semantic tracking observer', () => {
     const capture = await observer.captureAsync(async () => tracked);
     expect(capture.value).toBe(tracked);
     expect(capture.observations.map(item => item.address)).toEqual([[{ kind: 'property', key: 'then' }]]);
+  });
+
+  test('async capture passes tracked functions through without invoking or observing them', async () => {
+    let calls = 0;
+    let ownThenReads = 0;
+    let ownThenCalls = 0;
+    const implementation = () => { calls += 1; return 'called'; };
+    // eslint-disable-next-line microdelta/tracked-captures -- The test tracks a side-effecting callable to verify Promise assimilation does not invoke it.
+    const trackedFunction = observer.tracked(implementation, binding);
+    const accessorImplementation = () => { calls += 1; return 'accessor called'; };
+    // A configurable custom then getter stays opaque and must not run during Promise assimilation.
+    Object.defineProperty(accessorImplementation, 'then', {
+      configurable: true,
+      get() {
+        ownThenReads += 1;
+        return () => { ownThenCalls += 1; };
+      },
+    });
+    // eslint-disable-next-line microdelta/tracked-captures -- The test tracks an accessor-bearing callable to verify Promise assimilation does not inspect it.
+    const trackedAccessorFunction = observer.tracked(accessorImplementation, binding);
+    const direct = await observer.captureAsync(async () => trackedFunction);
+    // eslint-disable-next-line microdelta/tracked-captures -- Native Promise resolution is the runtime assimilation path under test.
+    const resolved = await observer.captureAsync(async () => Promise.resolve(trackedFunction));
+    // eslint-disable-next-line microdelta/tracked-captures -- Native Promise chaining is the runtime assimilation path under test.
+    const chained = await observer.captureAsync(async () => Promise.resolve('ready').then(() => trackedFunction));
+    // eslint-disable-next-line microdelta/tracked-captures -- Native Promise resolution is the runtime assimilation path under test.
+    const accessor = await observer.captureAsync(async () => Promise.resolve(trackedAccessorFunction));
+
+    for (const capture of [direct, resolved, chained]) {
+      expect(capture.value).toBe(trackedFunction);
+      expect(capture.observations).toHaveLength(0);
+    }
+    expect(accessor.value).toBe(trackedAccessorFunction);
+    expect(accessor.observations).toHaveLength(0);
+    expect(calls).toBe(0);
+    expect(ownThenReads).toBe(0);
+    expect(ownThenCalls).toBe(0);
+    expect(Reflect.get(trackedFunction, 'then')).toBeUndefined();
+  });
+
+  test('rejects non-configurable own then lookup without changing ordinary function calls', async () => {
+    let calls = 0;
+    const implementation = () => { calls += 1; return 'called'; };
+    Object.defineProperty(implementation, 'then', { configurable: false, value: () => undefined });
+    // eslint-disable-next-line microdelta/tracked-captures -- The test tracks a callable with a non-configurable then property to verify assimilation rejection.
+    const trackedFunction = observer.tracked(implementation, binding);
+
+    expect(trackedFunction()).toBe('called');
+    await expect(observer.captureAsync(async () => trackedFunction)).rejects.toThrow(/non-configurable then/i);
+    expect(calls).toBe(1);
   });
 
   test('copies registration bindings and retained facts so later source mutation cannot retarget evidence', () => {
@@ -134,6 +335,92 @@ describe('semantic tracking observer', () => {
     expect(captured.observations[0]?.encoded).toContain('Ada');
     expect(observer.compareCurrent(captured, { resolve: () => ({ kind: 'unavailable' }) }).kind).toBe('unavailable');
     expect(observer.compareCurrent(captured, { resolve: () => ({ kind: 'ambiguous' }) }).kind).toBe('ambiguous');
+  });
+
+  test('membership evidence ignores unrelated additions and changes when the selected member is removed', () => {
+    const source = createProvider();
+    const tracked = observer.tracked({ a: 1 }, binding);
+    const captured = observer.capture(() => 'a' in tracked);
+
+    source.set('analysis/author', { a: 1, b: 2 });
+    expect(observer.compareCurrent(captured, source.provider).kind).toBe('equal');
+
+    source.set('analysis/author', { b: 2 });
+    expect(observer.compareCurrent(captured, source.provider).kind).toBe('changed');
+  });
+
+  test('explicit identity reads ignore unread names but change when the identity changes', () => {
+    const source = createProvider();
+    const tracked = observer.tracked({ id: 'author-1', name: 'Ada' }, binding);
+    const captured = observer.capture(() => tracked.id);
+
+    source.set('analysis/author', { id: 'author-2', name: 'Ada' });
+    expect(observer.compareCurrent(captured, source.provider).kind).toBe('changed');
+
+    source.set('analysis/author', { id: 'author-1', name: 'Grace' });
+    expect(observer.compareCurrent(captured, source.provider).kind).toBe('equal');
+  });
+
+  test('matches selected addresses by segment meaning rather than object member order', () => {
+    // eslint-disable-next-line microdelta/tracked-captures -- This fixture compares runtime addresses supplied by an external binding.
+    const propertyCapture = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
+    // eslint-disable-next-line microdelta/tracked-captures -- This fixture compares runtime indices supplied by an external binding.
+    const indexCapture = observer.capture(() => observer.tracked(['Ada'], binding)[0]);
+    const compareFact = <T,>(capture: IObservationCapture<T>, fact: ISelectedFact) => observer.compareCurrent(capture, {
+      resolve: () => ({ kind: 'available', fact }),
+    });
+
+    expect(compareFact(propertyCapture, {
+      operation: 'value', address: [{ key: 'name', kind: 'property' }], fact: 'Ada',
+    }).kind).toBe('equal');
+    expect(compareFact(indexCapture, {
+      operation: 'value', address: [{ index: 0, kind: 'index' }], fact: 'Ada',
+    }).kind).toBe('equal');
+
+    expect(compareFact(propertyCapture, {
+      operation: 'value', address: [{ key: 'other', kind: 'property' }], fact: 'Ada',
+    }).kind).toBe('incompatible');
+    expect(compareFact(propertyCapture, {
+      operation: 'value', address: [{ index: 0, kind: 'index' }], fact: 'Ada',
+    }).kind).toBe('incompatible');
+    expect(compareFact(indexCapture, {
+      operation: 'value', address: [{ index: 1, kind: 'index' }], fact: 'Ada',
+    }).kind).toBe('incompatible');
+    expect(compareFact(indexCapture, {
+      operation: 'value', address: [{ key: '0', kind: 'property' }], fact: 'Ada',
+    }).kind).toBe('incompatible');
+  });
+
+  test('classifies unsupported selected provider payloads as incompatible', () => {
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime fixture captures a value to test malformed current provider payloads.
+    const captured = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
+    const malformed = {
+      operation: 'value',
+      address: [{ kind: 'property', key: 'name' }],
+      fact: () => 'functions are not selected value data',
+    };
+
+    expect(observer.compareCurrent(captured, {
+      resolve: () => ({ kind: 'available', fact: malformed }),
+    }).kind).toBe('incompatible');
+  });
+
+  test('classifies malformed selected envelopes and addresses as incompatible', () => {
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime fixture captures a value to test malformed current provider metadata.
+    const captured = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
+    const sparseAddress = new Array<unknown>(1);
+    const malformed: unknown[] = [
+      { operation: 'not-an-operation', address: [{ kind: 'property', key: 'name' }], fact: 'Ada' },
+      { operation: 'value', address: sparseAddress, fact: 'Ada' },
+      { operation: 'value', address: [{ kind: 'index', index: -1 }], fact: 'Ada' },
+      { operation: 'value', address: [{ kind: 'property', key: 'name', extra: true }], fact: 'Ada' },
+    ];
+
+    for (const fact of malformed) {
+      expect(observer.compareCurrent(captured, {
+        resolve: () => ({ kind: 'available', fact }),
+      }).kind).toBe('incompatible');
+    }
   });
 
   test('compares an exact compatible fingerprint request without asking for payload and rejects mismatched metadata descriptors', () => {
@@ -198,6 +485,7 @@ describe('semantic tracking observer', () => {
       expect(observer.compareCurrent(captured, {
         resolve: () => ({ kind: 'available', fact }),
       }).kind).toBe('incompatible');
+
     }
     expect(getterCalls).toBe(0);
   });
@@ -286,6 +574,121 @@ describe('semantic tracking observer', () => {
     expect(observer.compareCurrent(capture, source.provider).kind).toBe('equal');
     source.set('analysis/author', (value: number) => value + 2);
     expect(observer.compareCurrent(capture, source.provider).kind).toBe('changed');
+  });
+
+  test('uninspectable current implementation replacements are unavailable without executing them', () => {
+    let replacementCalls = 0;
+    const original = observer.tracked(() => 'original', binding);
+    const capture = observer.capture(() => original());
+    const boundReplacement = function replacement(): string {
+      replacementCalls += 1;
+      return 'replacement';
+    }.bind(undefined);
+
+    for (const replacement of [Math.max, boundReplacement]) {
+      const comparison = observer.compareCurrent(capture, {
+        resolve: () => ({ kind: 'available', fact: replacement }),
+      });
+      expect(comparison.kind).toBe('unavailable');
+    }
+    expect(replacementCalls).toBe(0);
+  });
+
+  test('current implementation comparison preserves host digest failures', () => {
+    const failure = new TypeError('host digest failed');
+    let digestUnavailable = false;
+    const host: IMachine = {
+      ...machine,
+      sha256(input: string): string {
+        if (digestUnavailable) {
+          throw failure;
+        }
+        return machine.sha256(input);
+      },
+    };
+    const isolated = createTrackingObserver(host);
+    const tracked = isolated.tracked(() => 'original', binding);
+    const capture = isolated.capture(() => tracked());
+    const replacement = (): string => 'replacement';
+    digestUnavailable = true;
+
+    expect(() => isolated.compareCurrent(capture, {
+      resolve: () => ({ kind: 'available', fact: replacement }),
+    })).toThrow(failure);
+  });
+
+  test('classifies unsupported materialized output as incompatible', () => {
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime fixture captures materialized output to test unsupported current payload classification.
+    const outputCapture = observer.capture(() => observer.snapshotOutput(observer.tracked({ result: 'Ada' }, binding)));
+
+    expect(observer.compareCurrent(outputCapture, {
+      resolve: () => ({ kind: 'available', fact: () => 'functions are not materialized data' }),
+    }).kind).toBe('incompatible');
+  });
+
+  test('classifies unsupported collection order as incompatible', () => {
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime fixture captures collection order to test unsupported current order data.
+    const orderCapture = observer.capture(() => observer.materialization.recordCollectionOrder(binding, ['member-a', 'member-b']));
+    const unsupportedOrder = ['member-a', 'member-b'];
+    Object.defineProperty(unsupportedOrder, 'hidden', { value: 'outside selected order data' });
+
+    expect(observer.compareCurrent(orderCapture, {
+      resolve: () => ({ kind: 'available', fact: unsupportedOrder }),
+    }).kind).toBe('incompatible');
+  });
+
+  test('materialized output and collection order digest failures remain host errors', () => {
+    const failure = new TypeError('host digest failed');
+    let digestUnavailable = false;
+    const host: IMachine = {
+      ...machine,
+      sha256(input: string): string {
+        if (digestUnavailable) {
+          throw failure;
+        }
+        return machine.sha256(input);
+      },
+    };
+    const isolated = createTrackingObserver(host);
+    const tracked = isolated.tracked({ result: 'Ada' }, binding);
+    const outputCapture = isolated.capture(() => isolated.snapshotOutput(tracked));
+    // eslint-disable-next-line microdelta/tracked-captures -- This host-failure fixture must record collection-order evidence through the real capture path.
+    const orderCapture = isolated.capture(() => isolated.materialization.recordCollectionOrder(binding, ['member-a', 'member-b']));
+    digestUnavailable = true;
+
+    expect(() => isolated.compareCurrent(outputCapture, {
+      resolve: () => ({ kind: 'available', fact: { result: 'Ada' } }),
+    })).toThrow(failure);
+    expect(() => isolated.compareCurrent(orderCapture, {
+      resolve: () => ({ kind: 'available', fact: ['member-a', 'member-b'] }),
+    })).toThrow(failure);
+  });
+
+  test('selected fact digest failures remain host errors', () => {
+    const failure = new TypeError('host digest failed');
+    let digestUnavailable = false;
+    const host: IMachine = {
+      ...machine,
+      sha256(input: string): string {
+        if (digestUnavailable) {
+          throw failure;
+        }
+        return machine.sha256(input);
+      },
+    };
+    const isolated = createTrackingObserver(host);
+    const tracked = isolated.tracked({ name: 'Ada' }, binding);
+    const capture = isolated.capture(() => tracked.name);
+    const currentFact = {
+      operation: 'value',
+      address: [{ kind: 'property', key: 'name' }],
+      fact: 'Ada',
+    };
+    digestUnavailable = true;
+
+    expect(() => isolated.compareCurrent(capture, {
+      resolve: () => ({ kind: 'available', fact: currentFact }),
+    })).toThrow(failure);
   });
 
   test('function-source fingerprints preserve distinct unpaired UTF-16 surrogate code units', () => {

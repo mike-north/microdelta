@@ -86,9 +86,9 @@ result lifecycle. Process-local tags and derivations are also not cross-process
 evidence.
 
 The following probe runs against those built workspace entries. It demonstrates
-the current Tracking and Value alpha contracts only. It imports generated files
+the current Tracking and Value alpha contracts only. It imports compiled JavaScript files
 inside the private workspace because Tracking and Value are project-private alpha
-declarations; their current names are absent from the default external TypeScript
+contracts; their current names are absent from the default external TypeScript
 surface. The JavaScript files are not a supported package entry point.
 
 From a checkout with Node.js 20 or newer:
@@ -186,9 +186,10 @@ The [specification entry point](docs/spec/README.md) is the active design
 authority. Read it first, then the owning contract and its acceptance scenarios.
 [Delivery milestones](docs/milestones.md) define the implementation order; the
 [repository issue queue](https://github.com/mike-north/microdelta/issues) tracks
-the work. The current milestone record marks M0.5 and M1 accepted. M2 tracking
-and package contracts are in progress and establish supported observations and
-value semantics, not durable memoization. M3 adds the
+the work. M0.5 is accepted; the final [M1 acceptance outcome](https://github.com/mike-north/microdelta/issues/10#issuecomment-5853047962)
+is recorded in the issue evidence. M2 tracking and package contracts are in
+progress and establish supported observations and value semantics, not durable
+memoization. M3 adds the
 small persisted analysis path with exact references and current source acceptance.
 M4 adds general composition and keyed collections. M5 covers operational
 correctness; M6 delivers the CLI and inspection surface; M7 assembles the full

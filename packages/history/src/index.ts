@@ -30,6 +30,15 @@ export type {
   ISelectedReadRequest,
 } from './completed-results.js';
 export type {
+  IAddressSegment,
+  IOperation,
+  ISelectedFact,
+  IValueProjectionDescriptor,
+  IValueProjectionFact,
+  IValueProjectionMember,
+  IValueProjectionTraversal,
+} from '@microdelta/value';
+export type {
   Divergence,
   Fingerprint,
   GenerationState,

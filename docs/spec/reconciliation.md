@@ -31,7 +31,7 @@ mechanisms. It does not retrofit new runtime behavior into the existing scaffold
 | Twelve internal components as final package architecture | ARC-001–009 | Six contexts and strong supporting components, each with owned contracts |
 | Siblings use public-only or raw source declarations | PKG-003/4 | Explicit alpha-trimmed paths; own tests untrimmed, external default public |
 | Java package tree translates literally to workspace packages | PKG-001/006 | Coarse workspace boundary; internal modules remain internal |
-| CML private, TypeScript private, # privacy and release tier are one axis | PKG-002/006 | Independent facts; experimental native CML subset, no invented DSL |
+| CML private, TypeScript private, # privacy and release tier are one axis | PKG-002/006 | Independent facts; CML correspondence retired, shaped package/API checks remain authoritative |
 
 ## Preserved original product obligations
 
@@ -69,7 +69,7 @@ an optional adapter mechanism, never an automatic step-level retention decision.
 1. Keep existing Store/naming/tracking tests as dated baseline evidence. The name
    utility remains useful metadata code; its existence does not authorize name-keyed
    memoization. Single-row Store conformance is not publication qualification.
-2. Establish new package/type/import enforcement after EXP-5; migrate incrementally
+2. Establish new package/type/import enforcement under M0.5; migrate incrementally
    with tests before software. The old dependency graph check remains a **baseline
    fixture** until then, not proof of six-context conformance.
 3. Select canonical encoding and binding protocol before durable writes. Existing
@@ -93,5 +93,7 @@ remain reachable as evidence with explicit links to the new entry point.
 
 [Source map](artifacts/source-map.csv) supplies a compact machine-readable inventory.
 The machine-readable restart fixtures encode selected semantics without freezing
-an API or storage format. CML/Lean/TLA+ artifacts are planned by named experiments;
-we do not claim a model is valid without its actual toolchain checking it.
+an API or storage format. The bounded CML result and Lean proof are historical;
+TLA models are selected only for concrete correctness questions under the
+model-to-code-and-test review contract. Model claims remain limited to the checked
+model, assumptions and bounds.

@@ -391,6 +391,50 @@ describe('semantic tracking observer', () => {
     })).toThrow(failure);
   });
 
+  test('classifies unsupported materialized output as incompatible', () => {
+    const outputCapture = observer.capture(() => observer.snapshotOutput(observer.tracked({ result: 'Ada' }, binding)));
+
+    expect(observer.compareCurrent(outputCapture, {
+      resolve: () => ({ kind: 'available', fact: () => 'functions are not materialized data' }),
+    }).kind).toBe('incompatible');
+  });
+
+  test('classifies unsupported collection order as incompatible', () => {
+    const orderCapture = observer.capture(() => observer.materialization.recordCollectionOrder(binding, ['member-a', 'member-b']));
+    const unsupportedOrder = ['member-a', 'member-b'];
+    Object.defineProperty(unsupportedOrder, 'hidden', { value: 'outside selected order data' });
+
+    expect(observer.compareCurrent(orderCapture, {
+      resolve: () => ({ kind: 'available', fact: unsupportedOrder }),
+    }).kind).toBe('incompatible');
+  });
+
+  test('materialized output and collection order digest failures remain host errors', () => {
+    const failure = new TypeError('host digest failed');
+    let digestUnavailable = false;
+    const host: IMachine = {
+      ...machine,
+      sha256(input: string): string {
+        if (digestUnavailable) {
+          throw failure;
+        }
+        return machine.sha256(input);
+      },
+    };
+    const isolated = createTrackingObserver(host);
+    const tracked = isolated.tracked({ result: 'Ada' }, binding);
+    const outputCapture = isolated.capture(() => isolated.snapshotOutput(tracked));
+    const orderCapture = isolated.capture(() => isolated.materialization.recordCollectionOrder(binding, ['member-a', 'member-b']));
+    digestUnavailable = true;
+
+    expect(() => isolated.compareCurrent(outputCapture, {
+      resolve: () => ({ kind: 'available', fact: { result: 'Ada' } }),
+    })).toThrow(failure);
+    expect(() => isolated.compareCurrent(orderCapture, {
+      resolve: () => ({ kind: 'available', fact: ['member-a', 'member-b'] }),
+    })).toThrow(failure);
+  });
+
   test('selected fact digest failures remain host errors', () => {
     const failure = new TypeError('host digest failed');
     let digestUnavailable = false;

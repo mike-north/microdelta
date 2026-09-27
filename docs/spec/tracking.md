@@ -47,6 +47,8 @@ before the active computation and capturing it can lose tracking and merits a
 fixture. Builtin exemptions are an experiment detail. No semantic-changing autofix
 or claim of sound detection for arbitrary JavaScript. Deliberately memoized random
 or LLM output remains valid; this rule concerns influences expected to invalidate it.
+The supported syntax and checker limitations are documented in the
+[tracked-capture lint guide](../tooling/tracked-captures.md).
 
 ## Observation decision table
 

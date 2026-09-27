@@ -35,9 +35,14 @@ function configOwner(filename) {
 }
 
 /** Exact producer artifacts prevent aliases from selecting an unintended tier. */
-function expectedDeclaration(alias, owner) {
+function expectedDeclaration(alias, owner, filename) {
+  const publicConsumer = filename.endsWith(`${path.sep}consumer-alpha${path.sep}tsconfig.public.json`);
+  const fixtureTier = publicConsumer ? 'public' : 'alpha';
   if (alias === '@microdelta/fixture-producer') {
-    return path.join(root, 'fixtures/declarations/producer/dist/api/fixture.alpha.d.ts');
+    return path.join(root, `fixtures/declarations/producer/dist/api/fixture.${fixtureTier}.d.ts`);
+  }
+  if (alias === '@microdelta/capture-producer') {
+    return path.join(root, `fixtures/declarations/capture-producer/dist/api/capture.${fixtureTier}.d.ts`);
   }
   const subpath = '/conformance/store';
   const packageName = alias.endsWith(subpath) ? alias.slice(0, -subpath.length) : alias;
@@ -53,7 +58,7 @@ function expectedDeclaration(alias, owner) {
     return null;
   }
   const basename = role === 'facade' ? 'microdelta' : directory;
-  const tier = owner === role ? 'untrimmed' : 'alpha';
+  const tier = publicConsumer ? 'public' : owner === role ? 'untrimmed' : 'alpha';
   const suffix = alias === packageName ? '' : '.conformance.store';
   return path.join(root, `packages/${directory}/dist/api/${basename}${suffix}.${tier}.d.ts`);
 }
@@ -82,7 +87,9 @@ async function inspectConfig(filename) {
       } else if (!(await stat(absolute).then(item => item.isFile()).catch(() => false))) {
         problems.push(`Missing producer declaration: ${filename}: ${alias} -> ${absolute}`);
       } else {
-        const expected = expectedDeclaration(alias, owner);
+        const expected = expectedDeclaration(alias, owner, filename);
+        // A workspace package symlink may resolve to the exact owner-approved
+        // declaration; compare real targets without allowing a different tier.
         const approvedSymlink = expected !== null && await realpath(absolute).then(async actual =>
           actual === await realpath(expected).catch(() => ''),
         ).catch(() => false);
@@ -102,6 +109,10 @@ const required = [
   path.join(root, `packages/${directory}/dist/api/${basename}.${tier}.d.ts`)));
 required.push(...['untrimmed', 'alpha', 'beta', 'public'].map(tier =>
   path.join(root, `fixtures/declarations/producer/dist/api/fixture.${tier}.d.ts`)));
+required.push(...['untrimmed', 'alpha', 'beta', 'public'].map(tier =>
+  path.join(root, `fixtures/declarations/capture-producer/dist/api/capture.${tier}.d.ts`)));
+required.push(...['untrimmed', 'alpha', 'beta', 'public'].map(tier =>
+  path.join(root, `fixtures/declarations/forged/dist/api/forged.${tier}.d.ts`)));
 for (const [directory, basename] of [['core', 'microdelta'], ['history', 'history']]) {
   required.push(...['untrimmed', 'alpha', 'beta', 'public'].map(tier =>
     path.join(root, `packages/${directory}/dist/api/${basename}.conformance.store.${tier}.d.ts`)));

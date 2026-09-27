@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.json",
+  "include": ["public-tier-negative.ts"],
+  "compilerOptions": {
+    "paths": {
+      "@microdelta/fixture-producer": ["../producer/dist/api/fixture.public.d.ts"],
+      "@microdelta/capture-producer": ["../capture-producer/dist/api/capture.public.d.ts"],
+      "@microdelta/tracking": ["../../../packages/tracking/dist/api/tracking.public.d.ts"]
+    }
+  }
+}

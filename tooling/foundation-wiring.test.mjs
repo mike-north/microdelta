@@ -1,5 +1,6 @@
 /** PKG-008 fails if CI or an aggregate script omits a required boundary gate. */
 import assert from 'node:assert/strict';
+import { spawnSync } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
@@ -15,7 +16,7 @@ const readJson = async filename => JSON.parse(await readFile(path.join(root, fil
 async function extractors() {
   const names = ['core', 'definition', 'tracking', 'history', 'value', 'materialization'];
   const files = names.map(name => `packages/${name}/api-extractor.json`);
-  files.push('packages/core/api-extractor-conformance.json', 'packages/history/api-extractor-conformance.json', 'packages/history/api-extractor-shared.json', 'fixtures/declarations/producer/api-extractor.json');
+  files.push('packages/core/api-extractor-conformance.json', 'packages/history/api-extractor-conformance.json', 'packages/history/api-extractor-shared.json', 'fixtures/declarations/producer/api-extractor.json', 'fixtures/declarations/capture-producer/api-extractor.json', 'fixtures/declarations/forged/api-extractor.json');
   return Object.fromEntries(await Promise.all(files.map(async filename => [filename, await readJson(filename)])));
 }
 
@@ -25,7 +26,22 @@ test('clean CI reaches build, declaration, import, lint, and consumer gates', as
     name, await readJson(`packages/${name}/package.json`),
   ])));
   const workflow = await readFile(path.join(root, '.github/workflows/check.yml'), 'utf8');
-  assert.deepEqual(missingFoundationGates({ workspace, packages, workflow, extractors: await extractors() }), []);
+  const eslintConfig = await readFile(path.join(root, 'eslint.config.mjs'), 'utf8');
+  assert.deepEqual(missingFoundationGates({ workspace, packages, workflow, extractors: await extractors(), eslintConfig }), []);
+});
+
+test('the declaration checker accepts the generated alpha package path needed by external rollups', () => {
+  for (const filename of [
+    'fixtures/declarations/capture-producer/tsconfig.json',
+    'fixtures/declarations/consumer-alpha/tsconfig.public.json',
+  ]) {
+    const result = spawnSync(process.execPath, [
+      path.join(root, 'tooling/check-producer-declarations.mjs'),
+      '--config',
+      path.join(root, filename),
+    ], { cwd: root, encoding: 'utf8' });
+    assert.equal(result.status, 0, `${filename}: ${result.stderr || result.stdout}`);
+  }
 });
 
 test('Value package build, checks, declaration views, and package order are required', async () => {
@@ -38,6 +54,7 @@ test('Value package build, checks, declaration views, and package order are requ
     packages,
     workflow: await readFile(path.join(root, '.github/workflows/check.yml'), 'utf8'),
     extractors: configs,
+    eslintConfig: await readFile(path.join(root, 'eslint.config.mjs'), 'utf8'),
   });
   assert.deepEqual(result, []);
   const packageBuild = workspace.scripts['build:packages'];
@@ -61,8 +78,9 @@ test('skipping an import, declaration, or API report checker is detected', async
     name, await readJson(`packages/${name}/package.json`),
   ])));
   const workflow = await readFile(path.join(root, '.github/workflows/check.yml'), 'utf8');
+  const eslintConfig = await readFile(path.join(root, 'eslint.config.mjs'), 'utf8');
   const configs = await extractors();
-  const copied = () => ({ workspace: structuredClone(workspace), packages: structuredClone(packages), workflow, extractors: structuredClone(configs) });
+  const copied = () => ({ workspace: structuredClone(workspace), packages: structuredClone(packages), workflow, extractors: structuredClone(configs), eslintConfig });
   for (const command of ['check:imports', 'check:declarations', 'check:fixtures']) {
     const fixture = copied();
     fixture.workspace.scripts['check:workspace'] = fixture.workspace.scripts['check:workspace'].replace(`npm run ${command}`, 'true');
@@ -97,6 +115,29 @@ test('skipping an import, declaration, or API report checker is detected', async
   const noExperimentTest = copied();
   noExperimentTest.workspace.scripts.test = noExperimentTest.workspace.scripts.test.replace('npm run test:experiments', 'true');
   assert.match(missingFoundationGates(noExperimentTest).join('\n'), /test.*test:experiments/u);
+  const noCaptureExtractor = copied();
+  noCaptureExtractor.workspace.scripts['build:fixtures'] = noCaptureExtractor.workspace.scripts['build:fixtures']
+    .replace(' && api-extractor run --config fixtures/declarations/capture-producer/api-extractor.json', '');
+  assert.match(missingFoundationGates(noCaptureExtractor).join('\n'), /build:fixtures.*capture-producer/u);
+  const noForgedExtractor = copied();
+  noForgedExtractor.workspace.scripts['build:fixtures'] = noForgedExtractor.workspace.scripts['build:fixtures']
+    .replace(' && api-extractor run --config fixtures/declarations/forged/api-extractor.json', '');
+  assert.match(missingFoundationGates(noForgedExtractor).join('\n'), /build:fixtures.*forged/u);
+  const noCaptureLint = copied();
+  noCaptureLint.eslintConfig = noCaptureLint.eslintConfig.replace("'microdelta/tracked-captures': 'error',", "'microdelta/tracked-captures': 'off',");
+  assert.match(missingFoundationGates(noCaptureLint).join('\n'), /root typed ESLint config.*microdelta\/tracked-captures/u);
+  const noCaptureFixture = copied();
+  noCaptureFixture.workspace.scripts['check:fixtures'] = noCaptureFixture.workspace.scripts['check:fixtures']
+    .replace('tsc --noEmit -p fixtures/declarations/consumer-alpha/tsconfig.json && ', '');
+  assert.match(missingFoundationGates(noCaptureFixture).join('\n'), /check:fixtures.*consumer-alpha/u);
+  const noCaptureProducer = copied();
+  noCaptureProducer.workspace.scripts['check:fixtures'] = noCaptureProducer.workspace.scripts['check:fixtures']
+    .replace('tsc --noEmit -p fixtures/declarations/capture-producer/tsconfig.json && ', '');
+  assert.match(missingFoundationGates(noCaptureProducer).join('\n'), /check:fixtures.*capture-producer/u);
+  const noForgedFixture = copied();
+  noForgedFixture.workspace.scripts['check:fixtures'] = noForgedFixture.workspace.scripts['check:fixtures']
+    .replace('tsc --noEmit -p fixtures/declarations/forged/tsconfig.json && ', '');
+  assert.match(missingFoundationGates(noForgedFixture).join('\n'), /check:fixtures.*forged/u);
   const noExperimentImportGate = copied();
   noExperimentImportGate.workspace.scripts['check:imports'] = noExperimentImportGate.workspace.scripts['check:imports'].replace('packages experiments', 'packages');
   assert.match(missingFoundationGates(noExperimentImportGate).join('\n'), /check:imports.*experiments/u);

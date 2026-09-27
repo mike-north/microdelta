@@ -15,6 +15,8 @@ const config = observer.tracked({ count: 2, enabled: true }, binding);
 expectType<ITracked<{ count: number; enabled: boolean }>>(config);
 expectType<number>(config.count);
 expectType<boolean>(config.enabled);
+expectType<number>(observer.materialization.read(config, 'count'));
+expectError(observer.materialization.read(config, '__microdeltaTracked'));
 const author = observer.tracked({ author: { name: 'Ada' } }, binding).author;
 expectType<ITracked<{ name: string }>>(author);
 expectAssignable<ITrackedView<{ readonly name: string }>>(author);
@@ -27,6 +29,8 @@ expectType<ITracked<{ name: string }> | undefined>(optionalAuthor.author);
 const roster = observer.tracked([{ name: 'Ada' }], binding);
 expectType<ITracked<{ name: string }> | undefined>(roster[0]);
 expectType<number>(roster.length);
+expectType<ITracked<{ name: string }>>(observer.materialization.read(roster, 0));
+expectType<number>(observer.materialization.read(roster, 'length'));
 expectError(() => {
   roster[0] = { name: 'Grace' };
 });
@@ -39,6 +43,8 @@ const pair = observer.tracked([{ name: 'Ada' }, 'selected'] as const, binding);
 expectType<ITracked<{ readonly name: 'Ada' }>>(pair[0]);
 expectType<'selected'>(pair[1]);
 expectType<2>(pair.length);
+const nested = observer.tracked({ profile: { name: 'Ada' } }, binding);
+expectType<ITracked<{ name: string }>>(observer.materialization.read(nested, 'profile'));
 function readImportedDeclaration(input: ITracked<{ count: number; enabled: boolean }>): number {
   return input.count;
 }

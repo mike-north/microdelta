@@ -130,7 +130,7 @@ export interface ITrackingBinding {
 // @alpha
 export interface ITrackingMaterialization {
     owns(value: unknown): value is ITracked<object>;
-    read<T extends object, K extends keyof ITracked<T>>(value: ITracked<T>, key: K): ITracked<T>[K];
+    read<V extends ITracked<object>, K extends Exclude<keyof V, keyof ITrackedBrand>>(value: V, key: K): V[K];
 }
 
 // @alpha

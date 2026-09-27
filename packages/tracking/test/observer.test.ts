@@ -152,7 +152,7 @@ describe('semantic tracking observer', () => {
       members: [['user-a', 'Ada']],
     };
     const keys = new Proxy(['user-a', 'user-b'], {
-      get(target, property, receiver) {
+      get(target, property, receiver): unknown {
         contentReads += 1;
         return Reflect.get(target, property, receiver);
       },
@@ -169,7 +169,7 @@ describe('semantic tracking observer', () => {
           Promise.resolve().then(() => recordProjection(binding, projection)),
           Promise.resolve().then(() => recordCollectionOrder(binding, keys)),
         ];
-        return Promise.all(attempts.map(attempt => attempt.catch(error => error)));
+        return Promise.all(attempts.map(attempt => attempt.catch((error: unknown) => error)));
       })();
     });
 
@@ -269,6 +269,28 @@ describe('semantic tracking observer', () => {
     expect(captured.observations[0]?.encoded).toContain('Ada');
     expect(observer.compareCurrent(captured, { resolve: () => ({ kind: 'unavailable' }) }).kind).toBe('unavailable');
     expect(observer.compareCurrent(captured, { resolve: () => ({ kind: 'ambiguous' }) }).kind).toBe('ambiguous');
+  });
+
+  test('membership evidence ignores unrelated additions and changes when the selected member is removed', () => {
+    const source = createProvider();
+    const captured = observer.capture(() => 'a' in observer.tracked({ a: 1 }, binding));
+
+    source.set('analysis/author', { a: 1, b: 2 });
+    expect(observer.compareCurrent(captured, source.provider).kind).toBe('equal');
+
+    source.set('analysis/author', { b: 2 });
+    expect(observer.compareCurrent(captured, source.provider).kind).toBe('changed');
+  });
+
+  test('explicit identity reads ignore unread names but change when the identity changes', () => {
+    const source = createProvider();
+    const captured = observer.capture(() => observer.tracked({ id: 'author-1', name: 'Ada' }, binding).id);
+
+    source.set('analysis/author', { id: 'author-2', name: 'Ada' });
+    expect(observer.compareCurrent(captured, source.provider).kind).toBe('changed');
+
+    source.set('analysis/author', { id: 'author-1', name: 'Grace' });
+    expect(observer.compareCurrent(captured, source.provider).kind).toBe('equal');
   });
 
   test('matches selected addresses by segment meaning rather than object member order', () => {

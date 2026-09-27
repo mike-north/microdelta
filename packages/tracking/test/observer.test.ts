@@ -136,7 +136,9 @@ describe('semantic tracking observer', () => {
   });
 
   test('matches selected addresses by segment meaning rather than object member order', () => {
+    // eslint-disable-next-line microdelta/tracked-captures -- This fixture compares runtime addresses supplied by an external binding.
     const propertyCapture = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
+    // eslint-disable-next-line microdelta/tracked-captures -- This fixture compares runtime indices supplied by an external binding.
     const indexCapture = observer.capture(() => observer.tracked(['Ada'], binding)[0]);
     const compareFact = <T,>(capture: IObservationCapture<T>, fact: ISelectedFact) => observer.compareCurrent(capture, {
       resolve: () => ({ kind: 'available', fact }),

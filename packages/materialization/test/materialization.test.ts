@@ -393,6 +393,7 @@ describe('selected materialization', () => {
     };
     const capture = tracking.capture(() => {
       try {
+        // eslint-disable-next-line microdelta/tracked-captures -- This malformed fixture verifies runtime rejection of unsupported projection data.
         return materialization.project({ path: ['step', 'roster'] }, fact);
       } catch (error: unknown) {
         return error;

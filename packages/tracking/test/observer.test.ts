@@ -107,6 +107,7 @@ describe('semantic tracking observer', () => {
       observer.capture(() => recordCollectionOrder(binding, ['user-a', 'user-b'])),
     ];
 
+    expect(captures.map(capture => capture.observations.length)).toEqual([1, 1, 1]);
     expect(captures.map(capture => capture.observations[0]?.kind))
       .toEqual(['fact', 'projection', 'collection-order']);
     expect(captures[0]?.observations[0]).toMatchObject({

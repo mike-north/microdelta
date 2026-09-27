@@ -836,6 +836,11 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
     return { kind: 'equal' };
   }
 
+  /**
+   * These capabilities belong to this observer's capture and fact-recording
+   * state. Keep those references lexical so a capability remains valid when
+   * destructured or passed as a callback; its caller is not a receiver contract.
+   */
   const materialization: ITrackingMaterialization = Object.freeze({
     assertFrameOpen(): void {
       const frame = captures.getStore();

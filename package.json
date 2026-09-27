@@ -11,7 +11,8 @@
     "check": "npm run build && concurrently --success all --names packages,workspace \"npm run check:packages\" \"npm run check:workspace\"",
     "check:packages": "npm run check --workspaces",
     "check:workspace": "concurrently --success all --names imports,experiments,suppressions,declarations,fixtures,wiring \"npm run check:imports\" \"npm run check:experiments\" \"npm run check:suppressions\" \"npm run check:declarations\" \"npm run check:fixtures\" \"npm run check:wiring\"",
-    "test": "npm run build && npm run test:tooling && npm run test --workspaces",
+    "test": "npm run build && npm run test:tooling && npm run test:exp3 && npm run test --workspaces",
+    "test:exp3": "tsc -p experiments/exp-3/tsconfig.test.json && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config experiments/exp-3/jest.config.mjs --runInBand --runTestsByPath .test-build/experiments/exp-3/test/sqlite-capability.test.js && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config experiments/exp-3/jest.config.mjs --runInBand --runTestsByPath .test-build/experiments/exp-3/test/publication.test.js",
     "test:tooling": "node --test tooling/*.test.mjs",
     "check:experiments": "tsc --noEmit -p tsconfig.json && eslint experiments --no-error-on-unmatched-pattern",
     "check:suppressions": "node tooling/check-suppressions.mjs",
@@ -26,12 +27,17 @@
   "devDependencies": {
     "@jest/globals": "30.5.1",
     "@microsoft/api-extractor": "7.59.2",
+    "@types/better-sqlite3": "7.6.13",
     "@types/node": "20.19.43",
+    "better-sqlite3": "12.9.0",
     "concurrently": "9.2.4",
     "eslint": "10.10.0",
     "jest": "30.5.1",
     "tsd": "0.33.0",
     "typescript": "5.9.3",
     "typescript-eslint": "8.70.0"
+  },
+  "allowScripts": {
+    "better-sqlite3@12.9.0": true
   }
 }

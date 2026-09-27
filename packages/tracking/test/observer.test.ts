@@ -3,10 +3,9 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 
 import { describe, expect, test } from '@jest/globals';
 import type { IMachine } from '@microdelta/machine';
-import { observe } from '@microdelta/value';
+import { observe, type ISelectedFact, type IValueProjectionFact } from '@microdelta/value';
 import { createTrackingObserver } from '../src/index.js';
-import type { ICurrentFactRequest, ICurrentFactResolution, ITrackingBinding } from '../src/index.js';
-import type { IValueProjectionFact } from '@microdelta/value';
+import type { ICurrentFactRequest, ICurrentFactResolution, IObservationCapture, ITrackingBinding } from '../src/index.js';
 
 /** Supply only host facilities; this test adapter has no Tracking policy. */
 const machine: IMachine = {
@@ -136,6 +135,68 @@ describe('semantic tracking observer', () => {
     expect(observer.compareCurrent(captured, { resolve: () => ({ kind: 'ambiguous' }) }).kind).toBe('ambiguous');
   });
 
+  test('matches selected addresses by segment meaning rather than object member order', () => {
+    // eslint-disable-next-line microdelta/tracked-captures -- This fixture compares runtime addresses supplied by an external binding.
+    const propertyCapture = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
+    // eslint-disable-next-line microdelta/tracked-captures -- This fixture compares runtime indices supplied by an external binding.
+    const indexCapture = observer.capture(() => observer.tracked(['Ada'], binding)[0]);
+    const compareFact = <T,>(capture: IObservationCapture<T>, fact: ISelectedFact) => observer.compareCurrent(capture, {
+      resolve: () => ({ kind: 'available', fact }),
+    });
+
+    expect(compareFact(propertyCapture, {
+      operation: 'value', address: [{ key: 'name', kind: 'property' }], fact: 'Ada',
+    }).kind).toBe('equal');
+    expect(compareFact(indexCapture, {
+      operation: 'value', address: [{ index: 0, kind: 'index' }], fact: 'Ada',
+    }).kind).toBe('equal');
+
+    expect(compareFact(propertyCapture, {
+      operation: 'value', address: [{ key: 'other', kind: 'property' }], fact: 'Ada',
+    }).kind).toBe('incompatible');
+    expect(compareFact(propertyCapture, {
+      operation: 'value', address: [{ index: 0, kind: 'index' }], fact: 'Ada',
+    }).kind).toBe('incompatible');
+    expect(compareFact(indexCapture, {
+      operation: 'value', address: [{ index: 1, kind: 'index' }], fact: 'Ada',
+    }).kind).toBe('incompatible');
+    expect(compareFact(indexCapture, {
+      operation: 'value', address: [{ key: '0', kind: 'property' }], fact: 'Ada',
+    }).kind).toBe('incompatible');
+  });
+
+  test('classifies unsupported selected provider payloads as incompatible', () => {
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime fixture captures a value to test malformed current provider payloads.
+    const captured = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
+    const malformed = {
+      operation: 'value',
+      address: [{ kind: 'property', key: 'name' }],
+      fact: () => 'functions are not selected value data',
+    };
+
+    expect(observer.compareCurrent(captured, {
+      resolve: () => ({ kind: 'available', fact: malformed }),
+    }).kind).toBe('incompatible');
+  });
+
+  test('classifies malformed selected envelopes and addresses as incompatible', () => {
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime fixture captures a value to test malformed current provider metadata.
+    const captured = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
+    const sparseAddress = new Array<unknown>(1);
+    const malformed: unknown[] = [
+      { operation: 'not-an-operation', address: [{ kind: 'property', key: 'name' }], fact: 'Ada' },
+      { operation: 'value', address: sparseAddress, fact: 'Ada' },
+      { operation: 'value', address: [{ kind: 'index', index: -1 }], fact: 'Ada' },
+      { operation: 'value', address: [{ kind: 'property', key: 'name', extra: true }], fact: 'Ada' },
+    ];
+
+    for (const fact of malformed) {
+      expect(observer.compareCurrent(captured, {
+        resolve: () => ({ kind: 'available', fact }),
+      }).kind).toBe('incompatible');
+    }
+  });
+
   test('compares an exact compatible fingerprint request without asking for payload and rejects mismatched metadata descriptors', () => {
     // eslint-disable-next-line microdelta/tracked-captures -- This runtime case creates its tracked wrapper inside capture to exercise fingerprint-only comparison.
     const captured = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
@@ -198,6 +259,7 @@ describe('semantic tracking observer', () => {
       expect(observer.compareCurrent(captured, {
         resolve: () => ({ kind: 'available', fact }),
       }).kind).toBe('incompatible');
+
     }
     expect(getterCalls).toBe(0);
   });
@@ -286,6 +348,121 @@ describe('semantic tracking observer', () => {
     expect(observer.compareCurrent(capture, source.provider).kind).toBe('equal');
     source.set('analysis/author', (value: number) => value + 2);
     expect(observer.compareCurrent(capture, source.provider).kind).toBe('changed');
+  });
+
+  test('uninspectable current implementation replacements are unavailable without executing them', () => {
+    let replacementCalls = 0;
+    const original = observer.tracked(() => 'original', binding);
+    const capture = observer.capture(() => original());
+    const boundReplacement = function replacement(): string {
+      replacementCalls += 1;
+      return 'replacement';
+    }.bind(undefined);
+
+    for (const replacement of [Math.max, boundReplacement]) {
+      const comparison = observer.compareCurrent(capture, {
+        resolve: () => ({ kind: 'available', fact: replacement }),
+      });
+      expect(comparison.kind).toBe('unavailable');
+    }
+    expect(replacementCalls).toBe(0);
+  });
+
+  test('current implementation comparison preserves host digest failures', () => {
+    const failure = new TypeError('host digest failed');
+    let digestUnavailable = false;
+    const host: IMachine = {
+      ...machine,
+      sha256(input: string): string {
+        if (digestUnavailable) {
+          throw failure;
+        }
+        return machine.sha256(input);
+      },
+    };
+    const isolated = createTrackingObserver(host);
+    const tracked = isolated.tracked(() => 'original', binding);
+    const capture = isolated.capture(() => tracked());
+    const replacement = (): string => 'replacement';
+    digestUnavailable = true;
+
+    expect(() => isolated.compareCurrent(capture, {
+      resolve: () => ({ kind: 'available', fact: replacement }),
+    })).toThrow(failure);
+  });
+
+  test('classifies unsupported materialized output as incompatible', () => {
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime fixture captures materialized output to test unsupported current payload classification.
+    const outputCapture = observer.capture(() => observer.snapshotOutput(observer.tracked({ result: 'Ada' }, binding)));
+
+    expect(observer.compareCurrent(outputCapture, {
+      resolve: () => ({ kind: 'available', fact: () => 'functions are not materialized data' }),
+    }).kind).toBe('incompatible');
+  });
+
+  test('classifies unsupported collection order as incompatible', () => {
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime fixture captures collection order to test unsupported current order data.
+    const orderCapture = observer.capture(() => observer.materialization.recordCollectionOrder(binding, ['member-a', 'member-b']));
+    const unsupportedOrder = ['member-a', 'member-b'];
+    Object.defineProperty(unsupportedOrder, 'hidden', { value: 'outside selected order data' });
+
+    expect(observer.compareCurrent(orderCapture, {
+      resolve: () => ({ kind: 'available', fact: unsupportedOrder }),
+    }).kind).toBe('incompatible');
+  });
+
+  test('materialized output and collection order digest failures remain host errors', () => {
+    const failure = new TypeError('host digest failed');
+    let digestUnavailable = false;
+    const host: IMachine = {
+      ...machine,
+      sha256(input: string): string {
+        if (digestUnavailable) {
+          throw failure;
+        }
+        return machine.sha256(input);
+      },
+    };
+    const isolated = createTrackingObserver(host);
+    const tracked = isolated.tracked({ result: 'Ada' }, binding);
+    const outputCapture = isolated.capture(() => isolated.snapshotOutput(tracked));
+    // eslint-disable-next-line microdelta/tracked-captures -- This host-failure fixture must record collection-order evidence through the real capture path.
+    const orderCapture = isolated.capture(() => isolated.materialization.recordCollectionOrder(binding, ['member-a', 'member-b']));
+    digestUnavailable = true;
+
+    expect(() => isolated.compareCurrent(outputCapture, {
+      resolve: () => ({ kind: 'available', fact: { result: 'Ada' } }),
+    })).toThrow(failure);
+    expect(() => isolated.compareCurrent(orderCapture, {
+      resolve: () => ({ kind: 'available', fact: ['member-a', 'member-b'] }),
+    })).toThrow(failure);
+  });
+
+  test('selected fact digest failures remain host errors', () => {
+    const failure = new TypeError('host digest failed');
+    let digestUnavailable = false;
+    const host: IMachine = {
+      ...machine,
+      sha256(input: string): string {
+        if (digestUnavailable) {
+          throw failure;
+        }
+        return machine.sha256(input);
+      },
+    };
+    const isolated = createTrackingObserver(host);
+    const tracked = isolated.tracked({ name: 'Ada' }, binding);
+    const capture = isolated.capture(() => tracked.name);
+    const currentFact = {
+      operation: 'value',
+      address: [{ kind: 'property', key: 'name' }],
+      fact: 'Ada',
+    };
+    digestUnavailable = true;
+
+    expect(() => isolated.compareCurrent(capture, {
+      resolve: () => ({ kind: 'available', fact: currentFact }),
+    })).toThrow(failure);
   });
 
   test('function-source fingerprints preserve distinct unpaired UTF-16 surrogate code units', () => {

@@ -180,8 +180,17 @@ export interface ITrackingMaterialization {
   assertFrameOpen(): void;
   /** Identify wrappers by this observer's private ownership, not by the type brand. */
   owns(value: unknown): value is ITracked<object>;
-  /** Read one selected field through the ordinary observer operation. */
-  read<T extends object, K extends keyof ITracked<T>>(value: ITracked<T>, key: K): ITracked<T>[K];
+  /**
+   * Read a materializable member through the ordinary observer operation. The
+   * nominal brand is a compile-time marker, not a source property; open indexes
+   * retain possible absence while known members keep their exact value types.
+   */
+  read<V extends ITracked<object>, K extends keyof V>(
+    value: V,
+    key: K & (Extract<K, keyof ITrackedBrand> extends never ? unknown : never),
+  ): V[K]
+    | (K extends string ? string extends keyof V ? undefined : never : never)
+    | (K extends number ? number extends keyof V ? undefined : never : never);
   /** Retain a selected fact read from a completed-result source. */
   recordSelected(binding: ITrackingBinding, fact: ISelectedFact): void;
   /** Retain one aggregate selected keyed-member projection. */
@@ -226,15 +235,33 @@ type IOutcome<T> =
 /** Version emitted implementation source before its portable SHA-256 content digest. */
 const IMPLEMENTATION_VERSION = 'MDF1|';
 
-/** JSON string escaping preserves UTF-16 code units before the host's UTF-8 hash. */
-function encodeImplementation(target: object, machine: ISha256Capability): { readonly encoded: string; readonly digest: string } {
+/**
+ * Return source text only when the runtime exposes inspectable implementation
+ * evidence; callers decide whether an uninspectable callable is rejected or
+ * treated as unavailable current evidence.
+ */
+function inspectImplementationSource(target: object): string | undefined {
   const source = Function.prototype.toString.call(target);
   if (isNativeFunctionSource(source)) {
-    throw new TypeError('Tracked callables need inspectable implementation source');
+    return undefined;
   }
+  return source;
+}
+
+/** JSON string escaping preserves UTF-16 code units before the host's UTF-8 hash. */
+function encodeImplementationSource(source: string, machine: ISha256Capability): { readonly encoded: string; readonly digest: string } {
   const sourceDigest = fingerprint(JSON.stringify(source), machine);
   const encoded = `${IMPLEMENTATION_VERSION}${sourceDigest}`;
   return { encoded, digest: fingerprint(encoded, machine) };
+}
+
+/** Capture requires inspectable code; hash failures remain operational failures. */
+function encodeImplementation(target: object, machine: ISha256Capability): { readonly encoded: string; readonly digest: string } {
+  const source = inspectImplementationSource(target);
+  if (source === undefined) {
+    throw new TypeError('Tracked callables need inspectable implementation source');
+  }
+  return encodeImplementationSource(source, machine);
 }
 
 /** Freeze external correspondence at registration so later mutation cannot retarget evidence. */
@@ -379,6 +406,21 @@ function isProjectionFact(value: unknown): value is IValueProjectionFact {
   }
 }
 
+/**
+ * Ask Value to validate and encode provider data while keeping Machine failures
+ * outside this boundary. A Value TypeError means the current fact is incompatible.
+ */
+function encodeCurrentValue(encode: () => string): string | undefined {
+  try {
+    return encode();
+  } catch (error: unknown) {
+    if (error instanceof TypeError) {
+      return undefined;
+    }
+    throw error;
+  }
+}
+
 /** Compare copied provider selections structurally without relying on object identity. */
 function sameRequest(left: ICurrentFactRequest, right: ICurrentFactRequest): boolean {
   try {
@@ -388,9 +430,29 @@ function sameRequest(left: ICurrentFactRequest, right: ICurrentFactRequest): boo
   }
 }
 
-/** Check that a provider's selected fact answers the exact requested scalar question. */
+/**
+ * Compare the selected operation and each address segment by its semantic key
+ * or index; JavaScript record member insertion order is not part of a path.
+ */
 function matchesSelectedRequest(fact: ISelectedFact, request: Extract<ICurrentFactRequest, { kind: 'selected' }>): boolean {
-  return fact.operation === request.operation && JSON.stringify(fact.address) === JSON.stringify(request.address);
+  if (fact.operation !== request.operation || fact.address.length !== request.address.length) {
+    return false;
+  }
+  for (let index = 0; index < fact.address.length; index += 1) {
+    const actual = fact.address[index];
+    const expected = request.address[index];
+    if (actual === undefined || expected === undefined || actual.kind !== expected.kind) {
+      return false;
+    }
+    if (actual.kind === 'property') {
+      if (expected.kind !== 'property' || actual.key !== expected.key) {
+        return false;
+      }
+    } else if (expected.kind !== 'index' || actual.index !== expected.index) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /** Keep provider key sequences finite, unique, dense, and free of coercion. */
@@ -708,33 +770,59 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
         currentFingerprint = resolved.fingerprint;
       } else {
         switch (observation.selection.kind) {
-          case 'selected':
-            if (!isSelectedFact(resolved.fact) || !matchesSelectedRequest(resolved.fact, observation.selection)) {
+          case 'selected': {
+            const fact = resolved.fact;
+            if (!isSelectedFact(fact) || !matchesSelectedRequest(fact, observation.selection)) {
               return { kind: 'incompatible', observation };
             }
-            currentFingerprint = fingerprint(encodeSelectedFact(resolved.fact), machine);
+            const encoded = encodeCurrentValue(() => encodeSelectedFact(fact));
+            if (encoded === undefined) {
+              return { kind: 'incompatible', observation };
+            }
+            currentFingerprint = fingerprint(encoded, machine);
             break;
+          }
           case 'implementation':
             if (typeof resolved.fact !== 'function') {
               return { kind: 'unavailable', observation };
             }
-            currentFingerprint = encodeImplementation(resolved.fact, machine).digest;
+            const source = inspectImplementationSource(resolved.fact);
+            if (source === undefined) {
+              return { kind: 'unavailable', observation };
+            }
+            currentFingerprint = encodeImplementationSource(source, machine).digest;
             break;
-          case 'materialized-output':
-            currentFingerprint = fingerprint(encodeSnapshot(resolved.fact), machine);
-            break;
-          case 'projection':
-            if (!isProjectionFact(resolved.fact)) {
+          case 'materialized-output': {
+            const encoded = encodeCurrentValue(() => encodeSnapshot(resolved.fact));
+            if (encoded === undefined) {
               return { kind: 'incompatible', observation };
             }
-            currentFingerprint = fingerprint(encodeProjectionFact(resolved.fact), machine);
+            currentFingerprint = fingerprint(encoded, machine);
             break;
-          case 'collection-order':
+          }
+          case 'projection': {
+            const fact = resolved.fact;
+            if (!isProjectionFact(fact)) {
+              return { kind: 'incompatible', observation };
+            }
+            const encoded = encodeCurrentValue(() => encodeProjectionFact(fact));
+            if (encoded === undefined) {
+              return { kind: 'incompatible', observation };
+            }
+            currentFingerprint = fingerprint(encoded, machine);
+            break;
+          }
+          case 'collection-order': {
             if (!isUniqueStringSequence(resolved.fact)) {
               return { kind: 'incompatible', observation };
             }
-            currentFingerprint = fingerprint(encodeValue(resolved.fact), machine);
+            const encoded = encodeCurrentValue(() => encodeValue(resolved.fact));
+            if (encoded === undefined) {
+              return { kind: 'incompatible', observation };
+            }
+            currentFingerprint = fingerprint(encoded, machine);
             break;
+          }
           default: {
             const exhaustive: never = observation.selection;
             return exhaustive;
@@ -758,7 +846,12 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
     owns(value: unknown): value is ITracked<object> {
       return value !== null && (typeof value === 'object' || typeof value === 'function') && ownership.has(value);
     },
-    read<T extends object, K extends keyof ITracked<T>>(value: ITracked<T>, key: K): ITracked<T>[K] {
+    /**
+     * Route a selected member read through the wrapper proxy so evaluation records
+     * its fact; open indexes may be absent and the compile-time brand is not a
+     * materialized source member.
+     */
+    read<V extends ITracked<object>, K extends keyof V>(value: V, key: K): V[K] {
       if (!ownership.has(value)) {
         throw new TypeError('Materialization reads require an observer-owned tracked value');
       }
@@ -803,7 +896,7 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
       if (isClassConstructor(value)) {
         throw new TypeError('Class constructors are unsupported tracked inputs');
       }
-      if (typeof value === 'function' && isNativeFunctionSource(Function.prototype.toString.call(value))) {
+      if (typeof value === 'function' && inspectImplementationSource(value) === undefined) {
         throw new TypeError('Tracked callables need inspectable implementation source');
       }
       const copied = copyBinding(binding);

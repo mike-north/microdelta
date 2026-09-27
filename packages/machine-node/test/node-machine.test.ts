@@ -10,6 +10,18 @@ function deferred(): { promise: Promise<void>; release(): void } {
 }
 
 describe('Node Machine conformance', () => {
+  test('A-20: SHA-256 capability matches independent UTF-8 conformance vectors', () => {
+    const machine = createNodeMachine();
+
+    for (const [input, expected] of [
+      ['', 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855'],
+      ['abc', 'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad'],
+      ['π🙂', '4f775c9ffa6d6d36f1e9099830376f1f22b7ade9afa0f312801ff0b876948bad'],
+    ] as const) {
+      expect(machine.sha256(input)).toBe(expected);
+    }
+  });
+
   test('A-20: async context propagates through awaits and restores nested context', async () => {
     const machine = createNodeMachine();
     const context = machine.createAsyncContext<string>();

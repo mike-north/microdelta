@@ -1,0 +1,5 @@
+{
+  "name": "@microdelta/exp5-fixture-workspace",
+  "private": true,
+  "workspaces": ["packages/*"]
+}

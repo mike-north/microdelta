@@ -1,0 +1,9 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": [],
+    "skipLibCheck": false
+  },
+  "files": ["value.ts", "materialization.ts"]
+}

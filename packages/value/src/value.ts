@@ -78,7 +78,9 @@ export type IValueProjectionMember = readonly [key: string, value: unknown];
  * @alpha
  */
 export interface IValueProjectionFact {
+  /** Selection and coverage whose meaning governs every supplied member value. */
   readonly descriptor: IValueProjectionDescriptor;
+  /** Unique collection-scoped keys paired with their selected content; key order is not ordered consumption evidence. */
   readonly members: readonly IValueProjectionMember[];
 }
 

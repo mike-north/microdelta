@@ -62,9 +62,7 @@ export interface IValueProjectionDescriptor {
 
 // @alpha
 export interface IValueProjectionFact {
-    // (undocumented)
     readonly descriptor: IValueProjectionDescriptor;
-    // (undocumented)
     readonly members: readonly IValueProjectionMember[];
 }
 

@@ -358,13 +358,22 @@ export function recordFromEntries(entries: readonly (readonly [string, unknown])
   return record;
 }
 
-/** Resolve one supported own or inherited data lookup without invoking getters. */
-function lookup(record: object, key: string, depth = 0): { readonly present: boolean; readonly own: boolean; readonly value: unknown } {
-  assertRecordSurface(record, key);
+/**
+ * Resolve one own or inherited data lookup without invoking getters. The caller
+ * first validates this record's complete supported prototype chain with
+ * {@link assertRecordChain}; repeating surface validation here would rescan
+ * unrelated keys and could report a key as if it were a source location.
+ */
+function lookupValidated(
+  record: object,
+  key: string,
+  path: string,
+  depth = 0,
+): { readonly present: boolean; readonly own: boolean; readonly value: unknown } {
   if (depth > MAX_CUSTOM_PROTOTYPES) {
-    unsupported(key, 'prototype depth');
+    unsupported(path, 'prototype depth');
   }
-  const own = ownData(record, key, key);
+  const own = ownData(record, key, `${path}.${key}`);
   if (own.present) {
     return { present: true, own: true, value: own.value };
   }
@@ -374,14 +383,14 @@ function lookup(record: object, key: string, depth = 0): { readonly present: boo
   }
   if (prototype === Object.prototype) {
     if (Object.prototype.hasOwnProperty.call(Object.prototype, key)) {
-      unsupported(key, 'intrinsic inherited data');
+      unsupported(`${path}.${key}`, 'intrinsic inherited data');
     }
     return { present: false, own: false, value: undefined };
   }
   if (typeof prototype !== 'object') {
-    unsupported(key, 'prototype');
+    unsupported(`${path}[[Prototype]]`, 'prototype');
   }
-  const inherited = lookup(prototype, key, depth + 1);
+  const inherited = lookupValidated(prototype, key, `${path}[[Prototype]]`, depth + 1);
   return { present: inherited.present, own: false, value: inherited.value };
 }
 
@@ -436,7 +445,7 @@ export function observe(root: unknown, address: readonly IAddressSegment[], oper
     unsupported('$', 'property needs record');
   }
   assertRecordChain(parent, '$');
-  const selected = lookup(parent, last.key);
+  const selected = lookupValidated(parent, last.key, '$');
   const fact = operation === 'value' ? selected.value : operation === 'own' ? selected.own : selected.present;
   return { operation, address, fact };
 }

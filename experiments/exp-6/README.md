@@ -1,5 +1,12 @@
 # EXP-6: flat-record observation theorem pilot
 
+**Current policy (2026-09-27; supersedes the historical decision below):** Lean
+is dormant under [VAL-2](../../docs/spec/tracking.md). Do not rerun, expand, or
+install Lean as part of routine work. Resume it only when a concrete correctness
+need makes this proof approach materially useful. The bounded result and
+reproduction record below preserve historical evidence; they do not create an
+ongoing verification or maintenance obligation.
+
 This pilot addresses [EXP-6](../../docs/spec/experiments.md) and [issue #9](https://github.com/mike-north/microdelta/issues/9). Its proof target is deliberately smaller than EXP-2's supported domain. It does not decide runtime reuse, source freshness, or publication.
 
 ## Proof target, fixed before the implementation
@@ -62,4 +69,4 @@ Two temporary negative controls were run outside the repository: changing `norma
 
 The theorem proves only the structural implication for all records in its declared flat algebra. Its proof relies on Lean's standard permutation and list facts and on the kernel assumptions printed above; it does not prove that the comparator is a complete implementation of EXP-2's canonical byte format, that SHA-256 equality is mathematical equality, or that a TypeScript runtime follows the Lean model. The finite comparison samples agreement for its generated cases, not all JS values. The numeric atom token is opaque in Lean; its translation into a supported JavaScript number is a separately checked bridge assumption. Duplicate keys, accessors, unsupported values, and lone-surrogate text values fail before entering the model. EXP-2's broader tests and contract remain authoritative for those excluded cases.
 
-**Decision: retain the bounded pilot as optional review evidence; do not require Lean in unrelated CI.** The theorem exposed a crisp boundary between unordered equality and order-sensitive keys, and the differential suite challenges its connection to EXP-2. Maintaining this artifact requires rerunning it when the flat-record meaning, normalizer, or Lean version changes, and reviewing the bridge whenever supported scalar translation changes. A small scoped change appears to require roughly half a day of proof/fixture review; Lean-version upgrade effort remains unmeasured. The 2.7 GB local toolchain and the unproven broader value domain outweigh the case for making the checker a mandatory gate at this stage. The supervisor records this bounded selection in the [owning Tracking contract](../../docs/spec/tracking.md); broader proof or production adoption remains a separate decision.
+**Historical decision (2026-09-26; superseded): retain the bounded pilot as optional review evidence; do not require Lean in unrelated CI.** The theorem exposed a crisp boundary between unordered equality and order-sensitive keys, and the differential suite challenges its connection to EXP-2. That original recommendation proposed rerunning the proof when its modeled meaning or Lean version changed, and reviewing the bridge when supported scalar translation changed; the 2026-09-27 dormant policy above supersedes that maintenance proposal. Its rough estimate of half a day for a small scoped change and unmeasured Lean-version upgrade effort are historical estimates, not current obligations. The 2.7 GB local toolchain and the unproven broader value domain informed the earlier decision against mandatory CI. The owning [Tracking contract](../../docs/spec/tracking.md) now records the current dormant policy; broader proof or production adoption remains a separate decision.

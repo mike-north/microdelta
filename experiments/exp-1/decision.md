@@ -1,11 +1,12 @@
-# EXP-1 bounded mechanism decision — proposed for supervisory review
+# EXP-1 bounded mechanism decision
 
 **Result: pass within the stated fixture domain; generic closure soundness is
 rejected.** This experiment tests structural current correspondence after a
 complete process exit. It does not implement or prove the M3 runtime, History
 publication, source freshness, nested paid-parent validation, or EXP-2's value
-encoding. The recommendation below is a mechanism proposal, not automatic
-normative adoption.
+encoding. The supervisor selects the bounded mechanism in CMP-6, TRK-2, REUSE-006,
+and REUSE-008; adoption takes effect with the reviewed PR. The limitations below
+remain part of that decision.
 
 ## Candidate and bounded domain
 
@@ -124,7 +125,7 @@ can hash selected implementation bytes; canonical durable encoding and
 artifact normalization remain unproven here. A digest remains evidence,
 never a locator.
 
-## Proposed owning-contract amendment, pending review
+## Owning-contract selection
 
 For CMP-6 and REUSE-006, permit a current registry of explicit structural
 input/callable/step slots, with member identity where applicable, to
@@ -141,5 +142,5 @@ integer compatibility group filters history before current implementation
 and input validation. A rollback hit preserves the old exact result and
 does not itself change the current publication pointer.
 
-The proposal does not select a public API spelling, EXP-2 encoding,
+This selection does not select a public API spelling, EXP-2 encoding,
 arbitrary closure analysis, or publication schema.

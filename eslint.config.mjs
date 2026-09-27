@@ -52,10 +52,4 @@ export default [
       'prefer-const': 'error',
     },
   },
-  {
-    // EXP-5 fixture packages model contexts outside the six production owners;
-    // their own compiler/API checks and PKG-007 baseline verify the scoped edge.
-    files: ['experiments/exp-5/fixture/packages/**/*.ts'],
-    rules: { 'microdelta/context-imports': 'off' },
-  },
 ];

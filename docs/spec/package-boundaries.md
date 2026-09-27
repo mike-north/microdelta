@@ -4,8 +4,9 @@
 ownership in [architecture](architecture.md); exact package names and output
 filenames are engineering choices. This specifies required enforcement, not a
 claim that API Extractor or its checks are already configured. The initial
-enforcement gate is M0.5, before runtime experiments; the CML correspondence
-experiment is separate.
+enforcement gate is M0.5, before runtime experiments. Deliberately shaped package
+surfaces, encapsulation, generated declarations, API Extractor reports, compiler
+checks, and import checks are the selected architecture/API enforcement system.
 
 ## PKG-001 — Coarse packages, explicit contracts
 
@@ -79,58 +80,25 @@ Review API reports as contract changes. Source import analysis remains necessary
 an export model does not describe all implementation dependencies. Neither export
 restrictions nor declaration trimming is a security sandbox for JavaScript code.
 
-## PKG-006 — Separate CML/API correspondence experiment
+## PKG-006 — Shaped package surfaces are the architecture/API contract
 
-Use established CML syntax unchanged. The selected mapping is **CML package
-visibility to `@internal`**, with the visibility boundary corresponding to the
-coarse workspace package in PKG-001, not an individual implementation folder.
-Do not invent mappings from CML private/protected members to alpha/beta release
-tiers. The experiment must identify which existing CML concepts have meaningful
-TypeScript/API counterparts before enforcing them.
+The project does not adopt CML or another parallel architecture model. The
+selected mechanism is the combination of deliberately shaped package entrypoints,
+encapsulation, generated declaration tiers, API Extractor report comparison,
+compiler checks, and fail-closed import-boundary checks defined by PKG-001 through
+PKG-005 and PKG-008. These mechanisms each cover a bounded fact: API reports
+protect exported signatures and release tags, compiler checks protect source
+contracts, and import checks protect implementation dependency edges. None alone
+proves runtime observation, freshness, or publication behavior; those obligations
+remain with the owning behavioral contracts and tests.
 
-Compare architecture intent and explicit context/package/API-element mappings
-with API Extractor's `.api.json` model, read through
-`@microsoft/api-extractor-model`. Filter the extracted surface consistently with
-the relevant declaration tier. Check represented ownership, exposed signatures
-and cross-context types without requiring every TypeScript helper to correspond
-one-to-one to a CML concept or inferring API names from display labels.
-
-Combine this with TypeScript compiler information for source/class visibility
-and implementation import checks. CML relationships are not automatically exact
-import adjacency. Structural conformance cannot establish correct freshness,
-publication or observation semantics; those require the behavioral contracts and
-tests in their owning contexts.
-
-**EXP-5 decision — bounded optional correspondence.** Retain the
-[native CML fixture and checker](../../experiments/exp-5/README.md) as an optional
-architecture correspondence tool. The tested subset maps two explicit bounded
-contexts to workspace package entrypoints, entities/services to exported classes,
-and selected operations to named methods with ordered parameters and simple
-return types. CML package visibility corresponds to `@internal`; native
-TypeScript accessibility and release tiers remain separate facts.
-The extracted Entity/Service distinction is retained as provenance but is not
-checked against TypeScript class roles.
-
-The official CML parser supplies model facts, API Extractor's maintained model
-supplies exported API facts, and the TypeScript compiler supplies the internal
-method and native-privacy facts absent from the API model. The correspondence
-manifest chooses represented elements and artifact locations; it must not invent
-their observed identity or signature. Missing mapped declarations, a mismatched
-actual API package identity, and a same-named reference from the wrong API owner
-must fail. The fixture exercises these boundaries with source-derived artifacts
-and mutation controls; [its evidence record](../../experiments/exp-5/evidence.md)
-distinguishes initial compiler failures from later behavioral sensitivity checks.
-
-This selection does not cover arbitrary TypeScript structures or establish
-semantic equivalence between classes and domain objects. Entity attributes,
-standalone functions, interfaces, type aliases, protected/private/`#` members,
-and beta/alpha tiers remain explicitly outside the CML comparison. Existing
-compiler, declaration-consumer, and import checks still govern those package
-boundaries. Generic types, overloads, and additional CML constructs require their
-own faithful mapping and negative assertions before they become represented facts.
-The Java/Gradle setup and model-maintenance cost do not justify an unconditional
-production CI prerequisite. Neither the optional model nor its absence changes
-PKG-001 through PKG-005 or the runtime contracts.
+**Superseding decision (2026-09-27):** EXP-5's bounded CML correspondence result
+is historical evidence only. Its fixture, parser bridge, and checker are removed
+from active source and package/build/check/test paths. The bounded findings and
+provenance are summarized in the [archive record](../archive/experiments/exp-5.md);
+the original run remains recoverable from PR #21 at commit
+`b4e7b67b54990ef8b50e0603c7e83ba001613c9b`. This retirement does not weaken or
+replace the API Extractor, declaration-consumer, compiler, or import checks.
 
 ## PKG-007 — Test-first enforcement gate
 
@@ -146,8 +114,7 @@ Before configuring enforcement, write positive and negative fixtures showing:
 5. Deep/relative imports, re-export chains and test-only source aliases cannot
    bypass the chosen surface. Missing producer declarations fail explicitly.
 6. Deliberate changes to API ownership, signatures, release tags or allowed edges
-   are detected by the appropriate model/compiler/import checks. Unsupported CML
-   comparisons are reported as unsupported, not passed as semantic conformance.
+   are detected by the appropriate API report/compiler/import checks.
 
 Run fixtures against generated artifacts and real consumer configurations, not
 only mocked path mappings. An intentional negative fixture must fail for its
@@ -175,9 +142,9 @@ but they do not establish this full gate. In particular, API Extractor rollups,
 all release-tier consumer fixtures, and type-aware lint checks are target work,
 not current evidence. Baseline source-import checks must remain fail-closed while
 packages change: unknown package/context paths and attempts to reach sibling
-source must produce a diagnostic, not fall through to permission. CML may later
-check selected architecture correspondence, but its adoption, parser, and model
-mapping are not prerequisites for PKG-008 or basic API Extractor enforcement.
+source must produce a diagnostic, not fall through to permission. API report and
+compiler/import gates are the selected architecture contract; no parallel model
+parser or correspondence checker is a prerequisite or active gate.
 
 **Validation:** run all foundation commands from a clean checkout in CI and
 record their exact results. Deliberately break a release tag, omit a producer's

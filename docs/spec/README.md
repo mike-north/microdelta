@@ -29,7 +29,7 @@ Read this entry point, then only the contracts relevant to the task:
 | [Ubiquitous language](glossary.md) | Shared terms, distinctions, relationships, and ownership | Learning or changing domain vocabulary |
 | [Domain](domain.md) | Purpose, vocabulary, scope, governing distinctions | Always on first entry |
 | [Architecture](architecture.md) | Six contexts, ownership, dependency directions, Machine host boundary, supporting modules | Crossing or changing boundaries |
-| [Package boundaries](package-boundaries.md) | Declaration tiers, visibility, compiler/API enforcement and separate CML mapping | Package/API/tooling work |
+| [Package boundaries](package-boundaries.md) | Declaration tiers, visibility, compiler/API enforcement as the architecture/API contract | Package/API/tooling work |
 | [Tracking](tracking.md) | Unified tracking, value/path/identity/collection observation rules | Changing dependencies or values |
 | [Composition](composition.md) | Fixed step graph, dynamic result instances, higher-order binding | Graphs, nesting, fanout |
 | [Execution](execution.md) | Current validation, exact references, retention, publication | Reuse, persistence, recovery |
@@ -69,11 +69,14 @@ remains outside the proven scope. See [acceptance](acceptance.md).
 
 **SPEC-5 — Stop at the actual gate.** Consolidation precedes the M0.5 tooling,
 package, and Machine foundation; that foundation precedes runtime experiments;
-experiments precede their dependent mechanisms. CML correspondence is separate
-from baseline API Extractor enforcement. Raise a product question only for a demonstrated
-conflict with a settled contract or a consequential author-visible choice. Routine
-encoding and tooling choices belong in experiments. No paid calls, publication,
-or runtime implementation are part of this specification update.
+experiments precede their dependent mechanisms. Shaped package/API surfaces and
+their compiler, API Extractor, and import checks are the selected architecture
+contract; CML correspondence is retired (PKG-006). Use TLA selectively under the
+bounded model-to-code-and-test review in PUB-004; Lean remains dormant unless a
+concrete correctness need justifies resuming it (VAL-2). Raise a product question
+only for a demonstrated conflict with a settled contract or a consequential
+author-visible choice. Routine encoding and tooling choices belong in experiments.
+No paid calls, publication, or runtime implementation are part of this specification update.
 
 ## Artifact conventions
 
@@ -81,9 +84,10 @@ Stable IDs are searchable literal strings. Links are relative and readable in a
 plain checkout. Mermaid/ASCII figures explain the adjacent normative tables; they
 do not independently redefine them. The JSON [reuse fixtures](artifacts/reuse-cases.json)
 are language-neutral scenario data with expected outcomes, not a persistence or
-public API schema. CML and formal proof artifacts are supplied by the relevant experiments using
-their real parsers/checkers. Their selected subsets and optional status are
-recorded in the owning contracts; placeholder syntax is not authority.
+public API schema. Formal models are supporting evidence only when selected for a
+concrete correctness question; owning contracts record their scope and limits.
+Retired CML and dormant Lean artifacts are historical evidence, not active
+tooling requirements or alternate authorities.
 
 The [validation record](validation.md) documents M0 checks and their limits.
 

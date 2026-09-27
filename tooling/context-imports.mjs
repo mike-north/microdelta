@@ -46,6 +46,18 @@ function isNodeBuiltin(specifier) {
 /** Identify implemented packages and fixture-only roles with one owner policy. */
 function location(filename) {
   const segments = filename.split(path.sep);
+  const experimentIndex = segments.lastIndexOf('experiments');
+  if (experimentIndex >= 0
+    && /^exp-[a-z0-9-]+$/u.test(segments[experimentIndex + 1] ?? '')
+    && segments[experimentIndex + 2] === 'src') {
+    return {
+      role: 'portable-experiment',
+      root: segments.slice(0, experimentIndex + 2).join(path.sep),
+      label: segments[experimentIndex + 1],
+      isTestFile: false,
+      nodeRuntimeException: false,
+    };
+  }
   const packageIndex = segments.lastIndexOf('packages');
   if (packageIndex >= 0 && segments[packageIndex + 1]) {
     const directory = segments[packageIndex + 1];
@@ -125,6 +137,14 @@ export const contextImports = {
         return;
       }
       if (specifier === 'microdelta' || specifier.startsWith('microdelta/') || specifier.startsWith('@microdelta/')) {
+        // A portable experiment is not a seventh context. It may consume
+        // declared package entries without granting deep or unknown imports.
+        if (owner.role === 'portable-experiment') {
+          if (!roleByPackage[specifier]) {
+            reportNodeAccess(node, `an undeclared package surface ${specifier}`);
+          }
+          return;
+        }
         const targetRole = roleByPackage[specifier];
         if (targetRole && (targetRole === owner.role || roles[owner.role].uses.includes(targetRole))) {
           return;

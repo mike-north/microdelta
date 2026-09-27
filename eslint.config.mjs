@@ -8,7 +8,7 @@ const assertionKinds = ['TSAsExpression', 'TSTypeAssertion'];
 
 /** Active TypeScript uses a real program; archived drafts and build output do not. */
 export default [
-  { ignores: ['**/dist/**', '**/.test-build/**', '**/node_modules/**', 'docs/archive/**'] },
+  { ignores: ['**/dist/**', '**/.test-build/**', '**/node_modules/**', 'docs/archive/**', 'experiments/**/test-d/**'] },
   {
     files: ['packages/**/*.ts', 'experiments/**/*.ts', 'fixtures/declarations/producer/**/*.ts'],
     languageOptions: {

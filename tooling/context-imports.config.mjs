@@ -6,7 +6,7 @@ import { contextImports } from './context-imports.mjs';
 export default [
   { ignores: ['**/dist/**', '**/.test-build/**', '**/node_modules/**'] },
   {
-    files: ['packages/**/*.ts', 'fixtures/context-roles/**/*.ts'],
+    files: ['packages/**/*.ts', 'fixtures/context-roles/**/*.ts', 'experiments/exp-*/src/**/*.ts'],
     languageOptions: { parser: tseslint.parser },
     linterOptions: { noInlineConfig: true },
     plugins: { microdelta: { rules: { 'context-imports': contextImports } } },

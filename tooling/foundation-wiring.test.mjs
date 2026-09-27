@@ -64,6 +64,15 @@ test('skipping an import, declaration, or API report checker is detected', async
   const noTypes = copied();
   noTypes.packages.tracking.scripts.check = 'npm run check:lint';
   assert.match(missingFoundationGates(noTypes).join('\n'), /tracking.*check:types/u);
+  const noExperimentBuild = copied();
+  noExperimentBuild.workspace.scripts.build = noExperimentBuild.workspace.scripts.build.replace('npm run build:experiments', 'true');
+  assert.match(missingFoundationGates(noExperimentBuild).join('\n'), /build.*build:experiments/u);
+  const noExperimentTest = copied();
+  noExperimentTest.workspace.scripts.test = noExperimentTest.workspace.scripts.test.replace('npm run test:experiments', 'true');
+  assert.match(missingFoundationGates(noExperimentTest).join('\n'), /test.*test:experiments/u);
+  const noExperimentImportGate = copied();
+  noExperimentImportGate.workspace.scripts['check:imports'] = noExperimentImportGate.workspace.scripts['check:imports'].replace('packages experiments', 'packages');
+  assert.match(missingFoundationGates(noExperimentImportGate).join('\n'), /check:imports.*experiments/u);
   const noTest = copied();
   noTest.workflow = noTest.workflow.replace('- run: npm test', '- run: true');
   assert.match(missingFoundationGates(noTest).join('\n'), /CI.*npm test/u);

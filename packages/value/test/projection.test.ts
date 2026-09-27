@@ -1,9 +1,41 @@
 import { describe, expect, test } from '@jest/globals';
 
-import { encodeProjectionFact, encodeValue, normalizeProjectionFact } from '../src/index.js';
+import { encodeProjectionFact, encodeValue, normalizeProjectionDescriptor, normalizeProjectionFact } from '../src/index.js';
 import type { IValueProjectionFact } from '../src/index.js';
 
 describe('keyed projection content', () => {
+  test('normalizes null-prototype descriptor records while preserving selected and visited order', () => {
+    const traversal = { complete: false as const, keys: ['second', 'first'], kind: 'visited' as const };
+    Object.setPrototypeOf(traversal, null);
+    const firstAddressSegment = { key: 'profile', kind: 'property' as const };
+    Object.setPrototypeOf(firstAddressSegment, null);
+    const secondAddressSegment = { index: 2, kind: 'index' as const };
+    Object.setPrototypeOf(secondAddressSegment, null);
+    const descriptor = {
+      traversal,
+      operation: 'value' as const,
+      address: [firstAddressSegment, secondAddressSegment],
+    };
+    Object.setPrototypeOf(descriptor, null);
+
+    const normalized = normalizeProjectionDescriptor(descriptor);
+
+    expect(normalized).toEqual({
+      address: [{ kind: 'property', key: 'profile' }, { kind: 'index', index: 2 }],
+      operation: 'value',
+      traversal: { kind: 'visited', complete: false, keys: ['second', 'first'] },
+    });
+    expect(normalized).not.toBe(descriptor);
+    expect(Object.getPrototypeOf(normalized)).toBe(Object.prototype);
+    expect(Object.isFrozen(normalized)).toBe(true);
+    expect(Object.isFrozen(normalized.address)).toBe(true);
+    expect(Object.isFrozen(normalized.address[0])).toBe(true);
+    expect(Object.isFrozen(normalized.traversal)).toBe(true);
+    if (normalized.traversal.kind === 'visited') {
+      expect(Object.isFrozen(normalized.traversal.keys)).toBe(true);
+    }
+  });
+
   test('canonicalizes unique keyed values independently of input order for exhaustive unordered traversal', () => {
     const first: IValueProjectionFact = {
       descriptor: {

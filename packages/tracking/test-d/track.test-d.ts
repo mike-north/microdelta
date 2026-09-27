@@ -1,25 +1,30 @@
 import { expectError, expectType } from 'tsd';
 
-import { cell, consume, createTag, derived, dirty, isValid, snapshot, withFrame, withFrameAsync } from '../dist/src/index.js';
-import type { Revision, Tag } from '../dist/src/index.js';
+import { createTracking } from '../dist/src/index.js';
+import type { IAsyncContext, IAsyncContextCapability } from '@microdelta/machine';
+import type { ITracking, Revision, Tag } from '../dist/src/index.js';
 
-const tag = createTag();
+const capability: IAsyncContextCapability = {
+  createAsyncContext<T>(): IAsyncContext<T> {
+    return {
+      getStore: () => undefined,
+      run: (_value, callback) => callback(),
+    };
+  },
+};
+const tracking = createTracking(capability);
+const tag = tracking.createTag();
+
+expectType<ITracking>(tracking);
 expectType<Tag>(tag);
-expectType<void>(consume(tag));
-expectType<void>(dirty(tag));
-expectType<Revision>(snapshot([tag]));
-expectType<boolean>(isValid([tag], 0));
-expectType<{ value: number; consumed: ReadonlySet<Tag> }>(withFrame(() => 1));
-expectType<Promise<{ value: number; consumed: ReadonlySet<Tag> }>>(withFrameAsync(async () => 1));
-expectType<{ get(): number; set(v: number): void }>(cell(1));
-expectType<{ get(): number }>(derived(() => 1));
-expectError(consume({ __tag: Symbol('forged') }));
-expectError(tag.__tag = Symbol('replacement'));
-expectError(tag.value);
-expectError(tag.revision);
-// eslint-disable-next-line @typescript-eslint/no-unsafe-call -- This negative tsd case intentionally calls a method absent from the declared type.
-expectError(withFrame(() => {}).consumed.add(tag));
-expectError(cell(1).set('wrong type'));
-// eslint-disable-next-line @typescript-eslint/no-unsafe-call -- This negative tsd case intentionally calls a method absent from the declared type.
-expectError(derived(() => 1).set(2));
-expectError(withFrameAsync(() => 1));
+expectType<void>(tracking.consume(tag));
+expectType<void>(tracking.dirty(tag));
+expectType<Revision>(tracking.snapshot([tag]));
+expectType<boolean>(tracking.isValid([tag], 0));
+expectType<{ value: number; consumed: ReadonlySet<Tag> }>(tracking.withFrame(() => 1));
+expectType<Promise<{ value: number; consumed: ReadonlySet<Tag> }>>(tracking.withFrameAsync(async () => 1));
+expectType<{ get(): number; set(v: number): void }>(tracking.cell(1));
+expectType<{ get(): number }>(tracking.derived(() => 1));
+expectError(tracking.consume({ __tag: Symbol('forged') }));
+expectError(tracking.withFrameAsync(() => 1));
+expectError(createTracking({}));

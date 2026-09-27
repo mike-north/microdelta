@@ -4,7 +4,6 @@
 
 ```ts
 
-import { createMemoryStore } from '@microdelta/history';
 import { Divergence } from '@microdelta/history';
 import { DuplicateRowError } from '@microdelta/history';
 import { FieldRow } from '@microdelta/history';
@@ -27,7 +26,8 @@ import { Subject } from '@microdelta/history';
 import { SubjectPatch } from '@microdelta/history';
 import { SubjectRow } from '@microdelta/history';
 
-export { createMemoryStore }
+// @public
+export function createMemoryStore(options?: MemoryStoreOptions): Store;
 
 export { Divergence }
 
@@ -70,5 +70,7 @@ export { Subject }
 export { SubjectPatch }
 
 export { SubjectRow }
+
+// (No @packageDocumentation comment for this package)
 
 ```

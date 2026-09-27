@@ -4,52 +4,43 @@
 
 ```ts
 
+// Warning: (ae-forgotten-export) The symbol "IAsyncContextCapability" needs to be exported by the entry point index.d.ts
+//
 // @alpha
-export function cell<T>(initial: T): {
-    get(): T;
-    set(v: T): void;
-};
+export function createTracking(capability: IAsyncContextCapability): ITracking;
 
 // @alpha
-export function consume(tag: Tag): void;
-
-// @alpha
-export function createTag(): Tag;
-
-// @alpha
-export function derived<T>(fn: () => T): {
-    get(): T;
-};
-
-// @alpha
-export function dirty(tag: Tag): void;
-
-// @alpha
-export function isValid(tags: Iterable<Tag>, at: Revision): boolean;
+export interface ITracking {
+    cell<T>(initial: T): {
+        get(): T;
+        set(v: T): void;
+    };
+    consume(tag: Tag): void;
+    createTag(): Tag;
+    derived<T>(fn: () => T): {
+        get(): T;
+    };
+    dirty(tag: Tag): void;
+    isValid(tags: Iterable<Tag>, at: Revision): boolean;
+    snapshot(tags: Iterable<Tag>): Revision;
+    withFrame<T>(fn: () => T): {
+        value: T;
+        consumed: ReadonlySet<Tag>;
+    };
+    withFrameAsync<T>(fn: () => Promise<T>): Promise<{
+        value: T;
+        consumed: ReadonlySet<Tag>;
+    }>;
+}
 
 // @alpha
 export type Revision = number;
-
-// @alpha
-export function snapshot(tags: Iterable<Tag>): Revision;
 
 // @alpha
 export interface Tag {
     // (undocumented)
     readonly __tag: unique symbol;
 }
-
-// @alpha
-export function withFrame<T>(fn: () => T): {
-    value: T;
-    consumed: ReadonlySet<Tag>;
-};
-
-// @alpha
-export function withFrameAsync<T>(fn: () => Promise<T>): Promise<{
-    value: T;
-    consumed: ReadonlySet<Tag>;
-}>;
 
 // (No @packageDocumentation comment for this package)
 

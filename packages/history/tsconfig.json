@@ -6,6 +6,9 @@
     "test/**/*.ts"
   ],
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    "paths": {
+      "@microdelta/machine": ["../machine/dist/api/machine.alpha.d.ts"]
+    }
   }
 }

@@ -91,9 +91,14 @@ design area is covered. Historical docs are not part of the normal reading path.
 The `microdelta` facade explicitly reexports the existing public History Store
 contract. `@microdelta/definition`, `@microdelta/tracking`, and
 `@microdelta/history` own the current diagnostic naming, process-local tracking,
-and legacy row Store code respectively. The [implementation map](../package-map.md)
-records accepted but absent roles without adding placeholder APIs. API Extractor
-rollups/reports and checked import edges are present; the complete M0.5 gate is
-still open. Current direct `AsyncLocalStorage` and `node:v8` runtime imports have
-not yet been isolated behind Machine. [Historical validation](../validation.md)
-is dated evidence, not a fresh run or satisfaction of the remaining requirements.
+and legacy row Store code respectively. The portable `@microdelta/machine`
+contracts cover async context propagation and detached snapshots; the
+`@microdelta/machine-node` adapter owns the Node bindings. Tracking and History
+receive their capabilities through injection, and the facade supplies the Node
+adapter while preserving `createMemoryStore(options?)`. The [implementation
+map](../package-map.md) records implemented and absent roles without placeholder
+APIs. API Extractor rollups/reports and checked import edges are present, and the
+Machine boundary is implemented. The complete M0.5 gate remains open pending the
+remaining foundation requirements, including repository protection. [Historical
+validation](../validation.md) is dated evidence, not a fresh run or satisfaction
+of those remaining requirements.

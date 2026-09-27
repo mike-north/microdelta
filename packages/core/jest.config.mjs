@@ -1,7 +1,2 @@
-/** Tests execute compiled ESM without a second transform pipeline. */
-export default {
-  testEnvironment: 'node',
-  roots: ['<rootDir>/.test-build/test'],
-  testMatch: ['**/*.test.js'],
-  transform: {},
-};
+/** Assembly tests run emitted ESM against generated package exports. */
+export default { testEnvironment: 'node', roots: ['<rootDir>/.test-build/test'], testMatch: ['**/*.test.js'], transform: {} };

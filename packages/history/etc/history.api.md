@@ -4,8 +4,10 @@
 
 ```ts
 
+// Warning: (ae-forgotten-export) The symbol "ISnapshotCapability" needs to be exported by the entry point index.d.ts
+//
 // @public
-export function createMemoryStore(options?: MemoryStoreOptions): Store;
+export function createMemoryStore(capability: ISnapshotCapability, options?: MemoryStoreOptions): Store;
 
 // @public
 export type Divergence = {

@@ -1,6 +1,12 @@
 {
   "extends": "./tsconfig.base.json",
-  "compilerOptions": { "noEmit": true },
+  "compilerOptions": {
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "@microdelta/machine-node": ["packages/machine-node/dist/api/machine-node.alpha.d.ts"]
+    }
+  },
   "files": ["packages/core/src/index.ts"],
   "include": ["experiments/**/*.ts"]
 }

@@ -31,6 +31,9 @@ async function compile(source, options = {}) {
   try {
     await writeFile(path.join(directory, 'package.json'), '{\"private\":true,\"type\":\"module\"}\n');
     await writeFile(path.join(directory, 'consumer.ts'), source);
+    for (const file of options.extraFiles ?? []) {
+      await writeFile(path.join(directory, file.name), file.contents);
+    }
     if (options.external) {
       const packageDir = path.join(directory, 'node_modules/@microdelta/fixture-producer');
       await mkdir(packageDir, { recursive: true });
@@ -52,7 +55,7 @@ async function compile(source, options = {}) {
     }
     const compilerOptions = {
       target: 'ES2022', module: 'NodeNext', moduleResolution: 'NodeNext',
-      strict: true, noEmit: true, skipLibCheck: false,
+      strict: true, noEmit: true, skipLibCheck: false, types: options.types ?? [],
     };
     if (options.paths || options.pathMap) {
       compilerOptions.baseUrl = directory;
@@ -171,14 +174,16 @@ test('legitimate runtime package imports resolve built JS without TS path rewrit
   const history = await import('@microdelta/history');
   const definition = await import('@microdelta/definition');
   const tracking = await import('@microdelta/tracking');
+  const machineNode = await import('@microdelta/machine-node');
   assert.equal(typeof definition.nameOf, 'function');
-  assert.equal(typeof tracking.createTag, 'function');
+  assert.equal(typeof tracking.createTracking, 'function');
+  assert.equal(typeof machineNode.createNodeMachine, 'function');
   for (const name of ['microdelta/conformance/store', '@microdelta/history/conformance/store']) {
     const entry = import.meta.resolve(name);
     assert.ok((await readFile(new URL(entry))).byteLength > 0, `${name} built entry`);
   }
   assert.equal(typeof facade.createMemoryStore, 'function');
-  assert.equal(facade.createMemoryStore, history.createMemoryStore);
+  assert.equal(typeof history.createMemoryStore, 'function');
 });
 
 /** Every production trimmed view must stand alone under full library checking. */
@@ -208,7 +213,7 @@ test('each actual package declaration view typechecks without hidden references'
 test('each History release tier composes root and conformance callbacks', async () => {
   for (const tier of tiers) {
     const api = path.join(root, 'packages/history/dist/api');
-    const result = await compile("import { createMemoryStore } from '@microdelta/history';\nimport { storeConformance } from '@microdelta/history/conformance/store';\nstoreConformance('tier', { fingerprintAlgorithm: 'sha256', create: () => createMemoryStore() });\n", {
+    const result = await compile("import { createMemoryStore } from '@microdelta/history';\nimport { storeConformance } from '@microdelta/history/conformance/store';\nconst snapshot = { snapshot<T>(value: T): T { return value; } };\nstoreConformance('tier', { fingerprintAlgorithm: 'sha256', create: () => createMemoryStore(snapshot) });\n", {
       pathMap: {
         '@microdelta/history': [path.join(api, `history.${tier}.d.ts`)],
         '@microdelta/history/conformance/store': [path.join(api, `history.conformance.store.${tier}.d.ts`)],
@@ -306,7 +311,41 @@ test('facade compiler maps both History imports to generated alpha declarations'
   assert.deepEqual(config.compilerOptions.paths, {
     '@microdelta/history': ['../history/dist/api/history.alpha.d.ts'],
     '@microdelta/history/conformance/store': ['../history/dist/api/history.conformance.store.alpha.d.ts'],
+    '@microdelta/machine-node': ['../machine-node/dist/api/machine-node.alpha.d.ts'],
+    '@microdelta/tracking': ['../tracking/dist/api/tracking.alpha.d.ts'],
   });
+});
+
+/** Public context declarations must remain usable without ambient Node types. */
+test('generated Machine, Tracking, and History declarations compile as portable consumers', async () => {
+  const source = [
+    "import { createTracking } from '@microdelta/tracking';",
+    "import { createMemoryStore } from '@microdelta/history';",
+    "import { createNodeMachine } from '@microdelta/machine-node';",
+    "import type { IAsyncContextCapability } from '@microdelta/machine';",
+    'const host = createNodeMachine();',
+    'const context: IAsyncContextCapability = host;',
+    'createTracking(context);',
+    'createMemoryStore(host);',
+  ].join('\n');
+  const api = path.join(root, 'packages');
+  const result = await compile(source, { types: [], pathMap: {
+    '@microdelta/machine': [path.join(api, 'machine/dist/api/machine.alpha.d.ts')],
+    '@microdelta/machine-node': [path.join(api, 'machine-node/dist/api/machine-node.alpha.d.ts')],
+    '@microdelta/tracking': [path.join(api, 'tracking/dist/api/tracking.alpha.d.ts')],
+    '@microdelta/history': [path.join(api, 'history/dist/api/history.alpha.d.ts')],
+  } });
+  assert.equal(result.status, 0, `Portable package consumer failed: ${result.stdout}${result.stderr}`);
+});
+
+/** A generated declaration cannot pull an implicit Node ambient type into a consumer. */
+test('types-empty consumers reject a deliberate Node declaration leak', async () => {
+  const result = await compile("import type { ILeaked } from './node-leak.js';\nexport const value: ILeaked | undefined = undefined;\n", {
+    types: [],
+    extraFiles: [{ name: 'node-leak.d.ts', contents: 'export interface ILeaked { readonly timer: NodeJS.Timeout; }\n' }],
+  });
+  assert.notEqual(result.status, 0, 'Node ambient declaration leak unexpectedly compiled');
+  assert.match(result.stdout + result.stderr, /NodeJS|TS2503/u);
 });
 
 /** A generated declaration is still forbidden when its tier or edge is wrong. */

@@ -1,0 +1,27 @@
+{
+  "name": "@microdelta/machine",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Portable host capability contracts",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "main": "./dist/src/index.js",
+  "types": "./dist/api/machine.public.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/api/machine.public.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json",
+    "check": "concurrently --success all --names types,lint \"npm run check:types\" \"npm run check:lint\"",
+    "check:types": "tsc --noEmit -p tsconfig.json",
+    "check:lint": "eslint .",
+    "test": "npm run test:types",
+    "test:types": "tsd"
+  },
+  "tsd": { "directory": "test-d" }
+}

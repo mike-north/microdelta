@@ -1,12 +1,13 @@
 /**
  * Process-local tags and capture frames implement current observation utilities.
- * They do not define durable observation encoding or run-level validity.
+ * Each tracker receives its host context capability; Tracking owns frame policy,
+ * while the adapter owns only async propagation. Durable encoding and run-level
+ * validity remain outside this module.
  * @packageDocumentation
  */
-import { AsyncLocalStorage } from 'node:async_hooks';
-
 import { computed, signal, untracked } from '@preact/signals-core';
 import type { Signal } from '@preact/signals-core';
+import type { IAsyncContextCapability } from '@microdelta/machine';
 
 /**
  * Opaque identity for one process-local reactive dependency.
@@ -31,7 +32,41 @@ interface IFrame {
 /** Capture failures as values so cached failures retain their read dependencies. */
 type IOutcome<T> = { readonly kind: 'value'; readonly value: T } | { readonly kind: 'error'; readonly error: unknown };
 
-const frames = new AsyncLocalStorage<IFrame>();
+/**
+ * One process-local Tracking instance and its isolated capture/revision state.
+ * Tags from another instance are rejected even though both instances share the
+ * same portable TypeScript brand.
+ * @alpha
+ */
+export interface ITracking {
+  /** Create a tag belonging only to this tracker. */
+  createTag(): Tag;
+  /** Read a tag and add it to this tracker's open capture frame, if any. */
+  consume(tag: Tag): void;
+  /** Advance this tracker's revision clock for one tag. */
+  dirty(tag: Tag): void;
+  /** Read the greatest revision represented by the supplied tags. */
+  snapshot(tags: Iterable<Tag>): Revision;
+  /** Check whether supplied tags remain at or before a revision. */
+  isValid(tags: Iterable<Tag>, at: Revision): boolean;
+  /** Capture dependencies from a synchronous callback. */
+  withFrame<T>(fn: () => T): { value: T; consumed: ReadonlySet<Tag> };
+  /** Capture dependencies across asynchronous work and awaits. */
+  withFrameAsync<T>(fn: () => Promise<T>): Promise<{ value: T; consumed: ReadonlySet<Tag> }>;
+  /** Create a mutable value cell whose reads consume one local tag. */
+  cell<T>(initial: T): { get(): T; set(v: T): void };
+  /** Create a lazy synchronous derivation over this tracker's cells. */
+  derived<T>(fn: () => T): { get(): T };
+}
+
+/**
+ * Bind Tracking's frame policy to host-provided async propagation. Every call
+ * creates independent tags, revisions, and frames; no host capability is held
+ * in mutable module-global configuration.
+ * @alpha
+ */
+export function createTracking(capability: IAsyncContextCapability): ITracking {
+const frames = capability.createAsyncContext<IFrame>();
 const revisions = new WeakMap<Tag, Signal<Revision>>();
 let currentRevision: Revision = 0;
 
@@ -43,7 +78,7 @@ const tagBrand: Tag['__tag'] = Symbol('microdelta.track') as Tag['__tag'];
 function revisionOf(tag: Tag): Signal<Revision> {
   const revision = revisions.get(tag);
   if (revision === undefined) {
-    throw new TypeError('Expected a process-local tag created by this track module');
+    throw new TypeError('Expected a process-local tag created by this tracker');
   }
   return revision;
 }
@@ -54,7 +89,7 @@ function revisionOf(tag: Tag): Signal<Revision> {
  * the JSON hook rejects accidental serialization instead of silently losing state.
  * @alpha
  */
-export function createTag(): Tag {
+function createTag(): Tag {
   const tag = Object.freeze<Tag & { toJSON(): never }>({
     __tag: tagBrand,
     toJSON(): never {
@@ -70,7 +105,7 @@ export function createTag(): Tag {
  * Reads outside a frame are allowed; completed frames do not acquire late reads.
  * @alpha
  */
-export function consume(tag: Tag): void {
+function consume(tag: Tag): void {
   void revisionOf(tag).value;
   const frame = frames.getStore();
   if (frame?.open === true) {
@@ -84,7 +119,7 @@ export function consume(tag: Tag): void {
  * snapshot, including snapshots containing frequently changed sibling tags.
  * @alpha
  */
-export function dirty(tag: Tag): void {
+function dirty(tag: Tag): void {
   const revision = revisionOf(tag);
   currentRevision++;
   revision.value = currentRevision;
@@ -95,7 +130,7 @@ export function dirty(tag: Tag): void {
  * Peeking never consumes dependencies; iteration supports single-pass iterables.
  * @alpha
  */
-export function snapshot(tags: Iterable<Tag>): Revision {
+function snapshot(tags: Iterable<Tag>): Revision {
   let maximum: Revision = 0;
   for (const tag of tags) {
     maximum = Math.max(maximum, revisionOf(tag).peek());
@@ -108,7 +143,7 @@ export function snapshot(tags: Iterable<Tag>): Revision {
  * Validation does not consume tags or cause derivations to subscribe to them.
  * @alpha
  */
-export function isValid(tags: Iterable<Tag>, at: Revision): boolean {
+function isValid(tags: Iterable<Tag>, at: Revision): boolean {
   return snapshot(tags) <= at;
 }
 
@@ -120,7 +155,7 @@ export function isValid(tags: Iterable<Tag>, at: Revision): boolean {
  * Use {@link withFrameAsync} for callbacks whose reads continue after await.
  * @alpha
  */
-export function withFrame<T>(fn: () => T): { value: T; consumed: ReadonlySet<Tag> } {
+function withFrame<T>(fn: () => T): { value: T; consumed: ReadonlySet<Tag> } {
   const frame: IFrame = { consumed: new Set(), open: true };
   return frames.run(frame, (): { value: T; consumed: ReadonlySet<Tag> } => {
     try {
@@ -140,12 +175,12 @@ export function withFrame<T>(fn: () => T): { value: T; consumed: ReadonlySet<Tag
  * detached work cannot subsequently change it or entangle with a parent frame.
  * @alpha
  */
-export async function withFrameAsync<T>(fn: () => Promise<T>): Promise<{ value: T; consumed: ReadonlySet<Tag> }> {
+async function withFrameAsync<T>(fn: () => Promise<T>): Promise<{ value: T; consumed: ReadonlySet<Tag> }> {
   const frame: IFrame = { consumed: new Set(), open: true };
   return frames.run(frame, async (): Promise<{ value: T; consumed: ReadonlySet<Tag> }> => {
     try {
       // Only the callback's synchronous launch could inherit a surrounding
-      // computed context; ALS independently carries collection across its awaits.
+      // computed context; Machine independently carries frame data across awaits.
       const value = await untracked(fn);
       return { value, consumed: new Set(frame.consumed) };
     } finally {
@@ -159,7 +194,7 @@ export async function withFrameAsync<T>(fn: () => Promise<T>): Promise<{ value: 
  * Every explicit set advances the tag, including equal-value sets (TK-3).
  * @alpha
  */
-export function cell<T>(initial: T): { get(): T; set(v: T): void } {
+function cell<T>(initial: T): { get(): T; set(v: T): void } {
   let value = initial;
   const tag = createTag();
   return {
@@ -181,7 +216,7 @@ export function cell<T>(initial: T): { get(): T; set(v: T): void } {
  * preserving composition through cached values, nested derivations, and catches.
  * @alpha
  */
-export function derived<T>(fn: () => T): { get(): T } {
+function derived<T>(fn: () => T): { get(): T } {
   const cached = computed(() => {
     const result = withFrame((): IOutcome<T> => {
       try {
@@ -210,4 +245,7 @@ export function derived<T>(fn: () => T): { get(): T } {
       return result.value.value;
     },
   };
+}
+
+return Object.freeze({ createTag, consume, dirty, snapshot, isValid, withFrame, withFrameAsync, cell, derived });
 }

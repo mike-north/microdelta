@@ -253,26 +253,62 @@ function copyAddress(address: readonly IAddressSegment[]): readonly IAddressSegm
     : { kind: 'index' as const, index: segment.index })));
 }
 
-/** Validate provider-selected data before treating it as a Value-owned fact. */
-function isSelectedFact(value: unknown): value is ISelectedFact {
-  if (value === null || typeof value !== 'object' || !('operation' in value) || !('address' in value) || !('fact' in value)) {
-    return false;
+interface IOwnDataProperty {
+  /** The descriptor value is copied without evaluating a caller-defined accessor. */
+  readonly value: unknown;
+}
+
+/** Read only an own data property from provider-owned structural evidence. */
+function ownDataProperty(target: object, key: string): IOwnDataProperty | undefined {
+  const descriptor = Object.getOwnPropertyDescriptor(target, key);
+  return descriptor !== undefined && 'value' in descriptor ? { value: descriptor.value } : undefined;
+}
+
+/**
+ * Copy the selected-fact envelope and address from provider data without
+ * executing accessors or accepting sparse address segments. Value still owns
+ * validation of the selected fact's supported content.
+ */
+function copySelectedFact(value: unknown): ISelectedFact | undefined {
+  if (value === null || typeof value !== 'object') {
+    return undefined;
   }
-  const operation = value.operation;
-  if (operation !== 'value' && operation !== 'own' && operation !== 'membership' && operation !== 'length' && operation !== 'keys') {
-    return false;
+  const operation = ownDataProperty(value, 'operation')?.value;
+  const addressValue = ownDataProperty(value, 'address')?.value;
+  const fact = ownDataProperty(value, 'fact');
+  if ((operation !== 'value' && operation !== 'own' && operation !== 'membership' && operation !== 'length' && operation !== 'keys') ||
+      !Array.isArray(addressValue) || fact === undefined) {
+    return undefined;
   }
-  if (!Array.isArray(value.address)) {
-    return false;
+  const length = ownDataProperty(addressValue, 'length')?.value;
+  if (typeof length !== 'number' || !Number.isSafeInteger(length) || length < 0) {
+    return undefined;
   }
-  return value.address.every((segment: unknown) => {
-    if (segment === null || typeof segment !== 'object' || !('kind' in segment)) {
-      return false;
+  const address: IAddressSegment[] = [];
+  for (let index = 0; index < length; index += 1) {
+    const entry = ownDataProperty(addressValue, String(index));
+    const segment = entry?.value;
+    if (segment === null || typeof segment !== 'object') {
+      return undefined;
     }
-    return segment.kind === 'property'
-      ? 'key' in segment && typeof segment.key === 'string'
-      : segment.kind === 'index' && 'index' in segment && typeof segment.index === 'number' && Number.isSafeInteger(segment.index);
-  });
+    const kind = ownDataProperty(segment, 'kind')?.value;
+    if (kind === 'property') {
+      const key = ownDataProperty(segment, 'key')?.value;
+      if (typeof key !== 'string') {
+        return undefined;
+      }
+      address.push({ kind, key });
+    } else if (kind === 'index') {
+      const value = ownDataProperty(segment, 'index')?.value;
+      if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
+        return undefined;
+      }
+      address.push({ kind, index: value });
+    } else {
+      return undefined;
+    }
+  }
+  return { operation, address, fact: fact.value };
 }
 
 /** Classes are not ordinary callable steps or supported plain-data records. */
@@ -524,10 +560,19 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
         encoded = implementation.encoded;
         currentFingerprint = implementation.digest;
       } else {
-        if (!isSelectedFact(resolved.fact)) {
+        const selected = copySelectedFact(resolved.fact);
+        if (selected === undefined) {
           return { kind: 'unavailable', observation };
         }
-        encoded = encodeSelectedFact(resolved.fact);
+        // Value TypeErrors here mean the supplied fact is outside its supported domain; Machine hashing stays outside this boundary.
+        try {
+          encoded = encodeSelectedFact(selected);
+        } catch (error: unknown) {
+          if (error instanceof TypeError) {
+            return { kind: 'unavailable', observation };
+          }
+          throw error;
+        }
         currentFingerprint = fingerprint(encoded, machine);
       }
       if (currentFingerprint !== observation.fingerprint) {

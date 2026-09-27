@@ -130,6 +130,88 @@ describe('semantic tracking observer', () => {
     expect(observer.compareCurrent(captured, { resolve: () => ({ kind: 'ambiguous' }) }).kind).toBe('ambiguous');
   });
 
+  test('current fact validation rejects accessors without invoking envelope or address getters', () => {
+    const tracked = observer.tracked({ name: 'Ada' }, binding);
+    const capture = observer.capture(() => tracked.name);
+    let getterCalls = 0;
+    const getter = () => { getterCalls += 1; return 'value'; };
+    const cases: unknown[] = [
+      Object.defineProperty({ address: [], fact: 'Ada' }, 'operation', { get: getter }),
+      Object.defineProperty({ operation: 'value', fact: 'Ada' }, 'address', { get: getter }),
+      Object.defineProperty({ operation: 'value', address: [] }, 'fact', { get: getter }),
+      {
+        operation: 'value',
+        address: [Object.defineProperty({ key: 'name' }, 'kind', { get: getter })],
+        fact: 'Ada',
+      },
+      {
+        operation: 'value',
+        address: [Object.defineProperty({ kind: 'property' }, 'key', { get: getter })],
+        fact: 'Ada',
+      },
+      {
+        operation: 'value',
+        address: [Object.defineProperty({ kind: 'index' }, 'index', { get: getter })],
+        fact: 'Ada',
+      },
+    ];
+
+    for (const fact of cases) {
+      expect(observer.compareCurrent(capture, {
+        resolve: () => ({ kind: 'available', fact }),
+      }).kind).toBe('unavailable');
+    }
+    expect(getterCalls).toBe(0);
+  });
+
+  test('malformed and unsupported current facts are unavailable instead of throwing', () => {
+    const tracked = observer.tracked({ name: 'Ada' }, binding);
+    const capture = observer.capture(() => tracked.name);
+    const sparseAddress = new Array<unknown>(1);
+    const unsupportedRecord = Object.defineProperty({}, 'secret', {
+      enumerable: true,
+      get() { throw new Error('unsupported data getter was invoked'); },
+    });
+    const cases: unknown[] = [
+      { operation: 'value', address: [{ kind: 'index', index: -1 }], fact: 'Ada' },
+      { operation: 'own', address: [], fact: 'not-a-boolean' },
+      { operation: 'value', address: sparseAddress, fact: 'Ada' },
+      { operation: 'value', address: [], fact: unsupportedRecord },
+      { operation: 'value', address: [], fact: () => 'unsupported data function' },
+    ];
+
+    for (const fact of cases) {
+      expect(observer.compareCurrent(capture, {
+        resolve: () => ({ kind: 'available', fact }),
+      }).kind).toBe('unavailable');
+    }
+  });
+
+  test('current fact comparison preserves Machine SHA failures', () => {
+    const failure = new TypeError('host digest failed');
+    let digestUnavailable = false;
+    const host: IMachine = {
+      ...machine,
+      sha256(input: string): string {
+        if (digestUnavailable) {
+          throw failure;
+        }
+        return machine.sha256(input);
+      },
+    };
+    const isolated = createTrackingObserver(host);
+    const tracked = isolated.tracked({ name: 'Ada' }, binding);
+    const capture = isolated.capture(() => tracked.name);
+    digestUnavailable = true;
+
+    expect(() => isolated.compareCurrent(capture, {
+      resolve: () => ({
+        kind: 'available',
+        fact: { operation: 'value', address: [{ kind: 'property', key: 'name' }], fact: 'Ada' },
+      }),
+    })).toThrow(failure);
+  });
+
   test('rebinding an intermediate object keeps equal consumed values and compares later changes at the new path', () => {
     const source = createProvider();
     const captured = observer.capture(() => observer.tracked({ author: { id: 'a', name: 'Ada' } }, binding).author.name);

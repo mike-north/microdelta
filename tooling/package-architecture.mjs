@@ -13,7 +13,7 @@ export const roles = Object.freeze({
   supervision: { directory: null, packageName: '@microdelta/supervision', kind: 'context', uses: ['definition', 'resolution', 'accounting'] },
   accounting: { directory: null, packageName: '@microdelta/accounting', kind: 'context', uses: [] },
   value: { directory: 'value', packageName: '@microdelta/value', kind: 'support', uses: ['machine'] },
-  materialization: { directory: null, packageName: '@microdelta/materialization', kind: 'support', uses: ['history', 'tracking', 'value'] },
+  materialization: { directory: 'materialization', packageName: '@microdelta/materialization', kind: 'support', uses: ['history', 'tracking', 'value'] },
   machine: { directory: 'machine', packageName: '@microdelta/machine', kind: 'host-contract', uses: [] },
   'machine-node': { directory: 'machine-node', packageName: '@microdelta/machine-node', kind: 'host-implementation', uses: ['machine'] },
 });

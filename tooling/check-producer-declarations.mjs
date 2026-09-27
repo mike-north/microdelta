@@ -88,11 +88,12 @@ async function inspectConfig(filename) {
         problems.push(`Missing producer declaration: ${filename}: ${alias} -> ${absolute}`);
       } else {
         const expected = expectedDeclaration(alias, owner, filename);
-        // Workspace package symlinks may select the same exact rollup that a
-        // sibling paths entry names directly; their real target must still be
-        // the owner-approved generated declaration, never a package source file.
-        const targetPath = await realpath(absolute).catch(() => absolute);
-        if (!expected || (absolute !== expected && targetPath !== expected)) {
+        // A workspace package symlink may resolve to the exact owner-approved
+        // declaration; compare real targets without allowing a different tier.
+        const approvedSymlink = expected !== null && await realpath(absolute).then(async actual =>
+          actual === await realpath(expected).catch(() => ''),
+        ).catch(() => false);
+        if (!expected || (absolute !== expected && !approvedSymlink)) {
           problems.push(`Unapproved declared package alias or tier: ${filename}: ${alias} -> ${absolute}`);
         }
       }

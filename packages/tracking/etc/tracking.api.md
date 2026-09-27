@@ -44,24 +44,65 @@ export type ICurrentComparison = {
     readonly kind: 'unavailable';
     readonly observation: ITrackingObservation;
 } | {
+    readonly kind: 'incompatible';
+    readonly observation: ITrackingObservation;
+} | {
     readonly kind: 'ambiguous';
     readonly observation: ITrackingObservation;
 };
 
 // @alpha
 export interface ICurrentFactProvider {
-    resolve(binding: ITrackingBinding, address: readonly IAddressSegment[], operation: IOperation | 'implementation'): ICurrentFactResolution;
+    resolve(binding: ITrackingBinding, request: ICurrentFactRequest): ICurrentFactResolution;
 }
+
+// @alpha
+export type ICurrentFactRequest = {
+    readonly kind: 'selected';
+    readonly operation: IOperation;
+    readonly address: readonly IAddressSegment[];
+    readonly encodingVersion: 'MDO1';
+} | {
+    readonly kind: 'implementation';
+    readonly address: readonly IAddressSegment[];
+    readonly encodingVersion: 'MDF1';
+} | {
+    readonly kind: 'materialized-output';
+    readonly address: readonly IAddressSegment[];
+    readonly encodingVersion: 'MDS1';
+} | {
+    readonly kind: 'projection';
+    readonly descriptor: IValueProjectionDescriptor;
+    readonly encodingVersion: 'MDP1';
+} | {
+    readonly kind: 'collection-order';
+    readonly keys: readonly string[];
+    readonly encodingVersion: 'MDV1';
+};
 
 // @alpha
 export type ICurrentFactResolution = {
     readonly kind: 'available';
     readonly fact: unknown;
 } | {
+    readonly kind: 'compatible-fingerprint';
+    readonly selection: ICurrentFactRequest;
+    readonly encodingVersion: ICurrentFactRequest['encodingVersion'];
+    readonly fingerprint: string;
+} | {
     readonly kind: 'unavailable';
+} | {
+    readonly kind: 'incompatible';
 } | {
     readonly kind: 'ambiguous';
 };
+
+// @alpha
+export type IDetachedOutput<T> = T extends (...arguments_: never[]) => unknown ? never : T extends readonly unknown[] ? number extends T['length'] ? readonly IDetachedOutput<T[number]>[] : T extends readonly [...infer Elements] ? {
+    readonly [K in keyof Elements]: IDetachedOutput<Elements[K]>;
+} : never : T extends object ? {
+    readonly [K in keyof T as K extends keyof ITrackedBrand ? never : K]: IDetachedOutput<T[K]>;
+} : T;
 
 // @alpha
 export interface IObservationCapture<T> {
@@ -71,6 +112,13 @@ export interface IObservationCapture<T> {
 
 // @alpha
 export type IOperation = 'value' | 'own' | 'membership' | 'length' | 'keys';
+
+// @alpha
+export interface ISelectedFact {
+    readonly address: readonly IAddressSegment[];
+    readonly fact: unknown;
+    readonly operation: IOperation;
+}
 
 // @alpha
 export interface ISha256Capability {
@@ -129,18 +177,24 @@ export interface ITrackingBinding {
 
 // @alpha
 export interface ITrackingMaterialization {
+    assertFrameOpen(): void;
     owns(value: unknown): value is ITracked<object>;
     read<T extends object, K extends keyof ITracked<T>>(value: ITracked<T>, key: K): ITracked<T>[K];
+    recordCollectionOrder(binding: ITrackingBinding, keys: readonly string[]): void;
+    recordProjection(binding: ITrackingBinding, fact: IValueProjectionFact): void;
+    recordSelected(binding: ITrackingBinding, fact: ISelectedFact): void;
 }
 
 // @alpha
 export interface ITrackingObservation {
     readonly address: readonly IAddressSegment[];
     readonly binding: ITrackingBinding;
-    readonly encoded: string;
+    readonly encoded?: string;
+    readonly encodingVersion: ICurrentFactRequest['encodingVersion'];
     readonly fingerprint: string;
-    readonly kind: 'fact' | 'implementation';
-    readonly operation: IOperation | 'implementation';
+    readonly kind: 'fact' | 'implementation' | 'materialized-output' | 'projection' | 'collection-order';
+    readonly operation: IOperation | 'implementation' | 'materialized-output' | 'projection' | 'collection-order';
+    readonly selection: ICurrentFactRequest;
 }
 
 // @alpha
@@ -155,12 +209,41 @@ export interface ITrackingObserver {
     keys(value: ITracked<object>): readonly string[];
     readonly local: ITracking;
     readonly materialization: ITrackingMaterialization;
+    snapshotOutput<T>(output: T): IDetachedOutput<T>;
     tracked<T extends object>(value: T, binding: ITrackingBinding): ITracked<T>;
 }
 
 // @alpha
 export interface ITrackingObserverHost extends IAsyncContextCapability, ISha256Capability {
 }
+
+// @alpha
+export interface IValueProjectionDescriptor {
+    readonly address: readonly IAddressSegment[];
+    readonly operation: 'value';
+    readonly traversal: IValueProjectionTraversal;
+}
+
+// @alpha
+export interface IValueProjectionFact {
+    // (undocumented)
+    readonly descriptor: IValueProjectionDescriptor;
+    // (undocumented)
+    readonly members: readonly IValueProjectionMember[];
+}
+
+// @alpha
+export type IValueProjectionMember = readonly [key: string, value: unknown];
+
+// @alpha
+export type IValueProjectionTraversal = {
+    readonly kind: 'exhaustive';
+    readonly complete: true;
+} | {
+    readonly kind: 'visited';
+    readonly complete: false;
+    readonly keys: readonly string[];
+};
 
 // @alpha
 export type Revision = number;

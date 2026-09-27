@@ -63,7 +63,7 @@ and [execution contract](docs/spec/execution.md) define their owners and cases.
 The [glossary](docs/spec/glossary.md) establishes shared terms; the
 [acceptance scenarios](docs/spec/acceptance.md) specify the required evidence.
 
-The selected Value experiment covers `undefined`, `null`, booleans, strings,
+The current Value semantics cover `undefined`, `null`, booleans, strings,
 numbers, sparse arrays, and supported plain records with bounded prototype
 support. It rejects cycles/shared references, accessors, symbols, data functions,
 `Date`, `Map`, `Set`, and class instances instead of silently treating them as
@@ -77,10 +77,13 @@ limits. The existing facade's public API is the compatibility History Store;
 it is not the durable-analysis workflow above. Tracking's project-private alpha
 observer can capture supported reads and called-function implementation evidence,
 then compare those facts through a caller-supplied current-fact provider. Value
-owns selected-fact encoding and comparison primitives. The observer does not own
-a durable binding registry, source freshness policy, output materialization,
-reuse decision, or persisted result lifecycle. Process-local tags and derivations
-are also not cross-process evidence.
+owns selected-fact encoding and comparison primitives. Tracking also provides an
+explicit operation that observes supplied output and returns a detached snapshot.
+Materialization composes that operation with selected reads from an injected exact
+result reader and canonical keyed projections. These components do not supply a
+durable binding registry, source freshness policy, reuse decision, or persisted
+result lifecycle. Process-local tags and derivations are also not cross-process
+evidence.
 
 The following probe runs against those built workspace entries. It demonstrates
 the current Tracking and Value alpha contracts only. It imports generated files
@@ -126,11 +129,14 @@ let currentPR = {
 };
 let currentAssess = assess;
 const provider = {
-  resolve(binding, address, operation) {
-    if (binding.path[0] === 'assessors') {
+  resolve(binding, selection) {
+    if (selection.kind === 'implementation' && binding.path[0] === 'assessors') {
       return { kind: 'available', fact: currentAssess };
     }
-    return { kind: 'available', fact: observe(currentPR, address, operation) };
+    if (selection.kind === 'selected') {
+      return { kind: 'available', fact: observe(currentPR, selection.address, selection.operation) };
+    }
+    return { kind: 'unavailable' };
   },
 };
 const unreadChange = observer.compareCurrent(first, provider);

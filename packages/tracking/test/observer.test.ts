@@ -96,6 +96,50 @@ describe('semantic tracking observer', () => {
     expect(capture.observations.map(item => item.address)).toEqual([[{ kind: 'property', key: 'then' }]]);
   });
 
+  test('async capture passes tracked functions through without invoking or observing them', async () => {
+    let calls = 0;
+    let ownThenReads = 0;
+    let ownThenCalls = 0;
+    const implementation = () => { calls += 1; return 'called'; };
+    const trackedFunction = observer.tracked(implementation, binding);
+    const accessorImplementation = () => { calls += 1; return 'accessor called'; };
+    // A configurable custom then getter stays opaque and must not run during Promise assimilation.
+    Object.defineProperty(accessorImplementation, 'then', {
+      configurable: true,
+      get() {
+        ownThenReads += 1;
+        return () => { ownThenCalls += 1; };
+      },
+    });
+    const trackedAccessorFunction = observer.tracked(accessorImplementation, binding);
+    const direct = await observer.captureAsync(async () => trackedFunction);
+    const resolved = await observer.captureAsync(async () => Promise.resolve(trackedFunction));
+    const chained = await observer.captureAsync(async () => Promise.resolve('ready').then(() => trackedFunction));
+    const accessor = await observer.captureAsync(async () => Promise.resolve(trackedAccessorFunction));
+
+    for (const capture of [direct, resolved, chained]) {
+      expect(capture.value).toBe(trackedFunction);
+      expect(capture.observations).toHaveLength(0);
+    }
+    expect(accessor.value).toBe(trackedAccessorFunction);
+    expect(accessor.observations).toHaveLength(0);
+    expect(calls).toBe(0);
+    expect(ownThenReads).toBe(0);
+    expect(ownThenCalls).toBe(0);
+    expect(Reflect.get(trackedFunction, 'then')).toBeUndefined();
+  });
+
+  test('rejects non-configurable own then lookup without changing ordinary function calls', async () => {
+    let calls = 0;
+    const implementation = () => { calls += 1; return 'called'; };
+    Object.defineProperty(implementation, 'then', { configurable: false, value: () => undefined });
+    const trackedFunction = observer.tracked(implementation, binding);
+
+    expect(trackedFunction()).toBe('called');
+    await expect(observer.captureAsync(async () => trackedFunction)).rejects.toThrow(/non-configurable then/i);
+    expect(calls).toBe(1);
+  });
+
   test('copies registration bindings and retained facts so later source mutation cannot retarget evidence', () => {
     const suppliedBinding = { path: ['analysis', 'author'] };
     const supplied = { name: 'Ada' };
@@ -128,6 +172,28 @@ describe('semantic tracking observer', () => {
     expect(captured.observations[0]?.encoded).toContain('Ada');
     expect(observer.compareCurrent(captured, { resolve: () => ({ kind: 'unavailable' }) }).kind).toBe('unavailable');
     expect(observer.compareCurrent(captured, { resolve: () => ({ kind: 'ambiguous' }) }).kind).toBe('ambiguous');
+  });
+
+  test('membership evidence ignores unrelated additions and changes when the selected member is removed', () => {
+    const source = createProvider();
+    const captured = observer.capture(() => 'a' in observer.tracked({ a: 1 }, binding));
+
+    source.set('analysis/author', { a: 1, b: 2 });
+    expect(observer.compareCurrent(captured, source.provider).kind).toBe('equal');
+
+    source.set('analysis/author', { b: 2 });
+    expect(observer.compareCurrent(captured, source.provider).kind).toBe('changed');
+  });
+
+  test('explicit identity reads ignore unread names but change when the identity changes', () => {
+    const source = createProvider();
+    const captured = observer.capture(() => observer.tracked({ id: 'author-1', name: 'Ada' }, binding).id);
+
+    source.set('analysis/author', { id: 'author-2', name: 'Ada' });
+    expect(observer.compareCurrent(captured, source.provider).kind).toBe('changed');
+
+    source.set('analysis/author', { id: 'author-1', name: 'Grace' });
+    expect(observer.compareCurrent(captured, source.provider).kind).toBe('equal');
   });
 
   test('current fact validation rejects accessors without invoking envelope or address getters', () => {

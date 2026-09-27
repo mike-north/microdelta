@@ -44,18 +44,19 @@ foundation requirement.
 pass on the intended package surface from a clean checkout and in CI, with exact
 commands and negative-fixture diagnostics recorded. The source-level Node
 boundary check passes on runtime code. This foundation must be green before
-EXP-1/2/3 runtime prototypes are treated as admissible evidence. The separate
-CML mapping experiment may proceed after this gate; it cannot waive the gate.
+EXP-1/2/3 runtime prototypes are treated as admissible evidence. Package/API
+enforcement remains the selected architecture contract.
 
 ## M1 — Bounded contract and architecture experiments
 
 After M0.5, run [EXP-1](spec/experiments.md) current binding/restart, EXP-2
-value/access semantics, and EXP-3 minimal publication protocol. Run EXP-5 as a
-separate bounded CML correspondence experiment; its outcome does not gate the
-existing API Extractor declaration checks. EXP-6 Lean and EXP-7 state-model
-pilots assess formal artifacts before adoption; their results
-may be pass, reject or inconclusive without blocking unrelated contexts. The
-publication mechanism must still meet its invariants with or without formal tools.
+value/access semantics, and EXP-3 minimal publication protocol. EXP-5's CML
+fixture ran as historical M1 evidence but is retired by
+[PKG-006](spec/package-boundaries.md); it creates no current gate. EXP-6 Lean
+evidence is dormant. Use the EXP-7 TLA model selectively for concrete correctness
+questions under the model-to-code-and-test review in
+[PUB-004](spec/execution.md). The publication mechanism must meet its invariants
+independently of formal tooling.
 
 **Exit:** assertion-first fixtures, exact commands/results, supported-domain limits,
 chosen mechanisms or explicit rejection, updated owning contracts. Real process
@@ -63,13 +64,14 @@ restart and generated declaration consumers are required where applicable. Do no
 build a second miniature product or expand all speculative native-type support.
 
 **Acceptance record:** [M1 evidence and final delivery conditions](validation/m1-2026-09-26.md).
-The selected/rejected mechanisms are recorded in their owning contracts. CML,
-Lean, and TLC remain optional bounded evidence; their successful checks do not
-prove production behavior or make the tools mandatory in unrelated CI.
+The selected/rejected mechanisms are recorded in their owning contracts. CML is
+retired, Lean is dormant, and TLA is selective supporting evidence. None of their
+historical successful checks alone proves production behavior or makes the tool
+mandatory in unrelated CI.
 
 **Unblocks:** M2/M3 supported data and durable binding/publication. M0.5 already
-establishes baseline package enforcement; EXP-5 can refine architecture-model
-correspondence without delaying it.
+establishes baseline package enforcement; no parallel architecture model is
+required.
 The exact nested-argument cases in EXP-4 and operational details in EXP-8 can wait
 until their dependent milestones. No broad product questionnaire is required.
 

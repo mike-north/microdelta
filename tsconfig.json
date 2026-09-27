@@ -9,5 +9,5 @@
   },
   "files": ["packages/core/src/index.ts"],
   "include": ["experiments/**/*.ts"],
-  "exclude": ["experiments/**/test-d/**", "experiments/exp-5/fixture/**/*"]
+  "exclude": ["experiments/**/test-d/**"]
 }

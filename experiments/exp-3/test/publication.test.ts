@@ -117,6 +117,24 @@ describe('EXP-3 SQLite publication protocol', () => {
     });
   });
 
+  test('the next writer advances the durable fence after the prior process dies and the store reopens', () => {
+    const databasePath = createDatabasePath();
+    expect(runWorker(databasePath, 'seed-old').status).toBe(0);
+
+    const killed = runWorker(databasePath, 'acquire-then-kill');
+    expect(killed.signal).toBe('SIGKILL');
+
+    const reopened = openDatabase(databasePath);
+    const repository = createPublicationRepository(reopened);
+    repository.initialize();
+    const next = repository.acquireWriter({ holderId: 'after-reopen', nowMs: 15, leaseMs: 5 });
+    if (next.kind !== 'acquired') {
+      throw new Error('Expected the expired holder to be reclaimed after reopen');
+    }
+
+    expect(next.fencingToken).toBe(3);
+  });
+
   test('killing after allocation consumes the generation without publishing a partial result', () => {
     const databasePath = createDatabasePath();
     expect(runWorker(databasePath, 'seed-old').status).toBe(0);

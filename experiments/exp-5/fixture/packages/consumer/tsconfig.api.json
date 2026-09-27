@@ -1,5 +1,0 @@
-{
-  "extends": "../../../../../tsconfig.base.json",
-  "compilerOptions": { "types": [] },
-  "files": ["dist/src/index.d.ts"]
-}

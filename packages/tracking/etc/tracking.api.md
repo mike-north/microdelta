@@ -179,7 +179,7 @@ export interface ITrackingBinding {
 export interface ITrackingMaterialization {
     assertFrameOpen(): void;
     owns(value: unknown): value is ITracked<object>;
-    read<T extends object, K extends keyof ITracked<T>>(value: ITracked<T>, key: K): ITracked<T>[K];
+    read<V extends ITracked<object>, K extends keyof V>(value: V, key: K & (Extract<K, keyof ITrackedBrand> extends never ? unknown : never)): V[K] | (K extends string ? string extends keyof V ? undefined : never : never) | (K extends number ? number extends keyof V ? undefined : never : never);
     recordCollectionOrder(binding: ITrackingBinding, keys: readonly string[]): void;
     recordProjection(binding: ITrackingBinding, fact: IValueProjectionFact): void;
     recordSelected(binding: ITrackingBinding, fact: ISelectedFact): void;

@@ -386,8 +386,8 @@ a complete concurrent-worker proof. EXP-7 evaluates the selected transition
 model; M5 still requires implementation concurrency evidence before any such
 claim. A model or transaction test does not qualify other storage backends.
 
-**EXP-7 evidence selection:** retain the finite TLA+ publication model as optional
-protocol-review evidence. Its checked instance contains one subject, two
+**EXP-7 historical evidence and selective review policy:** retain the finite TLA+
+publication model as bounded historical protocol-review evidence. Its checked instance contains one subject, two
 contenders, three stable attempt keys, generations through 3, fences through 2,
 and logical time through 2. It includes current-authority publication, retained
 complete references, lease rejection, monotonic allocation, crash/restart,
@@ -396,8 +396,8 @@ known-bad configuration removes holder/fence equality while retaining a live
 lease; its stale-writer counterexample must fail the independent authority
 invariant. The corrected configuration must exhaust the same finite bounds.
 
-The [model and implementation mapping](../../experiments/exp-7/README.md) are
-supporting evidence for PUB-001 through PUB-004, not proof of TypeScript or SQL.
+The [model and original implementation mapping](../../experiments/exp-7/README.md)
+are supporting evidence for PUB-001 through PUB-004, not proof of TypeScript or SQL.
 Payload/fingerprint/provenance content is abstracted to a staged phase;
 publication and rollback are atomic model steps. Time is globally monotonic in
 the model, while the prototype receives caller-supplied operation times. Model
@@ -406,10 +406,18 @@ persistence requirements. There is no liveness/fairness or unbounded-concurrency
 claim. Real process termination, exact references, and reopened fence allocation
 remain independently tested in EXP-3.
 
-TLC is not required in unrelated CI. Changes to these protocol transitions or
-authority rules require reassessing the model's correspondence and rerunning both
-configurations when using it as evidence; expanding concurrency still requires
-M5's implementation tests. An exhausted finite model cannot waive those gates.
+Use state modeling selectively when a concrete correctness question benefits
+from exploring interleavings or state combinations. A review must state the
+modeled state, transitions and invariants, finite bounds, abstraction assumptions,
+and a meaningful faulty control. Independently compare each model invariant and
+counterexample with both the actual implementation code and named test assertions.
+Classify each correspondence as aligned, divergent, missing, insufficient, or
+ambiguous. Turn actionable gaps into tests-first implementation work and run
+those tests in ordinary CI; record model-only assumptions and unproven properties.
+TLC need not run in CI. Finite safety checking proves neither unbounded behavior,
+liveness, nor SQLite correctness, and model review cannot waive M5 implementation
+concurrency tests. Recheck model correspondence and both configurations when a
+deliberately retained model is used to assess changed protocol transitions.
 
 ### PUB-005 — Contention and waiting report facts accurately
 

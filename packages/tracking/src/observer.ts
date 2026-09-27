@@ -180,8 +180,17 @@ export interface ITrackingMaterialization {
   assertFrameOpen(): void;
   /** Identify wrappers by this observer's private ownership, not by the type brand. */
   owns(value: unknown): value is ITracked<object>;
-  /** Read one selected field through the ordinary observer operation. */
-  read<T extends object, K extends keyof ITracked<T>>(value: ITracked<T>, key: K): ITracked<T>[K];
+  /**
+   * Read a materializable member through the ordinary observer operation. The
+   * nominal brand is a compile-time marker, not a source property; open indexes
+   * retain possible absence while known members keep their exact value types.
+   */
+  read<V extends ITracked<object>, K extends keyof V>(
+    value: V,
+    key: K & (Extract<K, keyof ITrackedBrand> extends never ? unknown : never),
+  ): V[K]
+    | (K extends string ? string extends keyof V ? undefined : never : never)
+    | (K extends number ? number extends keyof V ? undefined : never : never);
   /** Retain a selected fact read from a completed-result source. */
   recordSelected(binding: ITrackingBinding, fact: ISelectedFact): void;
   /** Retain one aggregate selected keyed-member projection. */
@@ -460,7 +469,6 @@ function isUniqueStringSequence(value: unknown): value is readonly string[] {
     keys.add(slot.value);
   }
   return true;
-
 }
 
 /** Classes are not ordinary callable steps or supported plain-data records. */
@@ -838,7 +846,12 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
     owns(value: unknown): value is ITracked<object> {
       return value !== null && (typeof value === 'object' || typeof value === 'function') && ownership.has(value);
     },
-    read<T extends object, K extends keyof ITracked<T>>(value: ITracked<T>, key: K): ITracked<T>[K] {
+    /**
+     * Route a selected member read through the wrapper proxy so evaluation records
+     * its fact; open indexes may be absent and the compile-time brand is not a
+     * materialized source member.
+     */
+    read<V extends ITracked<object>, K extends keyof V>(value: V, key: K): V[K] {
       if (!ownership.has(value)) {
         throw new TypeError('Materialization reads require an observer-owned tracked value');
       }

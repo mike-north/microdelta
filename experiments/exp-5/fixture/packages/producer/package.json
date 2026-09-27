@@ -1,7 +1,0 @@
-{
-  "name": "@microdelta/exp5-producer",
-  "version": "0.0.0",
-  "private": true,
-  "type": "module",
-  "types": "./dist/api/producer.public.d.ts"
-}

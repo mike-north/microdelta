@@ -86,6 +86,100 @@ describe('semantic tracking observer', () => {
       .toThrow(/observer-owned|owned/i);
   });
 
+  test('detached materialization record capabilities retain selected facts, projections, and collection order', () => {
+    const { recordSelected, recordProjection, recordCollectionOrder } = observer.materialization;
+    const selected: ISelectedFact = {
+      operation: 'value',
+      address: [{ kind: 'property', key: 'name' }],
+      fact: 'Ada',
+    };
+    const projection: IValueProjectionFact = {
+      descriptor: {
+        address: [{ kind: 'property', key: 'name' }],
+        operation: 'value',
+        traversal: { kind: 'exhaustive', complete: true },
+      },
+      members: [['user-a', 'Ada']],
+    };
+    const captures = [
+      observer.capture(() => recordSelected(binding, selected)),
+      observer.capture(() => recordProjection(binding, projection)),
+      observer.capture(() => recordCollectionOrder(binding, ['user-a', 'user-b'])),
+    ];
+
+    expect(captures.map(capture => capture.observations[0]?.kind))
+      .toEqual(['fact', 'projection', 'collection-order']);
+    expect(captures[0]?.observations[0]).toMatchObject({
+      address: selected.address,
+      operation: 'value',
+      selection: { kind: 'selected', operation: 'value', address: selected.address },
+    });
+    expect(captures[1]?.observations[0]).toMatchObject({
+      selection: { kind: 'projection', descriptor: projection.descriptor },
+    });
+    expect(captures[2]?.observations[0]).toMatchObject({
+      selection: { kind: 'collection-order', keys: ['user-a', 'user-b'] },
+    });
+  });
+
+  test('detached materialization record capabilities reject closed inherited frames before inspecting content', async () => {
+    let digestCalls = 0;
+    let contentReads = 0;
+    const host: IMachine = {
+      ...machine,
+      sha256(input: string): string {
+        digestCalls += 1;
+        return machine.sha256(input);
+      },
+    };
+    const isolated = createTrackingObserver(host);
+    const { recordSelected, recordProjection, recordCollectionOrder } = isolated.materialization;
+    const selected: ISelectedFact = {
+      get operation(): 'value' { contentReads += 1; return 'value'; },
+      address: [{ kind: 'property', key: 'name' }],
+      fact: 'Ada',
+    };
+    const projection: IValueProjectionFact = {
+      get descriptor(): IValueProjectionFact['descriptor'] {
+        contentReads += 1;
+        return {
+          address: [{ kind: 'property', key: 'name' }],
+          operation: 'value',
+          traversal: { kind: 'exhaustive', complete: true },
+        };
+      },
+      members: [['user-a', 'Ada']],
+    };
+    const keys = new Proxy(['user-a', 'user-b'], {
+      get(target, property, receiver) {
+        contentReads += 1;
+        return Reflect.get(target, property, receiver);
+      },
+    });
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>(resolve => { release = resolve; });
+    let detached: Promise<readonly unknown[]> = Promise.resolve([]);
+
+    await isolated.captureAsync(async () => {
+      detached = (async () => {
+        await gate;
+        const attempts: Array<Promise<unknown>> = [
+          Promise.resolve().then(() => recordSelected(binding, selected)),
+          Promise.resolve().then(() => recordProjection(binding, projection)),
+          Promise.resolve().then(() => recordCollectionOrder(binding, keys)),
+        ];
+        return Promise.all(attempts.map(attempt => attempt.catch(error => error)));
+      })();
+    });
+
+    release();
+    const errors = await detached;
+    expect(errors).toHaveLength(3);
+    expect(errors.every(error => error instanceof Error && /closed/i.test(error.message))).toBe(true);
+    expect(contentReads).toBe(0);
+    expect(digestCalls).toBe(0);
+  });
+
   test('synchronous capture rejects promises and ordinary thenable results', () => {
     expect(() => observer.capture(() => Promise.resolve('later'))).toThrow(/captureAsync/i);
     expect(() => observer.capture(() => ({ then: () => undefined }))).toThrow(/captureAsync/i);

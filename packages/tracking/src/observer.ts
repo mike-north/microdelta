@@ -858,7 +858,7 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
       return value[key];
     },
     recordSelected(binding: ITrackingBinding, fact: ISelectedFact): void {
-      this.assertFrameOpen();
+      materialization.assertFrameOpen();
       const encoded = encodeSelectedFact(fact);
       const request: ICurrentFactRequest = {
         kind: 'selected',
@@ -869,14 +869,14 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
       recordExternal(copyBinding(binding), request, 'fact', fact.operation, encoded);
     },
     recordProjection(binding: ITrackingBinding, fact: IValueProjectionFact): void {
-      this.assertFrameOpen();
+      materialization.assertFrameOpen();
       const encoded = encodeProjectionFact(fact);
       const descriptor = copyProjectionDescriptor(fact.descriptor);
       const request: ICurrentFactRequest = { kind: 'projection', descriptor, encodingVersion: 'MDP1' };
       recordExternal(copyBinding(binding), request, 'projection', 'projection', encoded);
     },
     recordCollectionOrder(binding: ITrackingBinding, keys: readonly string[]): void {
-      this.assertFrameOpen();
+      materialization.assertFrameOpen();
       if (!isUniqueStringSequence(keys)) {
         throw new TypeError('Collection order needs a unique ordered sequence of string keys');
       }

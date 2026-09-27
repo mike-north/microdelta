@@ -42,3 +42,9 @@ PKG-007 boundary consumers, plus passing EXP-1/EXP-2, package Jest and tsd
 suites. Only the root TypeScript exclusion list conflicted during the rebase;
 both the existing `experiments/**/test-d/**` exclusion and this fixture's
 exclusion were preserved.
+
+The branch was then rebased onto `4086df8` (EXP-3), retaining its SQLite
+dependencies alongside the direct API-model dependency. On that final combined
+state, the bounded `verify.sh`, `npm run check`, `npm test`, and `npm run build`
+again exited 0. The canonical test run now included 78 passing tooling checks
+and the EXP-3 SQLite/publication suites (5 and 12 passing tests respectively).

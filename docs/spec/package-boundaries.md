@@ -101,6 +101,35 @@ import adjacency. Structural conformance cannot establish correct freshness,
 publication or observation semantics; those require the behavioral contracts and
 tests in their owning contexts.
 
+**EXP-5 decision — bounded optional correspondence.** Retain the
+[native CML fixture and checker](../../experiments/exp-5/README.md) as an optional
+architecture correspondence tool. The tested subset maps two explicit bounded
+contexts to workspace package entrypoints, entities/services to exported classes,
+and selected operations to named methods with ordered parameters and simple
+return types. CML package visibility corresponds to `@internal`; native
+TypeScript accessibility and release tiers remain separate facts.
+
+The official CML parser supplies model facts, API Extractor's maintained model
+supplies exported API facts, and the TypeScript compiler supplies the internal
+method and native-privacy facts absent from the API model. The correspondence
+manifest chooses represented elements and artifact locations; it must not invent
+their observed identity or signature. Missing mapped declarations, a mismatched
+actual API package identity, and a same-named reference from the wrong API owner
+must fail. The fixture exercises these boundaries with source-derived artifacts
+and mutation controls; [its evidence record](../../experiments/exp-5/evidence.md)
+distinguishes initial compiler failures from later behavioral sensitivity checks.
+
+This selection does not cover arbitrary TypeScript structures or establish
+semantic equivalence between classes and domain objects. Entity attributes,
+standalone functions, interfaces, type aliases, protected/private/`#` members,
+and beta/alpha tiers remain explicitly outside the CML comparison. Existing
+compiler, declaration-consumer, and import checks still govern those package
+boundaries. Generic types, overloads, and additional CML constructs require their
+own faithful mapping and negative assertions before they become represented facts.
+The Java/Gradle setup and model-maintenance cost do not justify an unconditional
+production CI prerequisite. Neither the optional model nor its absence changes
+PKG-001 through PKG-005 or the runtime contracts.
+
 ## PKG-007 — Test-first enforcement gate
 
 Before configuring enforcement, write positive and negative fixtures showing:

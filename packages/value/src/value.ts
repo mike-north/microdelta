@@ -27,9 +27,10 @@ export type IAddressSegment =
 export type IOperation = 'value' | 'own' | 'membership' | 'length' | 'keys';
 
 /**
- * One fact computed for a caller-supplied root, address, and operation. This
- * value does not identify the current input binding or capture frame; Tracking
- * adds those relationships when it records execution evidence.
+ * One immediate lookup result for a caller-supplied root, address, and
+ * operation. The fact may be the selected object reference itself, so it is
+ * neither a detached snapshot nor retained Tracking evidence. Tracking adds
+ * binding and capture relationships and decides what data to encode as evidence.
  * @alpha
  */
 export interface ISelectedFact {
@@ -37,7 +38,7 @@ export interface ISelectedFact {
   readonly operation: IOperation;
   /** Ordered container-aware steps from the supplied root to the selected location. */
   readonly address: readonly IAddressSegment[];
-  /** The value or structural fact selected by the operation, with no inferred siblings. */
+  /** The selected value or structural fact; an object value remains the source reference. */
   readonly fact: unknown;
 }
 
@@ -186,6 +187,9 @@ function toWire(value: unknown, path: string, seen: WeakSet<object>, prototypeDe
   } else if (prototype === Object.prototype) {
     prototypeWire = ['p-object'];
   } else {
+    if (Array.isArray(prototype)) {
+      unsupported(path, 'array prototype for record');
+    }
     if (prototypeDepth >= MAX_CUSTOM_PROTOTYPES) {
       unsupported(path, 'prototype depth');
     }
@@ -383,8 +387,10 @@ function lookup(record: object, key: string, depth = 0): { readonly present: boo
 
 /** Observe exactly the requested fact; no sibling or whole-tree read is implied. */
 /**
- * Compute one literal supported fact without traversing unrelated values or
- * capturing run/binding context; Tracking decides whether to retain the result.
+ * Compute one literal supported fact without traversing unrelated descendants
+ * or capturing run/binding context. A value operation may return a navigable
+ * object reference; Tracking decides which consumed or materialized facts to
+ * encode as retained evidence.
  * @alpha
  */
 export function observe(root: unknown, address: readonly IAddressSegment[], operation: IOperation): ISelectedFact {
@@ -437,9 +443,12 @@ export function observe(root: unknown, address: readonly IAddressSegment[], oper
 
 /** Encode operation and structural address independently from the selected fact. */
 /**
- * Encode one selected fact's operation, structured address, and validated value.
- * The MDO1 evidence has no binding or capture provenance; Tracking owns those
- * execution relationships.
+ * Synchronously encode one supplied fact's operation, structured address, and
+ * complete supported value. An object fact is traversed in full here, even if
+ * it came from a shallow navigation lookup. Callers must select consumed or
+ * materialized facts; passing through a container alone is not evidence that
+ * its entire contents were consumed. The MDO1 encoding has no binding or
+ * capture provenance; Tracking owns those execution relationships.
  * @alpha
  */
 export function encodeSelectedFact(selectedFact: ISelectedFact): string {
@@ -467,8 +476,18 @@ export function encodeSelectedFact(selectedFact: ISelectedFact): string {
       }
       break;
     case 'keys':
-      if (!Array.isArray(selectedFact.fact) || selectedFact.fact.some(key => typeof key !== 'string')) {
+      if (!Array.isArray(selectedFact.fact)) {
         throw new TypeError('Key enumeration needs an ordered string-key sequence');
+      }
+      {
+        const keys = new Set<string>();
+        for (let index = 0; index < selectedFact.fact.length; index += 1) {
+          const descriptor = Object.getOwnPropertyDescriptor(selectedFact.fact, String(index));
+          if (descriptor === undefined || !('value' in descriptor) || typeof descriptor.value !== 'string' || keys.has(descriptor.value)) {
+            throw new TypeError('Key enumeration needs a dense sequence of unique strings');
+          }
+          keys.add(descriptor.value);
+        }
       }
       break;
     default:

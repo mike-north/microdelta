@@ -104,6 +104,21 @@ describe('literal observation facts', () => {
     expect(encodeSelectedFact(name)).toBe(encodeSelectedFact(observe({ name: 'Ada', huge: 'changed' }, name.address, 'value')));
     expect(encodeSelectedFact(name)).not.toBe(encodeSelectedFact(observe({ name: 'Grace', huge: 'unread' }, name.address, 'value')));
   });
+
+  test('navigation does not encode unread descendants, while explicit object facts encode all descendants', () => {
+    const source: { child: { name: string; unsupported: unknown } } = { child: { name: 'Ada', unsupported: () => 'unread' } };
+    const childAddress = [{ kind: 'property', key: 'child' }] as const;
+    const nameAddress = [...childAddress, { kind: 'property', key: 'name' }] as const;
+
+    expect(observe(source, nameAddress, 'value').fact).toBe('Ada');
+    const selectedChild = observe(source, childAddress, 'value');
+    expect(() => encodeSelectedFact(selectedChild)).toThrow(/unsupported/i);
+
+    source.child.unsupported = 'now supported';
+    const encoded = encodeSelectedFact(selectedChild);
+    source.child.name = 'Grace';
+    expect(encoded).toBe(encodeSelectedFact({ ...selectedChild, fact: { name: 'Ada', unsupported: 'now supported' } }));
+  });
 });
 
 describe('canonical supported domain', () => {
@@ -137,6 +152,13 @@ describe('canonical supported domain', () => {
     expect(observe(root, address, 'value').fact).toBe('Ada');
     expect(encodeSnapshot(decodeSnapshot(encodeSnapshot(root)))).toBe(encodeSnapshot(root));
     expect(() => encodeValue(recordFromEntries([], root))).toThrow(/prototype depth/iu);
+  });
+
+  test('array objects are rejected as custom record prototypes', () => {
+    const value = Object.create([]) as Record<string, unknown>;
+
+    expect(() => encodeValue(value)).toThrow(/prototype/i);
+    expect(() => encodeSnapshot(value)).toThrow(/prototype/i);
   });
 
   test('an independent Node process preserves canonical bytes and snapshot lookup meaning', () => {
@@ -212,11 +234,30 @@ describe('canonical supported domain', () => {
     expect(() => encodeSelectedFact({ operation: 'value', address: [{ kind: 'index', index: -1 }], fact: 'x' })).toThrow();
   });
 
+  test('key enumeration evidence requires dense unique string keys', () => {
+    const sparse = new Array<unknown>(1);
+    expect(() => encodeSelectedFact({ operation: 'keys', address: [], fact: sparse })).toThrow(/key enumeration/i);
+    expect(() => encodeSelectedFact({ operation: 'keys', address: [], fact: ['name', 'name'] })).toThrow(/key enumeration/i);
+    expect(() => encodeSelectedFact({ operation: 'keys', address: [], fact: ['name', 'email'] })).not.toThrow();
+  });
+
   test('decoded snapshots cannot mutate retained record or array content', () => {
     const decoded = decodeValue(encodeValue({ child: [1, { name: 'Ada' }] }));
     expect(Object.isFrozen(decoded)).toBe(true);
     const child = observe(decoded, [{ kind: 'property', key: 'child' }], 'value').fact;
     expect(Object.isFrozen(child)).toBe(true);
     expect(encodeValue(decoded)).toBe(encodeValue({ child: [1, { name: 'Ada' }] }));
+  });
+
+  test('direct snapshot decoding creates a frozen detached value', () => {
+    const source = { child: [1, { name: 'Ada' }] };
+    const decoded = decodeSnapshot(encodeSnapshot(source));
+    const child = observe(decoded, [{ kind: 'property', key: 'child' }], 'value').fact;
+    source.child[1] = { name: 'Grace' };
+
+    expect(decoded).not.toBe(source);
+    expect(Object.isFrozen(decoded)).toBe(true);
+    expect(Object.isFrozen(child)).toBe(true);
+    expect(encodeSnapshot(decoded)).toBe(encodeSnapshot({ child: [1, { name: 'Ada' }] }));
   });
 });

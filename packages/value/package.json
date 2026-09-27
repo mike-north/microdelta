@@ -1,0 +1,29 @@
+{
+  "name": "@microdelta/value",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Portable canonical value and structured address semantics",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "main": "./dist/src/index.js",
+  "types": "./dist/api/value.public.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/api/value.public.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json",
+    "check": "concurrently --success all --names types,lint \"npm run check:types\" \"npm run check:lint\"",
+    "check:types": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.portable.json",
+    "check:lint": "eslint .",
+    "test": "npm run test:unit && npm run test:types",
+    "test:unit": "tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand",
+    "test:types": "tsd"
+  },
+  "tsd": { "directory": "test-d" },
+  "dependencies": { "@microdelta/machine": "0.0.0" }
+}

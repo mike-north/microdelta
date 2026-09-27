@@ -59,7 +59,7 @@ export function missingFoundationGates({ workspace, packages, workflow, extracto
   if ((scripts['build:fixtures'] ?? '').includes('--local')) {
     problems.push('build:fixtures uses local API report rewriting');
   }
-  for (const name of ['definition', 'tracking', 'history', 'core']) {
+  for (const name of ['definition', 'tracking', 'history', 'value', 'core']) {
     const packageName = name === 'core' ? 'microdelta' : `@microdelta/${name}`;
     includes('build:packages', scripts['build:packages'], `npm run build --workspace ${packageName}`);
     includes(`${name} build`, packages[name]?.scripts?.build, 'tsc -p tsconfig.build.json');
@@ -67,6 +67,9 @@ export function missingFoundationGates({ workspace, packages, workflow, extracto
     includes(`${name} check`, packages[name]?.scripts?.check, 'npm run check:types');
     includes(`${name} check`, packages[name]?.scripts?.check, 'npm run check:lint');
     includes(`${name} check:types`, packages[name]?.scripts?.['check:types'], 'tsc --noEmit -p tsconfig.json');
+    if (name === 'value') {
+      includes('value check:types', packages[name]?.scripts?.['check:types'], 'tsc --noEmit -p tsconfig.portable.json');
+    }
     includes(`${name} check:lint`, packages[name]?.scripts?.['check:lint'], 'eslint .');
     includes(`${name} test`, packages[name]?.scripts?.test, 'npm run test:types');
     includes(`${name} test:types`, packages[name]?.scripts?.['test:types'], 'tsd');
@@ -101,7 +104,7 @@ export function missingFoundationGates({ workspace, packages, workflow, extracto
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const root = fileURLToPath(new URL('../', import.meta.url));
   const readJson = async filename => JSON.parse(await readFile(path.join(root, filename), 'utf8'));
-  const names = ['core', 'definition', 'tracking', 'history'];
+  const names = ['core', 'definition', 'tracking', 'history', 'value'];
   const packages = Object.fromEntries(await Promise.all(names.map(async name => [name, await readJson(`packages/${name}/package.json`)])));
   const filenames = names.map(name => `packages/${name}/api-extractor.json`);
   filenames.push('packages/core/api-extractor-conformance.json', 'packages/history/api-extractor-conformance.json', 'packages/history/api-extractor-shared.json', 'fixtures/declarations/producer/api-extractor.json');

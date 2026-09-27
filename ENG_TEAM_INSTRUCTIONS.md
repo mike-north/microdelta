@@ -33,10 +33,21 @@ priority, and progress. Repository issues contain the implementation contract;
 8. The supervisor reviews the current commit, checks required CI and declaration
    changes, and accounts for every review comment. Respond before resolving a
    thread. Changed commits require review of the affected substance and fresh checks.
-9. Only the supervisor merges accepted work. Merge authority is delegated by the
+9. Before merging or arming auto-merge, require a completed GitHub Copilot review
+   on the exact current PR head in addition to the supervisor's substantive
+   review. A requested or pending Copilot review is not evidence of completion.
+   Verify the review author is a GitHub `Bot` with login
+   `copilot-pull-request-reviewer[bot]` (the GraphQL login
+   `copilot-pull-request-reviewer` is also valid), its commit is the exact
+   head, it is submitted as `COMMENTED` or `APPROVED`, and it is not dismissed or
+   `CHANGES_REQUESTED`. Review and account for its findings; a completed comment
+   review is evidence of reviewer execution, not automatic acceptance of its
+   conclusions. The exact-head procedure and gate are in
+   [supervisor-review.md](docs/supervisor-review.md).
+10. Only the supervisor merges accepted work. Merge authority is delegated by the
    repository owner; it does not authorize bypassing checks, force-pushing the
    default branch, publishing packages, or changing secrets and visibility.
-10. After merge, verify the default-branch result, close fully satisfied issues,
+11. After merge, verify the default-branch result, close fully satisfied issues,
     release claims, update project fields, and unblock only dependencies actually met.
     Pass, reject, or inconclusive experiment results must state their evidence and
     the next decision; an inconclusive mechanism is not an adopted implementation.
@@ -70,14 +81,18 @@ content or untouched placeholders. It is intentionally separate from `npm run
 check`: push-only baseline CI has no PR body. Its tests are included in `npm test`.
 Local validation and hooks do not replace the required PR workflow.
 
-The exact intended required check names on `main` are **PR metadata**, **core
-(20)**, **core (22)**, and **core (24)**. The three core jobs run `npm ci`, `npm run
-check`, `npm test`, and `npm run build`. Require a pull request, current passing
-checks against an up-to-date base, resolved review conversations, and application
-of these rules to administrators without bypass entries. These are the intended
-settings, not evidence that live repository protection has been configured. The
+The exact intended required contexts on `main` are **PR metadata**, **core (20)**,
+**core (22)**, **core (24)**, and the separately published **Supervisor review**
+commit status. The four Actions checks retain their GitHub Actions source
+restrictions; the supervisor status is an additional exact-head review gate. The
+three core jobs run `npm ci`, `npm run check`, `npm test`, and `npm run build`.
+Require a pull request, passing required checks on an up-to-date base, resolved
+review conversations, and administrator enforcement without bypass entries.
+These are the intended settings, not evidence that live repository protection
+has been configured. The
 supervisor must configure and read back the live rule, recording the result or a
-specific platform limitation in the governing issue before closing it.
+specific platform limitation in the governing issue before closing it. See the
+[exact-head supervisor-review procedure](docs/supervisor-review.md).
 
 `PR metadata` runs on PR creation, body edits, reopening, and synchronization.
 Every run fetches the current body using a token limited to contents and PR read

@@ -29,28 +29,12 @@ read loads and records the requested field rather than reporting a semantic chan
 The concrete asynchronous loading surface is an experiment, not a promise that a
 synchronous JavaScript getter can perform arbitrary asynchronous I/O.
 
-## Distinct concepts
+## Shared vocabulary
 
-| Term | Meaning | Must not be confused with |
-| --- | --- | --- |
-| Analysis | Declared computation and logical namespace | One execution attempt or one giant memoized step |
-| Environment | Selected store/services/credentials and isolation scope | A cache-key string alone |
-| Run | Supervised execution lifetime | A result or one worker |
-| Step definition | Declared operation, implementation and policy | Invocation, display name, stored snapshot |
-| Binding | Current relationship connecting a declared operation/input/slot | Function text or an old snapshot pointer |
-| Step graph | Fixed abstract operations and possible relationships | Expanded result cardinality or observed read set |
-| Result graph | Invocations/results and actual observed relationships | A persisted live proxy graph |
-| Subject | Complete opaque author-supplied memoization identity, unique in an analysis | Output content hash or display name |
-| Compatibility version | Per-memo positive integer, default 1; controls eligible history, permits validated rollback | Diagnostic timestamp or implementation locator |
-| Implementation fingerprint | Automatically observed implementation evidence | Identity of a definition or proof of semantic equivalence |
-| Result | Immutable completed author value plus framework metadata | Failed attempt or reference |
-| Reference | Scoped pointer to an exact retained snapshot | Payload, latest alias, or request to compute |
-| Attempt | Work performed trying to produce or accept a result | Guaranteed successful output |
-| Acceptance evidence | Why a previous result is usable under current conditions | A rewrite of its historical provenance |
-| Observation | The semantic fact an execution consumed | All fields reachable from an object |
-| Identity | Which logical entity/member this is | Automatic dependency of every field read |
-| Finality | Current hook's acceptance of a cached result for this resolution | Persisted final status |
-| Resource observation | Reported quantity/unit/attribution of actual work | Invoice total or an estimate |
+The [ubiquitous language](glossary.md) defines analysis, run, step,
+invocation, frame, binding, observation, subject, result, reference, and related
+terms. It is the shared terminology source; the contracts here and in the other
+specification documents own their behavioral requirements.
 
 **DOM-4 — Independent axes.** Identity, content, storage, readiness, observation,
 source acceptance, and permission to execute are separate. Selecting memoization

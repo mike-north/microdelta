@@ -53,6 +53,13 @@ test('absent context roles use the same allowed-edge policy', async () => {
   }
 });
 
+test('Value Semantics consumes only the portable Machine hashing capability', async () => {
+  const allowed = await diagnostics('packages/value', "import type { ISha256Capability } from '@microdelta/machine'; export type IHash = ISha256Capability;");
+  assert.deepEqual(allowed.map(message => message.ruleId), []);
+  const reverse = await diagnostics('packages/machine', "import type { IValue } from '@microdelta/value'; export type IReverse = IValue;");
+  assert.deepEqual(reverse.map(message => message.ruleId), [rule]);
+});
+
 test('source, deep, re-export, facade, and unknown-path bypasses fail closed', async () => {
   for (const [owner, source] of [
     ['packages/core', "import { createMemoryStore } from '@microdelta/history/src/store/memory/index.js';"],
@@ -73,7 +80,7 @@ test('source, deep, re-export, facade, and unknown-path bypasses fail closed', a
   }
 });
 
-test('Node builtins and host globals are confined to the Node implementation', async () => {
+  test('Node builtins and host globals are confined to the Node implementation', async () => {
   const forbidden = [
     "import { AsyncLocalStorage } from 'node:async_hooks';",
     "import { serialize } from 'v8';",
@@ -175,4 +182,10 @@ test('Tracking and History production builds exclude ambient Node declarations',
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+});
+
+test('Value production source compiles without ambient host declarations', async () => {
+  const config = JSON.parse(await readFile(path.join(root, 'packages/value/tsconfig.portable.json'), 'utf8'));
+  assert.deepEqual(config.compilerOptions.types, [], 'Value build must opt out of ambient host globals');
+  assert.equal(config.compilerOptions.skipLibCheck, false, 'Value build must check Machine declarations');
 });

@@ -379,8 +379,7 @@ export const trackedCaptures = {
         }
 
         const directCallbacks = new Set(candidates.map(candidate => candidate.callback));
-        const validCallbacks = new Set();
-        for (const { callback, callbackNode } of candidates) {
+        for (const { callbackNode } of candidates) {
           const callbackScope = sourceCode.getScope(callbackNode);
           if (!callbackScope) {
             unsupported.add(callbackNode);
@@ -397,7 +396,6 @@ export const trackedCaptures = {
             }
           };
           collect(callbackScope);
-          let valid = true;
           for (const scope of scopes) {
             for (const reference of scope.references) {
               if (!reference.isRead()) {
@@ -435,12 +433,8 @@ export const trackedCaptures = {
                   continue;
                 }
               }
-              valid = false;
               context.report({ node: identifier, messageId: 'capture', data: { name: identifier.name } });
             }
-          }
-          if (valid) {
-            validCallbacks.add(callback);
           }
         }
         for (const node of unsupported) {

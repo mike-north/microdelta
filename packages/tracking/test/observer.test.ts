@@ -315,6 +315,47 @@ describe('semantic tracking observer', () => {
     expect(observer.compareCurrent(capture, source.provider).kind).toBe('changed');
   });
 
+  test('uninspectable current implementation replacements are unavailable without executing them', () => {
+    let replacementCalls = 0;
+    const original = observer.tracked(() => 'original', binding);
+    const capture = observer.capture(() => original());
+    const boundReplacement = function replacement(): string {
+      replacementCalls += 1;
+      return 'replacement';
+    }.bind(undefined);
+
+    for (const replacement of [Math.max, boundReplacement]) {
+      const comparison = observer.compareCurrent(capture, {
+        resolve: () => ({ kind: 'available', fact: replacement }),
+      });
+      expect(comparison.kind).toBe('unavailable');
+    }
+    expect(replacementCalls).toBe(0);
+  });
+
+  test('current implementation comparison preserves host digest failures', () => {
+    const failure = new TypeError('host digest failed');
+    let digestUnavailable = false;
+    const host: IMachine = {
+      ...machine,
+      sha256(input: string): string {
+        if (digestUnavailable) {
+          throw failure;
+        }
+        return machine.sha256(input);
+      },
+    };
+    const isolated = createTrackingObserver(host);
+    const tracked = isolated.tracked(() => 'original', binding);
+    const capture = isolated.capture(() => tracked());
+    const replacement = (): string => 'replacement';
+    digestUnavailable = true;
+
+    expect(() => isolated.compareCurrent(capture, {
+      resolve: () => ({ kind: 'available', fact: replacement }),
+    })).toThrow(failure);
+  });
+
   test('function-source fingerprints preserve distinct unpaired UTF-16 surrogate code units', () => {
     const highSurrogate = String.fromCharCode(0xd800);
     const lowSurrogate = String.fromCharCode(0xd801);

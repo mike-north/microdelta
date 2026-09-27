@@ -26,9 +26,13 @@
     "check:fixtures": "tsc --noEmit -p fixtures/declarations/producer/tsconfig.json && tsc --noEmit -p fixtures/declarations/capture-producer/tsconfig.json && tsc --noEmit -p fixtures/declarations/forged/tsconfig.json && tsc --noEmit -p fixtures/declarations/consumer-alpha/tsconfig.json && node tooling/check-capture-public-tier.mjs && eslint fixtures/declarations/producer/src fixtures/declarations/capture-producer/src fixtures/declarations/forged/src fixtures/declarations/consumer-alpha/src",
     "check:wiring": "node tooling/foundation-wiring.mjs",
     "test:exp2": "tsc -p experiments/exp-2/tsconfig.json && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-2/jest.config.mjs --runInBand",
-    "test:exp3": "tsc -p experiments/exp-3/tsconfig.test.json && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config experiments/exp-3/jest.config.mjs --runInBand --runTestsByPath .test-build/experiments/exp-3/test/sqlite-capability.test.js && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config experiments/exp-3/jest.config.mjs --runInBand --runTestsByPath .test-build/experiments/exp-3/test/publication.test.js"
+    "test:exp3": "tsc -p experiments/exp-3/tsconfig.test.json && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config experiments/exp-3/jest.config.mjs --runInBand --runTestsByPath .test-build/experiments/exp-3/test/sqlite-capability.test.js && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config experiments/exp-3/jest.config.mjs --runInBand --runTestsByPath .test-build/experiments/exp-3/test/publication.test.js",
+    "changeset:add": "changeset",
+    "changeset:status": "changeset status",
+    "changeset:version": "changeset version && npm install --package-lock-only --ignore-scripts --no-audit --no-fund"
   },
   "devDependencies": {
+    "@changesets/cli": "2.31.1",
     "@jest/globals": "30.5.1",
     "@microsoft/api-extractor": "7.59.2",
     "@microsoft/api-extractor-model": "7.33.13",

@@ -49,6 +49,136 @@ describe('literal observation facts', () => {
     expect(observe({}, address, 'membership').fact).toBe(false);
   });
 
+  test('validates each record surface once before resolving inherited lookup', () => {
+    const validationScans = { root: 0, inherited: 0 };
+    const inheritedTarget = recordFromEntries([['flag', true]], null);
+    // Proxy traps instrument reflective validation only; their targets remain supported records.
+    const inherited = new Proxy(inheritedTarget, {
+      ownKeys(target): ArrayLike<string | symbol> {
+        validationScans.inherited += 1;
+        return Reflect.ownKeys(target);
+      },
+    });
+    const rootTarget = recordFromEntries([], inherited);
+    const root = new Proxy(rootTarget, {
+      ownKeys(target): ArrayLike<string | symbol> {
+        validationScans.root += 1;
+        return Reflect.ownKeys(target);
+      },
+    });
+
+    expect(observe(root, [{ kind: 'property', key: 'flag' }], 'membership').fact).toBe(true);
+    // One symbol-key scan and one string-key scan validate each chain node.
+    expect(validationScans).toEqual({ root: 2, inherited: 2 });
+  });
+
+  test('selected descriptor failures keep the root-relative location without invoking a getter', () => {
+    const target = Object.create(null) as object;
+    let getterCalls = 0;
+    let descriptorReads = 0;
+    Object.defineProperty(target, 'profile.name', {
+      configurable: true,
+      enumerable: true,
+      get(): string {
+        getterCalls += 1;
+        return 'Ada';
+      },
+    });
+    // The first descriptor view lets chain validation finish; the second exposes
+    // a selected accessor so the lookup boundary must report its actual location.
+    const unstable = new Proxy(target, {
+      getOwnPropertyDescriptor(record, key): PropertyDescriptor | undefined {
+        if (key === 'profile.name') {
+          descriptorReads += 1;
+          if (descriptorReads === 1) {
+            return { configurable: true, enumerable: true, writable: true, value: 'Ada' };
+          }
+        }
+        return Reflect.getOwnPropertyDescriptor(record, key);
+      },
+    });
+
+    expect(() => observe(unstable, [{ kind: 'property', key: 'profile.name' }], 'value'))
+      .toThrow('Unsupported value at $.profile.name: accessor');
+    expect(getterCalls).toBe(0);
+  });
+
+  test('nested selected accessor errors retain property and array segments without invoking getters', () => {
+    let getterCalls = 0;
+    const person = Object.defineProperty(Object.create(null) as object, 'name', {
+      enumerable: true,
+      get(): string {
+        getterCalls += 1;
+        return 'Ada';
+      },
+    });
+    const address = [
+      { kind: 'property', key: 'groups' },
+      { kind: 'index', index: 0 },
+      { kind: 'property', key: 'person' },
+      { kind: 'property', key: 'name' },
+    ] as const;
+
+    expect(() => observe({ groups: [{ person }] }, address, 'value'))
+      .toThrow('Unsupported value at $.groups[0].person.name: nonenumerable or accessor property');
+    expect(getterCalls).toBe(0);
+  });
+
+  test('nested keys errors identify the selected target, including array paths', () => {
+    const groups = [{ members: ['Ada'] }];
+    const address = [
+      { kind: 'property', key: 'groups' },
+      { kind: 'index', index: 0 },
+      { kind: 'property', key: 'members' },
+    ] as const;
+
+    expect(() => observe({ groups }, address, 'keys'))
+      .toThrow('Unsupported value at $.groups[0].members: keys needs a record');
+  });
+
+  test('nested length errors identify the selected target, including array paths', () => {
+    const groups = [{ person: { name: 'Ada' } }];
+    const address = [
+      { kind: 'property', key: 'groups' },
+      { kind: 'index', index: 0 },
+      { kind: 'property', key: 'person' },
+    ] as const;
+
+    expect(() => observe({ groups }, address, 'length'))
+      .toThrow('Unsupported value at $.groups[0].person: length needs an array');
+  });
+
+  test('nested array surface errors retain the array address', () => {
+    const invalidArray = ['Ada'];
+    Object.setPrototypeOf(invalidArray, null);
+    const address = [
+      { kind: 'property', key: 'groups' },
+      { kind: 'index', index: 0 },
+    ] as const;
+
+    expect(() => observe({ groups: [invalidArray] }, address, 'length'))
+      .toThrow('Unsupported value at $.groups[0]: array prototype');
+  });
+
+  test('property lookup validates the full supported record chain before resolving', () => {
+    const getter = Object.defineProperty({ selected: 'Ada' }, 'hiddenGetter', {
+      enumerable: true,
+      get: () => 'unobserved',
+    });
+    const symbolKey = { selected: 'Ada', [Symbol('extra')]: true };
+    const nonenumerable = Object.defineProperty({ selected: 'Ada' }, 'hidden', { value: true });
+    const first = recordFromEntries([], null);
+    const second = recordFromEntries([], first);
+    const third = recordFromEntries([], second);
+    const tooDeep = recordFromEntries([], third);
+    const selected = [{ kind: 'property', key: 'selected' }] as const;
+
+    expect(() => observe(getter, selected, 'value')).toThrow(/\$\.hiddenGetter: nonenumerable or accessor property/u);
+    expect(() => observe(symbolKey, selected, 'value')).toThrow(/\$: user symbol key/u);
+    expect(() => observe(nonenumerable, selected, 'value')).toThrow(/\$\.hidden: nonenumerable or accessor property/u);
+    expect(() => observe(tooDeep, selected, 'value')).toThrow(/prototype depth/u);
+  });
+
   test('an object numeric key and an array index have different structured addresses', () => {
     const property = observe({ '0': 'x' }, [{ kind: 'property', key: '0' }], 'value');
     const index = observe(['x'], [{ kind: 'index', index: 0 }], 'value');

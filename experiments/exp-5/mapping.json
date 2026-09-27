@@ -33,6 +33,7 @@
     }
   ],
   "unsupported": [
+    "Entity versus Service semantic role",
     "entity attributes",
     "standalone function",
     "interface",

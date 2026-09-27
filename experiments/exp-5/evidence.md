@@ -48,3 +48,38 @@ dependencies alongside the direct API-model dependency. On that final combined
 state, the bounded `verify.sh`, `npm run check`, `npm test`, and `npm run build`
 again exited 0. The canonical test run now included 78 passing tooling checks
 and the EXP-3 SQLite/publication suites (5 and 12 passing tests respectively).
+
+Peer review found that `ICmlObjectFact.kind` was extracted but not compared.
+The accepted mapping intentionally compares either CML Entity or Service to an
+exported TypeScript class without asserting their semantic roles. Before adding
+this limitation to the coverage manifest, the focused assertion was run with
+`npx tsc -p experiments/exp-5/tsconfig.test.json && NODE_OPTIONS=--experimental-vm-modules
+npx jest --config experiments/exp-5/jest.config.mjs --runInBand --testNamePattern
+'accepts the represented subset'`. Jest exited 1: it expected `Entity versus
+Service semantic role` in `unsupported` and received the prior six categories.
+The fixed fixture has globally unique CML object names; its extractor retains
+the resolved referenced name rather than a qualified CML owner. This is a
+coverage limit, not evidence of general CML namespace correspondence. Moving
+`RecordEntity` or adding an unmapped duplicate is diagnosed under the fixed
+object obligations, and the API canonical reference-owner check remains in force.
+
+Clean CI on PR #21 initially failed `check:experiments` with
+`no-unsafe-return` and `no-unsafe-member-access` on the fixture consumer's
+`record.label`. The ordinary root build had not generated the producer alpha
+declaration before type-aware lint, while the earlier bounded `verify.sh` had
+left that ignored artifact in the local worktree. After moving both fixture
+packages' ignored `dist` directories aside, `npm run check:experiments`
+reproduced the failure. A new tooling assertion first failed because
+`build:experiments` did not call `build:exp5-fixtures`; after wiring a Node-only
+producer-then-consumer fixture build into the root build, the assertion passed.
+With fixture `dist` still absent at the start, `npm run check` exited 0: its
+build generated the producer declaration and both `.api.json` models before
+strict lint. This fixture preparation does not invoke Gradle, Java, or the
+optional CML comparison.
+
+After that fix, the canonical `npm test` gate exited 0 with 79 tooling tests
+and the package and EXP-1/2/3 suites; `npm run build` exited 0. The bounded
+`verify.sh` also exited 0 with parser validation, zero diagnostics, seven
+reported unsupported categories, and 17 Jest assertions. The fixture build
+regression test stays in the ordinary tooling suite, so a future change to
+the root build ordering will fail before the lint problem reappears in CI.

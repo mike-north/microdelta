@@ -51,7 +51,7 @@ const mapping: ICorrespondenceMapping = {
     'ProducerContext.Records.RecordEntity': ['rename', '_localCode'],
     'ConsumerContext.Reports.ReportService': ['formatRecord'],
   },
-  unsupported: ['entity attributes', 'standalone function', 'interface', 'type alias', 'protected/private/# class members', 'beta/alpha release tiers'],
+  unsupported: ['Entity versus Service semantic role', 'entity attributes', 'standalone function', 'interface', 'type alias', 'protected/private/# class members', 'beta/alpha release tiers'],
 };
 
 /** Every mutation changes one represented fact and must yield a diagnostic. */
@@ -66,6 +66,7 @@ describe('EXP-5 CML/API correspondence', () => {
     const result = compareCorrespondence(cml, api, mapping);
     expect(result.diagnostics).toEqual([]);
     expect(result.unsupported).toEqual(mapping.unsupported);
+    expect(result.unsupported).toContain('Entity versus Service semantic role');
   });
 
   test('detects changed ownership', () => {
@@ -75,6 +76,12 @@ describe('EXP-5 CML/API correspondence', () => {
     expect(changed(x => { x.cml.contexts.pop(); }).diagnostics.join('\n')).toMatch(/ConsumerContext/u);
     expect(changed(x => { x.cml.contexts[0]!.aggregates[0]!.objects.pop(); }).diagnostics.join('\n')).toMatch(/RecordEntity/u);
     expect(changed(x => { x.cml.contexts[0]!.aggregates[0]!.objects[0]!.operations.pop(); }).diagnostics.join('\n')).toMatch(/_localCode/u);
+    expect(changed(x => {
+      const object = x.cml.contexts[0]!.aggregates[0]!.objects.pop();
+      if (object) { x.cml.contexts[1]!.aggregates[0]!.objects.push(object); }
+    }).diagnostics.join('\n')).toMatch(/ProducerContext.Records.RecordEntity.*missing/u);
+    expect(changed(x => { x.cml.contexts[1]!.aggregates[0]!.objects.push(structuredClone(x.cml.contexts[0]!.aggregates[0]!.objects[0]!)); }).diagnostics.join('\n'))
+      .toMatch(/ConsumerContext.Reports.RecordEntity/u);
   });
   test('detects changed type name', () => {
     expect(changed(x => { x.api.packages[0]!.exports[0]!.name = 'RenamedRecord'; }).diagnostics.length).toBeGreaterThan(0);

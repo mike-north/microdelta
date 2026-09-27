@@ -11,7 +11,7 @@ export interface ICmlOperationFact {
   returnType: string;
 }
 
-/** An entity or service belongs to exactly one modeled aggregate. */
+/** An entity or service belongs to one modeled aggregate; its role is retained as CML provenance, not compared to TypeScript class semantics. */
 export interface ICmlObjectFact {
   name: string;
   kind: 'Entity' | 'Service';

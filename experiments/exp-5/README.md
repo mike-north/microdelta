@@ -40,7 +40,10 @@ the Gradle wrapper, compiles the two fixture workspace packages, emits their fou
 declaration tiers and `.api.json` models, runs strict TypeScript/type-aware lint,
 checks the mapped facts, then runs 17 Jest assertions. It is a separate bounded
 command; normal CI does not acquire a Java prerequisite before an adoption
-decision. In the verified warm-cache run it completed in about 13 seconds. The
+decision. The ordinary root `npm run build` prepares both fixture packages and
+their API models with Node tooling before `npm run check` lints their sources;
+it does not parse CML or run the optional correspondence comparison. In the
+verified warm-cache run, the bounded command completed in about 13 seconds. The
 first setup downloaded a 185,851,019-byte JDK archive and a 159,315,974-byte
 Gradle distribution, plus Maven dependencies; that setup cost matters to adoption.
 
@@ -49,7 +52,7 @@ Gradle distribution, plus Maven dependencies; that setup cost matters to adoptio
 | Native CML fact | Compared TypeScript/API fact | Boundary |
 | --- | --- | --- |
 | `BoundedContext` ownership | Explicit `mapping.json` context → package/entrypoint and `ApiModel.loadPackage` | CML names do not infer npm package names |
-| `Aggregate` → `Entity`/`Service` name | Explicit aggregate object → exported class in `.api.json` | Only two mapped objects; not every helper has a CML counterpart |
+| `Aggregate`-owned object name (`Entity` or `Service`) | Explicit aggregate object → exported class in `.api.json` | Both kinds map to class names; the Entity-versus-Service semantic role is not checked |
 | Operation name, parameter names/order, return type | API Extractor model `ApiMethod` and its typed excerpts | Simple strings and one named class reference only |
 | CML `package` operation visibility | `@internal` on a generated TypeScript declaration | API Extractor omits internal methods from `.api.json`, so TypeScript's AST supplies this fact |
 | CML `public` operation visibility | Native TypeScript public class method | Public member accessibility is independent of `@public`/`@alpha`/`@beta` release tier |
@@ -68,7 +71,16 @@ privacy separately; API-model assertions show release tiers separately. CML
 relationships do not grant a TypeScript context-import edge. The existing
 PKG-007 consumer fixtures remain the release-tier/import enforcement baseline.
 
-The positive comparison reports zero diagnostics and six explicit unsupported
+`CmlFacts` retains Entity/Service kind as parsed provenance, while the comparison
+checks only the selected object name and exported class shape. The fixture uses
+globally unique CML object names. For a CML object-valued parameter, the
+extractor retains the resolved object's name, not a qualified CML owner; this
+experiment does not prove namespace-general CML reference ownership. In the
+fixed mapping, moving `RecordEntity` or adding an unmapped duplicate fails the
+mapped object obligations. The API-side reference check separately proves the
+consumer parameter resolves to the producer class's canonical API owner.
+
+The positive comparison reports zero diagnostics and seven explicit unsupported
 categories. Mutations of ownership, type and operation names, parameter and
 return types, `@internal`, and cross-context type references fail the checker.
 The tests also change native `.cml` and TypeScript source, parse/build both again,

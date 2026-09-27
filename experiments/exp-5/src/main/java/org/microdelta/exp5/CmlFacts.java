@@ -21,7 +21,7 @@ import org.contextmapper.tactic.dsl.tacticdsl.ServiceOperation;
 import org.contextmapper.tactic.dsl.tacticdsl.SimpleDomainObject;
 import org.contextmapper.tactic.dsl.tacticdsl.Visibility;
 
-/** Extracts a deliberately small native CML fact set without parsing CML syntax ourselves. */
+/** Extracts a deliberately small native CML fact set without parsing CML syntax ourselves; entity/service kind is provenance, not a TypeScript class-role assertion. */
 public final class CmlFacts {
   /** This utility has no instance state or runtime role outside the experiment. */
   private CmlFacts() {}

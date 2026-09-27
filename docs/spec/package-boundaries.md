@@ -108,6 +108,8 @@ contexts to workspace package entrypoints, entities/services to exported classes
 and selected operations to named methods with ordered parameters and simple
 return types. CML package visibility corresponds to `@internal`; native
 TypeScript accessibility and release tiers remain separate facts.
+The extracted Entity/Service distinction is retained as provenance but is not
+checked against TypeScript class roles.
 
 The official CML parser supplies model facts, API Extractor's maintained model
 supplies exported API facts, and the TypeScript compiler supplies the internal

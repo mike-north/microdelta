@@ -6,6 +6,8 @@
 
 /** Canonical wire versions fail closed rather than guessing a migration. */
 const VALUE_VERSION = 'MDV1|';
+/** Snapshot transport keeps order that a later explicit keys read could consume. */
+const SNAPSHOT_VERSION = 'MDS1|';
 const OBSERVATION_VERSION = 'MDO1|';
 /** Explicit prototype chains are bounded so lookup meaning stays inspectable. */
 const MAX_CUSTOM_PROTOTYPES = 2;
@@ -132,7 +134,7 @@ function numberToken(value: number): string {
 }
 
 /** Encode only the declared JSON-like domain and its bounded prototype chain. */
-function toWire(value: unknown, path: string, seen: WeakSet<object>, prototypeDepth: number): unknown {
+function toWire(value: unknown, path: string, seen: WeakSet<object>, prototypeDepth: number, preserveOrder: boolean): unknown {
   if (value === undefined) {
     return ['u'];
   }
@@ -161,7 +163,7 @@ function toWire(value: unknown, path: string, seen: WeakSet<object>, prototypeDe
     for (let index = 0; index < value.length; index++) {
       const slot = ownData(value, String(index), `${path}[${index}]`);
       if (slot.present) {
-        entries.push(toWire(slot.value, `${path}[${index}]`, seen, prototypeDepth));
+        entries.push(toWire(slot.value, `${path}[${index}]`, seen, prototypeDepth, preserveOrder));
       } else {
         entries.push(['h']);
       }
@@ -179,18 +181,29 @@ function toWire(value: unknown, path: string, seen: WeakSet<object>, prototypeDe
     if (prototypeDepth >= MAX_CUSTOM_PROTOTYPES) {
       unsupported(path, 'prototype depth');
     }
-    prototypeWire = ['p-custom', toWire(prototype, `${path}[[Prototype]]`, seen, prototypeDepth + 1)];
+    prototypeWire = ['p-custom', toWire(prototype, `${path}[[Prototype]]`, seen, prototypeDepth + 1, preserveOrder)];
   }
-  const entries = sortedKeys(value).map((key): readonly [string, unknown] => {
+  const keys = preserveOrder ? Object.keys(value) : sortedKeys(value);
+  const entries = keys.map((key): readonly [string, unknown] => {
     const property = ownData(value, key, `${path}.${key}`);
-    return [key, toWire(property.value, `${path}.${key}`, seen, prototypeDepth)];
+    return [key, toWire(property.value, `${path}.${key}`, seen, prototypeDepth, preserveOrder)];
   });
   return ['o', entries, prototypeWire];
 }
 
-/** Canonical snapshots preserve structure that individual reads may ignore. */
+/** Normalized value evidence ignores dictionary insertion order. */
 export function encodeValue(value: unknown): string {
-  return `${VALUE_VERSION}${JSON.stringify(toWire(value, '$', new WeakSet(), 0))}`;
+  return `${VALUE_VERSION}${JSON.stringify(toWire(value, '$', new WeakSet(), 0, false))}`;
+}
+
+/** Preserve a snapshot's observable record order across process boundaries. */
+export function encodeSnapshot(value: unknown): string {
+  return `${SNAPSHOT_VERSION}${JSON.stringify(toWire(value, '$', new WeakSet(), 0, true))}`;
+}
+
+/** Restore an immutable snapshot without normalizing its key enumeration order. */
+export function decodeSnapshot(encoded: string): unknown {
+  return decodeCanonical(encoded, SNAPSHOT_VERSION, encodeSnapshot);
 }
 
 /** Narrow a parsed JSON node without accepting arbitrary unvalidated shapes. */
@@ -294,18 +307,23 @@ function freezeSnapshot(value: unknown): void {
   Object.freeze(value);
 }
 
-/** A decoder accepts only canonical v1 bytes, including unique ordered keys. */
-export function decodeValue(encoded: string): unknown {
-  if (!encoded.startsWith(VALUE_VERSION)) {
-    throw new TypeError('Unsupported canonical value version');
+/** Decode one versioned grammar and reject any noncanonical or lossy input. */
+function decodeCanonical(encoded: string, version: string, reencode: (value: unknown) => string): unknown {
+  if (!encoded.startsWith(version)) {
+    throw new TypeError('Unsupported canonical format version');
   }
-  const raw: unknown = JSON.parse(encoded.slice(VALUE_VERSION.length));
+  const raw: unknown = JSON.parse(encoded.slice(version.length));
   const decoded = fromWire(raw, '$');
-  if (encodeValue(decoded) !== encoded) {
+  if (reencode(decoded) !== encoded) {
     throw new TypeError('Unsupported noncanonical value encoding');
   }
   freezeSnapshot(decoded);
   return decoded;
+}
+
+/** Decode an unordered equality normal form; use snapshot transport for later keys reads. */
+export function decodeValue(encoded: string): unknown {
+  return decodeCanonical(encoded, VALUE_VERSION, encodeValue);
 }
 
 /** Construct plain data records without losing a duplicate input key. */

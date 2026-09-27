@@ -3,7 +3,7 @@
  * explicit asynchronous preparation. This is not a production storage API.
  * @packageDocumentation
  */
-import { decodeValue, encodeValue, fingerprint, observe, recordFromEntries } from './value.js';
+import { encodeValue, fingerprint, observe, recordFromEntries } from './value.js';
 import type { IDigestCapability, IObservation } from './value.js';
 
 /** Metadata is readable without opening any payload field. */
@@ -42,19 +42,46 @@ export function verifyFingerprint(source: ISyncFieldSource, expected: string): b
 /** Build a read surface without claiming a primitive can itself be proxied. */
 function fieldView(read: (name: string) => unknown): IFieldView {
   const observations: IObservation[] = [];
+  /** A nested object would need a separate path-aware view to avoid broad facts. */
+  function selectedScalar(name: string, value: unknown): unknown {
+    if (value !== undefined && value !== null
+      && typeof value !== 'string' && typeof value !== 'boolean' && typeof value !== 'number') {
+      throw new TypeError(`Unsupported nested or non-scalar field ${name} in the EXP-2 lazy view`);
+    }
+    void encodeValue(value);
+    return value;
+  }
+  /** Presence and enumeration need their own fact contracts, not false proxy defaults. */
+  function unsupportedOperation(): never {
+    throw new TypeError('Unsupported presence, enumeration, or prototype operation on EXP-2 scalar view');
+  }
   const value = new Proxy<Record<string, unknown>>(Object.freeze(recordFromEntries([], null)), {
     get(_target, property): unknown {
       if (typeof property !== 'string') {
         throw new TypeError('Unsupported symbol field access');
       }
-      // A selected subtree becomes a detached immutable snapshot; unread
-      // siblings in the backing source are never passed through this boundary.
-      const selected = decodeValue(encodeValue(read(property)));
-      observations.push(observe(recordFromEntries([[property, selected]], null), [{ kind: 'property', key: property }], 'value'));
+      const selected = selectedScalar(property, read(property));
+      const observed = observe(recordFromEntries([[property, selected]], null), [{ kind: 'property', key: property }], 'value');
+      observations.push(Object.freeze({
+        ...observed,
+        address: Object.freeze(observed.address.map(segment => Object.freeze({ ...segment }))),
+      }));
       return selected;
     },
+    getOwnPropertyDescriptor: unsupportedOperation,
+    getPrototypeOf: unsupportedOperation,
+    has: unsupportedOperation,
+    ownKeys: unsupportedOperation,
+    set(): false {
+      return false;
+    },
   });
-  return { value, observations };
+  return {
+    value,
+    get observations(): readonly IObservation[] {
+      return Object.freeze([...observations]);
+    },
+  };
 }
 
 /** A synchronous source can satisfy an unpredicted field read immediately. */
@@ -67,7 +94,12 @@ export async function prepareView(source: IAsyncFieldSource, names: readonly str
   const selected = new Map<string, unknown>();
   for (const name of new Set(names)) {
     const value = await source.readField(name);
-    selected.set(name, decodeValue(encodeValue(value)));
+    if (value !== undefined && value !== null
+      && typeof value !== 'string' && typeof value !== 'boolean' && typeof value !== 'number') {
+      throw new TypeError(`Unsupported nested or non-scalar prepared field ${name}`);
+    }
+    void encodeValue(value);
+    selected.set(name, value);
   }
   return fieldView((name: string): unknown => {
     if (!selected.has(name)) {

@@ -10,9 +10,9 @@ import {
   projectUniform,
   projectVisited,
   verifyFingerprint,
-} from './materialization.js';
-import type { IAsyncFieldSource, ISyncFieldSource } from './materialization.js';
-import type { IDigestCapability } from './value.js';
+} from './src/materialization.js';
+import type { IAsyncFieldSource, ISyncFieldSource } from './src/materialization.js';
+import type { IDigestCapability } from './src/value.js';
 
 /** Node supplies only the experiment's host digest adapter. */
 const digest: IDigestCapability = {
@@ -69,7 +69,7 @@ describe('fingerprint and selected materialization', () => {
     expect(view.observations).toHaveLength(1);
   });
 
-  test('a selected object is detached and immutable through the output boundary', () => {
+  test('lazy view rejects an object subtree instead of recording unread descendants', () => {
     const sourceValue = { nested: { name: 'Ada' } };
     const source: ISyncFieldSource = {
       fingerprint: 'sidecar',
@@ -78,13 +78,10 @@ describe('fingerprint and selected materialization', () => {
       },
     };
     const view = createSyncView(source);
-    const selected = view.value['person'];
-    expect(Object.isFrozen(selected)).toBe(true);
-    const output = materializeOutput(view, ['person']);
-    expect(Object.isFrozen(output)).toBe(true);
-    expect(Object.isFrozen(output['person'])).toBe(true);
+    expect(() => view.value['person']).toThrow(/scalar|nested/i);
+    expect(() => materializeOutput(view, ['person'])).toThrow(/scalar|nested/i);
     expect(Object.isFrozen(sourceValue)).toBe(false);
-    expect(view.observations).toHaveLength(2);
+    expect(view.observations).toHaveLength(0);
   });
 
   test('the view cannot be used to mutate a backing value', () => {
@@ -93,6 +90,27 @@ describe('fingerprint and selected materialization', () => {
     expect(Reflect.set(view.value, 'name', 'Eve')).toBe(false);
     expect(view.value.name).toBe('Ada');
     expect(reads).toEqual(['name']);
+  });
+
+  test('unsupported presence, enumeration, and prototype operations fail before payload reads', () => {
+    const { source, reads } = syncSource();
+    const view = createSyncView(source);
+    expect(() => Object.hasOwn(view.value, 'name')).toThrow(/unsupported/i);
+    expect(() => 'name' in view.value).toThrow(/unsupported/i);
+    expect(() => Object.keys(view.value)).toThrow(/unsupported/i);
+    expect((): void => { Object.getPrototypeOf(view.value); }).toThrow(/unsupported/i);
+    expect(reads).toEqual([]);
+    expect(view.observations).toHaveLength(0);
+  });
+
+  test('a caller cannot erase captured observations through the returned array', () => {
+    const { source } = syncSource();
+    const view = createSyncView(source);
+    expect(view.value.name).toBe('Ada');
+    const exposed = view.observations;
+    expect(Object.isFrozen(exposed)).toBe(true);
+    expect((): void => { Reflect.apply(Array.prototype.pop, exposed, []); }).toThrow();
+    expect(view.observations).toHaveLength(1);
   });
 
   test('explicit async preparation retains ordinary reads for prepared scalars', async () => {

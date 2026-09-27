@@ -5,5 +5,5 @@
     "types": [],
     "skipLibCheck": false
   },
-  "files": ["value.ts", "materialization.ts"]
+  "files": ["src/value.ts", "src/materialization.ts"]
 }

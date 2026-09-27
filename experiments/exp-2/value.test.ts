@@ -6,13 +6,15 @@ import { describe, expect, test } from '@jest/globals';
 
 import {
   decodeValue,
+  decodeSnapshot,
   encodeObservation,
+  encodeSnapshot,
   encodeValue,
   fingerprint,
   observe,
   recordFromEntries,
-} from './value.js';
-import type { IDigestCapability, IObservation } from './value.js';
+} from './src/value.js';
+import type { IDigestCapability, IObservation } from './src/value.js';
 
 /** The test adapter keeps host hashing out of the portable candidate. */
 const digest: IDigestCapability = {
@@ -74,6 +76,27 @@ describe('literal observation facts', () => {
     expect(encodeObservation(observe(first, [], 'keys'))).not.toBe(encodeObservation(observe(reverse, [], 'keys')));
   });
 
+  test('snapshot transport preserves later explicit enumeration while equality stays unordered', () => {
+    const reverse = recordFromEntries([['b', 2], ['a', 1]], null);
+    const forward = recordFromEntries([['a', 1], ['b', 2]], null);
+    expect(encodeValue(reverse)).toBe(encodeValue(forward));
+    const revived = decodeSnapshot(encodeSnapshot(reverse));
+    expect(observe(revived, [], 'keys').fact).toEqual(['b', 'a']);
+    expect(encodeObservation(observe(revived, [], 'keys'))).toBe(encodeObservation(observe(reverse, [], 'keys')));
+    expect(encodeSnapshot(reverse)).not.toBe(encodeSnapshot(forward));
+    expect(() => decodeSnapshot(encodeValue(reverse))).toThrow(/version/i);
+  });
+
+  test('plain nested observation selects a leaf without sibling inflation', () => {
+    const address = [
+      { kind: 'property', key: 'person' },
+      { kind: 'property', key: 'name' },
+    ] as const;
+    const before = { person: { name: 'Ada', unread: 1 } };
+    const changedUnread = { person: { name: 'Ada', unread: 2 } };
+    expect(encodeObservation(observe(before, address, 'value'))).toBe(encodeObservation(observe(changedUnread, address, 'value')));
+  });
+
   test('pass-through output observes only its selected materialized fields', () => {
     const source = { name: 'Ada', huge: 'unread' };
     const name = observe(source, [{ kind: 'property', key: 'name' }], 'value');
@@ -93,6 +116,8 @@ describe('canonical supported domain', () => {
     for (const value of values) {
       const encoded = encodeValue(value);
       expect(encodeValue(decodeValue(encoded))).toBe(encoded);
+      const snapshot = encodeSnapshot(value);
+      expect(encodeSnapshot(decodeSnapshot(snapshot))).toBe(snapshot);
       expect(fingerprint(encoded, digest)).toBe(fingerprint(encodeValue(decodeValue(encoded)), digest));
     }
     expect(encodeValue(-0)).not.toBe(encodeValue(0));
@@ -103,7 +128,7 @@ describe('canonical supported domain', () => {
   test('an independent Node process computes the same canonical bytes and SHA-256', () => {
     const value = recordFromEntries([['0', -0], ['name', 'Ada']], null);
     const local = encodeValue(value);
-    const moduleUrl = new URL('./value.js', import.meta.url).href;
+    const moduleUrl = new URL('./src/value.js', import.meta.url).href;
     const script = `import { createHash } from 'node:crypto'; import { encodeValue, recordFromEntries } from ${JSON.stringify(moduleUrl)}; const encoded = encodeValue(recordFromEntries([['name', 'Ada'], ['0', -0]], null)); process.stdout.write(JSON.stringify([encoded, createHash('sha256').update(encoded, 'utf8').digest('hex')]));`;
     const output = execFileSync(process.execPath, ['--input-type=module', '-e', script], { encoding: 'utf8' });
     expect(JSON.parse(output)).toEqual([local, fingerprint(local, digest)]);
@@ -139,6 +164,9 @@ describe('canonical supported domain', () => {
     expect(() => decodeValue('MDV1|["o",[["x",["d","1"]],["x",["d","2"]]],["p-null"]]')).toThrow(/duplicate/i);
     expect(() => decodeValue('MDV1|["o",[["z",["d","1"]],["a",["d","2"]]],["p-null"]]')).toThrow(/noncanonical/i);
     expect(() => decodeValue('MDV9|N')).toThrow(/version/i);
+    expect(() => decodeSnapshot('MDS1|["o",[["x",["d","1"]],["x",["d","2"]]],["p-null"]]')).toThrow(/duplicate/i);
+    expect(() => decodeSnapshot('MDS1|["a",["bad"]')).toThrow();
+    expect(() => decodeSnapshot('MDS9|["n"]')).toThrow(/version/i);
   });
 
   test('digest input includes operation, address, fact, and format version', () => {

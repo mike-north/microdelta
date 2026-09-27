@@ -355,10 +355,36 @@ Recovery must preserve reference integrity and retained attempt evidence without
 claiming an incomplete payload is completed. Define ambiguous publication
 acknowledgment handling so retry/recovery does not invent conflicting outcomes.
 
-**Experiment:** choose atomic backend transitions or a recoverable publication
-protocol and prove its bounded crash/race cases before treating backend ports
-as stable. This document selects neither a transaction schema nor a lease-token
-format. A model or table alone does not establish actual backend durability.
+**EXP-3 protocol selection:** the initial durable backend is a single local
+SQLite file with an enforced single active logical writer. History owns the
+writer lease, monotonically increasing fence, durable generation allocation,
+attempt state, and publication transaction. SQLite write serialization alone is
+not permission for multiple logical writers. Every holder mutation checks the
+current holder, fence, and unexpired lease within its transaction.
+
+Allocation advances its counter and inserts the attempt in a commit before
+payload staging. Staged bytes remain attempt evidence, never a completed result.
+One publication commit retains the immutable payload, fingerprint and provenance,
+moves the current pointer, and marks the attempt completed. Exact historical
+reads resolve their original snapshot rather than the current pointer. A stable
+attempt key lets recovery discover committed success before repeating the body
+after lost acknowledgment or a post-commit observer exception. It does not
+guarantee exactly-once external work for an uncommitted attempt.
+
+The [EXP-3 protocol and process-kill tests](../../experiments/exp-3/protocol.md)
+exercise acquisition, allocation, staging, pre-commit termination, and post-commit
+lost acknowledgment with WAL, full synchronous commits, foreign keys, and a
+bounded busy wait. The fixture pins better-sqlite3 12.9.0. Unknown schema versions
+and missing required tables reject rather than infer a migration. Production
+record layout and permanent Machine capability APIs remain implementation work;
+they must preserve these authority and atomicity boundaries.
+
+This selection is bounded process-termination/reopen evidence. It does not prove
+power-loss, device/filesystem failure, network filesystem, distributed clock, or
+multi-host durability. The logical-time fixture and stale-holder tests are not
+a complete concurrent-worker proof. EXP-7 evaluates the selected transition
+model; M5 still requires implementation concurrency evidence before any such
+claim. A model or transaction test does not qualify other storage backends.
 
 ### PUB-005 — Contention and waiting report facts accurately
 

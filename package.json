@@ -13,8 +13,8 @@
     "check:workspace": "concurrently --success all --names imports,experiments,suppressions,declarations,fixtures,wiring \"npm run check:imports\" \"npm run check:experiments\" \"npm run check:suppressions\" \"npm run check:declarations\" \"npm run check:fixtures\" \"npm run check:wiring\"",
     "test": "npm run build && npm run test:tooling && npm run test --workspaces && npm run test:experiments",
     "test:tooling": "node --test tooling/*.test.mjs",
-    "test:experiments": "tsd --typings experiments/exp-1/src/protocol.ts --files experiments/exp-1/test-d/protocol.test-d.ts && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-1/jest.config.mjs --runInBand && npm run test:exp2",
-    "check:experiments": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p experiments/exp-1/tsconfig.portable.json && tsc -p experiments/exp-2/tsconfig.portable.json && eslint experiments --no-error-on-unmatched-pattern",
+    "test:experiments": "tsd --typings experiments/exp-1/src/protocol.ts --files experiments/exp-1/test-d/protocol.test-d.ts && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-1/jest.config.mjs --runInBand && npm run test:exp2 && npm run test:exp3",
+    "check:experiments": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p experiments/exp-1/tsconfig.portable.json && tsc -p experiments/exp-2/tsconfig.portable.json && tsc --noEmit -p experiments/exp-3/tsconfig.portable.json && eslint experiments --no-error-on-unmatched-pattern",
     "check:suppressions": "node tooling/check-suppressions.mjs",
     "check:pr-metadata": "node tooling/pr-metadata.mjs",
     "build:packages": "npm run build --workspace @microdelta/machine && npm run build --workspace @microdelta/machine-node && npm run build --workspace @microdelta/definition && npm run build --workspace @microdelta/tracking && npm run build --workspace @microdelta/history && npm run build --workspace microdelta",
@@ -24,17 +24,23 @@
     "check:declarations": "node tooling/check-producer-declarations.mjs && node tooling/history-declaration-shims.mjs --check",
     "check:fixtures": "tsc --noEmit -p fixtures/declarations/producer/tsconfig.json && eslint fixtures/declarations/producer/src",
     "check:wiring": "node tooling/foundation-wiring.mjs",
-    "test:exp2": "tsc -p experiments/exp-2/tsconfig.json && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-2/jest.config.mjs --runInBand"
+    "test:exp2": "tsc -p experiments/exp-2/tsconfig.json && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-2/jest.config.mjs --runInBand",
+    "test:exp3": "tsc -p experiments/exp-3/tsconfig.test.json && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config experiments/exp-3/jest.config.mjs --runInBand --runTestsByPath .test-build/experiments/exp-3/test/sqlite-capability.test.js && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config experiments/exp-3/jest.config.mjs --runInBand --runTestsByPath .test-build/experiments/exp-3/test/publication.test.js"
   },
   "devDependencies": {
     "@jest/globals": "30.5.1",
     "@microsoft/api-extractor": "7.59.2",
+    "@types/better-sqlite3": "7.6.13",
     "@types/node": "20.19.43",
+    "better-sqlite3": "12.9.0",
     "concurrently": "9.2.4",
     "eslint": "10.10.0",
     "jest": "30.5.1",
     "tsd": "0.33.0",
     "typescript": "5.9.3",
     "typescript-eslint": "8.70.0"
+  },
+  "allowScripts": {
+    "better-sqlite3@12.9.0": true
   }
 }

@@ -187,10 +187,10 @@ authority. Read it first, then the owning contract and its acceptance scenarios.
 [Delivery milestones](docs/milestones.md) define the implementation order; the
 [repository issue queue](https://github.com/mike-north/microdelta/issues) tracks
 the work. M0.5 is accepted; the final [M1 acceptance outcome](https://github.com/mike-north/microdelta/issues/10#issuecomment-5853047962)
-is recorded in the issue evidence. M2 tracking and package contracts are in
-progress and establish supported observations and value semantics, not durable
-memoization. M3 adds the
-small persisted analysis path with exact references and current source acceptance.
+is recorded in the issue evidence. M2 provides bounded tracking observations
+and value semantics; its [acceptance record](https://github.com/mike-north/microdelta/issues/32)
+records delivery and verification. Durable memoization remains in M3, which adds
+the small persisted analysis path with exact references and current source acceptance.
 M4 adds general composition and keyed collections. M5 covers operational
 correctness; M6 delivers the CLI and inspection surface; M7 assembles the full
 roster workflow and scale acceptance. Review the [milestones](docs/milestones.md)

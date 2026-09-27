@@ -9,7 +9,7 @@ registry is [`tooling/package-architecture.mjs`](../tooling/package-architecture
 | --- | --- | --- | --- |
 | Author facade / assembly | `microdelta` (`packages/core`) | Supplies the Node Machine to History's memory factory; preserves `createMemoryStore(options?)` and exports the existing Store errors, types, and Jest conformance entry | Composition may consume approved owner contracts and `@microdelta/machine-node`; contexts cannot import through the facade |
 | Definition & Binding | `@microdelta/definition` | Function-name inspection for labels and diagnostics only; no binding or identity port yet | Value Semantics contract when implemented |
-| Tracking & Observation | `@microdelta/tracking` | Current process-local tags, capture frames, cells, and derivations; `createTracking(capability)` injects async context; no durable observation encoding | Value Semantics contract when implemented; `@microdelta/machine` |
+| Tracking & Observation | `@microdelta/tracking` | Process-local tags, frames, cells, and derivations plus project-private `createTrackingObserver(host)` alpha contracts for detached supported wrappers, consumed semantic facts, called-function implementation evidence, current-fact comparison, and cached evidence replay | Value Semantics and `@microdelta/machine` |
 | Result History & Publication | `@microdelta/history` | Existing row Store contract and compatibility row schema; memory adapter receives a snapshot capability; no cross-row publication operation | Value Semantics contract when implemented; `@microdelta/machine` |
 | Reuse Resolution | No package yet | Candidate-validation and source-policy ports remain unimplemented | Definition, Tracking, History, Materialization |
 | Run Supervision | No package yet | Admission, progress, retry, and cancellation ports remain unimplemented | Definition, Resolution, Accounting |
@@ -26,6 +26,12 @@ supplying the Node adapter at assembly. `Path` addresses rows in that Store; it 
 semantic address. `Identity`, `Subject`, and `RecordedRead` remain compatibility
 shapes, not ratification of the target domain model. `nameOf` supplies a label,
 never a durable subject key or current-binding locator.
+
+The Tracking observer is bounded M2 owner functionality: it stores no binding
+catalog or History rows and does not decide source freshness, reusable results, or
+output materialization. Its structural binding descriptor is supplied by another
+owner and resolved through the current-fact provider. It does not establish
+arbitrary JavaScript closure soundness.
 
 Each implemented package generates untrimmed, alpha, beta, and public declaration
 rollups plus a reviewed API report. Definition and Tracking's current exports are

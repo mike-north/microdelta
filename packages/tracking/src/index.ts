@@ -9,6 +9,25 @@ import { computed, signal, untracked } from '@preact/signals-core';
 import type { Signal } from '@preact/signals-core';
 import type { IAsyncContextCapability } from '@microdelta/machine';
 
+export type { IAsyncContext, IAsyncContextCapability, ISha256Capability } from '@microdelta/machine';
+export type { IAddressSegment, IOperation } from '@microdelta/value';
+
+export { createTrackingObserver } from './observer.js';
+export type {
+  ICurrentComparison,
+  ICurrentFactProvider,
+  ICurrentFactResolution,
+  IObservationCapture,
+  ITracked,
+  ITrackedBrand,
+  ITrackedView,
+  ITrackingBinding,
+  ITrackingMaterialization,
+  ITrackingObservation,
+  ITrackingObserver,
+  ITrackingObserverHost,
+} from './observer.js';
+
 /**
  * Opaque identity for one process-local reactive dependency.
  * Tags cannot be serialized; revision signals remain private to this module.

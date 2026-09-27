@@ -397,6 +397,21 @@ function isProjectionFact(value: unknown): value is IValueProjectionFact {
   }
 }
 
+/**
+ * Ask Value to validate and encode provider data while keeping Machine failures
+ * outside this boundary. A Value TypeError means the current fact is incompatible.
+ */
+function encodeCurrentValue(encode: () => string): string | undefined {
+  try {
+    return encode();
+  } catch (error: unknown) {
+    if (error instanceof TypeError) {
+      return undefined;
+    }
+    throw error;
+  }
+}
+
 /** Compare copied provider selections structurally without relying on object identity. */
 function sameRequest(left: ICurrentFactRequest, right: ICurrentFactRequest): boolean {
   try {
@@ -747,22 +762,18 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
         currentFingerprint = resolved.fingerprint;
       } else {
         switch (observation.selection.kind) {
-          case 'selected':
-            if (!isSelectedFact(resolved.fact) || !matchesSelectedRequest(resolved.fact, observation.selection)) {
+          case 'selected': {
+            const fact = resolved.fact;
+            if (!isSelectedFact(fact) || !matchesSelectedRequest(fact, observation.selection)) {
               return { kind: 'incompatible', observation };
             }
-            let encoded: string;
-            try {
-              encoded = encodeSelectedFact(resolved.fact);
-            } catch (error: unknown) {
-              // A Value TypeError means the selected content is outside its supported canonical domain.
-              if (error instanceof TypeError) {
-                return { kind: 'incompatible', observation };
-              }
-              throw error;
+            const encoded = encodeCurrentValue(() => encodeSelectedFact(fact));
+            if (encoded === undefined) {
+              return { kind: 'incompatible', observation };
             }
             currentFingerprint = fingerprint(encoded, machine);
             break;
+          }
           case 'implementation':
             if (typeof resolved.fact !== 'function') {
               return { kind: 'unavailable', observation };
@@ -773,21 +784,37 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
             }
             currentFingerprint = encodeImplementationSource(source, machine).digest;
             break;
-          case 'materialized-output':
-            currentFingerprint = fingerprint(encodeSnapshot(resolved.fact), machine);
-            break;
-          case 'projection':
-            if (!isProjectionFact(resolved.fact)) {
+          case 'materialized-output': {
+            const encoded = encodeCurrentValue(() => encodeSnapshot(resolved.fact));
+            if (encoded === undefined) {
               return { kind: 'incompatible', observation };
             }
-            currentFingerprint = fingerprint(encodeProjectionFact(resolved.fact), machine);
+            currentFingerprint = fingerprint(encoded, machine);
             break;
-          case 'collection-order':
+          }
+          case 'projection': {
+            const fact = resolved.fact;
+            if (!isProjectionFact(fact)) {
+              return { kind: 'incompatible', observation };
+            }
+            const encoded = encodeCurrentValue(() => encodeProjectionFact(fact));
+            if (encoded === undefined) {
+              return { kind: 'incompatible', observation };
+            }
+            currentFingerprint = fingerprint(encoded, machine);
+            break;
+          }
+          case 'collection-order': {
             if (!isUniqueStringSequence(resolved.fact)) {
               return { kind: 'incompatible', observation };
             }
-            currentFingerprint = fingerprint(encodeValue(resolved.fact), machine);
+            const encoded = encodeCurrentValue(() => encodeValue(resolved.fact));
+            if (encoded === undefined) {
+              return { kind: 'incompatible', observation };
+            }
+            currentFingerprint = fingerprint(encoded, machine);
             break;
+          }
           default: {
             const exhaustive: never = observation.selection;
             return exhaustive;

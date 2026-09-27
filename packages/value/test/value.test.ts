@@ -103,6 +103,63 @@ describe('literal observation facts', () => {
     expect(getterCalls).toBe(0);
   });
 
+  test('nested selected accessor errors retain property and array segments without invoking getters', () => {
+    let getterCalls = 0;
+    const person = Object.defineProperty(Object.create(null) as object, 'name', {
+      enumerable: true,
+      get(): string {
+        getterCalls += 1;
+        return 'Ada';
+      },
+    });
+    const address = [
+      { kind: 'property', key: 'groups' },
+      { kind: 'index', index: 0 },
+      { kind: 'property', key: 'person' },
+      { kind: 'property', key: 'name' },
+    ] as const;
+
+    expect(() => observe({ groups: [{ person }] }, address, 'value'))
+      .toThrow('Unsupported value at $.groups[0].person.name: nonenumerable or accessor property');
+    expect(getterCalls).toBe(0);
+  });
+
+  test('nested keys errors identify the selected target, including array paths', () => {
+    const groups = [{ members: ['Ada'] }];
+    const address = [
+      { kind: 'property', key: 'groups' },
+      { kind: 'index', index: 0 },
+      { kind: 'property', key: 'members' },
+    ] as const;
+
+    expect(() => observe({ groups }, address, 'keys'))
+      .toThrow('Unsupported value at $.groups[0].members: keys needs a record');
+  });
+
+  test('nested length errors identify the selected target, including array paths', () => {
+    const groups = [{ person: { name: 'Ada' } }];
+    const address = [
+      { kind: 'property', key: 'groups' },
+      { kind: 'index', index: 0 },
+      { kind: 'property', key: 'person' },
+    ] as const;
+
+    expect(() => observe({ groups }, address, 'length'))
+      .toThrow('Unsupported value at $.groups[0].person: length needs an array');
+  });
+
+  test('nested array surface errors retain the array address', () => {
+    const invalidArray = ['Ada'];
+    Object.setPrototypeOf(invalidArray, null);
+    const address = [
+      { kind: 'property', key: 'groups' },
+      { kind: 'index', index: 0 },
+    ] as const;
+
+    expect(() => observe({ groups: [invalidArray] }, address, 'length'))
+      .toThrow('Unsupported value at $.groups[0]: array prototype');
+  });
+
   test('property lookup validates the full supported record chain before resolving', () => {
     const getter = Object.defineProperty({ selected: 'Ada' }, 'hiddenGetter', {
       enumerable: true,

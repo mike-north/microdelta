@@ -44,6 +44,16 @@ test('rerunning an old event uses the newly corrected body', async () => {
   assert.deepEqual(await validateEvent('pull_request', { ...event, pull_request: { ...event.pull_request, body: '' } }, async () => current), []);
 });
 
+test('workflow dispatch checks the requested PR only when its head matches the dispatched ref', async () => {
+  const dispatched = { inputs: { pr_number: '4' }, ref: 'changeset-release/main' };
+  assert.deepEqual(await validateEvent('workflow_dispatch', dispatched, async number => {
+    assert.equal(number, 4);
+    return current;
+  }, 'head-a'), []);
+  await assert.rejects(validateEvent('workflow_dispatch', dispatched, async () => current, 'head-b'), /head/i);
+  await assert.rejects(validateEvent('workflow_dispatch', { inputs: { pr_number: '0' } }, async () => current, 'head-a'), /payload/i);
+});
+
 test('push-only CI needs neither a PR payload nor API access', async () => {
   assert.deepEqual(await validateEvent('push', {}, () => { throw new Error('must not fetch'); }), []);
 });
@@ -82,9 +92,9 @@ test('CI wires every required event to one read-only, cancellable metadata check
   const workflow = await readFile(new URL('../.github/workflows/pr-metadata.yml', import.meta.url), 'utf8');
   // These intentionally explicit assertions require review when CI's trust or
   // scheduling boundary changes; they do not parse arbitrary user-supplied YAML.
-  assert.match(workflow, /^on:\n  pull_request:\n    types: \[opened, edited, reopened, synchronize\]\n/mu);
+  assert.match(workflow, /^on:\n  pull_request:\n    types: \[opened, edited, reopened, synchronize\]\n  workflow_dispatch:\n    inputs:\n      pr_number:/mu);
   assert.match(workflow, /^permissions:\n  contents: read\n  pull-requests: read\n/mu);
-  assert.match(workflow, /^concurrency:\n  group: pr-metadata-\$\{\{ github\.event\.pull_request\.number \}\}\n  cancel-in-progress: true\n/mu);
+  assert.match(workflow, /^concurrency:\n  group: pr-metadata-\$\{\{ github\.event\.pull_request\.number \|\| inputs\.pr_number \}\}\n  cancel-in-progress: true\n/mu);
   assert.match(workflow, /^    name: PR metadata$/mu);
   assert.match(workflow, /^          persist-credentials: false$/mu);
   assert.match(workflow, /^        run: node tooling\/pr-metadata\.mjs --github-event$/mu);

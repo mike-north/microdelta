@@ -112,14 +112,33 @@ function isWithin(scope, ancestor) {
   return false;
 }
 
-/** Unsupported receiver syntax remains within the callback's lexical boundary. */
-function isAstDescendant(node, ancestor) {
-  for (let current = node; current; current = current.parent) {
-    if (current === ancestor) {
-      return true;
+/** Find every receiver occurrence in one callback subtree, including nested functions. */
+function findThisExpressions(root, visitorKeys) {
+  const pending = [root];
+  const found = [];
+  while (pending.length > 0) {
+    const node = pending.pop();
+    if (node.type === 'ThisExpression') {
+      found.push(node);
+    }
+    const children = [];
+    for (const key of visitorKeys[node.type] ?? []) {
+      const value = node[key];
+      if (Array.isArray(value)) {
+        for (const child of value) {
+          if (child && typeof child.type === 'string') {
+            children.push(child);
+          }
+        }
+      } else if (value && typeof value.type === 'string') {
+        children.push(value);
+      }
+    }
+    for (let index = children.length - 1; index >= 0; index--) {
+      pending.push(children[index]);
     }
   }
-  return false;
+  return found;
 }
 
 /** The type-aware rule keeps each exemption attached to declarations, not spellings. */
@@ -367,10 +386,8 @@ export const trackedCaptures = {
             unsupported.add(callbackNode);
             continue;
           }
-          for (const candidate of allNodes) {
-            if (candidate.type === 'ThisExpression' && isAstDescendant(candidate, callbackNode)) {
-              unsupported.add(candidate);
-            }
+          for (const thisExpression of findThisExpressions(callbackNode, sourceCode.visitorKeys)) {
+            unsupported.add(thisExpression);
           }
           const scopes = [];
           const collect = scope => {

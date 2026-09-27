@@ -106,6 +106,22 @@ test('callback receiver access is diagnosed as outside the supported capture syn
   assert.match(result.messages[0]?.message ?? '', /outside the linted direct-callback syntax/u);
 });
 
+test('nested callback receivers remain unsupported without leaking into sibling callbacks', async () => {
+  const eslint = new ESLint({ cwd: root });
+  const source = [
+    "import type { ITrackingObserver } from '@microdelta/tracking';",
+    'declare const observer: ITrackingObserver;',
+    'class Holder { run() {',
+    '  observer.capture(() => { const nested = () => [this, this]; return nested; });',
+    '  observer.capture(() => 1);',
+    '} }',
+  ].join('\n');
+  const [result] = await eslint.lintText(source, { filePath: fixture });
+  assert.ok(result);
+  assert.equal(result.messages.length, 2, JSON.stringify(result.messages, null, 2));
+  assert.ok(result.messages.every(message => message.messageId === 'unsupported'));
+});
+
 test('literal-computed canonical observer boundaries are diagnosed as unsupported syntax', async () => {
   const eslint = new ESLint({ cwd: root });
   const source = [

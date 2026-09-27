@@ -141,13 +141,18 @@ describe('selected materialization', () => {
     await tracking.captureAsync(async () => {
       for (const attempt of [
         () => scalar.name,
+        // eslint-disable-next-line microdelta/tracked-captures -- This runtime race fixture tries an already assembled projection after its capture frame closes.
         () => materialization.project({ path: ['collection'] }, projection),
         () => materialization.observeMemberOrder({ path: ['collection'] }, ['one']),
         () => materialization.materializeOutput(tracked.subtree),
         () => materialization.materializeOutput({ local: 'only' }),
       ]) {
+        // eslint-disable-next-line microdelta/tracked-captures -- The timer deliberately invokes captured work after the async observation frame has closed.
         setTimeout(() => {
-          try { attempt(); } catch (error: unknown) { errors.push(error); }
+          try { attempt(); } catch (error: unknown) {
+            // eslint-disable-next-line microdelta/tracked-captures -- This runtime race fixture retains each expected closed-frame error for its assertion.
+            errors.push(error);
+          }
         }, 0);
       }
     });
@@ -252,7 +257,9 @@ describe('selected materialization', () => {
     };
     const a: IValueProjectionFact = { descriptor, members: [['user-a', 'Ada'], ['user-b', 'Grace']] };
     const b: IValueProjectionFact = { descriptor, members: [['user-b', 'Grace'], ['user-a', 'Ada']] };
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime test supplies explicit untracked fixture metadata to verify canonical projection ordering.
     const first = tracking.capture(() => materialization.project(binding, a));
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime test supplies explicit untracked fixture metadata to verify canonical projection ordering.
     const reordered = tracking.capture(() => materialization.project(binding, b));
 
     expect(first.observations).toHaveLength(1);
@@ -262,11 +269,15 @@ describe('selected materialization', () => {
     expect(reordered.value.members.map(([key]) => key)).toEqual(['user-a', 'user-b']);
 
     const ordered = tracking.capture(() => {
+      // eslint-disable-next-line microdelta/tracked-captures -- This runtime test supplies fixture projection data directly to check order as a separate observation.
       materialization.project(binding, a);
+      // eslint-disable-next-line microdelta/tracked-captures -- This runtime test checks an explicit fixture binding as the separate order dependency.
       return materialization.observeMemberOrder(binding, ['user-a', 'user-b']);
     });
     const reversed = tracking.capture(() => {
+      // eslint-disable-next-line microdelta/tracked-captures -- This runtime test supplies fixture projection data directly to check order as a separate observation.
       materialization.project(binding, b);
+      // eslint-disable-next-line microdelta/tracked-captures -- This runtime test checks an explicit fixture binding as the separate order dependency.
       return materialization.observeMemberOrder(binding, ['user-b', 'user-a']);
     });
     expect(ordered.observations.map((observation) => observation.kind)).toEqual(['projection', 'collection-order']);
@@ -291,6 +302,7 @@ describe('selected materialization', () => {
       },
     };
     const materialization = createMaterialization({ tracking, reader: createExactReader().reader, projectionReader });
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime test injects exact saved-result metadata to verify reader selection.
     const capture = tracking.capture(() => materialization.projectFrom(reference, { path: ['roster'] }, descriptor));
 
     expect(dispatched).toEqual(reference);
@@ -326,6 +338,7 @@ describe('selected materialization', () => {
     };
     const withoutProjection = createMaterialization({ tracking, reader: exact.reader });
     const unavailable = tracking.capture(() => {
+      // eslint-disable-next-line microdelta/tracked-captures -- This runtime test passes explicit saved metadata to assert refusal without projection capability.
       try { return withoutProjection.projectFrom(reference, { path: ['roster'] }, descriptor); }
       catch (error: unknown) { return error; }
     });
@@ -342,6 +355,7 @@ describe('selected materialization', () => {
     };
     const withProjection = createMaterialization({ tracking, reader: exact.reader, projectionReader });
     const mismatched = tracking.capture(() => {
+      // eslint-disable-next-line microdelta/tracked-captures -- This runtime test passes explicit saved metadata to verify mismatched selections are rejected.
       try { return withProjection.projectFrom(reference, { path: ['roster'] }, descriptor); }
       catch (error: unknown) { return error; }
     });
@@ -361,6 +375,7 @@ describe('selected materialization', () => {
 
     for (const fact of [duplicate, missing]) {
       const capture = tracking.capture(() => {
+        // eslint-disable-next-line microdelta/tracked-captures -- This runtime test injects deliberately malformed projection facts to verify validation.
         try { return materialization.project(binding, fact); } catch (error: unknown) { return error; }
       });
       expect(capture.value).toBeInstanceOf(TypeError);

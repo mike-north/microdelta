@@ -20,12 +20,21 @@ boundary.
 Parameters and declarations inside a callback are local inputs. External
 captures are accepted when their declared type carries the canonical tracked
 brand, when they are one of the explicit observer capabilities (tracked,
-capture, captureAsync, derived, keys, or hasOwn), or when the reference is one
-of the allowlisted standard-library calls: selected deterministic Math numeric
-methods, Number.isFinite, Number.isInteger, Number.isNaN, Number.isSafeInteger,
-and Object.is. Calls are matched by resolved symbol and standard-library
-declaration. This list is compatibility policy, not a defense against runtime
-monkey-patching.
+capture, captureAsync, derived, keys, hasOwn, or snapshotOutput), or when the
+receiver is used with one of Materialization's exact observation methods:
+materializeOutput, project, projectFrom, and observeMemberOrder. Receiver
+allowances resolve from the owning Tracking and Materialization declarations
+and cover only that receiver; arguments and referenced values must still carry
+their own tracked evidence or be locally declared. Other Materialization methods
+do not inherit receiver authority. A lazy scalar view returned by Materialization
+preserves Tracking's canonical brand through its generated alpha declaration;
+detached output does not become tracked because Materialization produced it.
+
+External captures are also accepted when the reference is one of the allowlisted
+standard-library calls: selected deterministic Math numeric methods,
+Number.isFinite, Number.isInteger, Number.isNaN, Number.isSafeInteger, and
+Object.is. Calls are matched by resolved symbol and standard-library declaration.
+This list is compatibility policy, not a defense against runtime monkey-patching.
 
 The observer's keys and hasOwn operations and tracked in checks are supported.
 Native object reflection is not: Object.keys, Object.hasOwn,
@@ -38,8 +47,10 @@ failure. A bare scalar cell remains untracked.
 
 The rule checks actual TypeScript programs and generated declarations. Missing
 type services fail with a diagnostic. The declaration fixture compiles an
-alpha consumer against generated Tracking and producer rollups and separately
-asserts that the producer's public rollup hides its alpha-only contract.
+alpha consumer against generated Tracking, Materialization, Value, and producer
+rollups; it proves lazy scalar-view brand preservation, detached-output
+isolation, and exact receiver identity, then separately asserts that producer
+public rollups hide their alpha-only contracts.
 
 This rule does not infer arbitrary alias/reassignment history, dynamically
 computed observer method names, dynamic reflection, runtime prototype mutation,

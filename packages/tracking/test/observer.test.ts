@@ -137,6 +137,7 @@ describe('semantic tracking observer', () => {
   });
 
   test('compares an exact compatible fingerprint request without asking for payload and rejects mismatched metadata descriptors', () => {
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime case creates its tracked wrapper inside capture to exercise fingerprint-only comparison.
     const captured = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
     const expected = captured.observations[0];
     if (expected === undefined) { throw new Error('Expected selected evidence'); }
@@ -176,6 +177,7 @@ describe('semantic tracking observer', () => {
   });
 
   test('rejects accessor-backed current fact envelopes without invoking provider getters', () => {
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime case creates its tracked wrapper inside capture while testing malformed current evidence.
     const captured = observer.capture(() => observer.tracked({ name: 'Ada' }, binding).name);
     let getterCalls = 0;
     const badOperation = Object.defineProperties({}, {
@@ -374,9 +376,12 @@ describe('semantic tracking observer', () => {
     const keys = ['user-a', 'user-b'];
     let successCalls = 0;
     const success = observer.derived(() => {
+      // eslint-disable-next-line microdelta/tracked-captures -- This counter is the runtime proof that cached derivation bodies do not replay.
       successCalls += 1;
       observer.snapshotOutput(source.profile);
+      // eslint-disable-next-line microdelta/tracked-captures -- This runtime test exercises Tracking's internal projection-recording port directly.
       observer.materialization.recordProjection(binding, projection);
+      // eslint-disable-next-line microdelta/tracked-captures -- This runtime test exercises Tracking's internal member-order recording port directly.
       observer.materialization.recordCollectionOrder(binding, keys);
       return 'complete';
     });
@@ -393,16 +398,21 @@ describe('semantic tracking observer', () => {
     const failure = new Error('cached selected projection failed');
     let failureCalls = 0;
     const failed = observer.derived(() => {
+      // eslint-disable-next-line microdelta/tracked-captures -- This counter proves a cached failure body is not executed a second time.
       failureCalls += 1;
       observer.snapshotOutput(source.profile);
+      // eslint-disable-next-line microdelta/tracked-captures -- This runtime test exercises Tracking's internal projection-recording port directly.
       observer.materialization.recordProjection(binding, projection);
+      // eslint-disable-next-line microdelta/tracked-captures -- This runtime test exercises Tracking's internal member-order recording port directly.
       observer.materialization.recordCollectionOrder(binding, keys);
+      // eslint-disable-next-line microdelta/tracked-captures -- This exact error is the cached failure identity under test.
       throw failure;
     });
     const captureFailure = () => observer.capture(() => {
       try {
         failed.get();
       } catch (error: unknown) {
+        // eslint-disable-next-line microdelta/tracked-captures -- The runtime test compares replayed failure identity with its original test-owned error.
         if (error !== failure) { throw error; }
       }
       return 'caught';
@@ -428,6 +438,7 @@ describe('semantic tracking observer', () => {
       },
       members: Array.from({ length: 64 }, (_unused, index) => [`member-${index}`, `${selectedPayload}-${index}`] as const),
     };
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime assertion exercises Tracking's internal projection-recording port directly.
     const captured = observer.capture(() => observer.materialization.recordProjection(binding, exhaustive));
     expect(captured.observations).toHaveLength(1);
     const projection = captured.observations[0];
@@ -437,6 +448,7 @@ describe('semantic tracking observer', () => {
     expect(JSON.stringify(projection)).not.toContain(selectedPayload);
 
     const small: IValueProjectionFact = { ...exhaustive, members: exhaustive.members.slice(0, 1) };
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime assertion exercises Tracking's internal projection-recording port directly.
     const capturedSmall = observer.capture(() => observer.materialization.recordProjection(binding, small));
     expect(JSON.stringify(capturedSmall.observations[0])).toHaveLength(JSON.stringify(projection).length);
     const current = (fact: IValueProjectionFact): { resolve: (_binding: ITrackingBinding, request: ICurrentFactRequest) => ICurrentFactResolution } => ({
@@ -455,6 +467,7 @@ describe('semantic tracking observer', () => {
       },
       members: [['member-7', selectedPayload], ['member-2', `${selectedPayload}-2`]],
     };
+    // eslint-disable-next-line microdelta/tracked-captures -- This runtime assertion exercises Tracking's internal projection-recording port directly.
     const capturedVisited = observer.capture(() => observer.materialization.recordProjection(binding, visited));
     expect(capturedVisited.observations).toHaveLength(1);
     expect(capturedVisited.observations[0]?.selection).toMatchObject({

@@ -20,7 +20,11 @@ boundary.
 Definition authoring callbacks are boundaries too. A call is recognized when
 its resolved signature is `IDeclarations.source` or `IDeclarations.memo` from
 Definition's generated alpha declaration, so a facade's pre-applied or
-destructured builders qualify and same-spelled functions never do. The options
+destructured builders qualify and same-spelled functions never do. The
+`microdelta` facade's alpha `authoring()` returns exactly those builders (its
+rollup imports `IDeclarations` from Definition rather than restating it), so
+the consumer fixture `workspace-authoring.fixture.ts` and the executable
+example are checked against the same boundary. The options
 must be an object literal; its `run` and `finality` values are checked when they
 are inline arrows, function expressions, methods, or same-file function
 declarations. Factories, conditionals, aliases, bind, non-literal options,

@@ -72,7 +72,7 @@ test('the real workspace packs and installs as one coherent first-party graph fr
     assert.equal(release.commit, 'f'.repeat(40));
     const names = release.packages.map(entry => entry.name);
     assert.equal(names.at(-1), 'microdelta');
-    for (const name of ['@microdelta/machine', '@microdelta/value', '@microdelta/history', '@microdelta/machine-node', '@microdelta/tracking', '@microdelta/definition', '@microdelta/materialization', '@microdelta/resolution']) {
+    for (const name of ['@microdelta/machine', '@microdelta/value', '@microdelta/history', '@microdelta/machine-node', '@microdelta/tracking', '@microdelta/definition', '@microdelta/materialization', '@microdelta/resolution', '@microdelta/supervision']) {
       assert.ok(names.includes(name), `${name} must be packed for the facade closure`);
     }
     for (const entry of release.packages) assert.match(entry.integrity, /^sha512-/u);

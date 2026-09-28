@@ -4,7 +4,7 @@
  * this check makes that failure explicit and forbids source aliases in any
  * checked package or declaration-consumer tsconfig.
  */
-import { readdir, realpath, stat } from 'node:fs/promises';
+import { readFile, readdir, realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -34,8 +34,41 @@ function configOwner(filename) {
   return index < 0 ? null : roleByDirectory[parts[index + 1]] ?? null;
 }
 
+/** First-party package specifiers a generated declaration imports. */
+const firstPartySpecifier = /\bfrom\s+['"](microdelta|@microdelta\/[a-z0-9-]+)['"]/gu;
+
+/**
+ * Roles whose alpha rollups an owner's approved producers name, transitively.
+ * Type-checking an approved producer's generated alpha declaration requires
+ * resolving every first-party package it imports, including packages the owner
+ * has no edge to (Resolution's rollup names History and Tracking types). This
+ * closure admits exactly those alpha rollups for type resolution; it grants no
+ * source edge, which the import rule still enforces.
+ */
+async function declarationClosure(owner) {
+  const closure = new Set();
+  const pending = [...roles[owner].uses];
+  while (pending.length > 0) {
+    const role = pending.pop();
+    const directory = roles[role]?.directory;
+    if (!directory || closure.has(role)) {
+      continue;
+    }
+    closure.add(role);
+    const basename = role === 'facade' ? 'microdelta' : directory;
+    const text = await readFile(path.join(root, `packages/${directory}/dist/api/${basename}.alpha.d.ts`), 'utf8').catch(() => '');
+    for (const match of text.matchAll(firstPartySpecifier)) {
+      const imported = roleByPackage[match[1]];
+      if (imported && !closure.has(imported)) {
+        pending.push(imported);
+      }
+    }
+  }
+  return closure;
+}
+
 /** Exact producer artifacts prevent aliases from selecting an unintended tier. */
-function expectedDeclaration(alias, owner, filename) {
+async function expectedDeclaration(alias, owner, filename) {
   const publicConsumer = filename.endsWith(`${path.sep}consumer-alpha${path.sep}tsconfig.public.json`);
   const fixtureTier = publicConsumer ? 'public' : 'alpha';
   if (alias === '@microdelta/fixture-producer') {
@@ -50,7 +83,8 @@ function expectedDeclaration(alias, owner, filename) {
   if (!role || (alias !== packageName && !['microdelta/conformance/store', '@microdelta/history/conformance/store'].includes(alias))) {
     return null;
   }
-  if (owner && role !== owner && !roles[owner].uses.includes(role)) {
+  const approvedEdge = !owner || role === owner || roles[owner].uses.includes(role);
+  if (!approvedEdge && (publicConsumer || !(await declarationClosure(owner)).has(role))) {
     return null;
   }
   const directory = roles[role].directory;
@@ -87,7 +121,7 @@ async function inspectConfig(filename) {
       } else if (!(await stat(absolute).then(item => item.isFile()).catch(() => false))) {
         problems.push(`Missing producer declaration: ${filename}: ${alias} -> ${absolute}`);
       } else {
-        const expected = expectedDeclaration(alias, owner, filename);
+        const expected = await expectedDeclaration(alias, owner, filename);
         // A workspace package symlink may resolve to the exact owner-approved
         // declaration; compare real targets without allowing a different tier.
         const approvedSymlink = expected !== null && await realpath(absolute).then(async actual =>
@@ -105,7 +139,7 @@ async function inspectConfig(filename) {
 /** Default expectations cover every generated production and fixture tier. */
 const required = [
   ['core', 'microdelta'], ['definition', 'definition'], ['tracking', 'tracking'], ['history', 'history'], ['value', 'value'],
-  ['materialization', 'materialization'], ['resolution', 'resolution'],
+  ['materialization', 'materialization'], ['resolution', 'resolution'], ['supervision', 'supervision'],
 ].flatMap(([directory, basename]) => ['untrimmed', 'alpha', 'beta', 'public'].map(tier =>
   path.join(root, `packages/${directory}/dist/api/${basename}.${tier}.d.ts`)));
 required.push(...['untrimmed', 'alpha', 'beta', 'public'].map(tier =>
@@ -136,13 +170,17 @@ if (!selected) {
 }
 const files = selected ?? [];
 if (!selected) {
-  for (const directory of ['packages', 'fixtures/declarations']) {
+  for (const directory of ['packages', 'fixtures/declarations', 'examples']) {
     for await (const filename of configs(path.join(root, directory))) {
       files.push(filename);
     }
   }
 }
 for (const filename of files) {
+  // A trace of every inspected config lets tests prove the scan's coverage.
+  if (process.env.MICRODELTA_DECLARATION_TRACE === '1') {
+    process.stdout.write(`inspected ${filename}\n`);
+  }
   problems.push(...await inspectConfig(filename));
 }
 if (problems.length) {

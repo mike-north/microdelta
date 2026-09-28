@@ -21,6 +21,7 @@ const packages = [
   { directory: 'tracking', basename: 'tracking' },
   { directory: 'history', basename: 'history' },
   { directory: 'value', basename: 'value' },
+  { directory: 'supervision', basename: 'supervision' },
 ];
 const fixture = path.join(root, 'fixtures/declarations/producer');
 const captureFixture = path.join(root, 'fixtures/declarations/capture-producer');
@@ -195,14 +196,48 @@ test('legitimate runtime package imports resolve built JS without TS path rewrit
   assert.equal(typeof history.createMemoryStore, 'function');
 });
 
-/** Every production trimmed view must stand alone under full library checking. */
+/**
+ * The alpha rollups of the first-party packages a project-private view names,
+ * transitively, mapped the way an approved alpha consumer maps them.
+ */
+async function alphaClosure(view) {
+  const pathMap = {};
+  const pending = [view];
+  const seen = new Set();
+  while (pending.length > 0) {
+    const file = pending.pop();
+    if (seen.has(file)) {
+      continue;
+    }
+    seen.add(file);
+    for (const match of (await readFile(file, 'utf8')).matchAll(/\bfrom\s+'(@microdelta\/[a-z0-9-]+)'/gu)) {
+      const directory = match[1].slice('@microdelta/'.length);
+      const target = path.join(root, `packages/${directory}/dist/api/${directory}.alpha.d.ts`);
+      pathMap[match[1]] = [target];
+      pending.push(target);
+    }
+  }
+  return pathMap;
+}
+
+/**
+ * Every production view typechecks under full library checking. Public and
+ * beta views must stand alone: only the package itself is mapped and siblings
+ * resolve through normal package resolution. Project-private alpha and
+ * untrimmed views may name siblings' alpha contracts (the facade's workspace
+ * surface does); they are checked with exactly that alpha declaration
+ * closure mapped, as approved consumers compile them, and nothing else.
+ */
 test('each actual package declaration view typechecks without hidden references', async () => {
   for (const { directory, basename } of packages) {
     const packageName = directory === 'core' ? 'microdelta' : `@microdelta/${directory}`;
     for (const tier of tiers) {
       const view = path.join(root, `packages/${directory}/dist/api/${basename}.${tier}.d.ts`);
       const source = `type ISurface = typeof import('${packageName}');\nconst surface: ISurface | undefined = undefined;\nvoid surface;\n`;
-      const result = await compile(source, { paths: view, pathPackage: packageName });
+      const projectPrivate = tier === 'untrimmed' || tier === 'alpha';
+      const result = await compile(source, projectPrivate
+        ? { pathMap: { ...(await alphaClosure(view)), [packageName]: [view] } }
+        : { paths: view, pathPackage: packageName });
       assert.equal(result.status, 0, `${packageName}/${tier}: ${result.stdout}${result.stderr}`);
     }
   }
@@ -337,7 +372,8 @@ test('inherited paths and invented aliases cannot expose sibling source or untri
  * Actual facade source consumes History's approved alpha entry and subpath;
  * its assembly tests also consume Value's alpha entry for independent oracles
  * and the Definition, Materialization and Resolution alpha entries that
- * compose Resolution over real History.
+ * compose Resolution over real History, plus Supervision's alpha entry for the
+ * workspace run path.
  */
 test('facade compiler maps each approved owner import, including both History entries, to its generated alpha declaration', async () => {
   const config = JSON.parse(await readFile(path.join(root, 'packages/core/tsconfig.json'), 'utf8'));
@@ -348,6 +384,7 @@ test('facade compiler maps each approved owner import, including both History en
     '@microdelta/machine-node': ['../machine-node/dist/api/machine-node.alpha.d.ts'],
     '@microdelta/materialization': ['../materialization/dist/api/materialization.alpha.d.ts'],
     '@microdelta/resolution': ['../resolution/dist/api/resolution.alpha.d.ts'],
+    '@microdelta/supervision': ['../supervision/dist/api/supervision.alpha.d.ts'],
     '@microdelta/tracking': ['../tracking/dist/api/tracking.alpha.d.ts'],
     '@microdelta/value': ['../value/dist/api/value.alpha.d.ts'],
   });
@@ -406,6 +443,70 @@ test('real package configs reject wrong sibling tiers and forbidden context edge
       assert.notEqual(result.status, 0, `${owner} imported History through an unapproved edge or tier`);
       assert.match(result.stdout + result.stderr, /unapproved.*alias or tier/iu);
     }
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+/**
+ * A context type-checks its approved producers' generated alpha declarations,
+ * which may name types of packages it has no edge to (Resolution's rollup
+ * names History and Tracking types). The preflight admits exactly the alpha
+ * rollups in that declaration import closure; it grants no source edge (the
+ * import rule still governs source) and never admits other tiers or packages
+ * outside the closure.
+ */
+test('a context may map only the alpha declaration closure of its approved producers', async () => {
+  const gate = path.join(root, 'tooling/check-producer-declarations.mjs');
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'microdelta-closure-'));
+  try {
+    const packageDir = path.join(directory, 'packages', 'supervision');
+    await mkdir(packageDir, { recursive: true });
+    const config = path.join(packageDir, 'tsconfig.json');
+    const check = async (paths) => {
+      await writeFile(config, JSON.stringify({ compilerOptions: { paths }, files: [] }));
+      return spawnSync(process.execPath, [gate, '--config', config], { cwd: root, encoding: 'utf8' });
+    };
+    const closure = await check({
+      '@microdelta/resolution': [path.join(root, 'packages/resolution/dist/api/resolution.alpha.d.ts')],
+      '@microdelta/history': [path.join(root, 'packages/history/dist/api/history.alpha.d.ts')],
+      '@microdelta/tracking': [path.join(root, 'packages/tracking/dist/api/tracking.alpha.d.ts')],
+    });
+    assert.equal(closure.status, 0, `Resolution's declaration closure should be approved: ${closure.stdout}${closure.stderr}`);
+
+    const outside = await check({ '@microdelta/machine-node': [path.join(root, 'packages/machine-node/dist/api/machine-node.alpha.d.ts')] });
+    assert.notEqual(outside.status, 0, 'A package outside the declaration closure must remain rejected');
+    assert.match(outside.stdout + outside.stderr, /unapproved.*alias or tier/iu);
+
+    const wrongTier = await check({ '@microdelta/history': [path.join(root, 'packages/history/dist/api/history.untrimmed.d.ts')] });
+    assert.notEqual(wrongTier.status, 0, 'A closure package must still use its alpha tier');
+    assert.match(wrongTier.stdout + wrongTier.stderr, /unapproved.*alias or tier/iu);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+/**
+ * The checked-in example compiles through the installed workspace packages'
+ * generated alpha rollups; the workspace preflight scans it, and a source
+ * alias there is rejected like anywhere else.
+ */
+test('the executable example maps only installed generated alpha declarations', async () => {
+  const gate = path.join(root, 'tooling/check-producer-declarations.mjs');
+  const example = path.join(root, 'examples/contribution-report/tsconfig.json');
+  const accepted = spawnSync(process.execPath, [gate, '--config', example], { cwd: root, encoding: 'utf8' });
+  assert.equal(accepted.status, 0, `The example's installed alpha aliases should pass: ${accepted.stdout}${accepted.stderr}`);
+  const scan = spawnSync(process.execPath, [gate], { cwd: root, encoding: 'utf8', env: { ...process.env, MICRODELTA_DECLARATION_TRACE: '1' } });
+  assert.equal(scan.status, 0, scan.stdout + scan.stderr);
+  assert.match(scan.stdout, /examples[\\/]contribution-report[\\/]tsconfig\.json/u, 'the workspace preflight must scan the example');
+
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'microdelta-example-alias-'));
+  try {
+    const config = path.join(directory, 'tsconfig.json');
+    await writeFile(config, JSON.stringify({ compilerOptions: { paths: { microdelta: [path.join(root, 'packages/core/src/index.ts')] } }, files: [] }));
+    const source = spawnSync(process.execPath, [gate, '--config', config], { cwd: root, encoding: 'utf8' });
+    assert.notEqual(source.status, 0, 'A source alias outside packages must be rejected');
+    assert.match(source.stdout + source.stderr, /source alias bypasses/iu);
   } finally {
     await rm(directory, { recursive: true, force: true });
   }

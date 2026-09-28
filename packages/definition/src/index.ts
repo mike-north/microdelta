@@ -32,6 +32,7 @@ export {
   type IStepDeclaration,
 } from './declaration.js';
 export { declarations, type IDeclarations } from './declarations.js';
+
 export {
   type IBindingResolution,
   type IBindingTarget,
@@ -49,6 +50,7 @@ export {
   type IStepTarget,
   type ITopology,
   type IWitnessResolution,
+  isComposing,
 } from './composition.js';
 export {
   describeHandle,

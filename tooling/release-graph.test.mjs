@@ -121,6 +121,25 @@ test('the checked-in Resolution owner is a trusted, ordered member of the facade
   assert.equal(resolution?.directory, 'packages/resolution');
 });
 
+/**
+ * Issue #57 adds the Run Supervision owner, which the facade's workspace run
+ * path depends on. Supervision was registered for trusted publishing ahead of
+ * its workspace package; its package must satisfy the same release contract
+ * and publish after the owners whose declarations it consumes.
+ */
+test('the checked-in Supervision owner is a trusted, ordered member of the facade closure', async () => {
+  const workspace = await readWorkspace(root);
+  const plan = planRelease(workspace, { release: false });
+  const names = plan.packages.map(entry => entry.name);
+  assert.ok(names.includes('@microdelta/supervision'), 'Supervision belongs to the facade runtime closure');
+  for (const owner of ['@microdelta/definition', '@microdelta/resolution']) {
+    assert.ok(names.indexOf(owner) < names.indexOf('@microdelta/supervision'), `${owner} publishes before Supervision`);
+  }
+  assert.ok(names.indexOf('@microdelta/supervision') < names.indexOf('microdelta'));
+  const supervision = plan.packages.find(entry => entry.name === '@microdelta/supervision');
+  assert.equal(supervision?.directory, 'packages/supervision');
+});
+
 test('a newly added transitive owner without npm trust is refused', () => {
   const workspace = releaseWorkspace();
   workspace.packages[1].manifest.dependencies['@microdelta/accounting'] = '0.1.0';

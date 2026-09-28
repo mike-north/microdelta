@@ -1,4 +1,15 @@
 {
   "extends": "../../tsconfig.base.json",
-  "files": ["dist/src/index.d.ts", "dist/test/conformance/store/index.d.ts"]
+  "files": ["dist/src/index.d.ts", "dist/test/conformance/store/index.d.ts"],
+  "compilerOptions": {
+    "paths": {
+      "@microdelta/definition": ["../../node_modules/@microdelta/definition/dist/api/definition.alpha.d.ts"],
+      "@microdelta/history": ["../../node_modules/@microdelta/history/dist/api/history.alpha.d.ts"],
+      "@microdelta/history/conformance/store": ["../../node_modules/@microdelta/history/dist/api/history.conformance.store.alpha.d.ts"],
+      "@microdelta/machine-node": ["../../node_modules/@microdelta/machine-node/dist/api/machine-node.alpha.d.ts"],
+      "@microdelta/resolution": ["../../node_modules/@microdelta/resolution/dist/api/resolution.alpha.d.ts"],
+      "@microdelta/supervision": ["../../node_modules/@microdelta/supervision/dist/api/supervision.alpha.d.ts"],
+      "@microdelta/tracking": ["../../node_modules/@microdelta/tracking/dist/api/tracking.alpha.d.ts"]
+    }
+  }
 }

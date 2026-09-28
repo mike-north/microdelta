@@ -12,7 +12,8 @@
  * @see ../../../../docs/plans/m3-contribution-analysis.md (Explicit recovery request)
  * @see ../../../../docs/spec/execution.md
  */
-import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
+import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
+import type { IWriterLease } from '@microdelta/history';
 import { createNodeClock } from '@microdelta/machine-node';
 
 import { ResolutionError, SupervisionError, openWorkspace } from '../../src/index.js';
@@ -59,6 +60,21 @@ function acceptances(locator: string): number {
   const history = openHistory({ location: store.location, store: logicalStore });
   try {
     return history.readAcceptances({ kind: 'completed-result', locator }).length;
+  } finally {
+    history.close();
+  }
+}
+
+/** Observe the persisted writer through an independent real History connection without changing its authority. */
+function persistedWriter(): IWriterLease {
+  const history = openHistory({ location: store.location, store: logicalStore, clock: createNodeClock() });
+  try {
+    const writer = history.currentWriter();
+    expect(writer).toBeDefined();
+    if (writer === undefined) {
+      throw new Error('Expected a persisted writer lease');
+    }
+    return writer;
   } finally {
     history.close();
   }
@@ -164,38 +180,68 @@ describe('normal entry operation', () => {
   });
 
   test('a normal request after the run\'s writer lease expired re-acquires a fresh lease instead of failing', async () => {
-    // Regression: renewing an expired lease throws History's stale-writer
-    // error; the run's writer port kept that stale lease, so every later
-    // normal request in the same run failed.
-    const workspace = openWorkspace({ location: store.location, logicalStore, leaseMilliseconds: 250 });
-    const contributors = composeContributors();
+    // Only the boundary between requests advances: each real request has its
+    // full lease interval, while History still observes an expired held lease.
+    let hostNow = Date.now();
+    const clock = jest.spyOn(Date, 'now').mockImplementation(() => hostNow);
     try {
-      const result = await workspace.run({ authoring: contributors.authoring, composition: contributors.composition, environment }, async (run) => {
-        const first = await run.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
-        await new Promise((resolve) => setTimeout(resolve, 400));
-        const second = await run.resolve(contributors.steps['person:ben'].summary, { requestKey: freshRequestKey() });
-        return [first.kind, second.kind];
-      });
-      expect(result.value).toEqual(['published', 'published']);
-      expect(result.diagnostics).toEqual([]);
+      const workspace = openWorkspace({ location: store.location, logicalStore, leaseMilliseconds: 250 });
+      try {
+        const contributors = composeContributors();
+        const result = await workspace.run({ authoring: contributors.authoring, composition: contributors.composition, environment, runId: 'run:lease-reacquisition' }, async (run) => {
+          const first = await run.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
+          const firstLease = persistedWriter();
+          expect(firstLease.holder).toBe('microdelta-run:run:lease-reacquisition');
+          expect(firstLease.fence).toBeGreaterThan(0);
+          expect(firstLease.expiresAt).toBe(hostNow + 250);
+          hostNow = firstLease.expiresAt + 1;
+          expect(hostNow).toBeGreaterThan(firstLease.expiresAt);
+          const second = await run.resolve(contributors.steps['person:ben'].summary, { requestKey: freshRequestKey() });
+          const secondLease = persistedWriter();
+          expect(secondLease.holder).toBe(firstLease.holder);
+          expect(secondLease.fence).toBeGreaterThan(firstLease.fence);
+          expect(secondLease.expiresAt).toBe(hostNow + 250);
+          expect(secondLease.expiresAt).toBeGreaterThan(hostNow);
+          return [first.kind, second.kind];
+        });
+        expect(result.value).toEqual(['published', 'published']);
+        expect(result.diagnostics).toEqual([]);
+      } finally {
+        workspace.close();
+      }
     } finally {
-      workspace.close();
+      clock.mockRestore();
     }
   });
 
   test('a lease that expired after the run\'s last normal request is not reported as a release failure', async () => {
-    // Regression (peer review): releasing an expired lease threw History's
-    // stale-writer error and the run reported a false release diagnostic.
-    const workspace = openWorkspace({ location: store.location, logicalStore, leaseMilliseconds: 250 });
-    const contributors = composeContributors();
+    // The run crosses expiry only after its last normal request has published;
+    // an expired holder has no writer authority left for closure to release.
+    let hostNow = Date.now();
+    const clock = jest.spyOn(Date, 'now').mockImplementation(() => hostNow);
     try {
-      const result = await workspace.run({ authoring: contributors.authoring, composition: contributors.composition, environment }, async (run) => {
-        await run.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
-        await run.ordinary('slow assembly', () => new Promise((resolve) => setTimeout(resolve, 400)));
-      });
-      expect(result.diagnostics).toEqual([]);
+      const workspace = openWorkspace({ location: store.location, logicalStore, leaseMilliseconds: 250 });
+      try {
+        const contributors = composeContributors();
+        const result = await workspace.run({ authoring: contributors.authoring, composition: contributors.composition, environment, runId: 'run:expired-release' }, async (run) => {
+          const published = await run.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
+          expect(published.kind).toBe('published');
+          const lastLease = persistedWriter();
+          expect(lastLease.holder).toBe('microdelta-run:run:expired-release');
+          expect(lastLease.fence).toBeGreaterThan(0);
+          expect(lastLease.expiresAt).toBe(hostNow + 250);
+          await run.ordinary('assembly after lease expiry', () => {
+            hostNow = lastLease.expiresAt + 1;
+            expect(hostNow).toBeGreaterThan(lastLease.expiresAt);
+            expect(persistedWriter()).toEqual(lastLease);
+          });
+        });
+        expect(result.diagnostics).toEqual([]);
+      } finally {
+        workspace.close();
+      }
     } finally {
-      workspace.close();
+      clock.mockRestore();
     }
   });
 

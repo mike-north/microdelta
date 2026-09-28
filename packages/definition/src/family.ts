@@ -46,8 +46,8 @@ export interface IBindingFamily {
   readonly previous: IPreviousCarrierFamily;
   /** Maps a declared result type to what a source `run` returns (Resolution's control envelope). */
   readonly outcomes: ITypeFamily;
-  /** Current bindings supplied to a source's `run` and `finality`; a plain record. */
+  /** Current bindings for a source's `run` and `finality`: a plain record (ordinary or null prototype, enumerable own data fields only). */
   readonly source: object;
-  /** Current bindings supplied to a memo's `run`; a plain record. */
+  /** Current bindings for a memo's `run`: a plain record (ordinary or null prototype, enumerable own data fields only). */
   readonly memo: object;
 }

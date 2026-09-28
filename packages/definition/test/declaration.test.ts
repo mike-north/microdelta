@@ -125,6 +125,28 @@ describe('step declarations', () => {
     expectDefinitionError(() => Reflect.apply(memo, undefined, [inheritedRun]), 'invalid-callback');
   });
 
+  test('CMP-7: child records whose slots would be lost by collection are rejected', () => {
+    // Regression (Copilot on 3dc42ff; independent review finding 4): a non-enumerable
+    // own slot passed validation but vanished from children and topology.
+    const run = (): number => 1;
+    const activity = source({ subject: 'activity:a', run });
+    class ChildRecord {
+      public readonly activity = activity;
+    }
+    const hidden = Object.defineProperty({}, 'activity', { value: activity, enumerable: false });
+    const unsupported: readonly unknown[] = [hidden, new ChildRecord(), [activity], { [Symbol('activity')]: activity }];
+    for (const children of unsupported) {
+      const options: unknown = { subject: 'summary:a', children, run };
+      expectDefinitionError(() => Reflect.apply(memo, undefined, [options]), 'illegal-edge');
+    }
+  });
+
+  test('CMP-7: a null-prototype child record keeps every declared slot', () => {
+    const activity = source({ subject: 'activity:a', run: () => 1 });
+    const children: Record<string, typeof activity> = Object.assign(Object.create(null) as Record<string, typeof activity>, { activity });
+    expect(memo({ subject: 'summary:a', children, run: () => 1 }).children).toEqual(['activity']);
+  });
+
   test('CMP-1: declarations are frozen framework-owned copies of the author options', () => {
     const activity = source({ subject: 'activity:a', run: () => 1 });
     const other = source({ subject: 'activity:b', run: () => 2 });

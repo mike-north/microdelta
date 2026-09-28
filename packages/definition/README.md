@@ -11,7 +11,10 @@ See the [package map](../../docs/package-map.md) and
 A facade calls `declarations<TFamily>()` once. The binding family supplies
 type-level mappings from a declared result type to the view authors read, the
 immutable previous-result carrier a source receives and the outcome a source
-returns, plus distinct source and memo binding records. Definition never
+returns, plus distinct source and memo binding records. Binding records and memo
+`children` must be plain records: ordinary or null prototype, string keys, and
+enumerable own data properties only, so every declared field reaches the callback
+context or topology. Other shapes are rejected before any work. Definition never
 imports Tracking, History or Resolution; the facade chooses those meanings.
 
 - `source<R>({ subject, version?, label?, run, finality? })` declares a retained

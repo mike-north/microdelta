@@ -470,43 +470,51 @@ function checkCallback(read: IReadOptions, key: 'run' | 'finality', required: bo
   }
 }
 
-/** Memo children are a plain record of own data properties. */
+/**
+ * Whether a value is a plain record whose every declared field survives the
+ * collection Definition performs on it (`Object.entries` for memo children,
+ * object spread for callback contexts): a non-array object with the ordinary or
+ * a null prototype, string keys only, and only enumerable own data properties.
+ * Anything else would lose declared meaning (hidden fields, prototype methods,
+ * array length) or run author code, so it is rejected before affected work.
+ * Inspecting descriptors never invokes accessors.
+ */
+function isPlainRecord(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+  const prototype: unknown = Object.getPrototypeOf(value);
+  if (prototype !== Object.prototype && prototype !== null) {
+    return false;
+  }
+  for (const key of Reflect.ownKeys(value)) {
+    const descriptor = typeof key === 'string' ? Object.getOwnPropertyDescriptor(value, key) : undefined;
+    if (descriptor === undefined || !('value' in descriptor) || descriptor.enumerable !== true) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** Memo children are a plain record, so every declared slot becomes an edge. */
 function checkChildRecord(read: IReadOptions): void {
   const children = read.get('children');
-  if (children === undefined) {
-    return;
-  }
-  if (typeof children !== 'object' || children === null || Array.isArray(children)) {
-    reject('illegal-edge', 'Memo children must be a record of sibling slot names to source declarations.');
-  }
-  if (Object.getOwnPropertySymbols(children).length > 0) {
-    reject('illegal-edge', 'Memo child slots must be string names.');
-  }
-  for (const descriptor of Object.values(Object.getOwnPropertyDescriptors(children))) {
-    if (!('value' in descriptor)) {
-      reject('illegal-edge', 'Memo children must be data properties, not accessors.');
-    }
+  if (children !== undefined && !isPlainRecord(children)) {
+    reject('illegal-edge', 'Memo children must be a plain record of enumerable sibling slot names to source declarations.');
   }
 }
 
 /**
- * Facade bindings must be a plain record of own data properties and must not
- * claim the context name Definition supplies. Field values are never read.
+ * Facade bindings must be a plain record, so every declared field reaches the
+ * callback context, and must not claim the context name Definition supplies.
+ * Field values are never read.
  */
 function checkBindings(bindings: object, reserved: 'previous' | 'calls'): void {
-  if (typeof bindings !== 'object' || bindings === null) {
-    reject('invalid-bindings', 'Bindings must be a record.');
+  if (!isPlainRecord(bindings)) {
+    reject('invalid-bindings', 'Bindings must be a plain record of enumerable own data fields.');
   }
-  const descriptors = Object.getOwnPropertyDescriptors(bindings);
-  if (Object.hasOwn(descriptors, reserved)) {
+  if (Object.hasOwn(bindings, reserved)) {
     reject('invalid-bindings', `Bindings cannot supply the reserved context name ${reserved}.`);
-  }
-  // Reflect.ownKeys includes symbol keys, which the context spread also copies.
-  for (const key of Reflect.ownKeys(bindings)) {
-    const descriptor = Object.getOwnPropertyDescriptor(bindings, key);
-    if (descriptor === undefined || !('value' in descriptor)) {
-      reject('invalid-bindings', 'Bindings must hold data properties, not accessors.');
-    }
   }
 }
 

@@ -341,6 +341,47 @@ describe('invocation bridge', () => {
     expect(invoke).not.toHaveBeenCalled();
   });
 
+  test('bindings: shapes whose fields would be lost from the context reject on every path before invocation', () => {
+    // Regression (Copilot thread 4118026118; independent review findings 5 and 6):
+    // arrays, class instances and non-enumerable fields passed validation, then the
+    // context spread dropped length, prototype methods or the hidden field.
+    const fake = fakePort();
+    const built = buildFixture();
+    const summary = asMemo(openInvocation(built.composition, stepDescriptor('person:ada', 'summary'), fake.port));
+    const activity = asSource(openInvocation(built.composition, stepDescriptor('person:ada', 'activity'), fake.port));
+    fake.active = summary;
+    const invoke = jest.fn(recordingInvoker([]));
+    class Bindings {
+      public readonly config = 'current';
+      public format(): string {
+        return this.config;
+      }
+    }
+    const unsupported: readonly unknown[] = [
+      ['config'],
+      new Bindings(),
+      Object.defineProperty({}, 'config', { value: 'current', enumerable: false }),
+      { [Symbol('config')]: 'current' },
+    ];
+    // Supplied the way untyped facade code could, bypassing the binding record type.
+    for (const bindings of unsupported) {
+      expectDefinitionError(() => Reflect.apply(summary.apply, summary, [bindings, invoke]), 'invalid-bindings');
+      expectDefinitionError(() => Reflect.apply(activity.apply, activity, [bindings, undefined, invoke]), 'invalid-bindings');
+      expectDefinitionError(() => Reflect.apply(activity.applyFinality, activity, [bindings, supplierOf(carrierOf('previous'), []), invoke]), 'invalid-bindings');
+    }
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
+  test('bindings: a null-prototype plain record keeps every field in the callback context', () => {
+    const fake = fakePort();
+    const built = buildFixture();
+    const activity = asSource(openInvocation(built.composition, stepDescriptor('person:ada', 'activity'), fake.port));
+    const pairs: IInvokedPair[] = [];
+    const bindings: Record<string, unknown> = Object.assign(Object.create(null) as Record<string, unknown>, { config: 'current' });
+    activity.apply(bindings, undefined, recordingInvoker(pairs));
+    expect(pairs[0]?.context).toEqual({ config: 'current', previous: undefined });
+  });
+
   test('bridge: prototype-looking child slot names mint own declared handles', async () => {
     // Regression (independent review of 9500a4b): assigning `__proto__` into an
     // ordinary calls object hit the inherited setter, so a valid slot failed at apply.

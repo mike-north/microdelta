@@ -202,6 +202,9 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
 
     const live: IRun = Object.freeze({
       context,
+      get open(): boolean {
+        return frame.open;
+      },
       resolve(step: IBindingDescriptor, request: IRequestOptions): Promise<IResolutionOutcome> {
         return within(async () => {
           const outcome = await resolution.resolve({ step, requestKey: request.requestKey, lease: writer.lease() });

@@ -11,13 +11,15 @@
  * @see ../../../../docs/spec/acceptance.md (A-18)
  */
 import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
+import { createNodeClock } from '@microdelta/machine-node';
 
 import { SupervisionError, authoring, currentRun, openWorkspace } from '../../src/index.js';
 import type { IWorkspaceRun } from '../../src/index.js';
 import { composeContributors, resetWorld } from './fixture.js';
 import type { IWorld } from './fixture.js';
-import { caughtCode, environment, locatorOf, logicalStore, openSession, runReport, tempStore } from './support.js';
+import { caughtCode, environment, freshRequestKey, locatorOf, logicalStore, openSession, runReport, tempStore } from './support.js';
 import type { ITempStore } from './support.js';
+import { openHistory } from '../durable-history/support.js';
 
 let store: ITempStore;
 let world: IWorld;
@@ -86,6 +88,66 @@ describe('scoped run context (RUN-001, DOM-2)', () => {
         expect(await caughtCode(() => late.read(reference))).toBe('run-closed');
       }
     } finally {
+      session.close();
+    }
+  });
+
+  test('a run whose awaited Promise.all rejects early stays live, with context, reads and writer, until its started work settles', async () => {
+    // Regression (supervisory review P1, reproduced through the real facade):
+    // the run closed when only its body settled, so a started ordinary
+    // operation resumed with context and exact reads failing run-closed and
+    // its end event arrived after the run returned.
+    const session = openSession(store.location);
+    let openGate: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      openGate = resolve;
+    });
+    const events: string[] = [];
+    let slowSaw: { readonly environment: string; readonly name: string } | undefined;
+    let settled = false;
+    try {
+      const running = session.workspace.run({
+        authoring: session.contributors.authoring,
+        composition: session.contributors.composition,
+        environment,
+        observers: [{ observe: (event) => { if (event.kind === 'ordinary') { events.push(`${event.label}:${event.phase}`); } } }],
+      }, async (run) => {
+        const published = await run.resolve(session.contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
+        if (published.kind === 'refused') {
+          throw new Error('unexpected refusal');
+        }
+        const slow = run.ordinary('slow', async () => {
+          await held;
+          slowSaw = { environment: currentRun().environment, name: run.read<{ readonly name: string }>(published.reference).name };
+        });
+        return Promise.all([slow, run.ordinary('failing', () => { throw new Error('sibling failed'); })]);
+      }).then(() => 'resolved', (error: unknown) => (error instanceof Error ? error.message : String(error))).finally(() => {
+        settled = true;
+        events.push('run settled');
+      });
+      for (let index = 0; index < 5; index += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 2));
+      }
+      expect(settled).toBe(false);
+      // The run still holds History's writer while its started work is active.
+      const probe = openHistory({ location: store.location, store: logicalStore, clock: createNodeClock() });
+      try {
+        expect(probe.currentWriter()).toBeDefined();
+      } finally {
+        probe.close();
+      }
+      openGate();
+      expect(await running).toBe('sibling failed');
+      expect(slowSaw).toEqual({ environment, name: 'Ada' });
+      expect(events).toEqual(['slow:begin', 'failing:begin', 'failing:fail', 'slow:end', 'run settled']);
+      const after = openHistory({ location: store.location, store: logicalStore, clock: createNodeClock() });
+      try {
+        expect(after.currentWriter()).toBeUndefined();
+      } finally {
+        after.close();
+      }
+    } finally {
+      openGate();
       session.close();
     }
   });

@@ -552,3 +552,162 @@ describe('ordinary nonmemoized work (DOM-2, REUSE-009)', () => {
     });
   });
 });
+
+/** A gate a test opens explicitly. */
+function gate(): { readonly opened: Promise<void>; open(): void } {
+  let open: () => void = () => undefined;
+  const opened = new Promise<void>((resolve) => {
+    open = resolve;
+  });
+  return { opened, open };
+}
+
+/** Let pending microtasks and timers run, so a run that should wait is observably still pending. */
+async function settleTicks(): Promise<void> {
+  for (let index = 0; index < 5; index += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 1));
+  }
+}
+
+describe('lifetime of operations the run already started (RUN-001)', () => {
+  test('a body whose awaited Promise.all rejects early keeps the run live until its started sibling settles', async () => {
+    // Regression (supervisory review P1): the run closed, released its writer
+    // and snapshotted diagnostics when only its body settled, while an ordinary
+    // operation the body had started (and awaited through Promise.all) was
+    // still active; that operation then resumed in a closed run.
+    const supervisor = supervision();
+    const held = gate();
+    const order: string[] = [];
+    const { options, writer } = runOptions({ observers: [{ observe: (event) => { if (event.kind === 'ordinary') { order.push(`${event.label}:${event.phase}`); } } }] });
+    let slowSaw: unknown;
+    let settled = false;
+    const running = supervisor.run(options, async (run) => {
+      await run.resolve(step, { requestKey: 'request:1' });
+      const slow = run.ordinary('slow', async () => {
+        await held.opened;
+        slowSaw = supervisor.current();
+        return 'slow done';
+      });
+      return Promise.all([slow, run.ordinary('failing', () => { throw new Error('sibling failed'); })]);
+    }).finally(() => {
+      settled = true;
+      order.push('run settled');
+    });
+    const outcome = settled_(running);
+    await settleTicks();
+    expect(settled).toBe(false);
+    expect(writer.releases.count).toBe(0);
+    held.open();
+    const result = await outcome;
+    expect(result.error).toBeInstanceOf(Error);
+    expect(result.error instanceof Error ? result.error.message : '').toBe('sibling failed');
+    expect(slowSaw).toMatchObject({ analysis: 'analysis:test', environment: 'env:test' });
+    expect(order).toEqual(['slow:begin', 'failing:begin', 'failing:fail', 'slow:end', 'run settled']);
+    expect(writer.releases.count).toBe(1);
+  });
+
+  test('a body that returns before a started operation settles reports that operation\'s diagnostics', async () => {
+    const supervisor = supervision();
+    const held = gate();
+    const { options, writer } = runOptions({
+      observers: [{ observe: (event) => { if (event.kind === 'ordinary' && event.label === 'slow' && event.phase === 'end') { throw new Error('slow end observer failed'); } } }],
+    });
+    let settled = false;
+    const running = supervisor.run(options, async (run) => Promise.race([
+      run.ordinary('slow', async () => { await held.opened; return 'slow'; }),
+      run.ordinary('fast', () => 'fast'),
+    ])).finally(() => {
+      settled = true;
+    });
+    await settleTicks();
+    expect(settled).toBe(false);
+    expect(writer.releases.count).toBe(0);
+    held.open();
+    const result = await running;
+    expect(result.value).toBe('fast');
+    expect(result.diagnostics).toEqual([expect.stringContaining('slow end observer failed')]);
+    expect(writer.releases.count).toBe(1);
+  });
+
+  test('an asynchronous admission for already-started work completes while the run is still live', async () => {
+    const supervisor = supervision();
+    const held = gate();
+    const asked: string[] = [];
+    const { options, double, writer } = runOptions({
+      admission: {
+        async admit(): Promise<IAdmissionDecision> {
+          asked.push(`asked, released ${String(releases())}`);
+          await held.opened;
+          asked.push(`answered, released ${String(releases())}`);
+          return { kind: 'admitted' };
+        },
+      },
+    });
+    const releases = (): number => writer.releases.count;
+    const running = settled_(supervisor.run(options, async (run) => Promise.all([
+      run.resolve(step, { requestKey: 'request:1' }),
+      run.ordinary('failing', () => { throw new Error('sibling failed'); }),
+    ])));
+    await settleTicks();
+    held.open();
+    const result = await running;
+    expect(result.error instanceof Error ? result.error.message : '').toBe('sibling failed');
+    expect(asked).toEqual(['asked, released 0', 'answered, released 0']);
+    expect(double.decisions).toEqual([{ kind: 'admitted' }]);
+    expect(writer.releases.count).toBe(1);
+  });
+
+  test('an admission decision that arrives after the run actually closed is denied', async () => {
+    const supervisor = supervision();
+    const held = gate();
+    const { options, double } = runOptions({
+      admission: {
+        async admit(): Promise<IAdmissionDecision> {
+          await held.opened;
+          return { kind: 'admitted' };
+        },
+      },
+    });
+    let late: Promise<IAdmissionDecision> | undefined;
+    await supervisor.run(options, () => {
+      // Presented directly through the port, outside any operation the run tracks.
+      const ports = double.ports;
+      if (ports !== undefined) {
+        late = Promise.resolve(ports.admission.admit(Object.freeze({ step, kind: 'memo', subject: { analysis: 'analysis:test', environment: 'env:test', subject: 's', version: 1 }, reason: 'cold' })));
+      }
+    });
+    held.open();
+    expect(late).toBeDefined();
+    if (late !== undefined) {
+      expect(await late).toEqual({ kind: 'denied', reason: expect.stringContaining('closed') });
+    }
+  });
+
+  test('work an operation starts while the run waits for it is part of the run; work after actual closure is rejected', async () => {
+    const supervisor = supervision();
+    const held = gate();
+    const { options } = runOptions();
+    let kept: IRun | undefined;
+    let nested: unknown;
+    const result = await settled_(supervisor.run(options, async (run) => {
+      kept = run;
+      const slow = run.ordinary('slow', async () => {
+        await held.opened;
+        nested = await run.ordinary('nested', () => supervisor.current().environment);
+      });
+      setTimeout(() => held.open(), 5);
+      return Promise.all([slow, run.ordinary('failing', () => { throw new Error('sibling failed'); })]);
+    }));
+    expect(result.error instanceof Error ? result.error.message : '').toBe('sibling failed');
+    expect(nested).toBe('env:test');
+    expect(kept?.open).toBe(false);
+    if (kept !== undefined) {
+      await expectSupervisionError(kept.ordinary('late', () => 1), 'run-closed');
+    }
+  });
+});
+
+/** Settle a promise into a value or error, so a test can inspect a rejection it expects. */
+function settled_<T>(promise: Promise<T>): Promise<{ readonly value?: T; readonly error?: unknown }> {
+  return promise.then((value: T) => ({ value }), (error: unknown) => ({ error }));
+}

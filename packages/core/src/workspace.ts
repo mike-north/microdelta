@@ -330,6 +330,9 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
         let active = true;
         const run: IWorkspaceRun = Object.freeze({
           context: live.context,
+          get open(): boolean {
+            return live.open;
+          },
           resolve: live.resolve,
           check: live.check,
           recover: live.recover,

@@ -181,6 +181,11 @@ export interface IRequestOptions {
 export interface IRun {
   /** The run's context. */
   readonly context: IRunContext;
+  /**
+   * Whether the run still accepts work: true until its body and every
+   * operation started through this run have settled, false afterwards.
+   */
+  readonly open: boolean;
   /** Resolve one step under current policy (normal entry operation). */
   resolve(step: IBindingDescriptor, request: IRequestOptions): Promise<IResolutionOutcome>;
   /** Report what a normal request would do, without admission, claims, bodies or writes. */

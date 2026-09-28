@@ -36,7 +36,7 @@ export function missingFoundationGates({ workspace, packages, workflow, extracto
     includes('check:workspace', scripts['check:workspace'], `npm run ${gate}`);
   }
   for (const [gate, commands] of Object.entries({
-    'check:imports': ['eslint -c tooling/context-imports.config.mjs packages experiments'],
+    'check:imports': ['eslint -c tooling/context-imports.config.mjs packages experiments examples'],
     'check:declarations': ['node tooling/check-producer-declarations.mjs', 'node tooling/history-declaration-shims.mjs --check'],
     'check:fixtures': [
       'tsc --noEmit -p fixtures/declarations/producer/tsconfig.json',

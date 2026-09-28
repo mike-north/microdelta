@@ -51,7 +51,7 @@ function checkFile(source, filename) {
 
 /** A nonzero exit prevents broad or undocumented exceptions from entering CI. */
 const findings = [];
-for (const root of ['packages', 'experiments', 'fixtures/declarations']) {
+for (const root of ['packages', 'experiments', 'fixtures/declarations', 'examples']) {
   for await (const filename of activeFiles(root)) {
     findings.push(...checkFile(await readFile(filename, 'utf8'), filename));
   }

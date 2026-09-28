@@ -79,9 +79,16 @@ async function github(apiUrl, token, resource) {
   return response.json();
 }
 
-/** Gather facts from the standard Actions environment and write job outputs. */
-async function main() {
-  const env = process.env;
+/**
+ * Gather the decision's facts from the standard Actions environment. GitHub is
+ * read only for a push in the trusted repository; any missing token or failed
+ * read throws rather than producing a decision. The release-decision job and
+ * the publisher's final-boundary revalidation both use this reader.
+ */
+export async function readReleaseFacts(env) {
+  for (const variable of ['GITHUB_EVENT_NAME', 'GITHUB_REPOSITORY', 'GITHUB_REF']) {
+    if (!env[variable]) throw new ReleaseDecisionError(`${variable} is required to decide a release`);
+  }
   const facts = {
     eventName: env.GITHUB_EVENT_NAME,
     repository: env.GITHUB_REPOSITORY,
@@ -99,7 +106,18 @@ async function main() {
     const query = new URLSearchParams({ state: 'closed', base: 'main', head: `${owner}:${versionBranch}`, sort: 'updated', direction: 'desc', per_page: '100' });
     facts.mergedVersionPulls = await github(apiUrl, env.GITHUB_TOKEN, `/repos/${facts.repository}/pulls?${query}`);
   }
-  const decision = decideRelease(facts);
+  return facts;
+}
+
+/** Decide from live GitHub state; throws when eligibility cannot be established. */
+export async function currentReleaseDecision(env) {
+  return decideRelease(await readReleaseFacts(env));
+}
+
+/** Write the job outputs consumed by the package and publish jobs. */
+async function main() {
+  const env = process.env;
+  const decision = await currentReleaseDecision(env);
   process.stdout.write(`${decision.reason}\n`);
   if (env.GITHUB_OUTPUT) {
     await appendFile(env.GITHUB_OUTPUT, `publish=${decision.publish}\npull=${decision.pullNumber ?? ''}\n`);

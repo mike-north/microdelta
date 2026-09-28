@@ -173,3 +173,14 @@ test('CLI fails closed when GitHub cannot be read', async () => {
     assert.doesNotMatch(result.output, /publish=true/u);
   });
 });
+
+test('missing Actions event metadata fails closed with a named diagnostic', async () => {
+  await withGitHub(() => undefined, async apiUrl => {
+    for (const variable of ['GITHUB_EVENT_NAME', 'GITHUB_REPOSITORY', 'GITHUB_REF']) {
+      const result = await cli(apiUrl, { [variable]: '' });
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, new RegExp(`${variable} is required`, 'u'));
+      assert.doesNotMatch(result.output, /publish=true/u);
+    }
+  });
+});

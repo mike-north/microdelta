@@ -6,7 +6,10 @@
  * security boundary: only the `publish` job may obtain an OIDC token; it runs
  * only after the release decision and verified packing, on a GitHub-hosted
  * runner, with pinned actions, no dependency installation, and no registry
- * secret. The version job remains version-only and the triggers remain push to
+ * secret. Its only other permissions are read access used to re-establish,
+ * after any wait, that its commit is still the latest release decision. The
+ * package job may not suppress install scripts, because the artifact check
+ * installs the native SQLite binding normally. The version job remains version-only and the triggers remain push to
  * main plus manual dispatch. Run as a CLI by `npm run check:release-workflow`.
  * This is a line-oriented reader of the repository's own block-style YAML,
  * not a general YAML parser; unexpected layout fails the audit.
@@ -95,12 +98,16 @@ export function auditReleaseWorkflow(text) {
     if (!pack.includes(`run: ${command}\n`)) problems.push(`package job must run ${command}`);
   }
   if (!/node tooling\/release-artifacts\.mjs --release /u.test(pack)) problems.push('package job must run release-artifacts in --release mode');
+  if (/ignore[-_]scripts/iu.test(pack)) problems.push('package job must not suppress install scripts; the native SQLite check needs a normal install');
 
   const publish = jobs.publish ?? '';
   if (!/^ {4}needs: \[release-decision, package\]$/mu.test(publish)) problems.push('publish job must need release-decision and package');
   if (!publish.includes(`    ${releaseCondition}\n`)) problems.push(`publish job must run only when release-decision outputs publish == 'true'`);
-  if (jobPermissions(publish)?.join(',') !== 'contents: read,id-token: write') {
-    problems.push('publish job permissions must be exactly contents: read and id-token: write');
+  if (jobPermissions(publish)?.join(',') !== 'contents: read,id-token: write,pull-requests: read') {
+    problems.push('publish job permissions must be exactly contents: read, id-token: write and pull-requests: read');
+  }
+  if (!/node tooling\/publish-release\.mjs --manifest [^\n]*\n {8}env:\n {10}GITHUB_TOKEN: \$\{\{ github\.token \}\}\n/u.test(publish)) {
+    problems.push('publish job must pass the read-only job token for release revalidation to publish-release.mjs');
   }
   if (!/^ {4}runs-on: ubuntu-latest$/mu.test(publish)) problems.push('publish job must run on a GitHub-hosted ubuntu-latest runner');
   if (/npm (?:ci|install|run|test)\b/u.test(publish)) problems.push('publish job must not install or build; it only publishes verified tarballs');

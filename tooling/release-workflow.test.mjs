@@ -46,7 +46,7 @@ test('OIDC token permission in the version or package job is refused', () => {
 });
 
 test('a publish job with broader write permission is refused', () => {
-  refuses(workflow.replace(/(^  publish:\n[\s\S]*?permissions:\n)/mu, '$1      packages: write\n'), /publish job permissions must be exactly contents: read and id-token: write/u);
+  refuses(workflow.replace(/(^  publish:\n[\s\S]*?permissions:\n)/mu, '$1      packages: write\n'), /publish job permissions must be exactly contents: read, id-token: write and pull-requests: read/u);
 });
 
 test('publication that no longer depends on the release decision is refused', () => {
@@ -85,4 +85,18 @@ test('the version job must remain version-only', () => {
 test('packing must verify the exact pushed commit in release mode', () => {
   refuses(once(workflow, 'node tooling/release-artifacts.mjs --release', 'node tooling/release-artifacts.mjs'), /package job must run release-artifacts in --release mode/u);
   refuses(workflow.replace(/(^ {2}package:\n[\s\S]*?) {10}ref: \$\{\{ github\.sha \}\}\n/mu, '$1'), /package job must check out github\.sha/u);
+});
+
+// Issue #64 review finding 2: the publish job re-reads GitHub at its final
+// boundary, so it needs a read-only PR permission and the job token, and no more.
+test('publication must receive only read access for release revalidation', () => {
+  refuses(workflow.replace(/(^ {2}publish:\n[\s\S]*?) {6}pull-requests: read\n/mu, '$1'), /publish job permissions must be exactly contents: read, id-token: write and pull-requests: read/u);
+  refuses(workflow.replace(/(^ {2}publish:\n[\s\S]*?) {6}pull-requests: read\n/mu, '$1      pull-requests: write\n'), /publish job permissions must be exactly contents: read, id-token: write and pull-requests: read/u);
+  refuses(workflow.replace(/(^ {2}publish:\n[\s\S]*?) {10}GITHUB_TOKEN: \$\{\{ github\.token \}\}\n/mu, '$1'), /publish job must pass the read-only job token for release revalidation/u);
+});
+
+// Issue #64 review finding 4: the package job must let release-artifacts run
+// the native install; suppressing scripts there would hide a missing binding.
+test('the package job cannot suppress the native install check', () => {
+  refuses(once(workflow, 'node tooling/release-artifacts.mjs --release --out', 'npm_config_ignore_scripts=true node tooling/release-artifacts.mjs --release --out'), /package job must not suppress install scripts/u);
 });

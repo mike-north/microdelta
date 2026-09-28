@@ -127,6 +127,8 @@ jobs:
           retention-days: 7
   # The only job that can obtain an OIDC token. It installs nothing and runs no
   # package scripts; it publishes the verified tarballs in dependency order.
+  # After any wait it re-reads GitHub (pull-requests: read) and publishes only
+  # while this commit is still the latest merged Version Packages PR.
   publish:
     needs: [release-decision, package]
     if: needs.release-decision.outputs.publish == 'true'
@@ -134,6 +136,7 @@ jobs:
     permissions:
       contents: read
       id-token: write
+      pull-requests: read
     concurrency:
       group: publish-npm
       cancel-in-progress: false
@@ -151,3 +154,5 @@ jobs:
           path: ${{ runner.temp }}/release
       - name: Publish verified tarballs with npm trusted publishing
         run: node tooling/publish-release.mjs --manifest "$RUNNER_TEMP/release/release-manifest.json"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}

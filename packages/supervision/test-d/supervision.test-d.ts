@@ -57,7 +57,14 @@ expectAssignable<ISupervisionErrorCode>('outside-run');
 expectNotAssignable<ISupervisionErrorCode>('retry');
 
 // Fixed positions are published read-only.
-expectType<readonly ILifecyclePhase[]>(stepLifecycle);
+expectAssignable<readonly ILifecyclePhase[]>(stepLifecycle);
 expectNotAssignable<ILifecyclePhase[]>(stepLifecycle);
 expectType<readonly IOrdinaryPhase[]>(ordinaryLifecycle);
 expectNotAssignable<IOrdinaryPhase[]>(ordinaryLifecycle);
+
+// The published step positions are the exact ordered literals, and every
+// phase Resolution can emit is listed: a new phase must be placed explicitly.
+expectType<'verify'>(stepLifecycle[0]);
+expectType<'abandon'>(stepLifecycle[9]);
+declare const unlisted: Exclude<ILifecyclePhase, (typeof stepLifecycle)[number]>;
+expectType<never>(unlisted);

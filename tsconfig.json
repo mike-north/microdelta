@@ -4,10 +4,33 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
-      "@microdelta/machine-node": ["packages/machine-node/dist/api/machine-node.alpha.d.ts"]
+      "@microdelta/history": [
+        "packages/history/dist/api/history.alpha.d.ts"
+      ],
+      "@microdelta/machine": [
+        "packages/machine/dist/api/machine.alpha.d.ts"
+      ],
+      "@microdelta/machine-node": [
+        "packages/machine-node/dist/api/machine-node.alpha.d.ts"
+      ],
+      "@microdelta/materialization": [
+        "packages/materialization/dist/api/materialization.alpha.d.ts"
+      ],
+      "@microdelta/tracking": [
+        "packages/tracking/dist/api/tracking.alpha.d.ts"
+      ],
+      "@microdelta/value": [
+        "packages/value/dist/api/value.alpha.d.ts"
+      ]
     }
   },
-  "files": ["packages/core/src/index.ts"],
-  "include": ["experiments/**/*.ts"],
-  "exclude": ["experiments/**/test-d/**"]
+  "files": [
+    "packages/core/src/index.ts"
+  ],
+  "include": [
+    "experiments/**/*.ts"
+  ],
+  "exclude": [
+    "experiments/**/test-d/**"
+  ]
 }

@@ -19,6 +19,7 @@ import { describe, expect, jest, test } from '@jest/globals';
 
 import {
   DefinitionError,
+  isComposing,
   declarations,
   type IBindingDescriptor,
   type IAuthorInvoker,
@@ -95,6 +96,25 @@ describe('fixed M3 topology', () => {
       { parent: stepDescriptor('person:ada', 'summary'), child: stepDescriptor('person:ada', 'activity') },
       { parent: stepDescriptor('person:ben', 'summary'), child: stepDescriptor('person:ben', 'activity') },
     ]);
+  });
+
+  test('CMP-1: the topology names the declared input and callable slots, sorted and frozen', () => {
+    // Assembly derives the bindings every callback receives from these slot
+    // names, so authors never repeat them beside their composition.
+    const { composition } = buildFixture();
+    expect(composition.topology.inputs).toEqual(['config']);
+    expect(composition.topology.helpers).toEqual(['format', 'summarize']);
+    expect(Object.isFrozen(composition.topology.inputs)).toBe(true);
+    expect(Object.isFrozen(composition.topology.helpers)).toBe(true);
+    const reversed = buildFixture({ order: 'ben-first' });
+    expect(reversed.composition.topology.helpers).toEqual(['format', 'summarize']);
+  });
+
+  test('CMP-1: a composition without inputs or helpers declares empty slot lists', () => {
+    const ada = buildMember('person:ada');
+    const composition = compose({ scope: fixtureScope, members: [ada.registration] });
+    expect(composition.topology.inputs).toEqual([]);
+    expect(composition.topology.helpers).toEqual([]);
   });
 
   test('CMP-1: topology is ordered by structure, not registration order', () => {
@@ -183,6 +203,35 @@ describe('fixed M3 topology', () => {
     expectDefinitionError(() => compose({ scope: fixtureScope, members: [{ key: '', steps: [] }] }), 'invalid-descriptor');
     expectDefinitionError(() => compose({ scope: fixtureScope, members: [{ key: 'person:ada', steps: [{ slot: '', declaration }] }] }), 'invalid-descriptor');
     expectDefinitionError(() => compose({ scope: fixtureScope, inputs: [{ slot: '', value: {} }], members: [] }), 'invalid-descriptor');
+  });
+});
+
+describe('composition phase', () => {
+  test('CMP-9/RUN-001: isComposing reports true only while author code runs during composition', () => {
+    // Author code can run during composition through Proxy traps on the
+    // author's builder arrays. Run Supervision consults this query so runtime
+    // context lookup fails there; it never enables framework work.
+    const ben = buildMember('person:ben');
+    const observed: boolean[] = [];
+    const members = new Proxy([ben.registration], {
+      get(target, key, receiver): unknown {
+        if (key === '0') {
+          observed.push(isComposing());
+        }
+        return Reflect.get(target, key, receiver);
+      },
+    });
+    expect(isComposing()).toBe(false);
+    compose({ scope: fixtureScope, members });
+    expect(observed.length).toBeGreaterThan(0);
+    expect(observed.every(value => value)).toBe(true);
+    expect(isComposing()).toBe(false);
+  });
+
+  test('CMP-9: a composition that fails still ends the composition phase', () => {
+    const invalid: unknown = { scope: fixtureScope, members: [{ key: 'person:ada', steps: [{ slot: 'activity', declaration: {} }] }] };
+    expectDefinitionError(() => Reflect.apply(compose, undefined, [invalid]), 'forged-declaration');
+    expect(isComposing()).toBe(false);
   });
 });
 

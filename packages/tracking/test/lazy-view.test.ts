@@ -12,7 +12,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 
 import { describe, expect, test } from '@jest/globals';
 import type { IMachine } from '@microdelta/machine';
-import { encodeSelectedFact, encodeSnapshot, fingerprint, navigate, observe } from '@microdelta/value';
+import { decodeSnapshot, encodeSelectedFact, encodeSnapshot, fingerprint, navigate, observe } from '@microdelta/value';
 import type { IAddressSegment, IOperation, ISelectedFact, ISelectedNode } from '@microdelta/value';
 
 import { createTrackingObserver } from '../src/index.js';
@@ -52,7 +52,9 @@ function createSource(root: unknown): { readonly source: ITrackedNodeSource; rea
       },
       subtree(address): unknown {
         requests.push({ port: 'subtree', address: label(address) });
-        return address.length === 0 ? root : observe(root, address, 'value').fact;
+        // Like a durable reader, each load returns a fresh detached copy, so output alias
+        // checks cannot rely on repeated loads sharing one in-memory object.
+        return decodeSnapshot(encodeSnapshot(address.length === 0 ? root : observe(root, address, 'value').fact));
       },
     },
   };

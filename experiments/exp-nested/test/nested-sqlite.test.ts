@@ -286,6 +286,22 @@ describe('candidate integrity and scope on a real SQLite file', () => {
     wrongStore.close();
   });
 
+  test('a root value read has no member address and fails instead of fabricating a root fact', () => {
+    const opened = openFresh();
+    const reference = opened.index.publish('ada', activity());
+    for (const operation of ['value', 'own', 'membership'] as const) {
+      expect(() => opened.index.reader.readSelected(reference, { operation, address: [] })).toThrow(TypeError);
+      expect(() => opened.index.reader.readSelected(reference, { operation, address: [] })).toThrow(/member operation needs an address/u);
+      expect(opened.index.reader.resolveFingerprint(reference, { kind: 'selected', operation, address: [], encoding: 'MDO1' }))
+        .toEqual({ kind: 'incompatible' });
+    }
+    // Root shape and root key order remain answerable: they are not member-value reads.
+    expect(opened.index.reader.readNode(reference, [])).toEqual({ kind: 'record', address: [] });
+    expect(opened.index.reader.readSelected(reference, { operation: 'keys', address: [] }).fact)
+      .toEqual(['contributor', 'profile', 'pullRequests', 'reviews', 'notes']);
+    opened.close();
+  });
+
   test('publication is immutable and requires a navigable container root', () => {
     const opened = openFresh();
     const reference = opened.index.publish('ada', activity());

@@ -106,6 +106,23 @@ describe('admission after reuse and before claims', () => {
     }, {}, { admission: { deny: [{ memberKey: 'person:ada', slot: 'activity' }] } });
   });
 
+  test('a child refused during an admitted body refuses the summary and ends its attempt without a result', async () => {
+    const location = freshLocation();
+    await withSession(location, async (session) => {
+      const requestKey = freshRequestKey();
+      const outcome = await session.resolve(session.contributors.steps['person:ada'].summary, requestKey);
+      expect(outcome.kind).toBe('refused');
+      if (outcome.kind === 'refused') {
+        expect(outcome.refused).toEqual(session.contributors.steps['person:ada'].activity);
+      }
+      expect(session.admissions.map((request) => [request.step.slot, request.reason])).toEqual([['summary', 'cold'], ['activity', 'cold']]);
+      expect(world.checks['person:ada']).toBe(0);
+      expect(world.summaries['person:ada']).toBe(0);
+      expect(session.history.findCandidates({ analysis: session.contributors.composition.scope, environment: 'env:fixture', subject: 'summary:acme/widget:2026-Q1:person:ada', version: 1 })).toHaveLength(0);
+      expect(session.resolution.recover({ step: session.contributors.steps['person:ada'].summary, requestKey })).toMatchObject({ kind: 'unsuccessful' });
+    }, {}, { admission: { deny: [{ memberKey: 'person:ada', slot: 'activity' }] } });
+  });
+
   test('a throwing admission port fails only the affected call, before any attempt', async () => {
     const location = freshLocation();
     await withSession(location, async (session) => {

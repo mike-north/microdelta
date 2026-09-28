@@ -56,8 +56,10 @@ function describeLease(lease: IWriterLease): string {
  * Block until the host clock is past the recorded writer lease's expiry plus
  * a margin. Fails, naming the stored holder, its expiry and the host time,
  * when no holder is recorded, when the stored expiry lies further ahead than
- * the budget allows (it is not the lease the caller expects), or when the
- * recorded holder changes while waiting.
+ * the budget allows (it is not the lease the caller expects), when the
+ * budget is spent on the monotonic clock before the wall clock reaches the
+ * expiry (the host clock moved backward), or when the recorded holder
+ * changes while waiting.
  * @param read - Reads the recorded writer lease without taking the writer.
  * @param limits - Margin and budget of this wait.
  * @param clock - Time sources and sleep; the host's by default.
@@ -72,8 +74,15 @@ export function outlastStoredLease(read: () => IWriterLease | undefined, limits:
   if (deadline - now > limits.budgetMilliseconds) {
     throw new Error(`stored writer ${describeLease(stored)} lies ${String(stored.expiresAt - now)} ms after host time ${String(now)}: beyond the ${String(limits.budgetMilliseconds)} ms wait budget`);
   }
+  // Wall-clock progress alone cannot bound the wait: a backward step moves the
+  // deadline further away. The monotonic budget bounds it regardless.
+  const started = clock.monotonicNow();
   for (let remaining = deadline - clock.wallNow(); remaining > 0; remaining = deadline - clock.wallNow()) {
-    clock.sleep(remaining);
+    const elapsed = clock.monotonicNow() - started;
+    if (elapsed >= limits.budgetMilliseconds) {
+      throw new Error(`stored writer ${describeLease(stored)} had not expired at host time ${String(clock.wallNow())} after ${String(Math.round(elapsed))} ms of the ${String(limits.budgetMilliseconds)} ms wait budget (monotonic)`);
+    }
+    clock.sleep(Math.min(remaining, limits.budgetMilliseconds - elapsed));
   }
   const after = read();
   if (after?.holder !== stored.holder || after.fence !== stored.fence || after.expiresAt !== stored.expiresAt) {

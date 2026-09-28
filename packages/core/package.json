@@ -1,6 +1,6 @@
 {
   "name": "microdelta",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Persisted incremental analysis; implementation in progress",
   "license": "UNLICENSED",
   "repository": {
@@ -45,14 +45,14 @@
     }
   },
   "dependencies": {
-    "@microdelta/definition": "0.0.0",
-    "@microdelta/history": "0.0.0",
-    "@microdelta/machine-node": "0.0.0",
-    "@microdelta/materialization": "0.0.0",
-    "@microdelta/resolution": "0.0.0",
-    "@microdelta/supervision": "0.0.0",
-    "@microdelta/tracking": "0.0.0",
-    "@microdelta/value": "0.0.0"
+    "@microdelta/definition": "0.1.0",
+    "@microdelta/history": "0.1.0",
+    "@microdelta/machine-node": "0.1.0",
+    "@microdelta/materialization": "0.1.0",
+    "@microdelta/resolution": "0.1.0",
+    "@microdelta/supervision": "0.1.0",
+    "@microdelta/tracking": "0.1.0",
+    "@microdelta/value": "0.1.0"
   },
   "publishConfig": {
     "access": "public"

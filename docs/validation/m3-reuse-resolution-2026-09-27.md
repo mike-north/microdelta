@@ -211,7 +211,7 @@ problems reported); with Resolution enrolled, 4/4 pass.
 
 ## Contract coverage (assembly suites over real durable History)
 
-`packages/core/test/resolution`, 68 tests in three suites. Each "session" opens
+`packages/core/test/resolution`, 73 tests in three suites. Each "session" opens
 the real SQLite file, a fresh composition, observer and Resolution, and closes
 the file; nothing survives between sessions but durable History.
 
@@ -243,7 +243,8 @@ because the request-key-derived attempt identity already prevented a second
 check. The consumed-change test now also requires one finality evaluation; the
 run then rejected 20 of 20. After the peer-review repairs two controls were
 added (22 of 22 rejected). After the supervisory repairs five more were added;
-the final run rejected **27 of 27**, baseline and restored build 68/68.
+that run rejected 27 of 27. After the Copilot repairs two more were added; the
+final run rejected **29 of 29**, baseline and restored build 73/73.
 
 | Planted defect | Tests failing |
 | --- | --- |
@@ -273,6 +274,8 @@ the final run rejected **27 of 27**, baseline and restored build 68/68.
 | nested post-commit diagnostics stay with each step | 4 |
 | supported provenance need not carry its own implementation evidence | 3 |
 | supported source provenance may carry child edges | 1 |
+| an unsuccessful attempt ending is not announced as abandon | 3 |
+| an ending History refused is still announced | 1 |
 | a post-commit observer failure fails the call | 1 |
 
 ## Supervisory review repairs
@@ -300,17 +303,79 @@ and the transition-table row "current path targets a new entity with equal
 consumed scalar" permit retention while current evidence names the new child.
 The test now asserts that behavior, with its reasoning in a comment.
 
+## Integration with the trusted-publishing foundation
+
+`origin/main` at `07d743d` (PR #65, issue #64) was merged into this branch as
+`4418c89` without conflicts or history rewriting. Its release graph
+(`tooling/release-graph.mjs`) requires every member of the facade's runtime
+closure to be public, registered for trusted publishing, pinned exactly and
+published from this repository.
+
+- **Tests first (author).** `4c157f0` requires the checked-in workspace graph
+  to contain `@microdelta/resolution`, ordered after Definition, Tracking,
+  History and Materialization and before the facade, and the real-workspace
+  artifact test to pack and install it. Against the private manifest, three
+  graph tests failed with `@microdelta/resolution is private but required by
+  microdelta`.
+- **Metadata (supervisor-applied).** The implementer's proposed manifest
+  repair and changeset were denied by the host's auto-mode permission check
+  ("Create Public Surface"), and follow-on verification commands were then
+  denied as continuations of that outcome. The implementer did not retry or
+  route around either denial. The supervisor recovered the user's first-hand
+  authorization, resubmitted the identical edits for explicit host approval
+  and applied them. They are committed as `7004ca9`: Resolution is no longer
+  `private`; it declares `repository` (`packages/resolution`),
+  `files: ["dist", "!dist/api-temp"]` and `publishConfig.access: public`; the
+  version stays `0.0.0`. A changeset records a Resolution minor and a
+  Materialization patch. Nothing was published and no declaration tier was
+  promoted.
+- **Lockfile (supervisor).** After separate approval, the supervisor read back
+  the shared manifest and lock fields and found no lockfile update needed
+  (`/tmp/microdelta-issue56-lockfile-readback.md`).
+- **Integrated gates (supervisor).** With explicit host approval, the
+  supervisor ran `npm run build`, `npm run check` and `npm test` on the
+  integrated tree, all exit 0, including real artifact installation
+  (`/tmp/md56-evidence/integrated-supervisor-{build,check,test}.log`). These
+  are the supervisor's executions, not the author's.
+- **After the metadata (author).** `node --test tooling/release-graph.test.mjs`
+  passed 18/18; `npm run check:release` passed with publish order
+  `machine → machine-node → value → definition → history → tracking →
+  materialization → resolution → microdelta`.
+
+## Copilot review repairs
+
+Two Copilot findings on `2a39696` still applied to the current source.
+
+- **The promised `abandon` lifecycle event was never emitted (medium).** The
+  supervisor reproduced it with real History
+  (`/tmp/microdelta-issue56-abandon-probe.mjs`: a throwing summary was observed
+  as `verify, admit, claim, execute`, with no ending). Regressions came first
+  (`4d900f5`); **3 failed** against the previous engine: a failing body, an
+  observer throwing at `abandon`, and a child refused during an admitted body.
+  Two preservation controls passed beforehand: explicit retention ends with
+  `accept, release`, and an ending History refuses (the body outlives its
+  writer lease) is never announced. The fix (`74ded8a`) has the ending report
+  whether History recorded it. Unsuccessful endings are then announced as
+  `abandon`, explicit retention as `release`, and nothing is announced for a
+  refused ending, which leaves a diagnostic and an `incomplete` attempt. Both
+  positions follow a commit, so an observer failure there is a diagnostic and
+  the original failure or refusal remains the outcome. The lifecycle contract
+  comment states this. Two new mutation controls cover the behavior.
+- **A stale test title (low).** The facade path-mapping test in
+  `tooling/declaration-boundaries.test.mjs` now names what it asserts (every
+  approved owner import, including both History entries). No behavior changed.
+
 ## Repository gates
 
-Run sequentially at `1f7ab06` (later commits change only documentation):
+Run sequentially by the author at `cb23d91` (later commits change only
+documentation):
 
 | Command | Result |
 | --- | --- |
 | `npm run build` | exit 0 |
-| `npm run check` | exit 0 (strict types, portable types, type-aware lint, imports, declarations, API reports, fixtures, suppressions, wiring) |
-| `npm test` | exit 0: tooling 164/164; facade Jest 112/112 (durable History 44, Resolution 68), facade controls judge 5/5, facade tsd; Resolution Jest 3/3, tsd and public-consumer check; every other workspace and experiment suite passing |
-| `node packages/core/test/resolution/controls/resolution-mutation-controls.mjs` | PASS: 27 of 27 controls rejected; baseline and restored 68/68 |
-| Reviewer probes (`/tmp/microdelta-issue56-*-probe.mjs`, unchanged) | corrected behavior for all five; see *Supervisory review repairs* |
+| `npm run check` | exit 0 (strict types, portable types, type-aware lint, imports, declarations, API reports, fixtures, suppressions, wiring, release graph and workflow audit) |
+| `npm test` | exit 0: tooling 286/286, including the real-workspace pack/isolated-install/typecheck artifact test and the installed Node SQLite check; facade Jest 117/117 (durable History 44, Resolution 73), facade controls judge 5/5, facade tsd; Resolution Jest 3/3, tsd and public-consumer check; all other suites passing |
+| `node packages/core/test/resolution/controls/resolution-mutation-controls.mjs` | PASS: 29 of 29 controls rejected; baseline and restored 73/73 |
 
 ## Limits
 

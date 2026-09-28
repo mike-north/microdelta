@@ -14,7 +14,7 @@
     "test": "npm run build && npm run test:tooling && npm run test --workspaces && npm run test:experiments && npm run test:examples",
     "test:tooling": "node --test tooling/*.test.mjs",
     "test:experiments": "tsd --typings experiments/exp-1/src/protocol.ts --files experiments/exp-1/test-d/protocol.test-d.ts && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-1/jest.config.mjs --runInBand && npm run test:exp2 && npm run test:exp3 && npm run test:exp-nested",
-    "test:examples": "node --test examples/contribution-report/test/",
+    "test:examples": "node --test examples/contribution-report/test/*.test.mjs",
     "check:experiments": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p experiments/exp-1/tsconfig.portable.json && tsc -p experiments/exp-2/tsconfig.portable.json && tsc --noEmit -p experiments/exp-3/tsconfig.portable.json && tsc --noEmit -p experiments/exp-nested/tsconfig.portable.json && eslint experiments --no-error-on-unmatched-pattern",
     "check:examples": "tsc --noEmit -p examples/contribution-report/tsconfig.json && eslint examples",
     "check:suppressions": "node tooling/check-suppressions.mjs",

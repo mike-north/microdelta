@@ -49,7 +49,7 @@ export function missingFoundationGates({ workspace, packages, workflow, extracto
     'check:experiments': ['tsc --noEmit -p tsconfig.json', 'tsc --noEmit -p experiments/exp-1/tsconfig.portable.json', 'eslint experiments'],
     'check:examples': ['tsc --noEmit -p examples/contribution-report/tsconfig.json', 'eslint examples'],
     'build:examples': ['tsc -p examples/contribution-report/tsconfig.json'],
-    'test:examples': ['node --test examples/contribution-report/test/'],
+    'test:examples': ['node --test examples/contribution-report/test/*.test.mjs'],
     'check:suppressions': ['node tooling/check-suppressions.mjs'],
     'check:wiring': ['node tooling/foundation-wiring.mjs'],
     'check:release': ['node tooling/release-workflow.mjs', 'node tooling/release-graph.mjs'],

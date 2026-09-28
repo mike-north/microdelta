@@ -1,8 +1,70 @@
 /**
- * Existing function-name inspection for presentation and diagnostics only.
- * Function names do not establish Definition identity or binding correspondence.
+ * Definition & Binding: frozen declarations, the fixed step graph, current
+ * structural correspondence, declared child-call handles and the invocation
+ * bridge that pairs a reconnected step's actual author callback with its
+ * assembled context for Resolution's invoker. Function names remain
+ * presentation and diagnostic labels only; they never establish Definition
+ * identity or binding correspondence. This package does not store results,
+ * decide reuse, select previous results, capture observations or execute
+ * author callbacks itself.
  * @packageDocumentation
  */
+export { DefinitionError, type IDefinitionErrorCode } from './errors.js';
+export type { IBindingDescriptor, IBindingRole } from './descriptor.js';
+export type { IApply, IBindingFamily, IPreviousCarrierFamily, ITypeFamily } from './family.js';
+export {
+  isDeclaration,
+  type IAnyMemoDeclaration,
+  type IAnySourceDeclaration,
+  type IAuthorInvoker,
+  type ICalls,
+  type IChildDeclarations,
+  type IDeclarationBrand,
+  type IFinalityContext,
+  type IMemoDeclaration,
+  type IMemoOptions,
+  type IMemoRunContext,
+  type IPreviousSupplier,
+  type IResultOf,
+  type ISourceDeclaration,
+  type ISourceOptions,
+  type ISourceRunContext,
+  type IStepDeclaration,
+} from './declaration.js';
+export { declarations, type IDeclarations } from './declarations.js';
+export {
+  type IBindingResolution,
+  type IBindingTarget,
+  type ICallableTarget,
+  type IComposition,
+  type ICompositionBrand,
+  type ICompositionOptions,
+  type IDeclaredEdge,
+  type IHelperRegistration,
+  type IInputRegistration,
+  type IInputTarget,
+  type IMemberRegistration,
+  type IScopedSubject,
+  type IStepRegistration,
+  type IStepTarget,
+  type ITopology,
+  type IWitnessResolution,
+} from './composition.js';
+export {
+  describeHandle,
+  type IChildResult,
+  type IDeclaredCallBrand,
+  type IDeclaredCallHandle,
+  type IDeclaredInvocationRequest,
+  type IDirectChildWitness,
+  type IEmptyArguments,
+  type IInvocation,
+  type IInvocationPort,
+  type IInvocationScope,
+  type IMemoInvocation,
+  type ISourceInvocation,
+} from './invocation.js';
+
 /**
  * Exact synthetic names rejected when deriving a step's name (NM-1 and NM-2).
  * Explicit overrides are intentional author declarations and bypass this list.

@@ -5,6 +5,379 @@
 ```ts
 
 // @alpha
+export function declarations<TFamily extends IBindingFamily>(): IDeclarations<TFamily>;
+
+// @alpha
+export class DefinitionError extends Error {
+    constructor(code: IDefinitionErrorCode, message: string);
+    readonly code: IDefinitionErrorCode;
+}
+
+// @alpha
+export function describeHandle(value: unknown): IDirectChildWitness | undefined;
+
+// @alpha
+export interface IAnyMemoDeclaration<TFamily extends IBindingFamily> extends IDeclarationBrand<TFamily> {
+    readonly children: readonly string[];
+    // (undocumented)
+    readonly kind: 'memo';
+    readonly label: string | undefined;
+    readonly run: (context: never) => unknown;
+    readonly subject: string;
+    readonly version: number;
+}
+
+// @alpha
+export interface IAnySourceDeclaration<TFamily extends IBindingFamily> extends IDeclarationBrand<TFamily> {
+    readonly finality: ((context: never) => unknown) | undefined;
+    // (undocumented)
+    readonly kind: 'source';
+    readonly label: string | undefined;
+    readonly run: (context: never) => unknown;
+    readonly subject: string;
+    readonly version: number;
+}
+
+// @alpha
+export type IApply<TFamily extends ITypeFamily, TInput> = (TFamily & {
+    readonly input: TInput;
+})['output'];
+
+// @alpha
+export interface IAuthorInvoker<TOutcome> {
+    // (undocumented)
+    <TContext, TResult>(callback: (context: TContext) => TResult, context: TContext): TOutcome;
+}
+
+// @alpha
+export interface IBindingDescriptor {
+    readonly memberKey?: string;
+    readonly role: IBindingRole;
+    readonly scope: string;
+    readonly slot: string;
+}
+
+// @alpha
+export interface IBindingFamily {
+    readonly memo: object;
+    readonly outcomes: ITypeFamily;
+    readonly previous: IPreviousCarrierFamily;
+    readonly source: object;
+    readonly views: ITypeFamily;
+}
+
+// @alpha
+export type IBindingResolution<TFamily extends IBindingFamily = IBindingFamily> = {
+    readonly status: 'bound';
+    readonly descriptor: IBindingDescriptor;
+    readonly target: IBindingTarget<TFamily>;
+} | {
+    readonly status: 'missing';
+    readonly descriptor: IBindingDescriptor;
+} | {
+    readonly status: 'ambiguous';
+    readonly descriptor: IBindingDescriptor;
+    readonly occupants: number;
+};
+
+// @alpha
+export type IBindingRole = 'input' | 'callable' | 'step';
+
+// @alpha
+export type IBindingTarget<TFamily extends IBindingFamily> = IInputTarget | ICallableTarget | IStepTarget<TFamily>;
+
+// @alpha
+export interface ICallableTarget {
+    readonly callable: (...arguments_: never[]) => unknown;
+    // (undocumented)
+    readonly role: 'callable';
+}
+
+// @alpha
+export type ICalls<TFamily extends IBindingFamily, TChildren extends IChildDeclarations<TFamily>> = {
+    readonly [K in keyof TChildren]: IDeclaredCallHandle<IApply<TFamily['views'], IResultOf<TFamily, TChildren[K]>>>;
+};
+
+// @alpha
+export type IChildDeclarations<TFamily extends IBindingFamily> = {
+    readonly [slot: string]: IAnySourceDeclaration<TFamily>;
+};
+
+// @alpha
+export interface IChildResult<T> {
+    // (undocumented)
+    readonly data: T;
+}
+
+// @alpha
+export interface IComposition<TFamily extends IBindingFamily> extends ICompositionBrand<TFamily> {
+    resolve(descriptor: IBindingDescriptor): IBindingResolution<TFamily>;
+    resolveWitness(witness: unknown): IWitnessResolution<TFamily>;
+    readonly scope: string;
+    readonly topology: ITopology;
+}
+
+// @alpha
+export interface ICompositionBrand<TFamily extends IBindingFamily> {
+    // (undocumented)
+    readonly __microdeltaComposition: unique symbol;
+    // (undocumented)
+    readonly __microdeltaFamily?: (family: TFamily) => TFamily;
+}
+
+// @alpha
+export interface ICompositionOptions<TFamily extends IBindingFamily> {
+    readonly helpers?: readonly IHelperRegistration[];
+    readonly inputs?: readonly IInputRegistration[];
+    readonly members: readonly IMemberRegistration<TFamily>[];
+    readonly scope: string;
+}
+
+// @alpha
+export interface IDeclarationBrand<TFamily extends IBindingFamily> {
+    // (undocumented)
+    readonly __microdeltaDeclaration: unique symbol;
+    // (undocumented)
+    readonly __microdeltaFamily?: (family: TFamily) => TFamily;
+}
+
+// @alpha
+export interface IDeclarations<TFamily extends IBindingFamily> {
+    compose(options: ICompositionOptions<TFamily>): IComposition<TFamily>;
+    memo<TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult = unknown>(options: IMemoOptions<TFamily, TChildren, TResult>): IMemoDeclaration<TFamily, TChildren, TResult>;
+    openInvocation(composition: IComposition<TFamily>, parent: IBindingDescriptor, port: IInvocationPort<TFamily>): IInvocation<TFamily>;
+    source<TResult>(options: ISourceOptions<TFamily, TResult>): ISourceDeclaration<TFamily, TResult>;
+}
+
+// @alpha
+export interface IDeclaredCallBrand {
+    // (undocumented)
+    readonly __microdeltaDeclaredCall: unique symbol;
+}
+
+// @alpha
+export type IDeclaredCallHandle<T> = (() => Promise<IChildResult<T>>) & IDeclaredCallBrand;
+
+// @alpha
+export interface IDeclaredEdge {
+    // (undocumented)
+    readonly child: IBindingDescriptor;
+    // (undocumented)
+    readonly parent: IBindingDescriptor;
+}
+
+// @alpha
+export interface IDeclaredInvocationRequest<TFamily extends IBindingFamily, TResult> {
+    readonly child: ISourceDeclaration<TFamily, TResult>;
+    readonly scope: IInvocationScope;
+    readonly witness: IDirectChildWitness;
+}
+
+// @alpha
+export type IDefinitionErrorCode = 'invalid-subject' | 'invalid-version' | 'invalid-callback' | 'illegal-edge' | 'forged-declaration' | 'invalid-descriptor' | 'invalid-input' | 'conflicting-subject' | 'unresolved-parent' | 'composition-phase' | 'scope-closed' | 'scope-inactive' | 'unsupported-arguments' | 'invalid-result' | 'forged-composition' | 'invalid-bindings' | 'invalid-previous';
+
+// @alpha
+export interface IDirectChildWitness {
+    // (undocumented)
+    readonly arguments: IEmptyArguments;
+    // (undocumented)
+    readonly child: IBindingDescriptor;
+    // (undocumented)
+    readonly parent: IBindingDescriptor;
+    // (undocumented)
+    readonly version: 1;
+}
+
+// @alpha
+export interface IEmptyArguments {
+    // (undocumented)
+    readonly form: 'empty';
+}
+
+// @alpha
+export type IFinalityContext<TFamily extends IBindingFamily, TResult> = TFamily['source'] & {
+    readonly previous: IApply<TFamily['previous'], TResult>;
+};
+
+// @alpha
+export interface IHelperRegistration {
+    readonly helper: (...arguments_: never[]) => unknown;
+    readonly slot: string;
+}
+
+// @alpha
+export interface IInputRegistration {
+    readonly slot: string;
+    readonly value: unknown;
+}
+
+// @alpha
+export interface IInputTarget {
+    // (undocumented)
+    readonly role: 'input';
+    readonly value: unknown;
+}
+
+// @alpha
+export type IInvocation<TFamily extends IBindingFamily> = IMemoInvocation<TFamily> | ISourceInvocation<TFamily>;
+
+// @alpha
+export interface IInvocationPort<TFamily extends IBindingFamily> {
+    active(): IInvocationScope | undefined;
+    dispatch<TResult>(request: IDeclaredInvocationRequest<TFamily, TResult>): Promise<IChildResult<IApply<TFamily['views'], TResult>>>;
+}
+
+// @alpha
+export interface IInvocationScope {
+    close(): void;
+    readonly open: boolean;
+    readonly parent: IBindingDescriptor;
+}
+
+// @alpha
+export interface IMemberRegistration<TFamily extends IBindingFamily> {
+    readonly key: string;
+    readonly steps: readonly IStepRegistration<TFamily>[];
+}
+
+// @alpha
+export interface IMemoDeclaration<TFamily extends IBindingFamily, TChildren extends IChildDeclarations<TFamily>, TResult> extends IAnyMemoDeclaration<TFamily> {
+    // (undocumented)
+    readonly run: (context: IMemoRunContext<TFamily, TChildren>) => TResult;
+}
+
+// @alpha
+export interface IMemoInvocation<TFamily extends IBindingFamily> extends IInvocationScope {
+    apply<TOutcome>(bindings: TFamily['memo'], invoke: IAuthorInvoker<TOutcome>): TOutcome;
+    // (undocumented)
+    readonly kind: 'memo';
+}
+
+// @alpha
+export interface IMemoOptions<TFamily extends IBindingFamily, TChildren extends IChildDeclarations<TFamily>, TResult> {
+    readonly children?: TChildren;
+    readonly label?: string;
+    readonly run: (context: IMemoRunContext<TFamily, TChildren>) => TResult;
+    readonly subject: string;
+    readonly version?: number;
+}
+
+// @alpha
+export type IMemoRunContext<TFamily extends IBindingFamily, TChildren extends IChildDeclarations<TFamily>> = TFamily['memo'] & {
+    readonly calls: ICalls<TFamily, TChildren>;
+};
+
+// @alpha
+export interface IPreviousCarrierFamily extends ITypeFamily {
+    // (undocumented)
+    readonly output: {
+        readonly data: unknown;
+    };
+}
+
+// @alpha
+export interface IPreviousSupplier<TFamily extends IBindingFamily> {
+    carrier<TResult>(declaration: ISourceDeclaration<TFamily, TResult>): IApply<TFamily['previous'], TResult>;
+}
+
+// @alpha
+export type IResultOf<TFamily extends IBindingFamily, TDeclaration> = TDeclaration extends ISourceDeclaration<TFamily, infer TResult> ? TResult : never;
+
+// @alpha
+export interface IScopedSubject {
+    // (undocumented)
+    readonly scope: string;
+    // (undocumented)
+    readonly subject: string;
+}
+
+// @alpha
+export function isDeclaration(value: unknown): boolean;
+
+// @alpha
+export interface ISourceDeclaration<TFamily extends IBindingFamily, TResult> extends IAnySourceDeclaration<TFamily> {
+    // (undocumented)
+    readonly finality: ((context: IFinalityContext<TFamily, TResult>) => unknown) | undefined;
+    // (undocumented)
+    readonly run: (context: ISourceRunContext<TFamily, TResult>) => IApply<TFamily['outcomes'], TResult>;
+}
+
+// @alpha
+export interface ISourceInvocation<TFamily extends IBindingFamily> extends IInvocationScope {
+    apply<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily> | undefined, invoke: IAuthorInvoker<TOutcome>): TOutcome;
+    applyFinality<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>): TOutcome;
+    readonly hasFinality: boolean;
+    // (undocumented)
+    readonly kind: 'source';
+}
+
+// @alpha
+export interface ISourceOptions<TFamily extends IBindingFamily, TResult> {
+    readonly finality?: (context: IFinalityContext<TFamily, TResult>) => unknown;
+    readonly label?: string;
+    readonly run: (context: ISourceRunContext<TFamily, TResult>) => IApply<TFamily['outcomes'], TResult>;
+    readonly subject: string;
+    readonly version?: number;
+}
+
+// @alpha
+export type ISourceRunContext<TFamily extends IBindingFamily, TResult> = TFamily['source'] & {
+    readonly previous: IApply<TFamily['previous'], TResult> | undefined;
+};
+
+// @alpha
+export type IStepDeclaration<TFamily extends IBindingFamily> = IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily>;
+
+// @alpha
+export interface IStepRegistration<TFamily extends IBindingFamily> {
+    readonly declaration: IStepDeclaration<TFamily>;
+    readonly slot: string;
+}
+
+// @alpha
+export interface IStepTarget<TFamily extends IBindingFamily> {
+    readonly declaration: IStepDeclaration<TFamily>;
+    // (undocumented)
+    readonly role: 'step';
+    readonly scopedSubject: IScopedSubject;
+}
+
+// @alpha
+export interface ITopology {
+    // (undocumented)
+    readonly edges: readonly IDeclaredEdge[];
+    // (undocumented)
+    readonly steps: readonly IBindingDescriptor[];
+}
+
+// @alpha
+export interface ITypeFamily {
+    // (undocumented)
+    readonly input: unknown;
+    // (undocumented)
+    readonly output: unknown;
+}
+
+// @alpha
+export type IWitnessResolution<TFamily extends IBindingFamily> = {
+    readonly status: 'bound';
+    readonly parent: IStepTarget<TFamily>;
+    readonly child: IStepTarget<TFamily>;
+} | {
+    readonly status: 'missing';
+    readonly descriptor: IBindingDescriptor;
+} | {
+    readonly status: 'ambiguous';
+    readonly descriptor: IBindingDescriptor;
+    readonly occupants: number;
+} | {
+    readonly status: 'undeclared-edge';
+} | {
+    readonly status: 'unsupported';
+    readonly reason: 'malformed' | 'witness-version' | 'argument-form';
+};
+
+// @alpha
 export function nameOf(fn: Function, override?: string): string | undefined;
 
 // @alpha

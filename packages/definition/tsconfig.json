@@ -5,6 +5,11 @@
     "test/**/*.ts"
   ],
   "compilerOptions": {
-    "noEmit": true
+    "noEmit": true,
+    "paths": {
+      "@microdelta/value": [
+        "../value/dist/api/value.alpha.d.ts"
+      ]
+    }
   }
 }

@@ -18,7 +18,7 @@ import type {
   IResolutionErrorCode as IResolutionErrorCodeOf,
   IResolutionOutcome as IResolutionOutcomeOf,
 } from '@microdelta/resolution';
-import { openDurableHistory } from '@microdelta/history';
+import { StaleWriterError, openDurableHistory } from '@microdelta/history';
 import type { ICompletedResultReference as IHistoryReference, IDurableHistory, IWriterLease } from '@microdelta/history';
 import { createNodeClock, createNodeSqlite } from '@microdelta/machine-node';
 import { ResolutionError as ResolutionErrorClass, createResolution } from '@microdelta/resolution';
@@ -215,7 +215,10 @@ function deepFreeze<T>(value: T): T {
 /**
  * History's single-writer lease as one run's writer port: acquired on the
  * run's first normal request, renewed on each later one, released once when
- * the run closes. Another unexpired holder makes normal requests fail with
+ * the run closes. A lease that expired between requests is not renewable; it
+ * is dropped and a fresh lease with a new fence is acquired, so History's
+ * fencing (not this port) still rejects anything the stale lease might have
+ * written. Another unexpired holder makes normal requests fail with
  * `writer-unavailable`; it never blocks check-only or recovery requests.
  */
 function writerFor(history: IDurableHistory, holder: string, leaseMilliseconds: number): IRunWriter {
@@ -223,8 +226,15 @@ function writerFor(history: IDurableHistory, holder: string, leaseMilliseconds: 
   return Object.freeze({
     lease(): IWriterLease {
       if (held !== undefined) {
-        held = history.renewWriter(held, leaseMilliseconds);
-        return held;
+        try {
+          held = history.renewWriter(held, leaseMilliseconds);
+          return held;
+        } catch (error: unknown) {
+          if (!(error instanceof StaleWriterError)) {
+            throw error;
+          }
+          held = undefined;
+        }
       }
       const acquisition = history.acquireWriter({ holder, leaseMilliseconds });
       if (acquisition.kind !== 'acquired') {

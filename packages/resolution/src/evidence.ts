@@ -359,13 +359,33 @@ export function readProvenance(envelope: ICompletedEnvelope): IProvenanceReading
     slots.add(slot);
     return Object.freeze({ slot, witness: field(child, 'witness'), reference: reference(field(child, 'reference')), binding: Object.freeze({ path }) });
   });
+  const observations = Object.freeze(list(field(content, 'observations'), 'observations').map(observation));
+  // Semantic invariants of this format, checked before any comparison, hook,
+  // admission or body: every execution Resolution records invoked its own
+  // author callback under capture, so its own implementation observation is
+  // mandatory; and the bounded M3 model gives sources no child edges. A record
+  // that violates them cannot justify reuse. This detects records that break
+  // the format's own meaning; it is not a claim to detect arbitrary hostile
+  // storage that forges well-formed evidence.
+  if (!observations.some(isOwnImplementation)) {
+    return malformed(`${kind} provenance lacks its own implementation observation`);
+  }
+  if (kind === 'source' && children.length > 0) {
+    return malformed('source provenance records direct-child edges');
+  }
   return {
     status: 'supported',
     provenance: Object.freeze({
       kind,
       step: descriptor(field(content, 'step')),
-      observations: Object.freeze(list(field(content, 'observations'), 'observations').map(observation)),
+      observations,
       children: Object.freeze(children),
     }),
   };
+}
+
+/** Whether an observation is the step's own author-callback implementation evidence. */
+function isOwnImplementation(item: ITrackingObservation): boolean {
+  return item.kind === 'implementation' && item.selection.kind === 'implementation' && item.address.length === 0
+    && item.binding.path.length === 1 && item.binding.path[0] === bindingPaths.self[0];
 }

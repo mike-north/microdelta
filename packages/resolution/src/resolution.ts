@@ -118,6 +118,13 @@ interface IRequestContext {
   readonly slots: ICurrentSlots;
   /** Request-local shared current results of direct source invocations. */
   readonly sources: Map<string, Promise<IResolvedStep>>;
+  /**
+   * Post-commit diagnostics of every step this request resolved, including
+   * nested children. Each step's lifecycle runs once per request (sources are
+   * shared), so each diagnostic appears once; the top-level outcome reports
+   * all of them beside its own committed success.
+   */
+  readonly diagnostics: string[];
 }
 
 /** The bookkeeping of one executing memo body. */
@@ -231,8 +238,12 @@ export function createResolution<TInputs extends object, THelpers extends object
 
   const port: IInvocationPort<IFamily> = Object.freeze({
     active: (): IInvocationScope | undefined => active.getStore(),
+    // The child view travels inside a plain `{ data }` carrier across every
+    // asynchronous boundary. Resolving a Promise with the view itself would make
+    // Promise assimilation probe its `then` member inside the parent's capture,
+    // recording a read the author never made (and failing for array views).
     dispatch: <TResult>(request: IDeclaredInvocationRequest<IFamily, TResult>): Promise<IChildResult<IApply<IFamily['views'], TResult>>> =>
-      dispatchChild(request).then((view) => ({ data: trusted<IApply<IFamily['views'], TResult>>(view) })),
+      dispatchChild(request).then((delivered) => ({ data: trusted<IApply<IFamily['views'], TResult>>(delivered.data) })),
   });
 
   /** The scoped subject and compatibility group of a declaration. */
@@ -256,7 +267,7 @@ export function createResolution<TInputs extends object, THelpers extends object
 
   /** A new request context with its declared slots reconnected once. */
   function newRequest(mode: 'normal' | 'check', requestKey: string | undefined, lease: IWriterLease | undefined): IRequestContext {
-    return { mode, requestKey, lease, slots: reconnectSlots(composition, bindingSlots), sources: new Map() };
+    return { mode, requestKey, lease, slots: reconnectSlots(composition, bindingSlots), sources: new Map(), diagnostics: [] };
   }
 
   /** The lease of a normal request; check-only requests never write. */
@@ -267,9 +278,9 @@ export function createResolution<TInputs extends object, THelpers extends object
     return request.lease;
   }
 
-  /** New empty step evidence. */
-  function newEvidence(): IStepEvidence {
-    return { misses: [], trace: [], diagnostics: [] };
+  /** New step evidence; diagnostics are the request's shared list. */
+  function newEvidence(request: IRequestContext): IStepEvidence {
+    return { misses: [], trace: [], diagnostics: request.diagnostics };
   }
 
   /**
@@ -293,7 +304,7 @@ export function createResolution<TInputs extends object, THelpers extends object
       if (preExecution.has(phase)) {
         throw new ResolutionError('observer-failure', `Lifecycle observer failed at ${phase}: ${describe(error)}`, error);
       }
-      evidence.diagnostics.push(`Lifecycle observer failed at ${phase} after commit: ${describe(error)}`);
+      evidence.diagnostics.push(`Lifecycle observer failed at ${phase} for ${stepKey(step)} after commit: ${describe(error)}`);
     }
   }
 
@@ -531,7 +542,7 @@ export function createResolution<TInputs extends object, THelpers extends object
 
   /** Resolve one source step under current policy. */
   async function resolveSource(request: IRequestContext, step: IBindingDescriptor, declaration: IAnySourceDeclaration<IFamily>): Promise<IResolvedStep> {
-    const evidence = newEvidence();
+    const evidence = newEvidence(request);
     const done = (result: IStepResult): IResolvedStep => ({ step, result, evidence });
     emit(request, evidence, step, 'verify');
     const candidates = integrity(() => history.findCandidates(versioned(declaration)));
@@ -688,9 +699,11 @@ export function createResolution<TInputs extends object, THelpers extends object
       if (historical.analysis !== analysis || historical.environment !== environment) {
         throw new ResolutionError('integrity', `Recorded child ${child.slot} of ${candidate.reference.locator} is outside this History scope`);
       }
-      if (historical.subject !== childDeclaration.subject) {
-        return { verdict: 'miss', miss: miss(candidate.reference, 'correspondence', `the current ${child.slot} source has a different subject than the recorded child`) };
-      }
+      // The historical child is read only for exact integrity. Correspondence is
+      // the uniquely reconnected structural slot (CMP-6): a different subject now
+      // occupying it is simply the current child, resolved under its own
+      // eligibility and admission, whose consumed output facts are then compared
+      // (REUSE-005/006, RES-003/007). Original provenance keeps the old child.
       const resolved = await resolveSourceShared(request, childStep, childDeclaration);
       switch (resolved.result.kind) {
         case 'reused':
@@ -722,7 +735,7 @@ export function createResolution<TInputs extends object, THelpers extends object
 
   /** Resolve one memo step under current policy. */
   async function resolveMemo(request: IRequestContext, step: IBindingDescriptor, declaration: IAnyMemoDeclaration<IFamily>): Promise<IResolvedStep> {
-    const evidence = newEvidence();
+    const evidence = newEvidence(request);
     const done = (result: IStepResult): IResolvedStep => ({ step, result, evidence });
     emit(request, evidence, step, 'verify');
     const candidates = integrity(() => history.findCandidates(versioned(declaration)));
@@ -822,7 +835,7 @@ export function createResolution<TInputs extends object, THelpers extends object
    * already established in this request), record the direct-child evidence and
    * return a lazy view of the child's exact result bound to the child slot.
    */
-  async function dispatchChild<TResult>(request: IDeclaredInvocationRequest<IFamily, TResult>): Promise<unknown> {
+  async function dispatchChild<TResult>(request: IDeclaredInvocationRequest<IFamily, TResult>): Promise<{ readonly data: unknown }> {
     const frame = frames.get(request.scope);
     if (frame === undefined) {
       throw new ResolutionError('invalid-request', 'A declared call arrived from an invocation Resolution is not executing');
@@ -861,7 +874,8 @@ export function createResolution<TInputs extends object, THelpers extends object
         binding: Object.freeze({ path: bindingPaths.child(slot) }),
       }));
     }
-    return materialization.materializeView<object>(reference, { path: bindingPaths.child(slot) });
+    // Boxed: an async function's result is assimilated, so the view must never be it.
+    return Object.freeze({ data: materialization.materializeView<object>(reference, { path: bindingPaths.child(slot) }) });
   }
 
   /** Resolve a requested step in a request context. */

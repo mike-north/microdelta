@@ -223,9 +223,17 @@ export interface IOutcomeEvidence {
   readonly step: IBindingDescriptor;
   /** Candidates tried and why each failed, latest publication first. */
   readonly misses: readonly ICandidateMiss[];
-  /** The lifecycle events of this step, in order. */
+  /**
+   * The lifecycle events of the requested step itself, in order. Nested child
+   * steps have their own lifecycle; their events reach the observer, not this
+   * trace.
+   */
   readonly trace: readonly ILifecycleEvent[];
-  /** Post-commit diagnostics, such as observer failures after publication. */
+  /**
+   * Post-commit diagnostics of the whole request, including nested child
+   * steps, each reported once and naming its step: for example an observer
+   * failure after a child's acceptance or publication committed.
+   */
   readonly diagnostics: readonly string[];
 }
 

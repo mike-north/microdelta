@@ -1,9 +1,13 @@
 {
   "name": "@microdelta/resolution",
   "version": "0.0.0",
-  "private": true,
   "description": "Reuse Resolution: current candidate eligibility, source policy and direct-child validation",
   "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mike-north/microdelta.git",
+    "directory": "packages/resolution"
+  },
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -17,7 +21,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "!dist/api-temp"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json && node ../../tooling/trim-declaration-imports.mjs dist/api/resolution.beta.d.ts dist/api/resolution.public.d.ts",
@@ -37,5 +42,8 @@
     "@microdelta/history": "0.0.0",
     "@microdelta/materialization": "0.0.0",
     "@microdelta/tracking": "0.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

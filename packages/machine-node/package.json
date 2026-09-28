@@ -25,5 +25,5 @@
     "test:types": "tsd"
   },
   "tsd": { "directory": "test-d" },
-  "dependencies": { "@microdelta/machine": "0.0.0" }
+  "dependencies": { "@microdelta/machine": "0.0.0", "better-sqlite3": "12.9.0" }
 }

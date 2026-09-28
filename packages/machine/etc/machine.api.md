@@ -65,9 +65,9 @@ export interface ISqliteStatement {
 }
 
 // @alpha
-export type ISqliteSynchronousResult<T> = T extends {
+export type ISqliteSynchronousResult<T> = 0 extends 1 & T ? unknown : [Extract<T, {
     readonly then: (...parameters: never[]) => unknown;
-} ? never : unknown;
+}>] extends [never] ? unknown : never;
 
 // @alpha
 export type ISqliteValue = string | number | null | Uint8Array;

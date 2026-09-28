@@ -115,13 +115,20 @@ export interface ISqliteStatement {
 }
 
 /**
- * Makes a transaction callback's return type unusable when it is a Promise or
- * other thenable. A transaction commits when its callback returns; an
- * asynchronous callback would return before its awaited work, so such results
- * are rejected at compile time and, independently, at runtime.
+ * Makes a transaction callback's return type unusable when it is, or may be, a
+ * Promise or other thenable. A transaction commits when its callback returns;
+ * an asynchronous callback would return before its awaited work, so such
+ * results are rejected at compile time and, independently, at runtime.
+ *
+ * Any union constituent with a callable `then` rejects the whole result, so
+ * `number | Promise<number>` is refused like `Promise<number>`. Results the
+ * compiler cannot classify, `any` and `unknown`, are left to the runtime check
+ * rather than rejecting ordinary untyped data.
  * @alpha
  */
-export type ISqliteSynchronousResult<T> = T extends { readonly then: (...parameters: never[]) => unknown } ? never : unknown;
+export type ISqliteSynchronousResult<T> = 0 extends 1 & T
+  ? unknown
+  : [Extract<T, { readonly then: (...parameters: never[]) => unknown }>] extends [never] ? unknown : never;
 
 /**
  * An open connection to one persistent local SQLite database file. The caller

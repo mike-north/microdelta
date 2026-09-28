@@ -47,6 +47,33 @@ expectError(connection.transaction(async () => 42));
 expectError(connection.transaction(() => Promise.resolve(42)));
 expectError(connection.transaction(() => ({ then(): void { /* thenable */ } })));
 
+// A union with any Promise or thenable constituent is refused, even when its
+// other constituents are ordinary synchronous values.
+declare const mixedNumber: () => number | Promise<number>;
+declare const mixedVoid: () => void | Promise<void>;
+declare const mixedThenable: () => string | { then(onFulfilled: (value: string) => void): void };
+expectError(connection.transaction(mixedNumber));
+expectError(connection.transaction(mixedVoid));
+expectError(connection.transaction(mixedThenable));
+expectError(connection.transaction(() => (Math.random() > 0.5 ? 1 : Promise.resolve(2))));
+
+// Purely synchronous unions and ordinary data keep their inferred result type.
+declare const synchronousUnion: () => number | string | null;
+declare const optionalRow: () => ISqliteRow | undefined;
+declare const unknownResult: () => unknown;
+declare const untypedResult: () => ReturnType<typeof JSON.parse>;
+expectType<number | string | null>(connection.transaction(synchronousUnion));
+expectType<ISqliteRow | undefined>(connection.transaction(optionalRow));
+expectType<readonly ISqliteRow[]>(connection.transaction(() => statement.all()));
+expectType<'a' | 'b'>(connection.transaction((): 'a' | 'b' => 'a'));
+expectType<{ readonly id: number; readonly tags: readonly string[] }>(
+  connection.transaction((): { readonly id: number; readonly tags: readonly string[] } => ({ id: 1, tags: [] })),
+);
+expectType<{ readonly then: string }>(connection.transaction((): { readonly then: string } => ({ then: 'data' })));
+// Values the compiler cannot classify remain the runtime check's responsibility.
+expectType<unknown>(connection.transaction(unknownResult));
+connection.transaction(untypedResult);
+
 // A clock reading is a number of epoch milliseconds; policy is not part of the port.
 expectType<number>(clock.currentEpochMilliseconds());
 

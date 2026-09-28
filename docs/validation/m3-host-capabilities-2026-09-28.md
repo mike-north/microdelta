@@ -67,9 +67,10 @@ journaling also blocks a competing commit.
 ## Review findings and repairs
 
 Independent review and actual emitted-adapter probes confirmed two contract
-bypasses in the first production snapshot. Each regression was written and
-observed failing before the repair (3 failed, 45 passed of 48), then passed
-(48 of 48).
+bypasses in the first production snapshot; pull-request review found a third
+in the portable type guard. The runtime regressions were written and observed
+failing before repair (3 failed, 45 passed of 48), then passed (48 of 48).
+The separate type regression evidence is recorded below.
 
 1. **Non-finite row output.** `SELECT 1e999 AS value` returned
    `{ value: Infinity }`, although rows carry only finite numbers. New
@@ -88,6 +89,23 @@ observed failing before the repair (3 failed, 45 passed of 48), then passed
    `then` check. It contains their rejection through the intrinsic
    `Promise.prototype.then`, which never reads the instance's `then`. The
    foreign-thenable case now also asserts that its `then` is never called.
+
+3. **Partially thenable callback result types.** Pull-request review and a
+   strict compile probe against the generated alpha declarations showed that a
+   callback typed `() => number | Promise<number>` compiled. The distributive
+   guard reduced the Promise constituent to `never`, left `unknown` for the
+   rest, and so lost the refusal. New type assertions were written first:
+   `number | Promise<number>`, `void | Promise<void>`, `string | ` custom
+   thenable, and an inline conditional Promise must not compile. All four
+   compiled (4 tsd errors "Expected an error, but found none"). Positives already passed:
+   purely synchronous unions, optional rows, row arrays, literal unions, object
+   data, a data object whose `then` is a string, `unknown`, and an untyped
+   (`any`) result.
+   The guard now extracts constituents with a callable `then` and refuses the
+   whole result when any exist; `any` and `unknown` stay accepted at compile
+   time and are covered by the runtime check. All type assertions pass, and
+   the original probe fails with TS2345 against the regenerated alpha
+   declaration. Runtime checks are unchanged.
 
 ## Implementation
 
@@ -130,6 +148,8 @@ observed failing before the repair (3 failed, 45 passed of 48), then passed
   reads its `constructor` for species resolution. If that lookup throws, the
   Promise is still refused and rolled back, but its later rejection is not
   contained.
+- The compile-time guard cannot classify `any` or `unknown` callback results;
+  those rely on the runtime refusal.
 - The clock is a wall clock, not monotonic; readings can move backwards or jump.
 - Evidence covers a single local file on one host. Power loss, filesystem
   failure, network filesystems and multi-host operation are not claimed.

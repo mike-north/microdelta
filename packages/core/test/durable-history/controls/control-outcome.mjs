@@ -1,5 +1,6 @@
 /**
- * Fail-closed judgment for History's mutation controls. A Jest run counts as
+ * Fail-closed judgment for the facade's mutation controls (History's durable
+ * authority and Reuse Resolution). A Jest run counts as
  * evidence only when its exit status agrees with its assertion results,
  * exactly the intended suite files ran without runtime errors, every expected
  * test title appears exactly once, and every assertion either passed or
@@ -7,17 +8,18 @@
  * unparseable report and abnormal exits are never success.
  */
 
-/** The durable History suite files every run must execute. */
+/** The durable History suite files every History control run must execute. */
 export const intendedSuites = Object.freeze(['durable-history.test.js', 'crash-recovery.test.js']);
 
 /**
  * Judge one run. `exitStatus` is the child's exit code (null when killed);
  * `reportText` is Jest's `--json` output file content, or undefined when none
  * was written; `expectedTitles` is the complete baseline title set, or
- * undefined for the baseline run itself. Returns the failing titles, or
+ * undefined for the baseline run itself; `suites` is the exact suite file set
+ * the run must execute (History's by default). Returns the failing titles, or
  * throws with a diagnostic when the run is not trustworthy evidence.
  */
-export function judgeRun({ exitStatus, reportText, expectedTitles }) {
+export function judgeRun({ exitStatus, reportText, expectedTitles, suites: requiredSuites = intendedSuites }) {
   if (exitStatus !== 0 && exitStatus !== 1) {
     throw new Error(`abnormal Jest exit ${String(exitStatus)}`);
   }
@@ -34,7 +36,7 @@ export function judgeRun({ exitStatus, reportText, expectedTitles }) {
     throw new Error('a suite failed to run');
   }
   const suites = report.testResults.map((suite) => String(suite.name).split(/[\\/]/u).at(-1)).sort();
-  if (JSON.stringify(suites) !== JSON.stringify([...intendedSuites].sort())) {
+  if (JSON.stringify(suites) !== JSON.stringify([...requiredSuites].sort())) {
     throw new Error(`unexpected suites ran: ${suites.join(', ')}`);
   }
   const assertions = report.testResults.flatMap((suite) => {

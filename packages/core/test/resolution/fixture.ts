@@ -199,6 +199,10 @@ function checkActivity(previous: IPreviousResult<IActivity> | undefined, config:
     case 'fresh':
       if (previous !== undefined) {
         world.carriers[key] = previous;
+        // A conditional-fetch style read of the previous result: history, not a current input.
+        if (previous.data.profile.id.length === 0) {
+          throw new Error('fixture previous result has no profile identity');
+        }
       }
       return sourceOutcome.fresh(copy(world.remote[key]));
     case 'retain':

@@ -132,6 +132,23 @@ describe('current finality after restart', () => {
     });
   });
 
+  test('a check that read its previous result stays eligible later: previous reads are history, not current inputs', async () => {
+    const location = freshLocation();
+    await coldAda(location);
+    world.finality['person:ada'] = 'not-final';
+    const second = await withSession(location, async (session) => referenceOf(await session.resolve(session.contributors.steps['person:ada'].activity)));
+    world.finality['person:ada'] = 'final';
+    await withSession(location, async (session) => {
+      const envelope = session.history.readEnvelope({ kind: 'completed-result', locator: second });
+      const paths = (envelope.provenance.content as { readonly observations: readonly { readonly binding: { readonly path: readonly string[] } }[] }).observations.map((item) => item.binding.path.join('/'));
+      expect(paths).toContain('previous');
+      const outcome = await session.resolve(session.contributors.steps['person:ada'].activity);
+      expect(outcome.kind).toBe('reused');
+      expect(referenceOf(outcome)).toBe(second);
+      expect(outcome.misses).toEqual([]);
+    });
+  });
+
   test('an absent hook supplies no shortcut; an explicit check retention keeps the exact reference with separate acceptance', async () => {
     const location = freshLocation();
     const first = await withSession(location, async (session) => referenceOf(await session.resolve(session.contributors.steps['person:ada'].activity)), { adaFinality: 'absent' });

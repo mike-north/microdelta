@@ -171,7 +171,9 @@ describe('read and unread facts, called and uncalled helpers', () => {
       expect(outcomes['person:ben'].kind).toBe('reused');
       expect(referenceOf(outcomes['person:ben'])).toBe(cold.summaries['person:ben']);
       expect(world.summaries).toEqual({ 'person:ada': 1, 'person:ben': 0 });
-      // The re-executed body consumed the child already resolved during validation: one check only.
+      // The re-executed body consumed the child already resolved during validation:
+      // one finality evaluation and one check within this request.
+      expect(world.finalities['person:ada']).toBe(1);
       expect(world.checks['person:ada']).toBe(1);
     });
   });

@@ -139,12 +139,22 @@ export interface IDeclaredEdge {
 }
 
 /**
- * The frozen abstract step graph, ordered structurally rather than by registration.
+ * The frozen abstract step graph, ordered structurally rather than by
+ * registration, together with the names of the composition-wide input and
+ * callable slots every callback's bindings are assembled from. Slot names are
+ * declared structure, not current values: values are read only through
+ * `resolve`.
  * @alpha
  */
 export interface ITopology {
+  /** Every step slot, in structural order. */
   readonly steps: readonly IBindingDescriptor[];
+  /** Every permitted parent-to-child call relationship, in structural order. */
   readonly edges: readonly IDeclaredEdge[];
+  /** Declared input slot names, sorted; a repeated slot appears once (resolution reports it ambiguous). */
+  readonly inputs: readonly string[];
+  /** Declared callable (helper) slot names, sorted; a repeated slot appears once. */
+  readonly helpers: readonly string[];
 }
 
 /**
@@ -199,7 +209,15 @@ export interface ICompositionState<TFamily extends IBindingFamily> {
 /** Nonzero while a composition is being constructed; framework resolution must reject then. */
 let composing = 0;
 
-/** Whether a composition is currently being constructed. */
+/**
+ * Whether a composition is currently being constructed. Author code can run
+ * then only through traps on the author's own builder objects; framework
+ * resolution, declared calls and runtime context lookup must reject rather
+ * than act during composition (CMP-9, RUN-001). This is a read-only query; it
+ * grants nothing.
+ * @returns True while any composition is being constructed.
+ * @alpha
+ */
 export function isComposing(): boolean {
   return composing > 0;
 }
@@ -240,9 +258,12 @@ export function composeIn<TFamily extends IBindingFamily>(
     };
     // Framework-owned copies: arrays are copied once, and input values become
     // frozen Value snapshots, so later author mutation cannot change the graph.
+    const inputSlots = new Set<string>();
+    const helperSlots = new Set<string>();
     for (const input of listOf(optionFields.get('inputs'), 'inputs', true)) {
       const fields = captureFields(input, { slot: 'invalid-descriptor', value: 'invalid-input' });
       const slot = nonempty(fields.get('slot'), 'input slot');
+      inputSlots.add(slot);
       register({ scope, role: 'input', slot }, { target: Object.freeze({ role: 'input', value: snapshotInput(fields.get('value'), slot) }), record: undefined });
     }
     for (const helper of listOf(optionFields.get('helpers'), 'helpers', true)) {
@@ -252,6 +273,7 @@ export function composeIn<TFamily extends IBindingFamily>(
       if (!isCallable(callable)) {
         reject('invalid-callback', `Helper ${slot} must be a function.`);
       }
+      helperSlots.add(slot);
       register({ scope, role: 'callable', slot }, { target: Object.freeze({ role: 'callable', callable }), record: undefined });
     }
     const steps: IBindingDescriptor[] = [];
@@ -302,6 +324,8 @@ export function composeIn<TFamily extends IBindingFamily>(
     const topology: ITopology = Object.freeze({
       steps: Object.freeze([...steps].sort(compareDescriptors)),
       edges: Object.freeze([...edges].sort((left, right) => compareDescriptors(left.parent, right.parent) || compareDescriptors(left.child, right.child))),
+      inputs: Object.freeze([...inputSlots].sort()),
+      helpers: Object.freeze([...helperSlots].sort()),
     });
     const frozenRegistrations: ReadonlyMap<string, readonly IRegistration<TFamily>[]> = new Map(
       [...registrations].map(([key, occupants]) => [key, Object.freeze(occupants)]),

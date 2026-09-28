@@ -284,6 +284,9 @@ export interface IPreviousSupplier<TFamily extends IBindingFamily> {
 export type IResultOf<TFamily extends IBindingFamily, TDeclaration> = TDeclaration extends ISourceDeclaration<TFamily, infer TResult> ? TResult : never;
 
 // @alpha
+export function isComposing(): boolean;
+
+// @alpha
 export interface IScopedSubject {
     // (undocumented)
     readonly scope: string;
@@ -344,9 +347,9 @@ export interface IStepTarget<TFamily extends IBindingFamily> {
 
 // @alpha
 export interface ITopology {
-    // (undocumented)
     readonly edges: readonly IDeclaredEdge[];
-    // (undocumented)
+    readonly helpers: readonly string[];
+    readonly inputs: readonly string[];
     readonly steps: readonly IBindingDescriptor[];
 }
 

@@ -662,18 +662,39 @@ function envelopeFields(value: unknown, expected: readonly string[], context: st
   return fields;
 }
 
-/** Copy a dense structured address, accepting only canonical Property and Index segments. */
-function copyEnvelopeAddress(value: unknown, context: string): readonly IAddressSegment[] {
-  if (!Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype) {
-    throw new TypeError(`${context} must be an array of structured segments`);
+/**
+ * Read an untrusted array's indexed own data exactly once. It must be a
+ * standard array with no symbol keys, no own properties besides its dense
+ * index slots and `length`, and no accessor slots, so no iterator, method or
+ * prototype behavior can present a sequence other than the one read here.
+ */
+function envelopeSlots(value: unknown, context: string): readonly unknown[] {
+  if (!Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype || Object.getOwnPropertySymbols(value).length !== 0) {
+    throw new TypeError(`${context} must be a standard array`);
   }
-  const address: IAddressSegment[] = [];
-  for (let position = 0; position < value.length; position += 1) {
+  const lengthDescriptor = Object.getOwnPropertyDescriptor(value, 'length');
+  const length: unknown = lengthDescriptor !== undefined && 'value' in lengthDescriptor ? lengthDescriptor.value : undefined;
+  if (typeof length !== 'number' || Object.getOwnPropertyNames(value).length !== length + 1) {
+    throw new TypeError(`${context} must be a dense array without extra properties`);
+  }
+  const slots: unknown[] = [];
+  for (let position = 0; position < length; position += 1) {
     const slot = Object.getOwnPropertyDescriptor(value, String(position));
     if (slot === undefined || !('value' in slot)) {
-      throw new TypeError(`${context} must be a dense sequence of structured segments`);
+      throw new TypeError(`${context} must be a dense sequence of data slots`);
     }
-    const segmentValue: unknown = slot.value;
+    const slotValue: unknown = slot.value;
+    slots.push(slotValue);
+  }
+  return slots;
+}
+
+/** Copy a dense structured address, accepting only canonical Property and Index segments. */
+function copyEnvelopeAddress(value: unknown, context: string): readonly IAddressSegment[] {
+  const address: IAddressSegment[] = [];
+  const slots = envelopeSlots(value, context);
+  for (let position = 0; position < slots.length; position += 1) {
+    const segmentValue: unknown = slots[position];
     const kindDescriptor = isPlainEnvelope(segmentValue) ? Object.getOwnPropertyDescriptor(segmentValue, 'kind') : undefined;
     const kind: unknown = kindDescriptor !== undefined && 'value' in kindDescriptor ? kindDescriptor.value : undefined;
     if (kind === 'property') {
@@ -741,6 +762,50 @@ export function normalizeSelectedNode(candidate: unknown): ISelectedNode {
     }
     default:
       throw new TypeError('Selected node must be a scalar, record or array envelope');
+  }
+}
+
+/**
+ * Validate and detach a selected fact supplied across a reader, source or
+ * provider boundary. Each own data field and array slot is read once and the
+ * returned frozen fact is built from exactly those values, so what a caller
+ * returns to an author or records as evidence is precisely what was
+ * validated. Accessors never run; arrays with iteration, method or prototype
+ * behavior of their own are rejected. Presence facts must be booleans, length
+ * facts nonnegative integers and key facts dense unique strings; a `value`
+ * fact is a supported scalar or a supported container detached as an
+ * immutable snapshot. Whether the fact answers the operation and address a
+ * caller requested is the caller's check.
+ * @alpha
+ */
+export function normalizeSelectedFact(candidate: unknown): ISelectedFact {
+  const fields = envelopeFields(candidate, ['operation', 'address', 'fact'], 'Selected fact');
+  const operation = fields.get('operation');
+  const address = copyEnvelopeAddress(fields.get('address'), 'Selected fact address');
+  const fact = fields.get('fact');
+  switch (operation) {
+    case 'value':
+      return Object.freeze({ operation, address, fact: isScalar(fact) ? fact : decodeSnapshot(encodeSnapshot(fact)) });
+    case 'own':
+    case 'membership':
+      if (typeof fact !== 'boolean') {
+        throw new TypeError('A presence fact must be a boolean');
+      }
+      return Object.freeze({ operation, address, fact });
+    case 'length':
+      if (typeof fact !== 'number' || !Number.isSafeInteger(fact) || fact < 0) {
+        throw new TypeError('A length fact must be a nonnegative integer');
+      }
+      return Object.freeze({ operation, address, fact });
+    case 'keys': {
+      const keys = envelopeSlots(fact, 'Key enumeration');
+      if (!keys.every((key): key is string => typeof key === 'string') || new Set(keys).size !== keys.length) {
+        throw new TypeError('A key enumeration must contain unique strings');
+      }
+      return Object.freeze({ operation, address, fact: Object.freeze([...keys]) });
+    }
+    default:
+      throw new TypeError('Selected fact has an unsupported operation');
   }
 }
 

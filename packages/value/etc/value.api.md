@@ -108,6 +108,9 @@ export function normalizeProjectionDescriptor(value: unknown): IValueProjectionD
 export function normalizeProjectionFact(fact: IValueProjectionFact): IValueProjectionFact;
 
 // @alpha
+export function normalizeSelectedFact(candidate: unknown): ISelectedFact;
+
+// @alpha
 export function normalizeSelectedNode(candidate: unknown): ISelectedNode;
 
 // @alpha

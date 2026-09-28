@@ -369,6 +369,73 @@ describe('nested selected materialization', () => {
     expect(membership.observations).toHaveLength(0);
   });
 
+  test('reader facts are consumed exactly as validated: inconsistent arrays are rejected before observation', () => {
+    const exact = createNestedReader();
+    const reference = exact.publish('A', activity());
+    let iteratorCalls = 0;
+    let mapCalls = 0;
+    const inventedKeys = (): string[] => {
+      const keys = ['id', 'name', 'avatarUrl'];
+      Object.defineProperty(keys, Symbol.iterator, {
+        get(): () => Iterator<string> { iteratorCalls += 1; return function* invented(): Generator<string> { yield 'invented'; }; },
+      });
+      return keys;
+    };
+    const inventedAddress = (address: readonly IAddressSegment[]): IAddressSegment[] => {
+      const copy = [...address];
+      Object.defineProperty(copy, 'map', { value(): unknown[] { mapCalls += 1; return [['property', 'invented']]; } });
+      return copy;
+    };
+    const reader: ICompletedResultReader & ICompletedNavigationReader = {
+      ...exact.reader,
+      readSelected(_reference, request): ISelectedFact {
+        return request.operation === 'keys'
+          ? { operation: 'keys', address: request.address, fact: inventedKeys() }
+          : { operation: request.operation, address: inventedAddress(request.address), fact: request.operation === 'value' ? 'person:ada' : true };
+      },
+    };
+    const { tracking, materialization } = setup(reader);
+    const view = materialization.materializeView<IActivityView>(reference, binding);
+    const scalar = materialization.materialize<{ readonly contributor: string }>(reference, binding);
+
+    for (const attempt of [() => tracking.keys(view.profile), () => 'name' in view.profile, () => scalar.contributor]) {
+      const capture = tracking.capture(() => {
+        // eslint-disable-next-line microdelta/tracked-captures -- Each table entry reads through a deliberately inconsistent reader answer.
+        try { return attempt(); } catch (error: unknown) { return error; }
+      });
+      expect(capture.value).toBeInstanceOf(TypeError);
+      expect(capture.observations).toHaveLength(0);
+    }
+    expect(iteratorCalls).toBe(0);
+    expect(mapCalls).toBe(0);
+  });
+
+  test('member order returned to the author is the recorded indexed sequence; inconsistent arrays are rejected', () => {
+    const { tracking, materialization } = setup();
+    let iteratorCalls = 0;
+    const keys = ['user-a', 'user-b'];
+    Object.defineProperty(keys, Symbol.iterator, {
+      get(): () => Iterator<string> { iteratorCalls += 1; return function* invented(): Generator<string> { yield 'invented'; }; },
+    });
+    const collection = { path: ['roster'] };
+
+    const inconsistent = tracking.capture(() => {
+      // eslint-disable-next-line microdelta/tracked-captures -- The inconsistent order must be rejected before it is returned or recorded.
+      try { return materialization.observeMemberOrder(collection, keys); } catch (error: unknown) { return error; }
+    });
+    expect(inconsistent.value).toBeInstanceOf(TypeError);
+    expect(inconsistent.observations).toHaveLength(0);
+    // Outside any capture nothing is recorded, but the author must still never receive an invented order.
+    expect(() => materialization.observeMemberOrder(collection, keys)).toThrow(TypeError);
+    expect(iteratorCalls).toBe(0);
+
+    // eslint-disable-next-line microdelta/tracked-captures -- An ordinary untracked member order is returned and recorded unchanged.
+    const ordinary = tracking.capture(() => materialization.observeMemberOrder(collection, ['user-a', 'user-b']));
+    expect(ordinary.value).toEqual(['user-a', 'user-b']);
+    expect(Object.isFrozen(ordinary.value)).toBe(true);
+    expect(ordinary.observations[0]?.selection).toEqual({ kind: 'collection-order', keys: ['user-a', 'user-b'], encodingVersion: 'MDV1' });
+  });
+
   test('views reject mutation and native reflection and are owned by the composed observer', () => {
     const exact = createNestedReader();
     const { tracking, materialization } = setup(exact.reader);

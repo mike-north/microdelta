@@ -8,6 +8,7 @@ export {
   encodeValue,
   fingerprint,
   navigate,
+  normalizeSelectedFact,
   normalizeSelectedNode,
   normalizeProjectionDescriptor,
   normalizeProjectionFact,

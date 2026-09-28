@@ -8,7 +8,7 @@
  */
 import { describe, expect, test } from '@jest/globals';
 
-import { encodeSelectedFact, navigate, normalizeSelectedNode, observe } from '../src/value.js';
+import { encodeSelectedFact, navigate, normalizeSelectedFact, normalizeSelectedNode, observe } from '../src/value.js';
 import type { IAddressSegment, ISelectedNode } from '../src/value.js';
 
 /** Build a structured Property segment. */
@@ -182,3 +182,76 @@ describe('untrusted node envelopes', () => {
     expect(getterCalls).toBe(0);
   });
 });
+
+describe('untrusted selected-fact envelopes', () => {
+  const address = [property('profile'), property('name')];
+
+  test('ordinary facts for every operation are copied into frozen detached facts', () => {
+    const facts = [
+      { operation: 'value', address: [property('profile'), property('name')], fact: 'Ada' },
+      { operation: 'value', address: [property('missing')], fact: undefined },
+      { operation: 'own', address: [property('profile'), property('name')], fact: true },
+      { operation: 'membership', address: [property('profile'), index(0)], fact: false },
+      { operation: 'length', address: [property('list')], fact: 3 },
+      { operation: 'keys', address: [property('profile')], fact: ['zeta', 'alpha'] },
+    ];
+    for (const supplied of facts) {
+      const normalized = normalizeSelectedFact(supplied);
+      expect(normalized).toEqual(supplied);
+      expect(Object.isFrozen(normalized)).toBe(true);
+      expect(Object.isFrozen(normalized.address)).toBe(true);
+      expect(encodeSelectedFact(normalized)).toBe(encodeSelectedFact(supplied as never));
+    }
+    const keys = ['zeta', 'alpha'];
+    const normalized = normalizeSelectedFact({ operation: 'keys', address: [], fact: keys });
+    keys.push('mutated');
+    expect(normalized.fact).toEqual(['zeta', 'alpha']);
+    expect(Object.isFrozen(normalized.fact)).toBe(true);
+  });
+
+  test('a supported object value fact is detached as an immutable snapshot', () => {
+    const profile = { name: 'Ada', id: 'gh:1' };
+    const normalized = normalizeSelectedFact({ operation: 'value', address: [property('profile')], fact: profile });
+    profile.name = 'mutated';
+    expect(normalized.fact).toEqual({ name: 'Ada', id: 'gh:1' });
+    expect(Object.keys(normalized.fact as object)).toEqual(['name', 'id']);
+    expect(Object.isFrozen(normalized.fact)).toBe(true);
+  });
+
+  test('arrays whose iteration, methods or prototype disagree with their indexed data are rejected unread', () => {
+    let calls = 0;
+    const iterating = ['actual'];
+    Object.defineProperty(iterating, Symbol.iterator, { get(): unknown { calls += 1; return undefined; } });
+    const mapping = [property('name')];
+    Object.defineProperty(mapping, 'map', { value(): unknown { calls += 1; return []; } });
+    const prototyped = ['actual'];
+    Object.setPrototypeOf(prototyped, Object.create(Array.prototype) as object);
+    const sparseKeys: string[] = new Array<string>(2);
+    sparseKeys[0] = 'only';
+    const malformed: readonly unknown[] = [
+      { operation: 'keys', address, fact: iterating },
+      { operation: 'keys', address, fact: prototyped },
+      { operation: 'keys', address, fact: sparseKeys },
+      { operation: 'keys', address, fact: ['dup', 'dup'] },
+      { operation: 'keys', address, fact: [1] },
+      { operation: 'value', address: mapping, fact: 'Ada' },
+      { operation: 'own', address: prototyped, fact: true },
+      { operation: 'own', address, fact: 'yes' },
+      { operation: 'membership', address, fact: 1 },
+      { operation: 'length', address, fact: -1 },
+      { operation: 'length', address, fact: 1.5 },
+      { operation: 'value', address, fact: 1n },
+      { operation: 'value', address, fact: () => 'function' },
+      { operation: 'value', address, fact: Object.defineProperty({}, 'name', { enumerable: true, get(): string { calls += 1; return 'Ada'; } }) },
+      { operation: 'values', address, fact: 'Ada' },
+      { operation: 'value', address, fact: 'Ada', extra: true },
+      Promise.resolve({ operation: 'value', address, fact: 'Ada' }),
+      Object.defineProperty({ address, fact: 'Ada' }, 'operation', { enumerable: true, get(): string { calls += 1; return 'value'; } }),
+    ];
+    for (const candidate of malformed) {
+      expect(() => normalizeSelectedFact(candidate)).toThrow(TypeError);
+    }
+    expect(calls).toBe(0);
+  });
+});
+

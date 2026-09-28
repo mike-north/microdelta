@@ -14,7 +14,7 @@ import type {
   ISelectedFingerprintResolution,
   ISelectedReadRequest,
 } from '@microdelta/history';
-import { encodeValue, normalizeProjectionDescriptor, normalizeProjectionFact, normalizeSelectedNode } from '@microdelta/value';
+import { encodeValue, normalizeProjectionDescriptor, normalizeProjectionFact, normalizeSelectedFact, normalizeSelectedNode } from '@microdelta/value';
 import type {
   IAddressSegment,
   ISelectedFact,
@@ -186,27 +186,18 @@ function propertyValue(descriptor: PropertyDescriptor): unknown {
   return descriptor.value as unknown;
 }
 
-/** Reject malformed reader envelopes and ensure they answer the exact dispatched request. */
+/**
+ * Reject malformed reader envelopes and ensure they answer the exact
+ * dispatched request. Value validates and copies the envelope in one pass, so
+ * the fact returned to authors and recorded by Tracking is exactly the one
+ * checked here; no provider accessor, iterator or array method is consulted.
+ */
 function validateSelectedFact(value: unknown, request: ISelectedReadRequest): ISelectedFact {
-  if (value === null || typeof value !== 'object') {
-    throw new TypeError('Selected reader returned a malformed fact');
-  }
-  const operation = Object.getOwnPropertyDescriptor(value, 'operation');
-  const address = Object.getOwnPropertyDescriptor(value, 'address');
-  const fact = Object.getOwnPropertyDescriptor(value, 'fact');
-  if (operation === undefined || !('value' in operation) || address === undefined || !('value' in address)
-    || fact === undefined || !('value' in fact)) {
-    throw new TypeError('Selected reader facts require own data fields');
-  }
-  const copiedAddress = copyAddress(propertyValue(address));
-  const operationValue = propertyValue(operation);
-  if (operationValue !== request.operation || encodeValue(copiedAddress) !== encodeValue(request.address)) {
+  const fact = normalizeSelectedFact(value);
+  if (fact.operation !== request.operation || encodeValue(fact.address) !== encodeValue(request.address)) {
     throw new TypeError('Selected reader returned a fact for a mismatched operation or address');
   }
-  if (Object.keys(value).length !== 3) {
-    throw new TypeError('Selected reader fact has unsupported fields');
-  }
-  return Object.freeze({ operation: request.operation, address: copiedAddress, fact: propertyValue(fact) });
+  return fact;
 }
 
 /** Verify that a projection reader answered the requested relative selection. */
@@ -386,8 +377,10 @@ export function createMaterialization(options: IMaterializationOptions): IMateri
     observeMemberOrder(binding: ITrackingBinding, keys: readonly string[]): readonly string[] {
       options.tracking.materialization.assertFrameOpen();
       const copiedBinding = copyBinding(binding);
-      options.tracking.materialization.recordCollectionOrder(copiedBinding, keys);
-      return Object.freeze([...keys]);
+      // One validated copy is both recorded and returned, so the author never sees an order other than the evidence.
+      const order = normalizeSelectedFact({ operation: 'keys', address: [], fact: keys }).fact as readonly string[];
+      options.tracking.materialization.recordCollectionOrder(copiedBinding, order);
+      return order;
     },
     currentProvider(resolveReference: ICompletedReferenceResolver, fallback: ICurrentFactProvider): ICurrentFactProvider {
       return Object.freeze({

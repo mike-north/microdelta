@@ -12,6 +12,7 @@ import {
   encodeSnapshot,
   encodeValue,
   fingerprint,
+  normalizeSelectedFact,
   normalizeSelectedNode,
   observe,
 } from '@microdelta/value';
@@ -403,66 +404,6 @@ function requestAddress(request: ICurrentFactRequest): readonly IAddressSegment[
       : request.address;
 }
 
-/** Validate provider-selected data before treating it as a Value-owned fact. */
-function isSelectedFact(value: unknown): value is ISelectedFact {
-  if (value === null || typeof value !== 'object') {
-    return false;
-  }
-  const keys = Reflect.ownKeys(value);
-  if (keys.length !== 3 || keys.some((key) => key !== 'operation' && key !== 'address' && key !== 'fact')) {
-    return false;
-  }
-  const operationField = ownDataField(value, 'operation');
-  const addressField = ownDataField(value, 'address');
-  const factField = ownDataField(value, 'fact');
-  if (!operationField.present || !addressField.present || !factField.present) {
-    return false;
-  }
-  const operation = operationField.value;
-  if (operation !== 'value' && operation !== 'own' && operation !== 'membership' && operation !== 'length' && operation !== 'keys') {
-    return false;
-  }
-  const address = addressField.value;
-  if (!Array.isArray(address)) {
-    return false;
-  }
-  for (let index = 0; index < address.length; index += 1) {
-    const slot = ownDataField(address, String(index));
-    if (!slot.present || slot.value === null || typeof slot.value !== 'object') {
-      return false;
-    }
-    const segment = slot.value;
-    const segmentKeys = Reflect.ownKeys(segment);
-    if (segmentKeys.length !== 2 || segmentKeys.some((key) => key !== 'kind' && key !== 'key' && key !== 'index')) {
-      return false;
-    }
-    const kind = ownDataField(segment, 'kind');
-    if (!kind.present) {
-      return false;
-    }
-    const memberKey = ownDataField(segment, 'key');
-    const memberIndex = ownDataField(segment, 'index');
-    if (kind.value === 'property' && memberKey.present && typeof memberKey.value === 'string') {
-      continue;
-    }
-    if (kind.value === 'index' && memberIndex.present && typeof memberIndex.value === 'number'
-      && Number.isSafeInteger(memberIndex.value) && memberIndex.value >= 0) {
-      continue;
-    }
-    return false;
-  }
-  return true;
-}
-
-/** Read data-property contents as unknown; PropertyDescriptor.value is typed as any. */
-function ownDataField(value: object, key: string): { readonly present: boolean; readonly value: unknown } {
-  const descriptor = Object.getOwnPropertyDescriptor(value, key);
-  if (descriptor === undefined || !('value' in descriptor)) {
-    return { present: false, value: undefined };
-  }
-  return { present: true, value: descriptor.value as unknown };
-}
-
 /** Accept a current projection only when the Value-owned content encoder validates its full shape. */
 function isProjectionFact(value: unknown): value is IValueProjectionFact {
   if (value === null || typeof value !== 'object' || !('descriptor' in value) || !('members' in value)) {
@@ -480,7 +421,7 @@ function isProjectionFact(value: unknown): value is IValueProjectionFact {
  * Ask Value to validate and encode provider data while keeping Machine failures
  * outside this boundary. A Value TypeError means the current fact is incompatible.
  */
-function encodeCurrentValue(encode: () => string): string | undefined {
+function encodeCurrentValue<T>(encode: () => T): T | undefined {
   try {
     return encode();
   } catch (error: unknown) {
@@ -525,20 +466,31 @@ function matchesSelectedRequest(fact: ISelectedFact, request: Extract<ICurrentFa
   return true;
 }
 
-/** Keep provider key sequences finite, unique, dense, and free of coercion. */
-function isUniqueStringSequence(value: unknown): value is readonly string[] {
-  if (!Array.isArray(value)) {
-    return false;
+/**
+ * Copy a supplied key sequence from its indexed own data, reading each slot
+ * once, or return undefined when it is not a standard dense array of unique
+ * strings without extra own properties. The
+ * frozen copy is what callers encode and retain, so an iterator or other array
+ * behavior can never substitute a sequence other than the validated one.
+ */
+function copyUniqueStringSequence(value: unknown): readonly string[] | undefined {
+  // Only a standard array whose own properties are exactly its dense slots and length qualifies.
+  if (!Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype || Object.getOwnPropertySymbols(value).length !== 0
+    || Object.getOwnPropertyNames(value).length !== value.length + 1) {
+    return undefined;
   }
-  const keys = new Set<string>();
+  const keys: string[] = [];
+  const seen = new Set<string>();
   for (let index = 0; index < value.length; index += 1) {
     const slot = Object.getOwnPropertyDescriptor(value, String(index));
-    if (slot === undefined || !('value' in slot) || typeof slot.value !== 'string' || keys.has(slot.value)) {
-      return false;
+    const key: unknown = slot !== undefined && 'value' in slot && slot.enumerable === true ? slot.value : undefined;
+    if (typeof key !== 'string' || seen.has(key)) {
+      return undefined;
     }
-    keys.add(slot.value);
+    seen.add(key);
+    keys.push(key);
   }
-  return true;
+  return Object.freeze(keys);
 }
 
 /** Classes are not ordinary callable steps or supported plain-data records. */
@@ -609,31 +561,20 @@ function checkedNode(candidate: unknown, address: readonly IAddressSegment[]): I
   return node;
 }
 
-/** Validate a source's selected presence or key fact for exactly the requested operation and address. */
+/**
+ * Validate a source's selected presence or key fact for exactly the requested
+ * operation and address. Value copies the envelope in one pass, so the fact
+ * returned to the author and recorded as evidence is exactly the one checked.
+ */
 function checkedSelection(candidate: unknown, address: readonly IAddressSegment[], operation: 'own' | 'membership' | 'keys'): ISelectedFact {
-  if (!isSelectedFact(candidate)) {
-    throw new TypeError('Tracked node source returned a malformed selected fact');
-  }
-  const answered = ownDataField(candidate, 'operation').value;
-  const answeredAddress = ownDataField(candidate, 'address').value;
-  const fact = ownDataField(candidate, 'fact').value;
-  if (answered !== operation || !Array.isArray(answeredAddress)) {
+  const fact = normalizeSelectedFact(candidate);
+  if (fact.operation !== operation) {
     throw new TypeError('Tracked node source answered a different operation');
   }
-  const copied = copyAddress(answeredAddress as readonly IAddressSegment[]);
-  if (!sameAddress(copied, address)) {
+  if (!sameAddress(fact.address, address)) {
     throw new TypeError('Tracked node source answered a different address');
   }
-  if (operation === 'keys') {
-    if (!isUniqueStringSequence(fact)) {
-      throw new TypeError('Tracked node source returned an unsupported key enumeration');
-    }
-    return Object.freeze({ operation, address: copied, fact: Object.freeze([...fact]) });
-  }
-  if (typeof fact !== 'boolean') {
-    throw new TypeError('Tracked node source returned an unsupported presence fact');
-  }
-  return Object.freeze({ operation, address: copied, fact });
+  return fact;
 }
 
 /**
@@ -1030,8 +971,9 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
       } else {
         switch (observation.selection.kind) {
           case 'selected': {
-            const fact = resolved.fact;
-            if (!isSelectedFact(fact) || !matchesSelectedRequest(fact, observation.selection)) {
+            // A provider fact is compared only as the single validated copy Value produces.
+            const fact = encodeCurrentValue(() => normalizeSelectedFact(resolved.fact));
+            if (fact === undefined || !matchesSelectedRequest(fact, observation.selection)) {
               return { kind: 'incompatible', observation };
             }
             const encoded = encodeCurrentValue(() => encodeSelectedFact(fact));
@@ -1080,10 +1022,11 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
             break;
           }
           case 'collection-order': {
-            if (!isUniqueStringSequence(resolved.fact)) {
+            const keys = copyUniqueStringSequence(resolved.fact);
+            if (keys === undefined) {
               return { kind: 'incompatible', observation };
             }
-            const encoded = encodeCurrentValue(() => encodeValue(resolved.fact));
+            const encoded = encodeCurrentValue(() => encodeValue(keys));
             if (encoded === undefined) {
               return { kind: 'incompatible', observation };
             }
@@ -1134,14 +1077,16 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
         return;
       }
       materialization.assertFrameOpen();
-      const encoded = encodeSelectedFact(fact);
+      // Encode and record one validated copy so the evidence and its selection cannot diverge.
+      const selected = normalizeSelectedFact(fact);
+      const encoded = encodeSelectedFact(selected);
       const request: ICurrentFactRequest = {
         kind: 'selected',
-        operation: fact.operation,
-        address: fact.address,
+        operation: selected.operation,
+        address: selected.address,
         encodingVersion: 'MDO1',
       };
-      recordExternal(copyBinding(binding), request, 'fact', fact.operation, encoded);
+      recordExternal(copyBinding(binding), request, 'fact', selected.operation, encoded);
     },
     recordProjection(binding: ITrackingBinding, fact: IValueProjectionFact): void {
       if (captures.getStore() === undefined) {
@@ -1158,10 +1103,10 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
         return;
       }
       materialization.assertFrameOpen();
-      if (!isUniqueStringSequence(keys)) {
+      const copiedKeys = copyUniqueStringSequence(keys);
+      if (copiedKeys === undefined) {
         throw new TypeError('Collection order needs a unique ordered sequence of string keys');
       }
-      const copiedKeys = Object.freeze([...keys]);
       const encoded = encodeValue(copiedKeys);
       const request: ICurrentFactRequest = { kind: 'collection-order', keys: copiedKeys, encodingVersion: 'MDV1' };
       recordExternal(copyBinding(binding), request, 'collection-order', 'collection-order', encoded);

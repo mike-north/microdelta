@@ -1,6 +1,6 @@
 # microdelta facade
 
-The private `microdelta` entry preserves the scaffold's existing public History
+The `microdelta` entry preserves the scaffold's existing public History
 Store API. It explicitly reexports `@microdelta/history` declarations and runtime
 values; it does not own the Store or grant other contexts an import shortcut.
 See the [package map](../../docs/package-map.md) and [active specification](../../docs/spec/README.md).
@@ -34,4 +34,6 @@ composes the owners and adds no policy of its own:
 
 The [contribution report example](../../examples/contribution-report/README.md)
 uses this path through the installed workspace's generated alpha declarations.
-Independent-process kill-point acceptance of the durable path is separate work.
+The M3 independent-process acceptance harness in `test/acceptance` exercises
+this path across process exits, kill boundaries and lost-acknowledgment
+recovery; see the [M3 acceptance record](../../docs/validation/m3-acceptance-2026-09-28.md).

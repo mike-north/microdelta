@@ -4,6 +4,7 @@
   "compilerOptions": {
     "noEmit": true,
     "paths": {
+      "microdelta": ["../../node_modules/microdelta/dist/api/microdelta.untrimmed.d.ts"],
       "@microdelta/definition": ["../definition/dist/api/definition.alpha.d.ts"],
       "@microdelta/history": ["../history/dist/api/history.alpha.d.ts"],
       "@microdelta/history/conformance/store": ["../history/dist/api/history.conformance.store.alpha.d.ts"],

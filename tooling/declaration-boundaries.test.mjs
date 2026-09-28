@@ -373,11 +373,14 @@ test('inherited paths and invented aliases cannot expose sibling source or untri
  * its assembly tests also consume Value's alpha entry for independent oracles
  * and the Definition, Materialization and Resolution alpha entries that
  * compose Resolution over real History, plus Supervision's alpha entry for the
- * workspace run path.
+ * workspace run path. The M3 acceptance harness imports the facade's own built
+ * package, which own-package tests resolve through its untrimmed rollup
+ * (PKG-004), reached through the workspace's installed package link.
  */
 test('facade compiler maps each approved owner import, including both History entries, to its generated alpha declaration', async () => {
   const config = JSON.parse(await readFile(path.join(root, 'packages/core/tsconfig.json'), 'utf8'));
   assert.deepEqual(config.compilerOptions.paths, {
+    microdelta: ['../../node_modules/microdelta/dist/api/microdelta.untrimmed.d.ts'],
     '@microdelta/definition': ['../definition/dist/api/definition.alpha.d.ts'],
     '@microdelta/history': ['../history/dist/api/history.alpha.d.ts'],
     '@microdelta/history/conformance/store': ['../history/dist/api/history.conformance.store.alpha.d.ts'],

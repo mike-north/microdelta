@@ -23,10 +23,12 @@
  * @see ../../../../docs/plans/m3-contribution-analysis.md (Explicit recovery request; History, host operations and durable records)
  */
 import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
+import type { IWriterLease } from '@microdelta/history';
 
 import { adaExpected } from './expected.js';
 import { baseWorld, outcomeOf, referenceOf, scenario, subjectOf } from './harness.js';
 import type { IProcessRun, IScenario } from './harness.js';
+import { outlastStoredLease } from './lease-expiry.js';
 
 let s: IScenario;
 let cold: IProcessRun;
@@ -34,8 +36,24 @@ let cold: IProcessRun;
 /** Ada's summary after PR 103 is merged, derived by hand. */
 const adaMerged = { name: 'Ada', authored: 3, merged: 3, reviews: 5, sentence: 'Ada authored 3 pull requests, 3 of which were merged, and submitted 5 reviews.' };
 
-/** A short lease, so a killed holder's lease expires before the next normal request. */
-const leaseMilliseconds = 300;
+/**
+ * The writer lease of every killed run and of the normal requests that follow
+ * a kill in this suite: finite scheduling headroom so that a killed run still
+ * holds an unexpired lease when it reaches its planned commit boundary (History
+ * fences each holder mutation against the stored expiry, so a lapsed lease
+ * makes the worker fail with `StaleWriterError` instead of reaching the kill),
+ * and the same headroom for the later requests' own writes. It mitigates
+ * ordinary scheduling delay; it does not guarantee against an arbitrarily long
+ * pause or a host clock jump. Its measured basis is recorded in
+ * docs/validation/m3-crash-harness-2026-09-28.md.
+ */
+const leaseMilliseconds = 2_000;
+
+/**
+ * Waiting out a killed holder's stored lease: end just past the expiry, and
+ * never take longer than one lease (plus that margin) in total.
+ */
+const expiryWait = { marginMilliseconds: 50, budgetMilliseconds: leaseMilliseconds + 50 } as const;
 
 beforeEach(() => {
   s = scenario();
@@ -52,9 +70,14 @@ afterEach(() => {
   s.remove();
 });
 
-/** Wait past the killed process's lease. */
-function outlastLease(): void {
-  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, leaseMilliseconds + 150);
+/** The durable writer lease as History records it, or undefined when no holder is recorded. */
+function storedLease(): IWriterLease | undefined {
+  return s.inspect((history) => history.currentWriter());
+}
+
+/** Wait until the killed holder's stored lease has expired for History (see `lease-expiry.ts`). */
+function outlastKilledLease(): void {
+  outlastStoredLease(storedLease, expiryWait);
 }
 
 /** Durable state of Ada's summary after reopening: completed candidates, the latest pointer and the old exact result. */
@@ -84,12 +107,11 @@ function expectNoWriterActivity(recovery: IProcessRun): void {
   expect(touched).toEqual([]);
 }
 
-/** The durable writer row as History reports it, or undefined when no holder is recorded. */
-function writerRow(): unknown {
-  return s.inspect((history) => history.currentWriter());
-}
-
-/** Resolve Ada's summary under a saved key, killed at one boundary. */
+/**
+ * Resolve Ada's summary under a saved key, killed at one boundary. The harness
+ * already refuses a run whose planned kill was not reached, with the worker's
+ * own account of what happened instead; these checks restate the outcome.
+ */
 function killedAt(keys: string, fault: { readonly role: string; readonly occurrence: number; readonly when: 'before' | 'after' }): IProcessRun {
   const killed = s.run({ kind: 'resolve', member: 'person:ada' }, { keys, fault, leaseMilliseconds });
   expect(killed.signal).toBe('SIGKILL');
@@ -137,7 +159,7 @@ describe('publication-kill-boundaries (A-09) through a real summary invocation',
       expect(recovered.result?.['recovered']).toMatchObject({ kind: 'incomplete' });
       expect(recovered.count('summary') + recovered.count('check') + recovered.count('finality')).toBe(0);
       expectNoWriterActivity(recovered);
-      outlastLease();
+      outlastKilledLease();
       // Ada's committed source is now final, so the summary's own saved-key check is
       // what a normal request meets (the source is not re-executed under that key).
       s.writeWorld({ ...baseWorld(), pullRequests: baseWorld().pullRequests.map((pull) => (pull.number === 103 ? { ...pull, merged: true } : pull)) });
@@ -176,14 +198,15 @@ describe('publication-kill-boundaries (A-09) through a real summary invocation',
     const saved = s.saveKeys('publish-after-expiry');
     killedAt(saved.file, { role: 'publish', occurrence: 2, when: 'after' });
     const committed = adaSummaryState().current;
-    const writerBefore = writerRow();
+    const writerBefore = storedLease();
     expect(writerBefore).toMatchObject({ holder: expect.stringContaining('microdelta-run:') });
-    outlastLease();
+    outlastKilledLease();
+    expect(Date.now()).toBeGreaterThan(writerBefore?.expiresAt ?? Number.POSITIVE_INFINITY);
     const recovered = s.run({ kind: 'recover', member: 'person:ada' }, { keys: saved.file });
     expect(recovered.result?.['recovered']).toEqual({ kind: 'recovered', reference: committed });
     expect(recovered.count('summary') + recovered.count('check') + recovered.count('finality')).toBe(0);
     expectNoWriterActivity(recovered);
-    expect(writerRow()).toEqual(writerBefore);
+    expect(storedLease()).toEqual(writerBefore);
   });
 
   test('killed after the summary publication commits (lost acknowledgment): recovery returns the exact committed result with no author work or acceptance, wrong intent is rejected, and a fresh request applies current policy', () => {
@@ -200,7 +223,7 @@ describe('publication-kill-boundaries (A-09) through a real summary invocation',
     const acceptancesBefore = s.inspect((history) => history.readAcceptances({ kind: 'completed-result', locator: committed ?? '' }).length);
 
     // The killed process's writer row is still recorded; recovery must not touch it.
-    const writerBefore = writerRow();
+    const writerBefore = storedLease();
     expect(writerBefore).toMatchObject({ holder: expect.stringContaining('microdelta-run:') });
     // Recovery through the workspace's recover entry with the caller's saved key.
     const recovered = s.run({ kind: 'recover', member: 'person:ada' }, { keys: saved.file });
@@ -208,7 +231,7 @@ describe('publication-kill-boundaries (A-09) through a real summary invocation',
     expect(recovered.count('summary') + recovered.count('check') + recovered.count('finality')).toBe(0);
     expect(recovered.admissions).toEqual([]);
     expectNoWriterActivity(recovered);
-    expect(writerRow()).toEqual(writerBefore);
+    expect(storedLease()).toEqual(writerBefore);
     expect(s.inspect((history) => history.readAcceptances({ kind: 'completed-result', locator: committed ?? '' }).length)).toBe(acceptancesBefore);
     s.inspect((history) => {
       expect(history.reader.readSubtree({ kind: 'completed-result', locator: committed ?? '' }, [])).toEqual(adaMerged);
@@ -222,7 +245,7 @@ describe('publication-kill-boundaries (A-09) through a real summary invocation',
     // Recovery again is stable.
     expect(s.run({ kind: 'recover', member: 'person:ada' }, { keys: saved.file }).result?.['recovered']).toEqual({ kind: 'recovered', reference: committed });
 
-    outlastLease();
+    outlastKilledLease();
     // A subsequent fresh normal request performs current policy validation (the not-final check runs) and reuses the committed result.
     const fresh = s.run({ kind: 'resolve', member: 'person:ada' }, { keys: s.saveKeys('after-recovery').file, leaseMilliseconds });
     expect(fresh.count('finality', 'person:ada')).toBe(1);

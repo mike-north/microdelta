@@ -125,7 +125,11 @@ export interface IRunOptions {
   readonly keys?: string;
   readonly deny?: IJob['deny'];
   readonly throwAt?: IJob['throwAt'];
-  /** Kill the process at a History commit boundary. */
+  /**
+   * Kill the process at a History commit boundary. The run then returns only
+   * if that kill was reached (see {@link judgePlannedKill}); otherwise it
+   * throws {@link MissedPlannedKillError}.
+   */
   readonly fault?: { readonly role: string; readonly occurrence: number; readonly when: 'before' | 'after' };
   readonly leaseMilliseconds?: number;
   /** Make this member's summary body throw in this process. */
@@ -133,6 +137,89 @@ export interface IRunOptions {
   /** A different store file (wrong-store checks). */
   readonly location?: string;
   readonly logicalStore?: string;
+}
+
+/** A planned kill at one History commit boundary, as a run requests it. */
+export type IPlannedFault = NonNullable<IRunOptions['fault']>;
+
+/** What the parent observed of one finished worker process. */
+export interface IWorkerExit {
+  /** Exit status, or null when terminated by a signal. */
+  readonly status: number | null;
+  /** Terminating signal, if any. */
+  readonly signal: NodeJS.Signals | null;
+  /** Every parsed stdout line, in order. */
+  readonly lines: readonly Readonly<Record<string, unknown>>[];
+  /** The worker's standard error. */
+  readonly stderr: string;
+}
+
+/** Whether a worker process reached the kill its run planned. */
+export type IPlannedKillJudgement =
+  | { readonly kind: 'reached' }
+  | { readonly kind: 'missed'; readonly diagnostic: string };
+
+/** A planned fault in the words the instrumented host's trace uses, e.g. `after commit of publish #2`. */
+function describeFault(fault: IPlannedFault): string {
+  return `${fault.when} commit of ${fault.role} #${String(fault.occurrence)}`;
+}
+
+/** Whether a parsed line is the instrumented host's trace of exactly `plan`. */
+function tracesFault(line: Readonly<Record<string, unknown>>, plan: IPlannedFault): boolean {
+  return line['t'] === 'fault' && line['role'] === plan.role && line['occurrence'] === plan.occurrence && line['when'] === plan.when;
+}
+
+/** The worker's own error line, rendered as `name (code c): message`, or `none`. */
+function describeWorkerError(lines: IWorkerExit['lines']): string {
+  const error = lines.find((line) => line['t'] === 'error');
+  if (error === undefined) {
+    return 'none';
+  }
+  return `${String(error['name'])} (code ${String(error['code'])}): ${String(error['message'])}`;
+}
+
+/** At most this many trailing characters of a worker's stderr are quoted in a diagnostic. */
+const stderrExcerptLength = 4_000;
+
+/**
+ * Judge whether a worker reached the kill its run planned. A planned kill is
+ * reached only when the process was terminated by SIGKILL and its last
+ * output line is the instrumented host's single fault trace for exactly the
+ * requested role, occurrence and before/after boundary: the host writes that
+ * line synchronously immediately before signalling itself, so nothing may
+ * follow it. A SIGKILL without the trace (an external kill), with another
+ * boundary's trace, or any ordinary exit is a miss. A miss carries a
+ * diagnostic naming the requested fault, the exit status and signal, the
+ * actual fault trace or its absence, the worker's genuine error and its
+ * stderr, so a missed kill always names its observable cause.
+ * @param plan - The fault the run requested.
+ * @param exit - What the parent observed of the finished worker.
+ * @returns Whether the planned kill was reached, with a diagnostic when it was not.
+ */
+export function judgePlannedKill(plan: IPlannedFault, exit: IWorkerExit): IPlannedKillJudgement {
+  const faults = exit.lines.filter((line) => line['t'] === 'fault');
+  const last = exit.lines.at(-1);
+  if (exit.signal === 'SIGKILL' && faults.length === 1 && last !== undefined && tracesFault(last, plan)) {
+    return { kind: 'reached' };
+  }
+  const stderr = exit.stderr.trim();
+  const diagnostic = [
+    `planned kill not reached: requested SIGKILL ${describeFault(plan)}`,
+    `exit: status ${String(exit.status)}, signal ${String(exit.signal)}`,
+    `fault trace: ${faults.length === 0 ? 'none' : faults.map((line) => JSON.stringify(line)).join(' ')}`,
+    `worker error: ${describeWorkerError(exit.lines)}`,
+    `stderr: ${stderr.length === 0 ? '(empty)' : stderr.slice(-stderrExcerptLength)}`,
+  ].join('\n');
+  return { kind: 'missed', diagnostic };
+}
+
+/**
+ * A run that planned a kill whose worker did not die at that boundary. It is
+ * a harness failure, never a process result: the process-level evidence the
+ * run was meant to produce does not exist.
+ */
+export class MissedPlannedKillError extends Error {
+  public override readonly name = 'MissedPlannedKillError';
 }
 
 /** Counter for opaque request keys. */
@@ -194,6 +281,13 @@ export function scenario(): IScenario {
       const lines = parse(spawned.stdout);
       const traces = lines.filter((line) => line['t'] === 'trace');
       const events = lines.filter((line) => line['t'] === 'event');
+      if (options.fault !== undefined) {
+        // A planned kill is evidence only when reached; otherwise fail here, with the worker's own account.
+        const judgement = judgePlannedKill(options.fault, { status: spawned.status, signal: spawned.signal, lines, stderr: spawned.stderr });
+        if (judgement.kind === 'missed') {
+          throw new MissedPlannedKillError(judgement.diagnostic);
+        }
+      }
       if (spawned.status !== 0 && spawned.status !== 3 && spawned.signal !== 'SIGKILL') {
         throw new Error(`worker failed unexpectedly (${String(spawned.status)}/${String(spawned.signal)}): ${spawned.stderr}`);
       }

@@ -85,9 +85,14 @@ const events: { readonly role: string; readonly root: number; readonly scalar: n
 const plan = faultPlan();
 let seen = 0;
 
-/** Terminate without any JavaScript cleanup, after a synchronous trace line. */
-function kill(note: string): never {
-  writeSync(1, `${JSON.stringify({ t: 'fault', note })}\n`);
+/**
+ * Terminate without any JavaScript cleanup, after a synchronous trace line
+ * naming the fault reached: its role, occurrence and boundary as structured
+ * fields (which the parent matches against the plan) and a readable note.
+ * Nothing is written after it, so it is the process's last output line.
+ */
+function kill(fault: IFaultPlan): never {
+  writeSync(1, `${JSON.stringify({ t: 'fault', role: fault.role, occurrence: fault.occurrence, when: fault.when, note: `${fault.when} commit of ${fault.role} #${String(fault.occurrence)}` })}\n`);
   process.kill(process.pid, 'SIGKILL');
   throw new Error('unreachable after SIGKILL');
 }
@@ -164,7 +169,7 @@ export function createNodeSqlite(): ISqliteCapability {
                 seen += 1;
                 armed = seen === plan.occurrence;
                 if (armed && plan.when === 'before') {
-                  kill(`before commit of ${plan.role} #${String(plan.occurrence)}`);
+                  kill(plan);
                 }
               }
               return value;
@@ -173,7 +178,7 @@ export function createNodeSqlite(): ISqliteCapability {
             }
           }) as T;
           if (armed && plan?.when === 'after') {
-            kill(`after commit of ${plan.role} #${String(plan.occurrence)}`);
+            kill(plan);
           }
           return result;
         },

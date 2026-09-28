@@ -37,9 +37,17 @@ function withResultId(locator: string, id: number): string {
   return locator.replace(/,(\d+)\]$/u, `,${String(id)}]`);
 }
 
+/** Production-statement read evidence for one window. */
+interface IWindowReads {
+  readonly roles: Readonly<Record<string, number>>;
+  readonly rootPayloadCells: number;
+  readonly scalarCells: number;
+  readonly stagedCells: number;
+}
+
 /** The read evidence of a report run's validation window. */
-function validationReads(run: IProcessRun): { readonly roles: Readonly<Record<string, number>>; readonly rootPayloadCells: number; readonly scalarCells: number } {
-  const reads = run.result?.['reads'] as { readonly validation: { readonly roles: Readonly<Record<string, number>>; readonly rootPayloadCells: number; readonly scalarCells: number } } | undefined;
+function validationReads(run: IProcessRun): IWindowReads {
+  const reads = run.result?.['reads'] as { readonly validation: IWindowReads } | undefined;
   if (reads === undefined) {
     throw new Error('no read evidence');
   }
@@ -96,6 +104,34 @@ describe('selected-node-io (A-17 within M3)', () => {
     expect(reads.rootPayloadCells).toBe(0);
     expect(reads.scalarCells).toBe(7);
     expect(reads.roles['subtree-payload']).toBeUndefined();
+  });
+
+  test('fingerprint-only validation: with accepting hooks that never read the previous result, restart validation reads zero payload', () => {
+    // Its own store, so both processes declare the same hooks that decide from
+    // current inputs and the external world only.
+    const blind = scenario();
+    try {
+      blind.writeWorld(baseWorld());
+      const coldBlind = blind.run({ kind: 'report' }, { keys: blind.saveKeys('cold').file, variation: { blindFinality: true } });
+      const coldSources = blind.inspect((history) => Object.fromEntries((['person:ada', 'person:ben'] as const).map((member) =>
+        [member, history.readEnvelope({ kind: 'completed-result', locator: referenceOf(coldBlind, member) }).dependencies.map((reference) => reference.locator)])));
+      const restart = blind.run({ kind: 'report' }, { keys: blind.saveKeys('restart').file, variation: { blindFinality: true } });
+      for (const member of ['person:ada', 'person:ben'] as const) {
+        expect(restart.count('finality-blind', member)).toBe(1);
+        expect(restart.count('check', member)).toBe(0);
+        expect(restart.count('summary', member)).toBe(0);
+        expect(outcomeOf(restart, member)).toMatchObject({ kind: 'reused', basis: 'validated', reference: referenceOf(coldBlind, member), accepted: coldSources[member] });
+      }
+      const reads = validationReads(restart);
+      // The whole validation window returned no author payload of any kind…
+      expect({ root: reads.rootPayloadCells, scalar: reads.scalarCells, staged: reads.stagedCells }).toEqual({ root: 0, scalar: 0, staged: 0 });
+      expect(reads.roles['leaf-payload'] ?? 0).toBe(0);
+      expect(reads.roles['subtree-payload'] ?? 0).toBe(0);
+      // …while the consumed child facts were compared through stored fingerprints.
+      expect(reads.roles['fingerprint'] ?? 0).toBeGreaterThan(0);
+    } finally {
+      blind.remove();
+    }
   });
 
   test('eligible restart validation is metadata-only: no source payload beyond the finality hooks\' own selected reads', () => {

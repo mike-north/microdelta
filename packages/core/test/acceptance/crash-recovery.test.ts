@@ -69,6 +69,26 @@ function adaSummaryState(): { readonly candidates: readonly string[]; readonly c
   });
 }
 
+/** History roles that take, renew, release or observe the writer, or mutate durable state. */
+const writerOrMutationRoles = ['writer', 'allocate', 'stage', 'publish', 'accept', 'abandon'];
+
+/**
+ * Assert a recovery process's measured recovery window executed no writer or
+ * mutation statement at the real SQLite capability boundary. This holds
+ * whether or not an earlier holder's lease has expired.
+ */
+function expectNoWriterActivity(recovery: IProcessRun): void {
+  const reads = recovery.result?.['reads'] as { readonly roles: Readonly<Record<string, number>> } | undefined;
+  expect(reads).toBeDefined();
+  const touched = writerOrMutationRoles.filter((role) => (reads?.roles[role] ?? 0) > 0);
+  expect(touched).toEqual([]);
+}
+
+/** The durable writer row as History reports it, or undefined when no holder is recorded. */
+function writerRow(): unknown {
+  return s.inspect((history) => history.currentWriter());
+}
+
 /** Resolve Ada's summary under a saved key, killed at one boundary. */
 function killedAt(keys: string, fault: { readonly role: string; readonly occurrence: number; readonly when: 'before' | 'after' }): IProcessRun {
   const killed = s.run({ kind: 'resolve', member: 'person:ada' }, { keys, fault, leaseMilliseconds });
@@ -88,6 +108,7 @@ describe('publication-kill-boundaries (A-09) through a real summary invocation',
     const recovered = s.run({ kind: 'recover', member: 'person:ada' }, { keys: saved.file });
     expect(recovered.result?.['recovered']).toEqual({ kind: 'absent' });
     expect(recovered.count('summary') + recovered.count('check') + recovered.count('finality')).toBe(0);
+    expectNoWriterActivity(recovered);
   });
 
   test('killed before the summary allocation commits: the source result is committed, the summary attempt never existed', () => {
@@ -98,6 +119,7 @@ describe('publication-kill-boundaries (A-09) through a real summary invocation',
     expect(adaSummaryState()).toMatchObject({ candidates: [referenceOf(cold, 'person:ada')], current: referenceOf(cold, 'person:ada') });
     const recovered = s.run({ kind: 'recover', member: 'person:ada' }, { keys: saved.file });
     expect(recovered.result?.['recovered']).toEqual({ kind: 'absent' });
+    expectNoWriterActivity(recovered);
   });
 
   for (const boundary of [
@@ -114,6 +136,7 @@ describe('publication-kill-boundaries (A-09) through a real summary invocation',
       const recovered = s.run({ kind: 'recover', member: 'person:ada' }, { keys: saved.file });
       expect(recovered.result?.['recovered']).toMatchObject({ kind: 'incomplete' });
       expect(recovered.count('summary') + recovered.count('check') + recovered.count('finality')).toBe(0);
+      expectNoWriterActivity(recovered);
       outlastLease();
       // Ada's committed source is now final, so the summary's own saved-key check is
       // what a normal request meets (the source is not re-executed under that key).
@@ -143,6 +166,24 @@ describe('publication-kill-boundaries (A-09) through a real summary invocation',
     const recovered = s.run({ kind: 'recover', member: 'person:ada' }, { keys: saved.file });
     expect(recovered.result?.['recovered']).toMatchObject({ kind: 'unsuccessful' });
     expect(recovered.count('summary') + recovered.count('check') + recovered.count('finality')).toBe(0);
+    expectNoWriterActivity(recovered);
+  });
+
+  test('after the killed holder\'s lease has certainly expired, lost-acknowledgment recovery still performs no writer activity', () => {
+    // A recovery that acquired the writer would succeed here rather than meet a
+    // held lease, so only the measured absence of writer statements at the real
+    // SQLite boundary and the unchanged durable writer row can show it took none.
+    const saved = s.saveKeys('publish-after-expiry');
+    killedAt(saved.file, { role: 'publish', occurrence: 2, when: 'after' });
+    const committed = adaSummaryState().current;
+    const writerBefore = writerRow();
+    expect(writerBefore).toMatchObject({ holder: expect.stringContaining('microdelta-run:') });
+    outlastLease();
+    const recovered = s.run({ kind: 'recover', member: 'person:ada' }, { keys: saved.file });
+    expect(recovered.result?.['recovered']).toEqual({ kind: 'recovered', reference: committed });
+    expect(recovered.count('summary') + recovered.count('check') + recovered.count('finality')).toBe(0);
+    expectNoWriterActivity(recovered);
+    expect(writerRow()).toEqual(writerBefore);
   });
 
   test('killed after the summary publication commits (lost acknowledgment): recovery returns the exact committed result with no author work or acceptance, wrong intent is rejected, and a fresh request applies current policy', () => {
@@ -158,11 +199,16 @@ describe('publication-kill-boundaries (A-09) through a real summary invocation',
     expect(state.old).toEqual({ name: 'Ada', authored: 3, merged: 2, reviews: 5, sentence: adaExpected.sentence });
     const acceptancesBefore = s.inspect((history) => history.readAcceptances({ kind: 'completed-result', locator: committed ?? '' }).length);
 
-    // Recovery through the workspace's recover entry, while the killed process's lease is still unexpired.
+    // The killed process's writer row is still recorded; recovery must not touch it.
+    const writerBefore = writerRow();
+    expect(writerBefore).toMatchObject({ holder: expect.stringContaining('microdelta-run:') });
+    // Recovery through the workspace's recover entry with the caller's saved key.
     const recovered = s.run({ kind: 'recover', member: 'person:ada' }, { keys: saved.file });
     expect(recovered.result?.['recovered']).toEqual({ kind: 'recovered', reference: committed });
     expect(recovered.count('summary') + recovered.count('check') + recovered.count('finality')).toBe(0);
     expect(recovered.admissions).toEqual([]);
+    expectNoWriterActivity(recovered);
+    expect(writerRow()).toEqual(writerBefore);
     expect(s.inspect((history) => history.readAcceptances({ kind: 'completed-result', locator: committed ?? '' }).length)).toBe(acceptancesBefore);
     s.inspect((history) => {
       expect(history.reader.readSubtree({ kind: 'completed-result', locator: committed ?? '' }, [])).toEqual(adaMerged);

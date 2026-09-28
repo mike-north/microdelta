@@ -88,6 +88,7 @@ export interface IHelpers {
   readonly checkActivity: (outcome: ISourceOutcomes, previous: IPreviousResult<IActivity> | undefined, config: ITrackedView<IConfig>, key: string) => ISourceOutcome<IActivity>;
   readonly acceptActivity: (previous: IPreviousResult<IActivity>, config: ITrackedView<IConfig>, key: string) => boolean;
   readonly rejectActivity: (previous: IPreviousResult<IActivity>, key: string) => boolean;
+  readonly acceptCurrent: (config: ITrackedView<IConfig>, key: string) => boolean;
   readonly summarize: (activity: IResultView<IActivity>, format: ITrackedView<IFormat>, key: string) => ISummary;
   readonly format: IFormat;
   readonly legend: () => string;
@@ -109,6 +110,12 @@ export interface IVariation {
   readonly adaSource?: 'original' | 'changed';
   /** Ada's finality hook: present, absent, or a changed hook that rejects. */
   readonly adaFinality?: 'present' | 'absent' | 'changed';
+  /**
+   * Both members' finality hooks decide from current declared inputs and the
+   * external world only, never reading the previous result, so a restart's
+   * validation window contains no policy read of source payload at all.
+   */
+  readonly blindFinality?: boolean;
 }
 
 /** Write one trace line synchronously, so it survives a later SIGKILL. */
@@ -173,6 +180,13 @@ function acceptActivity(previous: IPreviousResult<IActivity>, config: ITrackedVi
   const world = readWorld(config.world);
   trace({ helper: 'finality', key });
   return previous.data.profile.id.length > 0 && world.final[key === 'person:ada' ? 'person:ada' : 'person:ben'];
+}
+
+/** A finality policy that decides without reading the previous result. */
+function acceptCurrent(config: ITrackedView<IConfig>, key: string): boolean {
+  const world = readWorld(config.world);
+  trace({ helper: 'finality-blind', key });
+  return world.final[key === 'person:ada' ? 'person:ada' : 'person:ben'];
 }
 
 /** A changed finality policy that never accepts. */
@@ -277,18 +291,33 @@ export function composeAnalysis(variation: IVariation, worldPath: string): IAnal
             finality: ({ previous, helpers }) => helpers.rejectActivity(previous, 'person:ada'),
             run: ({ previous, inputs, helpers, outcome }) => helpers.checkActivity(outcome, previous, inputs.config, 'person:ada'),
           })
-        : source<IActivity>({
-            subject: adaSubject,
-            label: adaLabel,
-            finality: ({ previous, inputs, helpers }) => helpers.acceptActivity(previous, inputs.config, 'person:ada'),
-            run: ({ previous, inputs, helpers, outcome }) => helpers.checkActivity(outcome, previous, inputs.config, 'person:ada'),
-          });
-  const benActivity = source<IActivity>({
-    subject: 'activity:acme/widget:2026-Q1:person:ben',
-    label: renamed ? 'Ben Bitdiddle — activity' : 'Ben activity',
-    finality: ({ previous, inputs, helpers }) => helpers.acceptActivity(previous, inputs.config, 'person:ben'),
-    run: ({ previous, inputs, helpers, outcome }) => helpers.checkActivity(outcome, previous, inputs.config, 'person:ben'),
-  });
+        : variation.blindFinality === true
+          ? source<IActivity>({
+              subject: adaSubject,
+              label: adaLabel,
+              finality: ({ inputs, helpers }) => helpers.acceptCurrent(inputs.config, 'person:ada'),
+              run: ({ previous, inputs, helpers, outcome }) => helpers.checkActivity(outcome, previous, inputs.config, 'person:ada'),
+            })
+          : source<IActivity>({
+              subject: adaSubject,
+              label: adaLabel,
+              finality: ({ previous, inputs, helpers }) => helpers.acceptActivity(previous, inputs.config, 'person:ada'),
+              run: ({ previous, inputs, helpers, outcome }) => helpers.checkActivity(outcome, previous, inputs.config, 'person:ada'),
+            });
+  const benLabel = renamed ? 'Ben Bitdiddle — activity' : 'Ben activity';
+  const benActivity = variation.blindFinality === true
+    ? source<IActivity>({
+        subject: 'activity:acme/widget:2026-Q1:person:ben',
+        label: benLabel,
+        finality: ({ inputs, helpers }) => helpers.acceptCurrent(inputs.config, 'person:ben'),
+        run: ({ previous, inputs, helpers, outcome }) => helpers.checkActivity(outcome, previous, inputs.config, 'person:ben'),
+      })
+    : source<IActivity>({
+        subject: 'activity:acme/widget:2026-Q1:person:ben',
+        label: benLabel,
+        finality: ({ previous, inputs, helpers }) => helpers.acceptActivity(previous, inputs.config, 'person:ben'),
+        run: ({ previous, inputs, helpers, outcome }) => helpers.checkActivity(outcome, previous, inputs.config, 'person:ben'),
+      });
   const adaSummary = memo({
     subject: 'summary:acme/widget:2026-Q1:person:ada',
     label: renamed ? 'Ada Lovelace — summary' : 'Ada summary',
@@ -315,6 +344,7 @@ export function composeAnalysis(variation: IVariation, worldPath: string): IAnal
     { slot: 'checkActivity', helper: checkActivity },
     { slot: 'acceptActivity', helper: acceptActivity },
     { slot: 'rejectActivity', helper: rejectActivity },
+    { slot: 'acceptCurrent', helper: acceptCurrent },
     { slot: 'summarize', helper: summarize },
     { slot: 'format', helper: variation.formatter === 'revised' ? formatRevised : format },
     { slot: 'legend', helper: variation.legend === 'revised' ? legendRevised : legend },

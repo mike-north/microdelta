@@ -103,6 +103,32 @@ test('Value package build, checks, declaration views, and package order are requ
   }).join('\n'), /resolution test.*test:unit/u);
 });
 
+/**
+ * The checked-in executable example is a real consumer of the facade's alpha
+ * declarations: it must be built, type-checked and linted (including the
+ * capture rule), and executed by the aggregate gates.
+ */
+test('the executable example is built, checked, linted and run by the aggregate gates', async () => {
+  const workspace = await readJson('package.json');
+  const names = ['core', 'definition', 'tracking', 'history', 'value', 'materialization', 'resolution', 'supervision'];
+  const packages = Object.fromEntries(await Promise.all(names.map(async name => [name, await readJson(`packages/${name}/package.json`)])));
+  const eslintConfig = await readFile(path.join(root, 'eslint.config.mjs'), 'utf8');
+  const inputs = { workspace, packages, workflow: '', extractors: await extractors(), eslintConfig };
+  for (const [script, fragment] of [
+    ['build', 'npm run build:examples'],
+    ['check:workspace', 'npm run check:examples'],
+    ['test', 'npm run test:examples'],
+  ]) {
+    const skipped = structuredClone(workspace);
+    skipped.scripts[script] = skipped.scripts[script].replace(fragment, 'true');
+    assert.match(missingFoundationGates({ ...inputs, workspace: skipped }).join('\n'), new RegExp(`${script}.*${fragment}`, 'u'), `${script} must require ${fragment}`);
+  }
+  const unlinted = structuredClone(workspace);
+  unlinted.scripts['check:examples'] = unlinted.scripts['check:examples'].replace('eslint examples', 'true');
+  assert.match(missingFoundationGates({ ...inputs, workspace: unlinted }).join('\n'), /check:examples.*eslint examples/u);
+  assert.match(missingFoundationGates({ ...inputs, eslintConfig: eslintConfig.replace("'examples/**/*.ts', ", '') }).join('\n'), /typed ESLint config.*examples/u);
+});
+
 test('skipping an import, declaration, or API report checker is detected', async () => {
   const workspace = await readJson('package.json');
   const packages = Object.fromEntries(await Promise.all(['core', 'definition', 'tracking', 'history', 'value', 'materialization', 'resolution', 'supervision'].map(async name => [

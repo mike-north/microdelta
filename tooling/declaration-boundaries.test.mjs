@@ -486,6 +486,31 @@ test('a context may map only the alpha declaration closure of its approved produ
   }
 });
 
+/**
+ * The checked-in example compiles through the installed workspace packages'
+ * generated alpha rollups; the workspace preflight scans it, and a source
+ * alias there is rejected like anywhere else.
+ */
+test('the executable example maps only installed generated alpha declarations', async () => {
+  const gate = path.join(root, 'tooling/check-producer-declarations.mjs');
+  const example = path.join(root, 'examples/contribution-report/tsconfig.json');
+  const accepted = spawnSync(process.execPath, [gate, '--config', example], { cwd: root, encoding: 'utf8' });
+  assert.equal(accepted.status, 0, `The example's installed alpha aliases should pass: ${accepted.stdout}${accepted.stderr}`);
+  const scan = spawnSync(process.execPath, [gate], { cwd: root, encoding: 'utf8', env: { ...process.env, MICRODELTA_DECLARATION_TRACE: '1' } });
+  assert.equal(scan.status, 0, scan.stdout + scan.stderr);
+  assert.match(scan.stdout, /examples[\\/]contribution-report[\\/]tsconfig\.json/u, 'the workspace preflight must scan the example');
+
+  const config = path.join(root, 'examples/contribution-report/.tsconfig-declaration-negative.json');
+  try {
+    await writeFile(config, JSON.stringify({ compilerOptions: { paths: { microdelta: [path.join(root, 'packages/core/src/index.ts')] } }, files: [] }));
+    const source = spawnSync(process.execPath, [gate, '--config', config], { cwd: root, encoding: 'utf8' });
+    assert.notEqual(source.status, 0, 'A source alias in the example must be rejected');
+    assert.match(source.stdout + source.stderr, /source alias bypasses/iu);
+  } finally {
+    await rm(config, { force: true });
+  }
+});
+
 /** Node module symlinks retain external package identity while resolving to the exact generated alpha artifact. */
 test('Materialization package aliases through workspace node_modules remain pinned to generated tiers', async () => {
   const gate = path.join(root, 'tooling/check-producer-declarations.mjs');

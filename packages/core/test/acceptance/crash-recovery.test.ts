@@ -23,6 +23,7 @@
  * @see ../../../../docs/plans/m3-contribution-analysis.md (Explicit recovery request; History, host operations and durable records)
  */
 import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
+import type { IWriterLease } from '@microdelta/history';
 
 import { adaExpected } from './expected.js';
 import { baseWorld, outcomeOf, referenceOf, scenario, subjectOf } from './harness.js';
@@ -34,8 +35,29 @@ let cold: IProcessRun;
 /** Ada's summary after PR 103 is merged, derived by hand. */
 const adaMerged = { name: 'Ada', authored: 3, merged: 3, reviews: 5, sentence: 'Ada authored 3 pull requests, 3 of which were merged, and submitted 5 reviews.' };
 
-/** A short lease, so a killed holder's lease expires before the next normal request. */
-const leaseMilliseconds = 300;
+/**
+ * The writer lease of every killed run and of the normal requests that follow
+ * a kill in this suite. It must be long enough that a killed run still holds
+ * an unexpired lease when it reaches its planned commit boundary: History
+ * fences each holder mutation against the stored expiry, so a lease that
+ * lapses first makes the worker fail with `StaleWriterError` instead of
+ * reaching the kill (the harness then reports a missed planned kill). Locally
+ * the killed run took 8-11 ms idle and 14-23 ms under full-core load from
+ * writer acquisition to the summary publication; two seconds is about two
+ * orders of magnitude above that, so ordinary scheduling delay on a slower
+ * machine does not exhaust it. It is headroom, not a guarantee: an arbitrarily
+ * long pause or a host clock jump can still expire it. The follow-up normal
+ * requests need the same headroom for their own writes. A killed holder is
+ * never waited out by elapsed time alone; see {@link outlastStoredLease}.
+ */
+const leaseMilliseconds = 2_000;
+
+/**
+ * How far past the stored expiry {@link outlastStoredLease} waits. History
+ * treats a lease as expired once its "now" reaches the expiry; the margin
+ * keeps the wait from ending on that exact millisecond.
+ */
+const expiryMarginMilliseconds = 50;
 
 beforeEach(() => {
   s = scenario();
@@ -52,9 +74,44 @@ afterEach(() => {
   s.remove();
 });
 
-/** Wait past the killed process's lease. */
-function outlastLease(): void {
-  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, leaseMilliseconds + 150);
+/** The durable writer lease as History records it, or undefined when no holder is recorded. */
+function storedLease(): IWriterLease | undefined {
+  return s.inspect((history) => history.currentWriter());
+}
+
+/**
+ * Block until History would treat the recorded (killed) holder's lease as
+ * expired, so that a later normal request can take the writer. History
+ * evaluates "now" as the larger of the host clock reading and its persisted
+ * time high-water, and a lease is expired once that "now" reaches the stored
+ * `expiresAt`; the parent and every worker read the same host clock, so once
+ * the parent's reading passes the stored expiry, any later History reading
+ * does too (barring a backward host clock step). The inspection only reads
+ * the writer row: it never acquires, renews or releases the lease.
+ *
+ * The wait is bounded: a stored expiry further ahead than this suite's lease
+ * allows, a missing holder, or a holder that changes while waiting is not the
+ * killed run's lease and fails with the stored holder, its expiry and the
+ * host time.
+ */
+function outlastStoredLease(): void {
+  const stored = storedLease();
+  if (stored === undefined) {
+    throw new Error(`no writer holder is recorded at host time ${String(Date.now())}; a killed run's lease was expected`);
+  }
+  const deadline = stored.expiresAt + expiryMarginMilliseconds;
+  const now = Date.now();
+  if (deadline - now > leaseMilliseconds + expiryMarginMilliseconds) {
+    throw new Error(`stored writer ${stored.holder}/${String(stored.fence)} expires at ${String(stored.expiresAt)}, ${String(stored.expiresAt - now)} ms after host time ${String(now)}: beyond this suite's ${String(leaseMilliseconds)} ms lease`);
+  }
+  const sleeper = new Int32Array(new SharedArrayBuffer(4));
+  for (let remaining = deadline - Date.now(); remaining > 0; remaining = deadline - Date.now()) {
+    Atomics.wait(sleeper, 0, 0, remaining);
+  }
+  const after = storedLease();
+  if (after?.holder !== stored.holder || after.fence !== stored.fence || after.expiresAt !== stored.expiresAt) {
+    throw new Error(`the stored writer changed while waiting for ${stored.holder}/${String(stored.fence)} to expire at ${String(stored.expiresAt)}: now ${JSON.stringify(after)} at host time ${String(Date.now())}`);
+  }
 }
 
 /** Durable state of Ada's summary after reopening: completed candidates, the latest pointer and the old exact result. */
@@ -84,12 +141,11 @@ function expectNoWriterActivity(recovery: IProcessRun): void {
   expect(touched).toEqual([]);
 }
 
-/** The durable writer row as History reports it, or undefined when no holder is recorded. */
-function writerRow(): unknown {
-  return s.inspect((history) => history.currentWriter());
-}
-
-/** Resolve Ada's summary under a saved key, killed at one boundary. */
+/**
+ * Resolve Ada's summary under a saved key, killed at one boundary. The harness
+ * already refuses a run whose planned kill was not reached, with the worker's
+ * own account of what happened instead; these checks restate the outcome.
+ */
 function killedAt(keys: string, fault: { readonly role: string; readonly occurrence: number; readonly when: 'before' | 'after' }): IProcessRun {
   const killed = s.run({ kind: 'resolve', member: 'person:ada' }, { keys, fault, leaseMilliseconds });
   expect(killed.signal).toBe('SIGKILL');
@@ -137,7 +193,7 @@ describe('publication-kill-boundaries (A-09) through a real summary invocation',
       expect(recovered.result?.['recovered']).toMatchObject({ kind: 'incomplete' });
       expect(recovered.count('summary') + recovered.count('check') + recovered.count('finality')).toBe(0);
       expectNoWriterActivity(recovered);
-      outlastLease();
+      outlastStoredLease();
       // Ada's committed source is now final, so the summary's own saved-key check is
       // what a normal request meets (the source is not re-executed under that key).
       s.writeWorld({ ...baseWorld(), pullRequests: baseWorld().pullRequests.map((pull) => (pull.number === 103 ? { ...pull, merged: true } : pull)) });
@@ -176,14 +232,15 @@ describe('publication-kill-boundaries (A-09) through a real summary invocation',
     const saved = s.saveKeys('publish-after-expiry');
     killedAt(saved.file, { role: 'publish', occurrence: 2, when: 'after' });
     const committed = adaSummaryState().current;
-    const writerBefore = writerRow();
+    const writerBefore = storedLease();
     expect(writerBefore).toMatchObject({ holder: expect.stringContaining('microdelta-run:') });
-    outlastLease();
+    outlastStoredLease();
+    expect(Date.now()).toBeGreaterThan(writerBefore?.expiresAt ?? Number.POSITIVE_INFINITY);
     const recovered = s.run({ kind: 'recover', member: 'person:ada' }, { keys: saved.file });
     expect(recovered.result?.['recovered']).toEqual({ kind: 'recovered', reference: committed });
     expect(recovered.count('summary') + recovered.count('check') + recovered.count('finality')).toBe(0);
     expectNoWriterActivity(recovered);
-    expect(writerRow()).toEqual(writerBefore);
+    expect(storedLease()).toEqual(writerBefore);
   });
 
   test('killed after the summary publication commits (lost acknowledgment): recovery returns the exact committed result with no author work or acceptance, wrong intent is rejected, and a fresh request applies current policy', () => {
@@ -200,7 +257,7 @@ describe('publication-kill-boundaries (A-09) through a real summary invocation',
     const acceptancesBefore = s.inspect((history) => history.readAcceptances({ kind: 'completed-result', locator: committed ?? '' }).length);
 
     // The killed process's writer row is still recorded; recovery must not touch it.
-    const writerBefore = writerRow();
+    const writerBefore = storedLease();
     expect(writerBefore).toMatchObject({ holder: expect.stringContaining('microdelta-run:') });
     // Recovery through the workspace's recover entry with the caller's saved key.
     const recovered = s.run({ kind: 'recover', member: 'person:ada' }, { keys: saved.file });
@@ -208,7 +265,7 @@ describe('publication-kill-boundaries (A-09) through a real summary invocation',
     expect(recovered.count('summary') + recovered.count('check') + recovered.count('finality')).toBe(0);
     expect(recovered.admissions).toEqual([]);
     expectNoWriterActivity(recovered);
-    expect(writerRow()).toEqual(writerBefore);
+    expect(storedLease()).toEqual(writerBefore);
     expect(s.inspect((history) => history.readAcceptances({ kind: 'completed-result', locator: committed ?? '' }).length)).toBe(acceptancesBefore);
     s.inspect((history) => {
       expect(history.reader.readSubtree({ kind: 'completed-result', locator: committed ?? '' }, [])).toEqual(adaMerged);
@@ -222,7 +279,7 @@ describe('publication-kill-boundaries (A-09) through a real summary invocation',
     // Recovery again is stable.
     expect(s.run({ kind: 'recover', member: 'person:ada' }, { keys: saved.file }).result?.['recovered']).toEqual({ kind: 'recovered', reference: committed });
 
-    outlastLease();
+    outlastStoredLease();
     // A subsequent fresh normal request performs current policy validation (the not-final check runs) and reuses the committed result.
     const fresh = s.run({ kind: 'resolve', member: 'person:ada' }, { keys: s.saveKeys('after-recovery').file, leaseMilliseconds });
     expect(fresh.count('finality', 'person:ada')).toBe(1);

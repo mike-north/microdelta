@@ -128,6 +128,8 @@ export interface IRunOptions {
   /** Kill the process at a History commit boundary. */
   readonly fault?: { readonly role: string; readonly occurrence: number; readonly when: 'before' | 'after' };
   readonly leaseMilliseconds?: number;
+  /** Make this member's summary body throw in this process. */
+  readonly failSummary?: IMemberKey;
   /** A different store file (wrong-store checks). */
   readonly location?: string;
   readonly logicalStore?: string;
@@ -181,6 +183,10 @@ export function scenario(): IScenario {
       };
       const env = { ...process.env };
       delete env['MICRODELTA_ACCEPTANCE_FAULT'];
+      delete env['MICRODELTA_ACCEPTANCE_FAIL_SUMMARY'];
+      if (options.failSummary !== undefined) {
+        env['MICRODELTA_ACCEPTANCE_FAIL_SUMMARY'] = options.failSummary;
+      }
       if (options.fault !== undefined) {
         env['MICRODELTA_ACCEPTANCE_FAULT'] = JSON.stringify(options.fault);
       }

@@ -188,6 +188,10 @@ function rejectActivity(previous: IPreviousResult<IActivity>, key: string): bool
  */
 function summarize(activity: IResultView<IActivity>, format: ITrackedView<IFormat>, key: string): ISummary {
   trace({ helper: 'summary', key });
+  // Author-body failure injection for the unsuccessful-attempt case; the parent sets it per process.
+  if (process.env['MICRODELTA_ACCEPTANCE_FAIL_SUMMARY'] === key) {
+    throw new Error(`injected summary failure for ${key}`);
+  }
   const authored = activity.pullRequests.length;
   let merged = 0;
   for (let index = 0; index < authored; index += 1) {

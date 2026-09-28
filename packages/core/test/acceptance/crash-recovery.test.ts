@@ -115,20 +115,35 @@ describe('publication-kill-boundaries (A-09) through a real summary invocation',
       expect(recovered.result?.['recovered']).toMatchObject({ kind: 'incomplete' });
       expect(recovered.count('summary') + recovered.count('check') + recovered.count('finality')).toBe(0);
       outlastLease();
+      // Ada's committed source is now final, so the summary's own saved-key check is
+      // what a normal request meets (the source is not re-executed under that key).
+      s.writeWorld({ ...baseWorld(), pullRequests: baseWorld().pullRequests.map((pull) => (pull.number === 103 ? { ...pull, merged: true } : pull)) });
       // A normal request with the same saved key is refused rather than resuming the incomplete work.
       const reused = s.run({ kind: 'resolve', member: 'person:ada' }, { keys: saved.file, leaseMilliseconds });
       expect(reused.error).toMatchObject({ code: 'invalid-request' });
       expect(reused.count('summary')).toBe(0);
-      // A fresh request performs current policy and publishes the new summary.
+      // A fresh request performs current policy (the current finality hook) and publishes the new summary.
       const fresh = s.run({ kind: 'resolve', member: 'person:ada' }, { keys: s.saveKeys('fresh').file, leaseMilliseconds });
       expect(outcomeOf(fresh)['kind']).toBe('published');
-      expect(fresh.count('check', 'person:ada')).toBe(1);
+      expect(fresh.count('finality', 'person:ada')).toBe(1);
+      expect(fresh.count('check', 'person:ada')).toBe(0);
       expect(fresh.count('summary', 'person:ada')).toBe(1);
       s.inspect((history) => {
         expect(history.reader.readSubtree({ kind: 'completed-result', locator: referenceOf(fresh) }, [])).toEqual(adaMerged);
       });
     });
   }
+
+  test('an unsuccessful summary attempt is reported as such by recovery and is never re-executed automatically', () => {
+    const saved = s.saveKeys('failed');
+    const failed = s.run({ kind: 'resolve', member: 'person:ada' }, { keys: saved.file, failSummary: 'person:ada' });
+    expect(failed.error).toMatchObject({ code: 'execution-failure' });
+    expect(failed.phases('person:ada', 'summary')).toEqual(['verify', 'admit', 'claim', 'execute', 'abandon']);
+    expect(adaSummaryState()).toMatchObject({ candidates: [referenceOf(cold, 'person:ada')], current: referenceOf(cold, 'person:ada') });
+    const recovered = s.run({ kind: 'recover', member: 'person:ada' }, { keys: saved.file });
+    expect(recovered.result?.['recovered']).toMatchObject({ kind: 'unsuccessful' });
+    expect(recovered.count('summary') + recovered.count('check') + recovered.count('finality')).toBe(0);
+  });
 
   test('killed after the summary publication commits (lost acknowledgment): recovery returns the exact committed result with no author work or acceptance, wrong intent is rejected, and a fresh request applies current policy', () => {
     const saved = s.saveKeys('publish-after');

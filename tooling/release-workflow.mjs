@@ -9,13 +9,47 @@
  * secret. Its only other permissions are read access used to re-establish,
  * after any wait, that its commit is still the latest release decision. The
  * package job may not suppress install scripts, because the artifact check
- * installs the native SQLite binding normally. The version job remains version-only and the triggers remain push to
- * main plus manual dispatch. Run as a CLI by `npm run check:release-workflow`.
+ * installs the native SQLite binding normally. The version job remains
+ * version-only and the triggers remain push to main plus manual dispatch.
+ * Run as a CLI by `npm run check:release`.
+ *
  * This is a line-oriented reader of the repository's own block-style YAML,
- * not a general YAML parser; unexpected layout fails the audit.
+ * not a general YAML parser, so it fixes the root layout it can reason about:
+ * exactly the keys `name`, `on`, `permissions` and `jobs`, once each and in that
+ * order, with `jobs` last. YAML allows root keys in any order, so a key after
+ * `jobs:` (for example a root `env` that redirects npm's registry) would
+ * otherwise be read as part of the last job and escape every root check.
+ * Anything else at column zero, other than comments and blank lines, fails.
  */
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+
+/** The only root-level keys, in their required order; `jobs` must be last. */
+const expectedRootKeys = ['name', 'on', 'permissions', 'jobs'];
+
+/**
+ * Diagnostics for column-zero content. Comments and blank lines are allowed
+ * anywhere; every other root line must be a plain `key:` from
+ * `expectedRootKeys`, and the keys must appear exactly once each, in order.
+ */
+function rootLayoutProblems(text) {
+  const problems = [];
+  const keys = [];
+  for (const line of text.split('\n')) {
+    if (line === '' || /^\s/u.test(line) || line.startsWith('#')) continue;
+    const key = /^([A-Za-z][A-Za-z0-9_-]*):(?:\s.*)?$/u.exec(line)?.[1];
+    if (key === undefined) {
+      problems.push(`unsupported root-level content: ${JSON.stringify(line)}`);
+    } else {
+      if (!expectedRootKeys.includes(key)) problems.push(`root-level key ${key} is not allowed in the trusted release workflow`);
+      keys.push(key);
+    }
+  }
+  if (keys.join(',') !== expectedRootKeys.join(',')) {
+    problems.push(`root-level keys must be exactly ${expectedRootKeys.join(', ')} in that order (found ${keys.join(', ')})`);
+  }
+  return problems;
+}
 
 /** Required jobs, in their checked-in order. */
 const expectedJobs = ['version', 'release-decision', 'package', 'publish'];
@@ -58,7 +92,7 @@ function actionsUsed(job) {
 
 /** Diagnostics for a release workflow's text; empty means acceptable. */
 export function auditReleaseWorkflow(text) {
-  const problems = [];
+  const problems = rootLayoutProblems(text);
   const preamble = text.slice(0, Math.max(0, text.search(/^jobs:\n/mu)));
   if (!/^permissions: \{\}$/mu.test(preamble) || /^permissions:\n/mu.test(preamble)) {
     problems.push('workflow-level permissions must be empty (permissions: {}); grant permissions per job');
@@ -66,6 +100,9 @@ export function auditReleaseWorkflow(text) {
   const triggers = /^on:\n(?: {2,}.*\n)*/mu.exec(preamble)?.[0];
   if (triggers !== expectedTriggers) problems.push('release workflow triggers must be exactly push to main and workflow_dispatch');
   if (/secrets\.|NPM_TOKEN|NODE_AUTH_TOKEN|_authToken/iu.test(text)) problems.push('release workflow must not reference secrets or npm tokens');
+  // npm reads any npm_config_* variable as configuration (registry, userconfig,
+  // scripts); none may be set around jobs that install from or publish to npm.
+  if (/\bnpm_config_/iu.test(text)) problems.push('release workflow must not override npm configuration through the environment');
 
   const jobs = workflowJobs(text);
   if (Object.keys(jobs).join(',') !== expectedJobs.join(',')) {

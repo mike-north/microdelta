@@ -100,3 +100,31 @@ test('publication must receive only read access for release revalidation', () =>
 test('the package job cannot suppress the native install check', () => {
   refuses(once(workflow, 'node tooling/release-artifacts.mjs --release --out', 'npm_config_ignore_scripts=true node tooling/release-artifacts.mjs --release --out'), /package job must not suppress install scripts/u);
 });
+
+// PR #65 review thread 4119112805: YAML root keys may follow `jobs:`. A valid
+// root `env` appended there changes npm's registry for the OIDC-capable job,
+// yet the audit used to read it as part of the last job and pass.
+test('a valid root env appended after jobs is refused', () => {
+  refuses(`${workflow}env:\n  NPM_CONFIG_REGISTRY: https://example.invalid\n`, /root-level key env is not allowed/u);
+});
+
+test('root permissions appended after jobs are refused', () => {
+  refuses(`${workflow}permissions: write-all\n`, /root-level keys must be exactly name, on, permissions, jobs in that order/u);
+});
+
+test('an unaudited root key before jobs is refused', () => {
+  refuses(once(workflow, 'permissions: {}\n', 'permissions: {}\ndefaults:\n  run:\n    shell: bash\n'), /root-level key defaults is not allowed/u);
+});
+
+test('any other unindented content after jobs is refused', () => {
+  refuses(`${workflow}---\nname: second document\n`, /unsupported root-level content/u);
+  refuses(`${workflow}"env": {}\n`, /unsupported root-level content/u);
+});
+
+test('root comments and blank lines after jobs remain allowed', () => {
+  assert.deepEqual(auditReleaseWorkflow(`${workflow}\n# Trailing maintainer note.\n\n`), []);
+});
+
+test('npm configuration environment overrides are refused anywhere in the workflow', () => {
+  refuses(workflow.replace(/(^ {10}GITHUB_TOKEN: \$\{\{ github\.token \}\}\n)(?![\s\S]*^ {10}GITHUB_TOKEN)/mu, '$1          NPM_CONFIG_REGISTRY: https://example.invalid\n'), /must not override npm configuration through the environment/u);
+});

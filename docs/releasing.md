@@ -146,7 +146,10 @@ publishing, pinned to each other's exact versions, and published from this
 repository (`repository.url` and `repository.directory`). The workspace root
 stays private. `npm run check:release` runs this structural check and the
 [`release.yml` audit](../tooling/release-workflow.mjs) on every CI run, so a
-change that would break a later release fails in its own PR.
+change that would break a later release fails in its own PR. The audit also fixes
+the workflow root to `name`, `on`, `permissions` and `jobs`, in that order, and
+refuses `npm_config_*` environment overrides, so no root key added after `jobs:`
+can change what the audited jobs do.
 
 ### Partial and repeated publication
 

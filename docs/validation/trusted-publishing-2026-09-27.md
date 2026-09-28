@@ -208,6 +208,19 @@ outside the repository in `/private/tmp/microdelta-issue64/repair-*.txt`.
    against a scripts-suppressed install. Scope is that path only, on the
    runner's platform and Node version; alpha declarations are not promoted.
 
+5. **Root keys after `jobs:` escaped the workflow audit** (Copilot review of
+   `d536d51`, thread 4119112805; supervisor probe). YAML allows root keys in
+   any order. A valid root `env` appended after `jobs:`, which would set
+   `NPM_CONFIG_REGISTRY` for every job including publish, was read as part of
+   the last job and produced no diagnostics. *RED:* 5 new tests in
+   `tooling/release-workflow.test.mjs` failed, the appended `env` returning an
+   empty diagnostic list. *GREEN:* the audit requires exactly the root keys
+   `name`, `on`, `permissions` and `jobs` in that order, refuses any other
+   column-zero content except comments and blank lines, and refuses
+   `npm_config_*` environment overrides anywhere (21/21 workflow tests; root
+   comments after `jobs:` remain accepted). The probe re-run against this code
+   refuses both the appended root `env` and an appended root `permissions`.
+
 ## Commands and results
 
 Final results for the pushed head are recorded in the pull request.

@@ -177,8 +177,10 @@ reference. This order also applies when resolving a source beneath a cached
 consumer. A single top-level resolution may reuse its in-memory verification
 outcome for the same direct invocation to avoid repeating hook evaluation within
 that resolution. Durable acceptance records remain separate historical evidence;
-neither form grants permission to skip current policy on a later resolution. The [M3 plan](../plans/m3-contribution-analysis.md) records the bounded
-authoring path and required hook/body-count assertions.
+neither form grants permission to skip current policy on a later resolution.
+
+The [M3 plan](../plans/m3-contribution-analysis.md) records the bounded authoring
+path and required hook/body-count assertions.
 
 Do not store a finality flag, state, callback answer, or equivalent assertion
 used to skip the current hook. Ordinary diagnostic records may describe a past

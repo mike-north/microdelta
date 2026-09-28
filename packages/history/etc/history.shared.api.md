@@ -4,6 +4,16 @@
 
 ```ts
 
+// @alpha
+export class AttemptConflictError extends Error {
+    constructor(message: string);
+}
+
+// @alpha
+export class AttemptStateError extends Error {
+    constructor(message: string);
+}
+
 // Warning: (ae-forgotten-export) The symbol "ISnapshotCapability" needs to be exported by the entry point api-surface.d.ts
 //
 // @public
@@ -86,6 +96,44 @@ export interface GenerationRow {
 export type GenerationState = 'claimed' | 'current' | 'superseded' | 'abandoned';
 
 // @alpha
+export class HistoryClockError extends Error {
+    constructor(message: string);
+}
+
+// @alpha
+export class HistoryIntegrityError extends Error {
+    constructor(message: string);
+}
+
+// @alpha
+export class HistorySchemaError extends Error {
+    constructor(message: string);
+}
+
+// @alpha
+export interface IAbandonRequest {
+    readonly attemptId: number;
+    readonly evidence: IVersionedRecord;
+    readonly outcome: 'failed' | 'interrupted';
+}
+
+// @alpha
+export interface IAcceptanceRecord {
+    readonly acceptanceId: number;
+    readonly dependencies: readonly ICompletedResultReference[];
+    readonly evidence: IVersionedRecord;
+    readonly fence: number;
+    readonly reference: ICompletedResultReference;
+}
+
+// @alpha
+export interface IAcceptanceRequest {
+    readonly dependencies: readonly ICompletedResultReference[];
+    readonly evidence: IVersionedRecord;
+    readonly reference: ICompletedResultReference;
+}
+
+// @alpha
 export type IAddressSegment =
 /** A literal string-keyed record lookup, including keys containing punctuation. */
     {
@@ -97,6 +145,40 @@ export type IAddressSegment =
     readonly kind: 'index';
     readonly index: number;
 };
+
+// @alpha
+export interface IAttemptRecord extends IAttemptRequest {
+    readonly allocatedFence: number;
+    readonly attemptId: number;
+    readonly endedFence: number | null;
+    readonly outcome: IVersionedRecord | null;
+    readonly result: ICompletedResultReference | null;
+    readonly state: IAttemptState;
+}
+
+// @alpha
+export interface IAttemptRequest extends IVersionedSubject {
+    readonly attemptKey: string;
+    readonly intentDigest: string;
+}
+
+// @alpha
+export type IAttemptState = 'allocated' | 'staged' | 'completed' | 'failed' | 'interrupted';
+
+// @alpha
+export interface IClockCapability {
+    currentEpochMilliseconds(): number;
+}
+
+// @alpha
+export interface ICompletedEnvelope extends IVersionedSubject {
+    readonly attemptId: number;
+    readonly dependencies: readonly ICompletedResultReference[];
+    readonly encoding: 'MDS1';
+    readonly provenance: IVersionedRecord;
+    readonly publication: number;
+    readonly reference: ICompletedResultReference;
+}
 
 // @alpha
 export interface ICompletedNavigationReader {
@@ -140,6 +222,44 @@ export type Identity = {
     source: Identity;
 };
 
+// @alpha
+export interface IDurableHistory {
+    abandonAttempt(lease: IWriterLease, request: IAbandonRequest): IAttemptRecord;
+    acquireWriter(request: IWriterAcquisitionRequest): IWriterAcquisition;
+    allocateAttempt(lease: IWriterLease, request: IAttemptRequest): IAttemptRecord;
+    close(): void;
+    currentWriter(): IWriterLease | undefined;
+    findCandidates(subject: IVersionedSubject): readonly ICompletedEnvelope[];
+    readonly logicalStore: string;
+    publishAttempt(lease: IWriterLease, attemptId: number): ICompletedResultReference;
+    readAcceptances(reference: ICompletedResultReference): readonly IAcceptanceRecord[];
+    readCurrent(subject: IScopedSubject): ICompletedResultReference | undefined;
+    readEnvelope(reference: ICompletedResultReference): ICompletedEnvelope;
+    readonly reader: ICompletedResultReader & ICompletedNavigationReader;
+    recordAcceptance(lease: IWriterLease, request: IAcceptanceRequest): IAcceptanceRecord;
+    recoverAttempt(request: IAttemptRequest): IRecoveryOutcome;
+    releaseWriter(lease: IWriterLease): void;
+    renewWriter(lease: IWriterLease, leaseMilliseconds: number): IWriterLease;
+    stageAttempt(lease: IWriterLease, request: IStageRequest): IAttemptRecord;
+    verifyResult(reference: ICompletedResultReference): IResultVerification;
+}
+
+// @alpha
+export interface IDurableHistoryOptions {
+    readonly clock: IClockCapability;
+    readonly location: string;
+    readonly logicalStore: string;
+    // Warning: (ae-forgotten-export) The symbol "ISha256Capability" needs to be exported by the entry point api-surface.d.ts
+    readonly sha256: ISha256Capability;
+    readonly sqlite: ISqliteCapability;
+}
+
+// @alpha
+export interface IHistoryScope {
+    readonly analysis: string;
+    readonly environment: string;
+}
+
 // @public
 export class InvalidStorePatchError extends Error {
     constructor(message?: string);
@@ -147,6 +267,34 @@ export class InvalidStorePatchError extends Error {
 
 // @alpha
 export type IOperation = 'value' | 'own' | 'membership' | 'length' | 'keys';
+
+// @alpha
+export type IRecoveryOutcome = {
+    readonly kind: 'absent';
+} | {
+    readonly kind: 'incomplete';
+    readonly attempt: IAttemptRecord;
+} | {
+    readonly kind: 'unsuccessful';
+    readonly attempt: IAttemptRecord;
+} | {
+    readonly kind: 'completed';
+    readonly attempt: IAttemptRecord;
+    readonly reference: ICompletedResultReference;
+};
+
+// @alpha
+export type IResultVerification = {
+    readonly kind: 'consistent';
+} | {
+    readonly kind: 'inconsistent';
+    readonly detail: string;
+};
+
+// @alpha
+export interface IScopedSubject extends IHistoryScope {
+    readonly subject: string;
+}
 
 // @alpha
 export interface ISelectedFact {
@@ -209,6 +357,20 @@ export interface ISelectedReadRequest {
 }
 
 // @alpha
+export interface ISqliteCapability {
+    // Warning: (ae-forgotten-export) The symbol "ISqliteConnection" needs to be exported by the entry point api-surface.d.ts
+    openSqlite(location: string): ISqliteConnection;
+}
+
+// @alpha
+export interface IStageRequest {
+    readonly attemptId: number;
+    readonly dependencies: readonly ICompletedResultReference[];
+    readonly payload: unknown;
+    readonly provenance: IVersionedRecord;
+}
+
+// @alpha
 export interface IValueProjectionDescriptor {
     readonly address: readonly IAddressSegment[];
     readonly operation: 'value';
@@ -234,6 +396,41 @@ export type IValueProjectionTraversal = {
     readonly keys: readonly string[];
 };
 
+// @alpha
+export interface IVersionedRecord {
+    readonly content: unknown;
+    readonly format: string;
+    readonly formatVersion: number;
+}
+
+// @alpha
+export interface IVersionedSubject extends IScopedSubject {
+    readonly version: number;
+}
+
+// @alpha
+export type IWriterAcquisition = {
+    readonly kind: 'acquired';
+    readonly lease: IWriterLease;
+} | {
+    readonly kind: 'held';
+    readonly holder: string;
+    readonly expiresAt: number;
+};
+
+// @alpha
+export interface IWriterAcquisitionRequest {
+    readonly holder: string;
+    readonly leaseMilliseconds: number;
+}
+
+// @alpha
+export interface IWriterLease {
+    readonly expiresAt: number;
+    readonly fence: number;
+    readonly holder: string;
+}
+
 // @public
 export interface MemoryStoreOptions {
     fingerprintAlgorithm?: string;
@@ -245,6 +442,9 @@ export interface MemoryStoreOptions {
 export class MissingRowError extends Error {
     constructor(message?: string);
 }
+
+// @alpha
+export function openDurableHistory(options: IDurableHistoryOptions): IDurableHistory;
 
 // @public
 export type Outcome = {
@@ -301,6 +501,11 @@ export type ResultKey = {
     revision: number;
     subjectHash: string;
 };
+
+// @alpha
+export class StaleWriterError extends Error {
+    constructor(message: string);
+}
 
 // @public
 export interface Store {

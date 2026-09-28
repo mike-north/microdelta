@@ -1,7 +1,9 @@
 /**
- * Existing row Store, memory adapter, and compatibility schema belong to
- * Result History. This entry exposes row-storage contracts and does not define
- * publication transitions or candidate-validity policy.
+ * Result History & Publication. This entry exposes the existing row Store,
+ * its memory adapter and compatibility schema unchanged, the exact
+ * completed-result reading ports, and the project-private alpha durable
+ * authority that owns attempts, the single logical writer, atomic publication
+ * and acceptance records. It never decides candidate validity or freshness.
  * @packageDocumentation
  */
 export {
@@ -40,6 +42,37 @@ export type {
   IValueProjectionMember,
   IValueProjectionTraversal,
 } from '@microdelta/value';
+export {
+  AttemptConflictError,
+  AttemptStateError,
+  HistoryClockError,
+  HistoryIntegrityError,
+  HistorySchemaError,
+  StaleWriterError,
+} from './durable/errors.js';
+export { openDurableHistory } from './durable/index.js';
+export type {
+  IAbandonRequest,
+  IAcceptanceRecord,
+  IAcceptanceRequest,
+  IAttemptRecord,
+  IAttemptRequest,
+  IAttemptState,
+  ICompletedEnvelope,
+  IDurableHistory,
+  IDurableHistoryOptions,
+  IHistoryScope,
+  IRecoveryOutcome,
+  IResultVerification,
+  IScopedSubject,
+  IStageRequest,
+  IVersionedRecord,
+  IVersionedSubject,
+  IWriterAcquisition,
+  IWriterAcquisitionRequest,
+  IWriterLease,
+} from './durable/contracts.js';
+export type { IClockCapability, ISqliteCapability } from '@microdelta/machine';
 export type {
   Divergence,
   Fingerprint,

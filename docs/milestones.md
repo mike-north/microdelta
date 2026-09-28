@@ -103,6 +103,12 @@ The [contribution-analysis plan](plans/m3-contribution-analysis.md) defines the
 selected two-contributor authoring slice, contract decisions and dependency queue.
 It is a delivery plan, not evidence of completed M3 implementation.
 
+**Progress (2026-09-28).** The component and assembly issues #52–#57 are
+accepted. The independent-process acceptance harness (#58) and its evidence are
+in the [M3 acceptance record](validation/m3-acceptance-2026-09-28.md). M3 is not
+complete until the supervisor's final decision in
+[#50](https://github.com/mike-north/microdelta/issues/50).
+
 Implement the real authoring path over the chosen durable backend: nonmemoized
 configuration/helper input plus a minimal declared retained source→memoized
 consumer path, exact result references, current source acceptance through the

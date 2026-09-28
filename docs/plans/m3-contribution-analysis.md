@@ -1,8 +1,10 @@
 # M3: durable repository contribution analysis
 
 Status: M3 implementation plan for [issue #51](https://github.com/mike-north/microdelta/issues/51),
-grounded in the confirmed user example on 2026-09-27. M2 is accepted; M3 has no
-implementation acceptance yet. This plan applies the active specification and
+grounded in the confirmed user example on 2026-09-27. M2 is accepted. The M3
+component and assembly issues (#52–#57) are accepted; the independent-process
+acceptance evidence (#58) is in the [M3 acceptance record](../validation/m3-acceptance-2026-09-28.md),
+and M3 as a whole is not yet accepted. This plan applies the active specification and
 does not replace it. [Issue #50](https://github.com/mike-north/microdelta/issues/50)
 is the final M3 acceptance gate. Implementation readiness is governed by acceptance of this plan and each
 prerequisite issue; the dependency table records that sequence.
@@ -184,8 +186,12 @@ no single stored finality bit stands in for those variants.
 | Run Supervision | Scoped run/environment, ordinary invocation lifetime, admission and observer positions | No context argument through every author helper; no bypass of Resolution or History; M5 retry/cancellation breadth remains deferred |
 | Facade assembly | Compose owner implementations into the actual workspace authoring path | No seventh domain authority; no fixture-only alternate cache API |
 
-New M3 cross-package surfaces start intentionally project-private `@alpha` while
-packages remain private. Existing public Store exports/signatures remain unchanged.
+New M3 cross-package surfaces are intentionally project-private `@alpha`
+declarations. That declaration tier is separate from package publishability:
+workspace packages carry public publish metadata, and only user-authorized
+`0.0.0` namespace-bootstrap placeholders without runtime code have been
+published; no M3 implementation release exists. Existing public Store
+exports/signatures remain unchanged.
 The runnable example must clearly use the real workspace authoring surface through
 its generated alpha declaration consumer; it must not advertise an unpublished npm
 installation or a stable public API. Publication/release-tier promotion is separate.

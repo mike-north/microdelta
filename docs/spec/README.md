@@ -1,11 +1,15 @@
 # microdelta specification — start here
 
-**Status as of 2026-09-27: consolidated design baseline; M0.5 accepted;
+**Status as of 2026-09-28: consolidated design baseline; M0.5 accepted;
 M1 bounded experiment decisions are recorded; final acceptance follows the
 [M1 evidence record](../validation/m1-2026-09-26.md). M2 bounded tracking and
 package components are implemented; their [evidence record](../validation/m2-2026-09-27.md)
 and [acceptance issue](https://github.com/mike-north/microdelta/issues/32) record delivery and verification.
-The complete durable runtime remains unimplemented.**
+M3's bounded durable components and assembled workspace path are delivered, and an
+independent-process acceptance harness records their evidence in the
+[M3 acceptance record](../validation/m3-acceptance-2026-09-28.md); M3 acceptance
+itself remains the supervisor's [#50](https://github.com/mike-north/microdelta/issues/50)
+decision. General composition, concurrency and scale remain unimplemented.**
 This specification describes the full target; the current checkout implements
 only the capabilities listed below.
 
@@ -117,9 +121,11 @@ records each owner's current scope and missing roles.
 Generated declaration tiers, API reports, package edges, and the supported typed
 capture boundary are checked by executable tooling. They do not establish
 arbitrary JavaScript closure soundness. The workspace path reuses retained
-results for the fixed two-contributor M3 shape across ordinary process restarts;
-independent-process kill-point and lost-acknowledgment acceptance, general
-fanout, and scale proof are not yet established.
+results for the fixed two-contributor M3 shape across complete process exits;
+independent processes exercise its current-evidence, source-policy, integrity,
+admission, selected-read, kill-boundary and lost-acknowledgment cases in the
+[M3 acceptance record](../validation/m3-acceptance-2026-09-28.md). General fanout
+and scale proof are not established.
 
 The [M2 evidence record](../validation/m2-2026-09-27.md) maps these bounded
 capabilities to current-head reviews, integrated checks, component merges, and

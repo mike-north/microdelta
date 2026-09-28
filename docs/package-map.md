@@ -52,8 +52,11 @@ only the Store API. Its assembly suites (`packages/core/test/workspace`) run
 over the real owners, and the checked-in
 [contribution report example](../examples/contribution-report/README.md)
 compiles against the installed workspace's generated alpha declarations and
-runs through the same path. Independent-process kill-point and
-lost-acknowledgment acceptance remain later M3 work.
+runs through the same path. The M3 independent-process acceptance harness
+(`packages/core/test/acceptance`) runs each step as a separate process over the
+built facade and the real SQLite store, including kill boundaries and
+lost-acknowledgment recovery; see the
+[M3 acceptance record](validation/m3-acceptance-2026-09-28.md).
 
 The Tracking observer is bounded M2 owner functionality: it stores no binding
 catalog or History rows and does not decide source freshness or reusable results.

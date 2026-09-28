@@ -55,11 +55,12 @@ workspace alpha path and the production SQLite History backend:
 | A-03 current finality and checks | *an accepting current hook runs once per member in every new process…*; *a false current answer enters the check…*; *an absent finality hook enters the current check in every new process*; *a changed current finality hook is what runs…*; *a changed source implementation is not excused by an accepting hook…* (`source-policy`) |
 | A-03/A-10 retain vs fresh equal | *an explicit retention keeps the exact source reference…*; *fresh equal data twice yields two distinct exact source references…* (`source-policy`) |
 | A-10 exact references | *a superseded summary stays exactly readable beside its successor*; *a missing reference, a reference from another store and a wrong-scope reference fail without retargeting or recomputation*; *an author mutating the eligible previous result changes no stored data* (`integrity-io`) |
-| Selected IO, metadata-only validation | *cold summary bodies read only the consumed scalar leaves…* (7 leaves, 0 root payloads); *eligible restart validation is metadata-only…* (only the two hooks' own `profile.id` leaves); *a consumed change reads only the re-executed summary's consumed leaves…* (6) (`integrity-io`) |
+| Fingerprint-only validation | *fingerprint-only validation: with accepting hooks that never read the previous result, restart validation reads zero payload*: current hooks run once each, no check or body, exact summaries and their exact accepted sources retained, **zero root, scalar and staged payload cells** and no leaf/subtree payload statement in the validation window, with stored-fingerprint statements present (`integrity-io`) |
+| Selected policy reads and nested reads (kept separately) | *cold summary bodies read only the consumed scalar leaves…* (7 leaves, 0 root payloads); *eligible restart validation is metadata-only: no source payload beyond the finality hooks' own selected reads* (the two hooks' `profile.id` leaves); *a consumed change reads only the re-executed summary's consumed leaves…* (6) (`integrity-io`) |
 | Basic A-19 | *eligible hits are served before a denying policy is ever consulted*; *a refused cold miss leaves no attempt, body, source work or result, and strands no writer*; *source work required to validate a cached summary obeys its own admission*; *check-only reports the source boundary and starts no work, admission or write*; *a pre-execution observer failure stops only that call and leaves no attempt*; *a post-commit observer failure is a diagnostic beside the committed result…* (`admission-observers`) |
 | A-09 kill boundaries (real summary invocation) | killed before the writer acquisition commits; before the summary allocation commits; after it commits; before and after the summary staging commits; immediately before the publication commits; after it commits (`crash-recovery`) |
-| Recovery after lost acknowledgment | *killed after the summary publication commits (lost acknowledgment)…*: recovery through `workspace.run(…).recover` with the caller-saved key returns the exact committed result, runs no body, check or finality hook, presents no admission, writes no acceptance, and works while the killed holder's lease is unexpired; a changed formatter under the same key is rejected `wrong-intent`; recovery is repeatable; a later fresh normal request runs the current finality hook and not-final check and reuses the committed result (`crash-recovery`) |
-| Absent / incomplete / unsuccessful | absent after pre-commit kills of acquisition and allocation; `incomplete` after the allocation, staging and pre-publication kills, where the same saved key is refused `invalid-request` rather than resumed and a fresh request executes under current policy; *an unsuccessful summary attempt is reported as such by recovery and is never re-executed automatically* (`crash-recovery`) |
+| Recovery after lost acknowledgment | *killed after the summary publication commits (lost acknowledgment)…*: recovery through `workspace.run(…).recover` with the caller-saved key returns the exact committed result, runs no body, check or finality hook, presents no admission and writes no acceptance; its measured window executes no writer or mutation statement at the real SQLite boundary and the killed holder's durable writer row is unchanged; a changed formatter under the same key is rejected `wrong-intent`; recovery is repeatable; a later fresh normal request runs the current finality hook and not-final check and reuses the committed result. *after the killed holder's lease has certainly expired, lost-acknowledgment recovery still performs no writer activity* proves the same independently of lease timing (`crash-recovery`) |
+| Absent / incomplete / unsuccessful | every recovery window in these cases also executes no writer or mutation statement; absent after pre-commit kills of acquisition and allocation; `incomplete` after the allocation, staging and pre-publication kills, where the same saved key is refused `invalid-request` rather than resumed and a fresh request executes under current policy; *an unsuccessful summary attempt is reported as such by recovery and is never re-executed automatically* (`crash-recovery`) |
 
 Each kill test asserts the process ended by SIGKILL with no result, the author
 work done before the kill (from the trace), the durable state on reopen, and
@@ -108,35 +109,75 @@ logs `first-*.log` in the work record).
 plants one wrong behavior at a time into Resolution, History and Supervision
 emitted builds, which the worker processes load through the built facade. It
 reruns the six acceptance suites, judges each run fail-closed with the shared
-judge, and restores the bytes. Final run at `2b51b39`: **PASS, 12 of 12
-rejected**; baseline and restored 38/38.
+judge, and restores the bytes. Run at `2b51b39`: PASS, 12 of 12, baseline and
+restored 38/38. Final run at `358e942` after the review repair: **PASS, 13 of
+13 rejected**; baseline and restored 40/40. The counts below are the final run.
 
 | Planted defect | Acceptance tests failing |
 | --- | --- |
 | A source candidate skips its own implementation/input validation | 1 |
-| An eligible source never consults its current finality hook | 15 |
-| A false current finality answer retains | 21 |
-| Consumed child output facts are not compared | 13 |
+| An eligible source never consults its current finality hook | 16 |
+| A false current finality answer retains | 22 |
+| Consumed child output facts are not compared | 14 |
 | Candidate lookup ignores the compatibility version | 1 |
 | Check-only proceeds to source work | 1 |
 | A memo admission refusal is ignored | 1 |
 | A normal request resumes a key whose execution is incomplete | 4 |
 | The recovery intent ignores the current declaration | 1 |
 | An incomplete attempt is reported as absent | 4 |
+| Fingerprint validation also materializes the source result payload | 3 |
 | A selected scalar read also loads the whole root payload | 3 |
-| Recovery takes the writer lease | 6 |
+| Recovery takes the writer lease | 9 |
+
+## Review repair (2026-09-28): two evidence gaps
+
+Root and independent review of `b3f871f` found two proof gaps; no runtime
+defect was observed.
+
+1. **Fingerprint-only validation was not isolated.** The restart IO test
+   allowed two scalar payload cells, which came from the finality hooks' own
+   `previous.data.profile.id` reads. Aggregate counts therefore did not prove
+   zero-payload fingerprint validation.
+   - A new variation declares accepting hooks that decide from current inputs
+     and the external world only. The new test requires zero root, scalar and
+     staged payload cells, with fingerprint statements present.
+   - The existing policy-read test is kept separately.
+   - Against current behavior the new test passed on first run, which is
+     preservation, not RED.
+   - Discrimination: a new planted defect makes `resolveFingerprint` also read
+     the result's root payload. It fails the new test (`root: 11` instead of 0;
+     log `repair-fingerprint-control.log`) and two existing IO tests. Bytes were
+     restored.
+2. **Recovery's writer independence was asserted by timing, not measured.** The
+   record claimed recovery ran while the killed 300 ms lease was unexpired, but
+   nothing asserted that. A slow host could let the planted lease-taking defect
+   acquire an expired lease and pass.
+   - Every recovery window now asserts no `writer`, `allocate`, `stage`,
+     `publish`, `accept` or `abandon` statement at the real SQLite capability
+     boundary. Lost-acknowledgment recovery also asserts the durable writer row
+     is unchanged.
+   - A separate test recovers *after* the killed lease has certainly expired.
+     These passed on first run (preservation).
+   - Under the planted defect, the after-expiry test's recovery succeeds, and it
+     is rejected solely by the measured `writer` statement (log
+     `repair-recovery-control.log`). That is timing-independent discrimination.
+     The defect now fails 9 tests, up from 6.
+   - The unverified "unexpired lease" claim is removed.
+
+The declaration-tier repair at `2b51b39` is unchanged; the facade tsd
+public-tier negatives still pass.
 
 ## Final gates
 
-Run sequentially by the implementer at `2b51b39` (Node v24.14.0, macOS);
-the later commit adds only this record.
+Run sequentially by the implementer at `358e942` (Node v24.14.0, macOS),
+after the review repair; the later commit changes only this record.
 
 | Command | Result |
 | --- | --- |
 | `npm run build` | exit 0 |
 | `npm run check` | exit 0 |
-| `npm test` | exit 0. Tooling 291/291 (including the pack, isolated-install and typecheck artifact test). Facade Jest 186/186: durable History 44, Resolution 73, workspace 31, acceptance 38. Facade tsd and controls judge pass. All other workspace suites and the example pass |
-| Acceptance negative controls | PASS 12/12; baseline and restored 38/38 |
+| `npm test` | exit 0. Tooling 291/291 (including the pack, isolated-install and typecheck artifact test). Facade Jest 188/188: durable History 44, Resolution 73, workspace 31, acceptance 40. Facade tsd and controls judge pass. All other workspace suites and the example pass |
+| Acceptance negative controls | PASS 13/13; baseline and restored 40/40 |
 
 ## Status reconciliation
 
@@ -158,7 +199,10 @@ code were published, and no M3 implementation release exists.
   order. The traces and durable state assert which work had run. Exactly-once
   external work before a commit is not claimed.
 - **Short leases in tests.** Kill tests use a 300 ms writer lease and wait past
-  it before a normal request; recovery is shown while the lease is still held.
+  it before a normal request. Whether that lease is still unexpired when a
+  recovery process starts is not asserted and not relied on: recovery's writer
+  independence is proved by the measured absence of writer statements and the
+  unchanged writer row, including after certain expiry.
 - **Read evidence.** Read evidence counts payload cells returned by production
   statements in the worker; it is not a memory or scale measurement (M7).
 - **Failure injection.** A summary body failure is injected by environment

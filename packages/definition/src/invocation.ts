@@ -20,7 +20,7 @@ import type { IBindingDescriptor } from './descriptor.js';
 import type { IAuthorInvoker, IDeclarationRecords, IPreviousSupplier, ISourceDeclaration } from './declaration.js';
 import { reject } from './declaration.js';
 import type { IComposition, ICompositionState } from './composition.js';
-import { descriptorKey, isComposing } from './composition.js';
+import { descriptorKey, isComposing, ownedDescriptor } from './composition.js';
 import { DefinitionError } from './errors.js';
 import type { IApply, IBindingFamily } from './family.js';
 
@@ -164,13 +164,14 @@ export function openInvocationIn<TFamily extends IBindingFamily>(
     reject('composition-phase', 'Invocations cannot be opened while composing.');
   }
   const state = compositions.get(composition) ?? reject('forged-composition', 'This family did not mint the composition.');
-  const occupants = state.registrations.get(descriptorKey(parent)) ?? [];
+  // Read the caller's descriptor only as own data, so opening never runs author code.
+  const frozenParent = ownedDescriptor(parent);
+  const occupants = state.registrations.get(descriptorKey(frozenParent)) ?? [];
   const [only] = occupants;
   const record = occupants.length === 1 ? only?.record : undefined;
   if (record === undefined) {
     reject('unresolved-parent', 'An invocation requires exactly one bound step.');
   }
-  const frozenParent: IBindingDescriptor = Object.freeze({ ...parent });
   let open = true;
   /** Apply is permitted only inside a live scope and never while composing. */
   const assertApplicable = (): void => {

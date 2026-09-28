@@ -291,7 +291,8 @@ export function composeIn<TFamily extends IBindingFamily>(
     const frozenRegistrations: ReadonlyMap<string, readonly IRegistration<TFamily>[]> = new Map(
       [...registrations].map(([key, occupants]) => [key, Object.freeze(occupants)]),
     );
-    const resolve = (descriptor: IBindingDescriptor): IBindingResolution<TFamily> => {
+    const resolve = (supplied: IBindingDescriptor): IBindingResolution<TFamily> => {
+      const descriptor = ownedDescriptor(supplied);
       const occupants = frozenRegistrations.get(descriptorKey(descriptor)) ?? [];
       const [only] = occupants;
       if (only === undefined) {
@@ -383,37 +384,67 @@ const WITNESS_VERSION = 1;
 function parseWitness(witness: unknown):
   | { readonly status: 'parsed'; readonly parent: IBindingDescriptor; readonly child: IBindingDescriptor }
   | { readonly status: 'unsupported'; readonly reason: 'malformed' | 'witness-version' | 'argument-form' } {
-  if (typeof witness !== 'object' || witness === null || !('parent' in witness) || !('child' in witness)) {
-    return { status: 'unsupported', reason: 'malformed' };
-  }
-  const parent = copyDescriptor(witness.parent);
-  const child = copyDescriptor(witness.child);
+  const parent = copyDescriptor(ownData(witness, 'parent'));
+  const child = copyDescriptor(ownData(witness, 'child'));
   if (parent === undefined || child === undefined) {
     return { status: 'unsupported', reason: 'malformed' };
   }
-  if (!('version' in witness) || witness.version !== WITNESS_VERSION) {
+  if (ownData(witness, 'version') !== WITNESS_VERSION) {
     return { status: 'unsupported', reason: 'witness-version' };
   }
-  const argumentsForm = 'arguments' in witness ? witness.arguments : undefined;
+  const argumentsForm = ownData(witness, 'arguments');
   if (typeof argumentsForm !== 'object' || argumentsForm === null ||
-      Object.keys(argumentsForm).length !== 1 || !('form' in argumentsForm) || argumentsForm.form !== 'empty') {
+      Reflect.ownKeys(argumentsForm).length !== 1 || ownData(argumentsForm, 'form') !== 'empty') {
     return { status: 'unsupported', reason: 'argument-form' };
   }
   return { status: 'parsed', parent, child };
 }
 
-/** Copy untrusted durable data into a frozen descriptor, or report it malformed. */
-function copyDescriptor(value: unknown): IBindingDescriptor | undefined {
-  if (typeof value !== 'object' || value === null ||
-      !('scope' in value) || typeof value.scope !== 'string' ||
-      !('role' in value) || (value.role !== 'input' && value.role !== 'callable' && value.role !== 'step') ||
-      !('slot' in value) || typeof value.slot !== 'string') {
+/**
+ * Read one own data property of untrusted input through its descriptor, so an
+ * accessor or an inherited property never runs author code. Returns undefined
+ * for a non-object, an absent own property or an accessor.
+ */
+function ownData(value: unknown, key: string): unknown {
+  if (typeof value !== 'object' || value === null) {
     return undefined;
   }
-  if ('memberKey' in value && value.memberKey !== undefined) {
-    return typeof value.memberKey === 'string'
-      ? Object.freeze({ scope: value.scope, role: value.role, slot: value.slot, memberKey: value.memberKey })
-      : undefined;
+  const descriptor = Object.getOwnPropertyDescriptor(value, key);
+  return descriptor !== undefined && 'value' in descriptor ? descriptor.value : undefined;
+}
+
+/**
+ * Copy untrusted descriptor data into a frozen descriptor, or report it
+ * malformed. Fields are read only as own data properties.
+ */
+function copyDescriptor(value: unknown): IBindingDescriptor | undefined {
+  if (typeof value !== 'object' || value === null) {
+    return undefined;
   }
-  return Object.freeze({ scope: value.scope, role: value.role, slot: value.slot });
+  for (const key of ['scope', 'role', 'slot', 'memberKey']) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (descriptor !== undefined && !('value' in descriptor)) {
+      return undefined;
+    }
+  }
+  const scope = ownData(value, 'scope');
+  const role = ownData(value, 'role');
+  const slot = ownData(value, 'slot');
+  const memberKey = ownData(value, 'memberKey');
+  if (typeof scope !== 'string' || (role !== 'input' && role !== 'callable' && role !== 'step') || typeof slot !== 'string') {
+    return undefined;
+  }
+  if (memberKey === undefined) {
+    return Object.freeze({ scope, role, slot });
+  }
+  return typeof memberKey === 'string' ? Object.freeze({ scope, role, slot, memberKey }) : undefined;
+}
+
+/**
+ * Copy a caller-supplied descriptor used for lookup or invocation into a frozen
+ * framework-owned descriptor, reading only own data properties, so lookups never
+ * run author code. A malformed or accessor-bearing descriptor is rejected.
+ */
+export function ownedDescriptor(value: unknown): IBindingDescriptor {
+  return copyDescriptor(value) ?? reject('invalid-descriptor', 'A binding descriptor must hold scope, role, slot and optional memberKey as own data properties.');
 }

@@ -382,6 +382,33 @@ describe('invocation bridge', () => {
     expect(pairs[0]?.context).toEqual({ config: 'current', previous: undefined });
   });
 
+  test('descriptors: accessor-bearing descriptors reject without running getters on every lookup path', () => {
+    // Regression (Copilot on 7f1d2dc, "Sanitize parent descriptor"): opening an
+    // invocation read and spread the caller's descriptor, invoking its getters.
+    const fake = fakePort();
+    const { composition } = buildFixture();
+    const getter = jest.fn((): string => fixtureScope);
+    const withGetter = Object.defineProperty(
+      { role: 'step', slot: 'summary', memberKey: 'person:ada' },
+      'scope',
+      { get: getter, enumerable: true },
+    );
+    expectDefinitionError(() => Reflect.apply(openInvocation, undefined, [composition, withGetter, fake.port]), 'invalid-descriptor');
+    expectDefinitionError(() => Reflect.apply(composition.resolve, composition, [withGetter]), 'invalid-descriptor');
+    const witnessGetter = jest.fn((): unknown => withGetter);
+    const witness = Object.defineProperty(
+      { version: 1, child: stepDescriptor('person:ada', 'activity'), arguments: { form: 'empty' } },
+      'parent',
+      { get: witnessGetter, enumerable: true },
+    );
+    expect(composition.resolveWitness(witness)).toEqual({ status: 'unsupported', reason: 'malformed' });
+    expect(composition.resolveWitness({ version: 1, parent: withGetter, child: stepDescriptor('person:ada', 'activity'), arguments: { form: 'empty' } }))
+      .toEqual({ status: 'unsupported', reason: 'malformed' });
+    expect(getter).not.toHaveBeenCalled();
+    expect(witnessGetter).not.toHaveBeenCalled();
+    expect(fake.requests).toHaveLength(0);
+  });
+
   test('bridge: prototype-looking child slot names mint own declared handles', async () => {
     // Regression (independent review of 9500a4b): assigning `__proto__` into an
     // ordinary calls object hit the inherited setter, so a valid slot failed at apply.

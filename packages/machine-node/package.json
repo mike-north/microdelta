@@ -1,6 +1,6 @@
 {
   "name": "@microdelta/machine-node",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Node implementation of microdelta host capabilities",
   "license": "UNLICENSED",
   "repository": {
@@ -37,7 +37,7 @@
     "directory": "test-d"
   },
   "dependencies": {
-    "@microdelta/machine": "0.0.0",
+    "@microdelta/machine": "0.1.0",
     "better-sqlite3": "12.9.0"
   },
   "publishConfig": {

@@ -1,6 +1,6 @@
 {
   "name": "@microdelta/value",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Portable canonical value and structured address semantics",
   "license": "UNLICENSED",
   "repository": {
@@ -37,7 +37,7 @@
     "directory": "test-d"
   },
   "dependencies": {
-    "@microdelta/machine": "0.0.0"
+    "@microdelta/machine": "0.1.0"
   },
   "publishConfig": {
     "access": "public"

@@ -26,13 +26,14 @@ import type {
   IVersionedRecord,
   IWriterLease,
 } from '@microdelta/history';
-import { encodeSelectedFact, encodeSnapshot, fingerprint, observe } from '@microdelta/value';
+import { encodeSelectedFact, encodeSnapshot, fingerprint, navigate, observe } from '@microdelta/value';
 import type { IAddressSegment } from '@microdelta/value';
 
 import {
   InjectedFault,
   adaActivity,
   cleanup,
+  domainRecord,
   controlledClock,
   freshLocation,
   logicalStore,
@@ -563,16 +564,97 @@ describe('exact selected reading from the generated index', () => {
   });
 });
 
+describe('valid-domain parity of the indexed reader', () => {
+  /** Addresses covering present, absent, inherited, shadowed, hole, present-undefined and invalid selections. */
+  const addresses: readonly (readonly IAddressSegment[])[] = [
+    [],
+    ...['ordered', 'sparse', 'present', 'child', 'bare', 'record', 'list', 'numbers', 'nothing', 'then', 'missing', 'toString'].map((key) => path(key)),
+    ...['own', 'inherited', 'shadowed', 'depth', 'box', 'missing', 'constructor'].map((key) => path('child', key)),
+    path('child', 'box', 'label'), path('child', 'box', 'missing'),
+    path('bare', 'only'), path('bare', 'toString'), path('bare', 'missing'),
+    path('record', '0'), path('record', 0), path('record', 'a.b'),
+    path('numbers', 'notANumber'), path('numbers', 'negativeZero'), path('numbers', 'infinity'),
+    path('missing', 'deep'), path('nothing', 'deep'), path('list', '0'), path('list', 0), path('list', 1),
+    ...[0, 1, 2, 3, 4].map((index) => path('sparse', index)),
+    ...[0, 1, 2, 3].map((index) => path('present', index)),
+  ];
+
+  test('every selection over the accepted Value edge domain equals the in-memory Value answer after reopen, without root payload reads', () => {
+    const sqlite = observedSqlite();
+    const location = freshLocation();
+    const writer = openHistory({ location });
+    const data = domainRecord();
+    const reference = publish(writer, acquire(writer), domainRecord(), { key: 'edges' });
+    writer.close();
+    const history = openHistory({ location, sqlite: sqlite.capability });
+    expect(history.verifyResult(reference)).toEqual({ kind: 'consistent' });
+    const start = sqlite.mark();
+    let compared = 0;
+    for (const address of addresses) {
+      for (const operation of ['value', 'own', 'membership', 'length', 'keys'] as const) {
+        const request = { operation, address };
+        let expected: ReturnType<typeof observe> | undefined;
+        try {
+          expected = observe(data, address, operation);
+        } catch (error: unknown) {
+          expect(error).toBeInstanceOf(TypeError);
+        }
+        if (expected === undefined) {
+          expect(() => history.reader.readSelected(reference, request)).toThrow(TypeError);
+          expect(history.reader.resolveFingerprint(reference, { kind: 'selected', ...request, encoding: 'MDO1' })).toEqual({ kind: 'incompatible' });
+        } else {
+          expect(encodeSelectedFact(history.reader.readSelected(reference, request))).toBe(encodeSelectedFact(expected));
+          expect(history.reader.resolveFingerprint(reference, { kind: 'selected', ...request, encoding: 'MDO1' }))
+            .toEqual({ kind: 'compatible', fingerprint: fingerprint(encodeSelectedFact(expected), machine) });
+        }
+        compared += 2;
+      }
+      let node: ReturnType<typeof navigate> | undefined;
+      try {
+        node = navigate(data, address);
+      } catch (error: unknown) {
+        expect(error).toBeInstanceOf(TypeError);
+      }
+      if (node === undefined) {
+        expect(() => history.reader.readNode(reference, address)).toThrow(TypeError);
+      } else {
+        expect(history.reader.readNode(reference, address)).toEqual(node);
+      }
+      compared += 1;
+    }
+    expect(compared).toBe(addresses.length * 11);
+    expect(sqlite.evidence(start).rootPayloadCells).toBe(0);
+    for (const address of [[], path('child'), path('child', 'box'), path('sparse'), path('present'), path('bare'), path('ordered')]) {
+      const expected = address.length === 0 ? data : observe(data, address, 'value').fact;
+      expect(encodeSnapshot(history.reader.readSubtree(reference, address))).toBe(encodeSnapshot(expected));
+      expect(history.reader.resolveFingerprint(reference, { kind: 'materialized-output', address, encoding: 'MDS1' }))
+        .toEqual({ kind: 'compatible', fingerprint: fingerprint(encodeSnapshot(expected), machine) });
+    }
+  });
+});
+
 describe('meaningful corruption is detected, never repaired', () => {
   /** Publish a source and a dependent summary, then return both references and the file. */
-  function publishedPair(): { readonly location: string; readonly history: IDurableHistory; readonly source: ICompletedResultReference; readonly summary: ICompletedResultReference } {
+  function publishedPair(): { readonly location: string; readonly history: IDurableHistory; readonly lease: IWriterLease; readonly source: ICompletedResultReference; readonly summary: ICompletedResultReference } {
     const location = freshLocation();
     const history = openHistory({ location });
     const lease = acquire(history);
     const source = publish(history, lease, adaActivity(), { key: 'source', request: { subject: 'activity:ada' } });
     const summary = publish(history, lease, { authored: 3 }, { key: 'summary', dependencies: [source] });
-    return { location, history, source, summary };
+    return { location, history, lease, source, summary };
   }
+
+  /** Close a published pair, corrupt it, and reopen it through a fresh handle. */
+  function corruptAndReopen(pair: { readonly location: string; readonly history: IDurableHistory }, sql: string, unchecked = false): IDurableHistory {
+    pair.history.close();
+    (unchecked ? tamperUnchecked : tamper)(pair.location, sql);
+    return openHistory({ location: pair.location });
+  }
+
+  /** SQL removing one completed result and its index while keeping its completed attempt row. */
+  const removeResult = (resultId: number): string => [
+    'history_addresses', 'history_edges', 'history_nodes', 'history_current', 'history_results',
+  ].map((table) => `DELETE FROM ${table} WHERE result_id = ${String(resultId)}`).join('; ');
 
   test('a tampered scalar leaf fails its indexed digest on read and in verification', () => {
     const { location, history, source } = publishedPair();
@@ -608,8 +690,78 @@ describe('meaningful corruption is detected, never repaired', () => {
 
   test('recovery never reports a completed attempt whose exact result no longer resolves', () => {
     const { location, history } = publishedPair();
-    tamper(location, 'DELETE FROM history_addresses WHERE result_id = 2; DELETE FROM history_edges WHERE result_id = 2; DELETE FROM history_nodes WHERE result_id = 2; DELETE FROM history_current WHERE result_id = 2; DELETE FROM history_results WHERE result_id = 2');
+    tamper(location, removeResult(2));
     expect(() => history.recoverAttempt(attempt('summary'))).toThrow(HistoryIntegrityError);
+  });
+
+  test('completed retry paths never acknowledge a missing result after reopen; corruption is not turned into a miss', () => {
+    const pair = publishedPair();
+    const reopened = corruptAndReopen(pair, removeResult(2));
+    // The lost-acknowledgment retry routes: re-allocating the same key and re-publishing the same attempt.
+    expect(() => reopened.allocateAttempt(pair.lease, attempt('summary'))).toThrow(HistoryIntegrityError);
+    expect(() => reopened.publishAttempt(pair.lease, 2)).toThrow(HistoryIntegrityError);
+    expect(() => reopened.recoverAttempt(attempt('summary'))).toThrow(HistoryIntegrityError);
+    // The attempt is still recorded as completed; nothing was downgraded to incomplete or absent.
+    const raw = openRaw(pair.location);
+    expect(raw.prepare('SELECT state FROM history_attempts WHERE attempt_id = 2').get()).toEqual({ state: 'completed' });
+    raw.close();
+    // Positive control: the healthy completed source still acknowledges by its key.
+    expect(reopened.allocateAttempt(pair.lease, attempt('source', { subject: 'activity:ada' })).result).toEqual(pair.source);
+    expect(reopened.publishAttempt(pair.lease, 1)).toEqual(pair.source);
+  });
+
+  test('candidate, current and dependency metadata reject a result whose producing attempt is not completed or whose encoding is unsupported', () => {
+    const regressed = publishedPair();
+    // A valid allocated row shape, so only the completion contract is violated.
+    const reopened = corruptAndReopen(regressed, "UPDATE history_attempts SET state = 'allocated', ended_fence = NULL WHERE attempt_id = 1");
+    expect(() => reopened.findCandidates({ ...scope, subject: 'activity:ada', version: 1 })).toThrow(HistoryIntegrityError);
+    expect(() => reopened.readCurrent({ ...scope, subject: 'activity:ada' })).toThrow(HistoryIntegrityError);
+    expect(() => reopened.readEnvelope(regressed.summary)).toThrow(HistoryIntegrityError);
+    expect(() => reopened.findCandidates({ ...scope, subject: summarySubject, version: 1 })).toThrow(HistoryIntegrityError);
+    expect(() => reopened.readEnvelope(regressed.source)).toThrow(HistoryIntegrityError);
+    // The attempt row now contradicts its published result; recovery and retry must not present it as incomplete work.
+    expect(() => reopened.recoverAttempt(attempt('source', { subject: 'activity:ada' }))).toThrow(HistoryIntegrityError);
+    expect(() => reopened.allocateAttempt(regressed.lease, attempt('source', { subject: 'activity:ada' }))).toThrow(HistoryIntegrityError);
+
+    const reencoded = publishedPair();
+    const other = corruptAndReopen(reencoded, "UPDATE history_results SET encoding = 'MDS9' WHERE result_id = 1");
+    expect(() => other.readCurrent({ ...scope, subject: 'activity:ada' })).toThrow(HistoryIntegrityError);
+    expect(() => other.findCandidates({ ...scope, subject: 'activity:ada', version: 1 })).toThrow(HistoryIntegrityError);
+    expect(() => other.findCandidates({ ...scope, subject: summarySubject, version: 1 })).toThrow(HistoryIntegrityError);
+    expect(() => other.readEnvelope(reencoded.summary)).toThrow(HistoryIntegrityError);
+  });
+
+  test('a missing index address or node for a present member is an integrity failure, never an absent-member fact', () => {
+    const name = path('profile', 'name');
+    const selections = (history: IDurableHistory, reference: ICompletedResultReference, address: readonly IAddressSegment[]): readonly (() => unknown)[] => [
+      () => history.reader.readNode(reference, address),
+      ...(['value', 'own', 'membership'] as const).map((operation) => () => history.reader.readSelected(reference, { operation, address })),
+      ...(['value', 'own', 'membership'] as const).map((operation) => () => history.reader.resolveFingerprint(reference, { kind: 'selected', operation, address, encoding: 'MDO1' })),
+      () => history.reader.resolveFingerprint(reference, { kind: 'materialized-output', address, encoding: 'MDS1' }),
+    ];
+
+    const addressless = publishedPair();
+    const withoutAddress = corruptAndReopen(addressless, `DELETE FROM history_addresses WHERE result_id = 1 AND address = '[["p","profile"],["p","name"]]'`);
+    for (const read of selections(withoutAddress, addressless.source, name)) {
+      expect(read).toThrow(HistoryIntegrityError);
+    }
+    // A genuinely absent sibling of the same record still answers from metadata.
+    expect(withoutAddress.reader.readSelected(addressless.source, { operation: 'membership', address: path('profile', 'nickname') }).fact).toBe(false);
+
+    const nodeless = publishedPair();
+    const withoutNode = corruptAndReopen(nodeless, `DELETE FROM history_nodes WHERE result_id = 1 AND node_id = (SELECT node_id FROM history_addresses WHERE result_id = 1 AND address = '[["p","profile"],["p","name"]]')`);
+    for (const read of selections(withoutNode, nodeless.source, name)) {
+      expect(read).toThrow(HistoryIntegrityError);
+    }
+
+    const elementless = publishedPair();
+    const withoutElement = corruptAndReopen(elementless, `DELETE FROM history_addresses WHERE result_id = 1 AND address = '[["p","pullRequests"],["i",1]]'`);
+    for (const read of selections(withoutElement, elementless.source, path('pullRequests', 1))) {
+      expect(read).toThrow(HistoryIntegrityError);
+    }
+    // A present element's surviving descendant evidence and an index past the end are unaffected.
+    expect(withoutElement.reader.readSelected(elementless.source, { operation: 'value', address: path('pullRequests', 1, 'merged') }).fact).toBe(true);
+    expect(withoutElement.reader.readSelected(elementless.source, { operation: 'own', address: path('pullRequests', 7) }).fact).toBe(false);
   });
 
   test('a dangling or wrong-scope dependency and malformed provenance are integrity failures on the dependent envelope', () => {

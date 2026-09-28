@@ -305,3 +305,37 @@ export function adaActivity(overrides: { readonly name?: string; readonly merged
     note: 'x'.repeat(100_000),
   };
 }
+
+/**
+ * The accepted nested-read gate's Value edge-domain record (issue #54): key
+ * order, sparse holes versus present undefined, two custom prototype levels
+ * with shadowing, a null-prototype record, Property "0" versus Index 0, a
+ * dotted key, NaN, negative zero, infinity, null and a `then` data field.
+ * Copied because assembly tests may not import experiment code.
+ */
+export function domainRecord(): unknown {
+  const grandparent = { depth: 'grandparent', shadowed: 'grandparent value' };
+  const parent = Object.create(grandparent) as { inherited: string; shadowed: string; box: { readonly label: string } };
+  parent.inherited = 'from prototype';
+  parent.shadowed = 'parent value';
+  parent.box = { label: 'inherited box' };
+  const child = Object.create(parent) as { own: string };
+  child.own = 'own value';
+  const bare = Object.create(null) as { only: string };
+  bare.only = 'null prototype';
+  const sparse: unknown[] = new Array<unknown>(4);
+  sparse[0] = 'first';
+  sparse[3] = 'last';
+  return {
+    ordered: { zeta: 1, alpha: 2, mid: 3 },
+    sparse,
+    present: ['first', undefined, 'third'],
+    child,
+    bare,
+    record: { '0': 'property zero', 'a.b': 'dotted key' },
+    list: ['index zero'],
+    numbers: { notANumber: Number.NaN, negativeZero: -0, infinity: Number.POSITIVE_INFINITY },
+    nothing: null,
+    then: 'legitimate author field',
+  };
+}

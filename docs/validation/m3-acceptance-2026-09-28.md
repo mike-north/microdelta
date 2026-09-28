@@ -167,16 +167,43 @@ defect was observed.
 The declaration-tier repair at `2b51b39` is unchanged; the facade tsd
 public-tier negatives still pass.
 
+## Control-runner path repair (2026-09-28)
+
+Copilot's review of `faf79d5` noted that the acceptance control runner derived
+the repository root from a URL `pathname`, which keeps spaces and `%`
+percent-encoded. The supervisor reproduced the failure from a checkout at
+`/private/tmp/microdelta control path %`: the runner exited 1 with `ENOENT` on
+the encoded path before any control ran. This was a tooling defect, not M3
+runtime scope.
+
+- **Tests first** (`0a71c6a`). The root derivation moved unchanged into
+  `controls/paths.mjs`, and a `node:test` regression (`paths.test.mjs`, now in
+  the facade's `test:controls`, so `npm test` runs it) **failed**. The resolved
+  target was `/private/tmp/microdelta%20control%20path%20%25/...`. At the same
+  commit, the real runner started from an archived checkout at
+  `/private/tmp/md58 control path %` also failed with `ENOENT` on the encoded
+  path. That checkout symlinked the worktree's `node_modules`, package `dist`
+  directories and facade test build (log `red-control-path-e2e.log`).
+- **Fix** (`6eefdfc`). `repositoryRoot` uses `fileURLToPath`. The regression
+  passes (2/2).
+- **Checked from the encoded checkout.** The fixed `paths.mjs` was placed in
+  that checkout and the runner started from it: **PASS, 13 of 13**, baseline
+  and restored 40/40, with the byte comparison reporting every planted file
+  restored (log `green-control-path-e2e.log`). The temporary checkout was then
+  removed.
+- Other existing runners were not changed.
+
 ## Final gates
 
-Run sequentially by the implementer at `358e942` (Node v24.14.0, macOS),
-after the review repair; the later commit changes only this record.
+Run sequentially by the implementer at `6eefdfc` (Node v24.14.0, macOS),
+after the control-runner path repair; the later commit changes only this
+record.
 
 | Command | Result |
 | --- | --- |
 | `npm run build` | exit 0 |
 | `npm run check` | exit 0 |
-| `npm test` | exit 0. Tooling 291/291 (including the pack, isolated-install and typecheck artifact test). Facade Jest 188/188: durable History 44, Resolution 73, workspace 31, acceptance 40. Facade tsd and controls judge pass. All other workspace suites and the example pass |
+| `npm test` | exit 0. Tooling 291/291 (including the pack, isolated-install and typecheck artifact test). Facade Jest 188/188: durable History 44, Resolution 73, workspace 31, acceptance 40. Facade tsd, controls judge and control-runner path regression pass. All other workspace suites and the example pass |
 | Acceptance negative controls | PASS 13/13; baseline and restored 40/40 |
 
 ## Status reconciliation

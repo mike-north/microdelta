@@ -6,7 +6,7 @@ component and assembly issues (#52–#57) and the independent-process acceptance
 issue (#58, [M3 acceptance record](../validation/m3-acceptance-2026-09-28.md))
 are accepted; the [M3 evidence record](../validation/m3-2026-09-28.md) maps
 them to the milestone exit. This plan applies the active specification and
-does not replace it; its body remains the historical delivery plan.
+does not replace it; its body retains the accepted M3 contracts and delivery sequence.
 [Issue #50](https://github.com/mike-north/microdelta/issues/50) records the
 final M3 milestone decision and the documentation delivery result. Implementation readiness is governed by acceptance of this plan and each
 prerequisite issue; the dependency table records that sequence.

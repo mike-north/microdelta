@@ -128,7 +128,7 @@ function createConnection(driver: Database.Database): ISqliteConnection {
             throw new TypeError('SQLite transaction callbacks must be synchronous; a Promise result was rolled back');
           }
           if (isThenable(result)) {
-            throw new TypeError('SQLite transaction callbacks must be synchronous; a thenable result was rolled back');
+            throw new TypeError('SQLite transaction callbacks must be synchronous; a thenable result, or one whose then cannot be inspected, was rolled back');
           }
           return result;
         }).immediate());
@@ -253,13 +253,24 @@ function isUint8Array(value: unknown): value is Uint8Array {
 
 /**
  * Recognize a non-native result the transaction boundary must refuse as
- * asynchronous. Native Promises are recognized earlier by their internal slot,
- * so a Promise whose own `then` is shadowed or throws is never judged here.
- * Reading `then` may run a foreign getter; the function itself is never called.
+ * asynchronous: an object or function with a callable `then`, or one whose
+ * `then` cannot be inspected because reading it throws. The inspection error
+ * is not propagated; the caller refuses the result with its own `TypeError`.
+ * Native Promises are recognized earlier by their internal slot, so a Promise
+ * whose own `then` is shadowed or throws is never judged here. Reading `then`
+ * may run a foreign getter; the function itself is never called.
  */
 function isThenable(value: unknown): boolean {
-  return (typeof value === 'object' || typeof value === 'function') && value !== null
-    && typeof Reflect.get(value, 'then') === 'function';
+  if ((typeof value !== 'object' && typeof value !== 'function') || value === null) {
+    return false;
+  }
+  let then: unknown;
+  try {
+    then = Reflect.get(value, 'then');
+  } catch {
+    return true;
+  }
+  return typeof then === 'function';
 }
 
 /**

@@ -455,6 +455,49 @@ export function describeSqliteCapabilityConformance(hostName: string, createCapa
         expect(values(connection)).toEqual([]);
       });
 
+      test('a returned object or function whose then cannot be inspected is refused with TypeError, not the inspection error', () => {
+        const { connection } = openEntries();
+        const insert = connection.prepare('INSERT INTO entries (value) VALUES (?)');
+        const sentinel = new RangeError('getter sentinel');
+        /** A `then` accessor whose inspection fails with the sentinel. */
+        const throwingThen: PropertyDescriptor = { get(): never { throw sentinel; } };
+        const uninspectable: readonly (() => unknown)[] = [
+          () => Object.defineProperty({ value: 1 }, 'then', throwingThen),
+          () => Object.defineProperty((): number => 1, 'then', throwingThen),
+        ];
+
+        for (const create of uninspectable) {
+          let thrown: unknown;
+          try {
+            transactionUnchecked(connection, () => {
+              insert.run('before-uninspectable-result');
+              return create();
+            });
+          } catch (error: unknown) {
+            thrown = error;
+          }
+          expect(thrown).not.toBe(sentinel);
+          expect(typeof thrown === 'object' && thrown !== null && 'name' in thrown ? thrown.name : thrown).toBe('TypeError');
+          expect(values(connection)).toEqual([]);
+        }
+
+        // A callback that throws directly still surfaces its exact thrown value.
+        let direct: unknown;
+        try {
+          connection.transaction(() => {
+            insert.run('before-direct-throw');
+            throw sentinel;
+          });
+        } catch (error: unknown) {
+          direct = error;
+        }
+        expect(direct).toBe(sentinel);
+        expect(values(connection)).toEqual([]);
+
+        expect(connection.transaction(() => insert.run('usable'))).toEqual({ changes: 1 });
+        expect(values(connection)).toEqual(['usable']);
+      });
+
       test('work scheduled by a committed callback cannot write after the transaction ended', async () => {
         const { connection } = openEntries();
         const insert = connection.prepare('INSERT INTO entries (value) VALUES (?)');

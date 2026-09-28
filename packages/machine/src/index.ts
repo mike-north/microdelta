@@ -156,8 +156,10 @@ export interface ISqliteConnection {
 
   /**
    * Run `operation` inside one IMMEDIATE transaction and return its result.
-   * A thrown value rolls back every write and is rethrown unchanged. A Promise
-   * or thenable result rolls back and fails with `TypeError`. A call made
+   * A value thrown by `operation` rolls back every write and is rethrown
+   * unchanged. A Promise or thenable result, or a returned object or function
+   * whose `then` cannot be inspected, rolls back and fails with `TypeError`;
+   * an error raised while inspecting that `then` is not rethrown. A call made
    * while this connection's transaction callback is running fails without
    * invoking `operation`.
    */

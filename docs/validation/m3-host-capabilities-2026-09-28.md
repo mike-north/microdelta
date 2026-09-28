@@ -68,9 +68,10 @@ journaling also blocks a competing commit.
 
 Independent review and actual emitted-adapter probes confirmed two contract
 bypasses in the first production snapshot; pull-request review found a third
-in the portable type guard. The runtime regressions were written and observed
-failing before repair (3 failed, 45 passed of 48), then passed (48 of 48).
-The separate type regression evidence is recorded below.
+in the portable type guard and a fourth at the returned-result inspection
+boundary. The first two runtime regressions were written and observed failing
+before repair (3 failed, 45 passed of 48), then passed (48 of 48). The type
+regression and fourth runtime regression evidence is recorded below.
 
 1. **Non-finite row output.** `SELECT 1e999 AS value` returned
    `{ value: Infinity }`, although rows carry only finite numbers. New
@@ -107,6 +108,21 @@ The separate type regression evidence is recorded below.
    the original probe fails with TS2345 against the regenerated alpha
    declaration. Runtime checks are unchanged.
 
+4. **Returned result whose `then` cannot be inspected.** A callback wrote a
+   row and returned a plain object whose `then` getter threw a `RangeError`
+   sentinel. The transaction rolled back, but the caller received the getter's
+   sentinel instead of the boundary's refusal. The selected contract keeps
+   errors thrown by the callback itself exactly, while a returned object or
+   function whose `then` cannot be inspected is refused as an invalid
+   asynchronous-result boundary with `TypeError`. The new regression returns
+   such an object and such a function. Each must fail with `TypeError`, not
+   the sentinel, and roll back. A control confirms a callback that throws the
+   same sentinel directly still surfaces it unchanged, and that the connection
+   stays usable afterwards. Before the repair: 1 failed, 48 passed of 49 (the
+   sentinel was received). The adapter now treats a throwing `then` inspection
+   as a refused result without rethrowing the inspection error: 49 of 49 pass.
+   Native Promise detection and rejection containment are unchanged.
+
 ## Implementation
 
 - Open refuses `''` and `:memory:`, applies each setting and reads it back; any
@@ -133,7 +149,7 @@ The separate type regression evidence is recorded below.
 | `npm ci` | Passed (611 packages; existing allow-scripts warnings for unrelated packages) |
 | `npm install --package-lock-only --ignore-scripts --no-audit --no-fund` | Lockfile adds `better-sqlite3` to machine-node and drops `dev` flags from its dependency subtree only |
 | `npm run check` | Passed |
-| `npm test` | Passed: tooling 154/154; machine-node 46/46 before the review repairs, 48/48 after; all workspace, tsd and experiment suites |
+| `npm test` | Passed: tooling 154/154; machine-node 46/46 before the review repairs, 48/48 after the first two, 49/49 after the fourth; all workspace, tsd and experiment suites |
 | `npm run build` | Passed, including API Extractor reports for both Machine packages |
 
 ## Limitations
@@ -144,7 +160,9 @@ The separate type regression evidence is recorded below.
   it does not stop other effects of leftover JavaScript, or work started through
   mechanisms that do not propagate async context.
 - Detecting a non-native thenable reads its `then` property, which may run a
-  getter; the function itself is never called. Containing a native Promise
+  getter; the function itself is never called. If the read throws, the result
+  is refused with `TypeError` and the getter's error is discarded. Other side
+  effects of that getter are not prevented. Containing a native Promise
   reads its `constructor` for species resolution. If that lookup throws, the
   Promise is still refused and rolled back, but its later rejection is not
   contained.

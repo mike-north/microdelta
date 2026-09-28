@@ -15,6 +15,24 @@ const nodeGlobals = new Set([
   'console', 'exports', 'global', 'module', 'process', 'require', 'setImmediate', 'setInterval', 'setTimeout',
 ]);
 
+/**
+ * Native host drivers bound only by the Node Machine implementation. Unlike
+ * Node built-ins, tests elsewhere get no exception: they reach the driver
+ * through the portable capability that implementation provides.
+ */
+const nodeAdapterOnlyPackages = ['better-sqlite3'];
+
+/** A driver package or any of its subpaths. */
+function isNodeAdapterOnlyPackage(specifier) {
+  return nodeAdapterOnlyPackages.some(name => specifier === name || specifier.startsWith(`${name}/`));
+}
+
+/** Production source of the Node Machine implementation, the one owner of native drivers. */
+function isNodeAdapterSource(filename, packageRoot, role) {
+  const relative = path.relative(packageRoot, filename).split(path.sep);
+  return role === 'machine-node' && relative[0] === 'src' && relative[1] === 'node' && !isTestFile(filename, packageRoot);
+}
+
 /** Tests may exercise host behavior, while production Node access has one owner subtree. */
 function hasNodeRuntimeException(filename, packageRoot, role) {
   const relative = path.relative(packageRoot, filename).split(path.sep);
@@ -56,6 +74,7 @@ function location(filename) {
       label: segments[experimentIndex + 1],
       isTestFile: false,
       nodeRuntimeException: false,
+      nodeAdapterSource: false,
     };
   }
   const packageIndex = segments.lastIndexOf('packages');
@@ -69,6 +88,7 @@ function location(filename) {
       label: directory,
       isTestFile: isTestFile(filename, root),
       nodeRuntimeException: hasNodeRuntimeException(filename, root, role),
+      nodeAdapterSource: isNodeAdapterSource(filename, root, role),
     };
   }
   const fixtureIndex = segments.lastIndexOf('context-roles');
@@ -106,6 +126,10 @@ export const contextImports = {
       }
       if (isNodeBuiltin(specifier) && !owner.nodeRuntimeException) {
         reportNodeAccess(node, `Node built-in ${specifier}`);
+        return;
+      }
+      if (isNodeAdapterOnlyPackage(specifier) && !owner.nodeAdapterSource) {
+        reportNodeAccess(node, `native driver ${specifier}, which only the Node Machine implementation may import`);
         return;
       }
       if (specifier.startsWith('.')) {

@@ -421,8 +421,9 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
 
   /**
    * Every path that reports an attempt's durable outcome to a caller
-   * (re-allocation of an existing key, re-publication, recovery) first checks
-   * it against stored results. A completed attempt's exact result must
+   * (re-allocation of an existing key, re-publication, recovery), and every
+   * lifecycle transition (stage, publish, abandon) before it changes anything,
+   * first checks the attempt against stored results. A completed attempt's exact result must
    * resolve; an attempt recorded as not completed must have no result row.
    * Either contradiction is an integrity failure, never a success and never
    * presented as incomplete work that a caller might resume.
@@ -559,7 +560,7 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
       const provenance = storeRecord(request.provenance, 'provenance');
       const references = [...request.dependencies];
       return asHolder(lease, () => {
-        const attempt = attemptOf(requireAttemptRow(attemptId));
+        const attempt = verifiedAttempt(attemptOf(requireAttemptRow(attemptId)));
         if (attempt.state !== 'allocated') {
           throw new AttemptStateError(`Attempt ${String(attemptId)} cannot be staged from state ${attempt.state}`);
         }
@@ -576,13 +577,13 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
       const attemptId = requirePositive(presentedId, 'attemptId');
       return asHolder(lease, () => {
         const row = requireAttemptRow(attemptId);
-        const attempt = attemptOf(row);
+        const attempt = verifiedAttempt(attemptOf(row));
         if (attempt.state === 'completed') {
-          const completed = verifiedAttempt(attempt).result;
-          if (completed === null) {
+          // Already verified above: its exact result resolves, so re-publication acknowledges it.
+          if (attempt.result === null) {
             throw new HistoryIntegrityError(`Completed attempt ${String(attemptId)} has no result reference`);
           }
-          return completed;
+          return attempt.result;
         }
         if (attempt.state !== 'staged') {
           throw new AttemptStateError(`Attempt ${String(attemptId)} cannot be published from state ${attempt.state}`);
@@ -616,7 +617,7 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
       }
       const evidence = storeRecord(request.evidence, 'outcome evidence');
       return asHolder(lease, () => {
-        const attempt = attemptOf(requireAttemptRow(attemptId));
+        const attempt = verifiedAttempt(attemptOf(requireAttemptRow(attemptId)));
         if (attempt.state !== 'allocated' && attempt.state !== 'staged') {
           throw new AttemptStateError(`Attempt ${String(attemptId)} cannot be abandoned from state ${attempt.state}`);
         }

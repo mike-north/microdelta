@@ -251,6 +251,26 @@ describe('read and unread facts, called and uncalled helpers', () => {
   });
 });
 
+describe('child failures inside a body', () => {
+  test('a body that swallows a failed child call cannot publish: the child failure fails the summary', async () => {
+    const location = freshLocation();
+    const cold = await coldReport(location);
+    world.finality['person:ada'] = 'throw';
+    await withSession(location, async (session) => {
+      let caught: unknown;
+      try {
+        await session.resolve(session.contributors.steps['person:ada'].summary);
+      } catch (error: unknown) {
+        caught = error;
+      }
+      expect(caught).toBeInstanceOf(ResolutionError);
+      expect((caught as ResolutionError).code).toBe('policy-failure');
+      expect(session.history.readCurrent(summarySubject('person:ada'))?.locator).toBe(cold.summaries['person:ada']);
+      expect(session.history.findCandidates({ ...summarySubject('person:ada'), version: 1 })).toHaveLength(1);
+    }, { adaSummaryCatches: true, formatter: 'revised' });
+  });
+});
+
 describe('compatibility versions and current path rebinding', () => {
   test('version 2 then unchanged version 1 rollback reuses the old exact results without rewinding the current pointer', async () => {
     const location = freshLocation();
@@ -409,17 +429,17 @@ describe('correspondence, witnesses and historical integrity', () => {
   });
 
   test.each([
-    ['a missing exact child reference', (_session: ISession, child: Record<string, unknown>) => ({ ...child, reference: { kind: 'completed-result', locator: `mdh1|${JSON.stringify(['store:contributors', analysis, environment, 999_999])}` } })],
-    ['a wrong-scope child reference', (session: ISession, child: Record<string, unknown>) => {
+    ['a recorded child naming a missing result', (_session: ISession, child: Record<string, unknown>) => ({ ...child, reference: { kind: 'completed-result', locator: `mdh1|${JSON.stringify(['store:contributors', analysis, environment, 999_999])}` } })],
+    ['a recorded child naming a result in another environment', (session: ISession, child: Record<string, unknown>) => {
       const other = session.history.allocateAttempt(session.lease, { analysis, environment: 'env:other', subject: 'activity:acme/widget:2026-Q1:person:ada', version: 1, attemptKey: 'other-scope', intentDigest: 'other-scope' });
       session.history.stageAttempt(session.lease, { attemptId: other.attemptId, payload: benActivity(), provenance: { format: 'test.other', formatVersion: 1, content: {} }, dependencies: [] });
       return { ...child, reference: session.history.publishAttempt(session.lease, other.attemptId) };
     }],
-    ['a child reference outside the recorded dependencies', (session: ISession, child: Record<string, unknown>) => {
+    ['a recorded child naming another member\'s result', (session: ISession, child: Record<string, unknown>) => {
       const ben = session.history.readCurrent({ analysis, environment, subject: 'activity:acme/widget:2026-Q1:person:ben' });
       return { ...child, reference: ben };
     }],
-  ])('%s is an integrity failure: no body, no attempt, no retargeting', async (_label, update) => {
+  ])('%s outside the exact dependencies is an integrity failure: no body, no attempt, no retargeting', async (_label, update) => {
     const location = freshLocation();
     const cold = await coldReport(location);
     await withSession(location, async (session) => {

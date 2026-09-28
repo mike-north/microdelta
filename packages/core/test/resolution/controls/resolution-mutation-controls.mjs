@@ -50,6 +50,8 @@ const controls = [
   { name: 'declared helpers are not tracked', file: 'resolution.js', anchor: 'helpers[slot] = tracking.tracked(state.value, { path: bindingPaths.callable(slot) });', replacement: 'helpers[slot] = state.value;' },
   { name: "the author callback is not tracked as the step's own implementation", file: 'resolution.js', anchor: 'const authored = tracking.tracked(callback, { path: bindingPaths.self });', replacement: 'const authored = callback;' },
   { name: 'direct invocations are not shared within a request', file: 'resolution.js', anchor: 'if (existing !== undefined) {', replacement: 'if (false) {' },
+  { name: 'a body that swallowed a failed child still publishes', file: 'resolution.js', anchor: 'if (frame.failed !== undefined) {', replacement: 'if (false) {' },
+  { name: 'a committed request key is served again by a normal request', file: 'resolution.js', anchor: "if (prior.kind !== 'absent') {", replacement: "if (prior.kind !== 'absent' && prior.kind !== 'completed') {" },
   { name: 'a post-commit observer failure fails the call', file: 'resolution.js', anchor: 'if (preExecution.has(phase)) {', replacement: 'if (true) {' },
 ];
 

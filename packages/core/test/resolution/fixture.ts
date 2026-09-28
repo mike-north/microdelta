@@ -310,6 +310,8 @@ export interface IVariation {
   readonly formatter?: 'original' | 'revised';
   /** Which uncalled helper implementation is registered. */
   readonly unusedHelper?: 'original' | 'revised';
+  /** Whether Ada's summary body swallows a failed child call and returns a fallback. */
+  readonly adaSummaryCatches?: boolean;
   /** Ada's activity compatibility version. */
   readonly adaActivityVersion?: number;
   /** Ada's activity subject; a different subject occupying the same slot breaks correspondence. */
@@ -366,7 +368,22 @@ export function composeContributors(variation: IVariation = {}): IContributors {
     finality: ({ previous, inputs, helpers }) => helpers.acceptActivity(previous, inputs.config, 'person:ben'),
     run: ({ previous, inputs, helpers }) => helpers.checkActivity(previous, inputs.config, 'person:ben', 'retrieval'),
   });
-  const adaSummary = memo({
+  const adaSummary = variation.adaSummaryCatches === true
+    ? memo({
+        subject: 'summary:acme/widget:2026-Q1:person:ada',
+        label: 'Ada summary',
+        version: variation.summaryVersion ?? 1,
+        children: { activity: adaActivity },
+        run: async ({ helpers, calls }) => {
+          try {
+            const { data: activity } = await calls.activity();
+            return helpers.summarize(activity, helpers.format, 'person:ada');
+          } catch {
+            return { name: 'unknown', authored: 0, merged: 0, reviews: 0, sentence: 'fallback' };
+          }
+        },
+      })
+    : memo({
     subject: 'summary:acme/widget:2026-Q1:person:ada',
     label: 'Ada summary',
     version: variation.summaryVersion ?? 1,

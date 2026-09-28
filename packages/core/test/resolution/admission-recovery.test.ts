@@ -227,6 +227,35 @@ describe('explicit recovery by saved request key', () => {
     }, { formatter: 'revised' });
   });
 
+  test('a normal retry with an already committed key is rejected before admission, never served as new work', async () => {
+    const location = freshLocation();
+    const requestKey = 'saved:request:committed';
+    await withSession(location, async (session) => {
+      expect((await session.resolve(session.contributors.steps['person:ada'].activity, requestKey)).kind).toBe('published');
+    });
+    world.finality['person:ada'] = 'not-final';
+    await withSession(location, async (session) => {
+      await expectFailure(session.resolve(session.contributors.steps['person:ada'].activity, requestKey), 'invalid-request');
+      expect(session.admissions).toHaveLength(0);
+      expect(world.checks['person:ada']).toBe(1);
+      // The committed execution remains recoverable through the separate operation.
+      expect(session.resolution.recover({ step: session.contributors.steps['person:ada'].activity, requestKey }).kind).toBe('recovered');
+    });
+  });
+
+  test('documents the disclosed History gap: a check retention ends its attempt without a result, so recovery reports unsuccessful', async () => {
+    const location = freshLocation();
+    await withSession(location, async (session) => {
+      await session.resolve(session.contributors.steps['person:ada'].activity);
+    }, { adaFinality: 'absent' });
+    world.check['person:ada'] = 'retain';
+    await withSession(location, async (session) => {
+      const requestKey = freshRequestKey();
+      expect((await session.resolve(session.contributors.steps['person:ada'].activity, requestKey)).kind).toBe('reused');
+      expect(session.resolution.recover({ step: session.contributors.steps['person:ada'].activity, requestKey }).kind).toBe('unsuccessful');
+    }, { adaFinality: 'absent' });
+  });
+
   test('absent and unsuccessful executions are reported explicitly and never executed by recovery', async () => {
     const location = freshLocation();
     world.summaryThrows['person:ada'] = true;

@@ -35,7 +35,11 @@ subtree?
 - Variations: renamed profile, unread-only change (avatar, labels, notes), one
   merged-status change, profile becoming an array, name becoming a record.
 
-## Assertions written first
+## Assertions
+
+The Value, Materialization and SQLite assertions below were written before
+their implementations. The Tracking assertions were not; see the process
+deviation under *Observed failures and chronology*.
 
 Package suites (`packages/*/test`):
 
@@ -72,20 +76,58 @@ fresh reader process and a fresh comparison process on one file:
 | Missing, wrong-store, unknown-version, unsupported-encoding references fail | missing, wrong-scope… |
 | Another store, schema version or incomplete schema rejected at open | another logical store… |
 | Immutable publication; container root required | publication is immutable… |
+| A root value, own or membership read has no member address: it throws Value's `TypeError` and its fingerprint resolves `incompatible`, never a fabricated root fact | a root value read has no member address… |
 
-## Observed test-first failures
+## Observed failures and chronology
 
 Recorded before each implementation was supplied:
 
 - Value: `navigation.test.ts` against throwing stubs — 10 failed, 37 passed.
-- Tracking: `lazy-view.test.ts` against the unmodified source — compilation
-  failed (`lazyView` and `ITrackedNodeSource` absent).
 - Materialization: `nested-view.test.ts` against a throwing `materializeView` —
   15 failed, 17 passed.
 - Real SQLite: `nested-sqlite.test.ts` against a throwing candidate — 11 failed.
   The first run with the candidate exposed a fixture defect (a shared `labels`
   array, correctly rejected by Value as a shared reference); after copying it
-  per pull request, all 11 passed.
+  per pull request, all 11 passed. A twelfth test, the root-value regression
+  requested in independent review, was added later; it guards behavior that
+  already failed closed, so it passed when added.
+
+**Process deviation (Tracking).** The Tracking lazy-view implementation was
+written *before* its failure was observed, contrary to the tests-first rule in
+EXP-0 and the governing issue. To record a failure afterwards, the new tests
+were run against the unmodified Tracking source, where they failed to compile
+because `lazyView` and `ITrackedNodeSource` did not exist. A missing-symbol
+compile error does not show that the assertions reject wrong behavior, so it is
+not tests-first evidence and is not claimed as such. The deviation stands; it
+cannot be repaired retroactively.
+
+### Later discrimination proof for the Tracking assertions
+
+After the implementation existed, `packages/tracking/test/controls/lazy-view-controls.mjs`
+was added to show that the already-written lazy-view assertions reject
+behaviorally wrong implementations, not merely missing symbols. Each control
+substitutes one wrong behavior into the emitted `.test-build` implementation
+(never the TypeScript source), runs the unchanged `lazy-view.test.ts`, requires
+named assertions to fail, and restores the emitted file; the restored suite
+must then pass. An anchor that stops matching exactly once fails the script. It
+runs in `npm test` through Tracking's `test:controls` script.
+
+| Wrong behavior substituted | Rejected by |
+| --- | --- |
+| Container navigation observes and loads the whole container | nested leaf read; parity; length/loops; explicit output |
+| Array length recorded on navigation instead of read | parity; length/loops |
+| `in` records own presence instead of lookup-chain membership | parity; source-answer validation |
+| Work inherited from a closed frame may still request content | closed-frame lifetime |
+| A source answer for a different address is accepted | source-answer validation |
+| Two navigations to one retained subtree become separate output sources | explicit output |
+
+The first run of the last control was **not** rejected. The test source returned
+the same in-memory object from every `subtree()` load, so an older value-identity
+check caught the repeated output and masked the missing per-address interning.
+Durable readers, including the SQLite candidate, return a fresh copy per load.
+The fixture was strengthened to return a detached copy per load, after which
+the control is rejected and the intended implementation still passes. No
+assertion or check was weakened.
 
 ## Reproduction
 
@@ -93,6 +135,7 @@ Recorded before each implementation was supplied:
 npm run build
 npm run test:exp-nested
 npm test --workspace @microdelta/value --workspace @microdelta/tracking --workspace @microdelta/materialization
+npm run test:controls --workspace @microdelta/tracking
 ```
 
 Pinned tools: Node 24.14.0 locally (CI 20/22/24), SQLite 3.53.0 through
@@ -159,6 +202,8 @@ Index requirements for the durable History authority:
 
 ## Coverage limits
 
+- Payload evidence counts SQL result cells returned to the reader; it does not
+  measure SQLite disk-page I/O.
 - No publication, attempt, lease, current-pointer, acceptance, crash-recovery or
   concurrency claim; those belong to the durable History authority.
 - Index generation encodes each container subtree for its digests, so its cost
@@ -171,10 +216,10 @@ Index requirements for the durable History authority:
 - Directly resolving a view through a Promise probes `then` as an ordinary read;
   invocation transport must carry views inside an ordinary result carrier.
 
-## Proposed owning-contract amendment
+## Owning-contract amendment
 
-For supervisor review: the EXP-2 access decision in
-[tracking.md](../../docs/spec/tracking.md) states that nested lazy
-materialization remains unproven. This gate supplies bounded evidence for it
-over synchronous indexed storage; the amendment and the experiment table entry
-are left to the supervisor.
+The supervisor approved a bounded amendment recording this decision in the
+[M3 nested selected-read decision](../../docs/spec/tracking.md) and the
+[experiment table](../../docs/spec/experiments.md). EXP-2's historical scope is
+retained, and EXP-0's tests-first requirement is unchanged: the Tracking
+deviation above is reported as evidence, not normalized into the rule.

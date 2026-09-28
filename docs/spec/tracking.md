@@ -188,9 +188,39 @@ scalar-read positive control proving the backing reader is observable.
 Explicit asynchronous preparation supports ordinary scalar reads of prepared
 fields. It is rejected as a general solution to unexpected ordinary getter reads
 from an async-only source: an unprepared field must fail visibly, never fabricate
-a scalar or claim the read was observed. DOM-3 and TRK-5 are unchanged. Nested lazy
-materialization, production cache/eviction policy, and scale behavior remain
-unproven; the selected-loading evidence is bounded to the operations above.
+a scalar or claim the read was observed. DOM-3 and TRK-5 are unchanged. Within
+EXP-2, nested lazy materialization, production cache/eviction policy, and scale
+behavior remained unproven; its selected-loading evidence is bounded to the
+operations above.
+
+**M3 nested selected-read decision:** the [nested-read gate](../../experiments/exp-nested/protocol.md)
+establishes a bounded synchronous navigation capability over exact retained
+record and array roots. Value returns a tagged scalar fact or container shape; a
+container shape is transport metadata, never a fabricated selected fact.
+Tracking records the existing TRK-5 leaf, length, presence, key-order and
+explicit-output observations. Navigating through a container alone records no
+whole-object dependency. Materialization composes the optional History
+navigation capability with the owning Tracking observer; scalar-only readers
+retain their existing contract.
+
+The gate uses file-backed SQLite in separate publisher, reader and comparison
+processes. Instrumented SQL results demonstrate that navigation and selected
+leaves return no root or unrelated subtree payload, while fingerprint comparison
+returns no payload cells. Independent MDO1 oracles and in-memory observer parity
+cover the declared fixture and supported Value edge cases. These are SQL
+result-cell guarantees within that tested scope, not measurements of disk-page
+I/O or scale. An explicit output request may load its selected subtree and
+records MDS1 output evidence. Async invocation transports a view inside an
+ordinary result carrier so transport does not create a phantom `then`
+observation or reserve an author data field.
+
+The candidate index is generated from canonical MDS1 data. Durable History
+remains the owner of adopting and publishing that index with completed results;
+this gate does not implement attempts, allocation, current pointers, crash-safe
+publication, cache/eviction policy or keyed projection indexing. Async-only
+storage still cannot promise unexpected ordinary synchronous reads. The
+[protocol](../../experiments/exp-nested/protocol.md) records the owner ports,
+required index evidence, reproducible controls and limits.
 
 ## Collections
 

@@ -387,7 +387,10 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
       if (row.analysis !== scope.analysis || row.environment !== scope.environment) {
         throw new HistoryIntegrityError(`Stored dependency on result ${String(dependencyId)} is outside the dependent's scope`);
       }
-      return referenceOf(dependencyId, scope);
+      // A returned dependency must satisfy the same exact contract as any reference: completed, in scope, supported.
+      const reference = referenceOf(dependencyId, scope);
+      resolveResult(reference, scope);
+      return reference;
     }));
   }
 
@@ -395,9 +398,9 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
   function envelopeOf(row: ISqliteRow): ICompletedEnvelope {
     const resultId = integer(row, 'result_id');
     const scope = { analysis: text(row, 'analysis'), environment: text(row, 'environment') };
-    if (row.encoding !== payloadEncoding || row.index_version !== indexVersion) {
-      throw new HistoryIntegrityError(`Stored result ${String(resultId)} uses an unsupported encoding or index version`);
-    }
+    // Candidate and exact metadata are authoritative only for a result that
+    // resolves exactly: a completed producing attempt, in scope, supported encoding.
+    resolveResult(referenceOf(resultId, scope), scope);
     return Object.freeze({
       ...scope,
       subject: text(row, 'subject'),
@@ -414,6 +417,23 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
   /** Resolve each dependency reference to a stored result in `scope`, inside the caller's transaction. */
   function dependencyIds(references: readonly ICompletedResultReference[], scope: IHistoryScope): readonly number[] {
     return references.map((reference) => resolveResult(reference, scope).resultId);
+  }
+
+  /**
+   * Every path that reports an attempt's durable outcome to a caller
+   * (re-allocation of an existing key, re-publication, recovery) first checks
+   * it against stored results. A completed attempt's exact result must
+   * resolve; an attempt recorded as not completed must have no result row.
+   * Either contradiction is an integrity failure, never a success and never
+   * presented as incomplete work that a caller might resume.
+   */
+  function verifiedAttempt(attempt: IAttemptRecord): IAttemptRecord {
+    if (attempt.result !== null) {
+      resolveResult(attempt.result, attempt);
+    } else if (statements.reference.get(attempt.attemptId) !== undefined) {
+      throw new HistoryIntegrityError(`Attempt ${String(attempt.attemptId)} is recorded as ${attempt.state} but has a published result`);
+    }
+    return attempt;
   }
 
   /** Recovery view of one attempt record. */
@@ -520,7 +540,7 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
         if (existing !== undefined) {
           const attempt = attemptOf(existing);
           assertSameExecution(attempt, request);
-          return attempt;
+          return verifiedAttempt(attempt);
         }
         const attemptId = safeSum(readSequences().lastAttempt, 1, 'attempt identity');
         statements.setAttemptSequence.run(attemptId);
@@ -557,8 +577,12 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
       return asHolder(lease, () => {
         const row = requireAttemptRow(attemptId);
         const attempt = attemptOf(row);
-        if (attempt.state === 'completed' && attempt.result !== null) {
-          return attempt.result;
+        if (attempt.state === 'completed') {
+          const completed = verifiedAttempt(attempt).result;
+          if (completed === null) {
+            throw new HistoryIntegrityError(`Completed attempt ${String(attemptId)} has no result reference`);
+          }
+          return completed;
         }
         if (attempt.state !== 'staged') {
           throw new AttemptStateError(`Attempt ${String(attemptId)} cannot be published from state ${attempt.state}`);
@@ -609,11 +633,7 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
       }
       const attempt = attemptOf(row);
       assertSameExecution(attempt, request);
-      if (attempt.result !== null) {
-        // A completed recovery must name a result that still resolves exactly.
-        resolveResult(attempt.result, attempt);
-      }
-      return recoveryOf(attempt);
+      return recoveryOf(verifiedAttempt(attempt));
     },
 
     findCandidates(presented: IVersionedSubject): readonly ICompletedEnvelope[] {
@@ -630,7 +650,10 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
       if (row.present === null) {
         throw new HistoryIntegrityError('Current pointer names a missing or wrong-scope result');
       }
-      return referenceOf(integer(row, 'result_id'), subject);
+      const reference = referenceOf(integer(row, 'result_id'), subject);
+      // The latest publication must itself resolve exactly; a corrupted target is never offered as current.
+      resolveResult(reference, subject);
+      return reference;
     },
 
     readEnvelope(reference: ICompletedResultReference): ICompletedEnvelope {

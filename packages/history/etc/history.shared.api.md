@@ -249,7 +249,6 @@ export interface IDurableHistoryOptions {
     readonly clock: IClockCapability;
     readonly location: string;
     readonly logicalStore: string;
-    // Warning: (ae-forgotten-export) The symbol "ISha256Capability" needs to be exported by the entry point api-surface.d.ts
     readonly sha256: ISha256Capability;
     readonly sqlite: ISqliteCapability;
 }
@@ -357,10 +356,47 @@ export interface ISelectedReadRequest {
 }
 
 // @alpha
+export interface ISha256Capability {
+    sha256(input: string): string;
+}
+
+// @alpha
 export interface ISqliteCapability {
-    // Warning: (ae-forgotten-export) The symbol "ISqliteConnection" needs to be exported by the entry point api-surface.d.ts
     openSqlite(location: string): ISqliteConnection;
 }
+
+// @alpha
+export interface ISqliteConnection {
+    close(): void;
+    exec(sql: string): void;
+    prepare(sql: string): ISqliteStatement;
+    transaction<T>(operation: () => T & ISqliteSynchronousResult<T>): T;
+}
+
+// @alpha
+export interface ISqliteRow {
+    readonly [column: string]: ISqliteValue;
+}
+
+// @alpha
+export interface ISqliteRunResult {
+    readonly changes: number;
+}
+
+// @alpha
+export interface ISqliteStatement {
+    all(...values: readonly ISqliteValue[]): readonly ISqliteRow[];
+    get(...values: readonly ISqliteValue[]): ISqliteRow | undefined;
+    run(...values: readonly ISqliteValue[]): ISqliteRunResult;
+}
+
+// @alpha
+export type ISqliteSynchronousResult<T> = 0 extends 1 & T ? unknown : [Extract<T, {
+    readonly then: (...parameters: never[]) => unknown;
+}>] extends [never] ? unknown : never;
+
+// @alpha
+export type ISqliteValue = string | number | null | Uint8Array;
 
 // @alpha
 export interface IStageRequest {

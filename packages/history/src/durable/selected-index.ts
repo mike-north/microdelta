@@ -348,6 +348,14 @@ export function createSelectedIndex(connection: ISqliteConnection, host: ISha256
     prefixMetadata: connection.prepare(sql`/* node-metadata */ SELECT a.address, a.node_id, a.own, a.value_fingerprint, n.kind, n.array_length, n.own_keys, n.terminal
       FROM history_addresses a JOIN history_nodes n ON n.result_id = a.result_id AND n.node_id = a.node_id
       WHERE a.result_id = ? AND a.address IN (SELECT value FROM json_each(?))`),
+    chainKeys: connection.prepare(sql`/* node-metadata */ WITH RECURSIVE chain(node_id) AS (
+        SELECT ?
+        UNION SELECT n.prototype_node FROM history_nodes n JOIN chain c ON n.node_id = c.node_id
+          WHERE n.result_id = ? AND n.prototype_node IS NOT NULL
+      )
+      SELECT n.own_keys FROM history_nodes n JOIN chain c ON n.node_id = c.node_id WHERE n.result_id = ?`),
+    elementEdge: connection.prepare(sql`/* node-metadata */ SELECT child_node FROM history_edges
+      WHERE result_id = ? AND parent_node = ? AND edge_kind = 'index' AND edge_key = ?`),
     scalarPayload: connection.prepare(sql`/* leaf-payload */ SELECT scalar FROM history_nodes WHERE result_id = ? AND node_id = ? AND kind = 'scalar'`),
     fingerprints: connection.prepare(sql`/* fingerprint */ SELECT a.value_fingerprint, n.snapshot_fingerprint
       FROM history_addresses a JOIN history_nodes n ON n.result_id = a.result_id AND n.node_id = a.node_id
@@ -414,7 +422,35 @@ export function createSelectedIndex(connection: ISqliteConnection, host: ISha256
     if (best === undefined) {
       throw new HistoryIntegrityError('Completed result has no indexed root');
     }
-    return { standIn: standIn(best.metadata), remainder: address.slice(best.length) };
+    const remainder = address.slice(best.length);
+    assertIndexedAbsence(resultId, best.metadata, remainder[0]);
+    return { standIn: standIn(best.metadata), remainder };
+  }
+
+  /**
+   * An unindexed address is answered as absent only when its indexed parent
+   * proves the first missing segment absent: a record key that appears in no
+   * own-key order along the parent's lookup chain, or an array index with no
+   * present-element edge (a hole or past the end). Evidence that a member is
+   * present while its address or node is missing means the index is
+   * incomplete, which is an integrity failure rather than absent author data.
+   * Only shape metadata is read; mismatched segment kinds are left to Value.
+   */
+  function assertIndexedAbsence(resultId: number, parent: IAddressMetadata, segment: IAddressSegment | undefined): void {
+    if (segment === undefined) {
+      return;
+    }
+    if (parent.kind === 'record' && segment.kind === 'property') {
+      const present = statements.chainKeys.all(parent.nodeId, resultId, resultId).some((row) => {
+        const keys = decodeStored(() => JSON.parse(text(row, 'own_keys')) as unknown, 'key order');
+        return Array.isArray(keys) && keys.includes(segment.key);
+      });
+      if (present) {
+        throw new HistoryIntegrityError(`Index is missing the address of present member ${JSON.stringify(segment.key)}`);
+      }
+    } else if (parent.kind === 'array' && segment.kind === 'index' && statements.elementEdge.get(resultId, parent.nodeId, String(segment.index)) !== undefined) {
+      throw new HistoryIntegrityError(`Index is missing the address of present element ${String(segment.index)}`);
+    }
   }
 
   /**

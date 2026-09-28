@@ -72,7 +72,23 @@ export type {
   IWriterAcquisitionRequest,
   IWriterLease,
 } from './durable/contracts.js';
-export type { IClockCapability, ISqliteCapability } from '@microdelta/machine';
+/**
+ * Machine host contracts surfaced by the durable authority's options and by
+ * the connections its SQLite capability returns. They are re-exported
+ * intentionally, as Value and Tracking re-export the host contracts they
+ * surface, so alpha consumers name Machine's exact types from History.
+ */
+export type {
+  IClockCapability,
+  ISha256Capability,
+  ISqliteCapability,
+  ISqliteConnection,
+  ISqliteRow,
+  ISqliteRunResult,
+  ISqliteStatement,
+  ISqliteSynchronousResult,
+  ISqliteValue,
+} from '@microdelta/machine';
 export type {
   Divergence,
   Fingerprint,

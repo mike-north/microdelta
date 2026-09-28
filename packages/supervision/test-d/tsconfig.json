@@ -1,0 +1,16 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": [],
+    "skipLibCheck": false,
+    "rootDirs": ["..", "../dist"],
+    "paths": {
+      "@microdelta/definition": ["../../../node_modules/@microdelta/definition/dist/api/definition.alpha.d.ts"],
+      "@microdelta/history": ["../../../node_modules/@microdelta/history/dist/api/history.alpha.d.ts"],
+      "@microdelta/resolution": ["../../../node_modules/@microdelta/resolution/dist/api/resolution.alpha.d.ts"],
+      "@microdelta/tracking": ["../../../node_modules/@microdelta/tracking/dist/api/tracking.alpha.d.ts"]
+    }
+  },
+  "include": ["*.ts"]
+}

@@ -183,6 +183,46 @@ describe('normal entry operation', () => {
     }
   });
 
+  test('a lease that expired after the run\'s last normal request is not reported as a release failure', async () => {
+    // Regression (peer review): releasing an expired lease threw History's
+    // stale-writer error and the run reported a false release diagnostic.
+    const workspace = openWorkspace({ location: store.location, logicalStore, leaseMilliseconds: 250 });
+    const contributors = composeContributors();
+    try {
+      const result = await workspace.run({ authoring: contributors.authoring, composition: contributors.composition, environment }, async (run) => {
+        await run.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
+        await run.ordinary('slow assembly', () => new Promise((resolve) => setTimeout(resolve, 400)));
+      });
+      expect(result.diagnostics).toEqual([]);
+    } finally {
+      workspace.close();
+    }
+  });
+
+  test('a second concurrent run on one workspace cannot write, names the other run as holder, and can still check', async () => {
+    const workspace = openWorkspace({ location: store.location, logicalStore });
+    const contributors = composeContributors();
+    const options = { authoring: contributors.authoring, composition: contributors.composition, environment };
+    try {
+      await workspace.run({ ...options, runId: 'run:first' }, async (first) => {
+        await first.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
+        await workspace.run({ ...options, runId: 'run:second' }, async (second) => {
+          let caught: unknown;
+          try {
+            await second.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
+          } catch (error: unknown) {
+            caught = error;
+          }
+          expect(caught instanceof SupervisionError ? caught.code : undefined).toBe('writer-unavailable');
+          expect(caught instanceof Error ? caught.message : '').toContain('run:first');
+          await expect(second.check(contributors.steps['person:ada'].summary)).resolves.toMatchObject({ kind: 'reusable' });
+        });
+      });
+    } finally {
+      workspace.close();
+    }
+  });
+
   test('an empty request key is rejected before any work', async () => {
     await inSession({}, async (session) => {
       let caught: unknown;

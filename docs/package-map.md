@@ -13,7 +13,7 @@ delivery are separate gates recorded in the [M2 evidence record](validation/m2-2
 | Definition & Binding | `@microdelta/definition` | Project-private alpha family-bound builders: frozen source/memo declarations with complete subjects and versions, the fixed M3 composition (memo to sibling source per explicit member), exact structural correspondence with distinct missing/ambiguous outcomes, direct-child witness reconnection, and an invocation bridge that hands actual author callbacks to an injected invoker and dispatches argument-free declared handles through an injected port; plus label-only `nameOf` | Value Semantics |
 | Tracking & Observation | `@microdelta/tracking` | Process-local tags, frames, cells, and derivations plus project-private `createTrackingObserver(host)` alpha contracts for detached supported wrappers, consumed semantic facts, called-function implementation evidence, current-fact comparison, and cached evidence replay | Value Semantics and `@microdelta/machine` |
 | Result History & Publication | `@microdelta/history` | Existing row Store contract and compatibility row schema; memory adapter receives a snapshot capability; alpha exact completed-result selection and fingerprint-reading ports; project-private alpha durable SQLite authority (`openDurableHistory`) over injected SQLite, clock and SHA-256 capabilities, owning the writer lease, attempts, atomic publication, current pointers, immutable results with a generated selected index, and acceptance records | Value Semantics; `@microdelta/machine` |
-| Reuse Resolution | No package yet | Candidate-validation and source-policy ports remain unimplemented | Definition, Tracking, History, Materialization |
+| Reuse Resolution | `@microdelta/resolution` | Project-private alpha `createResolution`: candidate lookup by scoped subject and version, own implementation/input/helper validation, current finality and explicit-retention source policy, direct-child witness reconnection with consumed-output comparison, admission before claims, check-only evaluation, request-key attempt identity with complete intent digests and no-execution recovery over History's durable authority; plus its binding family and minted source outcome envelopes | Definition, Tracking, History, Materialization |
 | Run Supervision | No package yet | Admission, progress, retry, and cancellation ports remain unimplemented | Definition, Resolution, Accounting |
 | Resource Accounting | No package yet | Observation and acknowledgment ports remain unimplemented | None |
 | Value Semantics | `@microdelta/value` (`packages/value`) | Supported canonical equality/snapshot encoding, structured observation addresses, selected facts, and fingerprints through Machine's SHA-256 capability | Machine |
@@ -35,8 +35,14 @@ It stores Resolution provenance and acceptance evidence as versioned opaque
 records and validates their exact dependency references, without importing
 Definition or Tracking. Its real-SQLite and independent-process evidence runs
 in the facade's assembly tests (`packages/core/test/durable-history`), because
-only assembly may compose History with the Node adapter. The first consumer
-through the workspace authoring path is later M3 work.
+only assembly may compose History with the Node adapter.
+
+Reuse Resolution is History's first consumer. It records its provenance,
+acceptance and attempt-ending evidence in its own versioned formats, and its
+behavioral suites also run in the facade's assembly tests
+(`packages/core/test/resolution`) over the real SQLite authority. The facade
+does not export Resolution yet: the workspace normal/recover entry operations,
+Supervision and the executable example remain later M3 work.
 
 The Tracking observer is bounded M2 owner functionality: it stores no binding
 catalog or History rows and does not decide source freshness or reusable results.

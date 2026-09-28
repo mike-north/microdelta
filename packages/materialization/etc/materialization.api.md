@@ -14,8 +14,8 @@ import type { ITracked } from '@microdelta/tracking';
 import type { ITrackedBrand } from '@microdelta/tracking';
 import type { ITrackingBinding } from '@microdelta/tracking';
 import type { ITrackingObserver } from '@microdelta/tracking';
-import type { IValueProjectionDescriptor } from '@microdelta/value';
-import type { IValueProjectionFact } from '@microdelta/value';
+import type { IValueProjectionDescriptor } from '@microdelta/tracking';
+import type { IValueProjectionFact } from '@microdelta/tracking';
 
 // @alpha
 export function createMaterialization(options: IMaterializationOptions): IMaterialization;

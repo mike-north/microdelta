@@ -51,3 +51,15 @@ test('pending, skipped, missing or unexpected tests never count as a rejection o
   assert.throws(() => judgeRun({ exitStatus: 0, reportText: report({ ...healthy, [intendedSuites[0]]: ['passed'] }), expectedTitles: baselineTitles }), /differ from the baseline/u);
   assert.throws(() => judgeRun({ exitStatus: 0, reportText: report({ ...healthy, [intendedSuites[0]]: ['passed', 'passed', 'passed'] }), expectedTitles: baselineTitles }), /differ from the baseline/u);
 });
+
+test('a caller-selected suite set is enforced exactly', () => {
+  const resolutionSuites = ['source-policy.test.js', 'summary-validation.test.js'];
+  const ran = JSON.stringify({
+    numRuntimeErrorTestSuites: 0,
+    testResults: resolutionSuites.map((suite) => ({ name: `/x/.test-build/test/resolution/${suite}`, status: 'passed', assertionResults: [{ fullName: suite, status: 'passed' }] })),
+  });
+  assert.deepEqual(judgeRun({ exitStatus: 0, reportText: ran, suites: resolutionSuites }).failed, []);
+  // The same run judged against History's default suites, or a larger set, is not evidence.
+  assert.throws(() => judgeRun({ exitStatus: 0, reportText: ran }), /unexpected suites/u);
+  assert.throws(() => judgeRun({ exitStatus: 0, reportText: ran, suites: [...resolutionSuites, 'admission-recovery.test.js'] }), /unexpected suites/u);
+});

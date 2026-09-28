@@ -8,7 +8,7 @@ export const roles = Object.freeze({
   facade: { directory: 'core', packageName: 'microdelta', kind: 'assembly', uses: ['definition', 'tracking', 'resolution', 'history', 'supervision', 'accounting', 'value', 'materialization', 'machine-node'] },
   definition: { directory: 'definition', packageName: '@microdelta/definition', kind: 'context', uses: ['value'] },
   tracking: { directory: 'tracking', packageName: '@microdelta/tracking', kind: 'context', uses: ['value', 'machine'] },
-  resolution: { directory: null, packageName: '@microdelta/resolution', kind: 'context', uses: ['definition', 'tracking', 'history', 'materialization'] },
+  resolution: { directory: 'resolution', packageName: '@microdelta/resolution', kind: 'context', uses: ['definition', 'tracking', 'history', 'materialization'] },
   history: { directory: 'history', packageName: '@microdelta/history', kind: 'context', uses: ['value', 'machine'] },
   supervision: { directory: null, packageName: '@microdelta/supervision', kind: 'context', uses: ['definition', 'resolution', 'accounting'] },
   accounting: { directory: null, packageName: '@microdelta/accounting', kind: 'context', uses: [] },

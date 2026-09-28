@@ -102,6 +102,25 @@ test('the checked-in workspace is a complete trusted graph containing the facade
   assert.equal(workspace.root.private, true);
 });
 
+/**
+ * Issue #56 registers the Resolution owner, which the facade's assembly
+ * depends on. Resolution was registered for trusted publishing ahead of its
+ * workspace package; its package must now satisfy the same release contract
+ * and publish after every owner whose declarations it consumes.
+ */
+test('the checked-in Resolution owner is a trusted, ordered member of the facade closure', async () => {
+  const workspace = await readWorkspace(root);
+  const plan = planRelease(workspace, { release: false });
+  const names = plan.packages.map(entry => entry.name);
+  assert.ok(names.includes('@microdelta/resolution'), 'Resolution belongs to the facade runtime closure');
+  for (const owner of ['@microdelta/definition', '@microdelta/tracking', '@microdelta/history', '@microdelta/materialization']) {
+    assert.ok(names.indexOf(owner) < names.indexOf('@microdelta/resolution'), `${owner} publishes before Resolution`);
+  }
+  assert.ok(names.indexOf('@microdelta/resolution') < names.indexOf('microdelta'));
+  const resolution = plan.packages.find(entry => entry.name === '@microdelta/resolution');
+  assert.equal(resolution?.directory, 'packages/resolution');
+});
+
 test('a newly added transitive owner without npm trust is refused', () => {
   const workspace = releaseWorkspace();
   workspace.packages[1].manifest.dependencies['@microdelta/accounting'] = '0.1.0';

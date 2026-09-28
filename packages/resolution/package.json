@@ -1,27 +1,23 @@
 {
-  "name": "microdelta",
+  "name": "@microdelta/resolution",
   "version": "0.0.0",
-  "description": "Persisted incremental analysis; implementation in progress",
+  "description": "Reuse Resolution: current candidate eligibility, source policy and direct-child validation",
   "license": "UNLICENSED",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/mike-north/microdelta.git",
-    "directory": "packages/core"
+    "directory": "packages/resolution"
   },
   "type": "module",
   "engines": {
     "node": ">=20"
   },
   "main": "./dist/src/index.js",
-  "types": "./dist/api/microdelta.public.d.ts",
+  "types": "./dist/api/resolution.public.d.ts",
   "exports": {
     ".": {
-      "types": "./dist/api/microdelta.public.d.ts",
+      "types": "./dist/api/resolution.public.d.ts",
       "import": "./dist/src/index.js"
-    },
-    "./conformance/store": {
-      "types": "./dist/api/microdelta.conformance.store.public.d.ts",
-      "import": "./dist/test/conformance/store/index.js"
     }
   },
   "files": [
@@ -29,14 +25,14 @@
     "!dist/api-temp"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json && api-extractor run --config api-extractor-conformance.json",
+    "build": "tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json && node ../../tooling/trim-declaration-imports.mjs dist/api/resolution.beta.d.ts dist/api/resolution.public.d.ts",
     "check": "concurrently --success all --names types,lint \"npm run check:types\" \"npm run check:lint\"",
-    "check:types": "tsc --noEmit -p tsconfig.json",
+    "check:types": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.portable.json",
     "check:lint": "eslint .",
-    "test": "npm run test:unit && npm run test:types && npm run test:controls",
+    "test": "npm run test:unit && npm run test:types && npm run test:public",
     "test:unit": "tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand",
     "test:types": "tsd",
-    "test:controls": "node --test test/durable-history/controls/control-outcome.test.mjs"
+    "test:public": "tsc --noEmit -p tsconfig.public-consumer.json"
   },
   "tsd": {
     "directory": "test-d"
@@ -44,11 +40,8 @@
   "dependencies": {
     "@microdelta/definition": "0.0.0",
     "@microdelta/history": "0.0.0",
-    "@microdelta/machine-node": "0.0.0",
     "@microdelta/materialization": "0.0.0",
-    "@microdelta/resolution": "0.0.0",
-    "@microdelta/tracking": "0.0.0",
-    "@microdelta/value": "0.0.0"
+    "@microdelta/tracking": "0.0.0"
   },
   "publishConfig": {
     "access": "public"

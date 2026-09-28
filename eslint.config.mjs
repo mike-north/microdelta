@@ -11,7 +11,7 @@ const assertionKinds = ['TSAsExpression', 'TSTypeAssertion'];
 export default [
   { ignores: ['**/dist/**', '**/.test-build/**', '**/node_modules/**', 'docs/archive/**', 'experiments/**/test-d/**'] },
   {
-    files: ['packages/**/*.ts', 'experiments/**/*.ts', 'fixtures/declarations/**/*.ts'],
+    files: ['packages/**/*.ts', 'experiments/**/*.ts', 'examples/**/*.ts', 'fixtures/declarations/**/*.ts'],
     languageOptions: {
       parser: tseslint.parser,
       parserOptions: { projectService: true, tsconfigRootDir: import.meta.dirname },

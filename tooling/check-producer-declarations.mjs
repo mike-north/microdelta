@@ -170,13 +170,17 @@ if (!selected) {
 }
 const files = selected ?? [];
 if (!selected) {
-  for (const directory of ['packages', 'fixtures/declarations']) {
+  for (const directory of ['packages', 'fixtures/declarations', 'examples']) {
     for await (const filename of configs(path.join(root, directory))) {
       files.push(filename);
     }
   }
 }
 for (const filename of files) {
+  // A trace of every inspected config lets tests prove the scan's coverage.
+  if (process.env.MICRODELTA_DECLARATION_TRACE === '1') {
+    process.stdout.write(`inspected ${filename}\n`);
+  }
   problems.push(...await inspectConfig(filename));
 }
 if (problems.length) {

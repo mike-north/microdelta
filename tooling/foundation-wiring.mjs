@@ -17,6 +17,7 @@ export function missingFoundationGates({ workspace, packages, workflow, extracto
     }
   };
   includes('root typed ESLint config', eslintConfig, "'microdelta/tracked-captures': 'error'");
+  includes('root typed ESLint config', eslintConfig, "'examples/**/*.ts', ");
   for (const command of ['npm ci', 'npm run check', 'npm test', 'npm run build']) {
     if (!workflow.includes(`- run: ${command}`)) {
       problems.push(`CI skips ${command}`);
@@ -31,7 +32,7 @@ export function missingFoundationGates({ workspace, packages, workflow, extracto
     includes('check', scripts.check, command);
   }
   includes('check:packages', scripts['check:packages'], 'npm run check --workspaces');
-  for (const gate of ['check:imports', 'check:declarations', 'check:fixtures', 'check:experiments', 'check:suppressions', 'check:wiring', 'check:release']) {
+  for (const gate of ['check:imports', 'check:declarations', 'check:fixtures', 'check:experiments', 'check:examples', 'check:suppressions', 'check:wiring', 'check:release']) {
     includes('check:workspace', scripts['check:workspace'], `npm run ${gate}`);
   }
   for (const [gate, commands] of Object.entries({
@@ -46,6 +47,9 @@ export function missingFoundationGates({ workspace, packages, workflow, extracto
       'eslint fixtures/declarations/producer/src fixtures/declarations/capture-producer/src fixtures/declarations/forged/src fixtures/declarations/consumer-alpha/src',
     ],
     'check:experiments': ['tsc --noEmit -p tsconfig.json', 'tsc --noEmit -p experiments/exp-1/tsconfig.portable.json', 'eslint experiments'],
+    'check:examples': ['tsc --noEmit -p examples/contribution-report/tsconfig.json', 'eslint examples'],
+    'build:examples': ['tsc -p examples/contribution-report/tsconfig.json'],
+    'test:examples': ['node --test examples/contribution-report/test/'],
     'check:suppressions': ['node tooling/check-suppressions.mjs'],
     'check:wiring': ['node tooling/foundation-wiring.mjs'],
     'check:release': ['node tooling/release-workflow.mjs', 'node tooling/release-graph.mjs'],
@@ -54,13 +58,14 @@ export function missingFoundationGates({ workspace, packages, workflow, extracto
       includes(gate, scripts[gate], command);
     }
   }
-  for (const command of ['npm run build', 'npm run test:tooling', 'npm run test --workspaces', 'npm run test:experiments']) {
+  for (const command of ['npm run build', 'npm run test:tooling', 'npm run test --workspaces', 'npm run test:experiments', 'npm run test:examples']) {
     includes('test', scripts.test, command);
   }
   includes('test:tooling', scripts['test:tooling'], 'node --test tooling/*.test.mjs');
   includes('build', scripts.build, 'npm run build:packages');
   includes('build', scripts.build, 'npm run build:fixtures');
   includes('build', scripts.build, 'npm run build:experiments');
+  includes('build', scripts.build, 'npm run build:examples');
   includes('build:experiments', scripts['build:experiments'], 'tsc -p experiments/exp-1/tsconfig.test.json');
   includes('test:experiments', scripts['test:experiments'], 'tsd --typings experiments/exp-1/src/protocol.ts');
   includes('test:experiments', scripts['test:experiments'], 'jest');

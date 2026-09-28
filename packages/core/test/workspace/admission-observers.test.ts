@@ -186,13 +186,14 @@ describe('admission (A-19, REUSE-009)', () => {
 });
 
 describe('observer positions (A-19, REUSE-009)', () => {
-  test('a pre-execution observer failure stops only the affected call, which leaves no attempt', async () => {
+  test('a pre-execution observer failure at admission stops only the affected call, which leaves no attempt', async () => {
     const session = openSession(store.location);
     const requestKey = freshRequestKey();
     try {
       const failed = await resolveOne(session, session.contributors.steps['person:ada'].summary, {
         requestKey,
-        throwAt: (event) => event.kind === 'step' && event.event.phase === 'admit' && event.event.step.memberKey === 'person:ada',
+        // Ada's cold summary reaches admission first; the throw stops that call before any claim.
+        throwAt: (event) => event.kind === 'step' && event.event.phase === 'admit' && event.event.step.memberKey === 'person:ada' && event.event.step.slot === 'summary',
       });
       expect(failed.error).toBeInstanceOf(ResolutionError);
       expect(await caughtCode(Promise.reject(failed.error))).toBe('observer-failure');

@@ -500,14 +500,15 @@ test('the executable example maps only installed generated alpha declarations', 
   assert.equal(scan.status, 0, scan.stdout + scan.stderr);
   assert.match(scan.stdout, /examples[\\/]contribution-report[\\/]tsconfig\.json/u, 'the workspace preflight must scan the example');
 
-  const config = path.join(root, 'examples/contribution-report/.tsconfig-declaration-negative.json');
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'microdelta-example-alias-'));
   try {
+    const config = path.join(directory, 'tsconfig.json');
     await writeFile(config, JSON.stringify({ compilerOptions: { paths: { microdelta: [path.join(root, 'packages/core/src/index.ts')] } }, files: [] }));
     const source = spawnSync(process.execPath, [gate, '--config', config], { cwd: root, encoding: 'utf8' });
-    assert.notEqual(source.status, 0, 'A source alias in the example must be rejected');
+    assert.notEqual(source.status, 0, 'A source alias outside packages must be rejected');
     assert.match(source.stdout + source.stderr, /source alias bypasses/iu);
   } finally {
-    await rm(config, { force: true });
+    await rm(directory, { recursive: true, force: true });
   }
 });
 

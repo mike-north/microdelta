@@ -9,7 +9,6 @@ import type { ICheckOutcome } from '@microdelta/resolution';
 import type { IExecutionAdmission } from '@microdelta/resolution';
 import type { ILifecycleEvent } from '@microdelta/resolution';
 import type { ILifecycleObserver } from '@microdelta/resolution';
-import type { ILifecyclePhase } from '@microdelta/resolution';
 import type { IRecoveryResult } from '@microdelta/resolution';
 import type { IResolution } from '@microdelta/resolution';
 import type { IResolutionOutcome } from '@microdelta/resolution';
@@ -104,6 +103,9 @@ export interface IRunWriter {
 }
 
 // @alpha
+export type IStepLifecycle = readonly ['verify', 'finality', 'admit', 'refuse', 'claim', 'execute', 'publish', 'accept', 'release', 'abandon'];
+
+// @alpha
 export interface ISupervision {
     current(): IRunContext;
     run<T>(options: IRunOptions, body: (run: IRun) => T | Promise<T>): Promise<IRunResult<Awaited<T>>>;
@@ -121,7 +123,7 @@ export interface ISupervisionOptions {
 export const ordinaryLifecycle: readonly IOrdinaryPhase[];
 
 // @alpha
-export const stepLifecycle: readonly ILifecyclePhase[];
+export const stepLifecycle: IStepLifecycle;
 
 // @alpha
 export class SupervisionError extends Error {

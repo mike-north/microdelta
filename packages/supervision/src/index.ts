@@ -29,5 +29,5 @@ export type {
   ISupervision,
   ISupervisionOptions,
 } from './contracts.js';
-export { ordinaryLifecycle, stepLifecycle } from './lifecycle.js';
+export { ordinaryLifecycle, stepLifecycle, type IStepLifecycle } from './lifecycle.js';
 export { createSupervision } from './supervision.js';

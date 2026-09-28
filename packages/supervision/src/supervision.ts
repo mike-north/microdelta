@@ -4,11 +4,16 @@
  * - its context (volatile run id, analysis, selected environment) is attached
  *   to the run body and to every request and ordinary call through the
  *   injected asynchronous scope, so author code finds it without a parameter;
- * - it closes when the body settles; afterwards its operations, escaped
- *   context lookups and late admission requests all fail or are denied;
+ * - it stays live until its body *and* every operation started through the
+ *   run (`resolve`, `check`, `recover`, `ordinary`) have settled, including
+ *   operations started while it waits and those whose aggregate (for example
+ *   a `Promise.all` with a failing sibling) the body stopped awaiting early;
+ *   only then does it close, and afterwards its operations, escaped context
+ *   lookups and admission decisions all fail or are denied. The body's own
+ *   outcome, value or failure, is what the run reports;
  * - storage's writer lease is taken only for normal requests and released
- *   exactly once at close, so a refused miss, a check or a recovery never
- *   strands it;
+ *   exactly once at actual close, so a refused miss, a check or a recovery
+ *   never strands it and started work never loses it;
  * - admission and observer positions are Supervision's ports into Resolution:
  *   the caller's policy decides admission, and observers are captured at
  *   start, see frozen events and can neither veto nor replace work.
@@ -46,7 +51,7 @@ import { SupervisionError } from './errors.js';
 /** The live state of one run, attached to its asynchronous scope. */
 interface IRunFrame {
   readonly context: IRunContext;
-  /** False once the run body settled; nothing new is attributed to a closed run. */
+  /** False once the body and every started operation settled; nothing new is attributed to a closed run. */
   open: boolean;
 }
 
@@ -161,13 +166,21 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     const writer = runOptions.writer;
     const diagnostics: string[] = [];
 
-    /** Supervision's admission port: the caller's policy while open, denial after close. */
+    /** The denial for work presented to, or decided after, a closed run. */
+    const closedDenial = (): IAdmissionDecision => Object.freeze({ kind: 'denied', reason: `run ${context.runId} has closed` });
+    /**
+     * Supervision's admission port: the caller's policy while open. A policy
+     * may decide asynchronously; a decision that arrives after the run
+     * actually closed is replaced by denial, so nothing is admitted into a
+     * closed run.
+     */
     const admission: IExecutionAdmission = Object.freeze({
-      admit(request: IAdmissionRequest): IAdmissionDecision | Promise<IAdmissionDecision> {
+      async admit(request: IAdmissionRequest): Promise<IAdmissionDecision> {
         if (!frame.open) {
-          return Object.freeze({ kind: 'denied', reason: `run ${context.runId} has closed` });
+          return closedDenial();
         }
-        return policy.admit(request);
+        const decision = await policy.admit(request);
+        return frame.open ? decision : closedDenial();
       },
     });
     /** Supervision's observer position for Resolution's lifecycle events. */
@@ -185,10 +198,34 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       }
     }
 
-    /** Run an operation inside this run's scope, after checking it is still open. */
-    async function within<TResult>(operation: () => TResult | Promise<TResult>): Promise<TResult> {
-      requireOpen();
-      return scope.run(frame, async () => operation());
+    /**
+     * Operations started through this run that have not settled. The run
+     * stays live until this set is empty after its body settled.
+     */
+    const started = new Set<Promise<unknown>>();
+
+    /**
+     * Run an operation inside this run's scope, after checking it is still
+     * open, and account for it until it settles.
+     */
+    function within<TResult>(operation: () => TResult | Promise<TResult>): Promise<TResult> {
+      try {
+        requireOpen();
+      } catch (error: unknown) {
+        return Promise.reject(error);
+      }
+      const pending = scope.run(frame, async () => operation());
+      const settled = pending.then(() => undefined, () => undefined);
+      started.add(settled);
+      void settled.then(() => started.delete(settled));
+      return pending;
+    }
+
+    /** Wait until every started operation, including ones started meanwhile, has settled. */
+    async function drain(): Promise<void> {
+      while (started.size > 0) {
+        await Promise.all([...started]);
+      }
     }
 
     /** Offer a post-work ordinary event; a failure there is a diagnostic. */
@@ -245,6 +282,8 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     try {
       value = await scope.run(frame, async () => body(live));
     } finally {
+      // The body's outcome is kept; work it already started still belongs to the run.
+      await drain();
       frame.open = false;
       try {
         writer.release();

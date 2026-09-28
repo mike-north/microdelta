@@ -174,7 +174,7 @@ export interface IWorkspaceRun extends IRun {
    * The deeply frozen data of one exact completed result in this workspace.
    * It is an exact-reference read: it records no acceptance, observation or
    * dependency, and a missing or wrong-store reference fails rather than
-   * retargeting.
+   * retargeting. It fails with `run-closed` once the run has actually closed.
    */
   read<T>(reference: ICompletedResultReference): T;
 }
@@ -190,9 +190,12 @@ export interface IWorkspace {
    * Run `body` as one supervised run over `options.composition`. One run at a
    * time holds the store's writer: while another run of this or any process
    * holds it, this run's normal requests fail with `writer-unavailable`, while
-   * `check` and `recover` still work. Operations the body starts but does not
-   * await are not awaited by the run; after it closes they cannot take new
-   * admission or claims, and their late writes fail History's fencing.
+   * `check` and `recover` still work. The run stays live, with its context,
+   * exact reads and writer, until the body and every operation started
+   * through the run have settled, even when the body stopped awaiting them
+   * early (for example a `Promise.all` whose sibling failed); the body's own
+   * value or failure is what the run reports. After that actual closure, run
+   * operations, context lookups and admission decisions are rejected or denied.
    */
   run<TInputs extends object, THelpers extends object, T>(
     options: IWorkspaceRunOptions<TInputs, THelpers>,
@@ -325,9 +328,7 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
           admission: ports.admission,
           observer: ports.observer,
         }),
-      }, async (live) => {
-        /** Whether this run's body is still executing; reads belong to their own live run. */
-        let active = true;
+      }, (live) => {
         const run: IWorkspaceRun = Object.freeze({
           context: live.context,
           get open(): boolean {
@@ -338,18 +339,15 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
           recover: live.recover,
           ordinary: live.ordinary,
           read<TData>(reference: ICompletedResultReference): TData {
-            if (!active) {
+            // Reads belong to their own run, for exactly Supervision's lifetime of it.
+            if (!live.open) {
               throw new SupervisionErrorClass('run-closed', `Run ${live.context.runId} has closed and accepts no new work`);
             }
             // The exact-reference reader validates store and scope and never retargets; the static type is the caller's claim about its own result.
             return deepFreeze(history.reader.readSubtree(reference, [])) as TData;
           },
         });
-        try {
-          return await body(run);
-        } finally {
-          active = false;
-        }
+        return body(run);
       });
     },
     close(): void {

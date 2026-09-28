@@ -35,6 +35,7 @@ export interface IResolutionPorts {
 export interface IRun {
     check(step: IBindingDescriptor): Promise<ICheckOutcome>;
     readonly context: IRunContext;
+    readonly open: boolean;
     ordinary<T>(label: string, work: () => T | Promise<T>): Promise<Awaited<T>>;
     recover(step: IBindingDescriptor, request: IRequestOptions): Promise<IRecoveryResult>;
     resolve(step: IBindingDescriptor, request: IRequestOptions): Promise<IResolutionOutcome>;

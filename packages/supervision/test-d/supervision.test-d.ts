@@ -68,3 +68,7 @@ expectType<'verify'>(stepLifecycle[0]);
 expectType<'abandon'>(stepLifecycle[9]);
 declare const unlisted: Exclude<ILifecyclePhase, (typeof stepLifecycle)[number]>;
 expectType<never>(unlisted);
+
+// A run's open state is observable but only Supervision changes it.
+expectType<boolean>(run.open);
+expectError((run as { readonly open: boolean }).open = false);

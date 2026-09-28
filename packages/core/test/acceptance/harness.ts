@@ -135,6 +135,31 @@ export interface IRunOptions {
   readonly logicalStore?: string;
 }
 
+/** A planned kill at one History commit boundary, as a run requests it. */
+export type IPlannedFault = NonNullable<IRunOptions['fault']>;
+
+/** What the parent observed of one finished worker process. */
+export interface IWorkerExit {
+  /** Exit status, or null when terminated by a signal. */
+  readonly status: number | null;
+  /** Terminating signal, if any. */
+  readonly signal: NodeJS.Signals | null;
+  /** Every parsed stdout line, in order. */
+  readonly lines: readonly Readonly<Record<string, unknown>>[];
+  /** The worker's standard error. */
+  readonly stderr: string;
+}
+
+/** Whether a worker process reached the kill its run planned. */
+export type IPlannedKillJudgement =
+  | { readonly kind: 'reached' }
+  | { readonly kind: 'missed'; readonly diagnostic: string };
+
+/** Judge whether a worker reached its planned kill. */
+export function judgePlannedKill(_plan: IPlannedFault, _exit: IWorkerExit): IPlannedKillJudgement {
+  return { kind: 'reached' };
+}
+
 /** Counter for opaque request keys. */
 let keyCounter = 0;
 

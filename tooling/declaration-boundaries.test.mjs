@@ -411,6 +411,44 @@ test('real package configs reject wrong sibling tiers and forbidden context edge
   }
 });
 
+/**
+ * A context type-checks its approved producers' generated alpha declarations,
+ * which may name types of packages it has no edge to (Resolution's rollup
+ * names History and Tracking types). The preflight admits exactly the alpha
+ * rollups in that declaration import closure; it grants no source edge (the
+ * import rule still governs source) and never admits other tiers or packages
+ * outside the closure.
+ */
+test('a context may map only the alpha declaration closure of its approved producers', async () => {
+  const gate = path.join(root, 'tooling/check-producer-declarations.mjs');
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'microdelta-closure-'));
+  try {
+    const packageDir = path.join(directory, 'packages', 'supervision');
+    await mkdir(packageDir, { recursive: true });
+    const config = path.join(packageDir, 'tsconfig.json');
+    const check = async (paths) => {
+      await writeFile(config, JSON.stringify({ compilerOptions: { paths }, files: [] }));
+      return spawnSync(process.execPath, [gate, '--config', config], { cwd: root, encoding: 'utf8' });
+    };
+    const closure = await check({
+      '@microdelta/resolution': [path.join(root, 'packages/resolution/dist/api/resolution.alpha.d.ts')],
+      '@microdelta/history': [path.join(root, 'packages/history/dist/api/history.alpha.d.ts')],
+      '@microdelta/tracking': [path.join(root, 'packages/tracking/dist/api/tracking.alpha.d.ts')],
+    });
+    assert.equal(closure.status, 0, `Resolution's declaration closure should be approved: ${closure.stdout}${closure.stderr}`);
+
+    const outside = await check({ '@microdelta/machine-node': [path.join(root, 'packages/machine-node/dist/api/machine-node.alpha.d.ts')] });
+    assert.notEqual(outside.status, 0, 'A package outside the declaration closure must remain rejected');
+    assert.match(outside.stdout + outside.stderr, /unapproved.*alias or tier/iu);
+
+    const wrongTier = await check({ '@microdelta/history': [path.join(root, 'packages/history/dist/api/history.untrimmed.d.ts')] });
+    assert.notEqual(wrongTier.status, 0, 'A closure package must still use its alpha tier');
+    assert.match(wrongTier.stdout + wrongTier.stderr, /unapproved.*alias or tier/iu);
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
 /** Node module symlinks retain external package identity while resolving to the exact generated alpha artifact. */
 test('Materialization package aliases through workspace node_modules remain pinned to generated tiers', async () => {
   const gate = path.join(root, 'tooling/check-producer-declarations.mjs');

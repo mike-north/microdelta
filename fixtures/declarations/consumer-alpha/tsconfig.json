@@ -9,7 +9,10 @@
       "@microdelta/materialization": ["../../../packages/materialization/dist/api/materialization.alpha.d.ts"],
       "@microdelta/history": ["../../../packages/history/dist/api/history.alpha.d.ts"],
       "@microdelta/value": ["../../../packages/value/dist/api/value.alpha.d.ts"],
-      "@microdelta/capture-producer": ["../capture-producer/dist/api/capture.alpha.d.ts"]
+      "@microdelta/capture-producer": ["../capture-producer/dist/api/capture.alpha.d.ts"],
+      "@microdelta/resolution": ["../../../packages/resolution/dist/api/resolution.alpha.d.ts"],
+      "@microdelta/supervision": ["../../../packages/supervision/dist/api/supervision.alpha.d.ts"],
+      "microdelta": ["../../../packages/core/dist/api/microdelta.alpha.d.ts"]
     }
   }
 }

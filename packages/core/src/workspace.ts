@@ -135,8 +135,12 @@ export interface IWorkspaceOptions {
   /** The logical store identity this file holds, or is created to hold. */
   readonly logicalStore: string;
   /**
-   * Positive safe-integer writer lease duration in milliseconds, renewed on
-   * every normal request of a run. Defaults to 30 seconds.
+   * Positive safe-integer writer lease duration in milliseconds, renewed when
+   * each normal request of a run starts. Defaults to 30 seconds. It is not
+   * renewed while one request runs: a single request (a source check or
+   * summary body) that outlives the lease fails with History's stale-writer
+   * error and leaves its attempt incomplete and recoverable. Choose a lease
+   * longer than the slowest single request.
    */
   readonly leaseMilliseconds?: number;
 }
@@ -182,12 +186,19 @@ export interface IWorkspaceRun extends IRun {
 export interface IWorkspace {
   /** The logical store identity the file holds. */
   readonly logicalStore: string;
-  /** Run `body` as one supervised run over `options.composition`. */
+  /**
+   * Run `body` as one supervised run over `options.composition`. One run at a
+   * time holds the store's writer: while another run of this or any process
+   * holds it, this run's normal requests fail with `writer-unavailable`, while
+   * `check` and `recover` still work. Operations the body starts but does not
+   * await are not awaited by the run; after it closes they cannot take new
+   * admission or claims, and their late writes fail History's fencing.
+   */
   run<TInputs extends object, THelpers extends object, T>(
     options: IWorkspaceRunOptions<TInputs, THelpers>,
     body: (run: IWorkspaceRun) => T | Promise<T>,
   ): Promise<IRunResult<Awaited<T>>>;
-  /** Close the store file; later runs fail. */
+  /** Close the store file; later runs fail. Close only after every run has settled: closing under a live run fails its later requests. */
   close(): void;
 }
 
@@ -247,7 +258,14 @@ function writerFor(history: IDurableHistory, holder: string, leaseMilliseconds: 
       if (held !== undefined) {
         const lease = held;
         held = undefined;
-        history.releaseWriter(lease);
+        try {
+          history.releaseWriter(lease);
+        } catch (error: unknown) {
+          // An expired lease is no longer held by anyone on this run's behalf; there is nothing to release.
+          if (!(error instanceof StaleWriterError)) {
+            throw error;
+          }
+        }
       }
     },
   });
@@ -272,6 +290,8 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
     logicalStore: options.logicalStore,
   });
   let open = true;
+  /** Process-local counter distinguishing this workspace's runs. */
+  let runCounter = 0;
 
   return Object.freeze({
     logicalStore: history.logicalStore,
@@ -283,14 +303,17 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
         return Promise.reject(new SupervisionErrorClass('invalid-request', 'This workspace has been closed'));
       }
       const { authoring, composition } = runOptions;
+      runCounter += 1;
+      // A volatile identity for this run, used for its writer holder and context; never reuse evidence.
+      const runId = runOptions.runId ?? `run:${String(runCounter)}:${composition.scope}`;
       return supervision.run({
         analysis: composition.scope,
         environment: runOptions.environment,
-        ...(runOptions.runId === undefined ? {} : { runId: runOptions.runId }),
+        runId,
         ...(runOptions.admission === undefined ? {} : { admission: runOptions.admission }),
         ...(runOptions.observers === undefined ? {} : { observers: runOptions.observers }),
-        // The holder names this process's run for diagnostics; History's fence, not the name, orders writers.
-        writer: writerFor(history, `microdelta-run:${composition.scope}`, leaseMilliseconds),
+        // The holder names this run for diagnostics; History's fence, not the name, orders writers.
+        writer: writerFor(history, `microdelta-run:${runId}`, leaseMilliseconds),
         resolution: (ports) => createResolution({
           declarations: authoring,
           composition,

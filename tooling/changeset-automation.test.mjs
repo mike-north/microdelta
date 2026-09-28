@@ -1,4 +1,8 @@
-/** Changeset release preparation stays reviewable and never publishes packages. */
+/**
+ * Changeset release preparation stays reviewable. The version job prepares the
+ * Version Packages PR and never publishes; publication is a separate, audited
+ * part of release.yml (see release-workflow.test.mjs) gated on merging that PR.
+ */
 import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -6,9 +10,18 @@ import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { workflowJobs } from './release-workflow.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const cli = path.join(root, 'node_modules/@changesets/cli/bin.js');
+
+/** The version-preparation job of release.yml, which must never publish. */
+async function versionJob() {
+  const workflow = await readFile(path.join(root, '.github/workflows/release.yml'), 'utf8');
+  const job = workflowJobs(workflow).version;
+  assert.ok(job, 'release.yml must keep its version job');
+  return job;
+}
 
 /** Create a disposable workspace so release generation cannot edit project packages. */
 async function fixture() {
@@ -88,16 +101,18 @@ test('workspace pins a Node 20-compatible Changesets CLI and names reviewable ta
 
 test('manual release preparation creates a version PR without publishing', async () => {
   const workflow = await readFile(path.join(root, '.github/workflows/release.yml'), 'utf8');
+  const job = await versionJob();
   assert.match(workflow, /workflow_dispatch:/u);
   assert.match(workflow, /contents:\s*write/u);
   assert.match(workflow, /pull-requests:\s*write/u);
   assert.match(workflow, /changesets\/action@a45c4d594aa4e2c509dc14a9f2b3b67ba3780d0d/u);
   assert.match(workflow, /version:\s*npm run changeset:version/u);
   assert.match(workflow, /createGithubReleases:\s*false/u);
-  assert.doesNotMatch(workflow, /^\s*publish:/mu);
-  assert.match(workflow, /branch:\s*main/u);
-  assert.match(workflow, /github\.ref != 'refs\/heads\/main'/u);
-  assert.doesNotMatch(workflow, /pull_request_target|npm run changeset:publish|changeset publish|npm publish|id-token:\s*write/u);
+  assert.doesNotMatch(job, /^\s*publish:/mu);
+  assert.match(job, /branch:\s*main/u);
+  assert.match(job, /github\.ref != 'refs\/heads\/main'/u);
+  assert.doesNotMatch(workflow, /pull_request_target/u);
+  assert.doesNotMatch(job, /npm run changeset:publish|changeset publish|npm publish|publish-release|id-token:\s*write/u);
 });
 
 test('automatic version PRs request checks against their exact generated branch', async () => {
@@ -117,7 +132,8 @@ test('automatic version PRs request checks against their exact generated branch'
   assert.match(check, /on: \[push, pull_request, workflow_dispatch\]/u);
   assert.match(metadata, /workflow_dispatch:/u);
   assert.match(metadata, /pr_number:/u);
-  assert.doesNotMatch(workflow, /npm (?:run )?publish|changeset publish|npm publish|pull_request_target|auto-merge|enable-pull-request-automerge/iu);
+  assert.doesNotMatch(workflow, /pull_request_target|auto-merge|enable-pull-request-automerge/iu);
+  assert.doesNotMatch(await versionJob(), /npm (?:run )?publish|changeset publish|npm publish/iu);
 });
 
 test('release workflow uses the documented version-only v1.9.0 action interface', async () => {
@@ -133,7 +149,7 @@ test('release workflow uses the documented version-only v1.9.0 action interface'
   assert.match(workflow, /version:\s*npm run changeset:version/u);
   assert.match(workflow, /outputs\.pullRequestNumber/u);
   assert.match(workflow, /createGithubReleases:\s*false/u);
-  assert.doesNotMatch(workflow, /^\s*publish:/mu);
+  assert.doesNotMatch(await versionJob(), /^\s*publish:/mu);
 });
 
 test('release PR generation records its package plan in the standard PR evidence shape', async () => {
@@ -156,6 +172,12 @@ test('release PR generation records its package plan in the standard PR evidence
     assert.match(body, /^Agent assistance: None$/mu);
     assert.doesNotMatch(body, /TODO|TBD|PLACEHOLDER|checks passed|reviewed and merged/iu);
     assert.match(body, /@microdelta\/tracking.*patch/iu);
+    // Merging is the release decision, so the body must say so rather than
+    // claim that the PR never leads to publication.
+    assert.match(body, /Merging this PR is the release decision/u);
+    assert.match(body, /npm trusted publishing/u);
+    assert.match(body, /Refs #64\b/u);
+    assert.doesNotMatch(body, /does not publish packages/u);
     const bodyPath = path.join(directory, 'body.md');
     await writeFile(bodyPath, body);
     const checked = spawnSync(process.execPath, [path.join(root, 'tooling/pr-metadata.mjs'), '--body-file', bodyPath], {

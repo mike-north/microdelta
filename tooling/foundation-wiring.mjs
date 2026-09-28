@@ -31,7 +31,7 @@ export function missingFoundationGates({ workspace, packages, workflow, extracto
     includes('check', scripts.check, command);
   }
   includes('check:packages', scripts['check:packages'], 'npm run check --workspaces');
-  for (const gate of ['check:imports', 'check:declarations', 'check:fixtures', 'check:experiments', 'check:suppressions', 'check:wiring']) {
+  for (const gate of ['check:imports', 'check:declarations', 'check:fixtures', 'check:experiments', 'check:suppressions', 'check:wiring', 'check:release']) {
     includes('check:workspace', scripts['check:workspace'], `npm run ${gate}`);
   }
   for (const [gate, commands] of Object.entries({
@@ -48,6 +48,7 @@ export function missingFoundationGates({ workspace, packages, workflow, extracto
     'check:experiments': ['tsc --noEmit -p tsconfig.json', 'tsc --noEmit -p experiments/exp-1/tsconfig.portable.json', 'eslint experiments'],
     'check:suppressions': ['node tooling/check-suppressions.mjs'],
     'check:wiring': ['node tooling/foundation-wiring.mjs'],
+    'check:release': ['node tooling/release-workflow.mjs', 'node tooling/release-graph.mjs'],
   })) {
     for (const command of commands) {
       includes(gate, scripts[gate], command);

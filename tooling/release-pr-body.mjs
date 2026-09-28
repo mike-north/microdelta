@@ -2,7 +2,9 @@
  * Render factual, reviewable metadata for the Changesets-generated version PR.
  * The release plan is generated from repository changesets immediately before
  * versioning; this body records intended package changes without claiming CI or
- * human review has already succeeded.
+ * human review has already succeeded. Merging the PR is the human release
+ * decision that lets release.yml publish through npm trusted publishing, so the
+ * body states that consequence rather than implying the PR is inert.
  */
 import { readFile } from 'node:fs/promises';
 
@@ -29,13 +31,14 @@ async function main() {
   process.stdout.write([
     '## Problem and resulting behavior',
     '',
-    'This Changesets version PR prepares package versions and changelogs for human review. It does not publish packages.',
+    'This Changesets version PR prepares package versions and changelogs for human review. Merging this PR is the release decision: release.yml then verifies the merged commit and publishes the first-party packages to npm through npm trusted publishing. Opening or updating this PR publishes nothing.',
     '',
     '## Governing issue and contracts',
     '',
     'Refs #31',
+    'Refs #64',
     '',
-    'The repository release-preparation contract keeps packages private, versions internal dependency ranges, disables private package tags, and leaves version PR approval and merge to maintainers.',
+    'The repository release contract versions internal dependency ranges exactly, leaves version PR approval and merge to maintainers, and publishes only after that merge (docs/releasing.md).',
     '',
     '## Acceptance evidence',
     '',
@@ -46,7 +49,7 @@ async function main() {
     '',
     '## Risks and limitations',
     '',
-    'This automation does not publish packages or approve or merge this PR. Review generated versions, changelogs, internal dependency ranges, current checks, and review feedback before merge.',
+    'This automation does not approve or merge this PR. npm versions are immutable once published, so review generated versions, changelogs, internal dependency ranges, current checks, and review feedback before merge. A package left at the reserved bootstrap version 0.0.0 stops the release before anything is published.',
     '',
     '## Attribution',
     '',

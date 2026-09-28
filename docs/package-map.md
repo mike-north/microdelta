@@ -12,7 +12,7 @@ delivery are separate gates recorded in the [M2 evidence record](validation/m2-2
 | Author facade / assembly | `microdelta` (`packages/core`) | Supplies the Node Machine to History's memory factory; preserves `createMemoryStore(options?)` and exports the existing Store errors, types, and Jest conformance entry | Composition may consume approved owner contracts and `@microdelta/machine-node`; contexts cannot import through the facade |
 | Definition & Binding | `@microdelta/definition` | Project-private alpha family-bound builders: frozen source/memo declarations with complete subjects and versions, the fixed M3 composition (memo to sibling source per explicit member), exact structural correspondence with distinct missing/ambiguous outcomes, direct-child witness reconnection, and an invocation bridge that hands actual author callbacks to an injected invoker and dispatches argument-free declared handles through an injected port; plus label-only `nameOf` | Value Semantics |
 | Tracking & Observation | `@microdelta/tracking` | Process-local tags, frames, cells, and derivations plus project-private `createTrackingObserver(host)` alpha contracts for detached supported wrappers, consumed semantic facts, called-function implementation evidence, current-fact comparison, and cached evidence replay | Value Semantics and `@microdelta/machine` |
-| Result History & Publication | `@microdelta/history` | Existing row Store contract and compatibility row schema; memory adapter receives a snapshot capability; alpha exact completed-result selection and fingerprint-reading ports have no production reader backend; no cross-row publication operation | Value Semantics; `@microdelta/machine` |
+| Result History & Publication | `@microdelta/history` | Existing row Store contract and compatibility row schema; memory adapter receives a snapshot capability; alpha exact completed-result selection and fingerprint-reading ports; project-private alpha durable SQLite authority (`openDurableHistory`) over injected SQLite, clock and SHA-256 capabilities, owning the writer lease, attempts, atomic publication, current pointers, immutable results with a generated selected index, and acceptance records | Value Semantics; `@microdelta/machine` |
 | Reuse Resolution | No package yet | Candidate-validation and source-policy ports remain unimplemented | Definition, Tracking, History, Materialization |
 | Run Supervision | No package yet | Admission, progress, retry, and cancellation ports remain unimplemented | Definition, Resolution, Accounting |
 | Resource Accounting | No package yet | Observation and acknowledgment ports remain unimplemented | None |
@@ -28,6 +28,15 @@ supplying the Node adapter at assembly. `Path` addresses rows in that Store; it 
 semantic address. `Identity`, `Subject`, and `RecordedRead` remain compatibility
 shapes, not ratification of the target domain model. `nameOf` supplies a label,
 never a durable subject key or current-binding locator.
+
+History's durable authority is a separate alpha entry beside the unchanged
+row Store: the facade does not export it and the public Store API is unchanged.
+It stores Resolution provenance and acceptance evidence as versioned opaque
+records and validates their exact dependency references, without importing
+Definition or Tracking. Its real-SQLite and independent-process evidence runs
+in the facade's assembly tests (`packages/core/test/durable-history`), because
+only assembly may compose History with the Node adapter. The first consumer
+through the workspace authoring path is later M3 work.
 
 The Tracking observer is bounded M2 owner functionality: it stores no binding
 catalog or History rows and does not decide source freshness or reusable results.

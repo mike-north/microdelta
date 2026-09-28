@@ -20,8 +20,9 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 import { judgeRun } from '../../durable-history/controls/control-outcome.mjs';
+import { repositoryRoot } from './paths.mjs';
 
-const root = new URL('../../../../../', import.meta.url).pathname;
+const root = repositoryRoot(import.meta.url);
 
 /** Emitted production files a control may plant into. */
 const targets = Object.freeze({

@@ -36,7 +36,7 @@
     "test": "npm run test:unit && npm run test:types && npm run test:controls",
     "test:unit": "tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand",
     "test:types": "tsd",
-    "test:controls": "node --test test/durable-history/controls/control-outcome.test.mjs"
+    "test:controls": "node --test test/durable-history/controls/control-outcome.test.mjs test/acceptance/controls/paths.test.mjs"
   },
   "tsd": {
     "directory": "test-d",

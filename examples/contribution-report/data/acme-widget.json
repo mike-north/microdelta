@@ -1,0 +1,33 @@
+{
+  "repository": "acme/widget",
+  "revision": 1,
+  "profiles": [
+    { "key": "person:ada", "id": "gh:1001", "name": "Ada", "avatarUrl": "https://avatars.example/ada.png" },
+    { "key": "person:ben", "id": "gh:2002", "name": "Ben", "avatarUrl": "https://avatars.example/ben.png" },
+    { "key": "person:cy", "id": "gh:3003", "name": "Cy", "avatarUrl": "https://avatars.example/cy.png" }
+  ],
+  "pullRequests": [
+    { "number": 98, "author": "person:ada", "createdAt": "2025-12-18T09:00:00Z", "merged": true, "labels": ["chore"] },
+    { "number": 101, "author": "person:ada", "createdAt": "2026-01-12T10:30:00Z", "merged": true, "labels": ["feature"] },
+    { "number": 102, "author": "person:ada", "createdAt": "2026-02-03T16:05:00Z", "merged": true, "labels": ["docs"] },
+    { "number": 103, "author": "person:ada", "createdAt": "2026-03-20T08:45:00Z", "merged": false, "labels": [] },
+    { "number": 201, "author": "person:ben", "createdAt": "2026-01-25T13:00:00Z", "merged": true, "labels": ["bug"] },
+    { "number": 202, "author": "person:ben", "createdAt": "2026-03-02T11:20:00Z", "merged": false, "labels": [] },
+    { "number": 204, "author": "person:ben", "createdAt": "2026-04-01T00:00:00Z", "merged": true, "labels": ["bug"] },
+    { "number": 301, "author": "person:cy", "createdAt": "2026-02-14T12:00:00Z", "merged": true, "labels": [] }
+  ],
+  "reviews": [
+    { "id": "rv-ada-0", "author": "person:ada", "pullRequest": 97, "submittedAt": "2025-12-30T10:00:00Z", "state": "submitted" },
+    { "id": "rv-ada-1", "author": "person:ada", "pullRequest": 201, "submittedAt": "2026-01-26T09:00:00Z", "state": "submitted" },
+    { "id": "rv-ada-2", "author": "person:ada", "pullRequest": 202, "submittedAt": "2026-03-03T15:00:00Z", "state": "submitted" },
+    { "id": "rv-ada-3", "author": "person:ada", "pullRequest": 301, "submittedAt": "2026-02-15T10:10:00Z", "state": "submitted" },
+    { "id": "rv-ada-4", "author": "person:ada", "pullRequest": 202, "submittedAt": "2026-03-05T17:30:00Z", "state": "submitted" },
+    { "id": "rv-ada-5", "author": "person:ada", "pullRequest": 201, "submittedAt": "2026-01-27T08:00:00Z", "state": "submitted" },
+    { "id": "rv-ada-6", "author": "person:ada", "pullRequest": 204, "submittedAt": "2026-03-31T23:00:00Z", "state": "pending" },
+    { "id": "rv-ben-1", "author": "person:ben", "pullRequest": 101, "submittedAt": "2026-01-13T11:00:00Z", "state": "submitted" },
+    { "id": "rv-ben-2", "author": "person:ben", "pullRequest": 102, "submittedAt": "2026-02-04T09:30:00Z", "state": "submitted" },
+    { "id": "rv-ben-3", "author": "person:ben", "pullRequest": 103, "submittedAt": "2026-03-21T14:00:00Z", "state": "submitted" },
+    { "id": "rv-ben-4", "author": "person:ben", "pullRequest": 301, "submittedAt": "2026-04-02T10:00:00Z", "state": "submitted" },
+    { "id": "rv-cy-1", "author": "person:cy", "pullRequest": 101, "submittedAt": "2026-01-14T10:00:00Z", "state": "submitted" }
+  ]
+}

@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "include": ["src/**/*.ts"],
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "dist",
+    "noEmit": false,
+    "skipLibCheck": false,
+    "paths": {
+      "microdelta": ["../../node_modules/microdelta/dist/api/microdelta.alpha.d.ts"],
+      "@microdelta/definition": ["../../node_modules/@microdelta/definition/dist/api/definition.alpha.d.ts"],
+      "@microdelta/history": ["../../node_modules/@microdelta/history/dist/api/history.alpha.d.ts"],
+      "@microdelta/resolution": ["../../node_modules/@microdelta/resolution/dist/api/resolution.alpha.d.ts"],
+      "@microdelta/supervision": ["../../node_modules/@microdelta/supervision/dist/api/supervision.alpha.d.ts"],
+      "@microdelta/tracking": ["../../node_modules/@microdelta/tracking/dist/api/tracking.alpha.d.ts"]
+    }
+  }
+}

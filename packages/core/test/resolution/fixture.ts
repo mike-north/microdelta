@@ -51,6 +51,8 @@ export interface IActivity {
   readonly profile: { readonly id: string; readonly name: string; readonly avatarUrl: string };
   readonly pullRequests: readonly IPullRequest[];
   readonly reviews: readonly { readonly id: string }[];
+  /** An ordinary author data field that happens to be named like a thenable member; unread unless a callback reads it. */
+  readonly then?: string;
 }
 
 /** A contributor summary: structured statistics and the sentence built from them. */
@@ -77,6 +79,9 @@ export interface IHelpers {
   readonly summarize: (activity: IResultView<IActivity>, format: ITrackedView<IFormat>, key: IMemberKey) => ISummary;
   readonly format: IFormat;
   readonly unused: () => string;
+  readonly readThen: (activity: IResultView<IActivity>) => string;
+  readonly listNumbers: (config: ITrackedView<IConfig>) => ISourceOutcome<readonly number[]>;
+  readonly total: (numbers: IResultView<readonly number[]>) => { readonly count: number; readonly first: number | null };
 }
 
 /** Resolution's binding family for this fixture. */
@@ -115,11 +120,17 @@ export interface IWorld {
   carriers: Partial<Record<IMemberKey, IPreviousResult<IActivity>>>;
   /** Whether each check received an eligible previous carrier. */
   sawPrevious: Record<IMemberKey, boolean[]>;
+  /** The array-root fixture source's remote data. */
+  numbers: number[];
+  /** Counts of the array-root source and its memo body. */
+  numberChecks: number;
+  totals: number;
 }
 
 /** The fixture activity for Ada (authored 3, merged 2, reviews 5). */
-export function adaActivity(overrides: { readonly name?: string; readonly profileId?: string; readonly merged103?: boolean; readonly avatar?: string; readonly label?: string } = {}): IActivity {
+export function adaActivity(overrides: { readonly name?: string; readonly profileId?: string; readonly merged103?: boolean; readonly avatar?: string; readonly label?: string; readonly then?: string } = {}): IActivity {
   return {
+    ...(overrides.then === undefined ? {} : { then: overrides.then }),
     profile: { id: overrides.profileId ?? 'gh:1001', name: overrides.name ?? 'Ada', avatarUrl: overrides.avatar ?? 'https://avatars.example/ada.png' },
     pullRequests: [
       { number: 101, merged: true, labels: [overrides.label ?? 'feature'] },
@@ -154,6 +165,9 @@ export function createWorld(): IWorld {
     summaries: { 'person:ada': 0, 'person:ben': 0 },
     carriers: {},
     sawPrevious: { 'person:ada': [], 'person:ben': [] },
+    numbers: [10, 20],
+    numberChecks: 0,
+    totals: 0,
   };
 }
 
@@ -286,6 +300,26 @@ function formatRevised(name: string, authored: number, merged: number, reviews: 
   return [`${name} authored ${pulls}`, mergedText, `and submitted ${reviewText}.`].join(', ');
 }
 
+/** A deliberate author read of an ordinary `then` data field. */
+function readThen(activity: IResultView<IActivity>): string {
+  return activity.then ?? 'absent';
+}
+
+/** The array-root fixture source adapter: fresh numbers every check. */
+function listNumbers(config: ITrackedView<IConfig>): ISourceOutcome<readonly number[]> {
+  world.numberChecks += 1;
+  if (config.repository.length === 0) {
+    throw new Error('fixture numbers need a repository');
+  }
+  return sourceOutcome.fresh<readonly number[]>(copy(world.numbers));
+}
+
+/** Summarize an array-root child through its length and first element. */
+function total(numbers: IResultView<readonly number[]>): { readonly count: number; readonly first: number | null } {
+  world.totals += 1;
+  return { count: numbers.length, first: numbers.length > 0 ? numbers[0] ?? null : null };
+}
+
 /** A declared helper no callback calls. */
 function unused(): string {
   return 'never called';
@@ -310,6 +344,8 @@ export interface IVariation {
   readonly formatter?: 'original' | 'revised';
   /** Which uncalled helper implementation is registered. */
   readonly unusedHelper?: 'original' | 'revised';
+  /** Whether Ada's summary also deliberately reads the child's `then` data field. */
+  readonly adaSummaryReadsThen?: boolean;
   /** Whether Ada's summary body swallows a failed child call and returns a fallback. */
   readonly adaSummaryCatches?: boolean;
   /** Ada's activity compatibility version. */
@@ -329,10 +365,12 @@ export interface IContributors {
   readonly composition: IComposition<IFamily>;
   readonly steps: Readonly<Record<IMemberKey, { readonly activity: IBindingDescriptor; readonly summary: IBindingDescriptor }>>;
   readonly declarations: Readonly<Record<IMemberKey, { readonly activity: IAnySourceDeclaration<IFamily>; readonly summary: IAnyMemoDeclaration<IFamily> }>>;
+  /** The array-root member: a numbers source and a memo reading its length and first element. */
+  readonly numbers: { readonly source: IBindingDescriptor; readonly total: IBindingDescriptor };
 }
 
 /** The declared input and helper slots every callback receives. */
-export const bindingSlots = { inputs: ['config'], helpers: ['checkActivity', 'acceptActivity', 'summarize', 'format', 'unused'] } as const;
+export const bindingSlots = { inputs: ['config'], helpers: ['checkActivity', 'acceptActivity', 'summarize', 'format', 'unused', 'readThen', 'listNumbers', 'total'] } as const;
 
 /** Compose both contributors with fresh allocations. */
 export function composeContributors(variation: IVariation = {}): IContributors {
@@ -368,7 +406,18 @@ export function composeContributors(variation: IVariation = {}): IContributors {
     finality: ({ previous, inputs, helpers }) => helpers.acceptActivity(previous, inputs.config, 'person:ben'),
     run: ({ previous, inputs, helpers }) => helpers.checkActivity(previous, inputs.config, 'person:ben', 'retrieval'),
   });
-  const adaSummary = variation.adaSummaryCatches === true
+  const adaSummary = variation.adaSummaryReadsThen === true
+    ? memo({
+        subject: 'summary:acme/widget:2026-Q1:person:ada',
+        label: 'Ada summary',
+        version: variation.summaryVersion ?? 1,
+        children: { activity: adaActivity },
+        run: async ({ helpers, calls }) => {
+          const { data: activity } = await calls.activity();
+          return { ...helpers.summarize(activity, helpers.format, 'person:ada'), marker: helpers.readThen(activity) };
+        },
+      })
+    : variation.adaSummaryCatches === true
     ? memo({
         subject: 'summary:acme/widget:2026-Q1:person:ada',
         label: 'Ada summary',
@@ -403,6 +452,21 @@ export function composeContributors(variation: IVariation = {}): IContributors {
       return helpers.summarize(activity, helpers.format, 'person:ben');
     },
   });
+  const numbersSource = source<readonly number[]>({
+    subject: 'numbers:acme/widget',
+    label: 'Fixture numbers',
+    run: ({ inputs, helpers }) => helpers.listNumbers(inputs.config),
+  });
+  const numbersTotal = memo({
+    subject: 'total:acme/widget',
+    label: 'Fixture total',
+    children: { numbers: numbersSource },
+    run: async ({ helpers, calls }) => {
+      const { data } = await calls.numbers();
+      return helpers.total(data);
+    },
+  });
+  const numbersMember = { key: 'list:numbers', steps: [{ slot: 'numbers', declaration: numbersSource }, { slot: 'total', declaration: numbersTotal }] };
   const ada = { key: 'person:ada', steps: [{ slot: 'activity', declaration: adaActivity }, { slot: 'summary', declaration: adaSummary }] };
   const ben = { key: 'person:ben', steps: [{ slot: 'activity', declaration: benActivitySource }, { slot: 'summary', declaration: benSummary }] };
   const helpers = [
@@ -411,12 +475,15 @@ export function composeContributors(variation: IVariation = {}): IContributors {
     { slot: 'summarize', helper: summarize },
     { slot: 'format', helper: variation.formatter === 'revised' ? formatRevised : format },
     { slot: 'unused', helper: variation.unusedHelper === 'revised' ? unusedRevised : unused },
+    { slot: 'readThen', helper: readThen },
+    { slot: 'listNumbers', helper: listNumbers },
+    { slot: 'total', helper: total },
   ];
   const composition = compose({
     scope: analysis,
     inputs: [{ slot: 'config', value: variation.config ?? defaultConfig }],
     helpers: variation.order === 'ben-first' ? [...helpers].reverse() : helpers,
-    members: variation.order === 'ben-first' ? [ben, ada] : [ada, ben],
+    members: variation.order === 'ben-first' ? [ben, ada, numbersMember] : [ada, ben, numbersMember],
   });
   const step = (memberKey: IMemberKey, slot: string): IBindingDescriptor => ({ scope: analysis, role: 'step', slot, memberKey });
   return {
@@ -430,5 +497,6 @@ export function composeContributors(variation: IVariation = {}): IContributors {
       'person:ada': { activity: adaActivity, summary: adaSummary },
       'person:ben': { activity: benActivitySource, summary: benSummary },
     },
+    numbers: { source: { scope: analysis, role: 'step', slot: 'numbers', memberKey: 'list:numbers' }, total: { scope: analysis, role: 'step', slot: 'total', memberKey: 'list:numbers' } },
   };
 }

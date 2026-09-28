@@ -276,3 +276,57 @@ describe('policy and control failures are never success', () => {
     });
   });
 });
+
+describe('supported provenance semantic integrity', () => {
+  /** Publish a copy of Ada's activity result with rewritten provenance as the latest candidate. */
+  function publishCraftedSource(session: ISession, locator: string, rewrite: (record: { readonly format: string; readonly formatVersion: number; readonly content: Record<string, unknown> }) => { readonly format: string; readonly formatVersion: number; readonly content: unknown }, key: string): string {
+    const original = session.history.readEnvelope({ kind: 'completed-result', locator });
+    const attempt = session.history.allocateAttempt(session.lease, { analysis: original.analysis, environment: original.environment, subject: original.subject, version: original.version, attemptKey: key, intentDigest: `crafted:${key}` });
+    const content = JSON.parse(JSON.stringify(original.provenance.content)) as Record<string, unknown>;
+    session.history.stageAttempt(session.lease, {
+      attemptId: attempt.attemptId,
+      payload: payloadOf(session.history, locator),
+      provenance: rewrite({ format: original.provenance.format, formatVersion: original.provenance.formatVersion, content }),
+      dependencies: [],
+    });
+    return session.history.publishAttempt(session.lease, attempt.attemptId).locator;
+  }
+
+  test.each([
+    ['no observations at all', (record: { readonly format: string; readonly formatVersion: number; readonly content: Record<string, unknown> }) => ({ ...record, content: { ...record.content, observations: [] } })],
+    ['no own implementation observation', (record: { readonly format: string; readonly formatVersion: number; readonly content: Record<string, unknown> }) => ({
+      ...record,
+      content: { ...record.content, observations: (record.content.observations as { readonly binding: { readonly path: readonly string[] } }[]).filter((item) => item.binding.path[0] !== 'self') },
+    })],
+    ['a direct-child edge on a source', (record: { readonly format: string; readonly formatVersion: number; readonly content: Record<string, unknown> }) => ({
+      ...record,
+      content: { ...record.content, children: [{ slot: 'activity', witness: { version: 1 }, reference: { kind: 'completed-result', locator: 'mdh1|x' }, binding: { path: ['child', 'activity'] } }] },
+    })],
+  ])('a supported source record with %s is an integrity failure before finality, admission or checks', async (_label, rewrite) => {
+    const location = freshLocation();
+    const first = await coldAda(location);
+    await withSession(location, async (session) => {
+      publishCraftedSource(session, first, rewrite, 'crafted-source');
+    }, { adaSource: 'changed' });
+    await withSession(location, async (session) => {
+      const start = session.sqlite.mark();
+      await expectFailure(session.resolve(session.contributors.steps['person:ada'].activity), 'integrity');
+      expect(world.finalities['person:ada']).toBe(0);
+      expect(world.checks['person:ada']).toBe(1);
+      expect(session.admissions).toHaveLength(0);
+      expect(session.sqlite.evidence(start).roles.allocate).toBeUndefined();
+    }, { adaSource: 'changed' });
+  });
+
+  test('an unsupported provenance version stays an honest miss; the older valid candidate is still reused', async () => {
+    const location = freshLocation();
+    const first = await coldAda(location);
+    const crafted = await withSession(location, async (session) => publishCraftedSource(session, first, (record) => ({ ...record, formatVersion: 2, content: { ...record.content, observations: [] } }), 'crafted-version'));
+    await withSession(location, async (session) => {
+      const outcome = await session.resolve(session.contributors.steps['person:ada'].activity);
+      expect(outcome.misses.map((item) => [item.candidate.locator, item.reason])).toEqual([[crafted, 'unsupported-evidence']]);
+      expect(outcome.kind).toBe('reused');
+      expect(referenceOf(outcome)).toBe(first);
+    });
+  });
+});

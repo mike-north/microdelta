@@ -271,6 +271,71 @@ describe('child failures inside a body', () => {
   });
 });
 
+describe('async child delivery', () => {
+  /** Whether any recorded observation of a result addresses a `then` member. */
+  function readsThen(session: ISession, locator: string): boolean {
+    const envelope = session.history.readEnvelope({ kind: 'completed-result', locator });
+    const content = envelope.provenance.content as { readonly observations: readonly { readonly address: readonly { readonly key?: string }[] }[] };
+    return content.observations.some((item) => item.address.some((segment) => segment.key === 'then'));
+  }
+
+  test('delivering a child records no Promise-assimilation read; an unread then field change retains the summary', async () => {
+    const location = freshLocation();
+    const cold = await coldReport(location);
+    await withSession(location, async (session) => {
+      expect(readsThen(session, cold.summaries['person:ada'])).toBe(false);
+    });
+    resetCounts();
+    world.finality['person:ada'] = 'not-final';
+    world.remote['person:ada'] = adaActivity({ then: 'unread field' });
+    await withSession(location, async (session) => {
+      const outcome = await session.resolve(session.contributors.steps['person:ada'].summary);
+      expect(outcome.kind).toBe('reused');
+      expect(referenceOf(outcome)).toBe(cold.summaries['person:ada']);
+      expect(world.checks['person:ada']).toBe(1);
+      expect(world.summaries['person:ada']).toBe(0);
+    });
+  });
+
+  test('a deliberate author read of a then data field is ordinary evidence', async () => {
+    const location = freshLocation();
+    world.remote['person:ada'] = adaActivity({ then: 'first' });
+    const first = await withSession(location, async (session) => {
+      const outcome = await session.resolve(session.contributors.steps['person:ada'].summary);
+      expect(payloadOf(session.history, referenceOf(outcome))).toMatchObject({ marker: 'first' });
+      expect(readsThen(session, referenceOf(outcome))).toBe(true);
+      return referenceOf(outcome);
+    }, { adaSummaryReadsThen: true });
+    world.finality['person:ada'] = 'not-final';
+    world.remote['person:ada'] = adaActivity({ then: 'second' });
+    await withSession(location, async (session) => {
+      const outcome = await session.resolve(session.contributors.steps['person:ada'].summary);
+      expect(outcome.kind).toBe('published');
+      expect(referenceOf(outcome)).not.toBe(first);
+      expect(payloadOf(session.history, referenceOf(outcome))).toMatchObject({ marker: 'second' });
+    }, { adaSummaryReadsThen: true });
+  });
+
+  test('an array-root child is delivered cold and validated after restart', async () => {
+    const location = freshLocation();
+    const first = await withSession(location, async (session) => {
+      const outcome = await session.resolve(session.contributors.numbers.total);
+      expect(outcome.kind).toBe('published');
+      expect(payloadOf(session.history, referenceOf(outcome))).toEqual({ count: 2, first: 10 });
+      return referenceOf(outcome);
+    });
+    expect(world.totals).toBe(1);
+    await withSession(location, async (session) => {
+      const outcome = await session.resolve(session.contributors.numbers.total);
+      // The numbers source has no finality hook, so its check runs; equal data keeps the total.
+      expect(outcome.kind).toBe('reused');
+      expect(referenceOf(outcome)).toBe(first);
+    });
+    expect(world.totals).toBe(1);
+    expect(world.numberChecks).toBe(2);
+  });
+});
+
 describe('compatibility versions and current path rebinding', () => {
   test('version 2 then unchanged version 1 rollback reuses the old exact results without rewinding the current pointer', async () => {
     const location = freshLocation();
@@ -412,20 +477,80 @@ describe('correspondence, witnesses and historical integrity', () => {
     });
   });
 
-  test('a different subject now occupying the child slot is a correspondence miss followed by normal execution', async () => {
+  /*
+   * Contract correction (supervisory review). An earlier version of this test
+   * required a correspondence miss when a different subject occupies the
+   * uniquely reconnected child slot. CMP-6 makes the declared structural slot
+   * the correspondence; REUSE-005/006 resolve the current child and compare
+   * only the consumed output facts; RES-003/007 and the transition-table row
+   * "current path targets a new entity with equal consumed scalar" permit the
+   * parent to retain while current evidence names the new child and original
+   * provenance keeps the old one. The child subject is the child's own history
+   * key, not a second parent correspondence key.
+   */
+  test('a different subject now occupying the child slot is resolved as the current child; equal consumed facts retain the summary', async () => {
     const location = freshLocation();
     const cold = await coldReport(location);
     resetCounts();
     await withSession(location, async (session) => {
       const outcome = await session.resolve(session.contributors.steps['person:ada'].summary);
-      expect(outcome.misses.map((item) => item.reason)).toEqual(['correspondence']);
-      expect(outcome.kind).toBe('published');
-      expect(referenceOf(outcome)).not.toBe(cold.summaries['person:ada']);
-      expect(payloadOf(session.history, referenceOf(outcome))).toEqual(expected['person:ada']);
-      // The new subject has no history, so its source ran cold; no finality was evaluated.
+      expect(outcome.misses).toEqual([]);
+      expect(outcome.kind).toBe('reused');
+      expect(referenceOf(outcome)).toBe(cold.summaries['person:ada']);
+      expect(world.summaries['person:ada']).toBe(0);
+      // The new subject has no history: its source ran cold under its own admission.
       expect(world.checks['person:ada']).toBe(1);
       expect(world.finalities['person:ada']).toBe(0);
+      expect(session.admissions.map((request) => [request.step.slot, request.reason])).toEqual([['activity', 'cold']]);
+      const relocated = session.history.readCurrent({ analysis, environment, subject: 'activity:acme/widget:2026-Q1:person:ada:relocated' });
+      if (outcome.kind === 'reused') {
+        expect(outcome.acceptance.dependencies).toEqual([relocated]);
+      }
+      // Original provenance and exact historical integrity are untouched.
+      const envelope = session.history.readEnvelope({ kind: 'completed-result', locator: cold.summaries['person:ada'] });
+      expect(envelope.dependencies.map((reference) => reference.locator)).toEqual([cold.activities['person:ada']]);
     }, { adaActivitySubject: 'activity:acme/widget:2026-Q1:person:ada:relocated' });
+  });
+
+  test('a different subject in the child slot with a changed consumed fact misses and executes', async () => {
+    const location = freshLocation();
+    const cold = await coldReport(location);
+    world.remote['person:ada'] = adaActivity({ merged103: true });
+    resetCounts();
+    await withSession(location, async (session) => {
+      const outcome = await session.resolve(session.contributors.steps['person:ada'].summary);
+      expect(outcome.misses.map((item) => item.reason)).toEqual(['changed']);
+      expect(outcome.kind).toBe('published');
+      expect(referenceOf(outcome)).not.toBe(cold.summaries['person:ada']);
+      expect(world.checks['person:ada']).toBe(1);
+      expect(world.summaries['person:ada']).toBe(1);
+    }, { adaActivitySubject: 'activity:acme/widget:2026-Q1:person:ada:relocated' });
+  });
+
+  test('a supported memo record without its own implementation evidence is an integrity failure before any work', async () => {
+    const location = freshLocation();
+    const cold = await coldReport(location);
+    await withSession(location, async (session) => {
+      publishCrafted(session.history, session.lease, cold.summaries['person:ada'], (content) => ({
+        ...content,
+        observations: (content.observations as { readonly binding: { readonly path: readonly string[] } }[]).filter((item) => item.binding.path[0] !== 'self'),
+      }), 'crafted-no-self');
+    });
+    resetCounts();
+    await withSession(location, async (session) => {
+      const start = session.sqlite.mark();
+      let caught: unknown;
+      try {
+        await session.resolve(session.contributors.steps['person:ada'].summary);
+      } catch (error: unknown) {
+        caught = error;
+      }
+      expect(caught).toBeInstanceOf(ResolutionError);
+      expect((caught as ResolutionError).code).toBe('integrity');
+      expect(counts()).toEqual({ checks: 0, finalities: 0, summaries: 0 });
+      expect(session.admissions).toHaveLength(0);
+      expect(session.sqlite.evidence(start).roles.allocate).toBeUndefined();
+    });
   });
 
   test.each([

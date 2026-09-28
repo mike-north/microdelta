@@ -52,6 +52,11 @@ const controls = [
   { name: 'direct invocations are not shared within a request', file: 'resolution.js', anchor: 'if (existing !== undefined) {', replacement: 'if (false) {' },
   { name: 'a body that swallowed a failed child still publishes', file: 'resolution.js', anchor: 'if (frame.failed !== undefined) {', replacement: 'if (false) {' },
   { name: 'a committed request key is served again by a normal request', file: 'resolution.js', anchor: "if (prior.kind !== 'absent') {", replacement: "if (prior.kind !== 'absent' && prior.kind !== 'completed') {" },
+  { name: 'a child view is resolved through Promise assimilation', file: 'resolution.js', anchor: 'return Object.freeze({ data: materialization.materializeView(reference, { path: bindingPaths.child(slot) }) });', replacement: 'const view = materialization.materializeView(reference, { path: bindingPaths.child(slot) }); await view; return Object.freeze({ data: view });' },
+  { name: 'a different current child subject is treated as lost correspondence', file: 'resolution.js', anchor: 'const resolved = await resolveSourceShared(request, childStep, childDeclaration);', replacement: "if (historical.subject !== childDeclaration.subject) { return { verdict: 'miss', miss: miss(candidate.reference, 'correspondence', 'subject differs') }; } const resolved = await resolveSourceShared(request, childStep, childDeclaration);" },
+  { name: 'nested post-commit diagnostics stay with each step', file: 'resolution.js', anchor: 'return { misses: [], trace: [], diagnostics: request.diagnostics };', replacement: 'return { misses: [], trace: [], diagnostics: [] };' },
+  { name: 'supported provenance need not carry its own implementation evidence', file: 'evidence.js', anchor: 'if (!observations.some(isOwnImplementation)) {', replacement: 'if (false) {' },
+  { name: 'supported source provenance may carry child edges', file: 'evidence.js', anchor: "if (kind === 'source' && children.length > 0) {", replacement: 'if (false) {' },
   { name: 'a post-commit observer failure fails the call', file: 'resolution.js', anchor: 'if (preExecution.has(phase)) {', replacement: 'if (true) {' },
 ];
 

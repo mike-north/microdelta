@@ -289,6 +289,70 @@ describe('lifecycle observers', () => {
     }, {}, { observer: { throwAt: 'publish' } });
   });
 
+  /** Diagnostics naming a step slot and phase. */
+  function about(diagnostics: readonly string[], slot: string, phase: string): readonly string[] {
+    return diagnostics.filter((line) => line.includes(`"${slot}"`) && line.includes(`at ${phase}`));
+  }
+
+  test('a child acceptance observer failure beneath an executing parent is reported on the top-level outcome', async () => {
+    const location = freshLocation();
+    const cold = await coldReport(location);
+    await withSession(location, async (session) => {
+      const outcome = await session.resolve(session.contributors.steps['person:ada'].summary);
+      expect(outcome.kind).toBe('published');
+      expect(referenceOf(outcome)).not.toBe(cold['person:ada']);
+      expect(about(outcome.diagnostics, 'activity', 'accept')).toHaveLength(1);
+      expect(outcome.diagnostics).toHaveLength(1);
+    }, { summaryVersion: 2 }, { observer: { throwAt: 'accept' } });
+  });
+
+  test('child and parent publication observer failures beneath an executing parent are each reported once', async () => {
+    const location = freshLocation();
+    await withSession(location, async (session) => {
+      const outcome = await session.resolve(session.contributors.steps['person:ada'].summary);
+      expect(outcome.kind).toBe('published');
+      expect(about(outcome.diagnostics, 'activity', 'publish')).toHaveLength(1);
+      expect(about(outcome.diagnostics, 'summary', 'publish')).toHaveLength(1);
+      expect(outcome.diagnostics).toHaveLength(2);
+    }, {}, { observer: { throwAt: 'publish' } });
+  });
+
+  test('child and parent acceptance observer failures beneath a cached parent are each reported once', async () => {
+    const location = freshLocation();
+    const cold = await coldReport(location);
+    await withSession(location, async (session) => {
+      const outcome = await session.resolve(session.contributors.steps['person:ada'].summary);
+      expect(outcome.kind).toBe('reused');
+      expect(referenceOf(outcome)).toBe(cold['person:ada']);
+      expect(about(outcome.diagnostics, 'activity', 'accept')).toHaveLength(1);
+      expect(about(outcome.diagnostics, 'summary', 'accept')).toHaveLength(1);
+      expect(outcome.diagnostics).toHaveLength(2);
+    }, {}, { observer: { throwAt: 'accept' } });
+  });
+
+  test('a child publication observer failure beneath a cached parent is reported once, even when the executing body shares the child', async () => {
+    const location = freshLocation();
+    const cold = await coldReport(location);
+    world.finality['person:ada'] = 'not-final';
+    world.remote['person:ada'] = adaActivity({ avatar: 'https://avatars.example/ada-3.png' });
+    await withSession(location, async (session) => {
+      const outcome = await session.resolve(session.contributors.steps['person:ada'].summary);
+      expect(outcome.kind).toBe('reused');
+      expect(referenceOf(outcome)).toBe(cold['person:ada']);
+      expect(outcome.diagnostics).toEqual(about(outcome.diagnostics, 'activity', 'publish'));
+      expect(outcome.diagnostics).toHaveLength(1);
+    }, {}, { observer: { throwAt: 'publish' } });
+    world.remote['person:ada'] = adaActivity({ merged103: true });
+    await withSession(location, async (session) => {
+      const outcome = await session.resolve(session.contributors.steps['person:ada'].summary);
+      // Validation resolved the child once; the executing body shared it.
+      expect(outcome.kind).toBe('published');
+      expect(about(outcome.diagnostics, 'activity', 'publish')).toHaveLength(1);
+      expect(about(outcome.diagnostics, 'summary', 'publish')).toHaveLength(1);
+      expect(outcome.diagnostics).toHaveLength(2);
+    }, {}, { observer: { throwAt: 'publish' } });
+  });
+
   test('an observer failure before execution stops only that call, with no attempt or body', async () => {
     const location = freshLocation();
     await withSession(location, async (session) => {

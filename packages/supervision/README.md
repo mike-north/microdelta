@@ -26,14 +26,20 @@ supervised run and returns `{ context, value, diagnostics }`:
   `run-closed` from a callback that escaped a closed run, and
   `composition-phase` while a composition is being constructed. The run id is
   volatile metadata, never reuse evidence.
-- **Lifetime.** The run closes when the body settles. Afterwards its
-  operations reject with `run-closed` and late admission requests are denied.
+- **Lifetime.** The run stays live until its body *and* every operation
+  started through it (`resolve`, `check`, `recover`, `ordinary`) have settled,
+  including operations started while it waits and ones the body stopped
+  awaiting early (a `Promise.all` whose sibling failed). The body's own value
+  or failure is what the run reports. `run.open` reports this state. After the
+  run actually closes, its operations reject with `run-closed` and admission
+  requests, or asynchronous decisions arriving late, are denied.
 - **Requests.** `resolve(step, { requestKey })` is the normal entry
   operation; `recover(step, { requestKey })` the recovery entry operation;
   `check(step)` is check-only. The caller supplies and saves each request key
   before starting work.
 - **Writer.** Storage's single-writer lease is taken through the injected
-  writer port only for normal requests and released exactly once at close.
+  writer port only for normal requests and released exactly once at actual
+  close, after started work settled.
   Check-only and recovery requests never need it.
 - **Admission.** The caller's policy decides admission of work Resolution
   presents after reuse had its chance; the default admits everything.

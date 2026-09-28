@@ -47,6 +47,12 @@ so review can assess them.
 - **Run context.** `{ runId, analysis, environment }`, frozen. The run id is
   volatile (caller-supplied or a process-local counter) and never evidence;
   the environment is History's environment for every request of the run.
+- **Run lifetime.** A run accounts for every operation started through it
+  (`resolve`, `check`, `recover`, `ordinary`), including operations started
+  while it waits, and closes only after its body and all of them settled. The
+  body's own value or failure is reported; context, exact reads, the writer and
+  observer/diagnostic accounting stay live until then. Promises an author
+  creates outside the run's operations are not tracked (see Limitations).
 - **Lookup failures.** `outside-run` (no live run in this asynchronous
   execution), `run-closed` (a callback scheduled inside a run fires after it
   closed), `composition-phase` (author code running during `compose`, for
@@ -55,15 +61,16 @@ so review can assess them.
 - **Writer port.** History's single-writer lease is taken only for normal
   requests: acquired on the run's first `resolve`, renewed on each later one,
   re-acquired with a fresh fence if it expired between requests, and released
-  exactly once when the run closes (an already expired lease counts as
+  exactly once when the run actually closes (an already expired lease counts as
   released; any other release failure is a run diagnostic). Each run's holder
   name includes its run id, so a blocked run's error names the holding run.
   `check` and `recover` never take it, so a crashed holder's unexpired lease
   cannot block recovery; another unexpired holder makes `resolve` fail with
   `writer-unavailable`. The default lease is 30 s.
 - **Admission.** The caller's policy is Resolution's admission port while the
-  run is open; after close, presented work is denied without consulting it.
-  The default admits everything.
+  run is open; after actual close, presented work is denied without consulting
+  it, and an asynchronous decision that arrives after actual close is replaced
+  by denial. The default admits everything.
 - **Observers.** Captured at run start (replacing `observe` later has no
   effect), offered frozen `{ kind: 'step' | 'ordinary', runId, ... }` events,
   every observer sees every event, return values are ignored, and the first
@@ -95,7 +102,8 @@ so review can assess them.
   checks project-private (untrimmed/alpha) views with exactly that closure
   mapped; public and beta views must still stand alone.
 - **Exact read.** `run.read(reference)` returns deeply frozen data from
-  History's exact reader, records nothing, and fails after its run closed.
+  History's exact reader, records nothing, and fails once its run actually
+  closed (it follows Supervision's `IRun.open`).
 - **Fixed positions.** `stepLifecycle` is a frozen literal tuple whose element
   union is checked at compile time to equal Resolution's phase union.
 - **Example imports.** `check:imports` restricts `examples/**` to `microdelta`
@@ -176,6 +184,9 @@ builds 56/56 (Supervision 25, workspace 29, example 2). The first runs exposed
 two runner/test faults, both fixed: Supervision's owner suite imports its own
 test build, so controls plant into both emitted copies (four controls had
 escaped); and an unawaited escaped lookup crashed Jest under one control.
+After the run-lifetime repair below, three controls were added and two
+re-anchored: **PASS, 22 of 22 rejected** at `e791224`, baseline and restored
+62/62.
 
 ## Acceptance mapping
 
@@ -184,7 +195,7 @@ escaped); and an unawaited escaped lookup crashed Jest under one control.
 | 1. Bounded Supervision with run/analysis/environment and structurally injected scope; no Machine edge or helper context argument; lookup fails outside a live run and during composition; fixed positions inspectable, not replaceable | `packages/supervision` (edges Definition, Resolution; import rule rejects a History/Machine import). Owner suite *scoped run context*, *writer ownership*, *observer positions*; facade `scope.test.ts` (*lookup outside any run fails…*, *a composition constructed inside a live run cannot look up…*, *author helpers … see the run context across awaits*); tsd `supervision.test-d.ts` (structural capability, observe-only observers, read-only positions); `admission-observers.test.ts` *every resolved step reports events only at the fixed lifecycle positions* |
 | 2. Generated alpha facade authoring declarations, input/helper brands, declared handles, top-level outcomes/exact refs; public `createMemoryStore` and declarations preserved; context is not a seventh owner | `microdelta.api.md` adds only `@alpha` items; public rollup still exports only the History Store API; facade tsd `test-d/facade.test-d.ts` rejects every workspace export on the public entry (negative-controlled); `fixtures/declarations/consumer-alpha/src/workspace-authoring.fixture.ts` compiles the alpha surface (`ITrackedView`, `IResultView`, `IDeclaredCallHandle`, `IResolutionOutcome`, …); the facade composes owners only (`src/workspace.ts`) |
 | 3. Checked-in executable example: two fixed source/summary pairs, acme/widget Q1 fixture, independent counts and template text; documented attribution, opaque subjects, selected scope, array semantics, ordinary report ordering; no private imports, test persistence, live GitHub or model | `examples/contribution-report` (README sections *Attribution rules*, *Array-position semantics*, *What the example shows*); `examples/contribution-report/test/example.test.mjs` (hand-derived sentences and counts; mutation-controlled); imports only `microdelta` through installed alpha declarations; the preflight scans its aliases |
-| 4. Tests first and RED: hits before denied admission; refused miss leaves nothing; source execution needed by validation obeys its own admission; check-only runs nothing; pre-execution observer failure contained; post-commit observer throw preserves success/ref; scoped context follows await and closes; nonmemoized assembly observed without hidden cache identity | `admission-observers.test.ts`: *reusable hits are served before a denying admission policy is ever consulted*, *a refused cold miss leaves no claim, attempt, body or reference, and strands no writer*, *source work needed to validate a cached summary obeys its own admission*, *check-only reports the source boundary and never runs missing work…*, *a pre-execution observer failure stops only the affected call…*, *a post-commit observer failure preserves committed success and its exact reference*, *ordinary report assembly is observed on every run with no reference and no hidden memoization*; `scope.test.ts` and the Supervision owner suite for scope follow/close. RED record above; discrimination by the controls |
+| 4. Tests first and RED: hits before denied admission; refused miss leaves nothing; source execution needed by validation obeys its own admission; check-only runs nothing; pre-execution observer failure contained; post-commit observer throw preserves success/ref; scoped context follows await and closes; nonmemoized assembly observed without hidden cache identity | `admission-observers.test.ts`: *reusable hits are served before a denying admission policy is ever consulted*, *a refused cold miss leaves no claim, attempt, body or reference, and strands no writer*, *source work needed to validate a cached summary obeys its own admission*, *check-only reports the source boundary and never runs missing work…*, *a pre-execution observer failure stops only the affected call…*, *a post-commit observer failure preserves committed success and its exact reference*, *ordinary report assembly is observed on every run with no reference and no hidden memoization*; `scope.test.ts` and the Supervision owner suite for scope follow/close, including the run-lifetime regressions (*a run whose awaited Promise.all rejects early stays live…* and the owner suite's *lifetime of operations the run already started*). RED record above; discrimination by the controls |
 | 5. Natural async child calls carry selected views safely; capture lint and generated alpha consumer enforce syntax; example compiles and runs via installed declarations; commands and instability documented | `contribution-run.test.ts` *changing only unread avatar, labels and a then data field keeps both exact summaries*; consumer fixture negatives (captured scalar, `currentRun()` in a callback, captured outcome constructor) are required diagnostics; `check:examples` type-checks and lints the example with the capture rule (negative-controlled); `build:examples`/`test:examples`; README *Run it now* and the instability notice |
 | 6. Full strict/type/lint/runtime/declaration/API/build/Node CI gates; no scheduling/retry/cancellation, M5 or publication/release changes | *Final gates* below; CI matrix runs on the PR. No workflow, trust, registry or version change; Supervision's manifest satisfies the accepted full-graph checks at `0.0.0` |
 | Recovery ownership (#57 share) | `recovery.test.ts`: *recover returns the exact committed summary without source hooks, bodies or a new acceptance*, *recover rejects a saved key whose current declared intent differs*, *recover reports absent…*, *recovery does not need the writer lease that another holder still owns*, *a normal request cannot reuse a saved key, while a fresh key performs current source policy*; the example's `run`/`recover` with caller-saved `requests.json` |
@@ -210,9 +221,10 @@ An author-dispatched read-only reviewer subagent reviewed the branch at
   it and the suppression check scans `examples`.
 - **Low, fixed.** Releasing an expired lease produced a false diagnostic.
   Regression **failed** first; it now counts as released.
-- **Low, documented.** `close()` under a live run, and operations a body starts
-  without awaiting, are documented on `IWorkspace` (late work cannot be
-  admitted or claimed; late writes fail fencing).
+- **Low, documented; later superseded.** `close()` under a live run was
+  documented on `IWorkspace`. The accompanying claim that operations a body
+  stops awaiting are simply not awaited, and that no admission could complete
+  after closure, was wrong; the supervisory review repair below replaces it.
 - **Low, fixed.** Fixed positions lacked an exhaustiveness check; the tsd
   assertion **failed** first and the constant is now a checked literal tuple.
 - **Low, fixed/disclosed.** The observer-containment test now targets the
@@ -227,20 +239,74 @@ The reviewer also noted that the declaration closure is derived from built
 rollups, so a producer that newly leaks a sibling type widens the approved
 closure rather than being flagged; API report review remains the check there.
 
+## Supervisory review repair (run lifetime)
+
+The supervisor and an independent reviewer confirmed a P1 at `11206945`,
+reproduced through the real assembled facade: a run closed when only its body
+settled. A body awaiting `Promise.all([slow ordinary, failing sibling])` rejects
+early while the slow operation is still active; the run then released its
+writer, closed its context and snapshotted diagnostics, so the slow operation
+resumed with `currentRun()` and `run.read` failing `run-closed` and its `end`
+event arriving after the run returned. A held asynchronous admission policy
+likewise answered `admitted` after the premature closure. The earlier
+`IWorkspace.run` comment wrongly treated this supported awaited pattern as
+unawaited work; it and the record are corrected.
+
+**Tests first.** `dbc016d` added regressions before the fix. The `IRun.open`
+contract member was added at the same time, reporting the existing behavior, so
+the failures are behavioral rather than compile errors:
+
+- Supervision owner suite, **5 of 5 new tests failed**: *a body whose awaited
+  Promise.all rejects early keeps the run live until its started sibling
+  settles* (run settled early); *a body that returns before a started
+  operation settles reports that operation's diagnostics* (settled early); *an
+  asynchronous admission for already-started work completes while the run is
+  still live* (answered after the writer release); *an admission decision that
+  arrives after the run actually closed is denied* (admitted); *work an
+  operation starts while the run waits for it is part of the run…* (nested
+  work rejected).
+- Real facade, **1 of 1 failed**: *a run whose awaited Promise.all rejects
+  early stays live, with context, reads and writer, until its started work
+  settles* (run settled while the gate was held). The test observes the run
+  pending with History's writer still held, then opens the gate, awaits the
+  sibling failure, and checks the slow operation's context and exact read, the
+  event order (`slow:end` before the run settles) and the writer release. It
+  never waits on a premature return, so a correctly waiting run cannot hang it.
+
+**Repair** (`9637739`). Supervision accounts for each started operation and
+drains them (looping for operations started meanwhile) before closing,
+releasing the writer and snapshotting diagnostics, and it preserves the
+body's own outcome. The admission port re-checks openness after an
+asynchronous policy decides. The facade's `read` guard uses `IRun.open`
+instead of its own body-scoped flag. Supervision's API report adds only
+`IRun.open`. Owner suite 30/30, workspace suites 30/30.
+
+**Controls** (`e791224`). New: *the run closes without waiting for operations
+it started* (5 tests), *started operations are not accounted to the run* (5),
+*an admission decided after actual closure is not denied* (1); the read-guard
+and admission controls were re-anchored. **PASS, 22 of 22 rejected**; baseline
+and restored 62/62.
+
 ## Final gates
 
-Run sequentially by the implementer at `2113abb` (Node v24.14.0, macOS);
-later commits change only this record.
+Run sequentially by the implementer at `e791224` (Node v24.14.0, macOS),
+after the run-lifetime repair; later commits change only documentation.
 
 | Command | Result |
 | --- | --- |
 | `npm run build` | exit 0 |
 | `npm run check` | exit 0 (strict and portable types, type-aware lint with the capture rule over packages, fixtures and the example, import boundaries including the example, declaration preflight, fixtures, wiring, release graph and workflow audit) |
-| `npm test` | exit 0. Tooling 291/291, including the real-workspace pack, isolated-install and public-declaration typecheck of every tarball (now including Supervision) and the installed Node SQLite check. Facade Jest 146/146 (durable History 44, Resolution 73, workspace 29), facade tsd and controls judge. Supervision Jest 25/25, tsd and public consumer. Example 2/2. All other suites passing |
-| Workspace mutation controls | PASS 19/19; baseline and restored 56/56 |
+| `npm test` | exit 0. Tooling 291/291, including the real-workspace pack, isolated-install and public-declaration typecheck of every tarball (now including Supervision) and the installed Node SQLite check. Facade Jest 147/147 (durable History 44, Resolution 73, workspace 30), facade tsd and controls judge. Supervision Jest 30/30, tsd and public consumer. Example 2/2. All other suites passing |
+| Workspace mutation controls | PASS 22/22; baseline and restored 62/62 |
 | Resolution mutation controls | not rerun (Resolution unchanged) |
 
 ## Limitations
+
+- The run's lifetime covers operations started through the run interface. A
+  promise an author creates by other means (not via `resolve`, `check`,
+  `recover` or `ordinary`) is not tracked; that is not general drain,
+  cancellation or scheduling infrastructure. A started operation that never
+  settles keeps its run live.
 
 - In-process sessions and the example's separate CLI processes prove the
   assembled path across ordinary restarts only. Kill points, lost

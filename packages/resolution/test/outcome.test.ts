@@ -8,7 +8,16 @@
  */
 import { describe, expect, test } from '@jest/globals';
 
+import type { IPreviousResult } from '../src/family.js';
 import { mintedOutcome, sourceOutcome } from '../src/outcome.js';
+
+/**
+ * Stand in for a previous carrier. The registry recognizes envelopes by
+ * minting, not by carrier validity, which Resolution checks separately.
+ */
+function carrierOf(data: unknown): IPreviousResult<{ readonly profile: { readonly name: string } }> {
+  return Object.freeze({ data }) as IPreviousResult<{ readonly profile: { readonly name: string } }>;
+}
 
 describe('source outcome envelopes', () => {
   test('fresh and retain envelopes are frozen and recognized with their minted form', () => {
@@ -16,7 +25,7 @@ describe('source outcome envelopes', () => {
     const fresh = sourceOutcome.fresh(data);
     expect(Object.isFrozen(fresh)).toBe(true);
     expect(mintedOutcome(fresh)).toEqual({ kind: 'fresh', data });
-    const carrier = Object.freeze({ data: Object.freeze({ profile: Object.freeze({ name: 'Ada' }) }) });
+    const carrier = carrierOf(Object.freeze({ profile: Object.freeze({ name: 'Ada' }) }));
     const retain = sourceOutcome.retain(carrier);
     expect(mintedOutcome(retain)).toEqual({ kind: 'retain', previous: carrier });
   });

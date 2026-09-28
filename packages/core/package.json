@@ -39,7 +39,10 @@
     "test:controls": "node --test test/durable-history/controls/control-outcome.test.mjs"
   },
   "tsd": {
-    "directory": "test-d"
+    "directory": "test-d",
+    "compilerOptions": {
+      "paths": {}
+    }
   },
   "dependencies": {
     "@microdelta/definition": "0.0.0",

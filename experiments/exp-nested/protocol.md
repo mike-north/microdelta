@@ -156,6 +156,60 @@ End to end, making the emitted suite fail to load now fails the runner with
 then runs the controls. The controls must run serially. The emitted file is
 restored on normal completion or error, but not after the process is killed.
 
+### Selected-fact envelope repair
+
+Review of the head after the runner repair (`ac5eeb5`) found, and a supervisor
+runtime reproduction confirmed, a validate-then-reread defect. The defect was
+in the production code, not the tests.
+
+Tracking's lazy `select` path validated a provider's key array by its indexed
+own data, then copied it with spread. For `['actual']` with an own
+`Symbol.iterator` getter yielding `'invented'`, `observer.keys(view)` called
+that getter, returned `['invented']` and fingerprinted `['invented']`.
+Addresses were copied with `address.map` after index-based validation.
+
+The same pattern appeared in four other places:
+
+- Materialization's reader-fact validation passed the raw provider array on.
+- `compareCurrent` encoded available provider facts through `address.map`.
+- `recordSelected` encoded one reading of a fact and recorded another.
+- `recordCollectionOrder` and `observeMemberOrder` validated key order by index
+  and then spread it.
+
+**Repair.** Value's new `normalizeSelectedFact` reads each own data field and
+array slot once and builds the frozen fact from exactly those values. Arrays
+must be standard dense arrays with no symbol keys, extra own properties or
+non-standard prototype. Tracking (lazy selection, `recordSelected`,
+`compareCurrent`) and Materialization (reader facts, member order) consume
+only that copy. Collection order is copied once from indexed data under the
+same standard-array rule. Unsupported provider arrays are rejected before
+anything is returned or observed. This is bounded validation of the supported
+data shapes, not a sandbox against arbitrary JavaScript such as proxies.
+
+**Tests before the repair**, in
+`packages/tracking/test/selected-envelopes.test.ts` and
+`packages/materialization/test/nested-view.test.ts`:
+
+- The five selected-fact regressions failed:
+  - iterator-invented keys;
+  - `map`-invented presence address;
+  - substituted array prototype;
+  - record bridge;
+  - provider fact classified `changed` rather than `incompatible`.
+- The collection-order regression failed.
+- Both Materialization regressions failed: reader facts and member order
+  returned outside a capture.
+- The ordinary-data control passed.
+- Value's `normalizeSelectedFact` tests failed 3 of 3 against a throwing stub.
+- One further guard passed before the change: an available projection whose
+  descriptor address has an own `map`. Value's encoder already rejects that
+  extra array property first, so the path was fail-closed and is unchanged.
+
+After the repair every regression and the existing parity, controls and
+suites pass. An existing test (an order array with a hidden own property must
+be incompatible) caught a too-permissive first copy, which is why collection
+order enforces the standard-array surface.
+
 ## Reproduction
 
 ```sh

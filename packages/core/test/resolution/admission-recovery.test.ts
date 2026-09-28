@@ -17,7 +17,7 @@ import { ResolutionError } from '@microdelta/resolution';
 import { cleanup, freshLocation } from '../durable-history/support.js';
 import { adaActivity, defaultConfig, resetWorld, world } from './fixture.js';
 import type { IMemberKey, IVariation } from './fixture.js';
-import { freshRequestKey, openSession, referenceOf, resolveSummaries } from './support.js';
+import { advanceClock, freshRequestKey, leaseMilliseconds, openSession, referenceOf, resolveSummaries } from './support.js';
 import type { IAdmissionPlan, IObserverPlan, ISession } from './support.js';
 
 beforeEach(() => {
@@ -351,6 +351,77 @@ describe('lifecycle observers', () => {
       expect(about(outcome.diagnostics, 'summary', 'publish')).toHaveLength(1);
       expect(outcome.diagnostics).toHaveLength(2);
     }, {}, { observer: { throwAt: 'publish' } });
+  });
+
+  /** The lifecycle phases observed for one step slot of Ada's member, in order. */
+  function phases(session: ISession, slot: string): readonly string[] {
+    return session.events.filter((event) => event.step.memberKey === 'person:ada' && event.step.slot === slot).map((event) => event.phase);
+  }
+
+  test('an admitted execution that fails is observed ending with abandon after its durable ending; the failure stays the outcome', async () => {
+    const location = freshLocation();
+    world.summaryThrows['person:ada'] = true;
+    await withSession(location, async (session) => {
+      const requestKey = freshRequestKey();
+      await expectFailure(session.resolve(session.contributors.steps['person:ada'].summary, requestKey), 'execution-failure');
+      expect(phases(session, 'summary')).toEqual(['verify', 'admit', 'claim', 'execute', 'abandon']);
+      expect(session.resolution.recover({ step: session.contributors.steps['person:ada'].summary, requestKey }).kind).toBe('unsuccessful');
+    });
+  });
+
+  test('an observer failing at abandon cannot replace the original failure', async () => {
+    const location = freshLocation();
+    world.summaryThrows['person:ada'] = true;
+    await withSession(location, async (session) => {
+      const requestKey = freshRequestKey();
+      let caught: unknown;
+      try {
+        await session.resolve(session.contributors.steps['person:ada'].summary, requestKey);
+      } catch (error: unknown) {
+        caught = error;
+      }
+      expect(caught).toBeInstanceOf(ResolutionError);
+      expect((caught as ResolutionError).code).toBe('execution-failure');
+      expect((caught as ResolutionError).message).toMatch(/fixture summary failure/u);
+      expect(phases(session, 'summary').at(-1)).toBe('abandon');
+      expect(session.resolution.recover({ step: session.contributors.steps['person:ada'].summary, requestKey }).kind).toBe('unsuccessful');
+    }, {}, { observer: { throwAt: 'abandon' } });
+  });
+
+  test('a child refused during an admitted body ends the summary attempt with abandon; the outcome stays refused', async () => {
+    const location = freshLocation();
+    await withSession(location, async (session) => {
+      const outcome = await session.resolve(session.contributors.steps['person:ada'].summary);
+      expect(outcome.kind).toBe('refused');
+      expect(outcome.trace.map((event) => event.phase)).toEqual(['verify', 'admit', 'claim', 'execute', 'abandon']);
+    }, {}, { admission: { deny: [{ memberKey: 'person:ada', slot: 'activity' }] } });
+  });
+
+  test('an explicit check retention ends its claim with release, never abandon', async () => {
+    const location = freshLocation();
+    await withSession(location, async (session) => {
+      await session.resolve(session.contributors.steps['person:ada'].activity);
+    }, { adaFinality: 'absent' });
+    world.check['person:ada'] = 'retain';
+    await withSession(location, async (session) => {
+      expect((await session.resolve(session.contributors.steps['person:ada'].activity)).kind).toBe('reused');
+      expect(phases(session, 'activity')).toEqual(['verify', 'admit', 'claim', 'execute', 'accept', 'release']);
+    }, { adaFinality: 'absent' });
+  });
+
+  test('an attempt History could not end is not reported as abandoned', async () => {
+    const location = freshLocation();
+    world.summaryThrows['person:ada'] = true;
+    // The body outlives the session's writer lease, so History refuses the ending as stale.
+    world.beforeSummaryThrows = () => {
+      advanceClock(leaseMilliseconds + 1);
+    };
+    await withSession(location, async (session) => {
+      const requestKey = freshRequestKey();
+      await expectFailure(session.resolve(session.contributors.steps['person:ada'].summary, requestKey), 'execution-failure');
+      expect(phases(session, 'summary')).toEqual(['verify', 'admit', 'claim', 'execute']);
+      expect(session.resolution.recover({ step: session.contributors.steps['person:ada'].summary, requestKey }).kind).toBe('incomplete');
+    });
   });
 
   test('an observer failure before execution stops only that call, with no attempt or body', async () => {

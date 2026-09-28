@@ -110,6 +110,8 @@ export interface IWorld {
   finality: Record<IMemberKey, IFinalityPolicy>;
   /** Whether each member's summary body throws. */
   summaryThrows: Record<IMemberKey, boolean>;
+  /** Test-controlled effect run inside a summary body just before it throws. */
+  beforeSummaryThrows: (() => void) | undefined;
   /** Counts of source check/retrieval runs per member. */
   checks: Record<IMemberKey, number>;
   /** Counts of finality hook evaluations per member. */
@@ -160,6 +162,7 @@ export function createWorld(): IWorld {
     check: { 'person:ada': 'fresh', 'person:ben': 'fresh' },
     finality: { 'person:ada': 'final', 'person:ben': 'final' },
     summaryThrows: { 'person:ada': false, 'person:ben': false },
+    beforeSummaryThrows: undefined,
     checks: { 'person:ada': 0, 'person:ben': 0 },
     finalities: { 'person:ada': 0, 'person:ben': 0 },
     summaries: { 'person:ada': 0, 'person:ben': 0 },
@@ -268,6 +271,7 @@ function acceptActivity(previous: IPreviousResult<IActivity>, config: ITrackedVi
 function summarize(activity: IResultView<IActivity>, format: ITrackedView<IFormat>, key: IMemberKey): ISummary {
   world.summaries[key] += 1;
   if (world.summaryThrows[key]) {
+    world.beforeSummaryThrows?.();
     throw new Error('fixture summary failure');
   }
   let merged = 0;

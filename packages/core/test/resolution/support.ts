@@ -72,14 +72,27 @@ export function freshRequestKey(): string {
   return `request:${String(requestCounter)}`;
 }
 
-/** One shared controlled clock so leases never expire during a test. */
+/** One shared controlled clock so leases never expire during a test unless a test advances it. */
 const clock = controlledClock(1_000);
+let clockReading = 1_000;
+
+/**
+ * Advance the shared clock, for example past a session's lease so History
+ * refuses that session's later writes as stale. Readings only move forward.
+ */
+export function advanceClock(milliseconds: number): void {
+  clockReading += milliseconds;
+  clock.set(clockReading);
+}
+
+/** The lease duration every session acquires. */
+export const leaseMilliseconds = 3_600_000;
 
 /** Open a session over the store at `location`. */
 export function openSession(location: string, variation: IVariation = {}, plans: { readonly admission?: IAdmissionPlan; readonly observer?: IObserverPlan } = {}): ISession {
   const sqlite = observedSqlite();
   const history = openHistory({ location, sqlite: sqlite.capability, clock });
-  const acquisition = history.acquireWriter({ holder: `session:${String(requestCounter)}`, leaseMilliseconds: 3_600_000 });
+  const acquisition = history.acquireWriter({ holder: `session:${String(requestCounter)}`, leaseMilliseconds });
   if (acquisition.kind !== 'acquired') {
     throw new Error(`expected the writer lease, observed ${JSON.stringify(acquisition)}`);
   }
@@ -130,7 +143,11 @@ export function openSession(location: string, variation: IVariation = {}, plans:
         return;
       }
       closed = true;
-      history.releaseWriter(lease);
+      try {
+        history.releaseWriter(lease);
+      } catch {
+        // A test that expired this lease on purpose cannot release it; the successor acquires anyway.
+      }
       history.close();
     },
   };

@@ -320,7 +320,7 @@ test('all GitHub adapter operations use the injected runner with their original 
       if (query?.includes('reviewThreads(first:100')) {
         return { data: { repository: { pullRequest: {
           id: 'PR_NODE', number: prNumber, title: 'Fix runtime behavior', state: 'OPEN', isDraft: false,
-          baseRefName: 'main', headRefName: 'fix-runtime', headRefOid: reviewedHead, url: pullRequestUrl,
+          baseRefName: 'main', headRefName: 'fix-runtime', headRepository: { nameWithOwner: 'mike-north/microdelta' }, headRefOid: reviewedHead, url: pullRequestUrl,
           mergedAt: null, autoMergeRequest: null,
           reviewThreads: {
             nodes: after === 'thread-cursor' ? [{ isResolved: false }] : [{ isResolved: true }],
@@ -368,8 +368,8 @@ test('all GitHub adapter operations use the injected runner with their original 
       resolveConversations: true, requiredContexts: ['core (20)'], checkSources: { 'core (20)': 'github-actions' },
     });
     assert.deepEqual(await api.readPullRequest(prNumber), {
-      number: prNumber, state: 'OPEN', isDraft: false, baseRefName: 'main', headRefName: 'fix-runtime',
-      headRefOid: reviewedHead, url: pullRequestUrl, nodeId: 'PR_NODE', unresolvedThreads: 1,
+      number: prNumber, state: 'OPEN', isDraft: false, title: 'Fix runtime behavior', baseRefName: 'main', headRefName: 'fix-runtime',
+      headRepositoryNameWithOwner: 'mike-north/microdelta', headRefOid: reviewedHead, url: pullRequestUrl, nodeId: 'PR_NODE', unresolvedThreads: 1,
       autoMergeEnabled: false, merged: false, isReleaseVersion: false,
     });
     assert.deepEqual(await api.readRequiredChecks(prNumber), [{ name: 'core (20)', bucket: 'pass' }]);

@@ -1,9 +1,13 @@
 {
   "name": "@microdelta/history",
   "version": "0.0.0",
-  "private": true,
   "description": "Existing history context capability; implementation incomplete",
   "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mike-north/microdelta.git",
+    "directory": "packages/history"
+  },
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -21,7 +25,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "!dist/api-temp"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json && api-extractor run --config api-extractor-conformance.json && api-extractor run --config api-extractor-shared.json && node ../../tooling/history-declaration-shims.mjs",
@@ -46,5 +51,8 @@
   "dependencies": {
     "@microdelta/machine": "0.0.0",
     "@microdelta/value": "0.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

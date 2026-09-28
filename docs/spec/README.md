@@ -102,7 +102,8 @@ design area is covered. Historical docs are not part of the normal reading path.
 The `microdelta` facade preserves its public History Store API. The checked-out
 packages also contain bounded project-private alpha components: Value equality,
 snapshot and projection semantics; Tracking's semantic observer, called-function
-evidence, scoped capture and replay; History's exact selected-reading ports; and
+evidence, scoped capture and replay; History's exact selected-reading ports and
+its durable single-writer SQLite authority with an indexed exact reader; and
 Materialization's selected scalar views, explicit detached output, and keyed
 projections. Machine supplies injected host capabilities, with the Node adapter
 owning async context, snapshots, and SHA-256. The [implementation map](../package-map.md)
@@ -110,8 +111,8 @@ records each owner's current scope and missing roles.
 
 Generated declaration tiers, API reports, package edges, and the supported typed
 capture boundary are checked by executable tooling. They do not establish
-arbitrary JavaScript closure soundness. The new components do not provide durable
-memoization, a production completed-result reader, general fanout, or scale proof.
+arbitrary JavaScript closure soundness. The new components do not yet provide
+durable memoization through the authoring path, general fanout, or scale proof.
 
 The [M2 evidence record](../validation/m2-2026-09-27.md) maps these bounded
 capabilities to current-head reviews, integrated checks, component merges, and

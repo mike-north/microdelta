@@ -4,6 +4,9 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
+      "@microdelta/definition": [
+        "packages/definition/dist/api/definition.alpha.d.ts"
+      ],
       "@microdelta/history": [
         "packages/history/dist/api/history.alpha.d.ts"
       ],
@@ -15,6 +18,12 @@
       ],
       "@microdelta/materialization": [
         "packages/materialization/dist/api/materialization.alpha.d.ts"
+      ],
+      "@microdelta/resolution": [
+        "packages/resolution/dist/api/resolution.alpha.d.ts"
+      ],
+      "@microdelta/supervision": [
+        "packages/supervision/dist/api/supervision.alpha.d.ts"
       ],
       "@microdelta/tracking": [
         "packages/tracking/dist/api/tracking.alpha.d.ts"

@@ -335,14 +335,19 @@ test('inherited paths and invented aliases cannot expose sibling source or untri
 
 /**
  * Actual facade source consumes History's approved alpha entry and subpath;
- * its assembly tests also consume Value's alpha entry for independent oracles.
+ * its assembly tests also consume Value's alpha entry for independent oracles
+ * and the Definition, Materialization and Resolution alpha entries that
+ * compose Resolution over real History.
  */
 test('facade compiler maps both History imports to generated alpha declarations', async () => {
   const config = JSON.parse(await readFile(path.join(root, 'packages/core/tsconfig.json'), 'utf8'));
   assert.deepEqual(config.compilerOptions.paths, {
+    '@microdelta/definition': ['../definition/dist/api/definition.alpha.d.ts'],
     '@microdelta/history': ['../history/dist/api/history.alpha.d.ts'],
     '@microdelta/history/conformance/store': ['../history/dist/api/history.conformance.store.alpha.d.ts'],
     '@microdelta/machine-node': ['../machine-node/dist/api/machine-node.alpha.d.ts'],
+    '@microdelta/materialization': ['../materialization/dist/api/materialization.alpha.d.ts'],
+    '@microdelta/resolution': ['../resolution/dist/api/resolution.alpha.d.ts'],
     '@microdelta/tracking': ['../tracking/dist/api/tracking.alpha.d.ts'],
     '@microdelta/value': ['../value/dist/api/value.alpha.d.ts'],
   });

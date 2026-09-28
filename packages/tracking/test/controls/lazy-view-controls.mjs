@@ -10,15 +10,25 @@
  * assertions reject plausible wrong implementations. An anchor that no longer
  * matches exactly once fails loudly so the controls cannot silently go stale.
  *
- * Run after `tsc -p tsconfig.test.json` (the `test:controls` script does both).
+ * Every Jest run is judged by `control-outcome.mjs`: only named assertions that
+ * actually failed in a valid execution of the complete suite reject a control,
+ * and the restored implementation must execute that suite with every assertion
+ * passing and a successful exit. Abnormal, empty, incomplete, pending or
+ * skipped runs never clear the gate.
+ *
+ * Prerequisite: the emitted `.test-build`. The package `test:controls` script
+ * compiles it first (`tsc -p tsconfig.test.json`) and runs the judgment tests
+ * before this script. Run serially: it rewrites one emitted file, which is
+ * restored in `finally` on normal completion or error, but not after a kill.
  */
 import { spawnSync } from 'node:child_process';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
+import { rejectsControl, restoredPasses } from './control-outcome.mjs';
+
 const packageRoot = fileURLToPath(new URL('../../', import.meta.url));
 const emitted = fileURLToPath(new URL('../../.test-build/src/observer.js', import.meta.url));
-const suite = '.test-build/test/lazy-view.test.js';
 const jest = fileURLToPath(new URL('../../../../node_modules/jest/bin/jest.js', import.meta.url));
 
 /** Test titles, as declared in `lazy-view.test.ts`. */
@@ -29,6 +39,16 @@ const titles = {
   output: 'explicit output detaches a lazy subtree, records its MDS1 snapshot and loads it only then',
   lifetime: 'a view inherited by work that outlives its capture frame fails before any source request',
   source: 'source answers for a different address, kind or operation are rejected before recording',
+};
+
+/** The complete intended suite: its emitted file and every declared test title. */
+const suite = {
+  path: '.test-build/test/lazy-view.test.js',
+  titles: [
+    ...Object.values(titles),
+    'lazy views are observer-owned, immutable and reject native reflection',
+    'reads outside any capture return values without recording evidence',
+  ],
 };
 
 /** Each wrong behavior: an exact emitted anchor, its replacement, and the assertions that must reject it. */
@@ -71,17 +91,14 @@ const controls = [
   },
 ];
 
-/** Run the lazy-view suite and return its failing test titles. */
-function failingTitles() {
-  const result = spawnSync(process.execPath, ['--experimental-vm-modules', jest, '--runInBand', '--json', '--runTestsByPath', suite], {
+/** Run the intended lazy-view suite once and return the raw process result. */
+function runSuite() {
+  const result = spawnSync(process.execPath, ['--experimental-vm-modules', jest, '--runInBand', '--json', '--runTestsByPath', suite.path], {
     cwd: packageRoot,
     encoding: 'utf8',
     maxBuffer: 16 * 1024 * 1024,
   });
-  const report = JSON.parse(result.stdout);
-  return report.testResults.flatMap((file) => file.assertionResults)
-    .filter((assertion) => assertion.status !== 'passed')
-    .map((assertion) => assertion.title);
+  return { status: result.status, signal: result.signal, stdout: result.stdout ?? '' };
 }
 
 const original = readFileSync(emitted, 'utf8');
@@ -94,20 +111,19 @@ try {
       continue;
     }
     writeFileSync(emitted, original.replace(control.anchor, control.replacement));
-    const failed = failingTitles();
-    const survived = control.mustFail.filter((title) => !failed.includes(title));
-    console.log(`control: ${control.name}\n  rejected by: ${failed.length === 0 ? '(nothing)' : failed.join(' | ')}`);
-    if (survived.length > 0) {
-      problems.push(`${control.name}: not rejected by ${survived.join(' | ')}`);
+    const verdict = rejectsControl(runSuite(), suite, control.mustFail);
+    console.log(`control: ${control.name}\n  rejected by: ${verdict.failed.length === 0 ? '(nothing)' : verdict.failed.join(' | ')}`);
+    if (!verdict.rejected) {
+      problems.push(`${control.name}: ${verdict.reason}`);
     }
   }
 } finally {
   writeFileSync(emitted, original);
 }
-const restored = failingTitles();
-console.log(`restored implementation: ${restored.length === 0 ? 'all lazy-view tests pass' : `failing ${restored.join(' | ')}`}`);
-if (restored.length > 0) {
-  problems.push('the restored implementation does not pass the lazy-view suite');
+const restored = restoredPasses(runSuite(), suite);
+console.log(`restored implementation: ${restored.passed ? `all ${String(suite.titles.length)} lazy-view tests executed and passed` : restored.reason}`);
+if (!restored.passed) {
+  problems.push(`the restored implementation did not pass the complete lazy-view suite: ${restored.reason}`);
 }
 if (problems.length > 0) {
   console.error(problems.join('\n'));

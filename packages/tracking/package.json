@@ -26,7 +26,7 @@
     "check:lint": "eslint .",
     "test": "npm run test:unit && npm run test:controls && npm run test:types",
     "test:unit": "tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --runInBand",
-    "test:controls": "node test/controls/lazy-view-controls.mjs",
+    "test:controls": "tsc -p tsconfig.test.json && node --test test/controls/control-outcome.test.mjs && node test/controls/lazy-view-controls.mjs",
     "test:types": "tsd"
   },
   "tsd": {

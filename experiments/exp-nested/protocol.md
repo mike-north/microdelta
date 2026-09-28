@@ -129,6 +129,33 @@ The fixture was strengthened to return a detached copy per load, after which
 the control is rejected and the intended implementation still passes. No
 assertion or check was weakened.
 
+**Runner repair.** Review found that the first version of the runner could
+report false success. It ignored the Jest exit status. It counted any
+non-passing assertion, including pending or skipped ones, as a rejection. A
+suite that failed to load produced zero assertions and could still be reported
+as a passing restored implementation. The judgment now lives in
+`packages/tracking/test/controls/control-outcome.mjs`, which requires all of the
+following:
+
+- a normal Jest exit (0 or 1) that agrees with the assertion results;
+- one parseable report for exactly the intended suite file, with no runtime
+  suite error;
+- every declared test title present exactly once;
+- every assertion either passed or failed.
+
+Only named assertions that actually failed can reject a control. The restored
+implementation must execute all 8 declared tests with every assertion passing
+and exit 0. `control-outcome.test.mjs` specifies the false-success cases. It was
+written against the extracted original logic, where 4 of 5 tests failed:
+pending/skipped rejection, abnormal execution, incomplete suite, and restored
+false success. After the repair it passes 5/5.
+
+End to end, making the emitted suite fail to load now fails the runner with
+"the intended suite failed to run", and the emitted implementation is restored.
+`test:controls` now compiles the test build itself, runs the judgment tests,
+then runs the controls. The controls must run serially. The emitted file is
+restored on normal completion or error, but not after the process is killed.
+
 ## Reproduction
 
 ```sh

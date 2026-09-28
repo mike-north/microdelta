@@ -21,8 +21,9 @@ review request.
 The supervisor still assesses Copilot's findings and owns their disposition.
 
 The command records the supervisor's own review scope and evidence; it does not
-infer review approval from a passing test suite. Release-version PRs use the
-human-controlled release procedure and are rejected by this command.
+infer review approval from a passing test suite. Release-version PRs are rejected
+by this command and use the human-operated
+[release review](#release-review-for-the-version-packages-pr) instead.
 
 With the expected full commit SHA and substantive review evidence ready, run:
 
@@ -74,9 +75,47 @@ and closes the issue only when its acceptance criteria are met.
 
 The command refuses either Changesets release signature: a case-insensitive title
 beginning with `Version Packages`, including prerelease suffixes, or a head branch
-beginning with `changeset-release/`. Those PRs remain under human-controlled
-release procedure. This command cannot publish their required **Supervisor review**
-status or arm auto-merge; until the supervisor defines a separate human release
-procedure for that status, those PRs cannot be merged under the new rule. Do not
-bypass protection or reuse a status from another head. An ordinary feature title
-such as `fix version comparison` is not treated as a release PR.
+beginning with `changeset-release/`. It never arms auto-merge on those PRs, because
+merging a Version Packages PR is the release decision: `release.yml` then publishes
+the packages to npm (see [releasing](releasing.md)). An ordinary feature title such
+as `fix version comparison` is not treated as a release PR.
+
+## Release review for the Version Packages PR
+
+`main` still requires **Supervisor review** on the release PR's exact head. A
+human maintainer records it with the separate
+[`tooling/release-review.mjs`](../tooling/release-review.mjs), then merges the PR
+manually. Running it is a release step: it needs the repository owner's decision
+to release, and agents must not run it or merge the PR on their own authority.
+
+```sh
+node tooling/release-review.mjs \
+  --pr 49 \
+  --head 0123456789abcdef0123456789abcdef01234567 \
+  --scope "Reviewed every generated version, changelog and internal range." \
+  --evidence "No package remains at 0.0.0; versions match the changesets." \
+  --verification "Fresh clone of this head: npm ci, npm run check, npm test, npm run build exited 0."
+```
+
+It keeps every gate of the ordinary command: the fixed repository, the complete
+`main` protection read-back, an open non-draft PR on `main` at the expected head,
+resolved conversations, and a submitted Copilot `COMMENTED` or `APPROVED` review by
+the Copilot `Bot` on that head with no outstanding Copilot request. It adds:
+
+- the PR must be titled `Version Packages` and come from this repository's
+  `changeset-release/main` branch;
+- every required check must have **completed successfully** on the head; pending
+  or skipped results, which the ordinary command tolerates, are refused;
+- auto-merge must be off;
+- the operator supplies substantive scope, evidence, and fresh verification of
+  that head (for example the fresh-clone gate results), all recorded in the PR;
+- the command runs only in an interactive terminal and the operator must type the
+  first 12 characters of the head after reading that merging publishes to npm.
+
+It then writes the review comment and a pending status, re-reads every gate, and
+publishes success on that exact SHA with a read-back. It never approves, arms
+auto-merge, or merges; if it finds auto-merge enabled afterwards it reports an
+error. The maintainer then merges manually under the same protection, with no
+administrator bypass. A new commit on the release branch needs a new release
+review. Implemented and tested for issue #64; it has not been applied to any
+release PR.

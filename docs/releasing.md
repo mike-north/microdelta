@@ -67,8 +67,18 @@ job explicitly dispatches the existing core and PR-metadata checks against the
 generated branch. It rewrites the PR body using the repository's required
 five-section evidence format, with the actual package plan, a statement that
 merging is the release decision, and no claim that checks or review are already
-complete. A maintainer reviews and merges that PR under the repository's
-required checks and protections, which this workflow does not change.
+complete.
+
+The release PR must satisfy the same `main` protection as any PR, including
+the exact-head **Supervisor review** status. The ordinary supervisor command
+refuses release PRs because it arms auto-merge. Instead, once the owner decides
+to release, a human maintainer reviews the PR and records that status with the
+[release review](supervisor-review.md#release-review-for-the-version-packages-pr)
+(`tooling/release-review.mjs`). It requires completed passing checks and a
+submitted Copilot review on the exact head, records scope, evidence and fresh
+verification, and never merges or arms auto-merge. The maintainer then merges
+the PR manually; there is no administrator bypass. This workflow does not change
+the repository's checks or protections.
 
 The repository setting **Allow GitHub Actions to create and approve pull
 requests** must be enabled for Changesets to create the PR. The `version` job
@@ -94,13 +104,23 @@ real work only for the release decision:
    `node tooling/release-artifacts.mjs --release --out <dir>`. That command
    validates the first-party graph, packs one tarball per package in
    dependency order, verifies each tarball's entry points and public
-   declarations, installs all tarballs into a scratch consumer (every
-   `microdelta`/`@microdelta/*` package must resolve to a local tarball), imports
-   every package root, and typechecks every exported entry through its public
-   declarations. It uploads the tarballs and `release-manifest.json`.
-   Dependency install scripts run only in this job, which cannot obtain an
-   OIDC token.
-3. **`publish`** (`contents: read`, `id-token: write`) is the only job that can
+   declarations, and refuses any tarball whose emitted JavaScript or
+   declarations import a first-party package it does not declare as a
+   dependency. It then installs **each package alone** into a scratch consumer.
+   npm `overrides` point that package's *declared* first-party dependencies at
+   the local tarballs, so the registry never supplies a first-party version and
+   an undeclared dependency cannot be satisfied by a sibling installed beside
+   it. Each install must import the package root and typecheck every exported
+   entry through its public declarations. Finally it installs
+   `@microdelta/machine-node` with install scripts enabled, as a consumer's normal
+   `npm install` does, and uses its SQLite capability to write, close, reopen and
+   read a temporary database file. That loads better-sqlite3's native binding,
+   which importing the package root does not. The check covers only this
+   open/write/read/reopen/close path on the runner's platform and Node version;
+   it is not a general integration suite and changes no declaration tier. It
+   uploads the tarballs and `release-manifest.json`. Dependency install scripts
+   run only in this job, which cannot obtain an OIDC token.
+3. **`publish`** (`contents: read`, `id-token: write`, `pull-requests: read`) is the only job that can
    request an OIDC token. It installs and builds nothing. It downloads the
    verified artifact and runs
    [`tooling/publish-release.mjs`](../tooling/publish-release.mjs), which
@@ -108,8 +128,15 @@ real work only for the release decision:
    every tarball still matches its recorded integrity, every package is
    registered for trusted publishing, no version is `0.0.0`, no long-lived npm
    token variable is set, the job has an OIDC endpoint, and npm is at least
-   11.5.1. It then reads every package version from the registry before any
-   publish, and publishes the absent ones in dependency order with
+   11.5.1. It does not trust the earlier decision job's output: a run can wait
+   for packaging or the `publish-npm` lock, or be re-run, while a newer Version
+   Packages PR merges. So it re-reads GitHub with the job's read-only token and
+   requires this commit to still be the latest merged Version Packages PR, both
+   before planning and before every individual publish. Missing or unreadable
+   evidence refuses. It then reads every package version, and every package's
+   current `latest` tag, from the registry before any publish. It refuses a
+   version below the current `latest`, which `--tag latest` would move
+   backward, and publishes the absent ones in dependency order with
    `npm publish <tarball> --access public --tag latest --provenance --ignore-scripts`.
 
 `tooling/release-graph.mjs` defines the release graph: `microdelta`, every
@@ -129,9 +156,12 @@ or conflicting. A conflict (the version exists with different contents) or any
 registry error other than "not found" stops the run before any publish. If a
 publish fails part way, the job stops, names what was already published, and
 publishes nothing further. To resume, use **Re-run failed jobs** on the same
-release run: identical versions are skipped and the rest publish in order. Do
-not start a new release to recover; a newer Version Packages merge makes the
-older run stale by design.
+release run: identical versions are skipped and the rest publish in order. The
+resumed job re-establishes eligibility first. If a newer Version Packages PR has
+merged since, the old run is stale and publishes nothing. The newer release
+publishes its own versions of every package, including any the older run never
+reached, so `latest` only moves forward. Do not start a new release to recover a
+run that is still the latest release.
 
 ## npm trusted publishing configuration
 
@@ -214,9 +244,11 @@ release, `npm install microdelta` installs only the bootstrap placeholder.
 
 The repository owner authorized npm-side setup (name bootstrap and trust
 configuration) and this GitHub-side configuration. Merging a Version Packages
-PR is a release decision the owner makes separately; agents do not merge it,
-dispatch releases, add registry tokens or secrets, or change repository
-visibility. No npm token is stored anywhere in this repository or its secrets.
+PR is a release decision the owner makes separately; agents do not record its
+release review, merge it, dispatch releases, add registry tokens or secrets, or
+change repository visibility. The release review procedure is implemented and
+tested but has not been applied to any release PR. No npm token is stored
+anywhere in this repository or its secrets.
 
 ## API Extractor reports
 

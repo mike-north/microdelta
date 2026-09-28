@@ -29,7 +29,10 @@ priority, and progress. Repository issues contain the implementation contract;
    must accurately state who implemented and reviewed the work, including agent
    assistance. Use `Refs #N`; the supervisor closes the issue after acceptance.
 7. Implementers stop at PR-open and report its URL to the supervisor. Further edits
-   follow a scoped review request. Release/Version PRs remain under human control.
+   follow a scoped review request. Release/Version PRs remain under human control:
+   merging one publishes to npm, so a human maintainer records its exact-head
+   status with the [release review](docs/supervisor-review.md#release-review-for-the-version-packages-pr)
+   and merges it manually; it is never auto-merged.
 8. The supervisor reviews the current commit, checks required CI and declaration
    changes, and accounts for every review comment. Respond before resolving a
    thread. Changed commits require review of the affected substance and fresh checks.

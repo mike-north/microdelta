@@ -76,7 +76,8 @@ other seven workspace packages, none of which exist on npm.
 - `release.yml` keeps the `version` job and adds `release-decision`,
   `package`, and `publish` jobs (see [releasing](../releasing.md)).
   Workflow-level permissions are empty; only `publish` has
-  `id-token: write`, and it installs nothing.
+  `id-token: write` (plus `contents: read` and `pull-requests: read` for
+  re-establishing release eligibility), and it installs nothing.
 - The seven publishable scoped manifests and `microdelta` are no longer
   `private`; each has `repository` metadata matching the trusted repository
   and its directory, and `publishConfig.access: public`. The workspace root
@@ -86,6 +87,9 @@ other seven workspace packages, none of which exist on npm.
   release decision.
 - `npm run check:release` (part of `npm run check`) audits `release.yml` and
   the first-party graph on every CI run.
+- `tooling/release-review.mjs` is the human-operated procedure that records
+  the required exact-head **Supervisor review** status on a Version Packages PR
+  without merging or arming auto-merge. It has not been applied to any PR.
 - No secret, npm token, repository setting, branch protection, or visibility
   was changed.
 
@@ -146,6 +150,64 @@ restricts OIDC to the `publish` job.
   action, `registry-url`, pull-request trigger, publish input on Changesets,
   non-release packing, packing another ref) is refused.
 
+## Independent review repairs (2026-09-28 UTC)
+
+An independent review of `d536d51834f48fb1a28b629fa6a6818463a0bf8d` found four
+gaps, accepted by the supervisor. Raw RED and GREEN logs for this repair are kept
+outside the repository in `/private/tmp/microdelta-issue64/repair-*.txt`.
+
+1. **The protected Version PR merge path had no way to satisfy Supervisor
+   review.** Live `main` protection requires that status. The ordinary
+   command rejects Version Packages PRs before writing it, and no release
+   procedure existed. *RED:* `tooling/release-review.test.mjs` failed first on
+   the missing module (non-behavioral). With `runReleaseReview` temporarily
+   bound to the only existing procedure, 21 of 30 tests failed; the happy path
+   was refused with `Release-version pull requests remain under
+   human-controlled release procedure`. The adapter test also failed until the
+   PR read returned the title and head repository. *GREEN:*
+   `tooling/release-review.mjs`, 30/30 tests. It writes exact-head pending,
+   then success, status; never calls auto-merge (the injected API throws if it
+   does); requires completed passing checks and a genuine Copilot review;
+   refuses 24 named conditions before any write; and its CLI refuses without an
+   interactive terminal before any `gh` call. The ordinary command still
+   refuses release PRs, now asserted in the new test file too.
+2. **A release decision could go stale before publishing.** The reviewer's
+   probe showed an old successful decision, reused by a re-run, allowing three
+   fake publishes after a newer Version PR merged. *RED:* the new two-run test
+   (`a release made stale after its decision job succeeded publishes
+   nothing`) exited 0 with publishes; 7 of 21 publisher tests failed, including
+   the latest-ordering and missing-evidence cases. *GREEN:* the publisher
+   re-reads GitHub before its plan and before every publish, refuses missing
+   or unreadable evidence, reads each package's `latest` tag, and refuses a
+   version below it (21/21). The reviewer's probe, re-run against this code,
+   reports status 1 and 0 publishes. `release-decision.mjs` now also refuses
+   missing `GITHUB_EVENT_NAME`/`GITHUB_REPOSITORY`/`GITHUB_REF`
+   (RED then GREEN). The workflow audit requires the publish job's exact
+   `contents: read`, `id-token: write`, `pull-requests: read` permissions and
+   job token (2 new tests; RED then GREEN).
+3. **An undeclared first-party dependency could hide behind a sibling
+   tarball.** *RED:* run against the `d536d51` tooling, the fixture with only
+   the facade's `dependencies` removed packed with exit 0 (`Installed 2
+   first-party packages … Every package root imports`). So did a
+   declaration-only import and a computed dynamic import (10/18 passed
+   overall). An earlier RED run of these three was invalid, because passing
+   `undefined` re-applied the fixture's default dependency; the tests were
+   corrected to pass `{}` and re-run against `d536d51`. *GREEN:* a static
+   scan of each tarball's emitted `.js`/`.d.ts` refuses undeclared first-party
+   specifiers, and each package is installed alone with siblings available only
+   through `overrides`. That isolated install catches the computed import the
+   scan cannot see (`ERR_MODULE_NOT_FOUND`). Healthy-graph, new registered owner
+   (`@microdelta/resolution`), and new unregistered owner
+   (`@microdelta/accounting`) controls pass or refuse as intended.
+4. **Native SQLite loading was never exercised.** *RED:* with install scripts
+   suppressed, `import('@microdelta/machine-node')` succeeds even though
+   better-sqlite3 has no binding. *GREEN:* `verifyNodeSqlite` opens a temporary
+   database through the installed adapter, writes in a transaction, reads,
+   closes, reopens and reads again. The artifact tool runs it after a normal
+   install with scripts enabled in the package job. The same function throws
+   against a scripts-suppressed install. Scope is that path only, on the
+   runner's platform and Node version; alpha declarations are not promoted.
+
 ## Commands and results
 
 Final results for the pushed head are recorded in the pull request.
@@ -156,6 +218,15 @@ Final results for the pushed head are recorded in the pull request.
   performed or simulated against npm; publisher tests use a fake `npm`.
 - The release-decision, package and publish jobs have not run on GitHub. Their
   first real run is the first Version Packages merge after this change.
+- `tooling/release-review.mjs` has been exercised only against an injected
+  GitHub boundary and its non-interactive CLI refusal; it has not been run
+  against GitHub or applied to PR #49. It cannot prove the operator is a
+  distinct human; the interactive confirmation and documentation are the
+  procedural control, as with the shared GitHub identity for the ordinary
+  supervisor status.
+- Eligibility is re-read before each publish, but a Version PR merged during
+  a single `npm publish` call is detected only before the next package. The
+  `latest`-order check still prevents moving `latest` backward.
 - Packages keep their existing `UNLICENSED` license field; publishing makes
   that code public on npm under the same terms as the public repository.
 - `npm view` is used to classify existing versions; very recent publications

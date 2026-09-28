@@ -5,11 +5,13 @@ M1 bounded experiment decisions are recorded; final acceptance follows the
 [M1 evidence record](../validation/m1-2026-09-26.md). M2 bounded tracking and
 package components are implemented; their [evidence record](../validation/m2-2026-09-27.md)
 and [acceptance issue](https://github.com/mike-north/microdelta/issues/32) record delivery and verification.
-M3's bounded durable components and assembled workspace path are delivered, and an
-independent-process acceptance harness records their evidence in the
-[M3 acceptance record](../validation/m3-acceptance-2026-09-28.md); M3 acceptance
-itself remains the supervisor's [#50](https://github.com/mike-north/microdelta/issues/50)
-decision. General composition, concurrency and scale remain unimplemented.**
+M3's bounded durable components and assembled workspace path have verified
+runtime acceptance (bounded: single writer, direct-child validation); the
+[M3 evidence record](../validation/m3-2026-09-28.md) maps them and the later
+[publication-kill harness repair](../validation/m3-crash-harness-2026-09-28.md)
+to the exit. [#50](https://github.com/mike-north/microdelta/issues/50) records the final
+milestone decision and documentation delivery result. General composition,
+concurrency and scale remain unimplemented.**
 This specification describes the full target; the current checkout implements
 only the capabilities listed below.
 
@@ -124,8 +126,14 @@ arbitrary JavaScript closure soundness. The workspace path reuses retained
 results for the fixed two-contributor M3 shape across complete process exits;
 independent processes exercise its current-evidence, source-policy, integrity,
 admission, selected-read, kill-boundary and lost-acknowledgment cases in the
-[M3 acceptance record](../validation/m3-acceptance-2026-09-28.md). General fanout
-and scale proof are not established.
+[M3 acceptance record](../validation/m3-acceptance-2026-09-28.md); the later
+[harness repair](../validation/m3-crash-harness-2026-09-28.md) verifies that a
+planned kill is reached before counting that evidence and bounds the test's
+wait on a killed holder's stored lease. The
+[M3 evidence record](../validation/m3-2026-09-28.md) maps that evidence and the
+component acceptances to the M3 exit; [#50](https://github.com/mike-north/microdelta/issues/50)
+records the final milestone decision and the documentation delivery result.
+General fanout, concurrency and scale proof are not established.
 
 The [M2 evidence record](../validation/m2-2026-09-27.md) maps these bounded
 capabilities to current-head reviews, integrated checks, component merges, and

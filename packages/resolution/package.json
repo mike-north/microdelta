@@ -1,0 +1,41 @@
+{
+  "name": "@microdelta/resolution",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Reuse Resolution: current candidate eligibility, source policy and direct-child validation",
+  "license": "UNLICENSED",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "./dist/src/index.js",
+  "types": "./dist/api/resolution.public.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/api/resolution.public.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json && node ../../tooling/trim-declaration-imports.mjs dist/api/resolution.beta.d.ts dist/api/resolution.public.d.ts",
+    "check": "concurrently --success all --names types,lint \"npm run check:types\" \"npm run check:lint\"",
+    "check:types": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.portable.json",
+    "check:lint": "eslint .",
+    "test": "npm run test:unit && npm run test:types && npm run test:public",
+    "test:unit": "tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand",
+    "test:types": "tsd",
+    "test:public": "tsc --noEmit -p tsconfig.public-consumer.json"
+  },
+  "tsd": {
+    "directory": "test-d"
+  },
+  "dependencies": {
+    "@microdelta/definition": "0.0.0",
+    "@microdelta/history": "0.0.0",
+    "@microdelta/materialization": "0.0.0",
+    "@microdelta/tracking": "0.0.0"
+  }
+}

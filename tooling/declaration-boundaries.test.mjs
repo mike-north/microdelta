@@ -339,7 +339,7 @@ test('inherited paths and invented aliases cannot expose sibling source or untri
  * and the Definition, Materialization and Resolution alpha entries that
  * compose Resolution over real History.
  */
-test('facade compiler maps both History imports to generated alpha declarations', async () => {
+test('facade compiler maps each approved owner import, including both History entries, to its generated alpha declaration', async () => {
   const config = JSON.parse(await readFile(path.join(root, 'packages/core/tsconfig.json'), 'utf8'));
   assert.deepEqual(config.compilerOptions.paths, {
     '@microdelta/definition': ['../definition/dist/api/definition.alpha.d.ts'],

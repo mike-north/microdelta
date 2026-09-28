@@ -57,6 +57,8 @@ const controls = [
   { name: 'nested post-commit diagnostics stay with each step', file: 'resolution.js', anchor: 'return { misses: [], trace: [], diagnostics: request.diagnostics };', replacement: 'return { misses: [], trace: [], diagnostics: [] };' },
   { name: 'supported provenance need not carry its own implementation evidence', file: 'evidence.js', anchor: 'if (!observations.some(isOwnImplementation)) {', replacement: 'if (false) {' },
   { name: 'supported source provenance may carry child edges', file: 'evidence.js', anchor: "if (kind === 'source' && children.length > 0) {", replacement: 'if (false) {' },
+  { name: 'an unsuccessful attempt ending is not announced as abandon', file: 'resolution.js', anchor: "if (ending.ending !== 'retained') {", replacement: 'if (false) {' },
+  { name: 'an ending History refused is still announced', file: 'resolution.js', anchor: 'could not be ended: ${describe(error)}`);', replacement: "could not be ended: ${describe(error)}`); emit(request, evidence, step, 'abandon');" },
   { name: 'a post-commit observer failure fails the call', file: 'resolution.js', anchor: 'if (preExecution.has(phase)) {', replacement: 'if (true) {' },
 ];
 

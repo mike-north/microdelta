@@ -1,11 +1,17 @@
 {
   "name": "@microdelta/materialization",
   "version": "0.0.0",
-  "private": true,
   "description": "Selected immutable result views and explicit output materialization",
   "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mike-north/microdelta.git",
+    "directory": "packages/materialization"
+  },
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "main": "./dist/src/index.js",
   "types": "./dist/api/materialization.public.d.ts",
   "exports": {
@@ -14,7 +20,10 @@
       "import": "./dist/src/index.js"
     }
   },
-  "files": ["dist"],
+  "files": [
+    "dist",
+    "!dist/api-temp"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json && node ../../tooling/trim-declaration-imports.mjs dist/api/materialization.beta.d.ts dist/api/materialization.public.d.ts",
     "check": "concurrently --success all --names types,lint \"npm run check:types\" \"npm run check:lint\"",
@@ -25,10 +34,15 @@
     "test:types": "tsd",
     "test:public": "tsc --noEmit -p tsconfig.public-consumer.json"
   },
-  "tsd": { "directory": "test-d" },
+  "tsd": {
+    "directory": "test-d"
+  },
   "dependencies": {
     "@microdelta/history": "0.0.0",
     "@microdelta/tracking": "0.0.0",
     "@microdelta/value": "0.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

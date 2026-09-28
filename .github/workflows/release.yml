@@ -1,19 +1,26 @@
-# Versioning is automatic after main changes and can also be requested manually.
-name: Prepare release PR
+# npm trusts this file (release.yml in mike-north/microdelta) to publish every
+# first-party package. Pushes to main and manual runs prepare the reviewable
+# Version Packages PR. Merging that PR is the human release decision: only the
+# push of its merge commit passes release-decision, after which the exact commit
+# is checked, packed and verified without publication credentials, and only the
+# publish job obtains a short-lived OIDC token to publish those tarballs.
+# tooling/release-workflow.mjs audits this shape; see docs/releasing.md.
+name: Release
 on:
   push:
     branches: [main]
   workflow_dispatch:
-permissions:
-  actions: write
-  contents: write
-  pull-requests: write
-concurrency:
-  group: prepare-release-pr
-  cancel-in-progress: false
+permissions: {}
 jobs:
   version:
     runs-on: ubuntu-latest
+    permissions:
+      actions: write
+      contents: write
+      pull-requests: write
+    concurrency:
+      group: prepare-release-pr
+      cancel-in-progress: false
     steps:
       - name: Require the release base branch
         if: github.ref != 'refs/heads/main'
@@ -68,3 +75,79 @@ jobs:
                 ...(workflow_id === 'pr-metadata.yml' ? { inputs: { pr_number: String(pull_number) } } : {}),
               });
             }
+  # Publishes only for the push whose commit merged the latest Version Packages
+  # PR; every other event outputs publish=false. Read-only GitHub access.
+  release-decision:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      publish: ${{ steps.decision.outputs.publish }}
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+      - name: Decide whether this run is a release
+        id: decision
+        run: node tooling/release-decision.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+  # Builds, checks, tests, packs and install-verifies the exact release commit.
+  # Dependency install scripts run here, where no OIDC token is obtainable.
+  package:
+    needs: release-decision
+    if: needs.release-decision.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+      - name: Pack and verify the first-party release graph
+        run: node tooling/release-artifacts.mjs --release --out "$RUNNER_TEMP/release"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: release-packages
+          path: ${{ runner.temp }}/release
+          if-no-files-found: error
+          retention-days: 7
+  # The only job that can obtain an OIDC token. It installs nothing and runs no
+  # package scripts; it publishes the verified tarballs in dependency order.
+  publish:
+    needs: [release-decision, package]
+    if: needs.release-decision.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    concurrency:
+      group: publish-npm
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: release-packages
+          path: ${{ runner.temp }}/release
+      - name: Publish verified tarballs with npm trusted publishing
+        run: node tooling/publish-release.mjs --manifest "$RUNNER_TEMP/release/release-manifest.json"

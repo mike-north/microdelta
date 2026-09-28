@@ -152,6 +152,64 @@ describe('scoped run context (RUN-001, DOM-2)', () => {
     }
   });
 
+  test('ordinary work queued in any microtask around the run\'s closure is rejected before starting or fully participates', async () => {
+    // Regression (supervisory review of 9637739, real facade): an ordinary call
+    // queued between the final empty check and closure was accepted, began,
+    // and then lost its context and exact read after the run released its
+    // writer and settled.
+    const session = openSession(store.location);
+    const classes: string[] = [];
+    try {
+      const cold = await runReport(session);
+      const ada = cold.outcomes['person:ada'];
+      if (ada.kind === 'refused') {
+        throw new Error('expected a result for Ada');
+      }
+      const reference = ada.reference;
+      for (let depth = 0; depth <= 8; depth += 1) {
+        const events: string[] = [];
+        let openGate: () => void = () => undefined;
+        const held = new Promise<void>((resolve) => {
+          openGate = resolve;
+        });
+        let late: Promise<string | undefined> | undefined;
+        let saw: string | undefined;
+        const running = session.workspace.run({
+          authoring: session.contributors.authoring,
+          composition: session.contributors.composition,
+          environment,
+          observers: [{ observe: (event) => { if (event.kind === 'ordinary') { events.push(`late:${event.phase}`); } } }],
+        }, (run) => {
+          let chain = Promise.resolve();
+          for (let index = 0; index < depth; index += 1) {
+            chain = chain.then(() => undefined);
+          }
+          void chain.then(() => {
+            // Settled into its error code at once, so it can never reject unhandled.
+            late = caughtCode(run.ordinary('late', async () => {
+              await held;
+              saw = `${currentRun().environment}/${run.read<{ readonly name: string }>(reference).name}`;
+            }));
+          });
+          return 'body';
+        }).finally(() => {
+          events.push('run settled');
+        });
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        openGate();
+        await running;
+        const code = late === undefined ? 'never called' : await late;
+        const began = events.includes('late:begin');
+        const participated = began && code === undefined && saw === `${environment}/Ada` && events.indexOf('late:end') < events.indexOf('run settled');
+        const rejected = !began && code === 'run-closed';
+        classes.push(`${String(depth)}:${participated ? 'participated' : rejected ? 'rejected' : `accepted-but-unaccounted (${String(code)})`}`);
+      }
+    } finally {
+      session.close();
+    }
+    expect(classes.filter((entry) => entry.includes('accepted-but-unaccounted'))).toEqual([]);
+  });
+
   test('a composition constructed inside a live run cannot look up the run context', async () => {
     const session = openSession(store.location);
     const lookups: unknown[] = [];

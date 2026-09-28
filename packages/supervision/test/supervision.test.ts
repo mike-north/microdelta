@@ -707,6 +707,109 @@ describe('lifetime of operations the run already started (RUN-001)', () => {
   });
 });
 
+/**
+ * Classify one late operation against the closure boundary: it must either
+ * never start (no `begin`, rejected `run-closed`) or participate fully (its
+ * `begin` and ending both precede the writer release and run settlement).
+ * An accepted operation still active after closure is the defect.
+ */
+function boundaryClass(events: readonly string[], label: string, outcome: { readonly error?: unknown }): 'rejected' | 'participated' | 'accepted-but-unaccounted' {
+  const begin = events.indexOf(`${label}:begin`);
+  const ended = Math.max(events.indexOf(`${label}:end`), events.indexOf(`${label}:fail`));
+  const release = events.indexOf('writer:release');
+  const settled = events.indexOf('run:settled');
+  if (begin < 0) {
+    return outcome.error instanceof SupervisionError && outcome.error.code === 'run-closed' ? 'rejected' : 'accepted-but-unaccounted';
+  }
+  return ended >= 0 && ended < release && ended < settled && outcome.error === undefined ? 'participated' : 'accepted-but-unaccounted';
+}
+
+describe('closure boundary (RUN-001)', () => {
+  test('work started in any microtask around the final quiescence check is rejected or fully participates', async () => {
+    // Regression (supervisory review of 9637739): the run observed no started
+    // work, then yielded before closing; an ordinary call queued in that gap
+    // was accepted and began, but the run released its writer and settled
+    // while it was still active, and it later failed run-closed.
+    const classes: string[] = [];
+    for (let depth = 0; depth <= 12; depth += 1) {
+      const supervisor = supervision();
+      const held = gate();
+      const events: string[] = [];
+      const writer = { lease: (): IRunLease => Object.freeze({ holder: 'h', fence: 1, expiresAt: 1 }), release: (): void => { events.push('writer:release'); } };
+      const { factory } = recordingResolution();
+      let late: ReturnType<typeof settled_> | undefined;
+      const running = supervisor.run({
+        analysis: 'analysis:test', environment: 'env:test', resolution: factory, writer,
+        observers: [{ observe: (event) => { if (event.kind === 'ordinary') { events.push(`${event.label}:${event.phase}`); } } }],
+      }, (run) => {
+        let chain = Promise.resolve();
+        for (let index = 0; index < depth; index += 1) {
+          chain = chain.then(() => undefined);
+        }
+        void chain.then(() => {
+          late = settled_(run.ordinary('late', async () => {
+            await held.opened;
+            return supervisor.current().environment;
+          }));
+        });
+        return 'body';
+      }).finally(() => {
+        events.push('run:settled');
+      });
+      await settleTicks();
+      held.open();
+      await running;
+      const outcome = late === undefined ? { error: new Error('never called') } : await late;
+      classes.push(`${String(depth)}:${boundaryClass(events, 'late', outcome)}`);
+    }
+    expect(classes.filter((entry) => entry.endsWith('accepted-but-unaccounted'))).toEqual([]);
+  });
+
+  test('nested work started by a participating operation near closure is rejected or fully participates', async () => {
+    const classes: string[] = [];
+    for (let depth = 0; depth <= 8; depth += 1) {
+      const supervisor = supervision();
+      const first = gate();
+      const second = gate();
+      const events: string[] = [];
+      const writer = { lease: (): IRunLease => Object.freeze({ holder: 'h', fence: 1, expiresAt: 1 }), release: (): void => { events.push('writer:release'); } };
+      const { factory } = recordingResolution();
+      let nested: ReturnType<typeof settled_> | undefined;
+      const running = settled_(supervisor.run({
+        analysis: 'analysis:test', environment: 'env:test', resolution: factory, writer,
+        observers: [{ observe: (event) => { if (event.kind === 'ordinary') { events.push(`${event.label}:${event.phase}`); } } }],
+      }, (run) => {
+        const slow = run.ordinary('slow', async () => {
+          await first.opened;
+          let chain = Promise.resolve();
+          for (let index = 0; index < depth; index += 1) {
+            chain = chain.then(() => undefined);
+          }
+          void chain.then(() => {
+            nested = settled_(run.ordinary('nested', async () => {
+              await second.opened;
+              return supervisor.current().environment;
+            }));
+          });
+          return 'slow done';
+        });
+        return Promise.all([slow, run.ordinary('failing', () => { throw new Error('sibling failed'); })]);
+      }).finally(() => {
+        events.push('run:settled');
+      }));
+      await settleTicks();
+      first.open();
+      await settleTicks();
+      second.open();
+      const result = await running;
+      expect(result.error instanceof Error ? result.error.message : '').toBe('sibling failed');
+      const outcome = nested === undefined ? { error: new Error('never called') } : await nested;
+      classes.push(`${String(depth)}:${boundaryClass(events, 'nested', outcome)}`);
+    }
+    expect(classes.filter((entry) => entry.endsWith('accepted-but-unaccounted'))).toEqual([]);
+  });
+});
+
 /** Settle a promise into a value or error, so a test can inspect a rejection it expects. */
 function settled_<T>(promise: Promise<T>): Promise<{ readonly value?: T; readonly error?: unknown }> {
   return promise.then((value: T) => ({ value }), (error: unknown) => ({ error }));

@@ -123,6 +123,9 @@ test('the executable example is built, checked, linted and run by the aggregate 
     skipped.scripts[script] = skipped.scripts[script].replace(fragment, 'true');
     assert.match(missingFoundationGates({ ...inputs, workspace: skipped }).join('\n'), new RegExp(`${script}.*${fragment}`, 'u'), `${script} must require ${fragment}`);
   }
+  const unbounded = structuredClone(workspace);
+  unbounded.scripts['check:imports'] = unbounded.scripts['check:imports'].replace(' examples', '');
+  assert.match(missingFoundationGates({ ...inputs, workspace: unbounded }).join('\n'), /check:imports.*examples/u);
   const unlinted = structuredClone(workspace);
   unlinted.scripts['check:examples'] = unlinted.scripts['check:examples'].replace('eslint examples', 'true');
   assert.match(missingFoundationGates({ ...inputs, workspace: unlinted }).join('\n'), /check:examples.*eslint examples/u);

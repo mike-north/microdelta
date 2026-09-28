@@ -240,3 +240,26 @@ test('Value production source compiles without ambient host declarations', async
   assert.deepEqual(config.compilerOptions.types, [], 'Value build must opt out of ambient host globals');
   assert.equal(config.compilerOptions.skipLibCheck, false, 'Value build must check Machine declarations');
 });
+
+/**
+ * The executable example is an external consumer of the facade: it may import
+ * only `microdelta` (and Node built-ins), never a scoped owner package or
+ * source path, even though its compiler resolves their alpha declarations.
+ */
+test('the executable example may import only the microdelta facade and Node built-ins', async () => {
+  const eslint = new ESLint({ cwd: root, overrideConfigFile: checkerConfig });
+  const filePath = path.join(root, 'examples/contribution-report/src/probe.ts');
+  for (const [source, allowed] of [
+    ["import { openWorkspace } from 'microdelta';", true],
+    ["import { readFileSync } from 'node:fs';", true],
+    ["import { openDurableHistory } from '@microdelta/history';", false],
+    ["import type { IResolution } from '@microdelta/resolution';", false],
+    ["export { createSupervision } from '@microdelta/supervision';", false],
+    ["import { createResolution } from '../../../packages/resolution/src/index.js';", false],
+  ]) {
+    const [result] = await eslint.lintText(source, { filePath });
+    assert.ok(result, 'Expected ESLint to inspect the example probe');
+    const errors = result.messages.filter(message => message.severity === 2);
+    assert.equal(errors.length === 0, allowed, `${source}: ${JSON.stringify(result.messages)}`);
+  }
+});

@@ -7,8 +7,9 @@ package components are implemented; their [evidence record](../validation/m2-202
 and [acceptance issue](https://github.com/mike-north/microdelta/issues/32) record delivery and verification.
 M3's bounded durable components and assembled workspace path have verified
 runtime acceptance (bounded: single writer, direct-child validation); the
-[M3 evidence record](../validation/m3-2026-09-28.md) maps them to the exit, and
-[#50](https://github.com/mike-north/microdelta/issues/50) records the final
+[M3 evidence record](../validation/m3-2026-09-28.md) maps them and the later
+[publication-kill harness repair](../validation/m3-crash-harness-2026-09-28.md)
+to the exit. [#50](https://github.com/mike-north/microdelta/issues/50) records the final
 milestone decision and documentation delivery result. General composition,
 concurrency and scale remain unimplemented.**
 This specification describes the full target; the current checkout implements
@@ -125,7 +126,10 @@ arbitrary JavaScript closure soundness. The workspace path reuses retained
 results for the fixed two-contributor M3 shape across complete process exits;
 independent processes exercise its current-evidence, source-policy, integrity,
 admission, selected-read, kill-boundary and lost-acknowledgment cases in the
-[M3 acceptance record](../validation/m3-acceptance-2026-09-28.md). The
+[M3 acceptance record](../validation/m3-acceptance-2026-09-28.md); the later
+[harness repair](../validation/m3-crash-harness-2026-09-28.md) verifies that a
+planned kill is reached before counting that evidence and bounds the test's
+wait on a killed holder's stored lease. The
 [M3 evidence record](../validation/m3-2026-09-28.md) maps that evidence and the
 component acceptances to the M3 exit; [#50](https://github.com/mike-north/microdelta/issues/50)
 records the final milestone decision and the documentation delivery result.

@@ -7,8 +7,9 @@ M1 experiment decisions are recorded in the [M1 evidence record](validation/m1-2
 its final CI and issue-acceptance conditions determine completion. M2 bounded
 tracking and package components are implemented; the [M2 evidence record](validation/m2-2026-09-27.md)
 and [acceptance issue](https://github.com/mike-north/microdelta/issues/32) record delivery and verification.
-M3's bounded durable runtime has verified acceptance: its component issues and
-independent-process acceptance issue are accepted, as mapped in the
+M3's bounded durable runtime has verified acceptance: its component issues,
+independent-process acceptance issue and later publication-kill harness repair
+are accepted, as mapped in the
 [M3 evidence record](validation/m3-2026-09-28.md). [#50](https://github.com/mike-north/microdelta/issues/50)
 records the final milestone decision and documentation delivery result. No M4 or
 later runtime milestone is complete.
@@ -124,7 +125,8 @@ separate API. No paid provider needed.
 **Evidence:** [M3 durable analysis record](validation/m3-2026-09-28.md). The
 record maps the exit to the accepted component issues (#51–#57), the
 [independent-process acceptance record](validation/m3-acceptance-2026-09-28.md)
-(#58), their reviews and default-branch results. The [acceptance issue](https://github.com/mike-north/microdelta/issues/50)
+(#58), and the later [publication-kill harness repair](validation/m3-crash-harness-2026-09-28.md)
+(#70), with their reviews and default-branch results. The [acceptance issue](https://github.com/mike-north/microdelta/issues/50)
 records the final milestone decision after documentation delivery and verification.
 
 ## M4 — Composition and keyed collections

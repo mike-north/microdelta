@@ -4,6 +4,7 @@ Status: M3 implementation plan for [issue #51](https://github.com/mike-north/mic
 grounded in the confirmed user example on 2026-09-27. M2 is accepted. The M3
 component and assembly issues (#52–#57) and the independent-process acceptance
 issue (#58, [M3 acceptance record](../validation/m3-acceptance-2026-09-28.md))
+and later harness repair (#70, [dated follow-up](../validation/m3-crash-harness-2026-09-28.md))
 are accepted; the [M3 evidence record](../validation/m3-2026-09-28.md) maps
 them to the milestone exit. This plan applies the active specification and
 does not replace it; its body retains the accepted M3 contracts and delivery sequence.
@@ -537,7 +538,7 @@ branch checks and owning issue acceptance are verified.
 | [#56](https://github.com/mike-north/microdelta/issues/56) | Current source/summary resolution and direct-child validation | #51, #53, #54, #55 |
 | [#57](https://github.com/mike-north/microdelta/issues/57) | Scoped Supervision/facade and executable contributor example | #51, #53, #55, #56 |
 | [#58](https://github.com/mike-north/microdelta/issues/58) | Independent subprocess acceptance and dated evidence/docs | #51, #57 and its prerequisites |
-| [#50](https://github.com/mike-north/microdelta/issues/50) | Supervisor final M3 acceptance and queue reconciliation | #51 through #58 |
+| [#50](https://github.com/mike-north/microdelta/issues/50) | Supervisor final M3 acceptance and queue reconciliation | #51 through #58; later required harness repair #70 |
 
 Implementers own one contained issue/worktree and stop at a reviewable PR. The
 supervisor owns contract decisions, substantive exact-head review, completed

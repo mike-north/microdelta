@@ -31,7 +31,9 @@ imports Tracking, History or Resolution; the facade chooses those meanings.
 
 `compose({ scope, inputs?, helpers?, members })` freezes framework-owned copies
 before any run. Inputs become frozen Value snapshots; accessors are rejected
-without being invoked. Members carry explicit keys and step slots. The only
+without being invoked. Each registration record (options, input, helper, member, step)
+is captured once from its own data properties, and that single capture is what
+lookup and invocation use; accessor or inherited registration fields reject. Members carry explicit keys and step slots. The only
 permitted edge is a memo naming a sibling **source** slot of the same member,
 whose declaration must be exactly the pinned child (current-composition
 consistency, not restart correspondence). There are no cross-member or

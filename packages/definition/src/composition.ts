@@ -21,6 +21,7 @@ import { decodeSnapshot, encodeSnapshot } from '@microdelta/value';
 import type { IBindingDescriptor } from './descriptor.js';
 import type { IDeclarationRecords, IStepDeclaration, IStepRecord } from './declaration.js';
 import { reject } from './declaration.js';
+import type { DefinitionError } from './errors.js';
 import type { IBindingFamily } from './family.js';
 
 /**
@@ -227,7 +228,11 @@ export function composeIn<TFamily extends IBindingFamily>(
 ): IComposition<TFamily> {
   composing++;
   try {
-    const scope = nonempty(options.scope, 'scope');
+    // Every registration record is captured exactly once through its own data
+    // property descriptors. Validation, lookup and invocation all use this one
+    // framework-owned capture, so no later read can observe a different value.
+    const optionFields = captureFields(options, { scope: 'invalid-descriptor', inputs: 'invalid-descriptor', helpers: 'invalid-descriptor', members: 'invalid-descriptor' });
+    const scope = nonempty(optionFields.get('scope'), 'scope');
     const registrations = new Map<string, IRegistration<TFamily>[]>();
     const register = (descriptor: IBindingDescriptor, registration: IRegistration<TFamily>): void => {
       const key = descriptorKey(descriptor);
@@ -235,39 +240,49 @@ export function composeIn<TFamily extends IBindingFamily>(
     };
     // Framework-owned copies: arrays are copied once, and input values become
     // frozen Value snapshots, so later author mutation cannot change the graph.
-    for (const input of Array.from(options.inputs ?? [])) {
-      const slot = nonempty(input.slot, 'input slot');
-      register({ scope, role: 'input', slot }, { target: Object.freeze({ role: 'input', value: snapshotInput(input.value, slot) }), record: undefined });
+    for (const input of listOf(optionFields.get('inputs'), 'inputs', true)) {
+      const fields = captureFields(input, { slot: 'invalid-descriptor', value: 'invalid-input' });
+      const slot = nonempty(fields.get('slot'), 'input slot');
+      register({ scope, role: 'input', slot }, { target: Object.freeze({ role: 'input', value: snapshotInput(fields.get('value'), slot) }), record: undefined });
     }
-    for (const helper of Array.from(options.helpers ?? [])) {
-      const slot = nonempty(helper.slot, 'helper slot');
-      if (typeof helper.helper !== 'function') {
+    for (const helper of listOf(optionFields.get('helpers'), 'helpers', true)) {
+      const fields = captureFields(helper, { slot: 'invalid-descriptor', helper: 'invalid-callback' });
+      const slot = nonempty(fields.get('slot'), 'helper slot');
+      const callable = fields.get('helper');
+      if (!isCallable(callable)) {
         reject('invalid-callback', `Helper ${slot} must be a function.`);
       }
-      register({ scope, role: 'callable', slot }, { target: Object.freeze({ role: 'callable', callable: helper.helper }), record: undefined });
+      register({ scope, role: 'callable', slot }, { target: Object.freeze({ role: 'callable', callable }), record: undefined });
     }
     const steps: IBindingDescriptor[] = [];
     const edges: IDeclaredEdge[] = [];
     /** RES-001: each scoped subject is claimed by exactly one declaration object in this composition. */
     const subjects = new Map<string, IStepDeclaration<TFamily>>();
-    for (const member of Array.from(options.members)) {
-      const memberKey = nonempty(member.key, 'member key');
-      const memberSteps = Array.from(member.steps);
-      for (const step of memberSteps) {
-        const slot = nonempty(step.slot, 'step slot');
-        const record = records.get(step.declaration);
+    for (const member of listOf(optionFields.get('members'), 'members', false)) {
+      const memberFields = captureFields(member, { key: 'invalid-descriptor', steps: 'invalid-descriptor' });
+      const memberKey = nonempty(memberFields.get('key'), 'member key');
+      // Capture every step of this member once, before any edge refers to a sibling.
+      const memberSteps = listOf(memberFields.get('steps'), 'member steps', false).map(step => {
+        const fields = captureFields(step, { slot: 'invalid-descriptor', declaration: 'forged-declaration' });
+        const slot = nonempty(fields.get('slot'), 'step slot');
+        const candidate = fields.get('declaration');
+        const record = typeof candidate === 'object' && candidate !== null ? records.get(candidate) : undefined;
         if (record === undefined) {
-          reject('forged-declaration', `Step ${slot} holds a declaration this family did not mint.`);
+          return reject('forged-declaration', `Step ${slot} holds a declaration this family did not mint.`);
         }
-        const claimant = subjects.get(step.declaration.subject);
-        if (claimant !== undefined && claimant !== step.declaration) {
-          reject('conflicting-subject', `Distinct declarations claim the scoped subject ${step.declaration.subject}.`);
+        return { slot, record };
+      });
+      for (const { slot, record } of memberSteps) {
+        const declaration = record.declaration;
+        const claimant = subjects.get(declaration.subject);
+        if (claimant !== undefined && claimant !== declaration) {
+          reject('conflicting-subject', `Distinct declarations claim the scoped subject ${declaration.subject}.`);
         }
-        subjects.set(step.declaration.subject, step.declaration);
+        subjects.set(declaration.subject, declaration);
         const descriptor = stepDescriptor(scope, slot, memberKey);
         steps.push(descriptor);
         register(descriptor, {
-          target: Object.freeze({ role: 'step', declaration: step.declaration, scopedSubject: Object.freeze({ scope, subject: step.declaration.subject }) }),
+          target: Object.freeze({ role: 'step', declaration, scopedSubject: Object.freeze({ scope, subject: declaration.subject }) }),
           record,
         });
         if (record.kind === 'memo') {
@@ -276,7 +291,7 @@ export function composeIn<TFamily extends IBindingFamily>(
             // declaration occupying that sibling slot of this member entry.
             const siblings = memberSteps.filter(sibling => sibling.slot === child);
             const [sibling] = siblings;
-            if (siblings.length !== 1 || sibling?.declaration !== pinned || child === slot) {
+            if (siblings.length !== 1 || sibling?.record.declaration !== pinned || child === slot) {
               reject('illegal-edge', `Memo ${slot} child ${child} must be the declaration occupying that sibling slot.`);
             }
             edges.push(Object.freeze({ parent: descriptor, child: stepDescriptor(scope, child, memberKey) }));
@@ -332,6 +347,51 @@ export function composeIn<TFamily extends IBindingFamily>(
   } finally {
     composing--;
   }
+}
+
+/**
+ * Capture a registration record's recognized fields exactly once through their
+ * own property descriptors. An accessor or an inherited recognized field is an
+ * unsupported builder shape and rejects with that field's code; no getter runs.
+ * CMP-9 guards framework resolution during construction; this is not a claim to
+ * sandbox arbitrary JavaScript, only that validated and used values are the same.
+ */
+function captureFields(value: unknown, fields: Readonly<Record<string, DefinitionError['code']>>): ReadonlyMap<string, unknown> {
+  if (typeof value !== 'object' || value === null) {
+    reject('invalid-descriptor', 'A composition registration must be a record.');
+  }
+  const captured = new Map<string, unknown>();
+  for (const [key, code] of Object.entries(fields)) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (descriptor === undefined) {
+      if (key in value) {
+        reject(code, `Registration field ${key} must be an own property, not inherited.`);
+      }
+      captured.set(key, undefined);
+      continue;
+    }
+    if (!('value' in descriptor)) {
+      reject(code, `Registration field ${key} must be a data property, not an accessor.`);
+    }
+    captured.set(key, descriptor.value);
+  }
+  return captured;
+}
+
+/** Copy a captured registration list once; optional lists may be absent. */
+function listOf(value: unknown, what: string, optional: boolean): readonly unknown[] {
+  if (value === undefined && optional) {
+    return [];
+  }
+  if (!Array.isArray(value)) {
+    reject('invalid-descriptor', `Composition ${what} must be an array.`);
+  }
+  return Array.from(value as readonly unknown[]);
+}
+
+/** A supplied helper is any function; Definition never invokes it. */
+function isCallable(value: unknown): value is (...arguments_: never[]) => unknown {
+  return typeof value === 'function';
 }
 
 /** A frozen step descriptor. */

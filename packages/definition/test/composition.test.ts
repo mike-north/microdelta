@@ -21,7 +21,9 @@ import {
   DefinitionError,
   declarations,
   type IBindingDescriptor,
+  type IAuthorInvoker,
   type IBindingResolution,
+  type IInvocationPort,
   type IComposition as ICompositionOf,
   type ICompositionOptions as ICompositionOptionsOf,
   type IStepDeclaration as IStepDeclarationOf,
@@ -34,6 +36,7 @@ import {
   fixtureScope,
   memberKeys,
   memo,
+  openInvocation,
   source,
   summarySubject,
   type IFixtureMemberKey,
@@ -180,6 +183,106 @@ describe('fixed M3 topology', () => {
     expectDefinitionError(() => compose({ scope: fixtureScope, members: [{ key: '', steps: [] }] }), 'invalid-descriptor');
     expectDefinitionError(() => compose({ scope: fixtureScope, members: [{ key: 'person:ada', steps: [{ slot: '', declaration }] }] }), 'invalid-descriptor');
     expectDefinitionError(() => compose({ scope: fixtureScope, inputs: [{ slot: '', value: {} }], members: [] }), 'invalid-descriptor');
+  });
+});
+
+describe('registration capture consistency', () => {
+  /** A port that is never expected to dispatch in these tests. */
+  const idlePort: IInvocationPort<ITestFamily> = { active: () => undefined, dispatch: () => Promise.reject(new Error('unexpected dispatch')) };
+
+  /** An invoker that records which callback it was handed and returns its result. */
+  function capturing(seen: unknown[]): IAuthorInvoker<unknown> {
+    return <TContext, TResult>(callback: (context: TContext) => TResult, context: TContext): unknown => {
+      seen.push(callback);
+      return callback(context);
+    };
+  }
+
+  test('registration: a step declaration that changes between reads cannot split lookup from invocation', () => {
+    // Regression (supervisor reproduction on 3b3f782): a declaration getter
+    // returning A first and B afterwards was read six times during compose;
+    // resolve reported B while openInvocation.apply executed A's record.
+    const runA = (): string => 'A';
+    const runB = (): string => 'B';
+    const sourceA = source({ subject: 'activity:a', run: runA });
+    const sourceB = source({ subject: 'activity:b', run: runB });
+    let reads = 0;
+    const getter = jest.fn(() => (reads++ === 0 ? sourceA : sourceB));
+    const flipping = Object.defineProperty({ slot: 'activity' }, 'declaration', { get: getter, enumerable: true });
+    const options: unknown = { scope: fixtureScope, members: [{ key: 'person:ada', steps: [flipping] }] };
+    expectDefinitionError(() => Reflect.apply(compose, undefined, [options]), 'forged-declaration');
+    expect(getter).not.toHaveBeenCalled();
+
+    // A registration whose descriptor itself varies between inspections is
+    // captured once: lookup and invocation agree on that single declaration.
+    let inspections = 0;
+    const varying = new Proxy({ slot: 'activity', declaration: sourceA }, {
+      getOwnPropertyDescriptor(target, key): PropertyDescriptor | undefined {
+        if (key === 'declaration') {
+          return { value: inspections++ === 0 ? sourceA : sourceB, writable: true, enumerable: true, configurable: true };
+        }
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    });
+    const composition = compose({ scope: fixtureScope, members: [{ key: 'person:ada', steps: [varying] }] });
+    const resolution = composition.resolve(stepDescriptor('person:ada', 'activity'));
+    const invocation = openInvocation(composition, stepDescriptor('person:ada', 'activity'), idlePort);
+    const seen: unknown[] = [];
+    const outcome = invocation.kind === 'source' ? invocation.apply({}, undefined, capturing(seen)) : undefined;
+    const bound = resolution.status === 'bound' && resolution.target.role === 'step' ? resolution.target.declaration : undefined;
+    expect(bound === sourceA || bound === sourceB).toBe(true);
+    expect(seen).toEqual([bound?.run]);
+    expect(outcome).toBe(bound === sourceA ? 'A' : 'B');
+  });
+
+  test('registration: a helper that changes between reads cannot bind a non-function', () => {
+    // Regression (supervisor reproduction on 3b3f782): a helper getter returning
+    // a function first and 17 afterwards passed validation and bound 17.
+    const helper = (): string => 'help';
+    let reads = 0;
+    const getter = jest.fn(() => (reads++ === 0 ? helper : 17));
+    const flipping = Object.defineProperty({ slot: 'format' }, 'helper', { get: getter, enumerable: true });
+    const options: unknown = { scope: fixtureScope, helpers: [flipping], members: [] };
+    expectDefinitionError(() => Reflect.apply(compose, undefined, [options]), 'invalid-callback');
+    expect(getter).not.toHaveBeenCalled();
+
+    let inspections = 0;
+    const varying = new Proxy({ slot: 'format', helper }, {
+      getOwnPropertyDescriptor(target, key): PropertyDescriptor | undefined {
+        if (key === 'helper') {
+          return { value: inspections++ === 0 ? helper : 17, writable: true, enumerable: true, configurable: true };
+        }
+        return Reflect.getOwnPropertyDescriptor(target, key);
+      },
+    });
+    const composition = compose({ scope: fixtureScope, helpers: [varying], members: [] });
+    expect(composition.resolve({ scope: fixtureScope, role: 'callable', slot: 'format' }))
+      .toMatchObject({ status: 'bound', target: { role: 'callable', callable: helper } });
+  });
+
+  test('registration: accessor or inherited registration fields reject before any work, without running getters', () => {
+    const activity = source({ subject: 'activity:a', run: () => 1 });
+    const getter = jest.fn((): unknown => 'person:ada');
+    /** Build an object whose named field is an accessor backed by the spy. */
+    const accessor = (base: object, key: string): object => Object.defineProperty({ ...base }, key, { get: getter, enumerable: true });
+    const cases: readonly [unknown, DefinitionError['code']][] = [
+      [accessor({ members: [] }, 'scope'), 'invalid-descriptor'],
+      [accessor({ scope: fixtureScope }, 'members'), 'invalid-descriptor'],
+      [accessor({ scope: fixtureScope, members: [] }, 'inputs'), 'invalid-descriptor'],
+      [accessor({ scope: fixtureScope, members: [] }, 'helpers'), 'invalid-descriptor'],
+      [{ scope: fixtureScope, members: [accessor({ steps: [] }, 'key')] }, 'invalid-descriptor'],
+      [{ scope: fixtureScope, members: [accessor({ key: 'person:ada' }, 'steps')] }, 'invalid-descriptor'],
+      [{ scope: fixtureScope, members: [{ key: 'person:ada', steps: [accessor({ declaration: activity }, 'slot')] }] }, 'invalid-descriptor'],
+      [{ scope: fixtureScope, inputs: [accessor({ value: {} }, 'slot')], members: [] }, 'invalid-descriptor'],
+      [{ scope: fixtureScope, inputs: [accessor({ slot: 'config' }, 'value')], members: [] }, 'invalid-input'],
+      [{ scope: fixtureScope, helpers: [accessor({ helper: () => 1 }, 'slot')], members: [] }, 'invalid-descriptor'],
+      [{ scope: fixtureScope, members: [Object.assign(Object.create({ key: 'person:ada' }), { steps: [] })] }, 'invalid-descriptor'],
+      [{ scope: fixtureScope, members: [{ key: 'person:ada', steps: [Object.assign(Object.create({ declaration: activity }), { slot: 'activity' })] }] }, 'forged-declaration'],
+    ];
+    for (const [options, code] of cases) {
+      expectDefinitionError(() => Reflect.apply(compose, undefined, [options]), code);
+    }
+    expect(getter).not.toHaveBeenCalled();
   });
 });
 

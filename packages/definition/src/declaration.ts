@@ -459,13 +459,13 @@ function checkChildRecord(read: IReadOptions): void {
   if (typeof children !== 'object' || children === null || Array.isArray(children)) {
     reject('illegal-edge', 'Memo children must be a record of sibling slot names to source declarations.');
   }
+  if (Object.getOwnPropertySymbols(children).length > 0) {
+    reject('illegal-edge', 'Memo child slots must be string names.');
+  }
   for (const descriptor of Object.values(Object.getOwnPropertyDescriptors(children))) {
     if (!('value' in descriptor)) {
       reject('illegal-edge', 'Memo children must be data properties, not accessors.');
     }
-  }
-  if (Object.getOwnPropertySymbols(children).length > 0) {
-    reject('illegal-edge', 'Memo child slots must be string names.');
   }
 }
 
@@ -481,8 +481,10 @@ function checkBindings(bindings: object, reserved: 'previous' | 'calls'): void {
   if (Object.hasOwn(descriptors, reserved)) {
     reject('invalid-bindings', `Bindings cannot supply the reserved context name ${reserved}.`);
   }
-  for (const descriptor of Object.values(descriptors)) {
-    if ('get' in descriptor || 'set' in descriptor) {
+  // Reflect.ownKeys includes symbol keys, which the context spread also copies.
+  for (const key of Reflect.ownKeys(bindings)) {
+    const descriptor = Object.getOwnPropertyDescriptor(bindings, key);
+    if (descriptor === undefined || !('value' in descriptor)) {
       reject('invalid-bindings', 'Bindings must hold data properties, not accessors.');
     }
   }

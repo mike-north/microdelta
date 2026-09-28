@@ -324,6 +324,22 @@ describe('invocation bridge', () => {
     expect(getter).not.toHaveBeenCalled();
   });
 
+  test('bindings: symbol-keyed accessors reject without being invoked by the context spread', () => {
+    // Regression: symbol-keyed descriptors were skipped, so the spread ran the getter.
+    const fake = fakePort();
+    const built = buildFixture();
+    const summary = asMemo(openInvocation(built.composition, stepDescriptor('person:ada', 'summary'), fake.port));
+    const activity = asSource(openInvocation(built.composition, stepDescriptor('person:ada', 'activity'), fake.port));
+    fake.active = summary;
+    const invoke = jest.fn(recordingInvoker([]));
+    const getter = jest.fn((): string => 'hidden');
+    const bindings = Object.defineProperty({}, Symbol('hidden'), { get: getter, enumerable: true });
+    expectDefinitionError(() => summary.apply(bindings, invoke), 'invalid-bindings');
+    expectDefinitionError(() => activity.apply(bindings, undefined, invoke), 'invalid-bindings');
+    expect(getter).not.toHaveBeenCalled();
+    expect(invoke).not.toHaveBeenCalled();
+  });
+
   test('CMP-9: composing, resolving and opening invocations never run callbacks or the invoker', () => {
     const fake = fakePort();
     const run = jest.fn((): string => 'x');

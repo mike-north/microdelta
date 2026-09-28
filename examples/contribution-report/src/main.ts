@@ -136,9 +136,23 @@ async function runReport(args: IArguments, analysis: IAnalysis, order: readonly 
   }
 }
 
+/** Read the saved request keys, rejecting anything but one nonempty string per contributor. */
+function savedRequestKeys(store: string): Record<IContributorKey, string> {
+  const saved: unknown = JSON.parse(readFileSync(requestsFile(store), 'utf8'));
+  const keys: Partial<Record<IContributorKey, string>> = {};
+  for (const key of contributorKeys) {
+    const value: unknown = typeof saved === 'object' && saved !== null ? Reflect.get(saved, key) : undefined;
+    if (typeof value !== 'string' || value.length === 0) {
+      throw new Error(`${requestsFile(store)} has no saved request key for ${key}`);
+    }
+    keys[key] = value;
+  }
+  return { 'person:ada': keys['person:ada'] ?? '', 'person:ben': keys['person:ben'] ?? '' };
+}
+
 /** Recover the executions the saved request keys identify, without running author code. */
 async function recover(args: IArguments, analysis: IAnalysis): Promise<Record<string, unknown>> {
-  const requestKeys = JSON.parse(readFileSync(requestsFile(args.store), 'utf8')) as Record<IContributorKey, string>;
+  const requestKeys = savedRequestKeys(args.store);
   const observed = counter();
   const workspace = open(args.store);
   try {

@@ -70,7 +70,9 @@ summary body, reuses both exact summary results and assembles the report again.
   identified admitted executions durably produced, without running author code,
   source hooks or writing acceptance. Reuse allocates no execution, so after a
   run that reused both summaries `recover` reports `absent`. After the first,
-  executing run it returns the exact committed summaries.
+  executing run it returns the exact committed summaries. Each `run` replaces
+  `requests.json` with fresh keys, so after an interrupted or unacknowledged
+  run, use `recover` *before* starting another `run`.
 - **Ordinary report assembly** (`src/report.ts`). The report is nonmemoized
   work: it runs on every run, is observed at `begin` and `end`, and has no
   completed-result identity. It reads each summary's exact result and orders

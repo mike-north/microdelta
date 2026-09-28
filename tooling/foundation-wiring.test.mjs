@@ -14,7 +14,7 @@ const readJson = async filename => JSON.parse(await readFile(path.join(root, fil
 
 /** Each exported entrypoint has a configured comparison report. */
 async function extractors() {
-  const names = ['core', 'definition', 'tracking', 'history', 'value', 'materialization', 'resolution'];
+  const names = ['core', 'definition', 'tracking', 'history', 'value', 'materialization', 'resolution', 'supervision'];
   const files = names.map(name => `packages/${name}/api-extractor.json`);
   files.push('packages/core/api-extractor-conformance.json', 'packages/history/api-extractor-conformance.json', 'packages/history/api-extractor-shared.json', 'fixtures/declarations/producer/api-extractor.json', 'fixtures/declarations/capture-producer/api-extractor.json', 'fixtures/declarations/forged/api-extractor.json');
   return Object.fromEntries(await Promise.all(files.map(async filename => [filename, await readJson(filename)])));
@@ -22,7 +22,7 @@ async function extractors() {
 
 test('clean CI reaches build, declaration, import, lint, and consumer gates', async () => {
   const workspace = await readJson('package.json');
-  const packages = Object.fromEntries(await Promise.all(['core', 'definition', 'tracking', 'history', 'value', 'materialization', 'resolution'].map(async name => [
+  const packages = Object.fromEntries(await Promise.all(['core', 'definition', 'tracking', 'history', 'value', 'materialization', 'resolution', 'supervision'].map(async name => [
     name, await readJson(`packages/${name}/package.json`),
   ])));
   const workflow = await readFile(path.join(root, '.github/workflows/check.yml'), 'utf8');
@@ -46,7 +46,7 @@ test('the declaration checker accepts the generated alpha package path needed by
 
 test('Value package build, checks, declaration views, and package order are required', async () => {
   const workspace = await readJson('package.json');
-  const names = ['core', 'definition', 'tracking', 'history', 'value', 'materialization', 'resolution'];
+  const names = ['core', 'definition', 'tracking', 'history', 'value', 'materialization', 'resolution', 'supervision'];
   const packages = Object.fromEntries(await Promise.all(names.map(async name => [name, await readJson(`packages/${name}/package.json`)])));
   const configs = await extractors();
   const result = missingFoundationGates({
@@ -64,6 +64,9 @@ test('Value package build, checks, declaration views, and package order are requ
   // Resolution consumes Materialization's declarations and the facade's tests consume Resolution's.
   assert.ok(packageBuild.indexOf('@microdelta/materialization') < packageBuild.indexOf('@microdelta/resolution'));
   assert.ok(packageBuild.indexOf('@microdelta/resolution') < packageBuild.indexOf('--workspace microdelta'));
+  // Supervision consumes Resolution's declarations and the facade consumes Supervision's.
+  assert.ok(packageBuild.indexOf('@microdelta/resolution') < packageBuild.indexOf('@microdelta/supervision'));
+  assert.ok(packageBuild.indexOf('@microdelta/supervision') < packageBuild.indexOf('--workspace microdelta'));
 
   const skippedBuild = structuredClone(workspace);
   skippedBuild.scripts['build:packages'] = skippedBuild.scripts['build:packages'].replace('npm run build --workspace @microdelta/value', 'true');
@@ -82,6 +85,14 @@ test('Value package build, checks, declaration views, and package order are requ
     workflow: '',
     extractors: configs,
   }).join('\n'), /build:packages.*@microdelta\/resolution/u);
+  const skippedSupervision = structuredClone(workspace);
+  skippedSupervision.scripts['build:packages'] = skippedSupervision.scripts['build:packages'].replace('npm run build --workspace @microdelta/supervision', 'true');
+  assert.match(missingFoundationGates({
+    workspace: skippedSupervision,
+    packages,
+    workflow: '',
+    extractors: configs,
+  }).join('\n'), /build:packages.*@microdelta\/supervision/u);
   const untestedResolution = structuredClone(packages);
   untestedResolution.resolution.scripts.test = 'npm run test:types';
   assert.match(missingFoundationGates({
@@ -94,7 +105,7 @@ test('Value package build, checks, declaration views, and package order are requ
 
 test('skipping an import, declaration, or API report checker is detected', async () => {
   const workspace = await readJson('package.json');
-  const packages = Object.fromEntries(await Promise.all(['core', 'definition', 'tracking', 'history', 'value', 'materialization', 'resolution'].map(async name => [
+  const packages = Object.fromEntries(await Promise.all(['core', 'definition', 'tracking', 'history', 'value', 'materialization', 'resolution', 'supervision'].map(async name => [
     name, await readJson(`packages/${name}/package.json`),
   ])));
   const workflow = await readFile(path.join(root, '.github/workflows/check.yml'), 'utf8');

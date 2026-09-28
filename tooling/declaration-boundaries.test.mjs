@@ -21,6 +21,7 @@ const packages = [
   { directory: 'tracking', basename: 'tracking' },
   { directory: 'history', basename: 'history' },
   { directory: 'value', basename: 'value' },
+  { directory: 'supervision', basename: 'supervision' },
 ];
 const fixture = path.join(root, 'fixtures/declarations/producer');
 const captureFixture = path.join(root, 'fixtures/declarations/capture-producer');
@@ -195,14 +196,48 @@ test('legitimate runtime package imports resolve built JS without TS path rewrit
   assert.equal(typeof history.createMemoryStore, 'function');
 });
 
-/** Every production trimmed view must stand alone under full library checking. */
+/**
+ * The alpha rollups of the first-party packages a project-private view names,
+ * transitively, mapped the way an approved alpha consumer maps them.
+ */
+async function alphaClosure(view) {
+  const pathMap = {};
+  const pending = [view];
+  const seen = new Set();
+  while (pending.length > 0) {
+    const file = pending.pop();
+    if (seen.has(file)) {
+      continue;
+    }
+    seen.add(file);
+    for (const match of (await readFile(file, 'utf8')).matchAll(/\bfrom\s+'(@microdelta\/[a-z0-9-]+)'/gu)) {
+      const directory = match[1].slice('@microdelta/'.length);
+      const target = path.join(root, `packages/${directory}/dist/api/${directory}.alpha.d.ts`);
+      pathMap[match[1]] = [target];
+      pending.push(target);
+    }
+  }
+  return pathMap;
+}
+
+/**
+ * Every production view typechecks under full library checking. Public and
+ * beta views must stand alone: only the package itself is mapped and siblings
+ * resolve through normal package resolution. Project-private alpha and
+ * untrimmed views may name siblings' alpha contracts (the facade's workspace
+ * surface does); they are checked with exactly that alpha declaration
+ * closure mapped, as approved consumers compile them, and nothing else.
+ */
 test('each actual package declaration view typechecks without hidden references', async () => {
   for (const { directory, basename } of packages) {
     const packageName = directory === 'core' ? 'microdelta' : `@microdelta/${directory}`;
     for (const tier of tiers) {
       const view = path.join(root, `packages/${directory}/dist/api/${basename}.${tier}.d.ts`);
       const source = `type ISurface = typeof import('${packageName}');\nconst surface: ISurface | undefined = undefined;\nvoid surface;\n`;
-      const result = await compile(source, { paths: view, pathPackage: packageName });
+      const projectPrivate = tier === 'untrimmed' || tier === 'alpha';
+      const result = await compile(source, projectPrivate
+        ? { pathMap: { ...(await alphaClosure(view)), [packageName]: [view] } }
+        : { paths: view, pathPackage: packageName });
       assert.equal(result.status, 0, `${packageName}/${tier}: ${result.stdout}${result.stderr}`);
     }
   }
@@ -337,7 +372,8 @@ test('inherited paths and invented aliases cannot expose sibling source or untri
  * Actual facade source consumes History's approved alpha entry and subpath;
  * its assembly tests also consume Value's alpha entry for independent oracles
  * and the Definition, Materialization and Resolution alpha entries that
- * compose Resolution over real History.
+ * compose Resolution over real History, plus Supervision's alpha entry for the
+ * workspace run path.
  */
 test('facade compiler maps each approved owner import, including both History entries, to its generated alpha declaration', async () => {
   const config = JSON.parse(await readFile(path.join(root, 'packages/core/tsconfig.json'), 'utf8'));
@@ -348,6 +384,7 @@ test('facade compiler maps each approved owner import, including both History en
     '@microdelta/machine-node': ['../machine-node/dist/api/machine-node.alpha.d.ts'],
     '@microdelta/materialization': ['../materialization/dist/api/materialization.alpha.d.ts'],
     '@microdelta/resolution': ['../resolution/dist/api/resolution.alpha.d.ts'],
+    '@microdelta/supervision': ['../supervision/dist/api/supervision.alpha.d.ts'],
     '@microdelta/tracking': ['../tracking/dist/api/tracking.alpha.d.ts'],
     '@microdelta/value': ['../value/dist/api/value.alpha.d.ts'],
   });

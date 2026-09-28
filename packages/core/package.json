@@ -38,6 +38,7 @@
   "dependencies": {
     "@microdelta/history": "0.0.0",
     "@microdelta/machine-node": "0.0.0",
-    "@microdelta/tracking": "0.0.0"
+    "@microdelta/tracking": "0.0.0",
+    "@microdelta/value": "0.0.0"
   }
 }

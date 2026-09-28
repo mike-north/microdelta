@@ -176,7 +176,7 @@ controls below.
 | 2. Lifecycle, candidates, exact and selected reads, separate acceptance, opaque provenance with explicit dependencies, retained history | *allocation commits a never-reused identity…*; *a staged attempt is not a completed result…*; *dependencies must be exact completed results…*; *candidates filter by compatibility version…*; *stored results and acceptances are immutable in storage*; tsd `packages/history/test-d/durable.test-d.ts` |
 | 3. One writer; fenced mutations; allocation before staging; one publication commit; rollback never rewinds current | *one live holder at a time…*; *a lease is fenced by its token alone…*; *a staged attempt is not a completed result, and publication installs everything in one commit* (in-process throw before commit); *candidates filter…rollback acceptance never rewinds current…*; crash suite below |
 | 4. Stable keys recover one execution; lost acknowledgment; changed intent rejects; clock policy; injected host | *stable keys identify one execution…*; *a kill after the publication commit but before acknowledgment is recovered by its stable key…*; *a backward host clock…*; *a forward jump can expire a lease early, after which the old fence cannot allocate, stage or publish…*; *an unavailable or invalid clock reading…* |
-| 5. Independent processes on the real backend: kills, stale holders, monotonic allocation, retained results, fresh equal, acceptance, corruption, indexed reads | `crash-recovery.test.ts` (8 tests, below); *fresh equal output is a distinct result…*; *selected leaves, lengths and metadata fingerprints come from the index without root payload reads…*; *unread changes keep consumed fingerprints equal…*; *every selection over the accepted Value edge domain equals the in-memory Value answer after reopen…*; the eight *meaningful corruption* tests |
+| 5. Independent processes on the real backend: kills, stale holders, monotonic allocation, retained results, fresh equal, acceptance, corruption, indexed reads | `crash-recovery.test.ts` (8 tests, below); *fresh equal output is a distinct result…*; *selected leaves, lengths and metadata fingerprints come from the index without root payload reads…*; *unread changes keep consumed fingerprints equal…*; *every selection over the accepted Value edge domain equals the in-memory Value answer after reopen…*; the *meaningful corruption* tests, including the four per-transition lifecycle contradiction tests and their healthy control |
 | 6. EXP-7 mapping; no M5 claim; gates | Section below; limitations; commands and results |
 
 Process kills in `crash-recovery.test.ts` all use SIGKILL against one real file.
@@ -210,8 +210,8 @@ unchanged suites and restored the build. The runner is checked in as
 `packages/core/test/durable-history/controls/history-mutation-controls.mjs` and
 is run on demand, after `npm run build` and the facade's `test:unit`. It
 requires each anchor to match exactly once and each control to be rejected by
-at least one named test, and it requires the restored build to pass all 36
-tests.
+at least one named test, and it requires the restored build to pass every
+baseline test (41 at the final head).
 
 Every Jest run is judged fail-closed by `controls/control-outcome.mjs`. Its
 false-success specification (`control-outcome.test.mjs`, 4 tests) runs in the
@@ -243,8 +243,17 @@ Evidence for the runner itself (author):
 - A SIGKILL cannot be intercepted. Rebuilding History restores the emitted
   files in that case.
 
-The final run rejected **23 of 23** controls. The baseline and the restored
-build each passed 36/36, the emitted files matched their pre-run hashes, and no
+After the lifecycle repair, three controls were added (stage, publication and
+abandon each skip the attempt/result contradiction check) and one was retired.
+The retired control removed verification from the completed re-publication
+branch. Once publication verified the attempt before branching, that call was
+redundant, so the control planted a defect in dead code and was **not
+rejected**. The redundant call was removed rather than keeping an
+undiscriminating control; the publication-contradiction control covers that
+path.
+
+The final run rejected **25 of 25** controls. The baseline and the restored
+build each passed 41/41, the emitted files matched their pre-run hashes, and no
 report directory leaked.
 
 | Planted defect | Rejected by |
@@ -337,6 +346,37 @@ scripts, final build):
   keys unchanged; `verifyResult` inconsistent;
 - parity: `{"checks":509,"addresses":45,"result":"PASS"}`.
 
+## Lifecycle contradiction repair (head `d2c190a`)
+
+The supervisor's independent repair review reproduced one remaining P2 with
+`/private/tmp/microdelta-issue55-repaired-lifecycle-probe.mjs`. It used the
+same valid-shape producer corruption as the accepted incomplete-metadata test:
+a completed attempt set back to `allocated` while its result and current pointer
+remain. `stageAttempt` then committed a `staged` row and `abandonAttempt` a
+`failed` row, even though reads rejected the contradiction.
+
+The author wrote one independent test per transition. Each uses its own
+corrupted file and compares every durable row a transition could change
+(attempts, results, current pointers, dependencies, sequences and index nodes)
+before and after. Against `d2c190a` **all four failed**:
+
+| Transition | Observed before repair |
+| --- | --- |
+| Stage a contradicted `allocated` attempt | did not throw (committed) |
+| Abandon a contradicted `allocated` attempt | did not throw (committed) |
+| Abandon a contradicted `staged` attempt | did not throw (committed) |
+| Publish a contradicted `staged` attempt (the analogous publication case) | refused only by SQLite `UNIQUE constraint failed: history_results.result_id`, the wrong error class |
+
+**Repair.** Stage, publish and abandon now verify the attempt against stored
+results inside their holder transaction, before any change, using the same
+shared check as recovery. A contradiction raises `HistoryIntegrityError`, and
+the durable evidence is identical before and after. A healthy-control test
+shows that in the same reopened corrupted file, a normal allocate, stage,
+publish (which moves the current pointer) and staged abandon still commit. The
+unchanged saved probe now reports `HistoryIntegrityError` for stage, abandon,
+recover, candidates, current, allocate and readEnvelope. This is bounded to the
+producer/result contradiction; no broader corruption hardening was added.
+
 ## Copilot declaration finding (head `8055461`)
 
 Copilot noted new `ae-forgotten-export` warnings for `ISha256Capability` and
@@ -410,13 +450,13 @@ Model-only assumptions that remain unproven by implementation evidence:
 
 ## Commands and results
 
-These ran in sequence on the final repaired tree, on Node v24.14.0, after the
-supervisory repairs.
+These ran in sequence, each to completion, on the final tree after the
+lifecycle repair, on Node v24.14.0.
 
 | Command | Result |
 | --- | --- |
-| `npm run check` | exit 0 (after one repaired lint error in the new tsd file, a forbidden double assertion): strict TypeScript (including History's `types: []` portable check), type-aware ESLint, import boundaries, declaration preflight and API reports, fixtures, suppressions, wiring |
-| `npm test` | exit 0. Tooling 164/164. Facade Jest 39/39, of which 36 are durable History; facade control judgment 4/4; History tsd including `durable.test-d.ts` and `host-capabilities.test-d.ts`. Every other package, experiment and control suite passed: Jest counts 81, 44, 49, 34, 93, 50, 24, 28, 5, 16 and 12, plus node:test 5/5 |
+| `npm run check` | exit 0: strict TypeScript (including History's `types: []` portable check), type-aware ESLint, import boundaries, declaration preflight and API reports, fixtures, suppressions, wiring |
+| `npm test` | exit 0. Tooling 164/164. Facade Jest 44/44, of which 41 are durable History; facade control judgment 4/4; History tsd including `durable.test-d.ts` and `host-capabilities.test-d.ts`. Every other package, experiment and control suite passed: Jest counts 81, 44, 49, 34, 93, 50, 24, 28, 5, 16 and 12, plus node:test 5/5 |
 | `npm run build` | exit 0; generated declarations and API reports current |
 | `git diff --check` | exit 0 |
 
@@ -427,7 +467,7 @@ export no durable symbol (tsd asserts `openDurableHistory` is absent from the
 public tier).
 
 The mutation controls ran through the checked-in runner described above
-(23/23, run separately from these commands). Remote
+(25/25, run separately from these commands). Remote
 CI on Node 20, 22 and 24 runs on the pull request.
 
 ## Limitations

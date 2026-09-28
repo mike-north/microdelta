@@ -45,8 +45,11 @@ Definition's `declarations()`. Callbacks receive:
 4. **Direct children** (memos): each recorded witness is reconnected through
    Definition; the current child is resolved under current policy and shared
    within the request; only the child output facts the memo consumed are
-   compared. Unsupported or unreconnectable witnesses are honest misses; a
-   missing or wrong-scope historical child is an integrity failure.
+   compared. A different subject occupying the uniquely reconnected slot is
+   the current child. Unsupported or unreconnectable witnesses are honest
+   misses; a missing or wrong-scope historical child is an integrity failure.
+   Child views are delivered inside a `{ data }` carrier, so awaiting a call
+   never reads the child's `then` member.
 5. **Admission and execution**: work that validation could not avoid is
    admitted before any claim, attempt or body. Denial is a typed `refused`
    outcome. Admitted work allocates an attempt keyed by the request key and the
@@ -64,6 +67,11 @@ a different intent is rejected and nothing is executed automatically.
 Provenance, acceptance and attempt-ending records use the versioned formats
 `microdelta.resolution.provenance`, `.acceptance` and `.attempt-ending`
 (version 1), documented in `src/evidence.ts`. History stores them opaquely.
+A supported record must carry the step's own implementation observation, and
+a source record has no child edges; otherwise it is an integrity failure.
+
+An outcome's `trace` is the requested step's own lifecycle; its `diagnostics`
+cover the whole request, including nested children, once each.
 
 ## Tests
 

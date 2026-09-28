@@ -44,3 +44,16 @@ test('keeps extra, wrong-code, wrong-file, and wrong-symbol diagnostics unexpect
   assert.equal(result.expected.length, 3, 'the checker must not hide extra matching diagnostics');
   assert.equal(result.unexpected.length, 3, 'all nonmatching compiler diagnostics remain visible');
 });
+
+test('classifies the hidden Definition declared-call handle as an expected public-tier diagnostic', () => {
+  const fixture = `/workspace/${expectedSuffix}`;
+  const result = classifyPublicCaptureTierDiagnostics([
+    diagnostic(fixture),
+    diagnostic(fixture),
+    diagnostic(fixture, expectedCode, "Namespace has no exported member 'IDeclaredCallHandle'."),
+    diagnostic(fixture, expectedCode, "Namespace has no exported member 'IDeclaredCallHandleLookalike'."),
+  ], fixture);
+
+  assert.equal(result.expected.length, 3);
+  assert.equal(result.unexpected.length, 1, 'only the exact alpha Definition symbol is expected');
+});

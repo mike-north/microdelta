@@ -1,5 +1,6 @@
 /**
- * PKG-004 proves the generated public declaration rejects an alpha-only type.
+ * PKG-004 proves the generated public declarations reject alpha-only types,
+ * including Definition's declared-call handle.
  * The expected compiler error is the assertion; success would expose a private
  * project contract through the consumer's default package view.
  */
@@ -21,13 +22,13 @@ if (config.error) {
   const diagnostics = [...parsed.errors, ...ts.getPreEmitDiagnostics(program)];
   const expectedFileName = path.join(root, 'fixtures', 'declarations', 'consumer-alpha', 'public-tier-negative.ts');
   const { expected, unexpected } = classifyPublicCaptureTierDiagnostics(diagnostics, expectedFileName);
-  if (expected.length !== 2 || unexpected.length > 0) {
+  if (expected.length !== 3 || unexpected.length > 0) {
     process.stderr.write(ts.formatDiagnosticsWithColorAndContext(diagnostics, {
       getCurrentDirectory: () => root,
       getCanonicalFileName: filename => filename,
       getNewLine: () => '\n',
     }));
-    process.stderr.write('Expected both generated public declarations to hide their alpha-only capture contract.\n');
+    process.stderr.write('Expected the generated public declarations to hide all three alpha-only contracts.\n');
     process.exitCode = 1;
   }
 }

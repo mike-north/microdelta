@@ -549,7 +549,7 @@ describe('asynchronous invocation transport', () => {
     const reference = exact.publish('A', activity());
 
     const capture = await tracking.captureAsync(async () => {
-      // eslint-disable-next-line microdelta/tracked-captures -- This stands in for a declared child handle, which returns an ordinary carrier around the selected view.
+      // This stands in for a declared child handle, which returns an ordinary carrier around the selected view.
       const invocation = async (): Promise<{ readonly data: IMaterializedView<IActivityView> }> =>
         // eslint-disable-next-line microdelta/tracked-captures -- The carrier wraps a view of an exact fixture reference, as a resolved child invocation would.
         Object.freeze({ data: materialization.materializeView<IActivityView>(reference, binding) });

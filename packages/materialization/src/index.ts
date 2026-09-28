@@ -15,13 +15,12 @@ import type {
   ISelectedReadRequest,
 } from '@microdelta/history';
 import { encodeValue, normalizeProjectionDescriptor, normalizeProjectionFact, normalizeSelectedFact, normalizeSelectedNode } from '@microdelta/value';
-import type {
-  IAddressSegment,
-  ISelectedFact,
-  ISelectedNode,
-  IValueProjectionDescriptor,
-  IValueProjectionFact,
-} from '@microdelta/value';
+import type { IAddressSegment, ISelectedFact, ISelectedNode } from '@microdelta/value';
+// Projection types appear in this package's declared surface. They are taken
+// from Tracking, whose generated surface carries a structurally identical copy
+// of Value's projection contract, so an alpha consumer approved for
+// Materialization and Tracking but not Value can resolve every type this
+// surface names. Value-produced facts remain assignable to them.
 import type {
   ICurrentFactProvider,
   ICurrentFactRequest,
@@ -32,6 +31,8 @@ import type {
   ITrackedNodeSource,
   ITrackingBinding,
   ITrackingObserver,
+  IValueProjectionDescriptor,
+  IValueProjectionFact,
 } from '@microdelta/tracking';
 
 /** Scalars are the only values exposed through the unexpected top-level result view. @alpha */

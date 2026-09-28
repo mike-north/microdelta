@@ -99,6 +99,10 @@ records the final milestone decision after documentation delivery and verificati
 
 ## M3 — Tiny durable analysis MVP
 
+The [contribution-analysis plan](plans/m3-contribution-analysis.md) defines the
+selected two-contributor authoring slice, contract decisions and dependency queue.
+It is a delivery plan, not evidence of completed M3 implementation.
+
 Implement the real authoring path over the chosen durable backend: nonmemoized
 configuration/helper input plus a minimal declared retained source→memoized
 consumer path, exact result references, current source acceptance through the

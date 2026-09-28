@@ -166,10 +166,26 @@ False follows normal verification/retrieval policy and does not itself require
 a full fetch. An absent hook supplies no finality shortcut. Without an eligible
 completed result there is no result to retain.
 
+**M3 direct-source phase selection:** establish scoped subject/version and unique
+current binding, then validate the candidate's own actually called implementation
+and consumed input evidence before invoking finality. Only a still-eligible
+candidate receives the current hook; cold or incompatible candidates have no
+eligible previous result and do not invoke it. Thus changed retrieval implementation
+cannot be excused by an accepting hook. False or absent finality proceeds to normal
+source policy, whose explicit retention can address only the eligible previous
+reference. This order also applies when resolving a source beneath a cached
+consumer. A single top-level resolution may reuse its in-memory verification
+outcome for the same direct invocation to avoid repeating hook evaluation within
+that resolution. Durable acceptance records remain separate historical evidence;
+neither form grants permission to skip current policy on a later resolution.
+
+The [M3 plan](../plans/m3-contribution-analysis.md) records the bounded authoring
+path and required hook/body-count assertions.
+
 Do not store a finality flag, state, callback answer, or equivalent assertion
 used to skip the current hook. Ordinary diagnostic records may describe a past
-decision; they are not authority for the next one. Hook naming, sync/async shape,
-and invocation deduplication within a single resolution are not settled here.
+decision; they are not authority for the next one. Hook naming and sync/async
+shape remain implementation choices.
 
 ### REUSE-003 — Source acceptance does not finalize downstream work
 

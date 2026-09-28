@@ -18,13 +18,18 @@ import type {
   IResolutionErrorCode as IResolutionErrorCodeOf,
   IResolutionOutcome as IResolutionOutcomeOf,
 } from '@microdelta/resolution';
-import type { ICompletedResultReference as IHistoryReference } from '@microdelta/history';
-import { ResolutionError as ResolutionErrorClass } from '@microdelta/resolution';
+import { openDurableHistory } from '@microdelta/history';
+import type { ICompletedResultReference as IHistoryReference, IDurableHistory, IWriterLease } from '@microdelta/history';
+import { createNodeClock, createNodeSqlite } from '@microdelta/machine-node';
+import { ResolutionError as ResolutionErrorClass, createResolution } from '@microdelta/resolution';
 import {
   SupervisionError as SupervisionErrorClass,
+  createSupervision,
   ordinaryLifecycle as supervisionOrdinaryLifecycle,
   stepLifecycle as supervisionStepLifecycle,
 } from '@microdelta/supervision';
+import type { IRunWriter } from '@microdelta/supervision';
+import { createTrackingObserver } from '@microdelta/tracking';
 import type {
   IOrdinaryPhase as ISupervisionOrdinaryPhase,
   IRequestOptions as ISupervisionRequestOptions,
@@ -37,6 +42,7 @@ import type {
 } from '@microdelta/supervision';
 
 import type { IAuthoring, IComposition } from './authoring.js';
+import { machine } from './host.js';
 
 /** An exact reference to one completed result. @alpha */
 export type ICompletedResultReference = IHistoryReference;
@@ -185,6 +191,58 @@ export interface IWorkspace {
   close(): void;
 }
 
+/** The default writer lease duration: long enough for one normal request, renewed on the next. */
+const defaultLeaseMilliseconds = 30_000;
+
+/**
+ * The facade's one Run Supervision, over the Node Machine's asynchronous
+ * context supplied structurally. `currentRun()` and every workspace run share
+ * it, so author code finds whichever run is live in its asynchronous execution.
+ */
+const supervision = createSupervision({ context: machine });
+
+/** Deeply freeze decoded result data so a read can never be mutated into looking current. */
+function deepFreeze<T>(value: T): T {
+  if (typeof value === 'object' && value !== null && !Object.isFrozen(value)) {
+    Object.freeze(value);
+    for (const key of Reflect.ownKeys(value)) {
+      deepFreeze(Reflect.get(value, key));
+    }
+  }
+  return value;
+}
+
+/**
+ * History's single-writer lease as one run's writer port: acquired on the
+ * run's first normal request, renewed on each later one, released once when
+ * the run closes. Another unexpired holder makes normal requests fail with
+ * `writer-unavailable`; it never blocks check-only or recovery requests.
+ */
+function writerFor(history: IDurableHistory, holder: string, leaseMilliseconds: number): IRunWriter {
+  let held: IWriterLease | undefined;
+  return Object.freeze({
+    lease(): IWriterLease {
+      if (held !== undefined) {
+        held = history.renewWriter(held, leaseMilliseconds);
+        return held;
+      }
+      const acquisition = history.acquireWriter({ holder, leaseMilliseconds });
+      if (acquisition.kind !== 'acquired') {
+        throw new SupervisionErrorClass('writer-unavailable', `History's writer lease is held by ${acquisition.holder} until ${String(acquisition.expiresAt)}`);
+      }
+      held = acquisition.lease;
+      return held;
+    },
+    release(): void {
+      if (held !== undefined) {
+        const lease = held;
+        held = undefined;
+        history.releaseWriter(lease);
+      }
+    },
+  });
+}
+
 /**
  * Open a workspace over one durable History store file.
  * @param options - Store location, logical identity and writer lease duration.
@@ -192,8 +250,79 @@ export interface IWorkspace {
  * @alpha
  */
 export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
-  void options;
-  throw new Error('The workspace run path is not implemented yet');
+  const leaseMilliseconds = options.leaseMilliseconds ?? defaultLeaseMilliseconds;
+  if (!Number.isSafeInteger(leaseMilliseconds) || leaseMilliseconds <= 0) {
+    throw new SupervisionErrorClass('invalid-request', 'A workspace writer lease must be a positive safe integer of milliseconds');
+  }
+  const history = openDurableHistory({
+    sqlite: createNodeSqlite(),
+    clock: createNodeClock(),
+    sha256: machine,
+    location: options.location,
+    logicalStore: options.logicalStore,
+  });
+  let open = true;
+
+  return Object.freeze({
+    logicalStore: history.logicalStore,
+    run<TInputs extends object, THelpers extends object, T>(
+      runOptions: IWorkspaceRunOptions<TInputs, THelpers>,
+      body: (run: IWorkspaceRun) => T | Promise<T>,
+    ): Promise<IRunResult<Awaited<T>>> {
+      if (!open) {
+        return Promise.reject(new SupervisionErrorClass('invalid-request', 'This workspace has been closed'));
+      }
+      const { authoring, composition } = runOptions;
+      return supervision.run({
+        analysis: composition.scope,
+        environment: runOptions.environment,
+        ...(runOptions.runId === undefined ? {} : { runId: runOptions.runId }),
+        ...(runOptions.admission === undefined ? {} : { admission: runOptions.admission }),
+        ...(runOptions.observers === undefined ? {} : { observers: runOptions.observers }),
+        // The holder names this process's run for diagnostics; History's fence, not the name, orders writers.
+        writer: writerFor(history, `microdelta-run:${composition.scope}`, leaseMilliseconds),
+        resolution: (ports) => createResolution({
+          declarations: authoring,
+          composition,
+          bindings: { inputs: composition.topology.inputs, helpers: composition.topology.helpers },
+          environment: runOptions.environment,
+          history,
+          tracking: createTrackingObserver(machine),
+          host: machine,
+          admission: ports.admission,
+          observer: ports.observer,
+        }),
+      }, async (live) => {
+        /** Whether this run's body is still executing; reads belong to their own live run. */
+        let active = true;
+        const run: IWorkspaceRun = Object.freeze({
+          context: live.context,
+          resolve: live.resolve,
+          check: live.check,
+          recover: live.recover,
+          ordinary: live.ordinary,
+          read<TData>(reference: ICompletedResultReference): TData {
+            if (!active) {
+              throw new SupervisionErrorClass('run-closed', `Run ${live.context.runId} has closed and accepts no new work`);
+            }
+            // The exact-reference reader validates store and scope and never retargets; the static type is the caller's claim about its own result.
+            return deepFreeze(history.reader.readSubtree(reference, [])) as TData;
+          },
+        });
+        try {
+          return await body(run);
+        } finally {
+          active = false;
+        }
+      });
+    },
+    close(): void {
+      if (open) {
+        open = false;
+        history.close();
+      }
+    },
+  });
 }
 
 /**
@@ -205,5 +334,5 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
  * @alpha
  */
 export function currentRun(): IRunContext {
-  throw new Error('The workspace run path is not implemented yet');
+  return supervision.current();
 }

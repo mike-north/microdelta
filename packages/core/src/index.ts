@@ -9,10 +9,8 @@
  */
 import { createMemoryStore as createHistoryMemoryStore } from '@microdelta/history';
 import type { MemoryStoreOptions, Store } from '@microdelta/history';
-import { createNodeMachine } from '@microdelta/machine-node';
 
-/** The default facade's host is selected once by assembly and passed explicitly. */
-const machine = createNodeMachine();
+import { machine } from './host.js';
 
 /**
  * Create the existing non-durable memory store with Node's detached snapshot

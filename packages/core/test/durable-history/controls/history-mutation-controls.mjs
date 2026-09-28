@@ -45,13 +45,19 @@ const controls = [
   { name: 'recovery ignores intent', file: 'index.js', anchor: `            assertSameExecution(attempt, request);
             return recoveryOf(verifiedAttempt(attempt));`, replacement: `            return recoveryOf(verifiedAttempt(attempt));` },
   { name: 'completed re-allocation skips result verification', file: 'index.js', anchor: 'return verifiedAttempt(attempt);', replacement: 'return attempt;' },
-  { name: 'completed re-publication skips result verification', file: 'index.js', anchor: 'const completed = verifiedAttempt(attempt).result;', replacement: 'const completed = attempt.result;' },
   { name: 'recovery skips outcome verification', file: 'index.js', anchor: 'return recoveryOf(verifiedAttempt(attempt));', replacement: 'return recoveryOf(attempt);' },
   { name: 'attempt/result contradiction is not detected', file: 'index.js', anchor: 'else if (statements.reference.get(attempt.attemptId) !== undefined) {', replacement: 'else if (false) {' },
   { name: 'envelopes and candidates skip exact resolution', file: 'index.js', anchor: 'resolveResult(referenceOf(resultId, scope), scope);', replacement: 'void 0;' },
   { name: 'current pointer skips exact resolution', file: 'index.js', anchor: 'resolveResult(reference, subject);', replacement: 'void 0;' },
   { name: 'returned dependencies skip exact resolution', file: 'index.js', anchor: '            resolveResult(reference, scope);\n            return reference;', replacement: '            return reference;' },
   { name: 'absent members need no indexed proof of absence', file: 'selected-index.js', anchor: 'assertIndexedAbsence(resultId, best.metadata, remainder[0]);', replacement: 'void 0;' },
+  { name: 'stage skips the attempt/result contradiction check', file: 'index.js', anchor: `const attempt = verifiedAttempt(attemptOf(requireAttemptRow(attemptId)));
+                if (attempt.state !== 'allocated') {`, replacement: `const attempt = attemptOf(requireAttemptRow(attemptId));
+                if (attempt.state !== 'allocated') {` },
+  { name: 'publication skips the attempt/result contradiction check', file: 'index.js', anchor: 'const attempt = verifiedAttempt(attemptOf(row));', replacement: 'const attempt = attemptOf(row);' },
+  { name: 'abandon skips the attempt/result contradiction check', file: 'index.js', anchor: `const attempt = verifiedAttempt(attemptOf(requireAttemptRow(attemptId)));
+                if (attempt.state !== 'allocated' && attempt.state !== 'staged') {`, replacement: `const attempt = attemptOf(requireAttemptRow(attemptId));
+                if (attempt.state !== 'allocated' && attempt.state !== 'staged') {` },
   { name: 'scalar leaves are not verified', file: 'selected-index.js', anchor: 'if (metadata.valueFingerprint === null || actual !== metadata.valueFingerprint) {', replacement: 'if (false) {' },
   { name: 'stored dependencies are not validated (dangling or wrong scope accepted)', file: 'index.js', anchor: 'const dependencyId = integer(row, \'dependency_id\');', replacement: 'const dependencyId = integer(row, \'dependency_id\'); return referenceOf(dependencyId, scope);' },
   { name: 'leaf reads fall back to the root payload', file: 'selected-index.js', anchor: "const row = statements.scalarPayload.get(resultId, metadata.nodeId);", replacement: "statements.payload.get(resultId); const row = statements.scalarPayload.get(resultId, metadata.nodeId);" },

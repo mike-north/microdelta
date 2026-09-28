@@ -731,6 +731,52 @@ describe('meaningful corruption is detected, never repaired', () => {
     expect(() => other.readEnvelope(reencoded.summary)).toThrow(HistoryIntegrityError);
   });
 
+  /** Every durable row a lifecycle transition could change, read through a fresh raw handle. */
+  const durableEvidence = (location: string): string => {
+    const raw = openRaw(location);
+    const rows = ['history_attempts ORDER BY attempt_id', 'history_results ORDER BY result_id', 'history_current ORDER BY subject', 'history_dependencies ORDER BY attempt_id, position', 'history_sequences', 'history_nodes ORDER BY result_id, node_id']
+      .map((query) => JSON.stringify(raw.prepare(`SELECT * FROM ${query}`).all()));
+    raw.close();
+    return rows.join('\n');
+  };
+  /** A valid staged row shape for attempt 1, restoring its own published content as staged candidate evidence. */
+  const contradictedStaged = `state = 'staged', ended_fence = NULL, staged_payload = (SELECT payload FROM history_results WHERE result_id = 1),
+    staged_provenance_format = 'test.resolution.provenance', staged_provenance_version = 1, staged_provenance = (SELECT provenance FROM history_results WHERE result_id = 1)`;
+  const outcomeEvidence = { format: 'test.outcome', formatVersion: 1, content: {} };
+  /**
+   * Each lifecycle transition against attempt 1 after its producer state is
+   * set back to a valid incomplete shape while its completed result, index
+   * and current pointer remain (the accepted incomplete-producer corruption).
+   */
+  const contradictedTransitions = [
+    { name: 'stage from a contradicted allocated attempt', producer: "state = 'allocated', ended_fence = NULL", run: (history: IDurableHistory, lease: IWriterLease): unknown => history.stageAttempt(lease, { attemptId: 1, payload: { late: true }, provenance: provenance('late'), dependencies: [] }) },
+    { name: 'abandon a contradicted allocated attempt', producer: "state = 'allocated', ended_fence = NULL", run: (history: IDurableHistory, lease: IWriterLease): unknown => history.abandonAttempt(lease, { attemptId: 1, outcome: 'failed', evidence: outcomeEvidence }) },
+    { name: 'abandon a contradicted staged attempt', producer: contradictedStaged, run: (history: IDurableHistory, lease: IWriterLease): unknown => history.abandonAttempt(lease, { attemptId: 1, outcome: 'interrupted', evidence: outcomeEvidence }) },
+    { name: 'publish a contradicted staged attempt', producer: contradictedStaged, run: (history: IDurableHistory, lease: IWriterLease): unknown => history.publishAttempt(lease, 1) },
+  ] as const;
+
+  for (const transition of contradictedTransitions) {
+    test(`${transition.name} is an integrity failure that changes no durable evidence`, () => {
+      const pair = publishedPair();
+      const reopened = corruptAndReopen(pair, `UPDATE history_attempts SET ${transition.producer} WHERE attempt_id = 1`);
+      const before = durableEvidence(pair.location);
+      expect(() => transition.run(reopened, pair.lease)).toThrow(HistoryIntegrityError);
+      expect(durableEvidence(pair.location)).toBe(before);
+    });
+  }
+
+  test('healthy allocate, stage, publish and staged abandon still commit beside a contradicted attempt', () => {
+    const pair = publishedPair();
+    const reopened = corruptAndReopen(pair, `UPDATE history_attempts SET ${contradictedStaged} WHERE attempt_id = 1`);
+    const fresh = reopened.allocateAttempt(pair.lease, attempt('healthy'));
+    expect(reopened.stageAttempt(pair.lease, { attemptId: fresh.attemptId, payload: { total: 4 }, provenance: provenance('healthy'), dependencies: [] }).state).toBe('staged');
+    const published = reopened.publishAttempt(pair.lease, fresh.attemptId);
+    expect(reopened.readCurrent({ ...scope, subject: summarySubject })).toEqual(published);
+    const abandoned = reopened.allocateAttempt(pair.lease, attempt('abandoned'));
+    reopened.stageAttempt(pair.lease, { attemptId: abandoned.attemptId, payload: { total: 5 }, provenance: provenance('abandoned'), dependencies: [] });
+    expect(reopened.abandonAttempt(pair.lease, { attemptId: abandoned.attemptId, outcome: 'failed', evidence: outcomeEvidence })).toMatchObject({ state: 'failed', result: null });
+  });
+
   test('a missing index address or node for a present member is an integrity failure, never an absent-member fact', () => {
     const name = path('profile', 'name');
     const selections = (history: IDurableHistory, reference: ICompletedResultReference, address: readonly IAddressSegment[]): readonly (() => unknown)[] => [

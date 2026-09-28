@@ -5,7 +5,12 @@
     "rootDirs": [
       "..",
       "../dist"
-    ]
+    ],
+    "paths": {
+      "@microdelta/value": [
+        "../../value/dist/api/value.alpha.d.ts"
+      ]
+    }
   },
   "include": [
     "*.ts"

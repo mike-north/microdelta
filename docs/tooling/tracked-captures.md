@@ -17,7 +17,21 @@ because the receiver is an external influence that the lexical-reference check
 cannot represent. A same-spelled non-framework function does not create a
 boundary.
 
-Parameters and declarations inside a callback are local inputs. External
+Definition authoring callbacks are boundaries too. A call is recognized when
+its resolved signature is `IDeclarations.source` or `IDeclarations.memo` from
+Definition's generated alpha declaration, so a facade's pre-applied or
+destructured builders qualify and same-spelled functions never do. The options
+must be an object literal; its `run` and `finality` values are checked when they
+are inline arrows, function expressions, methods, or same-file function
+declarations. Factories, conditionals, aliases, bind, non-literal options,
+spreads, computed option keys, and `this` are reported as unsupported. A captured
+canonical declared-call handle (Definition's `IDeclaredCallBrand`) is accepted
+as a handle, not raw data; Definition compositions, scopes and look-alike handle
+brands receive no receiver authority. Runtime ownership checks, not this rule,
+reject a handle used outside its own invocation.
+
+Parameters and declarations inside a callback are local inputs. Type-only
+references, such as parameter annotations, are not runtime influences. External
 captures are accepted when their declared type carries the canonical tracked
 brand, when they are one of the explicit observer capabilities (tracked,
 capture, captureAsync, derived, keys, hasOwn, or snapshotOutput), or when the

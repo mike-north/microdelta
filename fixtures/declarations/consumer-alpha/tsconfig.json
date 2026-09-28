@@ -4,6 +4,7 @@
   "compilerOptions": {
     "noEmit": true,
     "paths": {
+      "@microdelta/definition": ["../../../packages/definition/dist/api/definition.alpha.d.ts"],
       "@microdelta/tracking": ["../../../packages/tracking/dist/api/tracking.alpha.d.ts"],
       "@microdelta/materialization": ["../../../packages/materialization/dist/api/materialization.alpha.d.ts"],
       "@microdelta/history": ["../../../packages/history/dist/api/history.alpha.d.ts"],

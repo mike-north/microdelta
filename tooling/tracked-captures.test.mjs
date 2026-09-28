@@ -239,3 +239,178 @@ test('an unresolved Materialization receiver has no capability authority without
   assert.equal(findings.length, 1, JSON.stringify(result.messages, null, 2));
   assert.match(findings[0]?.message ?? '', /External influence 'unresolvedMaterialization'/u);
 });
+
+/** Definition's generated alpha declaration owns the direct authoring callback boundary. */
+const definitionFixture = path.join(root, 'fixtures/declarations/consumer-alpha/src/definition-captures.fixture.ts');
+const bindingFixture = path.join(root, 'fixtures/declarations/consumer-alpha/src/definition-binding.fixture.ts');
+
+/** A facade-shaped family whose builders are the canonical Definition boundary. */
+const definitionPrelude = [
+  "import { declarations, type IBindingFamily, type IPreviousCarrierFamily, type ITypeFamily } from '@microdelta/definition';",
+  "import type { ITracked, ITrackedView } from '@microdelta/tracking';",
+  "interface IViews extends ITypeFamily { readonly output: ITrackedView<this['input']> }",
+  'interface ICarrier<TData> { readonly data: ITrackedView<TData> }',
+  "interface ICarriers extends IPreviousCarrierFamily { readonly output: ICarrier<this['input']> }",
+  "interface IOutcomes extends ITypeFamily { readonly output: this['input'] }",
+  'interface IBindings { readonly inputs: ITracked<{ readonly limit: number }> }',
+  'interface IFamily extends IBindingFamily { readonly views: IViews; readonly previous: ICarriers; readonly outcomes: IOutcomes; readonly source: IBindings; readonly memo: IBindings }',
+  'const { memo, source } = declarations<IFamily>();',
+];
+
+test('alpha consumer resolves the real generated Definition declaration', () => {
+  const config = ts.readConfigFile(consumerConfig, ts.sys.readFile.bind(ts.sys));
+  const parsed = ts.parseJsonConfigFileContent(config.config, ts.sys, path.dirname(consumerConfig), undefined, consumerConfig);
+  const program = ts.createProgram(parsed.fileNames, parsed.options);
+  const sources = program.getSourceFiles().map(source => source.fileName.replaceAll('\\\\', '/'));
+  assert.ok(sources.some(source => source.endsWith('/packages/definition/dist/api/definition.alpha.d.ts')), sources.join('\n'));
+  const diagnostics = ts.getPreEmitDiagnostics(program)
+    .filter(diagnostic => diagnostic.file?.fileName === definitionFixture || diagnostic.file?.fileName === bindingFixture);
+  assert.deepEqual(diagnostics.map(diagnostic => ts.flattenDiagnosticMessageText(diagnostic.messageText, ' ')), []);
+});
+
+test('Definition capture fixture accepts the M3 authoring shape and flags each documented negative', async () => {
+  const eslint = new ESLint({ cwd: root });
+  const [result] = await eslint.lintFiles([definitionFixture]);
+  assert.ok(result);
+  assert.deepEqual(result.messages, [], JSON.stringify(result.messages, null, 2));
+  const findings = result.suppressedMessages.filter(message => message.ruleId === 'microdelta/tracked-captures');
+  assert.equal(findings.length, 5, JSON.stringify(result.suppressedMessages, null, 2));
+  assert.equal(findings.filter(message => /External influence 'externalThreshold'/u.test(message.message)).length, 2);
+  assert.ok(findings.some(message => /External influence 'forgedHandle'/u.test(message.message)));
+  assert.ok(findings.some(message => /External influence 'liveScope'/u.test(message.message)));
+  assert.ok(findings.some(message => message.messageId === 'unsupported'));
+});
+
+test('Definition source and memo callbacks are capture boundaries for raw external influences', async () => {
+  const eslint = new ESLint({ cwd: root });
+  const source = [
+    ...definitionPrelude,
+    'declare const externalFlag: boolean;',
+    'declare const threshold: number;',
+    "memo({ subject: 'summary:a', run: () => externalFlag });",
+    "source<number>({ subject: 'activity:a', run: () => 1, finality: () => threshold > 0 });",
+    'function summarize(): number { return threshold; }',
+    "memo({ subject: 'summary:b', run: summarize });",
+    "memo({ subject: 'summary:c', run() { return externalFlag; } });",
+  ].join('\n');
+  const [result] = await eslint.lintText(source, { filePath: definitionFixture });
+  assert.ok(result);
+  const findings = result.messages.filter(message => message.ruleId === 'microdelta/tracked-captures');
+  assert.deepEqual(findings.map(message => message.message.match(/'([^']+)'/u)?.[1]),
+    ['externalFlag', 'threshold', 'threshold', 'externalFlag'], JSON.stringify(result.messages, null, 2));
+});
+
+test('Definition callback parameters, tracked captures and canonical handles are accepted', async () => {
+  const eslint = new ESLint({ cwd: root });
+  const source = [
+    ...definitionPrelude,
+    "import type { IDeclaredCallHandle } from '@microdelta/definition';",
+    'interface IActivity { readonly authored: number }',
+    'declare const config: ITracked<{ readonly window: string }>;',
+    'declare const handle: IDeclaredCallHandle<ITrackedView<IActivity>>;',
+    "const activity = source<IActivity>({ subject: 'activity', run: ({ previous }) => ({ authored: previous?.data.authored ?? 0 }) });",
+    "memo({ subject: 'a', children: { activity }, run: async (context) => { const { data } = await context.calls.activity(); return data.authored > context.inputs.limit ? config.window : ''; } });",
+    "memo({ subject: 'b', run: async () => (await handle()).data.authored });",
+    "memo({ subject: 'c', run: function (context) { const local = 1; return context.inputs.limit + local + Math.max(1, 2); } });",
+  ].join('\n');
+  const [result] = await eslint.lintText(source, { filePath: definitionFixture });
+  assert.ok(result);
+  assert.deepEqual(result.messages.filter(message => message.ruleId === 'microdelta/tracked-captures'), [],
+    JSON.stringify(result.messages, null, 2));
+});
+
+test('unsupported Definition callback forms are diagnosed at the declaration boundary', async () => {
+  const eslint = new ESLint({ cwd: root });
+  const source = [
+    ...definitionPrelude,
+    'declare function factory(): () => number;',
+    'declare const flag: boolean;',
+    'const alias = (): number => 1;',
+    'declare const options: { readonly subject: string; readonly run: () => number };',
+    "memo({ subject: 'a', run: factory() });",
+    "memo({ subject: 'b', run: flag ? alias : alias });",
+    "memo({ subject: 'c', run: alias });",
+    "memo({ subject: 'd', run: alias.bind(undefined) });",
+    'memo(options);',
+    'memo({ ...options });',
+    "memo({ subject: 'e', ['run']: () => 1 });",
+    "source<number>({ subject: 'f', run: () => 1, finality: factory() });",
+  ].join('\n');
+  const [result] = await eslint.lintText(source, { filePath: definitionFixture });
+  assert.ok(result);
+  const findings = result.messages.filter(message => message.ruleId === 'microdelta/tracked-captures');
+  assert.equal(findings.length, 8, JSON.stringify(result.messages, null, 2));
+  assert.ok(findings.every(message => message.messageId === 'unsupported'), JSON.stringify(findings, null, 2));
+});
+
+test('receiver access inside a Definition callback is unsupported', async () => {
+  const eslint = new ESLint({ cwd: root });
+  const source = [
+    ...definitionPrelude,
+    "class Holder { limit = 1; declare() { return memo({ subject: 'a', run: () => this.limit }); } }",
+  ].join('\n');
+  const [result] = await eslint.lintText(source, { filePath: definitionFixture });
+  assert.ok(result);
+  const findings = result.messages.filter(message => message.ruleId === 'microdelta/tracked-captures');
+  assert.equal(findings.length, 1, JSON.stringify(result.messages, null, 2));
+  assert.equal(findings[0]?.messageId, 'unsupported');
+});
+
+test('same-spelled non-Definition APIs are not boundaries and forged handle brands are not capabilities', async () => {
+  const eslint = new ESLint({ cwd: root });
+  const source = [
+    ...definitionPrelude,
+    "import { forgedHandle, memo as forgedMemo } from '../../forged/dist/api/forged.alpha.js';",
+    'function sourceLike(options: { readonly run: () => number }): number { return options.run(); }',
+    'const lookalike = { source: sourceLike };',
+    'declare const externalFlag: boolean;',
+    'lookalike.source({ run: () => (externalFlag ? 1 : 0) });',
+    "forgedMemo({ subject: 'x', run: () => externalFlag });",
+    "memo({ subject: 'y', run: async () => (await forgedHandle()).data });",
+  ].join('\n');
+  const [result] = await eslint.lintText(source, { filePath: definitionFixture });
+  assert.ok(result);
+  const findings = result.messages.filter(message => message.ruleId === 'microdelta/tracked-captures');
+  assert.equal(findings.length, 1, JSON.stringify(result.messages, null, 2));
+  assert.match(findings[0]?.message ?? '', /External influence 'forgedHandle'/u);
+});
+
+test('Definition receivers are not whitelisted as a family inside capture boundaries', async () => {
+  const eslint = new ESLint({ cwd: root });
+  const source = [
+    ...definitionPrelude,
+    "import type { IComposition, IInvocationScope } from '@microdelta/definition';",
+    "import type { ITrackingObserver } from '@microdelta/tracking';",
+    'declare const composition: IComposition<IFamily>;',
+    'declare const scope: IInvocationScope;',
+    'declare const observer: ITrackingObserver;',
+    "memo({ subject: 'a', run: () => composition.resolve({ scope: 's', role: 'input', slot: 'config' }) });",
+    "memo({ subject: 'b', run: () => scope.open });",
+    'observer.capture(() => composition.scope);',
+  ].join('\n');
+  const [result] = await eslint.lintText(source, { filePath: definitionFixture });
+  assert.ok(result);
+  const findings = result.messages.filter(message => message.ruleId === 'microdelta/tracked-captures');
+  assert.deepEqual(findings.map(message => message.message.match(/'([^']+)'/u)?.[1]),
+    ['composition', 'scope', 'composition'], JSON.stringify(result.messages, null, 2));
+});
+
+test('type-only references inside a callback are not external influences, while value uses still are', async () => {
+  // Regression: a parameter type annotation naming an outer interface was reported as a captured read.
+  const eslint = new ESLint({ cwd: root });
+  const source = [
+    "import type { ITrackingObserver } from '@microdelta/tracking';",
+    'declare const observer: ITrackingObserver;',
+    'interface IExternal { readonly value: number }',
+    'declare const external: IExternal;',
+    'function typed(parameter: IExternal): number { return parameter.value; }',
+    'observer.capture(() => typed({ value: 1 } satisfies IExternal));',
+    'observer.capture((): IExternal => ({ value: 1 }));',
+    'observer.capture(() => external.value);',
+  ].join('\n');
+  const [result] = await eslint.lintText(source, { filePath: fixture });
+  assert.ok(result);
+  const findings = result.messages.filter(message => message.ruleId === 'microdelta/tracked-captures');
+  assert.deepEqual(findings.map(message => message.message.match(/'([^']+)'/u)?.[1]), ['typed', 'external'],
+    JSON.stringify(result.messages, null, 2));
+});

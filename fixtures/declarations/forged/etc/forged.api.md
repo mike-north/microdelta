@@ -10,6 +10,28 @@ export const forged: ITracked<{
 }>;
 
 // @alpha
+export const forgedHandle: IDeclaredCallHandle<number>;
+
+// @alpha
+export interface IDeclaredCallBrand {
+    // (undocumented)
+    readonly __microdeltaDeclaredCall: unique symbol;
+}
+
+// @alpha
+export type IDeclaredCallHandle<T> = (() => Promise<{
+    readonly data: T;
+}>) & IDeclaredCallBrand;
+
+// @alpha
+export interface IForgedMemoOptions {
+    // (undocumented)
+    readonly run: () => unknown;
+    // (undocumented)
+    readonly subject: string;
+}
+
+// @alpha
 export type ITracked<T extends object> = T & ITrackedBrand;
 
 // @alpha
@@ -17,6 +39,9 @@ export interface ITrackedBrand {
     // (undocumented)
     readonly __microdeltaTracked: unique symbol;
 }
+
+// @alpha
+export function memo(options: IForgedMemoOptions): IForgedMemoOptions;
 
 // (No @packageDocumentation comment for this package)
 

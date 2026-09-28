@@ -49,6 +49,13 @@ const lazyMaterialized = materialization.materialize<{ readonly total: number; r
   { path: ['fixture'] },
 );
 observer.capture(() => lazyMaterialized.total);
+// Lazy nested views keep the canonical brand through nested records and array positions.
+const nestedMaterialized = materialization.materializeView<{
+  readonly profile: { readonly name: string };
+  readonly rows: readonly { readonly merged: boolean }[];
+}>({ kind: 'completed-result', locator: 'fixture' }, { path: ['fixture'] });
+observer.capture(() => [nestedMaterialized.profile.name, nestedMaterialized.rows.length, nestedMaterialized.rows[0]?.merged]);
+observer.capture(() => observer.keys(nestedMaterialized.profile).includes('name'));
 // eslint-disable-next-line microdelta/tracked-captures -- An alpha-looking declaration is not Tracking's canonical brand.
 observer.capture(() => forged.value);
 observer.capture(() => tracked.enabled && 'enabled' in tracked);

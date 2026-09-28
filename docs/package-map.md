@@ -17,7 +17,7 @@ delivery are separate gates recorded in the [M2 evidence record](validation/m2-2
 | Run Supervision | No package yet | Admission, progress, retry, and cancellation ports remain unimplemented | Definition, Resolution, Accounting |
 | Resource Accounting | No package yet | Observation and acknowledgment ports remain unimplemented | None |
 | Value Semantics | `@microdelta/value` (`packages/value`) | Supported canonical equality/snapshot encoding, structured observation addresses, selected facts, and fingerprints through Machine's SHA-256 capability | Machine |
-| Materialization | `@microdelta/materialization` (`packages/materialization`) | Bounded selected scalar loading, explicit detached output, and keyed projection observation through injected ports; each reader declares its supported capabilities | History, Tracking, Value Semantics |
+| Materialization | `@microdelta/materialization` (`packages/materialization`) | Bounded selected scalar loading, lazy nested views through an optional synchronous navigation capability, explicit detached output, and keyed projection observation through injected ports; each reader declares its supported capabilities | History, Tracking, Value Semantics |
 | Machine host contract | `@microdelta/machine` (`packages/machine`) | Portable async-context, detached-snapshot, and SHA-256 capability contracts | Supporting contract; consumed by Tracking, History, Value Semantics, and the Node adapter |
 | Node Machine adapter | `@microdelta/machine-node` (`packages/machine-node`) | Implements the contracts with Node async hooks, V8 structured serialization, and crypto SHA-256 | `@microdelta/machine`; selected by the facade assembly |
 

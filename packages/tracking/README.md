@@ -13,6 +13,15 @@ also does not make its contents an output dependency. A materializer can use the
 narrow `materialization.owns()` and `materialization.read()` bridge to select
 output fields without obtaining a raw source object.
 
+`materialization.lazyView(binding, source)` creates an observer-owned view over
+retained content that a materializer supplies node by node through a synchronous
+`ITrackedNodeSource`. Its reads, lengths, `in` checks, `keys()`, `hasOwn()` and
+explicit output detachment record the same evidence an in-memory wrapper records
+for the same data; navigating through a container requests only that node's shape
+and records nothing. The source answers one exact request at a time and is never
+asked for siblings, the root payload or a whole subtree except for explicit
+output. Asynchronous-only storage cannot implement the port.
+
 An `async` callback that returns a tracked wrapper is subject to JavaScript Promise
 thenable assimilation. For object and array wrappers, the runtime's `then` lookup
 is captured as an actual consumed fact, including an absent `then`. Function

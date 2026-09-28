@@ -10,6 +10,12 @@ clones nor freezes it and is not retained Tracking evidence. Navigating through
 a container selects only the requested descendant and does not materialize its
 unread siblings.
 
+`navigate` answers what one exact address selects: the scalar `value` fact at a
+leaf, or only the shape of a record or array (arrays carry their length). A
+container shape is navigation metadata, never a selected fact or a whole-object
+observation. `normalizeSelectedNode` validates and detaches such a node when it
+arrives from an untrusted reader, without running accessors.
+
 `encodeSelectedFact` synchronously encodes the entire supplied fact. Encoding an
 object therefore traverses its complete supported contents and rejects any
 unsupported descendant. Tracking should encode facts actually consumed or

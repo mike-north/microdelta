@@ -12,22 +12,60 @@ import { FingerprintAlgorithmMismatchError } from '@microdelta/history';
 import { GenerationPatch } from '@microdelta/history';
 import { GenerationRow } from '@microdelta/history';
 import { GenerationState } from '@microdelta/history';
+import type { IAdmissionDecision as IAdmissionDecision_2 } from '@microdelta/resolution';
+import type { IAdmissionRequest as IAdmissionRequest_2 } from '@microdelta/resolution';
+import type { IBindingDescriptor } from '@microdelta/definition';
+import type { ICheckOutcome as ICheckOutcome_2 } from '@microdelta/resolution';
+import type { IChildResult as IChildResult_2 } from '@microdelta/definition';
+import type { ICompletedResultReference as ICompletedResultReference_2 } from '@microdelta/history';
+import type { IComposition as IComposition_2 } from '@microdelta/definition';
+import type { IDeclarations } from '@microdelta/definition';
+import type { IDeclaredCallHandle as IDeclaredCallHandle_2 } from '@microdelta/definition';
 import { Identity } from '@microdelta/history';
+import type { IExecutionAdmission } from '@microdelta/resolution';
+import type { ILifecycleEvent as ILifecycleEvent_2 } from '@microdelta/resolution';
+import type { ILifecyclePhase as ILifecyclePhase_2 } from '@microdelta/resolution';
 import { InvalidStorePatchError } from '@microdelta/history';
+import type { IOrdinaryPhase as IOrdinaryPhase_2 } from '@microdelta/supervision';
+import type { IPreviousResult as IPreviousResult_2 } from '@microdelta/resolution';
+import type { IRecoveryResult as IRecoveryResult_2 } from '@microdelta/resolution';
+import type { IRequestOptions as IRequestOptions_2 } from '@microdelta/supervision';
+import type { IResolutionErrorCode as IResolutionErrorCode_2 } from '@microdelta/resolution';
+import type { IResolutionFamily } from '@microdelta/resolution';
+import type { IResolutionOutcome as IResolutionOutcome_2 } from '@microdelta/resolution';
+import type { IResultView as IResultView_2 } from '@microdelta/resolution';
+import type { IRun } from '@microdelta/supervision';
+import type { IRunContext as IRunContext_2 } from '@microdelta/supervision';
+import type { IRunEvent as IRunEvent_2 } from '@microdelta/supervision';
+import type { IRunObserver as IRunObserver_2 } from '@microdelta/supervision';
+import type { IRunResult as IRunResult_2 } from '@microdelta/supervision';
+import type { ISourceOutcome as ISourceOutcome_2 } from '@microdelta/resolution';
+import type { ISourceOutcomes as ISourceOutcomes_2 } from '@microdelta/resolution';
+import type { ISupervisionErrorCode as ISupervisionErrorCode_2 } from '@microdelta/supervision';
+import type { ITrackedHelpers as ITrackedHelpers_2 } from '@microdelta/resolution';
+import type { ITrackedView as ITrackedView_2 } from '@microdelta/tracking';
 import { MemoryStoreOptions } from '@microdelta/history';
 import { MissingRowError } from '@microdelta/history';
 import { Outcome } from '@microdelta/history';
 import { Path } from '@microdelta/history';
 import { RecordedRead } from '@microdelta/history';
+import { ResolutionError as ResolutionError_2 } from '@microdelta/resolution';
 import { ResultKey } from '@microdelta/history';
 import { Store } from '@microdelta/history';
 import { StoreMetadata } from '@microdelta/history';
 import { Subject } from '@microdelta/history';
 import { SubjectPatch } from '@microdelta/history';
 import { SubjectRow } from '@microdelta/history';
+import { SupervisionError as SupervisionError_2 } from '@microdelta/supervision';
+
+// @alpha
+export function authoring<TInputs extends object, THelpers extends object>(): IAuthoring<TInputs, THelpers>;
 
 // @public
 export function createMemoryStore(options?: MemoryStoreOptions): Store;
+
+// @alpha
+export function currentRun(): IRunContext;
 
 export { Divergence }
 
@@ -45,13 +83,135 @@ export { GenerationRow }
 
 export { GenerationState }
 
+// @alpha
+export type IAdmissionDecision = IAdmissionDecision_2;
+
+// @alpha
+export type IAdmissionPolicy = IExecutionAdmission;
+
+// @alpha
+export type IAdmissionRequest = IAdmissionRequest_2;
+
+// @alpha
+export type IAuthoring<TInputs extends object, THelpers extends object> = IDeclarations<IAuthoringFamily<TInputs, THelpers>>;
+
+// @alpha
+export type IAuthoringFamily<TInputs extends object, THelpers extends object> = IResolutionFamily<TInputs, THelpers>;
+
+// @alpha
+export type ICheckOutcome = ICheckOutcome_2;
+
+// @alpha
+export type IChildResult<T> = IChildResult_2<T>;
+
+// @alpha
+export type ICompletedResultReference = ICompletedResultReference_2;
+
+// @alpha
+export type IComposition<TInputs extends object, THelpers extends object> = IComposition_2<IAuthoringFamily<TInputs, THelpers>>;
+
+// @alpha
+export type IDeclaredCallHandle<T> = IDeclaredCallHandle_2<T>;
+
 export { Identity }
 
+// @alpha
+export type ILifecycleEvent = ILifecycleEvent_2;
+
+// @alpha
+export type ILifecyclePhase = ILifecyclePhase_2;
+
 export { InvalidStorePatchError }
+
+// @alpha
+export type IOrdinaryPhase = IOrdinaryPhase_2;
+
+// @alpha
+export type IPreviousResult<T> = IPreviousResult_2<T>;
+
+// @alpha
+export type IRecoveryResult = IRecoveryResult_2;
+
+// @alpha
+export type IRequestOptions = IRequestOptions_2;
+
+// @alpha
+export type IResolutionErrorCode = IResolutionErrorCode_2;
+
+// @alpha
+export type IResolutionOutcome = IResolutionOutcome_2;
+
+// @alpha
+export type IResultView<T> = IResultView_2<T>;
+
+// @alpha
+export type IRunContext = IRunContext_2;
+
+// @alpha
+export type IRunEvent = IRunEvent_2;
+
+// @alpha
+export type IRunObserver = IRunObserver_2;
+
+// @alpha
+export type IRunResult<T> = IRunResult_2<T>;
+
+// @alpha
+export type ISourceOutcome<T> = ISourceOutcome_2<T>;
+
+// @alpha
+export type ISourceOutcomes = ISourceOutcomes_2;
+
+// @alpha
+export type IStepDescriptor = IBindingDescriptor;
+
+// @alpha
+export type ISupervisionErrorCode = ISupervisionErrorCode_2;
+
+// @alpha
+export type ITrackedHelpers<THelpers extends object> = ITrackedHelpers_2<THelpers>;
+
+// @alpha
+export type ITrackedView<T> = ITrackedView_2<T>;
+
+// @alpha
+export interface IWorkspace {
+    close(): void;
+    readonly logicalStore: string;
+    run<TInputs extends object, THelpers extends object, T>(options: IWorkspaceRunOptions<TInputs, THelpers>, body: (run: IWorkspaceRun) => T | Promise<T>): Promise<IRunResult<Awaited<T>>>;
+}
+
+// @alpha
+export interface IWorkspaceOptions {
+    readonly leaseMilliseconds?: number;
+    readonly location: string;
+    readonly logicalStore: string;
+}
+
+// @alpha
+export interface IWorkspaceRun extends IRun {
+    read<T>(reference: ICompletedResultReference): T;
+}
+
+// @alpha
+export interface IWorkspaceRunOptions<TInputs extends object, THelpers extends object> {
+    readonly admission?: IAdmissionPolicy;
+    readonly authoring: IAuthoring<TInputs, THelpers>;
+    readonly composition: IComposition<TInputs, THelpers>;
+    readonly environment: string;
+    readonly observers?: readonly IRunObserver[];
+    readonly runId?: string;
+}
 
 export { MemoryStoreOptions }
 
 export { MissingRowError }
+
+// @alpha
+export function openWorkspace(options: IWorkspaceOptions): IWorkspace;
+
+// @alpha
+export const ordinaryLifecycle: readonly IOrdinaryPhase[];
 
 export { Outcome }
 
@@ -59,7 +219,19 @@ export { Path }
 
 export { RecordedRead }
 
+// @alpha
+export const ResolutionError: typeof ResolutionError_2;
+
+// @alpha
+export type ResolutionError = ResolutionError_2;
+
 export { ResultKey }
+
+// @alpha
+export const sourceOutcome: ISourceOutcomes;
+
+// @alpha
+export const stepLifecycle: readonly ILifecyclePhase[];
 
 export { Store }
 
@@ -70,6 +242,12 @@ export { Subject }
 export { SubjectPatch }
 
 export { SubjectRow }
+
+// @alpha
+export const SupervisionError: typeof SupervisionError_2;
+
+// @alpha
+export type SupervisionError = SupervisionError_2;
 
 // (No @packageDocumentation comment for this package)
 

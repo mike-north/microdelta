@@ -126,6 +126,8 @@ interface IMemoFrame {
   readonly step: IBindingDescriptor;
   readonly children: Map<string, IChildEvidence>;
   refused: { readonly step: IBindingDescriptor; readonly reason: string } | undefined;
+  /** The first failed child resolution; a body that swallows it still cannot publish. */
+  failed: { readonly error: unknown } | undefined;
 }
 
 /** What a source run's capture finishes with. */
@@ -415,64 +417,72 @@ export function createResolution<TInputs extends object, THelpers extends object
   }
 
   /** End an attempt without a result; its failure never masks the original outcome. */
-  function abandon(request: IRequestContext, attemptId: number, outcome: 'failed' | 'interrupted', ending: Parameters<typeof endingRecord>[0]): void {
+  function abandon(request: IRequestContext, evidence: IStepEvidence, attemptId: number, outcome: 'failed' | 'interrupted', ending: Parameters<typeof endingRecord>[0]): void {
     try {
       history.abandonAttempt(leaseOf(request), { attemptId, outcome, evidence: endingRecord(ending) });
-    } catch {
-      // An attempt that cannot be ended stays incomplete and recoverable; the caller sees the original failure.
+    } catch (error: unknown) {
+      // An attempt that cannot be ended stays incomplete and recoverable; the caller still sees the original outcome.
+      evidence.diagnostics.push(`Attempt ${String(attemptId)} could not be ended: ${describe(error)}`);
     }
   }
 
+  /** The durable identity of one admitted execution under this request. */
+  type IExecutionIdentity = ReturnType<typeof versioned> & { readonly attemptKey: string; readonly intentDigest: string };
+
+  /** Reject a request key already bound to a different intent, as History does. */
+  function conflict(requestKey: string, step: IBindingDescriptor, error: unknown): never {
+    if (error instanceof AttemptConflictError) {
+      throw new ResolutionError('wrong-intent', `Request key ${requestKey} already identifies a different execution of ${stepKey(step)}`, error);
+    }
+    throw error;
+  }
+
   /**
-   * Claim one attempt for admitted work, keyed by the request key and the
-   * structural invocation with the complete current intent. A key whose same
-   * execution already committed returns that committed result; a key already
-   * bound to different intent is rejected; an incomplete or unsuccessful
-   * earlier execution under the same key is never resumed automatically.
+   * Derive the execution identity for admitted work and require that the
+   * request key has not already been used for it. This runs before admission:
+   * a key whose execution already committed, or that is bound to a different
+   * intent, or that names an incomplete or unsuccessful execution, is never
+   * served, resumed or re-executed by a normal request; the separate recovery
+   * operation reports what happened.
    */
-  function claim(request: IRequestContext, evidence: IStepEvidence, step: IBindingDescriptor, declaration: IStepDeclaration<IFamily>):
-    | { readonly kind: 'committed'; readonly reference: ICompletedResultReference; readonly attemptId: number }
-    | { readonly kind: 'allocated'; readonly attemptId: number } {
+  function freshIdentity(request: IRequestContext, step: IBindingDescriptor, declaration: IStepDeclaration<IFamily>): IExecutionIdentity {
     const requestKey = request.requestKey;
     if (requestKey === undefined) {
       throw new ResolutionError('invalid-request', 'A normal request needs a request key');
     }
-    const identity = {
+    const identity: IExecutionIdentity = {
       ...versioned(declaration),
       attemptKey: attemptKey(host, requestKey, step),
       intentDigest: intentDigest({ host, validation, composition, environment, step, declaration, slots: request.slots }),
-    };
-    const conflict = (error: unknown): never => {
-      if (error instanceof AttemptConflictError) {
-        throw new ResolutionError('wrong-intent', `Request key ${requestKey} already identifies a different execution of ${stepKey(step)}`, error);
-      }
-      throw error;
     };
     let prior: ReturnType<typeof history.recoverAttempt>;
     try {
       prior = integrity(() => history.recoverAttempt(identity));
     } catch (error: unknown) {
-      return conflict(error);
-    }
-    if (prior.kind === 'completed') {
-      return { kind: 'committed', reference: prior.reference, attemptId: prior.attempt.attemptId };
+      return conflict(requestKey, step, error);
     }
     if (prior.kind !== 'absent') {
-      throw new ResolutionError('invalid-request', `Request key ${requestKey} already identifies an ${prior.kind} execution of ${stepKey(step)}; recover it or use a fresh request key`);
+      throw new ResolutionError('invalid-request', `Request key ${requestKey} already identifies a ${prior.kind} execution of ${stepKey(step)}; recover it or use a fresh request key`);
     }
+    return identity;
+  }
+
+  /** Claim one attempt for admitted work under an identity checked by {@link freshIdentity}. */
+  function claim(request: IRequestContext, evidence: IStepEvidence, step: IBindingDescriptor, identity: IExecutionIdentity): number {
+    const requestKey = request.requestKey ?? '';
     let attemptId: number;
     try {
       attemptId = integrity(() => history.allocateAttempt(leaseOf(request), identity)).attemptId;
     } catch (error: unknown) {
-      return conflict(error);
+      return conflict(requestKey, step, error);
     }
     try {
       emit(request, evidence, step, 'claim');
     } catch (error: unknown) {
-      abandon(request, attemptId, 'failed', { ending: 'observer-failure', detail: describe(error) });
+      abandon(request, evidence, attemptId, 'failed', { ending: 'observer-failure', detail: describe(error) });
       throw error;
     }
-    return { kind: 'allocated', attemptId };
+    return attemptId;
   }
 
   /** Stage and publish new content in History's one publication commit. */
@@ -483,13 +493,13 @@ export function createResolution<TInputs extends object, THelpers extends object
   }): IStepResult {
     const lease = leaseOf(request);
     if (!isContainer(content.payload)) {
-      abandon(request, attemptId, 'failed', { ending: 'failed', detail: 'result root is not a record or array' });
+      abandon(request, evidence, attemptId, 'failed', { ending: 'failed', detail: 'result root is not a record or array' });
       throw new ResolutionError('unsupported-result', `Step ${stepKey(step)} produced a result without a record or array root`);
     }
     try {
       history.stageAttempt(lease, { attemptId, payload: content.payload, provenance: provenanceRecord(content.provenance), dependencies: content.dependencies });
     } catch (error: unknown) {
-      abandon(request, attemptId, 'failed', { ending: 'failed', detail: describe(error) });
+      abandon(request, evidence, attemptId, 'failed', { ending: 'failed', detail: describe(error) });
       if (error instanceof TypeError) {
         throw new ResolutionError('unsupported-result', `Step ${stepKey(step)} produced unsupported result data: ${error.message}`, error);
       }
@@ -570,16 +580,13 @@ export function createResolution<TInputs extends object, THelpers extends object
       if (request.mode === 'check') {
         return done({ kind: 'uncertain', boundary: step });
       }
+      authorBindings(request);
+      const identity = freshIdentity(request, step, declaration);
       const refusal = await admit(request, evidence, step, 'source', declaration, eligible !== undefined ? 'source-policy' : candidates.length > 0 ? 'invalid' : 'cold');
       if (refusal !== undefined) {
         return done({ kind: 'refused', refused: step, reason: refusal });
       }
-      authorBindings(request);
-      const claimed = claim(request, evidence, step, declaration);
-      if (claimed.kind === 'committed') {
-        return done({ kind: 'published', reference: claimed.reference, attemptId: claimed.attemptId });
-      }
-      const { attemptId } = claimed;
+      const attemptId = claim(request, evidence, step, identity);
       let ran: IObservationCapture<ISourceReturn>;
       try {
         emit(request, evidence, step, 'execute');
@@ -595,7 +602,7 @@ export function createResolution<TInputs extends object, THelpers extends object
           }
         });
       } catch (error: unknown) {
-        abandon(request, attemptId, 'failed', { ending: 'failed', detail: describe(error) });
+        abandon(request, evidence, attemptId, 'failed', { ending: 'failed', detail: describe(error) });
         if (error instanceof ResolutionError) {
           throw error;
         }
@@ -603,23 +610,29 @@ export function createResolution<TInputs extends object, THelpers extends object
       }
       const { minted } = ran.value;
       if (minted === undefined) {
-        abandon(request, attemptId, 'failed', { ending: 'failed', detail: 'invalid source outcome' });
+        abandon(request, evidence, attemptId, 'failed', { ending: 'failed', detail: 'invalid source outcome' });
         throw new ResolutionError('invalid-outcome', `Source ${stepKey(step)} returned something other than a Resolution outcome envelope`);
       }
       if (minted.kind === 'retain') {
         const held = typeof minted.previous === 'object' && minted.previous !== null ? carriers.get(minted.previous) : undefined;
         if (eligible === undefined || held === undefined || held.token !== token || held.reference.locator !== eligible.reference.locator) {
-          abandon(request, attemptId, 'failed', { ending: 'failed', detail: 'invalid retention' });
+          abandon(request, evidence, attemptId, 'failed', { ending: 'failed', detail: 'invalid retention' });
           throw new ResolutionError('invalid-retention', `Source ${stepKey(step)} retained something other than its own eligible previous result`);
         }
-        const result = accept(request, evidence, step, 'check', eligible.reference, { basis: 'check', step, observations: ran.observations }, []);
+        let result: IStepResult;
+        try {
+          result = accept(request, evidence, step, 'check', eligible.reference, { basis: 'check', step, observations: ran.observations }, []);
+        } catch (error: unknown) {
+          abandon(request, evidence, attemptId, 'failed', { ending: 'failed', detail: describe(error) });
+          throw error;
+        }
         // The admitted claim produced no new result: end it with the retention as its evidence.
-        abandon(request, attemptId, 'interrupted', { ending: 'retained', detail: 'the source check explicitly retained its eligible previous result', reference: eligible.reference });
+        abandon(request, evidence, attemptId, 'interrupted', { ending: 'retained', detail: 'the source check explicitly retained its eligible previous result', reference: eligible.reference });
         emit(request, evidence, step, 'release', eligible.reference);
         return done(result);
       }
       if (ran.value.detachError !== undefined) {
-        abandon(request, attemptId, 'failed', { ending: 'failed', detail: describe(ran.value.detachError) });
+        abandon(request, evidence, attemptId, 'failed', { ending: 'failed', detail: describe(ran.value.detachError) });
         throw new ResolutionError('unsupported-result', `Source ${stepKey(step)} returned unsupported fresh data: ${describe(ran.value.detachError)}`, ran.value.detachError);
       }
       return done(publish(request, evidence, step, attemptId, {
@@ -733,18 +746,22 @@ export function createResolution<TInputs extends object, THelpers extends object
     if (request.mode === 'check') {
       return done({ kind: 'execution-required' });
     }
+    const bindings = authorBindings(request);
+    const identity = freshIdentity(request, step, declaration);
     const refusal = await admit(request, evidence, step, 'memo', declaration, candidates.length > 0 ? 'invalid' : 'cold');
     if (refusal !== undefined) {
       return done({ kind: 'refused', refused: step, reason: refusal });
     }
-    const bindings = authorBindings(request);
-    const claimed = claim(request, evidence, step, declaration);
-    if (claimed.kind === 'committed') {
-      return done({ kind: 'published', reference: claimed.reference, attemptId: claimed.attemptId });
-    }
-    const { attemptId } = claimed;
+    // Opening the invocation runs no author code; doing it before the claim leaves no attempt behind if it fails.
     const invocation = openMemo(step);
-    const frame: IMemoFrame = { request, step, children: new Map(), refused: undefined };
+    let attemptId: number;
+    try {
+      attemptId = claim(request, evidence, step, identity);
+    } catch (error: unknown) {
+      invocation.close();
+      throw error;
+    }
+    const frame: IMemoFrame = { request, step, children: new Map(), refused: undefined, failed: undefined };
     frames.set(invocation, frame);
     let ran: IObservationCapture<IMemoReturn>;
     try {
@@ -758,24 +775,31 @@ export function createResolution<TInputs extends object, THelpers extends object
       })));
     } catch (error: unknown) {
       if (frame.refused !== undefined) {
-        abandon(request, attemptId, 'interrupted', { ending: 'child-refused', detail: frame.refused.reason });
+        abandon(request, evidence, attemptId, 'interrupted', { ending: 'child-refused', detail: frame.refused.reason });
         return done({ kind: 'refused', refused: frame.refused.step, reason: frame.refused.reason });
       }
-      abandon(request, attemptId, 'failed', { ending: 'failed', detail: describe(error) });
-      if (error instanceof ResolutionError && error.code !== 'execution-failure') {
-        throw error;
+      const cause = frame.failed?.error ?? error;
+      abandon(request, evidence, attemptId, 'failed', { ending: 'failed', detail: describe(cause) });
+      if (cause instanceof ResolutionError && cause.code !== 'execution-failure') {
+        throw cause;
       }
-      throw new ResolutionError('execution-failure', `Body of ${stepKey(step)} failed: ${describe(error)}`, error);
+      throw new ResolutionError('execution-failure', `Body of ${stepKey(step)} failed: ${describe(cause)}`, cause);
     } finally {
       invocation.close();
     }
     if (frame.refused !== undefined) {
       // A body that swallowed a refused child cannot publish a result missing that child.
-      abandon(request, attemptId, 'interrupted', { ending: 'child-refused', detail: frame.refused.reason });
+      abandon(request, evidence, attemptId, 'interrupted', { ending: 'child-refused', detail: frame.refused.reason });
       return done({ kind: 'refused', refused: frame.refused.step, reason: frame.refused.reason });
     }
+    if (frame.failed !== undefined) {
+      // A body that swallowed a failed child cannot publish a result missing that child's current evidence.
+      const cause = frame.failed.error;
+      abandon(request, evidence, attemptId, 'failed', { ending: 'failed', detail: describe(cause) });
+      throw cause instanceof ResolutionError ? cause : new ResolutionError('execution-failure', `A child of ${stepKey(step)} failed: ${describe(cause)}`, cause);
+    }
     if (ran.value.detachError !== undefined) {
-      abandon(request, attemptId, 'failed', { ending: 'failed', detail: describe(ran.value.detachError) });
+      abandon(request, evidence, attemptId, 'failed', { ending: 'failed', detail: describe(ran.value.detachError) });
       throw new ResolutionError('unsupported-result', `Body of ${stepKey(step)} returned unsupported data: ${describe(ran.value.detachError)}`, ran.value.detachError);
     }
     const children = [...frame.children.values()].sort((left, right) => left.slot < right.slot ? -1 : left.slot > right.slot ? 1 : 0);
@@ -805,11 +829,19 @@ export function createResolution<TInputs extends object, THelpers extends object
     }
     const reconnected = composition.resolveWitness(request.witness);
     if (reconnected.status !== 'bound' || reconnected.child.declaration !== request.child) {
-      throw new ResolutionError('unbound-step', 'A declared call does not reconnect to its current child declaration');
+      const error = new ResolutionError('unbound-step', 'A declared call does not reconnect to its current child declaration');
+      frame.failed ??= { error };
+      throw error;
     }
     const slot = request.witness.child.slot;
     const childStep = siblingStep(frame.step, slot);
-    const resolved = await resolveSourceShared(frame.request, childStep, request.child);
+    let resolved: IResolvedStep;
+    try {
+      resolved = await resolveSourceShared(frame.request, childStep, request.child);
+    } catch (error: unknown) {
+      frame.failed ??= { error };
+      throw error;
+    }
     if (resolved.result.kind !== 'reused' && resolved.result.kind !== 'published') {
       const reason = resolved.result.kind === 'refused' ? resolved.result.reason : `child resolution ended ${resolved.result.kind}`;
       frame.refused ??= { step: resolved.result.kind === 'refused' ? resolved.result.refused : childStep, reason };

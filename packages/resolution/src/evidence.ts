@@ -18,7 +18,11 @@
  *   records why an admitted attempt ended without a new result.
  *
  * A record in an unknown format or version is unsupported evidence, an honest
- * miss. A record that claims this format but is malformed is integrity damage.
+ * miss. A record that claims this format but whose own structure is malformed
+ * is integrity damage. A direct-child witness is kept as untrusted durable data
+ * and judged by Definition's reconnection instead: an unknown witness version
+ * or argument form, or a malformed witness, cannot justify current
+ * correspondence and is an honest miss (REUSE-007), never a guess.
  */
 import type { IBindingDescriptor } from '@microdelta/definition';
 import type { ICompletedResultReference, ICompletedEnvelope, IVersionedRecord } from '@microdelta/history';

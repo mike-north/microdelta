@@ -99,6 +99,12 @@ export type IAddressSegment =
 };
 
 // @alpha
+export interface ICompletedNavigationReader {
+    readNode(reference: ICompletedResultReference, address: readonly IAddressSegment[]): ISelectedNode;
+    readSubtree(reference: ICompletedResultReference, address: readonly IAddressSegment[]): unknown;
+}
+
+// @alpha
 export interface ICompletedProjectionReader {
     readProjection(reference: ICompletedResultReference, descriptor: IValueProjectionDescriptor): IValueProjectionFact;
 }
@@ -175,6 +181,25 @@ export type ISelectedFingerprintResolution = {
     readonly kind: 'incompatible';
 } | {
     readonly kind: 'ambiguous';
+};
+
+// @alpha
+export type ISelectedNode =
+/** A supported scalar (undefined, null, boolean, number or string) read at the address. */
+    {
+    readonly kind: 'scalar';
+    readonly selected: ISelectedFact;
+}
+/** A string-keyed plain-data record, possibly with a supported custom prototype chain. */
+| {
+    readonly kind: 'record';
+    readonly address: readonly IAddressSegment[];
+}
+/** A standard array; `length` counts slots including holes. */
+| {
+    readonly kind: 'array';
+    readonly address: readonly IAddressSegment[];
+    readonly length: number;
 };
 
 // @alpha

@@ -10,7 +10,8 @@ the required behavior.
 | Experiment | Bounded result and owning decision |
 | --- | --- |
 | EXP-1 | Select structural current binding and synchronous observed implementation/scalar evidence; [CMP-6](composition.md), TRK-2, REUSE-006/008. Arbitrary closure soundness remains excluded. |
-| EXP-2 | Select unordered equality, separate order-preserving snapshot transport, observations/projections, and top-level scalar access; [VAL-1/2/3 and COL-2](tracking.md). Reject async preparation as a general getter solution; nested lazy access remains unproven. |
+| EXP-2 | Select unordered equality, separate order-preserving snapshot transport, observations/projections, and top-level scalar access; [VAL-1/2/3 and COL-2](tracking.md). Reject async preparation as a general getter solution; nested lazy access was unproven within EXP-2 (see the M3 nested-read row). |
+| M3 nested read | Select bounded synchronous navigation over exact retained record and array roots: tagged scalar facts or container shapes, existing TRK-5 leaf/length/presence/key-order/explicit-output observations, no whole-object dependency from navigation, and file-backed SQLite evidence of no root or unrelated payload in selected reads and none in fingerprint comparison; [tracking decision](tracking.md) and [protocol](../../experiments/exp-nested/protocol.md). Durable publication, scale, cache/eviction and projection indexing remain outside it. |
 | EXP-3 | Select the single-file, single-active-writer SQLite protocol shape under process-kill/reopen evidence; [PUB-004](execution.md). Broader durability/concurrency claims remain unproven. |
 | EXP-5 | Historical bounded CML correspondence only; superseded by [PKG-006](package-boundaries.md). No CML model, parser, checker, or fixture is an active tool or gate. |
 | EXP-6 | Historical flat-record theorem and finite TypeScript comparison; [VAL-2](tracking.md). Lean is dormant unless a concrete need justifies renewed use. |

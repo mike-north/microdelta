@@ -1,10 +1,12 @@
 /**
- * Selected Materialization loads only explicitly requested scalar result facts,
- * emits detached explicit outputs, and builds keyed projections. It provides no
- * freshness policy, storage implementation, publication transition, or reuse grant.
+ * Selected Materialization loads only explicitly requested result facts, either
+ * as top-level scalars or through lazy nested views, emits detached explicit
+ * outputs, and builds keyed projections. It provides no freshness policy,
+ * storage implementation, publication transition, or reuse grant.
  * @packageDocumentation
  */
 import type {
+  ICompletedNavigationReader,
   ICompletedProjectionReader,
   ICompletedResultReader,
   ICompletedResultReference,
@@ -12,10 +14,11 @@ import type {
   ISelectedFingerprintResolution,
   ISelectedReadRequest,
 } from '@microdelta/history';
-import { encodeValue, normalizeProjectionDescriptor, normalizeProjectionFact } from '@microdelta/value';
+import { encodeValue, normalizeProjectionDescriptor, normalizeProjectionFact, normalizeSelectedFact, normalizeSelectedNode } from '@microdelta/value';
 import type {
   IAddressSegment,
   ISelectedFact,
+  ISelectedNode,
   IValueProjectionDescriptor,
   IValueProjectionFact,
 } from '@microdelta/value';
@@ -24,7 +27,9 @@ import type {
   ICurrentFactRequest,
   ICurrentFactResolution,
   IDetachedOutput,
+  ITracked,
   ITrackedBrand,
+  ITrackedNodeSource,
   ITrackingBinding,
   ITrackingObserver,
 } from '@microdelta/tracking';
@@ -37,6 +42,16 @@ export type IMaterializedScalarView<T extends object> = {
   readonly [K in keyof T as T[K] extends IMaterializedScalar ? K : never]: T[K];
 } & ITrackedBrand;
 
+/**
+ * An immutable lazy view over one exact retained record or array. Nested
+ * records and arrays stay lazy views carrying Tracking's canonical brand;
+ * scalar leaves are ordinary values. Arrays expose numeric positions and
+ * `length` only. The view is owned by the composed Tracking observer, so its
+ * explicit key, presence and output operations behave as for tracked inputs.
+ * @alpha
+ */
+export type IMaterializedView<T extends object> = ITracked<T>;
+
 /** Frozen selected member content returned by one aggregate projection operation. @alpha */
 export type IMaterializedProjection = IValueProjectionFact;
 
@@ -48,6 +63,8 @@ export interface IMaterializationOptions {
   readonly reader: ICompletedResultReader;
   /** Separate capability so scalar-only History readers need not implement projection reads. */
   readonly projectionReader?: ICompletedProjectionReader;
+  /** Separate capability for nested navigation; scalar-only readers keep their existing behavior. */
+  readonly navigationReader?: ICompletedNavigationReader;
 }
 
 /** A resolved binding identifies the exact completed result used for current metadata. @alpha */
@@ -65,6 +82,16 @@ export interface IMaterialization {
     reference: ICompletedResultReference,
     binding: ITrackingBinding,
   ): IMaterializedScalarView<T>;
+  /**
+   * Make one exact reference's record or array root navigable as a lazy nested
+   * view. Each member read asks the navigation reader for exactly that node and
+   * records only consumed leaves, lengths, presence and key order; passing
+   * through a container records nothing. Requires the navigation capability.
+   */
+  materializeView<T extends object>(
+    reference: ICompletedResultReference,
+    binding: ITrackingBinding,
+  ): IMaterializedView<T>;
   /** Explicitly detach supplied output and observe each selected tracked subtree. */
   materializeOutput<T>(output: T): IDetachedOutput<T>;
   /** Build and record one canonical keyed projection from already selected content. */
@@ -159,27 +186,18 @@ function propertyValue(descriptor: PropertyDescriptor): unknown {
   return descriptor.value as unknown;
 }
 
-/** Reject malformed reader envelopes and ensure they answer the exact dispatched request. */
+/**
+ * Reject malformed reader envelopes and ensure they answer the exact
+ * dispatched request. Value validates and copies the envelope in one pass, so
+ * the fact returned to authors and recorded by Tracking is exactly the one
+ * checked here; no provider accessor, iterator or array method is consulted.
+ */
 function validateSelectedFact(value: unknown, request: ISelectedReadRequest): ISelectedFact {
-  if (value === null || typeof value !== 'object') {
-    throw new TypeError('Selected reader returned a malformed fact');
-  }
-  const operation = Object.getOwnPropertyDescriptor(value, 'operation');
-  const address = Object.getOwnPropertyDescriptor(value, 'address');
-  const fact = Object.getOwnPropertyDescriptor(value, 'fact');
-  if (operation === undefined || !('value' in operation) || address === undefined || !('value' in address)
-    || fact === undefined || !('value' in fact)) {
-    throw new TypeError('Selected reader facts require own data fields');
-  }
-  const copiedAddress = copyAddress(propertyValue(address));
-  const operationValue = propertyValue(operation);
-  if (operationValue !== request.operation || encodeValue(copiedAddress) !== encodeValue(request.address)) {
+  const fact = normalizeSelectedFact(value);
+  if (fact.operation !== request.operation || encodeValue(fact.address) !== encodeValue(request.address)) {
     throw new TypeError('Selected reader returned a fact for a mismatched operation or address');
   }
-  if (Object.keys(value).length !== 3) {
-    throw new TypeError('Selected reader fact has unsupported fields');
-  }
-  return Object.freeze({ operation: request.operation, address: copiedAddress, fact: propertyValue(fact) });
+  return fact;
 }
 
 /** Verify that a projection reader answered the requested relative selection. */
@@ -216,6 +234,46 @@ function requireProjectionFact(value: unknown): IValueProjectionFact {
 /** Validate selected content and detach it as Value-owned canonical immutable data. */
 function detachProjection(fact: IValueProjectionFact): IMaterializedProjection {
   return normalizeProjectionFact(fact);
+}
+
+/**
+ * Validate a navigation reader's answer as a Value node for exactly the
+ * dispatched address. Malformed, asynchronous or mismatched answers fail here,
+ * at the History boundary, before Tracking records or returns anything.
+ */
+function validateNode(value: unknown, address: readonly IAddressSegment[]): ISelectedNode {
+  const node = normalizeSelectedNode(value);
+  const answered = node.kind === 'scalar' ? node.selected.address : node.address;
+  if (encodeValue(answered) !== encodeValue(address)) {
+    throw new TypeError('Navigation reader returned a node for a mismatched address');
+  }
+  return node;
+}
+
+/**
+ * Adapt one exact reference to Tracking's node-source port. Each request is
+ * detached before dispatch so a reader cannot mutate the address it answers,
+ * and every answer is validated against the dispatched request. Presence and
+ * key-order facts use the reader's ordinary selected-read contract.
+ */
+function createNodeSource(
+  reference: ICompletedResultReference,
+  reader: ICompletedResultReader,
+  navigationReader: ICompletedNavigationReader,
+): ITrackedNodeSource {
+  return Object.freeze({
+    node(address: readonly IAddressSegment[]): ISelectedNode {
+      const requested = copyAddress(address);
+      return validateNode(navigationReader.readNode(reference, requested), requested);
+    },
+    select(address: readonly IAddressSegment[], operation: 'own' | 'membership' | 'keys'): ISelectedFact {
+      const request: ISelectedReadRequest = Object.freeze({ operation, address: copyAddress(address) });
+      return validateSelectedFact(reader.readSelected(reference, request), request);
+    },
+    subtree(address: readonly IAddressSegment[]): unknown {
+      return navigationReader.readSubtree(reference, copyAddress(address));
+    },
+  });
 }
 
 /** A selected view maps one property get to one exact History read and one Tracking fact. */
@@ -271,6 +329,16 @@ export function createMaterialization(options: IMaterializationOptions): IMateri
       const exactReference = copyReference(reference);
       return createScalarView<T>(exactReference, copyBinding(binding), options.reader, options.tracking);
     },
+    materializeView<T extends object>(reference: ICompletedResultReference, binding: ITrackingBinding): IMaterializedView<T> {
+      options.tracking.materialization.assertFrameOpen();
+      const exactReference = copyReference(reference);
+      const copiedBinding = copyBinding(binding);
+      if (options.navigationReader === undefined) {
+        throw new TypeError('This completed-result reader does not support nested navigation');
+      }
+      const source = createNodeSource(exactReference, options.reader, options.navigationReader);
+      return options.tracking.materialization.lazyView<T>(copiedBinding, source);
+    },
     materializeOutput<T>(output: T): IDetachedOutput<T> {
       return options.tracking.snapshotOutput(output);
     },
@@ -309,8 +377,10 @@ export function createMaterialization(options: IMaterializationOptions): IMateri
     observeMemberOrder(binding: ITrackingBinding, keys: readonly string[]): readonly string[] {
       options.tracking.materialization.assertFrameOpen();
       const copiedBinding = copyBinding(binding);
-      options.tracking.materialization.recordCollectionOrder(copiedBinding, keys);
-      return Object.freeze([...keys]);
+      // One validated copy is both recorded and returned, so the author never sees an order other than the evidence.
+      const order = normalizeSelectedFact({ operation: 'keys', address: [], fact: keys }).fact as readonly string[];
+      options.tracking.materialization.recordCollectionOrder(copiedBinding, order);
+      return order;
     },
     currentProvider(resolveReference: ICompletedReferenceResolver, fallback: ICurrentFactProvider): ICurrentFactProvider {
       return Object.freeze({

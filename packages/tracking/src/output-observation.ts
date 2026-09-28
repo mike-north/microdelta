@@ -27,7 +27,10 @@ export type IDetachedOutput<T> = T extends (...arguments_: never[]) => unknown
 export interface IOutputOwnership {
   readonly binding: ITrackingBinding;
   readonly address: readonly IAddressSegment[];
+  /** The supported data to detach; for a lazy view it is loaded only for this explicit output. */
   readonly value: object;
+  /** One identity per underlying retained node, so repeated wrappers of it are detected as aliases. */
+  readonly identity: object;
 }
 
 /** One successfully snapshotted tracked subtree to add to the active frame. @internal */
@@ -121,10 +124,11 @@ export function createOutputObservationPort(
     }
     const ownership = callbacks.ownershipOf(value);
     if (ownership !== undefined) {
-      if (identities.has(value) || identities.has(ownership.value)) {
+      if (identities.has(value) || identities.has(ownership.identity) || identities.has(ownership.value)) {
         throw new TypeError('Output cannot contain cycles or repeated tracked subtrees');
       }
       identities.add(value);
+      identities.add(ownership.identity);
       identities.add(ownership.value);
       const encoded = encodeSnapshot(ownership.value);
       pending.push({ ownership, encoded, fingerprint: fingerprint(encoded, machine) });

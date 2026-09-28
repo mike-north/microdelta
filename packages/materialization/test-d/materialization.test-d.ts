@@ -1,10 +1,11 @@
 import { expectError, expectType } from 'tsd';
-import type { ICompletedResultReader, ICompletedResultReference } from '@microdelta/history';
+import type { ICompletedNavigationReader, ICompletedResultReader, ICompletedResultReference } from '@microdelta/history';
 import type { ITrackingObserverHost } from '@microdelta/tracking';
 import { createTrackingObserver } from '@microdelta/tracking';
 import type { ITracked } from '@microdelta/tracking';
 
 import { createMaterialization } from '../dist/api/materialization.alpha.js';
+import type { IMaterializedView } from '../dist/api/materialization.alpha.js';
 import * as publicMaterialization from '@microdelta/materialization';
 
 // The context is intentionally alpha-only until its contracts are accepted.
@@ -30,3 +31,20 @@ expectType<string>(detached.name);
 expectError(() => {
   materialization.materializeOutput({ profile: tracked.profile }).profile.name = 'changed';
 });
+
+// Nested views require the separate navigation capability and keep Tracking's canonical brand.
+declare const navigationReader: ICompletedNavigationReader;
+interface IActivity {
+  readonly profile: { readonly name: string };
+  readonly pullRequests: readonly { readonly merged: boolean }[];
+}
+const nested = createMaterialization({ tracking, reader, navigationReader });
+const activity = nested.materializeView<IActivity>(reference, { path: ['summary', 'activity'] });
+expectType<IMaterializedView<IActivity>>(activity);
+expectType<ITracked<IActivity>>(activity);
+expectType<string>(activity.profile.name);
+expectType<number>(activity.pullRequests.length);
+expectType<boolean | undefined>(activity.pullRequests[0]?.merged);
+expectError(activity.pullRequests.map);
+expectError(() => { activity.profile.name = 'changed'; });
+expectError(nested.materializeView<string>(reference, { path: ['summary'] }));

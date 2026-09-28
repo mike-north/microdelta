@@ -608,6 +608,242 @@ function observeAt(
   return { operation, address, fact };
 }
 
+/**
+ * The kind of node that one exact structured address selects. A scalar leaf is
+ * its ordinary `value` selected fact. A record or array is described only by
+ * its container shape: navigating through a container is transport metadata for
+ * a lazy view, never a whole-object observation, so no member, identity or
+ * serialized subtree is implied. Array length is carried so a view need not ask
+ * again, but it becomes observation evidence only when a consumer reads it.
+ * Shapes are never placed inside {@link ISelectedFact.fact}.
+ * @alpha
+ */
+export type ISelectedNode =
+  /** A supported scalar (undefined, null, boolean, number or string) read at the address. */
+  | { readonly kind: 'scalar'; readonly selected: ISelectedFact }
+  /** A string-keyed plain-data record, possibly with a supported custom prototype chain. */
+  | { readonly kind: 'record'; readonly address: readonly IAddressSegment[] }
+  /** A standard array; `length` counts slots including holes. */
+  | { readonly kind: 'array'; readonly address: readonly IAddressSegment[]; readonly length: number };
+
+/** A supported scalar is the only fact a navigation leaf may carry. */
+function isScalar(value: unknown): value is undefined | null | boolean | number | string {
+  return value === undefined || value === null || typeof value === 'boolean'
+    || typeof value === 'number' || typeof value === 'string';
+}
+
+/** Records with either supported plain prototype carry the same envelope meaning. */
+function isPlainEnvelope(value: unknown): value is object {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return false;
+  }
+  const prototype: unknown = Object.getPrototypeOf(value);
+  return (prototype === Object.prototype || prototype === null) && Object.getOwnPropertySymbols(value).length === 0;
+}
+
+/** Read the envelope's exact own data fields, rejecting accessors before they can run. */
+function envelopeFields(value: unknown, expected: readonly string[], context: string): ReadonlyMap<string, unknown> {
+  if (!isPlainEnvelope(value)) {
+    throw new TypeError(`${context} must be a plain record`);
+  }
+  const keys = Object.getOwnPropertyNames(value);
+  if (keys.length !== expected.length || keys.some((key) => !expected.includes(key))) {
+    throw new TypeError(`${context} has unsupported or missing fields`);
+  }
+  const fields = new Map<string, unknown>();
+  for (const key of expected) {
+    const descriptor = Object.getOwnPropertyDescriptor(value, key);
+    if (descriptor === undefined || !('value' in descriptor)) {
+      throw new TypeError(`${context}.${key} must be an own data field`);
+    }
+    const field: unknown = descriptor.value;
+    fields.set(key, field);
+  }
+  return fields;
+}
+
+/**
+ * Read an untrusted array's indexed own data exactly once. It must be a
+ * standard array with no symbol keys, no own properties besides its dense
+ * index slots and `length`, and no accessor slots, so no iterator, method or
+ * prototype behavior can present a sequence other than the one read here.
+ */
+function envelopeSlots(value: unknown, context: string): readonly unknown[] {
+  if (!Array.isArray(value) || Object.getPrototypeOf(value) !== Array.prototype || Object.getOwnPropertySymbols(value).length !== 0) {
+    throw new TypeError(`${context} must be a standard array`);
+  }
+  const lengthDescriptor = Object.getOwnPropertyDescriptor(value, 'length');
+  const length: unknown = lengthDescriptor !== undefined && 'value' in lengthDescriptor ? lengthDescriptor.value : undefined;
+  if (typeof length !== 'number' || Object.getOwnPropertyNames(value).length !== length + 1) {
+    throw new TypeError(`${context} must be a dense array without extra properties`);
+  }
+  const slots: unknown[] = [];
+  for (let position = 0; position < length; position += 1) {
+    const slot = Object.getOwnPropertyDescriptor(value, String(position));
+    if (slot === undefined || !('value' in slot)) {
+      throw new TypeError(`${context} must be a dense sequence of data slots`);
+    }
+    const slotValue: unknown = slot.value;
+    slots.push(slotValue);
+  }
+  return slots;
+}
+
+/** Copy a dense structured address, accepting only canonical Property and Index segments. */
+function copyEnvelopeAddress(value: unknown, context: string): readonly IAddressSegment[] {
+  const address: IAddressSegment[] = [];
+  const slots = envelopeSlots(value, context);
+  for (let position = 0; position < slots.length; position += 1) {
+    const segmentValue: unknown = slots[position];
+    const kindDescriptor = isPlainEnvelope(segmentValue) ? Object.getOwnPropertyDescriptor(segmentValue, 'kind') : undefined;
+    const kind: unknown = kindDescriptor !== undefined && 'value' in kindDescriptor ? kindDescriptor.value : undefined;
+    if (kind === 'property') {
+      const key = envelopeFields(segmentValue, ['kind', 'key'], `${context}[${position}]`).get('key');
+      if (typeof key !== 'string') {
+        throw new TypeError(`${context}[${position}] needs a string key`);
+      }
+      address.push(Object.freeze({ kind: 'property', key }));
+    } else if (kind === 'index') {
+      const indexValue = envelopeFields(segmentValue, ['kind', 'index'], `${context}[${position}]`).get('index');
+      if (typeof indexValue !== 'number' || !Number.isSafeInteger(indexValue) || indexValue < 0) {
+        throw new TypeError(`${context}[${position}] needs a nonnegative integer index`);
+      }
+      address.push(Object.freeze({ kind: 'index', index: indexValue }));
+    } else {
+      throw new TypeError(`${context}[${position}] is not a supported structured segment`);
+    }
+  }
+  return Object.freeze(address);
+}
+
+/** Build the frozen scalar node shared by navigation and envelope normalization. */
+function scalarNode(address: readonly IAddressSegment[], fact: unknown): ISelectedNode {
+  if (!isScalar(fact)) {
+    throw new TypeError('A scalar node must carry a supported scalar value');
+  }
+  return Object.freeze({
+    kind: 'scalar',
+    selected: Object.freeze({ operation: 'value', address, fact }),
+  });
+}
+
+/**
+ * Validate and detach a node envelope supplied across a reader or source
+ * boundary. Only own data fields are inspected, so accessors never run; every
+ * address is copied and the result is frozen. A scalar node must be a `value`
+ * fact whose fact is a supported scalar, so a fabricated container shape can
+ * never masquerade as selected content. Whether the node answers the address a
+ * caller requested is the caller's check.
+ * @alpha
+ */
+export function normalizeSelectedNode(candidate: unknown): ISelectedNode {
+  const kindDescriptor = isPlainEnvelope(candidate) ? Object.getOwnPropertyDescriptor(candidate, 'kind') : undefined;
+  const kind: unknown = kindDescriptor !== undefined && 'value' in kindDescriptor ? kindDescriptor.value : undefined;
+  switch (kind) {
+    case 'scalar': {
+      const selected = envelopeFields(envelopeFields(candidate, ['kind', 'selected'], 'Selected node').get('selected'),
+        ['operation', 'address', 'fact'], 'Selected node fact');
+      if (selected.get('operation') !== 'value') {
+        throw new TypeError('A scalar node must carry a value fact');
+      }
+      return scalarNode(copyEnvelopeAddress(selected.get('address'), 'Selected node address'), selected.get('fact'));
+    }
+    case 'record': {
+      const fields = envelopeFields(candidate, ['kind', 'address'], 'Selected record node');
+      return Object.freeze({ kind: 'record', address: copyEnvelopeAddress(fields.get('address'), 'Selected node address') });
+    }
+    case 'array': {
+      const fields = envelopeFields(candidate, ['kind', 'address', 'length'], 'Selected array node');
+      const length = fields.get('length');
+      if (typeof length !== 'number' || !Number.isSafeInteger(length) || length < 0) {
+        throw new TypeError('A selected array node needs a nonnegative integer length');
+      }
+      return Object.freeze({ kind: 'array', address: copyEnvelopeAddress(fields.get('address'), 'Selected node address'), length });
+    }
+    default:
+      throw new TypeError('Selected node must be a scalar, record or array envelope');
+  }
+}
+
+/**
+ * Validate and detach a selected fact supplied across a reader, source or
+ * provider boundary. Each own data field and array slot is read once and the
+ * returned frozen fact is built from exactly those values, so what a caller
+ * returns to an author or records as evidence is precisely what was
+ * validated. Accessors never run; arrays with iteration, method or prototype
+ * behavior of their own are rejected. Presence facts must be booleans, length
+ * facts nonnegative integers and key facts dense unique strings; a `value`
+ * fact is a supported scalar or a supported container detached as an
+ * immutable snapshot. Whether the fact answers the operation and address a
+ * caller requested is the caller's check.
+ * @alpha
+ */
+export function normalizeSelectedFact(candidate: unknown): ISelectedFact {
+  const fields = envelopeFields(candidate, ['operation', 'address', 'fact'], 'Selected fact');
+  const operation = fields.get('operation');
+  const address = copyEnvelopeAddress(fields.get('address'), 'Selected fact address');
+  const fact = fields.get('fact');
+  switch (operation) {
+    case 'value':
+      return Object.freeze({ operation, address, fact: isScalar(fact) ? fact : decodeSnapshot(encodeSnapshot(fact)) });
+    case 'own':
+    case 'membership':
+      if (typeof fact !== 'boolean') {
+        throw new TypeError('A presence fact must be a boolean');
+      }
+      return Object.freeze({ operation, address, fact });
+    case 'length':
+      if (typeof fact !== 'number' || !Number.isSafeInteger(fact) || fact < 0) {
+        throw new TypeError('A length fact must be a nonnegative integer');
+      }
+      return Object.freeze({ operation, address, fact });
+    case 'keys': {
+      const keys = envelopeSlots(fact, 'Key enumeration');
+      if (!keys.every((key): key is string => typeof key === 'string') || new Set(keys).size !== keys.length) {
+        throw new TypeError('A key enumeration must contain unique strings');
+      }
+      return Object.freeze({ operation, address, fact: Object.freeze([...keys]) });
+    }
+    default:
+      throw new TypeError('Selected fact has an unsupported operation');
+  }
+}
+
+/**
+ * Select the node at one exact address without traversing siblings or
+ * descendants. Intermediate steps use the same Property/Index lookup rules as
+ * {@link observe}; the selected container's own supported surface is validated
+ * so a view never exposes an unsupported shape. The empty address names the
+ * root, which must itself be a record or array: a scalar root has no member
+ * address at which its value could be observed.
+ * @alpha
+ */
+export function navigate(root: unknown, address: readonly IAddressSegment[]): ISelectedNode {
+  const copied = copyEnvelopeAddress(address, 'Navigation address');
+  let target: unknown = root;
+  let targetPath = '$';
+  if (copied.length > 0) {
+    const selected = observeAt(root, copied, 'value', '$');
+    target = selected.fact;
+    targetPath = copied.reduce(childPath, '$');
+  }
+  if (target !== null && typeof target === 'object') {
+    if (Array.isArray(target)) {
+      assertArraySurface(target, targetPath);
+      return Object.freeze({ kind: 'array', address: copied, length: target.length });
+    }
+    assertRecordChain(target, targetPath);
+    return Object.freeze({ kind: 'record', address: copied });
+  }
+  if (copied.length === 0) {
+    unsupported(targetPath, 'navigation root must be a record or array');
+  }
+  if (!isScalar(target)) {
+    unsupported(targetPath, typeof target);
+  }
+  return scalarNode(copied, target);
+}
+
 /** Observe exactly the requested fact; no sibling or whole-tree read is implied. */
 /**
  * Compute one literal supported fact without traversing unrelated descendants

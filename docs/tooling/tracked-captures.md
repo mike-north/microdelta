@@ -40,8 +40,8 @@ materializeOutput, project, projectFrom, and observeMemberOrder. Receiver
 allowances resolve from the owning Tracking and Materialization declarations
 and cover only that receiver; arguments and referenced values must still carry
 their own tracked evidence or be locally declared. Other Materialization methods
-do not inherit receiver authority. A lazy scalar view returned by Materialization
-preserves Tracking's canonical brand through its generated alpha declaration;
+do not inherit receiver authority. A lazy scalar or nested view returned by
+Materialization preserves Tracking's canonical brand through its generated alpha declaration;
 detached output does not become tracked because Materialization produced it.
 
 External captures are also accepted when the reference is one of the allowlisted
@@ -62,7 +62,7 @@ failure. A bare scalar cell remains untracked.
 The rule checks actual TypeScript programs and generated declarations. Missing
 type services fail with a diagnostic. The declaration fixture compiles an
 alpha consumer against generated Tracking, Materialization, Value, and producer
-rollups; it proves lazy scalar-view brand preservation, detached-output
+rollups; it proves lazy scalar- and nested-view brand preservation, detached-output
 isolation, and exact receiver identity, then separately asserts that producer
 public rollups hide their alpha-only contracts.
 

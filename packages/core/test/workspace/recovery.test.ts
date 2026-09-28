@@ -15,10 +15,10 @@
 import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
 import { createNodeClock } from '@microdelta/machine-node';
 
-import { ResolutionError, SupervisionError } from '../../src/index.js';
+import { ResolutionError, SupervisionError, openWorkspace } from '../../src/index.js';
 import type { IRecoveryResult, IStepDescriptor } from '../../src/index.js';
 import { openHistory } from '../durable-history/support.js';
-import { resetWorld } from './fixture.js';
+import { composeContributors, resetWorld } from './fixture.js';
 import type { IMemberKey, IVariation, IWorld } from './fixture.js';
 import { environment, freshRequestKey, locatorOf, logicalStore, openSession, runReport, tempStore } from './support.js';
 import type { ISession, ITempStore } from './support.js';
@@ -161,6 +161,26 @@ describe('normal entry operation', () => {
       expect(world.finalities).toEqual({ 'person:ada': 1, 'person:ben': 1 });
       expect(locatorOf(fresh.outcomes['person:ada'])).toBe(refs['person:ada']);
     });
+  });
+
+  test('a normal request after the run\'s writer lease expired re-acquires a fresh lease instead of failing', async () => {
+    // Regression: renewing an expired lease throws History's stale-writer
+    // error; the run's writer port kept that stale lease, so every later
+    // normal request in the same run failed.
+    const workspace = openWorkspace({ location: store.location, logicalStore, leaseMilliseconds: 250 });
+    const contributors = composeContributors();
+    try {
+      const result = await workspace.run({ authoring: contributors.authoring, composition: contributors.composition, environment }, async (run) => {
+        const first = await run.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        const second = await run.resolve(contributors.steps['person:ben'].summary, { requestKey: freshRequestKey() });
+        return [first.kind, second.kind];
+      });
+      expect(result.value).toEqual(['published', 'published']);
+      expect(result.diagnostics).toEqual([]);
+    } finally {
+      workspace.close();
+    }
   });
 
   test('an empty request key is rejected before any work', async () => {

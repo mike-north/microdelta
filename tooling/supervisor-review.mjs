@@ -3,13 +3,16 @@
  * This repository-scoped command binds a supervisor's review decision to one
  * exact PR head before asking GitHub to merge only after its required gates pass.
  * It records judgment supplied by the operator; CI output cannot manufacture it.
+ * Changesets Version Packages PRs are refused here: they use the separate,
+ * human-operated release-review.mjs, which shares these gates but never arms
+ * auto-merge, so a maintainer's manual merge stays the only release decision.
  */
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 
 /** The only repository whose protection contract this command knows. */
-const TARGET_REPOSITORY = 'mike-north/microdelta';
+export const TARGET_REPOSITORY = 'mike-north/microdelta';
 
 /** These protected checks remain independent merge gates beside supervisor review. */
 export const REQUIRED_BRANCH_CHECKS = Object.freeze([
@@ -38,7 +41,7 @@ const COPILOT_REVIEWER_LOGINS = new Set([
 const ACCEPTED_CHECK_BUCKETS = new Set(['pass', 'pending', 'skipping']);
 
 /** Validate human-supplied review evidence before any network call or status write. */
-function validateRequest(request) {
+export function validateRequest(request) {
   if (!Number.isSafeInteger(request.pullRequestNumber) || request.pullRequestNumber < 1) {
     throw new Error('Pull request number must be a positive integer.');
   }
@@ -54,7 +57,7 @@ function validateRequest(request) {
 }
 
 /** Fail closed unless the current main-branch rule contains the complete review and CI gate. */
-function validateProtection(protection, defaultBranch) {
+export function validateProtection(protection, defaultBranch) {
   if (protection.branch !== defaultBranch) throw new Error('Protection readback did not match the repository default branch.');
   if (!protection.requiresPullRequest) throw new Error('Main branch protection does not require pull requests.');
   if (!protection.strict) throw new Error('Main branch protection does not require an up-to-date base.');
@@ -89,7 +92,7 @@ function validatePullRequest(pullRequest, request, defaultBranch) {
 }
 
 /** Require every protected CI context to be visible and neither failed nor cancelled. */
-function validateChecks(checks) {
+export function validateChecks(checks) {
   const bucketsByName = new Map();
   for (const check of checks) {
     const buckets = bucketsByName.get(check.name) ?? [];
@@ -111,7 +114,7 @@ function validateChecks(checks) {
 }
 
 /** Require a submitted Copilot review on the exact head and reject outstanding requests. */
-function validateCopilotReview(reviewState, expectedHeadOid) {
+export function validateCopilotReview(reviewState, expectedHeadOid) {
   if (!Array.isArray(reviewState.reviews) || !Array.isArray(reviewState.pendingRequests)) {
     throw new Error('GitHub Copilot review evidence could not be read completely.');
   }
@@ -293,7 +296,7 @@ export function createGitHubApi(repositoryName, runJson = ghJson) {
     },
     /** Read PR lifecycle state and all review threads so pagination cannot hide unresolved discussion. */
     async readPullRequest(number) {
-      const query = `query($owner:String!,$name:String!,$number:Int!,$after:String){repository(owner:$owner,name:$name){pullRequest(number:$number){id number title state isDraft baseRefName headRefName headRefOid url mergedAt autoMergeRequest{enabledAt} reviewThreads(first:100,after:$after){nodes{isResolved} pageInfo{hasNextPage endCursor}}}}}`;
+      const query = `query($owner:String!,$name:String!,$number:Int!,$after:String){repository(owner:$owner,name:$name){pullRequest(number:$number){id number title state isDraft baseRefName headRefName headRepository{nameWithOwner} headRefOid url mergedAt autoMergeRequest{enabledAt} reviewThreads(first:100,after:$after){nodes{isResolved} pageInfo{hasNextPage endCursor}}}}}`;
       let after = null;
       let pullRequest;
       let unresolvedThreads = 0;
@@ -311,8 +314,10 @@ export function createGitHubApi(repositoryName, runJson = ghJson) {
         number: pullRequest.number,
         state: pullRequest.state,
         isDraft: pullRequest.isDraft,
+        title: pullRequest.title,
         baseRefName: pullRequest.baseRefName,
         headRefName: pullRequest.headRefName,
+        headRepositoryNameWithOwner: pullRequest.headRepository?.nameWithOwner ?? null,
         headRefOid: pullRequest.headRefOid,
         url: pullRequest.url,
         nodeId: pullRequest.id,

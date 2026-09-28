@@ -1,9 +1,13 @@
 {
   "name": "microdelta",
   "version": "0.0.0",
-  "private": true,
   "description": "Persisted incremental analysis; implementation in progress",
   "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mike-north/microdelta.git",
+    "directory": "packages/core"
+  },
   "type": "module",
   "engines": {
     "node": ">=20"
@@ -21,7 +25,8 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "!dist/api-temp"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json && api-extractor run --config api-extractor-conformance.json",
@@ -44,5 +49,8 @@
     "@microdelta/resolution": "0.0.0",
     "@microdelta/tracking": "0.0.0",
     "@microdelta/value": "0.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
   }
 }

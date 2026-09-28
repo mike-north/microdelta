@@ -233,5 +233,6 @@ consumers, and reviewed API reports. For implementation work, follow
 [delivery conventions](ENG_TEAM_INSTRUCTIONS.md): derive outcome assertions from
 the owning contract before changing software, observe the expected failure, and
 document durable intent in code. Contributors open scoped PRs for supervisory
-review; only the supervisor merges accepted work. Packages remain private and
-unpublished.
+review; only the supervisor merges accepted work. No implementation release has
+been published: npm holds only `0.0.0` namespace placeholders. Merging the
+reviewed Version Packages PR is the release decision; see [releasing](docs/releasing.md).

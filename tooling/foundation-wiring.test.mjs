@@ -165,3 +165,20 @@ test('skipping an import, declaration, or API report checker is detected', async
   noTest.workflow = noTest.workflow.replace('- run: npm test', '- run: true');
   assert.match(missingFoundationGates(noTest).join('\n'), /CI.*npm test/u);
 });
+
+test('the release workflow audit and first-party graph check are required checks', async () => {
+  const workspace = await readJson('package.json');
+  const names = ['core', 'definition', 'tracking', 'history', 'value', 'materialization'];
+  const packages = Object.fromEntries(await Promise.all(names.map(async name => [name, await readJson(`packages/${name}/package.json`)])));
+  const inputs = {
+    packages,
+    workflow: await readFile(path.join(root, '.github/workflows/check.yml'), 'utf8'),
+    extractors: await extractors(),
+    eslintConfig: await readFile(path.join(root, 'eslint.config.mjs'), 'utf8'),
+  };
+  assert.match(workspace.scripts['check:workspace'], /npm run check:release/u);
+  const omitted = { ...workspace, scripts: { ...workspace.scripts, 'check:workspace': workspace.scripts['check:workspace'].replace('"npm run check:release"', '') } };
+  assert.ok(missingFoundationGates({ ...inputs, workspace: omitted }).includes('check:workspace skips npm run check:release'));
+  const hollow = { ...workspace, scripts: { ...workspace.scripts, 'check:release': 'node tooling/release-workflow.mjs' } };
+  assert.ok(missingFoundationGates({ ...inputs, workspace: hollow }).includes('check:release skips node tooling/release-graph.mjs'));
+});

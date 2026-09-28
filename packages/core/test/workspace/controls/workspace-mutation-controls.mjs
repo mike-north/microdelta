@@ -51,6 +51,7 @@ const controls = [
   { name: 'request diagnostics are not collected by the run', target: 'supervision', anchor: 'diagnostics.push(...outcome.diagnostics);', replacement: 'void outcome;' },
   { name: 'Resolution uses a fixed environment instead of the selected one', target: 'workspace', anchor: "                    environment: runOptions.environment,\n                    history,", replacement: "                    environment: 'env:fixture',\n                    history," },
   { name: 'a closed run can still read results', target: 'workspace', anchor: 'if (!active) {', replacement: 'if (false) {' },
+  { name: 'an expired writer lease is kept instead of re-acquired', target: 'workspace', anchor: 'if (!(error instanceof StaleWriterError)) {', replacement: 'if (true) {' },
   { name: 'the example counts pending reviews', target: 'activity', anchor: "review.state === 'submitted' && ", replacement: '' },
   { name: 'the example window end is inclusive', target: 'activity', anchor: 'return time >= Date.parse(`${window.start}T00:00:00Z`) && time < Date.parse(', replacement: 'return time >= Date.parse(`${window.start}T00:00:00Z`) && time <= Date.parse(' },
 ];

@@ -72,10 +72,28 @@ so review can assess them.
   callbacks and its declared children, every declared input slot's content
   (Tracking's MDS1 fingerprint, slot-name order) and every declared helper's
   source text. Deriving it reads source text; it never invokes author code.
-- **Reused request key.** A normal request whose derived attempt already
-  committed with the same intent returns that committed result without
-  executing; an incomplete or unsuccessful earlier attempt under the same key
-  is rejected (`invalid-request`), never resumed automatically.
+- **Reused request key.** Before admission, a normal request derives its
+  execution identity and rejects a key already used for that invocation:
+  committed, incomplete or unsuccessful (`invalid-request`, pointing to
+  `recover`) or a different intent (`wrong-intent`). It never serves old work
+  as new or resumes it. (The first implementation served a committed attempt
+  as `published`; see *Author-requested peer review*.)
+- **Reuse allocates no attempt.** Finality-true and validated reuse record
+  acceptance without an attempt, so `recover` for such a request key reports
+  `absent`; recovery addresses admitted executions only.
+- **Check-only runs current finality.** `check` evaluates the current finality
+  hook (policy evaluation, an author callback) but never runs a source check,
+  a body, admission or a write.
+- **Candidates by subject and version.** A candidate's recorded step
+  descriptor is parsed but not compared with the requested step; the scoped
+  subject is the history identity (RES-001), and each consumed child is
+  reconnected through its witness.
+- **Implementation identity is source text.** Intent digests, like Tracking's
+  MDF1 implementation evidence, identify callbacks by
+  `Function.prototype.toString`. Two closures with equal source text but
+  different captured values are indistinguishable, so a saved key could
+  recover an execution whose closure state differed. This is the existing
+  Tracking limit (closure soundness is not claimed), not a new one.
 - **Attempt ending after explicit check retention (History contract gap).**
   An admitted source check that retains its previous result produces no new
   result. History's `abandonAttempt` offers only `failed` or `interrupted`, so
@@ -125,6 +143,42 @@ Added after first green, each then required by a mutation control:
 - a check that read its previous result stays eligible later;
 - one finality evaluation per direct invocation within a request.
 
+Also added after first green (passed on first run): a child refused during an
+admitted body refuses the summary and ends its attempt without a result.
+
+## Author-requested peer review
+
+A read-only reviewer subagent reviewed the branch at `1718523`. Findings and
+dispositions:
+
+- **High, fixed.** A child failure (for example a throwing child finality
+  hook) rejected into the memo body; a body that caught it could publish a
+  fallback with no child evidence, reused indefinitely afterwards. Regression
+  test *a body that swallows a failed child call cannot publish* was written
+  first and **failed** (no error, fallback published). Any failed child
+  resolution is now recorded in the executing frame and prevents publication.
+- **Medium, fixed.** A normal request reusing a key whose execution had
+  committed with the same intent was served that old result as `published`
+  after admission. Regression test *a normal retry with an already committed
+  key is rejected before admission* **failed** first (no error). Keys are now
+  checked before admission (see *Reused request key*).
+- **Medium, disclosed.** Explicit check retention ends its attempt
+  `interrupted`, so recovery reports `unsuccessful` for a successful retention.
+  A test now documents this; it is the History contract gap listed above.
+- **Low, fixed.** The memo invocation now opens before the claim; a failed
+  retention acceptance ends its attempt; attempts that cannot be ended are
+  reported as diagnostics.
+- **Low, disclosed.** Closure-state identity, reuse without attempts,
+  check-only finality and subject-scoped candidates (listed above). The
+  evidence module header now states that malformed or unsupported witnesses
+  are honest misses by design.
+- **Test naming, fixed.** The three integrity cases all fail at the
+  exact-dependency membership check; they are retitled accordingly. The later
+  `readEnvelope` and scope checks are defensive: History already rejects a
+  dangling or other-scope dependency at staging and on read.
+- **Low, not changed.** Raw History errors from `publishAttempt` (for example
+  a stale lease) propagate unwrapped as History's typed errors.
+
 **Gate enrollment (tooling, test first).** A new negative assertion in
 `tooling/foundation-wiring.test.mjs` requires a skipped Resolution build to be
 reported. Against the previous `foundation-wiring.mjs` it failed
@@ -133,7 +187,7 @@ problems reported); with Resolution enrolled, 4/4 pass.
 
 ## Contract coverage (assembly suites over real durable History)
 
-`packages/core/test/resolution`, 51 tests in three suites. Each "session" opens
+`packages/core/test/resolution`, 55 tests in three suites. Each "session" opens
 the real SQLite file, a fresh composition, observer and Resolution, and closes
 the file; nothing survives between sessions but durable History.
 
@@ -163,7 +217,8 @@ facade's `test:unit`.
 The first run rejected 19 of 20: disabling request-local sharing survived,
 because the request-key-derived attempt identity already prevented a second
 check. The consumed-change test now also requires one finality evaluation; the
-final run rejected **20 of 20**, baseline and restored build 51/51.
+run then rejected 20 of 20. After the peer-review repairs two controls were
+added; the final run rejected **22 of 22**, baseline and restored build 55/55.
 
 | Planted defect | Tests failing |
 | --- | --- |
@@ -186,11 +241,20 @@ final run rejected **20 of 20**, baseline and restored build 51/51.
 | declared helpers are not tracked | 4 |
 | the author callback is not tracked as its own implementation | 3 |
 | direct invocations are not shared within a request | 1 |
+| a body that swallowed a failed child still publishes | 1 |
+| a committed request key is served again by a normal request | 1 |
 | a post-commit observer failure fails the call | 1 |
 
 ## Repository gates
 
-Recorded under *Final gate results* at the PR head.
+Run sequentially at `f64c508` (the following commit changes only this record):
+
+| Command | Result |
+| --- | --- |
+| `npm run build` | exit 0 |
+| `npm run check` | exit 0 (strict types, portable types, type-aware lint, imports, declarations, API reports, fixtures, suppressions, wiring) |
+| `npm test` | exit 0: tooling 164/164; facade Jest 99/99 (durable History 44, Resolution 55), facade controls judge 5/5, facade tsd; Resolution Jest 3/3, tsd and public-consumer check; every other workspace and experiment suite passing |
+| `node packages/core/test/resolution/controls/resolution-mutation-controls.mjs` | PASS: 22 of 22 controls rejected; baseline and restored 55/55 |
 
 ## Limits
 

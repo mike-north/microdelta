@@ -335,7 +335,7 @@ describe('correspondence, witnesses and historical integrity', () => {
     history.stageAttempt(lease, {
       attemptId: attempt.attemptId,
       payload: payloadOf(history, locator),
-      provenance: { format: original.provenance.format, formatVersion: original.provenance.formatVersion, content: rewrite(structuredClone(original.provenance.content) as Record<string, unknown>) },
+      provenance: { format: original.provenance.format, formatVersion: original.provenance.formatVersion, content: rewrite(JSON.parse(JSON.stringify(original.provenance.content)) as Record<string, unknown>) },
       dependencies: original.dependencies,
     });
     return history.publishAttempt(lease, attempt.attemptId).locator;
@@ -371,20 +371,39 @@ describe('correspondence, witnesses and historical integrity', () => {
     });
   });
 
-  test('a missing current child slot is an honest correspondence miss followed by normal execution', async () => {
+  test('a witness whose child slot has no current declaration is an honest correspondence miss', async () => {
+    const location = freshLocation();
+    const cold = await coldReport(location);
+    const archived = (child: Record<string, unknown>): Record<string, unknown> => ({
+      ...child,
+      slot: 'archived',
+      witness: { ...(child.witness as Record<string, unknown>), child: { scope: analysis, role: 'step', slot: 'archived', memberKey: 'person:ada' } },
+      binding: { path: ['child', 'archived'] },
+    });
+    const crafted = await withSession(location, async (session) => publishCrafted(session.history, session.lease, cold.summaries['person:ada'], rewriteChild(archived), 'crafted-slot'));
+    resetCounts();
+    await withSession(location, async (session) => {
+      const outcome = await session.resolve(session.contributors.steps['person:ada'].summary);
+      expect(outcome.misses.map((item) => [item.candidate.locator, item.reason])).toEqual([[crafted, 'correspondence']]);
+      expect(referenceOf(outcome)).toBe(cold.summaries['person:ada']);
+      expect(world.summaries['person:ada']).toBe(0);
+    });
+  });
+
+  test('a different subject now occupying the child slot is a correspondence miss followed by normal execution', async () => {
     const location = freshLocation();
     const cold = await coldReport(location);
     resetCounts();
     await withSession(location, async (session) => {
       const outcome = await session.resolve(session.contributors.steps['person:ada'].summary);
-      expect(outcome.misses.map((miss) => miss.reason)).toEqual(['correspondence']);
+      expect(outcome.misses.map((item) => item.reason)).toEqual(['correspondence']);
       expect(outcome.kind).toBe('published');
       expect(referenceOf(outcome)).not.toBe(cold.summaries['person:ada']);
       expect(payloadOf(session.history, referenceOf(outcome))).toEqual(expected['person:ada']);
-      // The child itself still reused its own valid result under current finality.
-      expect(world.checks['person:ada']).toBe(0);
-      expect(world.finalities['person:ada']).toBe(1);
-    }, { adaActivitySlot: 'events' });
+      // The new subject has no history, so its source ran cold; no finality was evaluated.
+      expect(world.checks['person:ada']).toBe(1);
+      expect(world.finalities['person:ada']).toBe(0);
+    }, { adaActivitySubject: 'activity:acme/widget:2026-Q1:person:ada:relocated' });
   });
 
   test.each([

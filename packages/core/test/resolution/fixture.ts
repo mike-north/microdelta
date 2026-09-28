@@ -175,9 +175,13 @@ function forged<T>(value: unknown): T {
   return value as T;
 }
 
-/** Deep copy of remote data so no stored result shares a container with the world. */
+/**
+ * Deep copy of remote data so no stored result shares a container with the
+ * world. JSON (the fixture data is JSON-safe) creates the copy in the test's
+ * own realm; a host `structuredClone` can return objects from another realm.
+ */
 function copy<T>(value: T): T {
-  return structuredClone(value);
+  return JSON.parse(JSON.stringify(value)) as T;
 }
 
 /**
@@ -302,8 +306,10 @@ export interface IVariation {
   readonly formatter?: 'original' | 'revised';
   /** Which uncalled helper implementation is registered. */
   readonly unusedHelper?: 'original' | 'revised';
-  /** Ada's activity slot name (structural correspondence). */
-  readonly adaActivitySlot?: string;
+  /** Ada's activity compatibility version. */
+  readonly adaActivityVersion?: number;
+  /** Ada's activity subject; a different subject occupying the same slot breaks correspondence. */
+  readonly adaActivitySubject?: string;
   /** The declared configuration. */
   readonly config?: IConfig;
 }
@@ -327,21 +333,25 @@ export function composeContributors(variation: IVariation = {}): IContributors {
   const builders = declarations<IFamily>();
   const { source, memo, compose } = builders;
   const adaFinality = variation.adaFinality ?? 'present';
+  const adaSubject = variation.adaActivitySubject ?? 'activity:acme/widget:2026-Q1:person:ada';
   const adaActivity = variation.adaSource === 'changed'
     ? source<IActivity>({
-        subject: 'activity:acme/widget:2026-Q1:person:ada',
+        subject: adaSubject,
+        version: variation.adaActivityVersion ?? 1,
         label: 'Ada activity',
         finality: ({ previous, inputs, helpers }) => helpers.acceptActivity(previous, inputs.config, 'person:ada'),
         run: ({ previous, inputs, helpers }) => helpers.checkActivity(previous, inputs.config, 'person:ada', 'changed retrieval'),
       })
     : adaFinality === 'absent'
       ? source<IActivity>({
-          subject: 'activity:acme/widget:2026-Q1:person:ada',
+          subject: adaSubject,
+          version: variation.adaActivityVersion ?? 1,
           label: 'Ada activity',
           run: ({ previous, inputs, helpers }) => helpers.checkActivity(previous, inputs.config, 'person:ada', 'retrieval'),
         })
       : source<IActivity>({
-          subject: 'activity:acme/widget:2026-Q1:person:ada',
+          subject: adaSubject,
+          version: variation.adaActivityVersion ?? 1,
           label: 'Ada activity',
           finality: ({ previous, inputs, helpers }) => helpers.acceptActivity(previous, inputs.config, 'person:ada'),
           run: ({ previous, inputs, helpers }) => helpers.checkActivity(previous, inputs.config, 'person:ada', 'retrieval'),
@@ -352,28 +362,16 @@ export function composeContributors(variation: IVariation = {}): IContributors {
     finality: ({ previous, inputs, helpers }) => helpers.acceptActivity(previous, inputs.config, 'person:ben'),
     run: ({ previous, inputs, helpers }) => helpers.checkActivity(previous, inputs.config, 'person:ben', 'retrieval'),
   });
-  const adaSlot = variation.adaActivitySlot ?? 'activity';
-  const adaSummary = adaSlot === 'activity'
-    ? memo({
-        subject: 'summary:acme/widget:2026-Q1:person:ada',
-        label: 'Ada summary',
-        version: variation.summaryVersion ?? 1,
-        children: { activity: adaActivity },
-        run: async ({ helpers, calls }) => {
-          const { data: activity } = await calls.activity();
-          return helpers.summarize(activity, helpers.format, 'person:ada');
-        },
-      })
-    : memo({
-        subject: 'summary:acme/widget:2026-Q1:person:ada',
-        label: 'Ada summary',
-        version: variation.summaryVersion ?? 1,
-        children: { events: adaActivity },
-        run: async ({ helpers, calls }) => {
-          const { data: activity } = await calls.events();
-          return helpers.summarize(activity, helpers.format, 'person:ada');
-        },
-      });
+  const adaSummary = memo({
+    subject: 'summary:acme/widget:2026-Q1:person:ada',
+    label: 'Ada summary',
+    version: variation.summaryVersion ?? 1,
+    children: { activity: adaActivity },
+    run: async ({ helpers, calls }) => {
+      const { data: activity } = await calls.activity();
+      return helpers.summarize(activity, helpers.format, 'person:ada');
+    },
+  });
   const benSummary = memo({
     subject: 'summary:acme/widget:2026-Q1:person:ben',
     label: 'Ben summary',
@@ -384,7 +382,7 @@ export function composeContributors(variation: IVariation = {}): IContributors {
       return helpers.summarize(activity, helpers.format, 'person:ben');
     },
   });
-  const ada = { key: 'person:ada', steps: [{ slot: adaSlot, declaration: adaActivity }, { slot: 'summary', declaration: adaSummary }] };
+  const ada = { key: 'person:ada', steps: [{ slot: 'activity', declaration: adaActivity }, { slot: 'summary', declaration: adaSummary }] };
   const ben = { key: 'person:ben', steps: [{ slot: 'activity', declaration: benActivitySource }, { slot: 'summary', declaration: benSummary }] };
   const helpers = [
     { slot: 'checkActivity', helper: checkActivity },
@@ -404,7 +402,7 @@ export function composeContributors(variation: IVariation = {}): IContributors {
     builders,
     composition,
     steps: {
-      'person:ada': { activity: step('person:ada', adaSlot), summary: step('person:ada', 'summary') },
+      'person:ada': { activity: step('person:ada', 'activity'), summary: step('person:ada', 'summary') },
       'person:ben': { activity: step('person:ben', 'activity'), summary: step('person:ben', 'summary') },
     },
     declarations: {

@@ -170,6 +170,20 @@ describe('current finality after restart', () => {
     }, { adaSource: 'changed' });
   });
 
+  test('an incompatible version has no eligible previous result: no finality, absence to the check, old history kept', async () => {
+    const location = freshLocation();
+    const first = await coldAda(location);
+    await withSession(location, async (session) => {
+      const outcome = await session.resolve(session.contributors.steps['person:ada'].activity);
+      expect(world.finalities['person:ada']).toBe(0);
+      expect(world.sawPrevious['person:ada']).toEqual([false, false]);
+      expect(outcome.kind).toBe('published');
+      // The version-1 candidate is outside the version-2 group, so it is not even a miss.
+      expect(outcome.misses).toEqual([]);
+      expect(session.history.findCandidates({ ...adaActivitySubject, version: 1 }).map((envelope) => envelope.reference.locator)).toEqual([first]);
+    }, { adaActivityVersion: 2 });
+  });
+
   test('a changed consumed input makes the candidate ineligible before finality', async () => {
     const location = freshLocation();
     await coldAda(location);

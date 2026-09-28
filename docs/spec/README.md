@@ -103,9 +103,10 @@ The `microdelta` facade preserves its public History Store API. The checked-out
 packages also contain bounded project-private alpha components: Value equality,
 snapshot and projection semantics; Tracking's semantic observer, called-function
 evidence, scoped capture and replay; History's exact selected-reading ports and
-its durable single-writer SQLite authority with an indexed exact reader; and
+its durable single-writer SQLite authority with an indexed exact reader;
 Materialization's selected scalar views, explicit detached output, and keyed
-projections. Machine supplies injected host capabilities, with the Node adapter
+projections; and Reuse Resolution's current source policy and direct-child
+validation over that authority. Machine supplies injected host capabilities, with the Node adapter
 owning async context, snapshots, and SHA-256. The [implementation map](../package-map.md)
 records each owner's current scope and missing roles.
 

@@ -16,6 +16,11 @@ export interface IAsyncContextCapability {
 }
 
 // @alpha
+export interface IClockCapability {
+    currentEpochMilliseconds(): number;
+}
+
+// @alpha
 export interface IMachine extends IAsyncContextCapability, ISnapshotCapability, ISha256Capability {
 }
 
@@ -28,5 +33,43 @@ export interface ISha256Capability {
 export interface ISnapshotCapability {
     snapshot<T>(value: T): T;
 }
+
+// @alpha
+export interface ISqliteCapability {
+    openSqlite(location: string): ISqliteConnection;
+}
+
+// @alpha
+export interface ISqliteConnection {
+    close(): void;
+    exec(sql: string): void;
+    prepare(sql: string): ISqliteStatement;
+    transaction<T>(operation: () => T & ISqliteSynchronousResult<T>): T;
+}
+
+// @alpha
+export interface ISqliteRow {
+    readonly [column: string]: ISqliteValue;
+}
+
+// @alpha
+export interface ISqliteRunResult {
+    readonly changes: number;
+}
+
+// @alpha
+export interface ISqliteStatement {
+    all(...values: readonly ISqliteValue[]): readonly ISqliteRow[];
+    get(...values: readonly ISqliteValue[]): ISqliteRow | undefined;
+    run(...values: readonly ISqliteValue[]): ISqliteRunResult;
+}
+
+// @alpha
+export type ISqliteSynchronousResult<T> = T extends {
+    readonly then: (...parameters: never[]) => unknown;
+} ? never : unknown;
+
+// @alpha
+export type ISqliteValue = string | number | null | Uint8Array;
 
 ```

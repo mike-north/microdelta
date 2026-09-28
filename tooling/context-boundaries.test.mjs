@@ -131,6 +131,52 @@ test('Node boundary permits shadowed names, ECMAScript globals, tests, tooling, 
   }
 });
 
+/** Every import form the existing rule inspects, applied to the native SQLite driver. */
+const sqliteDriverForms = [
+  "import Database from 'better-sqlite3'; void Database;",
+  "import type { Database } from 'better-sqlite3'; export type IDriver = Database;",
+  "import Database from 'better-sqlite3/lib/database.js'; void Database;",
+  "export { default } from 'better-sqlite3';",
+  "export * from 'better-sqlite3';",
+  "const driver = import('better-sqlite3'); void driver;",
+  "import driver = require('better-sqlite3'); void driver;",
+  "const driver = require('better-sqlite3'); void driver;",
+];
+
+test('the native SQLite driver is confined to the Node Machine implementation', async () => {
+  for (const owner of [
+    'packages/history',
+    'packages/history/test',
+    'packages/machine',
+    'packages/machine-node',
+    'packages/machine-node/test',
+    'packages/core',
+    'packages/tracking',
+    'experiments/exp-3',
+  ]) {
+    for (const source of sqliteDriverForms) {
+      const messages = await diagnostics(owner, source);
+      assert.ok(
+        messages.some(message => message.ruleId === rule && /better-sqlite3/u.test(message.message)),
+        `${owner}: ${source}: ${JSON.stringify(messages)}`,
+      );
+    }
+  }
+  for (const source of sqliteDriverForms) {
+    const messages = await diagnostics('packages/machine-node/src/node', source);
+    assert.deepEqual(messages.map(message => message.ruleId), [], `Node adapter: ${source}: ${JSON.stringify(messages)}`);
+  }
+  // The existing rule treats every TypeScript import type as an unanalyzed module
+  // path and fails closed, so a type-position driver import is refused everywhere.
+  for (const owner of ['packages/history', 'packages/machine-node/src/node']) {
+    const messages = await diagnostics(owner, "export type IDriver = import('better-sqlite3').Database;");
+    assert.deepEqual(messages.map(message => message.ruleId), [rule], `${owner}: ${JSON.stringify(messages)}`);
+  }
+  // Other third-party specifiers keep their existing unrestricted treatment.
+  const unrelated = await diagnostics('packages/history', "import { expectType } from 'tsd'; void expectType;");
+  assert.deepEqual(unrelated.map(message => message.ruleId), []);
+});
+
 test('portable experiment source rejects Node access while its explicit test harness may use it', async () => {
   for (const owner of ['experiments/exp-1', 'experiments/exp-2']) {
     for (const source of [

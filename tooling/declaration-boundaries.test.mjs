@@ -185,6 +185,8 @@ test('legitimate runtime package imports resolve built JS without TS path rewrit
   assert.equal(typeof definition.nameOf, 'function');
   assert.equal(typeof tracking.createTracking, 'function');
   assert.equal(typeof machineNode.createNodeMachine, 'function');
+  assert.equal(typeof machineNode.createNodeSqlite, 'function');
+  assert.equal(typeof machineNode.createNodeClock, 'function');
   for (const name of ['microdelta/conformance/store', '@microdelta/history/conformance/store']) {
     const entry = import.meta.resolve(name);
     assert.ok((await readFile(new URL(entry))).byteLength > 0, `${name} built entry`);

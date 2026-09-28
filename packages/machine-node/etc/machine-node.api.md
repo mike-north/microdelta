@@ -4,9 +4,19 @@
 
 ```ts
 
+// Warning: (ae-forgotten-export) The symbol "IClockCapability" needs to be exported by the entry point index.d.ts
+//
+// @alpha
+export function createNodeClock(): IClockCapability;
+
 // Warning: (ae-forgotten-export) The symbol "IMachine" needs to be exported by the entry point index.d.ts
 //
 // @alpha
 export function createNodeMachine(): IMachine;
+
+// Warning: (ae-forgotten-export) The symbol "ISqliteCapability" needs to be exported by the entry point index.d.ts
+//
+// @alpha
+export function createNodeSqlite(): ISqliteCapability;
 
 ```

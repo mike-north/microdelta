@@ -4,11 +4,13 @@
 
 ```ts
 
+import type { ICompletedNavigationReader } from '@microdelta/history';
 import type { ICompletedProjectionReader } from '@microdelta/history';
 import type { ICompletedResultReader } from '@microdelta/history';
 import type { ICompletedResultReference } from '@microdelta/history';
 import type { ICurrentFactProvider } from '@microdelta/tracking';
 import type { IDetachedOutput } from '@microdelta/tracking';
+import type { ITracked } from '@microdelta/tracking';
 import type { ITrackedBrand } from '@microdelta/tracking';
 import type { ITrackingBinding } from '@microdelta/tracking';
 import type { ITrackingObserver } from '@microdelta/tracking';
@@ -26,6 +28,7 @@ export interface IMaterialization {
     currentProvider(resolveReference: ICompletedReferenceResolver, fallback: ICurrentFactProvider): ICurrentFactProvider;
     materialize<T extends object>(reference: ICompletedResultReference, binding: ITrackingBinding): IMaterializedScalarView<T>;
     materializeOutput<T>(output: T): IDetachedOutput<T>;
+    materializeView<T extends object>(reference: ICompletedResultReference, binding: ITrackingBinding): IMaterializedView<T>;
     observeMemberOrder(binding: ITrackingBinding, keys: readonly string[]): readonly string[];
     project(binding: ITrackingBinding, fact: IValueProjectionFact): IMaterializedProjection;
     projectFrom(reference: ICompletedResultReference, binding: ITrackingBinding, descriptor: IValueProjectionDescriptor): IMaterializedProjection;
@@ -33,6 +36,7 @@ export interface IMaterialization {
 
 // @alpha
 export interface IMaterializationOptions {
+    readonly navigationReader?: ICompletedNavigationReader;
     readonly projectionReader?: ICompletedProjectionReader;
     readonly reader: ICompletedResultReader;
     readonly tracking: ITrackingObserver;
@@ -48,5 +52,8 @@ export type IMaterializedScalar = undefined | null | boolean | number | string;
 export type IMaterializedScalarView<T extends object> = {
     readonly [K in keyof T as T[K] extends IMaterializedScalar ? K : never]: T[K];
 } & ITrackedBrand;
+
+// @alpha
+export type IMaterializedView<T extends object> = ITracked<T>;
 
 ```

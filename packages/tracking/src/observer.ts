@@ -5,11 +5,21 @@
  * @packageDocumentation
  */
 import type { IAsyncContextCapability, ISha256Capability } from '@microdelta/machine';
-import { decodeSnapshot, encodeProjectionFact, encodeSelectedFact, encodeSnapshot, encodeValue, fingerprint, observe } from '@microdelta/value';
+import {
+  decodeSnapshot,
+  encodeProjectionFact,
+  encodeSelectedFact,
+  encodeSnapshot,
+  encodeValue,
+  fingerprint,
+  normalizeSelectedNode,
+  observe,
+} from '@microdelta/value';
 import type {
   IAddressSegment,
   IOperation,
   ISelectedFact,
+  ISelectedNode,
   IValueProjectionDescriptor,
   IValueProjectionFact,
 } from '@microdelta/value';
@@ -171,6 +181,24 @@ export interface ITrackingObserver {
 }
 
 /**
+ * Exact synchronous content behind one lazy tracked view, supplied by a
+ * materializer over one immutable retained result. Addresses are absolute from
+ * the bound result root, exactly as an in-memory wrapper's addresses are.
+ * Tracking decides which answers become observations; the source only answers
+ * the single request it receives and must never widen it. Asynchronous-only
+ * storage cannot implement this port: a Promise is a malformed answer.
+ * @alpha
+ */
+export interface ITrackedNodeSource {
+  /** Navigate to one node: a scalar value fact or a container shape, never a subtree. */
+  node(address: readonly IAddressSegment[]): ISelectedNode;
+  /** Select one own-presence, lookup-chain membership or key-enumeration fact. */
+  select(address: readonly IAddressSegment[], operation: 'own' | 'membership' | 'keys'): ISelectedFact;
+  /** Load the complete supported subtree at a container address, only for explicit output detachment. */
+  subtree(address: readonly IAddressSegment[]): unknown;
+}
+
+/**
  * Materialization can identify a wrapper and use its tracked reads, never unwrap
  * its source.
  * @alpha
@@ -206,6 +234,13 @@ export interface ITrackingMaterialization {
    * Calls outside a capture are no-ops; calls inherited from a closed capture reject before inspecting content.
    */
   recordCollectionOrder(binding: ITrackingBinding, keys: readonly string[]): void;
+  /**
+   * Create an observer-owned lazy view over a record or array root supplied by
+   * a node source. Every operation records exactly the evidence an in-memory
+   * wrapper records for the same data; navigation alone records nothing and
+   * requests no sibling, descendant or whole-subtree content.
+   */
+  lazyView<T extends object>(binding: ITrackingBinding, source: ITrackedNodeSource): ITracked<T>;
 }
 
 interface IBindingRecord {
@@ -215,8 +250,9 @@ interface IBindingRecord {
   readonly path: readonly string[];
 }
 
-/** One wrapper's frozen source, correspondence and current structured path. */
-interface IProxyRecord {
+/** One in-memory wrapper's frozen source, correspondence and current structured path. */
+interface ILocalProxyRecord {
+  readonly kind: 'local';
   readonly binding: IBindingRecord;
   /** The snapshot root follows the wrapper closure; it is not indexed by binding identity. */
   readonly root: object;
@@ -225,6 +261,31 @@ interface IProxyRecord {
   /** Full path from the wrapper root, re-evaluated by current-fact providers. */
   readonly address: readonly IAddressSegment[];
 }
+
+/**
+ * The per-root state shared by every lazy view navigated from one
+ * {@link ITrackingMaterialization.lazyView} call. Identity tokens make two
+ * navigations to the same retained container the same output source, as two
+ * in-memory wrappers over one snapshot node are.
+ */
+interface ILazyRoot {
+  readonly source: ITrackedNodeSource;
+  readonly identities: Map<string, object>;
+}
+
+/** One lazy view: its correspondence, container shape and position within its retained root. */
+interface ILazyProxyRecord {
+  readonly kind: 'lazy';
+  readonly binding: IBindingRecord;
+  readonly root: ILazyRoot;
+  /** The navigated container shape; array length is transport metadata until read. */
+  readonly node: Extract<ISelectedNode, { readonly kind: 'record' | 'array' }>;
+  /** Full path from the retained root, re-evaluated by current-fact providers. */
+  readonly address: readonly IAddressSegment[];
+}
+
+/** Observer ownership of either wrapper form; only this private table proves it. */
+type IProxyRecord = ILocalProxyRecord | ILazyProxyRecord;
 
 /** Capture-local facts are mutable only while their async execution is open. */
 interface ICaptureFrame {
@@ -516,6 +577,112 @@ function isThenableResult(value: unknown, ownership: WeakMap<object, IProxyRecor
   return false;
 }
 
+/** Compare two structured addresses segment by segment. */
+function sameAddress(left: readonly IAddressSegment[], right: readonly IAddressSegment[]): boolean {
+  if (left.length !== right.length) {
+    return false;
+  }
+  return left.every((segment, position) => {
+    const other = right[position];
+    return other !== undefined && (segment.kind === 'property'
+      ? other.kind === 'property' && other.key === segment.key
+      : other.kind === 'index' && other.index === segment.index);
+  });
+}
+
+/** Stable text key for a structured address, used only for in-process identity interning. */
+function addressKey(address: readonly IAddressSegment[]): string {
+  return JSON.stringify(address.map((segment) => segment.kind === 'property' ? ['p', segment.key] : ['i', segment.index]));
+}
+
+/**
+ * Validate a source's navigation answer as a Value node for exactly the
+ * requested address. A mismatched, malformed or asynchronous answer fails
+ * before anything is recorded or returned to the author.
+ */
+function checkedNode(candidate: unknown, address: readonly IAddressSegment[]): ISelectedNode {
+  const node = normalizeSelectedNode(candidate);
+  const answered = node.kind === 'scalar' ? node.selected.address : node.address;
+  if (!sameAddress(answered, address)) {
+    throw new TypeError('Tracked node source answered a different address');
+  }
+  return node;
+}
+
+/** Validate a source's selected presence or key fact for exactly the requested operation and address. */
+function checkedSelection(candidate: unknown, address: readonly IAddressSegment[], operation: 'own' | 'membership' | 'keys'): ISelectedFact {
+  if (!isSelectedFact(candidate)) {
+    throw new TypeError('Tracked node source returned a malformed selected fact');
+  }
+  const answered = ownDataField(candidate, 'operation').value;
+  const answeredAddress = ownDataField(candidate, 'address').value;
+  const fact = ownDataField(candidate, 'fact').value;
+  if (answered !== operation || !Array.isArray(answeredAddress)) {
+    throw new TypeError('Tracked node source answered a different operation');
+  }
+  const copied = copyAddress(answeredAddress as readonly IAddressSegment[]);
+  if (!sameAddress(copied, address)) {
+    throw new TypeError('Tracked node source answered a different address');
+  }
+  if (operation === 'keys') {
+    if (!isUniqueStringSequence(fact)) {
+      throw new TypeError('Tracked node source returned an unsupported key enumeration');
+    }
+    return Object.freeze({ operation, address: copied, fact: Object.freeze([...fact]) });
+  }
+  if (typeof fact !== 'boolean') {
+    throw new TypeError('Tracked node source returned an unsupported presence fact');
+  }
+  return Object.freeze({ operation, address: copied, fact });
+}
+
+/**
+ * Traps shared by in-memory and lazy container views: tracked views are
+ * immutable snapshots and expose no native reflection, so presence and key
+ * order stay explicit, observed operations.
+ */
+const immutableContainerTraps = {
+  ownKeys(): ArrayLike<string | symbol> {
+    throw new TypeError('Native reflection is unsupported; use observer.keys for supported records');
+  },
+  getOwnPropertyDescriptor(): PropertyDescriptor | undefined {
+    throw new TypeError('Native reflection is unsupported; use observer.hasOwn for supported fields');
+  },
+  getPrototypeOf(): object | null {
+    throw new TypeError('Prototype reflection is unsupported for tracked values');
+  },
+  setPrototypeOf(): boolean {
+    throw new TypeError('Tracked values are immutable snapshots');
+  },
+  isExtensible(): boolean {
+    throw new TypeError('Extensibility reflection is unsupported for tracked values');
+  },
+  preventExtensions(): boolean {
+    throw new TypeError('Tracked values are immutable snapshots');
+  },
+  set(): boolean {
+    throw new TypeError('Tracked values are immutable snapshots');
+  },
+  defineProperty(): boolean {
+    throw new TypeError('Tracked values are immutable snapshots');
+  },
+  deleteProperty(): boolean {
+    throw new TypeError('Tracked values are immutable snapshots');
+  },
+} as const satisfies ProxyHandler<object>;
+
+/** Map one string member key to the structured segment its container kind implies. */
+function memberSegment(isArray: boolean, key: string, unsupportedMessage: string): IAddressSegment {
+  if (isArray) {
+    const index = arrayIndex(key);
+    if (index === undefined) {
+      throw new TypeError(unsupportedMessage);
+    }
+    return { kind: 'index', index };
+  }
+  return { kind: 'property', key };
+}
+
 /** Create one semantic observer over fresh local tag and host capabilities. @alpha */
 export function createTrackingObserver(machine: ITrackingObserverHost): ITrackingObserver {
   const local = createTracking(machine);
@@ -619,10 +786,22 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
     },
     ownershipOf(value) {
       const owned = ownership.get(value);
-      return owned === undefined ? undefined : {
+      if (owned === undefined) {
+        return undefined;
+      }
+      if (owned.kind === 'lazy') {
+        return {
+          binding: owned.binding.descriptor,
+          address: owned.address,
+          value: loadLazySubtree(owned),
+          identity: lazyIdentity(owned),
+        };
+      }
+      return {
         binding: owned.binding.descriptor,
         address: owned.address,
         value: owned.value,
+        identity: owned.value,
       };
     },
     record(fact: IOutputFact): void {
@@ -683,36 +862,95 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
         }
         return Boolean(recordFact(binding, root, [...address, segment], 'membership').fact);
       },
-      ownKeys(): ArrayLike<string | symbol> {
-        throw new TypeError('Native reflection is unsupported; use observer.keys for supported records');
-      },
-      getOwnPropertyDescriptor(): PropertyDescriptor | undefined {
-        throw new TypeError('Native reflection is unsupported; use observer.hasOwn for supported fields');
-      },
-      getPrototypeOf(): object | null {
-        throw new TypeError('Prototype reflection is unsupported for tracked values');
-      },
-      setPrototypeOf(): boolean {
-        throw new TypeError('Tracked values are immutable snapshots');
-      },
-      isExtensible(): boolean {
-        throw new TypeError('Extensibility reflection is unsupported for tracked values');
-      },
-      preventExtensions(): boolean {
-        throw new TypeError('Tracked values are immutable snapshots');
-      },
-      set(): boolean {
-        throw new TypeError('Tracked values are immutable snapshots');
-      },
-      defineProperty(): boolean {
-        throw new TypeError('Tracked values are immutable snapshots');
-      },
-      deleteProperty(): boolean {
-        throw new TypeError('Tracked values are immutable snapshots');
-      },
+      ...immutableContainerTraps,
     });
-    ownership.set(proxy, { binding, root, value, address: copyAddress(address) });
+    ownership.set(proxy, { kind: 'local', binding, root, value, address: copyAddress(address) });
     return proxy;
+  }
+
+  /** Reject lazy work inherited from a closed frame before it can request retained content. */
+  function assertLazyFrameOpen(): void {
+    const frame = captures.getStore();
+    if (frame !== undefined && !frame.open) {
+      throw new Error('Cannot observe tracked input after its capture frame closed');
+    }
+  }
+
+  /** Record one validated selected fact from a lazy source; outside a capture nothing is encoded. */
+  function recordLazyFact(binding: IBindingRecord, fact: ISelectedFact): void {
+    if (captures.getStore() === undefined) {
+      return;
+    }
+    const selection: ICurrentFactRequest = { kind: 'selected', operation: fact.operation, address: fact.address, encodingVersion: 'MDO1' };
+    recordExternal(binding, selection, 'fact', fact.operation, encodeSelectedFact(fact));
+  }
+
+  /**
+   * Wrap one navigated container from a lazy source. Traps mirror
+   * {@link wrapContainer} operation for operation, but each read asks the
+   * source for exactly one node or fact at its full address, after first
+   * rejecting work inherited from a closed frame.
+   */
+  function wrapLazy(binding: IBindingRecord, root: ILazyRoot, node: ILazyProxyRecord['node']): object {
+    const isArray = node.kind === 'array';
+    const target: object = isArray ? [] : Object.create(null) as object;
+    const proxy = new Proxy(target, {
+      get(_target, key): unknown {
+        assertLazyFrameOpen();
+        if (typeof key === 'symbol') {
+          throw new TypeError('Symbol reflection and native array methods are unsupported by tracked values');
+        }
+        if (node.kind === 'array' && key === 'length') {
+          const fact: ISelectedFact = Object.freeze({ operation: 'length', address: node.address, fact: node.length });
+          recordLazyFact(binding, fact);
+          return node.length;
+        }
+        const nextAddress = copyAddress([...node.address, memberSegment(isArray, key, `Unsupported array property ${key}`)]);
+        const next = checkedNode(root.source.node(nextAddress), nextAddress);
+        if (next.kind === 'scalar') {
+          recordLazyFact(binding, next.selected);
+          return next.selected.fact;
+        }
+        return wrapLazy(binding, root, next);
+      },
+      has(_target, key): boolean {
+        assertLazyFrameOpen();
+        if (typeof key !== 'string') {
+          throw new TypeError('Symbol membership is unsupported by tracked values');
+        }
+        const nextAddress = copyAddress([...node.address, memberSegment(isArray, key, 'Unsupported array membership key')]);
+        const fact = checkedSelection(root.source.select(nextAddress, 'membership'), nextAddress, 'membership');
+        recordLazyFact(binding, fact);
+        return fact.fact === true;
+      },
+      ...immutableContainerTraps,
+    });
+    ownership.set(proxy, { kind: 'lazy', binding, root, node, address: node.address });
+    return proxy;
+  }
+
+  /**
+   * Load an explicitly output lazy container as detached supported data. The
+   * source must answer with the same container kind it navigated; the output
+   * port then validates, encodes and copies it without retaining the answer.
+   */
+  function loadLazySubtree(owned: ILazyProxyRecord): object {
+    const loaded: unknown = owned.root.source.subtree(owned.address);
+    if (loaded === null || typeof loaded !== 'object' || Array.isArray(loaded) !== (owned.node.kind === 'array')) {
+      throw new TypeError('Tracked node source returned a subtree of a different kind');
+    }
+    return loaded;
+  }
+
+  /** Intern one identity per retained container address so repeated navigations alias in output checks. */
+  function lazyIdentity(owned: ILazyProxyRecord): object {
+    const key = addressKey(owned.address);
+    let identity = owned.root.identities.get(key);
+    if (identity === undefined) {
+      identity = Object.freeze({});
+      owned.root.identities.set(key, identity);
+    }
+    return identity;
   }
 
   /**
@@ -771,7 +1009,7 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
         throw new TypeError('Tracked function properties are immutable and unsupported');
       },
     });
-    ownership.set(proxy, { binding, root, value: target, address: copyAddress(address) });
+    ownership.set(proxy, { kind: 'local', binding, root, value: target, address: copyAddress(address) });
     return proxy as T;
   }
 
@@ -928,6 +1166,17 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
       const request: ICurrentFactRequest = { kind: 'collection-order', keys: copiedKeys, encodingVersion: 'MDV1' };
       recordExternal(copyBinding(binding), request, 'collection-order', 'collection-order', encoded);
     },
+    lazyView<T extends object>(binding: ITrackingBinding, source: ITrackedNodeSource): ITracked<T> {
+      assertLazyFrameOpen();
+      const copied = copyBinding(binding);
+      const rootNode = checkedNode(source.node([]), []);
+      if (rootNode.kind === 'scalar') {
+        throw new TypeError('A lazy tracked view needs a record or array root');
+      }
+      const root: ILazyRoot = { source, identities: new Map() };
+      // As in tracked(), the hidden owner table rather than the cast is the runtime authority.
+      return wrapLazy(copied, root, rootNode) as ITracked<T>;
+    },
   });
 
   return Object.freeze({
@@ -993,6 +1242,15 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
     snapshotOutput: outputObservation.snapshotOutput,
     keys(value: ITracked<object>): readonly string[] {
       const owned = ownership.get(value);
+      if (owned?.kind === 'lazy') {
+        if (owned.node.kind !== 'record') {
+          throw new TypeError('keys needs an observer-owned record');
+        }
+        assertLazyFrameOpen();
+        const selected = checkedSelection(owned.root.source.select(owned.address, 'keys'), owned.address, 'keys');
+        recordLazyFact(owned.binding, selected);
+        return selected.fact as readonly string[];
+      }
       if (owned === undefined || Array.isArray(owned.value)) {
         throw new TypeError('keys needs an observer-owned record');
       }
@@ -1014,6 +1272,17 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
       const owned = ownership.get(value);
       if (owned === undefined) {
         throw new TypeError('hasOwn needs an observer-owned value');
+      }
+      if (owned.kind === 'lazy') {
+        const isArray = owned.node.kind === 'array';
+        if (isArray && key === 'length') {
+          throw new TypeError('Array length ownership is not a supported own-property fact');
+        }
+        assertLazyFrameOpen();
+        const nextAddress = copyAddress([...owned.address, memberSegment(isArray, key, 'Array own-property checks need a canonical nonnegative index')]);
+        const selected = checkedSelection(owned.root.source.select(nextAddress, 'own'), nextAddress, 'own');
+        recordLazyFact(owned.binding, selected);
+        return selected.fact === true;
       }
       if (Array.isArray(owned.value) && key === 'length') {
         throw new TypeError('Array length ownership is not a supported own-property fact');

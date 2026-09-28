@@ -121,6 +121,25 @@ export interface ISelectedFact {
 }
 
 // @alpha
+export type ISelectedNode =
+/** A supported scalar (undefined, null, boolean, number or string) read at the address. */
+    {
+    readonly kind: 'scalar';
+    readonly selected: ISelectedFact;
+}
+/** A string-keyed plain-data record, possibly with a supported custom prototype chain. */
+| {
+    readonly kind: 'record';
+    readonly address: readonly IAddressSegment[];
+}
+/** A standard array; `length` counts slots including holes. */
+| {
+    readonly kind: 'array';
+    readonly address: readonly IAddressSegment[];
+    readonly length: number;
+};
+
+// @alpha
 export interface ISha256Capability {
     sha256(input: string): string;
 }
@@ -132,6 +151,13 @@ export type ITracked<T extends object> = ITrackedView<T>;
 export interface ITrackedBrand {
     // (undocumented)
     readonly __microdeltaTracked: unique symbol;
+}
+
+// @alpha
+export interface ITrackedNodeSource {
+    node(address: readonly IAddressSegment[]): ISelectedNode;
+    select(address: readonly IAddressSegment[], operation: 'own' | 'membership' | 'keys'): ISelectedFact;
+    subtree(address: readonly IAddressSegment[]): unknown;
 }
 
 // @alpha
@@ -178,6 +204,7 @@ export interface ITrackingBinding {
 // @alpha
 export interface ITrackingMaterialization {
     assertFrameOpen(): void;
+    lazyView<T extends object>(binding: ITrackingBinding, source: ITrackedNodeSource): ITracked<T>;
     owns(value: unknown): value is ITracked<object>;
     read<V extends ITracked<object>, K extends keyof V>(value: V, key: K & (Extract<K, keyof ITrackedBrand> extends never ? unknown : never)): V[K] | (K extends string ? string extends keyof V ? undefined : never : never) | (K extends number ? number extends keyof V ? undefined : never : never);
     recordCollectionOrder(binding: ITrackingBinding, keys: readonly string[]): void;

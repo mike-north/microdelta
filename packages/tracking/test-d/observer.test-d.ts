@@ -6,6 +6,7 @@ import type {
   IOperation as ITrackingOperation,
   ISelectedFact as ITrackingSelectedFact,
   ITracked,
+  ITrackedNodeSource,
   ITrackedView,
   ITrackingObserver,
   ITrackingObserverHost,
@@ -157,3 +158,11 @@ expectType<never>(observer.snapshotOutput((value: number) => value));
 const mixedDetached = observer.snapshotOutput({ config, label: 'local' });
 expectType<string>(mixedDetached.label);
 expectError(readImportedDeclaration(mixedDetached.config));
+
+// A lazy view over a node source is typed exactly as an in-memory tracked wrapper.
+declare const nodeSource: ITrackedNodeSource;
+const lazy = observer.materialization.lazyView<{ readonly profile: { readonly name: string } }>(binding, nodeSource);
+expectType<ITracked<{ readonly profile: { readonly name: string } }>>(lazy);
+expectType<string>(lazy.profile.name);
+expectError(observer.materialization.lazyView<string>(binding, nodeSource));
+expectError(nodeSource.select([], 'value'));

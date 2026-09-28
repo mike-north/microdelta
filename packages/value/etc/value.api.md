@@ -49,6 +49,25 @@ export interface ISelectedFact {
 }
 
 // @alpha
+export type ISelectedNode =
+/** A supported scalar (undefined, null, boolean, number or string) read at the address. */
+    {
+    readonly kind: 'scalar';
+    readonly selected: ISelectedFact;
+}
+/** A string-keyed plain-data record, possibly with a supported custom prototype chain. */
+| {
+    readonly kind: 'record';
+    readonly address: readonly IAddressSegment[];
+}
+/** A standard array; `length` counts slots including holes. */
+| {
+    readonly kind: 'array';
+    readonly address: readonly IAddressSegment[];
+    readonly length: number;
+};
+
+// @alpha
 export interface ISha256Capability {
     sha256(input: string): string;
 }
@@ -80,10 +99,16 @@ export type IValueProjectionTraversal = {
 };
 
 // @alpha
+export function navigate(root: unknown, address: readonly IAddressSegment[]): ISelectedNode;
+
+// @alpha
 export function normalizeProjectionDescriptor(value: unknown): IValueProjectionDescriptor;
 
 // @alpha
 export function normalizeProjectionFact(fact: IValueProjectionFact): IValueProjectionFact;
+
+// @alpha
+export function normalizeSelectedNode(candidate: unknown): ISelectedNode;
 
 // @alpha
 export function observe(root: unknown, address: readonly IAddressSegment[], operation: IOperation): ISelectedFact;

@@ -22,6 +22,7 @@ export type {
 export { createMemoryStore } from './store/memory/index.js';
 export type { MemoryStoreOptions } from './store/memory/index.js';
 export type {
+  ICompletedNavigationReader,
   ICompletedProjectionReader,
   ICompletedResultReader,
   ICompletedResultReference,
@@ -33,6 +34,7 @@ export type {
   IAddressSegment,
   IOperation,
   ISelectedFact,
+  ISelectedNode,
   IValueProjectionDescriptor,
   IValueProjectionFact,
   IValueProjectionMember,

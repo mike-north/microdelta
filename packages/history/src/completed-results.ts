@@ -8,6 +8,7 @@ import type {
   IAddressSegment,
   IOperation,
   ISelectedFact,
+  ISelectedNode,
   IValueProjectionDescriptor,
   IValueProjectionFact,
 } from '@microdelta/value';
@@ -92,3 +93,25 @@ export interface ICompletedProjectionReader {
     descriptor: IValueProjectionDescriptor,
   ): IValueProjectionFact;
 }
+
+/**
+ * Optional capability for readers that can navigate one exact completed
+ * snapshot node by node, for lazy nested views. A navigation answer is the
+ * scalar value fact or the record/array shape at exactly the requested address;
+ * answering it must not read the root payload, a sibling or an unrequested
+ * descendant. Presence and key-order facts at nested addresses are answered by
+ * the same reader's {@link ICompletedResultReader.readSelected}. Every answer is
+ * synchronous: storage that can only load asynchronously cannot implement this
+ * capability. Scalar-only readers need not implement it.
+ * @alpha
+ */
+export interface ICompletedNavigationReader {
+  /** Navigate to exactly one node of this reference, never following a current pointer. */
+  readNode(reference: ICompletedResultReference, address: readonly IAddressSegment[]): ISelectedNode;
+  /**
+   * Return the complete supported data of one container subtree, only for an
+   * explicit output request. Record key order must be the snapshot's order.
+   */
+  readSubtree(reference: ICompletedResultReference, address: readonly IAddressSegment[]): unknown;
+}
+

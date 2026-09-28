@@ -105,15 +105,21 @@ snapshot and projection semantics; Tracking's semantic observer, called-function
 evidence, scoped capture and replay; History's exact selected-reading ports and
 its durable single-writer SQLite authority with an indexed exact reader;
 Materialization's selected scalar views, explicit detached output, and keyed
-projections; and Reuse Resolution's current source policy and direct-child
-validation over that authority. Machine supplies injected host capabilities, with the Node adapter
+projections; Reuse Resolution's current source policy and direct-child
+validation over that authority; and Run Supervision's scoped runs, admission and
+fixed observer positions. The facade composes these owners into a project-private
+alpha workspace path with normal and recovery entry operations, exercised by a
+checked-in [executable example](../../examples/contribution-report/README.md).
+Machine supplies injected host capabilities, with the Node adapter
 owning async context, snapshots, and SHA-256. The [implementation map](../package-map.md)
 records each owner's current scope and missing roles.
 
 Generated declaration tiers, API reports, package edges, and the supported typed
 capture boundary are checked by executable tooling. They do not establish
-arbitrary JavaScript closure soundness. The new components do not yet provide
-durable memoization through the authoring path, general fanout, or scale proof.
+arbitrary JavaScript closure soundness. The workspace path reuses retained
+results for the fixed two-contributor M3 shape across ordinary process restarts;
+independent-process kill-point and lost-acknowledgment acceptance, general
+fanout, and scale proof are not yet established.
 
 The [M2 evidence record](../validation/m2-2026-09-27.md) maps these bounded
 capabilities to current-head reviews, integrated checks, component merges, and

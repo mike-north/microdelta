@@ -30,8 +30,10 @@ supervised run and returns `{ context, value, diagnostics }`:
   started through it (`resolve`, `check`, `recover`, `ordinary`) have settled,
   including operations started while it waits and ones the body stopped
   awaiting early (a `Promise.all` whose sibling failed). The body's own value
-  or failure is what the run reports. `run.open` reports this state. After the
-  run actually closes, its operations reject with `run-closed` and admission
+  or failure is what the run reports. `run.open` reports this state. The run
+  closes in the same turn that observes no started work, so every operation is
+  either accepted and waited for or rejected before starting. After the run
+  actually closes, its operations reject with `run-closed` and admission
   requests, or asynchronous decisions arriving late, are denied.
 - **Requests.** `resolve(step, { requestKey })` is the normal entry
   operation; `recover(step, { requestKey })` the recovery entry operation;

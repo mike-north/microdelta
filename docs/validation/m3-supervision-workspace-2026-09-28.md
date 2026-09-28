@@ -49,7 +49,8 @@ so review can assess them.
   the environment is History's environment for every request of the run.
 - **Run lifetime.** A run accounts for every operation started through it
   (`resolve`, `check`, `recover`, `ordinary`), including operations started
-  while it waits, and closes only after its body and all of them settled. The
+  while it waits, and closes only after its body and all of them settled, in
+  the same synchronous turn that observes no started work. The
   body's own value or failure is reported; context, exact reads, the writer and
   observer/diagnostic accounting stay live until then. Promises an author
   creates outside the run's operations are not tracked (see Limitations).
@@ -186,7 +187,8 @@ test build, so controls plant into both emitted copies (four controls had
 escaped); and an unawaited escaped lookup crashed Jest under one control.
 After the run-lifetime repair below, three controls were added and two
 re-anchored: **PASS, 22 of 22 rejected** at `e791224`, baseline and restored
-62/62.
+62/62. After the closure-boundary repair: **PASS, 23 of 23** at `bed6afd`,
+baseline and restored 65/65.
 
 ## Acceptance mapping
 
@@ -287,17 +289,52 @@ it started* (5 tests), *started operations are not accounted to the run* (5),
 and admission controls were re-anchored. **PASS, 22 of 22 rejected**; baseline
 and restored 62/62.
 
+## Closure-boundary repair
+
+Supervisory and independent review of `9637739` confirmed the original awaited
+sibling case was fixed, but found a remaining race. `drain()` returned after
+observing no started work, and the run then yielded once more before setting
+`open = false`. An ordinary call queued in that gap was accepted and began, but
+was never waited for: the writer released and the run settled while it was
+active, and it later failed `run-closed`. Reviewers reproduced it through a
+component probe (body-scheduled depth 1; nested depth 5 from a participating
+operation of an awaited `Promise.all` with a failed sibling) and through the
+real facade (depth 1).
+
+**Tests first** (`182b823`). Microtask-depth sweeps assert the invariant for
+every depth: a late operation either never starts and is rejected `run-closed`,
+or begins and settles before the writer release and run settlement. Against
+`9637739` they **failed** at exactly the reported depths:
+
+- Supervision owner suite, *work started in any microtask around the final
+  quiescence check…* (`1:accepted-but-unaccounted`) and *nested work started
+  by a participating operation near closure…* (`5:accepted-but-unaccounted`);
+- real facade, *ordinary work queued in any microtask around the run's
+  closure…* (`1:accepted-but-unaccounted (run-closed)`), where the late
+  operation also uses `currentRun()` and `run.read`.
+
+**Repair** (`0df7881`). The run closes inside the drain, in the same
+synchronous turn that observes an empty started set, so no call can be
+accepted after the final check without being waited for. The original awaited
+sibling regressions still pass. `ISupervision.run`'s contract now describes the
+participating-work lifetime rather than body settlement. Owner suite 32/32,
+workspace suites 31/31.
+
+**Controls** (`bed6afd`). The drain control is re-anchored and a new control
+plants a yield between the final empty check and closing; all three sweeps
+reject it. **PASS, 23 of 23**, baseline and restored 65/65.
+
 ## Final gates
 
-Run sequentially by the implementer at `e791224` (Node v24.14.0, macOS),
-after the run-lifetime repair; later commits change only documentation.
+Run sequentially by the implementer at `bed6afd` (Node v24.14.0, macOS),
+after the closure-boundary repair; later commits change only documentation.
 
 | Command | Result |
 | --- | --- |
 | `npm run build` | exit 0 |
 | `npm run check` | exit 0 (strict and portable types, type-aware lint with the capture rule over packages, fixtures and the example, import boundaries including the example, declaration preflight, fixtures, wiring, release graph and workflow audit) |
-| `npm test` | exit 0. Tooling 291/291, including the real-workspace pack, isolated-install and public-declaration typecheck of every tarball (now including Supervision) and the installed Node SQLite check. Facade Jest 147/147 (durable History 44, Resolution 73, workspace 30), facade tsd and controls judge. Supervision Jest 30/30, tsd and public consumer. Example 2/2. All other suites passing |
-| Workspace mutation controls | PASS 22/22; baseline and restored 62/62 |
+| `npm test` | exit 0. Tooling 291/291, including the real-workspace pack, isolated-install and public-declaration typecheck of every tarball (now including Supervision) and the installed Node SQLite check. Facade Jest 148/148 (durable History 44, Resolution 73, workspace 31), facade tsd and controls judge. Supervision Jest 32/32, tsd and public consumer. Example 2/2. All other suites passing |
+| Workspace mutation controls | PASS 23/23; baseline and restored 65/65 |
 | Resolution mutation controls | not rerun (Resolution unchanged) |
 
 ## Limitations

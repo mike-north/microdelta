@@ -221,11 +221,18 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       return pending;
     }
 
-    /** Wait until every started operation, including ones started meanwhile, has settled. */
-    async function drain(): Promise<void> {
+    /**
+     * Wait until every started operation, including ones started meanwhile,
+     * has settled, then close the run in the same synchronous turn that
+     * observes no started work. Closing there, rather than after yielding back
+     * to the caller, leaves no window in which a queued call could be accepted
+     * yet not waited for: every later call is rejected as new work.
+     */
+    async function drainAndClose(): Promise<void> {
       while (started.size > 0) {
         await Promise.all([...started]);
       }
+      frame.open = false;
     }
 
     /** Offer a post-work ordinary event; a failure there is a diagnostic. */
@@ -283,8 +290,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       value = await scope.run(frame, async () => body(live));
     } finally {
       // The body's outcome is kept; work it already started still belongs to the run.
-      await drain();
-      frame.open = false;
+      await drainAndClose();
       try {
         writer.release();
       } catch (error: unknown) {

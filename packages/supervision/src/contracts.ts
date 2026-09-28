@@ -221,8 +221,14 @@ export interface ISupervision {
    */
   current(): IRunContext;
   /**
-   * Run `body` as one supervised run. The run closes when the body settles:
-   * its writer lease is released and later use of the run or its context fails.
+   * Run `body` as one supervised run. The run stays live until the body and
+   * every operation started through the run (including operations started
+   * while it waits) have settled; it closes in the same turn that observes no
+   * started work, so any operation is either accepted and waited for, or
+   * rejected before starting. Closing releases the writer lease; afterwards
+   * the run's operations and context lookups fail and admission is denied.
+   * The returned result carries the body's own value (or rejects with the
+   * body's own failure) and the diagnostics of all participating work.
    */
   run<T>(options: IRunOptions, body: (run: IRun) => T | Promise<T>): Promise<IRunResult<Awaited<T>>>;
 }

@@ -174,9 +174,10 @@ eligible previous result and do not invoke it. Thus changed retrieval implementa
 cannot be excused by an accepting hook. False or absent finality proceeds to normal
 source policy, whose explicit retention can address only the eligible previous
 reference. This order also applies when resolving a source beneath a cached
-consumer. A single top-level resolution may share already-established current
-acceptance of the same direct invocation; such evidence is not persisted as future
-permission. The [M3 plan](../plans/m3-contribution-analysis.md) records the bounded
+consumer. A single top-level resolution may reuse its in-memory verification
+outcome for the same direct invocation to avoid repeating hook evaluation within
+that resolution. Durable acceptance records remain separate historical evidence;
+neither form grants permission to skip current policy on a later resolution. The [M3 plan](../plans/m3-contribution-analysis.md) records the bounded
 authoring path and required hook/body-count assertions.
 
 Do not store a finality flag, state, callback answer, or equivalent assertion

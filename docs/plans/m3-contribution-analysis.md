@@ -253,7 +253,9 @@ never fall back to payload I/O. The production History representation therefore
 needs independently addressable selected content and indexed evidence alongside
 its immutable result envelope. A bounded test-first nested-access gate precedes
 adoption: prove unread sibling content is neither read nor observed, changed
-consumed content invalidates, and unprefetched nested reads work. The navigation port returns a tagged scalar selected fact, record shape or array
+consumed content invalidates, and unprefetched nested reads work.
+
+The navigation port returns a tagged scalar selected fact, record shape or array
 shape (including length), scoped to the exact reference and structured address.
 Shapes are transport metadata, never fabricated `ISelectedFact.fact` objects or
 semantic whole-container reads. An optional History reader capability preserves

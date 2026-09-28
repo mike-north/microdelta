@@ -57,6 +57,19 @@ async function expectSupervisionError(action: Promise<unknown> | (() => unknown)
   expect(caught instanceof SupervisionError ? caught.code : undefined).toBe(code);
 }
 
+/**
+ * Settle an escaped lookup into a value immediately, so a failing assertion
+ * earlier in a test is reported instead of surfacing as an unhandled rejection.
+ */
+function settled(promise: Promise<unknown>): Promise<{ readonly value?: unknown; readonly error?: unknown }> {
+  return promise.then((value: unknown) => ({ value }), (error: unknown) => ({ error }));
+}
+
+/** The Supervision code of a settled failure, if it is one. */
+function settledCode(result: { readonly error?: unknown }): string | undefined {
+  return result.error instanceof SupervisionError ? result.error.code : undefined;
+}
+
 /** What the recording Resolution double did, and hooks a test can set. */
 interface IDouble {
   /** The ports Supervision supplied, once the factory ran. */
@@ -231,13 +244,13 @@ describe('scoped run context (RUN-001, DOM-2)', () => {
     const gate = new Promise<void>((resolve) => {
       openGate = resolve;
     });
-    let escaped: Promise<unknown> | undefined;
+    let escaped: ReturnType<typeof settled> | undefined;
     let kept: IRun | undefined;
     let closure: (() => unknown) | undefined;
     await supervisor.run(runOptions().options, (run) => {
       kept = run;
       // Scheduled inside the run, so it carries the run's scope when it fires after close.
-      escaped = gate.then(() => supervisor.current());
+      escaped = settled(gate.then(() => supervisor.current()));
       closure = () => supervisor.current();
     });
     openGate();
@@ -246,7 +259,7 @@ describe('scoped run context (RUN-001, DOM-2)', () => {
     if (escaped === undefined || kept === undefined || closure === undefined) {
       return;
     }
-    await expectSupervisionError(escaped, 'run-closed');
+    expect(settledCode(await escaped)).toBe('run-closed');
     // A closure merely called later from outside carries no run at all.
     await expectSupervisionError(closure, 'outside-run');
     const lateRun = kept;
@@ -263,18 +276,18 @@ describe('scoped run context (RUN-001, DOM-2)', () => {
     const gate = new Promise<void>((resolve) => {
       openGate = resolve;
     });
-    let escaped: Promise<unknown> | undefined;
+    let escaped: ReturnType<typeof settled> | undefined;
     await expect(supervisor.run(options, async (run) => {
       await run.resolve(step, { requestKey: 'request:1' });
-      escaped = gate.then(() => supervisor.current());
+      escaped = settled(gate.then(() => supervisor.current()));
       throw new Error('body failed');
     })).rejects.toThrow('body failed');
     openGate();
-    expect(writer.releases.count).toBe(1);
     expect(escaped).toBeDefined();
     if (escaped !== undefined) {
-      await expectSupervisionError(escaped, 'run-closed');
+      expect(settledCode(await escaped)).toBe('run-closed');
     }
+    expect(writer.releases.count).toBe(1);
   });
 
   test('lookup while a composition is being constructed fails, even inside a live run', async () => {

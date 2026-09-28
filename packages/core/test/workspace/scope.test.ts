@@ -13,7 +13,7 @@
 import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
 
 import { SupervisionError, authoring, currentRun, openWorkspace } from '../../src/index.js';
-import type { IRunContext } from '../../src/index.js';
+import type { IWorkspaceRun } from '../../src/index.js';
 import { composeContributors, resetWorld } from './fixture.js';
 import type { IWorld } from './fixture.js';
 import { caughtCode, environment, locatorOf, logicalStore, openSession, runReport, tempStore } from './support.js';
@@ -50,16 +50,40 @@ describe('scoped run context (RUN-001, DOM-2)', () => {
     const gate = new Promise<void>((resolve) => {
       openGate = resolve;
     });
-    let escaped: Promise<IRunContext> | undefined;
+    let escaped: Promise<string | undefined> | undefined;
     try {
       await session.workspace.run({ authoring: session.contributors.authoring, composition: session.contributors.composition, environment }, () => {
-        escaped = gate.then(() => currentRun());
+        // Scheduled inside the run and settled into its error code at once, so it can never reject unhandled.
+        escaped = caughtCode(gate.then(() => currentRun()));
       });
       openGate();
       expect(escaped).toBeDefined();
       if (escaped !== undefined) {
-        const code = await caughtCode(escaped);
-        expect(code).toBe('run-closed');
+        expect(await escaped).toBe('run-closed');
+      }
+    } finally {
+      session.close();
+    }
+  });
+
+  test('an exact read through a run that has closed fails instead of reading', async () => {
+    const session = openSession(store.location);
+    try {
+      const { outcomes } = await runReport(session);
+      const ada = outcomes['person:ada'];
+      if (ada.kind === 'refused') {
+        throw new Error('expected a result for Ada');
+      }
+      const reference = ada.reference;
+      let kept: IWorkspaceRun | undefined;
+      await session.workspace.run({ authoring: session.contributors.authoring, composition: session.contributors.composition, environment }, (run) => {
+        kept = run;
+        expect(run.read<{ readonly name: string }>(reference).name).toBe('Ada');
+      });
+      const late = kept;
+      expect(late).toBeDefined();
+      if (late !== undefined) {
+        expect(await caughtCode(() => late.read(reference))).toBe('run-closed');
       }
     } finally {
       session.close();
@@ -127,6 +151,26 @@ describe('scoped run context (RUN-001, DOM-2)', () => {
     }
     expect(seen.filter((entry) => entry.startsWith('first:'))).toEqual(['first:env:first', 'first:env:first']);
     expect(seen.filter((entry) => entry.startsWith('second:'))).toEqual(['second:env:second', 'second:env:second']);
+  });
+
+  test('the selected environment scopes history: a run in another environment cannot reuse its results', async () => {
+    const cold = openSession(store.location);
+    try {
+      await runReport(cold);
+    } finally {
+      cold.close();
+    }
+    world = resetWorld();
+    const session = openSession(store.location);
+    try {
+      const other = await session.workspace.run({ authoring: session.contributors.authoring, composition: session.contributors.composition, environment: 'env:other' },
+        (run) => run.resolve(session.contributors.steps['person:ada'].summary, { requestKey: 'request:other-environment' }));
+      expect(other.value).toMatchObject({ kind: 'published' });
+      expect(world.summaries['person:ada']).toBe(1);
+      expect(world.contexts.map((context) => context.environment)).toEqual(['env:other']);
+    } finally {
+      session.close();
+    }
   });
 
   test('a new run identifier alone leaves eligible results reusable', async () => {

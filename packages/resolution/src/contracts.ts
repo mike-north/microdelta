@@ -88,7 +88,12 @@ export interface IExecutionAdmission {
  * Positions of Resolution's framework-owned lifecycle, in the order they can
  * occur for one step: verify candidates, evaluate finality, decide admission,
  * claim an attempt, execute, then publish, accept (ending the claim with
- * `release` when a check retained instead of publishing) or abandon. The sequence is
+ * `release` when a check retained instead of publishing) or abandon. `abandon`
+ * announces that History durably ended an admitted attempt without a result
+ * (failure, interruption or a refused child); `release` announces the durable
+ * ending after an explicit retention. Neither is announced when History could
+ * not record the ending. Both follow a commit, so an observer failure there is
+ * a diagnostic that never replaces the call's outcome. The sequence is
  * inspectable and cannot be reordered or replaced by an observer.
  * @alpha
  */

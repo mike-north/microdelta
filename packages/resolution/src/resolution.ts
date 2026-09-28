@@ -428,13 +428,27 @@ export function createResolution<TInputs extends object, THelpers extends object
   }
 
   /** End an attempt without a result; its failure never masks the original outcome. */
-  function abandon(request: IRequestContext, evidence: IStepEvidence, attemptId: number, outcome: 'failed' | 'interrupted', ending: Parameters<typeof endingRecord>[0]): void {
+  /**
+   * End an admitted attempt without a new result and report whether History
+   * durably recorded the ending. An unsuccessful ending (failure, interruption,
+   * refused child) is then announced as the `abandon` lifecycle event; an
+   * explicit check retention is a successful ending its caller announces as
+   * `release` instead. Nothing is announced when History could not record the
+   * ending: the attempt stays incomplete and recoverable, and a diagnostic says
+   * so. Neither an ending failure nor an observer failure at `abandon` (a
+   * post-commit position) replaces the caller's original outcome.
+   */
+  function abandon(request: IRequestContext, evidence: IStepEvidence, step: IBindingDescriptor, attemptId: number, outcome: 'failed' | 'interrupted', ending: Parameters<typeof endingRecord>[0]): boolean {
     try {
       history.abandonAttempt(leaseOf(request), { attemptId, outcome, evidence: endingRecord(ending) });
     } catch (error: unknown) {
-      // An attempt that cannot be ended stays incomplete and recoverable; the caller still sees the original outcome.
-      evidence.diagnostics.push(`Attempt ${String(attemptId)} could not be ended: ${describe(error)}`);
+      evidence.diagnostics.push(`Attempt ${String(attemptId)} of ${stepKey(step)} could not be ended: ${describe(error)}`);
+      return false;
     }
+    if (ending.ending !== 'retained') {
+      emit(request, evidence, step, 'abandon');
+    }
+    return true;
   }
 
   /** The durable identity of one admitted execution under this request. */
@@ -490,7 +504,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     try {
       emit(request, evidence, step, 'claim');
     } catch (error: unknown) {
-      abandon(request, evidence, attemptId, 'failed', { ending: 'observer-failure', detail: describe(error) });
+      abandon(request, evidence, step, attemptId, 'failed', { ending: 'observer-failure', detail: describe(error) });
       throw error;
     }
     return attemptId;
@@ -504,13 +518,13 @@ export function createResolution<TInputs extends object, THelpers extends object
   }): IStepResult {
     const lease = leaseOf(request);
     if (!isContainer(content.payload)) {
-      abandon(request, evidence, attemptId, 'failed', { ending: 'failed', detail: 'result root is not a record or array' });
+      abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'result root is not a record or array' });
       throw new ResolutionError('unsupported-result', `Step ${stepKey(step)} produced a result without a record or array root`);
     }
     try {
       history.stageAttempt(lease, { attemptId, payload: content.payload, provenance: provenanceRecord(content.provenance), dependencies: content.dependencies });
     } catch (error: unknown) {
-      abandon(request, evidence, attemptId, 'failed', { ending: 'failed', detail: describe(error) });
+      abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(error) });
       if (error instanceof TypeError) {
         throw new ResolutionError('unsupported-result', `Step ${stepKey(step)} produced unsupported result data: ${error.message}`, error);
       }
@@ -613,7 +627,7 @@ export function createResolution<TInputs extends object, THelpers extends object
           }
         });
       } catch (error: unknown) {
-        abandon(request, evidence, attemptId, 'failed', { ending: 'failed', detail: describe(error) });
+        abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(error) });
         if (error instanceof ResolutionError) {
           throw error;
         }
@@ -621,29 +635,30 @@ export function createResolution<TInputs extends object, THelpers extends object
       }
       const { minted } = ran.value;
       if (minted === undefined) {
-        abandon(request, evidence, attemptId, 'failed', { ending: 'failed', detail: 'invalid source outcome' });
+        abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'invalid source outcome' });
         throw new ResolutionError('invalid-outcome', `Source ${stepKey(step)} returned something other than a Resolution outcome envelope`);
       }
       if (minted.kind === 'retain') {
         const held = typeof minted.previous === 'object' && minted.previous !== null ? carriers.get(minted.previous) : undefined;
         if (eligible === undefined || held === undefined || held.token !== token || held.reference.locator !== eligible.reference.locator) {
-          abandon(request, evidence, attemptId, 'failed', { ending: 'failed', detail: 'invalid retention' });
+          abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'invalid retention' });
           throw new ResolutionError('invalid-retention', `Source ${stepKey(step)} retained something other than its own eligible previous result`);
         }
         let result: IStepResult;
         try {
           result = accept(request, evidence, step, 'check', eligible.reference, { basis: 'check', step, observations: ran.observations }, []);
         } catch (error: unknown) {
-          abandon(request, evidence, attemptId, 'failed', { ending: 'failed', detail: describe(error) });
+          abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(error) });
           throw error;
         }
         // The admitted claim produced no new result: end it with the retention as its evidence.
-        abandon(request, evidence, attemptId, 'interrupted', { ending: 'retained', detail: 'the source check explicitly retained its eligible previous result', reference: eligible.reference });
-        emit(request, evidence, step, 'release', eligible.reference);
+        if (abandon(request, evidence, step, attemptId, 'interrupted', { ending: 'retained', detail: 'the source check explicitly retained its eligible previous result', reference: eligible.reference })) {
+          emit(request, evidence, step, 'release', eligible.reference);
+        }
         return done(result);
       }
       if (ran.value.detachError !== undefined) {
-        abandon(request, evidence, attemptId, 'failed', { ending: 'failed', detail: describe(ran.value.detachError) });
+        abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(ran.value.detachError) });
         throw new ResolutionError('unsupported-result', `Source ${stepKey(step)} returned unsupported fresh data: ${describe(ran.value.detachError)}`, ran.value.detachError);
       }
       return done(publish(request, evidence, step, attemptId, {
@@ -788,11 +803,11 @@ export function createResolution<TInputs extends object, THelpers extends object
       })));
     } catch (error: unknown) {
       if (frame.refused !== undefined) {
-        abandon(request, evidence, attemptId, 'interrupted', { ending: 'child-refused', detail: frame.refused.reason });
+        abandon(request, evidence, step, attemptId, 'interrupted', { ending: 'child-refused', detail: frame.refused.reason });
         return done({ kind: 'refused', refused: frame.refused.step, reason: frame.refused.reason });
       }
       const cause = frame.failed?.error ?? error;
-      abandon(request, evidence, attemptId, 'failed', { ending: 'failed', detail: describe(cause) });
+      abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(cause) });
       if (cause instanceof ResolutionError && cause.code !== 'execution-failure') {
         throw cause;
       }
@@ -802,17 +817,17 @@ export function createResolution<TInputs extends object, THelpers extends object
     }
     if (frame.refused !== undefined) {
       // A body that swallowed a refused child cannot publish a result missing that child.
-      abandon(request, evidence, attemptId, 'interrupted', { ending: 'child-refused', detail: frame.refused.reason });
+      abandon(request, evidence, step, attemptId, 'interrupted', { ending: 'child-refused', detail: frame.refused.reason });
       return done({ kind: 'refused', refused: frame.refused.step, reason: frame.refused.reason });
     }
     if (frame.failed !== undefined) {
       // A body that swallowed a failed child cannot publish a result missing that child's current evidence.
       const cause = frame.failed.error;
-      abandon(request, evidence, attemptId, 'failed', { ending: 'failed', detail: describe(cause) });
+      abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(cause) });
       throw cause instanceof ResolutionError ? cause : new ResolutionError('execution-failure', `A child of ${stepKey(step)} failed: ${describe(cause)}`, cause);
     }
     if (ran.value.detachError !== undefined) {
-      abandon(request, evidence, attemptId, 'failed', { ending: 'failed', detail: describe(ran.value.detachError) });
+      abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(ran.value.detachError) });
       throw new ResolutionError('unsupported-result', `Body of ${stepKey(step)} returned unsupported data: ${describe(ran.value.detachError)}`, ran.value.detachError);
     }
     const children = [...frame.children.values()].sort((left, right) => left.slot < right.slot ? -1 : left.slot > right.slot ? 1 : 0);

@@ -257,8 +257,9 @@ export function declareSource<TFamily extends IBindingFamily, TResult>(
   }
   checkCallback(read, 'run', true);
   checkCallback(read, 'finality', false);
-  // Both were just proven to be own data properties holding functions (or an
-  // absent finality), so reading them runs no author code.
+  // Both were just proven to be own data properties holding functions, or an
+  // absent finality with no inherited property either, so reading them runs no
+  // author code and adopts nothing unvalidated.
   const { run, finality } = options;
   const declaration = mint<ISourceDeclaration<TFamily, TResult>>({
     kind: 'source',
@@ -315,7 +316,8 @@ export function declareMemo<TFamily extends IBindingFamily, TChildren extends IC
   const label = labelOption(read);
   checkChildRecord(read);
   // `run` and `children` were just proven to be own data properties of the
-  // expected shape, so reading them runs no author code.
+  // expected shape (or children absent without an inherited property), so
+  // reading them runs no author code and adopts no unvalidated edge.
   const { run, children } = options;
   const entries: [string, IAnySourceDeclaration<TFamily>][] = children === undefined ? [] : Object.entries(children);
   for (const [slot, child] of entries) {
@@ -345,9 +347,11 @@ export function declareMemo<TFamily extends IBindingFamily, TChildren extends IC
     children: new Map(entries),
     apply<TOutcome>(bindings: TFamily['memo'], mintHandle: (slot: string) => IDeclaredCallHandle<unknown>, invoke: IAuthorInvoker<TOutcome>): TOutcome {
       checkBindings(bindings, 'calls');
-      const calls: Record<string, IDeclaredCallHandle<unknown>> = {};
+      // A null prototype makes every nonempty slot name, including `__proto__`,
+      // an own data entry rather than a write to an inherited accessor.
+      const calls: Record<string, IDeclaredCallHandle<unknown>> = Object.create(null) as Record<string, IDeclaredCallHandle<unknown>>;
       for (const slot of slots) {
-        calls[slot] = mintHandle(slot);
+        Object.defineProperty(calls, slot, { value: mintHandle(slot), enumerable: true, writable: false, configurable: false });
       }
       Object.freeze(calls);
       const present = Object.keys(calls).sort();
@@ -398,15 +402,31 @@ function readOptions(options: unknown): IReadOptions {
   const read = new Map<string, unknown>();
   for (const [key, descriptor] of Object.entries(Object.getOwnPropertyDescriptors(options))) {
     if (!('value' in descriptor)) {
-      const code = key === 'run' || key === 'finality' ? 'invalid-callback'
-        : key === 'version' ? 'invalid-version'
-          : key === 'children' ? 'illegal-edge'
-            : 'invalid-subject';
-      reject(code, `Declaration option ${key} must be a data property, not an accessor.`);
+      reject(optionErrorCode(key), `Declaration option ${key} must be a data property, not an accessor.`);
     }
     read.set(key, descriptor.value);
   }
+  // Recognized options must be own properties. An inherited option would be
+  // read by the typed property access that follows validation, running a
+  // prototype getter or silently adopting a callback or edge nobody validated.
+  // The `in` check inspects the prototype chain without invoking accessors.
+  for (const key of declarationOptions) {
+    if (!read.has(key) && key in options) {
+      reject(optionErrorCode(key), `Declaration option ${key} must be an own property, not inherited.`);
+    }
+  }
   return read;
+}
+
+/** Every option a source or memo declaration recognizes. */
+const declarationOptions = ['subject', 'version', 'label', 'run', 'finality', 'children'] as const;
+
+/** The Definition error code for an unusable value of one declaration option. */
+function optionErrorCode(key: string): DefinitionError['code'] {
+  return key === 'run' || key === 'finality' ? 'invalid-callback'
+    : key === 'version' ? 'invalid-version'
+      : key === 'children' ? 'illegal-edge'
+        : 'invalid-subject';
 }
 
 /** RES-001: a subject is a complete nonempty author string, retained exactly. */

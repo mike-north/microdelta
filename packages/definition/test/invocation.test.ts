@@ -336,8 +336,44 @@ describe('invocation bridge', () => {
     const bindings = Object.defineProperty({}, Symbol('hidden'), { get: getter, enumerable: true });
     expectDefinitionError(() => summary.apply(bindings, invoke), 'invalid-bindings');
     expectDefinitionError(() => activity.apply(bindings, undefined, invoke), 'invalid-bindings');
+    expectDefinitionError(() => activity.applyFinality(bindings, supplierOf(carrierOf('previous'), []), invoke), 'invalid-bindings');
     expect(getter).not.toHaveBeenCalled();
     expect(invoke).not.toHaveBeenCalled();
+  });
+
+  test('bridge: prototype-looking child slot names mint own declared handles', async () => {
+    // Regression (independent review of 9500a4b): assigning `__proto__` into an
+    // ordinary calls object hit the inherited setter, so a valid slot failed at apply.
+    const fake = fakePort();
+    for (const slot of ['__proto__', 'constructor']) {
+      const child = source<string>({ subject: `activity:${slot}`, run: () => slot });
+      const captured: { calls?: Readonly<Record<string, IDeclaredCallHandle<string>>> } = {};
+      const summary = memo({
+        subject: `summary:${slot}`,
+        children: Object.fromEntries([[slot, child]]),
+        run: (context: { readonly calls: Readonly<Record<string, IDeclaredCallHandle<string>>> }) => {
+          captured.calls = context.calls;
+          return slot;
+        },
+      });
+      const composition = compose({
+        scope: fixtureScope,
+        members: [{ key: 'person:ada', steps: [{ slot, declaration: child }, { slot: 'summary', declaration: summary }] }],
+      });
+      const invocation = asMemo(openInvocation(composition, stepDescriptor('person:ada', 'summary'), fake.port));
+      fake.active = invocation;
+      expect(invocation.apply({}, recordingInvoker([]))).toBe(slot);
+      const calls = captured.calls;
+      expect(calls === undefined ? [] : Object.keys(calls)).toEqual([slot]);
+      const handle: unknown = calls === undefined ? undefined : Object.getOwnPropertyDescriptor(calls, slot)?.value;
+      expect(typeof handle).toBe('function');
+      if (typeof handle === 'function') {
+        const result: unknown = Reflect.apply(handle, undefined, []);
+        await Promise.resolve(result);
+      }
+      expect(fake.requests.at(-1)?.witness.child).toEqual(stepDescriptor('person:ada', slot));
+      expect(fake.requests.at(-1)?.child).toBe(child);
+    }
   });
 
   test('CMP-9: composing, resolving and opening invocations never run callbacks or the invoker', () => {

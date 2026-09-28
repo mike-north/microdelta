@@ -93,6 +93,38 @@ describe('step declarations', () => {
     expect(getter).not.toHaveBeenCalled();
   });
 
+  test('CMP-9: inherited option accessors are rejected without being invoked', () => {
+    // Regression (independent review of 9500a4b): only own options were inspected,
+    // then destructuring read inherited finality/children getters during declaration.
+    const run = (): number => 1;
+    const activity = source({ subject: 'activity:a', run });
+    const finalityGetter = jest.fn((): (() => boolean) => () => true);
+    const childrenGetter = jest.fn((): Record<string, typeof activity> => ({ activity }));
+    const inheritedFinality: unknown = Object.assign(
+      Object.create(Object.defineProperty({}, 'finality', { get: finalityGetter, enumerable: true })),
+      { subject: 'activity:b', run },
+    );
+    const inheritedChildren: unknown = Object.assign(
+      Object.create(Object.defineProperty({}, 'children', { get: childrenGetter, enumerable: true })),
+      { subject: 'summary:a', run },
+    );
+    expectDefinitionError(() => Reflect.apply(source, undefined, [inheritedFinality]), 'invalid-callback');
+    expectDefinitionError(() => Reflect.apply(memo, undefined, [inheritedChildren]), 'illegal-edge');
+    expect(finalityGetter).not.toHaveBeenCalled();
+    expect(childrenGetter).not.toHaveBeenCalled();
+  });
+
+  test('CMP-9: inherited option data is rejected rather than silently becoming a callback or edge', () => {
+    const run = (): number => 1;
+    const activity = source({ subject: 'activity:a', run });
+    const inheritedFinality: unknown = Object.assign(Object.create({ finality: () => true }), { subject: 'activity:b', run });
+    const inheritedChildren: unknown = Object.assign(Object.create({ children: { activity } }), { subject: 'summary:a', run });
+    const inheritedRun: unknown = Object.assign(Object.create({ run }), { subject: 'summary:b' });
+    expectDefinitionError(() => Reflect.apply(source, undefined, [inheritedFinality]), 'invalid-callback');
+    expectDefinitionError(() => Reflect.apply(memo, undefined, [inheritedChildren]), 'illegal-edge');
+    expectDefinitionError(() => Reflect.apply(memo, undefined, [inheritedRun]), 'invalid-callback');
+  });
+
   test('CMP-1: declarations are frozen framework-owned copies of the author options', () => {
     const activity = source({ subject: 'activity:a', run: () => 1 });
     const other = source({ subject: 'activity:b', run: () => 2 });

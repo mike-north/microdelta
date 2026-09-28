@@ -7,7 +7,11 @@ M1 experiment decisions are recorded in the [M1 evidence record](validation/m1-2
 its final CI and issue-acceptance conditions determine completion. M2 bounded
 tracking and package components are implemented; the [M2 evidence record](validation/m2-2026-09-27.md)
 and [acceptance issue](https://github.com/mike-north/microdelta/issues/32) record delivery and verification.
-No M3 or later runtime milestone is complete.
+M3's bounded durable runtime has verified acceptance: its component issues and
+independent-process acceptance issue are accepted, as mapped in the
+[M3 evidence record](validation/m3-2026-09-28.md). [#50](https://github.com/mike-north/microdelta/issues/50)
+records the final milestone decision and documentation delivery result. No M4 or
+later runtime milestone is complete.
 A milestone is a quality checkpoint, including experiments; it need not be a
 user-facing release.
 
@@ -103,12 +107,6 @@ The [contribution-analysis plan](plans/m3-contribution-analysis.md) defines the
 selected two-contributor authoring slice, contract decisions and dependency queue.
 It is a delivery plan, not evidence of completed M3 implementation.
 
-**Progress (2026-09-28).** The component and assembly issues #52–#57 are
-accepted. The independent-process acceptance harness (#58) and its evidence are
-in the [M3 acceptance record](validation/m3-acceptance-2026-09-28.md). M3 is not
-complete until the supervisor's final decision in
-[#50](https://github.com/mike-north/microdelta/issues/50).
-
 Implement the real authoring path over the chosen durable backend: nonmemoized
 configuration/helper input plus a minimal declared retained source→memoized
 consumer path, exact result references, current source acceptance through the
@@ -122,6 +120,12 @@ worker safety. SQLite is the recommended initial backend, contingent on EXP-3.
 unchanged/read/unread/code/version changes, reordered explicit member invocations,
 retained history and rollback evidence. No fake durability wrapper around a
 separate API. No paid provider needed.
+
+**Evidence:** [M3 durable analysis record](validation/m3-2026-09-28.md). The
+record maps the exit to the accepted component issues (#51–#57), the
+[independent-process acceptance record](validation/m3-acceptance-2026-09-28.md)
+(#58), their reviews and default-branch results. The [acceptance issue](https://github.com/mike-north/microdelta/issues/50)
+records the final milestone decision after documentation delivery and verification.
 
 ## M4 — Composition and keyed collections
 

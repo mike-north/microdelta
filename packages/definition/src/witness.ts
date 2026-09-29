@@ -223,13 +223,16 @@ export function ownData(value: unknown, key: string): unknown {
 
 /**
  * Copy untrusted descriptor data into a frozen descriptor, or report it
- * malformed. Fields are read only as own data properties.
+ * malformed. Fields are read only as own data properties. A template step
+ * carries both a nonempty template slot and a nonempty collection binding,
+ * only in the step role, and its member key, when present, is nonempty; any
+ * other combination of the template fields is malformed.
  */
 export function copyDescriptor(value: unknown): IBindingDescriptor | undefined {
   if (typeof value !== 'object' || value === null) {
     return undefined;
   }
-  for (const key of ['scope', 'role', 'slot', 'memberKey']) {
+  for (const key of ['scope', 'role', 'slot', 'memberKey', 'template', 'collection']) {
     const descriptor = Object.getOwnPropertyDescriptor(value, key);
     if (descriptor !== undefined && !('value' in descriptor)) {
       return undefined;
@@ -239,13 +242,28 @@ export function copyDescriptor(value: unknown): IBindingDescriptor | undefined {
   const role = ownData(value, 'role');
   const slot = ownData(value, 'slot');
   const memberKey = ownData(value, 'memberKey');
+  const template = ownData(value, 'template');
+  const collection = ownData(value, 'collection');
   if (typeof scope !== 'string' || (role !== 'input' && role !== 'callable' && role !== 'step') || typeof slot !== 'string') {
     return undefined;
   }
-  if (memberKey === undefined) {
-    return Object.freeze({ scope, role, slot });
+  if (memberKey !== undefined && typeof memberKey !== 'string') {
+    return undefined;
   }
-  return typeof memberKey === 'string' ? Object.freeze({ scope, role, slot, memberKey }) : undefined;
+  const keyed = memberKey === undefined ? {} : { memberKey };
+  if (template === undefined && collection === undefined) {
+    return Object.freeze({ scope, role, slot, ...keyed });
+  }
+  if (role !== 'step' || typeof template !== 'string' || template.length === 0 ||
+      typeof collection !== 'string' || collection.length === 0 || memberKey === '') {
+    return undefined;
+  }
+  return Object.freeze({ scope, role, slot, ...keyed, template, collection });
+}
+
+/** Whether a descriptor addresses a fanout template step or instance. */
+export function isTemplateDescriptor(descriptor: IBindingDescriptor): boolean {
+  return descriptor.template !== undefined || descriptor.collection !== undefined;
 }
 
 /** Whether untrusted data is a record whose own keys are exactly `keys`, all data properties. */
@@ -410,7 +428,9 @@ function invocationArguments(value: unknown, index: number): IInvocationArgument
  * but 1 or 2 is an unsupported version before any other field is parsed. Then
  * the record must carry only that version's fields, then its structure, then
  * the version's own fields. Version 1 keeps its M3 meaning exactly: its
- * argument form must be `{ form: 'empty' }`.
+ * argument form must be `{ form: 'empty' }`, and a descriptor carrying
+ * template fields makes it malformed, since template instances only ever
+ * emit version 2.
  * @param witness - Untrusted durable data.
  * @returns The parsed, frozen witness or a precise unsupported reason.
  */
@@ -429,6 +449,10 @@ export function parseWitness(witness: unknown): IParsedWitness {
   }
   const argumentsForm = ownData(witness, 'arguments');
   if (version === 1) {
+    // Version 1 keeps its exact M3 meaning: template instances only ever emit version 2.
+    if (isTemplateDescriptor(parent) || isTemplateDescriptor(child)) {
+      return { status: 'unsupported', reason: 'malformed' };
+    }
     if (!exactRecord(argumentsForm, ['form']) || ownData(argumentsForm, 'form') !== 'empty') {
       return { status: 'unsupported', reason: 'argument-form' };
     }

@@ -258,17 +258,33 @@ export function createResolution<TInputs extends object, THelpers extends object
   }
 
   /** Reconnect a requested step to its unique current declaration. */
-  function stepTarget(step: IBindingDescriptor): { readonly step: IBindingDescriptor; readonly declaration: IStepDeclaration<IFamily> } {
+  /**
+   * Reconnect a requested step to its unique current source or memo
+   * declaration. Template instance steps (descriptors carrying `template` or
+   * `collection`) and strict folds are refused with `invalid-request` before
+   * any evidence, candidate lookup or admission: this resolver resolves only
+   * explicit member and composition-level sources and memos. Template instance
+   * invocation, gates and keyed member reuse are added by #85, and strict fold
+   * readiness by #86.
+   */
+  function stepTarget(step: IBindingDescriptor): { readonly step: IBindingDescriptor; readonly declaration: IAnySourceDeclaration<IFamily> | IAnyMemoDeclaration<IFamily> } {
     let resolution: ReturnType<typeof composition.resolve>;
     try {
       resolution = composition.resolve(step);
     } catch (error: unknown) {
       throw new ResolutionError('invalid-request', `Malformed step descriptor: ${describe(error)}`, error);
     }
+    if (resolution.descriptor.template !== undefined || resolution.descriptor.collection !== undefined) {
+      throw new ResolutionError('invalid-request', `Step ${stepKey(resolution.descriptor)} is a template instance step; this resolver resolves only member and composition-level sources and memos`);
+    }
     if (resolution.status !== 'bound' || resolution.target.role !== 'step') {
       throw new ResolutionError('unbound-step', `Step ${stepKey(resolution.descriptor)} has no unique current declaration (${resolution.status})`);
     }
-    return { step: resolution.descriptor, declaration: resolution.target.declaration };
+    const declaration = resolution.target.declaration;
+    if (declaration.kind === 'fold') {
+      throw new ResolutionError('invalid-request', `Step ${stepKey(resolution.descriptor)} is a strict fold; this resolver resolves only sources and memos`);
+    }
+    return { step: resolution.descriptor, declaration };
   }
 
   /** A new request context with its declared slots reconnected once. */

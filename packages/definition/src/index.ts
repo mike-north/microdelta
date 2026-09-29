@@ -1,6 +1,7 @@
 /**
- * Definition & Binding: frozen declarations, the fixed step graph, current
- * structural correspondence, supplied step slots, declared child-call handles
+ * Definition & Binding: frozen declarations, the fixed step graph (including
+ * keyed fanout templates, their gates and strict folds), current structural
+ * correspondence, member keying, supplied step slots, declared child-call handles
  * with their argument recipes and versioned invocation witnesses, and the
  * invocation bridge that pairs a reconnected step's actual author callback with
  * its assembled context for Resolution's invoker. Function names remain
@@ -11,6 +12,18 @@
  * @packageDocumentation
  */
 export { DefinitionError, type IDefinitionErrorCode } from './errors.js';
+export type {
+  ICollectionIdentity,
+  ICollectionOptions,
+  ICollectionResult,
+  ICollectionStatus,
+  IIdentityField,
+  IKeyedMember,
+  IKeyedSnapshot,
+  IKeyingDiagnostic,
+  IKeyingFailure,
+  IMemberOf,
+} from './collection.js';
 export type { IBindingDescriptor, IBindingRole } from './descriptor.js';
 export type { IApply, IBindingFamily, IPreviousCarrierFamily, ITypeFamily } from './family.js';
 export {
@@ -35,6 +48,41 @@ export {
   type IStepDeclaration,
 } from './declaration.js';
 export { declarations, type IDeclarations } from './declarations.js';
+export {
+  gateOutcome,
+  type IAnyTemplateDeclaration,
+  type IGateContext,
+  type IGateInvocation,
+  type IGateOutcome,
+  type IGateSettlement,
+  type IKeyedCollectionCheck,
+  type IMemberBuilder,
+  type IMemberSubject,
+  type IMemberSubjectBrand,
+  type IMemberSupplier,
+  type ITemplateBrand,
+  type ITemplateDeclaration,
+  type ITemplateMemoOptions,
+  type ITemplateOptions,
+  type ITemplateSourceOptions,
+  type ITemplateStepDeclaration,
+  type ITemplateSteps,
+  type ITemplateTopology,
+} from './template.js';
+export type {
+  IAnyFoldDeclaration,
+  IFoldDeclaration,
+  IFoldEntry,
+  IFoldInvocation,
+  IFoldMemberSupplier,
+  IFoldOptions,
+  IFoldOver,
+  IFoldRunContext,
+  IFoldTopology,
+  ISkippedEntry,
+  IStepsOf,
+  ISucceededEntry,
+} from './fold.js';
 
 export {
   type IBindingResolution,

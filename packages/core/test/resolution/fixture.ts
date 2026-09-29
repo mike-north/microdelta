@@ -358,6 +358,8 @@ export interface IVariation {
   readonly adaActivitySubject?: string;
   /** The declared configuration. */
   readonly config?: IConfig;
+  /** Also compose a keyed collection, a fanout template over it and a strict fold over the template. */
+  readonly keyed?: boolean;
 }
 
 /** The default declared configuration. */
@@ -371,6 +373,8 @@ export interface IContributors {
   readonly declarations: Readonly<Record<IMemberKey, { readonly activity: IAnySourceDeclaration<IFamily>; readonly summary: IAnyMemoDeclaration<IFamily> }>>;
   /** The array-root member: a numbers source and a memo reading its length and first element. */
   readonly numbers: { readonly source: IBindingDescriptor; readonly total: IBindingDescriptor };
+  /** The keyed variation's template instance and fold step descriptors (bound only when `keyed` is set). */
+  readonly keyed: { readonly instance: IBindingDescriptor; readonly fold: IBindingDescriptor };
 }
 
 /** The declared input and helper slots every callback receives. */
@@ -483,11 +487,13 @@ export function composeContributors(variation: IVariation = {}): IContributors {
     { slot: 'listNumbers', helper: listNumbers },
     { slot: 'total', helper: total },
   ];
+  const keyed = variation.keyed === true ? keyedDeclarations(builders) : undefined;
   const composition = compose({
     scope: analysis,
     inputs: [{ slot: 'config', value: variation.config ?? defaultConfig }],
     helpers: variation.order === 'ben-first' ? [...helpers].reverse() : helpers,
     members: variation.order === 'ben-first' ? [ben, ada, numbersMember] : [ada, ben, numbersMember],
+    ...(keyed === undefined ? {} : { steps: keyed.steps, templates: [keyed.template] }),
   });
   const step = (memberKey: IMemberKey, slot: string): IBindingDescriptor => ({ scope: analysis, role: 'step', slot, memberKey });
   return {
@@ -502,5 +508,54 @@ export function composeContributors(variation: IVariation = {}): IContributors {
       'person:ben': { activity: benActivitySource, summary: benSummary },
     },
     numbers: { source: { scope: analysis, role: 'step', slot: 'numbers', memberKey: 'list:numbers' }, total: { scope: analysis, role: 'step', slot: 'total', memberKey: 'list:numbers' } },
+    keyed: {
+      instance: { scope: analysis, role: 'step', slot: 'summary', template: 'contributor', collection: 'contributors', memberKey: 'person:ada' },
+      fold: { scope: analysis, role: 'step', slot: 'report' },
+    },
+  };
+}
+
+/** A discovered contributor record of the keyed variation. */
+interface IDiscovered {
+  readonly key: string;
+}
+
+/** The keyed variation's collection result. */
+interface IDiscoveredCollection {
+  readonly members: readonly IDiscovered[];
+  readonly status: 'complete' | 'open';
+}
+
+/**
+ * The keyed variation's declarations: a composition-level keyed collection,
+ * a template over it and a strict fold over the template's summary.
+ * Resolution refuses template instances and folds before any evidence or
+ * admission, so tests observe that no lifecycle event occurs.
+ */
+function keyedDeclarations(builders: IDeclarations<IFamily>) {
+  const { source, template, fold } = builders;
+  const contributors = source<IDiscoveredCollection>({
+    subject: 'contributors:acme/widget:2026-Q1',
+    collection: { identity: 'key' },
+    run: ({ outcome }) => outcome.fresh<IDiscoveredCollection>({ members: [], status: 'complete' }),
+  });
+  const contributor = template({
+    slot: 'contributor',
+    collection: contributors,
+    steps: (member) => ({
+      summary: member.source<string>({
+        subject: member.subject('keyed-summary:acme/widget:2026-Q1'),
+        run: ({ outcome }) => outcome.fresh('summary'),
+      }),
+    }),
+  });
+  const report = fold({
+    subject: 'keyed-report:acme/widget:2026-Q1',
+    over: { template: contributor, step: 'summary' },
+    run: () => 'report',
+  });
+  return {
+    template: contributor,
+    steps: [{ slot: 'contributors', declaration: contributors }, { slot: 'report', declaration: report }],
   };
 }

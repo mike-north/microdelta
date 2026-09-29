@@ -23,8 +23,8 @@ npm run test:exp4
 To reproduce one restart case directly after the build:
 
 ```sh
-node experiments/exp-4/.test-build/test/process-entry.js A /private/tmp/microdelta-exp4-history.json unchanged
-node experiments/exp-4/.test-build/test/process-entry.js B /private/tmp/microdelta-exp4-history.json unchanged
+node experiments/exp-4/.test-build/test/process-entry.js A "${TMPDIR:-/tmp}/microdelta-exp4-history.json" unchanged
+node experiments/exp-4/.test-build/test/process-entry.js B "${TMPDIR:-/tmp}/microdelta-exp4-history.json" unchanged
 ```
 
 Process A executes six fake paid bodies and writes the fixture. Process B

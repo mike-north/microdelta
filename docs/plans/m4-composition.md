@@ -1,7 +1,10 @@
 # M4: keyed contribution analysis with nested cutoff
 
 Status: M4 implementation plan for [issue #79](https://github.com/mike-north/microdelta/issues/79).
-M3 is accepted ([#50](https://github.com/mike-north/microdelta/issues/50)).
+M3 is accepted ([#50](https://github.com/mike-north/microdelta/issues/50)). The
+queue below is delivered and mapped to the M4 exit in the
+[M4 evidence record](../validation/m4-2026-09-29.md); the plan body keeps its
+accepted contracts and sequence.
 Mechanism choices come from the [EXP-4 decision](../../experiments/exp-4/decision.md)
 ([#78](https://github.com/mike-north/microdelta/issues/78)) and the owning
 contracts it amended. This plan applies the active specification and does not

@@ -257,7 +257,6 @@ export function createResolution<TInputs extends object, THelpers extends object
     return Object.freeze({ analysis, environment, subject: declaration.subject, version: declaration.version });
   }
 
-  /** Reconnect a requested step to its unique current declaration. */
   /**
    * Reconnect a requested step to its unique current source or memo
    * declaration. Template instance steps (descriptors carrying `template` or
@@ -268,14 +267,17 @@ export function createResolution<TInputs extends object, THelpers extends object
    * readiness by #86.
    */
   function stepTarget(step: IBindingDescriptor): { readonly step: IBindingDescriptor; readonly declaration: IAnySourceDeclaration<IFamily> | IAnyMemoDeclaration<IFamily> } {
+    // Checked on the requested descriptor itself, through property descriptors
+    // only (no accessor runs), before composition lookup can mint an instance.
+    if (typeof step === 'object' && step !== null &&
+        (Object.getOwnPropertyDescriptor(step, 'template') !== undefined || Object.getOwnPropertyDescriptor(step, 'collection') !== undefined)) {
+      throw new ResolutionError('invalid-request', 'The requested step is a template instance step; this resolver resolves only member and composition-level sources and memos');
+    }
     let resolution: ReturnType<typeof composition.resolve>;
     try {
       resolution = composition.resolve(step);
     } catch (error: unknown) {
       throw new ResolutionError('invalid-request', `Malformed step descriptor: ${describe(error)}`, error);
-    }
-    if (resolution.descriptor.template !== undefined || resolution.descriptor.collection !== undefined) {
-      throw new ResolutionError('invalid-request', `Step ${stepKey(resolution.descriptor)} is a template instance step; this resolver resolves only member and composition-level sources and memos`);
     }
     if (resolution.status !== 'bound' || resolution.target.role !== 'step') {
       throw new ResolutionError('unbound-step', `Step ${stepKey(resolution.descriptor)} has no unique current declaration (${resolution.status})`);

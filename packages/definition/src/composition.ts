@@ -39,7 +39,7 @@ import type { IBindingFamily } from './family.js';
 import type { IFoldTopology } from './fold.js';
 import type { IAnySuppliedStepDeclaration, ISuppliedStepRegistration } from './slot.js';
 import { slotSubject, supplyState } from './slot.js';
-import { bindTemplates, isMemberStep, type IAnyTemplateDeclaration, type IBoundTemplates, type ITemplateRecords, type ITemplateTopology } from './template.js';
+import { bindTemplates, instancePrefixOf, isMemberStep, type IAnyTemplateDeclaration, type IBoundTemplates, type ITemplateRecords, type ITemplateTopology } from './template.js';
 import { copyDescriptor, isTemplateDescriptor, parseWitness } from './witness.js';
 import type { IInvocationArguments, IInvocationWitness, IUnsupportedWitnessReason } from './witness.js';
 
@@ -483,6 +483,11 @@ export function composeIn<TFamily extends IBindingFamily>(
           const scoped = slotSubject(scope, subject, arguments_);
           if (subjects.has(scoped.subject)) {
             reject('conflicting-subject', `Slot ${state.slot} computed the subject ${scoped.subject}, which a declared step already claims (RES-001).`);
+          }
+          // Read when a subject is computed, after composition bound the templates.
+          const prefix = instancePrefixOf(boundTemplates.prefixes, scoped.subject);
+          if (prefix !== undefined) {
+            reject('conflicting-subject', `Slot ${state.slot} computed the subject ${scoped.subject}, which a template instance of member prefix ${JSON.stringify(prefix)} can claim (RES-001).`);
           }
           return scoped;
         },

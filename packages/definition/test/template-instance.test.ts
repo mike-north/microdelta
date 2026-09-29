@@ -12,10 +12,10 @@
  */
 import { describe, expect, test } from '@jest/globals';
 
-import { describeHandle, type IBindingDescriptor, type IMemoInvocation } from '../src/index.js';
-import { durable } from './fixtures/assertions.js';
+import { describeHandle, type IBindingDescriptor, type IDerivedArguments, type IMemoInvocation } from '../src/index.js';
+import { durable, expectDefinitionError } from './fixtures/assertions.js';
 import type { ITestFamily } from './fixtures/contributors.js';
-import { buildKeyed, compose, instanceDescriptor, openInvocation, source, template, type IContributors } from './fixtures/keyed.js';
+import { ada, ben, buildKeyed, compose, instanceDescriptor, openInvocation, source, template, type IContributors } from './fixtures/keyed.js';
 import { assessmentSubject, forward, rubric, stepSlot, supply, type IActivity, type IAssessment, type IAssessorParameters } from './fixtures/nested.js';
 import { callUntyped, directInvoker, fakePort, type IFakePort } from './fixtures/port.js';
 
@@ -40,7 +40,7 @@ const assessorSlot: IBindingDescriptor = { scope, role: 'callable', slot: 'asses
  * member memo and the composition-wide supplied assessor slot. The summary's
  * body only captures its calls, so a test drives each call explicitly.
  */
-function buildNestedTemplate() {
+function buildNestedTemplate(subject: (derived: IDerivedArguments<IAssessorParameters>) => string = assessmentSubject) {
   const assessor = stepSlot<IAssessorParameters, IAssessment>({ slot: 'assessor' });
   const collection = source<IContributors>({ subject: 'contributors:acme/widget', collection: { identity: 'key' }, run: () => ({ members: [], status: 'complete' }) });
   const captured: { calls?: object } = {};
@@ -65,7 +65,7 @@ function buildNestedTemplate() {
     scope,
     steps: [{ slot: 'contributors', declaration: collection }],
     templates: [contributor],
-    supplied: [supply({ slot: assessor, declaration: rubric('A'), subject: assessmentSubject })],
+    supplied: [supply({ slot: assessor, declaration: rubric('A'), subject })],
   });
   return { composition, contributor, captured };
 }
@@ -113,6 +113,8 @@ describe('template member memos (CMP-4 with CMP-3)', () => {
 
   test('CMP-4: an instance remaps only sibling declaration edges to its own member; the supplied slot stays composition-wide', async () => {
     const build = buildNestedTemplate();
+    // Keying precedes instance work and retains the keyed member's instances, so identities are stable.
+    build.composition.keyMembers('contributor', { members: [{ key: 'person:ada' }], status: 'complete' });
     const fake = fakePort();
     const { invocation, handle } = openNestedSummary(build, 'person:ada', fake);
     await callUntyped(handle('activity'));
@@ -208,10 +210,38 @@ describe('template instance witnesses (CMP-6, REUSE-007)', () => {
   });
 });
 
+describe('supplied slot subjects and template instances (RES-001)', () => {
+  /** The scoped subject the assessor slot computes for one derived-argument call. */
+  function slotSubjectOf(build: ReturnType<typeof buildNestedTemplate>): () => unknown {
+    const resolution = build.composition.resolve(assessorSlot);
+    if (resolution.status !== 'bound' || resolution.target.role !== 'callable' || resolution.target.kind !== 'supplied-step') {
+      throw new Error('expected the supplied assessor slot');
+    }
+    const target = resolution.target;
+    return () => target.subjectFor({ form: 'empty' });
+  }
+
+  test('RES-001: a slot subject equal to a template instance subject is a conflicting subject', () => {
+    const colliding = buildNestedTemplate(() => 'activity:acme/widget:person:ada');
+    expectDefinitionError(slotSubjectOf(colliding), 'conflicting-subject');
+    const otherStep = buildNestedTemplate(() => 'summary:acme/widget:someone');
+    expectDefinitionError(slotSubjectOf(otherStep), 'conflicting-subject');
+  });
+
+  test('RES-001: a slot subject outside every member prefix, or the bare prefix separator, still computes', () => {
+    expect(slotSubjectOf(buildNestedTemplate(() => 'assessment:acme/widget:7'))()).toEqual({ scope, subject: 'assessment:acme/widget:7' });
+    expect(slotSubjectOf(buildNestedTemplate(() => 'activity:acme/widget:'))()).toEqual({ scope, subject: 'activity:acme/widget:' });
+    expect(slotSubjectOf(buildNestedTemplate(() => 'activity:acme/widgets:ada'))()).toEqual({ scope, subject: 'activity:acme/widgets:ada' });
+  });
+});
+
 describe('instance declarations are minted per composition', () => {
   test('CMP-4: one template composed twice mints distinct instances per composition, each stable within it', () => {
     const built = buildKeyed();
     const other = compose({ scope: 'contribution-report:acme/widget:m4', steps: [{ slot: 'contributors', declaration: built.contributors }], templates: [built.contributor] });
+    for (const composition of [built.composition, other]) {
+      composition.keyMembers('contributor', { members: [ada, ben], status: 'complete' });
+    }
     const first = built.composition.resolve(instanceDescriptor('summary', 'person:ada'));
     const again = built.composition.resolve(instanceDescriptor('summary', 'person:ada'));
     const elsewhere = other.resolve(instanceDescriptor('summary', 'person:ada'));
@@ -221,5 +251,24 @@ describe('instance declarations are minted per composition', () => {
     expect(declarationOf(elsewhere)).toBeDefined();
     expect(declarationOf(elsewhere)).not.toBe(declarationOf(first));
     expect(built.factoryCalls()).toBe(1);
+  });
+
+  test('CMP-4: lookups for member keys the composition never keyed mint fresh instances and retain nothing', () => {
+    const built = buildKeyed();
+    const declarationOf = (key: string): unknown => {
+      const resolution = built.composition.resolve(instanceDescriptor('summary', key));
+      return resolution.status === 'bound' && resolution.target.role === 'step' ? resolution.target.declaration : undefined;
+    };
+    // An untrusted historical key resolves structurally, but is not retained.
+    const lookup = declarationOf('person:zed');
+    expect(lookup).toBeDefined();
+    expect(declarationOf('person:zed')).not.toBe(lookup);
+    // Once keying discovers the member, its instances are cached and stable.
+    built.composition.keyMembers('contributor', { members: [{ key: 'person:zed' }], status: 'open' });
+    const keyed = declarationOf('person:zed');
+    expect(declarationOf('person:zed')).toBe(keyed);
+    // A rejected snapshot retains nothing.
+    built.composition.keyMembers('contributor', { members: [{ key: 'person:yan' }, { key: 'person:yan' }], status: 'complete' });
+    expect(declarationOf('person:yan')).not.toBe(declarationOf('person:yan'));
   });
 });

@@ -154,6 +154,28 @@ describe('keying by custom key (COL-1)', () => {
 });
 
 describe('keying rejections (COL-1)', () => {
+  test('COL-1: a custom key that throws a value with no string form still rejects the snapshot, never escaping', () => {
+    const collection = source<IContributors>({ subject: 'c:unprintable', collection: { identity: 'key' }, run: () => ({ members: [], status: 'complete' }) });
+    const thrown: unknown[] = [Object.create(null), Symbol('bad'), { toString: () => { throw new Error('toString failed'); } }];
+    const composition = compose({
+      scope: keyedScope,
+      steps: [{ slot: 'roster', declaration: collection }],
+      templates: thrown.map((value, index) => template({
+        slot: `unprintable-${String(index)}`,
+        collection,
+        key: () => {
+          throw value;
+        },
+        steps: (member) => ({ p: member.source<string>({ subject: member.subject(`unprintable-${String(index)}`), run: () => 'p' }) }),
+      })),
+    });
+    thrown.forEach((_value, index) => {
+      const diagnostic = rejected(composition.keyMembers(`unprintable-${String(index)}`, { members: [ada], status: 'complete' }));
+      expect(diagnostic).toMatchObject({ reason: 'key-function-failed', collection: 'roster', customKey: true });
+      expect(diagnostic.message).toContain('`key` option');
+    });
+  });
+
   test('COL-1: a duplicate key rejects the whole snapshot, naming the collection, the key and the custom-key option', () => {
     const { composition } = buildKeyed();
     const result = composition.keyMembers('contributor', { members: [ada, ben, { ...ada, login: 'ada-2' }], status: 'complete' });

@@ -620,10 +620,24 @@ interface IBoundTemplate<TFamily extends IBindingFamily> {
   readonly topology: ITemplateTopology;
 }
 
+/**
+ * The member subject prefix whose instances can claim `subject`: an instance
+ * subject is `prefix:key` with a nonempty key, so only a longer subject that
+ * starts with `prefix:` can collide (RES-001).
+ * @param prefixes - Every member subject prefix of the composed templates.
+ * @param subject - A complete subject claimed elsewhere in the composition.
+ * @returns The colliding prefix, or undefined when no instance can claim the subject.
+ */
+export function instancePrefixOf(prefixes: readonly string[], subject: string): string | undefined {
+  return prefixes.find(prefix => subject.length > prefix.length + 1 && subject.startsWith(`${prefix}:`));
+}
+
 /** The templates of one frozen composition and the lookups Definition performs over them. */
 export interface IBoundTemplates<TFamily extends IBindingFamily> {
   /** Template topology, sorted by template slot. */
   readonly topology: readonly ITemplateTopology[];
+  /** Every member subject prefix of the composed templates. */
+  readonly prefixes: readonly string[];
   /** Supplied step slot names some template memo declares. */
   readonly slots: readonly string[];
   /** The template step descriptor a fold names, or undefined when that template or step is not composed. */
@@ -644,8 +658,9 @@ export interface IBoundTemplates<TFamily extends IBindingFamily> {
  * unique slot and fan out over a collection held by exactly one
  * composition-level step slot. Instance subjects must not collide across
  * templates or with any ordinary subject (RES-001). Instance declarations are
- * minted on demand and cached for this composition only, so resolving an
- * untrusted historical descriptor never grows state beyond the composition.
+ * minted on demand; only those of members this composition's keying returned
+ * are retained, per composition, so resolving an untrusted historical
+ * descriptor never grows retained state.
  * @param scope - The composition scope.
  * @param entries - The author's template list, already copied.
  * @param templates - The builder instance's template records.
@@ -702,26 +717,38 @@ export function bindTemplates<TFamily extends IBindingFamily>(
   const prefixes = [...bound.values()].flatMap(entry => [...entry.record.steps.values()].map(step => step.prefix));
   assertDisjointPrefixes(prefixes);
   for (const subject of subjects) {
-    // An instance subject is `prefix:key` with a nonempty key, so only a longer subject can collide.
-    const prefix = prefixes.find(candidate => subject.length > candidate.length + 1 && subject.startsWith(`${candidate}:`));
+    const prefix = instancePrefixOf(prefixes, subject);
     if (prefix !== undefined) {
       reject('conflicting-subject', `Subject ${JSON.stringify(subject)} can equal an instance subject of member prefix ${JSON.stringify(prefix)}.`);
     }
   }
-  /** This composition's instances: template slot, then member key, then step slot. */
+  /**
+   * The member keys each template's keying has returned in this composition.
+   * Only their instances are retained, so the cache is bounded by the members
+   * discovery actually produced (times the template's steps); an untrusted
+   * historical descriptor naming any other key resolves structurally to a
+   * fresh instance that is never retained.
+   */
+  const keyedMembers = new Map<string, Set<string>>();
+  /** This composition's retained instances: template slot, then member key, then step slot. */
   const instances = new Map<string, Map<string, Map<string, ISourceRecord<TFamily> | IMemoRecord<TFamily>>>>();
   const instanceOf = (entry: IBoundTemplate<TFamily>, stepSlot: string, memberKey: string): ISourceRecord<TFamily> | IMemoRecord<TFamily> | undefined => {
     const step = entry.record.steps.get(stepSlot);
     if (step === undefined) {
       return undefined;
     }
-    const byKey = instances.get(entry.record.declaration.slot) ?? new Map<string, Map<string, ISourceRecord<TFamily> | IMemoRecord<TFamily>>>();
-    instances.set(entry.record.declaration.slot, byKey);
-    const bySlot = byKey.get(memberKey) ?? new Map<string, ISourceRecord<TFamily> | IMemoRecord<TFamily>>();
-    byKey.set(memberKey, bySlot);
-    const existing = bySlot.get(stepSlot);
-    if (existing !== undefined) {
-      return existing;
+    const templateSlot = entry.record.declaration.slot;
+    const retained = keyedMembers.get(templateSlot)?.has(memberKey) === true;
+    let bySlot: Map<string, ISourceRecord<TFamily> | IMemoRecord<TFamily>> | undefined;
+    if (retained) {
+      const byKey = instances.get(templateSlot) ?? new Map<string, Map<string, ISourceRecord<TFamily> | IMemoRecord<TFamily>>>();
+      instances.set(templateSlot, byKey);
+      bySlot = byKey.get(memberKey) ?? new Map<string, ISourceRecord<TFamily> | IMemoRecord<TFamily>>();
+      byKey.set(memberKey, bySlot);
+      const existing = bySlot.get(stepSlot);
+      if (existing !== undefined) {
+        return existing;
+      }
     }
     // RES-001: the instance subject is computed from the member subject prefix and the key only.
     const subject = `${step.prefix}:${memberKey}`;
@@ -734,7 +761,7 @@ export function bindTemplates<TFamily extends IBindingFamily>(
       });
     // An instance, like its template step, is addressable only through its template.
     memberSteps.add(created.declaration);
-    bySlot.set(stepSlot, created);
+    bySlot?.set(stepSlot, created);
     return created;
   };
   const boundOf = (template: string): IBoundTemplate<TFamily> =>
@@ -752,6 +779,7 @@ export function bindTemplates<TFamily extends IBindingFamily>(
   };
   return Object.freeze({
     topology: Object.freeze([...bound.keys()].sort(compareText).map(slot => boundOf(slot).topology)),
+    prefixes: Object.freeze(prefixes),
     slots: Object.freeze([...slots].sort(compareText)),
     foldTarget(template: object, step: string): IBindingDescriptor | undefined {
       const entry = [...bound.values()].find(candidate => candidate.record.declaration === template);
@@ -772,7 +800,15 @@ export function bindTemplates<TFamily extends IBindingFamily>(
     },
     keyMembers(template: string, snapshot: unknown): IKeyedSnapshot {
       const { record, collection } = boundOf(template);
-      return keySnapshot({ template, collection, identity: record.identity, customKey: record.customKey }, snapshot);
+      const keyed = keySnapshot({ template, collection, identity: record.identity, customKey: record.customKey }, snapshot);
+      if (keyed.status === 'keyed') {
+        const members = keyedMembers.get(template) ?? new Set<string>();
+        keyedMembers.set(template, members);
+        for (const { key } of keyed.members) {
+          members.add(key);
+        }
+      }
+      return keyed;
     },
     gate(descriptor: IBindingDescriptor): IGateInvocation<TFamily> | undefined {
       const entry = addressed(descriptor);

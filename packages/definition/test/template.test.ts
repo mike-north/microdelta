@@ -274,8 +274,9 @@ describe('template topology and instance correspondence (CMP-4, CMP-6)', () => {
     expect(Object.isFrozen(subject)).toBe(true);
   });
 
-  test('CMP-4: instances are stable per key, keep the author callbacks and pin their own member siblings', () => {
+  test('CMP-4: instances are stable per keyed member, keep the author callbacks and pin their own member siblings', () => {
     const built = buildKeyed();
+    built.composition.keyMembers('contributor', { members: [{ key: 'person:ada' }, { key: 'person:ben' }], status: 'complete' });
     const summary = boundTarget(built.composition.resolve(instanceDescriptor('summary', 'person:ada'))).declaration;
     expect(boundTarget(built.composition.resolve(instanceDescriptor('summary', 'person:ada'))).declaration).toBe(summary);
     expect(summary).not.toBe(built.contributor.steps.summary);

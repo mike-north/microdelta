@@ -55,6 +55,29 @@ describe('Resolution refuses steps it does not resolve (CMP-9)', () => {
     expect(observed.events).toEqual([]);
   });
 
+  test('the refusal reads the requested descriptor before any composition lookup, never running its accessors', async () => {
+    let reads = 0;
+    const cases: readonly ((descriptors: { readonly instance: IBindingDescriptor }) => IBindingDescriptor)[] = [
+      // Malformed template fields would fail composition lookup; the refusal comes first.
+      ({ instance }) => ({ ...instance, template: '' }),
+      ({ instance }) => ({ scope: instance.scope, role: 'step', slot: 'summary', collection: 'contributors', memberKey: 'person:ada' }),
+      ({ instance }) => Object.defineProperty({ ...instance }, 'template', {
+        get: () => {
+          reads++;
+          return 'contributor';
+        },
+        enumerable: true,
+      }),
+    ];
+    for (const step of cases) {
+      const observed = await refusal(step);
+      expect(observed.caught instanceof ResolutionError ? observed.caught.code : undefined).toBe('invalid-request');
+      expect(observed.caught instanceof ResolutionError ? observed.caught.message : '').toContain('template instance step');
+      expect(observed.events).toEqual([]);
+    }
+    expect(reads).toBe(0);
+  });
+
   test('a strict fold step is refused with invalid-request before evidence, candidate lookup or admission', async () => {
     const observed = await refusal(({ fold }) => fold);
     expect(observed.caught).toBeInstanceOf(ResolutionError);

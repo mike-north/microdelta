@@ -13,10 +13,8 @@
  */
 import { randomUUID } from 'node:crypto';
 
-import type { IFoldReport } from '@microdelta/supervision';
-
 import { ResolutionError, openWorkspace } from '../../src/index.js';
-import type { IAdmissionDecision, IAdmissionRequest, IRunEvent } from '../../src/index.js';
+import type { IAdmissionDecision, IAdmissionRequest, IFoldReport, IRunEvent } from '../../src/index.js';
 import { openHistory } from '../durable-history/support.js';
 import { analysis, composeFold, reportSubject, world } from './fixture.js';
 import type { IFoldFixture, IVariation } from './fixture.js';

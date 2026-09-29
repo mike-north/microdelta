@@ -23,14 +23,28 @@ may change without notice; the default public entry exposes none of it. It
 composes the owners and adds no policy of its own:
 
 - `authoring<TInputs, THelpers>()`: Definition's builders bound to Reuse
-  Resolution's binding family (`source`, `memo`, `compose`).
+  Resolution's binding family: `source` (including keyed collection sources),
+  `memo`, `template` (fanout over a keyed collection with an optional custom
+  key and tracked gate; member steps read their member through the `member`
+  binding), `fold` (a strict fold over one template step), `stepSlot`,
+  `suppliedStep` and `supply` (callable step slots bound at composition),
+  the canonical `forward` argument origins, and `compose`. Step callbacks also
+  receive the observed `untracked` read.
 - `openWorkspace({ location, logicalStore })`: durable History over Node's
   SQLite and clock. `workspace.run(options, body)` is one Run Supervision run
   whose Resolution resolves against that store; the run offers the normal entry
-  operation `resolve(step, { requestKey })`, the recovery entry operation
-  `recover(step, { requestKey })`, `check(step)`, observed nonmemoized
-  `ordinary(label, work)`, and exact `read(reference)`.
+  operation `resolve(step, { requestKey })`, `resolveMembers(target, {
+  requestKey })` for every current member of a template step,
+  `resolveFold(step, { requestKey })` for a strict fold (reporting discovery,
+  each member's typed outcome and the fold's outcome with coverage), the
+  recovery entry operation `recover(step, { requestKey })`, `check(step)`,
+  observed nonmemoized `ordinary(label, work)`, and exact `read(reference)`.
 - `currentRun()`: the live run's context, looked up without a parameter.
+
+The alpha view names the owners' contracts through facade-local aliases, so a
+consumer imports only `microdelta`: for example `IMemberBuilder`,
+`IStepSlot`, `IForwarded`, `IFoldEntry`, `IFoldReport`, `IStrictFoldOutcome`
+and `IFoldCoverage`.
 
 The [contribution report example](../../examples/contribution-report/README.md)
 uses this path through the installed workspace's generated alpha declarations.

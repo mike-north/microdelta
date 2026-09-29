@@ -14,24 +14,43 @@ import { GenerationRow } from '@microdelta/history';
 import { GenerationState } from '@microdelta/history';
 import type { IAdmissionDecision as IAdmissionDecision_2 } from '@microdelta/resolution';
 import type { IAdmissionRequest as IAdmissionRequest_2 } from '@microdelta/resolution';
+import type { IAnyTemplateDeclaration as IAnyTemplateDeclaration_2 } from '@microdelta/definition';
 import type { IBindingDescriptor } from '@microdelta/definition';
+import type { ICandidateMiss as ICandidateMiss_2 } from '@microdelta/resolution';
 import type { ICheckOutcome as ICheckOutcome_2 } from '@microdelta/resolution';
 import type { IChildResult as IChildResult_2 } from '@microdelta/definition';
+import type { ICollectionResult as ICollectionResult_2 } from '@microdelta/definition';
+import type { ICollectionStatus as ICollectionStatus_2 } from '@microdelta/definition';
 import type { ICompletedResultReference as ICompletedResultReference_2 } from '@microdelta/history';
 import type { IComposition as IComposition_2 } from '@microdelta/definition';
 import type { IDeclarations } from '@microdelta/definition';
 import type { IDeclaredCallHandle as IDeclaredCallHandle_2 } from '@microdelta/definition';
 import { Identity } from '@microdelta/history';
+import type { IDerivedArguments as IDerivedArguments_2 } from '@microdelta/definition';
 import type { IDiscoveryReport as IDiscoveryReport_2 } from '@microdelta/supervision';
 import type { IExecutionAdmission } from '@microdelta/resolution';
+import type { IFoldCoverage as IFoldCoverage_2 } from '@microdelta/resolution';
+import type { IFoldDeclaration as IFoldDeclaration_2 } from '@microdelta/definition';
+import type { IFoldEntry as IFoldEntry_2 } from '@microdelta/definition';
+import type { IFoldOutcome as IFoldOutcome_2 } from '@microdelta/resolution';
+import type { IFoldReport as IFoldReport_2 } from '@microdelta/supervision';
+import type { IForward as IForward_2 } from '@microdelta/definition';
+import type { IForwarded as IForwarded_2 } from '@microdelta/definition';
 import type { IGateEvidence as IGateEvidence_2 } from '@microdelta/resolution';
+import type { IKeyedMember as IKeyedMember_2 } from '@microdelta/definition';
+import type { IKeyedSnapshot as IKeyedSnapshot_2 } from '@microdelta/definition';
+import type { IKeyingDiagnostic as IKeyingDiagnostic_2 } from '@microdelta/definition';
+import type { IKeyingFailure as IKeyingFailure_2 } from '@microdelta/definition';
 import type { ILifecycleEvent as ILifecycleEvent_2 } from '@microdelta/resolution';
 import type { ILifecyclePhase as ILifecyclePhase_2 } from '@microdelta/resolution';
+import type { IMemberBinding as IMemberBinding_2 } from '@microdelta/definition';
+import type { IMemberBuilder as IMemberBuilder_2 } from '@microdelta/definition';
 import type { IMemberOutcome as IMemberOutcome_2 } from '@microdelta/supervision';
 import type { IMembersReport as IMembersReport_2 } from '@microdelta/supervision';
 import type { IMembersTarget as IMembersTarget_2 } from '@microdelta/supervision';
 import { InvalidStorePatchError } from '@microdelta/history';
 import type { IOrdinaryPhase as IOrdinaryPhase_2 } from '@microdelta/supervision';
+import type { IPathInput as IPathInput_2 } from '@microdelta/definition';
 import type { IPreviousResult as IPreviousResult_2 } from '@microdelta/resolution';
 import type { IRecoveryResult as IRecoveryResult_2 } from '@microdelta/resolution';
 import type { IRequestOptions as IRequestOptions_2 } from '@microdelta/supervision';
@@ -44,11 +63,19 @@ import type { IRunContext as IRunContext_2 } from '@microdelta/supervision';
 import type { IRunEvent as IRunEvent_2 } from '@microdelta/supervision';
 import type { IRunObserver as IRunObserver_2 } from '@microdelta/supervision';
 import type { IRunResult as IRunResult_2 } from '@microdelta/supervision';
+import type { ISkippedEntry as ISkippedEntry_2 } from '@microdelta/definition';
+import type { ISlotSubject as ISlotSubject_2 } from '@microdelta/definition';
 import type { ISourceOutcome as ISourceOutcome_2 } from '@microdelta/resolution';
 import type { ISourceOutcomes as ISourceOutcomes_2 } from '@microdelta/resolution';
+import type { IStepSlot as IStepSlot_2 } from '@microdelta/definition';
+import type { IStrictFoldOutcome as IStrictFoldOutcome_2 } from '@microdelta/supervision';
+import type { ISucceededEntry as ISucceededEntry_2 } from '@microdelta/definition';
 import type { ISupervisionErrorCode as ISupervisionErrorCode_2 } from '@microdelta/supervision';
+import type { ISuppliedStepDeclaration as ISuppliedStepDeclaration_2 } from '@microdelta/definition';
+import type { ISuppliedStepRegistration as ISuppliedStepRegistration_2 } from '@microdelta/definition';
 import type { ITrackedHelpers as ITrackedHelpers_2 } from '@microdelta/resolution';
 import type { ITrackedView as ITrackedView_2 } from '@microdelta/tracking';
+import type { IUntrackedRead as IUntrackedRead_2 } from '@microdelta/resolution';
 import { MemoryStoreOptions } from '@microdelta/history';
 import { MissingRowError } from '@microdelta/history';
 import { Outcome } from '@microdelta/history';
@@ -98,16 +125,28 @@ export type IAdmissionPolicy = IExecutionAdmission;
 export type IAdmissionRequest = IAdmissionRequest_2;
 
 // @alpha
+export type IAnyTemplateDeclaration<TInputs extends object, THelpers extends object> = IAnyTemplateDeclaration_2<IAuthoringFamily<TInputs, THelpers>>;
+
+// @alpha
 export type IAuthoring<TInputs extends object, THelpers extends object> = IDeclarations<IAuthoringFamily<TInputs, THelpers>>;
 
 // @alpha
 export type IAuthoringFamily<TInputs extends object, THelpers extends object> = IResolutionFamily<TInputs, THelpers>;
 
 // @alpha
+export type ICandidateMiss = ICandidateMiss_2;
+
+// @alpha
 export type ICheckOutcome = ICheckOutcome_2;
 
 // @alpha
 export type IChildResult<T> = IChildResult_2<T>;
+
+// @alpha
+export type ICollectionResult<TMember> = ICollectionResult_2<TMember>;
+
+// @alpha
+export type ICollectionStatus = ICollectionStatus_2;
 
 // @alpha
 export type ICompletedResultReference = ICompletedResultReference_2;
@@ -121,16 +160,58 @@ export type IDeclaredCallHandle<T> = IDeclaredCallHandle_2<T>;
 export { Identity }
 
 // @alpha
+export type IDerivedArguments<TParameters extends readonly unknown[]> = IDerivedArguments_2<TParameters>;
+
+// @alpha
 export type IDiscoveryReport = IDiscoveryReport_2;
 
 // @alpha
+export type IFoldCoverage = IFoldCoverage_2;
+
+// @alpha
+export type IFoldDeclaration<TInputs extends object, THelpers extends object, TMemberResult, TResult> = IFoldDeclaration_2<IAuthoringFamily<TInputs, THelpers>, TMemberResult, TResult>;
+
+// @alpha
+export type IFoldEntry<T> = IFoldEntry_2<T>;
+
+// @alpha
+export type IFoldOutcome = IFoldOutcome_2;
+
+// @alpha
+export type IFoldReport = IFoldReport_2;
+
+// @alpha
+export type IForward = IForward_2;
+
+// @alpha
+export type IForwarded<T = unknown> = IForwarded_2<T>;
+
+// @alpha
 export type IGateEvidence = IGateEvidence_2;
+
+// @alpha
+export type IKeyedMember = IKeyedMember_2;
+
+// @alpha
+export type IKeyedSnapshot = IKeyedSnapshot_2;
+
+// @alpha
+export type IKeyingDiagnostic = IKeyingDiagnostic_2;
+
+// @alpha
+export type IKeyingFailure = IKeyingFailure_2;
 
 // @alpha
 export type ILifecycleEvent = ILifecycleEvent_2;
 
 // @alpha
 export type ILifecyclePhase = ILifecyclePhase_2;
+
+// @alpha
+export type IMemberBinding<TInputs extends object, THelpers extends object, TMember> = IMemberBinding_2<IAuthoringFamily<TInputs, THelpers>, TMember>;
+
+// @alpha
+export type IMemberBuilder<TInputs extends object, THelpers extends object, TMember> = IMemberBuilder_2<IAuthoringFamily<TInputs, THelpers>, TMember>;
 
 // @alpha
 export type IMemberOutcome = IMemberOutcome_2;
@@ -145,6 +226,9 @@ export { InvalidStorePatchError }
 
 // @alpha
 export type IOrdinaryPhase = IOrdinaryPhase_2;
+
+// @alpha
+export type IPathInput = IPathInput_2;
 
 // @alpha
 export type IPreviousResult<T> = IPreviousResult_2<T>;
@@ -177,6 +261,12 @@ export type IRunObserver = IRunObserver_2;
 export type IRunResult<T> = IRunResult_2<T>;
 
 // @alpha
+export type ISkippedEntry = ISkippedEntry_2;
+
+// @alpha
+export type ISlotSubject<TParameters extends readonly unknown[]> = ISlotSubject_2<TParameters>;
+
+// @alpha
 export type ISourceOutcome<T> = ISourceOutcome_2<T>;
 
 // @alpha
@@ -186,13 +276,31 @@ export type ISourceOutcomes = ISourceOutcomes_2;
 export type IStepDescriptor = IBindingDescriptor;
 
 // @alpha
+export type IStepSlot<TInputs extends object, THelpers extends object, TParameters extends readonly unknown[], TResult> = IStepSlot_2<IAuthoringFamily<TInputs, THelpers>, TParameters, TResult>;
+
+// @alpha
+export type IStrictFoldOutcome = IStrictFoldOutcome_2;
+
+// @alpha
+export type ISucceededEntry<T> = ISucceededEntry_2<T>;
+
+// @alpha
 export type ISupervisionErrorCode = ISupervisionErrorCode_2;
+
+// @alpha
+export type ISuppliedStepDeclaration<TInputs extends object, THelpers extends object, TParameters extends readonly unknown[], TResult> = ISuppliedStepDeclaration_2<IAuthoringFamily<TInputs, THelpers>, TParameters, TResult>;
+
+// @alpha
+export type ISuppliedStepRegistration<TInputs extends object, THelpers extends object> = ISuppliedStepRegistration_2<IAuthoringFamily<TInputs, THelpers>>;
 
 // @alpha
 export type ITrackedHelpers<THelpers extends object> = ITrackedHelpers_2<THelpers>;
 
 // @alpha
 export type ITrackedView<T> = ITrackedView_2<T>;
+
+// @alpha
+export type IUntrackedRead = IUntrackedRead_2;
 
 // @alpha
 export interface IWorkspace {

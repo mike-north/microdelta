@@ -117,5 +117,8 @@ publishes success on that exact SHA with a read-back. It never approves, arms
 auto-merge, or merges; if it finds auto-merge enabled afterwards it reports an
 error. The maintainer then merges manually under the same protection, with no
 administrator bypass. A new commit on the release branch needs a new release
-review. Implemented and tested for issue #64; it has not been applied to any
-release PR.
+review. Implemented and tested for issue #64. It was applied once, to PR #49 at
+`c92f2f60be759314c6acc01ce1c998c4bc999a1f` (see the
+[first-release record](validation/first-release-2026-09-28.md)); that use does
+not relax the procedure, and every future release PR needs its own exact-head
+review, owner authorization, and human confirmation.

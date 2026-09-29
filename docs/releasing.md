@@ -8,11 +8,16 @@ workflow in this document lives in
 [`.github/workflows/release.yml`](../.github/workflows/release.yml), the one
 workflow identity npm trusts for this repository.
 
-No implementation release has been published yet. The registry holds only the
-`0.0.0` namespace-bootstrap placeholders described below. Configuring trust and
-verifying the workflow locally are not evidence of a real OIDC publication; the
-first real publication is the first merge of a Version Packages PR after this
-configuration reaches `main`.
+The first implementation release, `0.1.0` of all ten packages, was published
+on 2026-09-28 by merging Version Packages PR #49 (merge commit `546c5e6`, release
+run 36489991465). It was verified from the public registry, downloaded bytes,
+signed provenance, `npm audit signatures`, and a clean external install, not
+from workflow success alone; see the
+[first-release record](validation/first-release-2026-09-28.md). The published
+runtime is an incomplete pre-1.0 release: a full durable-analysis API is not
+yet supported. Configuring trust and verifying the workflow locally are not by
+themselves evidence of a publication; each release needs its own registry
+verification.
 
 ## When to add a changeset
 
@@ -240,18 +245,33 @@ npm install microdelta
 ```
 
 npm resolves the exact first-party versions the release pinned. Consumers can
-check provenance with `npm audit signatures`. Until the first implementation
-release, `npm install microdelta` installs only the bootstrap placeholder.
+check provenance with `npm audit signatures`. `0.1.0` is the
+first implementation release and is `latest` for every package; the `0.0.0`
+bootstrap placeholders remain on the registry as history. It exposes only the
+bounded runtime pieces described in the README, not a supported durable-analysis
+API.
 
 ## Current authorization limits
 
 The repository owner authorized npm-side setup (name bootstrap and trust
 configuration) and this GitHub-side configuration. Merging a Version Packages
-PR is a release decision the owner makes separately; agents do not record its
-release review, merge it, dispatch releases, add registry tokens or secrets, or
-change repository visibility. The release review procedure is implemented and
-tested but has not been applied to any release PR. No npm token is stored
-anywhere in this repository or its secrets.
+PR is a release decision the owner makes separately for each release; agents do
+not record its release review, merge it, dispatch releases, add registry tokens
+or secrets, or change repository visibility. No npm token is stored anywhere in
+this repository or its secrets.
+
+Standing policy for every future release: fresh owner authorization for that
+release, exact-head required checks and the exact-head release review, human
+confirmation of the head, and a manual merge under branch protection without
+bypass. The Copilot review gate applies as usual; no waiver is standing.
+
+History, not precedent: the owner specifically authorized the release of PR #49
+at head `c92f2f60be75`, and the release review procedure was applied once to
+that exact head. Two one-time waivers of a missing completed Copilot review
+were granted, one for PR #75 at `342044074911` and one for PR #49 at
+`c92f2f60be75`. Each applied only to its own exact head; neither changes the
+ordinary Copilot gate or authorizes any later release. The review helper and
+branch protection were not changed.
 
 ## API Extractor reports
 

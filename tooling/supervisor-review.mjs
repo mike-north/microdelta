@@ -250,6 +250,107 @@ function ghJson(args, acceptedExitCodes = [0]) {
   }
 }
 
+/** Map a GitHub app ID onto the source label validateProtection compares. */
+function checkSourceForApp(appId) {
+  if (appId === GITHUB_ACTIONS_APP_ID) return REQUIRED_CHECK_SOURCE;
+  return appId == null ? null : `app:${appId}`;
+}
+
+/**
+ * A page of this size may hide further rules, so the reader refuses to reason from it:
+ * a rule it never saw could be the one that matters.
+ */
+const RULES_PAGE_SIZE = 100;
+
+/** The absent-source shape: no requirement is enforced by a source that does not exist. */
+const NO_PROTECTION = Object.freeze({
+  requiresPullRequest: false,
+  strict: false,
+  enforceAdmins: false,
+  resolveConversations: false,
+  requiredContexts: Object.freeze([]),
+  checkSources: Object.freeze({}),
+});
+
+/** Prefer the source-pinned Actions producer when two enforcement sources describe one context. */
+function mergeCheckSources(...sourceMaps) {
+  const merged = {};
+  for (const sources of sourceMaps) {
+    for (const [context, source] of Object.entries(sources)) {
+      if (!(context in merged) || (merged[context] !== REQUIRED_CHECK_SOURCE && source === REQUIRED_CHECK_SOURCE)) {
+        merged[context] = source;
+      }
+    }
+  }
+  return merged;
+}
+
+/** Combine sources by union of enforced requirements; the branch name comes from the caller. */
+function mergeProtections(branch, ...sources) {
+  return {
+    branch,
+    requiresPullRequest: sources.some(source => source.requiresPullRequest),
+    strict: sources.some(source => source.strict),
+    enforceAdmins: sources.some(source => source.enforceAdmins),
+    resolveConversations: sources.some(source => source.resolveConversations),
+    requiredContexts: [...new Set(sources.flatMap(source => source.requiredContexts))],
+    checkSources: mergeCheckSources(...sources.map(source => source.checkSources)),
+  };
+}
+
+/** Normalize the legacy branch-protection payload. */
+function normalizeLegacyProtection(rule) {
+  const checks = rule.required_status_checks;
+  const contexts = checks?.contexts ?? [];
+  const checksWithSources = checks?.checks ?? [];
+  const requiredContexts = new Set([...contexts, ...checksWithSources.map(check => check.context)]);
+  const checkSources = Object.fromEntries(checksWithSources.map(check => [
+    check.context,
+    checkSourceForApp(check.app_id),
+  ]));
+  return {
+    requiresPullRequest: rule.required_pull_request_reviews != null,
+    strict: checks?.strict === true,
+    enforceAdmins: rule.enforce_admins?.enabled === true,
+    resolveConversations: rule.required_conversation_resolution?.enabled === true,
+    requiredContexts: [...requiredContexts],
+    checkSources,
+  };
+}
+
+/**
+ * Normalize the rules GitHub reports as active for a branch, plus the owning rulesets' own
+ * enforcement and bypass lists. Rules of a ruleset that is not `active` enforce nothing and are
+ * ignored. Administrators are covered only when at least one ruleset contributes and every
+ * contributing ruleset is active with no bypass actor of any kind.
+ */
+function normalizeRulesetProtection(rules, rulesetsById) {
+  const protection = {
+    requiresPullRequest: false,
+    strict: false,
+    resolveConversations: false,
+    requiredContexts: [],
+    checkSources: {},
+  };
+  for (const rule of rules) {
+    if (rulesetsById.get(rule.ruleset_id).enforcement !== 'active') continue;
+    if (rule.type === 'pull_request') {
+      protection.requiresPullRequest = true;
+      if (rule.parameters?.required_review_thread_resolution === true) protection.resolveConversations = true;
+    } else if (rule.type === 'required_status_checks') {
+      if (rule.parameters?.strict_required_status_checks_policy === true) protection.strict = true;
+      for (const check of rule.parameters?.required_status_checks ?? []) {
+        protection.requiredContexts.push(check.context);
+        protection.checkSources = mergeCheckSources(protection.checkSources, { [check.context]: checkSourceForApp(check.integration_id) });
+      }
+    }
+  }
+  const contributing = [...rulesetsById.values()];
+  const enforceAdmins = contributing.length > 0
+    && contributing.every(ruleset => ruleset.enforcement === 'active' && (ruleset.bypass_actors ?? []).length === 0);
+  return { ...protection, enforceAdmins };
+}
+
 /**
  * Keep GitHub command execution behind one injectable boundary so adapter tests cannot
  * accidentally reach the ambient account and production operations share one CLI path.
@@ -267,32 +368,45 @@ export function createGitHubApi(repositoryName, runJson = ghJson) {
     return result;
   };
 
+  /** Legacy protection is optional: a 404 means the branch has none, any other failure is fatal. */
+  const readLegacyProtection = branch => {
+    try {
+      return normalizeLegacyProtection(runJson(['api', `${restPrefix}/branches/${branch}/protection`]));
+    } catch (error) {
+      if (error instanceof Error && /HTTP 404/u.test(error.message)) return NO_PROTECTION;
+      throw error;
+    }
+  };
+  /** Read-only GETs: active rules for the branch, then each contributing ruleset's enforcement and bypass list. */
+  const readRulesetProtection = branch => {
+    const rules = runJson(['api', `${restPrefix}/rules/branches/${branch}?per_page=${RULES_PAGE_SIZE}`]);
+    if (!Array.isArray(rules)) throw new Error('GitHub returned malformed branch rules.');
+    if (rules.length >= RULES_PAGE_SIZE) throw new Error('Branch rules response may be truncated; refusing to reason from a partial rule set.');
+    const rulesetsById = new Map();
+    for (const rule of rules) {
+      if (!Number.isSafeInteger(rule.ruleset_id)) throw new Error('GitHub returned a branch rule without its owning ruleset.');
+      if (!rulesetsById.has(rule.ruleset_id)) {
+        rulesetsById.set(rule.ruleset_id, runJson(['api', `${restPrefix}/rulesets/${rule.ruleset_id}`]));
+      }
+    }
+    return normalizeRulesetProtection(rules, rulesetsById);
+  };
+
   return {
     /** Read canonical repository identity and default branch for all subsequent gate checks. */
     async readRepository() {
       const result = runJson(['api', restPrefix]);
       return { nameWithOwner: result.full_name, defaultBranch: result.default_branch };
     },
-    /** Read branch protection and normalize required contexts and their producing app identity. */
+    /**
+     * Read every source that can protect the branch and normalize them into one requirement set.
+     * A requirement holds when either legacy branch protection or an active ruleset enforces it;
+     * a requirement absent from both stays false so validateProtection still fails closed.
+     */
     async readProtection(branch) {
-      const rule = runJson(['api', `${restPrefix}/branches/${branch}/protection`]);
-      const checks = rule.required_status_checks;
-      const contexts = checks?.contexts ?? [];
-      const checksWithSources = checks?.checks ?? [];
-      const requiredContexts = new Set([...contexts, ...checksWithSources.map(check => check.context)]);
-      const checkSources = Object.fromEntries(checksWithSources.map(check => [
-        check.context,
-        check.app_id === GITHUB_ACTIONS_APP_ID ? REQUIRED_CHECK_SOURCE : check.app_id === null ? null : `app:${check.app_id}`,
-      ]));
-      return {
-        branch,
-        requiresPullRequest: rule.required_pull_request_reviews != null,
-        strict: checks?.strict === true,
-        enforceAdmins: rule.enforce_admins?.enabled === true,
-        resolveConversations: rule.required_conversation_resolution?.enabled === true,
-        requiredContexts: [...requiredContexts],
-        checkSources,
-      };
+      const legacy = readLegacyProtection(branch);
+      const rulesets = readRulesetProtection(branch);
+      return mergeProtections(branch, legacy, rulesets);
     },
     /** Read PR lifecycle state and all review threads so pagination cannot hide unresolved discussion. */
     async readPullRequest(number) {

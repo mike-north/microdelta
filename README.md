@@ -15,9 +15,11 @@ acceptable, not to require deterministic output or to cache every function.
 
 microdelta is in development. Its active specification describes the target;
 the current workspace implements owner contracts and bounded runtime pieces, not
-the complete authoring, persistence, or reuse lifecycle. No package has been
-published, and there is not yet a supported durable-analysis API for an external
-consumer to install.
+the complete authoring, persistence, or reuse lifecycle. Version `0.1.0` of
+the ten packages is published on npm (verified in the
+[first-release record](docs/validation/first-release-2026-09-28.md)), but it is
+an incomplete pre-1.0 release: there is not yet a supported durable-analysis API
+for an external consumer to rely on.
 
 ## Target workflow
 
@@ -233,6 +235,10 @@ consumers, and reviewed API reports. For implementation work, follow
 [delivery conventions](ENG_TEAM_INSTRUCTIONS.md): derive outcome assertions from
 the owning contract before changing software, observe the expected failure, and
 document durable intent in code. Contributors open scoped PRs for supervisory
-review; only the supervisor merges accepted work. No implementation release has
-been published: npm holds only `0.0.0` namespace placeholders. Merging the
-reviewed Version Packages PR is the release decision; see [releasing](docs/releasing.md).
+review; only the supervisor merges accepted work. Version `0.1.0`
+of the ten packages was released on 2026-09-28 (see the
+[first-release record](docs/validation/first-release-2026-09-28.md)); it is
+incomplete and not a supported durable-analysis API. `0.0.0` remains the
+namespace-bootstrap history. Merging the reviewed Version Packages PR is the
+release decision, and each release needs fresh owner authorization; see
+[releasing](docs/releasing.md).

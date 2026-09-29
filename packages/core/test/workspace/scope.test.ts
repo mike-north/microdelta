@@ -73,7 +73,7 @@ describe('scoped run context (RUN-001, DOM-2)', () => {
     try {
       const { outcomes } = await runReport(session);
       const ada = outcomes['person:ada'];
-      if (ada.kind === 'refused') {
+      if (ada.kind === 'refused' || ada.kind === 'skipped') {
         throw new Error('expected a result for Ada');
       }
       const reference = ada.reference;
@@ -113,8 +113,8 @@ describe('scoped run context (RUN-001, DOM-2)', () => {
         observers: [{ observe: (event) => { if (event.kind === 'ordinary') { events.push(`${event.label}:${event.phase}`); } } }],
       }, async (run) => {
         const published = await run.resolve(session.contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
-        if (published.kind === 'refused') {
-          throw new Error('unexpected refusal');
+        if (published.kind === 'refused' || published.kind === 'skipped') {
+          throw new Error(`unexpected ${published.kind} outcome`);
         }
         const slow = run.ordinary('slow', async () => {
           await held;
@@ -162,7 +162,7 @@ describe('scoped run context (RUN-001, DOM-2)', () => {
     try {
       const cold = await runReport(session);
       const ada = cold.outcomes['person:ada'];
-      if (ada.kind === 'refused') {
+      if (ada.kind === 'refused' || ada.kind === 'skipped') {
         throw new Error('expected a result for Ada');
       }
       const reference = ada.reference;

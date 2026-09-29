@@ -8,6 +8,12 @@
  * callback. Author callback contexts are computed from a facade-supplied
  * binding family, so Definition never imports Tracking (ARC-003).
  *
+ * A template member step's callbacks also receive the member binding: every
+ * instance of the step is applied with Resolution's member supplier, and the
+ * step's context gains `member`, the view of its member's current keyed
+ * record. Every other step (composition-level, explicitly keyed M3 members)
+ * has no member binding and rejects one.
+ *
  * Owners that reconnect a step by descriptor see only its erased declaration.
  * The precise callback types survive in the step's record: closures created
  * while the author's types were known, which pair the actual callback with the
@@ -28,6 +34,8 @@ import type {
 } from './invocation.js';
 import type { IAnyStepSlot, IStepSlot, ISuppliedStepRecord } from './slot.js';
 import { stepSlotName } from './slot.js';
+import type { IBindingDescriptor } from './descriptor.js';
+import type { IMemberSupplier } from './template.js';
 import type { IInvocationWitness } from './witness.js';
 
 /**
@@ -60,6 +68,17 @@ export type IFinalityContext<TFamily extends IBindingFamily, TResult> = TFamily[
 };
 
 /**
+ * The member binding a template member step's callbacks (and its gate)
+ * receive: the facade's view of the member's current keyed record, typed from
+ * the template collection's member type.
+ * @alpha
+ */
+export interface IMemberBinding<TFamily extends IBindingFamily, TMember> {
+  /** The view of this instance's member record in the current keyed collection. */
+  readonly member: IApply<TFamily['views'], TMember>;
+}
+
+/**
  * A source declaration with its result type erased: identity, subject, version
  * and the actual callbacks, whose contexts owners cannot construct.
  * @alpha
@@ -85,12 +104,14 @@ export interface IAnySourceDeclaration<TFamily extends IBindingFamily> extends I
 }
 
 /**
- * A source declaration carrying its declared result type.
+ * A source declaration carrying its declared result type. `TExtra` is context
+ * its callbacks receive beyond the facade bindings: nothing for ordinary
+ * sources, the member binding for a template member source.
  * @alpha
  */
-export interface ISourceDeclaration<TFamily extends IBindingFamily, TResult> extends IAnySourceDeclaration<TFamily> {
-  readonly run: (context: ISourceRunContext<TFamily, TResult>) => IApply<TFamily['outcomes'], TResult>;
-  readonly finality: ((context: IFinalityContext<TFamily, TResult>) => unknown) | undefined;
+export interface ISourceDeclaration<TFamily extends IBindingFamily, TResult, TExtra = unknown> extends IAnySourceDeclaration<TFamily> {
+  readonly run: (context: ISourceRunContext<TFamily, TResult> & TExtra) => IApply<TFamily['outcomes'], TResult>;
+  readonly finality: ((context: IFinalityContext<TFamily, TResult> & TExtra) => unknown) | undefined;
 }
 
 /**
@@ -100,6 +121,8 @@ export interface ISourceDeclaration<TFamily extends IBindingFamily, TResult> ext
  */
 export type IResultOf<TFamily extends IBindingFamily, TDeclaration> =
   TDeclaration extends ISourceDeclaration<TFamily, infer TResult> ? TResult
+    // A member source's callbacks take the member binding; a `never` member accepts any member type.
+    : TDeclaration extends ISourceDeclaration<TFamily, infer TResult, { readonly member: never }> ? TResult
     : TDeclaration extends IStepSlot<TFamily, readonly unknown[], infer TResult> ? TResult
       : TDeclaration extends { readonly kind: 'memo'; readonly run: (context: never) => infer TResult } ? Awaited<TResult>
         : never;
@@ -169,12 +192,14 @@ export interface IAnyMemoDeclaration<TFamily extends IBindingFamily> extends IDe
 }
 
 /**
- * A memo declaration carrying its typed children and result type.
+ * A memo declaration carrying its typed children and result type. `TExtra` is
+ * context its `run` receives beyond the facade bindings and calls: nothing
+ * for ordinary memos, the member binding for a template member memo.
  * @alpha
  */
-export interface IMemoDeclaration<TFamily extends IBindingFamily, TChildren extends IChildDeclarations<TFamily>, TResult>
+export interface IMemoDeclaration<TFamily extends IBindingFamily, TChildren extends IChildDeclarations<TFamily>, TResult, TExtra = unknown>
   extends IAnyMemoDeclaration<TFamily> {
-  readonly run: (context: IMemoRunContext<TFamily, TChildren>) => TResult;
+  readonly run: (context: IMemoRunContext<TFamily, TChildren> & TExtra) => TResult;
 }
 
 /**
@@ -184,10 +209,11 @@ export interface IMemoDeclaration<TFamily extends IBindingFamily, TChildren exte
 export type IStepDeclaration<TFamily extends IBindingFamily> = IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily> | IAnyFoldDeclaration<TFamily>;
 
 /**
- * Author options for a retained source.
+ * Author options for a retained source. `TExtra` is the context its callbacks
+ * receive beyond the facade bindings; an ordinary source has none.
  * @alpha
  */
-export interface ISourceOptions<TFamily extends IBindingFamily, TResult> {
+export interface ISourceOptions<TFamily extends IBindingFamily, TResult, TExtra = unknown> {
   /** Complete opaque author identity of this work's history, unique within its analysis scope. */
   readonly subject: string;
   /** Compatibility group; a positive safe integer, default 1. */
@@ -195,18 +221,19 @@ export interface ISourceOptions<TFamily extends IBindingFamily, TResult> {
   /** Display metadata only; never identity or correspondence. */
   readonly label?: string;
   /** The author's check/retrieval callback. */
-  readonly run: (context: ISourceRunContext<TFamily, TResult>) => IApply<TFamily['outcomes'], TResult>;
+  readonly run: (context: ISourceRunContext<TFamily, TResult> & TExtra) => IApply<TFamily['outcomes'], TResult>;
   /** The author's optional current finality hook. */
-  readonly finality?: (context: IFinalityContext<TFamily, TResult>) => unknown;
+  readonly finality?: (context: IFinalityContext<TFamily, TResult> & TExtra) => unknown;
   /** Declares a keyed collection source and names its members' designated identity field (COL-1). */
   readonly collection?: ICollectionOptions<TResult>;
 }
 
 /**
- * Author options for a memoized computation.
+ * Author options for a memoized computation. `TExtra` is the context its
+ * `run` receives beyond the facade bindings and calls; an ordinary memo has none.
  * @alpha
  */
-export interface IMemoOptions<TFamily extends IBindingFamily, TChildren extends IChildDeclarations<TFamily>, TResult> {
+export interface IMemoOptions<TFamily extends IBindingFamily, TChildren extends IChildDeclarations<TFamily>, TResult, TExtra = unknown> {
   /** Complete opaque author identity of this work's history, unique within its analysis scope. */
   readonly subject: string;
   /** Compatibility group; a positive safe integer, default 1. */
@@ -216,7 +243,7 @@ export interface IMemoOptions<TFamily extends IBindingFamily, TChildren extends 
   /** Each call name mapped to the sibling declaration occupying that slot, or to a supplied step slot. */
   readonly children?: TChildren;
   /** The author's computation callback. */
-  readonly run: (context: IMemoRunContext<TFamily, TChildren>) => TResult;
+  readonly run: (context: IMemoRunContext<TFamily, TChildren> & TExtra) => TResult;
 }
 
 /**
@@ -237,18 +264,48 @@ export interface IAuthorInvoker<TOutcome> {
  * @alpha
  */
 export interface IPreviousSupplier<TFamily extends IBindingFamily> {
-  /** The immutable carrier for this source declaration's selected previous result. */
-  carrier<TResult>(declaration: ISourceDeclaration<TFamily, TResult>): IApply<TFamily['previous'], TResult>;
+  /**
+   * The immutable carrier for this source declaration's selected previous
+   * result. Any source declaration of the result type is accepted, whatever
+   * context extension its callbacks take.
+   */
+  carrier<TResult>(declaration: ISourceDeclaration<TFamily, TResult, never>): IApply<TFamily['previous'], TResult>;
+}
+
+/**
+ * The member binding one invocation is applied with: Resolution's member
+ * supplier and the instance descriptor it is asked about.
+ */
+export interface IMemberAccess<TFamily extends IBindingFamily> {
+  readonly supplier: IMemberSupplier<TFamily>;
+  readonly instance: IBindingDescriptor;
+}
+
+/**
+ * How a declaration's callbacks receive context beyond the facade bindings:
+ * given the facade bindings (to check that they claim none of its names) and
+ * the invocation's member binding, the extra context fields. An ordinary step
+ * has none and rejects a member binding; a template member step requires one.
+ */
+export type IContextExtension<TFamily extends IBindingFamily, TExtra> = (bindings: object, member: IMemberAccess<TFamily> | undefined) => TExtra;
+
+/** An ordinary step's extension: no member binding, and none may be supplied. */
+function noExtension<TFamily extends IBindingFamily>(bindings: object, member: IMemberAccess<TFamily> | undefined): unknown {
+  void bindings;
+  if (member !== undefined) {
+    reject('invalid-bindings', 'Only a template instance has a member binding; this step has none.');
+  }
+  return {};
 }
 
 /** A source step's record: its erased declaration and typed invocation closures. */
 export interface ISourceRecord<TFamily extends IBindingFamily> {
   readonly kind: 'source';
   readonly declaration: IAnySourceDeclaration<TFamily>;
-  /** Pair the actual `run` with its assembled context and hand both to the invoker. */
-  apply<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily> | undefined, invoke: IAuthorInvoker<TOutcome>): TOutcome;
+  /** Pair the actual `run` with its assembled context (and its member binding, for an instance) and hand both to the invoker. */
+  apply<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily> | undefined, invoke: IAuthorInvoker<TOutcome>, member: IMemberAccess<TFamily> | undefined): TOutcome;
   /** Pair the actual `finality` with its assembled context; absent hooks reject. */
-  applyFinality<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>): TOutcome;
+  applyFinality<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>, member: IMemberAccess<TFamily> | undefined): TOutcome;
   /** Dispatch a call of this source as a declared child, typed by its result. */
   dispatch(port: IInvocationPort<TFamily>, scope: IInvocationScope, witness: IInvocationWitness): Promise<IChildResult<unknown>>;
   /** Mint and record a template instance: a declaration with a new complete subject and the same callbacks. */
@@ -272,8 +329,13 @@ export interface IMemoRecord<TFamily extends IBindingFamily> {
    * are all sibling sources keeps the M3 version-1 witness.
    */
   readonly nested: boolean;
-  /** Pair the actual `run` with bindings plus minted calls and hand both to the invoker. */
-  apply<TOutcome>(bindings: TFamily['memo'], mint: (call: string) => IDeclaredCallHandle<unknown, readonly unknown[]>, invoke: IAuthorInvoker<TOutcome>): TOutcome;
+  /** Pair the actual `run` with bindings plus minted calls (and its member binding, for an instance) and hand both to the invoker. */
+  apply<TOutcome>(
+    bindings: TFamily['memo'],
+    mint: (call: string) => IDeclaredCallHandle<unknown, readonly unknown[]>,
+    invoke: IAuthorInvoker<TOutcome>,
+    member: IMemberAccess<TFamily> | undefined,
+  ): TOutcome;
   /**
    * Mint and record a template instance: a declaration with a new complete
    * subject and the same callback. Only sibling declaration edges are remapped,
@@ -314,6 +376,22 @@ export function declareSource<TFamily extends IBindingFamily, TResult>(
   records: IDeclarationRecords<TFamily>,
   options: ISourceOptions<TFamily, TResult>,
 ): ISourceDeclaration<TFamily, TResult> {
+  return declareSourceWith(records, options, noExtension);
+}
+
+/**
+ * Declare a retained source whose callbacks receive `extend`'s extra context,
+ * such as a template member source's member binding.
+ * @param records - The builder instance's records.
+ * @param options - The author's subject, version, callbacks and label.
+ * @param extend - The extra context of each invocation.
+ * @returns A frozen Definition-owned declaration.
+ */
+export function declareSourceWith<TFamily extends IBindingFamily, TResult, TExtra>(
+  records: IDeclarationRecords<TFamily>,
+  options: ISourceOptions<TFamily, TResult, TExtra>,
+  extend: IContextExtension<TFamily, TExtra>,
+): ISourceDeclaration<TFamily, TResult, TExtra> {
   const read = readOptions(options);
   if (read.has('children')) {
     reject('illegal-edge', 'Sources declare no child edges in M3.');
@@ -327,7 +405,7 @@ export function declareSource<TFamily extends IBindingFamily, TResult>(
   // absent finality with no inherited property either, so reading them runs no
   // author code and adopts nothing unvalidated.
   const { run, finality } = options;
-  const declaration = mint<ISourceDeclaration<TFamily, TResult>>({
+  const declaration = mint<ISourceDeclaration<TFamily, TResult, TExtra>>({
     kind: 'source',
     subject: subjectOption(read),
     version: versionOption(read),
@@ -337,22 +415,24 @@ export function declareSource<TFamily extends IBindingFamily, TResult>(
     collection: collectionOption(read.get('collection')),
   });
   /** The record of one declaration sharing these typed callbacks: the declared one or a template instance. */
-  const recordOf = (current: ISourceDeclaration<TFamily, TResult>): ISourceRecord<TFamily> => ({
+  const recordOf = (current: ISourceDeclaration<TFamily, TResult, TExtra>): ISourceRecord<TFamily> => ({
     kind: 'source',
     declaration: current,
-    apply<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily> | undefined, invoke: IAuthorInvoker<TOutcome>): TOutcome {
+    apply<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily> | undefined, invoke: IAuthorInvoker<TOutcome>, member: IMemberAccess<TFamily> | undefined): TOutcome {
       checkBindings(bindings, 'previous');
+      const extra = extend(bindings, member);
       const carrier = previous === undefined ? undefined : checkCarrier(previous.carrier(current));
-      const context: ISourceRunContext<TFamily, TResult> = { ...bindings, previous: carrier };
+      const context: ISourceRunContext<TFamily, TResult> & TExtra = { ...bindings, ...extra, previous: carrier };
       Object.freeze(context);
       return invoke(run, context);
     },
-    applyFinality<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>): TOutcome {
+    applyFinality<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>, member: IMemberAccess<TFamily> | undefined): TOutcome {
       if (finality === undefined) {
         reject('invalid-callback', `Source ${current.subject} declares no finality hook.`);
       }
       checkBindings(bindings, 'previous');
-      const context: IFinalityContext<TFamily, TResult> = { ...bindings, previous: checkCarrier(previous.carrier(current)) };
+      const extra = extend(bindings, member);
+      const context: IFinalityContext<TFamily, TResult> & TExtra = { ...bindings, ...extra, previous: checkCarrier(previous.carrier(current)) };
       Object.freeze(context);
       return invoke(finality, context);
     },
@@ -363,7 +443,7 @@ export function declareSource<TFamily extends IBindingFamily, TResult>(
     },
     instantiate(subject: string): ISourceRecord<TFamily> {
       // An instance is never itself a keyed collection: only composition-level sources are.
-      const instance = mint<ISourceDeclaration<TFamily, TResult>>({ kind: 'source', subject, version: current.version, label: current.label, run, finality, collection: undefined });
+      const instance = mint<ISourceDeclaration<TFamily, TResult, TExtra>>({ kind: 'source', subject, version: current.version, label: current.label, run, finality, collection: undefined });
       const instanceRecord = recordOf(instance);
       records.set(instance, instanceRecord);
       return instanceRecord;
@@ -384,6 +464,22 @@ export function declareMemo<TFamily extends IBindingFamily, TChildren extends IC
   records: IDeclarationRecords<TFamily>,
   options: IMemoOptions<TFamily, TChildren, TResult>,
 ): IMemoDeclaration<TFamily, TChildren, TResult> {
+  return declareMemoWith(records, options, noExtension);
+}
+
+/**
+ * Declare a memoized computation whose `run` receives `extend`'s extra
+ * context, such as a template member memo's member binding.
+ * @param records - The builder instance's records.
+ * @param options - The author's subject, version, children, callback and label.
+ * @param extend - The extra context of each invocation.
+ * @returns A frozen Definition-owned declaration.
+ */
+export function declareMemoWith<TFamily extends IBindingFamily, TChildren extends IChildDeclarations<TFamily>, TResult, TExtra>(
+  records: IDeclarationRecords<TFamily>,
+  options: IMemoOptions<TFamily, TChildren, TResult, TExtra>,
+  extend: IContextExtension<TFamily, TExtra>,
+): IMemoDeclaration<TFamily, TChildren, TResult, TExtra> {
   const read = readOptions(options);
   if (read.has('collection')) {
     reject('invalid-collection', 'Only a source declares a keyed collection.');
@@ -425,7 +521,7 @@ export function declareMemo<TFamily extends IBindingFamily, TChildren extends IC
   // A parent emits the nested witness exactly when it declares a memo child or a supplied slot.
   const nested = entries.some(([, edge]) => edge.kind === 'slot' || edge.declaration.kind === 'memo');
   const slots = Object.freeze(entries.map(([slot]) => slot));
-  const declaration = mint<IMemoDeclaration<TFamily, TChildren, TResult>>({
+  const declaration = mint<IMemoDeclaration<TFamily, TChildren, TResult, TExtra>>({
     kind: 'memo',
     subject,
     version,
@@ -434,7 +530,7 @@ export function declareMemo<TFamily extends IBindingFamily, TChildren extends IC
     run,
   });
   /** The record of one declaration sharing this typed callback: the declared one or a template instance. */
-  const recordOf = (current: IMemoDeclaration<TFamily, TChildren, TResult>, pinned: ReadonlyMap<string, IChildEdge<TFamily>>, emitsNested: boolean): IMemoRecord<TFamily> => ({
+  const recordOf = (current: IMemoDeclaration<TFamily, TChildren, TResult, TExtra>, pinned: ReadonlyMap<string, IChildEdge<TFamily>>, emitsNested: boolean): IMemoRecord<TFamily> => ({
     kind: 'memo',
     declaration: current,
     children: pinned,
@@ -443,7 +539,7 @@ export function declareMemo<TFamily extends IBindingFamily, TChildren extends IC
       instanceSubject: string,
       siblingFor: (child: IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily>) => IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily>,
     ): IMemoRecord<TFamily> {
-      const instance = mint<IMemoDeclaration<TFamily, TChildren, TResult>>({ kind: 'memo', subject: instanceSubject, version: current.version, label: current.label, children: slots, run });
+      const instance = mint<IMemoDeclaration<TFamily, TChildren, TResult, TExtra>>({ kind: 'memo', subject: instanceSubject, version: current.version, label: current.label, children: slots, run });
       const remapped = new Map([...pinned].map(([call, edge]): [string, IChildEdge<TFamily>] =>
         [call, edge.kind === 'sibling' ? { kind: 'sibling', declaration: siblingFor(edge.declaration) } : edge]));
       // A template instance always emits the version-2 witness, whose descriptors carry its template fields.
@@ -451,8 +547,14 @@ export function declareMemo<TFamily extends IBindingFamily, TChildren extends IC
       records.set(instance, instanceRecord);
       return instanceRecord;
     },
-    apply<TOutcome>(bindings: TFamily['memo'], mintHandle: (call: string) => IDeclaredCallHandle<unknown, readonly unknown[]>, invoke: IAuthorInvoker<TOutcome>): TOutcome {
+    apply<TOutcome>(
+      bindings: TFamily['memo'],
+      mintHandle: (call: string) => IDeclaredCallHandle<unknown, readonly unknown[]>,
+      invoke: IAuthorInvoker<TOutcome>,
+      member: IMemberAccess<TFamily> | undefined,
+    ): TOutcome {
       checkBindings(bindings, 'calls');
+      const extra = extend(bindings, member);
       // A null prototype makes every nonempty slot name, including `__proto__`,
       // an own data entry rather than a write to an inherited accessor.
       const calls: Record<string, IDeclaredCallHandle<unknown, readonly unknown[]>> = Object.create(null) as Record<string, IDeclaredCallHandle<unknown, readonly unknown[]>>;
@@ -469,7 +571,7 @@ export function declareMemo<TFamily extends IBindingFamily, TChildren extends IC
       // the declared child slots, and each handle dispatches only its pinned
       // sibling, whose port contract yields the family view of that child.
       const typed = calls as ICalls<TFamily, TChildren>;
-      const context: IMemoRunContext<TFamily, TChildren> = { ...bindings, calls: typed };
+      const context: IMemoRunContext<TFamily, TChildren> & TExtra = { ...bindings, ...extra, calls: typed };
       Object.freeze(context);
       return invoke(run, context);
     },

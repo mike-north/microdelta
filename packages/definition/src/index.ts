@@ -37,6 +37,7 @@ export {
   type IChildDeclarations,
   type IDeclarationBrand,
   type IFinalityContext,
+  type IMemberBinding,
   type IMemoDeclaration,
   type IMemoOptions,
   type IMemoRunContext,

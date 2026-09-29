@@ -3,7 +3,8 @@
  *
  * An **attempt key** names one admitted execution: it is derived canonically
  * from the caller's saved request key and the complete structural invocation
- * descriptor (scope, role, slot and member key), so one top-level request
+ * descriptor (scope, role, slot and member key, plus the template slot and
+ * collection binding of a template instance), so one top-level request
  * yields one key per direct invocation it executes. A supplied step slot is one
  * descriptor invoked with many argument lists, so its key also names the
  * call's subject and argument digest. It is not a subject-level cache key;
@@ -35,9 +36,14 @@ function sourceText(callback: unknown): string | null {
   return typeof callback === 'function' ? Function.prototype.toString.call(callback) : null;
 }
 
-/** The canonical structural tuple of a descriptor. */
+/**
+ * The canonical structural tuple of a descriptor. A template instance
+ * appends its template slot and collection binding; every other descriptor
+ * keeps its M3 tuple, so no existing attempt key or intent digest changes.
+ */
 function structural(step: IBindingDescriptor): readonly (string | null)[] {
-  return [step.scope, step.role, step.slot, step.memberKey ?? null];
+  const base = [step.scope, step.role, step.slot, step.memberKey ?? null];
+  return step.template === undefined && step.collection === undefined ? base : [...base, step.template ?? null, step.collection ?? null];
 }
 
 /**
@@ -90,9 +96,15 @@ export function intentDigest<TInputs extends object, THelpers extends object>(op
       })
     : [];
   // A nested parent's supplied slot children: each slot with its current implementation, in slot order.
+  // A template instance's edges are declared once by its template step, which carries no member key.
+  const topology = options.composition.topology;
+  const template = options.step.template === undefined ? undefined : topology.templates.find((entry) => entry.slot === options.step.template);
+  const parentEdges = template === undefined
+    ? topology.edges.filter((edge) => descriptorKey(edge.parent) === descriptorKey(options.step))
+    : template.edges.filter((edge) => edge.parent.slot === options.step.slot && edge.parent.collection === options.step.collection);
   const slotChildren = declaration.kind === 'memo'
-    ? options.composition.topology.edges
-      .filter((edge) => edge.child.role === 'callable' && descriptorKey(edge.parent) === descriptorKey(options.step))
+    ? parentEdges
+      .filter((edge) => edge.child.role === 'callable')
       .map((edge) => {
         const resolution = options.composition.resolve(edge.child);
         return resolution.status === 'bound' && resolution.target.role === 'callable' && resolution.target.kind === 'supplied-step'
@@ -128,9 +140,9 @@ function currentBindings(validation: ITrackingObserver, slots: ICurrentSlots): r
   return [inputs, inputContent(validation, slots), helpers];
 }
 
-/** The canonical key of a descriptor's structural fields. */
+/** The canonical key of every structural field of a descriptor. */
 function descriptorKey(descriptor: IBindingDescriptor): string {
-  return JSON.stringify([...structural(descriptor), descriptor.template ?? null, descriptor.collection ?? null]);
+  return JSON.stringify([descriptor.scope, descriptor.role, descriptor.slot, descriptor.memberKey ?? null, descriptor.template ?? null, descriptor.collection ?? null]);
 }
 
 /**

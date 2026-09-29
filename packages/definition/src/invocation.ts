@@ -7,8 +7,10 @@
  * author callback with the context Definition assembles: the facade's bindings
  * plus Definition-minted calls (memo), the previous carrier Resolution
  * selected (source), or the argument views Resolution reconstructed (supplied
- * step). The pair goes to Resolution's rank-2 invoker, which tracks and
- * captures it. Definition never selects previous results, materializes data,
+ * step). A template instance's source or memo is applied with Resolution's
+ * member supplier, and its context gains the member binding; every other step
+ * has none and rejects one. The pair goes to Resolution's rank-2 invoker,
+ * which tracks and captures it. Definition never selects previous results, materializes data,
  * decides freshness or admission, or runs a body.
  *
  * Calling a handle routes an immutable witness, the pinned child declaration
@@ -30,6 +32,7 @@ import type {
   IAuthorInvoker,
   IChildEdge,
   IDeclarationRecords,
+  IMemberAccess,
   IPreviousSupplier,
   ISourceDeclaration,
 } from './declaration.js';
@@ -39,6 +42,7 @@ import { DefinitionError } from './errors.js';
 import type { IApply, IBindingFamily } from './family.js';
 import type { IFoldInvocation } from './fold.js';
 import type { IAnySuppliedStepDeclaration, IArgumentSupplier } from './slot.js';
+import type { IMemberSupplier } from './template.js';
 import type {
   IDirectChildWitness,
   IEmptyArguments,
@@ -102,8 +106,8 @@ export interface ISourceCallRequest<TFamily extends IBindingFamily, TResult> {
   readonly scope: IInvocationScope;
   /** The witness for this call. */
   readonly witness: IInvocationWitness;
-  /** The declared child source, carrying its result type to the port. */
-  readonly child: ISourceDeclaration<TFamily, TResult>;
+  /** The declared child source, carrying its result type to the port; a member source takes the member binding. */
+  readonly child: ISourceDeclaration<TFamily, TResult, never>;
 }
 
 /**
@@ -191,8 +195,13 @@ export interface IInvocationScope {
  */
 export interface IMemoInvocation<TFamily extends IBindingFamily> extends IInvocationScope {
   readonly kind: 'memo';
-  /** Hand the actual author `run` and its context (bindings plus declared calls) to the invoker. */
-  apply<TOutcome>(bindings: TFamily['memo'], invoke: IAuthorInvoker<TOutcome>): TOutcome;
+  /**
+   * Hand the actual author `run` and its context (bindings plus declared
+   * calls) to the invoker. A template instance requires `member`, whose view
+   * of the instance's member record becomes the context's member binding;
+   * any other memo rejects one.
+   */
+  apply<TOutcome>(bindings: TFamily['memo'], invoke: IAuthorInvoker<TOutcome>, member?: IMemberSupplier<TFamily>): TOutcome;
 }
 
 /**
@@ -204,10 +213,14 @@ export interface ISourceInvocation<TFamily extends IBindingFamily> extends IInvo
   readonly kind: 'source';
   /** Whether the author declared a finality hook. */
   readonly hasFinality: boolean;
-  /** Hand the actual author `run` and its context to the invoker. */
-  apply<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily> | undefined, invoke: IAuthorInvoker<TOutcome>): TOutcome;
-  /** Hand the actual author `finality` and its context to the invoker. */
-  applyFinality<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>): TOutcome;
+  /**
+   * Hand the actual author `run` and its context to the invoker. A template
+   * instance requires `member`, whose view of the instance's member record
+   * becomes the context's member binding; any other source rejects one.
+   */
+  apply<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily> | undefined, invoke: IAuthorInvoker<TOutcome>, member?: IMemberSupplier<TFamily>): TOutcome;
+  /** Hand the actual author `finality` and its context (with the member binding, for an instance) to the invoker. */
+  applyFinality<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>, member?: IMemberSupplier<TFamily>): TOutcome;
 }
 
 /**
@@ -274,6 +287,9 @@ export function openInvocationIn<TFamily extends IBindingFamily>(
     reject('unresolved-parent', 'An invocation requires exactly one bound step.');
   }
   let open = true;
+  /** The member binding an apply supplies, addressed to this invocation's own descriptor. */
+  const memberAccess = (member: IMemberSupplier<TFamily> | undefined): IMemberAccess<TFamily> | undefined =>
+    member === undefined ? undefined : Object.freeze({ supplier: member, instance: frozenParent });
   /** Apply is permitted only inside a live scope and never while composing. */
   const assertApplicable = (): void => {
     if (isComposing()) {
@@ -294,13 +310,13 @@ export function openInvocationIn<TFamily extends IBindingFamily>(
         open = false;
       },
       hasFinality: record.declaration.finality !== undefined,
-      apply: (bindings, previous, invoke) => {
+      apply: (bindings, previous, invoke, member) => {
         assertApplicable();
-        return record.apply(bindings, previous, invoke);
+        return record.apply(bindings, previous, invoke, memberAccess(member));
       },
-      applyFinality: (bindings, previous, invoke) => {
+      applyFinality: (bindings, previous, invoke, member) => {
         assertApplicable();
-        return record.applyFinality(bindings, previous, invoke);
+        return record.applyFinality(bindings, previous, invoke, memberAccess(member));
       },
     };
     return Object.freeze(invocation);
@@ -368,9 +384,9 @@ export function openInvocationIn<TFamily extends IBindingFamily>(
     close(): void {
       open = false;
     },
-    apply: (bindings, invoke) => {
+    apply: (bindings, invoke, member) => {
       assertApplicable();
-      return memoRecord.apply(bindings, mintHandle, invoke);
+      return memoRecord.apply(bindings, mintHandle, invoke, memberAccess(member));
     },
   };
   Object.freeze(invocation);

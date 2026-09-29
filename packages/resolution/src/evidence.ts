@@ -60,13 +60,16 @@ export const nestedFormatVersion = 2;
  * names the position of the nested call whose output a nested memo consumed;
  * `argument` is a supplied step's argument list, observed per position;
  * `previous` is a source's eligible previous result, which is history rather
- * than a current input.
+ * than a current input; `member` is a template instance's member record from
+ * the current keyed collection, which its gate reads and its forwarded
+ * member origins resolve against.
  */
 export const bindingPaths = Object.freeze({
   self: Object.freeze(['self']),
   inputs: Object.freeze(['inputs']),
   previous: Object.freeze(['previous']),
   argument: Object.freeze(['argument']),
+  member: Object.freeze(['member']),
   callable: (slot: string): readonly string[] => Object.freeze(['callable', slot]),
   child: (slot: string): readonly string[] => Object.freeze(['child', slot]),
   call: (index: number): readonly string[] => Object.freeze(['call', String(index)]),
@@ -406,15 +409,29 @@ function reference(value: unknown): ICompletedResultReference {
   return Object.freeze({ kind: 'completed-result', locator });
 }
 
-/** A stored version-1 step descriptor: an M3 member or composition-level step. */
+/**
+ * A stored step descriptor: an M3 member or composition-level step, or a
+ * template instance, which also carries its nonempty template slot and
+ * collection binding. Descriptors without template fields read exactly as in
+ * M3; a record with only one template field is malformed.
+ */
 function descriptor(value: unknown): IBindingDescriptor {
   const scope = text(field(value, 'scope'), 'step scope');
   const slot = text(field(value, 'slot'), 'step slot');
   const memberKey = field(value, 'memberKey');
+  const template = field(value, 'template');
+  const collection = field(value, 'collection');
   if (field(value, 'role') !== 'step' || (memberKey !== undefined && typeof memberKey !== 'string')) {
     return malformed('step descriptor');
   }
-  return Object.freeze({ scope, role: 'step', slot, ...(memberKey === undefined ? {} : { memberKey }) });
+  const keyed = memberKey === undefined ? {} : { memberKey };
+  if (template === undefined && collection === undefined) {
+    return Object.freeze({ scope, role: 'step', slot, ...keyed });
+  }
+  if (typeof template !== 'string' || template.length === 0 || typeof collection !== 'string' || collection.length === 0) {
+    return malformed('template step descriptor');
+  }
+  return Object.freeze({ scope, role: 'step', slot, ...keyed, template, collection });
 }
 
 /**

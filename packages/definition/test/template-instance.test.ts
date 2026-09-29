@@ -17,7 +17,7 @@ import { durable, expectDefinitionError } from './fixtures/assertions.js';
 import type { ITestFamily } from './fixtures/contributors.js';
 import { ada, ben, buildKeyed, compose, instanceDescriptor, openInvocation, source, template, type IContributors } from './fixtures/keyed.js';
 import { assessmentSubject, forward, rubric, stepSlot, supply, type IActivity, type IAssessment, type IAssessorParameters } from './fixtures/nested.js';
-import { callUntyped, directInvoker, fakePort, type IFakePort } from './fixtures/port.js';
+import { callUntyped, directInvoker, fakePort, supplying, type IFakePort } from './fixtures/port.js';
 
 /** The scope of the nested template fixture. */
 const scope = 'contribution-report:acme/widget:instances';
@@ -82,7 +82,7 @@ function asMemo(invocation: ReturnType<typeof openInvocation>): IMemoInvocation<
 function openNestedSummary(build: ReturnType<typeof buildNestedTemplate>, memberKey: string, fake: IFakePort) {
   const invocation = asMemo(openInvocation(build.composition, nestedInstance('summary', memberKey), fake.port));
   fake.active = invocation;
-  invocation.apply({}, directInvoker());
+  invocation.apply({}, directInvoker(), supplying(ada, []));
   const calls = build.captured.calls;
   if (calls === undefined) {
     throw new Error('the summary did not receive its calls');
@@ -147,7 +147,7 @@ describe('template instance witnesses (CMP-6, REUSE-007)', () => {
     const invocation = asMemo(openInvocation(built.composition, instanceDescriptor('summary', 'person:ada'), fake.port));
     fake.active = invocation;
     fake.result = { data: 'activity' };
-    await invocation.apply({}, directInvoker());
+    await invocation.apply({}, directInvoker(), supplying(ada, []));
     expect(fake.requests).toHaveLength(1);
     expect(requestAt(fake, 0).witness).toEqual({
       version: 2,

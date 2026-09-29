@@ -2,11 +2,13 @@
  * Contracts of Reuse Resolution: the ports it consumes, the requests it
  * accepts and the outcomes it reports. Resolution decides current
  * eligibility, applies current source policy, validates direct children and
- * either reuses an exact retained result or executes through injected
- * admission and History ports (ARC-001/006, REUSE-001–009). It owns no
- * storage rows, no run lifetime and no admission policy.
+ * nested calls, resolves keyed template instances through their current
+ * population and tracked gates, and either reuses an exact retained result or
+ * executes through injected admission and History ports (ARC-001/006,
+ * REUSE-001–009, CMP-4, CMP-8). It owns no storage rows, no run lifetime and
+ * no admission policy; an admission decision's kind is carried, never decided.
  */
-import type { IBindingDescriptor, IComposition, IDeclarations } from '@microdelta/definition';
+import type { IBindingDescriptor, ICollectionStatus, IComposition, IDeclarations, IKeyingDiagnostic } from '@microdelta/definition';
 import type {
   IAcceptanceRecord,
   ICompletedResultReference,
@@ -16,6 +18,7 @@ import type {
 } from '@microdelta/history';
 import type { IAsyncContextCapability, ISha256Capability, ITrackingObservation, ITrackingObserver } from '@microdelta/tracking';
 
+import type { ResolutionError } from './errors.js';
 import type { IResolutionFamily } from './family.js';
 
 /**
@@ -72,10 +75,29 @@ export interface IAdmissionRequest {
   readonly reason: 'cold' | 'invalid' | 'source-policy';
 }
 
-/** An admission decision. Denial is an ordinary typed outcome. @alpha */
+/**
+ * An admission decision. Denial and cancellation are ordinary typed outcomes,
+ * never errors, and neither admits any claim, attempt or body.
+ *
+ * - `admitted`: the described work may proceed now.
+ * - `denied`: the work may not start in this pass; it is not completed, and
+ *   it is never a terminal failure (a strict consumer waits for it).
+ * - `cancelled`: Run Supervision withdrew the work from this run; a strict
+ *   consumer treats it as terminal for the pass (CMP-8, RUN-010). Only the
+ *   decision is carried here; cancellation mechanics belong to Supervision.
+ * @alpha
+ */
 export type IAdmissionDecision =
   | { readonly kind: 'admitted' }
-  | { readonly kind: 'denied'; readonly reason: string };
+  | { readonly kind: 'denied'; readonly reason: string }
+  | { readonly kind: 'cancelled'; readonly reason: string };
+
+/**
+ * Which non-admitting admission decision refused work: an ordinary denial or
+ * a cancellation. It is the decision's kind, carried unchanged.
+ * @alpha
+ */
+export type IRefusalDisposition = 'denied' | 'cancelled';
 
 /**
  * The execution-admission port supplied by Run Supervision. Resolution asks
@@ -250,6 +272,22 @@ export interface ICandidateMiss {
  */
 export type IReuseBasis = 'finality' | 'check' | 'validated';
 
+/**
+ * The evidence of one template instance's settled gate (CMP-8). The gate ran
+ * in its own tracking frame over the instance's member binding and declared
+ * inputs and helpers; its observations belong to that instance and to no
+ * step's provenance. Only an explicit `true` requires the instance and only an
+ * explicit `false` skips it; any other result, or a throw, is a gate failure
+ * rather than evidence.
+ * @alpha
+ */
+export interface IGateEvidence {
+  /** Whether the gate requires the instance or excludes it from the required population. */
+  readonly selected: 'required' | 'skipped';
+  /** The facts the gate consumed in its own capture: its implementation, inputs, helpers and member fields. */
+  readonly observations: readonly ITrackingObservation[];
+}
+
 /** Fields every normal outcome carries. @alpha */
 export interface IOutcomeEvidence {
   /** The resolved step. */
@@ -272,7 +310,10 @@ export interface IOutcomeEvidence {
 
 /**
  * The outcome of a normal request: an existing exact result reused with a new
- * acceptance record, a new publication, or an admission refusal.
+ * acceptance record, a new publication, an admission refusal, or, for a
+ * template instance its gate excludes, an explicit skip. A skip reuses,
+ * publishes, admits and retracts nothing; it is distinct from a successful
+ * result, from a refusal and from a failure.
  * @alpha
  */
 export type IResolutionOutcome = IOutcomeEvidence & (
@@ -292,6 +333,13 @@ export type IResolutionOutcome = IOutcomeEvidence & (
       /** The step whose work was refused; a child when the parent needed its work. */
       readonly refused: IBindingDescriptor;
       readonly reason: string;
+      /** Whether admission denied the work or Supervision cancelled it. */
+      readonly disposition: IRefusalDisposition;
+    }
+  | {
+      readonly kind: 'skipped';
+      /** The gate evidence that excluded the instance. */
+      readonly gate: IGateEvidence;
     }
 );
 
@@ -299,7 +347,8 @@ export type IResolutionOutcome = IOutcomeEvidence & (
  * The outcome of a check-only request. `reusable` names the exact result a
  * normal request would reuse right now; `execution-required` means the step
  * itself would run; `uncertain` means source work at `boundary` must happen
- * before anything downstream can be decided.
+ * before anything downstream can be decided; `skipped` means the requested
+ * template instance is excluded by its gate and would not run at all.
  * @alpha
  */
 export type ICheckOutcome =
@@ -316,7 +365,8 @@ export type ICheckOutcome =
       readonly step: IBindingDescriptor;
       readonly boundary: IBindingDescriptor;
       readonly misses: readonly ICandidateMiss[];
-    };
+    }
+  | { readonly kind: 'skipped'; readonly step: IBindingDescriptor; readonly gate: IGateEvidence; readonly misses: readonly ICandidateMiss[] };
 
 /**
  * What durably happened to one identified admitted execution. `recovered`
@@ -331,12 +381,123 @@ export type IRecoveryResult =
   | { readonly kind: 'unsuccessful'; readonly attemptId: number };
 
 /**
+ * A normal request for one template step across every current member of its
+ * keyed collection. The template's collection is resolved under its current
+ * source policy and keyed by Definition before any gate or member body; each
+ * member's instance of `step` is then resolved independently.
+ * @alpha
+ */
+export interface IMembersRequest {
+  /** The composed template's slot. */
+  readonly template: string;
+  /** One of the template's step slots; its instances are resolved. */
+  readonly step: string;
+  /** The caller's saved request key; a nonempty opaque string. */
+  readonly requestKey: string;
+  /** History's current writer lease for this run. */
+  readonly lease: IWriterLease;
+}
+
+/**
+ * How discovery settled for a members request.
+ *
+ * - `keyed`: the collection result is current and every member is keyed, in
+ *   canonical key order, with the snapshot's completion status. Open discovery
+ *   still admits member work (RUN-005).
+ * - `rejected`: Definition rejected the snapshot (a duplicate or missing key,
+ *   a failed custom key or a malformed snapshot); no gate or member work was
+ *   admitted and the diagnostic names the collection, key and custom-key option.
+ * - `refused`: the discovery source's own required work was refused by
+ *   admission, so no member is known in this pass.
+ * @alpha
+ */
+export type IDiscoveryOutcome =
+  | {
+      readonly kind: 'keyed';
+      /** The composition-level collection step. */
+      readonly collection: IBindingDescriptor;
+      /** The exact collection result the members were keyed from. */
+      readonly reference: ICompletedResultReference;
+      /** Whether discovery closed its member list. */
+      readonly completion: ICollectionStatus;
+      /** Every member key, in canonical order. */
+      readonly keys: readonly string[];
+    }
+  | {
+      readonly kind: 'rejected';
+      readonly collection: IBindingDescriptor;
+      readonly reference: ICompletedResultReference;
+      /** Definition's keying diagnostic. */
+      readonly diagnostic: IKeyingDiagnostic;
+    }
+  | {
+      readonly kind: 'refused';
+      readonly collection: IBindingDescriptor;
+      /** The step whose work was refused. */
+      readonly refused: IBindingDescriptor;
+      readonly reason: string;
+      readonly disposition: IRefusalDisposition;
+    };
+
+/**
+ * A member instance whose resolution failed for a member-attributable reason:
+ * its gate threw or returned a non-boolean (`gate-failure`), or its step or a
+ * child failed (for example `execution-failure` or `unbound-step`). The
+ * failure is confined to this member. Run-level failures (`admission-failure`,
+ * `observer-failure`, `integrity`, `wrong-intent`, `invalid-request`, and
+ * History or host failures) fail the whole members request instead.
+ * @alpha
+ */
+export interface IMemberFailure {
+  readonly kind: 'failed';
+  /** The typed failure. */
+  readonly error: ResolutionError;
+}
+
+/**
+ * One current member's instance of the requested template step.
+ * @alpha
+ */
+export interface IMemberResolution {
+  /** The member key. */
+  readonly key: string;
+  /** The instance descriptor: the template step descriptor plus the member key. */
+  readonly step: IBindingDescriptor;
+  /** The member's gate evidence; undefined when the template declares no gate or the gate failed. */
+  readonly gate: IGateEvidence | undefined;
+  /** The member's normal outcome (reused, published, refused or skipped), or its failure. */
+  readonly outcome: IResolutionOutcome | IMemberFailure;
+}
+
+/**
+ * The outcome of a members request: discovery, and one entry per current
+ * member in canonical key order (none unless discovery keyed).
+ * @alpha
+ */
+export interface IMembersResolution {
+  /** The template slot. */
+  readonly template: string;
+  /** How discovery settled. */
+  readonly discovery: IDiscoveryOutcome;
+  /** Every current member's instance outcome, in canonical key order. */
+  readonly members: readonly IMemberResolution[];
+  /** Post-commit diagnostics of the whole request, each reported once. */
+  readonly diagnostics: readonly string[];
+}
+
+/**
  * Reuse Resolution over one current composition and History scope.
  * @alpha
  */
 export interface IResolution {
   /** Resolve one step under current policy, reusing or executing through admission. */
   resolve(request: IResolveRequest): Promise<IResolutionOutcome>;
+  /**
+   * Resolve one template step for every current member of its keyed
+   * collection, each member independently. A run-level failure rejects the
+   * whole request rather than failing one member.
+   */
+  resolveMembers(request: IMembersRequest): Promise<IMembersResolution>;
   /** Report what a normal request would do, without admission, claims, bodies or writes. */
   check(request: ICheckRequest): Promise<ICheckOutcome>;
   /** Report the durable outcome of the execution a saved request key identifies, without executing. */

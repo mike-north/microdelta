@@ -20,6 +20,8 @@
  * - `admission-failure`: the injected admission port threw instead of deciding.
  * - `observer-failure`: a lifecycle observer threw before execution, so the affected call did not proceed.
  * - `invalid-request`: a request is malformed, for example an empty request key.
+ * - `gate-failure`: a template instance's gate threw or returned something other than a boolean (CMP-8); the instance is failed, never skipped.
+ * - `collection-rejected`: Definition rejected the current collection snapshot while keying it (COL-1), so no instance of it can be resolved.
  * @alpha
  */
 export type IResolutionErrorCode =
@@ -33,7 +35,9 @@ export type IResolutionErrorCode =
   | 'wrong-intent'
   | 'admission-failure'
   | 'observer-failure'
-  | 'invalid-request';
+  | 'invalid-request'
+  | 'gate-failure'
+  | 'collection-rejected';
 
 /**
  * A failed resolution. The underlying author, History or host failure, when

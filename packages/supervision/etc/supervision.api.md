@@ -6,16 +6,72 @@
 
 import type { IBindingDescriptor } from '@microdelta/definition';
 import type { ICheckOutcome } from '@microdelta/resolution';
+import type { IDiscoveryOutcome } from '@microdelta/resolution';
 import type { IExecutionAdmission } from '@microdelta/resolution';
+import type { IGateEvidence } from '@microdelta/resolution';
 import type { ILifecycleEvent } from '@microdelta/resolution';
 import type { ILifecycleObserver } from '@microdelta/resolution';
 import type { IRecoveryResult } from '@microdelta/resolution';
 import type { IResolution } from '@microdelta/resolution';
 import type { IResolutionOutcome } from '@microdelta/resolution';
 import type { IResolveRequest } from '@microdelta/resolution';
+import type { ResolutionError } from '@microdelta/resolution';
 
 // @alpha
 export function createSupervision(options: ISupervisionOptions): ISupervision;
+
+// @alpha
+export type IDiscoveryReport = Extract<IDiscoveryOutcome, {
+    readonly kind: 'keyed' | 'rejected';
+}> | {
+    readonly kind: 'pending' | 'cancelled';
+    readonly collection: IBindingDescriptor;
+    readonly refused: IBindingDescriptor;
+    readonly reason: string;
+};
+
+// @alpha
+export type IMemberOutcome = {
+    readonly status: 'succeeded';
+    readonly key: string;
+    readonly step: IBindingDescriptor;
+    readonly gate: IGateEvidence | undefined;
+    readonly outcome: Extract<IResolutionOutcome, {
+        readonly kind: 'reused' | 'published';
+    }>;
+} | {
+    readonly status: 'skipped';
+    readonly key: string;
+    readonly step: IBindingDescriptor;
+    readonly gate: IGateEvidence;
+} | {
+    readonly status: 'pending' | 'cancelled';
+    readonly key: string;
+    readonly step: IBindingDescriptor;
+    readonly gate: IGateEvidence | undefined;
+    readonly refused: IBindingDescriptor;
+    readonly reason: string;
+} | {
+    readonly status: 'failed';
+    readonly key: string;
+    readonly step: IBindingDescriptor;
+    readonly gate: IGateEvidence | undefined;
+    readonly error: ResolutionError;
+};
+
+// @alpha
+export interface IMembersReport {
+    readonly discovery: IDiscoveryReport;
+    readonly members: readonly IMemberOutcome[];
+    readonly step: string;
+    readonly template: string;
+}
+
+// @alpha
+export interface IMembersTarget {
+    readonly step: string;
+    readonly template: string;
+}
 
 // @alpha
 export type IOrdinaryPhase = 'begin' | 'end' | 'fail';
@@ -39,6 +95,7 @@ export interface IRun {
     ordinary<T>(label: string, work: () => T | Promise<T>): Promise<Awaited<T>>;
     recover(step: IBindingDescriptor, request: IRequestOptions): Promise<IRecoveryResult>;
     resolve(step: IBindingDescriptor, request: IRequestOptions): Promise<IResolutionOutcome>;
+    resolveMembers(target: IMembersTarget, request: IRequestOptions): Promise<IMembersReport>;
 }
 
 // @alpha

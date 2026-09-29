@@ -15,6 +15,13 @@
  * only. Renaming a template or moving it to another collection changes that
  * address, so prior instances are misses, never remapped.
  *
+ * Every member step's callbacks (a member source's `run` and `finality`, a
+ * member memo's `run`) receive the member binding: `member`, the view of the
+ * instance's member record in the current keyed collection that Resolution's
+ * member supplier gives, typed from the collection's member type. Definition
+ * never reads the record; a member step applied without its member binding
+ * rejects.
+ *
  * A template may declare a gate: a tracked author predicate over its declared
  * bindings (inputs, helpers and the member binding). Definition only exposes the
  * gate with its assembled context to Resolution's invoker and classifies the
@@ -25,8 +32,8 @@ import { keySnapshot, type IKeyedSnapshot, type IMemberOf } from './collection.j
 import { isComposing, ownedDescriptor, withinComposition, type IComposition, type ICompositionState, type IDeclaredEdge } from './composition.js';
 import {
   checkBindings,
-  declareMemo,
-  declareSource,
+  declareMemoWith,
+  declareSourceWith,
   isPlainRecord,
   readOptions,
   reject,
@@ -36,6 +43,8 @@ import {
   type IChildDeclarations,
   type IDeclarationRecords,
   type IFinalityContext,
+  type IMemberAccess,
+  type IMemberBinding,
   type IMemoDeclaration,
   type IMemoRecord,
   type IMemoRunContext,
@@ -66,30 +75,30 @@ export interface IMemberSubject extends IMemberSubjectBrand {
 }
 
 /**
- * Options for a member-scoped source: an ordinary source whose subject is a
- * symbolic member subject.
+ * Options for a member-scoped source: a source whose subject is a symbolic
+ * member subject and whose callbacks also receive the member binding.
  * @alpha
  */
-export interface ITemplateSourceOptions<TFamily extends IBindingFamily, TResult> {
+export interface ITemplateSourceOptions<TFamily extends IBindingFamily, TResult, TMember = unknown> {
   /** The member subject minted by this template's member builder. */
   readonly subject: IMemberSubject;
   /** Compatibility group; a positive safe integer, default 1. */
   readonly version?: number;
   /** Display metadata only; never identity or correspondence. */
   readonly label?: string;
-  /** The author's check/retrieval callback. */
-  readonly run: (context: ISourceRunContext<TFamily, TResult>) => IApply<TFamily['outcomes'], TResult>;
-  /** The author's optional current finality hook. */
-  readonly finality?: (context: IFinalityContext<TFamily, TResult>) => unknown;
+  /** The author's check/retrieval callback, with the member binding. */
+  readonly run: (context: ISourceRunContext<TFamily, TResult> & IMemberBinding<TFamily, TMember>) => IApply<TFamily['outcomes'], TResult>;
+  /** The author's optional current finality hook, with the member binding. */
+  readonly finality?: (context: IFinalityContext<TFamily, TResult> & IMemberBinding<TFamily, TMember>) => unknown;
 }
 
 /**
  * Options for a member-scoped memoized computation. Its children are sibling
  * member steps (sources or memos) of the same template, or composition-wide
- * supplied step slots.
+ * supplied step slots; its `run` also receives the member binding.
  * @alpha
  */
-export interface ITemplateMemoOptions<TFamily extends IBindingFamily, TChildren extends IChildDeclarations<TFamily>, TResult> {
+export interface ITemplateMemoOptions<TFamily extends IBindingFamily, TChildren extends IChildDeclarations<TFamily>, TResult, TMember = unknown> {
   /** The member subject minted by this template's member builder. */
   readonly subject: IMemberSubject;
   /** Compatibility group; a positive safe integer, default 1. */
@@ -98,25 +107,27 @@ export interface ITemplateMemoOptions<TFamily extends IBindingFamily, TChildren 
   readonly label?: string;
   /** Each call name mapped to the sibling member step occupying that slot, or to a supplied step slot. */
   readonly children?: TChildren;
-  /** The author's computation callback. */
-  readonly run: (context: IMemoRunContext<TFamily, TChildren>) => TResult;
+  /** The author's computation callback, with the member binding. */
+  readonly run: (context: IMemoRunContext<TFamily, TChildren> & IMemberBinding<TFamily, TMember>) => TResult;
 }
 
 /**
  * The symbolic member a template factory receives. It mints member subjects
  * and member step declarations while the factory runs and rejects every call
- * with `frozen` once the factory has returned. It exposes no key and no data.
+ * with `frozen` once the factory has returned. It exposes no key and no data;
+ * `TMember` is the collection's member type, which types the member binding
+ * its steps' callbacks receive.
  * @alpha
  */
-export interface IMemberBuilder<TFamily extends IBindingFamily> {
+export interface IMemberBuilder<TFamily extends IBindingFamily, TMember = unknown> {
   /** A member subject whose instances are `prefix:key`, computed from the key only. */
   subject(prefix: string): IMemberSubject;
-  /** Declare a member-scoped retained source. */
-  source<TResult>(options: ITemplateSourceOptions<TFamily, TResult>): ISourceDeclaration<TFamily, TResult>;
-  /** Declare a member-scoped memoized computation over sibling member sources. */
+  /** Declare a member-scoped retained source whose callbacks receive the member binding. */
+  source<TResult>(options: ITemplateSourceOptions<TFamily, TResult, TMember>): ISourceDeclaration<TFamily, TResult, IMemberBinding<TFamily, TMember>>;
+  /** Declare a member-scoped memoized computation over sibling member steps, receiving the member binding. */
   memo<TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult = unknown>(
-    options: ITemplateMemoOptions<TFamily, TChildren, TResult>,
-  ): IMemoDeclaration<TFamily, TChildren, TResult>;
+    options: ITemplateMemoOptions<TFamily, TChildren, TResult, TMember>,
+  ): IMemoDeclaration<TFamily, TChildren, TResult, IMemberBinding<TFamily, TMember>>;
 }
 
 /**
@@ -137,9 +148,7 @@ export type ITemplateSteps<TFamily extends IBindingFamily> = { readonly [slot: s
  * helpers) plus the member binding, a view of this instance's member record.
  * @alpha
  */
-export type IGateContext<TFamily extends IBindingFamily, TMember> = TFamily['memo'] & {
-  readonly member: IApply<TFamily['views'], TMember>;
-};
+export type IGateContext<TFamily extends IBindingFamily, TMember> = TFamily['memo'] & IMemberBinding<TFamily, TMember>;
 
 /**
  * Rejects, at the type level, a template over a source whose declared result
@@ -166,8 +175,8 @@ export interface ITemplateOptions<
   readonly key?: (member: IMemberOf<TFamily, TCollection>) => string;
   /** A tracked gate: an explicit `false` skips an instance without changing topology. */
   readonly gate?: (context: IGateContext<TFamily, IMemberOf<TFamily, TCollection>>) => boolean;
-  /** The factory, run exactly once against a symbolic member. */
-  readonly steps: (member: IMemberBuilder<TFamily>) => TSteps;
+  /** The factory, run exactly once against a symbolic member typed by the collection's member type. */
+  readonly steps: (member: IMemberBuilder<TFamily, IMemberOf<TFamily, TCollection>>) => TSteps;
 }
 
 /**
@@ -430,7 +439,19 @@ export function declareTemplate<TFamily extends IBindingFamily, TCollection exte
     minted.set(declaration, record);
     memberSteps.add(declaration);
   };
-  const member: IMemberBuilder<TFamily> = {
+  /**
+   * Every member step's extension: the member binding, the supplier's view of
+   * the applied instance's member record in this template's collection. A
+   * member step runs only as an instance, so a missing binding rejects.
+   */
+  const memberBinding = (bindings: object, access: IMemberAccess<TFamily> | undefined): IMemberBinding<TFamily, IMemberOf<TFamily, TCollection>> => {
+    checkBindings(bindings, 'member');
+    if (access === undefined) {
+      return reject('invalid-bindings', `Template ${slot} member steps run only as instances, with their member binding.`);
+    }
+    return { member: access.supplier.view<TCollection>(collection, access.instance) };
+  };
+  const member: IMemberBuilder<TFamily, IMemberOf<TFamily, TCollection>> = {
     subject(prefix: string): IMemberSubject {
       assertOpen();
       if (typeof prefix !== 'string' || prefix.length === 0) {
@@ -440,7 +461,9 @@ export function declareTemplate<TFamily extends IBindingFamily, TCollection exte
       prefixes.set(subject, prefix);
       return subject;
     },
-    source<TResult>(sourceOptions: ITemplateSourceOptions<TFamily, TResult>): ISourceDeclaration<TFamily, TResult> {
+    source<TResult>(
+      sourceOptions: ITemplateSourceOptions<TFamily, TResult, IMemberOf<TFamily, TCollection>>,
+    ): ISourceDeclaration<TFamily, TResult, IMemberBinding<TFamily, IMemberOf<TFamily, TCollection>>> {
       assertOpen();
       const fields = readOptions(sourceOptions);
       checkMemberOptions(fields);
@@ -449,31 +472,31 @@ export function declareTemplate<TFamily extends IBindingFamily, TCollection exte
       }
       const prefix = memberPrefix(fields.get('subject'));
       const { run, finality, version, label } = sourceOptions;
-      const declaration = declareSource<TFamily, TResult>(records, {
+      const declaration = declareSourceWith(records, {
         subject: prefix,
         run,
         ...(finality === undefined ? {} : { finality }),
         ...(version === undefined ? {} : { version }),
         ...(label === undefined ? {} : { label }),
-      });
+      }, memberBinding);
       adopt(declaration);
       return declaration;
     },
     memo<TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult = unknown>(
-      memoOptions: ITemplateMemoOptions<TFamily, TChildren, TResult>,
-    ): IMemoDeclaration<TFamily, TChildren, TResult> {
+      memoOptions: ITemplateMemoOptions<TFamily, TChildren, TResult, IMemberOf<TFamily, TCollection>>,
+    ): IMemoDeclaration<TFamily, TChildren, TResult, IMemberBinding<TFamily, IMemberOf<TFamily, TCollection>>> {
       assertOpen();
       const fields = readOptions(memoOptions);
       checkMemberOptions(fields);
       const prefix = memberPrefix(fields.get('subject'));
       const { run, children, version, label } = memoOptions;
-      const declaration = declareMemo<TFamily, TChildren, TResult>(records, {
+      const declaration = declareMemoWith(records, {
         subject: prefix,
         run,
         ...(children === undefined ? {} : { children }),
         ...(version === undefined ? {} : { version }),
         ...(label === undefined ? {} : { label }),
-      });
+      }, memberBinding);
       const record = records.get(declaration);
       for (const edge of record?.kind === 'memo' ? record.children.values() : []) {
         // Supplied step slots are composition-wide; sibling edges stay inside this template.

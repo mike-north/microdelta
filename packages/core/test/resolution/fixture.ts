@@ -529,8 +529,9 @@ interface IDiscoveredCollection {
 /**
  * The keyed variation's declarations: a composition-level keyed collection,
  * a template over it and a strict fold over the template's summary.
- * Resolution refuses template instances and folds before any evidence or
- * admission, so tests observe that no lifecycle event occurs.
+ * Resolution refuses strict folds before any evidence or admission, so tests
+ * observe that no lifecycle event occurs; template instance resolution is
+ * exercised by the keyed suites.
  */
 function keyedDeclarations(builders: IDeclarations<IFamily>) {
   const { source, template, fold } = builders;

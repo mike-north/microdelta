@@ -22,9 +22,14 @@ import type { IComposition as IComposition_2 } from '@microdelta/definition';
 import type { IDeclarations } from '@microdelta/definition';
 import type { IDeclaredCallHandle as IDeclaredCallHandle_2 } from '@microdelta/definition';
 import { Identity } from '@microdelta/history';
+import type { IDiscoveryReport as IDiscoveryReport_2 } from '@microdelta/supervision';
 import type { IExecutionAdmission } from '@microdelta/resolution';
+import type { IGateEvidence as IGateEvidence_2 } from '@microdelta/resolution';
 import type { ILifecycleEvent as ILifecycleEvent_2 } from '@microdelta/resolution';
 import type { ILifecyclePhase as ILifecyclePhase_2 } from '@microdelta/resolution';
+import type { IMemberOutcome as IMemberOutcome_2 } from '@microdelta/supervision';
+import type { IMembersReport as IMembersReport_2 } from '@microdelta/supervision';
+import type { IMembersTarget as IMembersTarget_2 } from '@microdelta/supervision';
 import { InvalidStorePatchError } from '@microdelta/history';
 import type { IOrdinaryPhase as IOrdinaryPhase_2 } from '@microdelta/supervision';
 import type { IPreviousResult as IPreviousResult_2 } from '@microdelta/resolution';
@@ -116,10 +121,25 @@ export type IDeclaredCallHandle<T> = IDeclaredCallHandle_2<T>;
 export { Identity }
 
 // @alpha
+export type IDiscoveryReport = IDiscoveryReport_2;
+
+// @alpha
+export type IGateEvidence = IGateEvidence_2;
+
+// @alpha
 export type ILifecycleEvent = ILifecycleEvent_2;
 
 // @alpha
 export type ILifecyclePhase = ILifecyclePhase_2;
+
+// @alpha
+export type IMemberOutcome = IMemberOutcome_2;
+
+// @alpha
+export type IMembersReport = IMembersReport_2;
+
+// @alpha
+export type IMembersTarget = IMembersTarget_2;
 
 export { InvalidStorePatchError }
 

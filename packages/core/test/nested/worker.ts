@@ -28,7 +28,7 @@ export interface INestedJob {
 /** A JSON-safe description of one member's result. */
 export type IMemberReport =
   | { readonly kind: 'reused' | 'published' | 'reusable'; readonly reference: string; readonly misses: readonly { readonly reason: string; readonly detail: string }[] }
-  | { readonly kind: 'refused' | 'execution-required' | 'uncertain'; readonly misses: readonly { readonly reason: string; readonly detail: string }[] }
+  | { readonly kind: 'refused' | 'skipped' | 'execution-required' | 'uncertain'; readonly misses: readonly { readonly reason: string; readonly detail: string }[] }
   | { readonly kind: 'failed'; readonly code: string; readonly message: string };
 
 /** The one result line a worker writes. */
@@ -63,8 +63,8 @@ async function run(job: INestedJob, key: IMemberKey, session: ReturnType<typeof 
         : { kind: checked.kind, misses: describeMisses(checked.misses) };
     }
     const outcome = await session.resolve(step);
-    return outcome.kind === 'refused'
-      ? { kind: 'refused', misses: describeMisses(outcome.misses) }
+    return outcome.kind === 'refused' || outcome.kind === 'skipped'
+      ? { kind: outcome.kind, misses: describeMisses(outcome.misses) }
       : { kind: outcome.kind, reference: outcome.reference.locator, misses: describeMisses(outcome.misses) };
   } catch (error: unknown) {
     if (error instanceof ResolutionError) {

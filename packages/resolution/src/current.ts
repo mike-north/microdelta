@@ -17,6 +17,8 @@
  * a nested call passes now (forwarded values rebuilt from current bindings,
  * derived values decoded from their recorded encodings), selected through the
  * same validation observer at the `argument` binding, position by position.
+ * So is a template instance's member binding: the member record the current
+ * keyed collection holds for its key, selected at the `member` binding.
  */
 import type { IBindingDescriptor, IComposition } from '@microdelta/definition';
 import type {
@@ -161,8 +163,9 @@ function selectFrom(observer: ITrackingObserver, view: ITracked<object>, request
 
 /**
  * The provider of a step's own current facts: its own actually called
- * implementation (`self`), the declared input record, declared helpers and,
- * for a supplied step, the arguments of the current call. Other bindings,
+ * implementation (`self`), the declared input record, declared helpers, for a
+ * supplied step the arguments of the current call, and for a template
+ * instance its member's current record. Other bindings,
  * including child outputs, are unavailable here; child output facts are
  * compared separately after the current child is established.
  */
@@ -171,6 +174,8 @@ export function ownFactProvider(options: {
   readonly slots: ICurrentSlots;
   readonly self: (context: never) => unknown;
   readonly arguments?: readonly IArgumentValue[];
+  /** A template instance's current member record; absent for any other step, or a member no longer keyed. */
+  readonly member?: object | undefined;
 }): ICurrentFactProvider {
   let view: ITracked<object> | undefined;
   const inputs = (): ITracked<object> => {
@@ -178,6 +183,7 @@ export function ownFactProvider(options: {
     return view;
   };
   let argumentView: ITracked<object> | undefined;
+  let memberView: ITracked<object> | undefined;
   const currentArguments = (values: readonly IArgumentValue[]): ITracked<object> => {
     argumentView ??= options.validation.tracked(argumentList(values), { path: bindingPaths.argument });
     return argumentView;
@@ -210,6 +216,10 @@ export function ownFactProvider(options: {
       if (root === 'argument' && slot === undefined && request.kind === 'selected' && options.arguments !== undefined) {
         return selectFrom(options.validation, currentArguments(options.arguments), request);
       }
+      if (root === 'member' && slot === undefined && request.kind === 'selected' && options.member !== undefined) {
+        memberView ??= options.validation.tracked(options.member, { path: bindingPaths.member });
+        return selectFrom(options.validation, memberView, request);
+      }
       return { kind: 'unavailable' };
     },
   });
@@ -230,7 +240,19 @@ export function isPreviousObservation(binding: ITrackingBinding): boolean {
   return binding.path.length === 1 && binding.path[0] === 'previous';
 }
 
-/** The member-scoped descriptor of a sibling step slot. */
+/**
+ * The descriptor of a sibling step slot at the parent's level: the same
+ * member key (or none) and, for a template instance, the same template slot
+ * and collection binding. Descriptors without template fields are unchanged
+ * from M3.
+ */
 export function siblingStep(parent: IBindingDescriptor, slot: string): IBindingDescriptor {
-  return Object.freeze({ scope: parent.scope, role: 'step', slot, ...(parent.memberKey === undefined ? {} : { memberKey: parent.memberKey }) });
+  return Object.freeze({
+    scope: parent.scope,
+    role: 'step',
+    slot,
+    ...(parent.memberKey === undefined ? {} : { memberKey: parent.memberKey }),
+    ...(parent.template === undefined ? {} : { template: parent.template }),
+    ...(parent.collection === undefined ? {} : { collection: parent.collection }),
+  });
 }

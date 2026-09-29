@@ -10,10 +10,22 @@
  */
 import { expectAssignable, expectError, expectNotAssignable, expectType } from 'tsd';
 import type { IBindingDescriptor } from '@microdelta/definition';
-import type { ICheckOutcome, ILifecyclePhase, IRecoveryResult, IResolutionOutcome } from '@microdelta/resolution';
+import type { ICheckOutcome, IGateEvidence, ILifecyclePhase, IRecoveryResult, IResolutionOutcome, ResolutionError } from '@microdelta/resolution';
 
 import { SupervisionError, createSupervision, ordinaryLifecycle, stepLifecycle } from '../dist/src/index.js';
-import type { IOrdinaryPhase, IRun, IRunContext, IRunEvent, IRunObserver, IRunResult, IRunScopeCapability, ISupervisionErrorCode } from '../dist/src/index.js';
+import type {
+  IDiscoveryReport,
+  IMemberOutcome,
+  IMembersReport,
+  IOrdinaryPhase,
+  IRun,
+  IRunContext,
+  IRunEvent,
+  IRunObserver,
+  IRunResult,
+  IRunScopeCapability,
+  ISupervisionErrorCode,
+} from '../dist/src/index.js';
 
 declare const step: IBindingDescriptor;
 declare const run: IRun;
@@ -35,6 +47,41 @@ expectError(run.resolve(step));
 expectError(run.resolve(step, {}));
 expectType<Promise<number>>(run.ordinary('count', () => 1));
 expectType<Promise<string>>(run.ordinary('text', async () => 'report'));
+
+// Member outcomes: one request per template step, needing request options.
+expectType<Promise<IMembersReport>>(run.resolveMembers({ template: 'contributor', step: 'summary' }, { requestKey: 'request:1' }));
+expectError(run.resolveMembers({ template: 'contributor', step: 'summary' }));
+expectError(run.resolveMembers({ template: 'contributor' }, { requestKey: 'request:1' }));
+
+// The five member statuses are distinct: only success carries a reference,
+// only a skip is guaranteed gate evidence, only a failure carries an error.
+declare const memberOutcome: IMemberOutcome;
+switch (memberOutcome.status) {
+  case 'succeeded':
+    expectType<string>(memberOutcome.outcome.reference.locator);
+    expectType<'reused' | 'published'>(memberOutcome.outcome.kind);
+    break;
+  case 'skipped':
+    expectType<IGateEvidence>(memberOutcome.gate);
+    expectError(memberOutcome.outcome);
+    break;
+  case 'pending':
+  case 'cancelled':
+    expectType<string>(memberOutcome.reason);
+    expectType<IBindingDescriptor>(memberOutcome.refused);
+    expectError(memberOutcome.outcome);
+    break;
+  case 'failed':
+    expectType<ResolutionError>(memberOutcome.error);
+    break;
+  default: {
+    const exhaustive: never = memberOutcome;
+    void exhaustive;
+  }
+}
+expectNotAssignable<IMemberOutcome['status']>('waiting');
+declare const discovery: IDiscoveryReport;
+expectType<'keyed' | 'rejected' | 'pending' | 'cancelled'>(discovery.kind);
 
 // The run context is read-only volatile metadata.
 declare const context: IRunContext;

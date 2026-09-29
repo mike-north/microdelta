@@ -402,9 +402,7 @@ export type IForwardOrigin = {
 };
 
 // @alpha
-export type IGateContext<TFamily extends IBindingFamily, TMember> = TFamily['memo'] & {
-    readonly member: IApply<TFamily['views'], TMember>;
-};
+export type IGateContext<TFamily extends IBindingFamily, TMember> = TFamily['memo'] & IMemberBinding<TFamily, TMember>;
 
 // @alpha
 export interface IGateInvocation<TFamily extends IBindingFamily> {
@@ -531,9 +529,14 @@ export interface IKeyingDiagnostic {
 export type IKeyingFailure = 'malformed-snapshot' | 'missing-key' | 'non-string-key' | 'empty-key' | 'duplicate-key' | 'key-function-failed';
 
 // @alpha
-export interface IMemberBuilder<TFamily extends IBindingFamily> {
-    memo<TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult = unknown>(options: ITemplateMemoOptions<TFamily, TChildren, TResult>): IMemoDeclaration<TFamily, TChildren, TResult>;
-    source<TResult>(options: ITemplateSourceOptions<TFamily, TResult>): ISourceDeclaration<TFamily, TResult>;
+export interface IMemberBinding<TFamily extends IBindingFamily, TMember> {
+    readonly member: IApply<TFamily['views'], TMember>;
+}
+
+// @alpha
+export interface IMemberBuilder<TFamily extends IBindingFamily, TMember = unknown> {
+    memo<TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult = unknown>(options: ITemplateMemoOptions<TFamily, TChildren, TResult, TMember>): IMemoDeclaration<TFamily, TChildren, TResult, IMemberBinding<TFamily, TMember>>;
+    source<TResult>(options: ITemplateSourceOptions<TFamily, TResult, TMember>): ISourceDeclaration<TFamily, TResult, IMemberBinding<TFamily, TMember>>;
     subject(prefix: string): IMemberSubject;
 }
 
@@ -571,23 +574,23 @@ export interface IMemoCallRequest<TFamily extends IBindingFamily> {
 }
 
 // @alpha
-export interface IMemoDeclaration<TFamily extends IBindingFamily, TChildren extends IChildDeclarations<TFamily>, TResult> extends IAnyMemoDeclaration<TFamily> {
+export interface IMemoDeclaration<TFamily extends IBindingFamily, TChildren extends IChildDeclarations<TFamily>, TResult, TExtra = unknown> extends IAnyMemoDeclaration<TFamily> {
     // (undocumented)
-    readonly run: (context: IMemoRunContext<TFamily, TChildren>) => TResult;
+    readonly run: (context: IMemoRunContext<TFamily, TChildren> & TExtra) => TResult;
 }
 
 // @alpha
 export interface IMemoInvocation<TFamily extends IBindingFamily> extends IInvocationScope {
-    apply<TOutcome>(bindings: TFamily['memo'], invoke: IAuthorInvoker<TOutcome>): TOutcome;
+    apply<TOutcome>(bindings: TFamily['memo'], invoke: IAuthorInvoker<TOutcome>, member?: IMemberSupplier<TFamily>): TOutcome;
     // (undocumented)
     readonly kind: 'memo';
 }
 
 // @alpha
-export interface IMemoOptions<TFamily extends IBindingFamily, TChildren extends IChildDeclarations<TFamily>, TResult> {
+export interface IMemoOptions<TFamily extends IBindingFamily, TChildren extends IChildDeclarations<TFamily>, TResult, TExtra = unknown> {
     readonly children?: TChildren;
     readonly label?: string;
-    readonly run: (context: IMemoRunContext<TFamily, TChildren>) => TResult;
+    readonly run: (context: IMemoRunContext<TFamily, TChildren> & TExtra) => TResult;
     readonly subject: string;
     readonly version?: number;
 }
@@ -619,11 +622,13 @@ export interface IPreviousCarrierFamily extends ITypeFamily {
 
 // @alpha
 export interface IPreviousSupplier<TFamily extends IBindingFamily> {
-    carrier<TResult>(declaration: ISourceDeclaration<TFamily, TResult>): IApply<TFamily['previous'], TResult>;
+    carrier<TResult>(declaration: ISourceDeclaration<TFamily, TResult, never>): IApply<TFamily['previous'], TResult>;
 }
 
 // @alpha
-export type IResultOf<TFamily extends IBindingFamily, TDeclaration> = TDeclaration extends ISourceDeclaration<TFamily, infer TResult> ? TResult : TDeclaration extends IStepSlot<TFamily, readonly unknown[], infer TResult> ? TResult : TDeclaration extends {
+export type IResultOf<TFamily extends IBindingFamily, TDeclaration> = TDeclaration extends ISourceDeclaration<TFamily, infer TResult> ? TResult : TDeclaration extends ISourceDeclaration<TFamily, infer TResult, {
+    readonly member: never;
+}> ? TResult : TDeclaration extends IStepSlot<TFamily, readonly unknown[], infer TResult> ? TResult : TDeclaration extends {
     readonly kind: 'memo';
     readonly run: (context: never) => infer TResult;
 } ? Awaited<TResult> : never;
@@ -654,35 +659,35 @@ export type ISlotSubject<TParameters extends readonly unknown[]> = (derived: IDe
 
 // @alpha
 export interface ISourceCallRequest<TFamily extends IBindingFamily, TResult> {
-    readonly child: ISourceDeclaration<TFamily, TResult>;
+    readonly child: ISourceDeclaration<TFamily, TResult, never>;
     readonly kind: 'source';
     readonly scope: IInvocationScope;
     readonly witness: IInvocationWitness;
 }
 
 // @alpha
-export interface ISourceDeclaration<TFamily extends IBindingFamily, TResult> extends IAnySourceDeclaration<TFamily> {
+export interface ISourceDeclaration<TFamily extends IBindingFamily, TResult, TExtra = unknown> extends IAnySourceDeclaration<TFamily> {
     // (undocumented)
-    readonly finality: ((context: IFinalityContext<TFamily, TResult>) => unknown) | undefined;
+    readonly finality: ((context: IFinalityContext<TFamily, TResult> & TExtra) => unknown) | undefined;
     // (undocumented)
-    readonly run: (context: ISourceRunContext<TFamily, TResult>) => IApply<TFamily['outcomes'], TResult>;
+    readonly run: (context: ISourceRunContext<TFamily, TResult> & TExtra) => IApply<TFamily['outcomes'], TResult>;
 }
 
 // @alpha
 export interface ISourceInvocation<TFamily extends IBindingFamily> extends IInvocationScope {
-    apply<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily> | undefined, invoke: IAuthorInvoker<TOutcome>): TOutcome;
-    applyFinality<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>): TOutcome;
+    apply<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily> | undefined, invoke: IAuthorInvoker<TOutcome>, member?: IMemberSupplier<TFamily>): TOutcome;
+    applyFinality<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>, member?: IMemberSupplier<TFamily>): TOutcome;
     readonly hasFinality: boolean;
     // (undocumented)
     readonly kind: 'source';
 }
 
 // @alpha
-export interface ISourceOptions<TFamily extends IBindingFamily, TResult> {
+export interface ISourceOptions<TFamily extends IBindingFamily, TResult, TExtra = unknown> {
     readonly collection?: ICollectionOptions<TResult>;
-    readonly finality?: (context: IFinalityContext<TFamily, TResult>) => unknown;
+    readonly finality?: (context: IFinalityContext<TFamily, TResult> & TExtra) => unknown;
     readonly label?: string;
-    readonly run: (context: ISourceRunContext<TFamily, TResult>) => IApply<TFamily['outcomes'], TResult>;
+    readonly run: (context: ISourceRunContext<TFamily, TResult> & TExtra) => IApply<TFamily['outcomes'], TResult>;
     readonly subject: string;
     readonly version?: number;
 }
@@ -818,10 +823,10 @@ export interface ITemplateDeclaration<TFamily extends IBindingFamily, TCollectio
 }
 
 // @alpha
-export interface ITemplateMemoOptions<TFamily extends IBindingFamily, TChildren extends IChildDeclarations<TFamily>, TResult> {
+export interface ITemplateMemoOptions<TFamily extends IBindingFamily, TChildren extends IChildDeclarations<TFamily>, TResult, TMember = unknown> {
     readonly children?: TChildren;
     readonly label?: string;
-    readonly run: (context: IMemoRunContext<TFamily, TChildren>) => TResult;
+    readonly run: (context: IMemoRunContext<TFamily, TChildren> & IMemberBinding<TFamily, TMember>) => TResult;
     readonly subject: IMemberSubject;
     readonly version?: number;
 }
@@ -832,14 +837,14 @@ export interface ITemplateOptions<TFamily extends IBindingFamily, TCollection ex
     readonly gate?: (context: IGateContext<TFamily, IMemberOf<TFamily, TCollection>>) => boolean;
     readonly key?: (member: IMemberOf<TFamily, TCollection>) => string;
     readonly slot: string;
-    readonly steps: (member: IMemberBuilder<TFamily>) => TSteps;
+    readonly steps: (member: IMemberBuilder<TFamily, IMemberOf<TFamily, TCollection>>) => TSteps;
 }
 
 // @alpha
-export interface ITemplateSourceOptions<TFamily extends IBindingFamily, TResult> {
-    readonly finality?: (context: IFinalityContext<TFamily, TResult>) => unknown;
+export interface ITemplateSourceOptions<TFamily extends IBindingFamily, TResult, TMember = unknown> {
+    readonly finality?: (context: IFinalityContext<TFamily, TResult> & IMemberBinding<TFamily, TMember>) => unknown;
     readonly label?: string;
-    readonly run: (context: ISourceRunContext<TFamily, TResult>) => IApply<TFamily['outcomes'], TResult>;
+    readonly run: (context: ISourceRunContext<TFamily, TResult> & IMemberBinding<TFamily, TMember>) => IApply<TFamily['outcomes'], TResult>;
     readonly subject: IMemberSubject;
     readonly version?: number;
 }

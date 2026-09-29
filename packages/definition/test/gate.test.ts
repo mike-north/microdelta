@@ -15,31 +15,17 @@ import { describe, expect, jest, test } from '@jest/globals';
 import {
   declarations,
   gateOutcome,
-  type IAnySourceDeclaration,
-  type IApply,
   type IBindingDescriptor,
   type IAuthorInvoker,
   type IGateOutcome,
-  type IMemberOf,
-  type IMemberSupplier,
 } from '../src/index.js';
 import { callUntyped, expectDefinitionError } from './fixtures/assertions.js';
+import { supplying } from './fixtures/port.js';
 import type { ITestFamily } from './fixtures/contributors.js';
 import { ada, buildKeyed, compositionStep, gateOf, instanceDescriptor, source, template, templateStepDescriptor, type IContributors } from './fixtures/keyed.js';
 
 /** Ada's summary instance, the descriptor gates are opened for. */
 const adaSummary = instanceDescriptor('summary', 'person:ada');
-
-/** A member supplier that records which collection and instance it was asked for and returns one member view. */
-function supplying(member: unknown, asked: unknown[]): IMemberSupplier<ITestFamily> {
-  return {
-    view: <TCollection extends IAnySourceDeclaration<ITestFamily>>(collection: TCollection, instance: IBindingDescriptor): IApply<ITestFamily['views'], IMemberOf<ITestFamily, TCollection>> => {
-      asked.push(collection, instance);
-      // Test-only: the supplier stands in for Resolution's trusted member view and returns the configured record.
-      return member as IApply<ITestFamily['views'], IMemberOf<ITestFamily, TCollection>>;
-    },
-  };
-}
 
 /** An invoker that records the callback and context it was handed, then calls it. */
 function recording(seen: { callback?: unknown; context?: unknown }): IAuthorInvoker<unknown> {

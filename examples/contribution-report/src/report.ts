@@ -27,6 +27,9 @@ export function assembleReport(run: IWorkspaceRun, outcomes: Readonly<Record<ICo
     if (outcome.kind === 'refused') {
       throw new Error(`the summary of ${key} was refused: ${outcome.reason}`);
     }
+    if (outcome.kind === 'skipped') {
+      throw new Error(`the summary of ${key} was skipped by a gate`);
+    }
     return { key, ...run.read<ISummary>(outcome.reference) };
   });
   return { repository: config.repository, window: config.window, selected, contributors };

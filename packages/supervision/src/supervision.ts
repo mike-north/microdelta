@@ -29,12 +29,18 @@ import type {
   IExecutionAdmission,
   ILifecycleEvent,
   ILifecycleObserver,
+  IMemberResolution,
+  IMembersResolution,
   IRecoveryResult,
   IResolution,
   IResolutionOutcome,
 } from '@microdelta/resolution';
 
 import type {
+  IDiscoveryReport,
+  IMemberOutcome,
+  IMembersReport,
+  IMembersTarget,
   IOrdinaryPhase,
   IRequestOptions,
   IRun,
@@ -113,6 +119,41 @@ function notify(observers: readonly ICapturedObserver[], event: IRunEvent): void
   if (failure !== undefined) {
     throw failure.error;
   }
+}
+
+/**
+ * Classify one member's Resolution outcome as its typed member outcome
+ * (CMP-8, RUN-010). An admission denial leaves the member pending, never
+ * failed; a cancellation decided through Supervision's admission port is
+ * cancelled; a gated-out member is skipped with its gate evidence and no
+ * result; a typed Resolution failure is failed.
+ */
+function memberOutcome(member: IMemberResolution): IMemberOutcome {
+  const { key, step, gate, outcome } = member;
+  switch (outcome.kind) {
+    case 'reused':
+    case 'published':
+      return Object.freeze({ status: 'succeeded', key, step, gate, outcome });
+    case 'skipped':
+      return Object.freeze({ status: 'skipped', key, step, gate: outcome.gate });
+    case 'refused':
+      return Object.freeze({ status: outcome.disposition === 'cancelled' ? 'cancelled' : 'pending', key, step, gate, refused: outcome.refused, reason: outcome.reason });
+    case 'failed':
+      return Object.freeze({ status: 'failed', key, step, gate, error: outcome.error });
+    default: {
+      const exhaustive: never = outcome;
+      return exhaustive;
+    }
+  }
+}
+
+/** Report one members request: discovery in Supervision's terms and every member's typed outcome. */
+function membersReport(step: string, resolved: IMembersResolution): IMembersReport {
+  const discovery = resolved.discovery;
+  const report: IDiscoveryReport = discovery.kind === 'refused'
+    ? Object.freeze({ kind: discovery.disposition === 'cancelled' ? 'cancelled' : 'pending', collection: discovery.collection, refused: discovery.refused, reason: discovery.reason })
+    : discovery;
+  return Object.freeze({ template: resolved.template, step, discovery: report, members: Object.freeze(resolved.members.map(memberOutcome)) });
 }
 
 /**
@@ -254,6 +295,13 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
           const outcome = await resolution.resolve({ step, requestKey: request.requestKey, lease: writer.lease() });
           diagnostics.push(...outcome.diagnostics);
           return outcome;
+        });
+      },
+      resolveMembers(target: IMembersTarget, request: IRequestOptions): Promise<IMembersReport> {
+        return within(async () => {
+          const resolved = await resolution.resolveMembers({ template: target.template, step: target.step, requestKey: request.requestKey, lease: writer.lease() });
+          diagnostics.push(...resolved.diagnostics);
+          return membersReport(target.step, resolved);
         });
       },
       check(step: IBindingDescriptor): Promise<ICheckOutcome> {

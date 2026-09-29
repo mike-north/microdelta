@@ -2,8 +2,11 @@
  * The microdelta entry. Its public surface preserves the scaffold's Store
  * factory, composing its required host capability at the application boundary.
  * Its project-private `@alpha` surface is the workspace authoring and run path:
- * authoring builders, durable workspaces supervised by Run Supervision, the
- * normal and recovery entry operations and runtime context lookup. Context
+ * authoring builders (including keyed collections, gated fanout templates,
+ * supplied step slots, forwarded arguments and strict folds), durable
+ * workspaces supervised by Run Supervision, the normal, members, fold and
+ * recovery entry operations with their typed reports, and runtime context
+ * lookup. Context
  * code may use owner contracts directly, never this assembly facade.
  * @packageDocumentation
  */
@@ -50,18 +53,40 @@ export type {
 export {
   authoring,
   sourceOutcome,
+  type IAnyTemplateDeclaration,
   type IAuthoring,
   type IAuthoringFamily,
   type IChildResult,
+  type ICollectionResult,
+  type ICollectionStatus,
   type IComposition,
   type IDeclaredCallHandle,
+  type IDerivedArguments,
+  type IFoldDeclaration,
+  type IFoldEntry,
+  type IForward,
+  type IForwarded,
+  type IKeyedMember,
+  type IKeyedSnapshot,
+  type IKeyingDiagnostic,
+  type IKeyingFailure,
+  type IMemberBinding,
+  type IMemberBuilder,
+  type IPathInput,
   type IPreviousResult,
   type IResultView,
+  type ISkippedEntry,
+  type ISlotSubject,
   type ISourceOutcome,
   type ISourceOutcomes,
   type IStepDescriptor,
+  type IStepSlot,
+  type ISucceededEntry,
+  type ISuppliedStepDeclaration,
+  type ISuppliedStepRegistration,
   type ITrackedHelpers,
   type ITrackedView,
+  type IUntrackedRead,
 } from './authoring.js';
 export {
   ResolutionError,
@@ -73,9 +98,13 @@ export {
   type IAdmissionDecision,
   type IAdmissionPolicy,
   type IAdmissionRequest,
+  type ICandidateMiss,
   type ICheckOutcome,
   type ICompletedResultReference,
   type IDiscoveryReport,
+  type IFoldCoverage,
+  type IFoldOutcome,
+  type IFoldReport,
   type IGateEvidence,
   type ILifecycleEvent,
   type ILifecyclePhase,
@@ -91,6 +120,7 @@ export {
   type IRunEvent,
   type IRunObserver,
   type IRunResult,
+  type IStrictFoldOutcome,
   type ISupervisionErrorCode,
   type IWorkspace,
   type IWorkspaceOptions,

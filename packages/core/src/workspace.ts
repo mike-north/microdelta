@@ -8,10 +8,13 @@
  * export is a facade-local `@alpha` declaration; spellings are not a public API.
  */
 import type {
+  ICandidateMiss as IResolutionCandidateMiss,
   ICheckOutcome as IResolutionCheckOutcome,
   IAdmissionDecision as IResolutionAdmissionDecision,
   IAdmissionRequest as IResolutionAdmissionRequest,
   IExecutionAdmission,
+  IFoldCoverage as IResolutionFoldCoverage,
+  IFoldOutcome as IResolutionFoldOutcome,
   IGateEvidence as IResolutionGateEvidence,
   ILifecycleEvent as IResolutionLifecycleEvent,
   ILifecyclePhase as IResolutionLifecyclePhase,
@@ -37,12 +40,14 @@ import type {
   IRun,
   IRunContext as ISupervisionRunContext,
   IDiscoveryReport as ISupervisionDiscoveryReport,
+  IFoldReport as ISupervisionFoldReport,
   IMemberOutcome as ISupervisionMemberOutcome,
   IMembersReport as ISupervisionMembersReport,
   IMembersTarget as ISupervisionMembersTarget,
   IRunEvent as ISupervisionRunEvent,
   IRunObserver as ISupervisionRunObserver,
   IRunResult as ISupervisionRunResult,
+  IStrictFoldOutcome as ISupervisionStrictFoldOutcome,
   ISupervisionErrorCode as ISupervisionErrorCodeOf,
 } from '@microdelta/supervision';
 
@@ -99,6 +104,37 @@ export type IMembersReport = ISupervisionMembersReport;
 
 /** The evidence of one template instance's settled gate: its selection and the facts it read in its own frame. @alpha */
 export type IGateEvidence = IResolutionGateEvidence;
+
+/**
+ * One strict fold request's report: how discovery settled, every current
+ * member's typed outcome in canonical key order, and the fold's typed outcome.
+ * @alpha
+ */
+export type IFoldReport = ISupervisionFoldReport;
+
+/**
+ * A strict fold's typed outcome in a run: `succeeded` with its settled
+ * reference and coverage, `waiting` on pending members or open discovery,
+ * `failed` naming failed, cancelled and pending keys, or `pending` or
+ * `cancelled` when the fold's own work was refused. Only `succeeded` ran or
+ * reused the fold.
+ * @alpha
+ */
+export type IStrictFoldOutcome = ISupervisionStrictFoldOutcome;
+
+/** Resolution's settled fold outcome, carried by a succeeded {@link IStrictFoldOutcome}. @alpha */
+export type IFoldOutcome = IResolutionFoldOutcome;
+
+/**
+ * Framework coverage of a reused or published strict fold: the required and
+ * skipped member keys and discovery closure, derived from the delivered
+ * members rather than anything the fold body reports.
+ * @alpha
+ */
+export type IFoldCoverage = IResolutionFoldCoverage;
+
+/** Why one earlier candidate result was not reused. @alpha */
+export type ICandidateMiss = IResolutionCandidateMiss;
 
 /** An observe-only run observer. @alpha */
 export type IRunObserver = ISupervisionRunObserver;

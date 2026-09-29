@@ -6,7 +6,10 @@
  *   configuration field becomes evidence;
  * - declared helpers as tracked functions, so an actually called helper's
  *   implementation becomes evidence and an uncalled one does not;
- * - a child call's result as a lazy view over its exact retained data;
+ * - a child call's result as a lazy view over its exact retained data, and a
+ *   supplied step's arguments as views observed under `argument` bindings;
+ * - an explicit observed untracked read, the only way a callback reads a
+ *   tracked member without consuming it;
  * - a source's eligible previous result as an immutable `{ data }` carrier;
  * - a source's outcome as a Resolution-minted control envelope, built with the
  *   `outcome` constructors its context supplies.
@@ -14,7 +17,7 @@
  * These are types only; the values are assembled by Resolution per invocation.
  */
 import type { IBindingFamily, IPreviousCarrierFamily, ITypeFamily } from '@microdelta/definition';
-import type { ITrackedView } from '@microdelta/tracking';
+import type { ITracked, ITrackedView, IUntrackedKey } from '@microdelta/tracking';
 
 import type { ISourceOutcome, ISourceOutcomes } from './outcome.js';
 
@@ -36,9 +39,19 @@ export interface IPreviousResult<T> {
   readonly data: IResultView<T>;
 }
 
-/** Result type to the child view a declared call delivers. @alpha */
+/**
+ * How an author reads one value a declared call delivers or a supplied step
+ * receives: a record or array through Tracking's lazy view, a scalar as itself.
+ * Completed results always have a record or array root (publication rejects
+ * anything else), so a scalar here is only ever a supplied step's argument,
+ * read through its observed `argument` binding.
+ * @alpha
+ */
+export type ICallView<T> = T extends object ? IResultView<T> : T;
+
+/** Result or argument type to the view a declared call delivers or a supplied step reads. @alpha */
 export interface IResolutionViews extends ITypeFamily {
-  readonly output: IResultView<this['input']>;
+  readonly output: ICallView<this['input']>;
 }
 
 /** Result type to the previous-result carrier a source receives. @alpha */
@@ -62,8 +75,19 @@ export type ITrackedHelpers<THelpers extends object> = {
 };
 
 /**
- * The current bindings every source and memo callback receives beside the
- * context names Definition supplies (`previous` or `calls`).
+ * The explicit, observed untracked read authors receive: return one scalar
+ * member of a tracked view without consuming it as evidence. The capture
+ * records that the read happened (Tracking's `untracked-read` observation), and
+ * any derived argument a memo passes to a nested call after it is recorded as
+ * unjustified, so revalidating that memo is an honest `unjustified-argument`
+ * miss rather than reuse justified by content it did not track (CMP-7).
+ * @alpha
+ */
+export type IUntrackedRead = <V extends ITracked<object>, K extends IUntrackedKey<V>>(value: V, key: K) => V[K];
+
+/**
+ * The current bindings every source, memo and supplied step callback receives
+ * beside the context names Definition supplies (`previous`, `calls` or `args`).
  * @alpha
  */
 export interface IStepBindings<TInputs extends object, THelpers extends object> {
@@ -71,6 +95,8 @@ export interface IStepBindings<TInputs extends object, THelpers extends object> 
   readonly inputs: ITrackedView<TInputs>;
   /** Declared helpers keyed by callable slot. */
   readonly helpers: ITrackedHelpers<THelpers>;
+  /** The explicit observed untracked read. */
+  readonly untracked: IUntrackedRead;
 }
 
 /**

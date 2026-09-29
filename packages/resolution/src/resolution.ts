@@ -233,6 +233,11 @@ export function createResolution<TInputs extends object, THelpers extends object
   const active = host.createAsyncContext<IInvocationScope>();
   /** Executing memo bodies, keyed by their invocation scope. */
   const frames = new WeakMap<IInvocationScope, IMemoFrame>();
+  /**
+   * The observed untracked read authors receive: Tracking reads the scalar
+   * without consuming it and records the read in the active capture.
+   */
+  const untracked: IFamily['memo']['untracked'] = (value, key) => tracking.untracked(value, key);
   /** Previous carriers this Resolution supplied, with the exact result and the resolution they belong to. */
   const carriers = new WeakMap<object, { readonly reference: ICompletedResultReference; readonly token: object }>();
 
@@ -337,7 +342,7 @@ export function createResolution<TInputs extends object, THelpers extends object
    * as one tracked view and each declared helper as a tracked function. Work
    * cannot proceed without every declared slot uniquely bound.
    */
-  function authorBindings(request: IRequestContext): { readonly inputs: IFamily['memo']['inputs']; readonly helpers: IFamily['memo']['helpers'] } {
+  function authorBindings(request: IRequestContext): IFamily['memo'] {
     for (const [slot, state] of [...request.slots.inputs, ...request.slots.helpers]) {
       if (state.status !== 'bound') {
         throw new ResolutionError('unbound-step', `Declared binding slot ${slot} is ${state.status} in the current composition`);
@@ -352,7 +357,7 @@ export function createResolution<TInputs extends object, THelpers extends object
       }
     }
     Object.freeze(helpers);
-    return { inputs: trusted<IFamily['memo']['inputs']>(inputs), helpers: trusted<IFamily['memo']['helpers']>(helpers) };
+    return Object.freeze({ inputs: trusted<IFamily['memo']['inputs']>(inputs), helpers: trusted<IFamily['memo']['helpers']>(helpers), untracked });
   }
 
   /**
@@ -407,7 +412,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     finish: (value: unknown) => TFinished,
   ): Promise<IObservationCapture<TFinished>> {
     const shared = authorBindings(request);
-    const bindings: IFamily['source'] = Object.freeze({ inputs: shared.inputs, helpers: shared.helpers, outcome: sourceOutcome });
+    const bindings: IFamily['source'] = Object.freeze({ ...shared, outcome: sourceOutcome });
     const supplier: IPreviousSupplier<IFamily> | undefined = carrier === undefined ? undefined : Object.freeze({
       carrier: <TResult>(declaration: ISourceDeclaration<IFamily, TResult>): IApply<IFamily['previous'], TResult> => {
         void declaration;
@@ -818,7 +823,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     let ran: IObservationCapture<IMemoReturn>;
     try {
       emit(request, evidence, step, 'execute');
-      ran = await active.run(invocation, () => invocation.apply(Object.freeze({ inputs: bindings.inputs, helpers: bindings.helpers }), invoker((value): IMemoReturn => {
+      ran = await active.run(invocation, () => invocation.apply(bindings, invoker((value): IMemoReturn => {
         try {
           return { data: tracking.snapshotOutput(value), detachError: undefined };
         } catch (error: unknown) {

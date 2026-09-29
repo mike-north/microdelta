@@ -166,3 +166,17 @@ expectType<ITracked<{ readonly profile: { readonly name: string } }>>(lazy);
 expectType<string>(lazy.profile.name);
 expectError(observer.materialization.lazyView<string>(binding, nodeSource));
 expectError(nodeSource.select([], 'value'));
+
+// An observed untracked read selects a scalar leaf or an array length, never a nested tracked container or the brand.
+const untrackedSource = observer.tracked({ rubric: { prompt: 'v1', weights: [2, 1] as readonly number[] }, label: 'acme', maybe: undefined as string | undefined }, binding);
+expectType<string>(observer.untracked(untrackedSource.rubric, 'prompt'));
+expectType<string>(observer.untracked(untrackedSource, 'label'));
+expectType<string | undefined>(observer.untracked(untrackedSource, 'maybe'));
+expectType<number>(observer.untracked(untrackedSource.rubric.weights, 'length'));
+expectAssignable<number | undefined>(observer.untracked(untrackedSource.rubric.weights, 0));
+expectError(observer.untracked(untrackedSource, 'rubric'));
+expectError(observer.untracked(untrackedSource.rubric, 'weights'));
+expectError(observer.untracked(untrackedSource, '__microdeltaTracked'));
+expectError(observer.untracked(untrackedSource, 'absent'));
+expectError(observer.untracked({ prompt: 'v1' }, 'prompt'));
+expectType<boolean>(observer.untrackedReadObserved());

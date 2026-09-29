@@ -46,8 +46,12 @@ export type IResolutionHistory = Pick<
  */
 export interface IResolutionHost extends IAsyncContextCapability, ISha256Capability {}
 
-/** Whether a step is a retained source or a memoized computation. @alpha */
-export type IStepKind = 'source' | 'memo';
+/**
+ * Whether a step is a retained source, a memoized computation, or the
+ * memoized implementation currently supplied to a callable step slot, invoked
+ * through a nested call. @alpha
+ */
+export type IStepKind = 'source' | 'memo' | 'supplied';
 
 /**
  * One request for new work, presented after reuse had its chance and before
@@ -194,7 +198,26 @@ export interface IRecoverRequest {
 /**
  * Why one candidate could not be reused. Changed content, lost or ambiguous
  * current correspondence, unsupported historical evidence and a changed child
- * output stay distinct (execution.md diagnostics).
+ * output stay distinct (execution.md diagnostics, REUSE-007).
+ *
+ * - `changed`: one of the candidate's own consumed facts (implementation,
+ *   input, helper or argument) differs now.
+ * - `unavailable`, `incompatible`, `ambiguous`: an own consumed fact has no
+ *   current value, a different container shape, or an ambiguous input binding.
+ * - `correspondence`: a recorded call no longer reconnects to this step's
+ *   current declared child relationship (M3 direct children, and nested edges
+ *   Definition reports undeclared).
+ * - `unsupported-evidence`: the provenance format or version, or a recorded
+ *   witness, argument form or recipe, is one Resolution does not read.
+ * - `changed-child-output`: a nested call's current child result differs in a
+ *   fact the candidate consumed from that call.
+ * - `missing-binding`, `ambiguous-binding`: a recorded nested call's callable
+ *   slot now has no current implementation, or several.
+ * - `unreconstructible-argument`: a recorded argument kept no value (for
+ *   example a function), so the call cannot be made again without the body.
+ * - `unjustified-argument`: a recorded derived argument was made after an
+ *   observed untracked read, so recorded evidence cannot justify it.
+ * - `child-refused`: reserved for a child whose required work was refused.
  * @alpha
  */
 export interface ICandidateMiss {
@@ -208,6 +231,11 @@ export interface ICandidateMiss {
     | 'ambiguous'
     | 'correspondence'
     | 'unsupported-evidence'
+    | 'changed-child-output'
+    | 'missing-binding'
+    | 'ambiguous-binding'
+    | 'unreconstructible-argument'
+    | 'unjustified-argument'
     | 'child-refused';
   /** The observation whose current fact did not compare equal, when one did. */
   readonly observation?: ITrackingObservation;

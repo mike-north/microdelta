@@ -386,7 +386,7 @@ export function createMaterialization(options: IMaterializationOptions): IMateri
     currentProvider(resolveReference: ICompletedReferenceResolver, fallback: ICurrentFactProvider): ICurrentFactProvider {
       return Object.freeze({
         resolve(binding: ITrackingBinding, request: ICurrentFactRequest): ICurrentFactResolution {
-          if (request.kind === 'implementation' || request.kind === 'collection-order') {
+          if (request.kind === 'implementation' || request.kind === 'collection-order' || request.kind === 'untracked-read') {
             return fallback.resolve(binding, request);
           }
           const reference = resolveReference(binding);

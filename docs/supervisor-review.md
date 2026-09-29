@@ -10,14 +10,20 @@ administrator enforcement, and resolved review conversations.
 
 The supervisor reviews the current GitHub PR head, implementation, issue
 acceptance, test-first evidence, applicable checks, and every review conversation.
-Before arming auto-merge, obtain a completed GitHub Copilot review on that same
-head. A requested or pending review does not count; the submitted review must be
-authored by a GitHub `Bot` with login `copilot-pull-request-reviewer[bot]`
-(the GraphQL login `copilot-pull-request-reviewer` is also accepted) and have
-state `COMMENTED` or `APPROVED`. Login text alone is insufficient; the command
-checks the review author's GraphQL type. It rejects an old-head, dismissed,
-pending, or `CHANGES_REQUESTED` Copilot review and any outstanding Copilot
-review request.
+Before arming auto-merge, obtain a completed GitHub Copilot review of the pull
+request. Copilot is requested automatically when the PR opens, and by the
+owner's policy later pushes are not re-reviewed, so a completed review of an
+earlier head of the same PR counts; the supervisor's own exact-head review
+binds the decision to the current commit. A requested or pending review does
+not count, and neither does an errored Copilot run (a `COMMENTED` review whose
+body reports that Copilot could not review, such as on a rate limit). The
+submitted review must be authored by a GitHub `Bot` with login
+`copilot-pull-request-reviewer[bot]` (the GraphQL login
+`copilot-pull-request-reviewer` is also accepted) and have state `COMMENTED` or
+`APPROVED`. Login text alone is insufficient; the command checks the review
+author's GraphQL type. It rejects the PR when its most recent Copilot review is
+dismissed, pending, or `CHANGES_REQUESTED`, and when any Copilot review request is
+still outstanding.
 The supervisor still assesses Copilot's findings and owns their disposition.
 
 The command records the supervisor's own review scope and evidence; it does not
@@ -60,13 +66,13 @@ enforces it; a requirement absent from both fails.
   nothing. A branch-rules response large enough to be truncated is refused.
 
 The command never edits protection or rulesets and has no flag that relaxes this
-check. The ruleset's Copilot code review does not re-review on push, so the
-supervisor requests a fresh Copilot review for each new head; the exact-head
-Copilot gate below then requires it to complete.
+check. The ruleset's Copilot code review does not re-review on push, by
+design: the Copilot gate below requires one completed Copilot review of the
+pull request, not of each head.
 
 It then confirms the PR is open, not a draft or release-version PR, targets `main`,
 still has the expected head, has no unresolved conversations, has a completed
-Copilot review on that head, and has visible required CI results that have not
+Copilot review of the pull request, and has visible required CI results that have not
 failed or been cancelled. Pending CI is allowed
 because those checks remain required by GitHub. Passing them locally is not a
 replacement for their GitHub results.
@@ -120,8 +126,8 @@ node tooling/release-review.mjs \
 
 It keeps every gate of the ordinary command: the fixed repository, the complete
 `main` protection read-back, an open non-draft PR on `main` at the expected head,
-resolved conversations, and a submitted Copilot `COMMENTED` or `APPROVED` review by
-the Copilot `Bot` on that head with no outstanding Copilot request. It adds:
+resolved conversations, and a completed Copilot `COMMENTED` or `APPROVED` review by
+the Copilot `Bot` of the pull request with no outstanding Copilot request. It adds:
 
 - the PR must be titled `Version Packages` and come from this repository's
   `changeset-release/main` branch;

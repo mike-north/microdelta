@@ -2,7 +2,7 @@
  * The human-operated release review records the protected, exact-head
  * **Supervisor review** status on a Changesets Version Packages PR so a
  * maintainer can merge it manually. It keeps every supervisor gate, requires
- * completed passing checks and a genuine Copilot review on that head, and never
+ * completed passing checks and a genuine completed Copilot review of the pull request, and never
  * arms auto-merge or merges: the maintainer's manual merge is the release
  * decision (issue #64 review finding 1).
  *
@@ -153,9 +153,9 @@ for (const [name, overrides, requestOverrides = {}, pattern] of [
   ['skipped required CI', { requiredChecks: [{ name: 'PR metadata', bucket: 'skipping' }, { name: 'core (20)', bucket: 'pass' }, { name: 'core (22)', bucket: 'pass' }, { name: 'core (24)', bucket: 'pass' }] }, {}, /must have completed successfully on the exact head: PR metadata/u],
   ['failed required CI', { requiredChecks: [{ name: 'PR metadata', bucket: 'pass' }, { name: 'core (20)', bucket: 'pass' }, { name: 'core (22)', bucket: 'fail' }, { name: 'core (24)', bucket: 'pass' }] }, {}, /non-passing results: core \(22\)/u],
   ['missing required CI', { requiredChecks: [{ name: 'PR metadata', bucket: 'pass' }] }, {}, /Required CI results are missing/u],
-  ['no Copilot review', { copilotReviews: [] }, {}, /submitted Copilot COMMENTED or APPROVED review/u],
-  ['a Copilot review of an older head', { copilotReviews: [{ authorLogin: 'copilot-pull-request-reviewer[bot]', authorType: 'Bot', commitOid: 'a'.repeat(40), state: 'COMMENTED', submitted: true }] }, {}, /submitted Copilot COMMENTED or APPROVED review/u],
-  ['a Copilot login from a user account', { copilotReviews: [{ authorLogin: 'copilot-pull-request-reviewer', authorType: 'User', commitOid: releaseHead, state: 'COMMENTED', submitted: true }] }, {}, /submitted Copilot COMMENTED or APPROVED review/u],
+  ['no Copilot review', { copilotReviews: [] }, {}, /completed Copilot COMMENTED or APPROVED review/u],
+  ['only an errored Copilot run', { copilotReviews: [{ authorLogin: 'copilot-pull-request-reviewer[bot]', authorType: 'Bot', commitOid: releaseHead, state: 'COMMENTED', submitted: true, errored: true }] }, {}, /completed Copilot COMMENTED or APPROVED review/u],
+  ['a Copilot login from a user account', { copilotReviews: [{ authorLogin: 'copilot-pull-request-reviewer', authorType: 'User', commitOid: releaseHead, state: 'COMMENTED', submitted: true }] }, {}, /completed Copilot COMMENTED or APPROVED review/u],
   ['an outstanding Copilot request', { pendingReviewRequests: ['copilot-pull-request-reviewer[bot]'] }, {}, /still requested/u],
   ['protection without Supervisor review', { protection: { ...scenario().state.protection, requiredContexts: [...REQUIRED_BRANCH_CHECKS] } }, {}, /missing required checks: Supervisor review/u],
   ['protection without administrator enforcement', { protection: { ...scenario().state.protection, enforceAdmins: false } }, {}, /administrators/u],

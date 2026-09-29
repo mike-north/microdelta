@@ -136,7 +136,11 @@ for (const [name, overrides, requestOverrides = {}] of [
     { name: REQUIRED_STATUS_CONTEXT, bucket: 'pending' },
   ] }],
   ['no completed Copilot review', { copilotReviews: [] }],
-  ['Copilot review on an older head', { copilotReviews: [{ authorLogin: 'copilot-pull-request-reviewer', authorType: 'Bot', commitOid: 'b'.repeat(40), state: 'COMMENTED', submitted: true }] }],
+  ['only an errored Copilot run', { copilotReviews: [{ authorLogin: 'copilot-pull-request-reviewer[bot]', authorType: 'Bot', commitOid: reviewedHead, state: 'COMMENTED', submitted: true, submittedAt: '2026-09-27T00:00:00Z', errored: true }] }],
+  ['latest Copilot review requests changes after an earlier comment', { copilotReviews: [
+    { authorLogin: 'copilot-pull-request-reviewer[bot]', authorType: 'Bot', commitOid: 'b'.repeat(40), state: 'COMMENTED', submitted: true, submittedAt: '2026-09-27T00:00:00Z' },
+    { authorLogin: 'copilot-pull-request-reviewer[bot]', authorType: 'Bot', commitOid: reviewedHead, state: 'CHANGES_REQUESTED', submitted: true, submittedAt: '2026-09-28T00:00:00Z' },
+  ] }],
   ['dismissed Copilot review', { copilotReviews: [{ authorLogin: 'copilot-pull-request-reviewer[bot]', authorType: 'Bot', commitOid: reviewedHead, state: 'DISMISSED', submitted: true }] }],
   ['pending Copilot review', { copilotReviews: [{ authorLogin: 'copilot-pull-request-reviewer[bot]', authorType: 'Bot', commitOid: reviewedHead, state: 'PENDING', submitted: false }] }],
   ['review authored by a different account', { copilotReviews: [{ authorLogin: 'reviewer', commitOid: reviewedHead, state: 'APPROVED', submitted: true }] }],
@@ -166,6 +170,23 @@ for (const [name, overrides, requestOverrides = {}] of [
     assert.equal(calls.some(([call]) => ['createReviewRecord', 'setCommitStatus', 'enableAutoMerge'].includes(call)), false);
   });
 }
+
+test('a completed Copilot review on an earlier head of the PR satisfies the per-PR review gate', async () => {
+  const { api, request, state } = scenario();
+  state.copilotReviews = [{ authorLogin: 'copilot-pull-request-reviewer[bot]', authorType: 'Bot', commitOid: 'b'.repeat(40), state: 'COMMENTED', submitted: true, submittedAt: '2026-09-27T00:00:00Z' }];
+  const result = await runSupervisorReview(request, api);
+  assert.equal(result.expectedHeadOid, reviewedHead);
+});
+
+test('an errored Copilot rerun does not erase an earlier completed Copilot review', async () => {
+  const { api, request, state } = scenario();
+  state.copilotReviews = [
+    { authorLogin: 'copilot-pull-request-reviewer[bot]', authorType: 'Bot', commitOid: 'b'.repeat(40), state: 'COMMENTED', submitted: true, submittedAt: '2026-09-27T00:00:00Z' },
+    { authorLogin: 'copilot-pull-request-reviewer[bot]', authorType: 'Bot', commitOid: reviewedHead, state: 'COMMENTED', submitted: true, submittedAt: '2026-09-28T00:00:00Z', errored: true },
+  ];
+  const result = await runSupervisorReview(request, api);
+  assert.equal(result.expectedHeadOid, reviewedHead);
+});
 
 test('a head change after pending status but before arming leaves no success or auto-merge request', async () => {
   const { api, calls, request, state } = scenario({ changeHeadOnRead: 2 });
@@ -339,6 +360,7 @@ test('all GitHub adapter operations use the injected runner with their original 
             nodes: [{
               state: pagedReview ? 'APPROVED' : 'COMMENTED',
               submittedAt: '2026-09-27T00:00:00Z',
+              body: pagedReview ? 'Looks good.' : 'Copilot encountered an error and was unable to review this pull request. You can try again by re-requesting a review.',
               commit: { oid: reviewedHead },
               author: { login: pagedReview ? 'reviewer' : 'copilot-pull-request-reviewer[bot]', __typename: pagedReview ? 'User' : 'Bot' },
             }],
@@ -377,8 +399,8 @@ test('all GitHub adapter operations use the injected runner with their original 
     assert.deepEqual(await api.readRequiredChecks(prNumber), [{ name: 'core (20)', bucket: 'pass' }]);
     assert.deepEqual(await api.readCopilotReviews(prNumber), {
       reviews: [
-        { authorLogin: 'copilot-pull-request-reviewer[bot]', authorType: 'Bot', commitOid: reviewedHead, state: 'COMMENTED', submitted: true },
-        { authorLogin: 'reviewer', authorType: 'User', commitOid: reviewedHead, state: 'APPROVED', submitted: true },
+        { authorLogin: 'copilot-pull-request-reviewer[bot]', authorType: 'Bot', commitOid: reviewedHead, state: 'COMMENTED', submitted: true, submittedAt: '2026-09-27T00:00:00Z', errored: true },
+        { authorLogin: 'reviewer', authorType: 'User', commitOid: reviewedHead, state: 'APPROVED', submitted: true, submittedAt: '2026-09-27T00:00:00Z', errored: false },
       ],
       pendingRequests: [], pendingRequestsUnread: false,
     });

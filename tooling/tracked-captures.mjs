@@ -5,13 +5,21 @@
  * a branded value belongs to that observer, and arbitrary closure soundness is
  * outside this rule's contract. Callback receiver access and literal-computed
  * observer boundaries are diagnosed as unsupported rather than inferred.
+ *
+ * Definition's author callbacks are boundaries wherever its generated builder
+ * signatures declare them: source `run`/`finality`, memo `run`, supplied step
+ * `run` (EXP-4 CX-2: an untracked capture in a supplied implementation is
+ * invisible to its implementation evidence), template `gate` and custom `key`,
+ * the template member builder's source and memo callbacks, and fold `run`.
+ * Definition's canonical `forward` origins and Tracking's observed untracked
+ * read are capabilities, not influences.
  */
 import path from 'node:path';
 import ts from 'typescript';
 import { fileURLToPath } from 'node:url';
 
 /** Observer capabilities and deterministic scalar functions have narrow authority. */
-const observerMethods = new Set(['tracked', 'capture', 'captureAsync', 'derived', 'snapshotOutput', 'keys', 'hasOwn']);
+const observerMethods = new Set(['tracked', 'capture', 'captureAsync', 'derived', 'snapshotOutput', 'keys', 'hasOwn', 'untracked', 'untrackedReadObserved']);
 const captureMethods = new Set(['tracked', 'capture', 'captureAsync', 'derived']);
 /** Only operations that express observations may use Materialization's receiver capability. */
 const materializationMethods = new Set(['materializeOutput', 'project', 'projectFrom', 'observeMemberOrder']);
@@ -41,20 +49,48 @@ const materializationOwnerFiles = new Set([
 const definitionOwnerFiles = new Set([
   path.resolve(fileURLToPath(new URL('../packages/definition/dist/api/definition.alpha.d.ts', import.meta.url))),
 ]);
-/** Only these author callback options of a Definition builder are capture boundaries. */
-const definitionCallbackOptions = new Set(['run', 'finality']);
+/**
+ * The author callback options each Definition builder declares, by builder
+ * interface and method. Only these options are capture boundaries; a builder
+ * absent from the generated declaration simply contributes none.
+ */
+const definitionCallbackOptions = new Map([
+  ['IDeclarations', new Map([
+    ['source', new Set(['run', 'finality'])],
+    ['memo', new Set(['run'])],
+    ['suppliedStep', new Set(['run'])],
+    ['template', new Set(['gate', 'key'])],
+    ['fold', new Set(['run'])],
+  ])],
+  ['IMemberBuilder', new Map([
+    ['source', new Set(['run', 'finality'])],
+    ['memo', new Set(['run'])],
+  ])],
+]);
 
-/** Collect Definition's builder signatures and declared-call brand from its generated declaration. */
+/**
+ * Collect Definition's builder signatures (each with its callback options),
+ * its declared-call brand and its canonical `forward` origin methods from the
+ * generated declaration.
+ */
 function definitionTypes(sourceFile, checker) {
-  const builderSignatures = new Set();
+  const builderSignatures = new Map();
   const brandProperties = new Set();
+  const forwardMembers = new Set();
   const visit = node => {
-    if (ts.isInterfaceDeclaration(node) && node.name.text === 'IDeclarations') {
+    const builders = ts.isInterfaceDeclaration(node) ? definitionCallbackOptions.get(node.name.text) : undefined;
+    if (builders) {
       for (const member of node.members) {
-        if (ts.isMethodSignature(member) && member.name && ts.isIdentifier(member.name) &&
-            (member.name.text === 'source' || member.name.text === 'memo')) {
-          builderSignatures.add(member);
+        const options = ts.isMethodSignature(member) && member.name && ts.isIdentifier(member.name) ? builders.get(member.name.text) : undefined;
+        if (options) {
+          builderSignatures.set(member, options);
         }
+      }
+    }
+    if (ts.isInterfaceDeclaration(node) && node.name.text === 'IForward') {
+      const symbol = checker.getSymbolAtLocation(node.name);
+      for (const property of symbol ? checker.getDeclaredTypeOfSymbol(symbol).getProperties() : []) {
+        forwardMembers.add(property);
       }
     }
     if (ts.isInterfaceDeclaration(node) && node.name.text === 'IDeclaredCallBrand') {
@@ -67,21 +103,23 @@ function definitionTypes(sourceFile, checker) {
     ts.forEachChild(node, visit);
   };
   visit(sourceFile);
-  return { builderSignatures, brandProperties };
+  return { builderSignatures, brandProperties, forwardMembers };
 }
 
 /** Resolve canonical symbols only from each owning source or generated alpha view. */
 function canonicalTypes(program, checker) {
   const declarations = new Map();
   const brandProperties = new Set();
-  const definitionBuilders = new Set();
+  const definitionBuilders = new Map();
+  const forwardMembers = new Set();
   let materializationSymbol;
   for (const sourceFile of program.getSourceFiles()) {
     const filename = path.resolve(sourceFile.fileName);
     if (definitionOwnerFiles.has(filename)) {
       const definition = definitionTypes(sourceFile, checker);
-      definition.builderSignatures.forEach(signature => definitionBuilders.add(signature));
+      definition.builderSignatures.forEach((options, signature) => definitionBuilders.set(signature, options));
       definition.brandProperties.forEach(property => brandProperties.add(property));
+      definition.forwardMembers.forEach(property => forwardMembers.add(property));
       continue;
     }
     const isTrackingOwner = trackingOwnerFiles.has(filename);
@@ -121,6 +159,7 @@ function canonicalTypes(program, checker) {
   return {
     brandProperties,
     definitionBuilders,
+    forwardMembers,
     observerMembers: new Map([...observerMethods].map(name => [
       name, observerSymbol && checker.getDeclaredTypeOfSymbol(observerSymbol).getProperty(name),
     ])),
@@ -354,6 +393,11 @@ export const trackedCaptures = {
       if (member?.type !== 'MemberExpression' || member.object !== identifier || member.computed) {
         return false;
       }
+      // Definition's canonical forward origins mint structural tokens only; a look-alike has other symbols.
+      if (member.parent?.type === 'CallExpression' && member.parent.callee === member &&
+          canonical.forwardMembers.has(propertySymbol(member))) {
+        return true;
+      }
       if (member.parent?.type === 'CallExpression' && member.parent.callee === member &&
           observerMethods.has(member.property.name)) {
         return actualObserverMethod(member.parent, member.property.name);
@@ -386,11 +430,12 @@ export const trackedCaptures = {
     /**
      * A Definition builder call is recognized by its resolved signature's
      * declaration in Definition's generated alpha rollup, so pre-applied or
-     * destructured builders qualify while same-spelled APIs never do.
+     * destructured builders qualify while same-spelled APIs never do. The
+     * result is that builder's callback options, or undefined.
      */
-    const isDefinitionBuilderCall = callTs => {
+    const definitionBuilderOptions = callTs => {
       const declaration = checker.getResolvedSignature(callTs)?.declaration;
-      return Boolean(declaration && canonical.definitionBuilders.has(declaration));
+      return declaration ? canonical.definitionBuilders.get(declaration) : undefined;
     };
 
     /** Resolve one Definition callback option value to a supported direct callback. */
@@ -408,11 +453,11 @@ export const trackedCaptures = {
     };
 
     /**
-     * The options must be an object literal. Its `run` and `finality` values are
+     * The options must be an object literal. Its callback option values are
      * boundaries when they are inline functions, methods or same-file function
      * declarations; spreads, computed keys and constructed callbacks are unsupported.
      */
-    const collectDefinitionCallbacks = (node, candidates, unsupported) => {
+    const collectDefinitionCallbacks = (node, callbackOptions, candidates, unsupported) => {
       const options = node.arguments[0];
       if (options?.type !== 'ObjectExpression') {
         unsupported.add(options ?? node);
@@ -429,7 +474,7 @@ export const trackedCaptures = {
         }
         const key = property.key.type === 'Identifier' ? property.key.name
           : property.key.type === 'Literal' ? String(property.key.value) : undefined;
-        if (!key || !definitionCallbackOptions.has(key)) {
+        if (!key || !callbackOptions.has(key)) {
           continue;
         }
         const callback = definitionCallback(property.value);
@@ -460,8 +505,9 @@ export const trackedCaptures = {
           if (!callTs || !ts.isCallExpression(callTs)) {
             continue;
           }
-          if (definitionBoundaries && isDefinitionBuilderCall(callTs)) {
-            collectDefinitionCallbacks(node, candidates, unsupported);
+          const callbackOptions = definitionBoundaries ? definitionBuilderOptions(callTs) : undefined;
+          if (callbackOptions) {
+            collectDefinitionCallbacks(node, callbackOptions, candidates, unsupported);
             continue;
           }
           if (!observerBoundaries) {

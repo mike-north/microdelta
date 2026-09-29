@@ -414,3 +414,139 @@ test('type-only references inside a callback are not external influences, while 
   assert.deepEqual(findings.map(message => message.message.match(/'([^']+)'/u)?.[1]), ['typed', 'external'],
     JSON.stringify(result.messages, null, 2));
 });
+
+/**
+ * M4 capture boundaries: supplied step `run`; template member-builder `run` and
+ * `finality`, template `gate` and custom `key`; fold `run`. Definition's
+ * canonical `forward` and Tracking's observed untracked read are capabilities,
+ * not external influences. Each boundary has a negative (a raw external
+ * capture is flagged) and a positive (a context-only callback is accepted).
+ *
+ * @see ../docs/spec/tracking.md (TRK-4)
+ * @see ../docs/spec/composition.md (CMP-7, CMP-9, EXP-4 counterexamples CX-1 and CX-2)
+ */
+const nestedPrelude = [
+  ...definitionPrelude.slice(0, -1),
+  "import type { ICollectionResult } from '@microdelta/definition';",
+  'const { memo, source, suppliedStep, stepSlot, template, fold, forward } = declarations<IFamily>();',
+  'interface IMember { readonly key: string; readonly authored: number }',
+  "const contributors = source<ICollectionResult<IMember>>({ subject: 'contributors', collection: { identity: 'key' }, run: () => ({ members: [], status: 'complete' }) });",
+];
+
+/** Lint `lines` after the nested prelude and return the tracked-captures findings and any parse failure. */
+async function nestedFindings(lines) {
+  const eslint = new ESLint({ cwd: root });
+  const [result] = await eslint.lintText([...nestedPrelude, ...lines].join('\n'), { filePath: definitionFixture });
+  assert.ok(result);
+  return result.messages.filter(message => message.ruleId === 'microdelta/tracked-captures' || message.fatal === true);
+}
+
+/** The captured names a set of findings reports. */
+function capturedNames(findings) {
+  return findings.map(message => message.message.match(/'([^']+)'/u)?.[1] ?? message.message);
+}
+
+test('supplied step run callbacks are capture boundaries (EXP-4 CX-2)', async () => {
+  const findings = await nestedFindings([
+    'declare const threshold: number;',
+    'const negative = suppliedStep<readonly [number], number>({ run: ({ args }) => args[0] + threshold });',
+    'const positive = suppliedStep<readonly [number], number>({ run: ({ args, inputs }) => args[0] + inputs.limit });',
+    'void negative; void positive;',
+  ]);
+  assert.deepEqual(capturedNames(findings), ['threshold'], JSON.stringify(findings, null, 2));
+});
+
+test('template member-builder run and finality callbacks are capture boundaries', async () => {
+  const findings = await nestedFindings([
+    'declare const externalFlag: boolean;',
+    'declare const externalLimit: number;',
+    'const negative = template({',
+    "  slot: 'negative', collection: contributors,",
+    '  steps: (member) => {',
+    "    const activity = member.source<{ readonly authored: number }>({ subject: member.subject('activity'), run: () => ({ authored: externalLimit }), finality: () => externalFlag });",
+    "    const summary = member.memo({ subject: member.subject('summary'), children: { activity }, run: () => externalLimit });",
+    '    return { activity, summary };',
+    '  },',
+    '});',
+    'const positive = template({',
+    "  slot: 'positive', collection: contributors,",
+    '  steps: (member) => {',
+    "    const activity = member.source<{ readonly authored: number }>({ subject: member.subject('activity'), run: ({ inputs }) => ({ authored: inputs.limit }), finality: ({ previous }) => previous.data.authored > 0 });",
+    "    const summary = member.memo({ subject: member.subject('summary'), children: { activity }, run: async ({ calls }) => (await calls.activity()).data.authored });",
+    '    return { activity, summary };',
+    '  },',
+    '});',
+    'void negative; void positive;',
+  ]);
+  assert.deepEqual(capturedNames(findings), ['externalLimit', 'externalFlag', 'externalLimit'], JSON.stringify(findings, null, 2));
+});
+
+test('template gate and custom key callbacks are capture boundaries', async () => {
+  const findings = await nestedFindings([
+    'declare const minimum: number;',
+    'declare const prefix: string;',
+    "const negative = template({ slot: 'negative', collection: contributors, key: (member) => prefix + member.key, gate: ({ member }) => member.authored >= minimum, steps: (member) => ({ a: member.source<number>({ subject: member.subject('a'), run: () => 1 }) }) });",
+    "const positive = template({ slot: 'positive', collection: contributors, key: (member) => member.key, gate: ({ member, inputs }) => member.authored >= inputs.limit, steps: (member) => ({ a: member.source<number>({ subject: member.subject('a'), run: () => 1 }) }) });",
+    'void negative; void positive;',
+  ]);
+  assert.deepEqual(capturedNames(findings), ['prefix', 'minimum'], JSON.stringify(findings, null, 2));
+});
+
+test('fold run callbacks are capture boundaries', async () => {
+  const findings = await nestedFindings([
+    'declare const heading: string;',
+    'const contributor = template({',
+    "  slot: 'contributor', collection: contributors,",
+    "  steps: (member) => ({ summary: member.memo({ subject: member.subject('summary'), run: () => 1 }) }),",
+    '});',
+    "const negative = fold({ subject: 'negative', over: { template: contributor, step: 'summary' }, run: ({ members }) => (members.length > 0 ? heading : '') });",
+    "const positive = fold({ subject: 'positive', over: { template: contributor, step: 'summary' }, run: ({ members, inputs }) => members.length + inputs.limit });",
+    'void negative; void positive;',
+  ]);
+  assert.deepEqual(capturedNames(findings), ['heading'], JSON.stringify(findings, null, 2));
+});
+
+test('unsupported callback forms at the new boundaries are diagnosed', async () => {
+  const findings = await nestedFindings([
+    'declare function factory(): () => number;',
+    'declare function predicate(): () => boolean;',
+    'const supplied = suppliedStep<readonly [], number>({ run: factory() });',
+    "const gated = template({ slot: 'gated', collection: contributors, gate: predicate(), steps: (member) => ({ a: member.source<number>({ subject: member.subject('a'), run: factory() }) }) });",
+    'void supplied; void gated;',
+  ]);
+  assert.equal(findings.length, 3, JSON.stringify(findings, null, 2));
+  assert.ok(findings.every(message => message.messageId === 'unsupported'), JSON.stringify(findings, null, 2));
+});
+
+test("Definition's canonical forward is a capability inside a callback; a look-alike is an external influence", async () => {
+  const findings = await nestedFindings([
+    "const slot = stepSlot<readonly [number, { readonly n: number }], number>({ slot: 'assessor' });",
+    "const activity = source<{ readonly items: readonly { readonly n: number }[] }>({ subject: 'activity', run: () => ({ items: [] }) });",
+    'const lookalike = { child: (result: unknown, path: readonly number[]) => ({ result, path }) };',
+    'memo({',
+    "  subject: 'positive', children: { activity, assess: slot },",
+    '  run: async ({ calls }) => {',
+    '    const first = await calls.activity();',
+    "    return (await calls.assess(1, forward.child<{ readonly n: number }>(first, ['items', 0]))).data;",
+    '  },',
+    '});',
+    "memo({ subject: 'negative', children: { activity }, run: async ({ calls }) => lookalike.child(await calls.activity(), [0]) });",
+  ]);
+  assert.deepEqual(capturedNames(findings), ['lookalike'], JSON.stringify(findings, null, 2));
+});
+
+test("Tracking's observed untracked read and its justification query are observer capabilities", async () => {
+  const eslint = new ESLint({ cwd: root });
+  const source = [
+    "import type { ITracked, ITrackingObserver } from '@microdelta/tracking';",
+    'declare const observer: ITrackingObserver;',
+    'declare const config: ITracked<{ readonly prompt: string }>;',
+    'declare const external: { readonly untracked: (value: unknown, key: string) => unknown };',
+    "observer.capture(() => [observer.untracked(config, 'prompt'), observer.untrackedReadObserved()]);",
+    "observer.capture(() => external.untracked(config, 'prompt'));",
+  ].join('\n');
+  const [result] = await eslint.lintText(source, { filePath: fixture });
+  assert.ok(result);
+  const findings = result.messages.filter(message => message.ruleId === 'microdelta/tracked-captures');
+  assert.deepEqual(capturedNames(findings), ['external'], JSON.stringify(result.messages, null, 2));
+});

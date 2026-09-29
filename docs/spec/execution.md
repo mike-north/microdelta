@@ -247,9 +247,14 @@ closures can be serialized or reconstruct an argument from its subject alone.
 direct input, callable, and step-slot correspondence. Only a unique current
 declaration can satisfy a historical consumed slot; names, source text, hashes,
 and call order are not fallback locators. The separate-process fixture establishes
-this bounded case. Durable wire encoding and general derived-argument evidence
-remain distinct work; EXP-4 owns the latter. No globally registered public step ID
-is required.
+this bounded case. No globally registered public step ID is required.
+
+**EXP-4 selection:** the nested invocation record and argument recipe in
+[CMP-7](composition.md) carry derived-argument evidence. A derived value is
+justified by the parent's own recorded evidence plus the consumed outputs of
+earlier child calls, validated in recorded call order; forwarded arguments
+resolve from current bindings; unreconstructible arguments are recorded as such.
+Durable wire encoding remains an implementation choice.
 
 ### REUSE-007 — Unproven reconstruction yields an honest outer miss
 
@@ -263,6 +268,12 @@ A wholly valid outer candidate skips its body. A missing binding or unproven
 derived argument cannot be silently matched to a similarly named operation.
 Diagnostics must distinguish insufficient validation evidence from observed
 changed content; both can require normal execution, for different reasons.
+
+EXP-4 exercises the distinct diagnostics: missing and ambiguous callable
+bindings, an unreconstructible argument and an unjustified argument (after an
+observed untracked read) are separate from changed evidence and changed child
+output. In each case the parent executes normally while its children reuse
+still-valid results.
 
 ### REUSE-008 — Track implementations automatically and preserve explicit control
 

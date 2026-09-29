@@ -7,6 +7,7 @@ import {
   REQUIRED_BRANCH_CHECKS,
   createGitHubApi,
   runSupervisorReview,
+  validateProtection,
 } from './supervisor-review.mjs';
 
 const prNumber = 34;
@@ -304,6 +305,7 @@ test('all GitHub adapter operations use the injected runner with their original 
         required_conversation_resolution: { enabled: true },
       };
     }
+    if (args[0] === 'api' && args[1] === 'repos/mike-north/microdelta/rules/branches/main?per_page=100') return [];
     if (args[0] === 'pr') return [{ name: 'core (20)', bucket: 'pass' }];
     if (args[0] === 'api' && args[1] === 'repos/mike-north/microdelta/issues/34/comments') {
       return { html_url: `${pullRequestUrl}#issuecomment-123` };
@@ -400,21 +402,22 @@ test('all GitHub adapter operations use the injected runner with their original 
 
   assert.deepEqual(calls[0], { args: ['api', 'repos/mike-north/microdelta'], acceptedExitCodes: undefined });
   assert.deepEqual(calls[1], { args: ['api', 'repos/mike-north/microdelta/branches/main/protection'], acceptedExitCodes: undefined });
-  assert.deepEqual(calls[2].args.slice(0, 3), ['api', 'graphql', '-f']);
-  assert.ok(calls[2].args.includes('after=null'));
-  assert.ok(calls[3].args.includes('after=thread-cursor'));
-  assert.deepEqual(calls[4], {
+  assert.deepEqual(calls[2], { args: ['api', 'repos/mike-north/microdelta/rules/branches/main?per_page=100'], acceptedExitCodes: undefined });
+  assert.deepEqual(calls[3].args.slice(0, 3), ['api', 'graphql', '-f']);
+  assert.ok(calls[3].args.includes('after=null'));
+  assert.ok(calls[4].args.includes('after=thread-cursor'));
+  assert.deepEqual(calls[5], {
     args: ['pr', 'checks', String(prNumber), '--repo', 'mike-north/microdelta', '--required', '--json', 'name,bucket'],
     acceptedExitCodes: [0, 8],
   });
   const graphCalls = calls.filter(call => call.args[0] === 'api' && call.args[1] === 'graphql');
   assert.equal(graphCalls.length, 7);
   assert.ok(graphCalls.some(call => call.args.includes('after=review-cursor')));
-  assert.deepEqual(calls[7], {
+  assert.deepEqual(calls[8], {
     args: ['api', 'repos/mike-north/microdelta/issues/34/comments', '-X', 'POST', '-f', 'body=Reviewed.'],
     acceptedExitCodes: undefined,
   });
-  assert.deepEqual(calls[8], {
+  assert.deepEqual(calls[9], {
     args: [
       'api', `repos/mike-north/microdelta/statuses/${reviewedHead}`, '-X', 'POST',
       '-f', `state=success`, '-f', `context=${REQUIRED_STATUS_CONTEXT}`,
@@ -422,11 +425,219 @@ test('all GitHub adapter operations use the injected runner with their original 
     ],
     acceptedExitCodes: undefined,
   });
-  assert.deepEqual(calls[9], {
+  assert.deepEqual(calls[10], {
     args: ['api', `repos/mike-north/microdelta/commits/${reviewedHead}/status`],
     acceptedExitCodes: undefined,
   });
   assert.ok(graphCalls[4].args.includes('number=34'));
   assert.ok(graphCalls[5].args.includes(`expectedHeadOid=${reviewedHead}`));
   assert.ok(graphCalls.every(call => call.acceptedExitCodes === undefined));
+});
+
+/**
+ * Issue #90: `main` is governed by a repository ruleset, not legacy branch protection.
+ *
+ * @see https://docs.github.com/en/rest/repos/rules#get-rules-for-a-branch
+ * @see https://docs.github.com/en/rest/repos/rules#get-a-repository-ruleset
+ */
+const RULESET_ID = 24154977;
+const REPO_PREFIX = 'repos/mike-north/microdelta';
+const LEGACY_PATH = `${REPO_PREFIX}/branches/main/protection`;
+const RULES_PATH = `${REPO_PREFIX}/rules/branches/main?per_page=100`;
+
+/** Rule payloads shaped like the rules-for-branch response: type, parameters, and owning ruleset. */
+function rulesetRules({ rulesetId = RULESET_ID, pullRequest = {}, checks = {}, omit = [], contexts } = {}) {
+  const requiredContexts = contexts ?? [
+    ...REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: 15368 })),
+    { context: REQUIRED_STATUS_CONTEXT, integration_id: null },
+  ];
+  const rules = [
+    { type: 'deletion', ruleset_id: rulesetId },
+    { type: 'non_fast_forward', ruleset_id: rulesetId },
+    {
+      type: 'required_status_checks',
+      ruleset_id: rulesetId,
+      parameters: { strict_required_status_checks_policy: true, required_status_checks: requiredContexts, ...checks },
+    },
+    {
+      type: 'pull_request',
+      ruleset_id: rulesetId,
+      parameters: { required_approving_review_count: 0, required_review_thread_resolution: true, ...pullRequest },
+    },
+    { type: 'copilot_code_review', ruleset_id: rulesetId, parameters: { review_on_push: false } },
+  ];
+  return rules.filter(rule => !omit.includes(rule.type));
+}
+
+/** Runner that serves the legacy, rules-for-branch, and ruleset-detail endpoints from fixtures. */
+function protectionRunner({ legacy = 'not-protected', rules = rulesetRules(), rulesets = {} } = {}) {
+  const calls = [];
+  const runJson = args => {
+    calls.push(args);
+    if (args[1] === LEGACY_PATH) {
+      if (legacy === 'not-protected') throw new Error('GitHub CLI failed: gh: Branch not protected (HTTP 404)');
+      return legacy;
+    }
+    if (args[1] === RULES_PATH) return rules;
+    const detail = /rulesets\/(\d+)$/u.exec(args[1] ?? '');
+    if (detail) {
+      const ruleset = { [RULESET_ID]: { enforcement: 'active', bypass_actors: [] }, ...rulesets }[detail[1]];
+      if (!ruleset) throw new Error('GitHub CLI failed: Not Found (HTTP 404)');
+      return ruleset;
+    }
+    throw new Error(`Unexpected GitHub command: ${args.join(' ')}`);
+  };
+  return { runJson, calls };
+}
+
+const readRuleProtection = async fixtures => {
+  const { runJson, calls } = protectionRunner(fixtures);
+  const protection = await createGitHubApi('mike-north/microdelta', runJson).readProtection('main');
+  return { protection, calls };
+};
+
+const legacyProtection = {
+  required_pull_request_reviews: {},
+  required_status_checks: {
+    strict: true,
+    contexts: [],
+    checks: [
+      ...REQUIRED_BRANCH_CHECKS.map(context => ({ context, app_id: 15368 })),
+      { context: REQUIRED_STATUS_CONTEXT, app_id: null },
+    ],
+  },
+  enforce_admins: { enabled: true },
+  required_conversation_resolution: { enabled: true },
+};
+
+const alwaysBypass = { actor_id: 5, actor_type: 'RepositoryRole', bypass_mode: 'always' };
+
+test('ruleset 24154977 alone yields a protection object that passes validateProtection', async () => {
+  const { protection, calls } = await readRuleProtection();
+  assert.equal(protection.branch, 'main');
+  assert.equal(protection.requiresPullRequest, true); // pull_request rule present
+  assert.equal(protection.resolveConversations, true); // required_review_thread_resolution: true
+  assert.equal(protection.strict, true); // strict_required_status_checks_policy: true
+  assert.equal(protection.enforceAdmins, true); // active ruleset, no bypass actors
+  assert.deepEqual([...protection.requiredContexts].sort(), [...REQUIRED_BRANCH_CHECKS, REQUIRED_STATUS_CONTEXT].sort());
+  assert.deepEqual(protection.checkSources, {
+    ...Object.fromEntries(REQUIRED_BRANCH_CHECKS.map(name => [name, 'github-actions'])),
+    [REQUIRED_STATUS_CONTEXT]: null, // integration_id null: an unscoped status
+  });
+  validateProtection(protection, 'main');
+  // Read-only: only GETs of the legacy, rules-for-branch, and ruleset-detail endpoints.
+  assert.deepEqual(calls, [
+    ['api', LEGACY_PATH],
+    ['api', RULES_PATH],
+    ['api', `${REPO_PREFIX}/rulesets/${RULESET_ID}`],
+  ]);
+});
+
+test('legacy protection alone still produces the previously normalized object', async () => {
+  const { protection } = await readRuleProtection({ legacy: legacyProtection, rules: [] });
+  assert.equal(protection.enforceAdmins, true);
+  assert.equal(protection.requiresPullRequest, true);
+  validateProtection(protection, 'main');
+});
+
+test('a requirement is satisfied when either legacy protection or a ruleset enforces it', async () => {
+  const legacyWithoutStrict = { ...legacyProtection, required_status_checks: { ...legacyProtection.required_status_checks, strict: false } };
+  const { protection } = await readRuleProtection({
+    legacy: legacyWithoutStrict,
+    rules: rulesetRules({ omit: ['pull_request'], checks: { required_status_checks: [] } }),
+  });
+  assert.equal(protection.strict, true); // ruleset supplies strict
+  assert.equal(protection.requiresPullRequest, true); // legacy supplies PRs
+  validateProtection(protection, 'main');
+});
+
+test('a requirement absent from both legacy protection and rulesets still fails', async () => {
+  const { protection } = await readRuleProtection({
+    legacy: { ...legacyProtection, required_conversation_resolution: { enabled: false } },
+    rules: rulesetRules({ pullRequest: { required_review_thread_resolution: false } }),
+  });
+  assert.equal(protection.resolveConversations, false);
+  assert.throws(() => validateProtection(protection, 'main'), /does not require resolved conversations/u);
+});
+
+test('legacy 404 is tolerated only for an unprotected branch; other legacy failures stay fatal', async () => {
+  const runJson = args => {
+    if (args[1] === LEGACY_PATH) throw new Error('GitHub CLI failed: Resource not accessible (HTTP 403)');
+    return [];
+  };
+  await assert.rejects(createGitHubApi('mike-north/microdelta', runJson).readProtection('main'), /HTTP 403/u);
+});
+
+test('an unreadable ruleset detail fails closed instead of assuming no bypass', async () => {
+  const runJson = args => {
+    if (args[1] === LEGACY_PATH) throw new Error('GitHub CLI failed: Branch not protected (HTTP 404)');
+    if (args[1] === RULES_PATH) return rulesetRules();
+    throw new Error('GitHub CLI failed: Not Found (HTTP 404)');
+  };
+  await assert.rejects(createGitHubApi('mike-north/microdelta', runJson).readProtection('main'), /Not Found/u);
+});
+
+test('neither legacy protection nor rules yields a protection that fails validation', async () => {
+  const { protection } = await readRuleProtection({ rules: [] });
+  assert.equal(protection.enforceAdmins, false); // no contributing ruleset cannot vouch for administrators
+  assert.throws(() => validateProtection(protection, 'main'), /does not require pull requests/u);
+});
+
+test('a possibly truncated rules-for-branch page fails closed', async () => {
+  const many = Array.from({ length: 100 }, () => ({ type: 'deletion', ruleset_id: RULESET_ID }));
+  await assert.rejects(readRuleProtection({ rules: many }), /truncat/iu);
+});
+
+test('a branch rule without its owning ruleset fails closed instead of skipping its bypass check', async () => {
+  const [first, ...rest] = rulesetRules();
+  const { ruleset_id: _omitted, ...orphan } = first;
+  await assert.rejects(readRuleProtection({ rules: [orphan, ...rest] }), /without its owning ruleset/u);
+});
+
+test('a non-array rules-for-branch response fails closed', async () => {
+  await assert.rejects(readRuleProtection({ rules: { message: 'unexpected' } }), /malformed branch rules/u);
+});
+
+for (const [name, fixtures, expected] of [
+  ['an evaluate-mode ruleset', { rulesets: { [RULESET_ID]: { enforcement: 'evaluate', bypass_actors: [] } } }, /does not require pull requests/u],
+  ['a disabled ruleset', { rulesets: { [RULESET_ID]: { enforcement: 'disabled', bypass_actors: [] } } }, /does not require pull requests/u],
+  ['a bypass actor', { rulesets: { [RULESET_ID]: { enforcement: 'active', bypass_actors: [alwaysBypass] } } }, /does not apply to administrators/u],
+  ['a pull-request-only bypass actor', { rulesets: { [RULESET_ID]: { enforcement: 'active', bypass_actors: [{ ...alwaysBypass, bypass_mode: 'pull_request' }] } } }, /does not apply to administrators/u],
+  ['a second contributing ruleset with a bypass actor', {
+    rules: [...rulesetRules(), { type: 'deletion', ruleset_id: 99 }],
+    rulesets: { 99: { enforcement: 'active', bypass_actors: [alwaysBypass] } },
+  }, /does not apply to administrators/u],
+  ['a missing required context', { rules: rulesetRules({ contexts: [
+    { context: 'PR metadata', integration_id: 15368 }, { context: 'core (20)', integration_id: 15368 },
+    { context: 'core (22)', integration_id: 15368 }, { context: REQUIRED_STATUS_CONTEXT, integration_id: null },
+  ] }) }, /missing required checks: core \(24\)/u],
+  ['a missing Supervisor review context', { rules: rulesetRules({ contexts: REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: 15368 })) }) }, /missing required checks: Supervisor review/u],
+  ['an Actions context without the Actions integration', { rules: rulesetRules({ contexts: [
+    ...REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: context === 'core (22)' ? null : 15368 })),
+    { context: REQUIRED_STATUS_CONTEXT, integration_id: null },
+  ] }) }, /source restriction is missing for: core \(22\)/u],
+  ['an Actions context pinned to a different app', { rules: rulesetRules({ contexts: [
+    ...REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: context === 'PR metadata' ? 123 : 15368 })),
+    { context: REQUIRED_STATUS_CONTEXT, integration_id: null },
+  ] }) }, /source restriction is missing for: PR metadata/u],
+  ['a missing pull_request rule', { rules: rulesetRules({ omit: ['pull_request'] }) }, /does not require pull requests/u],
+  ['a missing thread-resolution requirement', { rules: rulesetRules({ pullRequest: { required_review_thread_resolution: false } }) }, /does not require resolved conversations/u],
+  ['a non-strict status policy', { rules: rulesetRules({ checks: { strict_required_status_checks_policy: false } }) }, /does not require an up-to-date base/u],
+  ['a missing required_status_checks rule', { rules: rulesetRules({ omit: ['required_status_checks'] }) }, /does not require an up-to-date base/u],
+]) {
+  test(`ruleset protection fails validation with a specific message for ${name}`, async () => {
+    const { protection } = await readRuleProtection(fixtures);
+    assert.throws(() => validateProtection(protection, 'main'), expected);
+  });
+}
+
+test('ruleset-derived protection blocks runSupervisorReview before any write when a bypass actor exists', async () => {
+  const { runJson } = protectionRunner({
+    rulesets: { [RULESET_ID]: { enforcement: 'active', bypass_actors: [alwaysBypass] } },
+  });
+  const ruleApi = createGitHubApi('mike-north/microdelta', runJson);
+  const { api, calls, request } = scenario();
+  api.readProtection = branch => ruleApi.readProtection(branch);
+  await assert.rejects(runSupervisorReview(request, api), /does not apply to administrators/u);
+  assert.equal(calls.some(([call]) => ['createReviewRecord', 'setCommitStatus', 'enableAutoMerge'].includes(call)), false);
 });

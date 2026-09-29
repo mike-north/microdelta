@@ -17,6 +17,7 @@
 import type { ISourceDeclaration } from './declaration.js';
 import { DefinitionError } from './errors.js';
 import type { IBindingFamily } from './family.js';
+import { thrownDetail } from './thrown.js';
 
 /**
  * Whether discovery reported its member list as closed (`complete`) or as
@@ -277,26 +278,6 @@ function memberKey(strategy: IKeyStrategy, member: object):
     return { status: 'failed', failure: { reason: 'empty-key', key: raw, detail: undefined } };
   }
   return { status: 'keyed', key: raw };
-}
-
-/**
- * Describe a value a custom key threw without running author code: an Error's
- * own string `message` data property, a thrown string, or the thrown value's
- * type. Inspection that itself throws (for example a revoked proxy) falls back
- * to a fixed detail, so keying always returns its rejection.
- */
-function thrownDetail(error: unknown): string {
-  try {
-    if (error instanceof Error) {
-      const message = Object.getOwnPropertyDescriptor(error, 'message');
-      if (message !== undefined && 'value' in message && typeof message.value === 'string') {
-        return message.value;
-      }
-    }
-    return typeof error === 'string' ? error : `a thrown ${error === null ? 'null' : typeof error}`;
-  } catch {
-    return 'non-printable error';
-  }
 }
 
 /** Build a frozen whole-snapshot rejection whose message names the collection, the key and the custom-key option. */

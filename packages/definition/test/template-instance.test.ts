@@ -228,6 +228,16 @@ describe('supplied slot subjects and template instances (RES-001)', () => {
     expectDefinitionError(slotSubjectOf(otherStep), 'conflicting-subject');
   });
 
+  test('CMP-3: a slot subject function that throws a value with no string form is an invalid subject, never an escape', () => {
+    const thrown: unknown[] = [Object.create(null), Symbol('bad'), { toString: () => { throw new Error('toString failed'); } }, new Error('plain failure')];
+    for (const value of thrown) {
+      const build = buildNestedTemplate(() => {
+        throw value;
+      });
+      expectDefinitionError(slotSubjectOf(build), 'invalid-subject');
+    }
+  });
+
   test('RES-001: a slot subject outside every member prefix, or the bare prefix separator, still computes', () => {
     expect(slotSubjectOf(buildNestedTemplate(() => 'assessment:acme/widget:7'))()).toEqual({ scope, subject: 'assessment:acme/widget:7' });
     expect(slotSubjectOf(buildNestedTemplate(() => 'activity:acme/widget:'))()).toEqual({ scope, subject: 'activity:acme/widget:' });

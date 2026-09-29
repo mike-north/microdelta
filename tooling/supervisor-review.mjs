@@ -113,27 +113,50 @@ export function validateChecks(checks) {
   }));
 }
 
-/** Require a submitted Copilot review on the exact head and reject outstanding requests. */
+/**
+ * The body GitHub posts when a Copilot review run fails (for example on a rate limit). Such a
+ * review is submitted as COMMENTED but carries no review, so it is never completion evidence.
+ */
+const COPILOT_ERROR_BODY = /^Copilot encountered an error and was unable to review/u;
+
+/**
+ * Require one completed Copilot review of this pull request and reject outstanding requests.
+ *
+ * The owner's policy is one automatically requested Copilot review per pull request: later
+ * pushes are deliberately not re-reviewed, so a completed review of an earlier head counts.
+ * The supervisor's own exact-head review (the status this command publishes) is what binds a
+ * decision to the current commit. Errored Copilot runs never count, a still-outstanding request
+ * blocks, and the most recent real Copilot review must not be pending, dismissed, or a request
+ * for changes.
+ */
 export function validateCopilotReview(reviewState, expectedHeadOid) {
   if (!Array.isArray(reviewState.reviews) || !Array.isArray(reviewState.pendingRequests)) {
     throw new Error('GitHub Copilot review evidence could not be read completely.');
+  }
+  if (typeof expectedHeadOid !== 'string' || expectedHeadOid.length === 0) {
+    throw new Error('The expected head is required to review a pull request.');
   }
   const copilotRequestIsPending = reviewState.pendingRequestsUnread
     || reviewState.pendingRequests.some(login => COPILOT_REVIEWER_LOGINS.has(login));
   if (copilotRequestIsPending) throw new Error('Copilot review is still requested and has not completed.');
 
-  const sameHeadCopilotReviews = reviewState.reviews.filter(review =>
-    review.authorType === 'Bot'
-      && COPILOT_REVIEWER_LOGINS.has(review.authorLogin)
-      && review.commitOid === expectedHeadOid,
-  );
-  if (sameHeadCopilotReviews.some(review => ['CHANGES_REQUESTED', 'DISMISSED', 'PENDING'].includes(review.state))) {
-    throw new Error('The current-head Copilot review is pending, dismissed, or requests changes.');
+  const copilotReviews = reviewState.reviews
+    .filter(review =>
+      review.authorType === 'Bot'
+        && COPILOT_REVIEWER_LOGINS.has(review.authorLogin)
+        && review.errored !== true)
+    .map((review, order) => ({ review, order }))
+    .sort((left, right) =>
+      String(left.review.submittedAt ?? '').localeCompare(String(right.review.submittedAt ?? '')) || left.order - right.order)
+    .map(({ review }) => review);
+  const latest = copilotReviews.at(-1);
+  if (latest !== undefined && ['CHANGES_REQUESTED', 'DISMISSED', 'PENDING'].includes(latest.state)) {
+    throw new Error('The most recent Copilot review is pending, dismissed, or requests changes.');
   }
-  const completedReview = sameHeadCopilotReviews.some(review =>
+  const completedReview = copilotReviews.some(review =>
     review.submitted && ['COMMENTED', 'APPROVED'].includes(review.state),
   );
-  if (!completedReview) throw new Error('A submitted Copilot COMMENTED or APPROVED review on the expected head is required.');
+  if (!completedReview) throw new Error('A completed Copilot COMMENTED or APPROVED review of this pull request is required.');
 }
 
 /** Compare repo, protection, PR, and checks before every state-changing step. */
@@ -449,7 +472,7 @@ export function createGitHubApi(repositoryName, runJson = ghJson) {
     },
     /** Read submitted reviews and outstanding requests without confusing a request with a review. */
     async readCopilotReviews(number) {
-      const query = `query($owner:String!,$name:String!,$number:Int!,$after:String){repository(owner:$owner,name:$name){pullRequest(number:$number){reviews(first:100,after:$after){nodes{state submittedAt commit{oid} author{login __typename}} pageInfo{hasNextPage endCursor}} reviewRequests(first:100){nodes{requestedReviewer{... on User{login} ... on Bot{login}}} pageInfo{hasNextPage}}}}}`;
+      const query = `query($owner:String!,$name:String!,$number:Int!,$after:String){repository(owner:$owner,name:$name){pullRequest(number:$number){reviews(first:100,after:$after){nodes{state submittedAt body commit{oid} author{login __typename}} pageInfo{hasNextPage endCursor}} reviewRequests(first:100){nodes{requestedReviewer{... on User{login} ... on Bot{login}}} pageInfo{hasNextPage}}}}}`;
       let after = null;
       const reviews = [];
       let pendingRequests = [];
@@ -464,6 +487,8 @@ export function createGitHubApi(repositoryName, runJson = ghJson) {
           commitOid: review.commit?.oid ?? null,
           state: review.state,
           submitted: review.submittedAt != null,
+          submittedAt: review.submittedAt ?? null,
+          errored: typeof review.body === 'string' && COPILOT_ERROR_BODY.test(review.body),
         })));
         pendingRequests = pullRequest.reviewRequests.nodes.map(request => request.requestedReviewer?.login ?? null);
         hasMoreRequests = pullRequest.reviewRequests.pageInfo.hasNextPage;

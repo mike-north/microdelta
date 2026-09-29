@@ -10,7 +10,7 @@
  * taking that decision away from them. It keeps every ordinary gate — the
  * trusted repository, the complete `main` protection rule, an open non-draft
  * PR on `main` at the expected head, resolved conversations, and a genuine
- * submitted Copilot review of that head — and adds release-specific ones:
+ * completed Copilot review of the pull request — and adds release-specific ones:
  * the PR must be the `changeset-release/main` branch of this repository titled
  * "Version Packages"; every required check must have *completed successfully*
  * on the head (pending or skipped results are not enough for a release);
@@ -130,7 +130,7 @@ export async function runReleaseReview(request, api) {
       '',
       `Fresh verification: ${verification}`,
       '',
-      `Required checks (${REQUIRED_BRANCH_CHECKS.join(', ')}) completed successfully and a Copilot review of this head was submitted.`,
+      `Required checks (${REQUIRED_BRANCH_CHECKS.join(', ')}) completed successfully and a completed Copilot review of this pull request was found.`,
       'This status does not merge or arm auto-merge. A maintainer\'s manual merge of this PR is the release decision; release.yml then publishes to npm.',
       'A new commit requires a fresh release review.',
     ].join('\n'),

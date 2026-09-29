@@ -37,13 +37,17 @@ priority, and progress. Repository issues contain the implementation contract;
    changes, and accounts for every review comment. Respond before resolving a
    thread. Changed commits require review of the affected substance and fresh checks.
 9. Before merging or arming auto-merge, require a completed GitHub Copilot review
-   on the exact current PR head in addition to the supervisor's substantive
-   review. A requested or pending Copilot review is not evidence of completion.
-   Verify the review author is a GitHub `Bot` with login
-   `copilot-pull-request-reviewer[bot]` (the GraphQL login
-   `copilot-pull-request-reviewer` is also valid), its commit is the exact
-   head, it is submitted as `COMMENTED` or `APPROVED`, and it is not dismissed or
-   `CHANGES_REQUESTED`. Review and account for its findings; a completed comment
+   of the pull request in addition to the supervisor's exact-head substantive
+   review. The repository requests one Copilot review automatically when a PR
+   opens; by the owner's policy, later pushes are not re-reviewed, so a completed
+   review of an earlier head of the same PR counts. Do not re-request Copilot
+   after a push. A requested or pending Copilot review is not evidence of
+   completion, and an errored Copilot run (for example a rate limit) is not a
+   review; re-request once after the limit resets. Verify the review author is a
+   GitHub `Bot` with login `copilot-pull-request-reviewer[bot]` (the GraphQL
+   login `copilot-pull-request-reviewer` is also valid), it is submitted as
+   `COMMENTED` or `APPROVED`, and the most recent Copilot review is not
+   dismissed, pending or `CHANGES_REQUESTED`. Review and account for its findings; a completed comment
    review is evidence of reviewer execution, not automatic acceptance of its
    conclusions. The exact-head procedure and gate are in
    [supervisor-review.md](docs/supervisor-review.md).
@@ -95,8 +99,8 @@ review conversations, and administrator enforcement without bypass entries.
 protection. The supervisor-review command reads both sources read-only: a
 requirement holds if either enforces it, and administrator enforcement requires
 every contributing ruleset to be `active` with no bypass actors. The ruleset's
-Copilot review does not re-review on push, so the supervisor requests a fresh
-Copilot review for each new head. These settings are not evidence by themselves
+Copilot review does not re-review on push, by design: one Copilot review per
+pull request is the gate (step 9). These settings are not evidence by themselves
 that live protection is configured; the supervisor reads back the live rule,
 recording the result or a specific platform limitation in the governing issue
 before closing it. See the

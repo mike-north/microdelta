@@ -11,8 +11,12 @@ M3's bounded durable runtime has verified acceptance: its component issues,
 independent-process acceptance issue and later publication-kill harness repair
 are accepted, as mapped in the
 [M3 evidence record](validation/m3-2026-09-28.md). [#50](https://github.com/mike-north/microdelta/issues/50)
-records the final milestone decision and documentation delivery result. No M4 or
-later runtime milestone is complete.
+records the final milestone decision and documentation delivery result. M4's
+bounded keyed composition has verified acceptance: the EXP-4 decision, plan,
+component issues and independent-process acceptance issue are accepted, as mapped
+in the [M4 evidence record](validation/m4-2026-09-29.md);
+[#89](https://github.com/mike-north/microdelta/issues/89) records the final
+milestone decision. No M5 or later runtime milestone is complete.
 A milestone is a quality checkpoint, including experiments; it need not be a
 user-facing release.
 
@@ -139,6 +143,16 @@ arguments; otherwise miss the parent normally. Observe fields implicitly.
 **Exit:** A-05/A-06/A-07/A-08/A-11, including equal-output cutoff, discovery closure,
 changed current source hooks and illegal topology rejection. No general closure
 serialization or result-driven graph mutation.
+
+**Evidence:** [M4 keyed composition record](validation/m4-2026-09-29.md). The
+[contribution-analysis plan](plans/m4-composition.md) defines the delivered slice.
+The [EXP-4 decision](../experiments/exp-4/decision.md) selects its mechanisms,
+which are recorded in the owning contracts. The
+[acceptance record](validation/m4-acceptance-2026-09-29.md) maps each exit
+criterion to independent-process tests (#88). Projections here are per-member
+consumed facts plus a membership fact. COL-2's single logical projection
+dependency and scale evidence remain M7 measurement topics. Tolerant folds, and
+A-11's retry, wait and cancellation breadth, remain M5.
 
 ## M5 — Operational correctness before paid integration
 

@@ -56,7 +56,12 @@ any gate or body runs, using designated identity or an explicit custom-key
 function (COL-1). A missing or duplicate key rejects the collection with a
 diagnostic naming the collection, the key and the custom-key option; no member
 work is admitted. Renaming a template slot or moving it to another collection is
-changed correspondence: prior instances are not remapped.
+changed correspondence: prior instances are not remapped. Each member step callback
+(source `run` and `finality`, member memo `run`) receives a **member binding**: a
+tracked view of its member's current keyed record, the same view its gate reads.
+Its reads are that step's own observations and are validated against the current
+keyed snapshot. Explicit (non-template) members have no member binding, and
+`forward.member` origins are accepted only from template instances.
 
 ## Nested execution and validation
 
@@ -139,13 +144,19 @@ member fails the fold immediately, naming those keys and still reporting pending
 keys and open discovery; otherwise open discovery or a pending member leaves it
 waiting. Neither case runs the body or publishes. A closed empty population is a
 successful complete fold; an open one waits. By supervisor decision on the
-EXP-4 evidence (not exercised by its fixture), the strict fold's outcome also
-carries framework-level coverage (required keys, skipped keys, discovery
-closure), so consumers need not trust the body to report exclusions; M4 must
-test it. Its verification consumes
+EXP-4 evidence, the strict fold's outcome also carries framework-level coverage
+(required keys, skipped keys, discovery closure), so consumers need not trust the
+body to report exclusions. Its verification consumes
 each member's included-or-skipped outcome and the result facts it read, not the
 gate's raw observations; those remain the instance's own evidence. A threshold
-change that flips no outcome therefore reruns nothing. A skip or deletion never
+change that flips no outcome therefore reruns nothing unless the fold body itself
+reads the threshold. The fold's evidence also records the template step it
+consumes: renaming that step or its template slot, or moving the template to
+another collection, is changed correspondence and a miss, never a remap. When a
+member has both a denied and a cancelled child, cancellation determines its
+outcome. Run-level infrastructure failures (the admission port, observers,
+integrity) fail the whole request rather than being attributed to one member, so
+an outage is never mistaken for a terminal member failure. A skip or deletion never
 retracts an earlier publication: the instance's retained history and latest
 pointer are unchanged, and that pointer is not evidence that the member is still
 required. Tolerant or outcome folds are separate (RUN-010) and outside EXP-4.

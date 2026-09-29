@@ -1,7 +1,10 @@
 # M4: keyed contribution analysis with nested cutoff
 
 Status: M4 implementation plan for [issue #79](https://github.com/mike-north/microdelta/issues/79).
-M3 is accepted ([#50](https://github.com/mike-north/microdelta/issues/50)).
+M3 is accepted ([#50](https://github.com/mike-north/microdelta/issues/50)). The
+queue below is delivered and mapped to the M4 exit in the
+[M4 evidence record](../validation/m4-2026-09-29.md); the plan body keeps its
+accepted contracts and sequence.
 Mechanism choices come from the [EXP-4 decision](../../experiments/exp-4/decision.md)
 ([#78](https://github.com/mike-north/microdelta/issues/78)) and the owning
 contracts it amended. This plan applies the active specification and does not
@@ -160,7 +163,11 @@ keys, discovery closure) independent of what the body reports. The fold's consum
 membership, member fields and each member's included-or-skipped outcome participate
 in its verification. The gate's raw reads are the instance's own evidence, so
 repairing a member or flipping a gate outcome reruns the fold while unaffected member
-bodies stay unexecuted, and a threshold edit that flips nothing reruns nothing. A
+bodies stay unexecuted, and a threshold edit that flips nothing reruns nothing
+unless the body reads the threshold. The contribution report states its threshold
+(fixture decision above), so in the example a flip-free threshold edit reruns the
+report and no member work. The acceptance suite proves the flip-free case with a
+report variant that does not read the threshold. A
 skip or deletion never retracts an earlier member publication; a member's latest
 pointer is not evidence that it is still required. Outcome (tolerant) folds are
 outside M4.
@@ -192,11 +199,12 @@ const contributor = template({
       subject: member.subject('summary:acme/widget:2026-Q1'),
       children: { activity: 'activity', assess: 'assessor' },
       run: async ({ calls, helpers }) => {
-        const { data: activity } = await calls.activity();
+        const selected = await calls.activity();
+        const activity = selected.data;
         const scores = [];
         for (let i = 0; i < activity.pullRequests.length; i += 1) {
           // Derived scalar argument plus a forwarded origin in the activity result.
-          const { data } = await calls.assess(activity.pullRequests[i].number, forward.child('activity', ['pullRequests', i]));
+          const { data } = await calls.assess(activity.pullRequests[i].number, forward.child(selected, ['pullRequests', i]));
           scores.push(data.score);
         }
         return helpers.summarize(activity, scores, helpers.format);

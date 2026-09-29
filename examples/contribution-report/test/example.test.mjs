@@ -152,12 +152,12 @@ test('keyed-cold-and-restarted-report: cold, unchanged restart with zero member,
     assertCold(cold);
     const coldMembers = references(cold);
 
-    // Recovery of the cold run's saved request key returns its exact committed report and member summaries without running author code.
+    // Recovery of the cold run's saved request key returns its exact committed discovery, report and member summaries without running author code.
     const recovered = cli('recover', '--store', store);
-    assert.deepEqual(recovered.recovered, {
-      report: { kind: 'recovered', reference: cold.fold.reference },
-      members: Object.fromEntries(designatedKeys.map((key) => [key, { kind: 'recovered', reference: coldMembers[key] }])),
-    });
+    assert.equal(recovered.recovered.discovery.kind, 'recovered');
+    assert.equal(typeof recovered.recovered.discovery.reference, 'string');
+    assert.deepEqual(recovered.recovered.report, { kind: 'recovered', reference: cold.fold.reference });
+    assert.deepEqual(recovered.recovered.members, Object.fromEntries(designatedKeys.map((key) => [key, { kind: 'recovered', reference: coldMembers[key] }])));
     assert.deepEqual([recovered.executions, recovered.finality], [{}, {}]);
 
     // A new process registering everything in reverse executes no discovery, member, assessment or report body.
@@ -172,11 +172,18 @@ test('keyed-cold-and-restarted-report: cold, unchanged restart with zero member,
     assert.deepEqual(restarted.fold, { status: 'succeeded', kind: 'reused', reference: cold.fold.reference, misses: [], coverage: { required: designatedKeys, skipped: [], closed: true } });
     assert.deepEqual(restarted.summaries, cold.summaries);
 
-    // The restart executed no fold work, so its saved key identifies no admitted execution; members are listed only by a recovered report.
-    assert.deepEqual(cli('recover', '--store', store).recovered, { report: { kind: 'absent' }, members: {} });
+    // The restart reused everything, so its saved key identifies no admitted execution: no discovery or report
+    // execution lists members, and an explicitly named member's summary is absent too.
+    assert.deepEqual(cli('recover', '--store', store, '--member', ada).recovered, {
+      discovery: { kind: 'absent' },
+      report: { kind: 'absent' },
+      members: { [ada]: { kind: 'absent' } },
+    });
 
     const checked = cli('check', '--store', store);
     assert.equal(checked.checked.discovery.kind, 'reusable');
+    // The discovery result the cold run's recovery returned is the one current policy still accepts.
+    assert.equal(checked.checked.discovery.reference, recovered.recovered.discovery.reference);
     assert.deepEqual(checked.checked.members, Object.fromEntries(designatedKeys.map((key) => [key, { kind: 'reusable', reference: coldMembers[key] }])));
     assert.deepEqual(checked.executions, {});
   });
@@ -243,7 +250,46 @@ test('tracked-gate-instances: threshold 2 skips Cy and reruns only the report; t
   });
 });
 
-test('strict-fold-readiness: open discovery leaves the report waiting; closing it again reuses the cold report', () => {
+test('tracked-gate-instances: starting at threshold 2, threshold 1 runs only the newly required Cy and the report', () => {
+  withStore((store) => {
+    const gated = cli('run', '--store', store, '--minimum-authored', '2');
+    assert.deepEqual(gated.members[cy], { status: 'skipped' });
+    assert.equal(gated.executions['person:cy/activity'], undefined);
+    assert.equal(gated.executions['person:cy/summary'], undefined);
+    // Ada's three and Ben's two PRs are assessed; Cy's PR 301 is not.
+    assert.equal(gated.executions.assessor, 5);
+
+    // Cy was never required, so Cy's activity check, summary and PR 301's assessment run for the first time;
+    // the membership changed, so the report reruns. Discovery, Ada and Ben keep their exact results.
+    const required = cli('run', '--store', store, '--minimum-authored', '1');
+    assert.deepEqual(required.executions, { 'person:cy/activity': 1, 'person:cy/summary': 1, assessor: 1, report: 1 });
+    assert.deepEqual(required.members[ada], { status: 'succeeded', kind: 'reused', reference: gated.members[ada].reference });
+    assert.deepEqual(required.members[ben], { status: 'succeeded', kind: 'reused', reference: gated.members[ben].reference });
+    assert.equal(required.members[cy].kind, 'published');
+    assert.deepEqual(required.summaries[cy], expectedSummaries.cy);
+    assert.deepEqual(required.fold.coverage, { required: designatedKeys, skipped: [], closed: true });
+  });
+});
+
+test('recover after an interrupted strict report: a waiting fold executed no report, yet its members are recovered from the recovered discovery', () => {
+  withStore((store) => {
+    // A cold run against an open listing publishes discovery and every member, and leaves the report waiting.
+    const waiting = cli('run', '--store', store, '--open-discovery');
+    assert.deepEqual(waiting.fold, { status: 'waiting', pending: [], openDiscovery: true });
+    const published = references(waiting);
+    for (const key of designatedKeys) {
+      assert.equal(waiting.members[key].kind, 'published');
+    }
+
+    const recovered = cli('recover', '--store', store);
+    assert.equal(recovered.recovered.discovery.kind, 'recovered');
+    assert.deepEqual(recovered.recovered.report, { kind: 'absent' });
+    assert.deepEqual(recovered.recovered.members, Object.fromEntries(designatedKeys.map((key) => [key, { kind: 'recovered', reference: published[key] }])));
+    assert.deepEqual([recovered.executions, recovered.finality], [{}, {}]);
+  });
+});
+
+test('strict-fold-open-discovery: open discovery leaves the report waiting; closing it again reuses the cold report', () => {
   withStore((store) => {
     const cold = cli('run', '--store', store);
     assertCold(cold);
@@ -277,6 +323,9 @@ test('custom-key-correspondence: members keyed by upstream profile id correspond
     assert.deepEqual(cold.fold.coverage, { required: customKeys, skipped: [], closed: true });
     assert.deepEqual(cold.report.required.map((entry) => [entry.key, entry.score]), [['gh:1001', 5], ['gh:2002', 3], ['gh:3003', 2]]);
 
+    // Recovery keys the recovered listing with the saved custom-key choice.
+    assert.deepEqual(cli('recover', '--store', store).recovered.members, Object.fromEntries(customKeys.map((key) => [key, { kind: 'recovered', reference: cold.members[key].reference }])));
+
     const restarted = cli('run', '--store', store, '--key', 'id', '--reverse');
     assert.deepEqual(restarted.executions, {});
     assert.deepEqual(references(restarted), references(cold));
@@ -292,5 +341,9 @@ test('the example rejects an incomplete command line or an unknown option value 
     assert.match(failing('run', '--store', store, '--minimum-authored', 'two'), usage);
     assert.match(failing('run', '--store', store, '--minimum-authored', '-1'), usage);
     assert.match(failing('run', '--store', store, '--key', 'name'), usage);
+    // Recovery takes its composition choices from the saved request; `--member` names members for recovery only.
+    assert.match(failing('recover', '--store', store, '--reverse'), usage);
+    assert.match(failing('recover', '--store', store, '--rubric', 'B'), usage);
+    assert.match(failing('run', '--store', store, '--member', ada), usage);
   });
 });

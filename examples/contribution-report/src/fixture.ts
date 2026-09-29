@@ -87,7 +87,7 @@ export function currentUpstreamListing(): ICollectionStatus {
 
 /** Read and validate the fixture file; duplicates and unknown authors are fixture errors. */
 export function readFixture(): IFixture {
-  // The checked-in fixture has this shape; its records are validated below before any selection uses them.
+  // The record shape is trusted as the checked-in fixture's; only duplicate PR numbers and review ids and unknown authors are validated below.
   const fixture = JSON.parse(readFileSync(new URL('../data/acme-widget.json', import.meta.url), 'utf8')) as IFixture;
   const keys = new Set(fixture.profiles.map((profile) => profile.key));
   const numbers = new Set<number>();

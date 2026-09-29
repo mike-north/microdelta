@@ -35,6 +35,9 @@ node examples/contribution-report/dist/main.js check --store .test-build/example
 | `--open-discovery` | The fixture upstream reports its contributor listing as still open | closed |
 | `--reverse` | Register helpers and steps in reverse order | forward |
 
+`recover` takes no composition choices: it uses the ones saved with the
+request. It accepts a repeatable `--member KEY` to name a member explicitly.
+
 Add `--json` to any command for machine-readable output: discovery, each
 member's typed outcome and exact reference, each succeeded member's summary,
 the report's typed outcome with its exact reference and coverage, and counts of
@@ -67,6 +70,7 @@ report and every summary keep their exact references.
 | `--rubric C` (Ben's merged bug fix scores 3) | The six assessments, Ben's summary and the report | Ada's and Cy's summaries |
 | `--minimum-authored 2` | The report; Cy is skipped | Ada's and Ben's summaries |
 | `--minimum-authored 1` again | Nothing | Cy's summary and the earlier report validate again |
+| `--minimum-authored 1` after starting at 2 | Cy's activity and summary, PR 301's assessment and the report | Discovery, Ada's and Ben's summaries and assessments |
 | `--open-discovery` | Discovery's check; the report waits | Every summary; no report is published |
 | Closed listing again | Discovery's check | The earlier complete report validates again |
 
@@ -115,11 +119,17 @@ report consumed and reruns it.
   fresh request key and its composition choices to `requests.json` *before*
   starting work, then resolves the report through `run.resolveFold(step, {
   requestKey })`. `recover` reads that request and reports what the identified
-  admitted executions durably produced, without running author code or source
-  hooks: the report fold's, and each summary the recovered report lists as
-  required. Reuse allocates no execution, so after a run that reused the report
-  `recover` reports `absent` and lists no members. Each `run` replaces
-  `requests.json`, so recover an interrupted run *before* starting another.
+  admitted executions durably produced, without running a source hook,
+  finality policy or step body: discovery's, the report fold's, and the summary
+  of every member named by the recovered discovery listing, the recovered
+  report's required members or `--member`. Keying the recovered listing runs
+  the declared key projection, so under `--key id` it evaluates the custom key.
+  A run interrupted before its report executed (for example a report left
+  waiting on open discovery) still recovers every member its discovery listed.
+  Reuse allocates no execution, so after a run that reused discovery and the
+  report `recover` reports them `absent` and lists only `--member` keys. Each
+  `run` replaces `requests.json`, so recover an interrupted run *before*
+  starting another.
 - **Check.** `check` reports what a normal run would do for discovery and,
   once discovery is reusable, for each keyed member's summary, without
   admission, bodies or writes. A strict fold has no check-only request.

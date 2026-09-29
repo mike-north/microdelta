@@ -51,3 +51,6 @@ uses this path through the installed workspace's generated alpha declarations.
 The M3 independent-process acceptance harness in `test/acceptance` exercises
 this path across process exits, kill boundaries and lost-acknowledgment
 recovery; see the [M3 acceptance record](../../docs/validation/m3-acceptance-2026-09-28.md).
+The M4 independent-process acceptance suite in `test/m4-acceptance` drives the
+keyed, gated, nested and strictly folded contribution analysis through the same
+path; see the [M4 acceptance record](../../docs/validation/m4-acceptance-2026-09-29.md).

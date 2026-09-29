@@ -56,7 +56,10 @@ runs through the same path. The M3 independent-process acceptance harness
 (`packages/core/test/acceptance`) runs each step as a separate process over the
 built facade and the real SQLite store, including kill boundaries and
 lost-acknowledgment recovery; see the
-[M3 acceptance record](validation/m3-acceptance-2026-09-28.md).
+[M3 acceptance record](validation/m3-acceptance-2026-09-28.md). The M4 independent-process
+acceptance suite (`packages/core/test/m4-acceptance`) drives the keyed
+discovery, gated template, nested supplied assessor and strict fold the same
+way; see the [M4 acceptance record](validation/m4-acceptance-2026-09-29.md).
 
 The Tracking observer is bounded M2 owner functionality: it stores no binding
 catalog or History rows and does not decide source freshness or reusable results.

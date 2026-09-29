@@ -4,11 +4,12 @@
  * outcomes, scoped subject uniqueness, illegal edges, historical direct-child
  * witness reconnection and immunity to later author builder mutation.
  *
- * Supported topology (M3): a composition scope with named input and helper
- * slots and explicitly keyed members. Each member registers step slots holding
- * source or memo declarations. The only permitted edge is a memo step naming a
- * sibling source slot of the same member. There are no cross-member edges,
- * memo-to-memo edges, runtime arguments, derived arguments or fanout.
+ * Topology covered here (the M3 shape): a composition scope with named input
+ * and helper slots and explicitly keyed members. Each member registers step
+ * slots holding source or memo declarations, and memos name sibling source
+ * slots of the same member. There are no cross-member edges. Composition-level
+ * steps, memo-to-memo edges, supplied step slots and argument-bearing calls
+ * are covered by the nested-* suites.
  *
  * @see ../../../docs/spec/composition.md (CMP-1, CMP-6, CMP-7, CMP-9, EXP-1 selection)
  * @see ../../../docs/spec/execution.md (RES-001, REUSE-006, REUSE-007)
@@ -137,7 +138,7 @@ describe('fixed M3 topology', () => {
 
   test('CMP-1: later mutation of the author builder arrays and input objects cannot change the frozen graph', () => {
     const built = buildFixture();
-    const members = [...built.options.members];
+    const members = [...(built.options.members ?? [])];
     const inputs = [{ slot: 'config', value: built.config }];
     const options: ICompositionOptions = { ...built.options, members, inputs };
     const composition = compose(options);
@@ -237,7 +238,12 @@ describe('composition phase', () => {
 
 describe('registration capture consistency', () => {
   /** A port that is never expected to dispatch in these tests. */
-  const idlePort: IInvocationPort<ITestFamily> = { active: () => undefined, dispatch: () => Promise.reject(new Error('unexpected dispatch')) };
+  const idlePort: IInvocationPort<ITestFamily> = {
+    active: () => undefined,
+    dispatch: () => Promise.reject(new Error('unexpected dispatch')),
+    isTrackedView: () => false,
+    argumentsJustified: () => true,
+  };
 
   /** An invoker that records which callback it was handed and returns its result. */
   function capturing(seen: unknown[]): IAuthorInvoker<unknown> {
@@ -599,7 +605,7 @@ describe('historical direct-child witnesses', () => {
   test('REUSE-007: unknown witness versions and argument forms are unsupported, not guessed', () => {
     const { composition } = buildFixture();
     const base = { parent: stepDescriptor('person:ada', 'summary'), child: stepDescriptor('person:ada', 'activity') };
-    expect(composition.resolveWitness(durable({ ...base, version: 2, arguments: { form: 'empty' } })))
+    expect(composition.resolveWitness(durable({ ...base, version: 3, index: 0, arguments: { form: 'empty' } })))
       .toEqual({ status: 'unsupported', reason: 'witness-version' });
     expect(composition.resolveWitness(durable({ ...base, version: 1, arguments: { form: 'positional', values: ['person:ada'] } })))
       .toEqual({ status: 'unsupported', reason: 'argument-form' });

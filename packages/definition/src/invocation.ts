@@ -1,50 +1,50 @@
 /**
  * Invocation scopes, declared child-call handles and the injected port.
  *
- * `openInvocation` reconnects one uniquely bound step of a composition its
- * builder instance minted and returns a live scope whose `apply` pairs the
- * step's actual author callback with the context Definition assembles: the
- * facade's bindings plus either Definition-minted calls (memo) or the previous
- * carrier Resolution selected (source). The pair goes to Resolution's rank-2
- * invoker, which tracks and captures it. Definition never selects previous
- * results, materializes data, decides freshness or admission, or runs a body.
+ * `openInvocation` reconnects one uniquely bound step (or the implementation
+ * uniquely bound to a supplied step slot) of a composition its builder
+ * instance minted and returns a live scope whose `apply` pairs the actual
+ * author callback with the context Definition assembles: the facade's bindings
+ * plus Definition-minted calls (memo), the previous carrier Resolution
+ * selected (source), or the argument views Resolution reconstructed (supplied
+ * step). The pair goes to Resolution's rank-2 invoker, which tracks and
+ * captures it. Definition never selects previous results, materializes data,
+ * decides freshness or admission, or runs a body.
  *
- * A handle takes no runtime arguments; calling it routes an immutable
- * empty-argument direct-child witness and the pinned sibling declaration
- * through the injected port. The result is an immutable `{ data }` carrier so
- * awaiting it never probes a `then` property on child data. Forged, substituted,
- * out-of-scope, closed, composition-phase and argument-bearing calls reject
- * before dispatch (CMP-9).
+ * Calling a handle routes an immutable witness, the pinned child declaration
+ * (or the slot's current implementation and the call's subject) through the
+ * injected port. A parent whose children are all sibling sources sends the M3
+ * version-1 witness; a parent declaring a memo child or a supplied slot sends
+ * the version-2 nested witness with its call position and argument recipes.
+ * Only supplied slot calls take runtime arguments. The result is an immutable
+ * `{ data }` carrier so awaiting it never probes a `then` property on child
+ * data. Forged, substituted, out-of-scope, closed and composition-phase calls,
+ * arguments on argument-free edges, and raw tracked views reject before
+ * dispatch (CMP-9).
  */
-import type { IBindingDescriptor } from './descriptor.js';
-import type { IAuthorInvoker, IDeclarationRecords, IPreviousSupplier, ISourceDeclaration } from './declaration.js';
-import { reject } from './declaration.js';
-import type { IComposition, ICompositionState } from './composition.js';
+import { recordArguments, registerCarrier, type IArgumentContext, type IHandleArguments } from './arguments.js';
+import type { IComposition, ICompositionState, IScopedSubject, ISuppliedStepTarget } from './composition.js';
 import { descriptorKey, isComposing, ownedDescriptor } from './composition.js';
+import type {
+  IAnyMemoDeclaration,
+  IAuthorInvoker,
+  IChildEdge,
+  IDeclarationRecords,
+  IPreviousSupplier,
+  ISourceDeclaration,
+} from './declaration.js';
+import { reject } from './declaration.js';
+import type { IBindingDescriptor } from './descriptor.js';
 import { DefinitionError } from './errors.js';
 import type { IApply, IBindingFamily } from './family.js';
-
-/**
- * The explicit M3 argument form: a positive, checked statement that the child
- * receives no runtime arguments, not an absence of argument evidence.
- * @alpha
- */
-export interface IEmptyArguments {
-  readonly form: 'empty';
-}
-
-/**
- * The versioned durable description of one direct child call: its structural
- * parent and child slots and its argument form. Exact result references and
- * consumed outputs are added by Resolution, not Definition.
- * @alpha
- */
-export interface IDirectChildWitness {
-  readonly version: 1;
-  readonly parent: IBindingDescriptor;
-  readonly child: IBindingDescriptor;
-  readonly arguments: IEmptyArguments;
-}
+import type { IAnySuppliedStepDeclaration, IArgumentSupplier } from './slot.js';
+import type {
+  IDirectChildWitness,
+  IEmptyArguments,
+  IInvocationArguments,
+  IInvocationWitness,
+  INestedInvocationWitness,
+} from './witness.js';
 
 /**
  * The immutable carrier for a child result. `data` holds whatever view the
@@ -65,25 +65,86 @@ export interface IDeclaredCallBrand {
 }
 
 /**
- * A declared, argument-free child call. `T` is the child view the facade's
- * family selects for the child's declared result.
+ * A declared child call. `T` is the child view the facade's family selects for
+ * the child's declared result. `TParameters` are the runtime arguments a
+ * supplied step slot declares; sibling edges take none.
  * @alpha
  */
-export type IDeclaredCallHandle<T> = (() => Promise<IChildResult<T>>) & IDeclaredCallBrand;
+export type IDeclaredCallHandle<T, TParameters extends readonly unknown[] = readonly []> =
+  ((...values: IHandleArguments<TParameters>) => Promise<IChildResult<T>>) & IDeclaredCallBrand;
 
 /**
- * One dispatch from a genuine handle to the invocation port. `child` is the
- * pinned sibling declaration, carrying its result type to the port.
+ * What Definition can say about a genuine version-2 handle before it is
+ * called: its structural parent and child. The call position and argument
+ * recipe exist only once a call is made.
  * @alpha
  */
-export interface IDeclaredInvocationRequest<TFamily extends IBindingFamily, TResult> {
+export interface IDeclaredCallDescription {
+  /** The witness version the handle's calls record. */
+  readonly version: 2;
+  /** The calling step slot. */
+  readonly parent: IBindingDescriptor;
+  /** The called sibling step slot or supplied step slot. */
+  readonly child: IBindingDescriptor;
+}
+
+/**
+ * A dispatch of a sibling source. A parent whose children are all sources
+ * sends the M3 version-1 witness; a nested parent sends version 2.
+ * @alpha
+ */
+export interface ISourceCallRequest<TFamily extends IBindingFamily, TResult> {
+  /** Discriminates the request by child kind. */
+  readonly kind: 'source';
   /** The parent invocation scope the call belongs to. */
   readonly scope: IInvocationScope;
-  /** The direct-child witness for this call. */
-  readonly witness: IDirectChildWitness;
-  /** The declared child source. */
+  /** The witness for this call. */
+  readonly witness: IInvocationWitness;
+  /** The declared child source, carrying its result type to the port. */
   readonly child: ISourceDeclaration<TFamily, TResult>;
 }
+
+/**
+ * A dispatch of a sibling memo; always argument-free with a version-2 witness.
+ * @alpha
+ */
+export interface IMemoCallRequest<TFamily extends IBindingFamily> {
+  /** Discriminates the request by child kind. */
+  readonly kind: 'memo';
+  /** The parent invocation scope the call belongs to. */
+  readonly scope: IInvocationScope;
+  /** The nested witness for this call. */
+  readonly witness: INestedInvocationWitness;
+  /** The declared child memo pinned at composition. */
+  readonly child: IAnyMemoDeclaration<TFamily>;
+}
+
+/**
+ * A dispatch through a supplied step slot. The witness names the slot; the
+ * current implementation travels beside it for the port, never inside it.
+ * @alpha
+ */
+export interface ISuppliedCallRequest<TFamily extends IBindingFamily> {
+  /** Discriminates the request by child kind. */
+  readonly kind: 'supplied';
+  /** The parent invocation scope the call belongs to. */
+  readonly scope: IInvocationScope;
+  /** The nested witness for this call, naming the slot descriptor. */
+  readonly witness: INestedInvocationWitness;
+  /** The implementation currently bound to the slot. */
+  readonly child: IAnySuppliedStepDeclaration<TFamily>;
+  /** The call's history subject, computed from the slot's subject function and derived values only. */
+  readonly subject: IScopedSubject;
+}
+
+/**
+ * One dispatch from a genuine handle to the invocation port.
+ * @alpha
+ */
+export type IDeclaredInvocationRequest<TFamily extends IBindingFamily, TResult> =
+  | ISourceCallRequest<TFamily, TResult>
+  | IMemoCallRequest<TFamily>
+  | ISuppliedCallRequest<TFamily>;
 
 /**
  * The injected port implemented by Resolution and the run context. It is
@@ -95,6 +156,17 @@ export interface IInvocationPort<TFamily extends IBindingFamily> {
   active(): IInvocationScope | undefined;
   /** Resolve and deliver one declared child call. */
   dispatch<TResult>(request: IDeclaredInvocationRequest<TFamily, TResult>): Promise<IChildResult<IApply<TFamily['views'], TResult>>>;
+  /**
+   * Whether a value is a tracked view the run context minted. Definition asks
+   * before reading an argument, so a raw view is rejected without being read.
+   */
+  isTrackedView(value: unknown): boolean;
+  /**
+   * Whether derived arguments made now by the scope's body are justified by its
+   * recorded evidence: false once the body has made an observed untracked read.
+   * Definition records the answer and never computes it.
+   */
+  argumentsJustified(scope: IInvocationScope): boolean;
 }
 
 /**
@@ -136,20 +208,39 @@ export interface ISourceInvocation<TFamily extends IBindingFamily> extends IInvo
 }
 
 /**
- * A live invocation of either step kind.
+ * A live invocation of the implementation currently bound to a supplied step slot.
  * @alpha
  */
-export type IInvocation<TFamily extends IBindingFamily> = IMemoInvocation<TFamily> | ISourceInvocation<TFamily>;
-
-/** Witnesses of Definition-minted handles; forged look-alikes are absent. */
-const handles = new WeakMap<object, IDirectChildWitness>();
+export interface ISuppliedInvocation<TFamily extends IBindingFamily> extends IInvocationScope {
+  /** Discriminates the invocation kind. */
+  readonly kind: 'supplied';
+  /** Hand the actual author `run` and its context (bindings plus argument views) to the invoker. */
+  apply<TOutcome>(bindings: TFamily['memo'], args: IArgumentSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>): TOutcome;
+}
 
 /**
- * Open an invocation of one uniquely bound step in a composition this builder instance minted.
+ * A live invocation of any step kind.
+ * @alpha
+ */
+export type IInvocation<TFamily extends IBindingFamily> = IMemoInvocation<TFamily> | ISourceInvocation<TFamily> | ISuppliedInvocation<TFamily>;
+
+/** What Definition can describe about each genuine handle; forged look-alikes are absent. */
+const handles = new WeakMap<object, IDirectChildWitness | IDeclaredCallDescription>();
+
+/** The one explicit empty argument form every argument-free call records. */
+const emptyArguments: IEmptyArguments = Object.freeze({ form: 'empty' });
+
+/**
+ * Open an invocation of one uniquely bound step, or of the implementation
+ * uniquely bound to a supplied step slot, in a composition this builder
+ * instance minted. A memo parent's declared supplied slots must each resolve to
+ * exactly one current implementation before its body can run: an unsupplied
+ * slot rejects with `missing-slot` and a doubly supplied one with
+ * `ambiguous-slot` (the EXP-4 supplied-callable selection).
  * @param records - The builder instance's declaration records.
  * @param compositions - The builder instance's composition states.
  * @param composition - The frozen composition.
- * @param parent - The step slot being invoked.
+ * @param parent - The step slot or supplied step slot being invoked.
  * @param port - The injected invocation port.
  * @returns The live invocation.
  */
@@ -167,6 +258,9 @@ export function openInvocationIn<TFamily extends IBindingFamily>(
   // Read the caller's descriptor only as own data, so opening never runs author code.
   const frozenParent = ownedDescriptor(parent);
   const occupants = state.registrations.get(descriptorKey(frozenParent)) ?? [];
+  if (frozenParent.role === 'callable') {
+    checkSlotOccupancy(frozenParent.slot, occupants);
+  }
   const [only] = occupants;
   const record = occupants.length === 1 ? only?.record : undefined;
   if (record === undefined) {
@@ -204,7 +298,40 @@ export function openInvocationIn<TFamily extends IBindingFamily>(
     };
     return Object.freeze(invocation);
   }
+  if (record.kind === 'supplied-step') {
+    const suppliedRecord = record;
+    const invocation: ISuppliedInvocation<TFamily> = {
+      kind: 'supplied',
+      parent: frozenParent,
+      get open(): boolean {
+        return open;
+      },
+      close(): void {
+        open = false;
+      },
+      apply: (bindings, args, invoke) => {
+        assertApplicable();
+        return suppliedRecord.apply(bindings, args, invoke);
+      },
+    };
+    return Object.freeze(invocation);
+  }
   const memoRecord = record;
+  /** Each declared supplied slot's current implementation, resolved once before any body runs. */
+  const slotTargets = new Map<string, ISuppliedStepTarget<TFamily>>();
+  for (const edge of memoRecord.children.values()) {
+    if (edge.kind === 'slot' && !slotTargets.has(edge.slot)) {
+      const slotOccupants = state.registrations.get(descriptorKey(slotDescriptor(frozenParent.scope, edge.slot))) ?? [];
+      checkSlotOccupancy(edge.slot, slotOccupants);
+      const [occupant] = slotOccupants;
+      if (occupant?.target.role !== 'callable' || occupant.target.kind !== 'supplied-step') {
+        return reject('missing-slot', `Supplied step slot ${edge.slot} is not occupied by a supplied step.`);
+      }
+      slotTargets.set(edge.slot, occupant.target);
+    }
+  }
+  /** The parent invocation's call order: the next dispatched call's position. */
+  let nextIndex = 0;
   const invocation: IMemoInvocation<TFamily> = {
     kind: 'memo',
     parent: frozenParent,
@@ -220,29 +347,48 @@ export function openInvocationIn<TFamily extends IBindingFamily>(
     },
   };
   Object.freeze(invocation);
+  const argumentContext: IArgumentContext = Object.freeze({
+    scope: invocation,
+    hasMember: frozenParent.memberKey !== undefined,
+    inputDeclared: (slot: string): boolean => state.registrations.has(descriptorKey({ scope: frozenParent.scope, role: 'input', slot })),
+    isTrackedView: (value: unknown): boolean => port.isTrackedView(value),
+    justified: (): boolean => port.argumentsJustified(invocation),
+  });
 
-  /** Mint the guarded handle for one declared child slot of this invocation. */
-  function mintHandle(slot: string): IDeclaredCallHandle<unknown> {
-    const child = memoRecord.children.get(slot);
-    const childRecord = child === undefined ? undefined : records.get(child);
-    if (childRecord?.kind !== 'source') {
-      reject('illegal-edge', `Slot ${slot} is not a declared source child.`);
+  /**
+   * How one edge's call reaches the port once its arguments are recorded:
+   * a prepared dispatch that takes the call's witness. Preparation may reject
+   * (for example an invalid slot subject) before a call position is consumed.
+   */
+  function preparer(call: string, edge: IChildEdge<TFamily>): (args: IInvocationArguments) => (witness: IInvocationWitness) => Promise<unknown> {
+    if (edge.kind === 'slot') {
+      const target = slotTargets.get(edge.slot) ?? reject('missing-slot', `Supplied step slot ${edge.slot} is not supplied.`);
+      return args => {
+        const subject = target.subjectFor(args);
+        return witness => port.dispatch(Object.freeze({ kind: 'supplied', scope: invocation, witness: nestedWitness(witness), child: target.declaration, subject }));
+      };
     }
-    const childDescriptor: IBindingDescriptor = Object.freeze({
-      scope: frozenParent.scope,
-      role: 'step',
-      slot,
-      ...(frozenParent.memberKey === undefined ? {} : { memberKey: frozenParent.memberKey }),
-    });
-    const witness: IDirectChildWitness = Object.freeze({
-      version: 1,
-      parent: frozenParent,
-      child: childDescriptor,
-      arguments: Object.freeze({ form: 'empty' }),
-    });
+    const childRecord = records.get(edge.declaration);
+    if (childRecord?.kind === 'source') {
+      return () => witness => childRecord.dispatch(port, invocation, witness);
+    }
+    if (childRecord?.kind === 'memo') {
+      const child = childRecord.declaration;
+      return () => witness => port.dispatch(Object.freeze({ kind: 'memo', scope: invocation, witness: nestedWitness(witness), child }));
+    }
+    return reject('illegal-edge', `Call ${call} is not a declared child of this memo.`);
+  }
+
+  /** Mint the guarded handle for one declared call of this invocation. */
+  function mintHandle(call: string): IDeclaredCallHandle<unknown, readonly unknown[]> {
+    const edge = memoRecord.children.get(call) ?? reject('illegal-edge', `Call ${call} is not a declared child of this memo.`);
+    const prepare = preparer(call, edge);
+    const argumentBearing = edge.kind === 'slot';
+    const child = edge.kind === 'slot' ? slotDescriptor(frozenParent.scope, edge.slot) : siblingDescriptor(frozenParent, call);
+    const directWitness: IDirectChildWitness = Object.freeze({ version: 1, parent: frozenParent, child, arguments: emptyArguments });
     const handle = (...values: unknown[]): Promise<IChildResult<unknown>> => {
-      if (values.length > 0) {
-        return Promise.reject(new DefinitionError('unsupported-arguments', 'M3 declared calls take no runtime arguments.'));
+      if (!argumentBearing && values.length > 0) {
+        return Promise.reject(new DefinitionError('unsupported-arguments', 'Calls of sibling steps take no runtime arguments.'));
       }
       if (isComposing()) {
         return Promise.reject(new DefinitionError('composition-phase', 'Declared calls cannot resolve while composing.'));
@@ -253,21 +399,59 @@ export function openInvocationIn<TFamily extends IBindingFamily>(
       if (port.active() !== invocation) {
         return Promise.reject(new DefinitionError('scope-inactive', 'This handle belongs to an invocation that is not currently executing.'));
       }
-      return childRecord.dispatch(port, invocation, witness).then(childCarrier);
+      let dispatch: (witness: IInvocationWitness) => Promise<unknown>;
+      let args: IInvocationArguments;
+      try {
+        args = argumentBearing ? recordArguments(values, argumentContext) : emptyArguments;
+        dispatch = prepare(args);
+      } catch (error: unknown) {
+        return Promise.reject(error);
+      }
+      const index = nextIndex++;
+      const witness: IInvocationWitness = memoRecord.nested
+        ? Object.freeze({ version: 2, parent: frozenParent, child, index, arguments: args })
+        : directWitness;
+      return dispatch(witness).then(result => childCarrier(result, invocation, index));
     };
-    handles.set(handle, witness);
+    handles.set(handle, memoRecord.nested ? Object.freeze({ version: 2, parent: frozenParent, child }) : directWitness);
     Object.freeze(handle);
     // The brand is type-level only; this module is its sole minting authority.
-    return handle as IDeclaredCallHandle<unknown>;
+    return handle as IDeclaredCallHandle<unknown, readonly unknown[]>;
   }
   return invocation;
 }
 
+/** A supplied slot's occupancy must be exactly one; missing and ambiguous stay distinct. */
+function checkSlotOccupancy(slot: string, occupants: readonly unknown[]): void {
+  if (occupants.length === 0) {
+    reject('missing-slot', `Supplied step slot ${slot} has no current implementation.`);
+  }
+  if (occupants.length > 1) {
+    reject('ambiguous-slot', `Supplied step slot ${slot} has ${String(occupants.length)} current implementations.`);
+  }
+}
+
+/** A composition-wide supplied step slot descriptor. */
+function slotDescriptor(scope: string, slot: string): IBindingDescriptor {
+  return Object.freeze({ scope, role: 'callable', slot });
+}
+
+/** The descriptor of a sibling step slot at the parent's level (same member key, or none). */
+function siblingDescriptor(parent: IBindingDescriptor, slot: string): IBindingDescriptor {
+  return Object.freeze({ scope: parent.scope, role: 'step', slot, ...(parent.memberKey === undefined ? {} : { memberKey: parent.memberKey }) });
+}
+
+/** Memo and supplied calls are only ever made by nested parents, whose witnesses are version 2. */
+function nestedWitness(witness: IInvocationWitness): INestedInvocationWitness {
+  return witness.version === 2 ? witness : reject('illegal-edge', 'Memo and supplied slot calls require the nested invocation witness.');
+}
+
 /**
  * Re-wrap a port result as a frozen null-prototype `{ data }` without reading
- * anything from the data itself; anything else is rejected.
+ * anything from the data itself; anything else is rejected. The carrier is
+ * remembered as the result of its call position, so `forward.child` can name it.
  */
-function childCarrier(result: unknown): IChildResult<unknown> {
+function childCarrier(result: unknown, scope: IInvocationScope, index: number): IChildResult<unknown> {
   if (typeof result !== 'object' || result === null) {
     reject('invalid-result', 'The invocation port must supply a { data } carrier.');
   }
@@ -278,15 +462,20 @@ function childCarrier(result: unknown): IChildResult<unknown> {
   const data: unknown = descriptor.value;
   const carrier = { data };
   Object.setPrototypeOf(carrier, null);
-  return Object.freeze(carrier);
+  Object.freeze(carrier);
+  registerCarrier(carrier, scope, index);
+  return carrier;
 }
 
 /**
- * Describe the witness a Definition-minted handle dispatches; look-alikes are not handles.
+ * Describe a Definition-minted handle; look-alikes are not handles. An
+ * argument-free handle of an M3-shaped parent is described by its fixed
+ * version-1 witness; a nested parent's handle by its parent and child only,
+ * since its call position and recipe exist only once a call is made.
  * @param value - Any value.
- * @returns The handle's witness, or undefined when the value is not a genuine handle.
+ * @returns The description, or undefined when the value is not a genuine handle.
  * @alpha
  */
-export function describeHandle(value: unknown): IDirectChildWitness | undefined {
+export function describeHandle(value: unknown): IDirectChildWitness | IDeclaredCallDescription | undefined {
   return typeof value === 'function' ? handles.get(value) : undefined;
 }

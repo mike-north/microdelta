@@ -1,16 +1,22 @@
 /**
- * The frozen M3 composition and its current structural correspondence.
+ * The frozen composition and its current structural correspondence.
  *
- * A composition owns framework copies of its declared inputs, helpers and
- * explicitly keyed members before any run. Its supported topology is fixed:
- * members hold source and memo step slots, and the only permitted edge is a memo
- * naming a sibling source slot of the same member, whose pinned declaration must
- * be exactly the one occupying that slot in this composition. That identity is
- * current-composition consistency only; restart correspondence is structural.
- * Resolution of a historical descriptor or direct-child witness yields exactly
- * one current target or a distinct missing/ambiguous/unsupported outcome, never
- * a fallback by name, subject, hash, function identity or ordinal (CMP-1/6/7,
- * REUSE-006/007). Composition and lookup never invoke author callbacks.
+ * A composition owns framework copies of its declared inputs, helpers,
+ * composition-level steps, explicitly keyed members and supplied step
+ * bindings before any run. Its supported topology is fixed. Steps live at one
+ * of two levels: the composition level (descriptors with no member key) or an
+ * explicitly keyed member. A memo may name a sibling source or memo slot of its
+ * own level, whose pinned declaration must be exactly the one occupying that
+ * slot in this composition, or a composition-wide supplied step slot. That
+ * identity is current-composition consistency only; restart correspondence is
+ * structural. A supplied step slot is bound to whatever implementation this
+ * composition supplies; zero or several supplies are distinct misses reported
+ * when a parent is opened, never a remap. Resolution of a historical
+ * descriptor or invocation witness yields exactly one current target or a
+ * distinct missing/ambiguous/undeclared/unsupported outcome, never a fallback
+ * by name, subject, hash, function identity or ordinal (CMP-1/3/6/7,
+ * REUSE-006/007). Composition and lookup never invoke author callbacks; a slot
+ * subject function runs only when a caller asks for a call's subject.
  *
  * Each step registration keeps the declaration's own record, so the typed
  * invocation closures reached by `openInvocation` are exactly those retained
@@ -23,6 +29,10 @@ import type { IDeclarationRecords, IStepDeclaration, IStepRecord } from './decla
 import { reject } from './declaration.js';
 import type { DefinitionError } from './errors.js';
 import type { IBindingFamily } from './family.js';
+import type { IAnySuppliedStepDeclaration, ISuppliedStepRegistration } from './slot.js';
+import { slotSubject, supplyState } from './slot.js';
+import { copyDescriptor, parseWitness } from './witness.js';
+import type { IInvocationArguments, IInvocationWitness, IUnsupportedWitnessReason } from './witness.js';
 
 /**
  * A declared current input value. Definition retains a frozen copy, so later
@@ -48,11 +58,11 @@ export interface IHelperRegistration {
 }
 
 /**
- * A step slot within a member holding one Definition-minted declaration.
+ * A step slot, at the composition level or within a member, holding one Definition-minted declaration.
  * @alpha
  */
 export interface IStepRegistration<TFamily extends IBindingFamily> {
-  /** Step slot name within its member. */
+  /** Step slot name within its level (the composition level or one member). */
   readonly slot: string;
   /** The declaration occupying the slot. */
   readonly declaration: IStepDeclaration<TFamily>;
@@ -82,8 +92,12 @@ export interface ICompositionOptions<TFamily extends IBindingFamily> {
   readonly inputs?: readonly IInputRegistration[];
   /** Declared supplied helpers. */
   readonly helpers?: readonly IHelperRegistration[];
+  /** Composition-level step slots, outside any member; their descriptors carry no member key. */
+  readonly steps?: readonly IStepRegistration<TFamily>[];
   /** Explicitly keyed members. */
-  readonly members: readonly IMemberRegistration<TFamily>[];
+  readonly members?: readonly IMemberRegistration<TFamily>[];
+  /** Supplied step implementations bound to callable step slots, made by `supply`. */
+  readonly supplied?: readonly ISuppliedStepRegistration<TFamily>[];
 }
 
 /**
@@ -106,8 +120,32 @@ export interface IInputTarget {
 /** The current helper bound to a callable slot. @alpha */
 export interface ICallableTarget {
   readonly role: 'callable';
+  /** Distinguishes a helper function from a supplied step in the same callable slot namespace. */
+  readonly kind: 'helper';
   /** The author's actual helper function. */
   readonly callable: (...arguments_: never[]) => unknown;
+}
+
+/**
+ * The current supplied step bound to a callable step slot. The slot, not the
+ * implementation, is the structural correspondence; the implementation is
+ * whatever this composition binds now.
+ * @alpha
+ */
+export interface ISuppliedStepTarget<TFamily extends IBindingFamily> {
+  /** Supplied step slots share the callable slot namespace with helpers. */
+  readonly role: 'callable';
+  /** Distinguishes a supplied step from a helper function. */
+  readonly kind: 'supplied-step';
+  /** The supplied implementation, with its callback context erased. */
+  readonly declaration: IAnySuppliedStepDeclaration<TFamily>;
+  /**
+   * The scoped history subject of one call through this slot, computed by the
+   * bound subject function from the recipes' derived values only. It runs the
+   * author's subject function and rejects with `invalid-subject` unless that
+   * returns a complete nonempty string.
+   */
+  subjectFor(arguments_: IInvocationArguments): IScopedSubject;
 }
 
 /** The current declaration bound to a step slot; invoke it through `openInvocation`. @alpha */
@@ -120,7 +158,7 @@ export interface IStepTarget<TFamily extends IBindingFamily> {
 }
 
 /** Whatever a uniquely occupied slot currently denotes. @alpha */
-export type IBindingTarget<TFamily extends IBindingFamily> = IInputTarget | ICallableTarget | IStepTarget<TFamily>;
+export type IBindingTarget<TFamily extends IBindingFamily> = IInputTarget | ICallableTarget | ISuppliedStepTarget<TFamily> | IStepTarget<TFamily>;
 
 /**
  * Outcome of resolving one descriptor against the current composition.
@@ -155,19 +193,29 @@ export interface ITopology {
   readonly inputs: readonly string[];
   /** Declared callable (helper) slot names, sorted; a repeated slot appears once. */
   readonly helpers: readonly string[];
+  /** Supplied step slot names that some parent declares, sorted, whether or not they are currently supplied. */
+  readonly slots: readonly string[];
 }
 
 /**
- * Outcome of reconnecting a historical direct-child witness. Unknown witness
- * versions and argument forms are unsupported rather than guessed (REUSE-007).
+ * Outcome of reconnecting a historical invocation witness (version 1 or 2).
+ * A bound outcome carries the parsed witness so the caller reads its call
+ * position and recipes from Definition's validated copy. Unknown witness
+ * versions, argument or recipe forms and malformed data are unsupported
+ * rather than guessed (REUSE-007).
  * @alpha
  */
 export type IWitnessResolution<TFamily extends IBindingFamily> =
-  | { readonly status: 'bound'; readonly parent: IStepTarget<TFamily>; readonly child: IStepTarget<TFamily> }
+  | {
+    readonly status: 'bound';
+    readonly parent: IStepTarget<TFamily>;
+    readonly child: IStepTarget<TFamily> | ISuppliedStepTarget<TFamily>;
+    readonly witness: IInvocationWitness;
+  }
   | { readonly status: 'missing'; readonly descriptor: IBindingDescriptor }
   | { readonly status: 'ambiguous'; readonly descriptor: IBindingDescriptor; readonly occupants: number }
   | { readonly status: 'undeclared-edge' }
-  | { readonly status: 'unsupported'; readonly reason: 'malformed' | 'witness-version' | 'argument-form' };
+  | { readonly status: 'unsupported'; readonly reason: IUnsupportedWitnessReason };
 
 /**
  * Nominal brand for Definition-minted compositions, with an invariant family marker.
@@ -189,7 +237,7 @@ export interface IComposition<TFamily extends IBindingFamily> extends ICompositi
   readonly topology: ITopology;
   /** Resolve one structural descriptor to its unique current target. */
   resolve(descriptor: IBindingDescriptor): IBindingResolution<TFamily>;
-  /** Reconnect a historical direct-child witness, supplied as untrusted durable data. */
+  /** Reconnect a historical invocation witness, supplied as untrusted durable data. */
   resolveWitness(witness: unknown): IWitnessResolution<TFamily>;
 }
 
@@ -249,7 +297,14 @@ export function composeIn<TFamily extends IBindingFamily>(
     // Every registration record is captured exactly once through its own data
     // property descriptors. Validation, lookup and invocation all use this one
     // framework-owned capture, so no later read can observe a different value.
-    const optionFields = captureFields(options, { scope: 'invalid-descriptor', inputs: 'invalid-descriptor', helpers: 'invalid-descriptor', members: 'invalid-descriptor' });
+    const optionFields = captureFields(options, {
+      scope: 'invalid-descriptor',
+      inputs: 'invalid-descriptor',
+      helpers: 'invalid-descriptor',
+      steps: 'invalid-descriptor',
+      members: 'invalid-descriptor',
+      supplied: 'invalid-descriptor',
+    });
     const scope = nonempty(optionFields.get('scope'), 'scope');
     const registrations = new Map<string, IRegistration<TFamily>[]>();
     const register = (descriptor: IBindingDescriptor, registration: IRegistration<TFamily>): void => {
@@ -274,17 +329,21 @@ export function composeIn<TFamily extends IBindingFamily>(
         reject('invalid-callback', `Helper ${slot} must be a function.`);
       }
       helperSlots.add(slot);
-      register({ scope, role: 'callable', slot }, { target: Object.freeze({ role: 'callable', callable }), record: undefined });
+      register({ scope, role: 'callable', slot }, { target: Object.freeze({ role: 'callable', kind: 'helper', callable }), record: undefined });
     }
     const steps: IBindingDescriptor[] = [];
     const edges: IDeclaredEdge[] = [];
+    /** Supplied step slot names some parent declares. */
+    const declaredSlots = new Set<string>();
     /** RES-001: each scoped subject is claimed by exactly one declaration object in this composition. */
     const subjects = new Map<string, IStepDeclaration<TFamily>>();
-    for (const member of listOf(optionFields.get('members'), 'members', false)) {
-      const memberFields = captureFields(member, { key: 'invalid-descriptor', steps: 'invalid-descriptor' });
-      const memberKey = nonempty(memberFields.get('key'), 'member key');
-      // Capture every step of this member once, before any edge refers to a sibling.
-      const memberSteps = listOf(memberFields.get('steps'), 'member steps', false).map(step => {
+    /**
+     * Register one level's step slots: a member's (with its key) or the
+     * composition level (no key). Sibling edges stay within one level.
+     */
+    const registerLevel = (memberKey: string | undefined, rawSteps: readonly unknown[]): void => {
+      // Capture every step of this level once, before any edge refers to a sibling.
+      const levelSteps = rawSteps.map(step => {
         const fields = captureFields(step, { slot: 'invalid-descriptor', declaration: 'forged-declaration' });
         const slot = nonempty(fields.get('slot'), 'step slot');
         const candidate = fields.get('declaration');
@@ -292,9 +351,12 @@ export function composeIn<TFamily extends IBindingFamily>(
         if (record === undefined) {
           return reject('forged-declaration', `Step ${slot} holds a declaration this family did not mint.`);
         }
+        if (record.kind === 'supplied-step') {
+          return reject('illegal-edge', `Step ${slot} holds a supplied step; supplied steps occupy step slots only through supply.`);
+        }
         return { slot, record };
       });
-      for (const { slot, record } of memberSteps) {
+      for (const { slot, record } of levelSteps) {
         const declaration = record.declaration;
         const claimant = subjects.get(declaration.subject);
         if (claimant !== undefined && claimant !== declaration) {
@@ -307,18 +369,59 @@ export function composeIn<TFamily extends IBindingFamily>(
           target: Object.freeze({ role: 'step', declaration, scopedSubject: Object.freeze({ scope, subject: declaration.subject }) }),
           record,
         });
-        if (record.kind === 'memo') {
-          for (const [child, pinned] of record.children) {
-            // Current-composition consistency: the pinned child must be the one
-            // declaration occupying that sibling slot of this member entry.
-            const siblings = memberSteps.filter(sibling => sibling.slot === child);
-            const [sibling] = siblings;
-            if (siblings.length !== 1 || sibling?.record.declaration !== pinned || child === slot) {
-              reject('illegal-edge', `Memo ${slot} child ${child} must be the declaration occupying that sibling slot.`);
-            }
-            edges.push(Object.freeze({ parent: descriptor, child: stepDescriptor(scope, child, memberKey) }));
-          }
+        if (record.kind !== 'memo') {
+          continue;
         }
+        for (const [call, edge] of record.children) {
+          if (edge.kind === 'slot') {
+            declaredSlots.add(edge.slot);
+            edges.push(Object.freeze({ parent: descriptor, child: slotDescriptor(scope, edge.slot) }));
+            continue;
+          }
+          // Current-composition consistency: the pinned child must be the one
+          // declaration occupying that sibling slot of this level. Declarations
+          // are immutable and pinned before their parents exist, so memo edges
+          // cannot form a cycle; a parent occupying its own child slot fails here.
+          const siblings = levelSteps.filter(sibling => sibling.slot === call);
+          const [sibling] = siblings;
+          if (siblings.length !== 1 || sibling?.record.declaration !== edge.declaration || call === slot) {
+            reject('illegal-edge', `Memo ${slot} child ${call} must be the declaration occupying that sibling slot.`);
+          }
+          edges.push(Object.freeze({ parent: descriptor, child: stepDescriptor(scope, call, memberKey) }));
+        }
+      }
+    };
+    registerLevel(undefined, listOf(optionFields.get('steps'), 'steps', true));
+    for (const member of listOf(optionFields.get('members'), 'members', true)) {
+      const memberFields = captureFields(member, { key: 'invalid-descriptor', steps: 'invalid-descriptor' });
+      const memberKey = nonempty(memberFields.get('key'), 'member key');
+      registerLevel(memberKey, listOf(memberFields.get('steps'), 'member steps', false));
+    }
+    const suppliedSlots = new Set<string>();
+    for (const supplied of listOf(optionFields.get('supplied'), 'supplied', true)) {
+      const state = supplyState(supplied);
+      const record = state === undefined ? undefined : records.get(state.declaration);
+      if (state === undefined || record?.kind !== 'supplied-step') {
+        return reject('forged-declaration', 'A supplied registration must be made by supply from this family instance.');
+      }
+      suppliedSlots.add(state.slot);
+      const subject = state.subject;
+      const target: ISuppliedStepTarget<TFamily> = {
+        role: 'callable',
+        kind: 'supplied-step',
+        declaration: record.declaration,
+        subjectFor(arguments_: IInvocationArguments): IScopedSubject {
+          if (isComposing()) {
+            reject('composition-phase', 'Slot subjects cannot be computed while composing.');
+          }
+          return slotSubject(scope, subject, arguments_);
+        },
+      };
+      register(slotDescriptor(scope, state.slot), { target: Object.freeze(target), record });
+    }
+    for (const slot of [...declaredSlots, ...suppliedSlots]) {
+      if (helperSlots.has(slot)) {
+        reject('illegal-edge', `Callable slot ${slot} is declared as a supplied step slot and also registered as a helper.`);
       }
     }
     const topology: ITopology = Object.freeze({
@@ -326,6 +429,7 @@ export function composeIn<TFamily extends IBindingFamily>(
       edges: Object.freeze([...edges].sort((left, right) => compareDescriptors(left.parent, right.parent) || compareDescriptors(left.child, right.child))),
       inputs: Object.freeze([...inputSlots].sort()),
       helpers: Object.freeze([...helperSlots].sort()),
+      slots: Object.freeze([...declaredSlots].sort()),
     });
     const frozenRegistrations: ReadonlyMap<string, readonly IRegistration<TFamily>[]> = new Map(
       [...registrations].map(([key, occupants]) => [key, Object.freeze(occupants)]),
@@ -339,6 +443,8 @@ export function composeIn<TFamily extends IBindingFamily>(
       }
       return occupants.length > 1 ? { status: 'ambiguous', descriptor, occupants: occupants.length } : { status: 'bound', descriptor, target: only.target };
     };
+    const declaredEdge = (parent: IBindingDescriptor, child: IBindingDescriptor): boolean =>
+      topology.edges.some(edge => sameDescriptor(edge.parent, parent) && sameDescriptor(edge.child, child));
     const composition: Omit<IComposition<TFamily>, keyof ICompositionBrand<TFamily>> = {
       scope,
       topology,
@@ -348,7 +454,7 @@ export function composeIn<TFamily extends IBindingFamily>(
         if (parsed.status === 'unsupported') {
           return parsed;
         }
-        const { parent, child } = parsed;
+        const { parent, child } = parsed.witness;
         const parentResolution = resolve(parent);
         if (parentResolution.status !== 'bound') {
           return parentResolution;
@@ -357,11 +463,33 @@ export function composeIn<TFamily extends IBindingFamily>(
         if (childResolution.status !== 'bound') {
           return childResolution;
         }
-        if (parentResolution.target.role !== 'step' || childResolution.target.role !== 'step' ||
-            !topology.edges.some(edge => sameDescriptor(edge.parent, parent) && sameDescriptor(edge.child, child))) {
+        const parentTarget = parentResolution.target;
+        const childTarget = childResolution.target;
+        if (parentTarget.role !== 'step' || !declaredEdge(parent, child)) {
           return { status: 'undeclared-edge' };
         }
-        return { status: 'bound', parent: parentResolution.target, child: childResolution.target };
+        if (parsed.witness.version === 1) {
+          // M3 meaning, unchanged: an argument-free call of a sibling step.
+          return childTarget.role === 'step'
+            ? { status: 'bound', parent: parentTarget, child: childTarget, witness: parsed.witness }
+            : { status: 'undeclared-edge' };
+        }
+        const recipes = parsed.witness.arguments;
+        if (childTarget.role === 'step') {
+          // Sibling edges are argument-free.
+          return 'form' in recipes
+            ? { status: 'bound', parent: parentTarget, child: childTarget, witness: parsed.witness }
+            : { status: 'unsupported', reason: 'argument-form' };
+        }
+        if (childTarget.role !== 'callable' || childTarget.kind !== 'supplied-step') {
+          return { status: 'undeclared-edge' };
+        }
+        if (parent.memberKey === undefined && !('form' in recipes) &&
+            recipes.some(recipe => recipe.form === 'forwarded' && recipe.origin.binding === 'member')) {
+          // A composition-level parent has no member binding to forward from.
+          return { status: 'unsupported', reason: 'malformed' };
+        }
+        return { status: 'bound', parent: parentTarget, child: childTarget, witness: parsed.witness };
       },
     };
     Object.freeze(composition);
@@ -418,9 +546,14 @@ function isCallable(value: unknown): value is (...arguments_: never[]) => unknow
   return typeof value === 'function';
 }
 
-/** A frozen step descriptor. */
-function stepDescriptor(scope: string, slot: string, memberKey: string): IBindingDescriptor {
-  return Object.freeze({ scope, role: 'step', slot, memberKey });
+/** A frozen step descriptor; a composition-level step has no member key field at all. */
+function stepDescriptor(scope: string, slot: string, memberKey: string | undefined): IBindingDescriptor {
+  return memberKey === undefined ? Object.freeze({ scope, role: 'step', slot }) : Object.freeze({ scope, role: 'step', slot, memberKey });
+}
+
+/** A frozen, composition-wide supplied step slot descriptor. */
+function slotDescriptor(scope: string, slot: string): IBindingDescriptor {
+  return Object.freeze({ scope, role: 'callable', slot });
 }
 
 /** Scope, member keys and slots are nonempty author strings. */
@@ -456,72 +589,6 @@ function compareDescriptors(left: IBindingDescriptor, right: IBindingDescriptor)
     }
   }
   return 0;
-}
-
-/** The only supported witness version. */
-const WITNESS_VERSION = 1;
-
-/**
- * Parse untrusted durable witness data. Structure is checked first, then the
- * witness version, then the argument form, which must be exactly `{ form: 'empty' }`.
- */
-function parseWitness(witness: unknown):
-  | { readonly status: 'parsed'; readonly parent: IBindingDescriptor; readonly child: IBindingDescriptor }
-  | { readonly status: 'unsupported'; readonly reason: 'malformed' | 'witness-version' | 'argument-form' } {
-  const parent = copyDescriptor(ownData(witness, 'parent'));
-  const child = copyDescriptor(ownData(witness, 'child'));
-  if (parent === undefined || child === undefined) {
-    return { status: 'unsupported', reason: 'malformed' };
-  }
-  if (ownData(witness, 'version') !== WITNESS_VERSION) {
-    return { status: 'unsupported', reason: 'witness-version' };
-  }
-  const argumentsForm = ownData(witness, 'arguments');
-  if (typeof argumentsForm !== 'object' || argumentsForm === null ||
-      Reflect.ownKeys(argumentsForm).length !== 1 || ownData(argumentsForm, 'form') !== 'empty') {
-    return { status: 'unsupported', reason: 'argument-form' };
-  }
-  return { status: 'parsed', parent, child };
-}
-
-/**
- * Read one own data property of untrusted input through its descriptor, so an
- * accessor or an inherited property never runs author code. Returns undefined
- * for a non-object, an absent own property or an accessor.
- */
-function ownData(value: unknown, key: string): unknown {
-  if (typeof value !== 'object' || value === null) {
-    return undefined;
-  }
-  const descriptor = Object.getOwnPropertyDescriptor(value, key);
-  return descriptor !== undefined && 'value' in descriptor ? descriptor.value : undefined;
-}
-
-/**
- * Copy untrusted descriptor data into a frozen descriptor, or report it
- * malformed. Fields are read only as own data properties.
- */
-function copyDescriptor(value: unknown): IBindingDescriptor | undefined {
-  if (typeof value !== 'object' || value === null) {
-    return undefined;
-  }
-  for (const key of ['scope', 'role', 'slot', 'memberKey']) {
-    const descriptor = Object.getOwnPropertyDescriptor(value, key);
-    if (descriptor !== undefined && !('value' in descriptor)) {
-      return undefined;
-    }
-  }
-  const scope = ownData(value, 'scope');
-  const role = ownData(value, 'role');
-  const slot = ownData(value, 'slot');
-  const memberKey = ownData(value, 'memberKey');
-  if (typeof scope !== 'string' || (role !== 'input' && role !== 'callable' && role !== 'step') || typeof slot !== 'string') {
-    return undefined;
-  }
-  if (memberKey === undefined) {
-    return Object.freeze({ scope, role, slot });
-  }
-  return typeof memberKey === 'string' ? Object.freeze({ scope, role, slot, memberKey }) : undefined;
 }
 
 /**

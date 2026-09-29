@@ -64,6 +64,10 @@ interface IFakePort {
   active: IInvocationScope | undefined;
   /** What the next dispatch resolves to. */
   result: unknown;
+  /** Values the fake run context reports as its tracked views. */
+  readonly tracked: Set<unknown>;
+  /** What the fake reports as the active frame's argument justification. */
+  justified: boolean;
 }
 
 /**
@@ -82,12 +86,16 @@ function fakePort(): IFakePort {
     requests: [],
     active: undefined,
     result: { data: { kind: 'activity' } },
+    tracked: new Set(),
+    justified: true,
     port: {
       active: () => state.active,
       dispatch: <TResult>(request: IDeclaredInvocationRequest<ITestFamily, TResult>): Promise<IChildResult<TResult>> => {
         state.requests.push(request);
         return Promise.resolve(state.result).then(result => forwarded<TResult>(result));
       },
+      isTrackedView: (value: unknown) => state.tracked.has(value),
+      argumentsJustified: () => state.justified,
     },
   };
   return state;

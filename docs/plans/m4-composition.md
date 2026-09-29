@@ -160,7 +160,11 @@ keys, discovery closure) independent of what the body reports. The fold's consum
 membership, member fields and each member's included-or-skipped outcome participate
 in its verification. The gate's raw reads are the instance's own evidence, so
 repairing a member or flipping a gate outcome reruns the fold while unaffected member
-bodies stay unexecuted, and a threshold edit that flips nothing reruns nothing. A
+bodies stay unexecuted, and a threshold edit that flips nothing reruns nothing
+unless the body reads the threshold. The contribution report states its threshold
+(fixture decision above), so in the example a flip-free threshold edit reruns the
+report and no member work. The acceptance suite proves the flip-free case with a
+report variant that does not read the threshold. A
 skip or deletion never retracts an earlier member publication; a member's latest
 pointer is not evidence that it is still required. Outcome (tolerant) folds are
 outside M4.
@@ -192,11 +196,12 @@ const contributor = template({
       subject: member.subject('summary:acme/widget:2026-Q1'),
       children: { activity: 'activity', assess: 'assessor' },
       run: async ({ calls, helpers }) => {
-        const { data: activity } = await calls.activity();
+        const selected = await calls.activity();
+        const activity = selected.data;
         const scores = [];
         for (let i = 0; i < activity.pullRequests.length; i += 1) {
           // Derived scalar argument plus a forwarded origin in the activity result.
-          const { data } = await calls.assess(activity.pullRequests[i].number, forward.child('activity', ['pullRequests', i]));
+          const { data } = await calls.assess(activity.pullRequests[i].number, forward.child(selected, ['pullRequests', i]));
           scores.push(data.score);
         }
         return helpers.summarize(activity, scores, helpers.format);

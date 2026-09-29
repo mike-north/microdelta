@@ -23,10 +23,15 @@
  * - `invalid-argument`: a call argument cannot be recorded as a recipe: a raw tracked view passed without `forward`, or a `forward` origin that is malformed or does not belong to the calling invocation.
  * - `missing-slot`: a parent's declared supplied step slot has no current implementation.
  * - `ambiguous-slot`: a parent's declared supplied step slot has more than one current implementation.
- * - `invalid-result`: the invocation port did not supply a `{ data }` carrier.
+ * - `invalid-result`: the invocation port did not supply a `{ data }` carrier, or a gate settlement is malformed.
  * - `forged-composition`: an invocation was requested for a composition this family did not mint.
  * - `invalid-bindings`: facade bindings are not a plain record or collide with a context name Definition supplies.
  * - `invalid-previous`: a supplied previous-result carrier is not an immutable `{ data }` record.
+ * - `frozen`: a template builder was called after its template froze (CMP-1/9).
+ * - `invalid-template`: a template declaration, its factory result or its use in a composition is unsupported.
+ * - `invalid-collection`: a keyed collection declaration or a template's collection binding is unsupported (COL-1).
+ * - `invalid-members`: fold member outcomes supplied by Resolution are not explicit, uniquely keyed entries.
+ * - `skipped-member`: author code read data from a skipped fold entry, which has none (CMP-8).
  * @alpha
  */
 export type IDefinitionErrorCode =
@@ -49,7 +54,12 @@ export type IDefinitionErrorCode =
   | 'invalid-result'
   | 'forged-composition'
   | 'invalid-bindings'
-  | 'invalid-previous';
+  | 'invalid-previous'
+  | 'frozen'
+  | 'invalid-template'
+  | 'invalid-collection'
+  | 'invalid-members'
+  | 'skipped-member';
 
 /**
  * A rejected declaration, composition or invocation. Rejection always happens

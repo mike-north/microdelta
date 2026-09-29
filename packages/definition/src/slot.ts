@@ -25,6 +25,7 @@ import type { IAuthorInvoker, IDeclarationBrand, IDeclarationRecords } from './d
 import { checkBindings, checkCallback, labelOption, mint, readOptions, reject, versionOption } from './declaration.js';
 import type { DefinitionError } from './errors.js';
 import type { IApply, IBindingFamily } from './family.js';
+import { thrownDetail } from './thrown.js';
 import type { IInvocationArguments } from './witness.js';
 
 /**
@@ -403,7 +404,7 @@ function decodeDerived(encoded: string, position: number): unknown {
   }
 }
 
-/** A readable diagnostic from any thrown value. */
+/** A readable diagnostic from any thrown value, computed without running author code or throwing. */
 function describe(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  return thrownDetail(error);
 }

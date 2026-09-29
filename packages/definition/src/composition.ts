@@ -18,20 +18,29 @@
  * REUSE-006/007). Composition and lookup never invoke author callbacks; a slot
  * subject function runs only when a caller asks for a call's subject.
  *
+ * Keyed fanout templates bind to the one composition-level slot holding their
+ * collection source. A template instance is addressed by its template step
+ * descriptor plus the member key and is minted on demand, per composition,
+ * from the frozen template; a strict fold is a composition-level step that
+ * consumes one composed template step.
+ *
  * Each step registration keeps the declaration's own record, so the typed
  * invocation closures reached by `openInvocation` are exactly those retained
  * when the author declared the step.
  */
 import { decodeSnapshot, encodeSnapshot } from '@microdelta/value';
 
+import type { IKeyedSnapshot } from './collection.js';
 import type { IBindingDescriptor } from './descriptor.js';
 import type { IDeclarationRecords, IStepDeclaration, IStepRecord } from './declaration.js';
 import { reject } from './declaration.js';
 import type { DefinitionError } from './errors.js';
 import type { IBindingFamily } from './family.js';
+import type { IFoldTopology } from './fold.js';
 import type { IAnySuppliedStepDeclaration, ISuppliedStepRegistration } from './slot.js';
 import { slotSubject, supplyState } from './slot.js';
-import { copyDescriptor, parseWitness } from './witness.js';
+import { bindTemplates, instancePrefixOf, isMemberStep, type IAnyTemplateDeclaration, type IBoundTemplates, type ITemplateRecords, type ITemplateTopology } from './template.js';
+import { copyDescriptor, isTemplateDescriptor, parseWitness } from './witness.js';
 import type { IInvocationArguments, IInvocationWitness, IUnsupportedWitnessReason } from './witness.js';
 
 /**
@@ -98,6 +107,8 @@ export interface ICompositionOptions<TFamily extends IBindingFamily> {
   readonly members?: readonly IMemberRegistration<TFamily>[];
   /** Supplied step implementations bound to callable step slots, made by `supply`. */
   readonly supplied?: readonly ISuppliedStepRegistration<TFamily>[];
+  /** Fanout templates, each bound to a keyed collection source among the composition-level steps. */
+  readonly templates?: readonly IAnyTemplateDeclaration<TFamily>[];
 }
 
 /**
@@ -195,6 +206,10 @@ export interface ITopology {
   readonly helpers: readonly string[];
   /** Supplied step slot names that some parent declares, sorted, whether or not they are currently supplied. */
   readonly slots: readonly string[];
+  /** Fanout templates, sorted by template slot. */
+  readonly templates: readonly ITemplateTopology[];
+  /** Strict folds and the template steps they consume, in structural order. */
+  readonly folds: readonly IFoldTopology[];
 }
 
 /**
@@ -239,6 +254,8 @@ export interface IComposition<TFamily extends IBindingFamily> extends ICompositi
   resolve(descriptor: IBindingDescriptor): IBindingResolution<TFamily>;
   /** Reconnect a historical invocation witness, supplied as untrusted durable data. */
   resolveWitness(witness: unknown): IWitnessResolution<TFamily>;
+  /** Key one collection snapshot under a template's key strategy, before any gate or member body. */
+  keyMembers(template: string, snapshot: unknown): IKeyedSnapshot;
 }
 
 /** One occupant of a declared slot. The step record is the declaration's own record. */
@@ -252,6 +269,10 @@ export interface ICompositionState<TFamily extends IBindingFamily> {
   readonly scope: string;
   /** Every occupant of each descriptor key, so ambiguity stays observable. */
   readonly registrations: ReadonlyMap<string, readonly IRegistration<TFamily>[]>;
+  /** The composed templates: their instances, keying and gates. */
+  readonly templates: IBoundTemplates<TFamily>;
+  /** The template step descriptor each fold consumes, by the fold's descriptor key. */
+  readonly folds: ReadonlyMap<string, IBindingDescriptor>;
 }
 
 /** Nonzero while a composition is being constructed; framework resolution must reject then. */
@@ -270,9 +291,31 @@ export function isComposing(): boolean {
   return composing > 0;
 }
 
-/** Exact-field descriptor key; there is no partial or normalized match. */
+/**
+ * Run graph-construction work, such as a template factory, inside the
+ * composition phase, so framework resolution attempted from it rejects.
+ * @param build - The construction work.
+ * @returns Its result.
+ */
+export function withinComposition<T>(build: () => T): T {
+  composing++;
+  try {
+    return build();
+  } finally {
+    composing--;
+  }
+}
+
+/** Exact-field descriptor key over every field, absent fields included; there is no partial or normalized match. */
 export function descriptorKey(descriptor: IBindingDescriptor): string {
-  return JSON.stringify([descriptor.scope, descriptor.role, descriptor.slot, descriptor.memberKey ?? null]);
+  return JSON.stringify([
+    descriptor.scope,
+    descriptor.role,
+    descriptor.slot,
+    descriptor.memberKey ?? null,
+    descriptor.template ?? null,
+    descriptor.collection ?? null,
+  ]);
 }
 
 /** Whether two descriptors denote the same slot. */
@@ -284,13 +327,15 @@ function sameDescriptor(left: IBindingDescriptor, right: IBindingDescriptor): bo
  * Freeze an author's declared graph before any run, without invoking callbacks.
  * @param records - The builder instance's declaration records.
  * @param compositions - The builder instance's composition states.
- * @param options - The author's scope, inputs, helpers and members.
+ * @param options - The author's scope, inputs, helpers, steps, members, supplied steps and templates.
+ * @param templates - The builder instance's template records.
  * @returns The frozen composition.
  */
 export function composeIn<TFamily extends IBindingFamily>(
   records: IDeclarationRecords<TFamily>,
   compositions: WeakMap<object, ICompositionState<TFamily>>,
   options: ICompositionOptions<TFamily>,
+  templates: ITemplateRecords<TFamily>,
 ): IComposition<TFamily> {
   composing++;
   try {
@@ -304,6 +349,7 @@ export function composeIn<TFamily extends IBindingFamily>(
       steps: 'invalid-descriptor',
       members: 'invalid-descriptor',
       supplied: 'invalid-descriptor',
+      templates: 'invalid-descriptor',
     });
     const scope = nonempty(optionFields.get('scope'), 'scope');
     const registrations = new Map<string, IRegistration<TFamily>[]>();
@@ -346,6 +392,8 @@ export function composeIn<TFamily extends IBindingFamily>(
     const declaredSlots = new Set<string>();
     /** RES-001: each scoped subject is claimed by exactly one declaration object in this composition. */
     const subjects = new Map<string, IStepDeclaration<TFamily>>();
+    /** Composition-level step occupants, which templates bind to and folds live among. */
+    const compositionSteps: { readonly slot: string; readonly record: IStepRecord<TFamily> }[] = [];
     /**
      * Register one level's step slots: a member's (with its key) or the
      * composition level (no key). Sibling edges stay within one level.
@@ -363,8 +411,17 @@ export function composeIn<TFamily extends IBindingFamily>(
         if (record.kind === 'supplied-step') {
           return reject('illegal-edge', `Step ${slot} holds a supplied step; supplied steps occupy step slots only through supply.`);
         }
+        if (isMemberStep(record.declaration)) {
+          return reject('invalid-template', `Step ${slot} holds a member step declaration, which is addressable only through its template.`);
+        }
+        if (record.kind === 'fold' && memberKey !== undefined) {
+          return reject('illegal-edge', `Fold ${slot} must be a composition-level step, not a member step.`);
+        }
         return { slot, record };
       });
+      if (memberKey === undefined) {
+        compositionSteps.push(...levelSteps);
+      }
       for (const { slot, record } of levelSteps) {
         const declaration = record.declaration;
         const claimant = subjects.get(declaration.subject);
@@ -427,10 +484,37 @@ export function composeIn<TFamily extends IBindingFamily>(
           if (subjects.has(scoped.subject)) {
             reject('conflicting-subject', `Slot ${state.slot} computed the subject ${scoped.subject}, which a declared step already claims (RES-001).`);
           }
+          // Read when a subject is computed, after composition bound the templates.
+          const prefix = instancePrefixOf(boundTemplates.prefixes, scoped.subject);
+          if (prefix !== undefined) {
+            reject('conflicting-subject', `Slot ${state.slot} computed the subject ${scoped.subject}, which a template instance of member prefix ${JSON.stringify(prefix)} can claim (RES-001).`);
+          }
           return scoped;
         },
       };
       register(slotDescriptor(scope, state.slot), { target: Object.freeze(target), record });
+    }
+    const boundTemplates = bindTemplates(
+      scope,
+      listOf(optionFields.get('templates'), 'templates', true),
+      templates,
+      (declaration) => compositionSteps.filter(entry => entry.record.declaration === declaration).map(entry => entry.slot),
+      subjects.keys(),
+    );
+    for (const slot of boundTemplates.slots) {
+      declaredSlots.add(slot);
+    }
+    // A fold consumes a step of a template composed here; anything else is an undeclared edge.
+    const folds = new Map<string, IBindingDescriptor>();
+    const foldTopology: IFoldTopology[] = [];
+    for (const { slot, record } of compositionSteps) {
+      if (record.kind === 'fold') {
+        const over = boundTemplates.foldTarget(record.declaration.over.template, record.declaration.over.step)
+          ?? reject('illegal-edge', `Fold ${slot} consumes template ${record.declaration.over.template.slot}, which this composition does not declare.`);
+        const fold = stepDescriptor(scope, slot, undefined);
+        folds.set(descriptorKey(fold), over);
+        foldTopology.push(Object.freeze({ fold, over }));
+      }
     }
     for (const slot of [...declaredSlots, ...suppliedSlots]) {
       if (helperSlots.has(slot)) {
@@ -443,12 +527,23 @@ export function composeIn<TFamily extends IBindingFamily>(
       inputs: Object.freeze([...inputSlots].sort()),
       helpers: Object.freeze([...helperSlots].sort()),
       slots: Object.freeze([...declaredSlots].sort()),
+      templates: boundTemplates.topology,
+      folds: Object.freeze(foldTopology.sort((left, right) => compareDescriptors(left.fold, right.fold))),
     });
     const frozenRegistrations: ReadonlyMap<string, readonly IRegistration<TFamily>[]> = new Map(
       [...registrations].map(([key, occupants]) => [key, Object.freeze(occupants)]),
     );
     const resolve = (supplied: IBindingDescriptor): IBindingResolution<TFamily> => {
       const descriptor = ownedDescriptor(supplied);
+      if (isTemplateDescriptor(descriptor)) {
+        // A template instance: its template step descriptor plus the member key, never remapped.
+        const instance = boundTemplates.instance(descriptor);
+        return instance === undefined ? { status: 'missing', descriptor } : {
+          status: 'bound',
+          descriptor,
+          target: Object.freeze({ role: 'step', declaration: instance.declaration, scopedSubject: Object.freeze({ scope, subject: instance.declaration.subject }) }),
+        };
+      }
       const occupants = frozenRegistrations.get(descriptorKey(descriptor)) ?? [];
       const [only] = occupants;
       if (only === undefined) {
@@ -457,7 +552,7 @@ export function composeIn<TFamily extends IBindingFamily>(
       return occupants.length > 1 ? { status: 'ambiguous', descriptor, occupants: occupants.length } : { status: 'bound', descriptor, target: only.target };
     };
     const declaredEdge = (parent: IBindingDescriptor, child: IBindingDescriptor): boolean =>
-      topology.edges.some(edge => sameDescriptor(edge.parent, parent) && sameDescriptor(edge.child, child));
+      topology.edges.some(edge => sameDescriptor(edge.parent, parent) && sameDescriptor(edge.child, child)) || boundTemplates.declaresEdge(parent, child);
     const composition: Omit<IComposition<TFamily>, keyof ICompositionBrand<TFamily>> = {
       scope,
       topology,
@@ -498,16 +593,22 @@ export function composeIn<TFamily extends IBindingFamily>(
         if (childTarget.role !== 'callable' || childTarget.kind !== 'supplied-step') {
           return { status: 'undeclared-edge' };
         }
-        if (!('form' in recipes) && recipes.some(recipe => recipe.form === 'forwarded' && recipe.origin.binding === 'member')) {
+        if (!isTemplateDescriptor(parent) && !('form' in recipes) && recipes.some(recipe => recipe.form === 'forwarded' && recipe.origin.binding === 'member')) {
           // Member origins require a template instance's member binding;
           // explicit members and composition-level steps have none.
           return { status: 'unsupported', reason: 'argument-form' };
         }
         return { status: 'bound', parent: parentTarget, child: childTarget, witness: parsed.witness };
       },
+      keyMembers(template: string, snapshot: unknown): IKeyedSnapshot {
+        if (isComposing()) {
+          reject('composition-phase', 'Collections cannot be keyed while composing.');
+        }
+        return boundTemplates.keyMembers(template, snapshot);
+      },
     };
     Object.freeze(composition);
-    compositions.set(composition, { scope, registrations: frozenRegistrations });
+    compositions.set(composition, { scope, registrations: frozenRegistrations, templates: boundTemplates, folds });
     // The brand is type-level only; this module is its sole minting authority.
     return composition as IComposition<TFamily>;
   } finally {
@@ -591,10 +692,10 @@ function snapshotInput(value: unknown, slot: string): unknown {
   }
 }
 
-/** Structural descriptor order: member key, then role, then slot; registration order never matters. */
+/** Structural descriptor order: member key, role, slot, then template fields; registration order never matters. */
 function compareDescriptors(left: IBindingDescriptor, right: IBindingDescriptor): number {
-  const leftKey = [left.memberKey ?? '', left.role, left.slot];
-  const rightKey = [right.memberKey ?? '', right.role, right.slot];
+  const leftKey = [left.memberKey ?? '', left.role, left.slot, left.template ?? '', left.collection ?? ''];
+  const rightKey = [right.memberKey ?? '', right.role, right.slot, right.template ?? '', right.collection ?? ''];
   for (let index = 0; index < leftKey.length; index++) {
     const a = leftKey[index] ?? '';
     const b = rightKey[index] ?? '';
@@ -611,5 +712,5 @@ function compareDescriptors(left: IBindingDescriptor, right: IBindingDescriptor)
  * run author code. A malformed or accessor-bearing descriptor is rejected.
  */
 export function ownedDescriptor(value: unknown): IBindingDescriptor {
-  return copyDescriptor(value) ?? reject('invalid-descriptor', 'A binding descriptor must hold scope, role, slot and optional memberKey as own data properties.');
+  return copyDescriptor(value) ?? reject('invalid-descriptor', 'A binding descriptor must hold scope, role, slot and optional memberKey, template and collection as own data properties.');
 }

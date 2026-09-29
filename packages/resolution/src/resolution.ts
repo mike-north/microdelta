@@ -257,8 +257,22 @@ export function createResolution<TInputs extends object, THelpers extends object
     return Object.freeze({ analysis, environment, subject: declaration.subject, version: declaration.version });
   }
 
-  /** Reconnect a requested step to its unique current declaration. */
-  function stepTarget(step: IBindingDescriptor): { readonly step: IBindingDescriptor; readonly declaration: IStepDeclaration<IFamily> } {
+  /**
+   * Reconnect a requested step to its unique current source or memo
+   * declaration. Template instance steps (descriptors carrying `template` or
+   * `collection`) and strict folds are refused with `invalid-request` before
+   * any evidence, candidate lookup or admission: this resolver resolves only
+   * explicit member and composition-level sources and memos. Template instance
+   * invocation, gates and keyed member reuse are added by #85, and strict fold
+   * readiness by #86.
+   */
+  function stepTarget(step: IBindingDescriptor): { readonly step: IBindingDescriptor; readonly declaration: IAnySourceDeclaration<IFamily> | IAnyMemoDeclaration<IFamily> } {
+    // Checked on the requested descriptor itself, through property descriptors
+    // only (no accessor runs), before composition lookup can mint an instance.
+    if (typeof step === 'object' && step !== null &&
+        (Object.getOwnPropertyDescriptor(step, 'template') !== undefined || Object.getOwnPropertyDescriptor(step, 'collection') !== undefined)) {
+      throw new ResolutionError('invalid-request', 'The requested step is a template instance step; this resolver resolves only member and composition-level sources and memos');
+    }
     let resolution: ReturnType<typeof composition.resolve>;
     try {
       resolution = composition.resolve(step);
@@ -268,7 +282,11 @@ export function createResolution<TInputs extends object, THelpers extends object
     if (resolution.status !== 'bound' || resolution.target.role !== 'step') {
       throw new ResolutionError('unbound-step', `Step ${stepKey(resolution.descriptor)} has no unique current declaration (${resolution.status})`);
     }
-    return { step: resolution.descriptor, declaration: resolution.target.declaration };
+    const declaration = resolution.target.declaration;
+    if (declaration.kind === 'fold') {
+      throw new ResolutionError('invalid-request', `Step ${stepKey(resolution.descriptor)} is a strict fold; this resolver resolves only sources and memos`);
+    }
+    return { step: resolution.descriptor, declaration };
   }
 
   /** A new request context with its declared slots reconnected once. */

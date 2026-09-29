@@ -37,6 +37,7 @@ import { reject } from './declaration.js';
 import type { IBindingDescriptor } from './descriptor.js';
 import { DefinitionError } from './errors.js';
 import type { IApply, IBindingFamily } from './family.js';
+import type { IFoldInvocation } from './fold.js';
 import type { IAnySuppliedStepDeclaration, IArgumentSupplier } from './slot.js';
 import type {
   IDirectChildWitness,
@@ -45,6 +46,7 @@ import type {
   IInvocationWitness,
   INestedInvocationWitness,
 } from './witness.js';
+import { isTemplateDescriptor } from './witness.js';
 
 /**
  * The immutable carrier for a child result. `data` holds whatever view the
@@ -222,7 +224,7 @@ export interface ISuppliedInvocation<TFamily extends IBindingFamily> extends IIn
  * A live invocation of any step kind.
  * @alpha
  */
-export type IInvocation<TFamily extends IBindingFamily> = IMemoInvocation<TFamily> | ISourceInvocation<TFamily> | ISuppliedInvocation<TFamily>;
+export type IInvocation<TFamily extends IBindingFamily> = IMemoInvocation<TFamily> | ISourceInvocation<TFamily> | ISuppliedInvocation<TFamily> | IFoldInvocation<TFamily>;
 
 /** What Definition can describe about each genuine handle; forged look-alikes are absent. */
 const handles = new WeakMap<object, IDirectChildWitness | IDeclaredCallDescription>();
@@ -236,7 +238,10 @@ const emptyArguments: IEmptyArguments = Object.freeze({ form: 'empty' });
  * instance minted. A memo parent's declared supplied slots must each resolve to
  * exactly one current implementation before its body can run: an unsupplied
  * slot rejects with `missing-slot` and a doubly supplied one with
- * `ambiguous-slot` (the EXP-4 supplied-callable selection).
+ * `ambiguous-slot` (the EXP-4 supplied-callable selection). A template
+ * instance is opened by its instance descriptor; its calls always record the
+ * version-2 witness with template-bearing descriptors, and it alone has a
+ * member binding to forward from. A strict fold opens a `fold` invocation.
  * @param records - The builder instance's declaration records.
  * @param compositions - The builder instance's composition states.
  * @param composition - The frozen composition.
@@ -262,7 +267,8 @@ export function openInvocationIn<TFamily extends IBindingFamily>(
     checkSlotOccupancy(frozenParent.slot, occupants);
   }
   const [only] = occupants;
-  const record = occupants.length === 1 ? only?.record : undefined;
+  const instance = isTemplateDescriptor(frozenParent);
+  const record = instance ? state.templates.instance(frozenParent) : occupants.length === 1 ? only?.record : undefined;
   if (record === undefined) {
     reject('unresolved-parent', 'An invocation requires exactly one bound step.');
   }
@@ -297,6 +303,26 @@ export function openInvocationIn<TFamily extends IBindingFamily>(
       },
     };
     return Object.freeze(invocation);
+  }
+  if (record.kind === 'fold') {
+    const foldRecord = record;
+    const over = state.folds.get(descriptorKey(frozenParent)) ?? reject('unresolved-parent', 'A fold invocation requires the template step it consumes.');
+    const fold: IFoldInvocation<TFamily> = {
+      kind: 'fold',
+      parent: frozenParent,
+      over,
+      get open(): boolean {
+        return open;
+      },
+      close(): void {
+        open = false;
+      },
+      apply: (bindings, members, invoke) => {
+        assertApplicable();
+        return foldRecord.apply(bindings, members, invoke);
+      },
+    };
+    return Object.freeze(fold);
   }
   if (record.kind === 'supplied-step') {
     const suppliedRecord = record;
@@ -349,8 +375,8 @@ export function openInvocationIn<TFamily extends IBindingFamily>(
   Object.freeze(invocation);
   const argumentContext: IArgumentContext = Object.freeze({
     scope: invocation,
-    // Only template instances carry a member binding; no parent opened here is one.
-    memberBinding: false,
+    // Only template instances carry a member binding.
+    memberBinding: instance,
     inputDeclared: (slot: string): boolean => state.registrations.has(descriptorKey({ scope: frozenParent.scope, role: 'input', slot })),
     isTrackedView: (value: unknown): boolean => port.isTrackedView(value),
     justified: (): boolean => port.argumentsJustified(invocation),
@@ -446,9 +472,19 @@ function slotDescriptor(scope: string, slot: string): IBindingDescriptor {
   return Object.freeze({ scope, role: 'callable', slot });
 }
 
-/** The descriptor of a sibling step slot at the parent's level (same member key, or none). */
+/**
+ * The descriptor of a sibling step slot at the parent's level: the same member
+ * key (or none) and, for a template instance, the same template and collection.
+ */
 function siblingDescriptor(parent: IBindingDescriptor, slot: string): IBindingDescriptor {
-  return Object.freeze({ scope: parent.scope, role: 'step', slot, ...(parent.memberKey === undefined ? {} : { memberKey: parent.memberKey }) });
+  return Object.freeze({
+    scope: parent.scope,
+    role: 'step',
+    slot,
+    ...(parent.memberKey === undefined ? {} : { memberKey: parent.memberKey }),
+    ...(parent.template === undefined ? {} : { template: parent.template }),
+    ...(parent.collection === undefined ? {} : { collection: parent.collection }),
+  });
 }
 
 /** Memo and supplied calls are only ever made by nested parents, whose witnesses are version 2. */

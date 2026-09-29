@@ -15,8 +15,10 @@
  * invoker. Definition assembles contexts mechanically; it never selects
  * previous results, evaluates policy, captures observations or executes a body.
  */
+import { collectionOption, type ICollectionIdentity, type ICollectionOptions } from './collection.js';
 import { DefinitionError } from './errors.js';
 import type { IApply, IBindingFamily } from './family.js';
+import type { IAnyFoldDeclaration, IFoldRecord } from './fold.js';
 import type {
   IChildResult,
   IDeclaredCallHandle,
@@ -64,7 +66,11 @@ export type IFinalityContext<TFamily extends IBindingFamily, TResult> = TFamily[
  */
 export interface IAnySourceDeclaration<TFamily extends IBindingFamily> extends IDeclarationBrand<TFamily> {
   readonly kind: 'source';
-  /** Complete opaque author subject, retained exactly. */
+  /**
+   * Complete opaque author subject, retained exactly. For a member step
+   * declared by a fanout template's member builder, this is the member subject
+   * prefix; each instance declaration carries its complete subject.
+   */
   readonly subject: string;
   /** Positive safe-integer compatibility group. */
   readonly version: number;
@@ -74,6 +80,8 @@ export interface IAnySourceDeclaration<TFamily extends IBindingFamily> extends I
   readonly run: (context: never) => unknown;
   /** The author's actual finality hook, when declared. */
   readonly finality: ((context: never) => unknown) | undefined;
+  /** The designated identity of a keyed collection source; undefined for an ordinary source. */
+  readonly collection: ICollectionIdentity | undefined;
 }
 
 /**
@@ -144,7 +152,11 @@ export type IMemoRunContext<TFamily extends IBindingFamily, TChildren extends IC
  */
 export interface IAnyMemoDeclaration<TFamily extends IBindingFamily> extends IDeclarationBrand<TFamily> {
   readonly kind: 'memo';
-  /** Complete opaque author subject, retained exactly. */
+  /**
+   * Complete opaque author subject, retained exactly. For a member step
+   * declared by a fanout template's member builder, this is the member subject
+   * prefix; each instance declaration carries its complete subject.
+   */
   readonly subject: string;
   /** Positive safe-integer compatibility group. */
   readonly version: number;
@@ -166,10 +178,10 @@ export interface IMemoDeclaration<TFamily extends IBindingFamily, TChildren exte
 }
 
 /**
- * Any step declaration of one family.
+ * Any step declaration of one family: a source, a memo or a strict fold.
  * @alpha
  */
-export type IStepDeclaration<TFamily extends IBindingFamily> = IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily>;
+export type IStepDeclaration<TFamily extends IBindingFamily> = IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily> | IAnyFoldDeclaration<TFamily>;
 
 /**
  * Author options for a retained source.
@@ -186,6 +198,8 @@ export interface ISourceOptions<TFamily extends IBindingFamily, TResult> {
   readonly run: (context: ISourceRunContext<TFamily, TResult>) => IApply<TFamily['outcomes'], TResult>;
   /** The author's optional current finality hook. */
   readonly finality?: (context: IFinalityContext<TFamily, TResult>) => unknown;
+  /** Declares a keyed collection source and names its members' designated identity field (COL-1). */
+  readonly collection?: ICollectionOptions<TResult>;
 }
 
 /**
@@ -237,6 +251,8 @@ export interface ISourceRecord<TFamily extends IBindingFamily> {
   applyFinality<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>): TOutcome;
   /** Dispatch a call of this source as a declared child, typed by its result. */
   dispatch(port: IInvocationPort<TFamily>, scope: IInvocationScope, witness: IInvocationWitness): Promise<IChildResult<unknown>>;
+  /** Mint and record a template instance: a declaration with a new complete subject and the same callbacks. */
+  instantiate(subject: string): ISourceRecord<TFamily>;
 }
 
 /** One pinned child edge of a memo: a sibling step declaration, or a supplied step slot by name. */
@@ -258,10 +274,21 @@ export interface IMemoRecord<TFamily extends IBindingFamily> {
   readonly nested: boolean;
   /** Pair the actual `run` with bindings plus minted calls and hand both to the invoker. */
   apply<TOutcome>(bindings: TFamily['memo'], mint: (call: string) => IDeclaredCallHandle<unknown, readonly unknown[]>, invoke: IAuthorInvoker<TOutcome>): TOutcome;
+  /**
+   * Mint and record a template instance: a declaration with a new complete
+   * subject and the same callback. Only sibling declaration edges are remapped,
+   * each to `siblingFor(declaration)`; supplied step slot edges are
+   * composition-wide and stay as declared. An instance always emits the
+   * version-2 nested witness.
+   */
+  instantiate(
+    subject: string,
+    siblingFor: (declaration: IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily>) => IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily>,
+  ): IMemoRecord<TFamily>;
 }
 
-/** Any record a builder instance keeps: a step's, or a supplied step implementation's. */
-export type IStepRecord<TFamily extends IBindingFamily> = ISourceRecord<TFamily> | IMemoRecord<TFamily> | ISuppliedStepRecord<TFamily>;
+/** Any record a builder instance keeps: a step's, a strict fold's, or a supplied step implementation's. */
+export type IStepRecord<TFamily extends IBindingFamily> = ISourceRecord<TFamily> | IMemoRecord<TFamily> | IFoldRecord<TFamily> | ISuppliedStepRecord<TFamily>;
 
 /** One builder instance's records, keyed by the declarations it minted. */
 export type IDeclarationRecords<TFamily extends IBindingFamily> = WeakMap<object, IStepRecord<TFamily>>;
@@ -291,6 +318,9 @@ export function declareSource<TFamily extends IBindingFamily, TResult>(
   if (read.has('children')) {
     reject('illegal-edge', 'Sources declare no child edges in M3.');
   }
+  if (read.has('over')) {
+    reject('illegal-edge', 'Only a strict fold names the template step it consumes.');
+  }
   checkCallback(read, 'run', true);
   checkCallback(read, 'finality', false);
   // Both were just proven to be own data properties holding functions, or an
@@ -304,33 +334,42 @@ export function declareSource<TFamily extends IBindingFamily, TResult>(
     label: labelOption(read),
     run,
     finality,
+    collection: collectionOption(read.get('collection')),
   });
-  const record: ISourceRecord<TFamily> = {
+  /** The record of one declaration sharing these typed callbacks: the declared one or a template instance. */
+  const recordOf = (current: ISourceDeclaration<TFamily, TResult>): ISourceRecord<TFamily> => ({
     kind: 'source',
-    declaration,
+    declaration: current,
     apply<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily> | undefined, invoke: IAuthorInvoker<TOutcome>): TOutcome {
       checkBindings(bindings, 'previous');
-      const carrier = previous === undefined ? undefined : checkCarrier(previous.carrier(declaration));
+      const carrier = previous === undefined ? undefined : checkCarrier(previous.carrier(current));
       const context: ISourceRunContext<TFamily, TResult> = { ...bindings, previous: carrier };
       Object.freeze(context);
       return invoke(run, context);
     },
     applyFinality<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>): TOutcome {
       if (finality === undefined) {
-        reject('invalid-callback', `Source ${declaration.subject} declares no finality hook.`);
+        reject('invalid-callback', `Source ${current.subject} declares no finality hook.`);
       }
       checkBindings(bindings, 'previous');
-      const context: IFinalityContext<TFamily, TResult> = { ...bindings, previous: checkCarrier(previous.carrier(declaration)) };
+      const context: IFinalityContext<TFamily, TResult> = { ...bindings, previous: checkCarrier(previous.carrier(current)) };
       Object.freeze(context);
       return invoke(finality, context);
     },
     dispatch(port: IInvocationPort<TFamily>, scope: IInvocationScope, witness: IInvocationWitness): Promise<IChildResult<unknown>> {
-      const request: IDeclaredInvocationRequest<TFamily, TResult> = { kind: 'source', scope, witness, child: declaration };
+      const request: IDeclaredInvocationRequest<TFamily, TResult> = { kind: 'source', scope, witness, child: current };
       Object.freeze(request);
       return port.dispatch(request);
     },
-  };
-  records.set(declaration, record);
+    instantiate(subject: string): ISourceRecord<TFamily> {
+      // An instance is never itself a keyed collection: only composition-level sources are.
+      const instance = mint<ISourceDeclaration<TFamily, TResult>>({ kind: 'source', subject, version: current.version, label: current.label, run, finality, collection: undefined });
+      const instanceRecord = recordOf(instance);
+      records.set(instance, instanceRecord);
+      return instanceRecord;
+    },
+  });
+  records.set(declaration, recordOf(declaration));
   return declaration;
 }
 
@@ -346,6 +385,12 @@ export function declareMemo<TFamily extends IBindingFamily, TChildren extends IC
   options: IMemoOptions<TFamily, TChildren, TResult>,
 ): IMemoDeclaration<TFamily, TChildren, TResult> {
   const read = readOptions(options);
+  if (read.has('collection')) {
+    reject('invalid-collection', 'Only a source declares a keyed collection.');
+  }
+  if (read.has('over')) {
+    reject('illegal-edge', 'Only a strict fold names the template step it consumes.');
+  }
   checkCallback(read, 'run', true);
   const subject = subjectOption(read);
   const version = versionOption(read);
@@ -372,6 +417,9 @@ export function declareMemo<TFamily extends IBindingFamily, TChildren extends IC
     if (childRecord.kind === 'supplied-step') {
       reject('illegal-edge', `Child ${slot} is a supplied step; name its step slot instead, and bind the step at composition.`);
     }
+    if (childRecord.kind === 'fold') {
+      reject('illegal-edge', `Child ${slot} is a strict fold, which is never called as a child.`);
+    }
     entries.push([slot, { kind: 'sibling', declaration: childRecord.declaration }]);
   }
   // A parent emits the nested witness exactly when it declares a memo child or a supplied slot.
@@ -385,11 +433,24 @@ export function declareMemo<TFamily extends IBindingFamily, TChildren extends IC
     children: slots,
     run,
   });
-  const record: IMemoRecord<TFamily> = {
+  /** The record of one declaration sharing this typed callback: the declared one or a template instance. */
+  const recordOf = (current: IMemoDeclaration<TFamily, TChildren, TResult>, pinned: ReadonlyMap<string, IChildEdge<TFamily>>, emitsNested: boolean): IMemoRecord<TFamily> => ({
     kind: 'memo',
-    declaration,
-    children: new Map(entries),
-    nested,
+    declaration: current,
+    children: pinned,
+    nested: emitsNested,
+    instantiate(
+      instanceSubject: string,
+      siblingFor: (child: IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily>) => IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily>,
+    ): IMemoRecord<TFamily> {
+      const instance = mint<IMemoDeclaration<TFamily, TChildren, TResult>>({ kind: 'memo', subject: instanceSubject, version: current.version, label: current.label, children: slots, run });
+      const remapped = new Map([...pinned].map(([call, edge]): [string, IChildEdge<TFamily>] =>
+        [call, edge.kind === 'sibling' ? { kind: 'sibling', declaration: siblingFor(edge.declaration) } : edge]));
+      // A template instance always emits the version-2 witness, whose descriptors carry its template fields.
+      const instanceRecord = recordOf(instance, remapped, true);
+      records.set(instance, instanceRecord);
+      return instanceRecord;
+    },
     apply<TOutcome>(bindings: TFamily['memo'], mintHandle: (call: string) => IDeclaredCallHandle<unknown, readonly unknown[]>, invoke: IAuthorInvoker<TOutcome>): TOutcome {
       checkBindings(bindings, 'calls');
       // A null prototype makes every nonempty slot name, including `__proto__`,
@@ -412,8 +473,8 @@ export function declareMemo<TFamily extends IBindingFamily, TChildren extends IC
       Object.freeze(context);
       return invoke(run, context);
     },
-  };
-  records.set(declaration, record);
+  });
+  records.set(declaration, recordOf(declaration, new Map(entries), nested));
   return declaration;
 }
 
@@ -463,19 +524,20 @@ export function readOptions(options: unknown): IReadOptions {
   return read;
 }
 
-/** Every option a source or memo declaration recognizes. */
-const declarationOptions = ['subject', 'version', 'label', 'run', 'finality', 'children'] as const;
+/** Every option a source, memo or fold declaration recognizes; each builder rejects the ones that do not apply to its kind. */
+const declarationOptions = ['subject', 'version', 'label', 'run', 'finality', 'children', 'collection', 'over'] as const;
 
 /** The Definition error code for an unusable value of one declaration option. */
 function optionErrorCode(key: string): DefinitionError['code'] {
   return key === 'run' || key === 'finality' ? 'invalid-callback'
     : key === 'version' ? 'invalid-version'
-      : key === 'children' ? 'illegal-edge'
-        : 'invalid-subject';
+      : key === 'children' || key === 'over' ? 'illegal-edge'
+        : key === 'collection' ? 'invalid-collection'
+          : 'invalid-subject';
 }
 
 /** RES-001: a subject is a complete nonempty author string, retained exactly. */
-function subjectOption(read: IReadOptions): string {
+export function subjectOption(read: IReadOptions): string {
   const subject = read.get('subject');
   if (typeof subject !== 'string' || subject.length === 0) {
     reject('invalid-subject', 'A declaration requires a complete nonempty subject string.');
@@ -554,7 +616,7 @@ function checkChildRecord(read: IReadOptions): void {
  * callback context, and must not claim the context name Definition supplies.
  * Field values are never read.
  */
-export function checkBindings(bindings: object, reserved: 'previous' | 'calls' | 'args'): void {
+export function checkBindings(bindings: object, reserved: 'previous' | 'calls' | 'args' | 'member' | 'members'): void {
   if (!isPlainRecord(bindings)) {
     reject('invalid-bindings', 'Bindings must be a plain record of enumerable own data fields.');
   }

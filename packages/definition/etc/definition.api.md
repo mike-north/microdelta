@@ -17,6 +17,20 @@ export class DefinitionError extends Error {
 export function describeHandle(value: unknown): IDirectChildWitness | IDeclaredCallDescription | undefined;
 
 // @alpha
+export function gateOutcome(settlement: IGateSettlement): IGateOutcome;
+
+// @alpha
+export interface IAnyFoldDeclaration<TFamily extends IBindingFamily> extends IDeclarationBrand<TFamily> {
+    // (undocumented)
+    readonly kind: 'fold';
+    readonly label: string | undefined;
+    readonly over: IFoldOver<IAnyTemplateDeclaration<TFamily>, string>;
+    readonly run: (context: never) => unknown;
+    readonly subject: string;
+    readonly version: number;
+}
+
+// @alpha
 export interface IAnyMemoDeclaration<TFamily extends IBindingFamily> extends IDeclarationBrand<TFamily> {
     readonly children: readonly string[];
     // (undocumented)
@@ -29,6 +43,7 @@ export interface IAnyMemoDeclaration<TFamily extends IBindingFamily> extends IDe
 
 // @alpha
 export interface IAnySourceDeclaration<TFamily extends IBindingFamily> extends IDeclarationBrand<TFamily> {
+    readonly collection: ICollectionIdentity | undefined;
     readonly finality: ((context: never) => unknown) | undefined;
     // (undocumented)
     readonly kind: 'source';
@@ -50,6 +65,17 @@ export interface IAnySuppliedStepDeclaration<TFamily extends IBindingFamily> ext
     readonly label: string | undefined;
     readonly run: (context: never) => unknown;
     readonly version: number;
+}
+
+// @alpha
+export interface IAnyTemplateDeclaration<TFamily extends IBindingFamily> extends ITemplateBrand<TFamily> {
+    readonly collection: IAnySourceDeclaration<TFamily>;
+    readonly gate: ((context: never) => unknown) | undefined;
+    readonly key: ((member: never) => unknown) | undefined;
+    // (undocumented)
+    readonly kind: 'template';
+    readonly slot: string;
+    readonly steps: ITemplateSteps<TFamily>;
 }
 
 // @alpha
@@ -87,10 +113,12 @@ export interface IAuthorInvoker<TOutcome> {
 
 // @alpha
 export interface IBindingDescriptor {
+    readonly collection?: string;
     readonly memberKey?: string;
     readonly role: IBindingRole;
     readonly scope: string;
     readonly slot: string;
+    readonly template?: string;
 }
 
 // @alpha
@@ -153,7 +181,27 @@ export interface IChildResult<T> {
 }
 
 // @alpha
+export interface ICollectionIdentity {
+    readonly identity: string;
+}
+
+// @alpha
+export type ICollectionOptions<TResult> = TResult extends ICollectionResult<infer TMember> ? {
+    readonly identity: IIdentityField<TMember>;
+} : never;
+
+// @alpha
+export interface ICollectionResult<TMember> {
+    readonly members: readonly TMember[];
+    readonly status: ICollectionStatus;
+}
+
+// @alpha
+export type ICollectionStatus = 'complete' | 'open';
+
+// @alpha
 export interface IComposition<TFamily extends IBindingFamily> extends ICompositionBrand<TFamily> {
+    keyMembers(template: string, snapshot: unknown): IKeyedSnapshot;
     resolve(descriptor: IBindingDescriptor): IBindingResolution<TFamily>;
     resolveWitness(witness: unknown): IWitnessResolution<TFamily>;
     readonly scope: string;
@@ -176,6 +224,7 @@ export interface ICompositionOptions<TFamily extends IBindingFamily> {
     readonly scope: string;
     readonly steps?: readonly IStepRegistration<TFamily>[];
     readonly supplied?: readonly ISuppliedStepRegistration<TFamily>[];
+    readonly templates?: readonly IAnyTemplateDeclaration<TFamily>[];
 }
 
 // @alpha
@@ -189,13 +238,16 @@ export interface IDeclarationBrand<TFamily extends IBindingFamily> {
 // @alpha
 export interface IDeclarations<TFamily extends IBindingFamily> {
     compose(options: ICompositionOptions<TFamily>): IComposition<TFamily>;
+    fold<TTemplate extends IAnyTemplateDeclaration<TFamily>, TStep extends keyof IStepsOf<TTemplate> & string, TResult>(options: IFoldOptions<TFamily, TTemplate, TStep, TResult>): IFoldDeclaration<TFamily, IResultOf<TFamily, IStepsOf<TTemplate>[TStep]>, TResult>;
     readonly forward: IForward;
+    gateOf(composition: IComposition<TFamily>, instance: IBindingDescriptor): IGateInvocation<TFamily> | undefined;
     memo<TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult = unknown>(options: IMemoOptions<TFamily, TChildren, TResult>): IMemoDeclaration<TFamily, TChildren, TResult>;
     openInvocation(composition: IComposition<TFamily>, parent: IBindingDescriptor, port: IInvocationPort<TFamily>): IInvocation<TFamily>;
     source<TResult>(options: ISourceOptions<TFamily, TResult>): ISourceDeclaration<TFamily, TResult>;
     stepSlot<TParameters extends readonly unknown[] = readonly [], TResult = unknown>(options: IStepSlotOptions): IStepSlot<TFamily, TParameters, TResult>;
     suppliedStep<TParameters extends readonly unknown[] = readonly [], TResult = unknown>(options: ISuppliedStepOptions<TFamily, TParameters, TResult>): ISuppliedStepDeclaration<TFamily, TParameters, TResult>;
     supply<TParameters extends readonly unknown[], TResult>(options: ISupplyOptions<TFamily, TParameters, TResult>): ISuppliedStepRegistration<TFamily>;
+    template<TCollection extends IAnySourceDeclaration<TFamily>, TSteps extends ITemplateSteps<TFamily>>(options: ITemplateOptions<TFamily, TCollection, TSteps>): ITemplateDeclaration<TFamily, TCollection, TSteps>;
 }
 
 // @alpha
@@ -226,7 +278,7 @@ export interface IDeclaredEdge {
 export type IDeclaredInvocationRequest<TFamily extends IBindingFamily, TResult> = ISourceCallRequest<TFamily, TResult> | IMemoCallRequest<TFamily> | ISuppliedCallRequest<TFamily>;
 
 // @alpha
-export type IDefinitionErrorCode = 'invalid-subject' | 'invalid-version' | 'invalid-callback' | 'illegal-edge' | 'forged-declaration' | 'invalid-descriptor' | 'invalid-input' | 'conflicting-subject' | 'unresolved-parent' | 'composition-phase' | 'scope-closed' | 'scope-inactive' | 'unsupported-arguments' | 'invalid-argument' | 'missing-slot' | 'ambiguous-slot' | 'invalid-result' | 'forged-composition' | 'invalid-bindings' | 'invalid-previous';
+export type IDefinitionErrorCode = 'invalid-subject' | 'invalid-version' | 'invalid-callback' | 'illegal-edge' | 'forged-declaration' | 'invalid-descriptor' | 'invalid-input' | 'conflicting-subject' | 'unresolved-parent' | 'composition-phase' | 'scope-closed' | 'scope-inactive' | 'unsupported-arguments' | 'invalid-argument' | 'missing-slot' | 'ambiguous-slot' | 'invalid-result' | 'forged-composition' | 'invalid-bindings' | 'invalid-previous' | 'frozen' | 'invalid-template' | 'invalid-collection' | 'invalid-members' | 'skipped-member';
 
 // @alpha
 export type IDerivedArguments<TParameters extends readonly unknown[]> = {
@@ -258,6 +310,54 @@ export interface IEmptyArguments {
 export type IFinalityContext<TFamily extends IBindingFamily, TResult> = TFamily['source'] & {
     readonly previous: IApply<TFamily['previous'], TResult>;
 };
+
+// @alpha
+export interface IFoldDeclaration<TFamily extends IBindingFamily, TMemberResult, TResult> extends IAnyFoldDeclaration<TFamily> {
+    // (undocumented)
+    readonly run: (context: IFoldRunContext<TFamily, TMemberResult>) => TResult;
+}
+
+// @alpha
+export type IFoldEntry<T> = ISucceededEntry<T> | ISkippedEntry;
+
+// @alpha
+export interface IFoldInvocation<TFamily extends IBindingFamily> extends IInvocationScope {
+    apply<TOutcome>(bindings: TFamily['memo'], members: IFoldMemberSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>): TOutcome;
+    // (undocumented)
+    readonly kind: 'fold';
+    readonly over: IBindingDescriptor;
+}
+
+// @alpha
+export interface IFoldMemberSupplier<TFamily extends IBindingFamily> {
+    outcomes<TMemberResult>(fold: IFoldDeclaration<TFamily, TMemberResult, unknown>): readonly IFoldEntry<IApply<TFamily['views'], TMemberResult>>[];
+}
+
+// @alpha
+export interface IFoldOptions<TFamily extends IBindingFamily, TTemplate extends IAnyTemplateDeclaration<TFamily>, TStep extends keyof IStepsOf<TTemplate> & string, TResult> {
+    readonly label?: string;
+    readonly over: IFoldOver<TTemplate, TStep>;
+    readonly run: (context: IFoldRunContext<TFamily, IResultOf<TFamily, IStepsOf<TTemplate>[TStep]>>) => TResult;
+    readonly subject: string;
+    readonly version?: number;
+}
+
+// @alpha
+export interface IFoldOver<TTemplate, TStep extends string> {
+    readonly step: TStep;
+    readonly template: TTemplate;
+}
+
+// @alpha
+export type IFoldRunContext<TFamily extends IBindingFamily, TMemberResult> = TFamily['memo'] & {
+    readonly members: readonly IFoldEntry<IApply<TFamily['views'], TMemberResult>>[];
+};
+
+// @alpha
+export interface IFoldTopology {
+    readonly fold: IBindingDescriptor;
+    readonly over: IBindingDescriptor;
+}
 
 // @alpha
 export interface IForward {
@@ -298,6 +398,42 @@ export type IForwardOrigin = {
 };
 
 // @alpha
+export type IGateContext<TFamily extends IBindingFamily, TMember> = TFamily['memo'] & {
+    readonly member: IApply<TFamily['views'], TMember>;
+};
+
+// @alpha
+export interface IGateInvocation<TFamily extends IBindingFamily> {
+    apply<TOutcome>(bindings: TFamily['memo'], member: IMemberSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>): TOutcome;
+    readonly memberKey: string;
+    readonly parent: IBindingDescriptor;
+}
+
+// @alpha
+export type IGateOutcome = {
+    readonly status: 'required';
+} | {
+    readonly status: 'skipped';
+} | {
+    readonly status: 'failed';
+    readonly reason: 'non-boolean';
+    readonly received: string;
+} | {
+    readonly status: 'failed';
+    readonly reason: 'threw';
+    readonly error: unknown;
+};
+
+// @alpha
+export type IGateSettlement = {
+    readonly kind: 'returned';
+    readonly value: unknown;
+} | {
+    readonly kind: 'threw';
+    readonly error: unknown;
+};
+
+// @alpha
 export type IHandleArgument<T> = T | IForwarded<T>;
 
 // @alpha
@@ -310,6 +446,11 @@ export interface IHelperRegistration {
     readonly helper: (...arguments_: never[]) => unknown;
     readonly slot: string;
 }
+
+// @alpha
+export type IIdentityField<TMember> = {
+    [K in keyof TMember]-?: [Exclude<TMember[K], undefined>] extends [never] ? never : Exclude<TMember[K], undefined> extends string ? K : never;
+}[keyof TMember] & string;
 
 // @alpha
 export interface IInputRegistration {
@@ -325,7 +466,7 @@ export interface IInputTarget {
 }
 
 // @alpha
-export type IInvocation<TFamily extends IBindingFamily> = IMemoInvocation<TFamily> | ISourceInvocation<TFamily> | ISuppliedInvocation<TFamily>;
+export type IInvocation<TFamily extends IBindingFamily> = IMemoInvocation<TFamily> | ISourceInvocation<TFamily> | ISuppliedInvocation<TFamily> | IFoldInvocation<TFamily>;
 
 // @alpha
 export type IInvocationArguments = IEmptyArguments | readonly [IArgumentRecipe, ...IArgumentRecipe[]];
@@ -349,9 +490,72 @@ export interface IInvocationScope {
 export type IInvocationWitness = IDirectChildWitness | INestedInvocationWitness;
 
 // @alpha
+export type IKeyedCollectionCheck<TFamily extends IBindingFamily, TCollection> = [
+IMemberOf<TFamily, TCollection>
+] extends [never] ? never : unknown;
+
+// @alpha
+export interface IKeyedMember {
+    readonly key: string;
+    readonly member: unknown;
+}
+
+// @alpha
+export type IKeyedSnapshot = {
+    readonly status: 'keyed';
+    readonly template: string;
+    readonly collection: string;
+    readonly completion: ICollectionStatus;
+    readonly members: readonly IKeyedMember[];
+} | {
+    readonly status: 'rejected';
+    readonly diagnostic: IKeyingDiagnostic;
+};
+
+// @alpha
+export interface IKeyingDiagnostic {
+    readonly collection: string;
+    readonly customKey: boolean;
+    readonly identity: string | undefined;
+    readonly key: string | undefined;
+    readonly message: string;
+    readonly reason: IKeyingFailure;
+    readonly template: string;
+}
+
+// @alpha
+export type IKeyingFailure = 'malformed-snapshot' | 'missing-key' | 'non-string-key' | 'empty-key' | 'duplicate-key' | 'key-function-failed';
+
+// @alpha
+export interface IMemberBuilder<TFamily extends IBindingFamily> {
+    memo<TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult = unknown>(options: ITemplateMemoOptions<TFamily, TChildren, TResult>): IMemoDeclaration<TFamily, TChildren, TResult>;
+    source<TResult>(options: ITemplateSourceOptions<TFamily, TResult>): ISourceDeclaration<TFamily, TResult>;
+    subject(prefix: string): IMemberSubject;
+}
+
+// @alpha
+export type IMemberOf<TFamily extends IBindingFamily, TCollection> = TCollection extends ISourceDeclaration<TFamily, infer TResult> ? TResult extends ICollectionResult<infer TMember> ? TMember : never : never;
+
+// @alpha
 export interface IMemberRegistration<TFamily extends IBindingFamily> {
     readonly key: string;
     readonly steps: readonly IStepRegistration<TFamily>[];
+}
+
+// @alpha
+export interface IMemberSubject extends IMemberSubjectBrand {
+    readonly prefix: string;
+}
+
+// @alpha
+export interface IMemberSubjectBrand {
+    // (undocumented)
+    readonly __microdeltaMemberSubject: unique symbol;
+}
+
+// @alpha
+export interface IMemberSupplier<TFamily extends IBindingFamily> {
+    view<TCollection extends IAnySourceDeclaration<TFamily>>(collection: TCollection, instance: IBindingDescriptor): IApply<TFamily['views'], IMemberOf<TFamily, TCollection>>;
 }
 
 // @alpha
@@ -435,6 +639,13 @@ export interface IScopedSubject {
 export function isDeclaration(value: unknown): boolean;
 
 // @alpha
+export interface ISkippedEntry {
+    readonly key: string;
+    // (undocumented)
+    readonly status: 'skipped';
+}
+
+// @alpha
 export type ISlotSubject<TParameters extends readonly unknown[]> = (derived: IDerivedArguments<TParameters>) => string;
 
 // @alpha
@@ -464,6 +675,7 @@ export interface ISourceInvocation<TFamily extends IBindingFamily> extends IInvo
 
 // @alpha
 export interface ISourceOptions<TFamily extends IBindingFamily, TResult> {
+    readonly collection?: ICollectionOptions<TResult>;
     readonly finality?: (context: IFinalityContext<TFamily, TResult>) => unknown;
     readonly label?: string;
     readonly run: (context: ISourceRunContext<TFamily, TResult>) => IApply<TFamily['outcomes'], TResult>;
@@ -477,7 +689,7 @@ export type ISourceRunContext<TFamily extends IBindingFamily, TResult> = TFamily
 };
 
 // @alpha
-export type IStepDeclaration<TFamily extends IBindingFamily> = IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily>;
+export type IStepDeclaration<TFamily extends IBindingFamily> = IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily> | IAnyFoldDeclaration<TFamily>;
 
 // @alpha
 export interface IStepRegistration<TFamily extends IBindingFamily> {
@@ -502,11 +714,24 @@ export interface IStepSlotOptions {
 }
 
 // @alpha
+export type IStepsOf<TTemplate> = TTemplate extends {
+    readonly steps: infer TSteps;
+} ? TSteps : never;
+
+// @alpha
 export interface IStepTarget<TFamily extends IBindingFamily> {
     readonly declaration: IStepDeclaration<TFamily>;
     // (undocumented)
     readonly role: 'step';
     readonly scopedSubject: IScopedSubject;
+}
+
+// @alpha
+export interface ISucceededEntry<T> {
+    readonly data: T;
+    readonly key: string;
+    // (undocumented)
+    readonly status: 'succeeded';
 }
 
 // @alpha
@@ -569,12 +794,79 @@ export interface ISupplyOptions<TFamily extends IBindingFamily, TParameters exte
 }
 
 // @alpha
+export interface ITemplateBrand<TFamily extends IBindingFamily> {
+    // (undocumented)
+    readonly __microdeltaFamily?: (family: TFamily) => TFamily;
+    // (undocumented)
+    readonly __microdeltaTemplate: unique symbol;
+}
+
+// @alpha
+export interface ITemplateDeclaration<TFamily extends IBindingFamily, TCollection extends IAnySourceDeclaration<TFamily>, TSteps extends ITemplateSteps<TFamily>> extends IAnyTemplateDeclaration<TFamily> {
+    // (undocumented)
+    readonly collection: TCollection;
+    // (undocumented)
+    readonly gate: ((context: IGateContext<TFamily, IMemberOf<TFamily, TCollection>>) => boolean) | undefined;
+    // (undocumented)
+    readonly key: ((member: IMemberOf<TFamily, TCollection>) => string) | undefined;
+    // (undocumented)
+    readonly steps: TSteps;
+}
+
+// @alpha
+export interface ITemplateMemoOptions<TFamily extends IBindingFamily, TChildren extends IChildDeclarations<TFamily>, TResult> {
+    readonly children?: TChildren;
+    readonly label?: string;
+    readonly run: (context: IMemoRunContext<TFamily, TChildren>) => TResult;
+    readonly subject: IMemberSubject;
+    readonly version?: number;
+}
+
+// @alpha
+export interface ITemplateOptions<TFamily extends IBindingFamily, TCollection extends IAnySourceDeclaration<TFamily>, TSteps extends ITemplateSteps<TFamily>> {
+    readonly collection: TCollection & IKeyedCollectionCheck<TFamily, TCollection>;
+    readonly gate?: (context: IGateContext<TFamily, IMemberOf<TFamily, TCollection>>) => boolean;
+    readonly key?: (member: IMemberOf<TFamily, TCollection>) => string;
+    readonly slot: string;
+    readonly steps: (member: IMemberBuilder<TFamily>) => TSteps;
+}
+
+// @alpha
+export interface ITemplateSourceOptions<TFamily extends IBindingFamily, TResult> {
+    readonly finality?: (context: IFinalityContext<TFamily, TResult>) => unknown;
+    readonly label?: string;
+    readonly run: (context: ISourceRunContext<TFamily, TResult>) => IApply<TFamily['outcomes'], TResult>;
+    readonly subject: IMemberSubject;
+    readonly version?: number;
+}
+
+// @alpha
+export type ITemplateStepDeclaration<TFamily extends IBindingFamily> = IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily>;
+
+// @alpha
+export type ITemplateSteps<TFamily extends IBindingFamily> = {
+    readonly [slot: string]: ITemplateStepDeclaration<TFamily>;
+};
+
+// @alpha
+export interface ITemplateTopology {
+    readonly collection: IBindingDescriptor;
+    readonly customKey: boolean;
+    readonly edges: readonly IDeclaredEdge[];
+    readonly gated: boolean;
+    readonly slot: string;
+    readonly steps: readonly IBindingDescriptor[];
+}
+
+// @alpha
 export interface ITopology {
     readonly edges: readonly IDeclaredEdge[];
+    readonly folds: readonly IFoldTopology[];
     readonly helpers: readonly string[];
     readonly inputs: readonly string[];
     readonly slots: readonly string[];
     readonly steps: readonly IBindingDescriptor[];
+    readonly templates: readonly ITemplateTopology[];
 }
 
 // @alpha

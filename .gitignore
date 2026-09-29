@@ -4,3 +4,7 @@ dist/
 coverage/
 *.tsbuildinfo
 *.tgz
+
+scratch/
+*.local.*
+.DS_Store

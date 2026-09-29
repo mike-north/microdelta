@@ -1,7 +1,10 @@
 # Composition, binding, and higher-order work
 
-Status: normative boundaries; EXP-1 selects bounded structural correspondence.
-General nested arguments and higher-order reconstruction remain EXP-4 work.
+Status: normative boundaries. EXP-1 selects bounded structural correspondence.
+[EXP-4](../../experiments/exp-4/decision.md) selects the bounded nested argument
+recipe, supplied callable step slots, keyed fanout templates, tracked gates and
+strict-fold skip treatment recorded below. Arbitrary closure soundness remains
+excluded.
 Owner: Definition & Binding, collaborating with Reuse Resolution.
 
 ## Two graphs
@@ -26,14 +29,34 @@ Their abstract graph must be fully bound before runtime data is resolved.
 Structurally declared callable slots are the selected bounded mechanism for
 reconnecting a supplied implementation, such as `assessor`, across restarts.
 This does not require a globally public step ID or manually declared field
-dependencies. EXP-1 establishes direct current-slot correspondence; EXP-4 still
-owns general nested arguments and higher-order reconstruction.
+dependencies. EXP-1 establishes direct current-slot correspondence.
+
+**EXP-4 supplied-callable selection:** a supplied step is bound at composition to
+a structural callable slot. A step that declares the slot is admitted only when the
+slot resolves to exactly one current implementation; missing and multiply supplied
+slots are distinct misses before the body runs. The parent's evidence names the
+slot descriptor only. The supplied step's implementation evidence belongs to the
+child's own provenance, so exchanging implementation A for B is a child
+implementation change, not a parent-graph change or a guessed remap. Two
+closures with equal emitted text but different captured values are
+indistinguishable to this evidence (preserved counterexample CX-2); captured
+configuration must be a tracked input.
 
 **CMP-4 — Fanout template.** Build the declared member template once with a symbolic
 member input, then instantiate it for actual member keys. Do not rerun a topology
 factory for every runtime member. Member cardinality may be unknown at composition;
 possible operations and connections must not be. Preserve explicit precedence,
 without imposing arbitrary global serial execution on unrelated branches.
+
+**EXP-4 template selection:** the factory runs once against a symbolic member; its
+returned declarations are copied and frozen, and every builder rejects later calls.
+A member instance is addressed by the template's step descriptor (which includes
+its collection binding) plus the member key. Discovery keys every member before
+any gate or body runs, using designated identity or an explicit custom-key
+function (COL-1). A missing or duplicate key rejects the collection with a
+diagnostic naming the collection, the key and the custom-key option; no member
+work is admitted. Renaming a template slot or moving it to another collection is
+changed correspondence: prior instances are not remapped.
 
 ## Nested execution and validation
 
@@ -73,13 +96,57 @@ report an ordinary parent miss and execute normally when admitted; children may
 still reuse. Never execute paid work merely to discover whether that same work was
 necessary and label it cache validation. Do not promise serialized closures.
 
+**EXP-4 argument recipe:** a nested call's durable evidence records its structural
+parent and child slots, its position in the parent's call order and one recipe per
+argument (the M3 empty form remains valid):
+
+| Recipe | Recorded | Reconstruction |
+| --- | --- | --- |
+| `forwarded` | Structural origin: an input path, the member binding, or an earlier child call's output path | Resolved again from **current** bindings; a stored value is never substituted |
+| `derived` | Canonical supported value, and whether it was justified | Used only when recorded as justified and every earlier validation step passed |
+| `unreconstructible` | Its reason (for example a function value) | Always an honest parent miss; the child cannot observe it |
+
+Validation checks the parent's own implementation, consumed bindings and facts
+first, then each call in recorded order. For call *k* it resolves the recipe,
+obtains the current child result (validated or executed under normal admission)
+and compares only the parent's consumed output facts from that call. Under the
+tracked-influence contract, an unchanged parent prefix replays to the same derived
+value, so a changed basis is reported as changed evidence or changed child output
+before call *k*. The distinct unjustified-argument miss is reachable when the
+parent made an **observed** untracked read before deriving the argument. Child
+history identity is the child descriptor plus its derived argument values;
+forwarded values are identified by origin and observed by the child through
+`argument` binding paths. Untracked influence the runtime cannot observe remains
+outside this justification (preserved counterexample CX-1).
+
 ## Gates, skips, and enforcement
 
 **CMP-8 — Tracked runtime gates.** A runtime predicate may select whether a declared
 operation instance runs, without removing it from the abstract graph. Its relevant
 inputs are tracked. Distinguish skipped/no-value from success returning undefined,
-failure, cancellation and pending work. Exact fold policy for skipped members must
-be selected in EXP-4; no silent partial corpus is allowed for a strict consumer.
+failure, cancellation and pending work. No silent partial corpus is allowed for a
+strict consumer.
+
+**EXP-4 strict-fold selection:** a gate yields an explicit `skipped` instance only
+for an explicit `false`; a non-boolean result or a failed read fails the instance.
+The gate declares the **required population**. A strict fold receives one explicit
+keyed entry per current member, `succeeded` with its result view or `skipped`
+with no data, in canonical key order. It runs only when discovery is closed and
+every required member has an accepted result. Any failed or cancelled required
+member fails the fold immediately, naming those keys and still reporting pending
+keys and open discovery; otherwise open discovery or a pending member leaves it
+waiting. Neither case runs the body or publishes. A closed empty population is a
+successful complete fold; an open one waits. By supervisor decision on the
+EXP-4 evidence (not exercised by its fixture), the strict fold's outcome also
+carries framework-level coverage (required keys, skipped keys, discovery
+closure), so consumers need not trust the body to report exclusions; M4 must
+test it. Its verification consumes
+each member's included-or-skipped outcome and the result facts it read, not the
+gate's raw observations; those remain the instance's own evidence. A threshold
+change that flips no outcome therefore reruns nothing. A skip or deletion never
+retracts an earlier publication: the instance's retained history and latest
+pointer are unchanged, and that pointer is not evidence that the member is still
+required. Tolerant or outcome folds are separate (RUN-010) and outside EXP-4.
 
 **CMP-9 — Enforceable boundary.** Reject framework result resolution during graph
 construction and undeclared calls/target substitution/post-freeze mutation before

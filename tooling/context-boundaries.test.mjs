@@ -178,7 +178,7 @@ test('the native SQLite driver is confined to the Node Machine implementation', 
 });
 
 test('portable experiment source rejects Node access while its explicit test harness may use it', async () => {
-  for (const owner of ['experiments/exp-1', 'experiments/exp-2']) {
+  for (const owner of ['experiments/exp-1', 'experiments/exp-2', 'experiments/exp-4']) {
     for (const source of [
       "import { readFile } from 'node:fs/promises';",
       "export { serialize } from 'v8';",

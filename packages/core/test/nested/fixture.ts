@@ -130,6 +130,8 @@ export interface IWorld {
   summaries: Record<IMemberKey, number>;
   /** Assessor body runs per PR number. */
   assessments: Record<string, number>;
+  /** A PR number whose assessment body throws, standing in for a failing child; null for none. */
+  failAssessment: number | null;
 }
 
 /** Ada's activity (authored 101 merged, 102 merged, 103 open). */
@@ -164,6 +166,7 @@ export function createWorld(): IWorld {
     initials: { 'person:ada': 0, 'person:ben': 0 },
     summaries: { 'person:ada': 0, 'person:ben': 0 },
     assessments: {},
+    failAssessment: null,
   };
 }
 
@@ -208,6 +211,9 @@ function initialOf(activity: IResultView<IActivity>, key: IMemberKey): IInitial 
 function assess(rubric: 'A' | 'B', number: number, pullRequest: ITrackedView<IPullRequest>, weights: ITrackedView<IRubric>): IAssessment {
   const counted = String(number);
   world.assessments[counted] = (world.assessments[counted] ?? 0) + 1;
+  if (world.failAssessment === number) {
+    throw new Error(`fixture assessment failure for ${counted}`);
+  }
   const score = pullRequest.merged ? weights.mergedWeight : weights.openWeight;
   return { score, explanation: `${rubric}:${weights.prompt}:${pullRequest.title}` };
 }

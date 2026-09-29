@@ -164,9 +164,10 @@ export interface IInvocationPort<TFamily extends IBindingFamily> {
    */
   isTrackedView(value: unknown): boolean;
   /**
-   * Whether derived arguments made now by the scope's body are justified by its
-   * recorded evidence: false once the body has made an observed untracked read.
-   * Definition records the answer and never computes it.
+   * Whether arguments made now by the scope's body (derived values and
+   * forwarded paths alike) are justified by its recorded evidence: false once
+   * the body has made an observed untracked read. Definition records the
+   * answer and never computes it.
    */
   argumentsJustified(scope: IInvocationScope): boolean;
 }

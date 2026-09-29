@@ -52,7 +52,7 @@ function assessorWitness(memberKey: string, overrides: Readonly<Record<string, u
     index: 2,
     arguments: [
       { form: 'derived', value: encodeSnapshot(7), justified: true },
-      { form: 'forwarded', origin: { binding: 'child', call: 0, path: [{ kind: 'property', key: 'pullRequests' }, { kind: 'index', index: 0 }] } },
+      { form: 'forwarded', origin: { binding: 'child', call: 0, path: [{ kind: 'property', key: 'pullRequests' }, { kind: 'index', index: 0 }] }, justified: true },
     ],
     ...overrides,
   });
@@ -149,6 +149,21 @@ describe('version-2 witness reconnection (acceptance 5)', () => {
     expect(forwarded.origin.path.every(segment => Object.isFrozen(segment))).toBe(true);
   });
 
+  test('CMP-7: justification is read back for forwarded and derived recipes alike, never inferred', () => {
+    const witness = assessorWitness('person:ada', {
+      arguments: [
+        { form: 'derived', value: encodeSnapshot(7), justified: false },
+        { form: 'forwarded', origin: { binding: 'child', call: 0, path: [] }, justified: false },
+      ],
+    });
+    const resolved = buildNested().composition.resolveWitness(witness);
+    expect(resolved.status).toBe('bound');
+    expect(resolved.status === 'bound' ? resolved.witness.version === 2 && resolved.witness.arguments : undefined).toEqual([
+      { form: 'derived', value: encodeSnapshot(7), justified: false },
+      { form: 'forwarded', origin: { binding: 'child', call: 0, path: [] }, justified: false },
+    ]);
+  });
+
   test('REUSE-007: unknown versions, argument forms and recipe forms, and malformed data, are unsupported with precise reasons', () => {
     const { composition } = buildNested();
     const derived = { form: 'derived', value: encodeSnapshot(7), justified: true };
@@ -164,7 +179,7 @@ describe('version-2 witness reconnection (acceptance 5)', () => {
       ['unsupported:argument-form', assessorWitness('person:ada', { arguments: { form: 'empty', items: [] } })],
       ['unsupported:argument-form', assessorWitness('person:ada', { arguments: undefined })],
       ['unsupported:recipe-form', assessorWitness('person:ada', { arguments: [derived, { form: 'closure', source: '() => 1' }] })],
-      ['unsupported:recipe-form', assessorWitness('person:ada', { arguments: [derived, { form: 'forwarded', origin: { binding: 'global', path: [] } }] })],
+      ['unsupported:recipe-form', assessorWitness('person:ada', { arguments: [derived, { form: 'forwarded', origin: { binding: 'global', path: [] }, justified: true }] })],
       ['unsupported:malformed', assessorWitness('person:ada', { arguments: [derived, { value: 1 }] })],
       ['unsupported:malformed', assessorWitness('person:ada', { arguments: [{ form: 'derived', value: 'not canonical', justified: true }] })],
       ['unsupported:malformed', assessorWitness('person:ada', { arguments: [{ form: 'derived', value: encodeSnapshot(7) }] })],
@@ -172,10 +187,13 @@ describe('version-2 witness reconnection (acceptance 5)', () => {
       ['unsupported:malformed', assessorWitness('person:ada', { arguments: [{ ...derived, extra: true }] })],
       ['unsupported:malformed', assessorWitness('person:ada', { arguments: [{ form: 'unreconstructible', reason: '' }] })],
       ['unsupported:malformed', assessorWitness('person:ada', { arguments: [{ form: 'unreconstructible', reason: 'Unsupported value at $: function' }] })],
-      ['unsupported:malformed', assessorWitness('person:ada', { arguments: [{ form: 'forwarded', origin: { binding: 'child', call: 2, path: [] } }] })],
-      ['unsupported:malformed', assessorWitness('person:ada', { arguments: [{ form: 'forwarded', origin: { binding: 'input', slot: '', path: [] } }] })],
-      ['unsupported:malformed', assessorWitness('person:ada', { arguments: [{ form: 'forwarded', origin: { binding: 'input', slot: 'config', path: ['minimumAuthored'] } }] })],
-      ['unsupported:malformed', assessorWitness('person:ada', { arguments: [{ form: 'forwarded', origin: { binding: 'member', path: [{ kind: 'index', index: -1 }] } }] })],
+      // A forwarded recipe records whether its path was chosen with no observed untracked read before it; strictly required.
+      ['unsupported:malformed', assessorWitness('person:ada', { arguments: [{ form: 'forwarded', origin: { binding: 'child', call: 0, path: [] } }] })],
+      ['unsupported:malformed', assessorWitness('person:ada', { arguments: [{ form: 'forwarded', origin: { binding: 'child', call: 0, path: [] }, justified: 'yes' }] })],
+      ['unsupported:malformed', assessorWitness('person:ada', { arguments: [{ form: 'forwarded', origin: { binding: 'child', call: 2, path: [] }, justified: true }] })],
+      ['unsupported:malformed', assessorWitness('person:ada', { arguments: [{ form: 'forwarded', origin: { binding: 'input', slot: '', path: [] }, justified: true }] })],
+      ['unsupported:malformed', assessorWitness('person:ada', { arguments: [{ form: 'forwarded', origin: { binding: 'input', slot: 'config', path: ['minimumAuthored'] }, justified: true }] })],
+      ['unsupported:malformed', assessorWitness('person:ada', { arguments: [{ form: 'forwarded', origin: { binding: 'member', path: [{ kind: 'index', index: -1 }] }, justified: true }] })],
       ['unsupported:malformed', assessorWitness('person:ada', { parent: { slot: 'summary' } })],
       ['unsupported:witness-version', 'summary->assessor'],
     ];
@@ -233,7 +251,7 @@ describe('version-2 witness reconnection (acceptance 5)', () => {
   });
 
   test('CMP-7: a member-binding origin is an unsupported argument form for a parent that is not a template instance', () => {
-    const memberParent = assessorWitness('person:ada', { arguments: [{ form: 'forwarded', origin: { binding: 'member', path: [] } }] });
+    const memberParent = assessorWitness('person:ada', { arguments: [{ form: 'forwarded', origin: { binding: 'member', path: [] }, justified: true }] });
     expect(outcome(buildNested().composition.resolveWitness(memberParent))).toBe('unsupported:argument-form');
   });
 
@@ -250,7 +268,7 @@ describe('version-2 witness reconnection (acceptance 5)', () => {
       parent: levelStep('report'),
       child: callable('assessor'),
       index: 0,
-      arguments: [{ form: 'forwarded', origin: { binding: 'member', path: [] } }],
+      arguments: [{ form: 'forwarded', origin: { binding: 'member', path: [] }, justified: true }],
     });
     expect(outcome(composition.resolveWitness(witness))).toBe('unsupported:argument-form');
   });

@@ -7,7 +7,10 @@
  * origin (an input path, the member binding, or an earlier child call of the
  * same invocation plus a path) that Resolution resolves again from current
  * bindings. Any other supported plain data is a derived value retained as its
- * canonical MDS1 encoding. A value that is not supported plain data (a
+ * canonical MDS1 encoding. Both forwarded and derived recipes record whether
+ * the choice they carry (a derived value, or a forwarded path) was made with
+ * no observed untracked read earlier in the calling frame; the port answers
+ * that and Definition only records it. A value that is not supported plain data (a
  * function, symbol, accessor-bearing record and so on) is recorded as
  * unreconstructible, never rejected; the child can never observe it. A raw
  * tracked view is a live observation of a current binding and must be passed
@@ -168,7 +171,7 @@ export interface IArgumentContext {
   inputDeclared(slot: string): boolean;
   /** The port's tracked-view recognizer. */
   isTrackedView(value: unknown): boolean;
-  /** The port's justification for derived arguments made now. */
+  /** The port's justification for derived and forwarded arguments made now. */
   justified(): boolean;
 }
 
@@ -229,11 +232,12 @@ function containsLiveValue(value: unknown, isTrackedView: (value: unknown) => bo
 }
 
 /**
- * Validate a forward token's origin against the calling invocation. Member
- * origins require a template instance's member binding; no parent recorded
- * here has one, so they are rejected before any call position is consumed.
+ * Validate a forward token's origin against the calling invocation and return
+ * it. Member origins require a template instance's member binding; no parent
+ * recorded here has one, so they are rejected before any call position is
+ * consumed.
  */
-function forwardedRecipe(state: IForwardState, context: IArgumentContext, position: number): IArgumentRecipe {
+function forwardedOrigin(state: IForwardState, context: IArgumentContext, position: number): IForwardOrigin {
   const { origin } = state;
   switch (origin.binding) {
     case 'input':
@@ -256,7 +260,7 @@ function forwardedRecipe(state: IForwardState, context: IArgumentContext, positi
       return exhaustive;
     }
   }
-  return Object.freeze({ form: 'forwarded', origin });
+  return origin;
 }
 
 /**
@@ -294,14 +298,15 @@ function unreconstructibleReason(value: unknown, seen: Set<object>): IUnreconstr
   return undefined;
 }
 
-/** One argument after classification: a validated forwarded recipe, or plain data still to encode. */
-type IClassified = { readonly recipe: IArgumentRecipe } | { readonly value: unknown };
+/** One argument after classification: a validated forwarded origin, or plain data still to encode. */
+type IClassified = { readonly origin: IForwardOrigin } | { readonly value: unknown };
 
 /**
  * Record one call's runtime arguments as recipes, or reject before dispatch.
  * A first pass classifies every argument and validates every forwarded origin,
  * so a rejection never follows any encoding or any justification query; only
- * then are plain values encoded.
+ * then are plain values encoded. The port is asked for justification at most
+ * once per call, and only when a forwarded or derived recipe needs it.
  * @param values - The call's runtime arguments, in position order.
  * @param context - The calling invocation's recording context.
  * @returns The empty form for no arguments, otherwise one recipe per position.
@@ -310,7 +315,7 @@ export function recordArguments(values: readonly unknown[], context: IArgumentCo
   const classified = values.map((value, position): IClassified => {
     const state = typeof value === 'object' && value !== null ? forwardTokens.get(value) : undefined;
     if (state !== undefined) {
-      return { recipe: forwardedRecipe(state, context, position) };
+      return { origin: forwardedOrigin(state, context, position) };
     }
     const live = containsLiveValue(value, context.isTrackedView, new Set());
     if (live === 'tracked') {
@@ -323,8 +328,9 @@ export function recordArguments(values: readonly unknown[], context: IArgumentCo
   });
   let justified: boolean | undefined;
   const recipes = classified.map((entry): IArgumentRecipe => {
-    if ('recipe' in entry) {
-      return entry.recipe;
+    if ('origin' in entry) {
+      justified ??= context.justified() === true;
+      return Object.freeze({ form: 'forwarded', origin: entry.origin, justified });
     }
     let encoded: string;
     try {

@@ -173,11 +173,11 @@ describe('provenance v2 and cold execution', () => {
       // CMP-7: a derived scalar (justified: no untracked read preceded it) and a forwarded origin in call 0's output.
       expect(calls[2]?.witness.arguments).toEqual([
         { form: 'derived', value: encodeSnapshot(101), justified: true },
-        { form: 'forwarded', origin: { binding: 'child', call: 0, path: pullRequestAddress(0) } },
+        { form: 'forwarded', origin: { binding: 'child', call: 0, path: pullRequestAddress(0) }, justified: true },
       ]);
       expect(calls[4]?.witness.arguments).toEqual([
         { form: 'derived', value: encodeSnapshot(103), justified: true },
-        { form: 'forwarded', origin: { binding: 'child', call: 0, path: pullRequestAddress(2) } },
+        { form: 'forwarded', origin: { binding: 'child', call: 0, path: pullRequestAddress(2) }, justified: true },
       ]);
       // Every recorded call's exact result is an exact dependency, in call order.
       const envelope = session.history.readEnvelope({ kind: 'completed-result', locator: cold['person:ada'] });
@@ -420,12 +420,12 @@ describe('honest misses', () => {
       const calls = callsOf(session, cold['person:ada']);
       expect(calls[2]?.witness.arguments).toEqual([
         { form: 'derived', value: encodeSnapshot(101), justified: false },
-        { form: 'forwarded', origin: { binding: 'child', call: 0, path: pullRequestAddress(0) } },
+        { form: 'forwarded', origin: { binding: 'child', call: 0, path: pullRequestAddress(0) }, justified: false },
       ]);
       // Ben's summary made no untracked read; its derived arguments stay justified.
       expect(callsOf(session, cold['person:ben'])[2]?.witness.arguments).toEqual([
         { form: 'derived', value: encodeSnapshot(201), justified: true },
-        { form: 'forwarded', origin: { binding: 'child', call: 0, path: pullRequestAddress(0) } },
+        { form: 'forwarded', origin: { binding: 'child', call: 0, path: pullRequestAddress(0) }, justified: true },
       ]);
     });
     resetCounts();
@@ -446,7 +446,7 @@ describe('honest misses', () => {
     await withNestedSession(location, variation, async (session) => {
       expect(callsOf(session, cold['person:ada'])[2]?.witness.arguments).toEqual([
         { form: 'derived', value: encodeSnapshot(101), justified: true },
-        { form: 'forwarded', origin: { binding: 'child', call: 0, path: pullRequestAddress(0) } },
+        { form: 'forwarded', origin: { binding: 'child', call: 0, path: pullRequestAddress(0) }, justified: true },
         { form: 'unreconstructible', reason: 'function' },
       ]);
     });
@@ -465,20 +465,123 @@ describe('honest misses', () => {
   test.each([
     ['none', 'missing-binding', /assessor has no current implementation/u],
     ['twice', 'ambiguous-binding', /assessor has 2 current implementations/u],
-  ] as const)('a supplied slot bound %s on restart is a distinct miss and a distinct failure before any body', async (supplied, reason, diagnostic) => {
+  ] as const)('a supplied slot bound %s on restart is a distinct miss and a distinct failure with no child work at all', async (supplied, reason, diagnostic) => {
     const location = freshLocation();
     await coldRun(location);
     resetCounts();
+    // The earlier recorded call (call 0, the activity source) would need a check now; it must not run.
+    world.final['person:ada'] = false;
     await withNestedSession(location, { supplied, order: 'reversed' }, async (session) => {
       const checked = await session.check(session.nested.steps['person:ada'].summary);
       expect(checked.kind).toBe('execution-required');
       expect(checked.misses.map((item) => item.reason)).toEqual([reason]);
       const failure = await expectFailure(session.resolve(session.nested.steps['person:ada'].summary), 'unbound-step');
       expect(failure.message).toMatch(diagnostic);
-      expect(session.admissions.filter((request) => request.step.slot === 'summary')).toEqual([]);
+      expect(session.admissions).toEqual([]);
+      expect(session.events.filter((event) => event.step.slot !== 'summary')).toEqual([]);
     });
+    expect(world.checks).toEqual({ 'person:ada': 0, 'person:ben': 0 });
+    expect(world.initials).toEqual({ 'person:ada': 0, 'person:ben': 0 });
     expect(world.summaries).toEqual({ 'person:ada': 0, 'person:ben': 0 });
     expect(world.assessments).toEqual({});
+  });
+
+  test('an unsupported recorded witness is found before any child work, even when an earlier call would need work', async () => {
+    const location = freshLocation();
+    const cold = await coldRun(location);
+    await withNestedSession(location, {}, async (session) => {
+      const original = session.history.readEnvelope({ kind: 'completed-result', locator: cold['person:ada'] });
+      const content = JSON.parse(JSON.stringify(original.provenance.content)) as { readonly calls: IStoredCall[] } & Record<string, unknown>;
+      const crafted = { ...content, calls: content.calls.map((call) => call.index === 3 ? { ...call, witness: { ...call.witness, version: 9 } } : call) };
+      const attempt = session.history.allocateAttempt(session.lease, { analysis: original.analysis, environment: original.environment, subject: original.subject, version: original.version, attemptKey: 'crafted-late-witness', intentDigest: 'crafted:late-witness' });
+      session.history.stageAttempt(session.lease, { attemptId: attempt.attemptId, payload: payloadOf(session.history, cold['person:ada']), provenance: { format: original.provenance.format, formatVersion: 2, content: crafted }, dependencies: original.dependencies });
+      session.history.publishAttempt(session.lease, attempt.attemptId);
+    });
+    resetCounts();
+    world.final['person:ada'] = false;
+    await withNestedSession(location, {}, async (session) => {
+      const checked = await session.check(session.nested.steps['person:ada'].summary);
+      // The crafted candidate misses on its call-3 witness before call 0's source is consulted;
+      // the older candidate then reaches the activity source, which needs a check.
+      expect(checked.misses.map((item) => item.reason)).toEqual(['unsupported-evidence']);
+      expect(checked).toMatchObject({ kind: 'uncertain', boundary: session.nested.steps['person:ada'].activity });
+    });
+    expect(world.checks['person:ada']).toBe(0);
+  });
+
+  test('an M3-shaped (version-1) candidate whose recorded witness is not version 1 is unsupported evidence', async () => {
+    const location = freshLocation();
+    await coldRun(location);
+    const crafted = await withNestedSession(location, {}, async (session) => {
+      const [initialCandidate] = session.history.findCandidates({ analysis, environment: 'env:nested', subject: 'initial:acme/widget:person:ada', version: 1 });
+      if (initialCandidate === undefined) {
+        throw new Error('expected the cold initial result');
+      }
+      const content = JSON.parse(JSON.stringify(initialCandidate.provenance.content)) as { readonly children: { readonly witness: Record<string, unknown> }[] } & Record<string, unknown>;
+      const children = content.children.map((child) => ({ ...child, witness: { ...child.witness, version: 2, index: 0 } }));
+      const attempt = session.history.allocateAttempt(session.lease, { analysis: initialCandidate.analysis, environment: initialCandidate.environment, subject: initialCandidate.subject, version: initialCandidate.version, attemptKey: 'crafted-v1-witness', intentDigest: 'crafted:v1-witness' });
+      session.history.stageAttempt(session.lease, { attemptId: attempt.attemptId, payload: payloadOf(session.history, initialCandidate.reference.locator), provenance: { format: initialCandidate.provenance.format, formatVersion: 1, content: { ...content, children } }, dependencies: initialCandidate.dependencies });
+      return { crafted: session.history.publishAttempt(session.lease, attempt.attemptId).locator, original: initialCandidate.reference.locator };
+    });
+    resetCounts();
+    await withNestedSession(location, {}, async (session) => {
+      const outcome = await session.resolve(session.nested.steps['person:ada'].initial);
+      expect(outcome.misses.map((item) => [item.candidate.locator, item.reason])).toEqual([[crafted.crafted, 'unsupported-evidence']]);
+      expect(outcome).toMatchObject({ kind: 'reused', basis: 'validated' });
+      expect(referenceOf(outcome)).toBe(crafted.original);
+    });
+    expect(world.initials['person:ada']).toBe(0);
+  });
+
+  test('an older candidate is validated and reused after a newer candidate misses', async () => {
+    const location = freshLocation();
+    const cold = await coldRun(location);
+    const newer = await withNestedSession(location, { rubricInput: { ...defaultRubric, mergedWeight: 3 } }, async (session) => referenceOf(await session.resolve(session.nested.steps['person:ada'].summary)));
+    expect(newer).not.toBe(cold['person:ada']);
+    resetCounts();
+    await withNestedSession(location, {}, async (session) => {
+      const outcome = await session.resolve(session.nested.steps['person:ada'].summary);
+      expect(outcome.misses.map((item) => [item.candidate.locator, item.reason])).toEqual([[newer, 'changed-child-output']]);
+      expect(outcome).toMatchObject({ kind: 'reused', basis: 'validated' });
+      expect(referenceOf(outcome)).toBe(cold['person:ada']);
+    });
+    // The assessments' older candidates are reused too: no body runs.
+    expect(world.summaries['person:ada']).toBe(0);
+    expect(world.assessments).toEqual({});
+  });
+
+  test.each([
+    ['added', [...adaActivity().pullRequests, { number: 104, merged: true, title: 'New' }], { initial: 'A', total: 7, assessed: 4 }, { 104: 1 }],
+    ['removed', adaActivity().pullRequests.slice(0, 2), { initial: 'A', total: 4, assessed: 2 }, {}],
+  ] as const)('a changed call count (a pull request %s) is changed call-0 output; only new calls run', async (_label, pullRequests, payload, assessments) => {
+    const location = freshLocation();
+    await coldRun(location);
+    resetCounts();
+    world.final['person:ada'] = false;
+    world.remote['person:ada'] = { profile: { name: 'Ada' }, pullRequests: [...pullRequests] };
+    await withNestedSession(location, {}, async (session) => {
+      const outcome = await session.resolve(session.nested.steps['person:ada'].summary);
+      expect(outcome.kind).toBe('published');
+      expect(reasons(outcome)).toEqual(['changed-child-output']);
+      expect(outcome.misses[0]?.observation?.binding.path).toEqual(['call', '0']);
+      expect(payloadOf(session.history, referenceOf(outcome))).toEqual(payload);
+    });
+    expect(world.assessments).toEqual(assessments);
+    expect(world.summaries['person:ada']).toBe(1);
+  });
+
+  test('a child failing while the parent is validated fails the request once, with no parent admission or body', async () => {
+    const location = freshLocation();
+    await coldRun(location);
+    resetCounts();
+    world.failAssessment = 101;
+    await withNestedSession(location, { rubricInput: { ...defaultRubric, mergedWeight: 3 } }, async (session) => {
+      const failure = await expectFailure(session.resolve(session.nested.steps['person:ada'].summary), 'execution-failure');
+      expect(failure.message).toMatch(/fixture assessment failure for 101/u);
+      expect(session.admissions.filter((request) => request.step.slot === 'summary')).toEqual([]);
+    });
+    expect(world.assessments).toEqual({ 101: 1 });
+    expect(world.summaries['person:ada']).toBe(0);
   });
 
   test('an unknown provenance version and an unknown recorded witness version are unsupported evidence; the older valid candidate is reused', async () => {

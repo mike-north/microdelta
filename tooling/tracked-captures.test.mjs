@@ -550,3 +550,17 @@ test("Tracking's observed untracked read and its justification query are observe
   const findings = result.messages.filter(message => message.ruleId === 'microdelta/tracked-captures');
   assert.deepEqual(capturedNames(findings), ['external'], JSON.stringify(result.messages, null, 2));
 });
+
+test("only a receiver that resolves to Definition's canonical forward is a capability; a value annotated IForward is not", async () => {
+  const findings = await nestedFindings([
+    "import type { IForward } from '@microdelta/definition';",
+    'declare const spoof: IForward;',
+    'const builders = declarations<IFamily>();',
+    'const aliased = builders.forward;',
+    "const slot = stepSlot<readonly [{ readonly n: number }], number>({ slot: 'assessor' });",
+    "memo({ subject: 'spoofed', children: { assess: slot }, run: async ({ calls }) => (await calls.assess(spoof.input<{ readonly n: number }>('limit'))).data });",
+    "memo({ subject: 'aliased', children: { assess: slot }, run: async ({ calls }) => (await calls.assess(aliased.input<{ readonly n: number }>('limit'))).data });",
+    "memo({ subject: 'member', children: { assess: slot }, run: async ({ calls }) => (await calls.assess(builders.forward.input<{ readonly n: number }>('limit'))).data });",
+  ]);
+  assert.deepEqual(capturedNames(findings), ['spoof'], JSON.stringify(findings, null, 2));
+});

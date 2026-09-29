@@ -15,7 +15,7 @@ describe('derivedArguments', () => {
   test('decodes derived recipes by position and leaves forwarded and unreconstructible positions as holes', () => {
     const recipes: IInvocationArguments = [
       { form: 'derived', value: encodeSnapshot(101), justified: true },
-      { form: 'forwarded', origin: { binding: 'child', call: 0, path: [{ kind: 'index', index: 0 }] } },
+      { form: 'forwarded', origin: { binding: 'child', call: 0, path: [{ kind: 'index', index: 0 }] }, justified: true },
       { form: 'derived', value: encodeSnapshot({ label: 'docs', weights: [2, 1] }), justified: false },
       { form: 'unreconstructible', reason: 'function' },
     ];

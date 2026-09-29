@@ -141,7 +141,7 @@ describe('version-2 witnesses in call order (acceptance 5)', () => {
       index: 2,
       arguments: [
         { form: 'derived', value: encodeSnapshot(7), justified: true },
-        { form: 'forwarded', origin: { binding: 'child', call: 0, path: [{ kind: 'property', key: 'pullRequests' }, { kind: 'index', index: 0 }] } },
+        { form: 'forwarded', origin: { binding: 'child', call: 0, path: [{ kind: 'property', key: 'pullRequests' }, { kind: 'index', index: 0 }] }, justified: true },
       ],
     });
     expect(requestAt(fake, 3).witness).toEqual({
@@ -174,27 +174,31 @@ describe('version-2 witnesses in call order (acceptance 5)', () => {
     expect(Object.keys(decodeSnapshot(value) as object)).toEqual(['merged', 'number']);
   });
 
-  test('REUSE-006: justified is carried from the port at call time for derived arguments only; Definition never computes it', async () => {
+  test('REUSE-006: justified is carried from the port at call time for derived and forwarded arguments; Definition never computes it', async () => {
     const build = buildNested();
     const fake = fakePort();
     const { calls } = openSummary(build, 'person:ada', fake);
     const activity = await activityResult(calls, fake);
     fake.justified = false;
     await calls.assess(7, forward.child<IPullRequest>(activity, ['pullRequests', 0]));
-    fake.justified = true;
-    const queriesBeforeForwardedOnly = fake.justifiedQueries;
+    // A forwarded path is a choice too: one made after an observed untracked read is unjustified.
     await calls.assess(forward.input<number>('config', ['minimumAuthored']), forward.child<IPullRequest>(activity, ['pullRequests', 0]));
-    expect(fake.justifiedQueries).toBe(queriesBeforeForwardedOnly);
+    fake.justified = true;
     await calls.assess(7, merged);
     expect(requestAt(fake, 1).witness.arguments).toEqual([
       { form: 'derived', value: encodeSnapshot(7), justified: false },
-      { form: 'forwarded', origin: { binding: 'child', call: 0, path: [{ kind: 'property', key: 'pullRequests' }, { kind: 'index', index: 0 }] } },
+      { form: 'forwarded', origin: { binding: 'child', call: 0, path: [{ kind: 'property', key: 'pullRequests' }, { kind: 'index', index: 0 }] }, justified: false },
+    ]);
+    expect(requestAt(fake, 2).witness.arguments).toEqual([
+      { form: 'forwarded', origin: { binding: 'input', slot: 'config', path: [{ kind: 'property', key: 'minimumAuthored' }] }, justified: false },
+      { form: 'forwarded', origin: { binding: 'child', call: 0, path: [{ kind: 'property', key: 'pullRequests' }, { kind: 'index', index: 0 }] }, justified: false },
     ]);
     expect(requestAt(fake, 3).witness.arguments).toEqual([
       { form: 'derived', value: encodeSnapshot(7), justified: true },
       { form: 'derived', value: encodeSnapshot(merged), justified: true },
     ]);
-    expect(fake.justifiedQueries).toBe(2);
+    // One query per argument-bearing call, made once all of its arguments are classified.
+    expect(fake.justifiedQueries).toBe(3);
   });
 
   test('M3 compatibility: parents whose children are all sources dispatch the version-1 witness, including composition-level parents', async () => {
@@ -225,17 +229,17 @@ describe('argument-bearing handles (acceptance 4)', () => {
     await calls.assess(1, forward.child<IPullRequest>(activity));
     await calls.assess(forward.input<number>('config', ['0']), forward.child<IPullRequest>(activity, [0]));
     expect(requestAt(fake, 1).witness.arguments).toEqual([
-      { form: 'forwarded', origin: { binding: 'input', slot: 'config', path: [{ kind: 'property', key: 'minimumAuthored' }] } },
-      { form: 'forwarded', origin: { binding: 'child', call: 0, path: [{ kind: 'property', key: 'pullRequests' }, { kind: 'index', index: 0 }] } },
+      { form: 'forwarded', origin: { binding: 'input', slot: 'config', path: [{ kind: 'property', key: 'minimumAuthored' }] }, justified: true },
+      { form: 'forwarded', origin: { binding: 'child', call: 0, path: [{ kind: 'property', key: 'pullRequests' }, { kind: 'index', index: 0 }] }, justified: true },
     ]);
     expect(requestAt(fake, 2).witness.arguments).toEqual([
       { form: 'derived', value: encodeSnapshot(1), justified: true },
-      { form: 'forwarded', origin: { binding: 'child', call: 0, path: [] } },
+      { form: 'forwarded', origin: { binding: 'child', call: 0, path: [] }, justified: true },
     ]);
     // A string "0" is a property key, a number 0 an array index; they are never normalized.
     expect(requestAt(fake, 3).witness.arguments).toEqual([
-      { form: 'forwarded', origin: { binding: 'input', slot: 'config', path: [{ kind: 'property', key: '0' }] } },
-      { form: 'forwarded', origin: { binding: 'child', call: 0, path: [{ kind: 'index', index: 0 }] } },
+      { form: 'forwarded', origin: { binding: 'input', slot: 'config', path: [{ kind: 'property', key: '0' }] }, justified: true },
+      { form: 'forwarded', origin: { binding: 'child', call: 0, path: [{ kind: 'index', index: 0 }] }, justified: true },
     ]);
   });
 

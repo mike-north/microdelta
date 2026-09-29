@@ -174,6 +174,14 @@ interface IMemoFrame {
   readonly step: IBindingDescriptor;
   readonly children: Map<string, IChildEvidence>;
   readonly calls: Map<number, ICallEvidence>;
+  /** Declared calls the body has started whose delivery has not yet settled. */
+  readonly inflight: Set<Promise<unknown>>;
+  /**
+   * How many started calls were still unsettled at the moment the body's
+   * returned value was taken; undefined until then. A result cannot be
+   * published without the evidence of every call its body made.
+   */
+  unsettledAtReturn: number | undefined;
   refused: { readonly step: IBindingDescriptor; readonly reason: string } | undefined;
   /** The first failed child resolution; a body that swallows it still cannot publish. */
   failed: { readonly error: unknown } | undefined;
@@ -226,10 +234,12 @@ interface IEligible {
 }
 
 /**
- * Pass a value through a trusted port contract. Definition types a child view
- * and a previous carrier by the declared result type, which Resolution
- * delivers by construction from that declaration's exact result; the static
- * type cannot express that relationship, so this single assertion states it.
+ * Pass a value through a trusted port contract. Definition types a child view,
+ * a previous carrier and a supplied step's argument views by declared types
+ * (the child's result type, or the slot's parameter types), which Resolution
+ * delivers by construction: the view of that declaration's exact result, or
+ * views of the arguments rebuilt for that very call. The static type cannot
+ * express those relationships, so this single assertion states them.
  */
 function trusted<T>(value: unknown): T {
   return value as T;
@@ -337,6 +347,7 @@ function plainRecipe(recipe: IArgumentRecipe): Record<string, unknown> {
         origin: origin.binding === 'input' ? { binding: origin.binding, slot: origin.slot, path }
           : origin.binding === 'child' ? { binding: origin.binding, call: origin.call, path }
             : { binding: origin.binding, path },
+        justified: recipe.justified,
       };
     }
     case 'derived':
@@ -976,6 +987,10 @@ export function createResolution<TInputs extends object, THelpers extends object
       if (reconnected.status !== 'bound') {
         return { verdict: 'miss', miss: miss(candidate.reference, 'correspondence', `direct-child witness for ${child.slot} has no unique current correspondence (${reconnected.status})`) };
       }
+      if (reconnected.witness.version !== 1) {
+        // Version-1 provenance records only version-1 witnesses; any other is not this format's meaning.
+        return { verdict: 'miss', miss: miss(candidate.reference, 'unsupported-evidence', `direct-child witness for ${child.slot} is version ${String(reconnected.witness.version)}, not version 1`) };
+      }
       const childStep = siblingStep(step, child.slot);
       const childTarget = composition.resolve(childStep);
       const childDeclaration = reconnected.child.declaration;
@@ -1046,33 +1061,17 @@ export function createResolution<TInputs extends object, THelpers extends object
     if (ownComparison.kind !== 'equal') {
       return { verdict: 'miss', miss: missFrom(candidate.reference, ownComparison) };
     }
+    const scanned = scanCalls(candidate, declaration, provenance);
+    if (scanned.status === 'miss') {
+      return { verdict: 'miss', miss: scanned.miss };
+    }
     const outputs = new Map<number, ICompletedResultReference>();
     const unavailable: ICurrentFactProvider = Object.freeze({ resolve: () => ({ kind: 'unavailable' as const }) });
-    for (const call of provenance.calls) {
+    for (const { call, reconnected } of scanned.calls) {
       const label = `call ${String(call.index)}`;
-      const reconnected = composition.resolveWitness(call.witness);
-      switch (reconnected.status) {
-        case 'unsupported':
-          return missed('unsupported-evidence', `${label} witness is unsupported (${reconnected.reason})`);
-        case 'missing':
-          return missed('missing-binding', `${label}: ${describeSlot(reconnected.descriptor)} has no current binding`);
-        case 'ambiguous':
-          return missed('ambiguous-binding', `${label}: ${describeSlot(reconnected.descriptor)} has ${String(reconnected.occupants)} current bindings`);
-        case 'undeclared-edge':
-          return missed('correspondence', `${label} names an edge this step no longer declares`);
-        case 'bound':
-          break;
-        default: {
-          const exhaustive: never = reconnected;
-          return exhaustive;
-        }
-      }
       const witness = reconnected.witness;
-      if (witness.version !== 2 || witness.index !== call.index) {
-        return missed('unsupported-evidence', `${label} carries a witness for another call position or version`);
-      }
-      if (reconnected.parent.declaration !== declaration) {
-        return missed('correspondence', `${label} names a parent other than this step's current declaration`);
+      if (witness.version !== 2) {
+        return missed('unsupported-evidence', `${label} carries a witness for another version`);
       }
       if (!candidate.dependencies.some((dependency) => dependency.locator === call.reference.locator)) {
         throw new ResolutionError('integrity', `Recorded ${label} of ${candidate.reference.locator} is not among its exact dependencies`);
@@ -1139,12 +1138,114 @@ export function createResolution<TInputs extends object, THelpers extends object
     };
   }
 
+  /** A recorded call reconnected to its current parent and child, before any child work. */
+  interface IScannedCall {
+    readonly call: ICallEvidence;
+    readonly reconnected: Extract<ReturnType<typeof composition.resolveWitness>, { readonly status: 'bound' }>;
+  }
+
+  /**
+   * Reconnect every recorded call's witness through Definition, side effect
+   * free, before any child is resolved. A witness Definition cannot read, a
+   * slot with no current binding or several, an edge the step no longer
+   * declares, another parent, or a witness for another call position is a
+   * miss with zero child work, even when an earlier call would need work.
+   */
+  function scanCalls(candidate: ICompletedEnvelope, declaration: IAnyMemoDeclaration<IFamily>, provenance: INestedProvenance):
+    | { readonly status: 'miss'; readonly miss: ICandidateMiss }
+    | { readonly status: 'scanned'; readonly calls: readonly IScannedCall[] } {
+    const missed = (reason: ICandidateMiss['reason'], detail: string): { readonly status: 'miss'; readonly miss: ICandidateMiss } =>
+      ({ status: 'miss', miss: miss(candidate.reference, reason, detail) });
+    const calls: IScannedCall[] = [];
+    for (const call of provenance.calls) {
+      const label = `call ${String(call.index)}`;
+      const reconnected = composition.resolveWitness(call.witness);
+      switch (reconnected.status) {
+        case 'unsupported':
+          return missed('unsupported-evidence', `${label} witness is unsupported (${reconnected.reason})`);
+        case 'missing':
+          return missed('missing-binding', `${label}: ${describeSlot(reconnected.descriptor)} has no current binding`);
+        case 'ambiguous':
+          return missed('ambiguous-binding', `${label}: ${describeSlot(reconnected.descriptor)} has ${String(reconnected.occupants)} current bindings`);
+        case 'undeclared-edge':
+          return missed('correspondence', `${label} names an edge this step no longer declares`);
+        case 'bound':
+          break;
+        default: {
+          const exhaustive: never = reconnected;
+          return exhaustive;
+        }
+      }
+      if (reconnected.witness.version !== 2 || reconnected.witness.index !== call.index) {
+        return missed('unsupported-evidence', `${label} carries a witness for another call position or version`);
+      }
+      if (reconnected.parent.declaration !== declaration) {
+        return missed('correspondence', `${label} names a parent other than this step's current declaration`);
+      }
+      calls.push({ call, reconnected });
+    }
+    return { status: 'scanned', calls };
+  }
+
+  /**
+   * Whether a memo's declared supplied slots are each bound to exactly one
+   * implementation now. Opening the invocation runs no author code; Definition
+   * refuses it, with its distinct missing or ambiguous diagnostic, otherwise.
+   */
+  function slotOccupancy(step: IBindingDescriptor): { readonly reason: 'missing-binding' | 'ambiguous-binding'; readonly error: ResolutionError } | undefined {
+    try {
+      openMemo(step).close();
+      return undefined;
+    } catch (error: unknown) {
+      if (error instanceof ResolutionError && error.cause instanceof DefinitionError) {
+        if (error.cause.code === 'missing-slot') {
+          return { reason: 'missing-binding', error };
+        }
+        if (error.cause.code === 'ambiguous-slot') {
+          return { reason: 'ambiguous-binding', error };
+        }
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * The miss of a candidate for a memo that cannot run now because a declared
+   * supplied slot is unbound: whatever its own evidence and recorded witnesses
+   * show without any child work, otherwise the slot occupancy itself.
+   */
+  function unboundMiss(request: IRequestContext, declaration: IAnyMemoDeclaration<IFamily>, candidate: ICompletedEnvelope, occupancy: { readonly reason: 'missing-binding' | 'ambiguous-binding'; readonly error: ResolutionError }): ICandidateMiss {
+    const reading = integrity(() => readProvenance(candidate));
+    if (reading.status === 'unsupported') {
+      return miss(candidate.reference, 'unsupported-evidence', reading.detail);
+    }
+    const { provenance } = reading;
+    if (provenance.kind !== 'memo') {
+      return miss(candidate.reference, 'unsupported-evidence', `provenance was recorded for a ${provenance.kind === 'source' ? 'source' : 'supplied step'}`);
+    }
+    const own = provenance.version === 2
+      ? provenance.observations.filter((item) => callObservationIndex(item.binding) === undefined)
+      : provenance.observations.filter((item) => !isChildObservation(item.binding));
+    const ownComparison = compare(own, ownFactProvider({ validation, slots: request.slots, self: declaration.run }));
+    if (ownComparison.kind !== 'equal') {
+      return missFrom(candidate.reference, ownComparison);
+    }
+    if (provenance.version === 2) {
+      const scanned = scanCalls(candidate, declaration, provenance);
+      if (scanned.status === 'miss') {
+        return scanned.miss;
+      }
+    }
+    return miss(candidate.reference, occupancy.reason, occupancy.error.message);
+  }
+
   /**
    * Rebuild one nested call's arguments now, position by position. A forwarded
    * origin is resolved from current bindings (an input path, or the current
    * output of an earlier call of the same invocation); a stored value is never
-   * substituted. When validating, a derived value is used only if recorded as
-   * justified, and an unreconstructible argument is an immediate miss. When
+   * substituted. When validating, a derived value or forwarded path is used
+   * only if recorded as justified, and an unreconstructible argument is an
+   * immediate miss. When
    * executing, the parent is making the call itself, so every recipe stands.
    */
   function rebuildArguments(request: IRequestContext, index: number, recipes: IInvocationArguments, outputs: ReadonlyMap<number, ICompletedResultReference>, validating: boolean): IRebuiltArguments {
@@ -1169,6 +1270,9 @@ export function createResolution<TInputs extends object, THelpers extends object
           values.push({ kind: 'data', value: derived[position] });
           break;
         case 'forwarded': {
+          if (validating && !recipe.justified) {
+            return { status: 'miss', reason: 'unjustified-argument', detail: `${label} forwards a path chosen after an observed untracked read, so recorded evidence cannot justify it` };
+          }
           const found = forwardedValue(request, recipe.origin, outputs);
           if (found.status !== 'found') {
             return { status: 'miss', reason: found.status, detail: `${label} forwards ${describeOrigin(recipe.origin)}, which ${found.detail}` };
@@ -1252,26 +1356,39 @@ export function createResolution<TInputs extends object, THelpers extends object
   }
 
   /**
-   * The argument views a supplied step reads: one frozen position per
-   * argument. Data is read through the author observer's view of the whole
-   * list at the `argument` binding, so every read is the step's own evidence;
-   * an opaque position throws on read, so no step can depend on it.
+   * The argument list a supplied step reads, itself an observed view. Every
+   * position and the list's `length` are read through the author observer's
+   * view of the whole list at the `argument` binding, so a read, an iteration
+   * or a spread (which read `length` and each position) is the step's own
+   * evidence: a changed arity under an equal subject is a changed fact. An
+   * opaque position throws on read, so no step can depend on it.
+   *
+   * The proxy's target is a frozen hole-only array of the same length, so the
+   * list is a frozen array to Definition, and its length and array methods keep
+   * their ordinary meaning without exposing any value except through the view.
    */
   function argumentViews(values: readonly IArgumentValue[]): readonly unknown[] {
     const whole = tracking.tracked(argumentList(values), { path: bindingPaths.argument });
-    const views: unknown[] = [];
-    values.forEach((value, position) => {
-      Object.defineProperty(views, position, {
-        enumerable: true,
-        get: (): unknown => {
-          if (value.kind === 'opaque') {
-            throw new TypeError(`Argument ${String(position)} is unreconstructible (${value.reason}); a supplied step can never observe it`);
-          }
-          return Reflect.get(whole, String(position));
-        },
-      });
+    const target: unknown[] = [];
+    target.length = values.length;
+    Object.freeze(target);
+    return new Proxy(target, {
+      get(held, key, receiver): unknown {
+        if (key === 'length') {
+          return Reflect.get(whole, 'length');
+        }
+        const position = typeof key === 'string' && /^(?:0|[1-9][0-9]*)$/u.test(key) ? Number(key) : undefined;
+        if (position === undefined) {
+          // Array methods and iteration: they read `length` and positions back through this proxy.
+          return Reflect.get(held, key, receiver);
+        }
+        const value = values[position];
+        if (value?.kind === 'opaque') {
+          throw new TypeError(`Argument ${String(position)} is unreconstructible (${value.reason}); a supplied step can never observe it`);
+        }
+        return Reflect.get(whole, String(position));
+      },
     });
-    return Object.freeze(views);
   }
 
   /** Resolve one supplied slot call once per top-level request, for its slot, subject, version and arguments. */
@@ -1403,6 +1520,18 @@ export function createResolution<TInputs extends object, THelpers extends object
     const done = (result: IStepResult): IResolvedStep => ({ step, result, evidence });
     emit(request, evidence, step, 'verify');
     const candidates = integrity(() => history.findCandidates(versioned(declaration)));
+    // A memo whose declared supplied slot is unbound cannot run: every candidate
+    // is judged without any child work, and nothing is admitted.
+    const occupancy = slotOccupancy(step);
+    if (occupancy !== undefined) {
+      for (const candidate of candidates) {
+        evidence.misses.push(unboundMiss(request, declaration, candidate, occupancy));
+      }
+      if (request.mode === 'check') {
+        return done({ kind: 'execution-required' });
+      }
+      throw occupancy.error;
+    }
     for (const candidate of candidates) {
       const evaluated = await evaluateMemoCandidate(request, step, declaration, candidate);
       if (evaluated.verdict === 'stop') {
@@ -1421,9 +1550,6 @@ export function createResolution<TInputs extends object, THelpers extends object
       return done({ kind: 'execution-required' });
     }
     const bindings = authorBindings(request);
-    // A memo whose declared supplied slots are not uniquely bound cannot run:
-    // report that before any admission, claim or body (it runs no author code).
-    openMemo(step).close();
     const identity = freshIdentity(request, step, declaration);
     const refusal = await admit(request, evidence, step, 'memo', versioned(declaration), candidates.length > 0 ? 'invalid' : 'cold');
     if (refusal !== undefined) {
@@ -1438,13 +1564,19 @@ export function createResolution<TInputs extends object, THelpers extends object
       invocation.close();
       throw error;
     }
-    const frame: IMemoFrame = { request, step, children: new Map(), calls: new Map(), refused: undefined, failed: undefined };
+    const frame: IMemoFrame = { request, step, children: new Map(), calls: new Map(), inflight: new Set(), unsettledAtReturn: undefined, refused: undefined, failed: undefined };
     frames.set(invocation, frame);
     let ran: IObservationCapture<IMemoReturn>;
     try {
       emit(request, evidence, step, 'execute');
-      ran = await active.run(invocation, () => invocation.apply(bindings, invoker(detachComputation)));
+      ran = await active.run(invocation, () => invocation.apply(bindings, invoker((value): IMemoReturn => {
+        // Taken inside the capture, as the body's value is: which started calls it left unsettled.
+        frame.unsettledAtReturn = frame.inflight.size;
+        return detachComputation(value);
+      })));
     } catch (error: unknown) {
+      // Let calls the body started finish their own lifecycle before this attempt ends.
+      await Promise.allSettled([...frame.inflight]);
       if (frame.refused !== undefined) {
         abandon(request, evidence, step, attemptId, 'interrupted', { ending: 'child-refused', detail: frame.refused.reason });
         return done({ kind: 'refused', refused: frame.refused.step, reason: frame.refused.reason });
@@ -1457,6 +1589,13 @@ export function createResolution<TInputs extends object, THelpers extends object
       throw new ResolutionError('execution-failure', `Body of ${stepKey(step)} failed: ${describe(cause)}`, cause);
     } finally {
       invocation.close();
+    }
+    const unsettled = frame.unsettledAtReturn ?? 0;
+    await Promise.allSettled([...frame.inflight]);
+    if (unsettled > 0) {
+      // Its evidence would lack a call the body made: never publish such a result.
+      abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: `${String(unsettled)} declared call(s) had not settled when the body returned` });
+      throw new ResolutionError('execution-failure', `Body of ${stepKey(step)} returned while ${String(unsettled)} declared call(s) it made had not settled`);
     }
     if (frame.refused !== undefined) {
       // A body that swallowed a refused child cannot publish a result missing that child.
@@ -1474,9 +1613,8 @@ export function createResolution<TInputs extends object, THelpers extends object
       throw new ResolutionError('unsupported-result', `Body of ${stepKey(step)} returned unsupported data: ${describe(ran.value.detachError)}`, ran.value.detachError);
     }
     if (frame.calls.size > 0) {
-      // Nested calls carry version-2 witnesses: record them in call order. A
-      // call the body started but did not settle before returning left a gap;
-      // that result cannot be published without its evidence.
+      // Nested calls carry version-2 witnesses: record them in call order. Every
+      // started call settled, so positions are contiguous; a gap is a defect.
       const calls = [...frame.calls.values()].sort((left, right) => left.index - right.index);
       if (calls.some((call, position) => call.index !== position)) {
         abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'a declared call did not settle before the body returned' });
@@ -1502,11 +1640,23 @@ export function createResolution<TInputs extends object, THelpers extends object
    * already established in this request), record the direct-child evidence and
    * return a lazy view of the child's exact result bound to the child slot.
    */
-  async function dispatchChild<TResult>(request: IDeclaredInvocationRequest<IFamily, TResult>): Promise<{ readonly data: unknown }> {
+  function dispatchChild<TResult>(request: IDeclaredInvocationRequest<IFamily, TResult>): Promise<{ readonly data: unknown }> {
     const frame = frames.get(request.scope);
     if (frame === undefined) {
-      throw new ResolutionError('invalid-request', 'A declared call arrived from an invocation Resolution is not executing');
+      return Promise.reject(new ResolutionError('invalid-request', 'A declared call arrived from an invocation Resolution is not executing'));
     }
+    // Started now, synchronously within the body: in flight until its delivery settles.
+    const delivery = deliverChild(frame, request);
+    frame.inflight.add(delivery);
+    const settled = (): void => {
+      frame.inflight.delete(delivery);
+    };
+    void delivery.then(settled, settled);
+    return delivery;
+  }
+
+  /** Deliver one declared call for {@link dispatchChild}. */
+  async function deliverChild<TResult>(frame: IMemoFrame, request: IDeclaredInvocationRequest<IFamily, TResult>): Promise<{ readonly data: unknown }> {
     const witness = request.witness;
     if (witness.version === 2) {
       return dispatchNested(frame, request, witness);

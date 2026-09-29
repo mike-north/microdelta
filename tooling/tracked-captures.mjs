@@ -77,8 +77,16 @@ function definitionTypes(sourceFile, checker) {
   const builderSignatures = new Map();
   const brandProperties = new Set();
   const forwardMembers = new Set();
+  const forwardDeclarations = new Set();
   const visit = node => {
     const builders = ts.isInterfaceDeclaration(node) ? definitionCallbackOptions.get(node.name.text) : undefined;
+    if (ts.isInterfaceDeclaration(node) && node.name.text === 'IDeclarations') {
+      for (const member of node.members) {
+        if (ts.isPropertySignature(member) && member.name && ts.isIdentifier(member.name) && member.name.text === 'forward') {
+          forwardDeclarations.add(member);
+        }
+      }
+    }
     if (builders) {
       for (const member of node.members) {
         const options = ts.isMethodSignature(member) && member.name && ts.isIdentifier(member.name) ? builders.get(member.name.text) : undefined;
@@ -103,7 +111,7 @@ function definitionTypes(sourceFile, checker) {
     ts.forEachChild(node, visit);
   };
   visit(sourceFile);
-  return { builderSignatures, brandProperties, forwardMembers };
+  return { builderSignatures, brandProperties, forwardMembers, forwardDeclarations };
 }
 
 /** Resolve canonical symbols only from each owning source or generated alpha view. */
@@ -112,6 +120,7 @@ function canonicalTypes(program, checker) {
   const brandProperties = new Set();
   const definitionBuilders = new Map();
   const forwardMembers = new Set();
+  const forwardDeclarations = new Set();
   let materializationSymbol;
   for (const sourceFile of program.getSourceFiles()) {
     const filename = path.resolve(sourceFile.fileName);
@@ -120,6 +129,7 @@ function canonicalTypes(program, checker) {
       definition.builderSignatures.forEach((options, signature) => definitionBuilders.set(signature, options));
       definition.brandProperties.forEach(property => brandProperties.add(property));
       definition.forwardMembers.forEach(property => forwardMembers.add(property));
+      definition.forwardDeclarations.forEach(declaration => forwardDeclarations.add(declaration));
       continue;
     }
     const isTrackingOwner = trackingOwnerFiles.has(filename);
@@ -160,6 +170,7 @@ function canonicalTypes(program, checker) {
     brandProperties,
     definitionBuilders,
     forwardMembers,
+    forwardDeclarations,
     observerMembers: new Map([...observerMethods].map(name => [
       name, observerSymbol && checker.getDeclaredTypeOfSymbol(observerSymbol).getProperty(name),
     ])),
@@ -388,14 +399,45 @@ export const trackedCaptures = {
         program.isSourceFileDefaultLibrary(declaration.getSourceFile())) === true;
     };
 
+    /** Whether a symbol is Definition's canonical `IDeclarations.forward` property (through any instantiation). */
+    const isForwardProperty = symbol => symbol?.declarations?.some(declaration => canonical.forwardDeclarations.has(declaration)) === true;
+
+    /**
+     * Whether an identifier resolves to Definition's canonical `forward`: a
+     * binding destructured from an `IDeclarations` value, or a constant
+     * initialized from its `forward` property. A value merely annotated with
+     * the `IForward` type is not.
+     */
+    const isCanonicalForward = identifier => {
+      const tsIdentifier = tsNodeFor(identifier);
+      const declaration = tsIdentifier && checker.getSymbolAtLocation(tsIdentifier)?.valueDeclaration;
+      if (declaration && ts.isBindingElement(declaration) && ts.isObjectBindingPattern(declaration.parent)) {
+        const name = declaration.propertyName ?? declaration.name;
+        return ts.isIdentifier(name) && isForwardProperty(checker.getTypeAtLocation(declaration.parent).getProperty(name.text));
+      }
+      if (declaration && ts.isVariableDeclaration(declaration) && declaration.initializer && ts.isPropertyAccessExpression(declaration.initializer)) {
+        return isForwardProperty(checker.getSymbolAtLocation(declaration.initializer.name));
+      }
+      return false;
+    };
+
     const capabilityUse = identifier => {
       const member = identifier.parent;
       if (member?.type !== 'MemberExpression' || member.object !== identifier || member.computed) {
         return false;
       }
-      // Definition's canonical forward origins mint structural tokens only; a look-alike has other symbols.
+      // Definition's canonical forward origins mint structural tokens only. The
+      // method must be IForward's and the receiver must resolve to the canonical
+      // forward itself; a look-alike or a value typed IForward is an influence.
       if (member.parent?.type === 'CallExpression' && member.parent.callee === member &&
           canonical.forwardMembers.has(propertySymbol(member))) {
+        return isCanonicalForward(identifier);
+      }
+      // `builders.forward.child(...)`: the receiver is used only for its canonical forward.
+      const origin = member.parent;
+      if (isForwardProperty(propertySymbol(member)) && origin?.type === 'MemberExpression' && origin.object === member &&
+          !origin.computed && origin.parent?.type === 'CallExpression' && origin.parent.callee === origin &&
+          canonical.forwardMembers.has(propertySymbol(origin))) {
         return true;
       }
       if (member.parent?.type === 'CallExpression' && member.parent.callee === member &&

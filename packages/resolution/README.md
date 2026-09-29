@@ -27,12 +27,13 @@ Definition's `declarations()`. Callbacks receive:
   `retain(previous)` mint the only outcomes a source may return;
 - memos receive Definition's declared `calls`; each resolves to `{ data }`, a
   lazy view over the child's exact retained result;
-- supplied steps receive `args`, one view per argument position observed under
-  the `argument` binding (an unreconstructible argument throws on read);
+- supplied steps receive `args`, the argument list as an observed view under
+  the `argument` binding: each position, `length`, iteration and spread are
+  evidence, and an unreconstructible argument throws on read;
 - every callback receives `untracked(view, key)`, the explicit observed
   untracked read: it returns a scalar member without consuming it, the capture
   records the read, and any derived argument a memo passes afterwards is
-  recorded unjustified.
+  recorded unjustified, as is any forwarded path chosen afterwards.
 
 ## Resolution order
 
@@ -56,11 +57,13 @@ Definition's `declarations()`. Callbacks receive:
    misses; a missing or wrong-scope historical child is an integrity failure.
    Child views are delivered inside a `{ data }` carrier, so awaiting a call
    never reads the child's `then` member.
-4a. **Nested calls** (memos whose calls carry version-2 witnesses): after the
-   memo's own evidence, each recorded call in order is reconnected through
-   Definition; its arguments are rebuilt (forwarded origins from current
-   bindings or the current output of an earlier call, derived values only when
-   recorded as justified, never an unreconstructible one); the current child
+4a. **Nested calls** (memos whose calls carry version-2 witnesses): a memo
+   whose supplied slot is unbound is judged with no child work at all. After
+   the memo's own evidence, every recorded witness is reconnected through
+   Definition before any child is resolved; then, call by call in order, its
+   arguments are rebuilt (forwarded origins from current bindings or the
+   current output of an earlier call, forwarded paths and derived values only
+   when recorded as justified, never an unreconstructible one); the current child
    (a sibling source or memo, or the implementation currently supplied to a
    callable slot under that slot's subject) is validated or executed under
    normal admission; and only the facts consumed from that call are compared.
@@ -69,7 +72,8 @@ Definition's `declarations()`. Callbacks receive:
    `unjustified-argument` or `unsupported-evidence`. Children obtained while
    validating are shared with the parent's execution, so none runs twice in a
    request. A memo whose supplied slot is missing or ambiguous fails with
-   `unbound-step` before admission.
+   `unbound-step` before admission, and a body that returns while a call it
+   started is unsettled fails without publishing.
 5. **Admission and execution**: work that validation could not avoid is
    admitted before any claim, attempt or body. Denial is a typed `refused`
    outcome. Admitted work allocates an attempt keyed by the request key and the

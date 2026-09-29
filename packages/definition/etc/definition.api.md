@@ -383,6 +383,7 @@ export interface IForwardedBrand {
 // @alpha
 export interface IForwardedRecipe {
     readonly form: 'forwarded';
+    readonly justified: boolean;
     readonly origin: IForwardOrigin;
 }
 

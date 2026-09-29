@@ -49,8 +49,14 @@ brands receive no receiver authority. Runtime ownership checks, not this rule,
 reject a handle used outside its own invocation. Definition's canonical
 `forward` origins (`forward.input`, `forward.member`, `forward.child`, resolved
 to Definition's `IForward`) mint structural tokens and are accepted as a
-capability; a look-alike object with the same method names is an external
-influence.
+capability only when the receiver itself resolves to Definition's
+`IDeclarations.forward`: a binding destructured from a builder instance, a
+constant initialized from its `forward` property, or `builders.forward`
+directly. A look-alike with the same method names, or a value merely annotated
+`IForward`, is an external influence. The observer capabilities, including
+`untracked` and `untrackedReadObserved`, are recognized by `ITrackingObserver`'s
+own member symbols; which observer instance is used is a runtime ownership
+question the lint cannot decide.
 
 Parameters and declarations inside a callback are local inputs. Type-only
 references, such as parameter annotations, are not runtime influences. External

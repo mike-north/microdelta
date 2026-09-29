@@ -12,6 +12,7 @@
  */
 export { ResolutionError, type IResolutionErrorCode } from './errors.js';
 export type {
+  ICallView,
   IPreviousResult,
   IResolutionFamily,
   IResolutionOutcomes,
@@ -21,6 +22,7 @@ export type {
   ISourceBindings,
   IStepBindings,
   ITrackedHelpers,
+  IUntrackedRead,
 } from './family.js';
 export { sourceOutcome, type ISourceOutcome, type ISourceOutcomeBrand, type ISourceOutcomes } from './outcome.js';
 export type {

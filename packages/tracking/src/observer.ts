@@ -88,7 +88,15 @@ export type ICurrentFactRequest =
   | { readonly kind: 'implementation'; readonly address: readonly IAddressSegment[]; readonly encodingVersion: 'MDF1' }
   | { readonly kind: 'materialized-output'; readonly address: readonly IAddressSegment[]; readonly encodingVersion: 'MDS1' }
   | { readonly kind: 'projection'; readonly descriptor: IValueProjectionDescriptor; readonly encodingVersion: 'MDP1' }
-  | { readonly kind: 'collection-order'; readonly keys: readonly string[]; readonly encodingVersion: 'MDV1' };
+  | { readonly kind: 'collection-order'; readonly keys: readonly string[]; readonly encodingVersion: 'MDV1' }
+  /**
+   * An observed untracked read: the capture deliberately read the member at
+   * this address without consuming its fact. It names what was read, never the
+   * value, so no current fact can answer it; comparison skips it. Its evidence
+   * is that the frame's later work could have been influenced by content the
+   * capture did not track.
+   */
+  | { readonly kind: 'untracked-read'; readonly address: readonly IAddressSegment[]; readonly encodingVersion: 'MDU1' };
 
 /** Portable evidence for one selected fact, explicit output, projection, order, or implementation. @alpha */
 export interface ITrackingObservation {
@@ -99,9 +107,9 @@ export interface ITrackingObservation {
   /** Which exact semantic selection this record represents. */
   readonly selection: ICurrentFactRequest;
   /** Operation-specific category keeps selected facts separate from code evidence. */
-  readonly kind: 'fact' | 'implementation' | 'materialized-output' | 'projection' | 'collection-order';
+  readonly kind: 'fact' | 'implementation' | 'materialized-output' | 'projection' | 'collection-order' | 'untracked-read';
   /** Operation identity is repeated for compact inspection; the request is authoritative. */
-  readonly operation: IOperation | 'implementation' | 'materialized-output' | 'projection' | 'collection-order';
+  readonly operation: IOperation | 'implementation' | 'materialized-output' | 'projection' | 'collection-order' | 'untracked-read';
   /** Explicit selected-fact wire version retained alongside the digest. */
   readonly encodingVersion: ICurrentFactRequest['encodingVersion'];
   /** Canonical text is retained when the selection stays bounded; aggregate projection text is transient. */
@@ -154,6 +162,17 @@ export type ICurrentComparison =
   | { readonly kind: 'ambiguous'; readonly observation: ITrackingObservation };
 
 /**
+ * The members of a tracked view that an untracked read may select: scalar
+ * leaves (and an array's `length`), never a nested tracked container and never
+ * the compile-time brand. A member whose declared type may be a container is
+ * still rejected at runtime when it holds one.
+ * @alpha
+ */
+export type IUntrackedKey<V> = {
+  readonly [K in keyof V]-?: K extends keyof ITrackedBrand ? never : V[K] extends ITrackedBrand ? never : K;
+}[keyof V];
+
+/**
  * The observer adds semantic value and implementation facts to the existing
  * local tracker without changing tag/revision behavior or claiming persistence.
  * @alpha
@@ -175,6 +194,21 @@ export interface ITrackingObserver {
   keys(value: ITracked<object>): readonly string[];
   /** Explicit own-member presence without conflating it with inherited membership. */
   hasOwn(value: ITracked<object>, key: string): boolean;
+  /**
+   * Explicit observed untracked read: return one scalar member of an
+   * observer-owned view (or an array view's `length`) without consuming its
+   * fact. Inside a capture it records an `untracked-read` observation naming
+   * the binding and address instead, so the frame's reliance on untracked
+   * content is itself evidence. A nested container member is rejected; read a
+   * scalar leaf. Outside a capture the read records nothing.
+   */
+  untracked<V extends ITracked<object>, K extends IUntrackedKey<V>>(value: V, key: K): V[K];
+  /**
+   * Whether the active capture has recorded an observed untracked read so far,
+   * directly or through a replayed derivation. False outside any capture; a
+   * capture that has closed rejects the question.
+   */
+  untrackedReadObserved(): boolean;
   /** A narrow bridge lets materializers recognize wrappers and read selected fields. */
   readonly materialization: ITrackingMaterialization;
   /** Reactive local derivation that replays semantic facts on cached success and failure. */
@@ -294,7 +328,25 @@ interface ICaptureFrame {
   readonly observations: Map<string, ITrackingObservation>;
   /** Closed frames reject work that inherited their async context after completion. */
   open: boolean;
+  /**
+   * Whether an observed untracked read has entered this frame, directly or by
+   * replay. It only ever becomes true: later work cannot un-see content.
+   */
+  untracked: boolean;
+  /**
+   * Nonzero while an explicit untracked read navigates a view in this frame,
+   * so the selected member's ordinary fact is not recorded.
+   */
+  suppressed: number;
 }
+
+/** A fresh open capture frame. */
+function openFrame(): ICaptureFrame {
+  return { observations: new Map(), open: true, untracked: false, suppressed: 0 };
+}
+
+/** The version marker of an untracked-read observation's encoding: the read's address, never its value. */
+const UNTRACKED_READ_VERSION = 'MDU1';
 
 /** Preserve a cached failure together with the same semantic reads as success. */
 type IOutcome<T> =
@@ -385,6 +437,7 @@ function copyRequest(request: ICurrentFactRequest): ICurrentFactRequest {
     case 'selected':
     case 'implementation':
     case 'materialized-output':
+    case 'untracked-read':
       return Object.freeze({ ...request, address: copyAddress(request.address) });
     case 'projection':
       return Object.freeze({ ...request, descriptor: copyProjectionDescriptor(request.descriptor) });
@@ -639,6 +692,9 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
     if (!frame.open) {
       throw new Error('Cannot observe tracked input after its capture frame closed');
     }
+    if (frame.suppressed > 0) {
+      return observeAt(root, address, operation);
+    }
     const selected = observeAt(root, address, operation);
     const encoded = encodeSelectedFact(selected);
     const digest = fingerprint(encoded, machine);
@@ -670,6 +726,24 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
       const selection: ICurrentFactRequest = { kind: 'implementation', address, encodingVersion: 'MDF1' };
       frame.observations.set(key, freezeObservation({ binding, selection, kind: 'implementation', operation: 'implementation', encoded, digest }));
     }
+  }
+
+  /**
+   * Record that the open frame read the member at `address` without consuming
+   * it. The encoding names the address only; the value read is never retained.
+   */
+  function recordUntracked(frame: ICaptureFrame, binding: IBindingRecord, address: readonly IAddressSegment[]): void {
+    const copied = copyAddress(address);
+    const encoded = `${UNTRACKED_READ_VERSION}|${encodeValue(copied.map((segment) => segment.kind === 'property'
+      ? { kind: 'property', key: segment.key }
+      : { kind: 'index', index: segment.index }))}`;
+    const digest = fingerprint(encoded, machine);
+    const key = observationKey(binding, copied, 'untracked-read', digest);
+    if (!frame.observations.has(key)) {
+      const selection: ICurrentFactRequest = { kind: 'untracked-read', address: copied, encodingVersion: UNTRACKED_READ_VERSION };
+      frame.observations.set(key, freezeObservation({ binding, selection, kind: 'untracked-read', operation: 'untracked-read', encoded, digest }));
+    }
+    frame.untracked = true;
   }
 
   /** Detach semantic metadata while projection payload text stays transient and represented by its digest. */
@@ -819,7 +893,8 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
 
   /** Record one validated selected fact from a lazy source; outside a capture nothing is encoded. */
   function recordLazyFact(binding: IBindingRecord, fact: ISelectedFact): void {
-    if (captures.getStore() === undefined) {
+    const frame = captures.getStore();
+    if (frame === undefined || frame.suppressed > 0) {
       return;
     }
     const selection: ICurrentFactRequest = { kind: 'selected', operation: fact.operation, address: fact.address, encodingVersion: 'MDO1' };
@@ -957,6 +1032,11 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
   /** Current-value consumers use operation semantics and digest equality only. */
   function compareCurrent(capture: IObservationCapture<unknown>, provider: ICurrentFactProvider): ICurrentComparison {
     for (const observation of capture.observations) {
+      // An untracked read names what was read, not a fact: there is nothing
+      // current to compare, so it is never presented to the provider.
+      if (observation.selection.kind === 'untracked-read') {
+        continue;
+      }
       const resolved = provider.resolve(observation.binding, observation.selection);
       if (resolved.kind === 'unavailable' || resolved.kind === 'ambiguous' || resolved.kind === 'incompatible') {
         return { kind: resolved.kind, observation };
@@ -1156,7 +1236,7 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
       return wrapped as ITracked<T>;
     },
     capture<T>(callback: () => T): IObservationCapture<T> {
-      const frame: ICaptureFrame = { observations: new Map(), open: true };
+      const frame: ICaptureFrame = openFrame();
       return captures.run(frame, () => {
         try {
           const value = callback();
@@ -1173,7 +1253,7 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
       });
     },
     captureAsync<T>(callback: () => Promise<T>): Promise<IObservationCapture<T>> {
-      const frame: ICaptureFrame = { observations: new Map(), open: true };
+      const frame: ICaptureFrame = openFrame();
       return captures.run(frame, async () => {
         try {
           const value = await callback();
@@ -1213,6 +1293,57 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
       }
       return Object.freeze(keys);
     },
+    untracked<V extends ITracked<object>, K extends IUntrackedKey<V>>(value: V, key: K): V[K] {
+      const owned = ownership.get(value);
+      if (owned === undefined) {
+        throw new TypeError('Untracked reads require an observer-owned tracked value');
+      }
+      if (typeof key !== 'string' && typeof key !== 'number') {
+        throw new TypeError('Untracked reads select a string or numeric member');
+      }
+      const frame = captures.getStore();
+      if (frame !== undefined && !frame.open) {
+        throw new Error('Cannot read untracked after its capture frame closed');
+      }
+      const isArray = owned.kind === 'lazy' ? owned.node.kind === 'array' : Array.isArray(owned.value);
+      if (owned.kind === 'local' && typeof owned.value === 'function') {
+        throw new TypeError('Untracked reads select a member of a tracked record or array');
+      }
+      const name = String(key);
+      const segment: IAddressSegment = isArray && name === 'length'
+        ? { kind: 'property', key: 'length' }
+        : memberSegment(isArray, name, `Unsupported array property ${name}`);
+      // Read through the view itself so its supported-operation checks apply,
+      // with this frame's fact recording suspended for exactly this read.
+      if (frame !== undefined) {
+        frame.suppressed += 1;
+      }
+      let selected: V[K];
+      try {
+        selected = value[key];
+      } finally {
+        if (frame !== undefined) {
+          frame.suppressed -= 1;
+        }
+      }
+      if (selected !== null && (typeof selected === 'object' || typeof selected === 'function') && ownership.has(selected)) {
+        throw new TypeError('Untracked reads select a scalar leaf; navigate to the leaf through the tracked view first');
+      }
+      if (frame !== undefined) {
+        recordUntracked(frame, owned.binding, [...owned.address, segment]);
+      }
+      return selected;
+    },
+    untrackedReadObserved(): boolean {
+      const frame = captures.getStore();
+      if (frame === undefined) {
+        return false;
+      }
+      if (!frame.open) {
+        throw new Error('Cannot ask about untracked reads after the capture frame closed');
+      }
+      return frame.untracked;
+    },
     hasOwn(value: ITracked<object>, key: string): boolean {
       const owned = ownership.get(value);
       if (owned === undefined) {
@@ -1248,7 +1379,7 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
     materialization,
     derived<T>(callback: () => T): { get(): T } {
       const cached = local.derived((): IOutcome<T> => {
-        const frame: ICaptureFrame = { observations: new Map(), open: true };
+        const frame: ICaptureFrame = openFrame();
         return captures.run(frame, () => {
           try {
             return { kind: 'success', value: callback(), observations: Object.freeze([...frame.observations.values()]) };
@@ -1271,6 +1402,9 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
               const key = observationKey({ descriptor: observation.binding, path: observation.binding.path }, observation.address, observation.operation, observation.fingerprint);
               if (!current.observations.has(key)) {
                 current.observations.set(key, observation);
+              }
+              if (observation.kind === 'untracked-read') {
+                current.untracked = true;
               }
             }
           }

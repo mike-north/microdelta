@@ -14,6 +14,9 @@ export class DefinitionError extends Error {
 }
 
 // @alpha
+export function derivedArguments(arguments_: IInvocationArguments): readonly unknown[];
+
+// @alpha
 export function describeHandle(value: unknown): IDirectChildWitness | IDeclaredCallDescription | undefined;
 
 // @alpha
@@ -380,6 +383,7 @@ export interface IForwardedBrand {
 // @alpha
 export interface IForwardedRecipe {
     readonly form: 'forwarded';
+    readonly justified: boolean;
     readonly origin: IForwardOrigin;
 }
 

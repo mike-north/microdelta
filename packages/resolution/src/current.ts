@@ -12,6 +12,11 @@
  * example a parent body whose child is being validated). A recorded read whose
  * current path no longer navigates the same container shape is incompatible,
  * never equal.
+ *
+ * A supplied step's arguments are current facts of the same kind: the values
+ * a nested call passes now (forwarded values rebuilt from current bindings,
+ * derived values decoded from their recorded encodings), selected through the
+ * same validation observer at the `argument` binding, position by position.
  */
 import type { IBindingDescriptor, IComposition } from '@microdelta/definition';
 import type {
@@ -85,10 +90,36 @@ function isArray(value: unknown): boolean {
 }
 
 /**
- * Select one current input fact with Tracking's operation semantics by
- * navigating the validation observer's view of the current input record.
+ * One argument of a nested call as the called step can see it: supported data,
+ * or an opaque marker for an unreconstructible argument, which no read can
+ * observe.
  */
-function selectInput(observer: ITrackingObserver, view: ITracked<object>, request: Extract<ICurrentFactRequest, { kind: 'selected' }>): ICurrentFactResolution {
+export type IArgumentValue =
+  | { readonly kind: 'data'; readonly value: unknown }
+  | { readonly kind: 'opaque'; readonly reason: string };
+
+/**
+ * The argument list as one supported array: data at its position, a hole
+ * where an argument is opaque. Holes keep positions aligned without inventing
+ * a value for an argument that has none.
+ */
+export function argumentList(values: readonly IArgumentValue[]): unknown[] {
+  const list: unknown[] = [];
+  list.length = values.length;
+  values.forEach((value, position) => {
+    if (value.kind === 'data') {
+      list[position] = value.value;
+    }
+  });
+  return list;
+}
+
+/**
+ * Select one current fact with Tracking's operation semantics by navigating
+ * the validation observer's view of a current binding (the input record or a
+ * call's argument list).
+ */
+function selectFrom(observer: ITrackingObserver, view: ITracked<object>, request: Extract<ICurrentFactRequest, { kind: 'selected' }>): ICurrentFactResolution {
   const target = request.operation === 'own' || request.operation === 'membership' ? request.address.slice(0, -1) : request.address;
   let current: unknown = view;
   for (const segment of target) {
@@ -130,19 +161,26 @@ function selectInput(observer: ITrackingObserver, view: ITracked<object>, reques
 
 /**
  * The provider of a step's own current facts: its own actually called
- * implementation (`self`), the declared input record and declared helpers.
- * Other bindings, including child outputs, are unavailable here; child output
- * facts are compared separately after the current child is established.
+ * implementation (`self`), the declared input record, declared helpers and,
+ * for a supplied step, the arguments of the current call. Other bindings,
+ * including child outputs, are unavailable here; child output facts are
+ * compared separately after the current child is established.
  */
 export function ownFactProvider(options: {
   readonly validation: ITrackingObserver;
   readonly slots: ICurrentSlots;
   readonly self: (context: never) => unknown;
+  readonly arguments?: readonly IArgumentValue[];
 }): ICurrentFactProvider {
   let view: ITracked<object> | undefined;
   const inputs = (): ITracked<object> => {
     view ??= options.validation.tracked(inputRecord(options.slots), { path: bindingPaths.inputs });
     return view;
+  };
+  let argumentView: ITracked<object> | undefined;
+  const currentArguments = (values: readonly IArgumentValue[]): ITracked<object> => {
+    argumentView ??= options.validation.tracked(argumentList(values), { path: bindingPaths.argument });
+    return argumentView;
   };
   return Object.freeze({
     resolve(binding: ITrackingBinding, request: ICurrentFactRequest): ICurrentFactResolution {
@@ -167,7 +205,10 @@ export function ownFactProvider(options: {
             return { kind: 'unavailable' };
           }
         }
-        return selectInput(options.validation, inputs(), request);
+        return selectFrom(options.validation, inputs(), request);
+      }
+      if (root === 'argument' && slot === undefined && request.kind === 'selected' && options.arguments !== undefined) {
+        return selectFrom(options.validation, currentArguments(options.arguments), request);
       }
       return { kind: 'unavailable' };
     },
@@ -177,6 +218,11 @@ export function ownFactProvider(options: {
 /** Whether an observation is bound to a memo's direct child output. */
 export function isChildObservation(binding: ITrackingBinding): boolean {
   return binding.path[0] === 'child';
+}
+
+/** Whether an observation is bound to the output of one nested call, and which. */
+export function callObservationIndex(binding: ITrackingBinding): string | undefined {
+  return binding.path.length === 2 && binding.path[0] === 'call' ? binding.path[1] : undefined;
 }
 
 /** Whether an observation is bound to a source's previous result (history, not a current input). */

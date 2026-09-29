@@ -133,7 +133,7 @@ describe('template member memos (CMP-4 with CMP-3)', () => {
       index: 2,
       arguments: [
         { form: 'derived', value: expect.any(String), justified: true },
-        { form: 'forwarded', origin: { binding: 'member', path: [{ kind: 'property', key: 'pullRequests' }, { kind: 'index', index: 0 }] } },
+        { form: 'forwarded', origin: { binding: 'member', path: [{ kind: 'property', key: 'pullRequests' }, { kind: 'index', index: 0 }] }, justified: true },
       ],
     });
     expect(fake.requests.every(request => request.scope === invocation)).toBe(true);

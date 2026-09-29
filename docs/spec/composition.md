@@ -102,7 +102,7 @@ argument (the M3 empty form remains valid):
 
 | Recipe | Recorded | Reconstruction |
 | --- | --- | --- |
-| `forwarded` | Structural origin: an input path, the member binding, or an earlier child call's output path | Resolved again from **current** bindings; a stored value is never substituted |
+| `forwarded` | Structural origin: an input path, the member binding, or an earlier child call's output path, and whether its path was justified | Used only when recorded as justified; resolved again from **current** bindings; a stored value is never substituted |
 | `derived` | Canonical supported value, and whether it was justified | Used only when recorded as justified and every earlier validation step passed |
 | `unreconstructible` | Its reason (for example a function value) | Always an honest parent miss; the child cannot observe it |
 
@@ -113,7 +113,9 @@ and compares only the parent's consumed output facts from that call. Under the
 tracked-influence contract, an unchanged parent prefix replays to the same derived
 value, so a changed basis is reported as changed evidence or changed child output
 before call *k*. The distinct unjustified-argument miss is reachable when the
-parent made an **observed** untracked read before deriving the argument. Child
+parent made an **observed** untracked read before deriving the argument. The same
+holds for a forwarded path: a path chosen after an observed untracked read is
+recorded unjustified. Child
 history identity is the child descriptor plus its derived argument values;
 forwarded values are identified by origin and observed by the child through
 `argument` binding paths. Untracked influence the runtime cannot observe remains

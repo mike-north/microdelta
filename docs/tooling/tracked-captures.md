@@ -18,9 +18,23 @@ cannot represent. A same-spelled non-framework function does not create a
 boundary.
 
 Definition authoring callbacks are boundaries too. A call is recognized when
-its resolved signature is `IDeclarations.source` or `IDeclarations.memo` from
-Definition's generated alpha declaration, so a facade's pre-applied or
-destructured builders qualify and same-spelled functions never do. The
+its resolved signature is one of Definition's builders in its generated alpha
+declaration, so a facade's pre-applied or destructured builders qualify and
+same-spelled functions never do. Each builder declares which callback options
+are boundaries:
+
+| Builder | Callback options checked |
+| --- | --- |
+| `IDeclarations.source` | `run`, `finality` |
+| `IDeclarations.memo` | `run` |
+| `IDeclarations.suppliedStep` | `run` (EXP-4 CX-2: a supplied implementation's captured value is invisible to its implementation evidence) |
+| `IDeclarations.template` | `gate`, `key` |
+| `IDeclarations.fold` | `run` |
+| `IMemberBuilder.source` (a template factory's member builder) | `run`, `finality` |
+| `IMemberBuilder.memo` | `run` |
+
+A template's `steps` factory runs once at composition to build topology; it is
+not itself a boundary, but the member-builder calls inside it are. The
 `microdelta` facade's alpha `authoring()` returns exactly those builders (its
 rollup imports `IDeclarations` from Definition rather than restating it), so
 the consumer fixture `workspace-authoring.fixture.ts` and the executable
@@ -32,13 +46,27 @@ spreads, computed option keys, and `this` are reported as unsupported. A capture
 canonical declared-call handle (Definition's `IDeclaredCallBrand`) is accepted
 as a handle, not raw data; Definition compositions, scopes and look-alike handle
 brands receive no receiver authority. Runtime ownership checks, not this rule,
-reject a handle used outside its own invocation.
+reject a handle used outside its own invocation. Definition's canonical
+`forward` origins (`forward.input`, `forward.member`, `forward.child`, resolved
+to Definition's `IForward`) mint structural tokens and are accepted as a
+capability only when the receiver traces syntactically, through unreassigned
+`const` bindings, to a direct call of Definition's `declarations()` or the
+facade's `authoring()`: `const { forward } = authoring<...>()`,
+`const b = authoring<...>(); b.forward.child(...)`, `const { forward } = b`, or
+`const f = b.forward` where `b` is such a constant. The declared type is never
+trusted. A look-alike with the same method names, a value annotated `IForward`,
+a parameter, a `let` binding, an object literal or a cast claiming
+`IDeclarations` is an external influence. The observer capabilities, including
+`untracked` and `untrackedReadObserved`, are recognized by `ITrackingObserver`'s
+own member symbols; which observer instance is used is a runtime ownership
+question the lint cannot decide.
 
 Parameters and declarations inside a callback are local inputs. Type-only
 references, such as parameter annotations, are not runtime influences. External
 captures are accepted when their declared type carries the canonical tracked
 brand, when they are one of the explicit observer capabilities (tracked,
-capture, captureAsync, derived, keys, hasOwn, or snapshotOutput), or when the
+capture, captureAsync, derived, keys, hasOwn, snapshotOutput, or the observed
+untracked read `untracked` and its query `untrackedReadObserved`), or when the
 receiver is used with one of Materialization's exact observation methods:
 materializeOutput, project, projectFrom, and observeMemberOrder. Receiver
 allowances resolve from the owning Tracking and Materialization declarations

@@ -37,6 +37,7 @@ export type {
   ITrackingObservation,
   ITrackingObserver,
   ITrackingObserverHost,
+  IUntrackedKey,
 } from './observer.js';
 export type { IDetachedOutput } from './output-observation.js';
 

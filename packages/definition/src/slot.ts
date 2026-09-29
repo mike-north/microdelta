@@ -362,17 +362,18 @@ export function declareSupply<TFamily extends IBindingFamily, TParameters extend
 }
 
 /**
- * The scoped history subject of one slot call: the bound subject function
- * applied to the call's derived values by position, each a frozen copy decoded
- * from its canonical encoding. Forwarded and unreconstructible positions are
- * holes, so neither can influence the subject; nothing about the supplied
- * implementation is consulted.
- * @param scope - The analysis scope that qualifies the subject.
- * @param subject - The slot binding's author subject function.
+ * The derived values of one call's recipes by position, each a frozen copy
+ * decoded from its canonical encoding. Forwarded and unreconstructible
+ * positions are holes (never `undefined`), and the empty form yields an empty
+ * list. Definition owns the recipe encoding, so this is the one place a
+ * recorded derived value is decoded: slot subjects use it, and Resolution uses
+ * it to rebuild a call's arguments without running the parent. Whether a
+ * value is justified remains Resolution's judgment.
  * @param arguments_ - The call's argument recipes.
- * @returns The complete scoped subject.
+ * @returns A frozen sparse list of derived values.
+ * @alpha
  */
-export function slotSubject(scope: string, subject: ISubjectCallback, arguments_: IInvocationArguments): IScopedSubject {
+export function derivedArguments(arguments_: IInvocationArguments): readonly unknown[] {
   const derived: unknown[] = [];
   if (!('form' in arguments_)) {
     derived.length = arguments_.length;
@@ -382,7 +383,22 @@ export function slotSubject(scope: string, subject: ISubjectCallback, arguments_
       }
     });
   }
-  Object.freeze(derived);
+  return Object.freeze(derived);
+}
+
+/**
+ * The scoped history subject of one slot call: the bound subject function
+ * applied to the call's derived values by position (see
+ * {@link derivedArguments}). Forwarded and unreconstructible positions are
+ * holes, so neither can influence the subject; nothing about the supplied
+ * implementation is consulted.
+ * @param scope - The analysis scope that qualifies the subject.
+ * @param subject - The slot binding's author subject function.
+ * @param arguments_ - The call's argument recipes.
+ * @returns The complete scoped subject.
+ */
+export function slotSubject(scope: string, subject: ISubjectCallback, arguments_: IInvocationArguments): IScopedSubject {
+  const derived = derivedArguments(arguments_);
   let computed: unknown;
   try {
     computed = Reflect.apply(subject, undefined, [derived]);

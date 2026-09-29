@@ -59,7 +59,10 @@ export type IForwardOrigin =
 
 /**
  * An argument forwarded from a current binding, identified by its origin
- * rather than its value.
+ * rather than its value. `justified` is supplied by the caller from the parent
+ * frame's observed untracked-read state at the moment of the call: a path
+ * chosen after such a read is unjustified, exactly as a derived value is.
+ * Definition carries it and never computes it.
  * @alpha
  */
 export interface IForwardedRecipe {
@@ -67,6 +70,8 @@ export interface IForwardedRecipe {
   readonly form: 'forwarded';
   /** The structural origin, resolved again from current bindings. */
   readonly origin: IForwardOrigin;
+  /** Whether the path was chosen with no observed untracked read earlier in the calling frame. */
+  readonly justified: boolean;
 }
 
 /**
@@ -384,10 +389,12 @@ function isCanonicalSnapshot(encoded: string): boolean {
 function recipe(value: unknown, index: number): IArgumentRecipe {
   const form = ownData(value, 'form');
   switch (form) {
-    case 'forwarded':
-      return exactRecord(value, ['form', 'origin'])
-        ? Object.freeze({ form, origin: origin(ownData(value, 'origin'), index) })
+    case 'forwarded': {
+      const justified = ownData(value, 'justified');
+      return exactRecord(value, ['form', 'origin', 'justified']) && typeof justified === 'boolean'
+        ? Object.freeze({ form, origin: origin(ownData(value, 'origin'), index), justified })
         : unsupported('malformed');
+    }
     case 'derived': {
       const encoded = ownData(value, 'value');
       const justified = ownData(value, 'justified');

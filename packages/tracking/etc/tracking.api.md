@@ -78,6 +78,18 @@ export type ICurrentFactRequest = {
     readonly kind: 'collection-order';
     readonly keys: readonly string[];
     readonly encodingVersion: 'MDV1';
+}
+/**
+* An observed untracked read: the capture deliberately read the member at
+* this address without consuming its fact. It names what was read, never the
+* value, so no current fact can answer it; comparison skips it. Its evidence
+* is that the frame's later work could have been influenced by content the
+* capture did not track.
+*/
+| {
+    readonly kind: 'untracked-read';
+    readonly address: readonly IAddressSegment[];
+    readonly encodingVersion: 'MDU1';
 };
 
 // @alpha
@@ -219,8 +231,8 @@ export interface ITrackingObservation {
     readonly encoded?: string;
     readonly encodingVersion: ICurrentFactRequest['encodingVersion'];
     readonly fingerprint: string;
-    readonly kind: 'fact' | 'implementation' | 'materialized-output' | 'projection' | 'collection-order';
-    readonly operation: IOperation | 'implementation' | 'materialized-output' | 'projection' | 'collection-order';
+    readonly kind: 'fact' | 'implementation' | 'materialized-output' | 'projection' | 'collection-order' | 'untracked-read';
+    readonly operation: IOperation | 'implementation' | 'materialized-output' | 'projection' | 'collection-order' | 'untracked-read';
     readonly selection: ICurrentFactRequest;
 }
 
@@ -238,11 +250,18 @@ export interface ITrackingObserver {
     readonly materialization: ITrackingMaterialization;
     snapshotOutput<T>(output: T): IDetachedOutput<T>;
     tracked<T extends object>(value: T, binding: ITrackingBinding): ITracked<T>;
+    untracked<V extends ITracked<object>, K extends IUntrackedKey<V>>(value: V, key: K): V[K];
+    untrackedReadObserved(): boolean;
 }
 
 // @alpha
 export interface ITrackingObserverHost extends IAsyncContextCapability, ISha256Capability {
 }
+
+// @alpha
+export type IUntrackedKey<V> = {
+    readonly [K in keyof V]-?: K extends keyof ITrackedBrand ? never : V[K] extends ITrackedBrand ? never : K;
+}[keyof V];
 
 // @alpha
 export interface IValueProjectionDescriptor {

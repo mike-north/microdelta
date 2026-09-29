@@ -3,17 +3,27 @@
  * opaque records and never interprets them; Resolution alone defines and
  * reads them (plan: "History, host operations and durable records").
  *
- * - **Provenance** (`microdelta.resolution.provenance`, version 1) is the
- *   immutable historical truth of one execution: the step it ran for, the
- *   Tracking observations its own capture recorded (its actually called
- *   implementation, consumed inputs, called helpers and consumed child output
- *   facts) and, for a memo, one entry per direct child call with the
- *   structural witness, the exact child result it read and the output binding
- *   its child observations use. A child's own implementation and reads are in
- *   the child's provenance, never flattened into the parent's.
- * - **Acceptance** (`microdelta.resolution.acceptance`, version 1) records a
- *   current verification of an existing result: its basis and the current
- *   work or children it followed. It never rewrites provenance (RES-007).
+ * - **Provenance** (`microdelta.resolution.provenance`) is the immutable
+ *   historical truth of one execution: the step it ran for and the Tracking
+ *   observations its own capture recorded (its actually called implementation,
+ *   consumed inputs, called helpers, consumed child output facts and observed
+ *   untracked reads). A child's own implementation and reads are in the child's
+ *   provenance, never flattened into the parent's.
+ *   - Version 1 keeps its M3 meaning: a source, or a memo with one entry per
+ *     direct child slot (the version-1 witness, the exact child result it read
+ *     and the `child` binding its consumed facts use).
+ *   - Version 2 records nested execution (CMP-6/7, REUSE-006): a memo's ordered
+ *     calls, each with its version-2 witness (call position and argument
+ *     recipes), the exact child result and the `call` binding its consumed
+ *     facts use; or a supplied step invoked through a callable slot, whose
+ *     argument reads are its own `argument` observations.
+ *   A new execution writes version 2 exactly when version 1 cannot express it:
+ *   a memo whose calls carry version-2 witnesses, or a supplied step. Sources
+ *   and M3-shaped memos keep writing version 1.
+ * - **Acceptance** (`microdelta.resolution.acceptance`) records a current
+ *   verification of an existing result: its basis and the current work or
+ *   children it followed (version 1), or the current result of each recorded
+ *   call by position (version 2). It never rewrites provenance (RES-007).
  * - **Attempt ending** (`microdelta.resolution.attempt-ending`, version 1)
  *   records why an admitted attempt ended without a new result.
  *
@@ -30,29 +40,36 @@ import type { IAddressSegment, ICurrentFactRequest, ITrackingBinding, ITrackingO
 
 import { ResolutionError } from './errors.js';
 
-/** The provenance format identity and its only supported version. */
+/** The provenance format identity. */
 export const provenanceFormat = 'microdelta.resolution.provenance';
 /** The acceptance format identity. */
 export const acceptanceFormat = 'microdelta.resolution.acceptance';
 /** The attempt-ending format identity. */
 export const endingFormat = 'microdelta.resolution.attempt-ending';
-/** The version every Resolution record format currently uses. */
+/** The M3 version of every Resolution record format; the only attempt-ending version. */
 export const formatVersion = 1;
+/** The version of provenance and acceptance records that carry ordered nested calls. */
+export const nestedFormatVersion = 2;
 
 /**
  * Tracking binding paths Resolution assigns, as structural correspondence
  * Resolution resolves again for current facts. `self` is the author callback
  * of the step being validated; `inputs` the declared input record; a
  * `callable` path names one declared helper slot; a `child` path names the
- * direct child slot whose output a memo consumed; `previous` is a source's
- * eligible previous result, which is history rather than a current input.
+ * direct child slot whose output an M3-shaped memo consumed; a `call` path
+ * names the position of the nested call whose output a nested memo consumed;
+ * `argument` is a supplied step's argument list, observed per position;
+ * `previous` is a source's eligible previous result, which is history rather
+ * than a current input.
  */
 export const bindingPaths = Object.freeze({
   self: Object.freeze(['self']),
   inputs: Object.freeze(['inputs']),
   previous: Object.freeze(['previous']),
+  argument: Object.freeze(['argument']),
   callable: (slot: string): readonly string[] => Object.freeze(['callable', slot]),
   child: (slot: string): readonly string[] => Object.freeze(['child', slot]),
+  call: (index: number): readonly string[] => Object.freeze(['call', String(index)]),
 });
 
 /** One recorded direct child call of a memo execution. */
@@ -67,21 +84,64 @@ export interface IChildEvidence {
   readonly binding: ITrackingBinding;
 }
 
-/** Parsed provenance of one completed result. */
-export interface IProvenance {
+/**
+ * One recorded call of a nested memo execution, at its position in the call
+ * order. Repeated calls of one slot each have their own position and binding.
+ */
+export interface ICallEvidence {
+  /** Zero-based position in the parent execution's call order. */
+  readonly index: number;
+  /** The version-2 Definition witness, retained as untrusted durable data for reconnection. */
+  readonly witness: unknown;
+  /** The exact child result the execution read. */
+  readonly reference: ICompletedResultReference;
+  /** The binding the memo's consumed facts of this call use: `call`, then the position. */
+  readonly binding: ITrackingBinding;
+}
+
+/** Parsed version-1 provenance, with its M3 meaning. */
+export interface IDirectProvenance {
+  readonly version: 1;
   readonly kind: 'source' | 'memo';
   readonly step: IBindingDescriptor;
   readonly observations: readonly ITrackingObservation[];
   readonly children: readonly IChildEvidence[];
 }
 
+/**
+ * Parsed version-2 provenance: a nested memo with its ordered calls, or a
+ * supplied step (whose step is its callable slot descriptor, with no calls).
+ */
+export interface INestedProvenance {
+  readonly version: 2;
+  readonly kind: 'memo' | 'supplied';
+  readonly step: IBindingDescriptor;
+  readonly observations: readonly ITrackingObservation[];
+  readonly calls: readonly ICallEvidence[];
+}
+
+/** Parsed provenance of one completed result. */
+export type IProvenance = IDirectProvenance | INestedProvenance;
+
 /** The outcome of reading a candidate's provenance. */
 export type IProvenanceReading =
   | { readonly status: 'supported'; readonly provenance: IProvenance }
   | { readonly status: 'unsupported'; readonly detail: string };
 
-/** Build the stored provenance record of one execution. */
+/** Build the stored provenance record of one execution, in the version its parsed form names. */
 export function provenanceRecord(provenance: IProvenance): IVersionedRecord {
+  if (provenance.version === nestedFormatVersion) {
+    return {
+      format: provenanceFormat,
+      formatVersion: nestedFormatVersion,
+      content: {
+        kind: provenance.kind,
+        step: plainDescriptor(provenance.step),
+        observations: provenance.observations.map(plainObservation),
+        calls: provenance.calls.map((call) => ({ index: call.index, witness: call.witness, reference: plainReference(call.reference), binding: { path: [...call.binding.path] } })),
+      },
+    };
+  }
   return {
     format: provenanceFormat,
     formatVersion,
@@ -94,13 +154,30 @@ export function provenanceRecord(provenance: IProvenance): IVersionedRecord {
   };
 }
 
-/** Build a stored acceptance record. */
+/**
+ * Build a stored acceptance record. Naming the current result of each
+ * recorded call by position (a nested memo's validation) writes version 2;
+ * otherwise the M3 version 1.
+ */
 export function acceptanceRecord(content: {
   readonly basis: 'finality' | 'check' | 'validated';
   readonly step: IBindingDescriptor;
   readonly observations?: readonly ITrackingObservation[];
   readonly children?: readonly { readonly slot: string; readonly reference: ICompletedResultReference }[];
+  readonly calls?: readonly { readonly index: number; readonly reference: ICompletedResultReference }[];
 }): IVersionedRecord {
+  if (content.calls !== undefined) {
+    return {
+      format: acceptanceFormat,
+      formatVersion: nestedFormatVersion,
+      content: {
+        basis: content.basis,
+        step: plainDescriptor(content.step),
+        observations: (content.observations ?? []).map(plainObservation),
+        calls: content.calls.map((call) => ({ index: call.index, reference: plainReference(call.reference) })),
+      },
+    };
+  }
   return {
     format: acceptanceFormat,
     formatVersion,
@@ -138,6 +215,7 @@ function plainSelection(request: ICurrentFactRequest): Record<string, unknown> {
       return { kind: request.kind, operation: request.operation, address: plainAddress(request.address), encodingVersion: request.encodingVersion };
     case 'implementation':
     case 'materialized-output':
+    case 'untracked-read':
       return { kind: request.kind, address: plainAddress(request.address), encodingVersion: request.encodingVersion };
     case 'projection': {
       const traversal = request.descriptor.traversal;
@@ -178,13 +256,15 @@ function plainObservation(item: ITrackingObservation): Record<string, unknown> {
   };
 }
 
-/** A descriptor as plain stored data. */
-function plainDescriptor(descriptor: IBindingDescriptor): Record<string, string> {
+/** A descriptor as plain stored data, keeping every structural field it carries. */
+export function plainDescriptor(descriptor: IBindingDescriptor): Record<string, string> {
   return {
     scope: descriptor.scope,
     role: descriptor.role,
     slot: descriptor.slot,
     ...(descriptor.memberKey === undefined ? {} : { memberKey: descriptor.memberKey }),
+    ...(descriptor.template === undefined ? {} : { template: descriptor.template }),
+    ...(descriptor.collection === undefined ? {} : { collection: descriptor.collection }),
   };
 }
 
@@ -278,13 +358,15 @@ function selection(value: unknown): ICurrentFactRequest {
     }
     case 'collection-order':
       return encodingVersion === 'MDV1' ? Object.freeze({ kind, keys: strings(field(value, 'keys'), 'order keys'), encodingVersion }) : malformed('order request');
+    case 'untracked-read':
+      return encodingVersion === 'MDU1' ? Object.freeze({ kind, address: address(field(value, 'address')), encodingVersion }) : malformed('untracked-read request');
     default:
       return malformed('selection kind');
   }
 }
 
 /** The observation kinds Tracking emits. */
-const observationKinds = new Set(['fact', 'implementation', 'materialized-output', 'projection', 'collection-order']);
+const observationKinds = new Set(['fact', 'implementation', 'materialized-output', 'projection', 'collection-order', 'untracked-read']);
 
 /**
  * Copy one stored observation into a frozen Tracking observation. Every field
@@ -324,7 +406,7 @@ function reference(value: unknown): ICompletedResultReference {
   return Object.freeze({ kind: 'completed-result', locator });
 }
 
-/** A stored step descriptor. */
+/** A stored version-1 step descriptor: an M3 member or composition-level step. */
 function descriptor(value: unknown): IBindingDescriptor {
   const scope = text(field(value, 'scope'), 'step scope');
   const slot = text(field(value, 'slot'), 'step slot');
@@ -336,15 +418,35 @@ function descriptor(value: unknown): IBindingDescriptor {
 }
 
 /**
+ * A stored version-2 step descriptor: a memo's step slot, or a supplied
+ * step's composition-wide callable slot (which never carries a member key).
+ */
+function nestedDescriptor(value: unknown, kind: 'memo' | 'supplied'): IBindingDescriptor {
+  if (kind === 'memo') {
+    return descriptor(value);
+  }
+  const scope = text(field(value, 'scope'), 'slot scope');
+  const slot = text(field(value, 'slot'), 'slot name');
+  if (field(value, 'role') !== 'callable' || field(value, 'memberKey') !== undefined) {
+    return malformed('supplied step slot descriptor');
+  }
+  return Object.freeze({ scope, role: 'callable', slot });
+}
+
+/**
  * Read a candidate's provenance. Another format or version is unsupported
- * evidence; this format with malformed content is an integrity failure.
+ * evidence; a supported version with malformed content is an integrity failure.
  */
 export function readProvenance(envelope: ICompletedEnvelope): IProvenanceReading {
   const record = envelope.provenance;
-  if (record.format !== provenanceFormat || record.formatVersion !== formatVersion) {
+  if (record.format !== provenanceFormat || (record.formatVersion !== formatVersion && record.formatVersion !== nestedFormatVersion)) {
     return { status: 'unsupported', detail: `provenance ${record.format} version ${String(record.formatVersion)} is not supported` };
   }
-  const content = record.content;
+  return record.formatVersion === nestedFormatVersion ? readNested(record.content) : readDirect(record.content);
+}
+
+/** Read version-1 provenance with its M3 meaning, unchanged. */
+function readDirect(content: unknown): IProvenanceReading {
   const kind = field(content, 'kind');
   if (kind !== 'source' && kind !== 'memo') {
     return malformed('step kind');
@@ -376,10 +478,53 @@ export function readProvenance(envelope: ICompletedEnvelope): IProvenanceReading
   return {
     status: 'supported',
     provenance: Object.freeze({
+      version: formatVersion,
       kind,
       step: descriptor(field(content, 'step')),
       observations,
       children: Object.freeze(children),
+    }),
+  };
+}
+
+/**
+ * Read version-2 provenance. Beyond the observation envelope, its own meaning
+ * requires: a memo or supplied kind; each call at the position its index
+ * names, bound at `call` and that position; every consumed call fact bound to
+ * a recorded call (an unmatched one could never be compared); a supplied step
+ * with no calls; and the step's own implementation observation.
+ */
+function readNested(content: unknown): IProvenanceReading {
+  const kind = field(content, 'kind');
+  if (kind !== 'memo' && kind !== 'supplied') {
+    return malformed('nested step kind');
+  }
+  const calls = list(field(content, 'calls'), 'calls').map((call, position): ICallEvidence => {
+    const path = strings(field(field(call, 'binding'), 'path'), 'call binding');
+    if (field(call, 'index') !== position || path.length !== 2 || path[0] !== 'call' || path[1] !== String(position)) {
+      return malformed('call entry');
+    }
+    return Object.freeze({ index: position, witness: field(call, 'witness'), reference: reference(field(call, 'reference')), binding: Object.freeze({ path }) });
+  });
+  const observations = Object.freeze(list(field(content, 'observations'), 'observations').map(observation));
+  if (!observations.some(isOwnImplementation)) {
+    return malformed(`${kind} provenance lacks its own implementation observation`);
+  }
+  if (kind === 'supplied' && calls.length > 0) {
+    return malformed('supplied step provenance records calls');
+  }
+  const recorded = new Set(calls.map((call) => String(call.index)));
+  if (observations.some((item) => item.binding.path[0] === 'call' && (item.binding.path.length !== 2 || !recorded.has(item.binding.path[1] ?? '')))) {
+    return malformed('a consumed call fact names no recorded call');
+  }
+  return {
+    status: 'supported',
+    provenance: Object.freeze({
+      version: nestedFormatVersion,
+      kind,
+      step: nestedDescriptor(field(content, 'step'), kind),
+      observations,
+      calls: Object.freeze(calls),
     }),
   };
 }

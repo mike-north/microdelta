@@ -10,7 +10,7 @@ import { readdirSync, rmSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-/** Output directories every package, fixture, and example project may generate. */
+/** Output directories every package, experiment, fixture, and example project may generate. */
 const projectOutputDirectories = ['dist', 'temp', '.test-build'];
 /** Workspace-level generated directories. */
 const rootOutputDirectories = ['.test-build', 'coverage'];

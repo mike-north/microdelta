@@ -14,10 +14,12 @@ import type { IDeclarations } from '@microdelta/definition';
 import type { IDurableHistory } from '@microdelta/history';
 import type { IPreviousCarrierFamily } from '@microdelta/definition';
 import type { ISha256Capability } from '@microdelta/tracking';
+import type { ITracked } from '@microdelta/tracking';
 import type { ITrackedView } from '@microdelta/tracking';
 import type { ITrackingObservation } from '@microdelta/tracking';
 import type { ITrackingObserver } from '@microdelta/tracking';
 import type { ITypeFamily } from '@microdelta/definition';
+import type { IUntrackedKey } from '@microdelta/tracking';
 import type { IVersionedSubject } from '@microdelta/history';
 import type { IWriterLease } from '@microdelta/history';
 
@@ -41,11 +43,14 @@ export interface IAdmissionRequest {
 }
 
 // @alpha
+export type ICallView<T> = T extends object ? IResultView<T> : T;
+
+// @alpha
 export interface ICandidateMiss {
     readonly candidate: ICompletedResultReference;
     readonly detail: string;
     readonly observation?: ITrackingObservation;
-    readonly reason: 'changed' | 'unavailable' | 'incompatible' | 'ambiguous' | 'correspondence' | 'unsupported-evidence' | 'child-refused';
+    readonly reason: 'changed' | 'unavailable' | 'incompatible' | 'ambiguous' | 'correspondence' | 'unsupported-evidence' | 'changed-child-output' | 'missing-binding' | 'ambiguous-binding' | 'unreconstructible-argument' | 'unjustified-argument' | 'child-refused';
 }
 
 // @alpha
@@ -203,7 +208,7 @@ export interface IResolutionPrevious extends IPreviousCarrierFamily {
 // @alpha
 export interface IResolutionViews extends ITypeFamily {
     // (undocumented)
-    readonly output: IResultView<this['input']>;
+    readonly output: ICallView<this['input']>;
 }
 
 // @alpha
@@ -251,15 +256,19 @@ export interface ISourceOutcomes {
 export interface IStepBindings<TInputs extends object, THelpers extends object> {
     readonly helpers: ITrackedHelpers<THelpers>;
     readonly inputs: ITrackedView<TInputs>;
+    readonly untracked: IUntrackedRead;
 }
 
 // @alpha
-export type IStepKind = 'source' | 'memo';
+export type IStepKind = 'source' | 'memo' | 'supplied';
 
 // @alpha
 export type ITrackedHelpers<THelpers extends object> = {
     readonly [K in keyof THelpers]: ITrackedView<THelpers[K]>;
 };
+
+// @alpha
+export type IUntrackedRead = <V extends ITracked<object>, K extends IUntrackedKey<V>>(value: V, key: K) => V[K];
 
 // @alpha
 export class ResolutionError extends Error {

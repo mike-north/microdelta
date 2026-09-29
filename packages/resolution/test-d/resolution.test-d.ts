@@ -14,7 +14,7 @@ import type { IChildResult } from '@microdelta/definition';
 import type { ITrackedView } from '@microdelta/tracking';
 
 import { ResolutionError, sourceOutcome } from '../dist/src/index.js';
-import type { IPreviousResult, IResolutionFamily, IResolutionOutcome, IResultView, ISourceOutcome, ISourceOutcomes } from '../dist/src/index.js';
+import type { ICallView, ICandidateMiss, IPreviousResult, IResolutionFamily, IResolutionOutcome, IResultView, ISourceOutcome, ISourceOutcomes, IUntrackedRead } from '../dist/src/index.js';
 
 interface IActivity {
   readonly profile: { readonly name: string };
@@ -75,3 +75,35 @@ if (outcome.kind === 'refused') {
   expectType<string>(outcome.reference.locator);
 }
 expectType<ResolutionError['code']>(new ResolutionError('integrity', 'x').code);
+
+// Every callback receives the explicit observed untracked read: scalar members only.
+expectType<IUntrackedRead>(memoContext.untracked);
+expectType<string>(memoContext.untracked(memoContext.inputs.config, 'repository'));
+expectError(memoContext.untracked(memoContext.inputs, 'config'));
+expectType<IUntrackedRead>(runContext.untracked);
+
+// A supplied step reads a scalar argument as itself and a record argument through a tracked view.
+const { suppliedStep } = declarations<IFamily>();
+const assessor = suppliedStep<readonly [number, IActivity], { readonly score: number }>({
+  run: ({ args }) => ({ score: args[0] + args[1].count }),
+});
+type ISuppliedContext = Parameters<typeof assessor.run>[0];
+declare const suppliedContext: ISuppliedContext;
+expectType<number>(suppliedContext.args[0]);
+expectType<ITrackedView<IActivity>>(suppliedContext.args[1]);
+expectType<string>(suppliedContext.untracked(suppliedContext.args[1].profile, 'name'));
+declare const scalarView: ICallView<number>;
+expectType<number>(scalarView);
+declare const recordView: ICallView<IActivity>;
+expectType<ITrackedView<IActivity>>(recordView);
+void assessor;
+
+// Candidate misses keep nested reasons distinct from changed evidence and correspondence.
+declare const missed: ICandidateMiss;
+expectAssignable<ICandidateMiss['reason']>('changed-child-output');
+expectAssignable<ICandidateMiss['reason']>('missing-binding');
+expectAssignable<ICandidateMiss['reason']>('ambiguous-binding');
+expectAssignable<ICandidateMiss['reason']>('unreconstructible-argument');
+expectAssignable<ICandidateMiss['reason']>('unjustified-argument');
+expectNotAssignable<ICandidateMiss['reason']>('unjustified');
+expectType<string>(missed.detail);

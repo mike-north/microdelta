@@ -120,10 +120,12 @@ describe('observed untracked reads', () => {
     const [tainted, clean] = await Promise.all([
       observer.captureAsync(async () => {
         observer.untracked(inputs.rubric, 'prompt');
+        // eslint-disable-next-line microdelta/tracked-captures -- A resolved promise only yields the turn, so the read spans an await.
         await Promise.resolve();
         return observer.untrackedReadObserved();
       }),
       observer.captureAsync(async () => {
+        // eslint-disable-next-line microdelta/tracked-captures -- A resolved promise only yields the turn, interleaving with the concurrent capture.
         await Promise.resolve();
         return observer.untrackedReadObserved();
       }),
@@ -171,10 +173,8 @@ describe('observed untracked reads', () => {
 
   test('lazy views support untracked scalar reads that request exactly one node', () => {
     const { source, requests } = lazySource({ profile: { name: 'Ada', id: 'gh:1' }, notes: 'unread' });
-    const captured = observer.capture(() => {
-      const view = observer.materialization.lazyView<{ readonly profile: { readonly name: string; readonly id: string }; readonly notes: string }>({ path: ['child'] }, source);
-      return observer.untracked(view.profile, 'name');
-    });
+    const view = observer.materialization.lazyView<{ readonly profile: { readonly name: string; readonly id: string }; readonly notes: string }>({ path: ['child'] }, source);
+    const captured = observer.capture(() => observer.untracked(view.profile, 'name'));
     expect(captured.value).toBe('Ada');
     expect(kinds(captured.observations)).toEqual(['untracked-read']);
     expect(captured.observations[0]?.binding.path).toEqual(['child']);
@@ -184,18 +184,18 @@ describe('observed untracked reads', () => {
 
   test('a nested container member is rejected rather than detached untracked, and records nothing', () => {
     const inputs = observer.tracked(config, binding);
+    // @ts-expect-error: a nested tracked container is not an untracked-readable key; this negative case proves the runtime rejects it too.
+    expect(() => observer.capture(() => observer.untracked(inputs, 'rubric'))).toThrow(/scalar/u);
     const captured = observer.capture(() => {
-      let rejection = '';
       try {
-        // @ts-expect-error: a nested tracked container is not an untracked-readable key; this negative case proves the runtime rejects it too.
+        // @ts-expect-error: the same rejected container read, caught so the capture's state can be inspected.
         observer.untracked(inputs, 'rubric');
-      } catch (error: unknown) {
-        rejection = error instanceof Error ? error.message : 'non-error';
+      } catch {
+        return observer.untrackedReadObserved();
       }
-      return { rejection, tainted: observer.untrackedReadObserved() };
+      return true;
     });
-    expect(captured.value.rejection).toMatch(/scalar/u);
-    expect(captured.value.tainted).toBe(false);
+    expect(captured.value).toBe(false);
     expect(captured.observations).toEqual([]);
   });
 
@@ -217,7 +217,9 @@ describe('observed untracked reads', () => {
         // eslint-disable-next-line microdelta/tracked-captures -- This deferred test barrier runs the late calls only after the owning capture closes.
         await gate;
         const attempts = [
+          // eslint-disable-next-line microdelta/tracked-captures -- This test deliberately reads untracked after its capture frame closes.
           Promise.resolve().then(() => observer.untracked(inputs.rubric, 'prompt')),
+          // eslint-disable-next-line microdelta/tracked-captures -- This test deliberately asks for justification after its capture frame closes.
           Promise.resolve().then(() => observer.untrackedReadObserved()),
         ];
         // eslint-disable-next-line microdelta/tracked-captures -- Native promise aggregation is only test scheduling for the late rejections.

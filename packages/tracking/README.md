@@ -42,6 +42,15 @@ construction, and other function metadata/property access fail visibly. Explicit
 unsupported Value inputs, native array methods, and unobservable object
 identity/coercion are outside this bounded surface.
 
+`untracked(view, key)` is the explicit, observed untracked read: it returns one
+scalar member (or an array's `length`) of an observer-owned view without
+consuming its fact. Inside a capture it records an `untracked-read` observation
+(binding and address, `MDU1`; never the value read), and
+`untrackedReadObserved()` reports whether the active capture has made such a
+read, directly or through a replayed derivation. Comparison skips these
+observations: they carry no fact. A consumer such as Reuse Resolution uses the
+query to mark later derived work as unjustified by recorded evidence.
+
 These runnable alpha owner contracts are not the complete durable authoring API.
 History persistence, binding registry, output materialization and reuse
 eligibility remain separate owners. See the [package map](../../docs/package-map.md).

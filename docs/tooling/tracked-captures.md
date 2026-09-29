@@ -49,11 +49,14 @@ brands receive no receiver authority. Runtime ownership checks, not this rule,
 reject a handle used outside its own invocation. Definition's canonical
 `forward` origins (`forward.input`, `forward.member`, `forward.child`, resolved
 to Definition's `IForward`) mint structural tokens and are accepted as a
-capability only when the receiver itself resolves to Definition's
-`IDeclarations.forward`: a binding destructured from a builder instance, a
-constant initialized from its `forward` property, or `builders.forward`
-directly. A look-alike with the same method names, or a value merely annotated
-`IForward`, is an external influence. The observer capabilities, including
+capability only when the receiver traces syntactically, through unreassigned
+`const` bindings, to a direct call of Definition's `declarations()` or the
+facade's `authoring()`: `const { forward } = authoring<...>()`,
+`const b = authoring<...>(); b.forward.child(...)`, `const { forward } = b`, or
+`const f = b.forward` where `b` is such a constant. The declared type is never
+trusted. A look-alike with the same method names, a value annotated `IForward`,
+a parameter, a `let` binding, an object literal or a cast claiming
+`IDeclarations` is an external influence. The observer capabilities, including
 `untracked` and `untrackedReadObserved`, are recognized by `ITrackingObserver`'s
 own member symbols; which observer instance is used is a runtime ownership
 question the lint cannot decide.

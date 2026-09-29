@@ -11,7 +11,14 @@
  * - A forwarded origin whose current shape no longer answers the recorded
  *   path is changed evidence, never guessed.
  * - A body that returns while a call it started is still unsettled cannot
- *   publish: its evidence would be missing that call.
+ *   publish: its evidence would be missing that call. A body that throws
+ *   while calls are in flight reports its own failure once they settle.
+ * - The argument list behaves as the plain array it stands for under every
+ *   ordinary idiom (array methods, iteration, spread, destructuring, `in`,
+ *   key reflection, `for...in`, JSON), and each idiom's reads are evidence:
+ *   an arity change or a value change under an equal subject reruns the
+ *   child, and an unchanged list reuses it. Expected results are the same
+ *   idiom applied to a plain array.
  *
  * @see ../../../../docs/spec/composition.md (CMP-7 and the EXP-4 argument recipe)
  * @see ../../../../docs/spec/execution.md (REUSE-005, REUSE-006, REUSE-007)
@@ -36,6 +43,23 @@ const scope = 'arguments:fixture';
 interface IInputs {
   readonly cfg: { readonly which: string };
   readonly data: Readonly<Record<string, unknown>>;
+  /** The numbers the `summed` memo passes, one argument each. */
+  readonly nums: readonly number[];
+  /** Which idiom the supplied `sum` implementation reads its argument list with. */
+  readonly idiom: { readonly name: IIdiom };
+}
+
+/** The ordinary array idioms a supplied step may use on its argument list. */
+type IIdiom = 'map' | 'forEach' | 'reduce' | 'filter' | 'indexOf' | 'includes' | 'slice' | 'concat' | 'in' | 'keys' | 'forIn' | 'destructuring' | 'spread' | 'json' | 'index';
+
+/** Every idiom, in test order. */
+const idioms: readonly IIdiom[] = ['map', 'forEach', 'reduce', 'filter', 'indexOf', 'includes', 'slice', 'concat', 'in', 'keys', 'forIn', 'destructuring', 'spread', 'json', 'index'];
+
+/** What `sum` returns: the collected values' total and count, and the list's keys for the key idiom. */
+interface ICollected {
+  readonly t: number;
+  readonly n: number;
+  readonly keys?: readonly string[];
 }
 
 /** One forwarded record. */
@@ -47,13 +71,16 @@ interface IValue {
 interface IHelpers {
   readonly scoreOf: (count: number, value: number) => { readonly s: number };
   readonly readOf: (value: number) => IValue;
+  readonly collect: (idiom: IIdiom, args: readonly number[]) => ICollected;
+  readonly failOf: (value: number) => IValue;
+  readonly boom: () => never;
 }
 
 /** Resolution's binding family for this composition. */
 type IFamily = IResolutionFamily<IInputs, IHelpers>;
 
 /** Body runs of the supplied steps in the current test. */
-const runs = { score: 0, read: 0 };
+const runs = { score: 0, read: 0, sum: 0, fail: 0 };
 
 /** Score: a wide call (more than one argument) scores 100, otherwise the first argument. */
 function scoreOf(count: number, value: number): { readonly s: number } {
@@ -67,6 +94,86 @@ function readOf(value: number): IValue {
   return { v: value };
 }
 
+/** The values one idiom collects from a list; applied to a plain array it is the expected meaning. */
+function idiomValues(idiom: IIdiom, args: readonly number[]): readonly number[] {
+  switch (idiom) {
+    case 'map':
+      return args.map((value) => value);
+    case 'forEach': {
+      const out: number[] = [];
+      args.forEach((value) => {
+        out.push(value);
+      });
+      return out;
+    }
+    case 'reduce':
+      return args.reduce<readonly number[]>((collected, value) => [...collected, value], []);
+    case 'filter':
+      return args.filter(() => true);
+    case 'indexOf':
+      return [1, 2, 5].map((value) => args.indexOf(value));
+    case 'includes':
+      return [1, 2, 5].map((value) => (args.includes(value) ? value : 0));
+    case 'slice':
+      return args.slice(0);
+    case 'concat': {
+      const empty: number[] = [];
+      return empty.concat(args);
+    }
+    case 'in':
+      return [0, 1, 2].filter((position) => position in args).map((position) => args[position] ?? 0);
+    case 'keys':
+      return Object.keys(args).map((key) => args[Number(key)] ?? 0);
+    case 'forIn': {
+      const out: number[] = [];
+      for (const key in args) {
+        out.push(args[Number(key)] ?? 0);
+      }
+      return out;
+    }
+    case 'destructuring': {
+      const [first, second] = args;
+      return [first, second].filter((value): value is number => value !== undefined);
+    }
+    case 'spread':
+      return [...args];
+    case 'json': {
+      const parsed: unknown = JSON.parse(JSON.stringify(args));
+      return Array.isArray(parsed) ? parsed.filter((value): value is number => typeof value === 'number') : [];
+    }
+    case 'index':
+      // Direct positional reads, including one past the end of a shorter list.
+      return [args[0] ?? 0, args[1] ?? 0];
+    default: {
+      const exhaustive: never = idiom;
+      return exhaustive;
+    }
+  }
+}
+
+/** The supplied `sum` body: one idiom over the argument list. */
+function collect(idiom: IIdiom, args: readonly number[]): ICollected {
+  runs.sum += 1;
+  return expected(idiom, args);
+}
+
+/** The result `collect` produces for a list, computed on a plain array. */
+function expected(idiom: IIdiom, args: readonly number[]): ICollected {
+  const values = idiomValues(idiom, args);
+  return { t: values.reduce((total, value) => total + value, 0), n: values.length, ...(idiom === 'keys' ? { keys: Object.keys(args) } : {}) };
+}
+
+/** A supplied body that always fails, standing in for a child that fails while in flight. */
+function failOf(value: number): IValue {
+  runs.fail += 1;
+  throw new Error(`child failure ${String(value)}`);
+}
+
+/** A memo body failure. */
+function boom(): never {
+  throw new Error('body failure');
+}
+
 /** One build's choices. */
 interface IVariation {
   /** How the `arity` memo calls `score`: one argument, or two. */
@@ -77,6 +184,8 @@ interface IVariation {
   readonly dangling?: 'only' | 'trailing';
   readonly which?: string;
   readonly data?: Readonly<Record<string, unknown>>;
+  readonly nums?: readonly number[];
+  readonly idiom?: IIdiom;
 }
 
 /** One fresh composition. */
@@ -97,6 +206,37 @@ function compose(variation: IVariation): IBuild {
     ? suppliedStep<readonly [number, string?], { readonly s: number }>({ run: ({ args, helpers }) => helpers.scoreOf([...args].length, args[0]) })
     : suppliedStep<readonly [number, string?], { readonly s: number }>({ run: ({ args, helpers }) => helpers.scoreOf(args.length, args[0]) });
   const readImplementation = suppliedStep<readonly [IValue], IValue>({ run: ({ args, helpers }) => helpers.readOf(args[0].v) });
+  const sum = stepSlot<readonly number[], ICollected>({ slot: 'sum' });
+  // Constant subject: arity and values never change which history the call belongs to.
+  const sumSubject: ISlotSubject<readonly number[]> = () => 'sum:all';
+  const sumImplementation = suppliedStep<readonly number[], ICollected>({ run: ({ args, helpers, inputs }) => helpers.collect(inputs.idiom.name, args) });
+  const fail = stepSlot<readonly [number], IValue>({ slot: 'fail' });
+  const failSubject: ISlotSubject<readonly [number]> = (derived) => `fail:${String(derived[0])}`;
+  const failImplementation = suppliedStep<readonly [number], IValue>({ run: ({ args, helpers }) => helpers.failOf(args[0]) });
+  const summed = memo({
+    subject: 'summed',
+    children: { sum },
+    run: async ({ calls, inputs }) => {
+      const values: number[] = [];
+      for (let index = 0; index < inputs.nums.length; index += 1) {
+        const value = inputs.nums[index];
+        if (value !== undefined) {
+          values.push(value);
+        }
+      }
+      const collected = await calls.sum(...values);
+      return { t: collected.data.t, n: collected.data.n };
+    },
+  });
+  const throwing = memo({
+    subject: 'throwing',
+    children: { fail },
+    run: ({ calls, helpers }) => {
+      // A call still in flight, which will itself fail, when the body throws.
+      void calls.fail(1).catch(() => undefined);
+      return helpers.boom();
+    },
+  });
   const arity = variation.arity === 'two'
     ? memo({ subject: 'arity', children: { score }, run: async ({ calls }) => ({ s: (await calls.score(7, 'bonus')).data.s }) })
     : memo({ subject: 'arity', children: { score }, run: async ({ calls }) => ({ s: (await calls.score(7)).data.s }) });
@@ -137,17 +277,29 @@ function compose(variation: IVariation): IBuild {
     inputs: [
       { slot: 'cfg', value: { which: variation.which ?? 'a' } },
       { slot: 'data', value: variation.data ?? { a: { v: 1 }, b: { v: 2 }, nested: { a: { v: 3 } } } },
+      { slot: 'nums', value: variation.nums ?? [1] },
+      { slot: 'idiom', value: { name: variation.idiom ?? 'map' } },
     ],
-    helpers: [{ slot: 'scoreOf', helper: scoreOf }, { slot: 'readOf', helper: readOf }],
+    helpers: [
+      { slot: 'scoreOf', helper: scoreOf },
+      { slot: 'readOf', helper: readOf },
+      { slot: 'collect', helper: collect },
+      { slot: 'failOf', helper: failOf },
+      { slot: 'boom', helper: boom },
+    ],
     steps: [
       { slot: 'arity', declaration: arity },
       { slot: 'pick', declaration: pick },
       { slot: 'deep', declaration: deep },
       { slot: 'dangling', declaration: dangling },
+      { slot: 'summed', declaration: summed },
+      { slot: 'throwing', declaration: throwing },
     ],
     supplied: [
       supply({ slot: score, declaration: scoreImplementation, subject: scoreSubject }),
       supply({ slot: read, declaration: readImplementation, subject: readSubject }),
+      supply({ slot: sum, declaration: sumImplementation, subject: sumSubject }),
+      supply({ slot: fail, declaration: failImplementation, subject: failSubject }),
     ],
   });
   return { builders, composition };
@@ -177,7 +329,7 @@ async function session<T>(location: string, variation: IVariation, body: (operat
   const resolution = createResolution({
     declarations: build.builders,
     composition: build.composition,
-    bindings: { inputs: ['cfg', 'data'], helpers: ['scoreOf', 'readOf'] },
+    bindings: { inputs: ['cfg', 'data', 'nums', 'idiom'], helpers: ['scoreOf', 'readOf', 'collect', 'failOf', 'boom'] },
     environment: 'env:arguments',
     history,
     tracking: createTrackingObserver(machine),
@@ -211,6 +363,8 @@ function payload(history: IDurableHistory, outcome: IResolutionOutcome): unknown
 function resetRuns(): void {
   runs.score = 0;
   runs.read = 0;
+  runs.sum = 0;
+  runs.fail = 0;
 }
 
 /** Expect a rejection with a ResolutionError of `code`. */
@@ -255,6 +409,41 @@ describe('supplied step argument lists are observed', () => {
       expect(outcome.kind !== 'refused' && first.kind !== 'refused' ? outcome.reference.locator === first.reference.locator : false).toBe(true);
     });
     expect(runs.score).toBe(0);
+  });
+});
+
+describe('argument lists behave as plain arrays under every idiom, and each idiom is evidence', () => {
+  test.each(idioms)('%s: an arity change and a value change rerun the child; an unchanged list reuses it', async (idiom) => {
+    const location = freshLocation();
+    /** One session over `nums`: the parent's result, the child's latest payload and the child body runs. */
+    const sessionOver = async (nums: readonly number[]): Promise<{ readonly parent: unknown; readonly child: unknown; readonly runs: number }> => {
+      resetRuns();
+      return session(location, { idiom, nums }, async ({ history, resolve }) => {
+        const parent = payload(history, await resolve('summed'));
+        const [latest] = history.findCandidates({ analysis: scope, environment: 'env:arguments', subject: 'sum:all', version: 1 });
+        return { parent, child: latest === undefined ? undefined : history.reader.readSubtree(latest.reference, []), runs: runs.sum };
+      });
+    };
+    const cold = await sessionOver([1]);
+    expect(cold).toEqual({ parent: { t: expected(idiom, [1]).t, n: expected(idiom, [1]).n }, child: expected(idiom, [1]), runs: 1 });
+    // Arity change under the same subject: the list's recorded shape differs, so the child reruns.
+    const wider = await sessionOver([1, 2]);
+    expect(wider).toEqual({ parent: { t: expected(idiom, [1, 2]).t, n: expected(idiom, [1, 2]).n }, child: expected(idiom, [1, 2]), runs: 1 });
+    // Value change at an equal arity: a read element differs, so the child reruns.
+    const changed = await sessionOver([5, 2]);
+    expect(changed).toEqual({ parent: { t: expected(idiom, [5, 2]).t, n: expected(idiom, [5, 2]).n }, child: expected(idiom, [5, 2]), runs: 1 });
+    // Unchanged arity and values: the child and parent are reused.
+    const same = await sessionOver([5, 2]);
+    expect(same).toEqual({ ...changed, runs: 0 });
+  });
+
+  test('Object.keys reports the argument list\'s index keys', async () => {
+    resetRuns();
+    await session(freshLocation(), { idiom: 'keys', nums: [1, 2] }, async ({ history, resolve }) => {
+      await resolve('summed');
+      const [latest] = history.findCandidates({ analysis: scope, environment: 'env:arguments', subject: 'sum:all', version: 1 });
+      expect(latest === undefined ? undefined : history.reader.readSubtree(latest.reference, [])).toEqual({ t: 3, n: 2, keys: ['0', '1'] });
+    });
   });
 });
 
@@ -303,6 +492,18 @@ describe('forwarded paths', () => {
 });
 
 describe('unsettled calls at publication', () => {
+  test('a body that throws while a call is in flight reports its own failure once that call settles, even when the call fails too', async () => {
+    resetRuns();
+    await session(freshLocation(), {}, async ({ history, resolve }) => {
+      const message = await failureOf(resolve('throwing'), 'execution-failure');
+      expect(message).toMatch(/body failure/u);
+      expect(message).not.toMatch(/child failure/u);
+      expect(history.findCandidates({ analysis: scope, environment: 'env:arguments', subject: 'throwing', version: 1 })).toEqual([]);
+    });
+    // The in-flight call ran to its own end before the request reported.
+    expect(runs.fail).toBe(1);
+  });
+
   test.each(['only', 'trailing'] as const)('a body that returns while its %s call is unsettled fails without publishing', async (dangling) => {
     resetRuns();
     const location = freshLocation();

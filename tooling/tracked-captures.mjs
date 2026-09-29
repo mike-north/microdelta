@@ -50,6 +50,14 @@ const definitionOwnerFiles = new Set([
   path.resolve(fileURLToPath(new URL('../packages/definition/dist/api/definition.alpha.d.ts', import.meta.url))),
 ]);
 /**
+ * The facade's generated declarations, whose `authoring()` returns
+ * Definition's builders: its call is a canonical builder factory too.
+ */
+const facadeOwnerFiles = new Set([
+  path.resolve(fileURLToPath(new URL('../packages/core/dist/api/microdelta.alpha.d.ts', import.meta.url))),
+  path.resolve(fileURLToPath(new URL('../packages/core/dist/api/microdelta.untrimmed.d.ts', import.meta.url))),
+]);
+/**
  * The author callback options each Definition builder declares, by builder
  * interface and method. Only these options are capture boundaries; a builder
  * absent from the generated declaration simply contributes none.
@@ -70,22 +78,18 @@ const definitionCallbackOptions = new Map([
 
 /**
  * Collect Definition's builder signatures (each with its callback options),
- * its declared-call brand and its canonical `forward` origin methods from the
- * generated declaration.
+ * its declared-call brand, its canonical `forward` origin methods and its
+ * `declarations()` builder factory from the generated declaration.
  */
 function definitionTypes(sourceFile, checker) {
   const builderSignatures = new Map();
   const brandProperties = new Set();
   const forwardMembers = new Set();
-  const forwardDeclarations = new Set();
+  const factories = new Set();
   const visit = node => {
     const builders = ts.isInterfaceDeclaration(node) ? definitionCallbackOptions.get(node.name.text) : undefined;
-    if (ts.isInterfaceDeclaration(node) && node.name.text === 'IDeclarations') {
-      for (const member of node.members) {
-        if (ts.isPropertySignature(member) && member.name && ts.isIdentifier(member.name) && member.name.text === 'forward') {
-          forwardDeclarations.add(member);
-        }
-      }
+    if (ts.isFunctionDeclaration(node) && node.name?.text === 'declarations') {
+      factories.add(node);
     }
     if (builders) {
       for (const member of node.members) {
@@ -111,7 +115,20 @@ function definitionTypes(sourceFile, checker) {
     ts.forEachChild(node, visit);
   };
   visit(sourceFile);
-  return { builderSignatures, brandProperties, forwardMembers, forwardDeclarations };
+  return { builderSignatures, brandProperties, forwardMembers, factories };
+}
+
+/** Collect the facade's `authoring()` builder factory from its generated declaration. */
+function facadeFactories(sourceFile) {
+  const factories = new Set();
+  const visit = node => {
+    if (ts.isFunctionDeclaration(node) && node.name?.text === 'authoring') {
+      factories.add(node);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(sourceFile);
+  return factories;
 }
 
 /** Resolve canonical symbols only from each owning source or generated alpha view. */
@@ -120,7 +137,7 @@ function canonicalTypes(program, checker) {
   const brandProperties = new Set();
   const definitionBuilders = new Map();
   const forwardMembers = new Set();
-  const forwardDeclarations = new Set();
+  const builderFactories = new Set();
   let materializationSymbol;
   for (const sourceFile of program.getSourceFiles()) {
     const filename = path.resolve(sourceFile.fileName);
@@ -129,7 +146,11 @@ function canonicalTypes(program, checker) {
       definition.builderSignatures.forEach((options, signature) => definitionBuilders.set(signature, options));
       definition.brandProperties.forEach(property => brandProperties.add(property));
       definition.forwardMembers.forEach(property => forwardMembers.add(property));
-      definition.forwardDeclarations.forEach(declaration => forwardDeclarations.add(declaration));
+      definition.factories.forEach(factory => builderFactories.add(factory));
+      continue;
+    }
+    if (facadeOwnerFiles.has(filename)) {
+      facadeFactories(sourceFile).forEach(factory => builderFactories.add(factory));
       continue;
     }
     const isTrackingOwner = trackingOwnerFiles.has(filename);
@@ -170,7 +191,7 @@ function canonicalTypes(program, checker) {
     brandProperties,
     definitionBuilders,
     forwardMembers,
-    forwardDeclarations,
+    builderFactories,
     observerMembers: new Map([...observerMethods].map(name => [
       name, observerSymbol && checker.getDeclaredTypeOfSymbol(observerSymbol).getProperty(name),
     ])),
@@ -399,26 +420,76 @@ export const trackedCaptures = {
         program.isSourceFileDefaultLibrary(declaration.getSourceFile())) === true;
     };
 
-    /** Whether a symbol is Definition's canonical `IDeclarations.forward` property (through any instantiation). */
-    const isForwardProperty = symbol => symbol?.declarations?.some(declaration => canonical.forwardDeclarations.has(declaration)) === true;
-
-    /**
-     * Whether an identifier resolves to Definition's canonical `forward`: a
-     * binding destructured from an `IDeclarations` value, or a constant
-     * initialized from its `forward` property. A value merely annotated with
-     * the `IForward` type is not.
+    /*
+     * Canonical `forward` is established syntactically, never by a declared
+     * type: a receiver qualifies only when it traces through unreassigned
+     * `const` bindings to a direct call of Definition's `declarations()` or the
+     * facade's `authoring()`. Parameters, `let` bindings, object literals and
+     * casts can claim the builder type while holding anything, so they never
+     * qualify.
      */
-    const isCanonicalForward = identifier => {
-      const tsIdentifier = tsNodeFor(identifier);
-      const declaration = tsIdentifier && checker.getSymbolAtLocation(tsIdentifier)?.valueDeclaration;
-      if (declaration && ts.isBindingElement(declaration) && ts.isObjectBindingPattern(declaration.parent)) {
-        const name = declaration.propertyName ?? declaration.name;
-        return ts.isIdentifier(name) && isForwardProperty(checker.getTypeAtLocation(declaration.parent).getProperty(name.text));
+    /** The ESLint variable an identifier refers to, searching outward from its scope. */
+    const variableOf = identifier => {
+      for (let scope = sourceCode.getScope(identifier); scope; scope = scope.upper) {
+        const found = scope.set.get(identifier.name);
+        if (found) {
+          return found;
+        }
       }
-      if (declaration && ts.isVariableDeclaration(declaration) && declaration.initializer && ts.isPropertyAccessExpression(declaration.initializer)) {
-        return isForwardProperty(checker.getSymbolAtLocation(declaration.initializer.name));
+      return undefined;
+    };
+    /** The declarator and bound name of a single-definition, never-reassigned `const`, or undefined. */
+    const constBinding = variable => {
+      const [definition, ...others] = variable?.defs ?? [];
+      if (!definition || others.length > 0 || definition.type !== 'Variable' || definition.parent?.kind !== 'const' ||
+          variable.references.some(reference => reference.isWrite() && !reference.init)) {
+        return undefined;
       }
-      return false;
+      return { declarator: definition.node, name: definition.name };
+    };
+    /** Whether a node is a direct call of a canonical builder factory. */
+    const isFactoryCall = node => {
+      if (node?.type !== 'CallExpression') {
+        return false;
+      }
+      const tsCall = tsNodeFor(node);
+      const declaration = tsCall && ts.isCallExpression(tsCall) ? checker.getResolvedSignature(tsCall)?.declaration : undefined;
+      return Boolean(declaration && canonical.builderFactories.has(declaration));
+    };
+    /** Whether an expression traces to a canonical builder instance. */
+    const tracesToBuilders = (node, depth = 0) => {
+      if (depth > 8 || !node) {
+        return false;
+      }
+      if (isFactoryCall(node)) {
+        return true;
+      }
+      const bound = node.type === 'Identifier' ? constBinding(variableOf(node)) : undefined;
+      return Boolean(bound && bound.declarator.id.type === 'Identifier' && tracesToBuilders(bound.declarator.init, depth + 1));
+    };
+    /** Whether an expression traces to a canonical builder instance's `forward`. */
+    const tracesToForward = (node, depth = 0) => {
+      if (depth > 8 || !node) {
+        return false;
+      }
+      if (node.type === 'MemberExpression') {
+        return !node.computed && node.property.type === 'Identifier' && node.property.name === 'forward' && tracesToBuilders(node.object, depth + 1);
+      }
+      const bound = node.type === 'Identifier' ? constBinding(variableOf(node)) : undefined;
+      if (!bound) {
+        return false;
+      }
+      const { declarator, name } = bound;
+      if (declarator.id.type === 'Identifier') {
+        return tracesToForward(declarator.init, depth + 1);
+      }
+      if (declarator.id.type !== 'ObjectPattern') {
+        return false;
+      }
+      const property = declarator.id.properties.find(item => item.type === 'Property' &&
+        item.value.range[0] === name.range[0] && item.value.range[1] === name.range[1]);
+      return Boolean(property && !property.computed && property.key.type === 'Identifier' && property.key.name === 'forward') &&
+        tracesToBuilders(declarator.init, depth + 1);
     };
 
     const capabilityUse = identifier => {
@@ -427,18 +498,18 @@ export const trackedCaptures = {
         return false;
       }
       // Definition's canonical forward origins mint structural tokens only. The
-      // method must be IForward's and the receiver must resolve to the canonical
-      // forward itself; a look-alike or a value typed IForward is an influence.
+      // method must be IForward's and the receiver must trace to a canonical
+      // builder's forward; a look-alike or a value typed IForward is an influence.
       if (member.parent?.type === 'CallExpression' && member.parent.callee === member &&
           canonical.forwardMembers.has(propertySymbol(member))) {
-        return isCanonicalForward(identifier);
+        return tracesToForward(identifier);
       }
-      // `builders.forward.child(...)`: the receiver is used only for its canonical forward.
+      // `builders.forward.child(...)`: the builder instance is used only for its canonical forward.
       const origin = member.parent;
-      if (isForwardProperty(propertySymbol(member)) && origin?.type === 'MemberExpression' && origin.object === member &&
+      if (member.property.name === 'forward' && origin?.type === 'MemberExpression' && origin.object === member &&
           !origin.computed && origin.parent?.type === 'CallExpression' && origin.parent.callee === origin &&
           canonical.forwardMembers.has(propertySymbol(origin))) {
-        return true;
+        return tracesToBuilders(identifier);
       }
       if (member.parent?.type === 'CallExpression' && member.parent.callee === member &&
           observerMethods.has(member.property.name)) {

@@ -27,9 +27,11 @@ Definition's `declarations()`. Callbacks receive:
   `retain(previous)` mint the only outcomes a source may return;
 - memos receive Definition's declared `calls`; each resolves to `{ data }`, a
   lazy view over the child's exact retained result;
-- supplied steps receive `args`, the argument list as an observed view under
-  the `argument` binding: each position, `length`, iteration and spread are
-  evidence, and an unreconstructible argument throws on read;
+- supplied steps receive `args`, a frozen array that behaves as the plain
+  argument list under every ordinary idiom. Its elements are read through the
+  observed `argument` binding. Its shape is evidence too: reading `length` or a
+  position past the end, an `in` check and key reflection all record it. An
+  unreconstructible argument throws on read;
 - every callback receives `untracked(view, key)`, the explicit observed
   untracked read: it returns a scalar member without consuming it, the capture
   records the read, and any derived argument a memo passes afterwards is
@@ -73,7 +75,11 @@ Definition's `declarations()`. Callbacks receive:
    validating are shared with the parent's execution, so none runs twice in a
    request. A memo whose supplied slot is missing or ambiguous fails with
    `unbound-step` before admission, and a body that returns while a call it
-   started is unsettled fails without publishing.
+   started is unsettled fails without publishing. Before any attempt ends,
+   the memo waits for every call its body started to settle, so no child write
+   races the ending. If the body threw, its own failure is still the one
+   reported. That wait is unbounded; bounding it and cancelling in-flight work
+   belong to Run Supervision's cancellation contract (A-13).
 5. **Admission and execution**: work that validation could not avoid is
    admitted before any claim, attempt or body. Denial is a typed `refused`
    outcome. Admitted work allocates an attempt keyed by the request key and the

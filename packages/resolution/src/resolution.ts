@@ -174,7 +174,14 @@ interface IMemoFrame {
   readonly step: IBindingDescriptor;
   readonly children: Map<string, IChildEvidence>;
   readonly calls: Map<number, ICallEvidence>;
-  /** Declared calls the body has started whose delivery has not yet settled. */
+  /**
+   * Declared calls the body has started whose delivery has not yet settled.
+   * Before its attempt ends, the memo waits for every one of them to settle,
+   * whether the body returned or threw, so no child write races the ending.
+   * The wait is unbounded: a child that never settles keeps its parent
+   * waiting. Bounding that wait and cancelling in-flight work belong to Run
+   * Supervision's cancellation contract (A-13), not to this resolver.
+   */
   readonly inflight: Set<Promise<unknown>>;
   /**
    * How many started calls were still unsettled at the moment the body's
@@ -558,12 +565,12 @@ export function createResolution<TInputs extends object, THelpers extends object
    * assembled inside a fresh capture. `finish` runs inside that capture, so
    * explicit output detachment records what the step consumed from its output.
    */
-  function invoker<TFinished>(finish: (value: unknown) => TFinished): IAuthorInvoker<Promise<IObservationCapture<TFinished>>> {
+  function invoker<TFinished>(finish: (value: unknown) => TFinished, begin?: () => void): IAuthorInvoker<Promise<IObservationCapture<TFinished>>> {
     return <TContext, TResult>(callback: (context: TContext) => TResult, context: TContext): Promise<IObservationCapture<TFinished>> => {
       // eslint-disable-next-line microdelta/tracked-captures -- Framework invoker: the callback is the author's actual function from Definition's record, tracked so its implementation is the step's own evidence.
       const authored = tracking.tracked(callback, { path: bindingPaths.self });
-      // eslint-disable-next-line microdelta/tracked-captures -- Framework invoker: this capture is the author call's evidence boundary; it invokes only the tracked author callback with Definition's assembled context.
-      return tracking.captureAsync(async () => finish(await authored(context)));
+      // eslint-disable-next-line microdelta/tracked-captures -- Framework invoker: this capture is the author call's evidence boundary; `begin` marks the author call's start inside it, then only the tracked author callback runs with Definition's assembled context.
+      return tracking.captureAsync(async () => { begin?.(); return finish(await authored(context)); });
     };
   }
 
@@ -1356,39 +1363,72 @@ export function createResolution<TInputs extends object, THelpers extends object
   }
 
   /**
-   * The argument list a supplied step reads, itself an observed view. Every
-   * position and the list's `length` are read through the author observer's
-   * view of the whole list at the `argument` binding, so a read, an iteration
-   * or a spread (which read `length` and each position) is the step's own
-   * evidence: a changed arity under an equal subject is a changed fact. An
-   * opaque position throws on read, so no step can depend on it.
+   * The argument list a supplied step reads, as the plain array it stands for.
    *
-   * The proxy's target is a frozen hole-only array of the same length, so the
-   * list is a frozen array to Definition, and its length and array methods keep
-   * their ordinary meaning without exposing any value except through the view.
+   * The target is a frozen real array of the call's arity whose positions are
+   * enumerable accessors reading through the author observer's view of the
+   * whole list at the `argument` binding, so every element read (directly, by
+   * an array method, iteration, spread, destructuring or JSON) is the step's
+   * own evidence. An opaque (unreconstructible) position is an accessor that
+   * throws, so no step can depend on it. Being a real frozen array with real
+   * index keys, it satisfies Definition's frozen-array check, and `in`, key
+   * reflection and every array method see its elements.
+   *
+   * The proxy adds only observation: reading `length`, a position past the
+   * end, an `in` check or key reflection records the list's shape (its length,
+   * or the absent position), each returning exactly what the target answers,
+   * as the proxy invariants for a frozen target require. Shape observations
+   * are armed only when the author callback starts, because Definition's
+   * frozen-array check reflects on the list before that, possibly inside a
+   * parent body's capture where a record would be misattributed.
    */
-  function argumentViews(values: readonly IArgumentValue[]): readonly unknown[] {
+  function argumentViews(values: readonly IArgumentValue[]): { readonly views: readonly unknown[]; readonly arm: () => void } {
     const whole = tracking.tracked(argumentList(values), { path: bindingPaths.argument });
+    let armed = false;
+    const observeArity = (): void => {
+      if (armed) {
+        void Reflect.get(whole, 'length');
+      }
+    };
     const target: unknown[] = [];
-    target.length = values.length;
+    values.forEach((value, position) => {
+      Object.defineProperty(target, position, {
+        enumerable: true,
+        get: (): unknown => {
+          if (value.kind === 'opaque') {
+            throw new TypeError(`Argument ${String(position)} is unreconstructible (${value.reason}); a supplied step can never observe it`);
+          }
+          return Reflect.get(whole, String(position));
+        },
+      });
+    });
     Object.freeze(target);
-    return new Proxy(target, {
+    const views = new Proxy(target, {
       get(held, key, receiver): unknown {
         if (key === 'length') {
-          return Reflect.get(whole, 'length');
+          observeArity();
+          return held.length;
         }
-        const position = typeof key === 'string' && /^(?:0|[1-9][0-9]*)$/u.test(key) ? Number(key) : undefined;
-        if (position === undefined) {
-          // Array methods and iteration: they read `length` and positions back through this proxy.
-          return Reflect.get(held, key, receiver);
+        if (typeof key === 'string' && /^(?:0|[1-9][0-9]*)$/u.test(key) && Number(key) >= held.length) {
+          // A position past the end: its absence is a fact of this list's shape.
+          return Reflect.get(whole, key);
         }
-        const value = values[position];
-        if (value?.kind === 'opaque') {
-          throw new TypeError(`Argument ${String(position)} is unreconstructible (${value.reason}); a supplied step can never observe it`);
-        }
-        return Reflect.get(whole, String(position));
+        return Reflect.get(held, key, receiver);
+      },
+      has(held, key): boolean {
+        observeArity();
+        return Reflect.has(held, key);
+      },
+      ownKeys(held): ArrayLike<string | symbol> {
+        observeArity();
+        return Reflect.ownKeys(held);
+      },
+      getOwnPropertyDescriptor(held, key): PropertyDescriptor | undefined {
+        observeArity();
+        return Reflect.getOwnPropertyDescriptor(held, key);
       },
     });
+    return { views, arm: () => { armed = true; } };
   }
 
   /** Resolve one supplied slot call once per top-level request, for its slot, subject, version and arguments. */
@@ -1462,7 +1502,7 @@ export function createResolution<TInputs extends object, THelpers extends object
       invocation.close();
       throw error;
     }
-    const views = argumentViews(call.values);
+    const { views, arm } = argumentViews(call.values);
     const supplier: IArgumentSupplier<IFamily> = Object.freeze({
       views: <TParameters extends readonly unknown[]>(declaration: ISuppliedStepDeclaration<IFamily, TParameters, unknown>): IArgumentViews<IFamily, TParameters> => {
         void declaration;
@@ -1472,7 +1512,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     let ran: IObservationCapture<IMemoReturn>;
     try {
       emit(request, evidence, step, 'execute');
-      ran = await active.run(invocation, () => invocation.apply(bindings, supplier, invoker(detachComputation)));
+      ran = await active.run(invocation, () => invocation.apply(bindings, supplier, invoker(detachComputation, arm)));
     } catch (error: unknown) {
       abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(error) });
       if (error instanceof ResolutionError) {
@@ -1575,13 +1615,18 @@ export function createResolution<TInputs extends object, THelpers extends object
         return detachComputation(value);
       })));
     } catch (error: unknown) {
-      // Let calls the body started finish their own lifecycle before this attempt ends.
+      // What the body failed with is decided now: a call that fails or is
+      // refused while the in-flight calls settle below must not replace it.
+      const refused = frame.refused;
+      const failed = frame.failed;
+      // Let calls the body started finish their own lifecycle before this attempt
+      // ends (an unbounded wait; see IMemoFrame.inflight).
       await Promise.allSettled([...frame.inflight]);
-      if (frame.refused !== undefined) {
-        abandon(request, evidence, step, attemptId, 'interrupted', { ending: 'child-refused', detail: frame.refused.reason });
-        return done({ kind: 'refused', refused: frame.refused.step, reason: frame.refused.reason });
+      if (refused !== undefined) {
+        abandon(request, evidence, step, attemptId, 'interrupted', { ending: 'child-refused', detail: refused.reason });
+        return done({ kind: 'refused', refused: refused.step, reason: refused.reason });
       }
-      const cause = frame.failed?.error ?? error;
+      const cause = failed?.error ?? error;
       abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(cause) });
       if (cause instanceof ResolutionError && cause.code !== 'execution-failure') {
         throw cause;
@@ -1591,6 +1636,7 @@ export function createResolution<TInputs extends object, THelpers extends object
       invocation.close();
     }
     const unsettled = frame.unsettledAtReturn ?? 0;
+    // Every started call settles before the attempt ends (an unbounded wait; see IMemoFrame.inflight).
     await Promise.allSettled([...frame.inflight]);
     if (unsettled > 0) {
       // Its evidence would lack a call the body made: never publish such a result.

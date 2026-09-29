@@ -564,3 +564,70 @@ test("only a receiver that resolves to Definition's canonical forward is a capab
   ]);
   assert.deepEqual(capturedNames(findings), ['spoof'], JSON.stringify(findings, null, 2));
 });
+
+/** A slot whose argument is a forwarded input, for the forward-receiver fixtures below. */
+const forwardSlot = "const slot = stepSlot<readonly [{ readonly n: number }], number>({ slot: 'assessor' });";
+
+/** A memo whose callback forwards through `receiver`, named by its subject. */
+function forwardingMemo(subject, receiver) {
+  return `memo({ subject: '${subject}', children: { assess: slot }, run: async ({ calls }) => (await calls.assess(${receiver}.input<{ readonly n: number }>('limit'))).data });`;
+}
+
+test('forward is accepted only through an unreassigned const that traces to a canonical builder factory call', async () => {
+  const findings = await nestedFindings([
+    forwardSlot,
+    'const builders = declarations<IFamily>();',
+    'const { forward: fromConst } = builders;',
+    'const aliased = builders.forward;',
+    'const { forward: fromCall } = declarations<IFamily>();',
+    forwardingMemo('prelude', 'forward'),
+    forwardingMemo('from-const', 'fromConst'),
+    forwardingMemo('aliased', 'aliased'),
+    forwardingMemo('from-call', 'fromCall'),
+    forwardingMemo('member', 'builders.forward'),
+  ]);
+  assert.deepEqual(capturedNames(findings), [], JSON.stringify(findings, null, 2));
+});
+
+test("the facade's authoring() builders are canonical factories too", async () => {
+  const eslint = new ESLint({ cwd: root });
+  const source = [
+    "import { authoring } from 'microdelta';",
+    'interface IInputs { readonly limit: { readonly n: number } }',
+    'const builders = authoring<IInputs, Record<never, never>>();',
+    'const { memo, stepSlot, forward } = builders;',
+    forwardSlot,
+    forwardingMemo('destructured', 'forward'),
+    forwardingMemo('member', 'builders.forward'),
+  ].join('\n');
+  const [result] = await eslint.lintText(source, { filePath: definitionFixture });
+  assert.ok(result);
+  const findings = result.messages.filter(message => message.ruleId === 'microdelta/tracked-captures' || message.fatal === true);
+  assert.deepEqual(capturedNames(findings), [], JSON.stringify(result.messages, null, 2));
+});
+
+test('forward receivers that only claim the IDeclarations type are external influences', async () => {
+  const findings = await nestedFindings([
+    "import type { IDeclarations, IForward } from '@microdelta/definition';",
+    'declare const spoofForward: IForward;',
+    forwardSlot,
+    'const builders = declarations<IFamily>();',
+    'const literal: IDeclarations<IFamily> = { ...builders, forward: spoofForward };',
+    'const cast = { ...builders, forward: spoofForward } as IDeclarations<IFamily>;',
+    'let { forward: letForward } = builders;',
+    'let letAlias = builders.forward;',
+    'let rebound = builders;',
+    'rebound = literal;',
+    'letForward = spoofForward;',
+    'letAlias = spoofForward;',
+    forwardingMemo('literal', 'literal.forward'),
+    forwardingMemo('cast', 'cast.forward'),
+    forwardingMemo('let-destructured', 'letForward'),
+    forwardingMemo('let-alias', 'letAlias'),
+    forwardingMemo('rebound', 'rebound.forward'),
+    'export function fromParameter({ forward: parameterForward }: IDeclarations<IFamily>): unknown {',
+    `  return ${forwardingMemo('parameter', 'parameterForward').slice(0, -1)};`,
+    '}',
+  ]);
+  assert.deepEqual(capturedNames(findings), ['literal', 'cast', 'letForward', 'letAlias', 'rebound', 'parameterForward'], JSON.stringify(findings, null, 2));
+});

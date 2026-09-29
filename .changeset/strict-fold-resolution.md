@@ -13,7 +13,8 @@ Resolve strict folds with honest readiness, framework coverage and membership-aw
   - Neither runs the fold body, admits fold work or publishes.
 - Only a ready fold is validated or executed. Its body receives one explicit entry per current member in canonical key order: `succeeded` with a view of the member's accepted result, or `skipped` with no data.
 - A `reused` or `published` fold carries framework coverage `{ required, skipped, closed: true }`, derived from the delivered members rather than the body's result. A closed empty population is a successful fold. An open one waits, and never rewinds an earlier result.
-- Fold provenance (version 3) records the membership-and-status fact and the member facts the body consumed; gate observations stay each instance's own evidence. Validation recomputes the fact from current discovery and gate outcomes.
+- Fold provenance (version 3) records the consumed template step, the membership-and-status fact and the member facts the body consumed; gate observations stay each instance's own evidence. Validation recomputes the fact from current discovery and gate outcomes.
+  - A renamed consumed step or template, or a moved collection, is a `correspondence` miss, never a remap.
   - The new miss reasons are `changed-membership` and `changed-member-output`.
   - A gate flip, insertion or deletion reruns the fold. A reorder or a threshold edit that flips no gate reruns nothing. A member change reruns the fold only when a fact it consumed changed.
 - Skips and deletions retract nothing.

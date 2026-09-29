@@ -24,6 +24,10 @@
  *   body, must report exclusions); the `reads-skipped` body reads a skipped
  *   entry's data, which strict fold entries forbid.
  *
+ * A `structure` variation keeps every subject but renames the consumed member
+ * step or the template slot, or moves the collection to another slot, so the
+ * fold consumes a different template step.
+ *
  * Every `composeFold` call allocates fresh declarations, callbacks and
  * inputs, standing in for a new process; `order: 'reversed'` registers
  * helpers, steps and templates in reverse. The declared helpers each callback
@@ -251,6 +255,25 @@ export interface IVariation {
   readonly minimumAuthored?: number;
   /** The fold body. */
   readonly report?: IReportBody;
+  /**
+   * A structural change with every subject kept: the consumed member step
+   * slot renamed `summary` → `profile`, the template slot renamed
+   * `contributor` → `member`, or the collection moved from the `contributors`
+   * slot to `roster`. Each changes the fold's consumed template step.
+   */
+  readonly structure?: IStructureChange;
+}
+
+/** A structural change of the fold's consumed template step. */
+export type IStructureChange = 'renamed-step' | 'renamed-template' | 'moved-collection';
+
+/** The step, template and collection slots of one build. */
+function slotsOf(variation: IVariation): { readonly step: string; readonly template: string; readonly collection: string } {
+  return {
+    step: variation.structure === 'renamed-step' ? 'profile' : 'summary',
+    template: variation.structure === 'renamed-template' ? 'member' : 'contributor',
+    collection: variation.structure === 'moved-collection' ? 'roster' : 'contributors',
+  };
 }
 
 /** One fresh composition with its builders and the descriptors tests use. */
@@ -284,20 +307,21 @@ export function composeFold(variation: IVariation = {}): IFoldFixture {
     run: ({ helpers }) => helpers.discover(),
   });
 
+  const slots = slotsOf(variation);
   const steps = (member: IMemberBuilder<IAuthoringFamily<IInputs, IHelpers>, IContributor>) => ({
-    summary: member.memo({
+    [slots.step]: member.memo({
       subject: member.subject('summary:acme/widget:2026-Q1'),
       run: ({ member: bound, helpers }) => helpers.summarize(bound.login, bound.score),
     }),
   });
   const contributor = template({
-    slot: 'contributor',
+    slot: slots.template,
     collection: roster,
     gate: ({ member, inputs, helpers }) => helpers.meets(member.login, member.authored, inputs.config.minimumAuthored),
     steps,
   });
 
-  const over = { template: contributor, step: 'summary' } as const;
+  const over = { template: contributor, step: slots.step };
   const report = variation.report === 'omits-skipped'
     ? fold({ subject: reportSubject, over, run: ({ members, helpers }) => helpers.renderIncluded(members) })
     : variation.report === 'reads-skipped'
@@ -314,15 +338,15 @@ export function composeFold(variation: IVariation = {}): IFoldFixture {
     { slot: 'renderIncluded', helper: renderIncluded },
     { slot: 'renderReadingSkipped', helper: renderReadingSkipped },
   ], variation);
-  const compositionSteps = ordered([{ slot: 'contributors', declaration: roster }, { slot: 'report', declaration: report }], variation);
+  const compositionSteps = ordered([{ slot: slots.collection, declaration: roster }, { slot: 'report', declaration: report }], variation);
   const composition = compose({ scope: analysis, inputs, helpers, steps: compositionSteps, templates: [contributor] });
 
   return {
     builders,
     composition,
-    collection: Object.freeze({ scope: analysis, role: 'step', slot: 'contributors' }),
+    collection: Object.freeze({ scope: analysis, role: 'step', slot: slots.collection }),
     report: Object.freeze({ scope: analysis, role: 'step', slot: 'report' }),
-    over: Object.freeze({ scope: analysis, role: 'step', slot: 'summary', template: 'contributor', collection: 'contributors' }),
-    instance: (memberKey) => Object.freeze({ scope: analysis, role: 'step', slot: 'summary', template: 'contributor', collection: 'contributors', memberKey }),
+    over: Object.freeze({ scope: analysis, role: 'step', slot: slots.step, template: slots.template, collection: slots.collection }),
+    instance: (memberKey) => Object.freeze({ scope: analysis, role: 'step', slot: slots.step, template: slots.template, collection: slots.collection, memberKey }),
   };
 }

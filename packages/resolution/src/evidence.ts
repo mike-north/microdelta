@@ -17,8 +17,11 @@
  *     recipes), the exact child result and the `call` binding its consumed
  *     facts use; or a supplied step invoked through a callable slot, whose
  *     argument reads are its own `argument` observations.
- *   - Version 3 records a strict fold (CMP-8, RUN-010): its membership-and-
- *     status fact (every member key it covered in canonical order, each
+ *   - Version 3 records a strict fold (CMP-8, RUN-010): the template step it
+ *     consumed (its structural address, so a renamed step or template or a
+ *     moved collection is changed correspondence, never a remap), its
+ *     membership-and-status fact (every member key it covered in canonical
+ *     order, each
  *     `included` with the exact member result it read, or `skipped` by its
  *     gate) and its own observations, whose consumed member facts use one
  *     `entry` binding per included member. Gate observations are never part of
@@ -145,14 +148,17 @@ export type IMembershipEntry =
   | { readonly key: string; readonly status: 'skipped' };
 
 /**
- * Parsed version-3 provenance: a strict fold with its membership-and-status
- * fact in canonical key order and its own observations, whose consumed member
- * facts use `entry` bindings of included members.
+ * Parsed version-3 provenance: a strict fold with the template step it
+ * consumed, its membership-and-status fact in canonical key order and its own
+ * observations, whose consumed member facts use `entry` bindings of included
+ * members.
  */
 export interface IFoldProvenance {
   readonly version: 3;
   readonly kind: 'fold';
   readonly step: IBindingDescriptor;
+  /** The consumed template step: a template-bearing descriptor with no member key. */
+  readonly over: IBindingDescriptor;
   readonly observations: readonly ITrackingObservation[];
   readonly membership: readonly IMembershipEntry[];
 }
@@ -174,6 +180,7 @@ export function provenanceRecord(provenance: IProvenance): IVersionedRecord {
       content: {
         kind: provenance.kind,
         step: plainDescriptor(provenance.step),
+        over: plainDescriptor(provenance.over),
         observations: provenance.observations.map(plainObservation),
         membership: provenance.membership.map((entry) => entry.status === 'included'
           ? { key: entry.key, status: entry.status, reference: plainReference(entry.reference) }
@@ -630,8 +637,22 @@ function foldDescriptor(value: unknown): IBindingDescriptor {
 }
 
 /**
+ * A stored consumed template step: a template-bearing step descriptor (its
+ * template slot and collection binding present) that addresses the template
+ * step itself, so it never carries a member key.
+ */
+function overDescriptor(value: unknown): IBindingDescriptor {
+  const step = descriptor(value);
+  if (step.template === undefined || step.collection === undefined || step.memberKey !== undefined) {
+    return malformed('consumed template step descriptor');
+  }
+  return step;
+}
+
+/**
  * Read version-3 provenance. Beyond the observation envelope, its own meaning
- * requires: the `fold` kind; a membership-and-status fact whose keys are
+ * requires: the `fold` kind; the consumed template step, a template-bearing
+ * descriptor with no member key; a membership-and-status fact whose keys are
  * nonempty, unique and in strictly ascending canonical (code-unit) order, each
  * `included` with an exact reference or `skipped` with none; every consumed
  * member fact bound at `entry` and an included member's key (a skipped member
@@ -671,6 +692,7 @@ function readFold(content: unknown): IProvenanceReading {
       version: foldFormatVersion,
       kind: 'fold',
       step: foldDescriptor(field(content, 'step')),
+      over: overDescriptor(field(content, 'over')),
       observations,
       membership: Object.freeze(membership),
     }),

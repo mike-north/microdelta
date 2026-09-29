@@ -64,8 +64,10 @@
  * its body, admits its work or publishes. A ready fold is validated or
  * executed over its membership-and-status fact (each current member, in
  * canonical key order, included with its accepted result or skipped by its
- * gate): a candidate is reused only when that recorded fact equals the
- * current one and every member fact it consumed is unchanged. The gate's raw
+ * gate): a candidate is reused only when it consumed the same template step
+ * (a renamed step or template, or a moved collection, is a correspondence
+ * miss, never a remap), its recorded fact equals the current one and every
+ * member fact it consumed is unchanged. The gate's raw
  * observations are the instance's evidence, never the fold's, so a threshold
  * edit that flips no outcome reruns nothing. A successful fold carries
  * framework coverage derived from that fact, never from its body. Nothing is
@@ -2577,15 +2579,19 @@ export function createResolution<TInputs extends object, THelpers extends object
   /**
    * Validate one strict fold candidate against the current membership-and-
    * status fact (CMP-8; the fold consumes each member's included-or-skipped
-   * outcome, never the gate's raw facts): its own evidence first (its
-   * implementation, inputs and helpers); then the recorded membership fact,
-   * which must equal the current one exactly, so a gate flip, an insertion or
-   * a deletion is a miss while a reorder or a threshold edit that flips no
-   * outcome is not; then, for each included member, only the facts the fold
-   * consumed from that member's entry, compared against the member's current
-   * accepted result. The fold body never runs here.
+   * outcome, never the gate's raw facts). First, the template step it recorded
+   * consuming must be the one it consumes now: candidates are found by
+   * subject, which the fold keeps when the consumed step or template is
+   * renamed or the collection moves, and that is changed correspondence,
+   * never a remap (CMP-4, COL-1). Then its own evidence (its implementation,
+   * inputs and helpers); then the recorded membership fact, which must equal
+   * the current one exactly, so a gate flip, an insertion or a deletion is a
+   * miss while a reorder or a threshold edit that flips no outcome is not;
+   * then, for each included member, only the facts the fold consumed from that
+   * member's entry, compared against the member's current accepted result.
+   * The fold body never runs here.
    */
-  function evaluateFoldCandidate(request: IRequestContext, step: IBindingDescriptor, declaration: IAnyFoldDeclaration<IFamily>, candidate: ICompletedEnvelope, membership: readonly IMembershipEntry[]): IFoldVerdict {
+  function evaluateFoldCandidate(request: IRequestContext, step: IBindingDescriptor, over: IBindingDescriptor, declaration: IAnyFoldDeclaration<IFamily>, candidate: ICompletedEnvelope, membership: readonly IMembershipEntry[]): IFoldVerdict {
     const missed = (reason: ICandidateMiss['reason'], detail: string): IFoldVerdict => ({ verdict: 'miss', miss: miss(candidate.reference, reason, detail) });
     const reading = integrity(() => readProvenance(candidate));
     if (reading.status === 'unsupported') {
@@ -2596,6 +2602,9 @@ export function createResolution<TInputs extends object, THelpers extends object
       return missed('unsupported-evidence', `provenance was recorded for a ${describeKind(provenance.kind)}`);
     }
     const recorded: IFoldProvenance = provenance;
+    if (stepKey(recorded.over) !== stepKey(over)) {
+      return missed('correspondence', `the fold consumed ${stepKey(recorded.over)}, not the current ${stepKey(over)}`);
+    }
     const own = recorded.observations.filter((item) => entryObservationKey(item.binding) === undefined);
     const ownComparison = compare(own, ownFactProvider({ validation, slots: request.slots, self: declaration.run }));
     if (ownComparison.kind !== 'equal') {
@@ -2643,13 +2652,13 @@ export function createResolution<TInputs extends object, THelpers extends object
    * with the explicit keyed entries and publish version-3 provenance whose
    * exact dependencies are the included members' results.
    */
-  async function resolveFoldStep(request: IRequestContext, step: IBindingDescriptor, declaration: IAnyFoldDeclaration<IFamily>, membership: readonly IMembershipEntry[]): Promise<IResolvedStep> {
+  async function resolveFoldStep(request: IRequestContext, step: IBindingDescriptor, over: IBindingDescriptor, declaration: IAnyFoldDeclaration<IFamily>, membership: readonly IMembershipEntry[]): Promise<IResolvedStep> {
     const evidence = newEvidence(request);
     const done = (result: IStepResult): IResolvedStep => ({ step, result, evidence });
     emit(request, evidence, step, 'verify');
     const candidates = integrity(() => history.findCandidates(versioned(declaration)));
     for (const candidate of candidates) {
-      const evaluated = evaluateFoldCandidate(request, step, declaration, candidate, membership);
+      const evaluated = evaluateFoldCandidate(request, step, over, declaration, candidate, membership);
       if (evaluated.verdict === 'miss') {
         evidence.misses.push(evaluated.miss);
         continue;
@@ -2690,7 +2699,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     }
     return done(publish(request, evidence, step, attemptId, {
       payload: ran.value.data,
-      provenance: { version: 3, kind: 'fold', step, observations: ran.observations, membership },
+      provenance: { version: 3, kind: 'fold', step, over, observations: ran.observations, membership },
       dependencies: uniqueReferences(membership.flatMap((entry) => entry.status === 'included' ? [entry.reference] : [])),
     }));
   }
@@ -2824,7 +2833,7 @@ export function createResolution<TInputs extends object, THelpers extends object
       }
       const { population, settled } = await settleMembers(context, template, fold.over);
       const readiness = foldReadiness(fold, population, settled);
-      const resolved = readiness.status === 'ready' ? await resolveFoldStep(context, target.step, declaration, readiness.membership) : undefined;
+      const resolved = readiness.status === 'ready' ? await resolveFoldStep(context, target.step, fold.over, declaration, readiness.membership) : undefined;
       // Converted after the fold settled, so every outcome reports the whole request's diagnostics.
       const outcome = foldOutcome(context, target.step, readiness, resolved);
       return Object.freeze({

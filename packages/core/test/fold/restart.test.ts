@@ -246,6 +246,20 @@ describe('fold verification across processes', () => {
     expect(reordered.fold).toMatchObject({ status: 'succeeded', kind: 'reused', reference: foldReference(deleted) });
   });
 
+  test.each([
+    ['renaming the consumed member step', 'renamed-step'],
+    ['renaming the template slot', 'renamed-template'],
+    ['moving the collection to another slot', 'moved-collection'],
+  ] as const)('%s in a later process is a correspondence miss for the fold, never a reuse (no remap)', (_name, structure) => {
+    const store = scenario();
+    const a = store.run({}, createWorld());
+    const b = store.run({ ...reversed, structure }, reversedWorld(contributors()));
+    expect(logged(b, 'summary')).toEqual(['ada', 'ben', 'cy']);
+    expect(logged(b, 'report')).toHaveLength(1);
+    expect(b.fold).toMatchObject({ status: 'succeeded', kind: 'published', misses: ['correspondence'], coverage: { required: [...baseKeys], skipped: [], closed: true } });
+    expect(foldReference(b)).not.toBe(foldReference(a));
+  });
+
   test('a consumed member field reruns that member, and the fold only when a fact it consumed changed', () => {
     const store = scenario();
     const a = store.run({}, createWorld());

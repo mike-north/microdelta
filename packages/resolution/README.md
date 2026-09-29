@@ -155,13 +155,17 @@ failure or coverage.
    `coverage: { required, skipped, closed: true }`. The framework derives it
    from the members it delivered, never from the body's result.
 
-The fold's evidence is its membership-and-status fact (each member key,
-`included` with its exact result or `skipped`) plus the facts its body read
-from each included member's entry. The gate's raw reads stay the instance's
-own evidence. A candidate is reused only when its recorded fact equals the one
-current discovery and gate outcomes establish now (`changed-membership`
-otherwise) and each consumed member fact is unchanged
-(`changed-member-output` otherwise). So a gate flip, insertion or deletion
+The fold's evidence is the template step it consumed, its membership-and-status
+fact (each member key, `included` with its exact result or `skipped`), and the
+facts its body read from each included member's entry. The gate's raw reads
+stay the instance's own evidence. A candidate is reused only when three things
+hold:
+
+- It consumed the same template step. A renamed step or template, or a moved
+  collection, is a `correspondence` miss, never a remap.
+- Its recorded fact equals the one current discovery and gate outcomes
+  establish now (`changed-membership` otherwise).
+- Each consumed member fact is unchanged (`changed-member-output` otherwise). So a gate flip, insertion or deletion
 reruns the fold, while a reorder or a threshold edit that flips no gate reruns
 nothing. A member change reruns the fold only when a fact it consumed changed.
 Skips and deletions retract nothing.
@@ -185,13 +189,15 @@ its M3 meaning (sources and memos with direct children by slot). Version 2 of
 provenance records a nested memo's ordered calls (each witness, exact child
 result and `call` binding) or a supplied step; version 2 of acceptance names
 each call's current result by position. Version 3 of provenance records a
-strict fold's membership-and-status fact (keys in canonical order, each
-included with its exact result or skipped) and its consumed member facts at
-`entry` bindings; version 3 of acceptance names each included member's
-current result by key. Any other version is unsupported evidence. A supported
-record must carry the step's own implementation observation, a source record
-has no child edges, and a fold record's consumed member facts name only
-included members; otherwise it is an integrity failure.
+strict fold's consumed template step, its membership-and-status fact (keys in
+canonical order, each included with its exact result or skipped) and its
+consumed member facts at `entry` bindings; version 3 of acceptance names each
+included member's current result by key. Any other version is unsupported
+evidence. A supported record must carry the step's own implementation
+observation, and a source record has no child edges. A fold record's consumed
+template step is template-bearing with no member key, and its consumed member
+facts name only included members. A record that breaks any of these is an
+integrity failure.
 
 An outcome's `trace` is the requested step's own lifecycle; its `diagnostics`
 cover the whole request, including nested children, once each.

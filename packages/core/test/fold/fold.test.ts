@@ -21,7 +21,7 @@ import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
 import { ResolutionError, openWorkspace } from '../../src/index.js';
 import type { IWorkspaceRun } from '../../src/index.js';
 import { cleanup, freshLocation } from '../durable-history/support.js';
-import { composeFold, contributors, createWorld, dee, resetWorld, world } from './fixture.js';
+import { analysis, composeFold, contributors, createWorld, dee, resetWorld, world } from './fixture.js';
 import type { IContributor, IFoldFixture, IVariation } from './fixture.js';
 import {
   candidates,
@@ -265,6 +265,7 @@ describe('framework coverage (acceptance 3)', () => {
 /** Stored fold provenance as these tests read it. */
 interface IStoredFold {
   readonly kind: string;
+  readonly over?: unknown;
   readonly membership: readonly { readonly key: string; readonly status: string; readonly reference?: { readonly locator: string } }[];
   readonly observations: readonly { readonly binding: { readonly path: readonly string[] }; readonly address: readonly { readonly key?: string }[] }[];
 }
@@ -278,6 +279,8 @@ describe('fold evidence and verification (acceptance 4)', () => {
     // Resolution's version-3 provenance stores a fold's record as plain data of this shape.
     const content = stored.content as IStoredFold;
     expect(content.kind).toBe('fold');
+    // The consumed template step: its structural address, never a member key.
+    expect(content.over).toEqual({ scope: analysis, role: 'step', slot: 'summary', template: 'contributor', collection: 'contributors' });
     expect(content.membership).toEqual([
       { key: 'person:ada', status: 'included', reference: { kind: 'completed-result', locator: memberReference(report, 'person:ada') } },
       { key: 'person:ben', status: 'included', reference: { kind: 'completed-result', locator: memberReference(report, 'person:ben') } },
@@ -348,6 +351,24 @@ describe('fold evidence and verification (acceptance 4)', () => {
     expect(foldCandidates(location)).toEqual([foldReference(deleted), foldReference(inserted), foldReference(cold)]);
   });
 
+  test.each([
+    ['renaming the consumed member step', 'renamed-step'],
+    ['renaming the template slot', 'renamed-template'],
+    ['moving the collection to another slot', 'moved-collection'],
+  ] as const)('%s is a correspondence miss for the fold, never a reuse (no remap)', async (_name, structure) => {
+    const location = freshLocation();
+    const cold = await runFold(location);
+    clearLog();
+    const changed = await runFold(location, { structure, order: 'reversed' });
+    // Every subject is kept, but the fold now consumes a different template step:
+    // its earlier result is a correspondence miss, as each member's is.
+    expect(logged(changed, 'summary')).toEqual(['ada', 'ben', 'cy']);
+    expect(logged(changed, 'report')).toHaveLength(1);
+    expect(changed.fold).toMatchObject({ status: 'succeeded', kind: 'published', misses: ['correspondence'], coverage: { required: baseKeys, skipped: [], closed: true } });
+    expect(foldReference(changed)).not.toBe(foldReference(cold));
+    expect(foldCandidates(location)).toEqual([foldReference(changed), foldReference(cold)]);
+  });
+
   test('a consumed member field change reruns that member, and the fold only when a fact it consumed changed', async () => {
     const location = freshLocation();
     const cold = await runFold(location);
@@ -411,6 +432,12 @@ describe('stored fold evidence', () => {
       observations: content.observations.map((item) => item.binding.path[1] === 'person:ada' ? { ...item, binding: { path: ['entry', 'person:cy'] } } : item),
     }), undefined],
     ['an included member result outside the exact dependencies', (content: IStoredFold & Record<string, unknown>) => content, [] as readonly string[]],
+    ['no consumed template step', (content: IStoredFold & Record<string, unknown>) => Object.fromEntries(Object.entries(content).filter(([key]) => key !== 'over')), undefined],
+    ['a consumed template step without template fields', (content: IStoredFold & Record<string, unknown>) => ({ ...content, over: { scope: analysis, role: 'step', slot: 'summary' } }), undefined],
+    ['a consumed template step with a member key', (content: IStoredFold & Record<string, unknown>) => ({
+      ...content,
+      over: { scope: analysis, role: 'step', slot: 'summary', template: 'contributor', collection: 'contributors', memberKey: 'person:ada' },
+    }), undefined],
   ] as const)('malformed version-3 fold evidence is integrity damage, never a miss: %s', async (_name, tamper, dependencies) => {
     const location = freshLocation();
     const cold = await runFold(location, { minimumAuthored: 2 });

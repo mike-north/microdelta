@@ -1,43 +1,47 @@
 /**
- * Ordinary (nonmemoized) report assembly. It runs on every run, reads each
- * summary's small exact result and orders contributors by their stable keys,
- * whatever order the summaries were resolved in. It has no completed-result
- * identity and no hidden memoization. The report names the selected scope; it
- * does not claim complete repository coverage.
+ * Text rendering of one strict report request for the command line. This is
+ * presentation outside the framework: it formats the report fold's exact
+ * result together with the framework's coverage, or explains why the strict
+ * report did not run. Coverage always comes from the fold's typed outcome,
+ * never from the report body, so the text never claims more than closed
+ * discovery supports.
  */
-import type { IResolutionOutcome, IWorkspaceRun } from 'microdelta';
+import type { IFoldCoverage, IStrictFoldOutcome } from 'microdelta';
 
-import { config, contributorKeys } from './analysis.js';
-import type { IContributorKey, ISummary } from './analysis.js';
+import type { IReport } from './analysis.js';
 
-/** The assembled repository report. */
-export interface IReport {
-  readonly repository: string;
-  readonly window: { readonly start: string; readonly end: string };
-  /** The explicitly selected contributors; not a discovered complete population. */
-  readonly selected: readonly IContributorKey[];
-  readonly contributors: readonly (ISummary & { readonly key: IContributorKey })[];
-}
-
-/** Assemble the report from the summaries' exact results, ordered by stable key. */
-export function assembleReport(run: IWorkspaceRun, outcomes: Readonly<Record<IContributorKey, IResolutionOutcome>>): IReport {
-  const selected = [...contributorKeys].sort();
-  const contributors = selected.map((key) => {
-    const outcome = outcomes[key];
-    if (outcome.kind === 'refused') {
-      throw new Error(`the summary of ${key} was refused: ${outcome.reason}`);
-    }
-    if (outcome.kind === 'skipped') {
-      throw new Error(`the summary of ${key} was skipped by a gate`);
-    }
-    return { key, ...run.read<ISummary>(outcome.reference) };
-  });
-  return { repository: config.repository, window: config.window, selected, contributors };
-}
-
-/** Render the report as text. */
-export function renderReport(report: IReport): string {
+/** Render a completed report with its framework coverage. */
+export function renderReport(report: IReport, coverage: IFoldCoverage): string {
   const header = `Contribution report for ${report.repository}, ${report.window.start} to ${report.window.end} (exclusive)`;
-  const scope = `Selected contributors: ${report.selected.join(', ')} (not complete repository coverage)`;
-  return [header, scope, ...report.contributors.map((entry) => `- ${entry.key}: ${entry.sentence}`)].join('\n');
+  const threshold = report.minimumAuthored === 1 ? '1 authored pull request' : `${String(report.minimumAuthored)} authored pull requests`;
+  const scope = `Required: contributors with at least ${threshold} in the window`;
+  const skipped = coverage.skipped.length === 0 ? '0 skipped' : `${String(coverage.skipped.length)} skipped (${coverage.skipped.join(', ')})`;
+  return [
+    header,
+    scope,
+    ...report.required.map((entry) => `- ${entry.key} (score ${String(entry.score)}): ${entry.sentence}`),
+    ...report.excluded.map((key) => `- ${key}: excluded by the gate`),
+    // A reused or published strict fold's coverage is always over closed discovery.
+    `Coverage: ${String(coverage.required.length)} required, ${skipped}; discovery closed`,
+  ].join('\n');
+}
+
+/** Explain a strict report that did not succeed: it neither ran its body nor published. */
+export function renderUnfinished(outcome: Exclude<IStrictFoldOutcome, { readonly status: 'succeeded' }>): string {
+  switch (outcome.status) {
+    case 'waiting': {
+      const discovery = outcome.openDiscovery ? 'discovery is still open' : 'discovery is closed';
+      const pending = outcome.pending.length === 0 ? 'no member is pending' : `pending members: ${outcome.pending.join(', ')}`;
+      return `Report waiting: ${discovery}; ${pending}`;
+    }
+    case 'failed':
+      return `Report failed: ${outcome.diagnostic}`;
+    case 'pending':
+    case 'cancelled':
+      return `Report ${outcome.status}: ${outcome.reason}`;
+    default: {
+      const exhaustive: never = outcome;
+      return exhaustive;
+    }
+  }
 }

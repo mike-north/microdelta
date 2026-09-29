@@ -1,12 +1,14 @@
 {
   "repository": "acme/widget",
-  "revision": 1,
+  "revision": 2,
   "profiles": [
     { "key": "person:ada", "id": "gh:1001", "name": "Ada", "avatarUrl": "https://avatars.example/ada.png" },
     { "key": "person:ben", "id": "gh:2002", "name": "Ben", "avatarUrl": "https://avatars.example/ben.png" },
-    { "key": "person:cy", "id": "gh:3003", "name": "Cy", "avatarUrl": "https://avatars.example/cy.png" }
+    { "key": "person:cy", "id": "gh:3003", "name": "Cy", "avatarUrl": "https://avatars.example/cy.png" },
+    { "key": "person:dot", "id": "gh:4004", "name": "Dot", "avatarUrl": "https://avatars.example/dot.png" }
   ],
   "pullRequests": [
+    { "number": 99, "author": "person:dot", "createdAt": "2025-11-20T15:00:00Z", "merged": true, "labels": ["docs"] },
     { "number": 98, "author": "person:ada", "createdAt": "2025-12-18T09:00:00Z", "merged": true, "labels": ["chore"] },
     { "number": 101, "author": "person:ada", "createdAt": "2026-01-12T10:30:00Z", "merged": true, "labels": ["feature"] },
     { "number": 102, "author": "person:ada", "createdAt": "2026-02-03T16:05:00Z", "merged": true, "labels": ["docs"] },
@@ -28,6 +30,8 @@
     { "id": "rv-ben-2", "author": "person:ben", "pullRequest": 102, "submittedAt": "2026-02-04T09:30:00Z", "state": "submitted" },
     { "id": "rv-ben-3", "author": "person:ben", "pullRequest": 103, "submittedAt": "2026-03-21T14:00:00Z", "state": "submitted" },
     { "id": "rv-ben-4", "author": "person:ben", "pullRequest": 301, "submittedAt": "2026-04-02T10:00:00Z", "state": "submitted" },
-    { "id": "rv-cy-1", "author": "person:cy", "pullRequest": 101, "submittedAt": "2026-01-14T10:00:00Z", "state": "submitted" }
+    { "id": "rv-cy-1", "author": "person:cy", "pullRequest": 101, "submittedAt": "2026-01-14T10:00:00Z", "state": "submitted" },
+    { "id": "rv-dot-1", "author": "person:dot", "pullRequest": 102, "submittedAt": "2026-02-04T12:00:00Z", "state": "pending" },
+    { "id": "rv-dot-2", "author": "person:dot", "pullRequest": 202, "submittedAt": "2026-04-05T09:00:00Z", "state": "submitted" }
   ]
 }

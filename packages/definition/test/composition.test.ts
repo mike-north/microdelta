@@ -613,7 +613,8 @@ describe('historical direct-child witnesses', () => {
       .toEqual({ status: 'unsupported', reason: 'argument-form' });
     expect(composition.resolveWitness(durable({ ...base, version: 1 })))
       .toEqual({ status: 'unsupported', reason: 'argument-form' });
-    expect(composition.resolveWitness('summary->activity')).toEqual({ status: 'unsupported', reason: 'malformed' });
+    // The version is read first, so a record without one is an unsupported version.
+    expect(composition.resolveWitness('summary->activity')).toEqual({ status: 'unsupported', reason: 'witness-version' });
     expect(composition.resolveWitness(durable({ version: 1, parent: { slot: 'summary' }, child: base.child, arguments: { form: 'empty' } })))
       .toEqual({ status: 'unsupported', reason: 'malformed' });
   });

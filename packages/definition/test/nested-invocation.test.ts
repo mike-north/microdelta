@@ -182,16 +182,19 @@ describe('version-2 witnesses in call order (acceptance 5)', () => {
     fake.justified = false;
     await calls.assess(7, forward.child<IPullRequest>(activity, ['pullRequests', 0]));
     fake.justified = true;
+    const queriesBeforeForwardedOnly = fake.justifiedQueries;
+    await calls.assess(forward.input<number>('config', ['minimumAuthored']), forward.child<IPullRequest>(activity, ['pullRequests', 0]));
+    expect(fake.justifiedQueries).toBe(queriesBeforeForwardedOnly);
     await calls.assess(7, merged);
     expect(requestAt(fake, 1).witness.arguments).toEqual([
       { form: 'derived', value: encodeSnapshot(7), justified: false },
       { form: 'forwarded', origin: { binding: 'child', call: 0, path: [{ kind: 'property', key: 'pullRequests' }, { kind: 'index', index: 0 }] } },
     ]);
-    expect(requestAt(fake, 2).witness.arguments).toEqual([
+    expect(requestAt(fake, 3).witness.arguments).toEqual([
       { form: 'derived', value: encodeSnapshot(7), justified: true },
       { form: 'derived', value: encodeSnapshot(merged), justified: true },
     ]);
-    expect(fake.justifiedQueries).toBeGreaterThanOrEqual(2);
+    expect(fake.justifiedQueries).toBe(2);
   });
 
   test('M3 compatibility: parents whose children are all sources dispatch the version-1 witness, including composition-level parents', async () => {
@@ -213,17 +216,17 @@ describe('version-2 witnesses in call order (acceptance 5)', () => {
 });
 
 describe('argument-bearing handles (acceptance 4)', () => {
-  test('CMP-7: forward records an input path, the member binding and an earlier call of the same invocation', async () => {
+  test('CMP-7: forward records an input path and an earlier call of the same invocation', async () => {
     const build = buildNested();
     const fake = fakePort();
     const { calls } = openSummary(build, 'person:ada', fake);
     const activity = await activityResult(calls, fake);
-    await calls.assess(forward.input<number>('config', ['minimumAuthored']), forward.member<IPullRequest>(['pullRequests', 0]));
+    await calls.assess(forward.input<number>('config', ['minimumAuthored']), forward.child<IPullRequest>(activity, ['pullRequests', 0]));
     await calls.assess(1, forward.child<IPullRequest>(activity));
     await calls.assess(forward.input<number>('config', ['0']), forward.child<IPullRequest>(activity, [0]));
     expect(requestAt(fake, 1).witness.arguments).toEqual([
       { form: 'forwarded', origin: { binding: 'input', slot: 'config', path: [{ kind: 'property', key: 'minimumAuthored' }] } },
-      { form: 'forwarded', origin: { binding: 'member', path: [{ kind: 'property', key: 'pullRequests' }, { kind: 'index', index: 0 }] } },
+      { form: 'forwarded', origin: { binding: 'child', call: 0, path: [{ kind: 'property', key: 'pullRequests' }, { kind: 'index', index: 0 }] } },
     ]);
     expect(requestAt(fake, 2).witness.arguments).toEqual([
       { form: 'derived', value: encodeSnapshot(1), justified: true },
@@ -234,6 +237,56 @@ describe('argument-bearing handles (acceptance 4)', () => {
       { form: 'forwarded', origin: { binding: 'input', slot: 'config', path: [{ kind: 'property', key: '0' }] } },
       { form: 'forwarded', origin: { binding: 'child', call: 0, path: [{ kind: 'index', index: 0 }] } },
     ]);
+  });
+
+  test('CMP-9: member origins require a template instance; an explicit member rejects them at record time', async () => {
+    const build = buildNested();
+    const fake = fakePort();
+    const { calls } = openSummary(build, 'person:ada', fake);
+    const error = await rejectionOf(calls.assess(7, forward.member<IPullRequest>(['pullRequests', 0])));
+    expect(error?.code).toBe('invalid-argument');
+    expect(error?.message).toContain('template instance');
+    expect(fake.requests).toHaveLength(0);
+    expect(fake.justifiedQueries).toBe(0);
+    // The rejected call consumed no call position.
+    await calls.assess(7, merged);
+    expect(requestAt(fake, 0).witness).toMatchObject({ index: 0 });
+  });
+
+  test('CMP-9: a rejected call is classified before any encoding and never queries argumentsJustified', async () => {
+    const build = buildNested();
+    const fake = fakePort();
+    const ben = openSummary(build, 'person:ben', fake);
+    const benActivity = await activityResult(ben.calls, fake);
+    const { calls } = openSummary(build, 'person:ada', fake);
+    const view = { number: 7, merged: true };
+    fake.tracked.add(view);
+    const before = fake.requests.length;
+    await expectRejection(callUntyped(calls.assess, 7, forward.input('undeclared')), 'invalid-argument');
+    await expectRejection(callUntyped(calls.assess, 7, forward.child(benActivity)), 'invalid-argument');
+    await expectRejection(callUntyped(calls.assess, 7, forward.member()), 'invalid-argument');
+    await expectRejection(callUntyped(calls.assess, 7, view), 'invalid-argument');
+    expect(fake.justifiedQueries).toBe(0);
+    expect(fake.requests).toHaveLength(before);
+  });
+
+  test('CMP-9: a tracked view reached through a prototype chain is rejected without being read', async () => {
+    const build = buildNested();
+    const fake = fakePort();
+    const { calls } = openSummary(build, 'person:ada', fake);
+    const traps: string[] = [];
+    const view = new Proxy({ number: 7, merged: true }, {
+      get(target, key, receiver): unknown {
+        traps.push(`get:${String(key)}`);
+        return Reflect.get(target, key, receiver);
+      },
+    });
+    fake.tracked.add(view);
+    const inheriting: unknown = Object.create(view);
+    await expectRejection(callUntyped(calls.assess, 7, inheriting), 'invalid-argument');
+    await expectRejection(callUntyped(calls.assess, 7, { nested: inheriting }), 'invalid-argument');
+    expect(traps).toEqual([]);
+    expect(fake.requests).toHaveLength(0);
   });
 
   test('CMP-7: unsupported values are recorded unreconstructible, never rejected and never read', async () => {
@@ -250,6 +303,7 @@ describe('argument-bearing handles (acceptance 4)', () => {
       Object.defineProperty({ number: 1 }, 'merged', { get: getter, enumerable: true }),
       10n,
       new Custom(),
+      { number: 1, merged: () => true },
     ];
     for (const value of unsupported) {
       await callUntyped(calls.assess, 7, value);
@@ -262,6 +316,12 @@ describe('argument-bearing handles (acceptance 4)', () => {
       expect(JSON.stringify(request.witness)).not.toContain('callback');
     }
     expect(getter).not.toHaveBeenCalled();
+    // The reason is durable evidence: a small stable vocabulary, never an encoder's message text.
+    expect(fake.requests.map(request => {
+      const recipes = request.witness.arguments;
+      const second = 'form' in recipes ? undefined : recipes[1];
+      return second?.form === 'unreconstructible' ? second.reason : undefined;
+    })).toEqual(['function', 'symbol', 'accessor', 'bigint', 'unsupported-value', 'function']);
   });
 
   test('CMP-9: a raw tracked view is rejected before dispatch with a diagnostic pointing to forward, without being read', async () => {
@@ -477,6 +537,14 @@ describe('slot call subjects (acceptance 6)', () => {
     await callUntyped(calls.assess, 7, () => merged);
     await calls.assess(forward.input<number>('config', ['minimumAuthored']), merged);
     expect(keys).toEqual(['0', '0', '1']);
+  });
+
+  test('RES-001: a slot call subject equal to a declared step subject is a conflicting subject, rejected before dispatch', async () => {
+    const build = buildNested({ subject: () => 'summary:acme/widget:2026-Q1:person:ben' });
+    const fake = fakePort();
+    const { calls } = openSummary(build, 'person:ada', fake);
+    await expectRejection(calls.assess(7, merged), 'conflicting-subject');
+    expect(fake.requests).toHaveLength(0);
   });
 
   test('RES-001: a subject function that throws or returns an incomplete subject rejects before dispatch', async () => {

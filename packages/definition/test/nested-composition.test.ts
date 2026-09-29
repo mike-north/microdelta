@@ -360,6 +360,36 @@ describe('supplied callable step slots (acceptance 3)', () => {
     expectDefinitionError(() => invocation.apply({}, views, recording([])), 'scope-closed');
   });
 
+  test('M3 compatibility: an absent or helper callable that is not a declared step slot keeps unresolved-parent', () => {
+    const build = buildNested();
+    const composition = compose({ ...build.options, helpers: [{ slot: 'format', helper: () => 'x' }] });
+    expectDefinitionError(() => openInvocation(composition, slotDescriptor('format'), idlePort), 'unresolved-parent');
+    expectDefinitionError(() => openInvocation(composition, slotDescriptor('absent'), idlePort), 'unresolved-parent');
+  });
+
+  test('CMP-1: two calls naming one slot declare a single topology edge', () => {
+    const assessor = stepSlot<IAssessorParameters, IAssessment>({ slot: 'assessor' });
+    const summary = memo({ subject: 'summary:twice', children: { first: assessor, second: assessor }, run: () => 1 });
+    const composition = compose({
+      scope: nestedScope,
+      members: [{ key: 'person:ada', steps: [{ slot: 'summary', declaration: summary }] }],
+      supplied: [supply({ slot: assessor, declaration: rubric('A'), subject: assessmentSubject })],
+    });
+    expect(composition.topology.edges).toEqual([{ parent: memberStep('person:ada', 'summary'), child: slotDescriptor('assessor') }]);
+  });
+
+  test('CMP-9: a supplied step keeps the run it validated, even from options that answer differently on a later read', () => {
+    const validated = (): IAssessment => ({ score: 1, explanation: 'validated' });
+    const swapped = (): IAssessment => ({ score: 9, explanation: 'swapped' });
+    const options = new Proxy({ run: validated }, {
+      get(target, key, receiver): unknown {
+        return key === 'run' ? swapped : Reflect.get(target, key, receiver);
+      },
+    });
+    const implementation = suppliedStep<IAssessorParameters, IAssessment>(options);
+    expect(implementation.run).toBe(validated);
+  });
+
   test('EXP-4: opening an unsupplied or doubly supplied slot directly reports the same distinct outcomes', () => {
     expectDefinitionError(() => openInvocation(buildNested({ supplied: 'none' }).composition, slotDescriptor('assessor'), idlePort), 'missing-slot');
     expectDefinitionError(() => openInvocation(buildNested({ supplied: 'twice' }).composition, slotDescriptor('assessor'), idlePort), 'ambiguous-slot');

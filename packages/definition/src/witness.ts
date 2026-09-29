@@ -95,8 +95,29 @@ export interface IDerivedRecipe {
 export interface IUnreconstructibleRecipe {
   /** Discriminates the recipe form. */
   readonly form: 'unreconstructible';
-  /** Why no value was retained, for diagnostics only. */
-  readonly reason: string;
+  /** Why no value was retained, from a closed vocabulary; for diagnostics only. */
+  readonly reason: IUnreconstructibleReason;
+}
+
+/**
+ * The closed, durable vocabulary of why an argument is unreconstructible. It
+ * is evidence, so it never carries an encoder's message text.
+ *
+ * - `function`: the argument is, or contains, a function.
+ * - `symbol`: the argument is, or contains, a symbol value.
+ * - `bigint`: the argument is, or contains, a bigint.
+ * - `accessor`: the argument contains an accessor property.
+ * - `unsupported-value`: any other value outside supported plain data.
+ * @alpha
+ */
+export type IUnreconstructibleReason = 'function' | 'symbol' | 'bigint' | 'accessor' | 'unsupported-value';
+
+/** Every member of the unreconstructible-reason vocabulary. */
+const unreconstructibleReasons: ReadonlySet<string> = new Set(['function', 'symbol', 'bigint', 'accessor', 'unsupported-value']);
+
+/** Whether untrusted text is a known unreconstructible reason. */
+export function isUnreconstructibleReason(value: unknown): value is IUnreconstructibleReason {
+  return typeof value === 'string' && unreconstructibleReasons.has(value);
 }
 
 /**
@@ -239,6 +260,27 @@ function exactRecord(value: unknown, keys: readonly string[]): boolean {
   });
 }
 
+/** The only fields a version-1 witness record may carry. */
+const directWitnessKeys: ReadonlySet<string> = new Set(['version', 'parent', 'child', 'arguments']);
+
+/** The only fields a version-2 witness record may carry. */
+const nestedWitnessKeys: ReadonlySet<string> = new Set(['version', 'parent', 'child', 'index', 'arguments']);
+
+/**
+ * Whether a witness record carries only known fields, each an own data
+ * property. An extra field may belong to a format Definition does not read, so
+ * it makes the record malformed rather than silently ignored.
+ */
+function onlyDataKeys(value: unknown, allowed: ReadonlySet<string>): boolean {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+  return Reflect.ownKeys(value).every(key => {
+    const descriptor = typeof key === 'string' && allowed.has(key) ? Object.getOwnPropertyDescriptor(value, key) : undefined;
+    return descriptor !== undefined && 'value' in descriptor;
+  });
+}
+
 /** A non-negative safe integer, the only valid call position or array index. */
 export function isPosition(value: unknown): value is number {
   return typeof value === 'number' && Number.isSafeInteger(value) && value >= 0;
@@ -338,7 +380,7 @@ function recipe(value: unknown, index: number): IArgumentRecipe {
     }
     case 'unreconstructible': {
       const reason = ownData(value, 'reason');
-      return exactRecord(value, ['form', 'reason']) && typeof reason === 'string' && reason.length > 0
+      return exactRecord(value, ['form', 'reason']) && isUnreconstructibleReason(reason)
         ? Object.freeze({ form, reason })
         : unsupported('malformed');
     }
@@ -364,28 +406,33 @@ function invocationArguments(value: unknown, index: number): IInvocationArgument
 }
 
 /**
- * Parse untrusted durable witness data. Structure is checked first, then the
- * version, then the version's own fields. Version 1 keeps its M3 meaning
- * exactly: its argument form must be `{ form: 'empty' }`.
+ * Parse untrusted durable witness data. The version is read first: anything
+ * but 1 or 2 is an unsupported version before any other field is parsed. Then
+ * the record must carry only that version's fields, then its structure, then
+ * the version's own fields. Version 1 keeps its M3 meaning exactly: its
+ * argument form must be `{ form: 'empty' }`.
  * @param witness - Untrusted durable data.
  * @returns The parsed, frozen witness or a precise unsupported reason.
  */
 export function parseWitness(witness: unknown): IParsedWitness {
+  const version = ownData(witness, 'version');
+  if (version !== 1 && version !== 2) {
+    return { status: 'unsupported', reason: 'witness-version' };
+  }
+  if (!onlyDataKeys(witness, version === 1 ? directWitnessKeys : nestedWitnessKeys)) {
+    return { status: 'unsupported', reason: 'malformed' };
+  }
   const parent = copyDescriptor(ownData(witness, 'parent'));
   const child = copyDescriptor(ownData(witness, 'child'));
   if (parent === undefined || child === undefined) {
     return { status: 'unsupported', reason: 'malformed' };
   }
-  const version = ownData(witness, 'version');
   const argumentsForm = ownData(witness, 'arguments');
   if (version === 1) {
     if (!exactRecord(argumentsForm, ['form']) || ownData(argumentsForm, 'form') !== 'empty') {
       return { status: 'unsupported', reason: 'argument-form' };
     }
     return { status: 'parsed', witness: Object.freeze({ version, parent, child, arguments: Object.freeze({ form: 'empty' }) }) };
-  }
-  if (version !== 2) {
-    return { status: 'unsupported', reason: 'witness-version' };
   }
   const index = ownData(witness, 'index');
   if (!isPosition(index)) {

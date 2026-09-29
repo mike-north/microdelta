@@ -97,8 +97,56 @@ describe('version-2 witness reconnection (acceptance 5)', () => {
     const { composition, discovery } = buildNested();
     const witness = durable({ version: 1, parent: levelStep('report'), child: levelStep('discovery'), arguments: { form: 'empty' } });
     expect(composition.resolveWitness(witness)).toMatchObject({ status: 'bound', child: { role: 'step', declaration: discovery }, witness });
-    expect(composition.resolveWitness(durable({ version: 1, parent: memberStep('person:ada', 'summary'), child: callable('assessor'), arguments: { form: 'empty' } })))
-      .toEqual({ status: 'undeclared-edge' });
+  });
+
+  test('REUSE-007: a version-1 witness binds only to a source child; a memo or slot child is an unsupported argument form', () => {
+    const { composition } = buildNested();
+    const memoChild = durable({ version: 1, parent: memberStep('person:ada', 'summary'), child: memberStep('person:ada', 'profile'), arguments: { form: 'empty' } });
+    const slotChild = durable({ version: 1, parent: memberStep('person:ada', 'summary'), child: callable('assessor'), arguments: { form: 'empty' } });
+    expect(outcome(composition.resolveWitness(memoChild))).toBe('unsupported:argument-form');
+    expect(outcome(composition.resolveWitness(slotChild))).toBe('unsupported:argument-form');
+    const sourceChild = durable({ version: 1, parent: memberStep('person:ada', 'summary'), child: memberStep('person:ada', 'activity'), arguments: { form: 'empty' } });
+    expect(outcome(composition.resolveWitness(sourceChild))).toBe('bound');
+  });
+
+  test('REUSE-007: the version is read first; any other version is unsupported before other fields are parsed', () => {
+    const { composition } = buildNested();
+    expect(outcome(composition.resolveWitness(durable({ version: 3, parent: 'garbage' })))).toBe('unsupported:witness-version');
+    expect(outcome(composition.resolveWitness(durable({ parent: memberStep('person:ada', 'summary') })))).toBe('unsupported:witness-version');
+    expect(outcome(composition.resolveWitness('summary->assessor'))).toBe('unsupported:witness-version');
+  });
+
+  test('REUSE-007: extra fields on a version-1 or version-2 witness record are malformed, not ignored', () => {
+    const { composition } = buildNested();
+    const v1 = { version: 1, parent: levelStep('report'), child: levelStep('discovery'), arguments: { form: 'empty' } };
+    expect(outcome(composition.resolveWitness(durable({ ...v1, note: 'extra' })))).toBe('unsupported:malformed');
+    expect(outcome(composition.resolveWitness(durable({ ...v1, index: 0 })))).toBe('unsupported:malformed');
+    expect(outcome(composition.resolveWitness(assessorWitness('person:ada', { implementation: 'rubric A' })))).toBe('unsupported:malformed');
+    expect(outcome(composition.resolveWitness(durable(v1)))).toBe('bound');
+  });
+
+  test('REUSE-006: a parsed version-2 witness is deeply frozen: recipes, origins, paths and segments', () => {
+    const resolution = buildNested().composition.resolveWitness(assessorWitness('person:ada'));
+    if (resolution.status !== 'bound' || resolution.witness.version !== 2) {
+      throw new Error('expected a bound v2 witness');
+    }
+    const { witness } = resolution;
+    const recipes = witness.arguments;
+    if ('form' in recipes) {
+      throw new Error('expected recipes');
+    }
+    const [, forwarded] = recipes;
+    expect(Object.isFrozen(witness)).toBe(true);
+    expect(Object.isFrozen(witness.parent)).toBe(true);
+    expect(Object.isFrozen(witness.child)).toBe(true);
+    expect(Object.isFrozen(recipes)).toBe(true);
+    expect(recipes.every(recipe => Object.isFrozen(recipe))).toBe(true);
+    if (forwarded?.form !== 'forwarded') {
+      throw new Error('expected a forwarded recipe');
+    }
+    expect(Object.isFrozen(forwarded.origin)).toBe(true);
+    expect(Object.isFrozen(forwarded.origin.path)).toBe(true);
+    expect(forwarded.origin.path.every(segment => Object.isFrozen(segment))).toBe(true);
   });
 
   test('REUSE-007: unknown versions, argument forms and recipe forms, and malformed data, are unsupported with precise reasons', () => {
@@ -123,12 +171,13 @@ describe('version-2 witness reconnection (acceptance 5)', () => {
       ['unsupported:malformed', assessorWitness('person:ada', { arguments: [{ form: 'derived', value: encodeSnapshot(7), justified: 'yes' }] })],
       ['unsupported:malformed', assessorWitness('person:ada', { arguments: [{ ...derived, extra: true }] })],
       ['unsupported:malformed', assessorWitness('person:ada', { arguments: [{ form: 'unreconstructible', reason: '' }] })],
+      ['unsupported:malformed', assessorWitness('person:ada', { arguments: [{ form: 'unreconstructible', reason: 'Unsupported value at $: function' }] })],
       ['unsupported:malformed', assessorWitness('person:ada', { arguments: [{ form: 'forwarded', origin: { binding: 'child', call: 2, path: [] } }] })],
       ['unsupported:malformed', assessorWitness('person:ada', { arguments: [{ form: 'forwarded', origin: { binding: 'input', slot: '', path: [] } }] })],
       ['unsupported:malformed', assessorWitness('person:ada', { arguments: [{ form: 'forwarded', origin: { binding: 'input', slot: 'config', path: ['minimumAuthored'] } }] })],
       ['unsupported:malformed', assessorWitness('person:ada', { arguments: [{ form: 'forwarded', origin: { binding: 'member', path: [{ kind: 'index', index: -1 }] } }] })],
       ['unsupported:malformed', assessorWitness('person:ada', { parent: { slot: 'summary' } })],
-      ['unsupported:malformed', 'summary->assessor'],
+      ['unsupported:witness-version', 'summary->assessor'],
     ];
     for (const [expected, witness] of cases) {
       expect(`${JSON.stringify(witness)} => ${outcome(composition.resolveWitness(witness))}`).toBe(`${JSON.stringify(witness)} => ${expected}`);
@@ -183,7 +232,12 @@ describe('version-2 witness reconnection (acceptance 5)', () => {
     expect(outcome(composition.resolveWitness(witness))).toBe('unsupported:argument-form');
   });
 
-  test('CMP-7: a member-binding origin under a composition-level parent is malformed', () => {
+  test('CMP-7: a member-binding origin is an unsupported argument form for a parent that is not a template instance', () => {
+    const memberParent = assessorWitness('person:ada', { arguments: [{ form: 'forwarded', origin: { binding: 'member', path: [] } }] });
+    expect(outcome(buildNested().composition.resolveWitness(memberParent))).toBe('unsupported:argument-form');
+  });
+
+  test('CMP-7: a member-binding origin under a composition-level parent is an unsupported argument form', () => {
     const assessor = stepSlot<IAssessorParameters, IAssessment>({ slot: 'assessor' });
     const report = memo({ subject: 'report:slot', children: { assess: assessor }, run: () => 1 });
     const composition = compose({
@@ -198,7 +252,7 @@ describe('version-2 witness reconnection (acceptance 5)', () => {
       index: 0,
       arguments: [{ form: 'forwarded', origin: { binding: 'member', path: [] } }],
     });
-    expect(outcome(composition.resolveWitness(witness))).toBe('unsupported:malformed');
+    expect(outcome(composition.resolveWitness(witness))).toBe('unsupported:argument-form');
   });
 });
 
@@ -216,6 +270,15 @@ describe('recomputed slot subjects (acceptance 6)', () => {
       { scope: nestedScope, subject: 'assessment:acme/widget:7' },
       { scope: nestedScope, subject: 'assessment:acme/widget:7' },
     ]);
+  });
+
+  test('RES-001: recomputing a subject equal to a declared step subject rejects with conflicting-subject', () => {
+    const resolution = buildNested({ subject: () => 'contributors:acme/widget:2026-Q1' }).composition.resolveWitness(assessorWitness('person:ada'));
+    if (resolution.status !== 'bound' || resolution.child.role !== 'callable' || resolution.witness.version !== 2) {
+      throw new Error('expected a bound slot witness');
+    }
+    const { child, witness } = resolution;
+    expectDefinitionError(() => child.subjectFor(witness.arguments), 'conflicting-subject');
   });
 
   test('RES-001: recomputing a subject whose function returns an incomplete subject rejects with invalid-subject', () => {

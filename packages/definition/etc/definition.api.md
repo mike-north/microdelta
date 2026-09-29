@@ -586,9 +586,12 @@ export interface ITypeFamily {
 }
 
 // @alpha
+export type IUnreconstructibleReason = 'function' | 'symbol' | 'bigint' | 'accessor' | 'unsupported-value';
+
+// @alpha
 export interface IUnreconstructibleRecipe {
     readonly form: 'unreconstructible';
-    readonly reason: string;
+    readonly reason: IUnreconstructibleReason;
 }
 
 // @alpha

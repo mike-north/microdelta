@@ -258,7 +258,7 @@ export function openInvocationIn<TFamily extends IBindingFamily>(
   // Read the caller's descriptor only as own data, so opening never runs author code.
   const frozenParent = ownedDescriptor(parent);
   const occupants = state.registrations.get(descriptorKey(frozenParent)) ?? [];
-  if (frozenParent.role === 'callable') {
+  if (frozenParent.role === 'callable' && isStepSlot(composition.topology.slots, frozenParent.slot, occupants)) {
     checkSlotOccupancy(frozenParent.slot, occupants);
   }
   const [only] = occupants;
@@ -349,7 +349,8 @@ export function openInvocationIn<TFamily extends IBindingFamily>(
   Object.freeze(invocation);
   const argumentContext: IArgumentContext = Object.freeze({
     scope: invocation,
-    hasMember: frozenParent.memberKey !== undefined,
+    // Only template instances carry a member binding; no parent opened here is one.
+    memberBinding: false,
     inputDeclared: (slot: string): boolean => state.registrations.has(descriptorKey({ scope: frozenParent.scope, role: 'input', slot })),
     isTrackedView: (value: unknown): boolean => port.isTrackedView(value),
     justified: (): boolean => port.argumentsJustified(invocation),
@@ -419,6 +420,15 @@ export function openInvocationIn<TFamily extends IBindingFamily>(
     return handle as IDeclaredCallHandle<unknown, readonly unknown[]>;
   }
   return invocation;
+}
+
+/**
+ * Whether a callable slot is a supplied step slot: one some parent declares, or
+ * one occupied by a supplied step. Any other callable (an absent name or a
+ * helper) keeps the M3 `unresolved-parent` outcome when opened.
+ */
+function isStepSlot(declaredSlots: readonly string[], slot: string, occupants: readonly { readonly target: { readonly role: string; readonly kind?: string } }[]): boolean {
+  return declaredSlots.includes(slot) || occupants.some(occupant => occupant.target.kind === 'supplied-step');
 }
 
 /** A supplied slot's occupancy must be exactly one; missing and ambiguous stay distinct. */

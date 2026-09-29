@@ -247,8 +247,8 @@ export function createResolution<TInputs extends object, THelpers extends object
     // Author views (inputs, helpers and child results) are all minted by this
     // Resolution's tracking observer, so its ownership table recognizes them.
     isTrackedView: (value: unknown): boolean => tracking.materialization.owns(value),
-    // Tracking offers no observed untracked read yet, so no frame can have made
-    // one: every derived argument is justified by its frame's recorded evidence.
+    // This port treats every derived argument as justified: it keeps no
+    // observed untracked-read state for a frame that could contradict it.
     argumentsJustified: (): boolean => true,
   });
 

@@ -267,6 +267,15 @@ export function declareStepSlot<TFamily extends IBindingFamily, TParameters exte
   return token as IStepSlot<TFamily, TParameters, TResult>;
 }
 
+/**
+ * Narrow the captured `run` option to the callback type the author declared it
+ * under. Runtime can only prove it is a function; its parameter and result
+ * types are the author's own declaration, exactly as when read from `options`.
+ */
+function isRunOf<TContext, TResult>(value: unknown): value is (context: TContext) => TResult {
+  return typeof value === 'function';
+}
+
 /** Whether argument views are a frozen array, so the author context cannot be altered afterwards. */
 function isFrozenArray(value: unknown): boolean {
   return Array.isArray(value) && Object.isFrozen(value);
@@ -296,9 +305,12 @@ export function declareSuppliedStep<TFamily extends IBindingFamily, TParameters 
   checkCallback(read, 'run', true);
   const version = versionOption(read);
   const label = labelOption(read);
-  // `run` was just proven to be an own data property holding a function, so
-  // reading it runs no author code and adopts nothing unvalidated.
-  const { run } = options;
+  // Use the one captured value that was validated; re-reading `options` could
+  // observe a different value (for example through a proxy) than was checked.
+  const run = read.get('run');
+  if (!isRunOf<ISuppliedStepRunContext<TFamily, TParameters>, TResult>(run)) {
+    return reject('invalid-callback', 'Declaration option run must be a function.');
+  }
   const declaration = mint<ISuppliedStepDeclaration<TFamily, TParameters, TResult>>({ kind: 'supplied-step', version, label, run });
   const record: ISuppliedStepRecord<TFamily> = {
     kind: 'supplied-step',

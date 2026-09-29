@@ -84,6 +84,7 @@ export type {
   IInvocationArguments,
   IInvocationWitness,
   INestedInvocationWitness,
+  IUnreconstructibleReason,
   IUnreconstructibleRecipe,
   IUnsupportedWitnessReason,
 } from './witness.js';

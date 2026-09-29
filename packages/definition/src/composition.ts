@@ -333,6 +333,15 @@ export function composeIn<TFamily extends IBindingFamily>(
     }
     const steps: IBindingDescriptor[] = [];
     const edges: IDeclaredEdge[] = [];
+    /** Edge keys already recorded: several calls naming one slot declare one edge. */
+    const edgeKeys = new Set<string>();
+    const addEdge = (parent: IBindingDescriptor, child: IBindingDescriptor): void => {
+      const key = `${descriptorKey(parent)}->${descriptorKey(child)}`;
+      if (!edgeKeys.has(key)) {
+        edgeKeys.add(key);
+        edges.push(Object.freeze({ parent, child }));
+      }
+    };
     /** Supplied step slot names some parent declares. */
     const declaredSlots = new Set<string>();
     /** RES-001: each scoped subject is claimed by exactly one declaration object in this composition. */
@@ -375,7 +384,7 @@ export function composeIn<TFamily extends IBindingFamily>(
         for (const [call, edge] of record.children) {
           if (edge.kind === 'slot') {
             declaredSlots.add(edge.slot);
-            edges.push(Object.freeze({ parent: descriptor, child: slotDescriptor(scope, edge.slot) }));
+            addEdge(descriptor, slotDescriptor(scope, edge.slot));
             continue;
           }
           // Current-composition consistency: the pinned child must be the one
@@ -387,7 +396,7 @@ export function composeIn<TFamily extends IBindingFamily>(
           if (siblings.length !== 1 || sibling?.record.declaration !== edge.declaration || call === slot) {
             reject('illegal-edge', `Memo ${slot} child ${call} must be the declaration occupying that sibling slot.`);
           }
-          edges.push(Object.freeze({ parent: descriptor, child: stepDescriptor(scope, call, memberKey) }));
+          addEdge(descriptor, stepDescriptor(scope, call, memberKey));
         }
       }
     };
@@ -414,7 +423,11 @@ export function composeIn<TFamily extends IBindingFamily>(
           if (isComposing()) {
             reject('composition-phase', 'Slot subjects cannot be computed while composing.');
           }
-          return slotSubject(scope, subject, arguments_);
+          const scoped = slotSubject(scope, subject, arguments_);
+          if (subjects.has(scoped.subject)) {
+            reject('conflicting-subject', `Slot ${state.slot} computed the subject ${scoped.subject}, which a declared step already claims (RES-001).`);
+          }
+          return scoped;
         },
       };
       register(slotDescriptor(scope, state.slot), { target: Object.freeze(target), record });
@@ -469,10 +482,11 @@ export function composeIn<TFamily extends IBindingFamily>(
           return { status: 'undeclared-edge' };
         }
         if (parsed.witness.version === 1) {
-          // M3 meaning, unchanged: an argument-free call of a sibling step.
-          return childTarget.role === 'step'
+          // M3 meaning, unchanged: an argument-free call of a sibling source.
+          // A memo or supplied slot child was never recorded with version 1.
+          return childTarget.role === 'step' && childTarget.declaration.kind === 'source'
             ? { status: 'bound', parent: parentTarget, child: childTarget, witness: parsed.witness }
-            : { status: 'undeclared-edge' };
+            : { status: 'unsupported', reason: 'argument-form' };
         }
         const recipes = parsed.witness.arguments;
         if (childTarget.role === 'step') {
@@ -484,10 +498,10 @@ export function composeIn<TFamily extends IBindingFamily>(
         if (childTarget.role !== 'callable' || childTarget.kind !== 'supplied-step') {
           return { status: 'undeclared-edge' };
         }
-        if (parent.memberKey === undefined && !('form' in recipes) &&
-            recipes.some(recipe => recipe.form === 'forwarded' && recipe.origin.binding === 'member')) {
-          // A composition-level parent has no member binding to forward from.
-          return { status: 'unsupported', reason: 'malformed' };
+        if (!('form' in recipes) && recipes.some(recipe => recipe.form === 'forwarded' && recipe.origin.binding === 'member')) {
+          // Member origins require a template instance's member binding;
+          // explicit members and composition-level steps have none.
+          return { status: 'unsupported', reason: 'argument-form' };
         }
         return { status: 'bound', parent: parentTarget, child: childTarget, witness: parsed.witness };
       },

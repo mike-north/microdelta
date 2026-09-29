@@ -8,9 +8,9 @@ tests nested argument recipes, one supplied callable slot, a frozen keyed
 fanout template, tracked gates and a strict fold's treatment of skips across a
 complete process exit. It does not implement or prove an M4 runtime, History
 publication, durable schema, M5 waits/retries/cancellation, or EXP-2's value
-encoding. The owning contracts (composition.md, execution.md, tracking.md,
-experiments.md, glossary) are unchanged by this PR; the supervisor decides
-adoption and amends them.
+encoding. The supervisor adopted these mechanisms and amended the owning
+contracts (composition.md, execution.md, operations.md, experiments.md and the
+glossary) in the same PR; see "Supervisor resolution" below.
 
 | Mechanism | Result | Bound |
 | --- | --- | --- |

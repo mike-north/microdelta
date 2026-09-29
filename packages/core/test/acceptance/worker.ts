@@ -64,6 +64,8 @@ function describeOutcome(outcome: IResolutionOutcome): Readonly<Record<string, u
       return { kind: 'published', reference: outcome.reference.locator, diagnostics: outcome.diagnostics };
     case 'refused':
       return { kind: 'refused', refused: outcome.refused, reason: outcome.reason, diagnostics: outcome.diagnostics };
+    case 'skipped':
+      throw new Error('the acceptance fixture declares no gated template instance');
     default: {
       const exhaustive: never = outcome;
       return exhaustive;
@@ -105,7 +107,7 @@ async function perform(job: IJob, run: IWorkspaceRun, analysis: ReturnType<typeo
       const reportStart = markReads();
       const report = await run.ordinary('report', () => [...memberKeys].sort().map((member) => {
         const outcome = outcomes[member];
-        if (outcome === undefined || outcome.kind === 'refused') {
+        if (outcome === undefined || outcome.kind === 'refused' || outcome.kind === 'skipped') {
           return { key: member, refused: true };
         }
         return { key: member, ...run.read<ISummary>(outcome.reference) };

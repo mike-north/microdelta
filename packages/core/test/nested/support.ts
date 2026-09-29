@@ -137,6 +137,9 @@ export function referenceOf(outcome: IResolutionOutcome): string {
   if (outcome.kind === 'refused') {
     throw new Error(`expected a result, observed refusal of ${JSON.stringify(outcome.refused)}: ${outcome.reason}`);
   }
+  if (outcome.kind === 'skipped') {
+    throw new Error('expected a result, observed a gated-out skip');
+  }
   return outcome.reference.locator;
 }
 

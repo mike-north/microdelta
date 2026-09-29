@@ -7,13 +7,18 @@ import { expect } from '@jest/globals';
 
 import {
   DefinitionError,
+  type IAnySourceDeclaration,
+  type IApply,
   type IArgumentSupplier,
   type IArgumentViews,
   type IAuthorInvoker,
+  type IBindingDescriptor,
   type IChildResult,
   type IDeclaredInvocationRequest,
   type IInvocationPort,
   type IInvocationScope,
+  type IMemberOf,
+  type IMemberSupplier,
 } from '../../src/index.js';
 import type { ITestFamily } from './contributors.js';
 
@@ -118,4 +123,15 @@ export function expectDefinitionError(action: () => unknown, code: DefinitionErr
   }
   expect(caught).toBeInstanceOf(DefinitionError);
   expect(caught instanceof DefinitionError ? caught.code : undefined).toBe(code);
+}
+
+/** A member supplier that records which collection and instance it was asked for and returns one member view. */
+export function supplying(member: unknown, asked: unknown[]): IMemberSupplier<ITestFamily> {
+  return {
+    view: <TCollection extends IAnySourceDeclaration<ITestFamily>>(collection: TCollection, instance: IBindingDescriptor): IApply<ITestFamily['views'], IMemberOf<ITestFamily, TCollection>> => {
+      asked.push(collection, instance);
+      // Test-only: the supplier stands in for Resolution's trusted member view and returns the configured record.
+      return member as IApply<ITestFamily['views'], IMemberOf<ITestFamily, TCollection>>;
+    },
+  };
 }

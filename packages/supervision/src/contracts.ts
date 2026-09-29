@@ -4,8 +4,9 @@
  * REUSE-009, basic A-19).
  *
  * Supervision owns *when* work may happen: the run's environment and
- * lifetime, admission of work Resolution could not avoid, and the positions
- * at which observers see work. It does not decide reuse (Reuse Resolution),
+ * lifetime, admission of work Resolution could not avoid, the positions at
+ * which observers see work, and the typed outcome of each template member in
+ * a run (RUN-005, RUN-010). It does not decide reuse (Reuse Resolution),
  * own claims or publication (Result History), or read the host directly: the
  * asynchronous scope is a structurally injected capability, so this package
  * has no Machine import and ordinary author helpers receive no context
@@ -15,13 +16,16 @@
 import type { IBindingDescriptor } from '@microdelta/definition';
 import type {
   ICheckOutcome,
+  IDiscoveryOutcome,
   IExecutionAdmission,
+  IGateEvidence,
   ILifecycleEvent,
   ILifecycleObserver,
   IRecoveryResult,
   IResolution,
   IResolutionOutcome,
   IResolveRequest,
+  ResolutionError,
 } from '@microdelta/resolution';
 
 /**
@@ -173,6 +177,98 @@ export interface IRequestOptions {
 }
 
 /**
+ * The template step a members request resolves for every current member.
+ * @alpha
+ */
+export interface IMembersTarget {
+  /** The composed template's slot. */
+  readonly template: string;
+  /** One of the template's step slots. */
+  readonly step: string;
+}
+
+/**
+ * The typed outcome of one current member's instance in this run
+ * (CMP-8, RUN-005, RUN-010). The five statuses never collapse into one
+ * another:
+ *
+ * - `succeeded`: an accepted result exists now, reused or newly published.
+ * - `skipped`: the member's gate explicitly excluded it from the required
+ *   population; it has no result and nothing was admitted or retracted.
+ * - `pending`: the member's required work was not completed in this run
+ *   because admission denied it; never a terminal failure.
+ * - `failed`: its gate failed or its resolution raised a typed failure.
+ * - `cancelled`: Supervision withdrew the member's required work from this
+ *   run through the admission port; terminal for a strict consumer.
+ * @alpha
+ */
+export type IMemberOutcome =
+  | {
+      readonly status: 'succeeded';
+      readonly key: string;
+      readonly step: IBindingDescriptor;
+      readonly gate: IGateEvidence | undefined;
+      /** The reused or published outcome, with its exact reference. */
+      readonly outcome: Extract<IResolutionOutcome, { readonly kind: 'reused' | 'published' }>;
+    }
+  | {
+      readonly status: 'skipped';
+      readonly key: string;
+      readonly step: IBindingDescriptor;
+      /** The gate evidence that excluded the member. */
+      readonly gate: IGateEvidence;
+    }
+  | {
+      readonly status: 'pending' | 'cancelled';
+      readonly key: string;
+      readonly step: IBindingDescriptor;
+      readonly gate: IGateEvidence | undefined;
+      /** The step whose work was refused: the instance itself or one of its children. */
+      readonly refused: IBindingDescriptor;
+      readonly reason: string;
+    }
+  | {
+      readonly status: 'failed';
+      readonly key: string;
+      readonly step: IBindingDescriptor;
+      readonly gate: IGateEvidence | undefined;
+      /** The typed failure. */
+      readonly error: ResolutionError;
+    };
+
+/**
+ * How discovery settled for a members request, in Supervision's terms: keyed
+ * (with its completion status), rejected by keying with Definition's
+ * diagnostic, or not settled in this run because admission denied
+ * (`pending`) or cancelled (`cancelled`) the discovery source's work.
+ * @alpha
+ */
+export type IDiscoveryReport =
+  | Extract<IDiscoveryOutcome, { readonly kind: 'keyed' | 'rejected' }>
+  | {
+      readonly kind: 'pending' | 'cancelled';
+      readonly collection: IBindingDescriptor;
+      readonly refused: IBindingDescriptor;
+      readonly reason: string;
+    };
+
+/**
+ * One members request's report: discovery and every current member's typed
+ * outcome in canonical key order (none unless discovery keyed).
+ * @alpha
+ */
+export interface IMembersReport {
+  /** The template slot. */
+  readonly template: string;
+  /** The template step slot. */
+  readonly step: string;
+  /** How discovery settled. */
+  readonly discovery: IDiscoveryReport;
+  /** Every current member's typed outcome, in canonical key order. */
+  readonly members: readonly IMemberOutcome[];
+}
+
+/**
  * A live run. Every operation executes inside the run's scope, so author code
  * it reaches can look up the run context without a parameter. After the run
  * closes, every operation rejects with `run-closed`.
@@ -188,6 +284,16 @@ export interface IRun {
   readonly open: boolean;
   /** Resolve one step under current policy (normal entry operation). */
   resolve(step: IBindingDescriptor, request: IRequestOptions): Promise<IResolutionOutcome>;
+  /**
+   * Resolve one template step for every current member of its keyed
+   * collection and report each member's typed outcome. Members progress
+   * independently: one member's failure, refusal or skip, and open discovery,
+   * never prevent another member whose evidence is ready from completing. A
+   * run-level failure (the admission port or an observer failing, damaged
+   * History, a wrong request) rejects the whole request instead of failing
+   * any member.
+   */
+  resolveMembers(target: IMembersTarget, request: IRequestOptions): Promise<IMembersReport>;
   /** Report what a normal request would do, without admission, claims, bodies or writes. */
   check(step: IBindingDescriptor): Promise<ICheckOutcome>;
   /** Report the durable outcome of the execution a saved request key identifies, without executing (recovery entry operation). */

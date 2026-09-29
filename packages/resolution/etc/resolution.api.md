@@ -8,10 +8,12 @@ import type { IAcceptanceRecord } from '@microdelta/history';
 import type { IAsyncContextCapability } from '@microdelta/tracking';
 import type { IBindingDescriptor } from '@microdelta/definition';
 import type { IBindingFamily } from '@microdelta/definition';
+import type { ICollectionStatus } from '@microdelta/definition';
 import type { ICompletedResultReference } from '@microdelta/history';
 import type { IComposition } from '@microdelta/definition';
 import type { IDeclarations } from '@microdelta/definition';
 import type { IDurableHistory } from '@microdelta/history';
+import type { IKeyingDiagnostic } from '@microdelta/definition';
 import type { IPreviousCarrierFamily } from '@microdelta/definition';
 import type { ISha256Capability } from '@microdelta/tracking';
 import type { ITracked } from '@microdelta/tracking';
@@ -31,6 +33,9 @@ export type IAdmissionDecision = {
     readonly kind: 'admitted';
 } | {
     readonly kind: 'denied';
+    readonly reason: string;
+} | {
+    readonly kind: 'cancelled';
     readonly reason: string;
 };
 
@@ -69,6 +74,11 @@ export type ICheckOutcome = {
     readonly step: IBindingDescriptor;
     readonly boundary: IBindingDescriptor;
     readonly misses: readonly ICandidateMiss[];
+} | {
+    readonly kind: 'skipped';
+    readonly step: IBindingDescriptor;
+    readonly gate: IGateEvidence;
+    readonly misses: readonly ICandidateMiss[];
 };
 
 // @alpha
@@ -77,8 +87,34 @@ export interface ICheckRequest {
 }
 
 // @alpha
+export type IDiscoveryOutcome = {
+    readonly kind: 'keyed';
+    readonly collection: IBindingDescriptor;
+    readonly reference: ICompletedResultReference;
+    readonly completion: ICollectionStatus;
+    readonly keys: readonly string[];
+} | {
+    readonly kind: 'rejected';
+    readonly collection: IBindingDescriptor;
+    readonly reference: ICompletedResultReference;
+    readonly diagnostic: IKeyingDiagnostic;
+} | {
+    readonly kind: 'refused';
+    readonly collection: IBindingDescriptor;
+    readonly refused: IBindingDescriptor;
+    readonly reason: string;
+    readonly disposition: IRefusalDisposition;
+};
+
+// @alpha
 export interface IExecutionAdmission {
     admit(request: IAdmissionRequest): IAdmissionDecision | Promise<IAdmissionDecision>;
+}
+
+// @alpha
+export interface IGateEvidence {
+    readonly observations: readonly ITrackingObservation[];
+    readonly selected: 'required' | 'skipped';
 }
 
 // @alpha
@@ -95,6 +131,37 @@ export interface ILifecycleObserver {
 
 // @alpha
 export type ILifecyclePhase = 'verify' | 'finality' | 'admit' | 'refuse' | 'claim' | 'execute' | 'publish' | 'accept' | 'release' | 'abandon';
+
+// @alpha
+export interface IMemberFailure {
+    readonly error: ResolutionError;
+    // (undocumented)
+    readonly kind: 'failed';
+}
+
+// @alpha
+export interface IMemberResolution {
+    readonly gate: IGateEvidence | undefined;
+    readonly key: string;
+    readonly outcome: IResolutionOutcome | IMemberFailure;
+    readonly step: IBindingDescriptor;
+}
+
+// @alpha
+export interface IMembersRequest {
+    readonly lease: IWriterLease;
+    readonly requestKey: string;
+    readonly step: string;
+    readonly template: string;
+}
+
+// @alpha
+export interface IMembersResolution {
+    readonly diagnostics: readonly string[];
+    readonly discovery: IDiscoveryOutcome;
+    readonly members: readonly IMemberResolution[];
+    readonly template: string;
+}
 
 // @alpha
 export interface IOutcomeEvidence {
@@ -131,14 +198,18 @@ export type IRecoveryResult = {
 };
 
 // @alpha
+export type IRefusalDisposition = 'denied' | 'cancelled';
+
+// @alpha
 export interface IResolution {
     check(request: ICheckRequest): Promise<ICheckOutcome>;
     recover(request: IRecoverRequest): IRecoveryResult;
     resolve(request: IResolveRequest): Promise<IResolutionOutcome>;
+    resolveMembers(request: IMembersRequest): Promise<IMembersResolution>;
 }
 
 // @alpha
-export type IResolutionErrorCode = 'unbound-step' | 'policy-failure' | 'invalid-outcome' | 'invalid-retention' | 'execution-failure' | 'unsupported-result' | 'integrity' | 'wrong-intent' | 'admission-failure' | 'observer-failure' | 'invalid-request';
+export type IResolutionErrorCode = 'unbound-step' | 'policy-failure' | 'invalid-outcome' | 'invalid-retention' | 'execution-failure' | 'unsupported-result' | 'integrity' | 'wrong-intent' | 'admission-failure' | 'observer-failure' | 'invalid-request' | 'gate-failure' | 'collection-rejected';
 
 // @alpha
 export interface IResolutionFamily<TInputs extends object, THelpers extends object> extends IBindingFamily {
@@ -191,6 +262,10 @@ export type IResolutionOutcome = IOutcomeEvidence & ({
     readonly kind: 'refused';
     readonly refused: IBindingDescriptor;
     readonly reason: string;
+    readonly disposition: IRefusalDisposition;
+} | {
+    readonly kind: 'skipped';
+    readonly gate: IGateEvidence;
 });
 
 // @alpha

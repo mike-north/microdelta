@@ -73,6 +73,17 @@ collection is a miss, never a remap. An opened instance parent always records
 the version-2 witness with template-bearing descriptors, and only it may forward
 its member binding; the version-1 parser rejects template-bearing descriptors.
 
+Every member step's callbacks (a member source's `run` and `finality`, a
+member memo's `run`) receive `member`: the view of the instance's member record
+in the current keyed collection, typed from the collection's member type. The
+builder is typed `IMemberBuilder<F, TMember>` and member step declarations carry
+the extension, for example `ISourceDeclaration<F, R, IMemberBinding<F, TMember>>`.
+An instance invocation is applied with Resolution's member supplier (the same
+supplier a gate receives), whose view Definition places in the context without
+reading it. An instance applied without one, any other step applied with one,
+and facade bindings claiming `member` reject with `invalid-bindings`. Explicitly
+keyed M3 members and composition-level steps have no member binding.
+
 `composition.keyMembers(template, snapshot)` keys a collection snapshot by
 designated identity or the template's custom `key`, returning every member in
 canonical UTF-16 code-unit order with the completion status. A hole, `null` or

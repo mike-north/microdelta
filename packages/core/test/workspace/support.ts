@@ -104,8 +104,8 @@ export function assembleReport(run: IWorkspaceRun, outcomes: Readonly<Record<IMe
   assemblies.count += 1;
   const contributors = [...memberKeys].sort().map((key) => {
     const outcome = outcomes[key];
-    if (outcome.kind === 'refused') {
-      throw new Error(`summary of ${key} was refused: ${outcome.reason}`);
+    if (outcome.kind === 'refused' || outcome.kind === 'skipped') {
+      throw new Error(`summary of ${key} was ${outcome.kind}`);
     }
     return { key, ...run.read<ISummary>(outcome.reference) };
   });
@@ -173,6 +173,9 @@ export async function runReport(session: ISession, options: IReportRun = {}): Pr
 export function locatorOf(outcome: IResolutionOutcome): string {
   if (outcome.kind === 'refused') {
     throw new Error(`expected a result, observed refusal of ${JSON.stringify(outcome.refused)}: ${outcome.reason}`);
+  }
+  if (outcome.kind === 'skipped') {
+    throw new Error('expected a result, observed a gated-out skip');
   }
   return outcome.reference.locator;
 }

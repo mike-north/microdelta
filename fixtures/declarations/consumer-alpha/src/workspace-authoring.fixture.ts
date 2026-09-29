@@ -12,7 +12,20 @@
  * @see ../../../../docs/plans/m3-contribution-analysis.md (Authoring shape and worked walkthrough)
  */
 import { authoring, currentRun, openWorkspace, sourceOutcome } from 'microdelta';
-import type { IPreviousResult, IResolutionOutcome, IResultView, ISourceOutcome, IStepDescriptor, ITrackedView, IWorkspaceRun } from 'microdelta';
+import type {
+  IDiscoveryReport,
+  IGateEvidence,
+  IMemberOutcome,
+  IMembersReport,
+  IMembersTarget,
+  IPreviousResult,
+  IResolutionOutcome,
+  IResultView,
+  ISourceOutcome,
+  IStepDescriptor,
+  ITrackedView,
+  IWorkspaceRun,
+} from 'microdelta';
 
 /** Contributor activity as a source result. */
 interface IActivity {
@@ -88,4 +101,15 @@ export async function reportOnce(location: string, requestKey: string): Promise<
   } finally {
     workspace.close();
   }
+}
+
+/** Template member outcomes type-check through the facade's alpha rollup, named from `microdelta` itself. */
+export async function membersOnce(run: IWorkspaceRun, target: IMembersTarget, requestKey: string): Promise<readonly string[]> {
+  const report: IMembersReport = await run.resolveMembers(target, { requestKey });
+  const discovery: IDiscoveryReport = report.discovery;
+  const statuses = report.members.map((member: IMemberOutcome): string => {
+    const gate: IGateEvidence | undefined = member.gate;
+    return `${member.key}:${member.status}:${gate?.selected ?? 'ungated'}`;
+  });
+  return [discovery.kind, ...statuses];
 }

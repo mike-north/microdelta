@@ -12,6 +12,7 @@ import type {
   IAdmissionDecision as IResolutionAdmissionDecision,
   IAdmissionRequest as IResolutionAdmissionRequest,
   IExecutionAdmission,
+  IGateEvidence as IResolutionGateEvidence,
   ILifecycleEvent as IResolutionLifecycleEvent,
   ILifecyclePhase as IResolutionLifecyclePhase,
   IRecoveryResult as IResolutionRecoveryResult,
@@ -35,6 +36,10 @@ import type {
   IRequestOptions as ISupervisionRequestOptions,
   IRun,
   IRunContext as ISupervisionRunContext,
+  IDiscoveryReport as ISupervisionDiscoveryReport,
+  IMemberOutcome as ISupervisionMemberOutcome,
+  IMembersReport as ISupervisionMembersReport,
+  IMembersTarget as ISupervisionMembersTarget,
   IRunEvent as ISupervisionRunEvent,
   IRunObserver as ISupervisionRunObserver,
   IRunResult as ISupervisionRunResult,
@@ -79,6 +84,21 @@ export type IRunContext = ISupervisionRunContext;
 
 /** One event offered to run observers. @alpha */
 export type IRunEvent = ISupervisionRunEvent;
+
+/** The template step a members request resolves for every current member. @alpha */
+export type IMembersTarget = ISupervisionMembersTarget;
+
+/** One current template member's typed outcome in a run: succeeded, skipped, pending, failed or cancelled. @alpha */
+export type IMemberOutcome = ISupervisionMemberOutcome;
+
+/** How discovery settled for a members request: keyed, rejected, pending or cancelled. @alpha */
+export type IDiscoveryReport = ISupervisionDiscoveryReport;
+
+/** One members request's report: discovery and every current member's typed outcome in canonical key order. @alpha */
+export type IMembersReport = ISupervisionMembersReport;
+
+/** The evidence of one template instance's settled gate: its selection and the facts it read in its own frame. @alpha */
+export type IGateEvidence = IResolutionGateEvidence;
 
 /** An observe-only run observer. @alpha */
 export type IRunObserver = ISupervisionRunObserver;
@@ -335,6 +355,7 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
             return live.open;
           },
           resolve: live.resolve,
+          resolveMembers: live.resolveMembers,
           check: live.check,
           recover: live.recover,
           ordinary: live.ordinary,

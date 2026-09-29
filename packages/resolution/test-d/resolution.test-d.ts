@@ -14,7 +14,23 @@ import type { IChildResult } from '@microdelta/definition';
 import type { ITrackedView } from '@microdelta/tracking';
 
 import { ResolutionError, sourceOutcome } from '../dist/src/index.js';
-import type { ICallView, ICandidateMiss, IPreviousResult, IResolutionFamily, IResolutionOutcome, IResultView, ISourceOutcome, ISourceOutcomes, IUntrackedRead } from '../dist/src/index.js';
+import type {
+  IAdmissionDecision,
+  ICallView,
+  ICandidateMiss,
+  ICheckOutcome,
+  IGateEvidence,
+  IMemberResolution,
+  IPreviousResult,
+  IRefusalDisposition,
+  IResolution,
+  IResolutionFamily,
+  IResolutionOutcome,
+  IResultView,
+  ISourceOutcome,
+  ISourceOutcomes,
+  IUntrackedRead,
+} from '../dist/src/index.js';
 
 interface IActivity {
   readonly profile: { readonly name: string };
@@ -67,13 +83,42 @@ expectError(sourceOutcome.retain({ profile: { name: 'Ada' }, count: 1 }));
 expectAssignable<ISourceOutcome<IActivity>>(sourceOutcome.fresh<IActivity>({ profile: { name: 'Ada' }, count: 1 }));
 expectNotAssignable<ISourceOutcome<IActivity>>({ kind: 'fresh', data: { profile: { name: 'Ada' }, count: 1 } });
 
-// Outcomes are a discriminated union.
+// Outcomes are a discriminated union: a refusal names its disposition, a
+// gated-out instance is an explicit skip with gate evidence and no result.
 declare const outcome: IResolutionOutcome;
 if (outcome.kind === 'refused') {
   expectType<string>(outcome.reason);
+  expectType<IRefusalDisposition>(outcome.disposition);
+} else if (outcome.kind === 'skipped') {
+  expectType<IGateEvidence>(outcome.gate);
+  expectType<'required' | 'skipped'>(outcome.gate.selected);
+  expectError(outcome.reference);
 } else {
   expectType<string>(outcome.reference.locator);
 }
+declare const checked: ICheckOutcome;
+if (checked.kind === 'skipped') {
+  expectType<IGateEvidence>(checked.gate);
+  expectError(checked.reference);
+}
+
+// Admission may deny or cancel, each with a reason; nothing else is a decision.
+expectAssignable<IAdmissionDecision>({ kind: 'cancelled', reason: 'withdrawn' });
+expectAssignable<IAdmissionDecision>({ kind: 'denied', reason: 'quota' });
+expectNotAssignable<IAdmissionDecision>({ kind: 'cancelled' });
+expectNotAssignable<IAdmissionDecision>({ kind: 'skipped', reason: 'gate' });
+
+// Members are resolved per template step with a request key and a lease; each member is an outcome or a typed failure.
+declare const resolution: IResolution;
+expectError(resolution.resolveMembers({ template: 'contributor', step: 'summary' }));
+declare const member: IMemberResolution;
+if (member.outcome.kind === 'failed') {
+  expectType<ResolutionError>(member.outcome.error);
+} else {
+  expectAssignable<IResolutionOutcome>(member.outcome);
+}
+expectAssignable<ResolutionError['code']>('gate-failure');
+expectAssignable<ResolutionError['code']>('collection-rejected');
 expectType<ResolutionError['code']>(new ResolutionError('integrity', 'x').code);
 
 // Every callback receives the explicit observed untracked read: scalar members only.

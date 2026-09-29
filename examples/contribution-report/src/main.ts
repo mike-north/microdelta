@@ -84,8 +84,11 @@ function counter(): { readonly counts: ICounts; readonly observe: (event: IRunEv
 
 /** A compact, JSON-safe description of one normal outcome. */
 function describeOutcome(outcome: IResolutionOutcome): Record<string, unknown> {
-  return outcome.kind === 'refused'
-    ? { kind: outcome.kind, reason: outcome.reason }
+  if (outcome.kind === 'refused') {
+    return { kind: outcome.kind, reason: outcome.reason };
+  }
+  return outcome.kind === 'skipped'
+    ? { kind: outcome.kind }
     : { kind: outcome.kind, ...(outcome.kind === 'reused' ? { basis: outcome.basis } : {}), reference: outcome.reference.locator };
 }
 

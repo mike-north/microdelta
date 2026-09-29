@@ -353,7 +353,7 @@ async function session<T>(location: string, variation: IVariation, body: (operat
 
 /** The stored payload of an outcome's exact result. */
 function payload(history: IDurableHistory, outcome: IResolutionOutcome): unknown {
-  if (outcome.kind === 'refused') {
+  if (outcome.kind === 'refused' || outcome.kind === 'skipped') {
     throw new Error('expected a result');
   }
   return history.reader.readSubtree(outcome.reference, []);
@@ -406,7 +406,7 @@ describe('supplied step argument lists are observed', () => {
     await session(location, { arity: 'two' }, async ({ resolve }) => {
       const outcome = await resolve('arity');
       expect(outcome).toMatchObject({ kind: 'reused', misses: [] });
-      expect(outcome.kind !== 'refused' && first.kind !== 'refused' ? outcome.reference.locator === first.reference.locator : false).toBe(true);
+      expect(outcome.kind !== 'refused' && outcome.kind !== 'skipped' && first.kind !== 'refused' && first.kind !== 'skipped' ? outcome.reference.locator === first.reference.locator : false).toBe(true);
     });
     expect(runs.score).toBe(0);
   });
@@ -454,7 +454,7 @@ describe('forwarded paths', () => {
     await session(location, { which: 'a' }, async ({ history, resolve }) => {
       const outcome = await resolve('pick');
       expect(payload(history, outcome)).toEqual({ v: 1 });
-      if (outcome.kind === 'refused') {
+      if (outcome.kind === 'refused' || outcome.kind === 'skipped') {
         throw new Error('expected a result');
       }
       const calls = (history.readEnvelope(outcome.reference).provenance.content as { readonly calls: readonly { readonly witness: { readonly arguments: unknown } }[] }).calls;

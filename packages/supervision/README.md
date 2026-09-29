@@ -27,9 +27,9 @@ supervised run and returns `{ context, value, diagnostics }`:
   `composition-phase` while a composition is being constructed. The run id is
   volatile metadata, never reuse evidence.
 - **Lifetime.** The run stays live until its body *and* every operation
-  started through it (`resolve`, `check`, `recover`, `ordinary`) have settled,
-  including operations started while it waits and ones the body stopped
-  awaiting early (a `Promise.all` whose sibling failed). The body's own value
+  started through it (`resolve`, `resolveMembers`, `check`, `recover`,
+  `ordinary`) have settled, including operations started while it waits and
+  ones the body stopped awaiting early (a `Promise.all` whose sibling failed). The body's own value
   or failure is what the run reports. `run.open` reports this state. The run
   closes in the same turn that observes no started work, so every operation is
   either accepted and waited for or rejected before starting. After the run
@@ -44,7 +44,19 @@ supervised run and returns `{ context, value, diagnostics }`:
   close, after started work settled.
   Check-only and recovery requests never need it.
 - **Admission.** The caller's policy decides admission of work Resolution
-  presents after reuse had its chance; the default admits everything.
+  presents after reuse had its chance; the default admits everything. A
+  policy may deny work (it stays pending) or cancel it (withdrawn from this
+  run); only the decision is injected here, not cancellation mechanics.
+- **Member outcomes.** `resolveMembers({ template, step }, { requestKey })` is
+  a normal request for one template step across every current member. It
+  reports discovery (`keyed` with its completion status, `rejected` with
+  Definition's keying diagnostic, or `pending`/`cancelled` when discovery's
+  own work was refused) and each member's typed outcome in canonical key
+  order: `succeeded` (reused or published, with its exact reference),
+  `skipped` (gated out, with gate evidence and no result), `pending`
+  (admission denied; never a terminal failure), `failed` (a typed Resolution
+  failure, including a gate failure) or `cancelled`. Members progress
+  independently.
 - **Observers.** Observers are captured at start and see frozen events at the
   fixed positions `stepLifecycle` and `ordinaryLifecycle`. They cannot veto or
   replace work. A throw before work stops only that call; a throw after a
@@ -53,7 +65,7 @@ supervised run and returns `{ context, value, diagnostics }`:
   scope, observed at `begin`/`end`/`fail`. It has no completed-result identity
   and no hidden memoization.
 
-Retry, cancellation, scheduling and fanout breadth remain later work.
+Retry, wait and cancellation mechanics and scheduling remain later work.
 
 ## Tests
 

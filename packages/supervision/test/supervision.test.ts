@@ -18,11 +18,17 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import { describe, expect, test } from '@jest/globals';
 import { declarations } from '@microdelta/definition';
 import type { IBindingDescriptor, IBindingFamily } from '@microdelta/definition';
+import { ResolutionError } from '@microdelta/resolution';
 import type {
   IAdmissionDecision,
   IAdmissionRequest,
   ICheckOutcome,
+  IDiscoveryOutcome,
+  IGateEvidence,
   ILifecycleEvent,
+  IMemberResolution,
+  IMembersRequest,
+  IMembersResolution,
   IRecoveryResult,
   IResolution,
   IResolutionOutcome,
@@ -30,7 +36,18 @@ import type {
 } from '@microdelta/resolution';
 
 import { SupervisionError, createSupervision, ordinaryLifecycle, stepLifecycle } from '../src/index.js';
-import type { IResolutionPorts, IRun, IRunEvent, IRunLease, IRunObserver, IRunOptions, IRunScope, IRunScopeCapability, ISupervision } from '../src/index.js';
+import type {
+  IMemberOutcome,
+  IResolutionPorts,
+  IRun,
+  IRunEvent,
+  IRunLease,
+  IRunObserver,
+  IRunOptions,
+  IRunScope,
+  IRunScopeCapability,
+  ISupervision,
+} from '../src/index.js';
 
 /** Node's real asynchronous context, supplied structurally as a host would. */
 const nodeScopes: IRunScopeCapability = {
@@ -70,12 +87,30 @@ function settledCode(result: { readonly error?: unknown }): string | undefined {
   return result.error instanceof SupervisionError ? result.error.code : undefined;
 }
 
+/**
+ * How the double settles one scripted member of a members request, as real
+ * Resolution would: a gate that skips or fails it, or a required instance
+ * whose work is presented to Supervision's admission port and then published
+ * (or fails while executing).
+ */
+type IMemberScript =
+  | { readonly key: string; readonly gate: 'skipped' }
+  | { readonly key: string; readonly gate: 'failed' }
+  | { readonly key: string; readonly gate: 'required'; readonly body: 'publishes' | 'fails' };
+
+/** What the double's discovery does before any member: key the scripted members, reject them, or present discovery work to admission. */
+type IDiscoveryScript = 'keyed' | 'rejected' | 'admission';
+
 /** What the recording Resolution double did, and hooks a test can set. */
 interface IDouble {
   /** The ports Supervision supplied, once the factory ran. */
   ports: IResolutionPorts | undefined;
   /** Every request, in order. */
-  readonly calls: { readonly operation: 'resolve' | 'check' | 'recover'; readonly lease?: IRunLease; readonly requestKey?: string }[];
+  readonly calls: { readonly operation: 'resolve' | 'check' | 'recover' | 'members'; readonly lease?: IRunLease; readonly requestKey?: string; readonly template?: string; readonly step?: string }[];
+  /** The scripted members a members request settles, in the order discovery lists them. */
+  members: readonly IMemberScript[];
+  /** How the members request's discovery settles. */
+  discovery: IDiscoveryScript;
   /** Admission decisions returned to the double. */
   readonly decisions: IAdmissionDecision[];
   /** Runs where Resolution's author code would run, inside the request. */
@@ -86,7 +121,7 @@ interface IDouble {
 
 /** A Resolution double that follows the port contract: verify, admit, execute, publish. */
 function recordingResolution(): { readonly double: IDouble; readonly factory: IRunOptions['resolution'] } {
-  const double: IDouble = { ports: undefined, calls: [], decisions: [], during: undefined, diagnostics: [] };
+  const double: IDouble = { ports: undefined, calls: [], members: [], discovery: 'keyed', decisions: [], during: undefined, diagnostics: [] };
   const factory = (ports: IResolutionPorts): IResolution => {
     double.ports = ports;
     const emit = (phase: ILifecycleEvent['phase']): void => {
@@ -100,9 +135,9 @@ function recordingResolution(): { readonly double: IDouble; readonly factory: IR
         const admission: IAdmissionRequest = Object.freeze({ step, kind: 'memo', subject: { analysis: 'analysis:test', environment: 'env:test', subject: 'summary:ada', version: 1 }, reason: 'cold' });
         const decision = await ports.admission.admit(admission);
         double.decisions.push(decision);
-        if (decision.kind === 'denied') {
+        if (decision.kind !== 'admitted') {
           emit('refuse');
-          return Object.freeze({ kind: 'refused', step, refused: step, reason: decision.reason, misses: [], trace: [], diagnostics: [] });
+          return Object.freeze({ kind: 'refused', step, refused: step, reason: decision.reason, disposition: decision.kind, misses: [], trace: [], diagnostics: [] });
         }
         emit('claim');
         emit('execute');
@@ -115,6 +150,61 @@ function recordingResolution(): { readonly double: IDouble; readonly factory: IR
           diagnostics.push(`observer failed at publish: ${error instanceof Error ? error.message : String(error)}`);
         }
         return Object.freeze({ kind: 'published', step, reference, attemptId: 1, misses: [], trace: [], diagnostics });
+      },
+      async resolveMembers(request: IMembersRequest): Promise<IMembersResolution> {
+        double.calls.push({ operation: 'members', lease: request.lease, requestKey: request.requestKey, template: request.template, step: request.step });
+        const collection: IBindingDescriptor = Object.freeze({ scope: 'analysis:test', role: 'step', slot: 'contributors' });
+        const collectionReference = Object.freeze({ kind: 'completed-result' as const, locator: 'mdh1:test:collection' });
+        await Promise.resolve();
+        double.during?.();
+        if (double.discovery === 'admission') {
+          const decision = await ports.admission.admit(Object.freeze({ step: collection, kind: 'source', subject: { analysis: 'analysis:test', environment: 'env:test', subject: 'contributors', version: 1 }, reason: 'source-policy' }));
+          double.decisions.push(decision);
+          if (decision.kind !== 'admitted') {
+            return Object.freeze({ template: request.template, discovery: Object.freeze({ kind: 'refused', collection, refused: collection, reason: decision.reason, disposition: decision.kind }), members: [], diagnostics: [] });
+          }
+        }
+        if (double.discovery === 'rejected') {
+          const rejected: IDiscoveryOutcome = Object.freeze({
+            kind: 'rejected',
+            collection,
+            reference: collectionReference,
+            diagnostic: Object.freeze({ reason: 'duplicate-key', template: request.template, collection: 'contributors', key: 'person:ada', identity: 'key', customKey: false, message: 'Collection contributors has duplicate member key "person:ada".' }),
+          });
+          return Object.freeze({ template: request.template, discovery: rejected, members: [], diagnostics: [] });
+        }
+        const keys = double.members.map((member) => member.key).sort();
+        const discovery: IDiscoveryOutcome = Object.freeze({ kind: 'keyed', collection, reference: collectionReference, completion: 'open', keys });
+        const members: IMemberResolution[] = [];
+        for (const key of keys) {
+          const script = double.members.find((member) => member.key === key);
+          const instance: IBindingDescriptor = Object.freeze({ scope: 'analysis:test', role: 'step', slot: request.step, template: request.template, collection: 'contributors', memberKey: key });
+          const evidence = { misses: [], trace: [], diagnostics: [] };
+          if (script === undefined || script.gate === 'failed') {
+            members.push(Object.freeze({ key, step: instance, gate: undefined, outcome: Object.freeze({ kind: 'failed', error: new ResolutionError('gate-failure', `gate for ${key} returned a number`) }) }));
+            continue;
+          }
+          const gate: IGateEvidence = Object.freeze({ selected: script.gate, observations: [] });
+          if (script.gate === 'skipped') {
+            members.push(Object.freeze({ key, step: instance, gate, outcome: Object.freeze({ ...evidence, step: instance, kind: 'skipped', gate }) }));
+            continue;
+          }
+          const decision = await ports.admission.admit(Object.freeze({ step: instance, kind: 'memo', subject: { analysis: 'analysis:test', environment: 'env:test', subject: `summary:${key}`, version: 1 }, reason: 'cold' }));
+          double.decisions.push(decision);
+          if (decision.kind !== 'admitted') {
+            members.push(Object.freeze({ key, step: instance, gate, outcome: Object.freeze({ ...evidence, step: instance, kind: 'refused', refused: instance, reason: decision.reason, disposition: decision.kind }) }));
+            continue;
+          }
+          members.push(Object.freeze({
+            key,
+            step: instance,
+            gate,
+            outcome: script.body === 'publishes'
+              ? Object.freeze({ ...evidence, step: instance, kind: 'published', reference: Object.freeze({ kind: 'completed-result' as const, locator: `mdh1:test:${key}` }), attemptId: 1 })
+              : Object.freeze({ kind: 'failed', error: new ResolutionError('execution-failure', `Body of ${key} failed`) }),
+          }));
+        }
+        return Object.freeze({ template: request.template, discovery, members, diagnostics: [...double.diagnostics] });
       },
       async check(): Promise<ICheckOutcome> {
         double.calls.push({ operation: 'check' });
@@ -568,6 +658,130 @@ async function settleTicks(): Promise<void> {
     await new Promise((resolve) => setTimeout(resolve, 1));
   }
 }
+
+/** The member outcome of `key` in a report, or a failure naming what was there. */
+function memberOf(members: readonly IMemberOutcome[], key: string): IMemberOutcome {
+  const found = members.find((member) => member.key === key);
+  if (found === undefined) {
+    throw new Error(`no member ${key} among ${members.map((member) => member.key).join(', ')}`);
+  }
+  return found;
+}
+
+/** An admission policy that decides by the requested instance's member key; everything else is admitted. */
+function policyByMember(decisions: Readonly<Record<string, IAdmissionDecision>>): NonNullable<IRunOptions['admission']> {
+  return {
+    admit(request: IAdmissionRequest): IAdmissionDecision {
+      const key = request.step.memberKey;
+      return (key === undefined ? undefined : decisions[key]) ?? { kind: 'admitted' };
+    },
+  };
+}
+
+describe('typed member outcomes (CMP-8, RUN-005, RUN-010)', () => {
+  test('succeeded, skipped, pending, failed and cancelled members stay distinct in one run with discovery open', async () => {
+    const { options, double } = runOptions({
+      admission: policyByMember({
+        'person:cy': { kind: 'denied', reason: 'quota exhausted for now' },
+        'person:eve': { kind: 'cancelled', reason: 'operator stopped this member' },
+      }),
+    });
+    double.members = [
+      { key: 'person:eve', gate: 'required', body: 'publishes' },
+      { key: 'person:dee', gate: 'failed' },
+      { key: 'person:cy', gate: 'required', body: 'publishes' },
+      { key: 'person:ben', gate: 'skipped' },
+      { key: 'person:ada', gate: 'required', body: 'publishes' },
+      { key: 'person:fay', gate: 'required', body: 'fails' },
+    ];
+    const result = await supervision().run(options, (run) => run.resolveMembers({ template: 'contributor', step: 'summary' }, { requestKey: 'request:members' }));
+    const report = result.value;
+    expect(report.template).toBe('contributor');
+    expect(report.step).toBe('summary');
+    expect(report.discovery).toMatchObject({ kind: 'keyed', completion: 'open', keys: ['person:ada', 'person:ben', 'person:cy', 'person:dee', 'person:eve', 'person:fay'] });
+    // Canonical key order, whatever order discovery listed them in.
+    expect(report.members.map((member) => [member.key, member.status])).toEqual([
+      ['person:ada', 'succeeded'],
+      ['person:ben', 'skipped'],
+      ['person:cy', 'pending'],
+      ['person:dee', 'failed'],
+      ['person:eve', 'cancelled'],
+      ['person:fay', 'failed'],
+    ]);
+    const ada = memberOf(report.members, 'person:ada');
+    expect(ada.status === 'succeeded' ? ada.outcome.reference.locator : undefined).toBe('mdh1:test:person:ada');
+    // A skip carries its gate evidence and no result at all.
+    expect(memberOf(report.members, 'person:ben')).toEqual({
+      status: 'skipped',
+      key: 'person:ben',
+      step: expect.objectContaining({ memberKey: 'person:ben', template: 'contributor' }),
+      gate: { selected: 'skipped', observations: [] },
+    });
+    expect(memberOf(report.members, 'person:cy')).toMatchObject({ status: 'pending', reason: 'quota exhausted for now', refused: { memberKey: 'person:cy' } });
+    expect(memberOf(report.members, 'person:eve')).toMatchObject({ status: 'cancelled', reason: 'operator stopped this member', refused: { memberKey: 'person:eve' } });
+    const dee = memberOf(report.members, 'person:dee');
+    const fay = memberOf(report.members, 'person:fay');
+    expect(dee.status === 'failed' ? dee.error.code : undefined).toBe('gate-failure');
+    expect(fay.status === 'failed' ? fay.error.code : undefined).toBe('execution-failure');
+    // The cancellation reached Resolution as its own decision kind, never as a denial.
+    expect(double.decisions.map((decision) => decision.kind)).toEqual(['admitted', 'denied', 'cancelled', 'admitted']);
+  });
+
+  test('a members request is a normal request: it takes the writer lease and the caller request key, and runs in the run scope', async () => {
+    const supervisor = supervision();
+    const { options, double, writer } = runOptions();
+    double.members = [{ key: 'person:ada', gate: 'required', body: 'publishes' }];
+    const seen: string[] = [];
+    double.during = () => {
+      seen.push(supervisor.current().environment);
+    };
+    await supervisor.run(options, (run) => run.resolveMembers({ template: 'contributor', step: 'summary' }, { requestKey: 'request:members' }));
+    expect(double.calls).toEqual([{ operation: 'members', lease: writer.leases[0], requestKey: 'request:members', template: 'contributor', step: 'summary' }]);
+    expect(seen).toEqual(['env:test']);
+    expect(writer.releases.count).toBe(1);
+  });
+
+  test('refused discovery is pending or cancelled with no member outcomes; a rejected snapshot carries its keying diagnostic', async () => {
+    for (const [decision, status] of [
+      [{ kind: 'denied', reason: 'discovery quota' }, 'pending'],
+      [{ kind: 'cancelled', reason: 'discovery withdrawn' }, 'cancelled'],
+    ] as const) {
+      const { options, double } = runOptions({ admission: { admit: () => decision } });
+      double.discovery = 'admission';
+      double.members = [{ key: 'person:ada', gate: 'required', body: 'publishes' }];
+      const result = await supervision().run(options, (run) => run.resolveMembers({ template: 'contributor', step: 'summary' }, { requestKey: 'request:members' }));
+      expect(result.value.discovery).toEqual({ kind: status, collection: expect.objectContaining({ slot: 'contributors' }), refused: expect.objectContaining({ slot: 'contributors' }), reason: decision.reason });
+      expect(result.value.members).toEqual([]);
+    }
+    const { options, double } = runOptions();
+    double.discovery = 'rejected';
+    double.members = [{ key: 'person:ada', gate: 'required', body: 'publishes' }];
+    const result = await supervision().run(options, (run) => run.resolveMembers({ template: 'contributor', step: 'summary' }, { requestKey: 'request:members' }));
+    expect(result.value.discovery).toMatchObject({ kind: 'rejected', diagnostic: { reason: 'duplicate-key', key: 'person:ada', collection: 'contributors' } });
+    expect(result.value.members).toEqual([]);
+    expect(double.decisions).toEqual([]);
+  });
+
+  test('members request diagnostics join the run diagnostics once', async () => {
+    const { options, double } = runOptions();
+    double.members = [{ key: 'person:ada', gate: 'required', body: 'publishes' }];
+    double.diagnostics = ['observer failed after a member publication committed'];
+    const result = await supervision().run(options, (run) => run.resolveMembers({ template: 'contributor', step: 'summary' }, { requestKey: 'request:members' }));
+    expect(result.diagnostics).toEqual(['observer failed after a member publication committed']);
+  });
+
+  test('a members request after the run closed is rejected as new work', async () => {
+    const { options } = runOptions();
+    let escaped: IRun | undefined;
+    await supervision().run(options, (run) => {
+      escaped = run;
+    });
+    if (escaped === undefined) {
+      throw new Error('the run body did not run');
+    }
+    await expectSupervisionError(escaped.resolveMembers({ template: 'contributor', step: 'summary' }, { requestKey: 'request:late' }), 'run-closed');
+  });
+});
 
 describe('lifetime of operations the run already started (RUN-001)', () => {
   test('a body whose awaited Promise.all rejects early keeps the run live until its started sibling settles', async () => {

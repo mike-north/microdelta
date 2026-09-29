@@ -40,8 +40,23 @@
  * while its parent was being validated is reused when that parent then
  * executes, and no child runs twice. That sharing is request-local evidence,
  * never durable finality.
+ *
+ * A template instance (CMP-4, CMP-8, COL-1) is resolved within its current
+ * population: the template's collection source is resolved under its current
+ * policy once per request and its exact result keyed by Definition before any
+ * gate or member body; a rejected snapshot admits no member work. Each
+ * member's gate runs once per request in its own tracking frame over the
+ * member's current record, whose facts are that instance's gate evidence and
+ * enter no step's provenance; only an explicit `false` skips the instance. A
+ * required instance resolves like any source or memo. Its callbacks receive
+ * the member binding, a view of the member's current record whose reads are
+ * the step's own evidence and are validated against the current record on
+ * reuse; its forwarded member origins are rebuilt from that record. A members
+ * request resolves every current member independently, so one member's
+ * failure, refusal or skip never prevents a sibling whose evidence is ready
+ * from completing (RUN-005).
  */
-import { DefinitionError, derivedArguments } from '@microdelta/definition';
+import { DefinitionError, derivedArguments, gateOutcome } from '@microdelta/definition';
 import type {
   IAnyMemoDeclaration,
   IAnySourceDeclaration,
@@ -53,11 +68,16 @@ import type {
   IAuthorInvoker,
   IBindingDescriptor,
   IChildResult,
+  ICollectionStatus,
   IDeclaredInvocationRequest,
   IForwardOrigin,
+  IGateSettlement,
   IInvocationArguments,
   IInvocationPort,
   IInvocationScope,
+  IKeyingDiagnostic,
+  IMemberOf,
+  IMemberSupplier,
   IMemoInvocation,
   INestedInvocationWitness,
   IPreviousSupplier,
@@ -89,10 +109,16 @@ import type {
   ICandidateMiss,
   ICheckOutcome,
   ICheckRequest,
+  IDiscoveryOutcome,
+  IGateEvidence,
   ILifecycleEvent,
   ILifecyclePhase,
+  IMemberResolution,
+  IMembersRequest,
+  IMembersResolution,
   IRecoverRequest,
   IRecoveryResult,
+  IRefusalDisposition,
   IResolution,
   IResolutionOptions,
   IResolutionOutcome,
@@ -119,6 +145,14 @@ import { attemptKey, intentDigest, suppliedIntentDigest } from './intent.js';
 import { mintedOutcome, sourceOutcome } from './outcome.js';
 import type { IMintedOutcome } from './outcome.js';
 
+/**
+ * Resolution failures that belong to the run rather than to one template
+ * member: the admission port or an observer failed, historical evidence is
+ * damaged, or the request itself is wrong. A members request rethrows them
+ * instead of reporting any member failed.
+ */
+const runLevelFailures: ReadonlySet<ResolutionError['code']> = new Set<ResolutionError['code']>(['admission-failure', 'observer-failure', 'integrity', 'wrong-intent', 'invalid-request']);
+
 /** Lifecycle positions before any author body runs; an observer throw there stops the call. */
 const preExecution: ReadonlySet<ILifecyclePhase> = new Set(['verify', 'finality', 'admit', 'refuse', 'claim', 'execute']);
 
@@ -133,7 +167,7 @@ interface IStepEvidence {
 type IStepResult =
   | { readonly kind: 'reused'; readonly basis: IReuseBasis; readonly reference: ICompletedResultReference; readonly acceptance: IAcceptanceRecord | undefined }
   | { readonly kind: 'published'; readonly reference: ICompletedResultReference; readonly attemptId: number }
-  | { readonly kind: 'refused'; readonly refused: IBindingDescriptor; readonly reason: string }
+  | { readonly kind: 'refused'; readonly refused: IBindingDescriptor; readonly reason: string; readonly disposition: IRefusalDisposition }
   | { readonly kind: 'uncertain'; readonly boundary: IBindingDescriptor }
   | { readonly kind: 'execution-required' };
 
@@ -143,6 +177,51 @@ interface IResolvedStep {
   readonly result: IStepResult;
   readonly evidence: IStepEvidence;
 }
+
+/**
+ * A requested step's resolution. A template instance its gate excludes is an
+ * explicit skip rather than a work result; `gate` is the instance's gate
+ * evidence, absent for steps outside templates and templates without a gate.
+ */
+interface IResolvedTarget {
+  readonly step: IBindingDescriptor;
+  readonly result: IStepResult | { readonly kind: 'skipped'; readonly gate: IGateEvidence };
+  readonly evidence: IStepEvidence;
+  readonly gate: IGateEvidence | undefined;
+}
+
+/**
+ * One template's current population in one request: the collection result
+ * keyed by Definition, Definition's rejection of it, or the collection step's
+ * own result when discovery could not produce a current result (refused
+ * work, or check-only uncertainty).
+ */
+type IPopulation =
+  | {
+      readonly status: 'keyed';
+      readonly collection: IBindingDescriptor;
+      readonly reference: ICompletedResultReference;
+      readonly completion: ICollectionStatus;
+      /** Member keys in canonical order. */
+      readonly keys: readonly string[];
+    }
+  | { readonly status: 'rejected'; readonly collection: IBindingDescriptor; readonly reference: ICompletedResultReference; readonly diagnostic: IKeyingDiagnostic }
+  | { readonly status: 'stopped'; readonly collection: IBindingDescriptor; readonly result: Extract<IStepResult, { readonly kind: 'refused' | 'uncertain' }> };
+
+/**
+ * One gate run in its own capture: what it returned with the facts it read,
+ * that it returned a promise or other thenable (an asynchronous gate), or
+ * what it threw.
+ */
+type IGateRun =
+  | { readonly kind: 'returned'; readonly value: unknown; readonly observations: readonly ITrackingObservation[] }
+  | { readonly kind: 'promise' }
+  | { readonly kind: 'threw'; readonly error: unknown };
+
+/** How one member's gate settled in one request. */
+type IGateSettled =
+  | { readonly status: 'settled'; readonly evidence: IGateEvidence | undefined }
+  | { readonly status: 'failed'; readonly error: ResolutionError };
 
 /** One top-level request's context. */
 interface IRequestContext {
@@ -156,6 +235,16 @@ interface IRequestContext {
   readonly memos: Map<string, Promise<IResolvedStep>>;
   /** Request-local shared current results of supplied slot calls, by slot, subject, version and arguments. */
   readonly supplied: Map<string, Promise<IResolvedStep>>;
+  /** Request-local current populations, by template slot: discovery is resolved and keyed once per request. */
+  readonly populations: Map<string, Promise<IPopulation>>;
+  /**
+   * The member binding of every keyed member, by template slot and member
+   * key: the member record exactly as the current collection result holds it.
+   * Forwarded member origins and gates resolve against it.
+   */
+  readonly members: Map<string, ReadonlyMap<string, object>>;
+  /** Request-local settled gates, by template slot and member key: each gate runs once per request. */
+  readonly gates: Map<string, IGateSettled>;
   /**
    * Post-commit diagnostics of every step this request resolved, including
    * nested children. Each step's lifecycle runs once per request (sources are
@@ -189,9 +278,30 @@ interface IMemoFrame {
    * published without the evidence of every call its body made.
    */
   unsettledAtReturn: number | undefined;
-  refused: { readonly step: IBindingDescriptor; readonly reason: string } | undefined;
+  refused: { readonly step: IBindingDescriptor; readonly reason: string; readonly disposition: IRefusalDisposition } | undefined;
   /** The first failed child resolution; a body that swallows it still cannot publish. */
   failed: { readonly error: unknown } | undefined;
+}
+
+/** One refused child, as a memo frame records it. */
+type IFrameRefusal = NonNullable<IMemoFrame['refused']>;
+
+/**
+ * Record a refused child in its parent's frame. The first refusal is kept,
+ * except that a cancellation dominates a denial: a cancelled child makes the
+ * parent's own refusal a cancellation, whichever child was refused first, and
+ * the cancelled child is then the recorded refused step.
+ */
+function recordRefusal(frame: IMemoFrame, refusal: IFrameRefusal): void {
+  frame.refused = dominantRefusal(frame.refused, refusal);
+}
+
+/** The refusal that stands between a recorded one and a later one: the first, unless only the later is a cancellation. */
+function dominantRefusal(recorded: IFrameRefusal | undefined, later: IFrameRefusal | undefined): IFrameRefusal | undefined {
+  if (recorded === undefined) {
+    return later;
+  }
+  return recorded.disposition === 'denied' && later?.disposition === 'cancelled' ? later : recorded;
 }
 
 /** What a source run's capture finishes with. */
@@ -252,9 +362,36 @@ function trusted<T>(value: unknown): T {
   return value as T;
 }
 
-/** The canonical request-local key of a step descriptor. */
+/**
+ * The canonical request-local key of a step descriptor. A template instance
+ * adds its template slot and collection binding, so it never shares a key
+ * with an explicit member step of the same slot and key.
+ */
 function stepKey(step: IBindingDescriptor): string {
-  return JSON.stringify([step.scope, step.role, step.slot, step.memberKey ?? null]);
+  const base = [step.scope, step.role, step.slot, step.memberKey ?? null];
+  return JSON.stringify(step.template === undefined && step.collection === undefined ? base : [...base, step.template ?? null, step.collection ?? null]);
+}
+
+/** A template-bearing descriptor: a template step, or with a member key, one of its instances. */
+function isTemplateStep(step: IBindingDescriptor): boolean {
+  return step.template !== undefined || step.collection !== undefined;
+}
+
+/**
+ * Whether a candidate's recorded step no longer corresponds to the current
+ * step (CMP-4, COL-1). Candidates are found by subject, which a template
+ * instance keeps when its template slot is renamed or its collection moves to
+ * another slot; that is changed correspondence, never a remap. So whenever
+ * either descriptor is template-bearing, every structural field must match.
+ * Other steps keep their M3 meaning, where the subject is the correspondence.
+ */
+function changedCorrespondence(recorded: IBindingDescriptor, current: IBindingDescriptor): boolean {
+  return (isTemplateStep(recorded) || isTemplateStep(current)) && stepKey(recorded) !== stepKey(current);
+}
+
+/** The miss of a candidate whose recorded step no longer corresponds to the current one. */
+function correspondenceMiss(candidate: ICompletedResultReference, recorded: IBindingDescriptor, current: IBindingDescriptor): ICandidateMiss {
+  return miss(candidate, 'correspondence', `provenance names ${stepKey(recorded)}, not the current ${stepKey(current)}`);
 }
 
 /** A readable diagnostic from any thrown value. */
@@ -463,20 +600,15 @@ export function createResolution<TInputs extends object, THelpers extends object
 
   /**
    * Reconnect a requested step to its unique current source or memo
-   * declaration. Template instance steps (descriptors carrying `template` or
-   * `collection`) and strict folds are refused with `invalid-request` before
-   * any evidence, candidate lookup or admission: this resolver resolves only
-   * explicit member and composition-level sources and memos. Template instance
-   * invocation, gates and keyed member reuse are added by #85, and strict fold
-   * readiness by #86.
+   * declaration: an explicit member or composition-level step, or a template
+   * instance (its template step descriptor plus a member key). Definition
+   * reads the caller's descriptor through own data properties only, so a
+   * malformed or accessor-bearing descriptor is an invalid request and no
+   * accessor runs. A strict fold is refused with `invalid-request` before any
+   * evidence, candidate lookup or admission: strict fold readiness is not
+   * resolved here.
    */
   function stepTarget(step: IBindingDescriptor): { readonly step: IBindingDescriptor; readonly declaration: IAnySourceDeclaration<IFamily> | IAnyMemoDeclaration<IFamily> } {
-    // Checked on the requested descriptor itself, through property descriptors
-    // only (no accessor runs), before composition lookup can mint an instance.
-    if (typeof step === 'object' && step !== null &&
-        (Object.getOwnPropertyDescriptor(step, 'template') !== undefined || Object.getOwnPropertyDescriptor(step, 'collection') !== undefined)) {
-      throw new ResolutionError('invalid-request', 'The requested step is a template instance step; this resolver resolves only member and composition-level sources and memos');
-    }
     let resolution: ReturnType<typeof composition.resolve>;
     try {
       resolution = composition.resolve(step);
@@ -495,7 +627,19 @@ export function createResolution<TInputs extends object, THelpers extends object
 
   /** A new request context with its declared slots reconnected once. */
   function newRequest(mode: 'normal' | 'check', requestKey: string | undefined, lease: IWriterLease | undefined): IRequestContext {
-    return { mode, requestKey, lease, slots: reconnectSlots(composition, bindingSlots), sources: new Map(), memos: new Map(), supplied: new Map(), diagnostics: [] };
+    return {
+      mode,
+      requestKey,
+      lease,
+      slots: reconnectSlots(composition, bindingSlots),
+      sources: new Map(),
+      memos: new Map(),
+      supplied: new Map(),
+      populations: new Map(),
+      members: new Map(),
+      gates: new Map(),
+      diagnostics: [],
+    };
   }
 
   /** The lease of a normal request; check-only requests never write. */
@@ -644,19 +788,20 @@ export function createResolution<TInputs extends object, THelpers extends object
     const shared = authorBindings(request);
     const bindings: IFamily['source'] = Object.freeze({ ...shared, outcome: sourceOutcome });
     const supplier: IPreviousSupplier<IFamily> | undefined = carrier === undefined ? undefined : Object.freeze({
-      carrier: <TResult>(declaration: ISourceDeclaration<IFamily, TResult>): IApply<IFamily['previous'], TResult> => {
+      carrier: <TResult>(declaration: ISourceDeclaration<IFamily, TResult, never>): IApply<IFamily['previous'], TResult> => {
         void declaration;
         return trusted<IApply<IFamily['previous'], TResult>>(carrier);
       },
     });
+    const member = memberBindingOf(request, invocation.parent);
     return active.run(invocation, () => {
       if (which === 'finality') {
         if (supplier === undefined) {
           throw new ResolutionError('invalid-request', 'Finality needs an eligible previous result');
         }
-        return invocation.applyFinality(bindings, supplier, invoker(finish));
+        return invocation.applyFinality(bindings, supplier, invoker(finish), member);
       }
-      return invocation.apply(bindings, supplier, invoker(finish));
+      return invocation.apply(bindings, supplier, invoker(finish), member);
     });
   }
 
@@ -665,8 +810,12 @@ export function createResolution<TInputs extends object, THelpers extends object
     return integrity(() => tracking.compareCurrent({ value: undefined, observations }, provider));
   }
 
-  /** Ask Run Supervision's admission port for work; denial is recorded as refusal. */
-  async function admit(request: IRequestContext, evidence: IStepEvidence, step: IBindingDescriptor, kind: IStepKind, subject: IVersionedSubject, reason: IAdmissionRequest['reason']): Promise<string | undefined> {
+  /**
+   * Ask Run Supervision's admission port for work. Returns undefined when the
+   * work is admitted; a denial or a cancellation is recorded as a refusal and
+   * returned with the decision's reason and kind unchanged.
+   */
+  async function admit(request: IRequestContext, evidence: IStepEvidence, step: IBindingDescriptor, kind: IStepKind, subject: IVersionedSubject, reason: IAdmissionRequest['reason']): Promise<{ readonly reason: string; readonly disposition: IRefusalDisposition } | undefined> {
     emit(request, evidence, step, 'admit');
     let decision: unknown;
     try {
@@ -679,11 +828,11 @@ export function createResolution<TInputs extends object, THelpers extends object
       return undefined;
     }
     const deniedReason: unknown = typeof decision === 'object' && decision !== null ? Reflect.get(decision, 'reason') : undefined;
-    if (decided !== 'denied' || typeof deniedReason !== 'string') {
+    if ((decided !== 'denied' && decided !== 'cancelled') || typeof deniedReason !== 'string') {
       throw new ResolutionError('admission-failure', `Admission returned no valid decision for ${stepKey(step)}`);
     }
     emit(request, evidence, step, 'refuse');
-    return deniedReason;
+    return { reason: deniedReason, disposition: decided };
   }
 
   /** End an attempt without a result; its failure never masks the original outcome. */
@@ -853,9 +1002,13 @@ export function createResolution<TInputs extends object, THelpers extends object
         evidence.misses.push(miss(candidate.reference, 'unsupported-evidence', 'provenance was recorded for a memo'));
         continue;
       }
+      if (changedCorrespondence(reading.provenance.step, step)) {
+        evidence.misses.push(correspondenceMiss(candidate.reference, reading.provenance.step, step));
+        continue;
+      }
       // The previous result a check read is its history, not a current input.
       const own = reading.provenance.observations.filter((item) => !isPreviousObservation(item.binding));
-      const comparison = compare(own, ownFactProvider({ validation, slots: request.slots, self: declaration.run }));
+      const comparison = compare(own, ownFactProvider({ validation, slots: request.slots, self: declaration.run, member: memberRecord(request, step) }));
       if (comparison.kind === 'equal') {
         eligible = candidate;
         break;
@@ -891,7 +1044,7 @@ export function createResolution<TInputs extends object, THelpers extends object
       const identity = freshIdentity(request, step, declaration);
       const refusal = await admit(request, evidence, step, 'source', versioned(declaration), eligible !== undefined ? 'source-policy' : candidates.length > 0 ? 'invalid' : 'cold');
       if (refusal !== undefined) {
-        return done({ kind: 'refused', refused: step, reason: refusal });
+        return done({ kind: 'refused', refused: step, reason: refusal.reason, disposition: refusal.disposition });
       }
       const attemptId = claim(request, evidence, step, identity);
       let ran: IObservationCapture<ISourceReturn>;
@@ -972,6 +1125,9 @@ export function createResolution<TInputs extends object, THelpers extends object
     if (provenance.kind !== 'memo') {
       return { verdict: 'miss', miss: miss(candidate.reference, 'unsupported-evidence', `provenance was recorded for a ${provenance.kind === 'source' ? 'source' : 'supplied step'}`) };
     }
+    if (changedCorrespondence(provenance.step, step)) {
+      return { verdict: 'miss', miss: correspondenceMiss(candidate.reference, provenance.step, step) };
+    }
     if (provenance.version === 2) {
       return evaluateNestedCandidate(request, step, declaration, candidate, provenance);
     }
@@ -981,7 +1137,7 @@ export function createResolution<TInputs extends object, THelpers extends object
   /** Validate a version-1 memo candidate with its M3 meaning, unchanged. */
   async function evaluateDirectCandidate(request: IRequestContext, step: IBindingDescriptor, declaration: IAnyMemoDeclaration<IFamily>, candidate: ICompletedEnvelope, provenance: IDirectProvenance): Promise<IMemoVerdict> {
     const own = provenance.observations.filter((item) => !isChildObservation(item.binding));
-    const ownComparison = compare(own, ownFactProvider({ validation, slots: request.slots, self: declaration.run }));
+    const ownComparison = compare(own, ownFactProvider({ validation, slots: request.slots, self: declaration.run, member: memberRecord(request, step) }));
     if (ownComparison.kind !== 'equal') {
       return { verdict: 'miss', miss: missFrom(candidate.reference, ownComparison) };
     }
@@ -1064,7 +1220,7 @@ export function createResolution<TInputs extends object, THelpers extends object
   async function evaluateNestedCandidate(request: IRequestContext, step: IBindingDescriptor, declaration: IAnyMemoDeclaration<IFamily>, candidate: ICompletedEnvelope, provenance: INestedProvenance): Promise<IMemoVerdict> {
     const missed = (reason: ICandidateMiss['reason'], detail: string): IMemoVerdict => ({ verdict: 'miss', miss: miss(candidate.reference, reason, detail) });
     const own = provenance.observations.filter((item) => callObservationIndex(item.binding) === undefined);
-    const ownComparison = compare(own, ownFactProvider({ validation, slots: request.slots, self: declaration.run }));
+    const ownComparison = compare(own, ownFactProvider({ validation, slots: request.slots, self: declaration.run, member: memberRecord(request, step) }));
     if (ownComparison.kind !== 'equal') {
       return { verdict: 'miss', miss: missFrom(candidate.reference, ownComparison) };
     }
@@ -1087,7 +1243,7 @@ export function createResolution<TInputs extends object, THelpers extends object
       if (historical.analysis !== analysis || historical.environment !== environment) {
         throw new ResolutionError('integrity', `Recorded ${label} of ${candidate.reference.locator} is outside this History scope`);
       }
-      const rebuilt = rebuildArguments(request, call.index, witness.arguments, outputs, true);
+      const rebuilt = rebuildArguments(request, step, call.index, witness.arguments, outputs, true);
       if (rebuilt.status === 'miss') {
         return missed(rebuilt.reason, rebuilt.detail);
       }
@@ -1221,7 +1377,7 @@ export function createResolution<TInputs extends object, THelpers extends object
    * supplied slot is unbound: whatever its own evidence and recorded witnesses
    * show without any child work, otherwise the slot occupancy itself.
    */
-  function unboundMiss(request: IRequestContext, declaration: IAnyMemoDeclaration<IFamily>, candidate: ICompletedEnvelope, occupancy: { readonly reason: 'missing-binding' | 'ambiguous-binding'; readonly error: ResolutionError }): ICandidateMiss {
+  function unboundMiss(request: IRequestContext, step: IBindingDescriptor, declaration: IAnyMemoDeclaration<IFamily>, candidate: ICompletedEnvelope, occupancy: { readonly reason: 'missing-binding' | 'ambiguous-binding'; readonly error: ResolutionError }): ICandidateMiss {
     const reading = integrity(() => readProvenance(candidate));
     if (reading.status === 'unsupported') {
       return miss(candidate.reference, 'unsupported-evidence', reading.detail);
@@ -1230,10 +1386,13 @@ export function createResolution<TInputs extends object, THelpers extends object
     if (provenance.kind !== 'memo') {
       return miss(candidate.reference, 'unsupported-evidence', `provenance was recorded for a ${provenance.kind === 'source' ? 'source' : 'supplied step'}`);
     }
+    if (changedCorrespondence(provenance.step, step)) {
+      return correspondenceMiss(candidate.reference, provenance.step, step);
+    }
     const own = provenance.version === 2
       ? provenance.observations.filter((item) => callObservationIndex(item.binding) === undefined)
       : provenance.observations.filter((item) => !isChildObservation(item.binding));
-    const ownComparison = compare(own, ownFactProvider({ validation, slots: request.slots, self: declaration.run }));
+    const ownComparison = compare(own, ownFactProvider({ validation, slots: request.slots, self: declaration.run, member: memberRecord(request, step) }));
     if (ownComparison.kind !== 'equal') {
       return missFrom(candidate.reference, ownComparison);
     }
@@ -1248,14 +1407,15 @@ export function createResolution<TInputs extends object, THelpers extends object
 
   /**
    * Rebuild one nested call's arguments now, position by position. A forwarded
-   * origin is resolved from current bindings (an input path, or the current
-   * output of an earlier call of the same invocation); a stored value is never
+   * origin is resolved from current bindings (an input path, the calling
+   * template instance's current member binding, or the current output of an
+   * earlier call of the same invocation); a stored value is never
    * substituted. When validating, a derived value or forwarded path is used
    * only if recorded as justified, and an unreconstructible argument is an
-   * immediate miss. When
-   * executing, the parent is making the call itself, so every recipe stands.
+   * immediate miss. When executing, the parent is making the call itself, so
+   * every recipe stands.
    */
-  function rebuildArguments(request: IRequestContext, index: number, recipes: IInvocationArguments, outputs: ReadonlyMap<number, ICompletedResultReference>, validating: boolean): IRebuiltArguments {
+  function rebuildArguments(request: IRequestContext, step: IBindingDescriptor, index: number, recipes: IInvocationArguments, outputs: ReadonlyMap<number, ICompletedResultReference>, validating: boolean): IRebuiltArguments {
     if ('form' in recipes) {
       return { status: 'rebuilt', values: [] };
     }
@@ -1280,7 +1440,7 @@ export function createResolution<TInputs extends object, THelpers extends object
           if (validating && !recipe.justified) {
             return { status: 'miss', reason: 'unjustified-argument', detail: `${label} forwards a path chosen after an observed untracked read, so recorded evidence cannot justify it` };
           }
-          const found = forwardedValue(request, recipe.origin, outputs);
+          const found = forwardedValue(request, step, recipe.origin, outputs);
           if (found.status !== 'found') {
             return { status: 'miss', reason: found.status, detail: `${label} forwards ${describeOrigin(recipe.origin)}, which ${found.detail}` };
           }
@@ -1297,11 +1457,13 @@ export function createResolution<TInputs extends object, THelpers extends object
   }
 
   /**
-   * The current value at a forwarded origin, read through the validation
-   * observer so nothing is recorded into an author capture. A container is
-   * detached as supported data for the called step's argument view.
+   * The current value at a forwarded origin of a call made by `step`, read
+   * through the validation observer so nothing is recorded into an author
+   * capture. A container is detached as supported data for the called step's
+   * argument view. A member origin resolves against the member record the
+   * current keyed collection holds for `step`'s member key.
    */
-  function forwardedValue(request: IRequestContext, origin: IForwardOrigin, outputs: ReadonlyMap<number, ICompletedResultReference>): IForwardedValue {
+  function forwardedValue(request: IRequestContext, step: IBindingDescriptor, origin: IForwardOrigin, outputs: ReadonlyMap<number, ICompletedResultReference>): IForwardedValue {
     let root: unknown;
     switch (origin.binding) {
       case 'input': {
@@ -1323,9 +1485,14 @@ export function createResolution<TInputs extends object, THelpers extends object
         root = originMaterialization.materializeView<object>(reference, { path: ['forwarded'] });
         break;
       }
-      case 'member':
-        // Definition reconnects member origins only for template instances, which this resolver does not run.
-        return { status: 'unavailable', detail: 'needs a template instance member binding' };
+      case 'member': {
+        const record = memberRecord(request, step);
+        if (record === undefined) {
+          return { status: 'unavailable', detail: 'has no current member binding' };
+        }
+        root = validation.tracked(record, { path: bindingPaths.member });
+        break;
+      }
       default: {
         const exhaustive: never = origin;
         return exhaustive;
@@ -1492,7 +1659,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     const identity = freshSuppliedIdentity(request, call);
     const refusal = await admit(request, evidence, step, 'supplied', subject, candidates.length > 0 ? 'invalid' : 'cold');
     if (refusal !== undefined) {
-      return done({ kind: 'refused', refused: step, reason: refusal });
+      return done({ kind: 'refused', refused: step, reason: refusal.reason, disposition: refusal.disposition });
     }
     const invocation = openSupplied(step);
     let attemptId: number;
@@ -1565,7 +1732,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     const occupancy = slotOccupancy(step);
     if (occupancy !== undefined) {
       for (const candidate of candidates) {
-        evidence.misses.push(unboundMiss(request, declaration, candidate, occupancy));
+        evidence.misses.push(unboundMiss(request, step, declaration, candidate, occupancy));
       }
       if (request.mode === 'check') {
         return done({ kind: 'execution-required' });
@@ -1593,7 +1760,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     const identity = freshIdentity(request, step, declaration);
     const refusal = await admit(request, evidence, step, 'memo', versioned(declaration), candidates.length > 0 ? 'invalid' : 'cold');
     if (refusal !== undefined) {
-      return done({ kind: 'refused', refused: step, reason: refusal });
+      return done({ kind: 'refused', refused: step, reason: refusal.reason, disposition: refusal.disposition });
     }
     // Opening the invocation runs no author code; doing it before the claim leaves no attempt behind if it fails.
     const invocation = openMemo(step);
@@ -1613,7 +1780,7 @@ export function createResolution<TInputs extends object, THelpers extends object
         // Taken inside the capture, as the body's value is: which started calls it left unsettled.
         frame.unsettledAtReturn = frame.inflight.size;
         return detachComputation(value);
-      })));
+      }), memberBindingOf(request, step)));
     } catch (error: unknown) {
       // What the body failed with is decided now: a call that fails or is
       // refused while the in-flight calls settle below must not replace it.
@@ -1622,9 +1789,11 @@ export function createResolution<TInputs extends object, THelpers extends object
       // Let calls the body started finish their own lifecycle before this attempt
       // ends (an unbounded wait; see IMemoFrame.inflight).
       await Promise.allSettled([...frame.inflight]);
-      if (refused !== undefined) {
-        abandon(request, evidence, step, attemptId, 'interrupted', { ending: 'child-refused', detail: refused.reason });
-        return done({ kind: 'refused', refused: refused.step, reason: refused.reason });
+      // A refusal the body failed with stands; only a cancellation settling meanwhile upgrades a denial.
+      const refusal = refused === undefined ? undefined : dominantRefusal(refused, frame.refused);
+      if (refusal !== undefined) {
+        abandon(request, evidence, step, attemptId, 'interrupted', { ending: 'child-refused', detail: refusal.reason });
+        return done({ kind: 'refused', refused: refusal.step, reason: refusal.reason, disposition: refusal.disposition });
       }
       const cause = failed?.error ?? error;
       abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(cause) });
@@ -1646,7 +1815,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     if (frame.refused !== undefined) {
       // A body that swallowed a refused child cannot publish a result missing that child.
       abandon(request, evidence, step, attemptId, 'interrupted', { ending: 'child-refused', detail: frame.refused.reason });
-      return done({ kind: 'refused', refused: frame.refused.step, reason: frame.refused.reason });
+      return done({ kind: 'refused', refused: frame.refused.step, reason: frame.refused.reason, disposition: frame.refused.disposition });
     }
     if (frame.failed !== undefined) {
       // A body that swallowed a failed child cannot publish a result missing that child's current evidence.
@@ -1731,7 +1900,9 @@ export function createResolution<TInputs extends object, THelpers extends object
     }
     if (resolved.result.kind !== 'reused' && resolved.result.kind !== 'published') {
       const reason = resolved.result.kind === 'refused' ? resolved.result.reason : `child resolution ended ${resolved.result.kind}`;
-      frame.refused ??= { step: resolved.result.kind === 'refused' ? resolved.result.refused : childStep, reason };
+      recordRefusal(frame, resolved.result.kind === 'refused'
+        ? { step: resolved.result.refused, reason, disposition: resolved.result.disposition }
+        : { step: childStep, reason, disposition: 'denied' });
       throw new ResolutionError('execution-failure', `Declared child ${slot} was refused: ${reason}`);
     }
     const reference = resolved.result.reference;
@@ -1781,7 +1952,7 @@ export function createResolution<TInputs extends object, THelpers extends object
           break;
         case 'supplied': {
           const outputs = new Map([...frame.calls].map(([index, call]) => [index, call.reference]));
-          const rebuilt = rebuildArguments(frame.request, witness.index, witness.arguments, outputs, false);
+          const rebuilt = rebuildArguments(frame.request, frame.step, witness.index, witness.arguments, outputs, false);
           if (rebuilt.status !== 'rebuilt') {
             throw new ResolutionError('execution-failure', `Call ${String(witness.index)} of ${stepKey(frame.step)} cannot be made: ${rebuilt.detail}`);
           }
@@ -1798,7 +1969,9 @@ export function createResolution<TInputs extends object, THelpers extends object
     }
     if (resolved.result.kind !== 'reused' && resolved.result.kind !== 'published') {
       const reason = resolved.result.kind === 'refused' ? resolved.result.reason : `child resolution ended ${resolved.result.kind}`;
-      frame.refused ??= { step: resolved.result.kind === 'refused' ? resolved.result.refused : resolved.step, reason };
+      recordRefusal(frame, resolved.result.kind === 'refused'
+        ? { step: resolved.result.refused, reason, disposition: resolved.result.disposition }
+        : { step: resolved.step, reason, disposition: 'denied' });
       throw new ResolutionError('execution-failure', `Call ${String(witness.index)} of ${stepKey(frame.step)} was refused: ${reason}`);
     }
     const reference = resolved.result.reference;
@@ -1808,12 +1981,307 @@ export function createResolution<TInputs extends object, THelpers extends object
     return Object.freeze({ data: materialization.materializeView<object>(reference, binding) });
   }
 
+  /**
+   * The member supplier over one member record: each view it gives is a fresh
+   * tracked view of the record at the `member` binding, in whichever capture
+   * is active, so a gate's or a step's reads of it are that callback's own
+   * observations. Definition asks it for the instance's template collection,
+   * whose member type the record is by keying; the family view type cannot
+   * express that relationship, so `trusted` states it.
+   */
+  function memberSupplier(record: object): IMemberSupplier<IFamily> {
+    return Object.freeze({
+      view: <TCollection extends IAnySourceDeclaration<IFamily>>(collection: TCollection, addressed: IBindingDescriptor): IApply<IFamily['views'], IMemberOf<IFamily, TCollection>> => {
+        void collection;
+        void addressed;
+        return trusted<IApply<IFamily['views'], IMemberOf<IFamily, TCollection>>>(tracking.tracked(record, { path: bindingPaths.member }));
+      },
+    });
+  }
+
+  /**
+   * The member binding a step invocation is applied with: for a template
+   * instance, a supplier over its member's current record; for any other step,
+   * none. An instance whose member this request has not keyed gets none, and
+   * Definition then refuses to apply it.
+   */
+  function memberBindingOf(request: IRequestContext, step: IBindingDescriptor): IMemberSupplier<IFamily> | undefined {
+    const record = memberRecord(request, step);
+    return record === undefined ? undefined : memberSupplier(record);
+  }
+
+  /**
+   * The member record the current keyed collection holds for a template
+   * instance's member key, or undefined for a step outside a template or a
+   * member this request has not keyed.
+   */
+  function memberRecord(request: IRequestContext, step: IBindingDescriptor): object | undefined {
+    return step.template === undefined || step.memberKey === undefined ? undefined : request.members.get(step.template)?.get(step.memberKey);
+  }
+
+  /** A template's current population, established once per request. */
+  function populationOf(request: IRequestContext, template: string): Promise<IPopulation> {
+    const existing = request.populations.get(template);
+    if (existing !== undefined) {
+      return existing;
+    }
+    const pending = discover(request, template);
+    request.populations.set(template, pending);
+    return pending;
+  }
+
+  /**
+   * Discovery (CMP-4, COL-1, RUN-005): resolve the template's collection step
+   * under its current source policy, then key its exact current result through
+   * Definition before any gate or member body. Keying is all-or-nothing: a
+   * rejected snapshot keys no member. A keyed snapshot's member records become
+   * this request's member bindings. Open discovery still keys its members, and
+   * their work proceeds.
+   */
+  async function discover(request: IRequestContext, template: string): Promise<IPopulation> {
+    const topology = composition.topology.templates.find((entry) => entry.slot === template);
+    if (topology === undefined) {
+      throw new ResolutionError('unbound-step', `Template ${template} is not declared in the current composition`);
+    }
+    const collection = topology.collection;
+    const target = stepTarget(collection);
+    if (target.declaration.kind !== 'source') {
+      throw new ResolutionError('unbound-step', `The collection of template ${template} is not a source`);
+    }
+    const resolved = await resolveSourceShared(request, target.step, target.declaration);
+    const result = resolved.result;
+    switch (result.kind) {
+      case 'reused':
+      case 'published':
+        break;
+      case 'refused':
+      case 'uncertain':
+        return { status: 'stopped', collection, result };
+      case 'execution-required':
+        return { status: 'stopped', collection, result: { kind: 'uncertain', boundary: collection } };
+      default: {
+        const exhaustive: never = result;
+        return exhaustive;
+      }
+    }
+    const snapshot: unknown = integrity(() => history.reader.readSubtree(result.reference, []));
+    const keyed = composition.keyMembers(template, snapshot);
+    if (keyed.status === 'rejected') {
+      return { status: 'rejected', collection, reference: result.reference, diagnostic: keyed.diagnostic };
+    }
+    const records = new Map<string, object>();
+    for (const member of keyed.members) {
+      // Keying admits only record members, so every keyed member is an object.
+      if (typeof member.member === 'object' && member.member !== null) {
+        records.set(member.key, member.member);
+      }
+    }
+    request.members.set(template, records);
+    return { status: 'keyed', collection, reference: result.reference, completion: keyed.completion, keys: Object.freeze(keyed.members.map((member) => member.key)) };
+  }
+
+  /**
+   * Evaluate one member's gate once per request (CMP-8, EXP-4 gate selection).
+   * The gate runs in its own tracking frame over the declared inputs and
+   * helpers and a view of the member's current record at the `member`
+   * binding; its observations are that instance's gate evidence and enter no
+   * step's provenance. Only an explicit `true` requires the instance and only
+   * an explicit `false` skips it; a non-boolean result (a promise included)
+   * or a throw is a gate failure, never a skip.
+   */
+  function settleGate(request: IRequestContext, instance: IBindingDescriptor, template: string, key: string, record: object): IGateSettled {
+    const cacheKey = JSON.stringify([template, key]);
+    const existing = request.gates.get(cacheKey);
+    if (existing !== undefined) {
+      return existing;
+    }
+    const settled = evaluateGate(request, instance, template, key, record);
+    request.gates.set(cacheKey, settled);
+    return settled;
+  }
+
+  /** Run one gate and classify how it settled. */
+  function evaluateGate(request: IRequestContext, instance: IBindingDescriptor, template: string, key: string, record: object): IGateSettled {
+    const gate = options.declarations.gateOf(composition, instance);
+    if (gate === undefined) {
+      return { status: 'settled', evidence: undefined };
+    }
+    const ran = gate.apply(authorBindings(request), memberSupplier(record), gateInvoker);
+    if (ran.kind === 'promise') {
+      return {
+        status: 'failed',
+        error: new ResolutionError('gate-failure', `The gate of template ${template} for member ${key} returned a promise, not a boolean; a gate is a synchronous predicate and only an explicit false skips an instance`),
+      };
+    }
+    const settlement: IGateSettlement = ran.kind === 'returned' ? { kind: 'returned', value: ran.value } : { kind: 'threw', error: ran.error };
+    const outcome = gateOutcome(settlement);
+    switch (outcome.status) {
+      case 'required':
+      case 'skipped':
+        return {
+          status: 'settled',
+          evidence: Object.freeze({ selected: outcome.status, observations: Object.freeze([...(ran.kind === 'returned' ? ran.observations : [])]) }),
+        };
+      case 'failed':
+        return {
+          status: 'failed',
+          error: outcome.reason === 'threw'
+            ? new ResolutionError('gate-failure', `The gate of template ${template} for member ${key} threw: ${describe(outcome.error)}`, outcome.error)
+            : new ResolutionError('gate-failure', `The gate of template ${template} for member ${key} returned ${outcome.received}, not a boolean; only an explicit false skips an instance`),
+        };
+      default: {
+        const exhaustive: never = outcome;
+        return exhaustive;
+      }
+    }
+  }
+
+  /**
+   * The gate's invoker: track the author's gate as its own implementation and
+   * run it synchronously in a fresh capture, so its reads form a frame of
+   * their own. The gate's value is boxed inside the capture, so the capture
+   * never mistakes an asynchronous gate for an asynchronous capture; a
+   * promise or other thenable is then reported as such. A throw is settled
+   * here, as the gate's own outcome.
+   */
+  const gateInvoker: IAuthorInvoker<IGateRun> = <TContext, TResult>(callback: (context: TContext) => TResult, context: TContext): IGateRun => {
+    // eslint-disable-next-line microdelta/tracked-captures -- Framework invoker: the callback is the author's actual gate from Definition's record, tracked so its implementation is the gate's own evidence.
+    const authored = tracking.tracked(callback, { path: bindingPaths.self });
+    let captured: IObservationCapture<{ readonly value: unknown }>;
+    try {
+      // eslint-disable-next-line microdelta/tracked-captures -- Framework invoker: this capture is the gate's own evidence frame; it invokes only the tracked gate with Definition's assembled context.
+      captured = tracking.capture(() => ({ value: authored(context) }));
+    } catch (error: unknown) {
+      return { kind: 'threw', error };
+    }
+    const value = captured.value.value;
+    if (value instanceof Promise) {
+      // Its eventual rejection must not escape unhandled; the gate has already failed.
+      value.catch(() => undefined);
+      return { kind: 'promise' };
+    }
+    return isThenable(value) ? { kind: 'promise' } : { kind: 'returned', value, observations: captured.observations };
+  };
+
+  /**
+   * Whether a gate's value is a thenable: a non-promise object or function
+   * whose own `then` data property is a function. Only own data properties
+   * are read, so no author getter runs, and a Tracking view is never probed.
+   */
+  function isThenable(value: unknown): boolean {
+    if ((typeof value !== 'object' || value === null) && typeof value !== 'function') {
+      return false;
+    }
+    if (tracking.materialization.owns(value)) {
+      return false;
+    }
+    const then = Object.getOwnPropertyDescriptor(value, 'then');
+    return then !== undefined && 'value' in then && typeof then.value === 'function';
+  }
+
+  /**
+   * Resolve one template instance (CMP-4, CMP-8): establish the template's
+   * current population (discovery under current policy, keyed before any gate
+   * or body), require the member in it, settle its gate, then resolve the
+   * instance step with its member binding. A population that could not be
+   * established stops here with the collection's own refusal or uncertainty;
+   * a rejected snapshot or a failed gate is a typed failure; a skipped member
+   * admits nothing.
+   */
+  async function resolveInstance(request: IRequestContext, requested: IBindingDescriptor): Promise<IResolvedTarget> {
+    const template = requested.template;
+    const key = requested.memberKey;
+    if (template === undefined || key === undefined) {
+      throw new ResolutionError('unbound-step', `Step ${stepKey(requested)} is a template step without a member key, which addresses no instance`);
+    }
+    const population = await populationOf(request, template);
+    switch (population.status) {
+      case 'stopped':
+        return { step: requested, result: population.result, evidence: newEvidence(request), gate: undefined };
+      case 'rejected':
+        throw new ResolutionError('collection-rejected', population.diagnostic.message);
+      case 'keyed':
+        break;
+      default: {
+        const exhaustive: never = population;
+        return exhaustive;
+      }
+    }
+    const record = memberRecord(request, requested);
+    if (record === undefined) {
+      throw new ResolutionError('unbound-step', `Member ${key} is not in the current ${population.collection.slot} collection of template ${template}`);
+    }
+    // Reconnected after keying: the composition now retains this member's
+    // instances, so every later reconnection yields these same declarations.
+    const target = stepTarget(requested);
+    const gate = settleGate(request, target.step, template, key, record);
+    if (gate.status === 'failed') {
+      throw gate.error;
+    }
+    if (gate.evidence?.selected === 'skipped') {
+      return { step: target.step, result: { kind: 'skipped', gate: gate.evidence }, evidence: newEvidence(request), gate: gate.evidence };
+    }
+    const resolved = target.declaration.kind === 'source'
+      ? await resolveSourceShared(request, target.step, target.declaration)
+      : await resolveMemoShared(request, target.step, target.declaration);
+    return { ...resolved, gate: gate.evidence };
+  }
+
   /** Resolve a requested step in a request context. */
-  async function resolveStep(request: IRequestContext, step: IBindingDescriptor): Promise<IResolvedStep> {
+  async function resolveStep(request: IRequestContext, step: IBindingDescriptor): Promise<IResolvedTarget> {
     const target = stepTarget(step);
-    return target.declaration.kind === 'source'
-      ? resolveSourceShared(request, target.step, target.declaration)
-      : resolveMemoShared(request, target.step, target.declaration);
+    if (isTemplateStep(target.step)) {
+      return resolveInstance(request, target.step);
+    }
+    const resolved = target.declaration.kind === 'source'
+      ? await resolveSourceShared(request, target.step, target.declaration)
+      : await resolveMemoShared(request, target.step, target.declaration);
+    return { ...resolved, gate: undefined };
+  }
+
+  /** The public outcome of a normal request's resolved step, with the request's diagnostics so far. */
+  function normalOutcome(resolved: IResolvedTarget): IResolutionOutcome {
+    const evidence = { step: resolved.step, misses: Object.freeze([...resolved.evidence.misses]), trace: Object.freeze([...resolved.evidence.trace]), diagnostics: Object.freeze([...resolved.evidence.diagnostics]) };
+    const result = resolved.result;
+    switch (result.kind) {
+      case 'reused':
+        if (result.acceptance === undefined) {
+          throw new ResolutionError('integrity', 'A normal reuse must record current acceptance');
+        }
+        return Object.freeze({ ...evidence, kind: 'reused', basis: result.basis, reference: result.reference, acceptance: result.acceptance });
+      case 'published':
+        return Object.freeze({ ...evidence, kind: 'published', reference: result.reference, attemptId: result.attemptId });
+      case 'refused':
+        return Object.freeze({ ...evidence, kind: 'refused', refused: result.refused, reason: result.reason, disposition: result.disposition });
+      case 'skipped':
+        return Object.freeze({ ...evidence, kind: 'skipped', gate: result.gate });
+      case 'uncertain':
+      case 'execution-required':
+        throw new ResolutionError('invalid-request', `A normal request cannot end ${result.kind}`);
+      default: {
+        const exhaustive: never = result;
+        return exhaustive;
+      }
+    }
+  }
+
+  /** How discovery settled, for a members request. */
+  function discoveryOutcome(population: IPopulation): IDiscoveryOutcome {
+    switch (population.status) {
+      case 'keyed':
+        return Object.freeze({ kind: 'keyed', collection: population.collection, reference: population.reference, completion: population.completion, keys: population.keys });
+      case 'rejected':
+        return Object.freeze({ kind: 'rejected', collection: population.collection, reference: population.reference, diagnostic: population.diagnostic });
+      case 'stopped':
+        if (population.result.kind === 'uncertain') {
+          throw new ResolutionError('invalid-request', 'A normal request cannot end uncertain');
+        }
+        return Object.freeze({ kind: 'refused', collection: population.collection, refused: population.result.refused, reason: population.result.reason, disposition: population.result.disposition });
+      default: {
+        const exhaustive: never = population;
+        return exhaustive;
+      }
+    }
   }
 
   /** Validate a caller's request key. */
@@ -1829,27 +2297,65 @@ export function createResolution<TInputs extends object, THelpers extends object
       const requestKey = requestKeyOf(request.requestKey);
       const context = newRequest('normal', requestKey, request.lease);
       leaseOf(context);
-      const resolved = await resolveStep(context, request.step);
-      const evidence = { step: resolved.step, misses: Object.freeze([...resolved.evidence.misses]), trace: Object.freeze([...resolved.evidence.trace]), diagnostics: Object.freeze([...resolved.evidence.diagnostics]) };
-      const result = resolved.result;
-      switch (result.kind) {
-        case 'reused':
-          if (result.acceptance === undefined) {
-            throw new ResolutionError('integrity', 'A normal reuse must record current acceptance');
+      return normalOutcome(await resolveStep(context, request.step));
+    },
+
+    /**
+     * One normal request for a template step across every current member
+     * (RUN-005): discovery and keying once, then each member in canonical key
+     * order, independently. Failures are classified by whose they are:
+     *
+     * - Member-attributable failures stay with that member as its typed
+     *   failure, and its siblings still resolve, share this request's current
+     *   results and publish: an execution failure of its step or a child,
+     *   `gate-failure`, `unbound-step`, `policy-failure`, `invalid-outcome`,
+     *   `invalid-retention` and `unsupported-result`. A rejected snapshot is
+     *   reported on discovery, never as member failures.
+     * - Run-level failures fail the whole request and are never attributed to
+     *   one member, so a strict consumer never mistakes an outage for member
+     *   failures: `admission-failure` (the admission port itself failed),
+     *   `observer-failure`, `integrity`, `wrong-intent`, `invalid-request`,
+     *   and any failure that is not a ResolutionError (History, host, lease).
+     */
+    async resolveMembers(request: IMembersRequest): Promise<IMembersResolution> {
+      const requestKey = requestKeyOf(request.requestKey);
+      const context = newRequest('normal', requestKey, request.lease);
+      leaseOf(context);
+      const template = composition.topology.templates.find((entry) => entry.slot === request.template);
+      if (template === undefined) {
+        throw new ResolutionError('unbound-step', `Template ${String(request.template)} is not declared in the current composition`);
+      }
+      const templateStep = template.steps.find((step) => step.slot === request.step);
+      if (templateStep === undefined) {
+        throw new ResolutionError('unbound-step', `Template ${template.slot} declares no step ${String(request.step)}`);
+      }
+      const population = await populationOf(context, template.slot);
+      const settled: { readonly key: string; readonly step: IBindingDescriptor; readonly resolved: IResolvedTarget | ResolutionError }[] = [];
+      for (const key of population.status === 'keyed' ? population.keys : []) {
+        const instance: IBindingDescriptor = Object.freeze({ ...templateStep, memberKey: key });
+        try {
+          settled.push({ key, step: instance, resolved: await resolveInstance(context, instance) });
+        } catch (error: unknown) {
+          if (!(error instanceof ResolutionError) || runLevelFailures.has(error.code)) {
+            throw error;
           }
-          return Object.freeze({ ...evidence, kind: 'reused', basis: result.basis, reference: result.reference, acceptance: result.acceptance });
-        case 'published':
-          return Object.freeze({ ...evidence, kind: 'published', reference: result.reference, attemptId: result.attemptId });
-        case 'refused':
-          return Object.freeze({ ...evidence, kind: 'refused', refused: result.refused, reason: result.reason });
-        case 'uncertain':
-        case 'execution-required':
-          throw new ResolutionError('invalid-request', `A normal request cannot end ${result.kind}`);
-        default: {
-          const exhaustive: never = result;
-          return exhaustive;
+          settled.push({ key, step: instance, resolved: error });
         }
       }
+      // Converted after every member settled, so each outcome reports the whole request's diagnostics.
+      const members = settled.map(({ key, step, resolved }): IMemberResolution => {
+        if (resolved instanceof ResolutionError) {
+          const gate = context.gates.get(JSON.stringify([template.slot, key]));
+          return Object.freeze({ key, step, gate: gate?.status === 'settled' ? gate.evidence : undefined, outcome: Object.freeze({ kind: 'failed', error: resolved }) });
+        }
+        return Object.freeze({ key, step: resolved.step, gate: resolved.gate, outcome: normalOutcome(resolved) });
+      });
+      return Object.freeze({
+        template: template.slot,
+        discovery: discoveryOutcome(population),
+        members: Object.freeze(members),
+        diagnostics: Object.freeze([...context.diagnostics]),
+      });
     },
 
     async check(request: ICheckRequest): Promise<ICheckOutcome> {
@@ -1864,6 +2370,8 @@ export function createResolution<TInputs extends object, THelpers extends object
           return Object.freeze({ kind: 'execution-required', step: resolved.step, misses });
         case 'uncertain':
           return Object.freeze({ kind: 'uncertain', step: resolved.step, boundary: result.boundary, misses });
+        case 'skipped':
+          return Object.freeze({ kind: 'skipped', step: resolved.step, gate: result.gate, misses });
         case 'published':
         case 'refused':
           throw new ResolutionError('invalid-request', `A check-only request cannot end ${result.kind}`);

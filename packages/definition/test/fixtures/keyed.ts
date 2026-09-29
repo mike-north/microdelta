@@ -10,7 +10,7 @@
  * @see ../../../../docs/plans/m4-composition.md (authoring shape; concrete fixture decisions)
  * @see ../../../../docs/spec/composition.md (CMP-4, CMP-8, EXP-4 template selection)
  */
-import type { IBindingDescriptor, ICollectionResult, IMemberBuilder, ISourceDeclaration } from '../../src/index.js';
+import type { IBindingDescriptor, ICollectionResult, IMemberBinding, IMemberBuilder, ISourceDeclaration } from '../../src/index.js';
 import { builders, type ITestFamily } from './contributors.js';
 
 export const { source, memo, template, fold, compose, openInvocation, gateOf } = builders;
@@ -62,7 +62,7 @@ export interface ICallCounts {
 }
 
 /** Declare the member summary through the member builder, typed from its activity child. */
-function summaryOf(member: IMemberBuilder<ITestFamily>, activity: ISourceDeclaration<ITestFamily, string>, calls: ICallCounts) {
+function summaryOf(member: IMemberBuilder<ITestFamily, IContributor>, activity: ISourceDeclaration<ITestFamily, string, IMemberBinding<ITestFamily, IContributor>>, calls: ICallCounts) {
   return member.memo({
     subject: member.subject(summaryPrefix),
     children: { activity },
@@ -77,7 +77,7 @@ function summaryOf(member: IMemberBuilder<ITestFamily>, activity: ISourceDeclara
 /** Build the keyed composition with fresh allocations. */
 export function buildKeyed(variation: IKeyedVariation = {}) {
   let factoryCalls = 0;
-  let captured: IMemberBuilder<ITestFamily> | undefined;
+  let captured: IMemberBuilder<ITestFamily, IContributor> | undefined;
   let returned: Record<string, unknown> | undefined;
   const calls: ICallCounts = { gate: 0, key: 0, bodies: 0 };
   const contributors = source<IContributors>({
@@ -137,7 +137,7 @@ export function buildKeyed(variation: IKeyedVariation = {}) {
     /** How many times this build's template factory has run. */
     factoryCalls: (): number => factoryCalls,
     /** The member builder the factory received, captured to probe post-freeze calls. */
-    capturedMember: (): IMemberBuilder<ITestFamily> | undefined => captured,
+    capturedMember: (): IMemberBuilder<ITestFamily, IContributor> | undefined => captured,
     /** The author's own step record the factory returned, retained to probe later mutation. */
     returnedSteps: (): Record<string, unknown> | undefined => returned,
     calls,

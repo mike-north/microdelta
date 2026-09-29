@@ -24,6 +24,7 @@ import {
   type IIdentityField,
   type IInvocation,
   type IKeyedSnapshot,
+  type IMemberBinding,
   type IMemberOf,
   type IMemberSupplier,
   type IMemberSubject,
@@ -127,7 +128,7 @@ const contributor = template({
     return { activity, summary };
   },
 });
-expectType<ISourceDeclaration<IFamily, { readonly authored: number }>>(contributor.steps.activity);
+expectType<ISourceDeclaration<IFamily, { readonly authored: number }, IMemberBinding<IFamily, IContributor>>>(contributor.steps.activity);
 declare const summaryResult: IResultOf<IFamily, typeof contributor.steps.summary>;
 declare const activityResult: IResultOf<IFamily, typeof contributor.steps.activity>;
 expectType<{ sentence: string }>(summaryResult);
@@ -208,5 +209,54 @@ template({
       },
     });
     return { activity, profile, summary };
+  },
+});
+
+// Member steps receive the member binding: the facade's view of the member's
+// current keyed record, typed from the collection's member type. Ordinary
+// sources and memos (including explicit M3 members) have no member binding.
+template({
+  slot: 'bound',
+  collection: contributors,
+  steps: (member) => {
+    const activity = member.source<{ readonly owner: string }>({
+      subject: member.subject('bound-activity'),
+      finality: ({ member: bound, previous }) => {
+        expectType<IView<IContributor>>(bound);
+        return previous.data.owner === bound.id;
+      },
+      run: ({ member: bound, repository }) => {
+        expectType<IView<IContributor>>(bound);
+        expectType<string>(repository);
+        return { kind: 'fresh', data: { owner: bound.id } };
+      },
+    });
+    const summary = member.memo({
+      subject: member.subject('bound-summary'),
+      children: { activity },
+      run: async ({ member: bound, calls }) => {
+        expectType<number>(bound.authored);
+        const { data } = await calls.activity();
+        expectType<IView<{ readonly owner: string }>>(data);
+        return { owner: data.owner, authored: bound.authored };
+      },
+    });
+    expectError(member.memo({
+      subject: member.subject('bound-typo'),
+      run: ({ member: bound }) => {
+        void bound.missing;
+        return 1;
+      },
+    }));
+    return { activity, summary };
+  },
+});
+declare const binding: IMemberBinding<IFamily, IContributor>;
+expectType<IView<IContributor>>(binding.member);
+source<{ readonly total: number }>({
+  subject: 'unbound-source',
+  run: (context) => {
+    expectError(context.member);
+    return { kind: 'retain' };
   },
 });

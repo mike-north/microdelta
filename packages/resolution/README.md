@@ -1,8 +1,9 @@
 # Reuse Resolution
 
 This package owns current candidate eligibility, current source policy,
-direct-child and nested-call validation with consumed-output cutoff, honest
-misses, and execution through injected admission and History ports. Every export is a
+direct-child and nested-call validation with consumed-output cutoff, keyed
+template instance resolution with tracked gates, honest misses, and execution
+through injected admission and History ports. Every export is a
 project-private `@alpha` declaration; spellings are not a public contract. See
 the [execution contract](../../docs/spec/execution.md), the
 [M3 plan](../../docs/plans/m3-contribution-analysis.md) and the
@@ -81,13 +82,59 @@ Definition's `declarations()`. Callbacks receive:
    reported. That wait is unbounded; bounding it and cancelling in-flight work
    belong to Run Supervision's cancellation contract (A-13).
 5. **Admission and execution**: work that validation could not avoid is
-   admitted before any claim, attempt or body. Denial is a typed `refused`
-   outcome. Admitted work allocates an attempt keyed by the request key and the
+   admitted before any claim, attempt or body. A denial or a cancellation is a
+   typed `refused` outcome whose `disposition` carries the decision's kind.
+   Admitted work allocates an attempt keyed by the request key and the
    structural invocation, with the complete current intent digest, then runs
    under capture and publishes through History.
 
-`check({ step })` reports `reusable`, `execution-required` or `uncertain` at a
-needed source boundary without admission, attempts, bodies or writes.
+## Template instances
+
+A template instance is addressed by its template step descriptor plus a
+member key. Resolving one (directly, or for every member through
+`resolveMembers({ template, step, requestKey, lease })`):
+
+1. **Discovery**: the template's composition-level collection source is
+   resolved under its current source policy, once per request.
+2. **Keying**: its exact current result is keyed by Definition before any gate
+   or member body. A rejected snapshot (duplicate or missing key, failed
+   custom key, malformed snapshot) admits no gate or member work: a members
+   request reports `rejected` with Definition's diagnostic, and a direct
+   request fails with `collection-rejected`. A member absent from the current
+   snapshot is an `unbound-step`.
+3. **Gate**: each member's gate runs once per request in its own tracking
+   frame, over the declared inputs and helpers and the member's current record
+   at the `member` binding. Its observations are the member's gate evidence and
+   enter no step's provenance. An explicit `false` is a `skipped` outcome that
+   admits, publishes and retracts nothing; a non-boolean result or a throw is a
+   `gate-failure`, never a skip.
+4. **Instance**: a required instance resolves like any source or memo, with
+   its member binding. Its callbacks read `member`, a view of the member's
+   current record at the `member` binding; those reads are the step's own
+   observations and are validated against the current record on reuse. A
+   forwarded `member` origin is rebuilt from the same record. So an unread
+   discovery field changes nothing, while a consumed member field reruns only
+   the member steps that consumed it.
+
+Candidates are found by subject, which an instance keeps when its template is
+renamed or its collection moves to another slot. That is changed
+correspondence: a template-bearing candidate whose recorded step differs from
+the current descriptor is a `correspondence` miss, never a remap.
+
+`resolveMembers` resolves members in canonical key order, independently: a
+member whose evidence is ready completes and publishes while discovery is
+open or siblings fail, are refused or are skipped. Each member reports its
+normal outcome or its member-attributable typed failure (execution failure,
+`gate-failure`, `unbound-step` and the like). Run-level failures
+(`admission-failure`, `observer-failure`, `integrity`, `wrong-intent`,
+`invalid-request`, History or host errors) reject the whole request. A
+cancelled child makes its parent's refusal cancelled, whichever child was
+refused first. A gate returning a promise or thenable is a `gate-failure`. A
+strict fold is still refused with `invalid-request`.
+
+`check({ step })` reports `reusable`, `execution-required`, `uncertain` at a
+needed source boundary, or `skipped` for a gated-out instance, without
+admission, attempts, bodies or writes.
 `recover({ step, requestKey })` recomputes the attempt key and intent without
 running author code and reports the identified execution's durable outcome;
 a different intent is rejected and nothing is executed automatically.
@@ -112,7 +159,8 @@ cover the whole request, including nested children, once each.
 
 Owner tests cover the outcome-envelope registry and the typed family (`tsd`).
 Behavioral suites run in the facade's assembly tests
-(`packages/core/test/resolution`, and `packages/core/test/nested` for nested
-validation, including separate-process restarts) because only assembly may
+(`packages/core/test/resolution`, `packages/core/test/nested` for nested
+validation and `packages/core/test/keyed` for template instances, each
+including separate-process restarts) because only assembly may
 compose History with Node's real SQLite capability. An on-demand mutation-control runner there
 plants single wrong behaviors into this package's emitted build.

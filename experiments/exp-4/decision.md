@@ -239,6 +239,26 @@ output. Stored values are never substituted.
    gate). Folding raw gate facts would rerun the fold on every
    threshold edit.
 
+**Supervisor resolution (adopted in the owning contracts with this PR).**
+
+1. Failure precedence: fail immediately. A terminal failure or cancellation of a
+   required member makes strict completion impossible for the pass. The outcome
+   still names pending keys and open discovery. M5 retry policy may later
+   classify some failures as non-terminal; that does not change this rule for
+   terminal outcomes.
+2. Coverage: the strict fold's outcome carries framework-level coverage
+   (required keys, skipped keys, discovery closure). This fixture did not
+   exercise it, so M4 must test it.
+3. Retraction: none. Skips and deletions leave retained history and an
+   instance's latest pointer unchanged. That pointer is not evidence of current
+   requirement, and the fold and current discovery own membership.
+4. Gate framing: accepted as implemented. The fold consumes each member's
+   included-or-skipped outcome; the gate's raw facts remain the instance's
+   evidence.
+
+The unjustified-argument finding is recorded in CMP-7. That miss is reachable
+through an observed untracked read; unobserved influence remains CX-1.
+
 No conflict with CMP-8 or TEST-4 item 6 was observed. Skipped is distinct from
 successful `undefined`, pending, failed and cancelled at every level. A gate
 over absent evidence fails rather than skips. An open or pending population

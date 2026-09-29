@@ -3,7 +3,7 @@
 Status: M0.5 foundation is accepted and the six M1 experiment decisions are
 recorded below. [The M1 evidence record](../validation/m1-2026-09-26.md) defines
 final delivery acceptance and links implementation, review, and CI evidence.
-EXP-4 and EXP-8 remain deferred to their dependent milestones. Requirement IDs
+EXP-4 is decided for M4 (see its row below); EXP-8 remains deferred to M5. Requirement IDs
 in the linked contracts govern behavior; a rejected mechanism does not weaken
 the required behavior.
 
@@ -12,6 +12,7 @@ the required behavior.
 | EXP-1 | Select structural current binding and synchronous observed implementation/scalar evidence; [CMP-6](composition.md), TRK-2, REUSE-006/008. Arbitrary closure soundness remains excluded. |
 | EXP-2 | Select unordered equality, separate order-preserving snapshot transport, observations/projections, and top-level scalar access; [VAL-1/2/3 and COL-2](tracking.md). Reject async preparation as a general getter solution; nested lazy access was unproven within EXP-2 (see the M3 nested-read row). |
 | M3 nested read | Select bounded synchronous navigation over exact retained record and array roots: tagged scalar facts or container shapes, existing TRK-5 leaf/length/presence/key-order/explicit-output observations, no whole-object dependency from navigation, and file-backed SQLite evidence of no root or unrelated payload in selected reads and none in fingerprint comparison; [tracking decision](tracking.md) and [protocol](../../experiments/exp-nested/protocol.md). Durable publication, scale, cache/eviction and projection indexing remain outside it. |
+| EXP-4 | Select the nested invocation record and `forwarded`/`derived`/`unreconstructible` argument recipe validated in recorded call order, structural supplied callable step slots, a once-built keyed fanout template with default/custom keys and pre-work duplicate rejection, tracked gates, and strict folds over an explicit gate-declared required population; [CMP-3/4/7/8](composition.md), REUSE-006/007, RUN-010, [decision](../../experiments/exp-4/decision.md). Sound only under the tracked-influence contract (CX-1/CX-2); tolerant folds, pending-read semantics and multi-level nesting depth remain unproven. |
 | EXP-3 | Select the single-file, single-active-writer SQLite protocol shape under process-kill/reopen evidence; [PUB-004](execution.md). Broader durability/concurrency claims remain unproven. |
 | EXP-5 | Historical bounded CML correspondence only; superseded by [PKG-006](package-boundaries.md). No CML model, parser, checker, or fixture is an active tool or gate. |
 | EXP-6 | Historical flat-record theorem and finite TypeScript comparison; [VAL-2](tracking.md). Lean is dormant unless a concrete need justifies renewed use. |

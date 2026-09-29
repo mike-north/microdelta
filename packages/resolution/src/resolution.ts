@@ -244,6 +244,12 @@ export function createResolution<TInputs extends object, THelpers extends object
     // recording a read the author never made (and failing for array views).
     dispatch: <TResult>(request: IDeclaredInvocationRequest<IFamily, TResult>): Promise<IChildResult<IApply<IFamily['views'], TResult>>> =>
       dispatchChild(request).then((delivered) => ({ data: trusted<IApply<IFamily['views'], TResult>>(delivered.data) })),
+    // Author views (inputs, helpers and child results) are all minted by this
+    // Resolution's tracking observer, so its ownership table recognizes them.
+    isTrackedView: (value: unknown): boolean => tracking.materialization.owns(value),
+    // This port treats every derived argument as justified: it keeps no
+    // observed untracked-read state for a frame that could contradict it.
+    argumentsJustified: (): boolean => true,
   });
 
   /** The scoped subject and compatibility group of a declaration. */
@@ -854,6 +860,14 @@ export function createResolution<TInputs extends object, THelpers extends object
     const frame = frames.get(request.scope);
     if (frame === undefined) {
       throw new ResolutionError('invalid-request', 'A declared call arrived from an invocation Resolution is not executing');
+    }
+    if (request.kind !== 'source' || request.witness.version !== 1) {
+      // This Resolution delivers only argument-free sibling source calls with
+      // the version-1 witness; nested memo and supplied step slot calls are
+      // refused before any child work rather than validated by guesswork.
+      const error = new ResolutionError('unbound-step', `A ${request.kind} call with a version-${String(request.witness.version)} witness is not supported by this Resolution`);
+      frame.failed ??= { error };
+      throw error;
     }
     const reconnected = composition.resolveWitness(request.witness);
     if (reconnected.status !== 'bound' || reconnected.child.declaration !== request.child) {

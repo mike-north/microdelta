@@ -7,8 +7,11 @@
 
 /**
  * The kind of declared slot a descriptor addresses. Inputs are current
- * configuration values, callables are supplied helper functions, and steps are
- * source or memoized declarations within an explicitly keyed member.
+ * configuration values. Callables are composition-wide callable slots holding
+ * either a supplied helper function or a supplied step implementation; the two
+ * share one namespace, so a slot name denotes at most one of them. Steps are
+ * source or memoized declarations at the composition level or within an
+ * explicitly keyed member.
  * @alpha
  */
 export type IBindingRole = 'input' | 'callable' | 'step';
@@ -16,8 +19,9 @@ export type IBindingRole = 'input' | 'callable' | 'step';
 /**
  * A structural address within one composition scope. Two descriptors denote
  * the same slot exactly when every field is equal; there is no partial match.
- * M3 input and callable slots are composition-wide and carry no member key;
- * step slots always carry the explicit member key of their member.
+ * Input and callable slots are composition-wide and carry no member key. A
+ * member's step slot carries its explicit member key; a composition-level step
+ * slot has no member key field at all, so the two levels never alias.
  * @alpha
  */
 export interface IBindingDescriptor {
@@ -27,6 +31,6 @@ export interface IBindingDescriptor {
   readonly role: IBindingRole;
   /** The author-declared slot name within its role and member. */
   readonly slot: string;
-  /** The explicit member key; present for step slots only. */
+  /** The explicit member key; present only for step slots within a member. */
   readonly memberKey?: string;
 }

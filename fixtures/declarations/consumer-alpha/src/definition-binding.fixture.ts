@@ -74,7 +74,7 @@ interface IFacadeFamily extends IBindingFamily {
     readonly helpers: ITracked<{ readonly format: (name: string, authored: number, reviews: number) => string }>;
   };
 }
-const { source, memo, compose, openInvocation } = declarations<IFacadeFamily>();
+const { source, memo, suppliedStep, compose, openInvocation } = declarations<IFacadeFamily>();
 
 // ------------------------------------------------------------------ AUTHOR --
 
@@ -157,6 +157,8 @@ const port: IInvocationPort<IFacadeFamily> = {
   active: (): IInvocationScope | undefined => undefined,
   dispatch: <TResult>(request: IDeclaredInvocationRequest<IFacadeFamily, TResult>): Promise<IChildResult<IApply<ITrackedViews, TResult>>> =>
     Promise.resolve({ data: selectedView<TResult>(request.witness) }),
+  isTrackedView: (value: unknown): boolean => observer.materialization.owns(value),
+  argumentsJustified: (): boolean => true,
 };
 const previous: IPreviousSupplier<IFacadeFamily> = {
   carrier: <TResult>(declaration: ISourceDeclaration<IFacadeFamily, TResult>): IApply<IPreviousCarriers, TResult> => selectedCarrier(declaration),
@@ -180,7 +182,7 @@ if (resolution.status === 'bound') {
   if (invocation.kind === 'memo') {
     const outcome: Promise<IObservationCapture<unknown>> = invocation.apply(memoBindings, invoke);
     void outcome;
-  } else {
+  } else if (invocation.kind === 'source') {
     void invocation.apply(sourceBindings, undefined, invoke);
     void invocation.apply(sourceBindings, previous, invoke);
     if (invocation.hasFinality) {
@@ -264,8 +266,10 @@ const foreign = declarations<IOtherFamily>().source<IActivity>({ subject: 'activ
 // @ts-expect-error: the family marker is invariant.
 compose({ scope: 's', members: [{ key: 'k', steps: [{ slot: 'activity', declaration: foreign }] }] });
 
-// A memo cannot be a child, and a source must return the outcome envelope for its result.
-// @ts-expect-error: children must be source declarations.
-memo({ subject: 'summary:n7', children: { summary: adaSummary }, run: () => 1 });
+// A supplied step is not a sibling child (it is bound only through a step slot),
+// and a source must return the outcome envelope for its result.
+const assessment = suppliedStep<readonly [number], number>({ run: () => 1 });
+// @ts-expect-error: children are sibling source or memo declarations, or step slots.
+memo({ subject: 'summary:n7', children: { assess: assessment }, run: () => 1 });
 // @ts-expect-error: a source returns the facade's outcome for its result, not raw data.
 source<IProfile>({ subject: 'profile:n8', run: () => ({ name: 'Ada', avatar: 'a.png' }) });

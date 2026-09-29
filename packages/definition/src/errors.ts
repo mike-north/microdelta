@@ -10,7 +10,7 @@
  * - `invalid-subject`: a memoized or source subject is not a complete nonempty string (RES-001).
  * - `invalid-version`: a compatibility version is not a positive safe integer (REUSE-008).
  * - `invalid-callback`: an author callback is not a directly supplied function.
- * - `illegal-edge`: a child edge is outside the supported fixed M3 topology (CMP-1/7).
+ * - `illegal-edge`: a child edge or slot occupant is outside the supported fixed topology (CMP-1/3/7).
  * - `forged-declaration`: a registered declaration was not minted by Definition.
  * - `invalid-descriptor`: a scope, member key or slot is not a nonempty string.
  * - `invalid-input`: an input value cannot be copied into a frozen framework-owned snapshot.
@@ -19,7 +19,10 @@
  * - `composition-phase`: framework result resolution was attempted while composing (CMP-9).
  * - `scope-closed`: a handle was used after its invocation scope ended.
  * - `scope-inactive`: a handle was used outside its own currently executing invocation.
- * - `unsupported-arguments`: an M3 handle received runtime arguments.
+ * - `unsupported-arguments`: a handle for an argument-free edge received runtime arguments.
+ * - `invalid-argument`: a call argument cannot be recorded as a recipe: a raw tracked view passed without `forward`, or a `forward` origin that is malformed or does not belong to the calling invocation.
+ * - `missing-slot`: a parent's declared supplied step slot has no current implementation.
+ * - `ambiguous-slot`: a parent's declared supplied step slot has more than one current implementation.
  * - `invalid-result`: the invocation port did not supply a `{ data }` carrier.
  * - `forged-composition`: an invocation was requested for a composition this family did not mint.
  * - `invalid-bindings`: facade bindings are not a plain record or collide with a context name Definition supplies.
@@ -40,6 +43,9 @@ export type IDefinitionErrorCode =
   | 'scope-closed'
   | 'scope-inactive'
   | 'unsupported-arguments'
+  | 'invalid-argument'
+  | 'missing-slot'
+  | 'ambiguous-slot'
   | 'invalid-result'
   | 'forged-composition'
   | 'invalid-bindings'

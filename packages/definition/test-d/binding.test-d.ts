@@ -123,7 +123,7 @@ expectError(compose({ scope: 's', members: [{ key: 'k', steps: [{ slot: 'activit
 // Author negatives.
 // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- This negative tsd case intentionally reads a field absent from the child view.
 expectError(memo({ subject: 's', children: { activity }, run: async ({ calls }) => (await calls.activity()).data.name }));
-expectError(memo({ subject: 's', children: { summary }, run: () => 1 }));
+expectError(memo({ subject: 's', children: { summary: 'summary' }, run: () => 1 }));
 expectError(source<IActivity>({ subject: 's', run: () => ({ reviews: 1 }) }));
 expectError(source<IActivity>({
   subject: 's',
@@ -155,10 +155,14 @@ const port: IInvocationPort<IFamily> = {
   active: (): IInvocationScope | undefined => undefined,
   dispatch: <TResult>(request: IDeclaredInvocationRequest<IFamily, TResult>): Promise<IChildResult<IApply<IViews, TResult>>> =>
     Promise.resolve({ data: viewOf<TResult>(request.witness.child.slot) }),
+  isTrackedView: (): boolean => false,
+  argumentsJustified: (): boolean => true,
 };
 expectNotAssignable<IInvocationPort<IFamily>>({
   active: (): IInvocationScope | undefined => undefined,
   dispatch: <TResult>(_request: IDeclaredInvocationRequest<IFamily, TResult>) => Promise.resolve({ data: { reviews: 1 } }),
+  isTrackedView: (): boolean => false,
+  argumentsJustified: (): boolean => true,
 });
 const invoke: IAuthorInvoker<string> = <TContext, TResult>(callback: (context: TContext) => TResult, context: TContext): string =>
   String(callback(context));
@@ -172,7 +176,7 @@ const invocation = openInvocation(composition, { scope: 'report', role: 'step', 
 if (invocation.kind === 'memo') {
   expectType<string>(invocation.apply({ format: String }, invoke));
   expectError(invocation.apply({ repository: 'acme/widget' }, invoke));
-} else {
+} else if (invocation.kind === 'source') {
   expectType<boolean>(invocation.hasFinality);
   expectType<string>(invocation.apply({ repository: 'acme/widget' }, undefined, invoke));
   expectError(invocation.apply({ format: String }, undefined, invoke));

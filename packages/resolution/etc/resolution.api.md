@@ -55,7 +55,7 @@ export interface ICandidateMiss {
     readonly candidate: ICompletedResultReference;
     readonly detail: string;
     readonly observation?: ITrackingObservation;
-    readonly reason: 'changed' | 'unavailable' | 'incompatible' | 'ambiguous' | 'correspondence' | 'unsupported-evidence' | 'changed-child-output' | 'missing-binding' | 'ambiguous-binding' | 'unreconstructible-argument' | 'unjustified-argument' | 'child-refused';
+    readonly reason: 'changed' | 'unavailable' | 'incompatible' | 'ambiguous' | 'correspondence' | 'unsupported-evidence' | 'changed-child-output' | 'missing-binding' | 'ambiguous-binding' | 'unreconstructible-argument' | 'unjustified-argument' | 'child-refused' | 'changed-membership' | 'changed-member-output';
 }
 
 // @alpha
@@ -109,6 +109,59 @@ export type IDiscoveryOutcome = {
 // @alpha
 export interface IExecutionAdmission {
     admit(request: IAdmissionRequest): IAdmissionDecision | Promise<IAdmissionDecision>;
+}
+
+// @alpha
+export interface IFoldCoverage {
+    readonly closed: true;
+    readonly required: readonly string[];
+    readonly skipped: readonly string[];
+}
+
+// @alpha
+export type IFoldOutcome = IOutcomeEvidence & ({
+    readonly kind: 'reused';
+    readonly basis: 'validated';
+    readonly reference: ICompletedResultReference;
+    readonly acceptance: IAcceptanceRecord;
+    readonly coverage: IFoldCoverage;
+} | {
+    readonly kind: 'published';
+    readonly reference: ICompletedResultReference;
+    readonly attemptId: number;
+    readonly coverage: IFoldCoverage;
+} | {
+    readonly kind: 'refused';
+    readonly refused: IBindingDescriptor;
+    readonly reason: string;
+    readonly disposition: IRefusalDisposition;
+} | {
+    readonly kind: 'failed';
+    readonly failed: readonly string[];
+    readonly cancelled: readonly string[];
+    readonly pending: readonly string[];
+    readonly openDiscovery: boolean;
+    readonly diagnostic: string;
+} | {
+    readonly kind: 'waiting';
+    readonly pending: readonly string[];
+    readonly openDiscovery: boolean;
+});
+
+// @alpha
+export interface IFoldRequest {
+    readonly lease: IWriterLease;
+    readonly requestKey: string;
+    readonly step: IBindingDescriptor;
+}
+
+// @alpha
+export interface IFoldResolution {
+    readonly diagnostics: readonly string[];
+    readonly discovery: IDiscoveryOutcome;
+    readonly members: readonly IMemberResolution[];
+    readonly outcome: IFoldOutcome;
+    readonly over: IBindingDescriptor;
 }
 
 // @alpha
@@ -205,6 +258,7 @@ export interface IResolution {
     check(request: ICheckRequest): Promise<ICheckOutcome>;
     recover(request: IRecoverRequest): IRecoveryResult;
     resolve(request: IResolveRequest): Promise<IResolutionOutcome>;
+    resolveFold(request: IFoldRequest): Promise<IFoldResolution>;
     resolveMembers(request: IMembersRequest): Promise<IMembersResolution>;
 }
 
@@ -335,7 +389,7 @@ export interface IStepBindings<TInputs extends object, THelpers extends object> 
 }
 
 // @alpha
-export type IStepKind = 'source' | 'memo' | 'supplied';
+export type IStepKind = 'source' | 'memo' | 'supplied' | 'fold';
 
 // @alpha
 export type ITrackedHelpers<THelpers extends object> = {

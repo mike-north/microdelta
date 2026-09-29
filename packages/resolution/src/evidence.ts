@@ -17,13 +17,22 @@
  *     recipes), the exact child result and the `call` binding its consumed
  *     facts use; or a supplied step invoked through a callable slot, whose
  *     argument reads are its own `argument` observations.
+ *   - Version 3 records a strict fold (CMP-8, RUN-010): its membership-and-
+ *     status fact (every member key it covered in canonical order, each
+ *     `included` with the exact member result it read, or `skipped` by its
+ *     gate) and its own observations, whose consumed member facts use one
+ *     `entry` binding per included member. Gate observations are never part of
+ *     it: a member's included-or-skipped outcome is the fold's evidence, and
+ *     the gate's raw reads stay that instance's own evidence.
  *   A new execution writes version 2 exactly when version 1 cannot express it:
- *   a memo whose calls carry version-2 witnesses, or a supplied step. Sources
- *   and M3-shaped memos keep writing version 1.
+ *   a memo whose calls carry version-2 witnesses, or a supplied step; and
+ *   version 3 exactly for a strict fold. Sources and M3-shaped memos keep
+ *   writing version 1.
  * - **Acceptance** (`microdelta.resolution.acceptance`) records a current
  *   verification of an existing result: its basis and the current work or
- *   children it followed (version 1), or the current result of each recorded
- *   call by position (version 2). It never rewrites provenance (RES-007).
+ *   children it followed (version 1), the current result of each recorded
+ *   call by position (version 2), or the current result of each included
+ *   member by key (version 3). It never rewrites provenance (RES-007).
  * - **Attempt ending** (`microdelta.resolution.attempt-ending`, version 1)
  *   records why an admitted attempt ended without a new result.
  *
@@ -50,6 +59,8 @@ export const endingFormat = 'microdelta.resolution.attempt-ending';
 export const formatVersion = 1;
 /** The version of provenance and acceptance records that carry ordered nested calls. */
 export const nestedFormatVersion = 2;
+/** The version of provenance and acceptance records of a strict fold. */
+export const foldFormatVersion = 3;
 
 /**
  * Tracking binding paths Resolution assigns, as structural correspondence
@@ -62,7 +73,8 @@ export const nestedFormatVersion = 2;
  * `previous` is a source's eligible previous result, which is history rather
  * than a current input; `member` is a template instance's member record from
  * the current keyed collection, which its gate reads and its forwarded
- * member origins resolve against.
+ * member origins resolve against; an `entry` path names the member key whose
+ * result a strict fold's entry delivered, which its consumed member facts use.
  */
 export const bindingPaths = Object.freeze({
   self: Object.freeze(['self']),
@@ -73,6 +85,7 @@ export const bindingPaths = Object.freeze({
   callable: (slot: string): readonly string[] => Object.freeze(['callable', slot]),
   child: (slot: string): readonly string[] => Object.freeze(['child', slot]),
   call: (index: number): readonly string[] => Object.freeze(['call', String(index)]),
+  entry: (key: string): readonly string[] => Object.freeze(['entry', key]),
 });
 
 /** One recorded direct child call of a memo execution. */
@@ -123,8 +136,29 @@ export interface INestedProvenance {
   readonly calls: readonly ICallEvidence[];
 }
 
+/**
+ * One member of a strict fold's membership-and-status fact: included, with
+ * the exact member result its entry delivered, or skipped by its gate.
+ */
+export type IMembershipEntry =
+  | { readonly key: string; readonly status: 'included'; readonly reference: ICompletedResultReference }
+  | { readonly key: string; readonly status: 'skipped' };
+
+/**
+ * Parsed version-3 provenance: a strict fold with its membership-and-status
+ * fact in canonical key order and its own observations, whose consumed member
+ * facts use `entry` bindings of included members.
+ */
+export interface IFoldProvenance {
+  readonly version: 3;
+  readonly kind: 'fold';
+  readonly step: IBindingDescriptor;
+  readonly observations: readonly ITrackingObservation[];
+  readonly membership: readonly IMembershipEntry[];
+}
+
 /** Parsed provenance of one completed result. */
-export type IProvenance = IDirectProvenance | INestedProvenance;
+export type IProvenance = IDirectProvenance | INestedProvenance | IFoldProvenance;
 
 /** The outcome of reading a candidate's provenance. */
 export type IProvenanceReading =
@@ -133,6 +167,20 @@ export type IProvenanceReading =
 
 /** Build the stored provenance record of one execution, in the version its parsed form names. */
 export function provenanceRecord(provenance: IProvenance): IVersionedRecord {
+  if (provenance.version === foldFormatVersion) {
+    return {
+      format: provenanceFormat,
+      formatVersion: foldFormatVersion,
+      content: {
+        kind: provenance.kind,
+        step: plainDescriptor(provenance.step),
+        observations: provenance.observations.map(plainObservation),
+        membership: provenance.membership.map((entry) => entry.status === 'included'
+          ? { key: entry.key, status: entry.status, reference: plainReference(entry.reference) }
+          : { key: entry.key, status: entry.status }),
+      },
+    };
+  }
   if (provenance.version === nestedFormatVersion) {
     return {
       format: provenanceFormat,
@@ -159,8 +207,9 @@ export function provenanceRecord(provenance: IProvenance): IVersionedRecord {
 
 /**
  * Build a stored acceptance record. Naming the current result of each
- * recorded call by position (a nested memo's validation) writes version 2;
- * otherwise the M3 version 1.
+ * included member by key (a strict fold's validation) writes version 3;
+ * naming the current result of each recorded call by position (a nested
+ * memo's validation) writes version 2; otherwise the M3 version 1.
  */
 export function acceptanceRecord(content: {
   readonly basis: 'finality' | 'check' | 'validated';
@@ -168,7 +217,20 @@ export function acceptanceRecord(content: {
   readonly observations?: readonly ITrackingObservation[];
   readonly children?: readonly { readonly slot: string; readonly reference: ICompletedResultReference }[];
   readonly calls?: readonly { readonly index: number; readonly reference: ICompletedResultReference }[];
+  readonly members?: readonly { readonly key: string; readonly reference: ICompletedResultReference }[];
 }): IVersionedRecord {
+  if (content.members !== undefined) {
+    return {
+      format: acceptanceFormat,
+      formatVersion: foldFormatVersion,
+      content: {
+        basis: content.basis,
+        step: plainDescriptor(content.step),
+        observations: (content.observations ?? []).map(plainObservation),
+        members: content.members.map((member) => ({ key: member.key, reference: plainReference(member.reference) })),
+      },
+    };
+  }
   if (content.calls !== undefined) {
     return {
       format: acceptanceFormat,
@@ -456,10 +518,19 @@ function nestedDescriptor(value: unknown, kind: 'memo' | 'supplied'): IBindingDe
  */
 export function readProvenance(envelope: ICompletedEnvelope): IProvenanceReading {
   const record = envelope.provenance;
-  if (record.format !== provenanceFormat || (record.formatVersion !== formatVersion && record.formatVersion !== nestedFormatVersion)) {
-    return { status: 'unsupported', detail: `provenance ${record.format} version ${String(record.formatVersion)} is not supported` };
+  if (record.format === provenanceFormat) {
+    switch (record.formatVersion) {
+      case formatVersion:
+        return readDirect(record.content);
+      case nestedFormatVersion:
+        return readNested(record.content);
+      case foldFormatVersion:
+        return readFold(record.content);
+      default:
+        break;
+    }
   }
-  return record.formatVersion === nestedFormatVersion ? readNested(record.content) : readDirect(record.content);
+  return { status: 'unsupported', detail: `provenance ${record.format} version ${String(record.formatVersion)} is not supported` };
 }
 
 /** Read version-1 provenance with its M3 meaning, unchanged. */
@@ -542,6 +613,66 @@ function readNested(content: unknown): IProvenanceReading {
       step: nestedDescriptor(field(content, 'step'), kind),
       observations,
       calls: Object.freeze(calls),
+    }),
+  };
+}
+
+/**
+ * A stored fold step descriptor: a composition-level step, which never
+ * carries a member key or template fields.
+ */
+function foldDescriptor(value: unknown): IBindingDescriptor {
+  const step = descriptor(value);
+  if (step.memberKey !== undefined || step.template !== undefined || step.collection !== undefined) {
+    return malformed('fold step descriptor');
+  }
+  return step;
+}
+
+/**
+ * Read version-3 provenance. Beyond the observation envelope, its own meaning
+ * requires: the `fold` kind; a membership-and-status fact whose keys are
+ * nonempty, unique and in strictly ascending canonical (code-unit) order, each
+ * `included` with an exact reference or `skipped` with none; every consumed
+ * member fact bound at `entry` and an included member's key (a skipped member
+ * has no data to consume); and the fold's own implementation observation.
+ */
+function readFold(content: unknown): IProvenanceReading {
+  if (field(content, 'kind') !== 'fold') {
+    return malformed('fold step kind');
+  }
+  let previous: string | undefined;
+  const membership = list(field(content, 'membership'), 'membership').map((entry): IMembershipEntry => {
+    const key = text(field(entry, 'key'), 'member key');
+    if (key.length === 0 || (previous !== undefined && !(previous < key))) {
+      return malformed('membership keys are not unique and in canonical order');
+    }
+    previous = key;
+    const status = field(entry, 'status');
+    if (status === 'included') {
+      return Object.freeze({ key, status, reference: reference(field(entry, 'reference')) });
+    }
+    if (status === 'skipped' && field(entry, 'reference') === undefined) {
+      return Object.freeze({ key, status });
+    }
+    return malformed('membership entry');
+  });
+  const observations = Object.freeze(list(field(content, 'observations'), 'observations').map(observation));
+  if (!observations.some(isOwnImplementation)) {
+    return malformed('fold provenance lacks its own implementation observation');
+  }
+  const included = new Set(membership.flatMap((entry) => entry.status === 'included' ? [entry.key] : []));
+  if (observations.some((item) => item.binding.path[0] === 'entry' && (item.binding.path.length !== 2 || !included.has(item.binding.path[1] ?? '')))) {
+    return malformed('a consumed member fact names no included member');
+  }
+  return {
+    status: 'supported',
+    provenance: Object.freeze({
+      version: foldFormatVersion,
+      kind: 'fold',
+      step: foldDescriptor(field(content, 'step')),
+      observations,
+      membership: Object.freeze(membership),
     }),
   };
 }

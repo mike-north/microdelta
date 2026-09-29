@@ -597,7 +597,7 @@ describe('honest misses', () => {
       const content = JSON.parse(JSON.stringify(original.provenance.content)) as { readonly calls: IStoredCall[] } & Record<string, unknown>;
       const unknownWitness = { ...content, calls: content.calls.map((call) => call.index === 2 ? { ...call, witness: { ...call.witness, version: 9 } } : call) };
       const witnessLocator = publish('crafted-witness', { format: original.provenance.format, formatVersion: 2, content: unknownWitness });
-      const versionLocator = publish('crafted-version', { format: original.provenance.format, formatVersion: 3, content });
+      const versionLocator = publish('crafted-version', { format: original.provenance.format, formatVersion: 9, content });
       return { witnessLocator, versionLocator };
     });
     resetCounts();

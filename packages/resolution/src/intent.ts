@@ -14,7 +14,8 @@
  * meant to run: History scope, structural step, kind, subject, compatibility
  * version, the explicit empty-argument form, the source text of the step's
  * callbacks and of its declared children, the content of every declared input
- * slot and the source text of every declared helper slot. It is recovery
+ * slot and the source text of every declared helper slot; a strict fold's
+ * intent also names the template step it consumes. It is recovery
  * identity, deliberately broader than the consumed evidence reuse compares, so
  * a saved key can never recover an execution of different intent.
  *
@@ -128,6 +129,8 @@ export function intentDigest<TInputs extends object, THelpers extends object>(op
     ...currentBindings(options.validation, options.slots),
     // Appended only for nested parents, so every M3 intent digest is unchanged.
     ...(slotChildren.length === 0 ? [] : [slotChildren]),
+    // Appended only for strict folds: the template step whose members the fold consumes.
+    ...(declaration.kind === 'fold' ? [['fold-over', foldOver(options.composition, options.step)]] : []),
   ];
   return `mdi1:${options.host.sha256(JSON.stringify(intent))}`;
 }
@@ -138,6 +141,12 @@ function currentBindings(validation: ITrackingObserver, slots: ICurrentSlots): r
   const helpers = [...slots.helpers].sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
     .map(([slot, state]) => [slot, state.status, state.status === 'bound' ? sourceText(state.value) : null]);
   return [inputs, inputContent(validation, slots), helpers];
+}
+
+/** The structural tuple of the template step a fold consumes, or null when the composition declares no such fold. */
+function foldOver<TInputs extends object, THelpers extends object>(composition: IComposition<IResolutionFamily<TInputs, THelpers>>, step: IBindingDescriptor): readonly (string | null)[] | null {
+  const fold = composition.topology.folds.find((entry) => descriptorKey(entry.fold) === descriptorKey(step));
+  return fold === undefined ? null : structural(fold.over);
 }
 
 /** The canonical key of every structural field of a descriptor. */

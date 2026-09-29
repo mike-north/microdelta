@@ -3,9 +3,10 @@
  * accepts and the outcomes it reports. Resolution decides current
  * eligibility, applies current source policy, validates direct children and
  * nested calls, resolves keyed template instances through their current
- * population and tracked gates, and either reuses an exact retained result or
- * executes through injected admission and History ports (ARC-001/006,
- * REUSE-001–009, CMP-4, CMP-8). It owns no storage rows, no run lifetime and
+ * population and tracked gates, decides strict fold readiness, and either
+ * reuses an exact retained result or executes through injected admission and
+ * History ports (ARC-001/006, REUSE-001–009, CMP-4, CMP-8, RUN-010). It owns
+ * no storage rows, no run lifetime and
  * no admission policy; an admission decision's kind is carried, never decided.
  */
 import type { IBindingDescriptor, ICollectionStatus, IComposition, IDeclarations, IKeyingDiagnostic } from '@microdelta/definition';
@@ -50,11 +51,11 @@ export type IResolutionHistory = Pick<
 export interface IResolutionHost extends IAsyncContextCapability, ISha256Capability {}
 
 /**
- * Whether a step is a retained source, a memoized computation, or the
- * memoized implementation currently supplied to a callable step slot, invoked
- * through a nested call. @alpha
+ * Whether a step is a retained source, a memoized computation, the memoized
+ * implementation currently supplied to a callable step slot (invoked through
+ * a nested call), or a strict fold over a template step's members. @alpha
  */
-export type IStepKind = 'source' | 'memo' | 'supplied';
+export type IStepKind = 'source' | 'memo' | 'supplied' | 'fold';
 
 /**
  * One request for new work, presented after reuse had its chance and before
@@ -240,6 +241,11 @@ export interface IRecoverRequest {
  * - `unjustified-argument`: a recorded derived argument was made after an
  *   observed untracked read, so recorded evidence cannot justify it.
  * - `child-refused`: reserved for a child whose required work was refused.
+ * - `changed-membership`: a strict fold's recorded membership-and-status
+ *   fact (each member key, included or skipped, in canonical order) differs
+ *   from the one current discovery and gate outcomes establish now.
+ * - `changed-member-output`: a current included member's result differs in a
+ *   fact the strict fold consumed from that member's entry.
  * @alpha
  */
 export interface ICandidateMiss {
@@ -258,7 +264,9 @@ export interface ICandidateMiss {
     | 'ambiguous-binding'
     | 'unreconstructible-argument'
     | 'unjustified-argument'
-    | 'child-refused';
+    | 'child-refused'
+    | 'changed-membership'
+    | 'changed-member-output';
   /** The observation whose current fact did not compare equal, when one did. */
   readonly observation?: ITrackingObservation;
   /** Human-readable detail. */
@@ -486,11 +494,132 @@ export interface IMembersResolution {
 }
 
 /**
+ * A normal request for one strict fold (CMP-8, RUN-010). The fold's consumed
+ * template step is resolved for every current member first, each member
+ * independently, exactly as a members request resolves it; only then is the
+ * fold's readiness decided.
+ * @alpha
+ */
+export interface IFoldRequest {
+  /** The fold's composition-level step descriptor. */
+  readonly step: IBindingDescriptor;
+  /** The caller's saved request key; a nonempty opaque string. */
+  readonly requestKey: string;
+  /** History's current writer lease for this run. */
+  readonly lease: IWriterLease;
+}
+
+/**
+ * The population a successful strict fold covers, derived by the framework
+ * from the members it delivered rather than from anything the fold body
+ * returned, so a consumer never has to trust the body to report exclusions
+ * (CMP-8 supervisor resolution). A strict fold succeeds only over closed
+ * discovery with every required member accepted, so `closed` is always true
+ * and `required` is exactly the members delivered as succeeded entries.
+ * @alpha
+ */
+export interface IFoldCoverage {
+  /** The required population: every member included in the fold, in canonical key order. */
+  readonly required: readonly string[];
+  /** Every member its gate excluded, in canonical key order. */
+  readonly skipped: readonly string[];
+  /** Discovery closure; a successful strict fold never covers open discovery. */
+  readonly closed: true;
+}
+
+/**
+ * The outcome of one strict fold (CMP-8, RUN-005, RUN-010).
+ *
+ * - `reused` and `published`: every required member of a closed population
+ *   has an accepted result, and the fold's own result is current: an existing
+ *   one validated against the current membership-and-status fact and the
+ *   member facts it consumed, or a new publication. Both carry the
+ *   framework's `coverage`.
+ * - `refused`: readiness held, but admission denied or cancelled the fold's
+ *   own work.
+ * - `failed`: strict completion is impossible in this pass because a
+ *   required member failed or was cancelled, or discovery was rejected or
+ *   cancelled. It still names every pending member and whether discovery is
+ *   open.
+ * - `waiting`: nothing failed, but discovery is open (or its work was denied)
+ *   or a required member is pending. It is never terminal.
+ *
+ * Neither `failed` nor `waiting` runs the fold body, admits fold work,
+ * publishes, or retracts anything; their evidence has no misses or trace.
+ * @alpha
+ */
+export type IFoldOutcome = IOutcomeEvidence & (
+  | {
+      readonly kind: 'reused';
+      readonly basis: 'validated';
+      readonly reference: ICompletedResultReference;
+      readonly acceptance: IAcceptanceRecord;
+      readonly coverage: IFoldCoverage;
+    }
+  | {
+      readonly kind: 'published';
+      readonly reference: ICompletedResultReference;
+      readonly attemptId: number;
+      readonly coverage: IFoldCoverage;
+    }
+  | {
+      readonly kind: 'refused';
+      /** The fold step whose work was refused. */
+      readonly refused: IBindingDescriptor;
+      readonly reason: string;
+      readonly disposition: IRefusalDisposition;
+    }
+  | {
+      readonly kind: 'failed';
+      /** Required members whose resolution failed, in canonical key order. */
+      readonly failed: readonly string[];
+      /** Required members whose work was cancelled, in canonical key order. */
+      readonly cancelled: readonly string[];
+      /** Required members whose work was not completed in this pass, in canonical key order. */
+      readonly pending: readonly string[];
+      /** Whether discovery has not closed in this pass. */
+      readonly openDiscovery: boolean;
+      /** Why strict completion is impossible. */
+      readonly diagnostic: string;
+    }
+  | {
+      readonly kind: 'waiting';
+      /** Required members whose work was not completed in this pass, in canonical key order. */
+      readonly pending: readonly string[];
+      /** Whether discovery has not closed in this pass. */
+      readonly openDiscovery: boolean;
+    }
+);
+
+/**
+ * The outcome of a fold request: how discovery settled, every current
+ * member's instance outcome of the consumed template step in canonical key
+ * order, and the fold's own outcome.
+ * @alpha
+ */
+export interface IFoldResolution {
+  /** The template step descriptor (no member key) the fold consumes. */
+  readonly over: IBindingDescriptor;
+  /** How discovery settled. */
+  readonly discovery: IDiscoveryOutcome;
+  /** Every current member's instance outcome, in canonical key order. */
+  readonly members: readonly IMemberResolution[];
+  /** The strict fold's outcome. */
+  readonly outcome: IFoldOutcome;
+  /** Post-commit diagnostics of the whole request, each reported once. */
+  readonly diagnostics: readonly string[];
+}
+
+/**
  * Reuse Resolution over one current composition and History scope.
  * @alpha
  */
 export interface IResolution {
-  /** Resolve one step under current policy, reusing or executing through admission. */
+  /**
+   * Resolve one source or memo step under current policy, reusing or
+   * executing through admission. A strict fold is resolved by `resolveFold`,
+   * whose waiting, failed and coverage outcomes this outcome cannot express.
+   */
   resolve(request: IResolveRequest): Promise<IResolutionOutcome>;
   /**
    * Resolve one template step for every current member of its keyed
@@ -498,7 +627,18 @@ export interface IResolution {
    * whole request rather than failing one member.
    */
   resolveMembers(request: IMembersRequest): Promise<IMembersResolution>;
-  /** Report what a normal request would do, without admission, claims, bodies or writes. */
+  /**
+   * Resolve one strict fold: its consumed template step for every current
+   * member, then the fold's readiness, and only when ready its validation or
+   * execution. As for a members request, a run-level failure rejects the
+   * whole request rather than failing one member.
+   */
+  resolveFold(request: IFoldRequest): Promise<IFoldResolution>;
+  /**
+   * Report what a normal request for a source or memo step would do, without
+   * admission, claims, bodies or writes. A strict fold is refused, as `resolve`
+   * refuses it.
+   */
   check(request: ICheckRequest): Promise<ICheckOutcome>;
   /** Report the durable outcome of the execution a saved request key identifies, without executing. */
   recover(request: IRecoverRequest): IRecoveryResult;

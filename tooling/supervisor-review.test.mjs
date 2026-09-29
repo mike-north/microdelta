@@ -588,6 +588,16 @@ test('a possibly truncated rules-for-branch page fails closed', async () => {
   await assert.rejects(readRuleProtection({ rules: many }), /truncat/iu);
 });
 
+test('a branch rule without its owning ruleset fails closed instead of skipping its bypass check', async () => {
+  const [first, ...rest] = rulesetRules();
+  const { ruleset_id: _omitted, ...orphan } = first;
+  await assert.rejects(readRuleProtection({ rules: [orphan, ...rest] }), /without its owning ruleset/u);
+});
+
+test('a non-array rules-for-branch response fails closed', async () => {
+  await assert.rejects(readRuleProtection({ rules: { message: 'unexpected' } }), /malformed branch rules/u);
+});
+
 for (const [name, fixtures, expected] of [
   ['an evaluate-mode ruleset', { rulesets: { [RULESET_ID]: { enforcement: 'evaluate', bypass_actors: [] } } }, /does not require pull requests/u],
   ['a disabled ruleset', { rulesets: { [RULESET_ID]: { enforcement: 'disabled', bypass_actors: [] } } }, /does not require pull requests/u],

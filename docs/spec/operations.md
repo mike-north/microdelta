@@ -262,9 +262,12 @@ each member; representation follows the tracking contract.
 fold reports the failure. Repair it, then verify the tolerant/success-only fold
 reconsiders its input and unaffected member bodies stay unexecuted.
 
-**Open:** exact outcome-collection API, operator repair within an active run,
-and treatment of a deliberately skipped declared step by each fold. Do not
-conflate skipped, pending, cancelled, failed, and successful-empty outcomes.
+**Open:** exact outcome-collection API and operator repair within an active run.
+Do not conflate skipped, pending, cancelled, failed, and successful-empty outcomes.
+[EXP-4](../../experiments/exp-4/decision.md) selects the strict fold's treatment
+of a gated-out member ([CMP-8](composition.md)): the gate declares the required
+population, and a skipped member is an explicit data-free entry outside it.
+Tolerant/outcome-fold treatment of skips remains open.
 
 ### RUN-011 — Retry support includes unattended quota waits
 

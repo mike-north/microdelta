@@ -26,11 +26,13 @@ import type {
   IFoldReport,
   IForward,
   IForwarded,
+  IKeyedMember,
   IKeyedSnapshot,
   IKeyingDiagnostic,
   IKeyingFailure,
   IMemberBinding,
   IMemberBuilder,
+  IPathInput,
   IResultView,
   ISkippedEntry,
   ISlotSubject,
@@ -116,7 +118,8 @@ function steps(member: IMemberBuilder<IInputs, IHelpers, IContributor>) {
         if (pullRequest === undefined) {
           continue;
         }
-        const origin: IForwarded<IPullRequest> = forward.child<IPullRequest>(result, ['pullRequests', index]);
+        const path: IPathInput = ['pullRequests', index];
+        const origin: IForwarded<IPullRequest> = forward.child<IPullRequest>(result, path);
         const assessed = await calls.assess(pullRequest.number, origin);
         scores.push(assessed.data.score);
       }
@@ -169,7 +172,8 @@ export function keysOf(snapshot: unknown): readonly string[] | IKeyingFailure {
     const diagnostic: IKeyingDiagnostic = keyed.diagnostic;
     return diagnostic.reason;
   }
-  return keyed.members.map((member) => member.key);
+  const members: readonly IKeyedMember[] = keyed.members;
+  return members.map((member) => member.key);
 }
 
 /** A strict fold entry is either a succeeded view or a skipped key with no data. */

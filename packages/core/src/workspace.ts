@@ -356,6 +356,7 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
           },
           resolve: live.resolve,
           resolveMembers: live.resolveMembers,
+          resolveFold: live.resolveFold,
           check: live.check,
           recover: live.recover,
           ordinary: live.ordinary,

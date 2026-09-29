@@ -19,6 +19,9 @@ import type {
   ICallView,
   ICandidateMiss,
   ICheckOutcome,
+  IFoldCoverage,
+  IFoldOutcome,
+  IFoldResolution,
   IGateEvidence,
   IMemberResolution,
   IPreviousResult,
@@ -120,6 +123,48 @@ if (member.outcome.kind === 'failed') {
 expectAssignable<ResolutionError['code']>('gate-failure');
 expectAssignable<ResolutionError['code']>('collection-rejected');
 expectType<ResolutionError['code']>(new ResolutionError('integrity', 'x').code);
+
+// A strict fold is resolved with a request key and a lease. Only a reused or
+// published fold carries a reference and the framework's closed coverage; a
+// failed fold names every key list, a waiting one only pending keys, and
+// neither carries a result.
+expectType<Promise<IFoldResolution>>(resolution.resolveFold({ step: { scope: 'a', role: 'step', slot: 'report' }, requestKey: 'k', lease: { holder: 'h', fence: 1, expiresAt: 1 } }));
+expectError(resolution.resolveFold({ step: { scope: 'a', role: 'step', slot: 'report' } }));
+declare const folded: IFoldOutcome;
+switch (folded.kind) {
+  case 'reused':
+  case 'published':
+    expectType<string>(folded.reference.locator);
+    expectType<IFoldCoverage>(folded.coverage);
+    expectType<true>(folded.coverage.closed);
+    expectType<readonly string[]>(folded.coverage.skipped);
+    break;
+  case 'failed':
+    expectType<readonly string[]>(folded.failed);
+    expectType<readonly string[]>(folded.cancelled);
+    expectType<readonly string[]>(folded.pending);
+    expectType<boolean>(folded.openDiscovery);
+    expectError(folded.reference);
+    expectError(folded.coverage);
+    break;
+  case 'waiting':
+    expectType<readonly string[]>(folded.pending);
+    expectType<boolean>(folded.openDiscovery);
+    expectError(folded.failed);
+    expectError(folded.coverage);
+    break;
+  case 'refused':
+    expectType<IRefusalDisposition>(folded.disposition);
+    expectError(folded.coverage);
+    break;
+  default: {
+    const exhaustive: never = folded;
+    void exhaustive;
+  }
+}
+expectNotAssignable<IFoldCoverage>({ required: [], skipped: [], closed: false });
+expectAssignable<ICandidateMiss['reason']>('changed-membership');
+expectAssignable<ICandidateMiss['reason']>('changed-member-output');
 
 // Every callback receives the explicit observed untracked read: scalar members only.
 expectType<IUntrackedRead>(memoContext.untracked);

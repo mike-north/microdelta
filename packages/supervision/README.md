@@ -27,8 +27,8 @@ supervised run and returns `{ context, value, diagnostics }`:
   `composition-phase` while a composition is being constructed. The run id is
   volatile metadata, never reuse evidence.
 - **Lifetime.** The run stays live until its body *and* every operation
-  started through it (`resolve`, `resolveMembers`, `check`, `recover`,
-  `ordinary`) have settled, including operations started while it waits and
+  started through it (`resolve`, `resolveMembers`, `resolveFold`, `check`,
+  `recover`, `ordinary`) have settled, including operations started while it waits and
   ones the body stopped awaiting early (a `Promise.all` whose sibling failed). The body's own value
   or failure is what the run reports. `run.open` reports this state. The run
   closes in the same turn that observes no started work, so every operation is
@@ -57,6 +57,21 @@ supervised run and returns `{ context, value, diagnostics }`:
   (admission denied; never a terminal failure), `failed` (a typed Resolution
   failure, including a gate failure) or `cancelled`. Members progress
   independently.
+- **Strict fold outcomes.** `resolveFold(step, { requestKey })` is a normal
+  request for one strict fold. It reports discovery and every member of the
+  consumed template step as a members report does, then the fold's typed
+  outcome:
+  - `succeeded`: reused or published, with its exact reference and the
+    framework's `coverage: { required, skipped, closed: true }`.
+  - `failed`: a required member failed or was cancelled, or discovery was
+    rejected or cancelled. It names the failed, cancelled and pending keys and
+    whether discovery is open.
+  - `waiting`: discovery is open or a required member is pending.
+  - `pending` or `cancelled`: the fold was ready, but admission denied or
+    cancelled its own work.
+
+  A failed or waiting fold never ran its body, admitted fold work or
+  published.
 - **Observers.** Observers are captured at start and see frozen events at the
   fixed positions `stepLifecycle` and `ordinaryLifecycle`. They cannot veto or
   replace work. A throw before work stops only that call; a throw after a

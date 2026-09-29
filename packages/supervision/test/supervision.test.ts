@@ -24,6 +24,9 @@ import type {
   IAdmissionRequest,
   ICheckOutcome,
   IDiscoveryOutcome,
+  IFoldOutcome,
+  IFoldRequest,
+  IFoldResolution,
   IGateEvidence,
   ILifecycleEvent,
   IMemberResolution,
@@ -37,6 +40,7 @@ import type {
 
 import { SupervisionError, createSupervision, ordinaryLifecycle, stepLifecycle } from '../src/index.js';
 import type {
+  IFoldReport,
   IMemberOutcome,
   IResolutionPorts,
   IRun,
@@ -106,7 +110,7 @@ interface IDouble {
   /** The ports Supervision supplied, once the factory ran. */
   ports: IResolutionPorts | undefined;
   /** Every request, in order. */
-  readonly calls: { readonly operation: 'resolve' | 'check' | 'recover' | 'members'; readonly lease?: IRunLease; readonly requestKey?: string; readonly template?: string; readonly step?: string }[];
+  readonly calls: { readonly operation: 'resolve' | 'check' | 'recover' | 'members' | 'fold'; readonly lease?: IRunLease; readonly requestKey?: string; readonly template?: string; readonly step?: string }[];
   /** The scripted members a members request settles, in the order discovery lists them. */
   members: readonly IMemberScript[];
   /** How the members request's discovery settles. */
@@ -117,15 +121,88 @@ interface IDouble {
   during: (() => void) | undefined;
   /** Diagnostics the double's normal outcome reports. */
   diagnostics: readonly string[];
+  /** The fold outcome a fold request reports once its members settled. */
+  fold: IFoldOutcome;
 }
+
+/** The fold step the double resolves, and the template step it consumes. */
+const foldStep: IBindingDescriptor = Object.freeze({ scope: 'analysis:test', role: 'step', slot: 'report' });
+const foldOver: IBindingDescriptor = Object.freeze({ scope: 'analysis:test', role: 'step', slot: 'summary', template: 'contributor', collection: 'contributors' });
+
+/** Evidence fields of a fold outcome that ran no fold work. */
+const noFoldWork = Object.freeze({ step: foldStep, misses: [], trace: [], diagnostics: [] });
 
 /** A Resolution double that follows the port contract: verify, admit, execute, publish. */
 function recordingResolution(): { readonly double: IDouble; readonly factory: IRunOptions['resolution'] } {
-  const double: IDouble = { ports: undefined, calls: [], members: [], discovery: 'keyed', decisions: [], during: undefined, diagnostics: [] };
+  const double: IDouble = {
+    ports: undefined,
+    calls: [],
+    members: [],
+    discovery: 'keyed',
+    decisions: [],
+    during: undefined,
+    diagnostics: [],
+    fold: Object.freeze({ ...noFoldWork, kind: 'waiting', pending: [], openDiscovery: true }),
+  };
   const factory = (ports: IResolutionPorts): IResolution => {
     double.ports = ports;
     const emit = (phase: ILifecycleEvent['phase']): void => {
       ports.observer.observe(Object.freeze({ step, phase, ...(phase === 'publish' ? { reference } : {}) }));
+    };
+    /** Settle the scripted members of one template step, as a members request (or a fold's member phase) does. */
+    const settleMembers = async (template: string, stepSlot: string): Promise<IMembersResolution> => {
+      const collection: IBindingDescriptor = Object.freeze({ scope: 'analysis:test', role: 'step', slot: 'contributors' });
+      const collectionReference = Object.freeze({ kind: 'completed-result' as const, locator: 'mdh1:test:collection' });
+      await Promise.resolve();
+      double.during?.();
+      if (double.discovery === 'admission') {
+        const decision = await ports.admission.admit(Object.freeze({ step: collection, kind: 'source', subject: { analysis: 'analysis:test', environment: 'env:test', subject: 'contributors', version: 1 }, reason: 'source-policy' }));
+        double.decisions.push(decision);
+        if (decision.kind !== 'admitted') {
+          return Object.freeze({ template, discovery: Object.freeze({ kind: 'refused', collection, refused: collection, reason: decision.reason, disposition: decision.kind }), members: [], diagnostics: [] });
+        }
+      }
+      if (double.discovery === 'rejected') {
+        const rejected: IDiscoveryOutcome = Object.freeze({
+          kind: 'rejected',
+          collection,
+          reference: collectionReference,
+          diagnostic: Object.freeze({ reason: 'duplicate-key', template, collection: 'contributors', key: 'person:ada', identity: 'key', customKey: false, message: 'Collection contributors has duplicate member key "person:ada".' }),
+        });
+        return Object.freeze({ template, discovery: rejected, members: [], diagnostics: [] });
+      }
+      const keys = double.members.map((member) => member.key).sort();
+      const discovery: IDiscoveryOutcome = Object.freeze({ kind: 'keyed', collection, reference: collectionReference, completion: 'open', keys });
+      const members: IMemberResolution[] = [];
+      for (const key of keys) {
+        const script = double.members.find((member) => member.key === key);
+        const instance: IBindingDescriptor = Object.freeze({ scope: 'analysis:test', role: 'step', slot: stepSlot, template, collection: 'contributors', memberKey: key });
+        const evidence = { misses: [], trace: [], diagnostics: [] };
+        if (script === undefined || script.gate === 'failed') {
+          members.push(Object.freeze({ key, step: instance, gate: undefined, outcome: Object.freeze({ kind: 'failed', error: new ResolutionError('gate-failure', `gate for ${key} returned a number`) }) }));
+          continue;
+        }
+        const gate: IGateEvidence = Object.freeze({ selected: script.gate, observations: [] });
+        if (script.gate === 'skipped') {
+          members.push(Object.freeze({ key, step: instance, gate, outcome: Object.freeze({ ...evidence, step: instance, kind: 'skipped', gate }) }));
+          continue;
+        }
+        const decision = await ports.admission.admit(Object.freeze({ step: instance, kind: 'memo', subject: { analysis: 'analysis:test', environment: 'env:test', subject: `summary:${key}`, version: 1 }, reason: 'cold' }));
+        double.decisions.push(decision);
+        if (decision.kind !== 'admitted') {
+          members.push(Object.freeze({ key, step: instance, gate, outcome: Object.freeze({ ...evidence, step: instance, kind: 'refused', refused: instance, reason: decision.reason, disposition: decision.kind }) }));
+          continue;
+        }
+        members.push(Object.freeze({
+          key,
+          step: instance,
+          gate,
+          outcome: script.body === 'publishes'
+            ? Object.freeze({ ...evidence, step: instance, kind: 'published', reference: Object.freeze({ kind: 'completed-result' as const, locator: `mdh1:test:${key}` }), attemptId: 1 })
+            : Object.freeze({ kind: 'failed', error: new ResolutionError('execution-failure', `Body of ${key} failed`) }),
+        }));
+      }
+      return Object.freeze({ template, discovery, members, diagnostics: [...double.diagnostics] });
     };
     return {
       async resolve(request: IResolveRequest): Promise<IResolutionOutcome> {
@@ -153,58 +230,12 @@ function recordingResolution(): { readonly double: IDouble; readonly factory: IR
       },
       async resolveMembers(request: IMembersRequest): Promise<IMembersResolution> {
         double.calls.push({ operation: 'members', lease: request.lease, requestKey: request.requestKey, template: request.template, step: request.step });
-        const collection: IBindingDescriptor = Object.freeze({ scope: 'analysis:test', role: 'step', slot: 'contributors' });
-        const collectionReference = Object.freeze({ kind: 'completed-result' as const, locator: 'mdh1:test:collection' });
-        await Promise.resolve();
-        double.during?.();
-        if (double.discovery === 'admission') {
-          const decision = await ports.admission.admit(Object.freeze({ step: collection, kind: 'source', subject: { analysis: 'analysis:test', environment: 'env:test', subject: 'contributors', version: 1 }, reason: 'source-policy' }));
-          double.decisions.push(decision);
-          if (decision.kind !== 'admitted') {
-            return Object.freeze({ template: request.template, discovery: Object.freeze({ kind: 'refused', collection, refused: collection, reason: decision.reason, disposition: decision.kind }), members: [], diagnostics: [] });
-          }
-        }
-        if (double.discovery === 'rejected') {
-          const rejected: IDiscoveryOutcome = Object.freeze({
-            kind: 'rejected',
-            collection,
-            reference: collectionReference,
-            diagnostic: Object.freeze({ reason: 'duplicate-key', template: request.template, collection: 'contributors', key: 'person:ada', identity: 'key', customKey: false, message: 'Collection contributors has duplicate member key "person:ada".' }),
-          });
-          return Object.freeze({ template: request.template, discovery: rejected, members: [], diagnostics: [] });
-        }
-        const keys = double.members.map((member) => member.key).sort();
-        const discovery: IDiscoveryOutcome = Object.freeze({ kind: 'keyed', collection, reference: collectionReference, completion: 'open', keys });
-        const members: IMemberResolution[] = [];
-        for (const key of keys) {
-          const script = double.members.find((member) => member.key === key);
-          const instance: IBindingDescriptor = Object.freeze({ scope: 'analysis:test', role: 'step', slot: request.step, template: request.template, collection: 'contributors', memberKey: key });
-          const evidence = { misses: [], trace: [], diagnostics: [] };
-          if (script === undefined || script.gate === 'failed') {
-            members.push(Object.freeze({ key, step: instance, gate: undefined, outcome: Object.freeze({ kind: 'failed', error: new ResolutionError('gate-failure', `gate for ${key} returned a number`) }) }));
-            continue;
-          }
-          const gate: IGateEvidence = Object.freeze({ selected: script.gate, observations: [] });
-          if (script.gate === 'skipped') {
-            members.push(Object.freeze({ key, step: instance, gate, outcome: Object.freeze({ ...evidence, step: instance, kind: 'skipped', gate }) }));
-            continue;
-          }
-          const decision = await ports.admission.admit(Object.freeze({ step: instance, kind: 'memo', subject: { analysis: 'analysis:test', environment: 'env:test', subject: `summary:${key}`, version: 1 }, reason: 'cold' }));
-          double.decisions.push(decision);
-          if (decision.kind !== 'admitted') {
-            members.push(Object.freeze({ key, step: instance, gate, outcome: Object.freeze({ ...evidence, step: instance, kind: 'refused', refused: instance, reason: decision.reason, disposition: decision.kind }) }));
-            continue;
-          }
-          members.push(Object.freeze({
-            key,
-            step: instance,
-            gate,
-            outcome: script.body === 'publishes'
-              ? Object.freeze({ ...evidence, step: instance, kind: 'published', reference: Object.freeze({ kind: 'completed-result' as const, locator: `mdh1:test:${key}` }), attemptId: 1 })
-              : Object.freeze({ kind: 'failed', error: new ResolutionError('execution-failure', `Body of ${key} failed`) }),
-          }));
-        }
-        return Object.freeze({ template: request.template, discovery, members, diagnostics: [...double.diagnostics] });
+        return settleMembers(request.template, request.step);
+      },
+      async resolveFold(request: IFoldRequest): Promise<IFoldResolution> {
+        double.calls.push({ operation: 'fold', lease: request.lease, requestKey: request.requestKey, step: request.step.slot });
+        const settled = await settleMembers('contributor', 'summary');
+        return Object.freeze({ over: foldOver, discovery: settled.discovery, members: settled.members, outcome: double.fold, diagnostics: settled.diagnostics });
       },
       async check(): Promise<ICheckOutcome> {
         double.calls.push({ operation: 'check' });
@@ -780,6 +811,99 @@ describe('typed member outcomes (CMP-8, RUN-005, RUN-010)', () => {
       throw new Error('the run body did not run');
     }
     await expectSupervisionError(escaped.resolveMembers({ template: 'contributor', step: 'summary' }, { requestKey: 'request:late' }), 'run-closed');
+  });
+});
+
+describe('typed strict fold outcomes (CMP-8, RUN-005, RUN-010)', () => {
+  /** A fold request through one fresh run over the doubles, with `fold` as Resolution's fold outcome. */
+  async function foldReport(fold: IFoldOutcome, overrides: Partial<IRunOptions> = {}): Promise<{ readonly report: IFoldReport; readonly double: IDouble }> {
+    const { options, double } = runOptions(overrides);
+    double.members = [
+      { key: 'person:ben', gate: 'skipped' },
+      { key: 'person:ada', gate: 'required', body: 'publishes' },
+    ];
+    double.fold = fold;
+    const result = await supervision().run(options, (run) => run.resolveFold(foldStep, { requestKey: 'request:fold' }));
+    return { report: result.value, double };
+  }
+
+  test('a succeeded fold keeps its exact outcome and framework coverage beside discovery and every member outcome', async () => {
+    const coverage = Object.freeze({ required: ['person:ada'], skipped: ['person:ben'], closed: true as const });
+    const published: IFoldOutcome = Object.freeze({ ...noFoldWork, kind: 'published', reference: Object.freeze({ kind: 'completed-result' as const, locator: 'mdh1:test:report' }), attemptId: 7, coverage });
+    const { report } = await foldReport(published);
+    expect(report.fold).toBe(foldStep);
+    expect(report.over).toBe(foldOver);
+    expect(report.discovery).toMatchObject({ kind: 'keyed', keys: ['person:ada', 'person:ben'] });
+    expect(report.members.map((member) => [member.key, member.status])).toEqual([['person:ada', 'succeeded'], ['person:ben', 'skipped']]);
+    expect(report.outcome).toEqual({ status: 'succeeded', outcome: published });
+    expect(report.outcome.status === 'succeeded' ? report.outcome.outcome.coverage : undefined).toBe(coverage);
+  });
+
+  test('waiting and failed folds keep their key lists and open discovery distinct', async () => {
+    const waiting = await foldReport(Object.freeze({ ...noFoldWork, kind: 'waiting', pending: ['person:cy'], openDiscovery: false }));
+    expect(waiting.report.outcome).toEqual({ status: 'waiting', pending: ['person:cy'], openDiscovery: false });
+    const failed = await foldReport(Object.freeze({
+      ...noFoldWork,
+      kind: 'failed',
+      failed: ['person:dee'],
+      cancelled: ['person:eve'],
+      pending: ['person:cy'],
+      openDiscovery: true,
+      diagnostic: 'strict fold report cannot complete',
+    }));
+    expect(failed.report.outcome).toEqual({
+      status: 'failed',
+      failed: ['person:dee'],
+      cancelled: ['person:eve'],
+      pending: ['person:cy'],
+      openDiscovery: true,
+      diagnostic: 'strict fold report cannot complete',
+    });
+  });
+
+  test('the fold\'s own refused work is pending when denied and cancelled when cancelled, never failed', async () => {
+    for (const [disposition, status] of [['denied', 'pending'], ['cancelled', 'cancelled']] as const) {
+      const { report } = await foldReport(Object.freeze({ ...noFoldWork, kind: 'refused', refused: foldStep, reason: `fold work ${disposition}`, disposition }));
+      expect(report.outcome).toEqual({ status, refused: foldStep, reason: `fold work ${disposition}` });
+    }
+  });
+
+  test('member outcomes and refused discovery inside a fold report are classified as in a members report', async () => {
+    const { options, double } = runOptions({ admission: { admit: () => ({ kind: 'cancelled', reason: 'discovery withdrawn' }) } });
+    double.discovery = 'admission';
+    double.fold = Object.freeze({ ...noFoldWork, kind: 'failed', failed: [], cancelled: [], pending: [], openDiscovery: true, diagnostic: 'discovery was cancelled' });
+    const result = await supervision().run(options, (run) => run.resolveFold(foldStep, { requestKey: 'request:fold' }));
+    expect(result.value.discovery).toEqual({ kind: 'cancelled', collection: expect.objectContaining({ slot: 'contributors' }), refused: expect.objectContaining({ slot: 'contributors' }), reason: 'discovery withdrawn' });
+    expect(result.value.members).toEqual([]);
+    expect(result.value.outcome).toMatchObject({ status: 'failed', openDiscovery: true });
+  });
+
+  test('a fold request is a normal request: it takes the writer lease and the caller request key, runs in the run scope, and joins diagnostics once', async () => {
+    const supervisor = supervision();
+    const { options, double, writer } = runOptions();
+    double.members = [{ key: 'person:ada', gate: 'required', body: 'publishes' }];
+    double.diagnostics = ['observer failed after a member publication committed'];
+    const seen: string[] = [];
+    double.during = () => {
+      seen.push(supervisor.current().environment);
+    };
+    const result = await supervisor.run(options, (run) => run.resolveFold(foldStep, { requestKey: 'request:fold' }));
+    expect(double.calls).toEqual([{ operation: 'fold', lease: writer.leases[0], requestKey: 'request:fold', step: 'report' }]);
+    expect(seen).toEqual(['env:test']);
+    expect(result.diagnostics).toEqual(['observer failed after a member publication committed']);
+    expect(writer.releases.count).toBe(1);
+  });
+
+  test('a fold request after the run closed is rejected as new work', async () => {
+    const { options } = runOptions();
+    let escaped: IRun | undefined;
+    await supervision().run(options, (run) => {
+      escaped = run;
+    });
+    if (escaped === undefined) {
+      throw new Error('the run body did not run');
+    }
+    await expectSupervisionError(escaped.resolveFold(foldStep, { requestKey: 'request:late' }), 'run-closed');
   });
 });
 

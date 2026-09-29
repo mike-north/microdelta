@@ -5,9 +5,10 @@
  *
  * Supervision owns *when* work may happen: the run's environment and
  * lifetime, admission of work Resolution could not avoid, the positions at
- * which observers see work, and the typed outcome of each template member in
- * a run (RUN-005, RUN-010). It does not decide reuse (Reuse Resolution),
- * own claims or publication (Result History), or read the host directly: the
+ * which observers see work, and the typed outcome of each template member and
+ * strict fold in a run (RUN-005, RUN-010). It does not decide reuse (Reuse
+ * Resolution), own claims or publication (Result History), or read the host
+ * directly: the
  * asynchronous scope is a structurally injected capability, so this package
  * has no Machine import and ordinary author helpers receive no context
  * parameter. A run is not a retained result; its identifier is volatile
@@ -18,6 +19,7 @@ import type {
   ICheckOutcome,
   IDiscoveryOutcome,
   IExecutionAdmission,
+  IFoldOutcome,
   IGateEvidence,
   ILifecycleEvent,
   ILifecycleObserver,
@@ -269,6 +271,80 @@ export interface IMembersReport {
 }
 
 /**
+ * The typed outcome of one strict fold in this run (CMP-8, RUN-010). The
+ * five statuses never collapse into one another:
+ *
+ * - `succeeded`: the fold's result is current, reused or newly published,
+ *   over a closed population whose every required member was accepted. Its
+ *   outcome carries the framework's coverage (required keys, skipped keys,
+ *   closure), independent of what the body reported.
+ * - `waiting`: discovery is open, or a required member is pending; nothing
+ *   has failed. Never terminal.
+ * - `failed`: a required member failed or was cancelled, or discovery was
+ *   rejected or cancelled, so strict completion is impossible in this run.
+ *   It still names pending members and open discovery.
+ * - `pending`: the fold was ready, but admission denied its own work; never a
+ *   terminal failure.
+ * - `cancelled`: the fold was ready, but Supervision withdrew its own work
+ *   through the admission port; terminal for this run.
+ *
+ * `waiting` and `failed` never ran the fold body, admitted fold work or
+ * published.
+ * @alpha
+ */
+export type IStrictFoldOutcome =
+  | {
+      readonly status: 'succeeded';
+      /** The reused or published outcome, with its exact reference and coverage. */
+      readonly outcome: Extract<IFoldOutcome, { readonly kind: 'reused' | 'published' }>;
+    }
+  | {
+      readonly status: 'waiting';
+      /** Required members whose work was not completed in this run, in canonical key order. */
+      readonly pending: readonly string[];
+      /** Whether discovery has not closed in this run. */
+      readonly openDiscovery: boolean;
+    }
+  | {
+      readonly status: 'failed';
+      /** Required members whose resolution failed, in canonical key order. */
+      readonly failed: readonly string[];
+      /** Required members whose work was cancelled, in canonical key order. */
+      readonly cancelled: readonly string[];
+      /** Required members whose work was not completed in this run, in canonical key order. */
+      readonly pending: readonly string[];
+      /** Whether discovery has not closed in this run. */
+      readonly openDiscovery: boolean;
+      /** Why strict completion is impossible. */
+      readonly diagnostic: string;
+    }
+  | {
+      readonly status: 'pending' | 'cancelled';
+      /** The fold step whose own work was refused. */
+      readonly refused: IBindingDescriptor;
+      readonly reason: string;
+    };
+
+/**
+ * One fold request's report: discovery, every current member's typed outcome
+ * of the consumed template step in canonical key order (none unless
+ * discovery keyed), and the strict fold's typed outcome.
+ * @alpha
+ */
+export interface IFoldReport {
+  /** The fold's composition-level step. */
+  readonly fold: IBindingDescriptor;
+  /** The template step descriptor (no member key) the fold consumes. */
+  readonly over: IBindingDescriptor;
+  /** How discovery settled. */
+  readonly discovery: IDiscoveryReport;
+  /** Every current member's typed outcome, in canonical key order. */
+  readonly members: readonly IMemberOutcome[];
+  /** The strict fold's typed outcome. */
+  readonly outcome: IStrictFoldOutcome;
+}
+
+/**
  * A live run. Every operation executes inside the run's scope, so author code
  * it reaches can look up the run context without a parameter. After the run
  * closes, every operation rejects with `run-closed`.
@@ -294,6 +370,13 @@ export interface IRun {
    * any member.
    */
   resolveMembers(target: IMembersTarget, request: IRequestOptions): Promise<IMembersReport>;
+  /**
+   * Resolve one strict fold and report it: every current member of the
+   * consumed template step progresses independently first, then the fold
+   * fails, waits, or is validated or executed. A failed or waiting fold runs
+   * no body, admits no fold work and publishes nothing.
+   */
+  resolveFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IFoldReport>;
   /** Report what a normal request would do, without admission, claims, bodies or writes. */
   check(step: IBindingDescriptor): Promise<ICheckOutcome>;
   /** Report the durable outcome of the execution a saved request key identifies, without executing (recovery entry operation). */

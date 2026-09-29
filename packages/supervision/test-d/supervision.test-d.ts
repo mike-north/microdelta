@@ -10,11 +10,12 @@
  */
 import { expectAssignable, expectError, expectNotAssignable, expectType } from 'tsd';
 import type { IBindingDescriptor } from '@microdelta/definition';
-import type { ICheckOutcome, IGateEvidence, ILifecyclePhase, IRecoveryResult, IResolutionOutcome, ResolutionError } from '@microdelta/resolution';
+import type { ICheckOutcome, IFoldCoverage, IGateEvidence, ILifecyclePhase, IRecoveryResult, IResolutionOutcome, ResolutionError } from '@microdelta/resolution';
 
 import { SupervisionError, createSupervision, ordinaryLifecycle, stepLifecycle } from '../dist/src/index.js';
 import type {
   IDiscoveryReport,
+  IFoldReport,
   IMemberOutcome,
   IMembersReport,
   IOrdinaryPhase,
@@ -24,6 +25,7 @@ import type {
   IRunObserver,
   IRunResult,
   IRunScopeCapability,
+  IStrictFoldOutcome,
   ISupervisionErrorCode,
 } from '../dist/src/index.js';
 
@@ -82,6 +84,45 @@ switch (memberOutcome.status) {
 expectNotAssignable<IMemberOutcome['status']>('waiting');
 declare const discovery: IDiscoveryReport;
 expectType<'keyed' | 'rejected' | 'pending' | 'cancelled'>(discovery.kind);
+
+// A strict fold is resolved by its step descriptor with request options. Its
+// five statuses are distinct: only success carries a reference and coverage,
+// only a readiness failure carries failed and cancelled keys, and only the
+// fold's own refusal names the refused step.
+expectType<Promise<IFoldReport>>(run.resolveFold(step, { requestKey: 'request:1' }));
+expectError(run.resolveFold(step));
+declare const foldReport: IFoldReport;
+expectType<readonly IMemberOutcome[]>(foldReport.members);
+expectType<IDiscoveryReport>(foldReport.discovery);
+declare const foldOutcome: IStrictFoldOutcome;
+switch (foldOutcome.status) {
+  case 'succeeded':
+    expectType<string>(foldOutcome.outcome.reference.locator);
+    expectType<IFoldCoverage>(foldOutcome.outcome.coverage);
+    expectType<'reused' | 'published'>(foldOutcome.outcome.kind);
+    break;
+  case 'waiting':
+    expectType<readonly string[]>(foldOutcome.pending);
+    expectType<boolean>(foldOutcome.openDiscovery);
+    expectError(foldOutcome.failed);
+    break;
+  case 'failed':
+    expectType<readonly string[]>(foldOutcome.failed);
+    expectType<readonly string[]>(foldOutcome.cancelled);
+    expectType<string>(foldOutcome.diagnostic);
+    expectError(foldOutcome.outcome);
+    break;
+  case 'pending':
+  case 'cancelled':
+    expectType<IBindingDescriptor>(foldOutcome.refused);
+    expectError(foldOutcome.outcome);
+    break;
+  default: {
+    const exhaustive: never = foldOutcome;
+    void exhaustive;
+  }
+}
+expectNotAssignable<IStrictFoldOutcome['status']>('skipped');
 
 // The run context is read-only volatile metadata.
 declare const context: IRunContext;

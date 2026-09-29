@@ -5,7 +5,8 @@
  *   to the run body and to every request and ordinary call through the
  *   injected asynchronous scope, so author code finds it without a parameter;
  * - it stays live until its body *and* every operation started through the
- *   run (`resolve`, `check`, `recover`, `ordinary`) have settled, including
+ *   run (`resolve`, `resolveMembers`, `resolveFold`, `check`, `recover`,
+ *   `ordinary`) have settled, including
  *   operations started while it waits and those whose aggregate (for example
  *   a `Promise.all` with a failing sibling) the body stopped awaiting early;
  *   only then does it close, and afterwards its operations, escaped context
@@ -26,7 +27,10 @@ import type {
   IAdmissionDecision,
   IAdmissionRequest,
   ICheckOutcome,
+  IDiscoveryOutcome,
   IExecutionAdmission,
+  IFoldOutcome,
+  IFoldResolution,
   ILifecycleEvent,
   ILifecycleObserver,
   IMemberResolution,
@@ -38,6 +42,7 @@ import type {
 
 import type {
   IDiscoveryReport,
+  IFoldReport,
   IMemberOutcome,
   IMembersReport,
   IMembersTarget,
@@ -49,6 +54,7 @@ import type {
   IRunOptions,
   IRunResult,
   IRunScope,
+  IStrictFoldOutcome,
   ISupervision,
   ISupervisionOptions,
 } from './contracts.js';
@@ -147,13 +153,52 @@ function memberOutcome(member: IMemberResolution): IMemberOutcome {
   }
 }
 
-/** Report one members request: discovery in Supervision's terms and every member's typed outcome. */
-function membersReport(step: string, resolved: IMembersResolution): IMembersReport {
-  const discovery = resolved.discovery;
-  const report: IDiscoveryReport = discovery.kind === 'refused'
+/** How discovery settled, in Supervision's terms: refused discovery work is pending when denied and cancelled when cancelled. */
+function discoveryReport(discovery: IDiscoveryOutcome): IDiscoveryReport {
+  return discovery.kind === 'refused'
     ? Object.freeze({ kind: discovery.disposition === 'cancelled' ? 'cancelled' : 'pending', collection: discovery.collection, refused: discovery.refused, reason: discovery.reason })
     : discovery;
-  return Object.freeze({ template: resolved.template, step, discovery: report, members: Object.freeze(resolved.members.map(memberOutcome)) });
+}
+
+/** Report one members request: discovery in Supervision's terms and every member's typed outcome. */
+function membersReport(step: string, resolved: IMembersResolution): IMembersReport {
+  return Object.freeze({ template: resolved.template, step, discovery: discoveryReport(resolved.discovery), members: Object.freeze(resolved.members.map(memberOutcome)) });
+}
+
+/**
+ * Classify a strict fold's Resolution outcome as its typed fold outcome
+ * (CMP-8, RUN-010). A reused or published fold succeeded with its exact
+ * outcome and coverage; a readiness failure or wait keeps its key lists and
+ * open discovery; the fold's own refused work is pending when denied, never
+ * failed, and cancelled when cancelled.
+ */
+function strictFoldOutcome(outcome: IFoldOutcome): IStrictFoldOutcome {
+  switch (outcome.kind) {
+    case 'reused':
+    case 'published':
+      return Object.freeze({ status: 'succeeded', outcome });
+    case 'waiting':
+      return Object.freeze({ status: 'waiting', pending: outcome.pending, openDiscovery: outcome.openDiscovery });
+    case 'failed':
+      return Object.freeze({ status: 'failed', failed: outcome.failed, cancelled: outcome.cancelled, pending: outcome.pending, openDiscovery: outcome.openDiscovery, diagnostic: outcome.diagnostic });
+    case 'refused':
+      return Object.freeze({ status: outcome.disposition === 'cancelled' ? 'cancelled' : 'pending', refused: outcome.refused, reason: outcome.reason });
+    default: {
+      const exhaustive: never = outcome;
+      return exhaustive;
+    }
+  }
+}
+
+/** Report one fold request: discovery and every member in Supervision's terms, and the fold's typed outcome. */
+function foldReport(resolved: IFoldResolution): IFoldReport {
+  return Object.freeze({
+    fold: resolved.outcome.step,
+    over: resolved.over,
+    discovery: discoveryReport(resolved.discovery),
+    members: Object.freeze(resolved.members.map(memberOutcome)),
+    outcome: strictFoldOutcome(resolved.outcome),
+  });
 }
 
 /**
@@ -302,6 +347,13 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
           const resolved = await resolution.resolveMembers({ template: target.template, step: target.step, requestKey: request.requestKey, lease: writer.lease() });
           diagnostics.push(...resolved.diagnostics);
           return membersReport(target.step, resolved);
+        });
+      },
+      resolveFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IFoldReport> {
+        return within(async () => {
+          const resolved = await resolution.resolveFold({ step, requestKey: request.requestKey, lease: writer.lease() });
+          diagnostics.push(...resolved.diagnostics);
+          return foldReport(resolved);
         });
       },
       check(step: IBindingDescriptor): Promise<ICheckOutcome> {

@@ -321,7 +321,7 @@ describe('supported provenance semantic integrity', () => {
   test('an unsupported provenance version stays an honest miss; the older valid candidate is still reused', async () => {
     const location = freshLocation();
     const first = await coldAda(location);
-    const crafted = await withSession(location, async (session) => publishCraftedSource(session, first, (record) => ({ ...record, formatVersion: 3, content: { ...record.content, observations: [] } }), 'crafted-version'));
+    const crafted = await withSession(location, async (session) => publishCraftedSource(session, first, (record) => ({ ...record, formatVersion: 9, content: { ...record.content, observations: [] } }), 'crafted-version'));
     await withSession(location, async (session) => {
       const outcome = await session.resolve(session.contributors.steps['person:ada'].activity);
       expect(outcome.misses.map((item) => [item.candidate.locator, item.reason])).toEqual([[crafted, 'unsupported-evidence']]);

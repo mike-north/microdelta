@@ -235,6 +235,11 @@ export function callObservationIndex(binding: ITrackingBinding): string | undefi
   return binding.path.length === 2 && binding.path[0] === 'call' ? binding.path[1] : undefined;
 }
 
+/** Whether an observation is bound to a strict fold's member entry, and which member's. */
+export function entryObservationKey(binding: ITrackingBinding): string | undefined {
+  return binding.path.length === 2 && binding.path[0] === 'entry' ? binding.path[1] : undefined;
+}
+
 /** Whether an observation is bound to a source's previous result (history, not a current input). */
 export function isPreviousObservation(binding: ITrackingBinding): boolean {
   return binding.path.length === 1 && binding.path[0] === 'previous';

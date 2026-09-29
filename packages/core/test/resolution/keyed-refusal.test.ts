@@ -1,11 +1,13 @@
 /**
- * Reuse Resolution resolves template instances but still refuses strict
- * folds: a fold step is refused with `invalid-request` before any evidence,
- * candidate lookup or admission, and without running any author callback;
- * strict fold readiness belongs to later Resolution work. A template-bearing
- * descriptor that names no composed template step is an ordinary unbound
- * step, and malformed template fields are rejected as a malformed request
- * without running the caller's accessors.
+ * Reuse Resolution's step request refuses what it does not resolve. A strict
+ * fold step is refused by `resolve` with `invalid-request` before any
+ * evidence, candidate lookup or admission, and without running any author
+ * callback: a step outcome cannot express a fold's waiting, readiness failure
+ * or coverage, so folds are resolved only by `resolveFold` (see
+ * `packages/core/test/fold`). A template-bearing descriptor that names no
+ * composed template step is an ordinary unbound step, and malformed template
+ * fields are rejected as a malformed request without running the caller's
+ * accessors.
  *
  * @see ../../../../docs/spec/composition.md (CMP-4, CMP-8, CMP-9)
  * @see ../../../../docs/plans/m4-composition.md (Implementation queue and readiness)
@@ -46,11 +48,11 @@ function codeOf(caught: unknown): string | undefined {
 }
 
 describe('Resolution refuses steps it does not resolve (CMP-9)', () => {
-  test('a strict fold step is refused with invalid-request before evidence, candidate lookup or admission', async () => {
+  test('a strict fold step is refused by a step request with invalid-request, toward resolveFold, before evidence, candidate lookup or admission', async () => {
     const observed = await refusal(({ fold }) => fold);
     expect(observed.caught).toBeInstanceOf(ResolutionError);
     expect(codeOf(observed.caught)).toBe('invalid-request');
-    expect(observed.caught instanceof ResolutionError ? observed.caught.message : '').toContain('strict fold');
+    expect(observed.caught instanceof ResolutionError ? observed.caught.message : '').toMatch(/strict fold; resolve it with resolveFold/u);
     expect(observed.events).toEqual([]);
     expect(observed.admissions).toEqual([]);
     expect(observed.statements.statements).toBe(0);

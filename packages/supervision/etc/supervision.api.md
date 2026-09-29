@@ -8,6 +8,7 @@ import type { IBindingDescriptor } from '@microdelta/definition';
 import type { ICheckOutcome } from '@microdelta/resolution';
 import type { IDiscoveryOutcome } from '@microdelta/resolution';
 import type { IExecutionAdmission } from '@microdelta/resolution';
+import type { IFoldOutcome } from '@microdelta/resolution';
 import type { IGateEvidence } from '@microdelta/resolution';
 import type { ILifecycleEvent } from '@microdelta/resolution';
 import type { ILifecycleObserver } from '@microdelta/resolution';
@@ -29,6 +30,15 @@ export type IDiscoveryReport = Extract<IDiscoveryOutcome, {
     readonly refused: IBindingDescriptor;
     readonly reason: string;
 };
+
+// @alpha
+export interface IFoldReport {
+    readonly discovery: IDiscoveryReport;
+    readonly fold: IBindingDescriptor;
+    readonly members: readonly IMemberOutcome[];
+    readonly outcome: IStrictFoldOutcome;
+    readonly over: IBindingDescriptor;
+}
 
 // @alpha
 export type IMemberOutcome = {
@@ -95,6 +105,7 @@ export interface IRun {
     ordinary<T>(label: string, work: () => T | Promise<T>): Promise<Awaited<T>>;
     recover(step: IBindingDescriptor, request: IRequestOptions): Promise<IRecoveryResult>;
     resolve(step: IBindingDescriptor, request: IRequestOptions): Promise<IResolutionOutcome>;
+    resolveFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IFoldReport>;
     resolveMembers(target: IMembersTarget, request: IRequestOptions): Promise<IMembersReport>;
 }
 
@@ -162,6 +173,29 @@ export interface IRunWriter {
 
 // @alpha
 export type IStepLifecycle = readonly ['verify', 'finality', 'admit', 'refuse', 'claim', 'execute', 'publish', 'accept', 'release', 'abandon'];
+
+// @alpha
+export type IStrictFoldOutcome = {
+    readonly status: 'succeeded';
+    readonly outcome: Extract<IFoldOutcome, {
+        readonly kind: 'reused' | 'published';
+    }>;
+} | {
+    readonly status: 'waiting';
+    readonly pending: readonly string[];
+    readonly openDiscovery: boolean;
+} | {
+    readonly status: 'failed';
+    readonly failed: readonly string[];
+    readonly cancelled: readonly string[];
+    readonly pending: readonly string[];
+    readonly openDiscovery: boolean;
+    readonly diagnostic: string;
+} | {
+    readonly status: 'pending' | 'cancelled';
+    readonly refused: IBindingDescriptor;
+    readonly reason: string;
+};
 
 // @alpha
 export interface ISupervision {

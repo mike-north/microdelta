@@ -43,6 +43,27 @@ check remains restricted to the GitHub Actions app. If any part of the review
 gate is absent, the command fails before writing a comment or status. The root
 supervisor must install and independently verify this protection before first use.
 
+`main` is governed by a repository ruleset (24154977), so the read-back uses two
+read-only sources and combines them. A requirement holds when either source
+enforces it; a requirement absent from both fails.
+
+- **Legacy branch protection** (`GET branches/main/protection`). A 404 means the
+  branch has none and is not an error; any other failure stops the command.
+- **Active rulesets** (`GET rules/branches/main`, then `GET rulesets/{id}` for each
+  contributing ruleset). A `pull_request` rule requires PRs;
+  `required_review_thread_resolution: true` requires resolved conversations;
+  `strict_required_status_checks_policy: true` is the up-to-date base. Each
+  required status check is read with its `integration_id`: 15368 is the GitHub
+  Actions app, and **Supervisor review** stays an unscoped status. "Applies to
+  administrators" holds only when every contributing ruleset is `active` and has
+  no bypass actor of any mode; an `evaluate` or `disabled` ruleset enforces
+  nothing. A branch-rules response large enough to be truncated is refused.
+
+The command never edits protection or rulesets and has no flag that relaxes this
+check. The ruleset's Copilot code review does not re-review on push, so the
+supervisor requests a fresh Copilot review for each new head; the exact-head
+Copilot gate below then requires it to complete.
+
 It then confirms the PR is open, not a draft or release-version PR, targets `main`,
 still has the expected head, has no unresolved conversations, has a completed
 Copilot review on that head, and has visible required CI results that have not

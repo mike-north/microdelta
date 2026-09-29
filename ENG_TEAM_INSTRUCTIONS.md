@@ -91,10 +91,15 @@ restrictions; the supervisor status is an additional exact-head review gate. The
 three core jobs run `npm ci`, `npm run check`, `npm test`, and `npm run build`.
 Require a pull request, passing required checks on an up-to-date base, resolved
 review conversations, and administrator enforcement without bypass entries.
-These are the intended settings, not evidence that live repository protection
-has been configured. The
-supervisor must configure and read back the live rule, recording the result or a
-specific platform limitation in the governing issue before closing it. See the
+`main` is governed by repository ruleset 24154977 rather than legacy branch
+protection. The supervisor-review command reads both sources read-only: a
+requirement holds if either enforces it, and administrator enforcement requires
+every contributing ruleset to be `active` with no bypass actors. The ruleset's
+Copilot review does not re-review on push, so the supervisor requests a fresh
+Copilot review for each new head. These settings are not evidence by themselves
+that live protection is configured; the supervisor reads back the live rule,
+recording the result or a specific platform limitation in the governing issue
+before closing it. See the
 [exact-head supervisor-review procedure](docs/supervisor-review.md).
 
 `PR metadata` runs on PR creation, body edits, reopening, and synchronization.

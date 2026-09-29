@@ -206,7 +206,8 @@ export interface IReportEntry {
 export interface IReport {
   readonly repository: string;
   readonly window: { readonly start: string; readonly end: string };
-  readonly minimumAuthored: number;
+  /** The gate threshold the report states, or null from the body variant that never reads it. */
+  readonly minimumAuthored: number | null;
   readonly required: readonly IReportEntry[];
   readonly excluded: readonly string[];
 }
@@ -230,6 +231,7 @@ export interface IHelpers {
   readonly format: IFormat;
   readonly render: (members: ISummaryEntries, config: ITrackedView<IConfig>) => IReport;
   readonly renderRequired: (members: ISummaryEntries, config: ITrackedView<IConfig>) => IReport;
+  readonly renderUnstated: (members: ISummaryEntries, config: ITrackedView<IConfig>) => IReport;
 }
 
 /** The world file this process reads, set once by the worker before any run. */
@@ -427,6 +429,25 @@ function renderRequired(members: ISummaryEntries, config: ITrackedView<IConfig>)
   return { repository: config.repository, window: { start: config.window.start, end: config.window.end }, minimumAuthored: config.minimumAuthored, required, excluded: [] };
 }
 
+/**
+ * The report body without its threshold: as `render`, but it never reads
+ * `config.minimumAuthored`, so a threshold edit reaches this fold only through
+ * the members' included-or-skipped outcomes it consumed.
+ */
+function renderUnstated(members: ISummaryEntries, config: ITrackedView<IConfig>): IReport {
+  trace({ helper: 'report', body: 'omits-threshold', entries: members.map((entry) => `${entry.key}=${entry.status}`) });
+  const required: IReportEntry[] = [];
+  const excluded: string[] = [];
+  for (const entry of members) {
+    if (entry.status === 'succeeded') {
+      required.push({ key: entry.key, score: entry.data.score, sentence: entry.data.sentence });
+    } else {
+      excluded.push(entry.key);
+    }
+  }
+  return { repository: config.repository, window: { start: config.window.start, end: config.window.end }, minimumAuthored: null, required, excluded };
+}
+
 /** Which implementation the summary memo declares. */
 export type ISummaryVariant =
   /** The plan's summary. */
@@ -453,7 +474,9 @@ export interface IVariation {
   /** The summary memo's implementation (default `standard`). */
   readonly summary?: ISummaryVariant;
   /** The report body (default `lists-skipped`). */
-  readonly report?: 'lists-skipped' | 'omits-skipped';
+  readonly report?: 'lists-skipped' | 'omits-skipped' | 'omits-threshold';
+  /** Display labels of every declaration; never correspondence (default `original`). */
+  readonly labels?: 'original' | 'renamed';
   /** Mutate every author-owned array, record and input object after composing. */
   readonly mutateAfterCompose?: boolean;
 }
@@ -465,7 +488,11 @@ export const defaultRubric: IRubric = { wording: 'standard', mergedBugScore: 2 }
 export interface IAnalysis {
   readonly authoring: IAuthoring<IInputs, IHelpers>;
   readonly composition: IComposition<IInputs, IHelpers>;
-  /** Template step-factory invocations while composing this process's build. */
+  /**
+   * Template step-factory invocations so far in this process: composition and
+   * everything since. Read it after the run, so a factory re-invoked per
+   * instance or per request is counted.
+   */
   readonly factoryCalls: number;
   /** The strict report fold. */
   readonly report: IStepDescriptor;
@@ -494,12 +521,14 @@ function ordered<T>(items: readonly T[], variation: IVariation): T[] {
  */
 export function composeAnalysis(variation: IVariation = {}): IAnalysis {
   const builders = authoring<IInputs, IHelpers>();
+  /** A declaration's display label under the variation; labels are metadata, never correspondence. */
+  const label = (original: string): string => (variation.labels === 'renamed' ? `${original} (renamed display label)` : original);
   const { source, template, fold, stepSlot, suppliedStep, supply, forward, compose } = builders;
   const assessor = stepSlot<IAssessorParameters, IAssessment>({ slot: 'assessor' });
 
   const contributors = source<IContributors>({
     subject: 'contributors:acme/widget:2026-Q1',
-    label: 'contributor discovery',
+    label: label('contributor discovery'),
     collection: { identity: 'key' },
     finality: ({ previous, helpers }) => helpers.isDiscoveryFinal(previous),
     run: ({ inputs, helpers, outcome }) => helpers.discover(outcome, inputs.config),
@@ -513,7 +542,7 @@ export function composeAnalysis(variation: IVariation = {}): IAnalysis {
     factoryCalls += 1;
     const activity = member.source<IActivity>({
       subject: member.subject('activity:acme/widget:2026-Q1'),
-      label: 'contributor activity',
+      label: label('contributor activity'),
       finality: ({ previous, helpers }) => helpers.isActivityFinal(previous),
       run: ({ member: contributor, inputs, helpers, outcome }) => helpers.checkActivity(outcome, inputs.config, contributor.key ?? ''),
     });
@@ -522,7 +551,7 @@ export function composeAnalysis(variation: IVariation = {}): IAnalysis {
     const summary = variation.summary === 'untracked'
       ? member.memo({
           subject,
-          label: 'contributor summary',
+          label: label('contributor summary'),
           children,
           run: async ({ calls, helpers, inputs, untracked }) => {
             const selected = await calls.activity();
@@ -544,7 +573,7 @@ export function composeAnalysis(variation: IVariation = {}): IAnalysis {
       : variation.summary === 'unreconstructible'
         ? member.memo({
             subject,
-            label: 'contributor summary',
+            label: label('contributor summary'),
             children,
             run: async ({ calls, helpers }) => {
               const selected = await calls.activity();
@@ -565,7 +594,7 @@ export function composeAnalysis(variation: IVariation = {}): IAnalysis {
         : variation.summary === 'result-created'
           ? member.memo({
               subject,
-              label: 'contributor summary',
+              label: label('contributor summary'),
               children,
               run: async ({ calls, helpers }) => {
                 const selected = await calls.activity();
@@ -577,7 +606,7 @@ export function composeAnalysis(variation: IVariation = {}): IAnalysis {
             })
           : member.memo({
               subject,
-              label: 'contributor summary',
+              label: label('contributor summary'),
               children,
               run: async ({ calls, helpers }) => {
                 const selected = await calls.activity();
@@ -616,13 +645,15 @@ export function composeAnalysis(variation: IVariation = {}): IAnalysis {
 
   const over = { template: contributor, step: 'summary' } as const;
   const report = variation.report === 'omits-skipped'
-    ? fold({ subject: 'report:acme/widget:2026-Q1', label: 'contribution report', over, run: ({ members, inputs, helpers }) => helpers.renderRequired(members, inputs.config) })
-    : fold({ subject: 'report:acme/widget:2026-Q1', label: 'contribution report', over, run: ({ members, inputs, helpers }) => helpers.render(members, inputs.config) });
+    ? fold({ subject: 'report:acme/widget:2026-Q1', label: label('contribution report'), over, run: ({ members, inputs, helpers }) => helpers.renderRequired(members, inputs.config) })
+    : variation.report === 'omits-threshold'
+      ? fold({ subject: 'report:acme/widget:2026-Q1', label: label('contribution report'), over, run: ({ members, inputs, helpers }) => helpers.renderUnstated(members, inputs.config) })
+      : fold({ subject: 'report:acme/widget:2026-Q1', label: label('contribution report'), over, run: ({ members, inputs, helpers }) => helpers.render(members, inputs.config) });
 
   const rubricSteps = {
-    A: suppliedStep<IAssessorParameters, IAssessment>({ label: 'rubric A', run: ({ args, inputs, helpers }) => helpers.assessA(args[0], args[1], inputs.rubric) }),
-    B: suppliedStep<IAssessorParameters, IAssessment>({ label: 'rubric B', run: ({ args, inputs, helpers }) => helpers.assessB(args[0], args[1], inputs.rubric) }),
-    C: suppliedStep<IAssessorParameters, IAssessment>({ label: 'rubric C', run: ({ args, inputs, helpers }) => helpers.assessC(args[0], args[1], inputs.rubric) }),
+    A: suppliedStep<IAssessorParameters, IAssessment>({ label: label('rubric A'), run: ({ args, inputs, helpers }) => helpers.assessA(args[0], args[1], inputs.rubric) }),
+    B: suppliedStep<IAssessorParameters, IAssessment>({ label: label('rubric B'), run: ({ args, inputs, helpers }) => helpers.assessB(args[0], args[1], inputs.rubric) }),
+    C: suppliedStep<IAssessorParameters, IAssessment>({ label: label('rubric C'), run: ({ args, inputs, helpers }) => helpers.assessC(args[0], args[1], inputs.rubric) }),
   };
   const chosen = variation.assessor ?? 'A';
   const supplied = ordered(
@@ -653,6 +684,7 @@ export function composeAnalysis(variation: IVariation = {}): IAnalysis {
     { slot: 'format', helper: format },
     { slot: 'render', helper: render },
     { slot: 'renderRequired', helper: renderRequired },
+    { slot: 'renderUnstated', helper: renderUnstated },
   ], variation);
   const compositionSteps = ordered([{ slot: collectionSlot, declaration: contributors }, { slot: reportSlot, declaration: report }], variation);
   const templates = ordered([contributor], variation);
@@ -676,7 +708,9 @@ export function composeAnalysis(variation: IVariation = {}): IAnalysis {
   return {
     authoring: builders,
     composition,
-    factoryCalls,
+    get factoryCalls(): number {
+      return factoryCalls;
+    },
     report: Object.freeze({ scope: analysisScope, role: 'step', slot: reportSlot }),
     summary: (memberKey) => Object.freeze({ scope: analysisScope, role: 'step', slot: 'summary', template: templateSlot, collection: collectionSlot, memberKey }),
   };

@@ -6,8 +6,9 @@
  * processes load those builds through the built facade. Every control names
  * the planned evidence cases (the suites' `describe` titles) it is predicted
  * to break, written before the control ran; a control fails the run when any
- * predicted case still passes, when no test fails at all, or when its anchor
- * does not match exactly once. Each Jest run is judged fail-closed by the
+ * predicted case still passes, when no test fails at all, or when any of its
+ * anchors does not match exactly once. A control is one defect, which may need
+ * coordinated edits in more than one place. Each Jest run is judged fail-closed by the
  * facade's shared `control-outcome.mjs` against exactly the four M4 suites.
  * Every planted file is restored after its control, on error, and on
  * SIGINT/SIGTERM/SIGHUP, and final bytes are compared with the originals.
@@ -41,6 +42,8 @@ const suites = Object.freeze(['fold.test.js', 'keyed.test.js', 'nested.test.js',
 /**
  * One planted defect per control, with the planned evidence cases predicted
  * to reject it. Predictions follow from the owning contracts, not from a run.
+ * A control is either one `{ target, anchor, replacement }` edit or an
+ * `edits` list applied together.
  */
 const controls = [
   {
@@ -55,7 +58,7 @@ const controls = [
     target: 'resolution',
     anchor: 'const change = membershipChange(recorded.membership, membership);',
     replacement: 'const change = undefined;',
-    breaks: ['discovery-insert-delete-reorder'],
+    breaks: ['discovery-insert-delete-reorder', 'tracked-gate-instances'],
   },
   {
     name: 'a strict fold does not compare the member facts it consumed',
@@ -69,14 +72,14 @@ const controls = [
     target: 'resolution',
     anchor: "if (comparison.kind !== 'equal') {\n                return { verdict: 'miss', miss: callOutputMiss(",
     replacement: "if (false) {\n                return { verdict: 'miss', miss: callOutputMiss(",
-    breaks: ['nested-changed-output', 'supplied-assessor-swap'],
+    breaks: ['nested-changed-output', 'supplied-assessor-swap', 'discovery-insert-delete-reorder'],
   },
   {
     name: 'no equal-output cutoff: a re-executed call always misses its parent',
     target: 'resolution',
     anchor: "case 'published':\n                    outputs.set(call.index, resolved.result.reference);",
     replacement: "case 'published':\n                    if (resolved.result.kind === 'published') { return missed('changed-child-output', 'planted: no equal-output cutoff'); }\n                    outputs.set(call.index, resolved.result.reference);",
-    breaks: ['nested-equal-output-cutoff', 'supplied-assessor-swap', 'custom-key-correspondence'],
+    breaks: ['nested-equal-output-cutoff', 'supplied-assessor-swap', 'custom-key-correspondence', 'discovery-insert-delete-reorder'],
   },
   {
     name: 'an argument derived after an observed untracked read is treated as justified',
@@ -176,7 +179,50 @@ const controls = [
     replacement: "if (value === false) {\n        return { status: 'required' };",
     breaks: ['tracked-gate-instances', 'strict-fold-coverage'],
   },
+  {
+    name: 'a strict fold misses whenever a member result reference changed, even with equal consumed output (no fold cutoff)',
+    target: 'resolution',
+    anchor: "const current = new Map(membership.flatMap((entry) => entry.status === 'included' ? [[entry.key, entry.reference]] : []));",
+    replacement: "const current = new Map(membership.flatMap((entry) => entry.status === 'included' ? [[entry.key, entry.reference]] : []));\n        for (const entry of recorded.membership) { if (entry.status === 'included' && current.get(entry.key)?.locator !== entry.reference.locator) { return missed('changed-member-output', 'planted: member reference changed'); } }",
+    breaks: ['binding-and-argument-misses'],
+  },
+  {
+    name: 'a failed member does not block the strict fold',
+    target: 'resolution',
+    anchor: 'if (failed.length > 0 || cancelled.length > 0) {',
+    replacement: 'if (cancelled.length > 0) {',
+    breaks: ['strict-fold-readiness', 'binding-and-argument-misses', 'frozen-template-topology'],
+  },
+  {
+    name: 'membership follows discovery order and is compared by position',
+    edits: [
+      { target: 'collection', anchor: 'const ordered = [...keyed.keys()].sort(compareKeys).map(', replacement: 'const ordered = [...keyed.keys()].map(' },
+      {
+        target: 'resolution',
+        anchor: 'const before = new Map(recorded.map((entry) => [entry.key, entry.status]));',
+        replacement: "if (recorded.some((entry, index) => entry.key !== current[index]?.key)) { return 'planted: positional membership changed'; }\n    const before = new Map(recorded.map((entry) => [entry.key, entry.status]));",
+      },
+    ],
+    breaks: ['discovery-insert-delete-reorder', 'custom-key-correspondence'],
+  },
+  {
+    name: 'the template step factory is invoked again for every instance',
+    edits: [
+      {
+        target: 'template',
+        anchor: '        steps,\n        slotOf,\n    });\n    return declaration;',
+        replacement: '        steps,\n        slotOf,\n        refactory: () => { try { withinComposition(() => factory(member)); } catch { /* the frozen builder rejects the rerun */ } },\n    });\n    return declaration;',
+      },
+      { target: 'template', anchor: 'const subject = `${step.prefix}:${memberKey}`;', replacement: 'entry.record.refactory?.(); const subject = `${step.prefix}:${memberKey}`;' },
+    ],
+    breaks: ['frozen-template-topology', 'keyed-cold-and-restarted-report'],
+  },
 ];
+
+/** The edits one control applies. */
+function editsOf(control) {
+  return control.edits ?? [{ target: control.target, anchor: control.anchor, replacement: control.replacement }];
+}
 
 /** Original bytes of every target. */
 const originals = new Map(Object.values(targets).map((file) => [file, readFileSync(file, 'utf8')]));
@@ -234,15 +280,27 @@ try {
     throw new Error('the unmodified builds must pass every M4 acceptance test before controls run');
   }
   for (const control of controls) {
-    const file = targets[control.target];
-    const original = originals.get(file);
-    const matches = original.split(control.anchor).length - 1;
-    if (matches !== 1) {
-      console.log(`ANCHOR ${String(matches)}x: ${control.name}`);
+    // Plan every edit against the original bytes first; a control with any bad anchor plants nothing.
+    const planted = new Map();
+    let anchored = true;
+    for (const edit of editsOf(control)) {
+      const file = targets[edit.target];
+      const current = planted.get(file) ?? originals.get(file);
+      const matches = current.split(edit.anchor).length - 1;
+      if (matches !== 1) {
+        console.log(`ANCHOR ${String(matches)}x in ${edit.target}: ${control.name}`);
+        anchored = false;
+        break;
+      }
+      planted.set(file, current.replace(edit.anchor, () => edit.replacement));
+    }
+    if (!anchored) {
       failures += 1;
       continue;
     }
-    writeFileSync(file, original.replace(control.anchor, control.replacement));
+    for (const [file, content] of planted) {
+      writeFileSync(file, content);
+    }
     try {
       const { failed } = await runSuites(baseline.titles);
       const unbroken = control.breaks.filter((name) => !failed.some((title) => inCase(title, name)));
@@ -250,10 +308,14 @@ try {
       for (const name of failed) console.log(`- ${name}`);
       if (failed.length === 0 || unbroken.length > 0) failures += 1;
     } finally {
-      writeFileSync(file, original);
+      for (const file of planted.keys()) {
+        writeFileSync(file, originals.get(file));
+      }
     }
-    if (readFileSync(file, 'utf8') !== original) {
-      throw new Error(`${control.target} was not restored after ${control.name}`);
+    for (const file of planted.keys()) {
+      if (readFileSync(file, 'utf8') !== originals.get(file)) {
+        throw new Error(`${file} was not restored after ${control.name}`);
+      }
     }
   }
   const restored = await runSuites(baseline.titles);

@@ -56,10 +56,13 @@ export function expectNoMemberOrReportBodies(run: IProcessRun): void {
   expect(run.bodies('report')).toEqual([]);
 }
 
-/** Every listed member was reused with the exact reference `earlier` settled for it, with no candidate miss. */
+/**
+ * Every listed member was reused with the exact reference `earlier` settled
+ * for it, with no candidate miss, and its acceptance followed current results.
+ */
 export function expectRetained(run: IProcessRun, earlier: IProcessRun, keys: readonly string[]): void {
   for (const key of keys) {
-    expect(run.member(key)).toEqual({ status: 'succeeded', kind: 'reused', reference: earlier.reference(key), misses: [] });
+    expect(run.member(key)).toEqual({ status: 'succeeded', kind: 'reused', reference: earlier.reference(key), misses: [], accepted: expect.any(Array) });
   }
 }
 

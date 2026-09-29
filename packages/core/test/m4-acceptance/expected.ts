@@ -51,6 +51,13 @@ export const ben: ISummary = Object.freeze({ name: 'Ben', authored: 2, merged: 1
 /** Cy's summary under rubric A (every noun singular). */
 export const cy: ISummary = Object.freeze({ name: 'Cy', authored: 1, merged: 1, reviews: 1, score: 2, sentence: 'Cy authored 1 pull request, 1 of which was merged, and submitted 1 review.' });
 
+/**
+ * Ada's summary once her merged PR 100 (created 2026-01-05) exists, under
+ * rubric A: authored 100, 101, 102 and 103, merged 3, reviews unchanged,
+ * score 2 + 2 + 2 + 1 = 7.
+ */
+export const adaWithPr100: ISummary = Object.freeze({ name: 'Ada', authored: 4, merged: 3, reviews: 5, score: 7, sentence: 'Ada authored 4 pull requests, 3 of which were merged, and submitted 5 reviews.' });
+
 /** Dot's summary once PR 401 exists, under rubric A. */
 export const dot: ISummary = Object.freeze({ name: 'Dot', authored: 1, merged: 0, reviews: 0, score: 1, sentence: 'Dot authored 1 pull request, 0 of which were merged, and submitted 0 reviews.' });
 

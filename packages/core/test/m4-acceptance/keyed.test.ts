@@ -13,7 +13,7 @@
 import { describe, expect, test } from '@jest/globals';
 
 import type { IWorld, IWorldProfile } from './analysis.js';
-import { ada, allAssessed, assessmentSubject, ben, customKeys, cy, designatedKeys, dot, entry, reportAt1, scope, summarySubject } from './expected.js';
+import { ada, adaWithPr100, allAssessed, assessmentSubject, ben, customKeys, cy, designatedKeys, dot, entry, reportAt1, scope, summarySubject } from './expected.js';
 import { basePullRequests, baseReviews, baseWorld, reversedWorld } from './harness.js';
 import { assessed, expectNoMemberBodies, expectNoMemberOrReportBodies, expectRetained, freshScenario, removeScenarios, sortedBodies } from './support.js';
 
@@ -66,6 +66,16 @@ describe('keyed-cold-and-restarted-report', () => {
     });
     expect(b.result.summaries).toEqual(a.result.summaries);
     expect(b.result.report).toEqual(reportAt1);
+    expect(allAssessed.map((number) => s.candidates(assessmentSubject(number)))).toEqual(coldAssessments);
+
+    // TEST-2: every display label renamed in a later process changes no correspondence and runs nothing.
+    const relabelled = s.run({ reverse: true, labels: 'renamed' }, reversedWorld(baseWorld()));
+    expect(relabelled.bodies('discover')).toEqual([]);
+    expectNoMemberOrReportBodies(relabelled);
+    expect(relabelled.admissions).toEqual([]);
+    expectRetained(relabelled, a, designatedKeys);
+    expect(relabelled.result.fold).toMatchObject({ status: 'succeeded', kind: 'reused', reference: a.foldReference, misses: [] });
+    expect(relabelled.result.report).toEqual(reportAt1);
     expect(allAssessed.map((number) => s.candidates(assessmentSubject(number)))).toEqual(coldAssessments);
   });
 });
@@ -123,6 +133,44 @@ describe('discovery-insert-delete-reorder', () => {
     expectNoMemberOrReportBodies(reordered);
     expectRetained(reordered, deleted, ['person:ada', 'person:ben', 'person:dot']);
     expect(reordered.result.fold).toMatchObject({ status: 'succeeded', kind: 'reused', reference: deleted.foldReference, misses: [] });
+  });
+
+  test('a refreshed member source hook with equal data rechecks activities only; a new PR for Ada reruns her activity, summary and the report, assessing only the new PR across the shifted forwarded indices', () => {
+    const s = freshScenario();
+    const a = s.run({}, baseWorld());
+
+    // The member source policy no longer accepts previous activity; upstream data is unchanged.
+    const refreshed = s.run({ reverse: true }, reversedWorld(baseWorld({ activityFinal: false })));
+    expect(refreshed.bodies('discover')).toEqual([]);
+    expect(sortedBodies(refreshed, 'activity')).toEqual([...designatedKeys]);
+    expect(refreshed.bodies('assess')).toEqual([]);
+    expect(refreshed.bodies('summary')).toEqual([]);
+    expect(refreshed.bodies('report')).toEqual([]);
+    expectRetained(refreshed, a, designatedKeys);
+    expect(refreshed.result.fold).toMatchObject({ status: 'succeeded', kind: 'reused', reference: a.foldReference, misses: [] });
+
+    // Ada's new merged PR 100 sorts before 101, so each of her earlier PRs moves one forwarded index later.
+    const withPr100: IWorld = baseWorld({
+      revision: 2,
+      activityFinal: false,
+      pullRequests: [...basePullRequests(), { number: 100, author: 'gh:1001', createdAt: '2026-01-05T09:00:00Z', merged: true, labels: [] }],
+    });
+    const grown = s.run({ reverse: true }, reversedWorld(withPr100));
+    expect(grown.bodies('discover')).toHaveLength(1);
+    expect(sortedBodies(grown, 'activity')).toEqual([...designatedKeys]);
+    // Only the new PR is assessed: 101, 102 and 103 reconnect by their derived numbers and forwarded origins.
+    expect(grown.bodies('assess')).toEqual(assessed('A', ['100']));
+    expect(grown.bodies('summary')).toEqual(['Ada']);
+    expect(grown.bodies('report')).toHaveLength(1);
+    expect(grown.member('person:ada')).toEqual({ status: 'succeeded', kind: 'published', reference: expect.any(String), misses: ['changed-child-output'] });
+    expect(grown.result.summaries['person:ada']).toEqual(adaWithPr100);
+    expectRetained(grown, a, ['person:ben', 'person:cy']);
+    expect(grown.result.fold).toMatchObject({ status: 'succeeded', kind: 'published', misses: ['changed-member-output'], coverage: { required: [...designatedKeys], skipped: [], closed: true } });
+    expect(grown.result.report).toEqual({ ...reportAt1, required: [entry('person:ada', adaWithPr100), entry('person:ben', ben), entry('person:cy', cy)] });
+    for (const number of ['101', '102', '103']) {
+      expect(s.candidates(assessmentSubject(number))).toHaveLength(1);
+    }
+    expect(s.candidates(assessmentSubject('100'))).toHaveLength(1);
   });
 });
 

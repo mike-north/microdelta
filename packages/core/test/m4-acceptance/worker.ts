@@ -57,6 +57,12 @@ export interface IMemberJson {
   readonly kind?: string;
   readonly reference?: string;
   readonly misses?: readonly string[];
+  /**
+   * For reused members: the exact current results this run's acceptance
+   * followed. Kept apart from the reused result's own recorded dependencies
+   * (its original provenance), which a restart never rewrites.
+   */
+  readonly accepted?: readonly string[];
   /** For pending and cancelled members: the refused step (`<slot>/<member key>`) and reason. */
   readonly refused?: string;
   readonly reason?: string;
@@ -112,7 +118,7 @@ export interface IResultJson {
   readonly report: IReport | null;
   /** Check-only outcomes of the job's `check` members. */
   readonly checks: Readonly<Record<string, ICheckJson>>;
-  /** Template step-factory invocations while composing this process's build. */
+  /** Template step-factory invocations in this process, read after the run settled. */
   readonly factoryCalls: number;
   /** The frozen composition topology, as JSON. */
   readonly topology: string;
@@ -160,8 +166,11 @@ function describeDiscovery(discovery: IDiscoveryReport): IDiscoveryJson {
 /** Describe one member's typed outcome. */
 function describeMember(member: IMemberOutcome): IMemberJson {
   switch (member.status) {
-    case 'succeeded':
-      return { status: member.status, kind: member.outcome.kind, reference: member.outcome.reference.locator, misses: member.outcome.misses.map((miss) => miss.reason) };
+    case 'succeeded': {
+      const settled = member.outcome;
+      const base = { status: member.status, kind: settled.kind, reference: settled.reference.locator, misses: settled.misses.map((miss) => miss.reason) };
+      return settled.kind === 'reused' ? { ...base, accepted: settled.acceptance.dependencies.map((dependency) => dependency.locator) } : base;
+    }
     case 'skipped':
       return { status: member.status };
     case 'pending':
@@ -262,6 +271,7 @@ async function main(job: IJob): Promise<void> {
       summaries,
       report,
       checks,
+      // Read after the run, so a factory re-invoked per instance or per request would be counted.
       factoryCalls: analysis.factoryCalls,
       topology: JSON.stringify(analysis.composition.topology),
       diagnostics: result.diagnostics,

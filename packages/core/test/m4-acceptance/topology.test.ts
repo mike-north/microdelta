@@ -45,7 +45,7 @@ describe('frozen-template-topology', () => {
     const s = freshScenario();
     const a = s.run({ summary: 'result-created' }, baseWorld());
     for (const key of designatedKeys) {
-      expect(a.member(key)).toEqual({ status: 'failed', code: 'execution-failure', message: expect.any(String), cause: expect.stringMatching(/^DefinitionError: /u) });
+      expect(a.member(key)).toEqual({ status: 'failed', code: 'execution-failure', message: expect.any(String), cause: expect.stringMatching(/^DefinitionError: .*is frozen/u) });
       expect(s.candidates(summarySubject(key))).toEqual([]);
     }
     // The created operation never reached admission; each summary's own work and its activity did.
@@ -70,6 +70,28 @@ describe('frozen-template-topology', () => {
 });
 
 describe('tracked-gate-instances', () => {
+  test('with a report that does not read the threshold, a gate flip reaches the fold only through membership, and a flip-free edit runs nothing at all', () => {
+    const s = freshScenario();
+    const unstated = { report: 'omits-threshold' } as const;
+    const a = s.run({ ...unstated, minimumAuthored: 2 }, baseWorld());
+    expect(a.result.report).toEqual({ ...reportAt2, minimumAuthored: null });
+
+    const lowered = s.run({ ...unstated, reverse: true, minimumAuthored: 1 }, reversedWorld(baseWorld()));
+    expect(lowered.bodies('summary')).toEqual(['Cy']);
+    expect(lowered.bodies('report')).toHaveLength(1);
+    expect(lowered.result.fold).toMatchObject({ status: 'succeeded', kind: 'published', misses: ['changed-membership'], coverage: { required: [...designatedKeys], skipped: [], closed: true } });
+    expect(lowered.result.report).toEqual({ ...reportAt1, minimumAuthored: null });
+
+    const flipFree = s.run({ ...unstated, reverse: true, minimumAuthored: 0 }, reversedWorld(baseWorld()));
+    expectNoMemberOrReportBodies(flipFree);
+    expect(flipFree.admissions).toEqual([]);
+    expect(flipFree.result.fold).toMatchObject({ status: 'succeeded', kind: 'reused', reference: lowered.foldReference, misses: [] });
+
+    const raised = s.run({ ...unstated, reverse: true, minimumAuthored: 2 }, reversedWorld(baseWorld()));
+    expectNoMemberOrReportBodies(raised);
+    expect(raised.result.fold).toMatchObject({ status: 'succeeded', kind: 'reused', reference: a.foldReference, misses: ['changed-membership'] });
+  });
+
   test('lowering the threshold requires never-run Cy without changing topology and runs only Cy\'s work and the report; a flip-free threshold runs no member work; raising it again skips Cy without retracting it', () => {
     const s = freshScenario();
     const a = s.run({ minimumAuthored: 2 }, baseWorld());

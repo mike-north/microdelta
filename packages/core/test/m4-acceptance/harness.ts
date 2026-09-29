@@ -138,6 +138,8 @@ export interface IScenario {
   candidates(subject: string): readonly string[];
   /** The stored data of one exact reference, read through History's exact reader. */
   read(locator: string): unknown;
+  /** The exact dependencies one completed result recorded when it was published: its original provenance. */
+  dependencies(locator: string): readonly string[];
   /** Remove the scenario directory. */
   remove(): void;
 }
@@ -244,6 +246,14 @@ export function scenario(): IScenario {
       const history = openHistory({ location, store: logicalStore });
       try {
         return history.reader.readSubtree({ kind: 'completed-result', locator }, []);
+      } finally {
+        history.close();
+      }
+    },
+    dependencies(locator) {
+      const history = openHistory({ location, store: logicalStore });
+      try {
+        return history.readEnvelope({ kind: 'completed-result', locator }).dependencies.map((dependency) => dependency.locator);
       } finally {
         history.close();
       }

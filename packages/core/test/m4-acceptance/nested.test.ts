@@ -44,6 +44,16 @@ describe('nested-equal-output-cutoff', () => {
     expect(b.bodies('report')).toEqual([]);
     expectRetained(b, a, designatedKeys);
     expect(b.result.fold).toMatchObject({ status: 'succeeded', kind: 'reused', reference: a.foldReference, misses: [] });
+    // TEST-4.5: provenance and current acceptance stay distinguishable. Ada's summary keeps its
+    // original exact reference, whose recorded dependencies still name the cold assessments, while
+    // this run's acceptance of it names the new assessment results.
+    const adaActivity = s.candidates('activity:acme/widget:2026-Q1:person:ada');
+    expect(adaActivity).toHaveLength(1);
+    const latest = (number: string): string => s.candidates(assessmentSubject(number))[0] ?? '';
+    const earliest = (number: string): string => s.candidates(assessmentSubject(number))[1] ?? '';
+    const adaCalls = ['101', '102', '103'];
+    expect([...(b.member('person:ada').accepted ?? [])].sort()).toEqual([...adaActivity, ...adaCalls.map(latest)].sort());
+    expect([...s.dependencies(a.reference('person:ada'))].sort()).toEqual([...adaActivity, ...adaCalls.map(earliest)].sort());
     // Each assessment has a new exact result beside the retained one; only its explanation changed.
     for (const number of allAssessed) {
       const [latest, earlier] = s.candidates(assessmentSubject(number));

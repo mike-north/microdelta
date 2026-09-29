@@ -1,12 +1,13 @@
 /**
  * Definition & Binding: frozen declarations, the fixed step graph, current
- * structural correspondence, declared child-call handles and the invocation
- * bridge that pairs a reconnected step's actual author callback with its
- * assembled context for Resolution's invoker. Function names remain
+ * structural correspondence, supplied step slots, declared child-call handles
+ * with their argument recipes and versioned invocation witnesses, and the
+ * invocation bridge that pairs a reconnected step's actual author callback with
+ * its assembled context for Resolution's invoker. Function names remain
  * presentation and diagnostic labels only; they never establish Definition
  * identity or binding correspondence. This package does not store results,
- * decide reuse, select previous results, capture observations or execute
- * author callbacks itself.
+ * decide reuse or argument justification, select previous results, capture
+ * observations or execute step bodies itself.
  * @packageDocumentation
  */
 export { DefinitionError, type IDefinitionErrorCode } from './errors.js';
@@ -17,7 +18,9 @@ export {
   type IAnyMemoDeclaration,
   type IAnySourceDeclaration,
   type IAuthorInvoker,
+  type ICallOf,
   type ICalls,
+  type IChildDeclaration,
   type IChildDeclarations,
   type IDeclarationBrand,
   type IFinalityContext,
@@ -48,6 +51,7 @@ export {
   type IScopedSubject,
   type IStepRegistration,
   type IStepTarget,
+  type ISuppliedStepTarget,
   type ITopology,
   type IWitnessResolution,
   isComposing,
@@ -56,16 +60,52 @@ export {
   describeHandle,
   type IChildResult,
   type IDeclaredCallBrand,
+  type IDeclaredCallDescription,
   type IDeclaredCallHandle,
   type IDeclaredInvocationRequest,
-  type IDirectChildWitness,
-  type IEmptyArguments,
   type IInvocation,
   type IInvocationPort,
   type IInvocationScope,
+  type IMemoCallRequest,
   type IMemoInvocation,
+  type ISourceCallRequest,
   type ISourceInvocation,
+  type ISuppliedCallRequest,
+  type ISuppliedInvocation,
 } from './invocation.js';
+export type {
+  IArgumentPathSegment,
+  IArgumentRecipe,
+  IDerivedRecipe,
+  IDirectChildWitness,
+  IEmptyArguments,
+  IForwardedRecipe,
+  IForwardOrigin,
+  IInvocationArguments,
+  IInvocationWitness,
+  INestedInvocationWitness,
+  IUnreconstructibleReason,
+  IUnreconstructibleRecipe,
+  IUnsupportedWitnessReason,
+} from './witness.js';
+export type {
+  IAnyStepSlot,
+  IAnySuppliedStepDeclaration,
+  IArgumentSupplier,
+  IArgumentViews,
+  IDerivedArguments,
+  ISlotSubject,
+  IStepSlot,
+  IStepSlotBrand,
+  IStepSlotOptions,
+  ISuppliedStepDeclaration,
+  ISuppliedStepOptions,
+  ISuppliedStepRegistration,
+  ISuppliedStepRegistrationBrand,
+  ISuppliedStepRunContext,
+  ISupplyOptions,
+} from './slot.js';
+export type { IForward, IForwarded, IForwardedBrand, IHandleArgument, IHandleArguments, IPathInput } from './arguments.js';
 
 /**
  * Exact synthetic names rejected when deriving a step's name (NM-1 and NM-2).

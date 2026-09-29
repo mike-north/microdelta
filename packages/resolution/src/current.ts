@@ -55,7 +55,7 @@ export function reconnectSlots<TInputs extends object, THelpers extends object>(
   const helpers = new Map<string, ISlotState<(...arguments_: never[]) => unknown>>();
   for (const slot of slots.helpers) {
     const resolution = composition.resolve({ scope: composition.scope, role: 'callable', slot });
-    helpers.set(slot, resolution.status === 'bound' && resolution.target.role === 'callable'
+    helpers.set(slot, resolution.status === 'bound' && resolution.target.role === 'callable' && resolution.target.kind === 'helper'
       ? { status: 'bound', value: resolution.target.callable }
       : { status: resolution.status === 'ambiguous' ? 'ambiguous' : 'missing' });
   }

@@ -161,12 +161,12 @@ describe('step declarations', () => {
     expect(Object.isFrozen(declaration.children)).toBe(true);
   });
 
-  test('CMP-7: M3 child edges name nonempty sibling slots holding source declarations; sources declare none', () => {
+  test('CMP-7: child edges name nonempty call names holding source or memo declarations; sources declare none', () => {
     expect(memo({ subject: 'summary:a', run: () => 1 }).children).toEqual([]);
     const activity = source({ subject: 'activity:a', run: () => 1 });
     expectDefinitionError(() => memo({ subject: 'summary:a', children: { '': activity }, run: () => 1 }), 'illegal-edge');
-    const memoChild: unknown = { subject: 'summary:a', children: { summary: memo({ subject: 'summary:b', run: () => 1 }) }, run: () => 1 };
-    expectDefinitionError(() => Reflect.apply(memo, undefined, [memoChild]), 'illegal-edge');
+    const profile = memo({ subject: 'profile:a', children: { activity }, run: () => 1 });
+    expect(memo({ subject: 'summary:a', children: { activity, profile }, run: () => 1 }).children).toEqual(['activity', 'profile']);
     const sourceWithChildren: unknown = { subject: 'activity:a', children: { other: activity }, run: () => 1 };
     expectDefinitionError(() => Reflect.apply(source, undefined, [sourceWithChildren]), 'illegal-edge');
   });

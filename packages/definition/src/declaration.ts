@@ -21,10 +21,12 @@ import type {
   IChildResult,
   IDeclaredCallHandle,
   IDeclaredInvocationRequest,
-  IDirectChildWitness,
   IInvocationPort,
   IInvocationScope,
 } from './invocation.js';
+import type { IAnyStepSlot, IStepSlot, ISuppliedStepRecord } from './slot.js';
+import { stepSlotName } from './slot.js';
+import type { IInvocationWitness } from './witness.js';
 
 /**
  * Nominal brand for Definition-minted declarations, with an invariant family
@@ -84,25 +86,48 @@ export interface ISourceDeclaration<TFamily extends IBindingFamily, TResult> ext
 }
 
 /**
- * The result type a source declaration of this family produces.
+ * The result type a declared child produces: a source's declared result, a
+ * memo's settled computation result, or a step slot's declared result.
  * @alpha
  */
 export type IResultOf<TFamily extends IBindingFamily, TDeclaration> =
-  TDeclaration extends ISourceDeclaration<TFamily, infer TResult> ? TResult : never;
+  TDeclaration extends ISourceDeclaration<TFamily, infer TResult> ? TResult
+    : TDeclaration extends IStepSlot<TFamily, readonly unknown[], infer TResult> ? TResult
+      : TDeclaration extends { readonly kind: 'memo'; readonly run: (context: never) => infer TResult } ? Awaited<TResult>
+        : never;
 
 /**
- * A memo's children: each key is a sibling slot name (the structural edge) and
- * each value is the source declaration that slot must hold (the typed link).
+ * What a memo may name as a child: a sibling source or memo declaration (the
+ * sibling slot named by the child's key must hold exactly that declaration), or
+ * a supplied step slot bound at composition.
  * @alpha
  */
-export type IChildDeclarations<TFamily extends IBindingFamily> = { readonly [slot: string]: IAnySourceDeclaration<TFamily> };
+export type IChildDeclaration<TFamily extends IBindingFamily> = IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily> | IAnyStepSlot<TFamily>;
+
+/**
+ * A memo's children: each key is a call name. For a sibling declaration the
+ * key is also the sibling step slot (the structural edge) and the value is the
+ * declaration that slot must hold (the typed link). For a step slot token the
+ * key is only the local call name; the edge is to the token's callable slot.
+ * @alpha
+ */
+export type IChildDeclarations<TFamily extends IBindingFamily> = { readonly [call: string]: IChildDeclaration<TFamily> };
+
+/**
+ * The declared handle for one child: argument-free for sibling declarations,
+ * argument-bearing with the slot's declared parameters for a step slot.
+ * @alpha
+ */
+export type ICallOf<TFamily extends IBindingFamily, TChild> =
+  TChild extends IStepSlot<TFamily, infer TParameters, infer TResult> ? IDeclaredCallHandle<IApply<TFamily['views'], TResult>, TParameters>
+    : IDeclaredCallHandle<IApply<TFamily['views'], IResultOf<TFamily, TChild>>>;
 
 /**
  * Declared handles, typed by each child's selected view.
  * @alpha
  */
 export type ICalls<TFamily extends IBindingFamily, TChildren extends IChildDeclarations<TFamily>> = {
-  readonly [K in keyof TChildren]: IDeclaredCallHandle<IApply<TFamily['views'], IResultOf<TFamily, TChildren[K]>>>;
+  readonly [K in keyof TChildren]: ICallOf<TFamily, TChildren[K]>;
 };
 
 /**
@@ -125,7 +150,7 @@ export interface IAnyMemoDeclaration<TFamily extends IBindingFamily> extends IDe
   readonly version: number;
   /** Display metadata only. */
   readonly label: string | undefined;
-  /** Frozen sibling slot names this computation may call. */
+  /** Frozen call names this computation may use: sibling step slots and local names of supplied step slot calls. */
   readonly children: readonly string[];
   /** The author's actual computation callback. */
   readonly run: (context: never) => unknown;
@@ -174,7 +199,7 @@ export interface IMemoOptions<TFamily extends IBindingFamily, TChildren extends 
   readonly version?: number;
   /** Display metadata only; never identity or correspondence. */
   readonly label?: string;
-  /** Each sibling slot name mapped to the source declaration occupying it. */
+  /** Each call name mapped to the sibling declaration occupying that slot, or to a supplied step slot. */
   readonly children?: TChildren;
   /** The author's computation callback. */
   readonly run: (context: IMemoRunContext<TFamily, TChildren>) => TResult;
@@ -211,21 +236,32 @@ export interface ISourceRecord<TFamily extends IBindingFamily> {
   /** Pair the actual `finality` with its assembled context; absent hooks reject. */
   applyFinality<TOutcome>(bindings: TFamily['source'], previous: IPreviousSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>): TOutcome;
   /** Dispatch a call of this source as a declared child, typed by its result. */
-  dispatch(port: IInvocationPort<TFamily>, scope: IInvocationScope, witness: IDirectChildWitness): Promise<IChildResult<unknown>>;
+  dispatch(port: IInvocationPort<TFamily>, scope: IInvocationScope, witness: IInvocationWitness): Promise<IChildResult<unknown>>;
 }
+
+/** One pinned child edge of a memo: a sibling step declaration, or a supplied step slot by name. */
+export type IChildEdge<TFamily extends IBindingFamily> =
+  | { readonly kind: 'sibling'; readonly declaration: IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily> }
+  | { readonly kind: 'slot'; readonly slot: string };
 
 /** A memo step's record: its erased declaration, pinned children and typed invocation closure. */
 export interface IMemoRecord<TFamily extends IBindingFamily> {
   readonly kind: 'memo';
   readonly declaration: IAnyMemoDeclaration<TFamily>;
-  /** Each sibling slot mapped to the exact source declaration pinned for it. */
-  readonly children: ReadonlyMap<string, IAnySourceDeclaration<TFamily>>;
+  /** Each call name mapped to its pinned edge. */
+  readonly children: ReadonlyMap<string, IChildEdge<TFamily>>;
+  /**
+   * Whether this parent emits the version-2 nested witness: true exactly when
+   * it declares a memo child or a supplied step slot. A parent whose children
+   * are all sibling sources keeps the M3 version-1 witness.
+   */
+  readonly nested: boolean;
   /** Pair the actual `run` with bindings plus minted calls and hand both to the invoker. */
-  apply<TOutcome>(bindings: TFamily['memo'], mint: (slot: string) => IDeclaredCallHandle<unknown>, invoke: IAuthorInvoker<TOutcome>): TOutcome;
+  apply<TOutcome>(bindings: TFamily['memo'], mint: (call: string) => IDeclaredCallHandle<unknown, readonly unknown[]>, invoke: IAuthorInvoker<TOutcome>): TOutcome;
 }
 
-/** Any step record. */
-export type IStepRecord<TFamily extends IBindingFamily> = ISourceRecord<TFamily> | IMemoRecord<TFamily>;
+/** Any record a builder instance keeps: a step's, or a supplied step implementation's. */
+export type IStepRecord<TFamily extends IBindingFamily> = ISourceRecord<TFamily> | IMemoRecord<TFamily> | ISuppliedStepRecord<TFamily>;
 
 /** One builder instance's records, keyed by the declarations it minted. */
 export type IDeclarationRecords<TFamily extends IBindingFamily> = WeakMap<object, IStepRecord<TFamily>>;
@@ -234,7 +270,7 @@ export type IDeclarationRecords<TFamily extends IBindingFamily> = WeakMap<object
 const minted = new WeakSet<object>();
 
 /** Freeze a constructed declaration and attach its type-level brand. */
-function mint<TDeclaration extends object>(value: Omit<TDeclaration, keyof IDeclarationBrand<IBindingFamily>>): TDeclaration {
+export function mint<TDeclaration extends object>(value: Omit<TDeclaration, keyof IDeclarationBrand<IBindingFamily>>): TDeclaration {
   Object.freeze(value);
   minted.add(value);
   // The brand is type-level only; this module is its sole minting authority.
@@ -288,8 +324,8 @@ export function declareSource<TFamily extends IBindingFamily, TResult>(
       Object.freeze(context);
       return invoke(finality, context);
     },
-    dispatch(port: IInvocationPort<TFamily>, scope: IInvocationScope, witness: IDirectChildWitness): Promise<IChildResult<unknown>> {
-      const request: IDeclaredInvocationRequest<TFamily, TResult> = { scope, witness, child: declaration };
+    dispatch(port: IInvocationPort<TFamily>, scope: IInvocationScope, witness: IInvocationWitness): Promise<IChildResult<unknown>> {
+      const request: IDeclaredInvocationRequest<TFamily, TResult> = { kind: 'source', scope, witness, child: declaration };
       Object.freeze(request);
       return port.dispatch(request);
     },
@@ -319,19 +355,27 @@ export function declareMemo<TFamily extends IBindingFamily, TChildren extends IC
   // expected shape (or children absent without an inherited property), so
   // reading them runs no author code and adopts no unvalidated edge.
   const { run, children } = options;
-  const entries: [string, IAnySourceDeclaration<TFamily>][] = children === undefined ? [] : Object.entries(children);
-  for (const [slot, child] of entries) {
+  const entries: [string, IChildEdge<TFamily>][] = [];
+  for (const [slot, child] of children === undefined ? [] : Object.entries(children)) {
     if (slot === '') {
       reject('illegal-edge', 'A child slot name must be nonempty.');
     }
+    const suppliedSlot = stepSlotName(child);
+    if (suppliedSlot !== undefined) {
+      entries.push([slot, { kind: 'slot', slot: suppliedSlot }]);
+      continue;
+    }
     const childRecord = records.get(child);
     if (childRecord === undefined) {
-      reject('forged-declaration', `Child ${slot} is not a declaration this family minted.`);
+      reject('forged-declaration', `Child ${slot} is not a declaration or step slot this family minted.`);
     }
-    if (childRecord.kind !== 'source') {
-      reject('illegal-edge', `Child ${slot} must be a source declaration.`);
+    if (childRecord.kind === 'supplied-step') {
+      reject('illegal-edge', `Child ${slot} is a supplied step; name its step slot instead, and bind the step at composition.`);
     }
+    entries.push([slot, { kind: 'sibling', declaration: childRecord.declaration }]);
   }
+  // A parent emits the nested witness exactly when it declares a memo child or a supplied slot.
+  const nested = entries.some(([, edge]) => edge.kind === 'slot' || edge.declaration.kind === 'memo');
   const slots = Object.freeze(entries.map(([slot]) => slot));
   const declaration = mint<IMemoDeclaration<TFamily, TChildren, TResult>>({
     kind: 'memo',
@@ -345,11 +389,12 @@ export function declareMemo<TFamily extends IBindingFamily, TChildren extends IC
     kind: 'memo',
     declaration,
     children: new Map(entries),
-    apply<TOutcome>(bindings: TFamily['memo'], mintHandle: (slot: string) => IDeclaredCallHandle<unknown>, invoke: IAuthorInvoker<TOutcome>): TOutcome {
+    nested,
+    apply<TOutcome>(bindings: TFamily['memo'], mintHandle: (call: string) => IDeclaredCallHandle<unknown, readonly unknown[]>, invoke: IAuthorInvoker<TOutcome>): TOutcome {
       checkBindings(bindings, 'calls');
       // A null prototype makes every nonempty slot name, including `__proto__`,
       // an own data entry rather than a write to an inherited accessor.
-      const calls: Record<string, IDeclaredCallHandle<unknown>> = Object.create(null) as Record<string, IDeclaredCallHandle<unknown>>;
+      const calls: Record<string, IDeclaredCallHandle<unknown, readonly unknown[]>> = Object.create(null) as Record<string, IDeclaredCallHandle<unknown, readonly unknown[]>>;
       for (const slot of slots) {
         Object.defineProperty(calls, slot, { value: mintHandle(slot), enumerable: true, writable: false, configurable: false });
       }
@@ -388,14 +433,14 @@ export function reject(code: DefinitionError['code'], message: string): never {
 }
 
 /** An author options record's own data properties, read without invoking accessors. */
-type IReadOptions = ReadonlyMap<string, unknown>;
+export type IReadOptions = ReadonlyMap<string, unknown>;
 
 /**
  * Read an author options record through its own property descriptors. An
  * accessor on a callback option is an unsupported callback form; on any other
  * option it is an invalid value for that option. Getters are never invoked.
  */
-function readOptions(options: unknown): IReadOptions {
+export function readOptions(options: unknown): IReadOptions {
   if (typeof options !== 'object' || options === null) {
     reject('invalid-subject', 'Declaration options must be a record with a complete subject.');
   }
@@ -439,7 +484,7 @@ function subjectOption(read: IReadOptions): string {
 }
 
 /** REUSE-008: a positive safe integer compatibility group, defaulting to 1. */
-function versionOption(read: IReadOptions): number {
+export function versionOption(read: IReadOptions): number {
   if (!read.has('version') || read.get('version') === undefined) {
     return 1;
   }
@@ -451,7 +496,7 @@ function versionOption(read: IReadOptions): number {
 }
 
 /** Display labels are optional strings with no identity meaning. */
-function labelOption(read: IReadOptions): string | undefined {
+export function labelOption(read: IReadOptions): string | undefined {
   const label = read.get('label');
   if (label !== undefined && typeof label !== 'string') {
     reject('invalid-subject', 'A display label must be a string when present.');
@@ -460,7 +505,7 @@ function labelOption(read: IReadOptions): string | undefined {
 }
 
 /** Callbacks are directly supplied functions; an optional callback may be absent. */
-function checkCallback(read: IReadOptions, key: 'run' | 'finality', required: boolean): void {
+export function checkCallback(read: IReadOptions, key: 'run' | 'finality', required: boolean): void {
   const value = read.get(key);
   if (value === undefined && !required) {
     return;
@@ -479,7 +524,7 @@ function checkCallback(read: IReadOptions, key: 'run' | 'finality', required: bo
  * array length) or run author code, so it is rejected before affected work.
  * Inspecting descriptors never invokes accessors.
  */
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
+export function isPlainRecord(value: unknown): value is Record<string, unknown> {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) {
     return false;
   }
@@ -509,7 +554,7 @@ function checkChildRecord(read: IReadOptions): void {
  * callback context, and must not claim the context name Definition supplies.
  * Field values are never read.
  */
-function checkBindings(bindings: object, reserved: 'previous' | 'calls'): void {
+export function checkBindings(bindings: object, reserved: 'previous' | 'calls' | 'args'): void {
   if (!isPlainRecord(bindings)) {
     reject('invalid-bindings', 'Bindings must be a plain record of enumerable own data fields.');
   }

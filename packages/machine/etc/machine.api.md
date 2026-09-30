@@ -72,4 +72,10 @@ export type ISqliteSynchronousResult<T> = 0 extends 1 & T ? unknown : [Extract<T
 // @alpha
 export type ISqliteValue = string | number | null | Uint8Array;
 
+// @alpha
+export class SqliteBusyError extends Error {
+    constructor(message: string, waitedMilliseconds: number, options?: ErrorOptions);
+    readonly waitedMilliseconds: number;
+}
+
 ```

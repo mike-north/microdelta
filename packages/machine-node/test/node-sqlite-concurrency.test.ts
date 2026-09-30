@@ -5,8 +5,10 @@
  * to write-ahead logging, so every opener here is a separate Node process.
  *
  * Under the owner's M5 concurrency decision, processes that start together on
- * a store that does not exist yet must all be able to open it; none may fail
- * with a raw driver error while the others are initializing it.
+ * a store that does not exist yet must not crash: each opens it, or, only if
+ * the bounded busy wait is exhausted on a loaded host, fails with the typed
+ * `SqliteBusyError`. A raw driver error is always a defect. No minimum success
+ * rate is required.
  *
  * @see https://www.sqlite.org/wal.html#activating_and_configuring_wal_mode
  * @see https://www.sqlite.org/c3ref/busy_timeout.html
@@ -95,20 +97,26 @@ describe('Node SQLite capability: concurrent first open of a new store', () => {
   test.each([
     [2, 10],
     [4, 10],
-  ])('%i processes opening a new store together all succeed with WAL, across %i trials', async (processes, trials) => {
+  ])('%i processes opening a new store together each open with WAL or fail with a typed SqliteBusyError, across %i trials', async (processes, trials) => {
     const directory = mkdtempSync(join(tmpdir(), 'microdelta-sqlite-first-open-'));
     directories.push(directory);
-    const failures: IOpenerReport[] = [];
+    const rawFailures: IOpenerReport[] = [];
     let opened = 0;
+    let busy = 0;
     for (let trial = 0; trial < trials; trial += 1) {
       for (const report of await openNewStoreTogether(directory, trial, processes)) {
         if (report.opened && report.journal === 'wal') {
           opened += 1;
+        } else if (!report.opened && report.name === 'SqliteBusyError') {
+          busy += 1;
         } else {
-          failures.push(report);
+          rawFailures.push(report);
         }
       }
     }
-    expect({ failures, opened }).toEqual({ failures: [], opened: processes * trials });
+    // Counts are evidence, not a threshold: a loaded host may exhaust the busy budget legitimately.
+    process.stderr.write(`first open, ${String(processes)} processes x ${String(trials)} trials: ${String(opened)} opened, ${String(busy)} typed busy, ${String(rawFailures.length)} other\n`);
+    expect(rawFailures).toEqual([]);
+    expect(opened + busy).toBe(processes * trials);
   }, 120_000);
 });

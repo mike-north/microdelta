@@ -8,6 +8,3 @@ coverage/
 scratch/
 *.local.*
 .DS_Store
-
-# Claude Code local configuration (auto-added)
-.claude/*.local.*

@@ -16,7 +16,7 @@ acceptance and each prerequisite issue, as the dependency table records.
 The contribution report now calls a **paid-like assessor**: a deterministic fake
 provider with latency, rate limits, lost responses and usage reports. It never
 costs money. An operator runs the analysis unattended and gets the following
-behaviour:
+behavior:
 
 - A quota limit on one PR defers only that assessment. The run then either
   sleeps and resumes, or exits and reports "waiting until T". Every other

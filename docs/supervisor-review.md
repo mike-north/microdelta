@@ -10,11 +10,13 @@ administrator enforcement, and resolved review conversations.
 
 The supervisor reviews the current GitHub PR head, implementation, issue
 acceptance, test-first evidence, applicable checks, and every review conversation.
-Before arming auto-merge, obtain a completed GitHub Copilot review of the pull
-request. Copilot is requested automatically when the PR opens, and by the
-owner's policy later pushes are not re-reviewed, so a completed review of an
-earlier head of the same PR counts; the supervisor's own exact-head review
-binds the decision to the current commit. A requested or pending review does
+Before arming auto-merge, obtain a completed GitHub Copilot review present on
+some commit in the pull request. Copilot is requested automatically when the PR
+opens, and the review need not be on the latest commit; the supervisor's own
+exact-head review binds the decision to the current commit. Commits that
+address review feedback need no new Copilot review. The supervisor requests a
+new one only when significant new commits add scope Copilot never reviewed in
+concept, and records why. A requested or pending review does
 not count, and neither does an errored Copilot run (a `COMMENTED` review whose
 body reports that Copilot could not review, such as on a rate limit). The
 submitted review must be authored by a GitHub `Bot` with login
@@ -67,8 +69,8 @@ enforces it; a requirement absent from both fails.
 
 The command never edits protection or rulesets and has no flag that relaxes this
 check. The ruleset's Copilot code review does not re-review on push, by
-design: the Copilot gate below requires one completed Copilot review of the
-pull request, not of each head.
+design: the Copilot gate below requires a completed Copilot review on some
+commit in the pull request, not on each head.
 
 It then confirms the PR is open, not a draft or release-version PR, targets `main`,
 still has the expected head, has no unresolved conversations, has a completed

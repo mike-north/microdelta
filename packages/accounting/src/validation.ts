@@ -99,7 +99,7 @@ export function intentArgument(value: IUsageIntent): IUsageIntent {
   return Object.freeze({
     environment: requireIdentity(field(value, 'environment'), 'environment'),
     operation: requireIdentity(field(value, 'operation'), 'operation'),
-    request: requireIdentity(field(value, 'request'), 'request'),
+    requestAttempt: requireIdentity(field(value, 'requestAttempt'), 'requestAttempt'),
     attribution: attributionArgument(field(value, 'attribution')),
   });
 }
@@ -109,7 +109,7 @@ export function reportArgument(value: IUsageReport): IUsageReport {
   return Object.freeze({
     environment: requireIdentity(field(value, 'environment'), 'environment'),
     operation: requireIdentity(field(value, 'operation'), 'operation'),
-    request: requireIdentity(field(value, 'request'), 'request'),
+    requestAttempt: requireIdentity(field(value, 'requestAttempt'), 'requestAttempt'),
     report: requireIdentity(field(value, 'report'), 'report'),
     quantities: quantitiesFrom(field(value, 'quantities'), 'quantities'),
   });

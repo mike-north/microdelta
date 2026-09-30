@@ -229,12 +229,12 @@ export function cleanup(): void {
 /** Attribution of Ada's assessment in the first run. */
 export const adaAttribution: IUsageAttribution = { run: 'run-1', member: 'ada', stepAttempt: 'attempt-1' };
 
-/** An intent for request `request` of operation `operation` in `environment`. */
-export function intentFor(operation: string, request: string, overrides: { readonly environment?: string; readonly attribution?: IUsageAttribution } = {}): IUsageIntent {
-  return { environment: overrides.environment ?? 'production', operation, request, attribution: overrides.attribution ?? adaAttribution };
+/** A usage intent for request attempt `requestAttempt` of operation `operation` in `environment`. */
+export function intentFor(operation: string, requestAttempt: string, overrides: { readonly environment?: string; readonly attribution?: IUsageAttribution } = {}): IUsageIntent {
+  return { environment: overrides.environment ?? 'production', operation, requestAttempt, attribution: overrides.attribution ?? adaAttribution };
 }
 
-/** A report of `tokens` input tokens for `request` of `operation`. */
-export function tokenReport(operation: string, request: string, report: string, tokens: number, environment = 'production'): IUsageReport {
-  return { environment, operation, request, report, quantities: [{ unit: 'tokens.input', amount: tokens }] };
+/** A report of `tokens` input tokens for request attempt `requestAttempt` of `operation`. */
+export function tokenReport(operation: string, requestAttempt: string, report: string, tokens: number, environment = 'production'): IUsageReport {
+  return { environment, operation, requestAttempt, report, quantities: [{ unit: 'tokens.input', amount: tokens }] };
 }

@@ -3,10 +3,10 @@
  * and unknown usage kept apart, estimates kept apart from observations, and
  * the summaries derived from them (ACC-001–ACC-008).
  *
- * Supervision records an intent before each paid call and acknowledges each
- * usage report keyed by (operation, report); both are idempotent facts that
- * need no writer fence. An opened request without an acknowledged report is
- * unknown, never zero, in every summary. Everything is scoped per environment.
+ * Supervision records a usage intent for each request attempt before its paid
+ * call and acknowledges each usage report keyed by (operation, report); both
+ * are idempotent facts that need no writer fence. A recorded request attempt
+ * without an acknowledged report is unknown, never zero, in every summary. Everything is scoped per environment.
  * The SQLite adapter owns its schema, version and `accounting_` namespace and
  * reaches storage only through the injected Machine capability.
  *
@@ -16,6 +16,7 @@
  */
 export type {
   IAcknowledgedUsage,
+  ICompleteUsageSummary,
   IConflictingUsage,
   IDuplicateUsage,
   IDurableAccounting,
@@ -25,8 +26,6 @@ export type {
   IEstimateOutcome,
   IEstimateRecorded,
   IIncompleteUsageSummary,
-  IIntentOutcome,
-  IKnownUsageSummary,
   IRecordedEstimate,
   IRecordedReport,
   IUnknownUsage,
@@ -34,6 +33,7 @@ export type {
   IUsageAttribution,
   IUsageEstimate,
   IUsageIntent,
+  IUsageIntentOutcome,
   IUsageQuantity,
   IUsageQuery,
   IUsageReport,

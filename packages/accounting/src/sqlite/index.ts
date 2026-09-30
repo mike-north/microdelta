@@ -9,7 +9,7 @@
  *
  * | Write | Durable change | Death before commit | Death after commit, before return |
  * | --- | --- | --- | --- |
- * | open | intent row | no intent; the caller must not send | intent durable; redelivery is `already-open` |
+ * | usage intent | request attempt row | no intent; the caller must not send | intent durable; redelivery is `duplicate` |
  * | acknowledge | report and its quantities | usage stays unknown; redelivery records it | report durable; redelivery is `duplicate` |
  * | estimate | estimate and its quantities | nothing | estimate durable; redelivery is `duplicate` |
  *
@@ -18,8 +18,10 @@
  * at most once (M5 plan, "Accounting write authority"). A transaction that ran
  * to completion but whose commit did not confirm is reported as
  * {@link AccountingDurabilityUnknownError}, never as a durable acknowledgment
- * and never as certainly lost. This is single-file process-termination scope,
- * not a power-loss or distributed guarantee.
+ * and never as certainly lost. Summaries are single-statement reads with no
+ * transaction, so under WAL they see a consistent snapshot without taking the
+ * write lock. This is single-file process-termination scope, not a power-loss
+ * or distributed guarantee.
  * @packageDocumentation
  */
 import type { ISqliteConnection, ISqliteRow } from '@microdelta/machine';
@@ -29,7 +31,7 @@ import type {
   IDurableAccounting,
   IDurableAccountingOptions,
   IEstimateOutcome,
-  IIntentOutcome,
+  IUsageIntentOutcome,
   IRecordedEstimate,
   IRecordedReport,
   IUsageAcknowledgment,
@@ -42,8 +44,8 @@ import type {
   IUsageSummary,
 } from '../contracts.js';
 import { AccountingDurabilityUnknownError, AccountingIntegrityError, UnattributableUsageError, UsageIntentConflictError } from '../errors.js';
-import { summarize } from '../summary.js';
-import type { IIntentFact } from '../summary.js';
+import { factsFromRows, summarize } from '../summary.js';
+import type { IScopedUsageRow } from '../summary.js';
 import { estimateArgument, intentArgument, queryArgument, reportArgument, requireIdentity } from '../validation.js';
 import { initializeSchema } from './schema.js';
 
@@ -139,14 +141,14 @@ export function openDurableAccounting(options: IDurableAccountingOptions): IDura
   }
 
   const statements = {
-    request: connection.prepare(sql`/* intent */ SELECT operation, run, member, step_attempt FROM accounting_requests WHERE environment = ? AND request = ?`),
-    insertRequest: connection.prepare(sql`/* intent */ INSERT INTO accounting_requests (environment, request, operation, run, member, step_attempt) VALUES (?, ?, ?, ?, ?, ?)`),
-    operationKnown: connection.prepare(sql`/* report */ SELECT 1 AS known FROM accounting_requests WHERE environment = ? AND operation = ? LIMIT 1`),
-    reportRequest: connection.prepare(sql`/* report */ SELECT operation FROM accounting_requests WHERE environment = ? AND request = ?`),
-    report: connection.prepare(sql`/* report */ SELECT request FROM accounting_reports WHERE environment = ? AND operation = ? AND report = ?`),
+    intent: connection.prepare(sql`/* intent */ SELECT operation, run, member, step_attempt FROM accounting_request_attempts WHERE environment = ? AND request_attempt = ?`),
+    insertIntent: connection.prepare(sql`/* intent */ INSERT INTO accounting_request_attempts (environment, request_attempt, operation, run, member, step_attempt) VALUES (?, ?, ?, ?, ?, ?)`),
+    operationKnown: connection.prepare(sql`/* report */ SELECT 1 AS known FROM accounting_request_attempts WHERE environment = ? AND operation = ? LIMIT 1`),
+    reportAttempt: connection.prepare(sql`/* report */ SELECT operation FROM accounting_request_attempts WHERE environment = ? AND request_attempt = ?`),
+    report: connection.prepare(sql`/* report */ SELECT request_attempt FROM accounting_reports WHERE environment = ? AND operation = ? AND report = ?`),
     reportQuantities: connection.prepare(sql`/* report */ SELECT unit, amount FROM accounting_report_quantities
       WHERE environment = ? AND operation = ? AND report = ? ORDER BY unit`),
-    insertReport: connection.prepare(sql`/* report */ INSERT INTO accounting_reports (environment, operation, report, request) VALUES (?, ?, ?, ?)`),
+    insertReport: connection.prepare(sql`/* report */ INSERT INTO accounting_reports (environment, operation, report, request_attempt) VALUES (?, ?, ?, ?)`),
     insertReportQuantity: connection.prepare(sql`/* report */ INSERT INTO accounting_report_quantities (environment, operation, report, unit, amount) VALUES (?, ?, ?, ?, ?)`),
     estimate: connection.prepare(sql`/* estimate */ SELECT estimate, run, member, step_attempt, basis_format, basis_version, basis
       FROM accounting_estimates WHERE environment = ? AND estimate = ?`),
@@ -154,25 +156,32 @@ export function openDurableAccounting(options: IDurableAccountingOptions): IDura
     insertEstimate: connection.prepare(sql`/* estimate */ INSERT INTO accounting_estimates
       (environment, estimate, run, member, step_attempt, basis_format, basis_version, basis) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`),
     insertEstimateQuantity: connection.prepare(sql`/* estimate */ INSERT INTO accounting_estimate_quantities (environment, estimate, unit, amount) VALUES (?, ?, ?, ?)`),
-    scopedIntents: connection.prepare(sql`/* summary */ SELECT r.operation, r.request, r.run, r.member, r.step_attempt,
-      EXISTS (SELECT 1 FROM accounting_reports p WHERE p.environment = r.environment AND p.operation = r.operation AND p.request = r.request) AS reported
-      FROM accounting_requests r WHERE r.environment = ? AND ${scopePredicate('r', true)} ORDER BY r.operation, r.request`),
-    scopedReports: connection.prepare(sql`/* summary */ SELECT count(*) AS reports FROM accounting_reports p
-      JOIN accounting_requests r ON r.environment = p.environment AND r.operation = p.operation AND r.request = p.request
-      WHERE p.environment = ? AND ${scopePredicate('r', true)}`),
-    scopedQuantities: connection.prepare(sql`/* summary */ SELECT q.unit, q.amount FROM accounting_report_quantities q
-      JOIN accounting_reports p ON p.environment = q.environment AND p.operation = q.operation AND p.report = q.report
-      JOIN accounting_requests r ON r.environment = p.environment AND r.operation = p.operation AND r.request = p.request
-      WHERE q.environment = ? AND ${scopePredicate('r', true)}`),
-    scopedEstimates: connection.prepare(sql`/* summary */ SELECT e.estimate, e.run, e.member, e.step_attempt, e.basis_format, e.basis_version, e.basis
-      FROM accounting_estimates e WHERE e.environment = ? AND ${scopePredicate('e', false)} ORDER BY e.estimate`),
+    // A summary is one read statement over request attempts, their own
+    // reports and those reports' quantities: under WAL a single statement sees
+    // one consistent snapshot and takes no write lock, so it never blocks
+    // intent-before-send and a held write lock never makes it fail. The join
+    // pins each report to its own request attempt; a sibling attempt's report
+    // never makes an attempt reported.
+    scopedUsage: connection.prepare(sql`/* summary */ SELECT r.operation, r.request_attempt, r.run, r.member, r.step_attempt, p.report, q.unit, q.amount
+      FROM accounting_request_attempts r
+      LEFT JOIN accounting_reports p ON p.environment = r.environment AND p.operation = r.operation AND p.request_attempt = r.request_attempt
+      LEFT JOIN accounting_report_quantities q ON q.environment = p.environment AND q.operation = p.operation AND q.report = p.report
+      WHERE r.environment = ? AND ${scopePredicate('r', true)}
+      ORDER BY r.operation, r.request_attempt, p.report, q.unit`),
+    // Estimates are independent facts, read by their own single statement.
+    scopedEstimates: connection.prepare(sql`/* summary */ SELECT e.estimate, e.run, e.member, e.step_attempt, e.basis_format, e.basis_version, e.basis, q.unit, q.amount
+      FROM accounting_estimates e
+      LEFT JOIN accounting_estimate_quantities q ON q.environment = e.environment AND q.estimate = e.estimate
+      WHERE e.environment = ? AND ${scopePredicate('e', false)}
+      ORDER BY e.estimate, q.unit`),
   };
 
   /**
    * Run one write transaction. A failure raised while the transaction's work
    * runs rolls everything back and is rethrown unchanged: nothing was written.
-   * A failure after the work completed can only come from the commit, whose
-   * outcome is then unknown.
+   * That includes exhausting the bounded wait for another connection's write
+   * lock, which fails before the work starts. A failure after the work
+   * completed can only come from the commit, whose outcome is then unknown.
    */
   function write<T>(description: string, work: () => T): T {
     let outcome: { readonly value: T } | undefined;
@@ -202,7 +211,7 @@ export function openDurableAccounting(options: IDurableAccountingOptions): IDura
     return Object.freeze({
       environment,
       operation,
-      request: text(row, 'request'),
+      requestAttempt: text(row, 'request_attempt'),
       report,
       quantities: quantitiesOf(statements.reportQuantities.all(environment, operation, report)),
     });
@@ -220,34 +229,54 @@ export function openDurableAccounting(options: IDurableAccountingOptions): IDura
     });
   }
 
-  /** Refuse a report that does not name an opened request of its operation in its environment. */
+  /** Group joined estimate and quantity rows, ordered by estimate then unit, into recorded estimates. */
+  function estimatesOf(environment: string, rows: readonly ISqliteRow[]): readonly IRecordedEstimate[] {
+    const grouped = new Map<string, { readonly row: ISqliteRow; readonly quantities: IUsageQuantity[] }>();
+    for (const row of rows) {
+      const estimate = text(row, 'estimate');
+      const entry = grouped.get(estimate) ?? { row, quantities: [] };
+      grouped.set(estimate, entry);
+      if (row.unit !== null) {
+        entry.quantities.push(Object.freeze({ unit: text(row, 'unit'), amount: amount(row, 'amount') }));
+      }
+    }
+    return [...grouped].map(([estimate, { row, quantities }]) => Object.freeze({
+      environment,
+      estimate,
+      attribution: attributionOf(row),
+      quantities: Object.freeze(quantities),
+      basis: basisOf(row),
+    }));
+  }
+
+  /** Refuse a report that does not name a recorded request attempt of its operation in its environment. */
   function requireAttributable(report: IUsageReport): void {
     if (statements.operationKnown.get(report.environment, report.operation) === undefined) {
-      throw new UnattributableUsageError('unknown-operation', `No request of operation ${report.operation} was opened in environment ${report.environment}`);
+      throw new UnattributableUsageError('unknown-operation', `No usage intent names operation ${report.operation} in environment ${report.environment}`);
     }
-    const request = statements.reportRequest.get(report.environment, report.request);
-    if (request === undefined) {
-      throw new UnattributableUsageError('unknown-request', `Request ${report.request} of operation ${report.operation} was never opened in environment ${report.environment}`);
+    const attempt = statements.reportAttempt.get(report.environment, report.requestAttempt);
+    if (attempt === undefined) {
+      throw new UnattributableUsageError('unknown-request-attempt', `No usage intent was recorded for request attempt ${report.requestAttempt} of operation ${report.operation} in environment ${report.environment}`);
     }
-    if (text(request, 'operation') !== report.operation) {
-      throw new UnattributableUsageError('request-of-another-operation', `Request ${report.request} belongs to another operation than ${report.operation}`);
+    if (text(attempt, 'operation') !== report.operation) {
+      throw new UnattributableUsageError('request-attempt-of-another-operation', `Request attempt ${report.requestAttempt} belongs to another operation than ${report.operation}`);
     }
   }
 
   return {
-    openOperation(candidate: IUsageIntent): IIntentOutcome {
+    recordUsageIntent(candidate: IUsageIntent): IUsageIntentOutcome {
       const intent = intentArgument(candidate);
-      return write(`intent ${intent.request}`, () => {
-        const existing = statements.request.get(intent.environment, intent.request);
+      return write(`usage intent ${intent.requestAttempt}`, (): IUsageIntentOutcome => {
+        const existing = statements.intent.get(intent.environment, intent.requestAttempt);
         if (existing !== undefined) {
           if (text(existing, 'operation') !== intent.operation || !sameAttribution(attributionOf(existing), intent.attribution)) {
-            throw new UsageIntentConflictError(`Request ${intent.request} is already opened in environment ${intent.environment} for another operation or attribution`);
+            throw new UsageIntentConflictError(`Request attempt ${intent.requestAttempt} already has a usage intent in environment ${intent.environment} for another operation or attribution`);
           }
-          return 'already-open';
+          return 'duplicate';
         }
         const { run, member, stepAttempt } = intent.attribution;
-        statements.insertRequest.run(intent.environment, intent.request, intent.operation, run, member, stepAttempt);
-        return 'opened';
+        statements.insertIntent.run(intent.environment, intent.requestAttempt, intent.operation, run, member, stepAttempt);
+        return 'recorded';
       });
     },
 
@@ -257,10 +286,10 @@ export function openDurableAccounting(options: IDurableAccountingOptions): IDura
         requireAttributable(report);
         const recorded = recordedReport(report.environment, report.operation, report.report);
         if (recorded !== undefined) {
-          const same = recorded.request === report.request && sameQuantities(recorded.quantities, report.quantities);
+          const same = recorded.requestAttempt === report.requestAttempt && sameQuantities(recorded.quantities, report.quantities);
           return Object.freeze({ kind: same ? 'duplicate' : 'conflict', report: recorded });
         }
-        statements.insertReport.run(report.environment, report.operation, report.report, report.request);
+        statements.insertReport.run(report.environment, report.operation, report.report, report.requestAttempt);
         for (const { unit, amount: quantity } of report.quantities) {
           statements.insertReportQuantity.run(report.environment, report.operation, report.report, unit, quantity);
         }
@@ -298,24 +327,17 @@ export function openDurableAccounting(options: IDurableAccountingOptions): IDura
 
     summarizeUsage(candidate: IUsageQuery): IUsageSummary {
       const query = queryArgument(candidate);
-      const withOperation = scopeValues(query, true);
-      // One transaction gives every statement the same durable snapshot.
-      return connection.transaction(() => {
-        const intents = statements.scopedIntents.all(query.environment, ...withOperation).map((row): IIntentFact => ({
-          operation: text(row, 'operation'),
-          request: text(row, 'request'),
-          attribution: attributionOf(row),
-          reported: row.reported === 1,
-        }));
-        const counted = statements.scopedReports.get(query.environment, ...withOperation);
-        const reports = counted === undefined ? 0 : amount(counted, 'reports');
-        const reportedQuantities = quantitiesOf(statements.scopedQuantities.all(query.environment, ...withOperation));
-        // Estimates are not operation-scoped, so an operation filter selects none of them.
-        const estimates = query.operation === undefined
-          ? statements.scopedEstimates.all(query.environment, ...scopeValues(query, false)).map((row) => estimateOf(query.environment, row))
-          : [];
-        return summarize({ environment: query.environment, intents, reports, reportedQuantities, estimates });
-      });
+      // Two single-statement reads and no transaction: see `scopedUsage`.
+      const rows = statements.scopedUsage.all(query.environment, ...scopeValues(query, true)).map((row): IScopedUsageRow => ({
+        operation: text(row, 'operation'),
+        requestAttempt: text(row, 'request_attempt'),
+        attribution: attributionOf(row),
+        report: nullableText(row, 'report'),
+        quantity: row.unit === null ? null : Object.freeze({ unit: text(row, 'unit'), amount: amount(row, 'amount') }),
+      }));
+      // Estimates are not operation-scoped, so an operation filter selects none of them.
+      const estimates = query.operation === undefined ? estimatesOf(query.environment, statements.scopedEstimates.all(query.environment, ...scopeValues(query, false))) : [];
+      return summarize(factsFromRows(query.environment, rows, estimates));
     },
 
     close(): void {

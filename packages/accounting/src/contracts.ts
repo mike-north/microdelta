@@ -4,8 +4,9 @@
  *
  * The facts are:
  *
- * - an **intent** that one request attempt of one external operation is about
- *   to be sent, so usage is expected from it (ACC-007 "intent before send");
+ * - a **usage intent** that one request attempt of one external operation is
+ *   about to be sent, so usage is expected from it (ACC-007 "intent before
+ *   send");
  * - a **usage report** that the provider observed consumption for that
  *   operation, identified by (operation, report) and acknowledged only once
  *   durable (ACC-003, ACC-007);
@@ -20,8 +21,16 @@
  *
  * Accounting never invents usage, never counts an estimate as observed, and
  * never decides execution policy such as retry, budgets or deletion (ACC-005,
- * ACC-006, ACC-008). Operation and request identities are supplied by Run
- * Supervision; Accounting stores them as opaque identifiers.
+ * ACC-006, ACC-008). External operations and their request attempts are Run
+ * Supervision's: it mints and owns their identities, and Accounting records
+ * usage expected from and reported for them as opaque identifiers. Accounting
+ * never opens, settles or resolves an operation.
+ *
+ * Operator resolution of an operation whose usage is unknown needs no other
+ * Accounting fact: usage the operator learns is acknowledged as an ordinary
+ * report under an operator-namespaced report identity, and an abandoned
+ * operation is a Supervision and History fact, after which Accounting
+ * correctly keeps reporting its usage as unknown.
  * @packageDocumentation
  */
 import type { ISqliteCapability } from '@microdelta/machine';
@@ -35,7 +44,7 @@ import type { ISqliteCapability } from '@microdelta/machine';
  * @alpha
  */
 export interface IUsageAttribution {
-  /** The run that sent the request or produced the estimate. */
+  /** The run that sent the request attempt or produced the estimate. */
   readonly run: string;
   /** The designated member key the work belongs to, or `null` when none applies. */
   readonly member: string | null;
@@ -44,32 +53,33 @@ export interface IUsageAttribution {
 }
 
 /**
- * The durable intent that request attempt `request` of external operation
- * `operation` is about to be sent. It must be recorded, and acknowledged,
- * before the paid call is sent. From then on the request's usage is expected:
- * until a report for it is acknowledged, every summary that includes it reports
- * its usage as unknown, never zero (ACC-005). A request identity belongs to one
- * operation within its environment.
+ * A usage intent: request attempt `requestAttempt` of external operation
+ * `operation` is about to be sent. It must be durably recorded before the paid
+ * call is sent. From then on the attempt's usage is expected: until a report
+ * for it is acknowledged, every summary that includes it reports its usage as
+ * unknown, never zero (ACC-005). A request attempt identity belongs to one
+ * operation within its environment. A request attempt is one network try of the
+ * operation (EXP-8); it is unrelated to a run's request key.
  * @alpha
  */
 export interface IUsageIntent {
   /** The environment whose accounting records this fact. */
   readonly environment: string;
-  /** The stable identity of the logical external operation (RUN-012). */
+  /** The stable identity of the logical external operation, minted by Run Supervision (RUN-012). */
   readonly operation: string;
   /** The identity of this request attempt, unique within the environment. */
-  readonly request: string;
-  /** The run, member and step attempt the request is sent for. */
+  readonly requestAttempt: string;
+  /** The run, member and step attempt the request attempt is sent for. */
   readonly attribution: IUsageAttribution;
 }
 
 /**
- * The durable outcome of recording an intent. `opened` means this call wrote
- * it; `already-open` means an identical intent was already durable, so a
+ * The durable outcome of recording a usage intent. `recorded` means this call
+ * wrote it; `duplicate` means an identical intent was already durable, so a
  * redelivery after an unknown commit is harmless. Both confirm durability.
  * @alpha
  */
-export type IIntentOutcome = 'opened' | 'already-open';
+export type IUsageIntentOutcome = 'recorded' | 'duplicate';
 
 /**
  * One observed quantity: a nonnegative safe-integer `amount` of `unit`. A unit
@@ -88,12 +98,12 @@ export interface IUsageQuantity {
 }
 
 /**
- * One usage report delivered for a request of an opened operation. The report
+ * One usage report delivered for a recorded request attempt. The report
  * identity is unique per operation, not globally: the same report identity on
  * two operations is two reports, and a redelivery of the same (operation,
  * report) is never summed twice (ACC-003). Quantities are additive deltas of
  * observed consumption, one entry per unit; an empty list is the reporter's
- * explicit observation that the request consumed nothing. Cumulative
+ * explicit observation that the attempt consumed nothing. Cumulative
  * snapshots and corrections are not part of this contract.
  * @alpha
  */
@@ -102,9 +112,15 @@ export interface IUsageReport {
   readonly environment: string;
   /** The operation the usage is attributed to. */
   readonly operation: string;
-  /** The opened request attempt of that operation that incurred the usage. */
-  readonly request: string;
-  /** The report identity, unique within the operation. */
+  /** The recorded request attempt of that operation that incurred the usage. */
+  readonly requestAttempt: string;
+  /**
+   * The report identity, unique within the operation. It must be stable across
+   * redelivery: derive it from the provider's response (for example its usage
+   * record or response identifier), never mint it per delivery. Deduplication
+   * rests on it alone, so a fresh identity on a redelivery after
+   * {@link AccountingDurabilityUnknownError} is counted a second time.
+   */
   readonly report: string;
   /** Observed deltas, at most one per unit. */
   readonly quantities: readonly IUsageQuantity[];
@@ -120,7 +136,7 @@ export interface IRecordedReport {
   /** The operation it is attributed to. */
   readonly operation: string;
   /** The request attempt that incurred it. */
-  readonly request: string;
+  readonly requestAttempt: string;
   /** The report identity within the operation. */
   readonly report: string;
   /** Observed deltas in unit order. */
@@ -139,7 +155,7 @@ export interface IAcknowledgedUsage {
 }
 
 /**
- * An identical report (same request and quantities) was already durable, so
+ * An identical report (same request attempt and quantities) was already durable, so
  * nothing was written and nothing is counted again. This confirms durability
  * as fully as `acknowledged` and is how a lost acknowledgment is resolved.
  * @alpha
@@ -280,17 +296,18 @@ export interface IUsageQuery {
 }
 
 /**
- * One opened request with no acknowledged report: its usage is unknown. It may
- * still be in flight, or its process may have died on either side of the
- * send; Accounting cannot tell and never reports it as zero (ACC-005).
+ * One recorded request attempt with no acknowledged report: its usage is
+ * unknown. It may still be in flight, or its process may have died on either
+ * side of the send; Accounting cannot tell and never reports it as zero
+ * (ACC-005). Another attempt's report never covers it.
  * @alpha
  */
 export interface IUnknownUsage {
-  /** The operation whose request has no report. */
+  /** The operation whose request attempt has no report. */
   readonly operation: string;
   /** The request attempt with no report. */
-  readonly request: string;
-  /** Whom the request was sent for. */
+  readonly requestAttempt: string;
+  /** Whom the request attempt was sent for. */
   readonly attribution: IUsageAttribution;
 }
 
@@ -307,10 +324,10 @@ export interface IUsageSummaryBase {
    * guaranteed bill (ACC-005). An absent unit means no report stated it.
    */
   readonly observed: readonly IUsageQuantity[];
-  /** Distinct operations with an opened request in scope. */
+  /** Distinct operations with a recorded request attempt in scope. */
   readonly operations: number;
-  /** Opened requests in scope. */
-  readonly requests: number;
+  /** Recorded request attempts (usage intents) in scope. */
+  readonly requestAttempts: number;
   /** Acknowledged reports in scope. */
   readonly reports: number;
   /** Estimates in scope, each with its own basis; never part of `observed`. */
@@ -318,27 +335,27 @@ export interface IUsageSummaryBase {
 }
 
 /**
- * Every opened request in scope has an acknowledged report, so `observed` is
- * all the usage reported for the scope.
+ * Every recorded request attempt in scope has an acknowledged report, so
+ * `observed` is all the usage reported for the scope.
  * @alpha
  */
-export interface IKnownUsageSummary extends IUsageSummaryBase {
+export interface ICompleteUsageSummary extends IUsageSummaryBase {
   /** Discriminates a summary with no usage gap. */
-  readonly status: 'known';
-  /** No request in scope lacks a report. */
+  readonly status: 'complete';
+  /** No request attempt in scope lacks a report. */
   readonly unknown: readonly [];
 }
 
 /**
- * At least one opened request in scope has no acknowledged report. `observed`
- * is what was reported; the usage of each `unknown` request is unknown, so the
- * scope's actual consumption is not known (ACC-005).
+ * At least one recorded request attempt in scope has no acknowledged report.
+ * `observed` is what was reported; the usage of each `unknown` attempt is
+ * unknown, so the scope's actual consumption is not known (ACC-005).
  * @alpha
  */
 export interface IIncompleteUsageSummary extends IUsageSummaryBase {
   /** Discriminates a summary with a known usage gap. */
   readonly status: 'incomplete';
-  /** The requests whose usage is unknown, ordered by operation then request. */
+  /** The request attempts whose usage is unknown, ordered by operation then request attempt. */
   readonly unknown: readonly [IUnknownUsage, ...IUnknownUsage[]];
 }
 
@@ -347,28 +364,42 @@ export interface IIncompleteUsageSummary extends IUsageSummaryBase {
  * makes a usage gap impossible to read as zero.
  * @alpha
  */
-export type IUsageSummary = IKnownUsageSummary | IIncompleteUsageSummary;
+export type IUsageSummary = ICompleteUsageSummary | IIncompleteUsageSummary;
 
 /**
  * Resource Accounting's durable port. Every method is synchronous and every
  * write commits before it returns. Writes need no writer lease or fence; they
- * are idempotent keyed facts, safe to redeliver from any process.
+ * are idempotent keyed facts, safe to redeliver from any process. Summaries are
+ * reads: they take no write lock, so they never block a write and a held write
+ * lock never makes them fail.
+ *
+ * A write waits a bounded time for another connection's write lock. When the
+ * wait is exhausted the write fails before doing any work, so nothing was
+ * recorded and the fact may be redelivered. That failure currently surfaces as
+ * the host's own SQLite busy error.
+ * TODO(#113): surface write-lock exhaustion as Machine's typed busy error once
+ * the host provides one.
  * @alpha
  */
 export interface IDurableAccounting {
   /**
-   * Durably record that a request is about to be sent. Call before the send;
-   * send only after this returns. A redelivered identical intent returns
-   * `already-open`. A request identity already opened for a different
-   * operation or attribution is refused with {@link UsageIntentConflictError}.
+   * Durably record the usage intent for a request attempt about to be sent.
+   * Call before the send; send only after this returns. A redelivered
+   * identical intent returns `duplicate`. A request attempt identity already
+   * recorded for a different operation or attribution is refused with
+   * {@link UsageIntentConflictError}. Recording an intent does not open or own
+   * the operation, whose identity and lifecycle are Run Supervision's.
    */
-  openOperation(intent: IUsageIntent): IIntentOutcome;
+  recordUsageIntent(intent: IUsageIntent): IUsageIntentOutcome;
 
   /**
    * Durably acknowledge a usage report, keyed by (operation, report) within its
-   * environment. A report naming an operation or request never opened in its
-   * environment, or a request of another operation, is refused with
-   * {@link UnattributableUsageError}.
+   * environment. The report identity must be stable across redelivery (derived
+   * from the provider's response, never minted per delivery): after
+   * {@link AccountingDurabilityUnknownError}, redeliver the same report with the
+   * same identity, or it is counted twice. A report naming an operation or
+   * request attempt never recorded in its environment, or a request attempt of
+   * another operation, is refused with {@link UnattributableUsageError}.
    */
   acknowledgeUsage(report: IUsageReport): IUsageAcknowledgment;
 

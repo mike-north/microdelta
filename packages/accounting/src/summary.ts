@@ -1,18 +1,18 @@
 /**
  * The storage-independent derivation of a usage summary from the durable facts
- * already selected for its scope. It is where ACC-005 and ACC-006 are decided:
- * an opened request without an acknowledged report is unknown, never zero, and
- * estimates are carried beside observations, never summed into them. It never
- * fabricates a quantity: a unit appears in `observed` only when some
+ * read for its scope. It is where ACC-005 and ACC-006 are decided: a recorded
+ * request attempt without an acknowledged report of its own is unknown, never
+ * zero, and estimates are carried beside observations, never summed into them.
+ * It never fabricates a quantity: a unit appears in `observed` only when some
  * acknowledged report stated it.
  * @packageDocumentation
  */
 import type { IRecordedEstimate, IUnknownUsage, IUsageAttribution, IUsageQuantity, IUsageSummary } from './contracts.js';
 
-/** One opened request in scope and whether any report for it is acknowledged. */
+/** One recorded request attempt in scope and whether a report of its own is acknowledged. */
 export interface IIntentFact {
   readonly operation: string;
-  readonly request: string;
+  readonly requestAttempt: string;
   readonly attribution: IUsageAttribution;
   readonly reported: boolean;
 }
@@ -20,7 +20,7 @@ export interface IIntentFact {
 /** The durable facts selected for one summary's scope. */
 export interface ISummaryFacts {
   readonly environment: string;
-  /** Opened requests in scope, ordered by operation then request. */
+  /** Recorded request attempts in scope, ordered by operation then request attempt. */
   readonly intents: readonly IIntentFact[];
   /** Acknowledged reports in scope. */
   readonly reports: number;
@@ -28,6 +28,65 @@ export interface ISummaryFacts {
   readonly reportedQuantities: readonly IUsageQuantity[];
   /** Estimates in scope. */
   readonly estimates: readonly IRecordedEstimate[];
+}
+
+/**
+ * One row of a summary's single read: a recorded request attempt in scope,
+ * joined with one of its own acknowledged reports (or none) and one of that
+ * report's quantities (or none). Rows arrive ordered by operation, request
+ * attempt, report and unit, all read by one statement so they form one
+ * consistent snapshot.
+ */
+export interface IScopedUsageRow {
+  readonly operation: string;
+  readonly requestAttempt: string;
+  readonly attribution: IUsageAttribution;
+  /** An acknowledged report of this request attempt, or `null` when it has none. */
+  readonly report: string | null;
+  /** One quantity of that report, or `null` for a report with no quantities or no report. */
+  readonly quantity: IUsageQuantity | null;
+}
+
+/** A request attempt's attribution and whether a report of its own was seen. */
+interface IAttemptState {
+  readonly attribution: IUsageAttribution;
+  reported: boolean;
+}
+
+/**
+ * Fold the joined rows of one read into summary facts. A request attempt is
+ * reported exactly when some row pairs it with a report of its own; a report
+ * is counted once however many quantity rows it has, and each quantity once.
+ */
+export function factsFromRows(environment: string, rows: readonly IScopedUsageRow[], estimates: readonly IRecordedEstimate[]): ISummaryFacts {
+  // Keyed by operation, then request attempt (or report): nested maps keep
+  // arbitrary identity strings exact and preserve the rows' order.
+  const attempts = new Map<string, Map<string, IAttemptState>>();
+  const reports = new Map<string, Set<string>>();
+  const reportedQuantities: IUsageQuantity[] = [];
+  for (const row of rows) {
+    const operationAttempts = attempts.get(row.operation) ?? new Map<string, IAttemptState>();
+    attempts.set(row.operation, operationAttempts);
+    const attempt = operationAttempts.get(row.requestAttempt) ?? { attribution: row.attribution, reported: false };
+    operationAttempts.set(row.requestAttempt, attempt);
+    if (row.report !== null) {
+      attempt.reported = true;
+      const operationReports = reports.get(row.operation) ?? new Set<string>();
+      reports.set(row.operation, operationReports);
+      operationReports.add(row.report);
+      if (row.quantity !== null) {
+        reportedQuantities.push(row.quantity);
+      }
+    }
+  }
+  return {
+    environment,
+    intents: [...attempts].flatMap(([operation, operationAttempts]) =>
+      [...operationAttempts].map(([requestAttempt, { attribution, reported }]): IIntentFact => ({ operation, requestAttempt, attribution, reported }))),
+    reports: [...reports.values()].reduce((count, operationReports) => count + operationReports.size, 0),
+    reportedQuantities,
+    estimates,
+  };
 }
 
 /**
@@ -52,24 +111,24 @@ export function sumQuantities(quantities: readonly IUsageQuantity[]): readonly I
 
 /**
  * Derive the summary for one scope. The status is `incomplete` exactly when
- * some opened request in scope lacks an acknowledged report, and those
- * requests are listed; `observed` holds only reported sums.
+ * some recorded request attempt in scope lacks an acknowledged report of its
+ * own, and those attempts are listed; `observed` holds only reported sums.
  */
 export function summarize(facts: ISummaryFacts): IUsageSummary {
   const base = {
     environment: facts.environment,
     observed: sumQuantities(facts.reportedQuantities),
     operations: new Set(facts.intents.map((intent) => intent.operation)).size,
-    requests: facts.intents.length,
+    requestAttempts: facts.intents.length,
     reports: facts.reports,
     estimates: Object.freeze([...facts.estimates]),
   };
   const [first, ...rest] = facts.intents
     .filter((intent) => !intent.reported)
-    .map((intent): IUnknownUsage => Object.freeze({ operation: intent.operation, request: intent.request, attribution: intent.attribution }));
+    .map((intent): IUnknownUsage => Object.freeze({ operation: intent.operation, requestAttempt: intent.requestAttempt, attribution: intent.attribution }));
   if (first === undefined) {
     const unknown: readonly [] = Object.freeze([]);
-    return Object.freeze({ ...base, status: 'known', unknown });
+    return Object.freeze({ ...base, status: 'complete', unknown });
   }
   const unknown: readonly [IUnknownUsage, ...IUnknownUsage[]] = Object.freeze([first, ...rest]);
   return Object.freeze({ ...base, status: 'incomplete', unknown });

@@ -11,15 +11,15 @@
 import { describe, expect, test } from '@jest/globals';
 
 import type { IRecordedEstimate, IUsageAttribution } from '../src/contracts.js';
-import { sumQuantities, summarize } from '../src/summary.js';
-import type { IIntentFact } from '../src/summary.js';
+import { factsFromRows, sumQuantities, summarize } from '../src/summary.js';
+import type { IIntentFact, IScopedUsageRow } from '../src/summary.js';
 
 /** Attribution of the run under test. */
 const attribution: IUsageAttribution = { run: 'run-1', member: 'ada', stepAttempt: 'attempt-1' };
 
-/** One opened request of `operation`, reported or not. */
-function intent(operation: string, request: string, reported: boolean): IIntentFact {
-  return { operation, request, attribution, reported };
+/** One recorded request attempt of `operation`, reported or not. */
+function intent(operation: string, requestAttempt: string, reported: boolean): IIntentFact {
+  return { operation, requestAttempt, attribution, reported };
 }
 
 /** An estimate with an explicit pricing basis. */
@@ -32,7 +32,7 @@ const pricing: IRecordedEstimate = {
 };
 
 describe('summaries', () => {
-  test('usage is known when every opened request has an acknowledged report', () => {
+  test('usage is complete when every recorded request attempt has an acknowledged report', () => {
     const summary = summarize({
       environment: 'production',
       intents: [intent('op-1', 'req-1', true), intent('op-2', 'req-2', true)],
@@ -42,17 +42,17 @@ describe('summaries', () => {
     });
     expect(summary).toEqual({
       environment: 'production',
-      status: 'known',
+      status: 'complete',
       observed: [{ unit: 'requests', amount: 1 }, { unit: 'tokens.input', amount: 150 }],
       unknown: [],
       operations: 2,
-      requests: 2,
+      requestAttempts: 2,
       reports: 2,
       estimates: [],
     });
   });
 
-  test('ACC-005: an opened request without a report is unknown, never zero', () => {
+  test('ACC-005: a recorded request attempt without a report is unknown, never zero', () => {
     const summary = summarize({
       environment: 'production',
       intents: [intent('op-1', 'req-1', false)],
@@ -61,7 +61,7 @@ describe('summaries', () => {
       estimates: [],
     });
     expect(summary.status).toBe('incomplete');
-    expect(summary.unknown).toEqual([{ operation: 'op-1', request: 'req-1', attribution }]);
+    expect(summary.unknown).toEqual([{ operation: 'op-1', requestAttempt: 'req-1', attribution }]);
     // No zero-valued quantity is fabricated for the unreported request.
     expect(summary.observed).toEqual([]);
   });
@@ -74,13 +74,13 @@ describe('summaries', () => {
       reportedQuantities: [{ unit: 'units', amount: 100 }],
       estimates: [],
     });
-    expect(summary).toMatchObject({ status: 'incomplete', observed: [{ unit: 'units', amount: 100 }], operations: 2, requests: 2, reports: 1 });
-    expect(summary.unknown.map((gap) => gap.request)).toEqual(['req-2']);
+    expect(summary).toMatchObject({ status: 'incomplete', observed: [{ unit: 'units', amount: 100 }], operations: 2, requestAttempts: 2, reports: 1 });
+    expect(summary.unknown.map((gap) => gap.requestAttempt)).toEqual(['req-2']);
   });
 
   test('a scope with no opened work records no usage and no gap', () => {
     expect(summarize({ environment: 'trial', intents: [], reports: 0, reportedQuantities: [], estimates: [] }))
-      .toEqual({ environment: 'trial', status: 'known', observed: [], unknown: [], operations: 0, requests: 0, reports: 0, estimates: [] });
+      .toEqual({ environment: 'trial', status: 'complete', observed: [], unknown: [], operations: 0, requestAttempts: 0, reports: 0, estimates: [] });
   });
 
   test('operations are counted once however many of their requests are open', () => {
@@ -91,7 +91,7 @@ describe('summaries', () => {
       reportedQuantities: [{ unit: 'requests', amount: 1 }],
       estimates: [],
     });
-    expect(summary).toMatchObject({ operations: 1, requests: 2, status: 'incomplete' });
+    expect(summary).toMatchObject({ operations: 1, requestAttempts: 2, status: 'incomplete' });
   });
 
   test('ACC-006: estimates are listed with their basis and never enter observed totals', () => {
@@ -126,5 +126,41 @@ describe('quantity sums', () => {
 
   test('a sum beyond the safe-integer range fails rather than rounds', () => {
     expect(() => sumQuantities([{ unit: 'tokens', amount: Number.MAX_SAFE_INTEGER }, { unit: 'tokens', amount: 1 }])).toThrow(RangeError);
+  });
+});
+
+describe('folding one joined read into summary facts', () => {
+  /** One joined row: a request attempt with one report quantity, a report without quantities, or no report. */
+  function row(operation: string, requestAttempt: string, report: string | null, quantity: IScopedUsageRow['quantity'] = null): IScopedUsageRow {
+    return { operation, requestAttempt, attribution, report, quantity };
+  }
+
+  test('a report makes only its own request attempt reported', () => {
+    const facts = factsFromRows('production', [row('op-1', 'req-1', 'usage-1', { unit: 'tokens.input', amount: 100 }), row('op-1', 'req-2', null)], []);
+    expect(facts.intents).toEqual([
+      { operation: 'op-1', requestAttempt: 'req-1', attribution, reported: true },
+      { operation: 'op-1', requestAttempt: 'req-2', attribution, reported: false },
+    ]);
+    expect(summarize(facts)).toMatchObject({ status: 'incomplete', unknown: [{ requestAttempt: 'req-2' }], reports: 1, requestAttempts: 2 });
+  });
+
+  test('a report with several quantities is one report; a report with none is still a report', () => {
+    const facts = factsFromRows('production', [
+      row('op-1', 'req-1', 'usage-1', { unit: 'tokens.input', amount: 100 }),
+      row('op-1', 'req-1', 'usage-1', { unit: 'tokens.output', amount: 10 }),
+      row('op-2', 'req-2', 'none'),
+    ], []);
+    expect(facts).toMatchObject({ reports: 2, reportedQuantities: [{ unit: 'tokens.input', amount: 100 }, { unit: 'tokens.output', amount: 10 }] });
+    expect(facts.intents.every((intent) => intent.reported)).toBe(true);
+  });
+
+  test('the same report identity on two operations is two reports', () => {
+    const facts = factsFromRows('production', [row('op-1', 'req-1', 'usage'), row('op-2', 'req-2', 'usage')], []);
+    expect(facts.reports).toBe(2);
+  });
+
+  test('identities are compared exactly, whatever characters they contain', () => {
+    const facts = factsFromRows('production', [row('a\u0000b', 'c', 'r'), row('a', 'b\u0000c', null)], []);
+    expect(facts.intents.map((intent) => [intent.operation, intent.requestAttempt, intent.reported])).toEqual([['a\u0000b', 'c', true], ['a', 'b\u0000c', false]]);
   });
 });

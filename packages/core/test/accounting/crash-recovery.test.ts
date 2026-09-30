@@ -89,7 +89,7 @@ function applied(provider: string): readonly string[] {
   return existsSync(provider) ? readFileSync(provider, 'utf8').split('\n').filter((line) => line.length > 0) : [];
 }
 
-/** Ada's single paid assessment: one operation, one request, one report of 100 input tokens. */
+/** Ada's single paid assessment: one operation, one request attempt, one report of 100 input tokens. */
 const intent = intentFor('op-assess-ada', 'req-1');
 const report: IUsageReport = tokenReport('op-assess-ada', 'req-1', 'usage-1', 100);
 
@@ -99,27 +99,27 @@ function fixture(): { readonly location: string; readonly provider: string } {
 }
 
 describe('separate-process kills around a paid call', () => {
-  test('kill after open: the provider received nothing, yet usage is unknown, never zero', () => {
+  test('kill after the intent: the provider received nothing, yet usage is unknown, never zero', () => {
     const { location, provider } = fixture();
-    const crashed = runWorker(location, [{ op: 'open', intent }, { op: 'kill' }]);
+    const crashed = runWorker(location, [{ op: 'intent', intent }, { op: 'kill' }]);
     expectKilled(crashed, 1);
-    expect(crashed.trace[0]?.value).toBe('opened');
+    expect(crashed.trace[0]?.value).toBe('recorded');
 
     // Pessimistic by design (EXP-8 CX-4): without a provider status query, an intent without a report is unknown.
     expect(applied(provider)).toEqual([]);
     const summary = openAccounting({ location }).summarizeUsage({ environment: 'production' });
-    expect(summary).toMatchObject({ status: 'incomplete', observed: [], requests: 1, reports: 0 });
-    expect(summary.unknown).toEqual([{ operation: 'op-assess-ada', request: 'req-1', attribution: adaAttribution }]);
+    expect(summary).toMatchObject({ status: 'incomplete', observed: [], requestAttempts: 1, reports: 0 });
+    expect(summary.unknown).toEqual([{ operation: 'op-assess-ada', requestAttempt: 'req-1', attribution: adaAttribution }]);
 
     // A successor process reads the same gap; nothing it can redeliver fills it.
     const [redelivered, successorView] = expectClean(runWorker(location, [{ op: 'redeliver', provider }, { op: 'summarize', environment: 'production' }]));
     expect(redelivered).toEqual([]);
-    expect(successorView).toMatchObject({ status: 'incomplete', unknown: [{ request: 'req-1' }] });
+    expect(successorView).toMatchObject({ status: 'incomplete', unknown: [{ requestAttempt: 'req-1' }] });
   });
 
   test('kill after the provider applied the call: usage is unknown until the late report is delivered once', () => {
     const { location, provider } = fixture();
-    const crashed = runWorker(location, [{ op: 'open', intent }, { op: 'send', provider, report }, { op: 'kill' }]);
+    const crashed = runWorker(location, [{ op: 'intent', intent }, { op: 'send', provider, report }, { op: 'kill' }]);
     expectKilled(crashed, 2);
 
     expect(applied(provider)).toHaveLength(1);
@@ -128,20 +128,20 @@ describe('separate-process kills around a paid call', () => {
     // The successor delivers the provider's late report: counted exactly once, with no replay of the call.
     const [firstDelivery, afterFirst] = expectClean(runWorker(location, [{ op: 'redeliver', provider }, { op: 'summarize', environment: 'production' }]));
     expect(firstDelivery).toEqual(['acknowledged']);
-    expect(afterFirst).toMatchObject({ status: 'known', observed: [{ unit: 'tokens.input', amount: 100 }], reports: 1 });
+    expect(afterFirst).toMatchObject({ status: 'complete', observed: [{ unit: 'tokens.input', amount: 100 }], reports: 1 });
     const [secondDelivery] = expectClean(runWorker(location, [{ op: 'redeliver', provider }]));
     expect(secondDelivery).toEqual(['duplicate']);
     expect(applied(provider)).toHaveLength(1);
-    expect(openAccounting({ location }).summarizeUsage({ environment: 'production' })).toMatchObject({ status: 'known', observed: [{ unit: 'tokens.input', amount: 100 }], reports: 1 });
+    expect(openAccounting({ location }).summarizeUsage({ environment: 'production' })).toMatchObject({ status: 'complete', observed: [{ unit: 'tokens.input', amount: 100 }], reports: 1 });
   });
 
   test('kill after the acknowledgment: the durable report survives and a redelivery is a duplicate', () => {
     const { location, provider } = fixture();
-    const crashed = runWorker(location, [{ op: 'open', intent }, { op: 'send', provider, report }, { op: 'acknowledge', report }, { op: 'kill' }]);
+    const crashed = runWorker(location, [{ op: 'intent', intent }, { op: 'send', provider, report }, { op: 'acknowledge', report }, { op: 'kill' }]);
     expectKilled(crashed, 3);
     expect(crashed.trace[2]?.value).toEqual({ kind: 'acknowledged', report });
 
-    expect(openAccounting({ location }).summarizeUsage({ environment: 'production' })).toMatchObject({ status: 'known', observed: [{ unit: 'tokens.input', amount: 100 }], reports: 1 });
+    expect(openAccounting({ location }).summarizeUsage({ environment: 'production' })).toMatchObject({ status: 'complete', observed: [{ unit: 'tokens.input', amount: 100 }], reports: 1 });
     const [redelivered] = expectClean(runWorker(location, [{ op: 'redeliver', provider }]));
     expect(redelivered).toEqual(['duplicate']);
     expect(openAccounting({ location }).summarizeUsage({ environment: 'production' })).toMatchObject({ observed: [{ unit: 'tokens.input', amount: 100 }], reports: 1 });
@@ -152,7 +152,7 @@ describe('a lost acknowledgment (ambiguous commit)', () => {
   test('the commit landed but the process died before acknowledging: usage is retained exactly once', () => {
     const { location, provider } = fixture();
     const crashed = runWorker(location, [
-      { op: 'open', intent },
+      { op: 'intent', intent },
       { op: 'send', provider, report },
       { op: 'arm', role: 'report', timing: 'after-commit' },
       { op: 'acknowledge', report },
@@ -160,17 +160,17 @@ describe('a lost acknowledgment (ambiguous commit)', () => {
     // The acknowledge step never traced: its caller received no acknowledgment.
     expectKilled(crashed, 3);
 
-    expect(openAccounting({ location }).summarizeUsage({ environment: 'production' })).toMatchObject({ status: 'known', observed: [{ unit: 'tokens.input', amount: 100 }], reports: 1 });
+    expect(openAccounting({ location }).summarizeUsage({ environment: 'production' })).toMatchObject({ status: 'complete', observed: [{ unit: 'tokens.input', amount: 100 }], reports: 1 });
     // Redelivering the same report resolves the ambiguity without counting it twice.
     const [redelivered, view] = expectClean(runWorker(location, [{ op: 'redeliver', provider }, { op: 'summarize', environment: 'production' }]));
     expect(redelivered).toEqual(['duplicate']);
-    expect(view).toMatchObject({ status: 'known', observed: [{ unit: 'tokens.input', amount: 100 }], reports: 1 });
+    expect(view).toMatchObject({ status: 'complete', observed: [{ unit: 'tokens.input', amount: 100 }], reports: 1 });
   });
 
   test('the commit did not land: usage stays unknown until redelivery records it once', () => {
     const { location, provider } = fixture();
     const crashed = runWorker(location, [
-      { op: 'open', intent },
+      { op: 'intent', intent },
       { op: 'send', provider, report },
       { op: 'arm', role: 'report', timing: 'before-commit' },
       { op: 'acknowledge', report },
@@ -180,16 +180,16 @@ describe('a lost acknowledgment (ambiguous commit)', () => {
     expect(openAccounting({ location }).summarizeUsage({ environment: 'production' })).toMatchObject({ status: 'incomplete', observed: [], reports: 0 });
     const [redelivered, view] = expectClean(runWorker(location, [{ op: 'redeliver', provider }, { op: 'summarize', environment: 'production' }]));
     expect(redelivered).toEqual(['acknowledged']);
-    expect(view).toMatchObject({ status: 'known', observed: [{ unit: 'tokens.input', amount: 100 }], reports: 1 });
+    expect(view).toMatchObject({ status: 'complete', observed: [{ unit: 'tokens.input', amount: 100 }], reports: 1 });
   });
 
-  test('an intent whose commit did not land leaves no expected usage; one that landed is already open', () => {
+  test('an intent whose commit did not land leaves no expected usage; one that landed is a duplicate', () => {
     const { location } = fixture();
-    expectKilled(runWorker(location, [{ op: 'arm', role: 'intent', timing: 'before-commit' }, { op: 'open', intent }]), 1);
-    expect(openAccounting({ location }).summarizeUsage({ environment: 'production' })).toMatchObject({ status: 'known', requests: 0 });
+    expectKilled(runWorker(location, [{ op: 'arm', role: 'intent', timing: 'before-commit' }, { op: 'intent', intent }]), 1);
+    expect(openAccounting({ location }).summarizeUsage({ environment: 'production' })).toMatchObject({ status: 'complete', requestAttempts: 0 });
 
-    expectKilled(runWorker(location, [{ op: 'arm', role: 'intent', timing: 'after-commit' }, { op: 'open', intent }]), 1);
-    const [reopened] = expectClean(runWorker(location, [{ op: 'open', intent }]));
-    expect(reopened).toBe('already-open');
+    expectKilled(runWorker(location, [{ op: 'arm', role: 'intent', timing: 'after-commit' }, { op: 'intent', intent }]), 1);
+    const [reopened] = expectClean(runWorker(location, [{ op: 'intent', intent }]));
+    expect(reopened).toBe('duplicate');
   });
 });

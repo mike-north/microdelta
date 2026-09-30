@@ -26,6 +26,12 @@ export interface IAcknowledgedUsage {
 }
 
 // @alpha
+export interface ICompleteUsageSummary extends IUsageSummaryBase {
+    readonly status: 'complete';
+    readonly unknown: readonly [];
+}
+
+// @alpha
 export interface IConflictingUsage {
     readonly kind: 'conflict';
     readonly report: IRecordedReport;
@@ -41,8 +47,8 @@ export interface IDuplicateUsage {
 export interface IDurableAccounting {
     acknowledgeUsage(report: IUsageReport): IUsageAcknowledgment;
     close(): void;
-    openOperation(intent: IUsageIntent): IIntentOutcome;
     recordEstimate(estimate: IUsageEstimate): IEstimateOutcome;
+    recordUsageIntent(intent: IUsageIntent): IUsageIntentOutcome;
     summarizeUsage(query: IUsageQuery): IUsageSummary;
 }
 
@@ -83,15 +89,6 @@ export interface IIncompleteUsageSummary extends IUsageSummaryBase {
 }
 
 // @alpha
-export type IIntentOutcome = 'opened' | 'already-open';
-
-// @alpha
-export interface IKnownUsageSummary extends IUsageSummaryBase {
-    readonly status: 'known';
-    readonly unknown: readonly [];
-}
-
-// @alpha
 export interface IRecordedEstimate {
     readonly attribution: IUsageAttribution;
     readonly basis: IEstimateBasis;
@@ -106,17 +103,17 @@ export interface IRecordedReport {
     readonly operation: string;
     readonly quantities: readonly IUsageQuantity[];
     readonly report: string;
-    readonly request: string;
+    readonly requestAttempt: string;
 }
 
 // @alpha
-export type IUnattributableReason = 'unknown-operation' | 'unknown-request' | 'request-of-another-operation';
+export type IUnattributableReason = 'unknown-operation' | 'unknown-request-attempt' | 'request-attempt-of-another-operation';
 
 // @alpha
 export interface IUnknownUsage {
     readonly attribution: IUsageAttribution;
     readonly operation: string;
-    readonly request: string;
+    readonly requestAttempt: string;
 }
 
 // @alpha
@@ -143,8 +140,11 @@ export interface IUsageIntent {
     readonly attribution: IUsageAttribution;
     readonly environment: string;
     readonly operation: string;
-    readonly request: string;
+    readonly requestAttempt: string;
 }
+
+// @alpha
+export type IUsageIntentOutcome = 'recorded' | 'duplicate';
 
 // @alpha
 export interface IUsageQuantity {
@@ -167,11 +167,11 @@ export interface IUsageReport {
     readonly operation: string;
     readonly quantities: readonly IUsageQuantity[];
     readonly report: string;
-    readonly request: string;
+    readonly requestAttempt: string;
 }
 
 // @alpha
-export type IUsageSummary = IKnownUsageSummary | IIncompleteUsageSummary;
+export type IUsageSummary = ICompleteUsageSummary | IIncompleteUsageSummary;
 
 // @alpha
 export interface IUsageSummaryBase {
@@ -180,7 +180,7 @@ export interface IUsageSummaryBase {
     readonly observed: readonly IUsageQuantity[];
     readonly operations: number;
     readonly reports: number;
-    readonly requests: number;
+    readonly requestAttempts: number;
 }
 
 // @alpha

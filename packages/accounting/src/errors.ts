@@ -9,17 +9,17 @@
 
 /**
  * Why a usage report could not be attributed to recorded work in its
- * environment: no request of the named operation was ever opened
- * (`unknown-operation`), the operation is known but the named request was
- * never opened (`unknown-request`), or the named request was opened for a
- * different operation (`request-of-another-operation`).
+ * environment: no usage intent names the operation (`unknown-operation`), the
+ * operation has intents but none for the named request attempt
+ * (`unknown-request-attempt`), or the named request attempt's intent is for a
+ * different operation (`request-attempt-of-another-operation`).
  * @alpha
  */
-export type IUnattributableReason = 'unknown-operation' | 'unknown-request' | 'request-of-another-operation';
+export type IUnattributableReason = 'unknown-operation' | 'unknown-request-attempt' | 'request-attempt-of-another-operation';
 
 /**
- * A usage report was refused because it does not name an opened request of the
- * named operation in its environment. Nothing was recorded. Accounting never
+ * A usage report was refused because it does not name a recorded request
+ * attempt of the named operation in its environment. Nothing was recorded. Accounting never
  * guesses an attribution for usage it cannot place (ACC-002).
  * @alpha
  */
@@ -36,9 +36,10 @@ export class UnattributableUsageError extends Error {
 }
 
 /**
- * An intent reused a request identity already opened in its environment for a
- * different operation or attribution. A request identity names one request
- * attempt; it cannot stand for another. Nothing was recorded.
+ * A usage intent reused a request attempt identity already recorded in its
+ * environment for a different operation or attribution. A request attempt
+ * identity names one request attempt; it cannot stand for another. Nothing was
+ * recorded.
  * @alpha
  */
 export class UsageIntentConflictError extends Error {

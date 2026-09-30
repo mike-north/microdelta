@@ -14,11 +14,12 @@ import { AccountingDurabilityUnknownError, UnattributableUsageError, openDurable
 import type {
   IDurableAccounting,
   IEstimateOutcome,
-  IIntentOutcome,
   IRecordedEstimate,
   IUnattributableReason,
   IUnknownUsage,
   IUsageAcknowledgment,
+  IUsageIntent,
+  IUsageIntentOutcome,
   IUsageQuantity,
   IUsageReport,
   IUsageSummary,
@@ -34,15 +35,17 @@ expectType<IDurableAccounting>(openDurableAccounting({ sqlite, location: '/tmp/a
 expectError(openDurableAccounting({ location: '/tmp/accounting.sqlite', logicalStore: 'store' }));
 expectError(openDurableAccounting({ sqlite, location: '/tmp/accounting.sqlite' }));
 
-const intent = { environment: 'production', operation: 'op-1', request: 'req-1', attribution: { run: 'run-1', member: null, stepAttempt: null } } as const;
-expectType<IIntentOutcome>(accounting.openOperation(intent));
-expectAssignable<IIntentOutcome>('opened');
-expectAssignable<IIntentOutcome>('already-open');
-expectNotAssignable<IIntentOutcome>('pending');
+const intent = { environment: 'production', operation: 'op-1', requestAttempt: 'req-1', attribution: { run: 'run-1', member: null, stepAttempt: null } } as const;
+expectType<IUsageIntentOutcome>(accounting.recordUsageIntent(intent));
+expectAssignable<IUsageIntentOutcome>('recorded');
+expectAssignable<IUsageIntentOutcome>('duplicate');
+expectNotAssignable<IUsageIntentOutcome>('pending');
+// A request attempt is named `requestAttempt`; the old `request` spelling is not accepted.
+expectNotAssignable<IUsageIntent>({ environment: 'production', operation: 'op-1', request: 'req-1', attribution: { run: 'run-1', member: null, stepAttempt: null } });
 // Attribution names the run explicitly; member and step attempt are explicit nulls when absent.
-expectError(accounting.openOperation({ environment: 'production', operation: 'op-1', request: 'req-1', attribution: { run: 'run-1' } }));
+expectError(accounting.recordUsageIntent({ environment: 'production', operation: 'op-1', requestAttempt: 'req-1', attribution: { run: 'run-1' } }));
 
-const report: IUsageReport = { environment: 'production', operation: 'op-1', request: 'req-1', report: 'usage-1', quantities: [{ unit: 'tokens', amount: 1 }] };
+const report: IUsageReport = { environment: 'production', operation: 'op-1', requestAttempt: 'req-1', report: 'usage-1', quantities: [{ unit: 'tokens', amount: 1 }] };
 expectType<IUsageAcknowledgment>(accounting.acknowledgeUsage(report));
 // Accounting writes are keyed facts: they take no writer lease or fence.
 expectError(accounting.acknowledgeUsage({ ...report, lease: { holder: 'run-1', fence: 1, expiresAt: 0 } }));
@@ -63,19 +66,19 @@ switch (acknowledgment.kind) {
 if (summary.status === 'incomplete') {
   expectType<IUnknownUsage>(summary.unknown[0]);
 } else {
-  expectType<'known'>(summary.status);
+  expectType<'complete'>(summary.status);
   expectType<readonly []>(summary.unknown);
 }
 expectNotAssignable<IUsageSummary>({
-  environment: 'production', status: 'incomplete', unknown: [], observed: [], operations: 1, requests: 1, reports: 0, estimates: [],
+  environment: 'production', status: 'incomplete', unknown: [], observed: [], operations: 1, requestAttempts: 1, reports: 0, estimates: [],
 });
 expectNotAssignable<IUsageSummary>({
   environment: 'production',
-  status: 'known',
-  unknown: [{ operation: 'op-1', request: 'req-1', attribution: { run: 'run-1', member: null, stepAttempt: null } }],
+  status: 'complete',
+  unknown: [{ operation: 'op-1', requestAttempt: 'req-1', attribution: { run: 'run-1', member: null, stepAttempt: null } }],
   observed: [],
   operations: 1,
-  requests: 1,
+  requestAttempts: 1,
   reports: 0,
   estimates: [],
 });

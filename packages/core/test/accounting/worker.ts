@@ -14,17 +14,18 @@ import { appendFileSync, existsSync, readFileSync, writeSync } from 'node:fs';
 
 import type { IDurableAccounting, IUsageAcknowledgment, IUsageIntent, IUsageReport } from '@microdelta/accounting';
 
-import { faultySqlite, openAccounting } from './support.js';
+import { faultySqlite, openAccounting, openRaw } from './support.js';
 import type { IFaultTiming } from './support.js';
 
 /** One step; the worker applies steps in order. */
 export type IWorkerStep =
-  | { readonly op: 'open'; readonly intent: IUsageIntent }
+  | { readonly op: 'intent'; readonly intent: IUsageIntent }
   | { readonly op: 'send'; readonly provider: string; readonly report: IUsageReport }
   | { readonly op: 'acknowledge'; readonly report: IUsageReport }
   | { readonly op: 'redeliver'; readonly provider: string }
   | { readonly op: 'arm'; readonly role: string; readonly timing: IFaultTiming }
   | { readonly op: 'summarize'; readonly environment: string }
+  | { readonly op: 'hold-write-lock'; readonly milliseconds: number }
   | { readonly op: 'kill' };
 
 /** A complete worker invocation. */
@@ -73,12 +74,12 @@ function hasStrings(value: unknown, fields: readonly string[]): value is object 
  * are left to the adapter's own boundary validation, which is under test.
  */
 function isReport(value: unknown): value is IUsageReport {
-  return hasStrings(value, ['environment', 'operation', 'request', 'report']) && Array.isArray(Reflect.get(value, 'quantities'));
+  return hasStrings(value, ['environment', 'operation', 'requestAttempt', 'report']) && Array.isArray(Reflect.get(value, 'quantities'));
 }
 
 /** Narrow a parsed intent to the shape the parent serialized. */
 function isIntent(value: unknown): value is IUsageIntent {
-  return hasStrings(value, ['environment', 'operation', 'request']) && hasStrings(Reflect.get(value, 'attribution'), ['run']);
+  return hasStrings(value, ['environment', 'operation', 'requestAttempt']) && hasStrings(Reflect.get(value, 'attribution'), ['run']);
 }
 
 /** Narrow one parsed script step; an unrecognized step is a harness error. */
@@ -91,7 +92,7 @@ function parseStep(value: unknown): IWorkerStep {
   const environment = field('environment');
   const role = field('role');
   const timing = field('timing');
-  if (op === 'open' && isIntent(intent)) {
+  if (op === 'intent' && isIntent(intent)) {
     return { op, intent };
   }
   if (op === 'send' && typeof provider === 'string' && isReport(report)) {
@@ -105,6 +106,10 @@ function parseStep(value: unknown): IWorkerStep {
   }
   if (op === 'arm' && typeof role === 'string' && (timing === 'statement' || timing === 'before-commit' || timing === 'after-commit')) {
     return { op, role, timing };
+  }
+  const milliseconds = field('milliseconds');
+  if (op === 'hold-write-lock' && typeof milliseconds === 'number') {
+    return { op, milliseconds };
   }
   if (op === 'summarize' && typeof environment === 'string') {
     return { op, environment };
@@ -137,8 +142,8 @@ const accounting: IDurableAccounting = openAccounting({ location: script.locatio
 /** Apply one step and return its traceable result. */
 function apply(step: IWorkerStep): unknown {
   switch (step.op) {
-    case 'open':
-      return accounting.openOperation(step.intent);
+    case 'intent':
+      return accounting.recordUsageIntent(step.intent);
     case 'send':
       // The provider applies the call and holds its usage report for delivery.
       appendFileSync(step.provider, `${JSON.stringify(step.report)}\n`, 'utf8');
@@ -153,6 +158,19 @@ function apply(step: IWorkerStep): unknown {
       return step.role;
     case 'summarize':
       return accounting.summarizeUsage({ environment: step.environment });
+    case 'hold-write-lock': {
+      // Hold SQLite's write lock (an IMMEDIATE transaction on a separate
+      // connection) for a fixed time, announcing it once held, as a
+      // concurrent writer mid-transaction would.
+      const connection = openRaw(script.location);
+      connection.transaction(() => {
+        trace({ op: 'hold-write-lock', held: true });
+        Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, step.milliseconds);
+        return undefined;
+      });
+      connection.close();
+      return 'released';
+    }
     case 'kill':
       process.kill(process.pid, 'SIGKILL');
       return null;

@@ -6,9 +6,17 @@
  * migration from unknown, incomplete, foreign or differently versioned
  * storage, and it does not share a file with another owner's schema.
  *
- * Every recorded fact is immutable: triggers refuse any update or delete of
- * any row. Environments are a column of every fact table and part of every
- * key, so identical identities in two environments never collide (RUN-017).
+ * Every recorded fact is immutable. For every table, including the identity
+ * row, triggers refuse:
+ * - any `UPDATE` (including `UPDATE OR REPLACE`);
+ * - any `DELETE`;
+ * - any `INSERT` whose primary key is already present. This is what refuses
+ *   `REPLACE` and `INSERT OR REPLACE`: SQLite resolves their conflict by deleting
+ *   the existing row without firing delete triggers, so the insert itself must
+ *   be refused. A plain duplicate insert fails the same way.
+ * Only an insert of a new key can add a fact. Environments are a column of
+ * every fact table and part of every key, so identical identities in two
+ * environments never collide (RUN-017).
  * @packageDocumentation
  */
 import type { ISqliteConnection, ISqliteRow } from '@microdelta/machine';
@@ -24,15 +32,15 @@ export const schemaName = 'microdelta.accounting.durable';
 /** The only schema version this implementation reads or writes. */
 export const schemaVersion = 1;
 
-/** Every table; all rows are immutable facts. */
-const tables = [
-  'accounting_identity',
-  'accounting_requests',
-  'accounting_reports',
-  'accounting_report_quantities',
-  'accounting_estimates',
-  'accounting_estimate_quantities',
-] as const;
+/** Every table with its primary-key columns; all rows are immutable facts. */
+const tables: readonly (readonly [table: string, key: readonly string[]])[] = [
+  ['accounting_identity', ['singleton']],
+  ['accounting_request_attempts', ['environment', 'request_attempt']],
+  ['accounting_reports', ['environment', 'operation', 'report']],
+  ['accounting_report_quantities', ['environment', 'operation', 'report', 'unit']],
+  ['accounting_estimates', ['environment', 'estimate']],
+  ['accounting_estimate_quantities', ['environment', 'estimate', 'unit']],
+];
 
 /**
  * Every schema object, one statement each, in creation order. Stored
@@ -46,31 +54,31 @@ const schemaObjects: readonly string[] = [
     schema_version INTEGER NOT NULL,
     logical_store TEXT NOT NULL CHECK (length(logical_store) > 0)
   ) STRICT`,
-  // Intents: request `request` of operation `operation` was about to be sent,
-  // for this run, member and step attempt. A request identity belongs to one
-  // operation within its environment.
-  sql`CREATE TABLE accounting_requests (
+  // Usage intents: request attempt `request_attempt` of operation `operation`
+  // was about to be sent for this run, member and step attempt. A request
+  // attempt identity belongs to one operation within its environment.
+  sql`CREATE TABLE accounting_request_attempts (
     environment TEXT NOT NULL CHECK (length(environment) > 0),
-    request TEXT NOT NULL CHECK (length(request) > 0),
+    request_attempt TEXT NOT NULL CHECK (length(request_attempt) > 0),
     operation TEXT NOT NULL CHECK (length(operation) > 0),
     run TEXT NOT NULL CHECK (length(run) > 0),
     member TEXT CHECK (member IS NULL OR length(member) > 0),
     step_attempt TEXT CHECK (step_attempt IS NULL OR length(step_attempt) > 0),
-    PRIMARY KEY (environment, request),
-    UNIQUE (environment, operation, request)
+    PRIMARY KEY (environment, request_attempt),
+    UNIQUE (environment, operation, request_attempt)
   ) STRICT`,
-  sql`CREATE INDEX accounting_requests_by_run ON accounting_requests (environment, run, member, step_attempt)`,
+  sql`CREATE INDEX accounting_request_attempts_by_run ON accounting_request_attempts (environment, run, member, step_attempt)`,
   // Acknowledged usage reports, keyed by (operation, report) within an
-  // environment and attributed to an opened request of that operation.
+  // environment and attributed to a recorded request attempt of that operation.
   sql`CREATE TABLE accounting_reports (
     environment TEXT NOT NULL,
     operation TEXT NOT NULL,
     report TEXT NOT NULL CHECK (length(report) > 0),
-    request TEXT NOT NULL,
+    request_attempt TEXT NOT NULL,
     PRIMARY KEY (environment, operation, report),
-    FOREIGN KEY (environment, operation, request) REFERENCES accounting_requests (environment, operation, request)
+    FOREIGN KEY (environment, operation, request_attempt) REFERENCES accounting_request_attempts (environment, operation, request_attempt)
   ) STRICT`,
-  sql`CREATE INDEX accounting_reports_by_request ON accounting_reports (environment, operation, request)`,
+  sql`CREATE INDEX accounting_reports_by_request_attempt ON accounting_reports (environment, operation, request_attempt)`,
   // Observed deltas of one report, one row per unit.
   sql`CREATE TABLE accounting_report_quantities (
     environment TEXT NOT NULL,
@@ -102,10 +110,13 @@ const schemaObjects: readonly string[] = [
     PRIMARY KEY (environment, estimate, unit),
     FOREIGN KEY (environment, estimate) REFERENCES accounting_estimates (environment, estimate)
   ) STRICT`,
-  ...tables.flatMap((table) => [
+  ...tables.flatMap(([table, key]) => [
     sql`CREATE TRIGGER ${table}_immutable_update BEFORE UPDATE ON ${table}
     BEGIN SELECT RAISE(ABORT, '${table} rows are immutable accounting facts'); END`,
     sql`CREATE TRIGGER ${table}_immutable_delete BEFORE DELETE ON ${table}
+    BEGIN SELECT RAISE(ABORT, '${table} rows are immutable accounting facts'); END`,
+    sql`CREATE TRIGGER ${table}_immutable_replace BEFORE INSERT ON ${table}
+    WHEN EXISTS (SELECT 1 FROM ${table} WHERE ${key.map((column) => `${column} = NEW.${column}`).join(' AND ')})
     BEGIN SELECT RAISE(ABORT, '${table} rows are immutable accounting facts'); END`,
   ]),
 ];

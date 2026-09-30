@@ -15,13 +15,13 @@ import { estimateArgument, intentArgument, quantitiesArgument, queryArgument, re
 const attribution: IUsageAttribution = { run: 'run-1', member: 'ada', stepAttempt: 'attempt-7' };
 
 /** A well-formed intent. */
-const intent: IUsageIntent = { environment: 'production', operation: 'op-1', request: 'req-1', attribution };
+const intent: IUsageIntent = { environment: 'production', operation: 'op-1', requestAttempt: 'req-1', attribution };
 
 /** A well-formed report. */
 const report: IUsageReport = {
   environment: 'production',
   operation: 'op-1',
-  request: 'req-1',
+  requestAttempt: 'req-1',
   report: 'usage-1',
   quantities: [{ unit: 'tokens.output', amount: 20 }, { unit: 'tokens.input', amount: 100 }],
 };
@@ -65,7 +65,7 @@ describe('intent arguments', () => {
   test.each([
     ['environment', { ...intent, environment: '' }],
     ['operation', { ...intent, operation: '' }],
-    ['request', { ...intent, request: 42 }],
+    ['requestAttempt', { ...intent, requestAttempt: 42 }],
     ['run', { ...intent, attribution: { ...attribution, run: '' } }],
     ['member', { ...intent, attribution: { ...attribution, member: '' } }],
     ['stepAttempt', { ...intent, attribution: { ...attribution, stepAttempt: undefined } }],
@@ -120,7 +120,7 @@ describe('report arguments', () => {
 
   test.each([
     ['report', { ...report, report: '' }],
-    ['request', { ...report, request: '' }],
+    ['requestAttempt', { ...report, requestAttempt: '' }],
     ['operation', { ...report, operation: null }],
     ['environment', { ...report, environment: '' }],
   ])('a report with a malformed %s is refused', (name, value) => {

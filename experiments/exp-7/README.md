@@ -1,60 +1,147 @@
-# EXP-7 finite TLA+ publication model
+# EXP-7 finite TLA+ publication and writer-lease models
 
-This model checks the safety boundary already exercised by the EXP-3 SQLite
-fixture: only a live current holder with the current fence may publish, and a
-published reference names a retained complete attempt. It is a finite protocol
-abstraction, not a model of SQLite internals or a general proof of History.
+Two finite models check the safety boundary of History's durable publication
+protocol. `Publication.tla` began with the EXP-3 SQLite fixture: only a live
+current holder with the current fence may publish, and a published reference
+names a retained complete attempt. It now also represents production History's
+abandonment and acceptance transitions. `WriterLease.tla` models the production
+writer protocol (`packages/history/src/durable/index.ts`) under the owner's
+2026-09-30 concurrency decision. The decision's elements are one fenced writer
+per store, contending processes that wait and take over only an expired lease
+through a fresh fence, and inspection without a lease. The model also covers
+the shared holder guard and the clock high-water policy under arbitrary host
+readings.
 
-## State represented
+Both are finite protocol abstractions, not models of SQLite internals or
+general proofs of History. The model→code→test mapping against production
+History is in the
+[M5 concurrency validation record](../../docs/validation/m5-concurrency-2026-09-30.md).
+
+## `Publication.tla`: state represented
 
 `Publication.tla` represents one subject, two contenders (`A`, `B`), a retained
 seed result, and two further stable attempt keys (`abandoned`, `successor`).
-Durable state contains the holder, expiry, monotonically increasing fence and
-generation, per-key lifecycle and reference, retained complete snapshots, and
-the current pointer. Process-local state contains liveness, the held token, the
-attempt currently being resumed, whether body execution has returned, and an
-unacknowledged publication reference. Body calls and the latest event witnesses
-are bounded; cumulative acknowledgments and issued high-water observations are
-ghost state used to check invariants, not EXP-3 database records.
+Durable state contains:
 
-`RebindAttempt` models stable-key lookup followed by resuming an existing
-allocated or staged attempt under the current authority. `Execute` allows two
-bounded calls to represent a pre-commit retry. `Crash` and `Restart` clear only
-process-local credentials and pending acknowledgment; they preserve durable
-state. `AbortPublish` is a pre-commit rollback and leaves all durable fields
-unchanged. `AtomicPublish` represents the one successful transaction boundary.
+- the holder, expiry, and monotonically increasing fence and generation;
+- per-key lifecycle and reference;
+- retained complete snapshots and the current pointer.
+
+Process-local state contains liveness, the held token, the attempt currently
+being resumed, whether body execution has returned, and an unacknowledged
+publication reference. Body calls and the latest event witnesses are bounded.
+Cumulative acknowledgments and issued high-water observations are ghost state
+used to check invariants, not database records.
+
+The model's actions:
+
+- `RebindAttempt` models stable-key lookup followed by resuming an existing
+  allocated or staged attempt under the current authority.
+- `Execute` allows two bounded calls to represent a pre-commit retry.
+- `Crash` and `Restart` clear only process-local credentials and pending
+  acknowledgment; they preserve durable state.
+- `AbortPublish` is a pre-commit rollback and leaves all durable fields
+  unchanged.
+- `AtomicPublish` represents the one successful transaction boundary.
+- `Abandon` ends an allocated or staged attempt under current authority. The
+  terminal `ended` phase stands for production's `failed` and `interrupted`
+  states.
+- `Accept` records that an existing retained result was accepted. No other
+  transition reads acceptance records, so they are witnessed rather than
+  stored. Only the current pointer and retained history are durable facts an
+  acceptance could disturb.
+
+## `WriterLease.tla`: state represented
+
+`WriterLease.tla` represents two processes, two holder names (so a process may
+reuse another's name), fences 0–3, host clock readings 0–3 and lease length 2.
+Durable state is:
+
+- the writer row: holder, last fence, expiry and persisted clock high-water;
+- the fence of the latest data write, which stands for the rows that record
+  `allocated_fence`, `ended_fence`, `published_fence` and the acceptance fence.
+
+Each process keeps its lease object (name and fence) indefinitely, so a stale
+process can present it at any later step. A crashed process is one that takes
+no further step, and a restarted one acquires a new lease object. Every
+operation reads an arbitrary host clock value, so readings may move backwards
+or jump forwards between any two steps. History evaluates the larger of that
+reading and the high-water, as production does.
+
+The model's actions:
+
+- `Grant`: `acquireWriter` taking the lease, either because none is recorded
+  or because the recorded one has expired.
+- `Held`: `acquireWriter` observing an unexpired holder.
+- `HolderOp`: the shared `asHolder` guard, applied to `renew`, `release`,
+  `allocate`, `stage`, `publish`, `abandon` and `accept`.
+- `Inspect`: a lease-free read.
+
+Accepted effects mirror the production statements, including renew and
+release writing the presented fence back into the writer row. A rejected
+mutation commits only the time observation.
 
 ## Bounds and interpretation
 
-The configurations fix two contenders, three attempt keys, generations 0–3,
+`Publication.cfg` fixes two contenders, three attempt keys, generations 0–3,
 fences 0–2, logical times 0–2, and lease length 1. The seed occupies generation
 1; later successful allocation consumes one of generations 2–3. Logical time
-moves forward one tick at a time and operations use that model time. EXP-3 instead
-accepts a caller-supplied `nowMs`; the model does not check clock behavior or
-arbitrary timestamp sequences. The model makes no fairness or liveness claim.
-`CHECK_DEADLOCK FALSE` suppresses deadlock reporting because reaching a configured
-finite bound can intentionally leave no enabled transition; it does not assert
-that a production writer always makes progress.
+moves forward one tick at a time. `WriterLease.cfg` covers the clock policy that
+`Publication.tla` abstracts, with the bounds above; `WriterLeaseThreeProcesses.cfg`
+repeats it with three processes. Neither model makes a fairness or liveness
+claim. `CHECK_DEADLOCK FALSE` suppresses deadlock reporting because reaching a
+configured finite bound can intentionally leave no enabled transition. It does
+not assert that a production writer always makes progress, that a waiter is
+ever granted the lease, or anything about the operator deadline and typed
+writer-busy error, which are not yet implemented.
 
 Staged payload bytes, fingerprints, and provenance are abstracted to the
-`staged` lifecycle value. The model has no per-subject table shape, schema
+`staged` lifecycle value. The models have no per-subject table shape, schema
 versioning, corrupt-storage cases, filesystem behavior, SQLite lock behavior, or
-process scheduling. The SQL operations inside publication are not stepped or
-interrupted individually: a successful `AtomicPublish` commits all represented
-publication fields together, while rollback is represented by an unchanged
-`AbortPublish`. Consequently the real child-process kill tests remain the
-independent evidence for SQLite crash and reopen behavior. The model does not
-prove power-loss durability, distributed coordination, provider exactly-once
-execution, or unrestricted concurrency safety.
+process scheduling. The SQL operations inside a transaction are not stepped or
+interrupted individually: each accepted transition commits all represented
+fields together, and rollback is an unchanged state. Consequently the real
+child-process kill tests remain the independent evidence for SQLite crash and
+reopen behavior. The models do not prove power-loss durability, distributed
+coordination, provider exactly-once execution, multi-writer parallelism, or
+unrestricted concurrency safety.
 
-`PublicationBad.cfg` changes one guard only: `OmitPublishFence = TRUE` allows the
-publisher to satisfy liveness and lease-time checks without matching the current
-holder and fence. TLC must find the stale-publisher violation of
-`PublicationUsedCurrentAuthority`; this is a positive control demonstrating that
-the invariant detects the intended fault. `Publication.cfg` restores the guard
-and checks the same invariants over the same finite bounds.
+## Known-bad controls
+
+Each known-bad configuration sets `Fault` to weaken exactly one guard and
+checks the same invariants over the same bounds. TLC must find a violation.
+
+| Configuration | Weakened guard | Expected first violation |
+| --- | --- | --- |
+| `PublicationBad.cfg` | publication without holder/fence equality | `PublicationUsedCurrentAuthority` |
+| `PublicationBad-abandon-completed.cfg` | abandonment of a completed attempt | `CurrentIsComplete` |
+| `PublicationBad-accept-moves-current.cfg` | acceptance rewinds the current pointer | `AcceptanceKeepsCurrentAndHistory` |
+| `WriterLeaseBad-takeover-without-fence.cfg` | takeover reuses the previous fence | `GrantIssuesFreshFence` |
+| `WriterLeaseBad-renew-ignores-fence.cfg` | renewal checks holder and expiry, not fence | `AcceptedByCurrentAuthority` |
+| `WriterLeaseBad-holder-ignores-fence.cfg` | every holder mutation skips the fence | `AcceptedByCurrentAuthority` |
+| `WriterLeaseBad-holder-ignores-expiry.cfg` | every holder mutation skips expiry | `AcceptedByCurrentAuthority` |
+| `WriterLeaseBad-acquire-ignores-expiry.cfg` | acquisition takes over an unexpired holder | `TakeoverOnlyAfterExpiry` |
+| `WriterLeaseBad-waiter-advances-fence.cfg` | a `held` observation advances the fence | `WaiterPreservesAuthorityState` |
+| `WriterLeaseBad-ignore-high-water.cfg` | time is the raw host reading | `EffectiveTimeNeverRegresses` |
+
+Four faults are first reported against a direct statement of the protocol.
+Their `WriterLeaseConsequence-<fault>.cfg` runs omit those statements, which
+shows whether the weakened guard also reaches a storage-safety violation:
+
+- Takeover without a fence increment reaches `AtMostOneAuthority`.
+- Ignoring the high-water reaches `EndedAuthorityNeverActs`, an expired lease
+  revived at a regressed reading.
+- Early takeover and a fence-advancing waiter exhaust without a storage-safety
+  violation. The fence alone keeps storage safe; waiting for expiry is the
+  lease promise the owner's decision makes to the holder.
+
+The Node mutation controls in
+`packages/core/test/concurrency/controls/controls.mjs` plant each
+`WriterLease` fault into History's emitted build.
 
 ## Invariants
+
+`Publication.tla`:
 
 - `TypeOK` checks each durable, process-local, ghost, and bounded value against
   its declared finite domain.
@@ -74,13 +161,45 @@ and checks the same invariants over the same finite bounds.
   and body-call count on completed-key retry.
 - `ExactReferenceReadIsStable` checks the selected retained reference at the
   read event.
+- `EndedAttemptIsNeverAResult` keeps an abandoned attempt out of retained
+  results and the current pointer, with its generation still consumed.
+- `AcceptanceKeepsCurrentAndHistory` requires an acceptance to name a retained
+  result and leave the current pointer where it found it.
 
-Event-specific ghost witnesses are reset on unrelated transitions to avoid
-retaining irrelevant history in the finite state graph. The acknowledgment set
-and high-water maxima persist because their invariants depend on cumulative
-history.
+`WriterLease.tla`, first the direct protocol statements:
 
-## Relation to EXP-3 tests
+- `GrantIssuesFreshFence`: every grant issues the previous fence plus one.
+- `TakeoverOnlyAfterExpiry`: a recorded holder is taken over only once its
+  lease has expired at the evaluated time.
+- `WaiterPreservesAuthorityState`: a `held` observation leaves holder, fence,
+  expiry and data untouched and can only raise the high-water.
+- `InspectionChangesNothing`: a lease-free read changes no durable state.
+- `EffectiveTimeNeverRegresses`: the persisted high-water is never below any
+  evaluated time.
+
+Then the storage-safety consequences:
+
+- `AcceptedByCurrentAuthority`: an accepted mutation came from the process that
+  received the latest grant (a ghost fact independent of holder names),
+  presenting that grant's name and fence within its unexpired lease.
+- `EndedAuthorityNeverActs`: a fence once found expired, released or superseded
+  never mutates again.
+- `RejectedPreservesAuthorityState`: a refusal changes only the high-water.
+- `StorageSeesNonDecreasingFences`: data writes arrive in non-decreasing fence
+  order.
+- `FenceNeverRegresses`: the durable fence is never below any issued fence.
+- `AtMostOneAuthority`: at most one process holds a lease object the durable
+  row would accept.
+
+Event-specific ghost witnesses are reset on unrelated transitions. Only
+cumulative facts persist: acknowledgments, high-water maxima, the latest
+grantee and ended fences.
+
+## Relation to executable tests
+
+The production mapping, with named tests per action and invariant, is in the
+[M5 concurrency validation record](../../docs/validation/m5-concurrency-2026-09-30.md).
+The historical EXP-3 correspondence remains:
 
 | Model boundary | EXP-3 executable evidence |
 | --- | --- |
@@ -91,43 +210,59 @@ history.
 | Retained exact-reference reads remain independent of current | `exact older references remain readable after a newer result becomes current` |
 | Stale authority cannot renew, stage, publish, or release the successor lease | `only one live writer is admitted, and every stale authority operation is fenced` |
 
-The separate process-kill tests exercise real Node child processes and reopen a
-file-backed SQLite store; this model does not substitute for those observations.
-The fence-after-reopen assertion directly checks the token advances from the
-seed writer's `1` to `3` after the killed holder consumed `2`.
-
 ## Reproduction
 
-Run each configuration from this directory with the pinned `tla2tools.jar` from the official
+Use the pinned `tla2tools.jar` from the official
 [TLA+ tools v1.7.1 release](https://github.com/tlaplus/tlaplus/releases/tag/v1.7.1)
 and a Java 17 runtime. This jar reports `TLC2 Version 2.16 of 31 December 2020
 (rev: cdddf55)`. Its SHA-1 matches the release page,
-`9416f74257aa50f250776db34964db7ec99e9883`; the measured SHA-256 is
+`9416f74257aa50f250776db34964db7ec99e9883`; verify its SHA-256 before use:
 `d532ba31aafe17afba1130f92410d9257454ff7393d1eb2fe032f0c07f352da5`.
-The observed host used Eclipse Adoptium 17.0.20.1 on macOS ARM (x86_64 JVM). Keep TLC's state database outside the source tree:
+
+The 2026-09-30 runs used a portable Eclipse Temurin 17.0.20.1+1 JDK for macOS
+aarch64, a native arm64 binary; TLC's banner labels any 64-bit JVM `x86_64`.
+Its tarball was `OpenJDK17U-jdk_aarch64_mac_hotspot_17.0.20.1_1.tar.gz`, SHA-256
+`196d13ba5f10414bef7f6a05a9b3f00edacb18ebacef2b99485db9e2ee18f0e8`. Keep the
+toolchain and TLC's state database in the repository's gitignored `scratch/`
+directory, not in the source tree or a system location. From the repository
+root:
 
 ```sh
-java -cp /path/to/tla2tools.jar tlc2.TLC -workers 1 \
-  -metadir /tmp/exp7-bad-states -config PublicationBad.cfg Publication.tla
-java -cp /path/to/tla2tools.jar tlc2.TLC -workers 1 \
-  -metadir /tmp/exp7-good-states -config Publication.cfg Publication.tla
+mkdir -p scratch/tla-toolchain
+# place tla2tools.jar and an unpacked Java 17 JDK in scratch/tla-toolchain, then:
+shasum -a 256 scratch/tla-toolchain/tla2tools.jar
+JAVA=scratch/tla-toolchain/jdk-17.0.20.1+1/Contents/Home/bin/java
+cd experiments/exp-7
+for cfg in PublicationBad.cfg PublicationBad-abandon-completed.cfg \
+    PublicationBad-accept-moves-current.cfg Publication.cfg; do
+  ../../"$JAVA" -cp ../../scratch/tla-toolchain/tla2tools.jar tlc2.TLC -workers 1 \
+    -metadir "../../scratch/tlc-meta/${cfg%.cfg}" -config "$cfg" Publication.tla
+done
+for cfg in WriterLeaseBad-*.cfg WriterLeaseConsequence-*.cfg \
+    WriterLease.cfg WriterLeaseThreeProcesses.cfg; do
+  ../../"$JAVA" -cp ../../scratch/tla-toolchain/tla2tools.jar tlc2.TLC -workers 1 \
+    -metadir "../../scratch/tlc-meta/${cfg%.cfg}" -config "$cfg" WriterLease.tla
+done
 ```
 
-The bad configuration is expected to stop with exit code 12 and a counterexample
-at `PublicationUsedCurrentAuthority`. The good configuration is expected to
-exhaust its finite reachable state graph with all listed invariants intact.
-The [observed evidence](evidence.md) records counts, exits, and the counterexample.
-Those observed results are evidence for these bounds only.
-
+Every known-bad configuration is expected to stop with exit code 12 at the
+violation listed above. Every good configuration, and the two consequence runs
+without a storage-safety violation, is expected to exhaust its finite
+reachable state graph with exit code 0. The
+[observed evidence](evidence.md) records the 2026-09-26 EXP-3-era runs. The
+[M5 validation record](../../docs/validation/m5-concurrency-2026-09-30.md)
+records the current models' counts, exits and counterexamples. These results
+are evidence for these bounds only.
 
 ## Decision and maintenance
 
-Retain this model as optional protocol-review evidence, as recorded in
-[PUB-004](../../docs/spec/execution.md). The known-bad interleaving demonstrates
-useful sensitivity to the authority boundary, and the corrected finite run is
-small enough to reproduce locally. This does not make TLC a mandatory dependency
-for unrelated CI or discharge M5's implementation concurrency gate. Reassess the
-mapping and rerun both configurations when the publication transitions, lease
-rules, stable-key recovery, or model bounds change. Broader contender/time bounds
-and toolchain upgrades have unmeasured maintenance costs. The present corrected
-run took 2 minutes 15 seconds; routine Node CI remains independent of Java.
+Retain these models as optional protocol-review evidence, as recorded in
+[PUB-004](../../docs/spec/execution.md). The known-bad configurations
+demonstrate sensitivity to each guard, and the good runs are small enough to
+reproduce locally. This does not make TLC a mandatory dependency for CI, and it
+does not discharge M5's implementation concurrency gate, which the Node suites
+in `packages/core/test/concurrency` address. Reassess the mapping and rerun
+every configuration when the publication transitions, lease rules, clock
+policy, stable-key recovery, or model bounds change. Broader bounds and
+toolchain upgrades have unmeasured maintenance costs. Routine Node CI remains
+independent of Java.

@@ -101,11 +101,17 @@ authority still requires the fence.
 ## Selected execution contract (from EXP-8, rulings on #109)
 
 - **Stop.** The drain unit is the admitted step. A request-granularity drain is
-  rejected. A hard stop:
+  rejected. Under a soft stop, a draining step may still issue its remaining
+  first-attempt requests, including through the child steps it calls, because
+  authors isolate paid calls in child steps. Retries, resumed deferrals and work
+  not called from an admitted step are refused. A hard stop:
   - aborts sends, permit waits and deferral sleeps;
   - discards a returned but uncommitted output;
   - records remote cancellation only where the provider supports it, and otherwise
     running or unknown.
+- **Waiting.** A member in a timed wait holds neither a request permit nor its
+  active-window lane, so a quota wait never stalls its siblings. The window
+  default is independent of the permit count.
 - **Publication race.** The publication commit is the linearization point. It
   requires an unexpired, current lease that is re-read durably.
 - **Taint guard.** Once a step attempt has a pending signal (unknown outcome or

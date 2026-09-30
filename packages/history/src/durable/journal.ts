@@ -2,32 +2,38 @@
  * Run Supervision's operation journal inside History's durable authority
  * (RUN-011/012, ARC-007). History stores Supervision's operation and deferral
  * records as opaque versioned records, following the pattern of Resolution's
- * provenance: it owns their environment namespace, format collection, key,
- * revision, commit sequence and committing fence, and never interprets their
- * content. EXP-8 selected the semantics this port must support: an intent
- * committed before a send, a deferral with a "not before" time, and
+ * provenance: it owns their environment namespace, owner-named collection,
+ * key, revision, commit sequence and committing fence, and never interprets
+ * their content. EXP-8 selected the semantics this port must support: an
+ * intent committed before a send, a deferral with a "not before" time, and
  * compare-and-set transitions between operation states. Deciding what any of
  * those states mean, including whether a deferral may be cleared, remains
  * Supervision's responsibility.
  *
+ * A record's identity is its address: analysis, environment, collection and
+ * key. Its format and version are only the tag of each revision. A write under
+ * a different format therefore compare-and-sets against the address's current
+ * revision like any other write; it never creates a parallel record.
+ *
  * Each commit is one IMMEDIATE transaction that first checks the writer's
- * holder, fence and unexpired lease, then every compare-and-set expectation,
- * then inserts a new immutable revision per write:
+ * holder, fence and unexpired lease, then, for every write, that the port
+ * understands the current revision's format and version and that the expected
+ * revision is current, then inserts a new immutable revision per write:
  *
  * | Transition | Durable change | Death before commit | Death after commit |
  * | --- | --- | --- | --- |
  * | journal commit | one new revision per write, journal sequence + writes | no revision, no sequence issued | every revision durable; readers see them all |
  *
  * A port is bound to the record formats and versions its caller understands.
- * A record of any other version is refused on write, and a stored record of
- * any other version is refused on read, list or overwrite, so an older caller
- * never acts on or clobbers a record written by a newer format version.
+ * A record of any other format or version is refused on write, and a stored
+ * record of any other format or version is refused on read, list or
+ * overwrite, so an older caller never acts on or clobbers a record it does
+ * not understand.
  * @packageDocumentation
  */
 import type { ISqliteConnection, ISqliteRow } from '@microdelta/machine';
 
 import type {
-  IHistoryScope,
   IJournalAddress,
   IJournalCommit,
   IJournalDeclaration,
@@ -59,7 +65,7 @@ export interface IJournalStore {
 
 /** One validated write, ready to check and insert. */
 interface IPreparedWrite {
-  readonly key: string;
+  readonly address: IJournalAddress;
   readonly expectedRevision: number;
   readonly record: IStoredRecord;
 }
@@ -90,6 +96,11 @@ function declaredFormats(declaration: IJournalDeclaration): { readonly formats: 
   return { formats: Object.freeze(formats), versions };
 }
 
+/** Copy and validate a journal address argument. */
+function journalAddress(value: IJournalAddress): IJournalAddress {
+  return { ...historyScope(value), collection: requireName(value.collection, 'journal collection'), key: requireName(value.key, 'journal key') };
+}
+
 /**
  * Create the journal store over one open, validated connection. Statements
  * are prepared once; every port shares them, the writer check and the
@@ -100,15 +111,15 @@ export function createJournalStore(connection: ISqliteConnection, asHolder: IHol
     sequence: connection.prepare(sql`/* journal */ SELECT last_journal FROM history_sequences WHERE singleton = 1`),
     setSequence: connection.prepare(sql`/* journal */ UPDATE history_sequences SET last_journal = ? WHERE singleton = 1`),
     current: connection.prepare(sql`/* journal */ SELECT * FROM history_journal
-      WHERE analysis = ? AND environment = ? AND format = ? AND journal_key = ? ORDER BY revision DESC LIMIT 1`),
+      WHERE analysis = ? AND environment = ? AND collection = ? AND journal_key = ? ORDER BY revision DESC LIMIT 1`),
     insert: connection.prepare(sql`/* journal */ INSERT INTO history_journal
-      (analysis, environment, format, journal_key, revision, sequence, fence, format_version, content) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`),
+      (analysis, environment, collection, journal_key, revision, sequence, fence, format, format_version, content) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
     list: connection.prepare(sql`/* journal */ SELECT j.* FROM history_journal j
-      JOIN history_journal first ON first.analysis = j.analysis AND first.environment = j.environment AND first.format = j.format
+      JOIN history_journal first ON first.analysis = j.analysis AND first.environment = j.environment AND first.collection = j.collection
         AND first.journal_key = j.journal_key AND first.revision = 1
-      WHERE j.analysis = ? AND j.environment = ? AND j.format = ?
+      WHERE j.analysis = ? AND j.environment = ? AND j.collection = ?
         AND j.revision = (SELECT max(k.revision) FROM history_journal k
-          WHERE k.analysis = j.analysis AND k.environment = j.environment AND k.format = j.format AND k.journal_key = j.journal_key)
+          WHERE k.analysis = j.analysis AND k.environment = j.environment AND k.collection = j.collection AND k.journal_key = j.journal_key)
       ORDER BY first.sequence`),
   };
 
@@ -121,38 +132,35 @@ export function createJournalStore(connection: ISqliteConnection, asHolder: IHol
     return integer(row, 'last_journal');
   }
 
+  /** The current revision at one address, inside or outside a transaction. */
+  function currentRow(address: IJournalAddress): ISqliteRow | undefined {
+    return statements.current.get(address.analysis, address.environment, address.collection, address.key);
+  }
+
   return Object.freeze({
     open(declaration: IJournalDeclaration): IOperationJournal {
       const { formats, versions } = declaredFormats(declaration);
 
-      /** Refuse a format this port never declared. */
-      function declaredVersions(format: string): ReadonlySet<number> {
-        const accepted = versions.get(format);
-        if (accepted === undefined) {
-          throw new JournalVersionError(`Journal format ${format} is not declared by this journal port`);
-        }
-        return accepted;
-      }
-
-      /** Refuse a format version this port never declared, for a presented or stored record. */
+      /** Refuse a format or version this port never declared, for a presented or stored record. */
       function requireDeclared(format: string, formatVersion: number, subject: string): void {
-        if (!declaredVersions(format).has(formatVersion)) {
+        if (versions.get(format)?.has(formatVersion) !== true) {
           throw new JournalVersionError(`${subject} uses ${format} version ${String(formatVersion)}, which this journal port does not declare`);
         }
       }
 
-      /** Convert one stored revision to its frozen record, refusing an undeclared stored version. */
-      function recordOf(row: ISqliteRow, expected: IHistoryScope & { readonly format: string }): IJournalRecord {
-        const format = text(row, 'format');
+      /** Convert one stored revision to its frozen record, refusing an undeclared stored format or version. */
+      function recordOf(row: ISqliteRow, expected: IJournalQuery): IJournalRecord {
         const key = text(row, 'journal_key');
-        if (text(row, 'analysis') !== expected.analysis || text(row, 'environment') !== expected.environment || format !== expected.format) {
+        if (text(row, 'analysis') !== expected.analysis || text(row, 'environment') !== expected.environment || text(row, 'collection') !== expected.collection) {
           throw new HistoryIntegrityError(`Stored journal record ${key} is outside the requested namespace`);
         }
+        const format = text(row, 'format');
         const formatVersion = integer(row, 'format_version');
         requireDeclared(format, formatVersion, `Stored journal record ${key}`);
         return Object.freeze({
           analysis: expected.analysis,
           environment: expected.environment,
+          collection: expected.collection,
           key,
           revision: requirePositiveStored(integer(row, 'revision'), 'revision'),
           sequence: requirePositiveStored(integer(row, 'sequence'), 'sequence'),
@@ -161,29 +169,25 @@ export function createJournalStore(connection: ISqliteConnection, asHolder: IHol
         });
       }
 
-      /** The current revision of one address inside or outside a transaction. */
-      function currentRow(address: IJournalAddress): ISqliteRow | undefined {
-        return statements.current.get(address.analysis, address.environment, address.format, address.key);
-      }
-
       /** Validate every write before any storage work, refusing ambiguous or undeclared ones. */
       function prepareWrites(request: IJournalCommit): readonly IPreparedWrite[] {
+        const scope = historyScope(request);
         const presented: unknown = request.writes;
         if (!Array.isArray(presented) || presented.length === 0) {
           throw new TypeError('A journal commit needs at least one write');
         }
         const seen = new Set<string>();
         return request.writes.map((write) => {
-          const key = requireName(write.key, 'journal key');
+          const address = journalAddress({ ...scope, collection: write.collection, key: write.key });
           const expectedRevision = requireNonnegative(write.expectedRevision, 'expected journal revision');
           const record = storeRecord(write.record, 'journal record');
-          const identity = JSON.stringify([record.format, key]);
+          const identity = JSON.stringify([address.collection, address.key]);
           if (seen.has(identity)) {
-            throw new TypeError(`Journal commit writes ${record.format} key ${key} more than once`);
+            throw new TypeError(`Journal commit writes ${address.collection} key ${address.key} more than once`);
           }
           seen.add(identity);
-          requireDeclared(record.format, record.formatVersion, `Journal write ${key}`);
-          return { key, expectedRevision, record };
+          requireDeclared(record.format, record.formatVersion, `Journal write ${address.key}`);
+          return { address, expectedRevision, record };
         });
       }
 
@@ -191,38 +195,36 @@ export function createJournalStore(connection: ISqliteConnection, asHolder: IHol
         formats,
 
         commit(lease: IWriterLease, request: IJournalCommit): readonly IJournalRecord[] {
-          const scope = historyScope(request);
           const writes = prepareWrites(request);
           return asHolder(lease, () => {
             // Every expectation is checked before the first insert, so a refused commit writes nothing.
-            const revisions = writes.map((write) => {
-              const address = { ...scope, format: write.record.format, key: write.key };
+            const revisions = writes.map(({ address, expectedRevision }) => {
               const row = currentRow(address);
               const current = row === undefined ? 0 : integer(row, 'revision');
               if (row !== undefined) {
-                // Never overwrite a record whose stored version this port does not understand.
-                requireDeclared(address.format, integer(row, 'format_version'), `Stored journal record ${write.key}`);
+                // A port that does not understand the current revision cannot have read it, whatever its format.
+                requireDeclared(text(row, 'format'), integer(row, 'format_version'), `Stored journal record ${address.key}`);
               }
-              if (current !== write.expectedRevision) {
+              if (current !== expectedRevision) {
                 throw new JournalConflictError(
-                  `Journal ${address.format} key ${write.key} is at revision ${String(current)}, not the expected ${String(write.expectedRevision)}`,
+                  `Journal ${address.collection} key ${address.key} is at revision ${String(current)}, not the expected ${String(expectedRevision)}`,
                 );
               }
               return safeSum(current, 1, 'journal revision');
             });
             let sequence = lastSequence();
-            const committed = writes.map((write, index) => {
+            const committed = writes.map(({ address, record }, index) => {
               sequence = safeSum(sequence, 1, 'journal sequence');
               const revision = revisions[index];
               if (revision === undefined) {
                 throw new HistoryIntegrityError('Journal commit lost a prepared revision');
               }
-              statements.insert.run(scope.analysis, scope.environment, write.record.format, write.key, revision, sequence, lease.fence, write.record.formatVersion, write.record.content);
-              const row = currentRow({ ...scope, format: write.record.format, key: write.key });
+              statements.insert.run(address.analysis, address.environment, address.collection, address.key, revision, sequence, lease.fence, record.format, record.formatVersion, record.content);
+              const row = currentRow(address);
               if (row === undefined) {
-                throw new HistoryIntegrityError(`Committed journal record ${write.key} is not readable`);
+                throw new HistoryIntegrityError(`Committed journal record ${address.key} is not readable`);
               }
-              return recordOf(row, { ...scope, format: write.record.format });
+              return recordOf(row, address);
             });
             statements.setSequence.run(sequence);
             return Object.freeze(committed);
@@ -230,16 +232,14 @@ export function createJournalStore(connection: ISqliteConnection, asHolder: IHol
         },
 
         read(presented: IJournalAddress): IJournalRecord | undefined {
-          const address = { ...historyScope(presented), format: requireName(presented.format, 'journal format'), key: requireName(presented.key, 'journal key') };
-          declaredVersions(address.format);
+          const address = journalAddress(presented);
           const row = currentRow(address);
           return row === undefined ? undefined : recordOf(row, address);
         },
 
         list(presented: IJournalQuery): readonly IJournalRecord[] {
-          const query = { ...historyScope(presented), format: requireName(presented.format, 'journal format') };
-          declaredVersions(query.format);
-          return Object.freeze(statements.list.all(query.analysis, query.environment, query.format).map((row) => recordOf(row, query)));
+          const query = { ...historyScope(presented), collection: requireName(presented.collection, 'journal collection') };
+          return Object.freeze(statements.list.all(query.analysis, query.environment, query.collection).map((row) => recordOf(row, query)));
         },
       };
       return Object.freeze(journal);

@@ -260,13 +260,14 @@ export interface IAcceptanceRequest {
   readonly dependencies: readonly ICompletedResultReference[];
   /**
    * The environment, within the result's analysis, whose current verification
-   * accepted the result. Omitted, it is the environment that published the
-   * result, which is the only choice for a result no promotion names. Another
-   * environment is accepted only when a recorded promotion admits the result
-   * there; the acceptance then belongs to that environment's namespace alone
-   * and never satisfies a lookup in the publishing environment.
+   * accepted the result. It is always explicit and never inferred from the
+   * reference: the caller names its own run environment. It may be the
+   * environment that published the result, or another environment into which
+   * a recorded promotion admits the result. The acceptance then belongs to
+   * that environment's namespace alone and never satisfies a lookup in any
+   * other environment.
    */
-  readonly environment?: string;
+  readonly environment: string;
 }
 
 /** One immutable current-acceptance record, separate from the result it names. @alpha */
@@ -298,15 +299,17 @@ export type IResultVerification =
  * Asks History to admit exact completed results of other environments into
  * one target environment of the same analysis (RUN-017). A trial result
  * satisfies a production lookup only through such a recorded promotion. The
- * scope names the target; each reference keeps naming its own publishing
- * environment. The evidence is the promoter's versioned record of who promoted
- * what and why; History stores it opaquely.
+ * target names where the results are admitted; each reference keeps naming
+ * its own publishing environment. The evidence is the promoter's versioned
+ * record of who promoted what and why; History stores it opaquely.
  * @alpha
  */
-export interface IPromotionRequest extends IHistoryScope {
+export interface IPromotionRequest {
+  /** The analysis and environment the results are admitted into. */
+  readonly target: IHistoryScope;
   /**
-   * Distinct exact completed results of this analysis, none published in the
-   * target environment, in the promoter's order.
+   * Distinct exact completed results of the target's analysis, none published
+   * in the target environment, in the promoter's order.
    */
   readonly references: readonly ICompletedResultReference[];
   /** The promoter's versioned evidence for this promotion. */
@@ -321,9 +324,11 @@ export interface IPromotionRequest extends IHistoryScope {
  * environment's later verifications record their own acceptances.
  * @alpha
  */
-export interface IPromotionRecord extends IHistoryScope {
+export interface IPromotionRecord {
   /** Store-wide never-reused promotion identity, increasing in record order. */
   readonly promotionId: number;
+  /** The analysis and environment the results were admitted into. */
+  readonly target: IHistoryScope;
   /** The writer fence under which the promotion was recorded. */
   readonly fence: number;
   /** The promoter's evidence, decoded and frozen. */
@@ -337,16 +342,18 @@ export interface IPromotionRecord extends IHistoryScope {
  * those naming one exact result.
  * @alpha
  */
-export interface IPromotionQuery extends IHistoryScope {
+export interface IPromotionQuery {
+  /** The analysis and environment whose admitting promotions to read. */
+  readonly target: IHistoryScope;
   /** When present, only promotions that name this exact result. */
   readonly reference?: ICompletedResultReference;
 }
 
 /**
  * One owner-defined journal record format and the exact format versions a
- * journal port can read and write. The format also names the record
- * collection: keys are unique per namespace and format. History compares the
- * tag and versions for exact equality and never interprets the content.
+ * journal port can read and write. A format is only a record's version tag:
+ * it never identifies a record or its collection. History compares the tag
+ * and versions for exact equality and never interprets the content.
  * @alpha
  */
 export interface IJournalFormat {
@@ -358,9 +365,8 @@ export interface IJournalFormat {
 
 /**
  * The formats a journal port is bound to. A stored record of an undeclared
- * format version is refused rather than returned or overwritten, so a caller
- * never acts on, or clobbers, a record written by a format version it does
- * not understand.
+ * format or version is refused rather than returned or overwritten, so a
+ * caller never acts on, or clobbers, a record it does not understand.
  * @alpha
  */
 export interface IJournalDeclaration {
@@ -369,34 +375,38 @@ export interface IJournalDeclaration {
 }
 
 /**
- * Locates one journal record: its environment namespace, format collection
- * and owner-defined key.
+ * Locates one journal record: its environment namespace, owner-named
+ * collection and owner-defined key. The record's identity is exactly this
+ * address; its format tag may change between revisions only by
+ * compare-and-set.
  * @alpha
  */
 export interface IJournalAddress extends IHistoryScope {
-  /** The record's declared format, which names its collection. */
-  readonly format: string;
-  /** The owner-defined non-empty key, unique within the namespace and format. */
+  /** The owner-named non-empty collection, such as Supervision's operations. */
+  readonly collection: string;
+  /** The owner-defined non-empty key, unique within the namespace and collection. */
   readonly key: string;
 }
 
 /**
- * Selects every record of one format collection in one environment namespace.
+ * Selects every record of one collection in one environment namespace.
  * @alpha
  */
 export interface IJournalQuery extends IHistoryScope {
-  /** The declared format whose collection to list. */
-  readonly format: string;
+  /** The owner-named collection to list. */
+  readonly collection: string;
 }
 
 /**
  * One compare-and-set write of a journal commit. The expected revision is the
- * revision the caller last read for this key; `0` asserts that the key has
- * never been written. The record's format selects the collection and must be
- * declared with the record's version.
+ * revision the caller last read at this address; `0` asserts that the key has
+ * never been written in the collection, under any format. The record's
+ * format and version are its version tag and must be declared by the port.
  * @alpha
  */
 export interface IJournalWrite {
+  /** The owner-named non-empty collection. */
+  readonly collection: string;
   /** The owner-defined non-empty key. */
   readonly key: string;
   /** The current revision the write replaces, or `0` for a new key. */
@@ -411,26 +421,28 @@ export interface IJournalWrite {
  * @alpha
  */
 export interface IJournalCommit extends IHistoryScope {
-  /** At least one write, each key and format pair at most once. */
+  /** At least one write, each collection and key pair at most once. */
   readonly writes: readonly IJournalWrite[];
 }
 
 /**
- * One immutable revision of a journal record. Revisions of a key start at 1
- * and increase by one per committed write; earlier revisions are retained and
- * never rewritten.
+ * One immutable revision of a journal record. Revisions of an address start
+ * at 1 and increase by one per committed write; earlier revisions are retained
+ * and never rewritten.
  * @alpha
  */
 export interface IJournalRecord extends IHistoryScope {
+  /** The owner-named collection. */
+  readonly collection: string;
   /** The owner-defined key. */
   readonly key: string;
-  /** This revision's number within its key, starting at 1. */
+  /** This revision's number within its address, starting at 1. */
   readonly revision: number;
   /** Store-wide never-reused journal write identity, increasing in commit order. */
   readonly sequence: number;
   /** The writer fence under which this revision was committed. */
   readonly fence: number;
-  /** The owner-defined record, decoded and frozen; its format names the collection. */
+  /** The owner-defined record, decoded and frozen, with this revision's version tag. */
   readonly record: IVersionedRecord;
 }
 
@@ -439,10 +451,10 @@ export interface IJournalRecord extends IHistoryScope {
  * keeps owner-defined operation and deferral records, such as an intent
  * committed before a send or a "not before" deferral, atomically and under
  * writer fencing, without interpreting them: History owns only namespacing,
- * revisions, fencing and the declared-version check. A commit needs the
- * current writer lease and checks holder, fence and unexpired lease in the
- * same transaction as its compare-and-set checks and writes; reads need no
- * lease and never see an uncommitted write.
+ * collections, revisions, fencing and the declared-version check. A commit
+ * needs the current writer lease and checks holder, fence and unexpired lease
+ * in the same transaction as its compare-and-set checks and writes; reads
+ * need no lease and never see an uncommitted write.
  * @alpha
  */
 export interface IOperationJournal {
@@ -450,12 +462,13 @@ export interface IOperationJournal {
   readonly formats: readonly IJournalFormat[];
   /**
    * Commit every write in one transaction. The whole commit is refused,
-   * unchanged, for a stale lease, an expected revision that is not the key's
-   * current revision, an undeclared format or version, or a current revision
-   * whose stored version this port does not understand.
+   * unchanged, for a stale lease, an undeclared format or version, a current
+   * revision whose stored format or version this port does not understand
+   * (checked first, since such a caller cannot have read it), or an expected
+   * revision that is not the address's current revision.
    */
   commit(lease: IWriterLease, request: IJournalCommit): readonly IJournalRecord[];
-  /** The current revision of one record, or undefined if the key was never written. */
+  /** The current revision at one address, or undefined if the key was never written there. */
   read(address: IJournalAddress): IJournalRecord | undefined;
   /** The current revision of every key in one collection, in order of first write. */
   list(query: IJournalQuery): readonly IJournalRecord[];
@@ -553,11 +566,11 @@ export interface IDurableHistory {
   /** Record a current acceptance of an existing result without touching it or the current pointer. */
   recordAcceptance(lease: IWriterLease, request: IAcceptanceRequest): IAcceptanceRecord;
   /**
-   * Acceptance records naming one exact result that were recorded in one
-   * environment, in record order. The environment defaults to the one that
-   * published the result; another must admit the result through a promotion.
+   * Acceptance records naming one exact result that were recorded in the
+   * named environment, in record order. The environment is always explicit:
+   * the publishing environment, or one a promotion admits the result into.
    */
-  readAcceptances(reference: ICompletedResultReference, environment?: string): readonly IAcceptanceRecord[];
+  readAcceptances(reference: ICompletedResultReference, environment: string): readonly IAcceptanceRecord[];
 
   /**
    * In one commit, record a promotion that admits exact results of other

@@ -18,7 +18,7 @@ import type { IAttemptRequest, IJournalRecord, IPromotionRecord, IWriterLease } 
 import { expectClean, expectKilled, runWorker, valueOf } from '../durable-history/processes.js';
 import { cleanup, controlledClock, freshLocation, openHistory } from '../durable-history/support.js';
 import type { IWorkerStep } from '../durable-history/worker.js';
-import { operation, operationFormat, production, trial, versionOne } from './support.js';
+import { operation, operations, production, trial, versionOne } from './support.js';
 
 afterEach(cleanup);
 
@@ -26,14 +26,14 @@ afterEach(cleanup);
 const summary = 'summary:acme/widget:2026-Q1:person:ada';
 
 /** The journal address of the operation every scenario records. */
-const intentAddress = { ...trial, format: operationFormat, key: 'op-assess-ada' };
+const intentAddress = { ...trial, collection: operations, key: 'op-assess-ada' };
 
 /** An intent record committed before a (fixture) send. */
 const intent = { member: 'm-ada', name: 'assess', bindingDigest: 'sha256:binding', state: 'pending' };
 
 /** The steps that commit the intent as a new key under the worker's lease. */
 function commitIntent(expectedRevision = 0, content: unknown = intent): IWorkerStep {
-  return { op: 'journal-commit', scope: trial, writes: [{ key: intentAddress.key, expectedRevision, record: operation(content) }] };
+  return { op: 'journal-commit', scope: trial, writes: [{ collection: operations, key: intentAddress.key, expectedRevision, record: operation(content) }] };
 }
 
 /** An attempt request for Ada's summary in one environment. */
@@ -68,7 +68,7 @@ describe('process death around the journal commit', () => {
       commitIntent(),
     ]));
     // The rolled-back commit issued nothing: the successor's write is sequence 1 under fence 2.
-    expect(valueOf(successor[3])).toEqual([{ ...trial, key: intentAddress.key, revision: 1, sequence: 1, fence: 2, record: operation(intent) }]);
+    expect(valueOf(successor[3])).toEqual([{ ...trial, collection: operations, key: intentAddress.key, revision: 1, sequence: 1, fence: 2, record: operation(intent) }]);
   });
 
   test('a kill just after the journal commit leaves the intent durable; a new process reads it and only a successor fence can advance it by compare-and-set', () => {
@@ -82,7 +82,7 @@ describe('process death around the journal commit', () => {
     ]);
     expectKilled(killed, 4);
     const committed = valueOf<readonly IJournalRecord[]>(killed.trace[3]);
-    expect(committed).toEqual([{ ...trial, key: intentAddress.key, revision: 1, sequence: 1, fence: 1, record: operation(intent) }]);
+    expect(committed).toEqual([{ ...trial, collection: operations, key: intentAddress.key, revision: 1, sequence: 1, fence: 1, record: operation(intent) }]);
 
     // A reader in another process sees exactly the committed intent while the dead lease is still live.
     const reader = expectClean(runWorker(location, [
@@ -110,7 +110,7 @@ describe('process death around the journal commit', () => {
       ['journal-commit', false, 'JournalConflictError'],
       ['journal-commit', true, undefined],
     ]);
-    expect(readIntent(location, 1_150)).toEqual({ ...trial, key: intentAddress.key, revision: 2, sequence: 2, fence: 2, record: operation({ ...intent, state: 'unknown' }) });
+    expect(readIntent(location, 1_150)).toEqual({ ...trial, collection: operations, key: intentAddress.key, revision: 2, sequence: 2, fence: 2, record: operation({ ...intent, state: 'unknown' }) });
   });
 });
 
@@ -135,7 +135,7 @@ describe('fencing and namespacing across processes', () => {
       { op: 'use-lease', lease: staleLease },
       { op: 'journal', formats: versionOne },
       commitIntent(1, { ...intent, state: 'succeeded' }),
-      { op: 'promote', scope: production, locators: [trialLocator], label: 'late' },
+      { op: 'promote', target: production, locators: [trialLocator], label: 'late' },
     ]);
     expect(stale.status).toBe(0);
     expect(stale.trace.slice(3).map((entry) => [entry.op, entry.ok, entry.error])).toEqual([
@@ -144,7 +144,7 @@ describe('fencing and namespacing across processes', () => {
     ]);
     expect(readIntent(location, 1_170)).toMatchObject({ revision: 1, fence: 1, record: { content: intent } });
     const history = openHistory({ location, clock: controlledClock(1_170) });
-    expect(history.readPromotions(production)).toEqual([]);
+    expect(history.readPromotions({ target: production })).toEqual([]);
   });
 
   test('trial results and journal records stay out of production in every later process until a promotion, which then admits the named result', () => {
@@ -185,7 +185,7 @@ describe('fencing and namespacing across processes', () => {
       { op: 'time', at: 1_020 },
       { op: 'acquire', holder: 'operator', lease: 100 },
       { op: 'arm', role: 'promote' },
-      { op: 'promote', scope: production, locators: [trialLocator], label: 'killed' },
+      { op: 'promote', target: production, locators: [trialLocator], label: 'killed' },
     ]), 3);
     const unpromoted = expectClean(runWorker(location, [{ op: 'time', at: 1_030 }, { op: 'candidates', subject: { ...production, subject: summary, version: 1 } }]));
     expect(valueOf(unpromoted[1])).toEqual([]);
@@ -193,11 +193,11 @@ describe('fencing and namespacing across processes', () => {
     const promoted = expectClean(runWorker(location, [
       { op: 'time', at: 1_200 },
       { op: 'acquire', holder: 'operator', lease: 100 },
-      { op: 'promote', scope: production, locators: [trialLocator], label: 'reviewed' },
+      { op: 'promote', target: production, locators: [trialLocator], label: 'reviewed' },
       { op: 'release' },
     ]));
     const promotion = valueOf<IPromotionRecord>(promoted[2]);
-    expect(promotion).toMatchObject({ promotionId: 1, environment: production.environment, fence: 4, references: [{ locator: trialLocator }], evidence: { content: { label: 'reviewed' } } });
+    expect(promotion).toMatchObject({ promotionId: 1, target: production, fence: 4, references: [{ locator: trialLocator }], evidence: { content: { label: 'reviewed' } } });
 
     const after = expectClean(runWorker(location, [
       { op: 'time', at: 1_210 },

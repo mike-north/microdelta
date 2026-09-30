@@ -38,12 +38,12 @@ export type IWorkerStep =
   | { readonly op: 'stage'; readonly payload: unknown; readonly label: string; readonly dependencies?: readonly string[] }
   | { readonly op: 'publish' }
   | { readonly op: 'abandon'; readonly outcome: 'failed' | 'interrupted' }
-  | { readonly op: 'accept'; readonly locator: string; readonly environment?: string }
+  | { readonly op: 'accept'; readonly locator: string; readonly environment: string }
   | { readonly op: 'journal'; readonly formats: readonly IJournalFormat[] }
   | { readonly op: 'journal-commit'; readonly scope: IHistoryScope; readonly writes: readonly IJournalWrite[] }
   | { readonly op: 'journal-read'; readonly address: IJournalAddress }
   | { readonly op: 'journal-list'; readonly query: IJournalQuery }
-  | { readonly op: 'promote'; readonly scope: IHistoryScope; readonly locators: readonly string[]; readonly label: string }
+  | { readonly op: 'promote'; readonly target: IHistoryScope; readonly locators: readonly string[]; readonly label: string }
   | { readonly op: 'candidates'; readonly subject: IVersionedSubject }
   | { readonly op: 'recover'; readonly request: IAttemptRequest }
   | { readonly op: 'acknowledge'; readonly file: string }
@@ -162,7 +162,7 @@ function apply(step: IWorkerStep): unknown {
         reference: { kind: 'completed-result', locator: step.locator },
         evidence: { format: 'test.acceptance', formatVersion: 1, content: { accepted: true } },
         dependencies: [],
-        ...(step.environment === undefined ? {} : { environment: step.environment }),
+        environment: step.environment,
       });
     case 'journal':
       journal = history.openJournal({ formats: step.formats });
@@ -175,7 +175,7 @@ function apply(step: IWorkerStep): unknown {
       return requireJournal().list(step.query);
     case 'promote':
       return history.promoteResults(requireLease(), {
-        ...step.scope,
+        target: step.target,
         references: step.locators.map((locator) => ({ kind: 'completed-result', locator })),
         evidence: { format: 'test.promotion', formatVersion: 1, content: { label: step.label } },
       });

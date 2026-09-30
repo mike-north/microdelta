@@ -103,7 +103,7 @@ describe('current finality after restart', () => {
         expect(outcome.reference.locator).toBe(first);
         // Acceptance is a separate record naming the unchanged exact result.
         expect(outcome.acceptance.reference.locator).toBe(first);
-        expect(current.history.readAcceptances(outcome.reference)).toHaveLength(session);
+        expect(current.history.readAcceptances(outcome.reference, environment)).toHaveLength(session);
         expect(outcome.trace.map((event) => event.phase)).toEqual(['verify', 'finality', 'accept']);
         expect(current.admissions).toHaveLength(0);
       });
@@ -166,7 +166,7 @@ describe('current finality after restart', () => {
       expect(session.history.readCurrent(adaActivitySubject)?.locator).toBe(first);
       // The check's work is recorded as acceptance evidence, never folded into the original provenance.
       const envelope = session.history.readEnvelope(outcome.reference);
-      expect(session.history.readAcceptances(outcome.reference).map((record) => record.acceptanceId)).toEqual([outcome.acceptance.acceptanceId]);
+      expect(session.history.readAcceptances(outcome.reference, environment).map((record) => record.acceptanceId)).toEqual([outcome.acceptance.acceptanceId]);
       expect(outcome.acceptance.evidence.content).not.toEqual(envelope.provenance.content);
       // The admitted claim ends without a new result once the check retained.
       expect(outcome.trace.map((event) => event.phase)).toEqual(['verify', 'admit', 'claim', 'execute', 'accept', 'release']);
@@ -223,7 +223,7 @@ describe('policy and control failures are never success', () => {
       expect(failure.cause).toBeInstanceOf(Error);
       expect(world.checks['person:ada']).toBe(1);
       const reference = { kind: 'completed-result' as const, locator: first };
-      expect(session.history.readAcceptances(reference)).toHaveLength(0);
+      expect(session.history.readAcceptances(reference, environment)).toHaveLength(0);
       expect(session.history.readCurrent(adaActivitySubject)?.locator).toBe(first);
     });
   });
@@ -253,7 +253,7 @@ describe('policy and control failures are never success', () => {
       await expectFailure(session.resolve(session.contributors.steps['person:ada'].activity), code);
       expect(session.history.readCurrent(adaActivitySubject)?.locator).toBe(first);
       expect(session.history.findCandidates({ ...adaActivitySubject, version: 1 })).toHaveLength(1);
-      expect(session.history.readAcceptances({ kind: 'completed-result', locator: first })).toHaveLength(0);
+      expect(session.history.readAcceptances({ kind: 'completed-result', locator: first }, environment)).toHaveLength(0);
       const roles = session.sqlite.evidence(before).roles;
       expect(roles.allocate).toBeGreaterThan(0);
       expect(roles.abandon).toBeGreaterThan(0);

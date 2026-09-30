@@ -1102,7 +1102,7 @@ export function createResolution<TInputs extends object, THelpers extends object
 
   /** Record a current acceptance of an existing result and report it. */
   function accept(request: IRequestContext, evidence: IStepEvidence, step: IBindingDescriptor, basis: IReuseBasis, reference: ICompletedResultReference, record: Parameters<typeof acceptanceRecord>[0], dependencies: readonly ICompletedResultReference[]): IStepResult {
-    const acceptance = integrity(() => history.recordAcceptance(leaseOf(request), { reference, evidence: acceptanceRecord(record), dependencies }));
+    const acceptance = integrity(() => history.recordAcceptance(leaseOf(request), { reference, evidence: acceptanceRecord(record), dependencies, environment }));
     emit(request, evidence, step, 'accept', reference);
     return { kind: 'reused', basis, reference, acceptance };
   }

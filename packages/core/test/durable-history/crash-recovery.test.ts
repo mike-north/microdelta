@@ -279,7 +279,7 @@ describe('stale holders across processes', () => {
       { op: 'stage', payload: adaActivity(), label: 'late' },
       { op: 'publish' },
       { op: 'abandon', outcome: 'interrupted' },
-      { op: 'accept', locator: seed },
+      { op: 'accept', locator: seed, environment: scope.environment },
       { op: 'release' },
     ]);
     expect(stale.status).toBe(0);

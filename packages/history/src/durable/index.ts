@@ -260,17 +260,19 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
   }
 
   /**
-   * The namespace an acceptance is recorded or read in: the result's
-   * publishing scope by default, or another environment of the same analysis
-   * that a promotion admits the result into.
+   * The namespace an acceptance is recorded or read in, always named by the
+   * caller: the result's publishing environment, or another environment of
+   * the same analysis that a promotion admits the result into.
    */
-  function acceptanceScope(resultId: number, published: IHistoryScope, environment: string | undefined): IHistoryScope {
-    if (environment === undefined || environment === published.environment) {
+  function acceptanceScope(reference: ICompletedResultReference, resultId: number, published: IHistoryScope, environment: string): IHistoryScope {
+    if (environment === published.environment) {
       return published;
     }
     const scope = { analysis: published.analysis, environment };
     if (!isPromotedInto(resultId, scope)) {
-      throw new HistoryIntegrityError(`Completed result ${String(resultId)} is not admissible in environment ${environment}: it was not published there and no promotion names it there`);
+      throw new HistoryIntegrityError(
+        `Completed result ${reference.locator} is not admissible in environment ${environment} of analysis ${published.analysis}: it was not published there and no promotion names it there`,
+      );
     }
     return scope;
   }
@@ -515,7 +517,7 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
    */
   function promotionOf(row: ISqliteRow): IPromotionRecord {
     const promotionId = integer(row, 'promotion_id');
-    const target = { analysis: text(row, 'analysis'), environment: text(row, 'environment') };
+    const target = Object.freeze({ analysis: text(row, 'analysis'), environment: text(row, 'environment') });
     const references = statements.promotionResults.all(promotionId).map((named, position) => {
       const resultId = integer(named, 'result_id');
       if (integer(named, 'position') !== position || named.present === null) {
@@ -533,8 +535,8 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
       throw new HistoryIntegrityError(`Stored promotion ${String(promotionId)} names no result`);
     }
     return Object.freeze({
-      ...target,
       promotionId,
+      target,
       fence: integer(row, 'fence'),
       evidence: loadRecord(row.evidence_format, row.evidence_version, row.evidence, 'promotion evidence'),
       references: Object.freeze(references),
@@ -729,11 +731,11 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
     recordAcceptance(lease: IWriterLease, request: IAcceptanceRequest): IAcceptanceRecord {
       const evidence = storeRecord(request.evidence, 'acceptance evidence');
       const references = [...request.dependencies];
-      const environment = request.environment === undefined ? undefined : requireName(request.environment, 'acceptance environment');
+      const environment = requireName(request.environment, 'acceptance environment');
       return asHolder(lease, () => {
         const { resultId, scope: published } = resolveResult(request.reference);
-        // The acceptance and its dependencies belong to the accepting environment's namespace.
-        const scope = acceptanceScope(resultId, published, environment);
+        // The acceptance and its dependencies belong to the named accepting environment's namespace.
+        const scope = acceptanceScope(request.reference, resultId, published, environment);
         const dependencies = dependencyIds(references, scope);
         const acceptanceId = safeSum(readSequences().lastAcceptance, 1, 'acceptance identity');
         statements.setAcceptanceSequence.run(acceptanceId);
@@ -749,16 +751,16 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
       });
     },
 
-    readAcceptances(reference: ICompletedResultReference, presentedEnvironment?: string): readonly IAcceptanceRecord[] {
-      const environment = presentedEnvironment === undefined ? undefined : requireName(presentedEnvironment, 'acceptance environment');
+    readAcceptances(reference: ICompletedResultReference, presentedEnvironment: string): readonly IAcceptanceRecord[] {
+      const environment = requireName(presentedEnvironment, 'acceptance environment');
       const { resultId, scope: published } = resolveResult(reference);
-      const scope = acceptanceScope(resultId, published, environment);
+      const scope = acceptanceScope(reference, resultId, published, environment);
       const exact = referenceOf(resultId, published);
       return Object.freeze(statements.acceptances.all(resultId, scope.environment).map((row) => acceptanceOf(row, exact, scope)));
     },
 
     promoteResults(lease: IWriterLease, request: IPromotionRequest): IPromotionRecord {
-      const target = historyScope(request);
+      const target = historyScope(request.target);
       const evidence = storeRecord(request.evidence, 'promotion evidence');
       const presented: unknown = request.references;
       if (!Array.isArray(presented) || presented.length === 0) {
@@ -768,11 +770,12 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
       return asHolder(lease, () => {
         const resultIds = references.map((reference) => {
           const { resultId, scope: published } = resolveResult(reference);
+          // A reference that cannot be promoted into the target is one integrity class, like any wrong-scope reference.
           if (published.analysis !== target.analysis) {
             throw new HistoryIntegrityError(`Completed result ${reference.locator} belongs to another analysis; promotion never crosses analyses`);
           }
           if (published.environment === target.environment) {
-            throw new TypeError(`Completed result ${reference.locator} was published in ${target.environment}; only results of other environments can be promoted into it`);
+            throw new HistoryIntegrityError(`Completed result ${reference.locator} was published in ${target.environment}; only results of other environments can be promoted into it`);
           }
           return resultId;
         });
@@ -794,7 +797,7 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
     },
 
     readPromotions(query: IPromotionQuery): readonly IPromotionRecord[] {
-      const target = historyScope(query);
+      const target = historyScope(query.target);
       if (query.reference === undefined) {
         return Object.freeze(statements.promotions.all(target.analysis, target.environment).map(promotionOf));
       }

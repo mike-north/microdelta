@@ -14,14 +14,14 @@ single-file schema, distinct from the legacy Store, with:
 - never-reused attempt identities with stable keys and intent digests;
 - staging and one-commit atomic publication with a current pointer per scoped subject;
 - immutable completed results with an exact scoped selected reader generated from their canonical payload;
-- separate acceptance records, namespaced by the environment that recorded them;
+- separate acceptance records, namespaced by the explicitly named environment that recorded them;
 - environment namespaces within one store, so a trial run's attempts, heads,
   candidates, acceptances and journal records never satisfy production;
 - recorded, fenced promotions that admit named exact results of one environment
   into another of the same analysis, without moving or rewriting either one's history;
 - Run Supervision's operation journal: opaque versioned records per environment,
-  format and key, committed atomically by compare-and-set under writer fencing,
-  with undeclared record versions refused.
+  owner-named collection and key, committed atomically by compare-and-set under
+  writer fencing, with undeclared record formats and versions refused.
 
 It stores Resolution's provenance and Supervision's journal records as
 versioned opaque records and never decides reuse eligibility, freshness or

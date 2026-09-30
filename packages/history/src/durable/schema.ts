@@ -232,19 +232,22 @@ const schemaObjects: readonly string[] = [
   ) STRICT`,
   sql`CREATE INDEX history_promotion_results_by_result ON history_promotion_results (result_id, promotion_id)`,
   // Run Supervision's operation journal: immutable revisions of opaque owner
-  // records per environment namespace, format collection and key. The
-  // current record is a key's highest revision; the sequence orders commits.
+  // records per environment namespace, owner-named collection and key. The
+  // current record is an address's highest revision; the sequence orders
+  // commits. The format and version are each revision's tag, never part of
+  // the record's identity, so two formats can never hold parallel records.
   sql`CREATE TABLE history_journal (
     analysis TEXT NOT NULL CHECK (length(analysis) > 0),
     environment TEXT NOT NULL CHECK (length(environment) > 0),
-    format TEXT NOT NULL CHECK (length(format) > 0),
+    collection TEXT NOT NULL CHECK (length(collection) > 0),
     journal_key TEXT NOT NULL CHECK (length(journal_key) > 0),
     revision INTEGER NOT NULL CHECK (revision > 0),
     sequence INTEGER NOT NULL UNIQUE CHECK (sequence > 0),
     fence INTEGER NOT NULL CHECK (fence > 0),
+    format TEXT NOT NULL CHECK (length(format) > 0),
     format_version INTEGER NOT NULL CHECK (format_version > 0),
     content TEXT NOT NULL,
-    PRIMARY KEY (analysis, environment, format, journal_key, revision)
+    PRIMARY KEY (analysis, environment, collection, journal_key, revision)
   ) STRICT`,
   ...immutableTables.flatMap((table) => [
     sql`CREATE TRIGGER ${table}_immutable_update BEFORE UPDATE ON ${table}

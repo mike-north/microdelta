@@ -17,7 +17,7 @@ import { HistoryIntegrityError, StaleWriterError } from '@microdelta/history';
 import type { ICompletedResultReference, IDurableHistory } from '@microdelta/history';
 
 import { cleanup, controlledClock, freshLocation, openHistory, openRaw } from '../durable-history/support.js';
-import { acceptanceEvidence, acquire, analysis, attempt, operation, operationFormat, production, promotionEvidence, publish, trial, versionOne } from './support.js';
+import { acceptanceEvidence, acquire, analysis, attempt, operation, operations, production, promotionEvidence, publish, trial, versionOne } from './support.js';
 
 afterEach(cleanup);
 
@@ -51,9 +51,9 @@ describe('environment namespaces', () => {
     const history = openHistory({ location: freshLocation() });
     const lease = acquire(history);
     const trialAda = publish(history, lease, trial, summary, { key: 'ada' });
-    history.recordAcceptance(lease, { reference: trialAda, evidence: acceptanceEvidence('trial check'), dependencies: [] });
+    history.recordAcceptance(lease, { reference: trialAda, evidence: acceptanceEvidence('trial check'), dependencies: [], environment: trial.environment });
     const journal = history.openJournal({ formats: versionOne });
-    journal.commit(lease, { ...trial, writes: [{ key: 'op-1', expectedRevision: 0, record: operation({ state: 'succeeded' }) }] });
+    journal.commit(lease, { ...trial, writes: [{ collection: operations, key: 'op-1', expectedRevision: 0, record: operation({ state: 'succeeded' }) }] });
 
     // Heads and candidates.
     expect(history.findCandidates({ ...production, subject: summary, version: 1 })).toEqual([]);
@@ -68,12 +68,14 @@ describe('environment namespaces', () => {
     // Acceptances and dependencies: a trial result is not admissible in production.
     expect(() => history.recordAcceptance(lease, { reference: trialAda, evidence: acceptanceEvidence('production check'), dependencies: [], environment: production.environment })).toThrow(HistoryIntegrityError);
     expect(() => history.readAcceptances(trialAda, production.environment)).toThrow(HistoryIntegrityError);
+    // The refusal names the exact result by its locator.
+    expect(() => history.readAcceptances(trialAda, production.environment)).toThrow(trialAda.locator);
     expect(() => history.stageAttempt(lease, { attemptId: productionAttempt.attemptId, payload: { total: 1 }, provenance: { format: 'test.resolution.provenance', formatVersion: 1, content: {} }, dependencies: [trialAda] })).toThrow(HistoryIntegrityError);
-    expect(history.readAcceptances(trialAda).map((record) => [record.environment, record.evidence.content])).toEqual([[trial.environment, { check: 'trial check' }]]);
+    expect(history.readAcceptances(trialAda, trial.environment).map((record) => [record.environment, record.evidence.content])).toEqual([[trial.environment, { check: 'trial check' }]]);
 
     // Journal records.
-    expect(journal.read({ ...production, format: operationFormat, key: 'op-1' })).toBeUndefined();
-    expect(journal.list({ ...production, format: operationFormat })).toEqual([]);
+    expect(journal.read({ ...production, collection: operations, key: 'op-1' })).toBeUndefined();
+    expect(journal.list({ ...production, collection: operations })).toEqual([]);
   });
 });
 
@@ -90,8 +92,8 @@ describe('recorded promotion', () => {
     const productionAda = publish(history, lease, production, summary, { key: 'production-ada' });
     const trialAda = publish(history, lease, trial, summary, { key: 'trial-ada' });
     const trialBo = publish(history, lease, trial, boSummary, { key: 'trial-bo' });
-    history.recordAcceptance(lease, { reference: trialAda, evidence: acceptanceEvidence('trial check'), dependencies: [] });
-    history.openJournal({ formats: versionOne }).commit(lease, { ...trial, writes: [{ key: 'op-1', expectedRevision: 0, record: operation({ state: 'succeeded' }) }] });
+    history.recordAcceptance(lease, { reference: trialAda, evidence: acceptanceEvidence('trial check'), dependencies: [], environment: trial.environment });
+    history.openJournal({ formats: versionOne }).commit(lease, { ...trial, writes: [{ collection: operations, key: 'op-1', expectedRevision: 0, record: operation({ state: 'succeeded' }) }] });
     history.releaseWriter(lease);
     return { history, productionAda, trialAda, trialBo };
   }
@@ -100,15 +102,14 @@ describe('recorded promotion', () => {
     const location = freshLocation();
     const { history, productionAda, trialAda, trialBo } = seeded(location);
     const trialEnvelope = history.readEnvelope(trialAda);
-    const trialAcceptances = history.readAcceptances(trialAda);
+    const trialAcceptances = history.readAcceptances(trialAda, trial.environment);
     const trialBefore = trialHistory(location);
 
     const lease = acquire(history, 'operator');
-    const promotion = history.promoteResults(lease, { ...production, references: [trialAda], evidence: promotionEvidence('trial reviewed') });
+    const promotion = history.promoteResults(lease, { target: production, references: [trialAda], evidence: promotionEvidence('trial reviewed') });
     expect(promotion).toEqual({
       promotionId: 1,
-      analysis,
-      environment: production.environment,
+      target: { analysis, environment: production.environment },
       fence: lease.fence,
       evidence: promotionEvidence('trial reviewed'),
       references: [trialAda],
@@ -127,21 +128,21 @@ describe('recorded promotion', () => {
     expect(history.readCurrent({ ...trial, subject: summary })).toEqual(trialAda);
 
     // Provenance of the promotion is queryable per target environment and per result.
-    expect(history.readPromotions(production)).toEqual([promotion]);
-    expect(history.readPromotions({ ...production, reference: trialAda })).toEqual([promotion]);
-    expect(history.readPromotions({ ...production, reference: trialBo })).toEqual([]);
-    expect(history.readPromotions(trial)).toEqual([]);
+    expect(history.readPromotions({ target: production })).toEqual([promotion]);
+    expect(history.readPromotions({ target: production, reference: trialAda })).toEqual([promotion]);
+    expect(history.readPromotions({ target: production, reference: trialBo })).toEqual([]);
+    expect(history.readPromotions({ target: trial })).toEqual([]);
 
     // Trial history is untouched: same envelope, acceptances and stored rows.
     expect(history.readEnvelope(trialAda)).toEqual(trialEnvelope);
-    expect(history.readAcceptances(trialAda)).toEqual(trialAcceptances);
+    expect(history.readAcceptances(trialAda, trial.environment)).toEqual(trialAcceptances);
     expect(trialHistory(location)).toEqual(trialBefore);
 
     // Production verifies and consumes the promoted result in its own namespace.
     const accepted = history.recordAcceptance(lease, { reference: trialAda, evidence: acceptanceEvidence('production check'), dependencies: [productionAda], environment: production.environment });
     expect(accepted).toMatchObject({ reference: trialAda, environment: production.environment, fence: lease.fence, dependencies: [productionAda] });
     expect(history.readAcceptances(trialAda, production.environment)).toEqual([accepted]);
-    expect(history.readAcceptances(trialAda)).toEqual(trialAcceptances);
+    expect(history.readAcceptances(trialAda, trial.environment)).toEqual(trialAcceptances);
     const report = publish(history, lease, production, 'report:acme/widget:2026-Q1', { key: 'report', dependencies: [trialAda, productionAda] });
     expect(history.readEnvelope(report).dependencies).toEqual([trialAda, productionAda]);
     expect(trialHistory(location)).toEqual(trialBefore);
@@ -150,16 +151,40 @@ describe('recorded promotion', () => {
     // Everything survives reopening through a fresh handle.
     const reopened = openHistory({ location, clock: controlledClock(2_000) });
     expect(reopened.findCandidates({ ...production, subject: summary, version: 1 }).map((candidate) => candidate.reference)).toEqual([trialAda, productionAda]);
-    expect(reopened.readPromotions(production)).toEqual([promotion]);
+    expect(reopened.readPromotions({ target: production })).toEqual([promotion]);
     expect(reopened.readEnvelope(report).dependencies).toEqual([trialAda, productionAda]);
     expect(reopened.readAcceptances(trialAda, production.environment)).toEqual([accepted]);
+  });
+
+  test('a trial result promoted into production and accepted there appears only in production’s acceptances, never in trial’s', () => {
+    const location = freshLocation();
+    const { history, productionAda, trialAda } = seeded(location);
+    const lease = acquire(history, 'operator');
+    const trialOnly = history.readAcceptances(trialAda, trial.environment);
+    expect(trialOnly.map((record) => record.environment)).toEqual([trial.environment]);
+    history.promoteResults(lease, { target: production, references: [trialAda], evidence: promotionEvidence('reviewed') });
+    // Before production verifies it, production has recorded nothing for the promoted result.
+    expect(history.readAcceptances(trialAda, production.environment)).toEqual([]);
+
+    const accepted = history.recordAcceptance(lease, { reference: trialAda, evidence: acceptanceEvidence('production check'), dependencies: [productionAda], environment: production.environment });
+    expect(accepted).toMatchObject({ reference: trialAda, environment: production.environment, dependencies: [productionAda] });
+    expect(history.readAcceptances(trialAda, production.environment)).toEqual([accepted]);
+    expect(history.readAcceptances(trialAda, trial.environment)).toEqual(trialOnly);
+    expect(rows(location, 'SELECT acceptance_id, environment FROM history_acceptances ORDER BY acceptance_id')).toEqual([
+      { acceptance_id: trialOnly[0]?.acceptanceId, environment: trial.environment },
+      { acceptance_id: accepted.acceptanceId, environment: production.environment },
+    ]);
+
+    // An accepting environment is always named: an empty one is refused on write and read.
+    expect(() => history.recordAcceptance(lease, { reference: trialAda, evidence: acceptanceEvidence('unnamed'), dependencies: [], environment: '' })).toThrow(TypeError);
+    expect(() => history.readAcceptances(trialAda, '')).toThrow(TypeError);
   });
 
   test('a promotion into one environment admits nothing into any other environment', () => {
     const { history, trialAda } = seeded(freshLocation());
     const lease = acquire(history, 'operator');
     const staging = { analysis, environment: 'env:staging' };
-    history.promoteResults(lease, { ...staging, references: [trialAda], evidence: promotionEvidence('to staging') });
+    history.promoteResults(lease, { target: staging, references: [trialAda], evidence: promotionEvidence('to staging') });
     expect(history.findCandidates({ ...staging, subject: summary, version: 1 }).map((candidate) => candidate.reference)).toEqual([trialAda]);
     expect(history.findCandidates({ ...production, subject: summary, version: 1 }).map((candidate) => candidate.reference)).not.toContainEqual(trialAda);
     expect(() => history.recordAcceptance(lease, { reference: trialAda, evidence: acceptanceEvidence('production check'), dependencies: [], environment: production.environment })).toThrow(HistoryIntegrityError);
@@ -174,25 +199,37 @@ describe('recorded promotion', () => {
     const current = acquire(history, 'current', 10_000);
     const evidence = promotionEvidence('attempt');
 
-    expect(() => history.promoteResults(stale, { ...production, references: [trialAda], evidence })).toThrow(StaleWriterError);
+    expect(() => history.promoteResults(stale, { target: production, references: [trialAda], evidence })).toThrow(StaleWriterError);
+    // Every reference that cannot be promoted into the target is one integrity class: unknown,
+    // of another analysis, or already published in the target environment.
     const otherAnalysis = publish(history, current, { analysis: 'analysis:other', environment: trial.environment }, summary, { key: 'other-analysis' });
-    expect(() => history.promoteResults(current, { ...production, references: [otherAnalysis], evidence })).toThrow(HistoryIntegrityError);
-    expect(() => history.promoteResults(current, { ...production, references: [{ kind: 'completed-result', locator: 'bogus' }], evidence })).toThrow(HistoryIntegrityError);
-    for (const references of [[], [trialAda, trialAda], [productionAda], [trialBo, productionAda]]) {
-      expect(() => history.promoteResults(current, { ...production, references, evidence })).toThrow(TypeError);
+    for (const references of [[otherAnalysis], [{ kind: 'completed-result', locator: 'bogus' } as const], [productionAda], [trialBo, productionAda]]) {
+      expect(() => history.promoteResults(current, { target: production, references, evidence })).toThrow(HistoryIntegrityError);
     }
-    expect(() => history.promoteResults(current, { ...production, environment: '', references: [trialAda], evidence })).toThrow(TypeError);
-    expect(() => history.promoteResults(current, { ...production, references: [trialAda], evidence: { format: '', formatVersion: 1, content: {} } })).toThrow(TypeError);
-    expect(history.readPromotions(production)).toEqual([]);
+    // Malformed requests are refused by shape.
+    for (const references of [[], [trialAda, trialAda]]) {
+      expect(() => history.promoteResults(current, { target: production, references, evidence })).toThrow(TypeError);
+    }
+    expect(() => history.promoteResults(current, { target: { ...production, environment: '' }, references: [trialAda], evidence })).toThrow(TypeError);
+    expect(() => history.promoteResults(current, { target: production, references: [trialAda], evidence: { format: '', formatVersion: 1, content: {} } })).toThrow(TypeError);
+    expect(history.readPromotions({ target: production })).toEqual([]);
     expect(history.findCandidates({ ...production, subject: summary, version: 1 }).map((candidate) => candidate.reference)).toEqual([productionAda]);
 
     // A successful promotion issues identity 1: refused attempts consumed none. Records are immutable.
-    const recorded = history.promoteResults(current, { ...production, references: [trialBo, trialAda], evidence });
+    const recorded = history.promoteResults(current, { target: production, references: [trialBo, trialAda], evidence });
     expect(recorded).toMatchObject({ promotionId: 1, fence: current.fence, references: [trialBo, trialAda] });
     const raw = openRaw(location);
     for (const statement of ["UPDATE history_promotions SET environment = 'env:trial'", 'DELETE FROM history_promotions', 'DELETE FROM history_promotion_results']) {
       expect(() => raw.exec(statement)).toThrow(/immutable/u);
     }
     raw.close();
+
+    // Promotion identities are never reissued, including after reopening the store.
+    const staging = { analysis, environment: 'env:staging' };
+    expect(history.promoteResults(current, { target: staging, references: [trialAda], evidence }).promotionId).toBe(2);
+    history.close();
+    const reopened = openHistory({ location, clock });
+    expect(reopened.promoteResults(current, { target: staging, references: [trialBo], evidence }).promotionId).toBe(3);
+    expect(reopened.readPromotions({ target: staging }).map((record) => record.promotionId)).toEqual([2, 3]);
   });
 });

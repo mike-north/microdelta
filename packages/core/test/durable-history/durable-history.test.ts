@@ -380,6 +380,7 @@ describe('candidates, rollback and separate acceptance', () => {
       reference: v1New,
       evidence: { format: 'test.acceptance', formatVersion: 1, content: { check: 'rollback to version 1' } },
       dependencies: [currentChild],
+      environment: scope.environment,
     });
     expect(acceptance).toMatchObject({ reference: v1New, fence: lease.fence, dependencies: [currentChild], evidence: { content: { check: 'rollback to version 1' } } });
     expect(history.readCurrent({ ...scope, subject: summarySubject })).toEqual(v2);
@@ -387,11 +388,11 @@ describe('candidates, rollback and separate acceptance', () => {
     const rawAfter = openRaw(location);
     expect(rawAfter.prepare('SELECT provenance FROM history_results WHERE result_id = 2').get()).toEqual(storedBefore);
     rawAfter.close();
-    expect(history.readAcceptances(v1New)).toEqual([acceptance]);
-    expect(history.readAcceptances(v1Old)).toEqual([]);
-    const second = history.recordAcceptance(lease, { reference: v1New, evidence: { format: 'test.acceptance', formatVersion: 1, content: { check: 'again' } }, dependencies: [] });
+    expect(history.readAcceptances(v1New, scope.environment)).toEqual([acceptance]);
+    expect(history.readAcceptances(v1Old, scope.environment)).toEqual([]);
+    const second = history.recordAcceptance(lease, { reference: v1New, evidence: { format: 'test.acceptance', formatVersion: 1, content: { check: 'again' } }, dependencies: [], environment: scope.environment });
     expect(second.acceptanceId).toBeGreaterThan(acceptance.acceptanceId);
-    expect(history.readAcceptances(v1New)).toEqual([acceptance, second]);
+    expect(history.readAcceptances(v1New, scope.environment)).toEqual([acceptance, second]);
   });
 
   test('stored results and acceptances are immutable in storage', () => {
@@ -399,7 +400,7 @@ describe('candidates, rollback and separate acceptance', () => {
     const history = openHistory({ location });
     const lease = acquire(history);
     const reference = publish(history, lease, adaActivity(), { key: 'immutable' });
-    history.recordAcceptance(lease, { reference, evidence: { format: 'test.acceptance', formatVersion: 1, content: {} }, dependencies: [] });
+    history.recordAcceptance(lease, { reference, evidence: { format: 'test.acceptance', formatVersion: 1, content: {} }, dependencies: [], environment: scope.environment });
     const raw = openRaw(location);
     for (const statement of [
       "UPDATE history_results SET payload = 'x'",

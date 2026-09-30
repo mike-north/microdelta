@@ -130,7 +130,7 @@ export interface IAcceptanceRecord {
 // @alpha
 export interface IAcceptanceRequest {
     readonly dependencies: readonly ICompletedResultReference[];
-    readonly environment?: string;
+    readonly environment: string;
     readonly evidence: IVersionedRecord;
     readonly reference: ICompletedResultReference;
 }
@@ -236,7 +236,7 @@ export interface IDurableHistory {
     openJournal(declaration: IJournalDeclaration): IOperationJournal;
     promoteResults(lease: IWriterLease, request: IPromotionRequest): IPromotionRecord;
     publishAttempt(lease: IWriterLease, attemptId: number): ICompletedResultReference;
-    readAcceptances(reference: ICompletedResultReference, environment?: string): readonly IAcceptanceRecord[];
+    readAcceptances(reference: ICompletedResultReference, environment: string): readonly IAcceptanceRecord[];
     readCurrent(subject: IScopedSubject): ICompletedResultReference | undefined;
     readEnvelope(reference: ICompletedResultReference): ICompletedEnvelope;
     readonly reader: ICompletedResultReader & ICompletedNavigationReader;
@@ -266,7 +266,7 @@ export interface IHistoryScope {
 
 // @alpha
 export interface IJournalAddress extends IHistoryScope {
-    readonly format: string;
+    readonly collection: string;
     readonly key: string;
 }
 
@@ -288,11 +288,12 @@ export interface IJournalFormat {
 
 // @alpha
 export interface IJournalQuery extends IHistoryScope {
-    readonly format: string;
+    readonly collection: string;
 }
 
 // @alpha
 export interface IJournalRecord extends IHistoryScope {
+    readonly collection: string;
     readonly fence: number;
     readonly key: string;
     readonly record: IVersionedRecord;
@@ -302,6 +303,7 @@ export interface IJournalRecord extends IHistoryScope {
 
 // @alpha
 export interface IJournalWrite {
+    readonly collection: string;
     readonly expectedRevision: number;
     readonly key: string;
     readonly record: IVersionedRecord;
@@ -324,22 +326,25 @@ export interface IOperationJournal {
 }
 
 // @alpha
-export interface IPromotionQuery extends IHistoryScope {
+export interface IPromotionQuery {
     readonly reference?: ICompletedResultReference;
+    readonly target: IHistoryScope;
 }
 
 // @alpha
-export interface IPromotionRecord extends IHistoryScope {
+export interface IPromotionRecord {
     readonly evidence: IVersionedRecord;
     readonly fence: number;
     readonly promotionId: number;
     readonly references: readonly ICompletedResultReference[];
+    readonly target: IHistoryScope;
 }
 
 // @alpha
-export interface IPromotionRequest extends IHistoryScope {
+export interface IPromotionRequest {
     readonly evidence: IVersionedRecord;
     readonly references: readonly ICompletedResultReference[];
+    readonly target: IHistoryScope;
 }
 
 // @alpha

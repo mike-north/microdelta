@@ -28,8 +28,14 @@ export const production: IHistoryScope = Object.freeze({ analysis, environment: 
 /** An illustrative Supervision operation-record format; History must not interpret it. */
 export const operationFormat = 'test.supervision.operation';
 
-/** An illustrative Supervision deferral-record format, a separate collection. */
+/** An illustrative Supervision deferral-record format. */
 export const deferralFormat = 'test.supervision.deferral';
+
+/** The owner-named collection of operation records; its identity is independent of any format. */
+export const operations = 'operations';
+
+/** The owner-named collection of deferral records. */
+export const deferrals = 'deferrals';
 
 /** A port declaration that understands only version 1 of both formats. */
 export const versionOne: readonly IJournalFormat[] = Object.freeze([

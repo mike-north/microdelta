@@ -59,13 +59,35 @@ export function _createNodeSqliteImplementation(): ISqliteCapability {
   });
 }
 
+/** The driver error's `name`, stable across every copy of the driver module. */
+const driverErrorName = 'SqliteError';
+
+/** Code prefix shared by `SQLITE_BUSY` and its extended variants such as `SQLITE_BUSY_SNAPSHOT`. */
+const busyCodePrefix = 'SQLITE_BUSY';
+
 /**
  * Recognize a driver failure that means another connection holds a lock this
  * one needs: `SQLITE_BUSY` and its extended variants. Other failures, such as
  * corruption or misuse, are never contention.
+ *
+ * Classification is by the error's stable meaning (`name` and string `code`),
+ * deliberately not `instanceof Database.SqliteError`. The driver module can be
+ * loaded more than once in a process (for example, once per Jest suite), yet
+ * the native addon keeps throwing the error class from the first copy it saw,
+ * so class identity says nothing reliable about whether an error came from the
+ * driver. Nor is `instanceof Error` trusted, since a native addon's errors can
+ * come from another realm. An error that merely mentions busy in its message
+ * is not busy.
+ * @internal
  */
-function isDriverBusy(error: unknown): boolean {
-  return error instanceof Database.SqliteError && error.code.startsWith('SQLITE_BUSY');
+export function _isDriverBusy(error: unknown): boolean {
+  return typeof error === 'object'
+    && error !== null
+    && 'name' in error
+    && error.name === driverErrorName
+    && 'code' in error
+    && typeof error.code === 'string'
+    && error.code.startsWith(busyCodePrefix);
 }
 
 /** Describe exhausted contention as the portable typed failure, keeping the driver error as its cause. */
@@ -80,13 +102,14 @@ function busyFailure(error: unknown, startedAt: number): SqliteBusyError {
  * driver already waited out the connection's busy timeout before failing, so
  * a busy error here means the budget is spent. Every other failure, including
  * values thrown by caller code, passes through unchanged.
+ * @internal
  */
-function typedBusy<T>(operation: () => T): T {
+export function _typedBusy<T>(operation: () => T): T {
   const startedAt = Date.now();
   try {
     return operation();
   } catch (error: unknown) {
-    throw isDriverBusy(error) ? busyFailure(error, startedAt) : error;
+    throw _isDriverBusy(error) ? busyFailure(error, startedAt) : error;
   }
 }
 
@@ -112,7 +135,7 @@ function retryWhileBusy(startedAt: number, step: () => void): void {
       step();
       return;
     } catch (error: unknown) {
-      if (!isDriverBusy(error)) {
+      if (!_isDriverBusy(error)) {
         throw error;
       }
       if (Date.now() - startedAt >= busyTimeoutMilliseconds) {
@@ -135,7 +158,7 @@ function openConnection(location: string): ISqliteConnection {
     throw new TypeError(`SQLite location ${JSON.stringify(location)} cannot hold a persistent write-ahead-logged database`);
   }
   const startedAt = Date.now();
-  const driver = typedBusy(() => new Database(location, { timeout: busyTimeoutMilliseconds }));
+  const driver = _typedBusy(() => new Database(location, { timeout: busyTimeoutMilliseconds }));
   try {
     retryWhileBusy(startedAt, () => {
       for (const { assignment, setting, expected } of selectedConfiguration) {
@@ -178,12 +201,12 @@ function createConnection(driver: Database.Database): ISqliteConnection {
   const connection: ISqliteConnection = {
     exec(sql: string): void {
       assertUsable();
-      typedBusy(() => { driver.exec(sql); });
+      _typedBusy(() => { driver.exec(sql); });
     },
 
     prepare(sql: string): ISqliteStatement {
       assertUsable();
-      return createStatement(typedBusy(() => driver.prepare(sql)), assertUsable);
+      return createStatement(_typedBusy(() => driver.prepare(sql)), assertUsable);
     },
 
     transaction<T>(operation: () => T & ISqliteSynchronousResult<T>): T {
@@ -194,7 +217,7 @@ function createConnection(driver: Database.Database): ISqliteConnection {
       const lifetime: ITransactionLifetime = { live: true };
       inTransaction = true;
       try {
-        return typedBusy(() => inherited.run(lifetime, () => driver.transaction(() => {
+        return _typedBusy(() => inherited.run(lifetime, () => driver.transaction(() => {
           const result = operation();
           if (types.isPromise(result)) {
             containNativeRejection(result);
@@ -249,15 +272,15 @@ function createStatement(statement: Database.Statement<unknown[], unknown>, asse
 
   return Object.freeze({
     run(...values: readonly ISqliteValue[]): ISqliteRunResult {
-      const result = typedBusy(() => statement.run(...prepareCall(values)));
+      const result = _typedBusy(() => statement.run(...prepareCall(values)));
       return { changes: result.changes };
     },
     get(...values: readonly ISqliteValue[]): ISqliteRow | undefined {
-      const cells: unknown = typedBusy(() => statement.get(...prepareCall(values)));
+      const cells: unknown = _typedBusy(() => statement.get(...prepareCall(values)));
       return cells === undefined ? undefined : toRow(statement, cells);
     },
     all(...values: readonly ISqliteValue[]): readonly ISqliteRow[] {
-      const rows: readonly unknown[] = typedBusy(() => statement.all(...prepareCall(values)));
+      const rows: readonly unknown[] = _typedBusy(() => statement.all(...prepareCall(values)));
       return rows.map((cells) => toRow(statement, cells));
     },
   });

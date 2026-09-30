@@ -17,3 +17,4 @@ Add the Resource Accounting package (project-private `@alpha` surfaces).
   - A recorded request attempt without an acknowledged report of its own is listed as unknown usage and never read as zero.
   - Summaries are single-statement reads that never take the write lock.
 - Writes need no History writer fence. A commit that does not confirm fails with `AccountingDurabilityUnknownError`, and redelivering the same fact resolves it.
+- A write that cannot get the write lock within the host's bounded wait did no work and fails with `AccountingBusyError`, whose cause is the host's typed `SqliteBusyError`.

@@ -41,6 +41,7 @@ export type {
   IUsageSummaryBase,
 } from './contracts.js';
 export {
+  AccountingBusyError,
   AccountingDurabilityUnknownError,
   AccountingIntegrityError,
   AccountingSchemaError,

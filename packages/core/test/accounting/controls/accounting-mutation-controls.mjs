@@ -38,9 +38,10 @@ const controls = [
   { name: "a report for another operation's request attempt is accepted", file: 'sqlite/index.js', anchor: "if (text(attempt, 'operation') !== report.operation) {", replacement: 'if (false) {' },
   { name: 'attribution ignores the environment', file: 'sqlite/index.js', anchor: 'SELECT 1 AS known FROM accounting_request_attempts WHERE environment = ? AND operation = ? LIMIT 1', replacement: 'SELECT 1 AS known FROM accounting_request_attempts WHERE (? IS NOT NULL) AND operation = ? LIMIT 1' },
   { name: 'estimates are summed into observed usage', file: 'sqlite/index.js', anchor: 'return summarize(factsFromRows(query.environment, rows, estimates));', replacement: 'const facts = factsFromRows(query.environment, rows, estimates); return summarize({ ...facts, reportedQuantities: [...facts.reportedQuantities, ...estimates.flatMap((estimate) => estimate.quantities)] });' },
-  { name: 'an unconfirmed commit is reported as acknowledged', file: 'sqlite/index.js', anchor: 'throw new AccountingDurabilityUnknownError(', replacement: 'return outcome.value; throw new AccountingDurabilityUnknownError(' },
-  { name: 'an unconfirmed commit is reported as certainly failed', file: 'sqlite/index.js', anchor: '            if (outcome === undefined) {\n                throw error;', replacement: '            if (true) {\n                throw error;' },
+  { name: 'an unconfirmed commit is reported as acknowledged', file: 'sqlite/index.js', anchor: 'throw writeFailure(description, error, outcome !== undefined);', replacement: 'if (outcome !== undefined && !(error instanceof SqliteBusyError)) { return outcome.value; } throw writeFailure(description, error, outcome !== undefined);' },
+  { name: 'an unconfirmed commit is reported as certainly failed', file: 'sqlite/index.js', anchor: 'if (!workCompleted) {', replacement: 'if (true) {' },
   { name: 'a summary takes the write lock', file: 'sqlite/index.js', anchor: 'const query = queryArgument(candidate);', replacement: 'const query = queryArgument(candidate); connection.transaction(() => undefined);' },
+  { name: 'write-lock contention passes through as an unnamed host error', file: 'sqlite/index.js', anchor: 'if (error instanceof SqliteBusyError) {', replacement: 'if (false) {' },
   { name: 'REPLACE over a recorded fact is allowed', file: 'sqlite/schema.js', anchor: 'WHEN EXISTS (SELECT 1 FROM ${table} WHERE', replacement: 'WHEN 0 AND EXISTS (SELECT 1 FROM ${table} WHERE' },
 ];
 

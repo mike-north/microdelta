@@ -374,11 +374,10 @@ export type IUsageSummary = ICompleteUsageSummary | IIncompleteUsageSummary;
  * lock never makes them fail.
  *
  * A write waits a bounded time for another connection's write lock. When the
- * wait is exhausted the write fails before doing any work, so nothing was
- * recorded and the fact may be redelivered. That failure currently surfaces as
- * the host's own SQLite busy error.
- * TODO(#113): surface write-lock exhaustion as Machine's typed busy error once
- * the host provides one.
+ * wait is exhausted the write fails with {@link AccountingBusyError}, whose
+ * cause is the host's typed `SqliteBusyError`. Such a write did no work:
+ * nothing was recorded, no acknowledgment was issued, and the same fact may be
+ * redelivered later.
  * @alpha
  */
 export interface IDurableAccounting {

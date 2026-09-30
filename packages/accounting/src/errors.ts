@@ -1,11 +1,13 @@
 /**
  * Distinct failure classes of Resource Accounting. A caller must be able to
  * tell a refused fact (unattributable usage, a conflicting intent) from
- * unsupported storage, corrupted storage and a write whose durability is
- * unknown, because each calls for a different response. Malformed arguments
- * fail with `TypeError` before any storage is touched.
+ * unsupported storage, corrupted storage, a write that could not get the write
+ * lock and a write whose durability is unknown, because each calls for a
+ * different response. Malformed arguments fail with `TypeError` before any
+ * storage is touched.
  * @packageDocumentation
  */
+import type { SqliteBusyError } from '@microdelta/machine';
 
 /**
  * Why a usage report could not be attributed to recorded work in its
@@ -47,6 +49,31 @@ export class UsageIntentConflictError extends Error {
   public constructor(message: string) {
     super(message);
     this.name = 'UsageIntentConflictError';
+  }
+}
+
+/**
+ * A write could not get the store's write lock within the host's bounded busy
+ * wait, because another connection, possibly in another process, held it. The
+ * write did no work: nothing was recorded and no acknowledgment was issued,
+ * so the same fact may be redelivered later. The host's typed
+ * {@link @microdelta/machine#SqliteBusyError} is its `cause`. Accounting names
+ * contention itself so that its consumers can tell a busy store from a broken
+ * one without depending on the Machine contract.
+ * @alpha
+ */
+export class AccountingBusyError extends Error {
+  /** How long, in milliseconds, the host waited for the lock before giving up. */
+  public readonly waitedMilliseconds: number;
+
+  /** The host's busy failure this error reports. */
+  public declare readonly cause: SqliteBusyError;
+
+  /** Create a busy failure that carries the host's typed busy error as its cause. */
+  public constructor(message: string, cause: SqliteBusyError) {
+    super(message, { cause });
+    this.name = 'AccountingBusyError';
+    this.waitedMilliseconds = cause.waitedMilliseconds;
   }
 }
 

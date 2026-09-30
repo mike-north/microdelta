@@ -12,7 +12,7 @@
  */
 import { appendFileSync, existsSync, readFileSync, writeSync } from 'node:fs';
 
-import type { IDurableAccounting, IUsageAcknowledgment, IUsageIntent, IUsageReport } from '@microdelta/accounting';
+import type { IDurableAccounting, IUsageAcknowledgment, IUsageEstimate, IUsageIntent, IUsageReport } from '@microdelta/accounting';
 
 import { faultySqlite, openAccounting, openRaw } from './support.js';
 import type { IFaultTiming } from './support.js';
@@ -22,6 +22,7 @@ export type IWorkerStep =
   | { readonly op: 'intent'; readonly intent: IUsageIntent }
   | { readonly op: 'send'; readonly provider: string; readonly report: IUsageReport }
   | { readonly op: 'acknowledge'; readonly report: IUsageReport }
+  | { readonly op: 'estimate'; readonly estimate: IUsageEstimate }
   | { readonly op: 'redeliver'; readonly provider: string }
   | { readonly op: 'arm'; readonly role: string; readonly timing: IFaultTiming }
   | { readonly op: 'summarize'; readonly environment: string }
@@ -39,9 +40,27 @@ function trace(entry: unknown): void {
   writeSync(1, `${JSON.stringify(entry)}\n`);
 }
 
-/** Describe an error by class name and message for the parent's assertions. */
-function describeError(error: unknown): { readonly error: string; readonly message: string } {
-  return error instanceof Error ? { error: error.name, message: error.message } : { error: 'unknown', message: String(error) };
+/**
+ * Describe an error for the parent's assertions: its class name and message,
+ * the class name of its cause, and any wait it reports.
+ */
+function describeError(error: unknown): { readonly error: string; readonly message: string; readonly cause: string | null; readonly waitedMilliseconds: unknown } {
+  if (!(error instanceof Error)) {
+    return { error: 'unknown', message: String(error), cause: null, waitedMilliseconds: null };
+  }
+  const cause: unknown = error.cause;
+  return {
+    error: error.name,
+    message: error.message,
+    cause: cause instanceof Error ? cause.name : null,
+    waitedMilliseconds: Reflect.get(error, 'waitedMilliseconds') ?? null,
+  };
+}
+
+/** Narrow a parsed estimate to the shape the parent serialized. */
+function isEstimate(value: unknown): value is IUsageEstimate {
+  return hasStrings(value, ['environment', 'estimate']) && hasStrings(Reflect.get(value, 'attribution'), ['run'])
+    && Array.isArray(Reflect.get(value, 'quantities')) && hasStrings(Reflect.get(value, 'basis'), ['format']);
 }
 
 /**
@@ -92,6 +111,10 @@ function parseStep(value: unknown): IWorkerStep {
   const environment = field('environment');
   const role = field('role');
   const timing = field('timing');
+  const estimate = field('estimate');
+  if (op === 'estimate' && isEstimate(estimate)) {
+    return { op, estimate };
+  }
   if (op === 'intent' && isIntent(intent)) {
     return { op, intent };
   }
@@ -148,6 +171,8 @@ function apply(step: IWorkerStep): unknown {
       // The provider applies the call and holds its usage report for delivery.
       appendFileSync(step.provider, `${JSON.stringify(step.report)}\n`, 'utf8');
       return null;
+    case 'estimate':
+      return accounting.recordEstimate(step.estimate);
     case 'acknowledge':
       return accounting.acknowledgeUsage(step.report);
     case 'redeliver':

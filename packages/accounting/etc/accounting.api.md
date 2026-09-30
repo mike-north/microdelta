@@ -5,6 +5,14 @@
 ```ts
 
 // @alpha
+export class AccountingBusyError extends Error {
+    constructor(message: string, cause: SqliteBusyError);
+    // Warning: (ae-forgotten-export) The symbol "SqliteBusyError" needs to be exported by the entry point index.d.ts
+    readonly cause: SqliteBusyError;
+    readonly waitedMilliseconds: number;
+}
+
+// @alpha
 export class AccountingDurabilityUnknownError extends Error {
     constructor(message: string, cause: unknown);
 }

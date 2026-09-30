@@ -18,12 +18,15 @@
  * at most once (M5 plan, "Accounting write authority"). A transaction that ran
  * to completion but whose commit did not confirm is reported as
  * {@link AccountingDurabilityUnknownError}, never as a durable acknowledgment
- * and never as certainly lost. Summaries are single-statement reads with no
+ * and never as certainly lost. A write that cannot get the write lock within
+ * the host's bounded wait did no work and fails as {@link AccountingBusyError}.
+ * Summaries are single-statement reads with no
  * transaction, so under WAL they see a consistent snapshot without taking the
  * write lock. This is single-file process-termination scope, not a power-loss
  * or distributed guarantee.
  * @packageDocumentation
  */
+import { SqliteBusyError } from '@microdelta/machine';
 import type { ISqliteConnection, ISqliteRow } from '@microdelta/machine';
 import { decodeSnapshot, encodeSnapshot } from '@microdelta/value';
 
@@ -43,7 +46,13 @@ import type {
   IUsageReport,
   IUsageSummary,
 } from '../contracts.js';
-import { AccountingDurabilityUnknownError, AccountingIntegrityError, UnattributableUsageError, UsageIntentConflictError } from '../errors.js';
+import {
+  AccountingBusyError,
+  AccountingDurabilityUnknownError,
+  AccountingIntegrityError,
+  UnattributableUsageError,
+  UsageIntentConflictError,
+} from '../errors.js';
 import { factsFromRows, summarize } from '../summary.js';
 import type { IScopedUsageRow } from '../summary.js';
 import { estimateArgument, intentArgument, queryArgument, reportArgument, requireIdentity } from '../validation.js';
@@ -125,6 +134,29 @@ function basisOf(row: ISqliteRow): IRecordedEstimate['basis'] {
 }
 
 /**
+ * Classify the failure of one write transaction, given whether the write's
+ * work had completed when the transaction failed:
+ * - The host's typed busy error means its bounded wait for another
+ *   connection's lock was exhausted and, by the Machine contract, the failed
+ *   operation had no effect, whether the wait was for the write lock or at
+ *   commit. It becomes {@link AccountingBusyError}: nothing was written.
+ * - Any other failure raised while the work ran rolled everything back and is
+ *   returned unchanged: nothing was written.
+ * - Any other failure after the work completed can only come from the commit,
+ *   whose outcome is unknown: {@link AccountingDurabilityUnknownError}.
+ * Returns the error to throw; it never throws itself.
+ */
+export function writeFailure(description: string, error: unknown, workCompleted: boolean): unknown {
+  if (error instanceof SqliteBusyError) {
+    return new AccountingBusyError(`The ${description} was not recorded: the store stayed locked by another connection for ${String(error.waitedMilliseconds)} ms; redeliver it later`, error);
+  }
+  if (!workCompleted) {
+    return error;
+  }
+  return new AccountingDurabilityUnknownError(`The commit of ${description} did not confirm; redeliver the same fact to resolve whether it is durable`, error);
+}
+
+/**
  * Open (creating when empty) the durable accounting store for one logical
  * store. The file is rejected before any work unless it is empty or holds
  * exactly this schema version for this logical store.
@@ -176,13 +208,7 @@ export function openDurableAccounting(options: IDurableAccountingOptions): IDura
       ORDER BY e.estimate, q.unit`),
   };
 
-  /**
-   * Run one write transaction. A failure raised while the transaction's work
-   * runs rolls everything back and is rethrown unchanged: nothing was written.
-   * That includes exhausting the bounded wait for another connection's write
-   * lock, which fails before the work starts. A failure after the work
-   * completed can only come from the commit, whose outcome is then unknown.
-   */
+  /** Run one write transaction; its failures are classified by {@link writeFailure}. */
   function write<T>(description: string, work: () => T): T {
     let outcome: { readonly value: T } | undefined;
     try {
@@ -191,10 +217,7 @@ export function openDurableAccounting(options: IDurableAccountingOptions): IDura
         return undefined;
       });
     } catch (error: unknown) {
-      if (outcome === undefined) {
-        throw error;
-      }
-      throw new AccountingDurabilityUnknownError(`The commit of ${description} did not confirm; redeliver the same fact to resolve whether it is durable`, error);
+      throw writeFailure(description, error, outcome !== undefined);
     }
     if (outcome === undefined) {
       throw new AccountingIntegrityError(`The transaction for ${description} returned without running`);

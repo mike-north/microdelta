@@ -84,9 +84,12 @@ recorded, because the usage happened. Publication authority still requires the
 fence.
 
 A write waits a bounded time for another connection's write lock. If that wait
-is exhausted, the write fails before doing any work, so nothing was recorded
-and the fact can be redelivered. That failure currently surfaces as the host's
-own SQLite busy error; a typed Machine busy error is tracked in #113.
+is exhausted, the write fails with `AccountingBusyError` and has done no work:
+nothing was recorded, no acknowledgment was issued, and the fact can be
+redelivered. Its `cause` is the host's typed `SqliteBusyError` from
+`@microdelta/machine`, and `waitedMilliseconds` reports the wait. Accounting
+names contention itself so that consumers without a Machine edge, such as Run
+Supervision, can tell a busy store from a broken one.
 
 ## Storage
 

@@ -8,9 +8,10 @@
  * @see ../../../docs/spec/operations.md (ACC-003, ACC-005, ACC-006, ACC-007)
  */
 import { expectAssignable, expectError, expectNotAssignable, expectType } from 'tsd';
+import { SqliteBusyError } from '@microdelta/machine';
 import type { ISqliteCapability } from '@microdelta/machine';
 
-import { AccountingDurabilityUnknownError, UnattributableUsageError, openDurableAccounting } from '../dist/src/index.js';
+import { AccountingBusyError, AccountingDurabilityUnknownError, UnattributableUsageError, openDurableAccounting } from '../dist/src/index.js';
 import type {
   IDurableAccounting,
   IEstimateOutcome,
@@ -103,3 +104,11 @@ if (estimateOutcome.kind === 'conflict') {
 declare const refusal: UnattributableUsageError;
 expectType<IUnattributableReason>(refusal.reason);
 expectAssignable<Error>(new AccountingDurabilityUnknownError('commit unconfirmed', new Error('io')));
+
+// Write-lock contention is Accounting's own typed failure, caused by the host's typed busy error.
+declare const busy: AccountingBusyError;
+expectAssignable<Error>(busy);
+expectType<number>(busy.waitedMilliseconds);
+expectAssignable<SqliteBusyError>(busy.cause);
+expectType<AccountingBusyError>(new AccountingBusyError('store busy', new SqliteBusyError('busy', 500)));
+expectError(new AccountingBusyError('store busy', new Error('raw driver error')));

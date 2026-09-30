@@ -2555,6 +2555,13 @@ export function createResolution<TInputs extends object, THelpers extends object
      * window starts them in that order. A member not yet started holds
      * nothing, so after a stop it is presented to admission, and refused,
      * only when a lane reaches it; after a run-level failure it does not start.
+     *
+     * Invariant: the window's lane pool is run-wide, so a member's work must
+     * never reach another `settleMembers` (a nested fan-out) under the same
+     * pool; a member holding a lane while its own fan-out waits for lanes can
+     * deadlock the window (RUN-002's nested rule). It holds today because a
+     * strict fold cannot be a declared child and every run operation starts
+     * from the run's root frame, never from inside a member.
      */
     const member = async (key: string, position: number): Promise<void> => {
       if (runFailure.first !== undefined) {

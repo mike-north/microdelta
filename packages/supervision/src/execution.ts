@@ -36,6 +36,7 @@ import type { IBindingDescriptor } from '@microdelta/definition';
 import type { IExecutionSupervision, ISupervisedExecution } from '@microdelta/resolution';
 
 import type { IRemoteState, IRunContext, IRunEvent, IRunExecution, ISendInterruption, ISendPhase, ISendRequest } from './contracts.js';
+import { createAbortSource } from './control.js';
 import type { IAbortSignal, IAbortSource, IRunTimer, IStopController, IStopState } from './control.js';
 import { SupervisionError } from './errors.js';
 import type { IPermit, IPermitPool } from './permits.js';
@@ -58,9 +59,12 @@ export interface IAttemptFrame {
 /**
  * One fan-out member's place in the run's bounded active window. The member
  * holds a lane while it works. A timed wait lends the lane to the next
- * waiting member and reclaims one on waking, so a member waiting for a time
- * never stalls its siblings. With several waits in progress at once, the lane
- * is lent at the first and reclaimed after the last.
+ * waiting member and, on waking, reclaims one ahead of members that have not
+ * started, so a member waiting for a time never stalls its siblings and a
+ * woken member never waits behind the remaining population. With several
+ * waits in progress at once, the lane is lent at the first and reclaimed
+ * after the last; meanwhile the member's other branches run without a lane
+ * (the window bounds members holding a lane, not every branch of a body).
  */
 export interface IMemberLane {
   /** The lane held now, if any. */
@@ -100,6 +104,8 @@ export interface ISupervisedRun {
   readonly interruptions: ISendInterruption[];
   /** Offer an event to observers; a failure becomes a diagnostic. */
   report(event: IRunEvent, position: string): void;
+  /** Record a post-commit diagnostic of the run, such as a failing abort listener. */
+  diagnose(message: string): void;
   /** Account for an operation until it settles, rejecting it with `run-closed` if the run already closed. */
   track<T>(operation: () => Promise<T>): Promise<T>;
   /** Why a commit may not happen now, or undefined. */
@@ -198,8 +204,16 @@ export function supervisedExecution(run: ISupervisedRun, frames: IFrameAccess): 
       }
     },
     async member<T>(work: () => Promise<T>): Promise<T> {
-      // Queued members are served first in, first out. After a hard stop a
-      // member no longer waits for a lane: its work is refused promptly anyway.
+      // Queued members are served first in, first out, after any woken member
+      // reclaiming a lane. After a hard stop a member no longer waits for a
+      // lane: its work is refused promptly anyway.
+      //
+      // Invariant (RUN-002's nested rule): the lane pool is run-wide, so work
+      // run under a lane must never start another member fan-out (a nested
+      // settleMembers) under the same pool: a member holding a lane while
+      // waiting for lanes its own fan-out needs can deadlock the window. Today
+      // members cannot trigger fan-out (folds are not children, and run
+      // operations start from the run's root frame, not a member's).
       const lane: IMemberLane = { permit: await run.lanes.acquire(run.hard.signal), waits: 0, closed: false };
       try {
         return await frames.enter({ run, attempt: undefined, lane }, work);
@@ -226,9 +240,12 @@ function lendLane(lane: IMemberLane | undefined): void {
 }
 
 /**
- * Reclaim a lane when the last timed wait of a member ends, waiting first in,
- * first out behind members that are already queued. Returns false when a
- * hard stop ended that wait, so the member's work must stop.
+ * Reclaim a lane when the last timed wait of a member ends. The reclaim has
+ * priority over members that have not started: the woken member already
+ * holds a claimed attempt and its evidence in memory, so with a large
+ * population it must not wait behind every unstarted member. Reclaims among
+ * themselves are served first in, first out. Returns false when a hard stop
+ * ended that wait, so the member's work must stop.
  */
 async function reclaimLane(run: ISupervisedRun, lane: IMemberLane | undefined): Promise<boolean> {
   if (lane === undefined || lane.closed) {
@@ -238,7 +255,7 @@ async function reclaimLane(run: ISupervisedRun, lane: IMemberLane | undefined): 
   if (lane.waits > 0 || lane.permit !== undefined) {
     return true;
   }
-  const permit = await run.lanes.acquire(run.hard.signal);
+  const permit = await run.lanes.acquire(run.hard.signal, { priority: true });
   if (lane.closed) {
     // The member settled while this wait was reclaiming: hand the lane straight on.
     permit?.release();
@@ -347,13 +364,25 @@ export function runControls(frame: IRunFrame): IRunExecution {
       return refuse(label, after ?? 'a hard stop ended the wait for a permit');
     }
     sendEvent(label, 'begin');
+    // The send's own signal: it aborts when the run's hard signal does, and is
+    // detached from the run as soon as the send settles. An adapter listener
+    // that is never removed therefore stays on this short-lived signal and
+    // cannot keep its closure reachable until the run closes.
+    const own = createAbortSource((error: unknown) => {
+      run.diagnose(`An abort listener of send ${label} failed: ${error instanceof Error ? error.message : String(error)}`);
+    });
+    const detach = run.hard.signal.onAbort(() => {
+      own.abort();
+    });
     let raced: IRaced<T>;
     try {
-      raced = await raceAbort(started(() => perform(run.hard.signal)), run.hard.signal);
+      raced = await raceAbort(started(() => perform(own.signal)), run.hard.signal);
     } catch (error: unknown) {
       permit.release();
       sendEvent(label, 'fail');
       throw error;
+    } finally {
+      detach();
     }
     permit.release();
     if (!raced.aborted) {

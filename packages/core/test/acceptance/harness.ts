@@ -219,21 +219,24 @@ export function judgePlannedKill(plan: IPlannedFault, exit: IWorkerExit): IPlann
 
 /**
  * Judge whether a worker that exited on its own finished its command. A
- * worker always ends by writing a `result` line (status 0) or an `error`
- * line (status 3). One that exits without either never finished: for
- * example, its event loop drained with work still pending, so it left
+ * worker always ends by writing a `result` line and exiting 0, or an
+ * `error` line and exiting 3, and the line kind must match the status. One
+ * that exits without the matching line never finished as its status claims:
+ * for example, its event loop drained with work still pending, so it left
  * nothing to judge. That is a harness failure, never a result.
  * @param exit - What the parent observed of the finished worker.
  * @returns A diagnostic when the worker did not finish its command, otherwise undefined.
  */
 export function judgeCompletedWorker(exit: IWorkerExit): string | undefined {
-  if (exit.lines.some((line) => line['t'] === 'result' || line['t'] === 'error')) {
+  // Success writes a result line; a reported failure (status 3) writes an error line. The kinds never swap.
+  const expected = exit.status === 0 ? 'result' : 'error';
+  if (exit.lines.some((line) => line['t'] === expected)) {
     return undefined;
   }
   const last = exit.lines.at(-1);
   const stderr = exit.stderr.trim();
   return [
-    `worker exited with status ${String(exit.status)} but wrote no result or error line: it never finished its command`,
+    `worker exited with status ${String(exit.status)} but wrote no ${expected} line: it never finished its command as its status claims`,
     `last line: ${last === undefined ? 'none' : JSON.stringify(last)}`,
     `stderr: ${stderr.length === 0 ? '(empty)' : stderr.slice(-stderrExcerptLength)}`,
   ].join('\n');

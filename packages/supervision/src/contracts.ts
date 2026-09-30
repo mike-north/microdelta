@@ -503,7 +503,12 @@ export interface ISendRequest<T> {
    * refuses a retry; only a hard stop refuses a draining step's first attempt.
    */
   readonly retry?: boolean;
-  /** Perform the send. It receives the run's abort signal and should abandon its request when it aborts. */
+  /**
+   * Perform the send. It receives the send's own abort signal, which aborts
+   * when a hard stop takes effect for the run and is detached from the run
+   * once the send settles; the adapter should abandon its request when it
+   * aborts.
+   */
   perform(signal: IAbortSignal): Promise<T>;
   /**
    * Ask the provider to cancel the remote work after a local abort, where
@@ -558,8 +563,13 @@ export interface IRunExecution {
   /**
    * Wait, holding no permit, until the wall clock reaches
    * `epochMilliseconds`: the wait before a retry or a deferred resumption.
-   * A fan-out member lends its window lane for the wait and reclaims one
-   * (first in, first out) on waking, so it never stalls its siblings. Because
+   * A fan-out member lends its window lane for the wait and, on waking,
+   * reclaims one ahead of members that have not started (wakers among
+   * themselves first in, first out), so it never stalls its siblings. While
+   * the lane is lent, other branches of the member's body (for example the
+   * other side of `Promise.all([sleepUntil(t), send(...)])`) keep running
+   * without one: the window bounds members holding a lane, not every branch
+   * of a member's body, while permits still bound the actual sends. Because
    * a stop forbids the retry the wait precedes, any stop ends the wait at
    * once with `SupervisionError('stopped')`, and the step attempt can no
    * longer publish.

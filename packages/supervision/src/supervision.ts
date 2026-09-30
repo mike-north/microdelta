@@ -334,6 +334,9 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       lanes: createPermitPool(window),
       timer,
       interruptions: [],
+      diagnose(message: string): void {
+        diagnostics.push(message);
+      },
       report(event: IRunEvent, position: string): void {
         try {
           notify(observers, event);

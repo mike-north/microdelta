@@ -119,7 +119,11 @@ execution contract describes them (EXP-8 mechanisms 1 and 2, ruling R).
   bounds how many fan-out members actively resolve at once: Resolution runs
   each member through the cancellation port's `member()`, which grants lanes
   first in, first out in canonical key order. A member waiting for a time
-  lends its lane and reclaims one on waking, so it never stalls its siblings.
+  lends its lane and, on waking, reclaims one ahead of members that have not
+  started, so it never stalls its siblings. The window bounds members holding
+  a lane, not every branch of a member's body; permits still bound its sends.
+  The lane pool is run-wide, so member work must never start a nested
+  fan-out under it.
 - **Execution controls.** `supervision.execution()` gives author code and
   adapters the live run's controls by scoped lookup:
   - `send({ label, retry?, perform, cancel? })` holds one permit per send. A

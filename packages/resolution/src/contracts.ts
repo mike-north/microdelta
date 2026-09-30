@@ -148,8 +148,14 @@ export interface IExecutionSupervision {
    * Resolve one fan-out member (of a members request or a strict fold's
    * member phase) inside the run's bounded active window (RUN-002): wait,
    * first in first out, for a lane, then run `work` holding it. The member
-   * lends its lane while it waits for a time. Resolution presents every
-   * member in canonical key order, so members start in that order.
+   * lends its lane while it waits for a time and reclaims one on waking
+   * ahead of members that have not started. The window bounds members
+   * holding a lane, not every branch of a member's body: while a lane is
+   * lent, the member's other branches keep running, and permits still bound
+   * its sends. Resolution presents every member in canonical key order, so
+   * members start in that order. The lane pool is run-wide: work run as a
+   * member must never start another member fan-out under the same pool,
+   * which could deadlock the window (RUN-002's nested rule).
    */
   member<T>(work: () => Promise<T>): Promise<T>;
   /**

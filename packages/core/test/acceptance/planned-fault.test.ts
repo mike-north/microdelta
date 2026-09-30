@@ -179,12 +179,19 @@ describe('an unplanned worker exit must have finished its command', () => {
   test('status 0 with neither a result nor an error line is a harness failure naming what the worker left', () => {
     // Regression: a worker whose event loop drained with work pending exited 0 having written no result.
     const diagnostic = judgeCompletedWorker({ status: 0, signal: null, lines: [...progress], stderr: 'pending work never settled' });
-    expect(diagnostic).toMatch(/exited with status 0 but wrote no result or error line/u);
+    expect(diagnostic).toMatch(/exited with status 0 but wrote no result line/u);
     expect(diagnostic).toMatch(/last line: .*"helper":"summary"/u);
     expect(diagnostic).toMatch(/stderr: pending work never settled/u);
   });
 
+  test.each([
+    ['status 0 with only an error line', 0, { t: 'error', name: 'ResolutionError', code: 'execution-failure', message: 'x' }, /status 0 but wrote no result line/u],
+    ['status 3 with only a result line', 3, { t: 'result', outcome: {} }, /status 3 but wrote no error line/u],
+  ] as const)('a line kind that does not match the exit status is a harness failure: %s', (_label, status, line, message) => {
+    expect(judgeCompletedWorker({ status, signal: null, lines: [...progress, line], stderr: '' })).toMatch(message);
+  });
+
   test('status 3 without an error line, or with no output at all, is also a harness failure', () => {
-    expect(judgeCompletedWorker({ status: 3, signal: null, lines: [], stderr: '' })).toMatch(/exited with status 3 but wrote no result or error line.*last line: none/su);
+    expect(judgeCompletedWorker({ status: 3, signal: null, lines: [], stderr: '' })).toMatch(/exited with status 3 but wrote no error line.*last line: none/su);
   });
 });

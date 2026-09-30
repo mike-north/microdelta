@@ -18,9 +18,11 @@
 import { describe, expect, test } from '@jest/globals';
 
 import { createAbortSource } from '../src/control.js';
-import { raceAbort } from '../src/execution.js';
+import type { IAbortSource } from '../src/control.js';
+import { raceAbort, runControls } from '../src/execution.js';
+import type { ISupervisedRun } from '../src/execution.js';
 import { SupervisionError, createStopController, createSupervision } from '../src/index.js';
-import type { IRunEvent, IRunExecution, IRunObserver, IRunOptions, IStopState, ISupervision } from '../src/index.js';
+import type { IAbortSignal, IRunEvent, IRunExecution, IRunObserver, IRunOptions, IStopState, ISupervision } from '../src/index.js';
 import { createPermitPool } from '../src/permits.js';
 import { T0, admissionFor, codeOf, controlEvents, deferred, fakeTimer, hour, nodeScopes, optionsFor, portDouble, settle, stepOf, stubProvider, supervisionWith } from './support.js';
 
@@ -335,6 +337,46 @@ describe('the permit pool (RUN-002)', () => {
       await Promise.all([sleeper, sibling]);
     });
     expect(order).toEqual(['sleeper:start', 'sibling:start', 'sibling:end', 'sleeper:woke']);
+  });
+
+  test('a waking member reclaims a lane ahead of members that have not started, and wakers are served among themselves first in, first out', async () => {
+    const timer = fakeTimer();
+    const double = portDouble();
+    const supervisor = supervisionWith(timer);
+    const order: string[] = [];
+    const holderGate = deferred();
+    await supervisor.run(optionsFor(double, { window: 1 }), async () => {
+      const { execution } = double.ports();
+      /** A member that waits for a time, then resumes (holding its claimed attempt's evidence meanwhile). */
+      const sleeper = (name: string, until: number): Promise<void> => execution.member(async () => {
+        order.push(`${name}:start`);
+        await supervisor.execution().sleepUntil(until);
+        order.push(`${name}:woke`);
+      });
+      const first = sleeper('first', T0 + hour);
+      await settle();
+      const second = sleeper('second', T0 + hour + 1);
+      await settle();
+      // The holder takes the lane both sleepers lent; three more members queue behind it, not yet started.
+      const holder = execution.member(async () => {
+        order.push('holder:start');
+        await holderGate.promise;
+        order.push('holder:end');
+      });
+      const queued = ['q1', 'q2', 'q3'].map((name) => execution.member(async () => {
+        order.push(`${name}:start`);
+        await Promise.resolve();
+      }));
+      await settle();
+      expect(order).toEqual(['first:start', 'second:start', 'holder:start']);
+      // Both sleepers wake while the holder still has the only lane, the first before the second.
+      timer.advance(hour + 1);
+      await settle();
+      holderGate.resolve();
+      await Promise.all([first, second, holder, ...queued]);
+    });
+    // Woken members resume before any unstarted member starts, in the order they woke.
+    expect(order).toEqual(['first:start', 'second:start', 'holder:start', 'holder:end', 'first:woke', 'second:woke', 'q1:start', 'q2:start', 'q3:start']);
   });
 
   test.each([
@@ -867,5 +909,67 @@ describe('abort listeners are released once they can no longer run (regression: 
     expect(granted).toBeDefined();
     expect(source.listenerCount).toBe(0);
     granted?.release();
+  });
+
+  /** A live run's state built by hand, so a test can read the listener count of its hard-stop source. */
+  function handBuiltRun(): { readonly run: ISupervisedRun; readonly hard: IAbortSource } {
+    const hard = createAbortSource();
+    const run: ISupervisedRun = {
+      context: Object.freeze({ runId: 'run:hand-built', analysis: 'analysis:test', environment: 'env:test' }),
+      open: true,
+      controller: createStopController(),
+      hard,
+      stopped: createAbortSource(),
+      permits: createPermitPool(1),
+      lanes: createPermitPool(1),
+      timer: undefined,
+      interruptions: [],
+      report: () => undefined,
+      diagnose: () => undefined,
+      track: (operation) => operation(),
+      publicationRefusal: () => undefined,
+    };
+    return { run, hard };
+  }
+
+  test('each send gets its own signal, detached once the send settles, so an adapter that never removes its listener retains nothing through the run', async () => {
+    const { run, hard } = handBuiltRun();
+    const controls = runControls({ run, attempt: undefined, lane: undefined });
+    const baseline = hard.listenerCount;
+    const seen: IAbortSignal[] = [];
+    for (let index = 0; index < 10; index += 1) {
+      const output = { big: 'x'.repeat(10_000) };
+      await controls.send({
+        label: 'careless',
+        perform: (signal) => {
+          seen.push(signal);
+          // A careless adapter: its listener captures the output and is never removed.
+          signal.onAbort(() => {
+            void output;
+          });
+          return Promise.resolve(output);
+        },
+      });
+    }
+    await controls.send({ label: 'failing', perform: (signal) => { signal.onAbort(() => undefined); return Promise.reject(new Error('provider unavailable')); } }).catch(() => undefined);
+    expect(hard.listenerCount).toBe(baseline);
+    expect(seen.every((signal) => signal !== run.hard.signal && !signal.aborted)).toBe(true);
+  });
+
+  test('a send\'s own signal still aborts when a hard stop lands while it is in flight', async () => {
+    const { run, hard } = handBuiltRun();
+    const controls = runControls({ run, attempt: undefined, lane: undefined });
+    const aborted: string[] = [];
+    const sending = controls.send({
+      label: 'in-flight',
+      perform: (signal) => new Promise<number>(() => {
+        signal.onAbort(() => aborted.push('adapter saw the abort'));
+      }),
+    });
+    await settle();
+    hard.abort();
+    expect(await codeOf(sending)).toBe('stopped');
+    expect(aborted).toEqual(['adapter saw the abort']);
+    expect(run.interruptions).toEqual([{ label: 'in-flight', remote: 'unknown' }]);
   });
 });

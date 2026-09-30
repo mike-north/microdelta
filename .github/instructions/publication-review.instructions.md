@@ -10,9 +10,13 @@ exact references, crash recovery, or stable-key retries. Matching a path is a
 review prompt, not proof that an unrelated edit changes this protocol.
 
 Start with `docs/spec/execution.md` (especially PUB-004). Read the relevant
-transitions/invariants in `experiments/exp-7/Publication.tla`, its configurations,
-and the assumptions in `experiments/exp-7/README.md`. EXP-3 is the currently
-modeled experiment implementation; do not assume all History code implements it.
+transitions/invariants in `experiments/exp-7/Publication.tla` (publication,
+abandonment, acceptance) and `experiments/exp-7/WriterLease.tla` (writer lease,
+waiting, takeover and clock high-water), their configurations, and the
+assumptions in `experiments/exp-7/README.md`. The production durable History in
+`packages/history/src/durable` is mapped to both models, action by action, in
+the latest `docs/validation/m5-concurrency-*.md` record; EXP-3 remains the
+historical experiment implementation.
 
 Perform two comparisons for affected invariants:
 
@@ -23,8 +27,9 @@ Perform two comparisons for affected invariants:
    preserve exact retained references and monotonically allocated authority.
    Check recovery before commit, after commit and before acknowledgment.
 2. **Model to tests:** inspect actual assertions, not just test names. Find
-   executable cases for the affected invariant and the faulty-fence
-   counterexample. Check state after rejection/rollback and after process
+   executable cases for the affected invariant and its known-bad
+   configuration's counterexample, and the matching mutation control in
+   `packages/core/test/concurrency/controls`. Check state after rejection/rollback and after process
    restart, and completed-key retry's reference and body-call count. Confirm
    relevant tests run through the repository's ordinary CI commands.
 

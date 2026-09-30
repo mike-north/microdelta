@@ -137,6 +137,13 @@ export interface IAbortSource {
   readonly signal: IAbortSignal;
   /** Abort once, running every pending listener in order. */
   abort(): void;
+  /**
+   * How many listeners the source still retains. A listener is retained only
+   * until it runs or is removed, so every settled race or wait returns this
+   * to its baseline; a retained listener would keep whatever it captures
+   * (for example a step's output) reachable until the run closes.
+   */
+  readonly listenerCount: number;
 }
 
 /**
@@ -146,8 +153,12 @@ export interface IAbortSource {
  */
 export function createAbortSource(onListenerFailure?: (error: unknown) => void): IAbortSource {
   let done = false;
-  /** Pending listeners in registration order; removed entries are skipped. */
-  const listeners: { readonly listener: () => void; removed: boolean }[] = [];
+  /**
+   * Pending listeners in registration order (a Set keeps insertion order).
+   * An entry leaves the set as soon as it runs or is removed, so nothing it
+   * captures stays reachable through the source afterwards.
+   */
+  const listeners = new Set<{ readonly listener: () => void }>();
   const call = (listener: () => void): void => {
     try {
       listener();
@@ -167,22 +178,26 @@ export function createAbortSource(onListenerFailure?: (error: unknown) => void):
         call(listener);
         return (): void => undefined;
       }
-      const entry = { listener, removed: false };
-      listeners.push(entry);
+      const entry = { listener };
+      listeners.add(entry);
       return (): void => {
-        entry.removed = true;
+        listeners.delete(entry);
       };
     },
   });
   return Object.freeze({
     signal,
+    get listenerCount(): number {
+      return listeners.size;
+    },
     abort(): void {
       if (done) {
         return;
       }
       done = true;
-      for (const entry of listeners.splice(0)) {
-        if (!entry.removed) {
+      for (const entry of [...listeners]) {
+        // A listener removed by an earlier one while aborting does not run.
+        if (listeners.delete(entry)) {
           call(entry.listener);
         }
       }

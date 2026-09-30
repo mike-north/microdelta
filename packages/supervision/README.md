@@ -90,17 +90,24 @@ execution contract describes them (EXP-8 mechanisms 1 and 2, ruling R).
 - **Stop controller.** `createStopController({ timer })` holds an operator's
   stop intent; a run receives it as `options.stop`. Levels only escalate:
   - A **soft stop** admits no new work: Supervision's admission port
-    cancels every later admission, including children an executing parent
-    has not yet obtained. Admitted steps drain, with **no default deadline**.
+    cancels every later admission except the first attempts of children a
+    draining step's body demands (see below). Admitted steps drain, with
+    **no default deadline**.
   - An **operator deadline** on a soft stop escalates it to hard when it
     passes. The deadline timer never keeps the host alive on its own.
   - A **hard stop** aborts the run's signal. Admitted bodies are
     interrupted at once, even ones that never settle. Sends in flight,
     permit waits and waits for a time are aborted. Nothing new is committed.
-- **Drain unit and taint.** The drain unit is the admitted step. A step
-  whose send or wait was refused or aborted is tainted: whatever its body
-  returns, its execution ends `interrupted`, so partial work is never
-  published, and it sends nothing more.
+- **Drain unit and taint.** The drain unit is the admitted step attempt: it
+  keeps running, issues its remaining first-attempt requests and publishes.
+  Authors isolate each paid call in its own child step, so a child an
+  admitted, still-executing step's body demands is part of its drain and is
+  admitted as a first attempt, transitively. Retries, deferred resumptions
+  and waits stay refused, and work no executing admitted body demands (a new
+  request, a fan-out member not yet started) is cancelled. A step whose send
+  or wait was refused or aborted is tainted: whatever its body returns, its
+  execution ends `interrupted`, so partial work is never published, and it
+  sends nothing more and obtains no further child.
 - **Publication commit.** Resolution asks `publicationRefusal()` in the same
   synchronous turn as each commit, so the commit is the linearization point:
   a hard stop effective before it discards the output, one after it cannot
@@ -108,8 +115,11 @@ execution contract describes them (EXP-8 mechanisms 1 and 2, ruling R).
   that outlives its lease cannot publish either.
 - **Permits and window.** `options.permits` (default 1) bounds sends in
   flight. A permit guards only a real send, never waiting for a permit,
-  children or a time. `options.window` (default `permits`) bounds how many
-  members of one fan-out resolve at once.
+  children or a time. `options.window` (default 8, independent of permits)
+  bounds how many fan-out members actively resolve at once: Resolution runs
+  each member through the cancellation port's `member()`, which grants lanes
+  first in, first out in canonical key order. A member waiting for a time
+  lends its lane and reclaims one on waking, so it never stalls its siblings.
 - **Execution controls.** `supervision.execution()` gives author code and
   adapters the live run's controls by scoped lookup:
   - `send({ label, retry?, perform, cancel? })` holds one permit per send. A

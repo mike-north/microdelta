@@ -272,7 +272,10 @@ export interface IWorkspaceRunOptions<TInputs extends object, THelpers extends o
    * permit guards only a real send, never waiting. Defaults to 1.
    */
   readonly permits?: number;
-  /** How many members of one fan-out resolve at once. Defaults to `permits`. */
+  /**
+   * How many fan-out members actively resolve at once, independent of
+   * `permits`; a member waiting for a time lends its lane. Defaults to 8.
+   */
   readonly window?: number;
 }
 
@@ -447,7 +450,6 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
           admission: ports.admission,
           observer: ports.observer,
           execution: ports.execution,
-          window: ports.window,
         }),
       }, (live) => {
         const run: IWorkspaceRun = Object.freeze({

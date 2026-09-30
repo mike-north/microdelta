@@ -12,8 +12,8 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 import type { IBindingDescriptor } from '@microdelta/definition';
 import type { IAdmissionRequest, IResolution, IResolutionOutcome } from '@microdelta/resolution';
 
-import { SupervisionError } from '../src/index.js';
-import type { IResolutionPorts, IRunLease, IRunOptions, IRunScope, IRunScopeCapability, IRunTimer } from '../src/index.js';
+import { SupervisionError, createSupervision } from '../src/index.js';
+import type { IResolutionPorts, IRunEvent, IRunLease, IRunOptions, IRunScope, IRunScopeCapability, IRunTimer, ISupervision } from '../src/index.js';
 
 /** Node's real asynchronous context, supplied structurally as a host would. */
 export const nodeScopes: IRunScopeCapability = {
@@ -212,13 +212,17 @@ export function stubProvider(options: { readonly settleOnAbort?: boolean } = {})
         state.peak = Math.max(state.peak, state.inFlight);
         try {
           await new Promise<void>((resolve, reject) => {
-            signal.onAbort(() => {
+            // A well-behaved adapter stops listening once its request settles.
+            const stopListening = signal.onAbort(() => {
               aborted.push(label);
               if (options.settleOnAbort === true) {
                 reject(new Error(`request ${label} abandoned`));
               }
             });
-            void gateOf(label).promise.then(resolve);
+            void gateOf(label).promise.then(() => {
+              stopListening();
+              resolve();
+            });
           });
           completed.push(label);
           return value;
@@ -231,4 +235,27 @@ export function stubProvider(options: { readonly settleOnAbort?: boolean } = {})
       gateOf(label).resolve();
     },
   };
+}
+
+/** A Supervision over Node's real scope and the given fake timer. */
+export function supervisionWith(timer: IFakeTimer): ISupervision {
+  return createSupervision({ context: nodeScopes, timer });
+}
+
+/** Run options over a port double. */
+export function optionsFor(double: IPortDouble, overrides: Partial<IRunOptions> = {}): IRunOptions {
+  return { analysis: 'analysis:test', environment: 'env:test', resolution: double.factory, writer: grantingWriter, ...overrides };
+}
+
+/** The stop and send events a run offered, as compact strings. */
+export function controlEvents(events: readonly IRunEvent[]): string[] {
+  return events.flatMap((event) => {
+    if (event.kind === 'stop') {
+      return [`stop:${event.level}:${String(event.cause)}`];
+    }
+    if (event.kind === 'send') {
+      return [`send:${event.label}:${event.phase}${event.phase === 'remote-state' ? `:${event.remote}` : ''}`];
+    }
+    return [];
+  });
 }

@@ -6,6 +6,10 @@
  *
  * Stop intent reaches work at exactly these points:
  *
+ * - **Admission** (in the run engine): a soft stop cancels new work, except
+ *   the first attempts of children an admitted, still-executing, untainted
+ *   step's body demands, which belong to that step's drain unit
+ *   ({@link isDraining}); a hard stop cancels everything.
  * - **Admitted bodies** run through {@link supervisedExecution}, each in its
  *   own attempt frame. A hard stop interrupts the wait for a body at once,
  *   even one that never settles (arbitrary JavaScript is not forcibly
@@ -22,7 +26,8 @@
  *   draining step's first attempts proceed. A tainted attempt sends nothing
  *   more.
  * - **Waits for a time** hold no permit and end at once on any stop, because
- *   the retry they precede is forbidden.
+ *   the retry they precede is forbidden. They also lend their member's window
+ *   lane for their duration ({@link IMemberLane}).
  *
  * Nothing here decides reuse, touches History or reads a host timer: the
  * timer is injected.
@@ -33,16 +38,46 @@ import type { IExecutionSupervision, ISupervisedExecution } from '@microdelta/re
 import type { IRemoteState, IRunContext, IRunEvent, IRunExecution, ISendInterruption, ISendPhase, ISendRequest } from './contracts.js';
 import type { IAbortSignal, IAbortSource, IRunTimer, IStopController, IStopState } from './control.js';
 import { SupervisionError } from './errors.js';
-import type { IPermitPool } from './permits.js';
+import type { IPermit, IPermitPool } from './permits.js';
 
 /**
- * One admitted step's execution inside a run: which step it is, and the
- * first reason stop intent refused or aborted something it did. A tainted
- * attempt can never publish, whatever its body later returns.
+ * One admitted step's execution inside a run: which step it is, the first
+ * reason stop intent refused or aborted something it did, and whether its
+ * execution has ended. A tainted attempt can never publish, whatever its body
+ * later returns. While an untainted attempt is still executing it is
+ * *draining* under a soft stop: the children its body demands are part of its
+ * drain unit and are admitted as first attempts.
  */
 export interface IAttemptFrame {
   readonly step: IBindingDescriptor;
   taint: string | undefined;
+  /** True once its execution returned, threw or was interrupted; a call made later belongs to no draining body. */
+  ended: boolean;
+}
+
+/**
+ * One fan-out member's place in the run's bounded active window. The member
+ * holds a lane while it works. A timed wait lends the lane to the next
+ * waiting member and reclaims one on waking, so a member waiting for a time
+ * never stalls its siblings. With several waits in progress at once, the lane
+ * is lent at the first and reclaimed after the last.
+ */
+export interface IMemberLane {
+  /** The lane held now, if any. */
+  permit: IPermit | undefined;
+  /** Timed waits in progress in this member's work. */
+  waits: number;
+  /** True once the member's work settled; a late wake-up must not reclaim a lane. */
+  closed: boolean;
+}
+
+/**
+ * Whether an attempt is draining: executing, untainted, and so still
+ * entitled under a soft stop to the first attempts of the children its body
+ * demands (EXP-8: the drain unit is the admitted step attempt).
+ */
+export function isDraining(attempt: IAttemptFrame | undefined): boolean {
+  return attempt !== undefined && attempt.taint === undefined && !attempt.ended;
 }
 
 /**
@@ -58,6 +93,8 @@ export interface ISupervisedRun {
   readonly hard: IAbortSource;
   readonly stopped: IAbortSource;
   readonly permits: IPermitPool;
+  /** The lanes of the bounded active window of member fan-out. */
+  readonly lanes: IPermitPool;
   readonly timer: IRunTimer | undefined;
   /** Every send a hard stop aborted, with its remote state, in order. */
   readonly interruptions: ISendInterruption[];
@@ -70,13 +107,16 @@ export interface ISupervisedRun {
 }
 
 /**
- * What the run's asynchronous scope carries: the run, and the admitted
- * step attempt whose body is executing there, if any. A nested execution
- * gets its own frame; the parent's is restored when it returns or throws.
+ * What the run's asynchronous scope carries: the run, the admitted step
+ * attempt whose body is executing there, if any, and the window lane of the
+ * fan-out member it belongs to, if any. A nested execution gets its own frame
+ * (inheriting the member's lane); the parent's is restored when it returns or
+ * throws.
  */
 export interface IRunFrame {
   readonly run: ISupervisedRun;
   readonly attempt: IAttemptFrame | undefined;
+  readonly lane: IMemberLane | undefined;
 }
 
 /** How a promise raced against a signal settled. */
@@ -116,14 +156,24 @@ function observedLevel(run: ISupervisedRun): 'none' | 'soft' | 'hard' {
   return run.hard.signal.aborted ? 'hard' : run.stopped.signal.aborted ? 'soft' : 'none';
 }
 
+/** How the port reaches the run's asynchronous scope. */
+export interface IFrameAccess {
+  /** This run's frame in the current asynchronous execution, if there is one. */
+  current(): IRunFrame | undefined;
+  /** Run work with a frame attached to its asynchronous execution. */
+  enter<T>(frame: IRunFrame, work: () => Promise<T>): Promise<T>;
+}
+
 /**
  * The cancellation port Supervision hands to Resolution for one run. Each
- * execution runs in its own attempt frame inside the run's scope.
+ * execution runs in its own attempt frame inside the run's scope, inheriting
+ * the window lane of the member it belongs to; each fan-out member runs in a
+ * window lane.
  * @param run - The live run.
- * @param enter - Run work with a frame attached to its asynchronous execution.
+ * @param frames - Access to the run's asynchronous scope.
  * @returns The port.
  */
-export function supervisedExecution(run: ISupervisedRun, enter: <T>(frame: IRunFrame, work: () => Promise<T>) => Promise<T>): IExecutionSupervision {
+export function supervisedExecution(run: ISupervisedRun, frames: IFrameAccess): IExecutionSupervision {
   return Object.freeze({
     async execute<T>(step: IBindingDescriptor, work: () => Promise<T>): Promise<ISupervisedExecution<T>> {
       if (!run.open) {
@@ -132,19 +182,70 @@ export function supervisedExecution(run: ISupervisedRun, enter: <T>(frame: IRunF
       if (run.hard.signal.aborted) {
         return { kind: 'interrupted', reason: 'a hard stop interrupted the step before it started' };
       }
-      const attempt: IAttemptFrame = { step, taint: undefined };
+      const attempt: IAttemptFrame = { step, taint: undefined, ended: false };
+      const lane = frames.current()?.lane;
       try {
-        const raced = await raceAbort(started(() => enter({ run, attempt }, work)), run.hard.signal);
+        const raced = await raceAbort(started(() => frames.enter({ run, attempt, lane }, work)), run.hard.signal);
         if (raced.aborted) {
           return { kind: 'interrupted', reason: 'a hard stop interrupted the step' };
         }
         return attempt.taint === undefined ? { kind: 'returned', value: raced.value } : { kind: 'interrupted', reason: attempt.taint };
       } catch (error: unknown) {
         return attempt.taint === undefined ? { kind: 'threw', error } : { kind: 'interrupted', reason: attempt.taint };
+      } finally {
+        // Whatever the detached author code does later, this body is no longer draining.
+        attempt.ended = true;
+      }
+    },
+    async member<T>(work: () => Promise<T>): Promise<T> {
+      // Queued members are served first in, first out. After a hard stop a
+      // member no longer waits for a lane: its work is refused promptly anyway.
+      const lane: IMemberLane = { permit: await run.lanes.acquire(run.hard.signal), waits: 0, closed: false };
+      try {
+        return await frames.enter({ run, attempt: undefined, lane }, work);
+      } finally {
+        lane.closed = true;
+        lane.permit?.release();
+        lane.permit = undefined;
       }
     },
     publicationRefusal: (): string | undefined => run.publicationRefusal(),
   });
+}
+
+/** Lend a member's lane at the start of a timed wait (the first, when several overlap). */
+function lendLane(lane: IMemberLane | undefined): void {
+  if (lane === undefined || lane.closed) {
+    return;
+  }
+  lane.waits += 1;
+  if (lane.waits === 1) {
+    lane.permit?.release();
+    lane.permit = undefined;
+  }
+}
+
+/**
+ * Reclaim a lane when the last timed wait of a member ends, waiting first in,
+ * first out behind members that are already queued. Returns false when a
+ * hard stop ended that wait, so the member's work must stop.
+ */
+async function reclaimLane(run: ISupervisedRun, lane: IMemberLane | undefined): Promise<boolean> {
+  if (lane === undefined || lane.closed) {
+    return true;
+  }
+  lane.waits -= 1;
+  if (lane.waits > 0 || lane.permit !== undefined) {
+    return true;
+  }
+  const permit = await run.lanes.acquire(run.hard.signal);
+  if (lane.closed) {
+    // The member settled while this wait was reclaiming: hand the lane straight on.
+    permit?.release();
+    return true;
+  }
+  lane.permit = permit;
+  return permit !== undefined;
 }
 
 /** Mark an attempt as unable to publish, keeping its first reason. */
@@ -185,7 +286,7 @@ function sendFields<T>(request: ISendRequest<T>): ISendFields<T> {
  * @returns The controls.
  */
 export function runControls(frame: IRunFrame): IRunExecution {
-  const { run, attempt } = frame;
+  const { run, attempt, lane } = frame;
 
   /** Offer one send event. */
   const sendEvent = (label: string, phase: Exclude<ISendPhase, 'remote-state'>): void => {
@@ -275,19 +376,34 @@ export function runControls(frame: IRunFrame): IRunExecution {
       taint(attempt, before);
       throw new SupervisionError('stopped', `The wait was refused: ${before}`);
     }
-    await new Promise<void>((resolve, reject) => {
-      let cancelTimer: () => void = () => undefined;
-      const remove = run.stopped.signal.onAbort(() => {
-        cancelTimer();
-        const reason = `a ${observedLevel(run)} stop ended the wait`;
-        taint(attempt, reason);
-        reject(new SupervisionError('stopped', `The wait ended early: ${reason}`));
+    // A timed wait holds neither a permit nor its member's window lane (RUN-002, RUN-011).
+    lendLane(lane);
+    try {
+      await new Promise<void>((resolve, reject) => {
+        let cancelTimer: () => void = () => undefined;
+        const remove = run.stopped.signal.onAbort(() => {
+          cancelTimer();
+          const reason = `a ${observedLevel(run)} stop ended the wait`;
+          taint(attempt, reason);
+          reject(new SupervisionError('stopped', `The wait ended early: ${reason}`));
+        });
+        cancelTimer = timer.schedule(epochMilliseconds, () => {
+          remove();
+          resolve();
+        }, { keepAlive: true });
       });
-      cancelTimer = timer.schedule(epochMilliseconds, () => {
-        remove();
-        resolve();
-      }, { keepAlive: true });
-    });
+    } catch (error: unknown) {
+      // The member is stopping: it gives up the wait without taking a lane back.
+      if (lane !== undefined && !lane.closed) {
+        lane.waits -= 1;
+      }
+      throw error;
+    }
+    if (!await reclaimLane(run, lane)) {
+      const reason = 'a hard stop ended the wait for a window lane';
+      taint(attempt, reason);
+      throw new SupervisionError('stopped', `The wait ended early: ${reason}`);
+    }
   }
 
   return Object.freeze({

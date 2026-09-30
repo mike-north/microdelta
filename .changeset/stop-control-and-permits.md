@@ -9,12 +9,12 @@
 Add operator stop control, a bounded permit pool, the publication-commit rule and bounded nested waiting to supervised runs (project-private `@alpha` surfaces).
 
 - **Stop controller.** `createStopController()` holds operator stop intent, and a run receives it as `stop`. Levels only escalate.
-  - A soft stop admits no new work and refuses every retry, while admitted steps drain with no default deadline.
+  - A soft stop admits no new work and refuses every retry, while admitted steps drain with no default deadline. The drain unit is the admitted step attempt: a child its still-executing body demands is admitted as a first attempt; its retries and waits stay refused, and work no executing admitted body demands is cancelled.
   - An operator deadline on a soft stop escalates it to hard; its timer never keeps the host alive on its own.
   - A hard stop interrupts admitted bodies at once, even ones that never settle. It aborts sends in flight, permit waits and waits for a time, and it forbids later commits.
 - **No partial output.** A step whose send or wait was refused or aborted can no longer publish. An interrupted attempt ends `interrupted`, with a `stopped` ending, and reports a `refused` outcome with disposition `cancelled`.
 - **Publication commit.** Each commit first asks Supervision whether a hard stop forbids it, in the same synchronous turn, so the commit is the linearization point. History's commit still re-reads the writer lease durably, so a drain that outlives its lease cannot publish.
-- **Permits and window.** A run's `permits` (default 1) bound sends in flight; a permit guards only a real send, never waiting. Its `window` (default `permits`) bounds how many members of one members request or strict fold resolve at once. Members start and report in canonical key order.
+- **Permits and window.** A run's `permits` (default 1) bound sends in flight; a permit guards only a real send, never waiting. Its `window` (default 8, independent of permits) bounds how many fan-out members actively resolve at once. Resolution runs each member through the cancellation port's `member()`; members start first in, first out, and report in canonical key order. A member waiting for a time lends its lane and reclaims one on waking, so it never stalls its siblings. Resolution without Supervision resolves members one at a time.
 - **Execution controls.** `currentExecution()` returns the live run's controls, attributed to the admitted step running there:
   - its stop state and abort signal;
   - `send({ label, retry?, perform, cancel? })`, which records the remote state (`cancelled`, `running` or `unknown`) of an aborted send;

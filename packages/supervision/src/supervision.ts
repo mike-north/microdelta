@@ -69,9 +69,31 @@ import type {
 import { createAbortSource, createStopController } from './control.js';
 import type { IStopLevel, IStopState } from './control.js';
 import { SupervisionError } from './errors.js';
-import { raceAbort, runControls, supervisedExecution } from './execution.js';
-import type { IRunFrame, ISupervisedRun } from './execution.js';
+import { isDraining, raceAbort, runControls, supervisedExecution } from './execution.js';
+import type { IAttemptFrame, IFrameAccess, IRunFrame, ISupervisedRun } from './execution.js';
 import { createPermitPool } from './permits.js';
+
+/**
+ * The default size of a run's permit pool: one send in flight at a time. It
+ * bounds provider requests, and is deliberately conservative for paid
+ * providers; an operator sizes it to the provider's concurrency limit.
+ */
+const defaultPermits = 1;
+
+/**
+ * The default size of a run's bounded active window of member fan-out. It is
+ * independent of the permit pool because the two bound different things:
+ * permits bound concurrent provider requests, while the window bounds how
+ * many members are actively resolving at once, and so the member work,
+ * validation and in-flight evidence held in memory. A window wider than the
+ * permit pool lets members that are validating, reusing results or waiting
+ * for a permit progress while others send, so one slow or waiting member
+ * never stalls its siblings (a member in a timed wait also lends its lane).
+ * Eight keeps that concurrency, and the memory of in-flight members, modest
+ * for a single-process run; it matches EXP-8's evaluated default for
+ * concurrently admitted steps. Operators widen it for large fan-outs.
+ */
+const defaultWindow = 8;
 
 /**
  * A run's positive count option (its permits or window), or `fallback` when
@@ -272,8 +294,8 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     if (typeof runOptions.resolution !== 'function' || typeof runOptions.writer !== 'object' || runOptions.writer === null) {
       throw new SupervisionError('invalid-request', 'A run needs a Resolution factory and a writer port');
     }
-    const permits = positiveCount(runOptions.permits, 1, 'permits');
-    const window = positiveCount(runOptions.window, permits, 'window');
+    const permits = positiveCount(runOptions.permits, defaultPermits, 'permits');
+    const window = positiveCount(runOptions.window, defaultWindow, 'window');
     const controller = runOptions.stop ?? createStopController();
     if (typeof controller !== 'object' || controller === null || typeof Reflect.get(controller, 'subscribe') !== 'function') {
       throw new SupervisionError('invalid-request', 'A run\'s stop must be a stop controller');
@@ -288,6 +310,12 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     const policy = runOptions.admission ?? admitAll;
     const writer = runOptions.writer;
     const diagnostics: string[] = [];
+    /** The stop intent in force when the run closed; captured in the turn that closes it. */
+    let closingStop: IStopState = controller.state;
+    /** Where a failing listener of one of the run's abort signals is reported: a diagnostic, never a failure of the stop. */
+    const listenerFailure = (signal: string) => (error: unknown): void => {
+      diagnostics.push(`A ${signal} listener of run ${context.runId} failed: ${describe(error)}`);
+    };
 
     /**
      * Operations started through this run that have not settled: requests,
@@ -300,11 +328,10 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       context,
       open: true,
       controller,
-      hard: createAbortSource((error: unknown) => {
-        diagnostics.push(`An abort listener of run ${context.runId} failed: ${describe(error)}`);
-      }),
-      stopped: createAbortSource(),
+      hard: createAbortSource(listenerFailure('hard stop')),
+      stopped: createAbortSource(listenerFailure('stop')),
       permits: createPermitPool(permits),
+      lanes: createPermitPool(window),
       timer,
       interruptions: [],
       report(event: IRunEvent, position: string): void {
@@ -331,7 +358,15 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         return state.hard.signal.aborted ? 'a hard stop took effect before the publication commit' : undefined;
       },
     };
-    const frame: IRunFrame = Object.freeze({ run: state, attempt: undefined });
+    const frame: IRunFrame = Object.freeze({ run: state, attempt: undefined, lane: undefined });
+    /** Access to this run's frames in the shared scope; a frame of another run is not this run's. */
+    const frames: IFrameAccess = Object.freeze({
+      current: (): IRunFrame | undefined => {
+        const store = scope.getStore();
+        return store?.run === state ? store : undefined;
+      },
+      enter,
+    });
 
     /**
      * Observe the operator's stop intent while the run is open: report each
@@ -358,26 +393,42 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
 
     /** The denial for work presented to, or decided after, a closed run. */
     const closedDenial = (): IAdmissionDecision => Object.freeze({ kind: 'denied', reason: `run ${context.runId} has closed` });
-    /** The cancellation of new work once the run is stopped, or undefined while it is not. */
-    const stopRefusal = (): IAdmissionDecision | undefined => {
+    /**
+     * The cancellation of work stop intent forbids, or undefined when it may
+     * be decided by the policy. A hard stop cancels everything. A soft stop
+     * cancels new work, except the first attempt of a child that `demandedBy`
+     * (the step attempt whose executing body requested it) is still draining:
+     * that child belongs to the admitted step's drain unit.
+     */
+    const stopRefusal = (demandedBy: IAttemptFrame | undefined): IAdmissionDecision | undefined => {
       if (state.hard.signal.aborted) {
         return Object.freeze({ kind: 'cancelled', reason: `run ${context.runId} is stopped: a hard stop admits no new work` });
       }
-      return state.stopped.signal.aborted ? Object.freeze({ kind: 'cancelled', reason: `run ${context.runId} is stopped: a soft stop admits no new work` }) : undefined;
+      if (!state.stopped.signal.aborted || isDraining(demandedBy)) {
+        return undefined;
+      }
+      return Object.freeze({ kind: 'cancelled', reason: `run ${context.runId} is stopped: a soft stop admits no new work` });
     };
     /**
      * Supervision's admission port: the caller's policy while open and not
-     * stopped (RUN-014: no admission after a soft stop). A policy may decide
+     * stopped (RUN-014: no admission after a soft stop), and, during a soft
+     * stop's drain, for the children an admitted step's executing body
+     * demands (EXP-8: the drain unit is the admitted step attempt). Admission
+     * is always of a first attempt: retries and deferred resumptions are
+     * refused at the send and wait they need. A policy may decide
      * asynchronously; a decision that arrives after the run closed is replaced
-     * by denial, one that arrives after a stop by cancellation, and a hard
-     * stop ends the wait for a pending decision at once.
+     * by denial, one that arrives when stop intent forbids the work by
+     * cancellation, and a hard stop ends the wait for a pending decision at
+     * once.
      */
     const admission: IExecutionAdmission = Object.freeze({
       async admit(request: IAdmissionRequest): Promise<IAdmissionDecision> {
         if (!state.open) {
           return closedDenial();
         }
-        const before = stopRefusal();
+        // The body (if any) whose execution demands this work, as its asynchronous context carries it.
+        const demandedBy = frames.current()?.attempt;
+        const before = stopRefusal(demandedBy);
         if (before !== undefined) {
           return before;
         }
@@ -385,7 +436,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         if (!state.open) {
           return closedDenial();
         }
-        const after = stopRefusal();
+        const after = stopRefusal(demandedBy);
         if (after !== undefined || decided.aborted) {
           // Only a hard stop ends the wait early, and that stop cancels the work.
           return after ?? closedDenial();
@@ -399,7 +450,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         notify(observers, Object.freeze({ kind: 'step', runId: context.runId, event }));
       },
     });
-    const resolution: IResolution = runOptions.resolution(Object.freeze({ admission, observer, execution: supervisedExecution(state, enter), window }));
+    const resolution: IResolution = runOptions.resolution(Object.freeze({ admission, observer, execution: supervisedExecution(state, frames) }));
 
     /**
      * Run an operation inside this run's scope, after checking it is still
@@ -414,14 +465,16 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
      * has settled, then close the run in the same synchronous turn that
      * observes no started work. Closing there, rather than after yielding back
      * to the caller, leaves no window in which a queued call could be accepted
-     * yet not waited for: every later call is rejected as new work. Stop
-     * intent is no longer observed once the run has closed.
+     * yet not waited for: every later call is rejected as new work. The stop
+     * intent in force is captured in that same turn, and is no longer
+     * observed once the run has closed.
      */
     async function drainAndClose(): Promise<void> {
       while (started.size > 0) {
         await Promise.all([...started]);
       }
       state.open = false;
+      closingStop = controller.state;
       unsubscribe();
     }
 
@@ -490,14 +543,11 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     });
 
     let value: Awaited<T>;
-    /** The stop intent in force when the run closed. */
-    let closingStop: IStopState = controller.state;
     try {
       value = await scope.run(frame, async () => body(live));
     } finally {
       // The body's outcome is kept; work it already started still belongs to the run.
       await drainAndClose();
-      closingStop = controller.state;
       try {
         writer.release();
       } catch (error: unknown) {

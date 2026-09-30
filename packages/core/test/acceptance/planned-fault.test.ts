@@ -22,7 +22,7 @@
  */
 import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
 
-import { baseWorld, judgePlannedKill, scenario } from './harness.js';
+import { baseWorld, judgeCompletedWorker, judgePlannedKill, scenario } from './harness.js';
 import type { IPlannedFault, IScenario, IWorkerExit } from './harness.js';
 
 /** The lost-acknowledgment boundary the crash suite plans: just after the summary publication commits. */
@@ -167,5 +167,24 @@ describe('planned kills through independent worker processes', () => {
     expect(failed.result).toBeUndefined();
     expect(failed.error).toMatchObject({ code: 'observer-failure' });
     expect(failed.lines.filter((line) => line['t'] === 'fault')).toEqual([]);
+  });
+});
+
+describe('an unplanned worker exit must have finished its command', () => {
+  test('status 0 with a result line, or status 3 with an error line, is a finished command', () => {
+    expect(judgeCompletedWorker({ status: 0, signal: null, lines: [...progress, { t: 'result', outcome: {} }], stderr: '' })).toBeUndefined();
+    expect(judgeCompletedWorker({ status: 3, signal: null, lines: [...progress, { t: 'error', name: 'ResolutionError', code: 'execution-failure', message: 'x' }], stderr: '' })).toBeUndefined();
+  });
+
+  test('status 0 with neither a result nor an error line is a harness failure naming what the worker left', () => {
+    // Regression: a worker whose event loop drained with work pending exited 0 having written no result.
+    const diagnostic = judgeCompletedWorker({ status: 0, signal: null, lines: [...progress], stderr: 'pending work never settled' });
+    expect(diagnostic).toMatch(/exited with status 0 but wrote no result or error line/u);
+    expect(diagnostic).toMatch(/last line: .*"helper":"summary"/u);
+    expect(diagnostic).toMatch(/stderr: pending work never settled/u);
+  });
+
+  test('status 3 without an error line, or with no output at all, is also a harness failure', () => {
+    expect(judgeCompletedWorker({ status: 3, signal: null, lines: [], stderr: '' })).toMatch(/exited with status 3 but wrote no result or error line.*last line: none/su);
   });
 });

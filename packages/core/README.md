@@ -41,10 +41,12 @@ composes the owners and adds no policy of its own:
   observed nonmemoized `ordinary(label, work)`, and exact `read(reference)`.
   A run's options may also carry an operator stop controller (`stop`), its
   permit pool size (`permits`, default 1) and fan-out window (`window`,
-  default `permits`).
+  default 8, independent of permits; a member waiting for a time lends its
+  lane).
 - `currentRun()`: the live run's context, looked up without a parameter.
 - `createStopController()`: operator stop intent with deadlines on Node's
-  timer. A soft stop admits no new work and drains admitted steps, with no
+  timer. A soft stop admits no new work and drains admitted steps (with the
+  first attempts of the children their bodies demand), with no
   default deadline; a deadline or a hard stop aborts sends, permit waits and
   waits for a time, and discards uncommitted output.
 - `currentExecution()`: the live run's execution controls, looked up without

@@ -101,8 +101,10 @@ Definition's `declarations()`. Callbacks receive:
    unsupervised and every commit may proceed.
 
 The members of one members request or strict fold resolve concurrently
-within the bounded active `window` (RUN-002; 1 when absent), started and
-reported in canonical key order. A member not yet started holds nothing.
+within Run Supervision's bounded active window: Resolution presents each
+member to the port's `member()` in canonical key order, and members are
+started and reported in that order (RUN-002). A member not yet started holds
+nothing. Without the port, members resolve one at a time.
 
 ## Template instances
 

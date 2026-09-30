@@ -100,13 +100,17 @@ export function stubProvider(options: { readonly cooperative?: boolean } = {}): 
         counts.peak = Math.max(counts.peak, counts.inFlight);
         try {
           await new Promise<void>((resolve, reject) => {
-            signal.onAbort(() => {
+            // A well-behaved adapter stops listening once its request settles.
+            const stopListening = signal.onAbort(() => {
               aborted.push(label);
               if (options.cooperative === true) {
                 reject(new Error(`request ${label} abandoned`));
               }
             });
-            void requestGates.wait(label).then(resolve);
+            void requestGates.wait(label).then(() => {
+              stopListening();
+              resolve();
+            });
           });
           completed.push(label);
           return value;

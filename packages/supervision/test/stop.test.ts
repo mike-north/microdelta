@@ -17,33 +17,12 @@
  */
 import { describe, expect, test } from '@jest/globals';
 
+import { createAbortSource } from '../src/control.js';
+import { raceAbort } from '../src/execution.js';
 import { SupervisionError, createStopController, createSupervision } from '../src/index.js';
-import type { IRunEvent, IRunExecution, IRunOptions, IStopState, ISupervision } from '../src/index.js';
-import { T0, admissionFor, codeOf, deferred, fakeTimer, grantingWriter, hour, nodeScopes, portDouble, settle, stepOf, stubProvider } from './support.js';
-import type { IFakeTimer, IPortDouble } from './support.js';
-
-/** A Supervision over Node's real scope and the given fake timer. */
-function supervisionWith(timer: IFakeTimer): ISupervision {
-  return createSupervision({ context: nodeScopes, timer });
-}
-
-/** Run options over a port double. */
-function optionsFor(double: IPortDouble, overrides: Partial<IRunOptions> = {}): IRunOptions {
-  return { analysis: 'analysis:test', environment: 'env:test', resolution: double.factory, writer: grantingWriter, ...overrides };
-}
-
-/** The stop and send events a run offered, as compact strings. */
-function controlEvents(events: readonly IRunEvent[]): string[] {
-  return events.flatMap((event) => {
-    if (event.kind === 'stop') {
-      return [`stop:${event.level}:${String(event.cause)}`];
-    }
-    if (event.kind === 'send') {
-      return [`send:${event.label}:${event.phase}${event.phase === 'remote-state' ? `:${event.remote}` : ''}`];
-    }
-    return [];
-  });
-}
+import type { IRunEvent, IRunExecution, IRunObserver, IRunOptions, IStopState, ISupervision } from '../src/index.js';
+import { createPermitPool } from '../src/permits.js';
+import { T0, admissionFor, codeOf, controlEvents, deferred, fakeTimer, hour, nodeScopes, optionsFor, portDouble, settle, stepOf, stubProvider, supervisionWith } from './support.js';
 
 /** A state value, for readable equality. */
 function state(level: IStopState['level'], cause?: IStopState['cause'], deadline?: number): IStopState {
@@ -299,15 +278,63 @@ describe('the permit pool (RUN-002)', () => {
     expect(provider.completed).toEqual(labels);
   });
 
-  test('the fan-out window Resolution receives defaults to the permit bound and can be set apart', async () => {
-    const windows: number[] = [];
-    for (const overrides of [{}, { permits: 3 }, { permits: 2, window: 5 }]) {
+  test('the fan-out window is independent of permits: by default 8 members resolve at once, first in first out, whatever the permit bound', async () => {
+    /** How many members a run lets resolve at once, and in what order they started. */
+    const probe = async (overrides: Partial<IRunOptions>): Promise<{ readonly peak: number; readonly started: readonly number[] }> => {
       const double = portDouble();
-      await supervisionWith(fakeTimer()).run(optionsFor(double, overrides), () => {
-        windows.push(double.ports().window);
+      const gate = deferred();
+      const started: number[] = [];
+      let active = 0;
+      let peak = 0;
+      await supervisionWith(fakeTimer()).run(optionsFor(double, overrides), async () => {
+        const members = Array.from({ length: 12 }, (_unused, index) => double.ports().execution.member(async () => {
+          started.push(index);
+          active += 1;
+          peak = Math.max(peak, active);
+          await gate.promise;
+          active -= 1;
+        }));
+        await settle();
+        gate.resolve();
+        await Promise.all(members);
       });
-    }
-    expect(windows).toEqual([1, 3, 5]);
+      return { peak, started };
+    };
+    const ordered = Array.from({ length: 12 }, (_unused, index) => index);
+    expect(await probe({})).toEqual({ peak: 8, started: ordered });
+    expect(await probe({ permits: 3 })).toEqual({ peak: 8, started: ordered });
+    expect(await probe({ permits: 1, window: 2 })).toEqual({ peak: 2, started: ordered });
+  });
+
+  test('a member waiting for a time lends its lane: with one lane a sibling runs meanwhile, and the sleeper reclaims a lane on waking', async () => {
+    const timer = fakeTimer();
+    const double = portDouble();
+    const supervisor = supervisionWith(timer);
+    const order: string[] = [];
+    const siblingGate = deferred();
+    await supervisor.run(optionsFor(double, { window: 1 }), async () => {
+      const { execution } = double.ports();
+      const sleeper = execution.member(async () => {
+        order.push('sleeper:start');
+        await supervisor.execution().sleepUntil(T0 + hour);
+        order.push('sleeper:woke');
+      });
+      const sibling = execution.member(async () => {
+        order.push('sibling:start');
+        await siblingGate.promise;
+        order.push('sibling:end');
+      });
+      await settle();
+      // The sibling holds the only lane while the sleeper waits.
+      expect(order).toEqual(['sleeper:start', 'sibling:start']);
+      timer.advance(hour);
+      await settle();
+      // The sleeper's time has come, but it resumes only once a lane is free.
+      expect(order).toEqual(['sleeper:start', 'sibling:start']);
+      siblingGate.resolve();
+      await Promise.all([sleeper, sibling]);
+    });
+    expect(order).toEqual(['sleeper:start', 'sibling:start', 'sibling:end', 'sleeper:woke']);
   });
 
   test.each([
@@ -583,6 +610,9 @@ describe('run-scoped lifecycle isolation (A-18, RUN-001)', () => {
     expect(kept).toBeDefined();
     if (kept !== undefined) {
       const late = kept;
+      // Stop intent stays readable after close; only work is refused.
+      expect(late.stop).toEqual(state('none'));
+      expect(late.signal.aborted).toBe(false);
       expect(await codeOf(late.send({ label: 'late', perform: provider.request('late', 1) }))).toBe('run-closed');
       expect(await codeOf(late.sleepUntil(T0 + hour))).toBe('run-closed');
     }
@@ -631,5 +661,211 @@ describe('stop events and the run report', () => {
       supervisor.execution().send({ label: 'x', perform: () => Promise.resolve(1) }).catch((error: unknown) => error));
     expect(result.value).toBeInstanceOf(SupervisionError);
     expect(result.value).toMatchObject({ code: 'stopped' });
+  });
+});
+
+/**
+ * Run `turnLimit` event-loop turns or until `done` holds; returns whether it
+ * held. Lets a test detect work that would otherwise wait forever, then
+ * unstick it (with a hard stop) so the run can still close and report.
+ */
+async function eventually(done: () => boolean, turnLimit = 50): Promise<boolean> {
+  for (let turn = 0; turn < turnLimit && !done(); turn += 1) {
+    await settle();
+  }
+  return done();
+}
+
+describe('permit waiters and stop intent (RUN-002, RUN-014)', () => {
+  test('a waiter a soft stop cancels leaves the queue, so a draining step queued behind it still gets the permit', async () => {
+    const controller = createStopController();
+    const provider = stubProvider();
+    const double = portDouble();
+    const supervisor = supervisionWith(fakeTimer());
+    const result = await supervisor.run(optionsFor(double, { stop: controller, permits: 1 }), async () => {
+      const { execution } = double.ports();
+      const a = execution.execute(stepOf('a'), () => supervisor.execution().send({ label: 'a', perform: provider.request('a', 1) }));
+      await settle();
+      // A retry queues first for the only permit; any stop refuses it.
+      const r = execution.execute(stepOf('r'), () => supervisor.execution().send({ label: 'r', retry: true, perform: provider.request('r', 2) }));
+      await settle();
+      // A draining step's first attempt queues behind it.
+      const b = execution.execute(stepOf('b'), () => supervisor.execution().send({ label: 'b', perform: provider.request('b', 3) }));
+      await settle();
+      controller.request({ level: 'soft' });
+      provider.release('a');
+      provider.release('b');
+      const drained = await eventually(() => provider.completed.includes('b'));
+      if (!drained) {
+        controller.request({ level: 'hard' });
+      }
+      return { drained, a: await a, r: await r, b: await b };
+    });
+    expect(result.value).toEqual({
+      drained: true,
+      a: { kind: 'returned', value: 1 },
+      r: { kind: 'interrupted', reason: expect.stringContaining('soft stop refuses retries') },
+      b: { kind: 'returned', value: 3 },
+    });
+    expect(provider.received).toEqual(['a', 'b']);
+  });
+
+  test('a permit granted to a waiter just as a soft stop lands is handed straight back, and a draining step queued behind it proceeds', async () => {
+    const controller = createStopController();
+    const provider = stubProvider();
+    const double = portDouble();
+    const supervisor = supervisionWith(fakeTimer());
+    // The stop lands in the very turn `a` hands its permit to the queued retry, before the retry's continuation runs.
+    const stopAtHandOver: IRunObserver = {
+      observe: (event) => {
+        if (event.kind === 'send' && event.label === 'a' && event.phase === 'end') {
+          controller.request({ level: 'soft' });
+        }
+      },
+    };
+    const result = await supervisor.run(optionsFor(double, { stop: controller, permits: 1, observers: [stopAtHandOver] }), async () => {
+      const { execution } = double.ports();
+      const a = execution.execute(stepOf('a'), () => supervisor.execution().send({ label: 'a', perform: provider.request('a', 1) }));
+      await settle();
+      const r = execution.execute(stepOf('r'), () => supervisor.execution().send({ label: 'r', retry: true, perform: provider.request('r', 2) }));
+      await settle();
+      const b = execution.execute(stepOf('b'), () => supervisor.execution().send({ label: 'b', perform: provider.request('b', 3) }));
+      await settle();
+      provider.release('a');
+      provider.release('b');
+      const drained = await eventually(() => provider.completed.includes('b'));
+      if (!drained) {
+        controller.request({ level: 'hard' });
+      }
+      return { drained, a: await a, r: await r, b: await b };
+    });
+    expect(result.value).toEqual({
+      drained: true,
+      a: { kind: 'returned', value: 1 },
+      r: { kind: 'interrupted', reason: expect.stringContaining('soft stop refuses retries') },
+      b: { kind: 'returned', value: 3 },
+    });
+    expect(provider.received).toEqual(['a', 'b']);
+  });
+
+  test('permit waiters are served first in, first out', async () => {
+    const provider = stubProvider();
+    const double = portDouble();
+    const supervisor = supervisionWith(fakeTimer());
+    const labels = ['p0', 'p1', 'p2', 'p3'];
+    await supervisor.run(optionsFor(double, { permits: 1 }), async () => {
+      const sends = labels.map((label) => supervisor.execution().send({ label, perform: provider.request(label, label) }));
+      for (const label of labels) {
+        await settle();
+        provider.release(label);
+      }
+      await Promise.all(sends);
+    });
+    expect(provider.received).toEqual(labels);
+  });
+});
+
+describe('the run stays open while its sends are outstanding (RUN-001, RUN-014)', () => {
+  test('a body that returns while its send is still in flight does not close the run before the send settles', async () => {
+    const provider = stubProvider();
+    const double = portDouble();
+    const supervisor = supervisionWith(fakeTimer());
+    let sent: Promise<number> | undefined;
+    let arrived = false;
+    const running = supervisor.run(optionsFor(double), () => {
+      sent = supervisor.execution().send({ label: 'gated', perform: provider.request('gated', 1) });
+      return 'body returned';
+    });
+    void running.then(() => {
+      arrived = true;
+    });
+    await settle();
+    await settle();
+    expect(provider.received).toEqual(['gated']);
+    expect(arrived).toBe(false);
+    provider.release('gated');
+    const result = await running;
+    expect(result.value).toBe('body returned');
+    expect(await sent).toBe(1);
+  });
+
+  test('after a hard stop the run waits for a slow provider cancellation, and reports its remote state', async () => {
+    const controller = createStopController();
+    const provider = stubProvider();
+    const double = portDouble();
+    const supervisor = supervisionWith(fakeTimer());
+    const cancellation = deferred<'cancelled' | 'running'>();
+    let code: Promise<string | undefined> | undefined;
+    let arrived = false;
+    const running = supervisor.run(optionsFor(double, { stop: controller }), () => {
+      code = codeOf(supervisor.execution().send({ label: 'slow', perform: provider.request('slow', 1), cancel: () => cancellation.promise }));
+      return 'body returned';
+    });
+    void running.then(() => {
+      arrived = true;
+    });
+    await settle();
+    expect(provider.received).toEqual(['slow']);
+    controller.request({ level: 'hard' });
+    await settle();
+    await settle();
+    // The send was aborted locally; the provider has not yet answered the cancellation.
+    expect(provider.aborted).toEqual(['slow']);
+    expect(arrived).toBe(false);
+    cancellation.resolve('cancelled');
+    const result = await running;
+    expect(await code).toBe('stopped');
+    expect(result.interruptions).toEqual([{ label: 'slow', remote: 'cancelled' }]);
+    expect(result.stop).toEqual(state('hard', 'operator'));
+  });
+});
+
+describe('abort listeners are released once they can no longer run (regression: a settled step output stayed reachable until its run closed)', () => {
+  test('removing a listener releases it, so the source returns to its baseline', () => {
+    const source = createAbortSource();
+    const baseline = source.listenerCount;
+    const removers = Array.from({ length: 10 }, () => source.signal.onAbort(() => undefined));
+    expect(source.listenerCount).toBe(baseline + 10);
+    for (const remove of removers) {
+      remove();
+      remove();
+    }
+    expect(source.listenerCount).toBe(baseline);
+  });
+
+  test('a removed listener never runs, and removal after the abort does nothing', () => {
+    const source = createAbortSource();
+    const calls: string[] = [];
+    const removed = source.signal.onAbort(() => calls.push('removed'));
+    const kept = source.signal.onAbort(() => calls.push('kept'));
+    removed();
+    source.abort();
+    kept();
+    expect(calls).toEqual(['kept']);
+    expect(source.listenerCount).toBe(0);
+  });
+
+  test('a race that settles releases its listener, so the value it resolved (a step output) is not retained by the signal', async () => {
+    const source = createAbortSource();
+    const baseline = source.listenerCount;
+    for (let index = 0; index < 20; index += 1) {
+      const raced = await raceAbort(Promise.resolve({ output: 'x'.repeat(10_000) }), source.signal);
+      expect(raced.aborted).toBe(false);
+    }
+    await raceAbort(Promise.reject(new Error('body failed')), source.signal).catch(() => undefined);
+    expect(source.listenerCount).toBe(baseline);
+  });
+
+  test('a permit waiter that is granted a permit releases its cancellation listener', async () => {
+    const source = createAbortSource();
+    const pool = createPermitPool(1);
+    const first = await pool.acquire(source.signal);
+    const queued = pool.acquire(source.signal);
+    expect(source.listenerCount).toBe(1);
+    first?.release();
+    const granted = await queued;
+    expect(granted).toBeDefined();
+    expect(source.listenerCount).toBe(0);
+    granted?.release();
   });
 });

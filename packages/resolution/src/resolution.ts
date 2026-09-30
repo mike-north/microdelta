@@ -665,22 +665,34 @@ function uniqueReferences(references: readonly ICompletedResultReference[]): rea
   return unique;
 }
 
+/** Run author work to its own end, reporting how it settled; nothing interrupts it. */
+async function executeUnsupervised<T>(step: IBindingDescriptor, work: () => Promise<T>): Promise<ISupervisedExecution<T>> {
+  void step;
+  try {
+    return { kind: 'returned', value: await work() };
+  } catch (error: unknown) {
+    return { kind: 'threw', error };
+  }
+}
+
 /**
- * Execution without Run Supervision: author work runs to its own end, nothing
- * interrupts it, and every commit may proceed. Used when a Resolution is
- * built without a cancellation port.
+ * Execution without Run Supervision, for one Resolution: author work runs to
+ * its own end, nothing interrupts it, every commit may proceed, and fan-out
+ * members resolve one at a time, in the order they are presented.
  */
-const unsupervised: IExecutionSupervision = Object.freeze({
-  async execute<T>(step: IBindingDescriptor, work: () => Promise<T>): Promise<ISupervisedExecution<T>> {
-    void step;
-    try {
-      return { kind: 'returned', value: await work() };
-    } catch (error: unknown) {
-      return { kind: 'threw', error };
-    }
-  },
-  publicationRefusal: (): string | undefined => undefined,
-});
+function unsupervised(): IExecutionSupervision {
+  /** The previous member's settlement; the next member starts after it. */
+  let tail: Promise<unknown> = Promise.resolve();
+  return Object.freeze({
+    execute: executeUnsupervised,
+    member<T>(work: () => Promise<T>): Promise<T> {
+      const next = tail.then(work);
+      tail = next.then(() => undefined, () => undefined);
+      return next;
+    },
+    publicationRefusal: (): string | undefined => undefined,
+  });
+}
 
 /**
  * Create Reuse Resolution over one current composition and History scope.
@@ -700,12 +712,8 @@ export function createResolution<TInputs extends object, THelpers extends object
       throw new ResolutionError('invalid-request', 'Declared binding slots must be nonempty strings');
     }
   }
-  const window = options.window ?? 1;
-  if (typeof window !== 'number' || !Number.isSafeInteger(window) || window <= 0) {
-    throw new ResolutionError('invalid-request', 'The member fan-out window must be a positive safe integer');
-  }
-  /** Run Supervision's cancellation port, or unsupervised execution where nothing can interrupt work. */
-  const supervision: IExecutionSupervision = options.execution ?? unsupervised;
+  /** Run Supervision's cancellation port and window, or unsupervised execution where nothing can interrupt work. */
+  const supervision: IExecutionSupervision = options.execution ?? unsupervised();
   const analysis = composition.scope;
   const environment = options.environment;
   /** Selects current input facts and fingerprints intent; it never has an author capture. */
@@ -1215,7 +1223,8 @@ export function createResolution<TInputs extends object, THelpers extends object
       if (eligible !== undefined && invocation.hasFinality) {
         emit(request, evidence, step, 'finality');
         // A check-only request starts no work, so its policy evaluation is not supervised.
-        const evaluated = await (request.mode === 'check' ? unsupervised : supervision).execute(step, () => callSource(request, invocation, 'finality', carrier, (value) => value));
+        const run = (): ReturnType<typeof callSource<unknown>> => callSource(request, invocation, 'finality', carrier, (value) => value);
+        const evaluated = await (request.mode === 'check' ? executeUnsupervised(step, run) : supervision.execute(step, run));
         if (evaluated.kind === 'interrupted') {
           return done({ kind: 'refused', refused: step, reason: evaluated.reason, disposition: 'cancelled' });
         }
@@ -2515,8 +2524,9 @@ export function createResolution<TInputs extends object, THelpers extends object
   /**
    * Settle one template step for every current member of its template's
    * population (RUN-005): discovery and keying once, then the members
-   * independently, started in canonical key order with at most `window` of
-   * them resolving at once (RUN-002), and reported in canonical key order. A
+   * independently, started in canonical key order within Run Supervision's
+   * bounded active window (RUN-002; one at a time without Supervision), and
+   * reported in canonical key order. A
    * member-attributable typed failure (a gate failure included) is confined
    * to that member; its siblings still resolve, share this request's current
    * results and publish. A run-level failure (`runLevelFailures`, or any
@@ -2539,35 +2549,30 @@ export function createResolution<TInputs extends object, THelpers extends object
         runFailure.first = { position, error };
       }
     };
-    let next = 0;
     /**
-     * One lane of the bounded active window (RUN-002): it takes the next
-     * member in canonical key order whenever its previous one settles. A
-     * member not yet taken holds nothing, so after a stop it is presented to
-     * admission, and refused, only when a lane reaches it.
+     * Resolve one member inside the run's bounded active window (RUN-002).
+     * Every member is presented at once, in canonical key order, and the
+     * window starts them in that order. A member not yet started holds
+     * nothing, so after a stop it is presented to admission, and refused,
+     * only when a lane reaches it; after a run-level failure it does not start.
      */
-    const lane = async (): Promise<void> => {
-      while (runFailure.first === undefined && next < keys.length) {
-        const position = next;
-        next += 1;
-        const key = keys[position];
-        if (key === undefined) {
+    const member = async (key: string, position: number): Promise<void> => {
+      if (runFailure.first !== undefined) {
+        return;
+      }
+      const instance: IBindingDescriptor = Object.freeze({ ...templateStep, memberKey: key });
+      try {
+        settled.set(position, { key, step: instance, resolved: await resolveInstance(request, instance) });
+      } catch (error: unknown) {
+        if (!(error instanceof ResolutionError) || runLevelFailures.has(error.code)) {
+          recordRunFailure(position, error);
           return;
         }
-        const instance: IBindingDescriptor = Object.freeze({ ...templateStep, memberKey: key });
-        try {
-          settled.set(position, { key, step: instance, resolved: await resolveInstance(request, instance) });
-        } catch (error: unknown) {
-          if (!(error instanceof ResolutionError) || runLevelFailures.has(error.code)) {
-            recordRunFailure(position, error);
-            continue;
-          }
-          settled.set(position, { key, step: instance, resolved: error });
-        }
+        settled.set(position, { key, step: instance, resolved: error });
       }
     };
     // Members already started finish before a run-level failure is reported, so no member work outlives the request.
-    await Promise.all(Array.from({ length: Math.min(window, keys.length) }, lane));
+    await Promise.all(keys.map((key, position) => supervision.member(() => member(key, position))));
     if (runFailure.first !== undefined) {
       throw runFailure.first.error;
     }

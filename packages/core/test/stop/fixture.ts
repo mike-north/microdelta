@@ -16,6 +16,13 @@
  *   `stuck`; `throwing` starts `stuck` and then throws its own error;
  *   `attributed` notes its attribution, awaits a failing child and notes
  *   again.
+ * - `retrier` is a memo that sends `retrier:first`, then (once the test
+ *   opens `retrier:retry-gate`) retries with `retrier:retry`, as a retry
+ *   policy would after a transient failure.
+ * - `sequential` calls `c1` and only after it settles calls `c2`, so `c2` is
+ *   a child the body demands later; `staged` calls `c1` and then `retrier`.
+ *   These are well-authored parents in EXP-8's sense (resolution 3): each
+ *   paid call is isolated in its own child step.
  *
  * Author callbacks capture nothing but their typed context: every effect goes
  * through a declared helper over the module's `world`, which each test
@@ -117,6 +124,7 @@ export interface IHelpers {
   readonly total: (values: readonly number[]) => { readonly total: number };
   readonly note: (label: string) => void;
   readonly boom: () => never;
+  readonly retrying: () => Promise<{ readonly n: number }>;
 }
 
 /** One permit-guarded send of `label` to the world's provider. */
@@ -200,6 +208,14 @@ function note(label: string): void {
   world.log.push(`${label}@${execution.step?.slot ?? 'none'}:${currentRun().runId === execution.runId ? 'same-run' : 'other-run'}`);
 }
 
+/** A child that sends a first attempt and then, once its gate opens, retries. */
+async function retrying(): Promise<{ readonly n: number }> {
+  await send('retrier:first');
+  world.log.push('awaiting-retry:retrier');
+  await world.gates.wait('retrier:retry-gate');
+  return { n: await send('retrier:retry', true) };
+}
+
 /** A body's own failure. */
 function boom(): never {
   throw new Error('body failure');
@@ -210,7 +226,7 @@ export interface IStopFixture {
   readonly builders: IAuthoring<IInputs, IHelpers>;
   readonly composition: IComposition<IInputs, IHelpers>;
   /** A composition-level step. */
-  step(slot: 'fanout' | 'hanging' | 'throwing' | 'attributed' | 'plain'): IStepDescriptor;
+  step(slot: 'fanout' | 'hanging' | 'throwing' | 'attributed' | 'plain' | 'sequential' | 'staged'): IStepDescriptor;
   /** One member's `work` instance. */
   instance(memberKey: string): IStepDescriptor;
 }
@@ -239,6 +255,26 @@ export function composeStop(): IStopFixture {
   const c3 = memo({ subject: 'c3:stop', run: ({ helpers }) => helpers.child(3) });
   const stuck = memo({ subject: 'stuck:stop', run: ({ helpers }) => helpers.child(0) });
   const plain = memo({ subject: 'plain:stop', run: ({ helpers }) => helpers.total([1, 2]) });
+  const retrier = memo({ subject: 'retrier:stop', run: ({ helpers }) => helpers.retrying() });
+  const sequential = memo({
+    subject: 'sequential:stop',
+    children: { c1, c2 },
+    run: async ({ calls, helpers }) => {
+      // The second child is demanded only after the first settles.
+      const first = await calls.c1();
+      const second = await calls.c2();
+      return helpers.total([first.data.n, second.data.n]);
+    },
+  });
+  const staged = memo({
+    subject: 'staged:stop',
+    children: { c1, retrier },
+    run: async ({ calls, helpers }) => {
+      const first = await calls.c1();
+      const second = await calls.retrier();
+      return helpers.total([first.data.n, second.data.n]);
+    },
+  });
   const fanout = memo({
     subject: 'fanout:stop',
     children: { c1, c2, c3 },
@@ -284,6 +320,7 @@ export function composeStop(): IStopFixture {
       { slot: 'total', helper: total },
       { slot: 'note', helper: note },
       { slot: 'boom', helper: boom },
+      { slot: 'retrying', helper: retrying },
     ],
     steps: [
       { slot: 'items', declaration: items },
@@ -296,6 +333,9 @@ export function composeStop(): IStopFixture {
       { slot: 'hanging', declaration: hanging },
       { slot: 'throwing', declaration: throwing },
       { slot: 'attributed', declaration: attributed },
+      { slot: 'retrier', declaration: retrier },
+      { slot: 'sequential', declaration: sequential },
+      { slot: 'staged', declaration: staged },
     ],
     templates: [item],
     supplied: [supply({ slot: failingSlot, declaration: failingStep, subject: () => 'failing:stop' })],

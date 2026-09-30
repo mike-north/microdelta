@@ -218,6 +218,28 @@ export function judgePlannedKill(plan: IPlannedFault, exit: IWorkerExit): IPlann
 }
 
 /**
+ * Judge whether a worker that exited on its own finished its command. A
+ * worker always ends by writing a `result` line (status 0) or an `error`
+ * line (status 3). One that exits without either never finished: for
+ * example, its event loop drained with work still pending, so it left
+ * nothing to judge. That is a harness failure, never a result.
+ * @param exit - What the parent observed of the finished worker.
+ * @returns A diagnostic when the worker did not finish its command, otherwise undefined.
+ */
+export function judgeCompletedWorker(exit: IWorkerExit): string | undefined {
+  if (exit.lines.some((line) => line['t'] === 'result' || line['t'] === 'error')) {
+    return undefined;
+  }
+  const last = exit.lines.at(-1);
+  const stderr = exit.stderr.trim();
+  return [
+    `worker exited with status ${String(exit.status)} but wrote no result or error line: it never finished its command`,
+    `last line: ${last === undefined ? 'none' : JSON.stringify(last)}`,
+    `stderr: ${stderr.length === 0 ? '(empty)' : stderr.slice(-stderrExcerptLength)}`,
+  ].join('\n');
+}
+
+/**
  * A run that planned a kill whose worker did not die at that boundary. It is
  * a harness failure, never a process result: the process-level evidence the
  * run was meant to produce does not exist.
@@ -296,6 +318,13 @@ export function scenario(): IScenario {
       }
       if (spawned.status !== 0 && spawned.status !== 3 && spawned.signal !== 'SIGKILL') {
         throw new Error(`worker failed unexpectedly (${String(spawned.status)}/${String(spawned.signal)}): ${spawned.stderr}`);
+      }
+      if (spawned.signal === null) {
+        // An ordinary exit is evidence only when the worker finished its command.
+        const unfinished = judgeCompletedWorker({ status: spawned.status, signal: spawned.signal, lines, stderr: spawned.stderr });
+        if (unfinished !== undefined) {
+          throw new Error(unfinished);
+        }
       }
       return {
         status: spawned.status,

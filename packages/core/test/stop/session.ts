@@ -37,9 +37,17 @@ export function freshKey(): string {
   return `stop-request:${String(requestCounter)}`;
 }
 
-/** Run `body` in one workspace run of the session with the chosen options. */
+/**
+ * Run `body` in one workspace run of the session with the chosen options.
+ * The returned run is already marked handled: a test that fails before
+ * awaiting it (for example a bounded wait that times out) reports its own
+ * failed expectation, instead of the run's later failure surfacing as an
+ * unhandled rejection that crashes the runner. Awaiting it still rejects.
+ */
 export function runIn<T>(session: IStopSession, options: IChosenRunOptions, body: (run: IWorkspaceRun) => Promise<T>): Promise<IRunResult<T>> {
-  return session.workspace.run({ authoring: session.fixture.builders, composition: session.fixture.composition, environment, ...options }, body);
+  const running = session.workspace.run({ authoring: session.fixture.builders, composition: session.fixture.composition, environment, ...options }, body);
+  running.catch(() => undefined);
+  return running;
 }
 
 /** Resolve every current item's `work` in one run. */

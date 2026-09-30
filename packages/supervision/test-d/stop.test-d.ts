@@ -78,7 +78,9 @@ expectType<readonly ISendInterruption[]>(result.interruptions);
 
 // The cancellation port Resolution receives is Resolution's own contract.
 expectType<IExecutionSupervision>(ports.execution);
-expectType<number>(ports.window);
+expectType<Promise<number>>(ports.execution.member(() => Promise.resolve(1)));
+// The window is Supervision's own: Resolution receives lanes through member(), never a window number.
+expectNotAssignable<{ readonly window: number }>(ports);
 expectAssignable<ISupervisedExecution<number>>({ kind: 'interrupted', reason: 'a hard stop interrupted the step' });
 
 // The timer is structural: any clock with one-shot scheduling fits.

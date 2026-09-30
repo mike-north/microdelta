@@ -114,22 +114,26 @@ export interface IRunWriter {
 
 /**
  * The ports Supervision hands to the Resolution it runs: its admission port,
- * its observer position, its cancellation port and the fan-out window. All
- * stay owned by Supervision.
+ * its observer position, and its cancellation port with the fan-out window.
+ * All stay owned by Supervision.
  * @alpha
  */
 export interface IResolutionPorts {
-  /** Admission of work current validation could not avoid; stop intent refuses it. */
+  /**
+   * Admission of work current validation could not avoid. Stop intent
+   * cancels it, except that during a soft stop's drain the first attempt of a
+   * child an admitted, executing step's body demands is still decided by the
+   * policy.
+   */
   readonly admission: IExecutionAdmission;
   /** The lifecycle observer position Resolution reports to. */
   readonly observer: ILifecycleObserver;
   /**
    * The cancellation port every admitted body and current-policy hook runs
-   * through, and every publication commit consults (RUN-014/015).
+   * through, every publication commit consults (RUN-014/015), and every
+   * fan-out member resolves within (the bounded active window, RUN-002).
    */
   readonly execution: IExecutionSupervision;
-  /** The run's bounded active window of member fan-out (RUN-002). */
-  readonly window: number;
 }
 
 /**
@@ -223,10 +227,12 @@ export interface IRunOptions {
    */
   readonly permits?: number;
   /**
-   * The bounded active window of member fan-out: how many members of one
-   * members request or strict fold resolve at once. A positive safe integer;
-   * equal to `permits` when absent, so members run concurrently up to the
-   * permit bound.
+   * The bounded active window of member fan-out: how many members of the
+   * run's members requests and strict folds actively resolve at once. It is
+   * independent of `permits`: the window bounds active member work and its
+   * memory, permits bound provider requests. A member waiting for a time
+   * lends its lane, so it never stalls its siblings. A positive safe integer;
+   * 8 when absent.
    */
   readonly window?: number;
 }
@@ -503,6 +509,9 @@ export interface ISendRequest<T> {
    * Ask the provider to cancel the remote work after a local abort, where
    * the provider supports it: resolves `cancelled` when confirmed, `running`
    * when the work continues. Absent, or failing, the remote state is `unknown`.
+   * The send, and so its run, does not settle until this answers, so an
+   * adapter must bound it (for example with its own timeout that resolves
+   * `running` or rejects) rather than wait indefinitely for the provider.
    */
   cancel?(): Promise<'cancelled' | 'running'>;
 }
@@ -519,9 +528,15 @@ export interface IRunExecution {
   readonly runId: string;
   /** The admitted step whose body this execution belongs to; undefined outside one. */
   readonly step: IBindingDescriptor | undefined;
-  /** The run's stop intent now. */
+  /**
+   * The run's stop intent now. It stays readable after the run closes (it is
+   * the operator's controller state); only `send` and `sleepUntil` then fail.
+   */
   readonly stop: IStopState;
-  /** Aborts when a hard stop takes effect for the run. */
+  /**
+   * Aborts when a hard stop takes effect for the run. It stays readable after
+   * the run closes, and a stop requested after the close no longer aborts it.
+   */
   readonly signal: IAbortSignal;
   /**
    * Perform one send holding one of the run's permits.
@@ -543,8 +558,11 @@ export interface IRunExecution {
   /**
    * Wait, holding no permit, until the wall clock reaches
    * `epochMilliseconds`: the wait before a retry or a deferred resumption.
-   * Because a stop forbids that retry, any stop ends the wait at once with
-   * `SupervisionError('stopped')`, and the step attempt can no longer publish.
+   * A fan-out member lends its window lane for the wait and reclaims one
+   * (first in, first out) on waking, so it never stalls its siblings. Because
+   * a stop forbids the retry the wait precedes, any stop ends the wait at
+   * once with `SupervisionError('stopped')`, and the step attempt can no
+   * longer publish.
    */
   sleepUntil(epochMilliseconds: number): Promise<void>;
 }

@@ -59,9 +59,9 @@ describe('the permit pool (RUN-002)', () => {
       const running = runMembers(session, { permits: 2 });
       await until(() => world.provider.received.length === 2, 'two sends are in flight');
       await turns(20);
-      // Two members are active and sending; the rest have not started.
+      // The default window (independent of permits) starts every member; only the two permitted sends are in flight.
       expect(world.provider.received).toEqual(['item:1', 'item:2']);
-      expect(world.log.filter((entry) => entry.startsWith('start:'))).toEqual(['start:item:1', 'start:item:2']);
+      expect(world.log.filter((entry) => entry.startsWith('start:'))).toEqual(['start:item:1', 'start:item:2', 'start:item:3', 'start:item:4', 'start:item:5']);
       for (const key of world.keys) {
         await until(() => world.provider.received.includes(key), `${key} is sent`);
         world.provider.release(key);
@@ -125,13 +125,54 @@ describe('the permit pool (RUN-002)', () => {
   });
 });
 
+describe('the bounded active window: a wait holds neither a permit nor a lane (RUN-002, RUN-011)', () => {
+  test('under the default options a member waiting for a time lets a sibling start and complete meanwhile', async () => {
+    world.plans['item:1'] = 'sleep';
+    world.wakeAt = Date.now() + 300;
+    const session = openStopSession(store.location);
+    try {
+      world.provider.release('item:2');
+      const running = runMembers(session);
+      await until(() => world.provider.completed.includes('item:2'), 'the sibling has started and completed');
+      expect(world.log).not.toContain('woke:item:1');
+      const { value } = await running;
+      expect(statuses(value)).toEqual({ 'item:1': 'succeeded', 'item:2': 'succeeded' });
+      expect(world.log.indexOf('woke:item:1')).toBeGreaterThan(world.log.indexOf('start:item:2'));
+    } finally {
+      session.close();
+    }
+  });
+
+  test('a woken member resumes only once a lane is free, so the window is never exceeded', async () => {
+    world.plans['item:1'] = 'sleep';
+    world.wakeAt = Date.now() + 50;
+    const session = openStopSession(store.location);
+    try {
+      const running = runMembers(session, { window: 1 });
+      // The sleeping member lent its only lane: the sibling starts and sends.
+      await until(() => world.provider.received.includes('item:2'), 'the sibling holds the lane and is sending');
+      await elapse(150);
+      await turns(20);
+      // Its time has come, but the lane is taken: it has not resumed.
+      expect(world.log).not.toContain('woke:item:1');
+      world.provider.release('item:2');
+      const { value } = await running;
+      expect(statuses(value)).toEqual({ 'item:1': 'succeeded', 'item:2': 'succeeded' });
+      expect(world.log).toEqual(['start:item:1', 'sleeping:item:1', 'start:item:2', 'woke:item:1']);
+    } finally {
+      session.close();
+    }
+  });
+});
+
 describe('soft stop: no admission or retry, and admitted steps drain (RUN-014)', () => {
   test('an in-flight step drains and publishes; a queued member is never admitted or sent', async () => {
     const session = openStopSession(store.location);
     const stop = createStopController();
     const events: IRunEvent[] = [];
     try {
-      const running = runMembers(session, { stop, observers: [{ observe: (event) => events.push(event) }] });
+      // One lane, so the second member has not started when the stop lands.
+      const running = runMembers(session, { stop, window: 1, observers: [{ observe: (event) => events.push(event) }] });
       await until(() => world.provider.received.includes('item:1'), 'the first member is sending');
       stop.request({ level: 'soft' });
       world.provider.release('item:1');

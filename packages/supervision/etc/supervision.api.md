@@ -109,7 +109,6 @@ export interface IResolutionPorts {
     readonly admission: IExecutionAdmission;
     readonly execution: IExecutionSupervision;
     readonly observer: ILifecycleObserver;
-    readonly window: number;
 }
 
 // @alpha

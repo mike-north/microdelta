@@ -8,9 +8,12 @@
  * - a publication refusal consulted immediately before the commit discards
  *   output the body already returned (EXP-8 resolution 2: a hard stop
  *   effective before the commit forbids publication);
- * - members of one members request resolve concurrently within the bounded
- *   active window, one at a time by default, and report in canonical order
- *   (RUN-002).
+ * - a refusal landing at any moment between the body's return and the commit
+ *   (including during Resolution's wait for in-flight calls) discards the
+ *   output, and one landing after the commit cannot undo it;
+ * - members of one members request resolve through the port's `member()`
+ *   window, started and reported in canonical order, and one at a time
+ *   without Run Supervision (RUN-002).
  *
  * @see ../../../../docs/spec/operations.md (RUN-002, RUN-014, RUN-015)
  * @see ../../../../experiments/exp-8/decision.md (mechanism 2, supervisor resolution 2)
@@ -18,7 +21,7 @@
 import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
 import type { IBindingDescriptor } from '@microdelta/definition';
 import { createNodeMachine } from '@microdelta/machine-node';
-import { ResolutionError, createResolution } from '@microdelta/resolution';
+import { createResolution } from '@microdelta/resolution';
 import type { IExecutionSupervision, IResolution, ISupervisedExecution } from '@microdelta/resolution';
 import { createTrackingObserver } from '@microdelta/tracking';
 
@@ -37,32 +40,96 @@ beforeEach(() => {
 
 afterEach(cleanup);
 
+/**
+ * A refusal the scripted port makes effective a given number of microtask
+ * hops after a body's work returns: somewhere between the body returning and
+ * (or after) its publication commit.
+ */
+interface IScheduledRefusal {
+  readonly hops: number;
+  readonly reason: string;
+  /** Whether the step had not yet been published when the refusal took effect; set when it does. */
+  beforeCommit: boolean | undefined;
+}
+
 /** A scripted cancellation port: interrupts the named steps' executions, and refuses publication while `refusal` is set. */
 interface IScriptedPort extends IExecutionSupervision {
   /** Step slots whose executions end interrupted without running. */
   readonly interrupt: Set<string>;
   /** The publication refusal to report, if any. */
   refusal: string | undefined;
+  /** A refusal to make effective after the next body returns, if any. */
+  scheduled: IScheduledRefusal | undefined;
   /** Step slots presented for execution, in order. */
   readonly executed: string[];
+  /** The most members that were resolving at once through `member()`. */
+  readonly peak: number;
 }
 
-/** Create a scripted port. */
-function scriptedPort(): IScriptedPort {
+/** Run `effect` after `hops` further microtask hops. */
+function afterHops(hops: number, effect: () => void): void {
+  queueMicrotask(() => {
+    if (hops === 0) {
+      effect();
+    } else {
+      afterHops(hops - 1, effect);
+    }
+  });
+}
+
+/** Create a scripted port whose `member()` grants `lanes` lanes first in, first out, as Run Supervision's window does. */
+function scriptedPort(lanes = 1): IScriptedPort {
+  const queue: (() => void)[] = [];
+  let active = 0;
+  let peak = 0;
   const port: IScriptedPort = {
     interrupt: new Set(),
     refusal: undefined,
+    scheduled: undefined,
     executed: [],
+    get peak(): number {
+      return peak;
+    },
+    async member<T>(work: () => Promise<T>): Promise<T> {
+      if (active >= lanes) {
+        await new Promise<void>((resolve) => {
+          queue.push(resolve);
+        });
+      } else {
+        active += 1;
+      }
+      peak = Math.max(peak, active);
+      try {
+        return await work();
+      } finally {
+        const next = queue.shift();
+        if (next === undefined) {
+          active -= 1;
+        } else {
+          next();
+        }
+      }
+    },
     async execute<T>(step: IBindingDescriptor, work: () => Promise<T>): Promise<ISupervisedExecution<T>> {
       port.executed.push(step.slot);
       if (port.interrupt.has(step.slot)) {
         return { kind: 'interrupted', reason: 'scripted hard stop' };
       }
+      let value: T;
       try {
-        return { kind: 'returned', value: await work() };
+        value = await work();
       } catch (error: unknown) {
         return { kind: 'threw', error };
       }
+      const scheduled = port.scheduled;
+      if (scheduled !== undefined) {
+        // The body has returned; the refusal lands while Resolution proceeds towards the commit.
+        afterHops(scheduled.hops, () => {
+          scheduled.beforeCommit = publishedSubjects(location).length === 0;
+          port.refusal = scheduled.reason;
+        });
+      }
+      return { kind: 'returned', value };
     },
     publicationRefusal: () => port.refusal,
   };
@@ -72,8 +139,8 @@ function scriptedPort(): IScriptedPort {
 /** Monotonic request keys. */
 let requests = 0;
 
-/** A Resolution over a fresh fixture composition and real History, with the given port and window. */
-function resolutionWith(port: IExecutionSupervision | undefined, window?: number): { readonly resolution: IResolution; resolve(step: IBindingDescriptor): ReturnType<IResolution['resolve']>; members(): ReturnType<IResolution['resolveMembers']> } {
+/** A Resolution over a fresh fixture composition and real History, with the given port (or none). */
+function resolutionWith(port: IExecutionSupervision | undefined): { readonly resolution: IResolution; resolve(step: IBindingDescriptor): ReturnType<IResolution['resolve']>; members(): ReturnType<IResolution['resolveMembers']> } {
   const history = openHistory({ location, clock: controlledClock(1_000), store: 'store:stop-port' });
   const acquired = history.acquireWriter({ holder: 'stop-port', leaseMilliseconds: 3_600_000 });
   if (acquired.kind !== 'acquired') {
@@ -91,7 +158,6 @@ function resolutionWith(port: IExecutionSupervision | undefined, window?: number
     host: machine,
     admission: { admit: () => ({ kind: 'admitted' }) },
     ...(port === undefined ? {} : { execution: port }),
-    ...(window === undefined ? {} : { window }),
   });
   return {
     resolution,
@@ -132,6 +198,24 @@ describe('the cancellation port (RUN-015)', () => {
     expect(publishedSubjects(location)).toEqual([]);
   });
 
+  test('the commit is the linearization point: a refusal landing at any moment after the body returned discards the output exactly when it lands before the commit', async () => {
+    const observed: { readonly hops: number; readonly beforeCommit: boolean | undefined; readonly outcome: string }[] = [];
+    for (let hops = 0; hops <= 12; hops += 1) {
+      location = freshLocation();
+      const port = scriptedPort();
+      const scheduled: IScheduledRefusal = { hops, reason: 'a hard stop landed after the body returned', beforeCommit: undefined };
+      port.scheduled = scheduled;
+      const outcome = await resolutionWith(port).resolve(stepOf('plain'));
+      await turns(1);
+      observed.push({ hops, beforeCommit: scheduled.beforeCommit, outcome: outcome.kind });
+    }
+    // Every refusal that landed before the commit discarded the output; one after it could not undo the commit.
+    expect(observed.filter((entry) => entry.outcome !== (entry.beforeCommit === true ? 'refused' : 'published'))).toEqual([]);
+    // Both sides of the commit were exercised, including a refusal landing during Resolution's wait between the body returning and the commit.
+    expect(observed.filter((entry) => entry.hops > 0 && entry.beforeCommit === true).length).toBeGreaterThan(0);
+    expect(observed.some((entry) => entry.beforeCommit === false)).toBe(true);
+  });
+
   test('without a refusal the same body publishes (control)', async () => {
     const outcome = await resolutionWith(scriptedPort()).resolve(stepOf('plain'));
     expect(outcome.kind).toBe('published');
@@ -140,12 +224,13 @@ describe('the cancellation port (RUN-015)', () => {
 });
 
 describe('the bounded active window of member fan-out (RUN-002)', () => {
-  test('members resolve concurrently up to the window and report in canonical key order', async () => {
+  test('members resolve through the port\'s window, started first in first out in canonical key order, and report in that order', async () => {
     world = installWorld(createWorld(['item:3', 'item:1', 'item:4', 'item:2']));
     for (const key of world.keys) {
       world.plans[key] = 'gate';
     }
-    const running = resolutionWith(scriptedPort(), 2).members();
+    const port = scriptedPort(2);
+    const running = resolutionWith(port).members();
     await until(() => world.log.filter((entry) => entry.startsWith('start:')).length === 2, 'two members have started');
     await turns(20);
     expect(world.log).toEqual(['start:item:1', 'start:item:2']);
@@ -157,9 +242,10 @@ describe('the bounded active window of member fan-out (RUN-002)', () => {
     }
     const resolved = await running;
     expect(resolved.members.map((member) => `${member.key}:${member.outcome.kind}`)).toEqual(['item:1:published', 'item:2:published', 'item:3:published', 'item:4:published']);
+    expect(port.peak).toBe(2);
   });
 
-  test('without a window members resolve one at a time', async () => {
+  test('without Run Supervision members resolve one at a time', async () => {
     for (const key of world.keys) {
       world.plans[key] = 'gate';
     }
@@ -170,16 +256,5 @@ describe('the bounded active window of member fan-out (RUN-002)', () => {
     world.gates.open('item:1:go');
     world.gates.open('item:2:go');
     expect((await running).members.map((member) => member.outcome.kind)).toEqual(['published', 'published']);
-  });
-
-  test.each([0, 1.5, -1])('a window of %s is refused at construction', (window) => {
-    let caught: unknown;
-    try {
-      resolutionWith(scriptedPort(), window);
-    } catch (error: unknown) {
-      caught = error;
-    }
-    expect(caught).toBeInstanceOf(ResolutionError);
-    expect(caught).toMatchObject({ code: 'invalid-request' });
   });
 });

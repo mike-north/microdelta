@@ -145,6 +145,14 @@ export interface IExecutionSupervision {
    */
   execute<T>(step: IBindingDescriptor, work: () => Promise<T>): Promise<ISupervisedExecution<T>>;
   /**
+   * Resolve one fan-out member (of a members request or a strict fold's
+   * member phase) inside the run's bounded active window (RUN-002): wait,
+   * first in first out, for a lane, then run `work` holding it. The member
+   * lends its lane while it waits for a time. Resolution presents every
+   * member in canonical key order, so members start in that order.
+   */
+  member<T>(work: () => Promise<T>): Promise<T>;
+  /**
    * Why run cancellation forbids committing new output right now, or
    * undefined when a commit may proceed. Called in the same synchronous turn
    * as the commit it guards, so the commit is the linearization point: a hard
@@ -229,17 +237,11 @@ export interface IResolutionOptions<TInputs extends object, THelpers extends obj
   /** An optional lifecycle observer. */
   readonly observer?: ILifecycleObserver;
   /**
-   * Run Supervision's cancellation port. Without it, author work runs
-   * unsupervised: nothing interrupts it and every commit may proceed.
+   * Run Supervision's cancellation port and fan-out window. Without it,
+   * author work runs unsupervised (nothing interrupts it and every commit may
+   * proceed) and fan-out members resolve one at a time.
    */
   readonly execution?: IExecutionSupervision;
-  /**
-   * The bounded active window of member fan-out (RUN-002): at most this many
-   * current members of one members request or strict fold resolve at once, in
-   * canonical key order; a member not yet started holds nothing. A positive
-   * safe integer; 1 (members one at a time) when absent.
-   */
-  readonly window?: number;
 }
 
 /**

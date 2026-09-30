@@ -114,6 +114,7 @@ export interface IExecutionAdmission {
 // @alpha
 export interface IExecutionSupervision {
     execute<T>(step: IBindingDescriptor, work: () => Promise<T>): Promise<ISupervisedExecution<T>>;
+    member<T>(work: () => Promise<T>): Promise<T>;
     publicationRefusal(): string | undefined;
 }
 
@@ -307,7 +308,6 @@ export interface IResolutionOptions<TInputs extends object, THelpers extends obj
     readonly host: IResolutionHost;
     readonly observer?: ILifecycleObserver;
     readonly tracking: ITrackingObserver;
-    readonly window?: number;
 }
 
 // @alpha

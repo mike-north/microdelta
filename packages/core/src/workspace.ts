@@ -24,15 +24,29 @@ import type {
 } from '@microdelta/resolution';
 import { StaleWriterError, openDurableHistory } from '@microdelta/history';
 import type { ICompletedResultReference as IHistoryReference, IDurableHistory, IWriterLease } from '@microdelta/history';
-import { createNodeClock, createNodeSqlite } from '@microdelta/machine-node';
+import { createNodeClock, createNodeSqlite, createNodeTimer } from '@microdelta/machine-node';
 import { ResolutionError as ResolutionErrorClass, createResolution } from '@microdelta/resolution';
 import {
   SupervisionError as SupervisionErrorClass,
+  createStopController as createSupervisionStopController,
   createSupervision,
   ordinaryLifecycle as supervisionOrdinaryLifecycle,
   stepLifecycle as supervisionStepLifecycle,
 } from '@microdelta/supervision';
-import type { IRunWriter } from '@microdelta/supervision';
+import type {
+  IAbortSignal as ISupervisionAbortSignal,
+  IRemoteState as ISupervisionRemoteState,
+  IRunExecution as ISupervisionRunExecution,
+  IRunWriter,
+  ISendInterruption as ISupervisionSendInterruption,
+  ISendPhase as ISupervisionSendPhase,
+  ISendRequest as ISupervisionSendRequest,
+  IStopCause as ISupervisionStopCause,
+  IStopController as ISupervisionStopController,
+  IStopLevel as ISupervisionStopLevel,
+  IStopRequest as ISupervisionStopRequest,
+  IStopState as ISupervisionStopState,
+} from '@microdelta/supervision';
 import { createTrackingObserver } from '@microdelta/tracking';
 import type {
   IOrdinaryPhase as ISupervisionOrdinaryPhase,
@@ -151,6 +165,39 @@ export type IResolutionErrorCode = IResolutionErrorCodeOf;
 /** Supervision failure codes. @alpha */
 export type ISupervisionErrorCode = ISupervisionErrorCodeOf;
 
+/** The stop level in force: none, soft (drain) or hard (abort). @alpha */
+export type IStopLevel = ISupervisionStopLevel;
+
+/** Why a stop level holds: the operator, or an operator deadline that escalated a soft stop. @alpha */
+export type IStopCause = ISupervisionStopCause;
+
+/** One operator stop request, with an optional deadline for a soft stop. @alpha */
+export type IStopRequest = ISupervisionStopRequest;
+
+/** The stop intent in force: level, cause and armed deadline. @alpha */
+export type IStopState = ISupervisionStopState;
+
+/** Operator stop intent given to runs; created by {@link createStopController}. @alpha */
+export type IStopController = ISupervisionStopController;
+
+/** The portable cooperative abort signal a hard stop aborts. @alpha */
+export type IAbortSignal = ISupervisionAbortSignal;
+
+/** What is known about an aborted send's remote work: cancelled, running or unknown. @alpha */
+export type IRemoteState = ISupervisionRemoteState;
+
+/** One real, permit-guarded send performed through {@link IRunExecution}. @alpha */
+export type ISendRequest<T> = ISupervisionSendRequest<T>;
+
+/** A position of one send, as run observers see it. @alpha */
+export type ISendPhase = ISupervisionSendPhase;
+
+/** A send a hard stop aborted, with its recorded remote state. @alpha */
+export type ISendInterruption = ISupervisionSendInterruption;
+
+/** The live run's execution controls: stop intent, abort signal, permit-guarded sends and stop-aware waits. @alpha */
+export type IRunExecution = ISupervisionRunExecution;
+
 /**
  * A failed resolution; `code` names the violated contract.
  * @alpha
@@ -218,6 +265,18 @@ export interface IWorkspaceRunOptions<TInputs extends object, THelpers extends o
   readonly admission?: IAdmissionPolicy;
   /** Observers, captured when the run starts. */
   readonly observers?: readonly IRunObserver[];
+  /** The operator's stop intent for this run, from {@link createStopController}; never stopped when absent. */
+  readonly stop?: IStopController;
+  /**
+   * How many sends may be in flight at once (the run's permit pool). A
+   * permit guards only a real send, never waiting. Defaults to 1.
+   */
+  readonly permits?: number;
+  /**
+   * How many fan-out members actively resolve at once, independent of
+   * `permits`; a member waiting for a time lends its lane. Defaults to 8.
+   */
+  readonly window?: number;
 }
 
 /**
@@ -264,12 +323,16 @@ export interface IWorkspace {
 /** The default writer lease duration: long enough for one normal request, renewed on the next. */
 const defaultLeaseMilliseconds = 30_000;
 
+/** Node's timer, which arms stop deadlines and waits for a time. */
+const timer = createNodeTimer();
+
 /**
  * The facade's one Run Supervision, over the Node Machine's asynchronous
- * context supplied structurally. `currentRun()` and every workspace run share
- * it, so author code finds whichever run is live in its asynchronous execution.
+ * context and timer supplied structurally. `currentRun()`,
+ * `currentExecution()` and every workspace run share it, so author code finds
+ * whichever run is live in its asynchronous execution.
  */
-const supervision = createSupervision({ context: machine });
+const supervision = createSupervision({ context: machine, timer });
 
 /** Deeply freeze decoded result data so a read can never be mutated into looking current. */
 function deepFreeze<T>(value: T): T {
@@ -371,6 +434,9 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
         runId,
         ...(runOptions.admission === undefined ? {} : { admission: runOptions.admission }),
         ...(runOptions.observers === undefined ? {} : { observers: runOptions.observers }),
+        ...(runOptions.stop === undefined ? {} : { stop: runOptions.stop }),
+        ...(runOptions.permits === undefined ? {} : { permits: runOptions.permits }),
+        ...(runOptions.window === undefined ? {} : { window: runOptions.window }),
         // The holder names this run for diagnostics; History's fence, not the name, orders writers.
         writer: writerFor(history, `microdelta-run:${runId}`, leaseMilliseconds),
         resolution: (ports) => createResolution({
@@ -383,6 +449,7 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
           host: machine,
           admission: ports.admission,
           observer: ports.observer,
+          execution: ports.execution,
         }),
       }, (live) => {
         const run: IWorkspaceRun = Object.freeze({
@@ -427,4 +494,27 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
  */
 export function currentRun(): IRunContext {
   return supervision.current();
+}
+
+/**
+ * The live run's execution controls in the current asynchronous execution:
+ * its stop intent and abort signal, permit-guarded sends and stop-aware
+ * waits, attributed to the admitted step whose body is running there. Fails
+ * as {@link currentRun} does.
+ * @returns The live run's execution controls.
+ * @alpha
+ */
+export function currentExecution(): IRunExecution {
+  return supervision.execution();
+}
+
+/**
+ * Create an operator stop controller whose deadlines are armed on Node's
+ * timer. Give it to one or more runs; a first interrupt typically requests a
+ * soft stop (optionally with a deadline) and a second a hard stop.
+ * @returns A controller with nothing stopped.
+ * @alpha
+ */
+export function createStopController(): IStopController {
+  return createSupervisionStopController({ timer });
 }

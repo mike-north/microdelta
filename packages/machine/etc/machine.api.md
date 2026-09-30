@@ -73,6 +73,16 @@ export type ISqliteSynchronousResult<T> = 0 extends 1 & T ? unknown : [Extract<T
 export type ISqliteValue = string | number | null | Uint8Array;
 
 // @alpha
+export interface ITimerCapability extends IClockCapability {
+    schedule(epochMilliseconds: number, callback: () => void, options?: ITimerOptions): () => void;
+}
+
+// @alpha
+export interface ITimerOptions {
+    readonly keepAlive?: boolean;
+}
+
+// @alpha
 export class SqliteBusyError extends Error {
     constructor(message: string, waitedMilliseconds: number, options?: ErrorOptions);
     readonly waitedMilliseconds: number;

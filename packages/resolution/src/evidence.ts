@@ -262,8 +262,12 @@ export function acceptanceRecord(content: {
   };
 }
 
-/** Build a stored attempt-ending record. */
-export function endingRecord(content: { readonly ending: 'retained' | 'failed' | 'child-refused' | 'observer-failure'; readonly detail: string; readonly reference?: ICompletedResultReference }): IVersionedRecord {
+/**
+ * Build a stored attempt-ending record. `stopped` records that run
+ * cancellation interrupted the attempt or discarded its output before the
+ * publication commit (RUN-014/015); the other endings keep their M3 meaning.
+ */
+export function endingRecord(content: { readonly ending: 'retained' | 'failed' | 'child-refused' | 'observer-failure' | 'stopped'; readonly detail: string; readonly reference?: ICompletedResultReference }): IVersionedRecord {
   return {
     format: endingFormat,
     formatVersion,

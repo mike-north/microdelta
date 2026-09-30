@@ -1,24 +1,27 @@
 /**
  * Contracts of Run Supervision: the scoped run lifetime it owns, the ports it
  * consumes and the operations a live run offers (ARC-001, DOM-2, RUN-001,
- * REUSE-009, basic A-19).
+ * RUN-002, RUN-014, RUN-015, REUSE-009, A-13, A-18, A-19).
  *
  * Supervision owns *when* work may happen: the run's environment and
  * lifetime, admission of work Resolution could not avoid, the positions at
- * which observers see work, and the typed outcome of each template member and
- * strict fold in a run (RUN-005, RUN-010). It does not decide reuse (Reuse
- * Resolution), own claims or publication (Result History), or read the host
- * directly: the
- * asynchronous scope is a structurally injected capability, so this package
- * has no Machine import and ordinary author helpers receive no context
- * parameter. A run is not a retained result; its identifier is volatile
- * metadata and never participates in reuse evidence.
+ * which observers see work, the typed outcome of each template member and
+ * strict fold in a run (RUN-005, RUN-010), the permits that bound real sends,
+ * the fan-out window, and the operator's stop intent as it reaches admission,
+ * bodies, sends, waits and the publication commit. It does not decide reuse
+ * (Reuse Resolution), own claims or publication (Result History), or read the
+ * host directly: the asynchronous scope and the timer are structurally
+ * injected capabilities, so this package has no Machine import and ordinary
+ * author helpers receive no context parameter. A run is not a retained
+ * result; its identifier is volatile metadata and never participates in reuse
+ * evidence.
  */
 import type { IBindingDescriptor } from '@microdelta/definition';
 import type {
   ICheckOutcome,
   IDiscoveryOutcome,
   IExecutionAdmission,
+  IExecutionSupervision,
   IFoldOutcome,
   IGateEvidence,
   ILifecycleEvent,
@@ -29,6 +32,8 @@ import type {
   IResolveRequest,
   ResolutionError,
 } from '@microdelta/resolution';
+
+import type { IAbortSignal, IRunTimer, IStopController, IStopLevel, IStopState } from './control.js';
 
 /**
  * One asynchronous scope slot: a value attached to the current asynchronous
@@ -58,6 +63,12 @@ export interface IRunScopeCapability {
 export interface ISupervisionOptions {
   /** The structurally injected scope capability. */
   readonly context: IRunScopeCapability;
+  /**
+   * The structurally injected timer that waits for a time
+   * ({@link IRunExecution.sleepUntil}). Without it such waits are refused as
+   * an invalid request.
+   */
+  readonly timer?: IRunTimer;
 }
 
 /**
@@ -102,15 +113,23 @@ export interface IRunWriter {
 }
 
 /**
- * The ports Supervision hands to the Resolution it runs: its admission port
- * and its observer position. Both stay owned by Supervision.
+ * The ports Supervision hands to the Resolution it runs: its admission port,
+ * its observer position, its cancellation port and the fan-out window. All
+ * stay owned by Supervision.
  * @alpha
  */
 export interface IResolutionPorts {
-  /** Admission of work current validation could not avoid. */
+  /** Admission of work current validation could not avoid; stop intent refuses it. */
   readonly admission: IExecutionAdmission;
   /** The lifecycle observer position Resolution reports to. */
   readonly observer: ILifecycleObserver;
+  /**
+   * The cancellation port every admitted body and current-policy hook runs
+   * through, and every publication commit consults (RUN-014/015).
+   */
+  readonly execution: IExecutionSupervision;
+  /** The run's bounded active window of member fan-out (RUN-002). */
+  readonly window: number;
 }
 
 /**
@@ -122,14 +141,40 @@ export interface IResolutionPorts {
 export type IOrdinaryPhase = 'begin' | 'end' | 'fail';
 
 /**
+ * What is known about a send's remote work after a hard stop aborted it
+ * locally (RUN-014): the provider confirmed it `cancelled`, reported it still
+ * `running`, or nothing is known (`unknown`: no provider cancellation, or no
+ * answer). Never omitted, and never assumed cancelled.
+ * @alpha
+ */
+export type IRemoteState = 'cancelled' | 'running' | 'unknown';
+
+/**
+ * Positions of one send (a permit-guarded real request):
+ *
+ * - `refused`: stop intent refused it before anything was sent;
+ * - `begin`: it holds a permit and is being sent;
+ * - `end` or `fail`: it settled on its own, successfully or not;
+ * - `aborted`: a hard stop abandoned it locally while in flight;
+ * - `cancel-requested`: provider cancellation was then requested;
+ * - `remote-state`: the remote state was recorded.
+ * @alpha
+ */
+export type ISendPhase = 'refused' | 'begin' | 'end' | 'fail' | 'aborted' | 'cancel-requested' | 'remote-state';
+
+/**
  * One event offered to run observers: a framework lifecycle event of a
- * resolved step, or a phase of ordinary work. Events are frozen and name the
- * run they belong to.
+ * resolved step, a phase of ordinary work, a change of stop intent, or a
+ * position of a send. Events are frozen, name the run they belong to, and
+ * carry identifiers, levels and states only, never values (RUN-013).
  * @alpha
  */
 export type IRunEvent =
   | { readonly kind: 'step'; readonly runId: string; readonly event: ILifecycleEvent }
-  | { readonly kind: 'ordinary'; readonly runId: string; readonly label: string; readonly phase: IOrdinaryPhase };
+  | { readonly kind: 'ordinary'; readonly runId: string; readonly label: string; readonly phase: IOrdinaryPhase }
+  | { readonly kind: 'stop'; readonly runId: string; readonly level: Exclude<IStopLevel, 'none'>; readonly cause: IStopState['cause'] }
+  | { readonly kind: 'send'; readonly runId: string; readonly label: string; readonly phase: Exclude<ISendPhase, 'remote-state'> }
+  | { readonly kind: 'send'; readonly runId: string; readonly label: string; readonly phase: 'remote-state'; readonly remote: IRemoteState };
 
 /**
  * An observer of a run. Observers cover memoized and nonmemoized work alike,
@@ -164,6 +209,26 @@ export interface IRunOptions {
   readonly admission?: IExecutionAdmission;
   /** Observers, captured when the run starts. */
   readonly observers?: readonly IRunObserver[];
+  /**
+   * The operator's stop intent for this run. Without one the run is never
+   * stopped. The same controller may be given to several runs; each run's
+   * permits, waits and attempts stay its own.
+   */
+  readonly stop?: IStopController;
+  /**
+   * The run's permit pool size: how many sends may be in flight at once. A
+   * permit guards only a real send, never waiting, deferral or a member's
+   * subtree (RUN-002). A positive safe integer; 1 when absent, a
+   * conservative default for paid providers that an operator sizes up.
+   */
+  readonly permits?: number;
+  /**
+   * The bounded active window of member fan-out: how many members of one
+   * members request or strict fold resolve at once. A positive safe integer;
+   * equal to `permits` when absent, so members run concurrently up to the
+   * permit bound.
+   */
+  readonly window?: number;
 }
 
 /**
@@ -386,8 +451,20 @@ export interface IRun {
 }
 
 /**
- * What a completed run reports: its context, the body's value and the
- * post-commit diagnostics of every request and ordinary call it made.
+ * A send a hard stop aborted, with its recorded remote state.
+ * @alpha
+ */
+export interface ISendInterruption {
+  /** The send's identifier label. */
+  readonly label: string;
+  /** What is known about its remote work. */
+  readonly remote: IRemoteState;
+}
+
+/**
+ * What a completed run reports: its context, the body's value, the
+ * post-commit diagnostics of every request and ordinary call it made, the
+ * stop intent in force when it closed, and every send a hard stop aborted.
  * @alpha
  */
 export interface IRunResult<T> {
@@ -397,6 +474,79 @@ export interface IRunResult<T> {
   readonly value: T;
   /** Post-commit diagnostics, each reported once. */
   readonly diagnostics: readonly string[];
+  /** The stop intent in force when the run closed. */
+  readonly stop: IStopState;
+  /** Every send a hard stop aborted, in order, with its remote state. */
+  readonly interruptions: readonly ISendInterruption[];
+}
+
+/**
+ * One real, permit-guarded send: the constrained request a permit exists for,
+ * such as one call to a paid provider. It is the primitive an external
+ * operation handle builds on; it records no operation identity itself.
+ * @alpha
+ */
+export interface ISendRequest<T> {
+  /**
+   * An identifier naming the send in events, for example `assess`. It must
+   * never embed a value (RUN-013).
+   */
+  readonly label: string;
+  /**
+   * Whether this send repeats an earlier attempt of the same work. Any stop
+   * refuses a retry; only a hard stop refuses a draining step's first attempt.
+   */
+  readonly retry?: boolean;
+  /** Perform the send. It receives the run's abort signal and should abandon its request when it aborts. */
+  perform(signal: IAbortSignal): Promise<T>;
+  /**
+   * Ask the provider to cancel the remote work after a local abort, where
+   * the provider supports it: resolves `cancelled` when confirmed, `running`
+   * when the work continues. Absent, or failing, the remote state is `unknown`.
+   */
+  cancel?(): Promise<'cancelled' | 'running'>;
+}
+
+/**
+ * The live run's execution controls, as author code and adapters find them
+ * through scoped lookup: stop intent, its abort signal, permit-guarded sends
+ * and stop-aware waiting. Each run's controls are its own (RUN-001); `step`
+ * attributes them to the admitted step whose body is running, if any.
+ * @alpha
+ */
+export interface IRunExecution {
+  /** The run's volatile identifier. */
+  readonly runId: string;
+  /** The admitted step whose body this execution belongs to; undefined outside one. */
+  readonly step: IBindingDescriptor | undefined;
+  /** The run's stop intent now. */
+  readonly stop: IStopState;
+  /** Aborts when a hard stop takes effect for the run. */
+  readonly signal: IAbortSignal;
+  /**
+   * Perform one send holding one of the run's permits.
+   *
+   * - A hard stop refuses it, and a soft stop refuses a retry, or any send
+   *   outside an admitted step. A step attempt whose earlier send or wait was
+   *   refused or aborted sends nothing more.
+   * - Waiting for a permit holds none; a hard stop ends the wait (a permit
+   *   granted afterwards is handed straight back).
+   * - A hard stop aborts it in flight: the permit is released, provider
+   *   cancellation is requested where supported, and the remote state is
+   *   recorded.
+   *
+   * A refusal or abort rejects with `SupervisionError('stopped')`, and the
+   * step attempt it belonged to can no longer publish; a send's own failure
+   * rejects with its error. After the run closes it rejects with `run-closed`.
+   */
+  send<T>(request: ISendRequest<T>): Promise<T>;
+  /**
+   * Wait, holding no permit, until the wall clock reaches
+   * `epochMilliseconds`: the wait before a retry or a deferred resumption.
+   * Because a stop forbids that retry, any stop ends the wait at once with
+   * `SupervisionError('stopped')`, and the step attempt can no longer publish.
+   */
+  sleepUntil(epochMilliseconds: number): Promise<void>;
 }
 
 /**
@@ -410,14 +560,25 @@ export interface ISupervision {
    */
   current(): IRunContext;
   /**
+   * The live run's execution controls in the current asynchronous execution,
+   * attributed to the admitted step whose body is running there, if any.
+   * Fails as {@link ISupervision.current} does.
+   */
+  execution(): IRunExecution;
+  /**
    * Run `body` as one supervised run. The run stays live until the body and
    * every operation started through the run (including operations started
    * while it waits) have settled; it closes in the same turn that observes no
    * started work, so any operation is either accepted and waited for, or
    * rejected before starting. Closing releases the writer lease; afterwards
    * the run's operations and context lookups fail and admission is denied.
-   * The returned result carries the body's own value (or rejects with the
-   * body's own failure) and the diagnostics of all participating work.
+   * While the run is open, its stop controller governs it: a soft stop
+   * cancels later admissions while admitted steps drain, and a hard stop
+   * also interrupts bodies, sends and waits and forbids later commits (see
+   * {@link IRunExecution}). The returned result carries the body's own value
+   * (or rejects with the body's own failure), the diagnostics of all
+   * participating work, the stop intent in force at close and every send a
+   * hard stop aborted.
    */
   run<T>(options: IRunOptions, body: (run: IRun) => T | Promise<T>): Promise<IRunResult<Awaited<T>>>;
 }

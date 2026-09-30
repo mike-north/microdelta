@@ -8,6 +8,7 @@ import type { IBindingDescriptor } from '@microdelta/definition';
 import type { ICheckOutcome } from '@microdelta/resolution';
 import type { IDiscoveryOutcome } from '@microdelta/resolution';
 import type { IExecutionAdmission } from '@microdelta/resolution';
+import type { IExecutionSupervision } from '@microdelta/resolution';
 import type { IFoldOutcome } from '@microdelta/resolution';
 import type { IGateEvidence } from '@microdelta/resolution';
 import type { ILifecycleEvent } from '@microdelta/resolution';
@@ -19,7 +20,16 @@ import type { IResolveRequest } from '@microdelta/resolution';
 import type { ResolutionError } from '@microdelta/resolution';
 
 // @alpha
+export function createStopController(options?: IStopControllerOptions): IStopController;
+
+// @alpha
 export function createSupervision(options: ISupervisionOptions): ISupervision;
+
+// @alpha
+export interface IAbortSignal {
+    readonly aborted: boolean;
+    onAbort(listener: () => void): () => void;
+}
 
 // @alpha
 export type IDiscoveryReport = Extract<IDiscoveryOutcome, {
@@ -87,6 +97,9 @@ export interface IMembersTarget {
 export type IOrdinaryPhase = 'begin' | 'end' | 'fail';
 
 // @alpha
+export type IRemoteState = 'cancelled' | 'running' | 'unknown';
+
+// @alpha
 export interface IRequestOptions {
     readonly requestKey: string;
 }
@@ -94,7 +107,9 @@ export interface IRequestOptions {
 // @alpha
 export interface IResolutionPorts {
     readonly admission: IExecutionAdmission;
+    readonly execution: IExecutionSupervision;
     readonly observer: ILifecycleObserver;
+    readonly window: number;
 }
 
 // @alpha
@@ -126,7 +141,33 @@ export type IRunEvent = {
     readonly runId: string;
     readonly label: string;
     readonly phase: IOrdinaryPhase;
+} | {
+    readonly kind: 'stop';
+    readonly runId: string;
+    readonly level: Exclude<IStopLevel, 'none'>;
+    readonly cause: IStopState['cause'];
+} | {
+    readonly kind: 'send';
+    readonly runId: string;
+    readonly label: string;
+    readonly phase: Exclude<ISendPhase, 'remote-state'>;
+} | {
+    readonly kind: 'send';
+    readonly runId: string;
+    readonly label: string;
+    readonly phase: 'remote-state';
+    readonly remote: IRemoteState;
 };
+
+// @alpha
+export interface IRunExecution {
+    readonly runId: string;
+    send<T>(request: ISendRequest<T>): Promise<T>;
+    readonly signal: IAbortSignal;
+    sleepUntil(epochMilliseconds: number): Promise<void>;
+    readonly step: IBindingDescriptor | undefined;
+    readonly stop: IStopState;
+}
 
 // @alpha
 export type IRunLease = IResolveRequest['lease'];
@@ -142,8 +183,11 @@ export interface IRunOptions {
     readonly analysis: string;
     readonly environment: string;
     readonly observers?: readonly IRunObserver[];
+    readonly permits?: number;
     readonly resolution: (ports: IResolutionPorts) => IResolution;
     readonly runId?: string;
+    readonly stop?: IStopController;
+    readonly window?: number;
     readonly writer: IRunWriter;
 }
 
@@ -151,6 +195,8 @@ export interface IRunOptions {
 export interface IRunResult<T> {
     readonly context: IRunContext;
     readonly diagnostics: readonly string[];
+    readonly interruptions: readonly ISendInterruption[];
+    readonly stop: IStopState;
     readonly value: T;
 }
 
@@ -166,13 +212,70 @@ export interface IRunScopeCapability {
 }
 
 // @alpha
+export interface IRunTimer {
+    currentEpochMilliseconds(): number;
+    schedule(epochMilliseconds: number, callback: () => void, options?: {
+        readonly keepAlive?: boolean;
+    }): () => void;
+}
+
+// @alpha
 export interface IRunWriter {
     lease(): IRunLease;
     release(): void;
 }
 
 // @alpha
+export interface ISendInterruption {
+    readonly label: string;
+    readonly remote: IRemoteState;
+}
+
+// @alpha
+export type ISendPhase = 'refused' | 'begin' | 'end' | 'fail' | 'aborted' | 'cancel-requested' | 'remote-state';
+
+// @alpha
+export interface ISendRequest<T> {
+    cancel?(): Promise<'cancelled' | 'running'>;
+    readonly label: string;
+    perform(signal: IAbortSignal): Promise<T>;
+    readonly retry?: boolean;
+}
+
+// @alpha
 export type IStepLifecycle = readonly ['verify', 'finality', 'admit', 'refuse', 'claim', 'execute', 'publish', 'accept', 'release', 'abandon'];
+
+// @alpha
+export type IStopCause = 'operator' | 'deadline';
+
+// @alpha
+export interface IStopController {
+    request(stop: IStopRequest): void;
+    readonly signal: IAbortSignal;
+    readonly state: IStopState;
+    subscribe(listener: (state: IStopState) => void): () => void;
+}
+
+// @alpha
+export interface IStopControllerOptions {
+    readonly timer?: IRunTimer;
+}
+
+// @alpha
+export type IStopLevel = 'none' | 'soft' | 'hard';
+
+// @alpha
+export interface IStopRequest {
+    readonly deadline?: number;
+    readonly level: 'soft' | 'hard';
+}
+
+// @alpha
+export interface IStopState {
+    readonly cause: IStopCause | undefined;
+    readonly deadline: number | undefined;
+    readonly level: IStopLevel;
+}
 
 // @alpha
 export type IStrictFoldOutcome = {
@@ -200,15 +303,17 @@ export type IStrictFoldOutcome = {
 // @alpha
 export interface ISupervision {
     current(): IRunContext;
+    execution(): IRunExecution;
     run<T>(options: IRunOptions, body: (run: IRun) => T | Promise<T>): Promise<IRunResult<Awaited<T>>>;
 }
 
 // @alpha
-export type ISupervisionErrorCode = 'outside-run' | 'run-closed' | 'composition-phase' | 'observer-failure' | 'writer-unavailable' | 'invalid-request';
+export type ISupervisionErrorCode = 'outside-run' | 'run-closed' | 'composition-phase' | 'observer-failure' | 'writer-unavailable' | 'invalid-request' | 'stopped';
 
 // @alpha
 export interface ISupervisionOptions {
     readonly context: IRunScopeCapability;
+    readonly timer?: IRunTimer;
 }
 
 // @alpha

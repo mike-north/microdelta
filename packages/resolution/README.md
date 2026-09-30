@@ -79,14 +79,30 @@ Definition's `declarations()`. Callbacks receive:
    started is unsettled fails without publishing. Before any attempt ends,
    the memo waits for every call its body started to settle, so no child write
    races the ending. If the body threw, its own failure is still the one
-   reported. That wait is unbounded; bounding it and cancelling in-flight work
-   belong to Run Supervision's cancellation contract (A-13).
+   reported. That wait has no default deadline, but run cancellation bounds
+   it (#106): each child's admission, body and nested waits run through Run
+   Supervision's ports, so once a hard stop or an operator deadline takes
+   effect every in-flight child ends interrupted, even one whose author code
+   never settles, and the parent ends cancelled (or with its own error when
+   its body had already thrown), never with a partial publication.
 5. **Admission and execution**: work that validation could not avoid is
    admitted before any claim, attempt or body. A denial or a cancellation is a
    typed `refused` outcome whose `disposition` carries the decision's kind.
    Admitted work allocates an attempt keyed by the request key and the
    structural invocation, with the complete current intent digest, then runs
    under capture and publishes through History.
+6. **Run cancellation**: every admitted body and current-policy hook runs
+   through the optional `execution` port (Run Supervision's cancellation
+   port), and each publication commit first asks it whether cancellation
+   forbids committing now, in the same synchronous turn as the commit. An
+   interrupted execution, or output a hard stop discards before its commit,
+   ends the attempt `interrupted` with a `stopped` ending and reports a
+   `refused` outcome with disposition `cancelled`. Without the port, work runs
+   unsupervised and every commit may proceed.
+
+The members of one members request or strict fold resolve concurrently
+within the bounded active `window` (RUN-002; 1 when absent), started and
+reported in canonical key order. A member not yet started holds nothing.
 
 ## Template instances
 

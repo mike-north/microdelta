@@ -34,7 +34,12 @@
  * own implementation, bindings and the argument facts it observed.
  *
  * Work that validation could not avoid is admitted before any claim, attempt
- * or body (REUSE-009). Within one top-level request, every child invocation's
+ * or body (REUSE-009). Every admitted body and current-policy hook runs
+ * through Run Supervision's cancellation port, and every publication commit
+ * first asks it whether run cancellation forbids committing now (RUN-014/015):
+ * an interrupted execution, or output a hard stop discards before its commit,
+ * ends the attempt interrupted (ending `stopped`) and reports a cancellation,
+ * never a failure or a partial result. Within one top-level request, every child invocation's
  * established current result (a source or memo step, or a supplied slot call
  * with its subject and arguments) is shared, so a child validated or executed
  * while its parent was being validated is reused when that parent then
@@ -134,6 +139,7 @@ import type {
   ICheckOutcome,
   ICheckRequest,
   IDiscoveryOutcome,
+  IExecutionSupervision,
   IFoldCoverage,
   IFoldOutcome,
   IFoldRequest,
@@ -153,6 +159,7 @@ import type {
   IResolveRequest,
   IReuseBasis,
   IStepKind,
+  ISupervisedExecution,
 } from './contracts.js';
 import {
   argumentList,
@@ -321,10 +328,17 @@ interface IMemoFrame {
   /**
    * Declared calls the body has started whose delivery has not yet settled.
    * Before its attempt ends, the memo waits for every one of them to settle,
-   * whether the body returned or threw, so no child write races the ending.
-   * The wait is unbounded: a child that never settles keeps its parent
-   * waiting. Bounding that wait and cancelling in-flight work belong to Run
-   * Supervision's cancellation contract (A-13), not to this resolver.
+   * whether the body returned, threw or was interrupted, so no child write
+   * races the ending.
+   *
+   * The wait has no default deadline, but run cancellation bounds it (#106):
+   * each child's own admission, body and nested waits run through Run
+   * Supervision's ports, so once a hard stop or an operator deadline takes
+   * effect every in-flight child ends promptly as interrupted, even one whose
+   * author code never settles. The parent then ends honestly: cancelled when
+   * it was itself interrupted, or with its own error when its body had
+   * already thrown. It never publishes partial work. A soft stop does not
+   * shorten the wait: admitted children drain.
    */
   readonly inflight: Set<Promise<unknown>>;
   /**
@@ -652,6 +666,23 @@ function uniqueReferences(references: readonly ICompletedResultReference[]): rea
 }
 
 /**
+ * Execution without Run Supervision: author work runs to its own end, nothing
+ * interrupts it, and every commit may proceed. Used when a Resolution is
+ * built without a cancellation port.
+ */
+const unsupervised: IExecutionSupervision = Object.freeze({
+  async execute<T>(step: IBindingDescriptor, work: () => Promise<T>): Promise<ISupervisedExecution<T>> {
+    void step;
+    try {
+      return { kind: 'returned', value: await work() };
+    } catch (error: unknown) {
+      return { kind: 'threw', error };
+    }
+  },
+  publicationRefusal: (): string | undefined => undefined,
+});
+
+/**
  * Create Reuse Resolution over one current composition and History scope.
  * @param options - Ports, composition and declared binding slots.
  * @returns The Resolution contract.
@@ -669,6 +700,12 @@ export function createResolution<TInputs extends object, THelpers extends object
       throw new ResolutionError('invalid-request', 'Declared binding slots must be nonempty strings');
     }
   }
+  const window = options.window ?? 1;
+  if (typeof window !== 'number' || !Number.isSafeInteger(window) || window <= 0) {
+    throw new ResolutionError('invalid-request', 'The member fan-out window must be a positive safe integer');
+  }
+  /** Run Supervision's cancellation port, or unsupervised execution where nothing can interrupt work. */
+  const supervision: IExecutionSupervision = options.execution ?? unsupervised;
   const analysis = composition.scope;
   const environment = options.environment;
   /** Selects current input facts and fingerprints intent; it never has an author capture. */
@@ -1075,13 +1112,35 @@ export function createResolution<TInputs extends object, THelpers extends object
     return attemptId;
   }
 
-  /** Stage and publish new content in History's one publication commit. */
+  /**
+   * End an admitted attempt that run cancellation interrupted, or whose output
+   * it discarded before the commit: the attempt ends interrupted with a
+   * `stopped` ending, and the step reports a cancellation refusal of its own
+   * work, never a failure and never a partial result (RUN-014/015).
+   */
+  function interrupt(request: IRequestContext, evidence: IStepEvidence, step: IBindingDescriptor, attemptId: number, reason: string): IStepResult {
+    abandon(request, evidence, step, attemptId, 'interrupted', { ending: 'stopped', detail: reason });
+    return { kind: 'refused', refused: step, reason, disposition: 'cancelled' };
+  }
+
+  /**
+   * Stage and publish new content in History's one publication commit. Run
+   * cancellation is consulted first, in the same synchronous turn as the
+   * commit, so the commit is the linearization point: a hard stop effective
+   * before it discards the output; one after it cannot undo it. History's
+   * commit itself re-reads the lease durably, so a drain that outlived its
+   * lease cannot publish either (EXP-8 ruling R).
+   */
   function publish(request: IRequestContext, evidence: IStepEvidence, step: IBindingDescriptor, attemptId: number, content: {
     readonly payload: unknown;
     readonly provenance: Parameters<typeof provenanceRecord>[0];
     readonly dependencies: readonly ICompletedResultReference[];
   }): IStepResult {
     const lease = leaseOf(request);
+    const refusal = supervision.publicationRefusal();
+    if (refusal !== undefined) {
+      return interrupt(request, evidence, step, attemptId, refusal);
+    }
     if (!isContainer(content.payload)) {
       abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'result root is not a record or array' });
       throw new ResolutionError('unsupported-result', `Step ${stepKey(step)} produced a result without a record or array root`);
@@ -1155,12 +1214,15 @@ export function createResolution<TInputs extends object, THelpers extends object
       const carrier = eligible === undefined ? undefined : carrierFor(eligible.reference, token);
       if (eligible !== undefined && invocation.hasFinality) {
         emit(request, evidence, step, 'finality');
-        let decided: IObservationCapture<unknown>;
-        try {
-          decided = await callSource(request, invocation, 'finality', carrier, (value) => value);
-        } catch (error: unknown) {
-          throw new ResolutionError('policy-failure', `Current finality of ${stepKey(step)} failed: ${describe(error)}`, error);
+        // A check-only request starts no work, so its policy evaluation is not supervised.
+        const evaluated = await (request.mode === 'check' ? unsupervised : supervision).execute(step, () => callSource(request, invocation, 'finality', carrier, (value) => value));
+        if (evaluated.kind === 'interrupted') {
+          return done({ kind: 'refused', refused: step, reason: evaluated.reason, disposition: 'cancelled' });
         }
+        if (evaluated.kind === 'threw') {
+          throw new ResolutionError('policy-failure', `Current finality of ${stepKey(step)} failed: ${describe(evaluated.error)}`, evaluated.error);
+        }
+        const decided = evaluated.value;
         if (typeof decided.value !== 'boolean') {
           throw new ResolutionError('policy-failure', `Current finality of ${stepKey(step)} returned ${typeof decided.value}, not a boolean`);
         }
@@ -1181,10 +1243,10 @@ export function createResolution<TInputs extends object, THelpers extends object
         return done({ kind: 'refused', refused: step, reason: refusal.reason, disposition: refusal.disposition });
       }
       const attemptId = claim(request, evidence, step, identity);
-      let ran: IObservationCapture<ISourceReturn>;
+      let executed: ISupervisedExecution<IObservationCapture<ISourceReturn>>;
       try {
         emit(request, evidence, step, 'execute');
-        ran = await callSource(request, invocation, 'run', carrier, (value): ISourceReturn => {
+        executed = await supervision.execute(step, () => callSource(request, invocation, 'run', carrier, (value): ISourceReturn => {
           const minted = mintedOutcome(value);
           if (minted?.kind !== 'fresh') {
             return { minted, data: undefined, detachError: undefined };
@@ -1194,14 +1256,22 @@ export function createResolution<TInputs extends object, THelpers extends object
           } catch (error: unknown) {
             return { minted, data: undefined, detachError: error };
           }
-        });
+        }));
       } catch (error: unknown) {
+        executed = { kind: 'threw', error };
+      }
+      if (executed.kind === 'interrupted') {
+        return done(interrupt(request, evidence, step, attemptId, executed.reason));
+      }
+      if (executed.kind === 'threw') {
+        const error = executed.error;
         abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(error) });
         if (error instanceof ResolutionError) {
           throw error;
         }
         throw new ResolutionError('execution-failure', `Source check of ${stepKey(step)} failed: ${describe(error)}`, error);
       }
+      const ran = executed.value;
       const { minted } = ran.value;
       if (minted === undefined) {
         abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'invalid source outcome' });
@@ -1212,6 +1282,11 @@ export function createResolution<TInputs extends object, THelpers extends object
         if (eligible === undefined || held === undefined || held.token !== token || held.reference.locator !== eligible.reference.locator) {
           abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'invalid retention' });
           throw new ResolutionError('invalid-retention', `Source ${stepKey(step)} retained something other than its own eligible previous result`);
+        }
+        // An explicit retention is this check's output: a hard stop effective before its commit discards it too.
+        const stopped = supervision.publicationRefusal();
+        if (stopped !== undefined) {
+          return done(interrupt(request, evidence, step, attemptId, stopped));
         }
         let result: IStepResult;
         try {
@@ -1810,19 +1885,27 @@ export function createResolution<TInputs extends object, THelpers extends object
         return trusted<IArgumentViews<IFamily, TParameters>>(views);
       },
     });
-    let ran: IObservationCapture<IMemoReturn>;
+    let executed: ISupervisedExecution<IObservationCapture<IMemoReturn>>;
     try {
       emit(request, evidence, step, 'execute');
-      ran = await active.run(invocation, () => invocation.apply(bindings, supplier, invoker(detachComputation, arm)));
+      executed = await supervision.execute(step, () => active.run(invocation, () => invocation.apply(bindings, supplier, invoker(detachComputation, arm))));
     } catch (error: unknown) {
+      executed = { kind: 'threw', error };
+    } finally {
+      invocation.close();
+    }
+    if (executed.kind === 'interrupted') {
+      return done(interrupt(request, evidence, step, attemptId, executed.reason));
+    }
+    if (executed.kind === 'threw') {
+      const error = executed.error;
       abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(error) });
       if (error instanceof ResolutionError) {
         throw error;
       }
       throw new ResolutionError('execution-failure', `Supplied step ${describeSlot(step)} for ${subject.subject} failed: ${describe(error)}`, error);
-    } finally {
-      invocation.close();
     }
+    const ran = executed.value;
     if (ran.value.detachError !== undefined) {
       abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(ran.value.detachError) });
       throw new ResolutionError('unsupported-result', `Supplied step ${describeSlot(step)} returned unsupported data: ${describe(ran.value.detachError)}`, ran.value.detachError);
@@ -1907,21 +1990,33 @@ export function createResolution<TInputs extends object, THelpers extends object
     }
     const frame: IMemoFrame = { request, step, children: new Map(), calls: new Map(), inflight: new Set(), unsettledAtReturn: undefined, refused: undefined, failed: undefined };
     frames.set(invocation, frame);
-    let ran: IObservationCapture<IMemoReturn>;
+    let executed: ISupervisedExecution<IObservationCapture<IMemoReturn>>;
     try {
       emit(request, evidence, step, 'execute');
-      ran = await active.run(invocation, () => invocation.apply(bindings, invoker((value): IMemoReturn => {
+      executed = await supervision.execute(step, () => active.run(invocation, () => invocation.apply(bindings, invoker((value): IMemoReturn => {
         // Taken inside the capture, as the body's value is: which started calls it left unsettled.
         frame.unsettledAtReturn = frame.inflight.size;
         return detachComputation(value);
-      }), memberBindingOf(request, step)));
+      }), memberBindingOf(request, step))));
     } catch (error: unknown) {
+      executed = { kind: 'threw', error };
+    } finally {
+      // The body's execution has ended (or was interrupted): it starts no new call; calls it started continue.
+      invocation.close();
+    }
+    if (executed.kind === 'interrupted') {
+      // Calls the body started end under the same run cancellation before this attempt does (see IMemoFrame.inflight).
+      await Promise.allSettled([...frame.inflight]);
+      return done(interrupt(request, evidence, step, attemptId, executed.reason));
+    }
+    if (executed.kind === 'threw') {
+      const error = executed.error;
       // What the body failed with is decided now: a call that fails or is
       // refused while the in-flight calls settle below must not replace it.
       const refused = frame.refused;
       const failed = frame.failed;
       // Let calls the body started finish their own lifecycle before this attempt
-      // ends (an unbounded wait; see IMemoFrame.inflight).
+      // ends (bounded by run cancellation; see IMemoFrame.inflight).
       await Promise.allSettled([...frame.inflight]);
       // A refusal the body failed with stands; only a cancellation settling meanwhile upgrades a denial.
       const refusal = refused === undefined ? undefined : dominantRefusal(refused, frame.refused);
@@ -1935,11 +2030,10 @@ export function createResolution<TInputs extends object, THelpers extends object
         throw cause;
       }
       throw new ResolutionError('execution-failure', `Body of ${stepKey(step)} failed: ${describe(cause)}`, cause);
-    } finally {
-      invocation.close();
     }
+    const ran = executed.value;
     const unsettled = frame.unsettledAtReturn ?? 0;
-    // Every started call settles before the attempt ends (an unbounded wait; see IMemoFrame.inflight).
+    // Every started call settles before the attempt ends (bounded by run cancellation; see IMemoFrame.inflight).
     await Promise.allSettled([...frame.inflight]);
     if (unsettled > 0) {
       // Its evidence would lack a call the body made: never publish such a result.
@@ -2420,30 +2514,67 @@ export function createResolution<TInputs extends object, THelpers extends object
 
   /**
    * Settle one template step for every current member of its template's
-   * population (RUN-005): discovery and keying once, then each member in
-   * canonical key order, independently. A member-attributable typed failure
-   * (a gate failure included) is confined to that member; its siblings still
-   * resolve, share this request's current results and publish. A run-level
-   * failure (`runLevelFailures`, or any failure that is not a ResolutionError)
-   * fails the whole request and is never attributed to a member, so a strict
-   * fold never mistakes an outage for a terminal member failure. A members
-   * request and a strict fold's member phase are this same settlement.
+   * population (RUN-005): discovery and keying once, then the members
+   * independently, started in canonical key order with at most `window` of
+   * them resolving at once (RUN-002), and reported in canonical key order. A
+   * member-attributable typed failure (a gate failure included) is confined
+   * to that member; its siblings still resolve, share this request's current
+   * results and publish. A run-level failure (`runLevelFailures`, or any
+   * failure that is not a ResolutionError) fails the whole request and is
+   * never attributed to a member, so a strict fold never mistakes an outage
+   * for a terminal member failure: no further member starts, members already
+   * started finish, and the earliest such failure in key order is thrown. A
+   * members request and a strict fold's member phase are this same settlement.
    */
   async function settleMembers(request: IRequestContext, template: ITemplateTopology, templateStep: IBindingDescriptor): Promise<{ readonly population: IPopulation; readonly settled: readonly ISettledMember[] }> {
     const population = await populationOf(request, template.slot);
-    const settled: ISettledMember[] = [];
-    for (const key of population.status === 'keyed' ? population.keys : []) {
-      const instance: IBindingDescriptor = Object.freeze({ ...templateStep, memberKey: key });
-      try {
-        settled.push({ key, step: instance, resolved: await resolveInstance(request, instance) });
-      } catch (error: unknown) {
-        if (!(error instanceof ResolutionError) || runLevelFailures.has(error.code)) {
-          throw error;
-        }
-        settled.push({ key, step: instance, resolved: error });
+    const keys = population.status === 'keyed' ? population.keys : [];
+    const settled = new Map<number, ISettledMember>();
+    /** The earliest (in canonical order) run-level failure seen; once set, no further member starts. */
+    const runFailure: { first: { readonly position: number; readonly error: unknown } | undefined } = { first: undefined };
+    /** Keep the earliest run-level failure in canonical key order. */
+    const recordRunFailure = (position: number, error: unknown): void => {
+      const earlier = runFailure.first;
+      if (earlier === undefined || position < earlier.position) {
+        runFailure.first = { position, error };
       }
+    };
+    let next = 0;
+    /**
+     * One lane of the bounded active window (RUN-002): it takes the next
+     * member in canonical key order whenever its previous one settles. A
+     * member not yet taken holds nothing, so after a stop it is presented to
+     * admission, and refused, only when a lane reaches it.
+     */
+    const lane = async (): Promise<void> => {
+      while (runFailure.first === undefined && next < keys.length) {
+        const position = next;
+        next += 1;
+        const key = keys[position];
+        if (key === undefined) {
+          return;
+        }
+        const instance: IBindingDescriptor = Object.freeze({ ...templateStep, memberKey: key });
+        try {
+          settled.set(position, { key, step: instance, resolved: await resolveInstance(request, instance) });
+        } catch (error: unknown) {
+          if (!(error instanceof ResolutionError) || runLevelFailures.has(error.code)) {
+            recordRunFailure(position, error);
+            continue;
+          }
+          settled.set(position, { key, step: instance, resolved: error });
+        }
+      }
+    };
+    // Members already started finish before a run-level failure is reported, so no member work outlives the request.
+    await Promise.all(Array.from({ length: Math.min(window, keys.length) }, lane));
+    if (runFailure.first !== undefined) {
+      throw runFailure.first.error;
     }
-    return { population, settled };
+    return { population, settled: keys.flatMap((_key, position) => {
+      const member = settled.get(position);
+      return member === undefined ? [] : [member];
+    }) };
   }
 
   /** The public member outcomes of settled members, with the request's diagnostics so far. */
@@ -2680,19 +2811,27 @@ export function createResolution<TInputs extends object, THelpers extends object
       invocation.close();
       throw error;
     }
-    let ran: IObservationCapture<IMemoReturn>;
+    let executed: ISupervisedExecution<IObservationCapture<IMemoReturn>>;
     try {
       emit(request, evidence, step, 'execute');
-      ran = await active.run(invocation, () => invocation.apply(bindings, foldMembers(membership), invoker(detachComputation)));
+      executed = await supervision.execute(step, () => active.run(invocation, () => invocation.apply(bindings, foldMembers(membership), invoker(detachComputation))));
     } catch (error: unknown) {
+      executed = { kind: 'threw', error };
+    } finally {
+      invocation.close();
+    }
+    if (executed.kind === 'interrupted') {
+      return done(interrupt(request, evidence, step, attemptId, executed.reason));
+    }
+    if (executed.kind === 'threw') {
+      const error = executed.error;
       abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(error) });
       if (error instanceof ResolutionError) {
         throw error;
       }
       throw new ResolutionError('execution-failure', `Body of strict fold ${stepKey(step)} failed: ${describe(error)}`, error);
-    } finally {
-      invocation.close();
     }
+    const ran = executed.value;
     if (ran.value.detachError !== undefined) {
       abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(ran.value.detachError) });
       throw new ResolutionError('unsupported-result', `Body of strict fold ${stepKey(step)} returned unsupported data: ${describe(ran.value.detachError)}`, ran.value.detachError);

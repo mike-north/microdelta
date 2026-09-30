@@ -134,6 +134,10 @@ export interface IRunOptions {
   readonly leaseMilliseconds?: number;
   /** Make this member's summary body throw in this process. */
   readonly failSummary?: IMemberKey;
+  /** Request an operator stop when the run's observer sees this step position. */
+  readonly stopAt?: IJob['stopAt'];
+  /** Make the report command's presenter fail after every summary resolved. */
+  readonly failPresenter?: boolean;
   /** A different store file (wrong-store checks). */
   readonly location?: string;
   readonly logicalStore?: string;
@@ -266,6 +270,8 @@ export function scenario(): IScenario {
         ...(options.keys === undefined ? {} : { requestKeys: options.keys }),
         ...(options.deny === undefined ? {} : { deny: options.deny }),
         ...(options.throwAt === undefined ? {} : { throwAt: options.throwAt }),
+        ...(options.stopAt === undefined ? {} : { stopAt: options.stopAt }),
+        ...(options.failPresenter === undefined ? {} : { failPresenter: options.failPresenter }),
         leaseMilliseconds: options.leaseMilliseconds ?? 60_000,
       };
       const env = { ...process.env };

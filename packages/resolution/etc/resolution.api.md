@@ -112,6 +112,12 @@ export interface IExecutionAdmission {
 }
 
 // @alpha
+export interface IExecutionSupervision {
+    execute<T>(step: IBindingDescriptor, work: () => Promise<T>): Promise<ISupervisedExecution<T>>;
+    publicationRefusal(): string | undefined;
+}
+
+// @alpha
 export interface IFoldCoverage {
     readonly closed: true;
     readonly required: readonly string[];
@@ -296,10 +302,12 @@ export interface IResolutionOptions<TInputs extends object, THelpers extends obj
     readonly composition: IComposition<IResolutionFamily<TInputs, THelpers>>;
     readonly declarations: IDeclarations<IResolutionFamily<TInputs, THelpers>>;
     readonly environment: string;
+    readonly execution?: IExecutionSupervision;
     readonly history: IResolutionHistory;
     readonly host: IResolutionHost;
     readonly observer?: ILifecycleObserver;
     readonly tracking: ITrackingObserver;
+    readonly window?: number;
 }
 
 // @alpha
@@ -390,6 +398,18 @@ export interface IStepBindings<TInputs extends object, THelpers extends object> 
 
 // @alpha
 export type IStepKind = 'source' | 'memo' | 'supplied' | 'fold';
+
+// @alpha
+export type ISupervisedExecution<T> = {
+    readonly kind: 'returned';
+    readonly value: T;
+} | {
+    readonly kind: 'threw';
+    readonly error: unknown;
+} | {
+    readonly kind: 'interrupted';
+    readonly reason: string;
+};
 
 // @alpha
 export type ITrackedHelpers<THelpers extends object> = {

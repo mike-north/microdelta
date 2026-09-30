@@ -4,10 +4,11 @@
  * eligibility, applies current source policy, validates direct children and
  * nested calls, resolves keyed template instances through their current
  * population and tracked gates, decides strict fold readiness, and either
- * reuses an exact retained result or executes through injected admission and
- * History ports (ARC-001/006, REUSE-001–009, CMP-4, CMP-8, RUN-010). It owns
- * no storage rows, no run lifetime and
- * no admission policy; an admission decision's kind is carried, never decided.
+ * reuses an exact retained result or executes through injected admission,
+ * cancellation and History ports (ARC-001/006, REUSE-001–009, CMP-4, CMP-8,
+ * RUN-002, RUN-010, RUN-014/015). It owns no storage rows, no run lifetime,
+ * no admission policy and no cancellation mechanics; an admission decision's
+ * kind and an interruption's reason are carried, never decided.
  */
 import type { IBindingDescriptor, ICollectionStatus, IComposition, IDeclarations, IKeyingDiagnostic } from '@microdelta/definition';
 import type {
@@ -112,6 +113,47 @@ export interface IExecutionAdmission {
 }
 
 /**
+ * How one supervised execution of author code (a source check, a finality
+ * hook, a memo, supplied-step or fold body) ended.
+ *
+ * - `returned` or `threw`: the code settled on its own, and stop intent
+ *   neither refused nor aborted anything it did.
+ * - `interrupted`: run cancellation ended the execution first (a hard stop,
+ *   or a closed run), or stop intent refused or aborted work inside it. Its
+ *   output, if it ever produces one, is discarded: the attempt ends
+ *   interrupted and nothing is published (RUN-014/015). The author code may
+ *   still be running; Resolution never uses what it later returns.
+ * @alpha
+ */
+export type ISupervisedExecution<T> =
+  | { readonly kind: 'returned'; readonly value: T }
+  | { readonly kind: 'threw'; readonly error: unknown }
+  | { readonly kind: 'interrupted'; readonly reason: string };
+
+/**
+ * Run Supervision's cancellation port. Resolution runs every admitted body
+ * and every current-policy hook through it, and consults it immediately
+ * before each publication commit, so stop intent reaches author code and the
+ * commit without Resolution owning cancellation mechanics. It decides nothing
+ * about reuse and never touches History.
+ * @alpha
+ */
+export interface IExecutionSupervision {
+  /**
+   * Run author work for `step` under the run's supervision and report how it
+   * ended. It never rejects: a thrown or rejected body is `threw`.
+   */
+  execute<T>(step: IBindingDescriptor, work: () => Promise<T>): Promise<ISupervisedExecution<T>>;
+  /**
+   * Why run cancellation forbids committing new output right now, or
+   * undefined when a commit may proceed. Called in the same synchronous turn
+   * as the commit it guards, so the commit is the linearization point: a hard
+   * stop effective before it discards the output, one after it cannot undo it.
+   */
+  publicationRefusal(): string | undefined;
+}
+
+/**
  * Positions of Resolution's framework-owned lifecycle, in the order they can
  * occur for one step: verify candidates, evaluate finality, decide admission,
  * claim an attempt, execute, then publish, accept (ending the claim with
@@ -186,6 +228,18 @@ export interface IResolutionOptions<TInputs extends object, THelpers extends obj
   readonly admission: IExecutionAdmission;
   /** An optional lifecycle observer. */
   readonly observer?: ILifecycleObserver;
+  /**
+   * Run Supervision's cancellation port. Without it, author work runs
+   * unsupervised: nothing interrupts it and every commit may proceed.
+   */
+  readonly execution?: IExecutionSupervision;
+  /**
+   * The bounded active window of member fan-out (RUN-002): at most this many
+   * current members of one members request or strict fold resolve at once, in
+   * canonical key order; a member not yet started holds nothing. A positive
+   * safe integer; 1 (members one at a time) when absent.
+   */
+  readonly window?: number;
 }
 
 /**
@@ -341,7 +395,11 @@ export type IResolutionOutcome = IOutcomeEvidence & (
       /** The step whose work was refused; a child when the parent needed its work. */
       readonly refused: IBindingDescriptor;
       readonly reason: string;
-      /** Whether admission denied the work or Supervision cancelled it. */
+      /**
+       * Whether admission denied the work or Supervision cancelled it. Run
+       * cancellation that interrupts an admitted attempt, or discards its
+       * output before the commit, is also `cancelled`.
+       */
       readonly disposition: IRefusalDisposition;
     }
   | {

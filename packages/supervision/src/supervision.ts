@@ -17,7 +17,14 @@
  *   never strands it and started work never loses it;
  * - admission and observer positions are Supervision's ports into Resolution:
  *   the caller's policy decides admission, and observers are captured at
- *   start, see frozen events and can neither veto nor replace work.
+ *   start, see frozen events and can neither veto nor replace work;
+ * - the operator's stop controller is observed while the run is open: a soft
+ *   stop cancels every later admission while admitted steps drain, and a
+ *   hard stop also aborts the run's signal, which interrupts admitted bodies,
+ *   sends, permit waits and waits for a time and forbids later commits (see
+ *   `execution.ts`);
+ * - the run owns a bounded permit pool for its sends and hands Resolution
+ *   the bounded active window of member fan-out.
  *
  * Supervision never decides reuse, touches History or reads the host itself.
  */
@@ -51,6 +58,7 @@ import type {
   IRun,
   IRunContext,
   IRunEvent,
+  IRunExecution,
   IRunOptions,
   IRunResult,
   IRunScope,
@@ -58,13 +66,25 @@ import type {
   ISupervision,
   ISupervisionOptions,
 } from './contracts.js';
+import { createAbortSource, createStopController } from './control.js';
+import type { IStopLevel, IStopState } from './control.js';
 import { SupervisionError } from './errors.js';
+import { raceAbort, runControls, supervisedExecution } from './execution.js';
+import type { IRunFrame, ISupervisedRun } from './execution.js';
+import { createPermitPool } from './permits.js';
 
-/** The live state of one run, attached to its asynchronous scope. */
-interface IRunFrame {
-  readonly context: IRunContext;
-  /** False once the body and every started operation settled; nothing new is attributed to a closed run. */
-  open: boolean;
+/**
+ * A run's positive count option (its permits or window), or `fallback` when
+ * absent. Anything but a positive safe integer is an invalid request.
+ */
+function positiveCount(value: unknown, fallback: number, name: string): number {
+  if (value === undefined) {
+    return fallback;
+  }
+  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value <= 0) {
+    throw new SupervisionError('invalid-request', `A run's ${name} must be a positive safe integer`);
+  }
+  return value;
 }
 
 /** An observer's `observe` function as captured when its run started. */
@@ -209,11 +229,15 @@ function foldReport(resolved: IFoldResolution): IFoldReport {
  */
 export function createSupervision(options: ISupervisionOptions): ISupervision {
   const scope: IRunScope<IRunFrame> = options.context.createAsyncContext<IRunFrame>();
+  const timer = options.timer;
   /** Process-local counter for generated run identifiers (volatile metadata). */
   let generated = 0;
 
+  /** Run work with `frame` attached to its asynchronous execution. */
+  const enter = <TWork>(frame: IRunFrame, work: () => Promise<TWork>): Promise<TWork> => scope.run(frame, work);
+
   /** The live frame of the current asynchronous execution, or the reason there is none. */
-  function current(): IRunContext {
+  function liveFrame(): IRunFrame {
     if (isComposing()) {
       throw new SupervisionError('composition-phase', 'Runtime context cannot be looked up while a composition is being constructed');
     }
@@ -221,10 +245,18 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     if (frame === undefined) {
       throw new SupervisionError('outside-run', 'Runtime context was looked up outside a live run');
     }
-    if (!frame.open) {
-      throw new SupervisionError('run-closed', `Run ${frame.context.runId} has closed; its context is no longer available`);
+    if (!frame.run.open) {
+      throw new SupervisionError('run-closed', `Run ${frame.run.context.runId} has closed; its context is no longer available`);
     }
-    return frame.context;
+    return frame;
+  }
+
+  function current(): IRunContext {
+    return liveFrame().run.context;
+  }
+
+  function execution(): IRunExecution {
+    return runControls(liveFrame());
   }
 
   async function run<T>(runOptions: IRunOptions, body: (run: IRun) => T | Promise<T>): Promise<IRunResult<Awaited<T>>> {
@@ -240,33 +272,125 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     if (typeof runOptions.resolution !== 'function' || typeof runOptions.writer !== 'object' || runOptions.writer === null) {
       throw new SupervisionError('invalid-request', 'A run needs a Resolution factory and a writer port');
     }
+    const permits = positiveCount(runOptions.permits, 1, 'permits');
+    const window = positiveCount(runOptions.window, permits, 'window');
+    const controller = runOptions.stop ?? createStopController();
+    if (typeof controller !== 'object' || controller === null || typeof Reflect.get(controller, 'subscribe') !== 'function') {
+      throw new SupervisionError('invalid-request', 'A run\'s stop must be a stop controller');
+    }
     generated += 1;
     const context: IRunContext = Object.freeze({
       runId: runOptions.runId ?? `run:${String(generated)}`,
       analysis: runOptions.analysis,
       environment: runOptions.environment,
     });
-    const frame: IRunFrame = { context, open: true };
     const observers = captureObservers(runOptions.observers);
     const policy = runOptions.admission ?? admitAll;
     const writer = runOptions.writer;
     const diagnostics: string[] = [];
 
+    /**
+     * Operations started through this run that have not settled: requests,
+     * ordinary work, sends and waits. The run stays live until this set is
+     * empty after its body settled.
+     */
+    const started = new Set<Promise<unknown>>();
+
+    const state: ISupervisedRun = {
+      context,
+      open: true,
+      controller,
+      hard: createAbortSource((error: unknown) => {
+        diagnostics.push(`An abort listener of run ${context.runId} failed: ${describe(error)}`);
+      }),
+      stopped: createAbortSource(),
+      permits: createPermitPool(permits),
+      timer,
+      interruptions: [],
+      report(event: IRunEvent, position: string): void {
+        try {
+          notify(observers, event);
+        } catch (error: unknown) {
+          diagnostics.push(`Run observer failed at ${position}: ${describe(error)}`);
+        }
+      },
+      track<TResult>(operation: () => Promise<TResult>): Promise<TResult> {
+        if (!state.open) {
+          return Promise.reject(new SupervisionError('run-closed', `Run ${context.runId} has closed and accepts no new work`));
+        }
+        const pending = operation();
+        const settled = pending.then(() => undefined, () => undefined);
+        started.add(settled);
+        void settled.then(() => started.delete(settled));
+        return pending;
+      },
+      publicationRefusal(): string | undefined {
+        if (!state.open) {
+          return `run ${context.runId} has closed`;
+        }
+        return state.hard.signal.aborted ? 'a hard stop took effect before the publication commit' : undefined;
+      },
+    };
+    const frame: IRunFrame = Object.freeze({ run: state, attempt: undefined });
+
+    /**
+     * Observe the operator's stop intent while the run is open: report each
+     * new level to observers, then abort the run's signals. A hard stop
+     * aborts `hard` before `stopped`, so everything a stop ends sees the
+     * level that ended it. After the run closes nothing is observed.
+     */
+    let observedLevel: IStopLevel = 'none';
+    const observeStop = (next: IStopState): void => {
+      if (!state.open || next.level === 'none') {
+        return;
+      }
+      if (next.level !== observedLevel) {
+        observedLevel = next.level;
+        state.report(Object.freeze({ kind: 'stop', runId: context.runId, level: next.level, cause: next.cause }), `stop ${next.level}`);
+      }
+      if (next.level === 'hard') {
+        state.hard.abort();
+      }
+      state.stopped.abort();
+    };
+    const unsubscribe = controller.subscribe(observeStop);
+    observeStop(controller.state);
+
     /** The denial for work presented to, or decided after, a closed run. */
     const closedDenial = (): IAdmissionDecision => Object.freeze({ kind: 'denied', reason: `run ${context.runId} has closed` });
+    /** The cancellation of new work once the run is stopped, or undefined while it is not. */
+    const stopRefusal = (): IAdmissionDecision | undefined => {
+      if (state.hard.signal.aborted) {
+        return Object.freeze({ kind: 'cancelled', reason: `run ${context.runId} is stopped: a hard stop admits no new work` });
+      }
+      return state.stopped.signal.aborted ? Object.freeze({ kind: 'cancelled', reason: `run ${context.runId} is stopped: a soft stop admits no new work` }) : undefined;
+    };
     /**
-     * Supervision's admission port: the caller's policy while open. A policy
-     * may decide asynchronously; a decision that arrives after the run
-     * actually closed is replaced by denial, so nothing is admitted into a
-     * closed run.
+     * Supervision's admission port: the caller's policy while open and not
+     * stopped (RUN-014: no admission after a soft stop). A policy may decide
+     * asynchronously; a decision that arrives after the run closed is replaced
+     * by denial, one that arrives after a stop by cancellation, and a hard
+     * stop ends the wait for a pending decision at once.
      */
     const admission: IExecutionAdmission = Object.freeze({
       async admit(request: IAdmissionRequest): Promise<IAdmissionDecision> {
-        if (!frame.open) {
+        if (!state.open) {
           return closedDenial();
         }
-        const decision = await policy.admit(request);
-        return frame.open ? decision : closedDenial();
+        const before = stopRefusal();
+        if (before !== undefined) {
+          return before;
+        }
+        const decided = await raceAbort(Promise.resolve(policy.admit(request)), state.hard.signal);
+        if (!state.open) {
+          return closedDenial();
+        }
+        const after = stopRefusal();
+        if (after !== undefined || decided.aborted) {
+          // Only a hard stop ends the wait early, and that stop cancels the work.
+          return after ?? closedDenial();
+        }
+        return decided.value;
       },
     });
     /** Supervision's observer position for Resolution's lifecycle events. */
@@ -275,36 +399,14 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         notify(observers, Object.freeze({ kind: 'step', runId: context.runId, event }));
       },
     });
-    const resolution: IResolution = runOptions.resolution(Object.freeze({ admission, observer }));
-
-    /** Reject new work once the run has closed. */
-    function requireOpen(): void {
-      if (!frame.open) {
-        throw new SupervisionError('run-closed', `Run ${context.runId} has closed and accepts no new work`);
-      }
-    }
-
-    /**
-     * Operations started through this run that have not settled. The run
-     * stays live until this set is empty after its body settled.
-     */
-    const started = new Set<Promise<unknown>>();
+    const resolution: IResolution = runOptions.resolution(Object.freeze({ admission, observer, execution: supervisedExecution(state, enter), window }));
 
     /**
      * Run an operation inside this run's scope, after checking it is still
      * open, and account for it until it settles.
      */
     function within<TResult>(operation: () => TResult | Promise<TResult>): Promise<TResult> {
-      try {
-        requireOpen();
-      } catch (error: unknown) {
-        return Promise.reject(error);
-      }
-      const pending = scope.run(frame, async () => operation());
-      const settled = pending.then(() => undefined, () => undefined);
-      started.add(settled);
-      void settled.then(() => started.delete(settled));
-      return pending;
+      return state.track(() => scope.run(frame, async () => operation()));
     }
 
     /**
@@ -312,13 +414,15 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
      * has settled, then close the run in the same synchronous turn that
      * observes no started work. Closing there, rather than after yielding back
      * to the caller, leaves no window in which a queued call could be accepted
-     * yet not waited for: every later call is rejected as new work.
+     * yet not waited for: every later call is rejected as new work. Stop
+     * intent is no longer observed once the run has closed.
      */
     async function drainAndClose(): Promise<void> {
       while (started.size > 0) {
         await Promise.all([...started]);
       }
-      frame.open = false;
+      state.open = false;
+      unsubscribe();
     }
 
     /** Offer a post-work ordinary event; a failure there is a diagnostic. */
@@ -333,7 +437,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     const live: IRun = Object.freeze({
       context,
       get open(): boolean {
-        return frame.open;
+        return state.open;
       },
       resolve(step: IBindingDescriptor, request: IRequestOptions): Promise<IResolutionOutcome> {
         return within(async () => {
@@ -386,19 +490,28 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     });
 
     let value: Awaited<T>;
+    /** The stop intent in force when the run closed. */
+    let closingStop: IStopState = controller.state;
     try {
       value = await scope.run(frame, async () => body(live));
     } finally {
       // The body's outcome is kept; work it already started still belongs to the run.
       await drainAndClose();
+      closingStop = controller.state;
       try {
         writer.release();
       } catch (error: unknown) {
         diagnostics.push(`Run ${context.runId} could not release its writer: ${describe(error)}`);
       }
     }
-    return Object.freeze({ context, value, diagnostics: Object.freeze([...diagnostics]) });
+    return Object.freeze({
+      context,
+      value,
+      diagnostics: Object.freeze([...diagnostics]),
+      stop: closingStop,
+      interruptions: Object.freeze([...state.interruptions]),
+    });
   }
 
-  return Object.freeze({ current, run });
+  return Object.freeze({ current, execution, run });
 }

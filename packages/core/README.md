@@ -39,7 +39,17 @@ composes the owners and adds no policy of its own:
   each member's typed outcome and the fold's outcome with coverage), the
   recovery entry operation `recover(step, { requestKey })`, `check(step)`,
   observed nonmemoized `ordinary(label, work)`, and exact `read(reference)`.
+  A run's options may also carry an operator stop controller (`stop`), its
+  permit pool size (`permits`, default 1) and fan-out window (`window`,
+  default `permits`).
 - `currentRun()`: the live run's context, looked up without a parameter.
+- `createStopController()`: operator stop intent with deadlines on Node's
+  timer. A soft stop admits no new work and drains admitted steps, with no
+  default deadline; a deadline or a hard stop aborts sends, permit waits and
+  waits for a time, and discards uncommitted output.
+- `currentExecution()`: the live run's execution controls, looked up without
+  a parameter: its stop intent and abort signal, permit-guarded `send` and
+  stop-aware `sleepUntil`, attributed to the admitted step running there.
 
 The alpha view names the owners' contracts through facade-local aliases, so a
 consumer imports only `microdelta`: for example `IMemberBuilder`,

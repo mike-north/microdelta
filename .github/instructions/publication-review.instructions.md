@@ -1,5 +1,5 @@
 ---
-applyTo: "experiments/exp-3/**,experiments/exp-7/**,packages/history/**,docs/spec/execution.md,docs/formal-review.md"
+applyTo: "experiments/exp-3/**,experiments/exp-7/**,packages/history/**,packages/core/test/concurrency/**,docs/spec/execution.md,docs/formal-review.md"
 ---
 
 # Publication model alignment review
@@ -28,8 +28,16 @@ Perform two comparisons for affected invariants:
    Check recovery before commit, after commit and before acknowledgment.
 2. **Model to tests:** inspect actual assertions, not just test names. Find
    executable cases for the affected invariant and its known-bad
-   configuration's counterexample, and the matching mutation control in
-   `packages/core/test/concurrency/controls`. Check state after rejection/rollback and after process
+   configuration's counterexample, and the matching code mutation control:
+   - every `WriterLease.tla` fault, and `Publication.tla`'s
+     `abandon-completed` and `accept-moves-current`, has a control in
+     `packages/core/test/concurrency/controls/controls.mjs`, run by
+     `concurrency-mutation-controls.mjs`;
+   - `Publication.tla`'s `omit-publish-fence` has its control ("publication
+     ignores the fence") in
+     `packages/core/test/durable-history/controls/history-mutation-controls.mjs`;
+     the concurrency holder-guard fence control covers the same guard for
+     every operation. Check state after rejection/rollback and after process
    restart, and completed-key retry's reference and body-call count. Confirm
    relevant tests run through the repository's ordinary CI commands.
 

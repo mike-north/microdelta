@@ -72,4 +72,14 @@ export type ISqliteSynchronousResult<T> = 0 extends 1 & T ? unknown : [Extract<T
 // @alpha
 export type ISqliteValue = string | number | null | Uint8Array;
 
+// @alpha
+export interface ITimerCapability extends IClockCapability {
+    schedule(epochMilliseconds: number, callback: () => void, options?: ITimerOptions): () => void;
+}
+
+// @alpha
+export interface ITimerOptions {
+    readonly keepAlive?: boolean;
+}
+
 ```

@@ -59,9 +59,10 @@ export interface ISha256Capability {
 /**
  * The host contract aggregates the capabilities selected by current runtime
  * consumers. Assembly supplies the adapter; canonical meaning remains owned by
- * Value Semantics and other context contracts. Durable SQLite storage and the
- * clock are separate capabilities, injected only where a consumer needs them,
- * so existing Machine consumers and test hosts are unaffected by them.
+ * Value Semantics and other context contracts. Durable SQLite storage, the
+ * clock and the timer are separate capabilities, injected only where a
+ * consumer needs them, so existing Machine consumers and test hosts are
+ * unaffected by them.
  * @alpha
  */
 export interface IMachine extends IAsyncContextCapability, ISnapshotCapability, ISha256Capability {}
@@ -200,4 +201,42 @@ export interface ISqliteCapability {
 export interface IClockCapability {
   /** Return the current UTC epoch time in whole milliseconds, or throw if the host cannot provide one. */
   currentEpochMilliseconds(): number;
+}
+
+/**
+ * Options of one scheduled timer.
+ * @alpha
+ */
+export interface ITimerOptions {
+  /**
+   * Whether the pending timer by itself keeps the host alive. Defaults to
+   * true, so a waiting run does not end merely because nothing else is
+   * pending. A deadline that must never prolong the host's life passes false:
+   * it still fires on time whenever other work keeps the host running.
+   */
+  readonly keepAlive?: boolean;
+}
+
+/**
+ * Schedules a callback for a future wall-clock time, measured by the same
+ * whole-millisecond UTC epoch readings as {@link IClockCapability}. It exists
+ * so contexts can wait for a time (a stop deadline, a "not before T" wait)
+ * without reading host timers themselves, and so tests can substitute a
+ * controlled implementation.
+ *
+ * A scheduled callback runs at most once, never synchronously inside
+ * `schedule`, and only after a clock reading at or after the requested time:
+ * a host timer that fires early, or a clock that moved backwards, re-arms
+ * rather than firing. A time already reached fires as soon as the host
+ * allows. Waits longer than the host's own timer range are supported.
+ * @alpha
+ */
+export interface ITimerCapability extends IClockCapability {
+  /**
+   * Call `callback` once when the clock first reads at or after
+   * `epochMilliseconds`. Returns a function that cancels the pending call;
+   * cancelling after the call ran, or twice, does nothing. Throws a
+   * `RangeError` for a time that is not a safe integer of epoch milliseconds.
+   */
+  schedule(epochMilliseconds: number, callback: () => void, options?: ITimerOptions): () => void;
 }

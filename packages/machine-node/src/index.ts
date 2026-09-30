@@ -1,15 +1,16 @@
 /**
  * Node's implementation of the portable Machine host contracts. Durable SQLite
- * storage and the wall clock are separate factories so assembly injects them
- * only into the consumers that need them, leaving {@link createNodeMachine}
- * and its existing consumers unchanged.
+ * storage, the wall clock and the timer are separate factories so assembly
+ * injects them only into the consumers that need them, leaving
+ * {@link createNodeMachine} and its existing consumers unchanged.
  * @packageDocumentation
  */
-import type { IClockCapability, IMachine, ISqliteCapability } from '@microdelta/machine';
+import type { IClockCapability, IMachine, ISqliteCapability, ITimerCapability } from '@microdelta/machine';
 
 import { _createNodeClockImplementation } from './node/clock.js';
 import { _createNodeMachineImplementation } from './node/index.js';
 import { _createNodeSqliteImplementation } from './node/sqlite.js';
+import { _createNodeTimerImplementation } from './node/timer.js';
 
 /**
  * Create the Node adapter selected by application assembly. Each call returns
@@ -37,4 +38,13 @@ export function createNodeSqlite(): ISqliteCapability {
  */
 export function createNodeClock(): IClockCapability {
   return _createNodeClockImplementation();
+}
+
+/**
+ * Create Node's timer: the wall clock plus one-shot callbacks scheduled for a
+ * wall-clock time, re-armed rather than fired early, over any wait length.
+ * @alpha
+ */
+export function createNodeTimer(): ITimerCapability {
+  return _createNodeTimerImplementation();
 }

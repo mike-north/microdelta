@@ -246,6 +246,7 @@ root:
 mkdir -p scratch/tla-toolchain
 # place tla2tools.jar and an unpacked Temurin 17 JDK in scratch/tla-toolchain, then:
 shasum -a 256 scratch/tla-toolchain/tla2tools.jar
+# JAVA is relative to the repository root (the runs below prefix ../../).
 # The JDK tarball's layout differs by platform. macOS:
 JAVA=scratch/tla-toolchain/jdk-17.0.20.1+1/Contents/Home/bin/java
 # Linux instead: JAVA=scratch/tla-toolchain/jdk-17.0.20.1+1/bin/java

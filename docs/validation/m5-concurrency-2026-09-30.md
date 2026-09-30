@@ -72,7 +72,8 @@ models or tests it.
 - Nothing was installed system-wide. The JDK, jar, TLC state databases
   (`-metadir`) and logs lived in the repository's gitignored `scratch/`.
 
-Every run used one worker, with `JAVA` set to the JDK's `java`:
+Every run used one worker, with `JAVA` set to the JDK's `java` as a path
+relative to the repository root:
 
 - macOS layout: `scratch/tla-toolchain/jdk-17.0.20.1+1/Contents/Home/bin/java`;
 - Linux layout: `scratch/tla-toolchain/jdk-17.0.20.1+1/bin/java`.
@@ -133,7 +134,8 @@ distinct, depth 24 in 2 min 5 s.
 ### TLC results
 
 The final run of every configuration was the README's reproduction block run
-verbatim with `sh` (`scratch/readme-repro2.log`). `WriterLease.cfg` uses two
+verbatim with `sh`. Its log was local and is not committed; the counts below
+reproduce from that block. `WriterLease.cfg` uses two
 processes, two holder names, fences 0–3, host readings 0–3 and lease length 2.
 `Publication.cfg` keeps the EXP-7 bounds.
 

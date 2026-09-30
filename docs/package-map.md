@@ -12,7 +12,7 @@ delivery are separate gates recorded in the [M2 evidence record](validation/m2-2
 | Author facade / assembly | `microdelta` (`packages/core`) | Supplies the Node Machine to History's memory factory; preserves `createMemoryStore(options?)` and exports the existing Store errors, types, and Jest conformance entry. Its project-private alpha workspace path composes the owners: `authoring()` builders bound to Resolution's family, `openWorkspace` over durable History with Node SQLite and clock, supervised runs with the normal (`resolve`) and recovery (`recover`) entry operations, `check`, ordinary work and exact reads, and `currentRun()` context lookup | Composition may consume approved owner contracts and `@microdelta/machine-node`; contexts cannot import through the facade |
 | Definition & Binding | `@microdelta/definition` | Project-private alpha family-bound builders: frozen source/memo declarations with complete subjects and versions, the fixed M3 composition (memo to sibling source per explicit member), exact structural correspondence with distinct missing/ambiguous outcomes, direct-child witness reconnection, and an invocation bridge that hands actual author callbacks to an injected invoker and dispatches argument-free declared handles through an injected port; the topology's declared input and callable slot names, the read-only `isComposing()` composition-phase query, plus label-only `nameOf` | Value Semantics |
 | Tracking & Observation | `@microdelta/tracking` | Process-local tags, frames, cells, and derivations plus project-private `createTrackingObserver(host)` alpha contracts for detached supported wrappers, consumed semantic facts, called-function implementation evidence, current-fact comparison, and cached evidence replay | Value Semantics and `@microdelta/machine` |
-| Result History & Publication | `@microdelta/history` | Existing row Store contract and compatibility row schema; memory adapter receives a snapshot capability; alpha exact completed-result selection and fingerprint-reading ports; project-private alpha durable SQLite authority (`openDurableHistory`) over injected SQLite, clock and SHA-256 capabilities, owning the writer lease, attempts, atomic publication, current pointers, immutable results with a generated selected index, and acceptance records | Value Semantics; `@microdelta/machine` |
+| Result History & Publication | `@microdelta/history` | Existing row Store contract and compatibility row schema; memory adapter receives a snapshot capability; alpha exact completed-result selection and fingerprint-reading ports; project-private alpha durable SQLite authority (`openDurableHistory`) over injected SQLite, clock and SHA-256 capabilities, owning the writer lease, attempts, atomic publication, current pointers, immutable results with a generated selected index, environment-scoped acceptance records, recorded promotions between environments, and Run Supervision's fenced operation journal of opaque versioned records | Value Semantics; `@microdelta/machine` |
 | Reuse Resolution | `@microdelta/resolution` | Project-private alpha `createResolution`: candidate lookup by scoped subject and version, own implementation/input/helper validation, current finality and explicit-retention source policy, direct-child witness reconnection with consumed-output comparison, admission before claims, check-only evaluation, request-key attempt identity with complete intent digests and no-execution recovery over History's durable authority; plus its binding family and minted source outcome envelopes | Definition, Tracking, History, Materialization |
 | Run Supervision | `@microdelta/supervision` | Project-private alpha `createSupervision({ context })` over a structurally injected async-scope capability: scoped runs with volatile run id, analysis and selected environment; `current()` lookup failing outside a live run, after close and during composition; lazy writer-lease use for normal requests only; the caller's admission policy; observe-only observers at the fixed `stepLifecycle` and `ordinaryLifecycle` positions; ordinary nonmemoized work. Retry, cancellation, scheduling and fanout breadth remain unimplemented | Definition, Resolution, Accounting |
 | Resource Accounting | No package yet | Observation and acknowledgment ports remain unimplemented | None |
@@ -33,9 +33,16 @@ History's durable authority is a separate alpha entry beside the unchanged
 row Store: the facade does not export it and the public Store API is unchanged.
 It stores Resolution provenance and acceptance evidence as versioned opaque
 records and validates their exact dependency references, without importing
-Definition or Tracking. Its real-SQLite and independent-process evidence runs
-in the facade's assembly tests (`packages/core/test/durable-history`), because
-only assembly may compose History with the Node adapter.
+Definition or Tracking. Environments are namespaces within one store
+(RUN-017): attempts, heads, candidates, acceptances and journal records of one
+environment never satisfy another, except results that a recorded, fenced
+promotion admits. Run Supervision's operation and deferral records are stored
+through the same authority's operation journal, as opaque versioned records
+with compare-and-set revisions under writer fencing; History never interprets
+them. Its real-SQLite and independent-process evidence runs in the facade's
+assembly tests (`packages/core/test/durable-history` and
+`packages/core/test/journal`), because only assembly may compose History with
+the Node adapter.
 
 Reuse Resolution is History's first consumer. It records its provenance,
 acceptance and attempt-ending evidence in its own versioned formats, and its

@@ -34,19 +34,22 @@ export interface IWorkerLaunch {
  * One History operation the parent asks a worker to perform. `at` is the
  * controlled clock reading for that operation; read-only commands carry none,
  * and the worker makes its clock fail while they run, so a read that consulted
- * or persisted time would be refused. `notBefore` (host epoch milliseconds)
- * holds the command until that instant, which lines up several workers.
+ * or persisted time would be refused. `notBefore`, on the host monotonic clock
+ * ({@link hostMonotonicMilliseconds}), holds the command until that instant,
+ * which lines up several workers.
  * Attempts are named by a caller key; the worker maps keys to the attempt
- * identities it was given.
+ * identities it was given. Stage, publish and abandon may instead name an
+ * explicit `attemptId`, such as an attempt another process allocated, so a
+ * stale worker can act on another holder's attempt.
  */
 export type IHarnessCommand = (
   | { readonly op: 'acquire'; readonly at: number; readonly holder: string; readonly leaseMilliseconds: number }
   | { readonly op: 'renew'; readonly at: number; readonly leaseMilliseconds: number }
   | { readonly op: 'release'; readonly at: number }
   | { readonly op: 'allocate'; readonly at: number; readonly key: string }
-  | { readonly op: 'stage'; readonly at: number; readonly key: string; readonly label: string }
-  | { readonly op: 'publish'; readonly at: number; readonly key: string }
-  | { readonly op: 'abandon'; readonly at: number; readonly key: string }
+  | { readonly op: 'stage'; readonly at: number; readonly key: string; readonly label: string; readonly attemptId?: number }
+  | { readonly op: 'publish'; readonly at: number; readonly key: string; readonly attemptId?: number }
+  | { readonly op: 'abandon'; readonly at: number; readonly key: string; readonly attemptId?: number }
   | { readonly op: 'accept'; readonly at: number; readonly locator: string }
   | { readonly op: 'recover'; readonly key: string }
   | { readonly op: 'inspect' }
@@ -60,12 +63,27 @@ export type IHarnessCommand = (
 export type IHarnessOperation = IHarnessCommand['op'];
 
 /**
- * A worker's answer to one command: the operation's JSON value, or the
- * class name and message of what it threw.
+ * When a worker ran one command, on the host monotonic clock
+ * ({@link hostMonotonicMilliseconds}): from just after any `notBefore` barrier
+ * released it until the History call returned or threw. Every process reads
+ * the same system-wide clock, so intervals from different workers can be
+ * compared to show whether their operations overlapped.
  */
-export type IHarnessReply =
+export interface IStepTiming {
+  /** When the operation began. */
+  readonly startedAt: number;
+  /** When the operation finished. */
+  readonly endedAt: number;
+}
+
+/**
+ * A worker's answer to one command: the operation's JSON value, or the
+ * class name and message of what it threw, with when it ran.
+ */
+export type IHarnessReply = IStepTiming & (
   | { readonly ok: true; readonly value: unknown }
-  | { readonly ok: false; readonly error: string; readonly message: string };
+  | { readonly ok: false; readonly error: string; readonly message: string }
+);
 
 /**
  * One event of a free-running contention loop (`contend`), in the order the
@@ -83,6 +101,18 @@ export interface IContentionEvent {
   readonly heldBy?: string;
   /** For a refusal, the thrown class name. */
   readonly error?: string;
+}
+
+/**
+ * The host's system-wide monotonic clock in milliseconds with sub-millisecond
+ * resolution (`process.hrtime`, backed by `mach_absolute_time` on macOS and
+ * `CLOCK_MONOTONIC` on Linux). Unlike `performance.timeOrigin`, which each
+ * process fixes at its own start, every process on the host reads the same
+ * value, so barrier instants and step intervals compare across workers. It is
+ * unrelated to History's wall clock and never reaches History.
+ */
+export function hostMonotonicMilliseconds(): number {
+  return Number(process.hrtime.bigint()) / 1_000_000;
 }
 
 /** Whether a value is a non-null, non-array object. */
@@ -125,6 +155,12 @@ export function parseLaunch(value: unknown): IWorkerLaunch {
   return { location: stringField(value, 'location'), store: stringField(value, 'store'), clock };
 }
 
+/** Read an optional explicit attempt identity. */
+function withAttempt<T extends object>(command: T, record: Readonly<Record<string, unknown>>): T & { readonly attemptId?: number } {
+  const attemptId = optionalNumber(record, 'attemptId');
+  return attemptId === undefined ? command : { ...command, attemptId };
+}
+
 /** Attach the optional barrier to a parsed command. */
 function withBarrier<T extends object>(command: T, notBefore: number | undefined): T & { readonly notBefore?: number } {
   return notBefore === undefined ? command : { ...command, notBefore };
@@ -145,11 +181,12 @@ export function parseCommand(value: unknown): IHarnessCommand {
     case 'release':
       return withBarrier({ op, at: numberField(value, 'at') }, notBefore);
     case 'allocate':
+      return withBarrier({ op, at: numberField(value, 'at'), key: stringField(value, 'key') }, notBefore);
     case 'publish':
     case 'abandon':
-      return withBarrier({ op, at: numberField(value, 'at'), key: stringField(value, 'key') }, notBefore);
+      return withBarrier(withAttempt({ op, at: numberField(value, 'at'), key: stringField(value, 'key') }, value), notBefore);
     case 'stage':
-      return withBarrier({ op, at: numberField(value, 'at'), key: stringField(value, 'key'), label: stringField(value, 'label') }, notBefore);
+      return withBarrier(withAttempt({ op, at: numberField(value, 'at'), key: stringField(value, 'key'), label: stringField(value, 'label') }, value), notBefore);
     case 'accept':
       return withBarrier({ op, at: numberField(value, 'at'), locator: stringField(value, 'locator') }, notBefore);
     case 'recover':
@@ -173,7 +210,10 @@ export function parseReply(value: unknown): IHarnessReply {
   if (!isRecord(value) || typeof value.ok !== 'boolean') {
     throw new TypeError(`malformed worker reply ${JSON.stringify(value)}`);
   }
-  return value.ok ? { ok: true, value: value.value } : { ok: false, error: stringField(value, 'error'), message: stringField(value, 'message') };
+  const timing = { startedAt: numberField(value, 'startedAt'), endedAt: numberField(value, 'endedAt') };
+  return value.ok
+    ? { ...timing, ok: true, value: value.value }
+    : { ...timing, ok: false, error: stringField(value, 'error'), message: stringField(value, 'message') };
 }
 
 /** Narrow a lease value. */

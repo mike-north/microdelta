@@ -23,7 +23,7 @@ import { createNodeClock } from '@microdelta/machine-node';
 
 import { controlledClock, observedSqlite, openHistory } from '../durable-history/support.js';
 import { attemptRequest, evidence, labelAddress, lastPartAddress, payload, provenance, subject } from './fixture.js';
-import { parseCommand, parseLaunch } from './protocol.js';
+import { hostMonotonicMilliseconds, parseCommand, parseLaunch } from './protocol.js';
 import type { IContentionEvent, IHarnessCommand, IHarnessReply } from './protocol.js';
 
 const encoded = process.argv[2];
@@ -49,10 +49,22 @@ function sleep(milliseconds: number): void {
   Atomics.wait(sleeper, 0, 0, milliseconds);
 }
 
-/** Block until the host clock reaches `epochMilliseconds`. */
-function waitUntil(epochMilliseconds: number): void {
-  for (let remaining = epochMilliseconds - Date.now(); remaining > 0; remaining = epochMilliseconds - Date.now()) {
-    sleep(Math.min(remaining, 5));
+/** The shared host monotonic clock the barrier and step timings use. */
+const hostNow = hostMonotonicMilliseconds;
+
+/**
+ * Block until the host monotonic clock reaches `instant`: sleep while more
+ * than the spin window remains, then spin, so workers released by one
+ * barrier start close together. The window is wide because a timed sleep can
+ * overshoot by milliseconds when the host coalesces timers.
+ */
+function waitUntil(instant: number): void {
+  const spinWindow = 10;
+  for (let remaining = instant - hostNow(); remaining > spinWindow; remaining = instant - hostNow()) {
+    sleep(remaining - spinWindow);
+  }
+  while (hostNow() < instant) {
+    // Spin for the final instant; sleeping here would blur the release.
   }
 }
 
@@ -85,9 +97,9 @@ function allocate(key: string): IAttemptRecord {
   return attempt;
 }
 
-/** Stage the labelled payload for `key`. */
-function stage(key: string, label: string): IAttemptRecord {
-  return history.stageAttempt(requireLease(), { attemptId: requireAttempt(key), payload: payload(label), provenance: provenance(label), dependencies: [] });
+/** Stage the labelled payload for the attempt this worker allocated under `key`, or for an explicitly named attempt. */
+function stage(key: string, label: string, attemptId: number = requireAttempt(key)): IAttemptRecord {
+  return history.stageAttempt(requireLease(), { attemptId, payload: payload(label), provenance: provenance(label), dependencies: [] });
 }
 
 /** Record one step of the contention loop: accepted, or refused with its class name. */
@@ -166,13 +178,13 @@ function perform(command: IHarnessCommand): unknown {
       return summarize(allocate(command.key));
     case 'stage':
       controlled.set(command.at);
-      return summarize(stage(command.key, command.label));
+      return summarize(stage(command.key, command.label, command.attemptId ?? requireAttempt(command.key)));
     case 'publish':
       controlled.set(command.at);
-      return history.publishAttempt(requireLease(), requireAttempt(command.key));
+      return history.publishAttempt(requireLease(), command.attemptId ?? requireAttempt(command.key));
     case 'abandon':
       controlled.set(command.at);
-      return summarize(history.abandonAttempt(requireLease(), { attemptId: requireAttempt(command.key), outcome: 'interrupted', evidence: evidence('abandoned') }));
+      return summarize(history.abandonAttempt(requireLease(), { attemptId: command.attemptId ?? requireAttempt(command.key), outcome: 'interrupted', evidence: evidence('abandoned') }));
     case 'accept': {
       controlled.set(command.at);
       const record = history.recordAcceptance(requireLease(), { reference: { kind: 'completed-result', locator: command.locator }, evidence: evidence('accepted'), dependencies: [] });
@@ -227,16 +239,20 @@ process.on('message', (message: unknown) => {
   try {
     command = parseCommand(message);
   } catch (error: unknown) {
-    reply({ ok: false, error: 'HarnessProtocolError', message: error instanceof Error ? error.message : String(error) }, false);
+    const now = hostNow();
+    reply({ ok: false, error: 'HarnessProtocolError', message: error instanceof Error ? error.message : String(error), startedAt: now, endedAt: now }, false);
     return;
   }
   if (command.notBefore !== undefined) {
     waitUntil(command.notBefore);
   }
+  const startedAt = hostNow();
   try {
-    reply({ ok: true, value: perform(command) }, command.op === 'close');
+    const value = perform(command);
+    reply({ ok: true, value, startedAt, endedAt: hostNow() }, command.op === 'close');
   } catch (error: unknown) {
-    reply({ ok: false, error: error instanceof Error ? error.name : 'unknown', message: error instanceof Error ? error.message : String(error) }, false);
+    const endedAt = hostNow();
+    reply({ ok: false, error: error instanceof Error ? error.name : 'unknown', message: error instanceof Error ? error.message : String(error), startedAt, endedAt }, false);
   }
 });
 

@@ -1,10 +1,10 @@
 /**
  * Behavioral discrimination controls for the M5 concurrency suites. Each
- * control in `controls.mjs` plants exactly one weakened writer guard into
+ * control in `controls.mjs` plants exactly one weakened guard into
  * History's emitted build, reruns the unchanged interleaving and contention
  * suites, and records which named tests fail; the emitted file is restored
  * afterwards and the restored build must pass every test. A control whose
- * anchor does not match exactly once, or that no test rejects, fails the run.
+ * anchors do not each match exactly once, or that no test rejects, fails the run.
  * Every Jest run is judged fail-closed by `control-outcome.mjs` against
  * exactly the two concurrency suites. The planted file is restored after each
  * control, on error and on SIGINT/SIGTERM/SIGHUP, and its final bytes are
@@ -21,7 +21,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { judgeRun } from '../../durable-history/controls/control-outcome.mjs';
-import { controls, repositoryRoot, suites, target } from './controls.mjs';
+import { controls, plant, repositoryRoot, suites, target } from './controls.mjs';
 
 const file = join(repositoryRoot, target);
 const core = join(repositoryRoot, 'packages/core');
@@ -78,16 +78,18 @@ try {
     throw new Error('the unmodified build must pass every test before controls run');
   }
   for (const control of controls) {
-    const count = original.split(control.anchor).length - 1;
-    if (count !== 1) {
-      console.log(`ANCHOR ${String(count)}x: ${control.name}`);
+    let planted;
+    try {
+      planted = plant(original, control);
+    } catch (error) {
+      console.log(`ANCHOR: ${error instanceof Error ? error.message : String(error)}`);
       failures += 1;
       continue;
     }
-    writeFileSync(file, original.replace(control.anchor, control.replacement));
+    writeFileSync(file, planted);
     try {
       const { failed } = await runSuites(baseline.titles);
-      console.log(`\n## ${control.name} (model fault ${control.fault}): ${String(failed.length)} failing`);
+      console.log(`\n## ${control.name} (${control.model} fault ${control.fault}): ${String(failed.length)} failing`);
       for (const name of failed) console.log(`- ${name}`);
       if (failed.length === 0) failures += 1;
     } finally {

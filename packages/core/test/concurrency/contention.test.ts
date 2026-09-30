@@ -1,11 +1,14 @@
 /**
- * Real simultaneous contention for History's single fenced writer (M5 exit,
+ * Real concurrent contention for History's single fenced writer (M5 exit,
  * PUB-002, PUB-005). Several Node processes hold open History handles on one
- * SQLite file and issue operations at the same instant, so SQLite's IMMEDIATE
- * transactions genuinely race. Assertions hold for every schedule: at most one
- * process holds authority at a time, each loser receives History's typed
- * refusal (`held` naming the holder, or `StaleWriterError`), and storage
- * receives writes in non-decreasing fence order, which is the fencing property
+ * SQLite file. A host-clock barrier releases their operations together, and
+ * each worker reports when its operation ran, so the suite asserts that some
+ * operations really overlapped inside History rather than assuming it; SQLite's
+ * IMMEDIATE transactions then serialize them. Assertions hold for every
+ * schedule: at most one process holds authority at a time, each loser
+ * receives History's typed refusal (`held` naming the holder, or
+ * `StaleWriterError`), and storage receives writes in non-decreasing fence
+ * order, which is the fencing property
  * `StorageSeesNonDecreasingFences` of `experiments/exp-7/WriterLease.tla`.
  *
  * The typed writer-busy error and the operator deadline of the owner's
@@ -21,10 +24,10 @@ import { afterEach, describe, expect, test } from '@jest/globals';
 import type { IWriterLease } from '@microdelta/history';
 
 import { cleanup } from '../durable-history/support.js';
-import { expectRefused, freshStore, heldFrom, leaseFrom, locatorFrom, reopenForReading, snapshot, startWorker, stopWorkers } from './driver.js';
-import type { IDurableState, IWorkerHandle } from './driver.js';
+import { expectRefused, freshStore, heldFrom, leaseFrom, locatorFrom, measureConcurrency, reopenForReading, snapshot, startWorker, stopWorkers } from './driver.js';
+import type { IConcurrencyMeasure, IDurableState, IWorkerHandle } from './driver.js';
 import { attemptRequest, concurrencyStore, subject } from './fixture.js';
-import { parseContentionLog } from './protocol.js';
+import { hostMonotonicMilliseconds, parseContentionLog } from './protocol.js';
 import type { IContentionEvent, IHarnessCommand, IHarnessReply } from './protocol.js';
 
 afterEach(async () => {
@@ -32,12 +35,12 @@ afterEach(async () => {
   cleanup();
 });
 
-/** Host epoch milliseconds shortly ahead, at which every worker starts the next command together. */
+/** An instant shortly ahead on the host monotonic clock, at which every worker starts the next command together. */
 function barrier(): number {
-  return Date.now() + 40;
+  return hostMonotonicMilliseconds() + 40;
 }
 
-/** Send one command to every worker for the same instant and collect the replies in worker order. */
+/** Release one command to every worker at a shared barrier instant and collect the replies in worker order. */
 async function together(workers: readonly IWorkerHandle[], command: (target: IWorkerHandle) => IHarnessCommand): Promise<readonly IHarnessReply[]> {
   const notBefore = barrier();
   return Promise.all(workers.map((target) => target.step({ ...command(target), notBefore })));
@@ -59,8 +62,8 @@ function expectFenceOrderedStorage(state: IDurableState): void {
   expect(published).toEqual([...published].sort((left, right) => left - right));
 }
 
-describe('simultaneous contention with a controlled clock (C1)', () => {
-  test('in every round exactly one of four simultaneous acquirers wins the next fence, every other one is told who holds it, and every stale lease is refused', async () => {
+describe('barrier-aligned contention with a controlled clock (C1)', () => {
+  test('in every round exactly one of four barrier-aligned acquirers wins the next fence, every other one is told who holds it, and every stale lease is refused', async () => {
     const location = freshStore();
     const workers = await Promise.all(['W0', 'W1', 'W2', 'W3'].map((name) => startWorker(name, { location, store: concurrencyStore, clock: 'controlled' })));
     const leases = new Map<string, IWriterLease>();
@@ -68,10 +71,13 @@ describe('simultaneous contention with a controlled clock (C1)', () => {
     const pending = new Map<string, string>();
     const rounds = 10;
     const leaseMilliseconds = 400;
+    // Per round, how the four barrier-aligned acquisitions related in host time.
+    const measures: IConcurrencyMeasure[] = [];
     for (let round = 1; round <= rounds; round += 1) {
       // Every previous lease has expired by this round's reading.
       const at = round * 1_000;
       const acquisitions = await together(workers, (target) => ({ op: 'acquire', at, holder: `contender-${target.name}`, leaseMilliseconds }));
+      measures.push(measureConcurrency(acquisitions));
       const outcomes = workers.map((target, index) => ({ target, value: valueOf(target, acquisitions[index]) }));
       const winners = outcomes.filter(({ value }) => typeof value === 'object' && value !== null && Reflect.get(value, 'kind') === 'acquired');
       expect(winners).toHaveLength(1);
@@ -87,7 +93,7 @@ describe('simultaneous contention with a controlled clock (C1)', () => {
       }
       leases.set(winner.target.name, granted);
 
-      // Every process holding any lease object mutates at the same instant; only the winner may.
+      // Every process holding any lease object mutates at the next barrier; only the winner may.
       const holders = workers.filter((target) => leases.has(target.name));
       const attempts = await together(holders, (target) => target === winner.target
         ? { op: 'allocate', at: at + 1, key: `round-${String(round)}` }
@@ -112,6 +118,10 @@ describe('simultaneous contention with a controlled clock (C1)', () => {
       pending.set(winner.target.name, left);
     }
     await Promise.all(workers.map((target) => target.close()));
+    // The acquisitions really ran at once: in at least one round two of them
+    // were inside History at the same time, which the serialized SQLite writer
+    // then ordered.
+    expect(measures.some((measure) => measure.overlap > 0)).toBe(true);
 
     const state = snapshot(location);
     expectFenceOrderedStorage(state);
@@ -136,6 +146,9 @@ describe('free-running contention with the host clock (C2)', () => {
     const workers = await Promise.all(names.map((name) => startWorker(name, { location, store: concurrencyStore, clock: 'host' })));
     const replies = await together(workers, (target) => ({ op: 'contend', holder: `free-${target.name}`, durationMilliseconds: 1_500, leaseMilliseconds: 150 }));
     const logs = workers.map((target, index) => ({ holder: `free-${target.name}`, log: parseContentionLog(valueOf(target, replies[index])) }));
+    // The four loops ran concurrently for most of their 1.5 s rather than one after another.
+    const loops = measureConcurrency(replies);
+    expect(loops.overlap).toBeGreaterThan(1_000);
     await Promise.all(workers.map((target) => target.close()));
 
     const grants = logs.flatMap(({ holder, log }) => log.filter((event) => event.op === 'acquire' && event.ok).map((event) => ({ holder, fence: event.fence })));

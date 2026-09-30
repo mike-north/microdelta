@@ -89,7 +89,7 @@ export function startWorker(name: string, launch: IWorkerLaunch): Promise<IWorke
       const waiting = ready;
       ready = undefined;
       if (isRecord(message) && message.ready === true) {
-        waiting.resolve({ ok: true, value: null });
+        waiting.resolve({ ok: true, value: null, startedAt: 0, endedAt: 0 });
       } else {
         waiting.reject(new Error(`worker ${name} did not start: ${JSON.stringify(message)}`));
       }
@@ -267,8 +267,8 @@ export function authorityOf(state: IDurableState): Omit<IDurableState, 'timeHigh
 /**
  * Create an initialized, empty store in a fresh temporary file and return its
  * location. Workers then open an existing store: several processes creating
- * one new file at the same instant is a separate case, reproduced by
- * `store-open.test.ts`.
+ * one new file at the same instant is a separate concern of the Node SQLite
+ * capability (issue #113), outside these suites.
  */
 export function freshStore(): string {
   const location = freshLocation();
@@ -281,9 +281,38 @@ export function reopenForReading(location: string, at: number): IDurableHistory 
   return openHistory({ location, clock: controlledClock(at), store: concurrencyStore });
 }
 
-/** Require a refusal of the given History class. */
-export function expectRefused(reply: IHarnessReply, errorName: string): void {
+/**
+ * Require a refusal of the given History class. When `message` is given, the
+ * refusal's message must match it, which pins which branch of a guard refused
+ * (for example a stale fence versus an expired lease).
+ */
+export function expectRefused(reply: IHarnessReply, errorName: string, message?: RegExp): void {
   expect(reply.ok ? { ok: true, value: reply.value } : { ok: false, error: reply.error }).toEqual({ ok: false, error: errorName });
+  if (message !== undefined && !reply.ok) {
+    expect(reply.message).toMatch(message);
+  }
+}
+
+/**
+ * How several workers' runs of one barrier command related in host time:
+ * `skew` is the spread of their start times; `overlap` is the longest time
+ * during which at least two of them were running at once (0 if none were).
+ */
+export interface IConcurrencyMeasure {
+  readonly skew: number;
+  readonly overlap: number;
+}
+
+/** Measure start skew and pairwise overlap of barrier-aligned step intervals. */
+export function measureConcurrency(intervals: readonly { readonly startedAt: number; readonly endedAt: number }[]): IConcurrencyMeasure {
+  const starts = intervals.map((interval) => interval.startedAt);
+  let overlap = 0;
+  intervals.forEach((left, index) => {
+    for (const right of intervals.slice(index + 1)) {
+      overlap = Math.max(overlap, Math.min(left.endedAt, right.endedAt) - Math.max(left.startedAt, right.startedAt));
+    }
+  });
+  return { skew: Math.max(...starts) - Math.min(...starts), overlap: Math.max(0, overlap) };
 }
 
 /** The lease of an `acquired` outcome, or a renewed lease. */

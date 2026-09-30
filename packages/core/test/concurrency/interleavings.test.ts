@@ -120,6 +120,26 @@ function staleCommand(operation: IStaleOperation, at: number, seed: string): IHa
   }
 }
 
+/** The three lease-guarded mutations a stale A can aim at B's own staged attempt. */
+const successorAttemptOperations = ['stage', 'publish', 'abandon'] as const;
+type ISuccessorAttemptOperation = (typeof successorAttemptOperations)[number];
+
+/** The command a stale A sends against B's staged `b-work`, named by B's attempt identity. */
+function onBehalfCommand(operation: ISuccessorAttemptOperation, at: number, attemptId: number): IHarnessCommand {
+  switch (operation) {
+    case 'stage':
+      return { op: 'stage', at, key: 'b-work', label: 'forged', attemptId };
+    case 'publish':
+      return { op: 'publish', at, key: 'b-work', attemptId };
+    case 'abandon':
+      return { op: 'abandon', at, key: 'b-work', attemptId };
+    default: {
+      const exhaustive: never = operation;
+      return exhaustive;
+    }
+  }
+}
+
 /**
  * How the successor B comes to hold the writer while A keeps its lease
  * object. A's lease is 100 ms from 1 000, so it expires at 1 100.
@@ -138,61 +158,137 @@ interface ITakeover {
 }
 
 const takeovers: readonly ITakeover[] = [
-  { name: 'B takes over the expired lease under another holder name', holders: ['worker-a', 'worker-b'], releaseFirst: false, takeoverAt: 1_150, staleAt: 1_160 },
-  { name: 'B takes over the expired lease under the same holder name', holders: ['shared-holder', 'shared-holder'], releaseFirst: false, takeoverAt: 1_150, staleAt: 1_160 },
-  { name: 'B acquires under the same name after A releases, while A’s expiry is still ahead', holders: ['shared-holder', 'shared-holder'], releaseFirst: true, takeoverAt: 1_030, staleAt: 1_040 },
-  { name: 'B takes over after a forward clock jump and A acts at a regressed reading before its expiry', holders: ['shared-holder', 'shared-holder'], releaseFirst: false, takeoverAt: 50_000, staleAt: 1_050 },
+  { name: 'T1 B takes over the expired lease under another holder name', holders: ['worker-a', 'worker-b'], releaseFirst: false, takeoverAt: 1_150, staleAt: 1_160 },
+  { name: 'T2 B takes over the expired lease under the same holder name', holders: ['shared-holder', 'shared-holder'], releaseFirst: false, takeoverAt: 1_150, staleAt: 1_160 },
+  { name: 'T3 B acquires under the same name after A releases, while A’s expiry is still ahead', holders: ['shared-holder', 'shared-holder'], releaseFirst: true, takeoverAt: 1_030, staleAt: 1_040 },
+  { name: 'T4 B takes over after a forward clock jump and A acts at a regressed reading before its expiry', holders: ['shared-holder', 'shared-holder'], releaseFirst: false, takeoverAt: 50_000, staleAt: 1_050 },
 ];
+
+/**
+ * T0: A's lease has expired but no successor has acquired yet, so the
+ * durable holder and fence still match A's lease and only the guard's expiry
+ * branch can refuse it. B takes over afterwards.
+ */
+const expiredBeforeTakeover: ITakeover = { name: 'T0 A acts after its lease expired, before any successor acquires', holders: ['worker-a', 'worker-b'], releaseFirst: false, takeoverAt: 1_170, staleAt: 1_160 };
 
 /** How far B's own work has progressed when A presents its stale lease. */
 const positions = ['after B acquires', 'after B stages', 'after B publishes'] as const;
+type IPosition = 'before B acquires' | (typeof positions)[number];
 
-/** The enumerated cases: every takeover, stale operation and position. */
-const staleCases = takeovers.flatMap((takeover) =>
+/** What a refused stale operation's message must say: which branch of the holder guard refused it. */
+const notCurrentHolder = /is not the current holder/u;
+const expiredLease = /expired at 1100$/u;
+
+/** One stale-holder scenario: a takeover, when A acts, and the command A sends. */
+interface IStaleScenario {
+  readonly takeover: ITakeover;
+  readonly position: IPosition;
+  /** A's command, given the seed's locator and B's staged attempt identity once B has one. */
+  readonly command: (seed: string, successorAttempt: number | undefined) => IHarnessCommand;
+  /** The refusal branch the message must name. */
+  readonly refusal: RegExp;
+}
+
+/**
+ * Run one stale-holder scenario across two worker processes. A does its
+ * legitimate work and loses authority; B takes over and works up to the
+ * chosen position; A presents its own stale lease object. The refusal must
+ * be typed, name the expected guard branch and change no compared durable row
+ * but the high-water; B must then finish, publish and renew under its own
+ * fence; and after every process closes, no partial or stale result may exist.
+ */
+async function runStaleScenario(scenario: IStaleScenario): Promise<void> {
+  const { takeover, position } = scenario;
+  const location = freshStore();
+  const [a, b] = await Promise.all([worker('A', location), worker('B', location)]);
+  const first = await firstHolderWork(a, takeover.holders[0], 100);
+  if (takeover.releaseFirst) {
+    await ok(a, { op: 'release', at: 1_020 });
+  }
+  const t = takeover.takeoverAt;
+
+  /** Present A's stale lease and check that nothing but the high-water changed. */
+  const presentStale = async (successorAttempt: number | undefined): Promise<void> => {
+    const before = snapshot(location);
+    expectRefused(await a.step(scenario.command(first.seed, successorAttempt)), 'StaleWriterError', scenario.refusal);
+    const after = snapshot(location);
+    // Only the persisted clock high-water may move; it never moves back.
+    expect(authorityOf(after)).toEqual(authorityOf(before));
+    expect(after.timeHighWater).toBeGreaterThanOrEqual(before.timeHighWater);
+  };
+
+  if (position === 'before B acquires') {
+    await presentStale(undefined);
+  }
+  const successor = await acquire(b, t, takeover.holders[1], 1_000);
+  // Every grant issues a strictly larger fence than any earlier grant.
+  expect(successor.fence).toBeGreaterThan(first.lease.fence);
+  if (position === 'after B acquires') {
+    await presentStale(undefined);
+  }
+  const successorAttempt = attemptFrom(await ok(b, { op: 'allocate', at: t + 1, key: 'b-work' })).attemptId;
+  await ok(b, { op: 'stage', at: t + 2, key: 'b-work', label: 'successor' });
+  if (position === 'after B stages') {
+    await presentStale(successorAttempt);
+  }
+  const published = locatorFrom(await ok(b, { op: 'publish', at: t + 3, key: 'b-work' }));
+  if (position === 'after B publishes') {
+    await presentStale(successorAttempt);
+  }
+  // B's authority is untouched: it renews under its own fence.
+  const renewed = leaseFrom(await ok(b, { op: 'renew', at: t + 4, leaseMilliseconds: 1_000 }));
+  // Renewal is evaluated at the persisted high-water, which A's refused operation may have raised.
+  expect(renewed).toEqual({ holder: successor.holder, fence: successor.fence, expiresAt: Math.max(t + 4, takeover.staleAt) + 1_000 });
+
+  await Promise.all([a.close(), b.close()]);
+  expectNoPartialResult(location, { seed: first.seed, published, renewed });
+}
+
+/** T1–T4: every takeover kind, every stale operation on A's own work, every position of B's work. */
+const takeoverCases = takeovers.flatMap((takeover) =>
   staleOperations.flatMap((operation) => positions.map((position) => ({ takeover, operation, position }))));
 
-describe('a stale holder after takeover (families T1–T4 × seven operations × three positions)', () => {
-  test.each(staleCases.map((entry) => [entry.takeover.name, entry.operation, entry.position, entry] as const))(
+/** T0: every stale operation, refused by the expiry branch before anyone takes over. */
+const expiryCases = staleOperations.map((operation) => ({ takeover: expiredBeforeTakeover, operation }));
+
+/** O1–O4: every takeover kind, a stale A acting on B's staged attempt, after B stages. */
+const onBehalfCases = takeovers.flatMap((takeover) => successorAttemptOperations.map((operation) => ({ takeover, operation })));
+
+describe('a stale holder after takeover (T1–T4 × seven operations × three positions)', () => {
+  test.each(takeoverCases.map((entry) => [entry.takeover.name, entry.operation, entry.position, entry] as const))(
     '%s: A’s stale %s %s is refused and B’s state is untouched',
     async (_name, operation, position, { takeover }) => {
-      const location = freshStore();
-      const [a, b] = await Promise.all([worker('A', location), worker('B', location)]);
-      const first = await firstHolderWork(a, takeover.holders[0], 100);
-      if (takeover.releaseFirst) {
-        await ok(a, { op: 'release', at: 1_020 });
-      }
+      await runStaleScenario({ takeover, position, command: (seed) => staleCommand(operation, takeover.staleAt, seed), refusal: notCurrentHolder });
+    },
+    scenarioTimeout,
+  );
+});
 
-      const successor = await acquire(b, takeover.takeoverAt, takeover.holders[1], 1_000);
-      // Every grant issues a strictly larger fence than any earlier grant.
-      expect(successor.fence).toBeGreaterThan(first.lease.fence);
-      const t = takeover.takeoverAt;
-      const stagedBeforeStale = position !== 'after B acquires';
-      const publishedBeforeStale = position === 'after B publishes';
-      if (stagedBeforeStale) {
-        await ok(b, { op: 'allocate', at: t + 1, key: 'b-work' });
-        await ok(b, { op: 'stage', at: t + 2, key: 'b-work', label: 'successor' });
-      }
-      const earlyPublication = publishedBeforeStale ? locatorFrom(await ok(b, { op: 'publish', at: t + 3, key: 'b-work' })) : undefined;
+describe('an expired holder before any takeover (T0 × seven operations)', () => {
+  test.each(expiryCases.map((entry) => [entry.operation, entry] as const))(
+    'T0: A’s %s after its own lease expired is refused by the expiry check, and B later takes over untouched',
+    async (operation, { takeover }) => {
+      await runStaleScenario({ takeover, position: 'before B acquires', command: (seed) => staleCommand(operation, takeover.staleAt, seed), refusal: expiredLease });
+    },
+    scenarioTimeout,
+  );
+});
 
-      const before = snapshot(location);
-      expectRefused(await a.step(staleCommand(operation, takeover.staleAt, first.seed)), 'StaleWriterError');
-      const after = snapshot(location);
-      // Only the persisted clock high-water may move; it never moves back.
-      expect(authorityOf(after)).toEqual(authorityOf(before));
-      expect(after.timeHighWater).toBeGreaterThanOrEqual(before.timeHighWater);
-
-      // B's authority is untouched: it finishes its work and renews under its own fence.
-      if (!stagedBeforeStale) {
-        await ok(b, { op: 'allocate', at: t + 1, key: 'b-work' });
-        await ok(b, { op: 'stage', at: t + 2, key: 'b-work', label: 'successor' });
-      }
-      const published = earlyPublication ?? locatorFrom(await ok(b, { op: 'publish', at: t + 3, key: 'b-work' }));
-      const renewed = leaseFrom(await ok(b, { op: 'renew', at: t + 4, leaseMilliseconds: 1_000 }));
-      // Renewal is evaluated at the persisted high-water, which A's refused operation may have raised.
-      expect(renewed).toEqual({ holder: successor.holder, fence: successor.fence, expiresAt: Math.max(t + 4, takeover.staleAt) + 1_000 });
-
-      await Promise.all([a.close(), b.close()]);
-      expectNoPartialResult(location, { seed: first.seed, published, renewed });
+describe('a stale holder acting on the successor’s attempt (O1–O4 × three operations)', () => {
+  test.each(onBehalfCases.map((entry) => [entry.takeover.name, entry.operation, entry] as const))(
+    '%s: A’s stale %s of B’s staged attempt is refused and B still publishes it',
+    async (_name, operation, { takeover }) => {
+      await runStaleScenario({
+        takeover,
+        position: 'after B stages',
+        command: (_seed, successorAttempt) => {
+          if (successorAttempt === undefined) {
+            throw new Error('B has not allocated its attempt yet');
+          }
+          return onBehalfCommand(operation, takeover.staleAt, successorAttempt);
+        },
+        refusal: notCurrentHolder,
+      });
     },
     scenarioTimeout,
   );
@@ -271,6 +367,22 @@ describe('waiting, inspection and the clock high-water across processes', () => 
 
     // The holder's authority is intact after the inspection.
     expect(locatorFrom(await ok(a, { op: 'publish', at: 1_020, key: 'a-staged' }))).not.toBe(seed);
+  }, scenarioTimeout);
+
+  test('W4: at exactly its recorded expiry a holder’s mutation is refused by the expiry check, one millisecond earlier it is accepted, and a waiter acquires at that same instant', async () => {
+    const location = freshStore();
+    const [a, b] = await Promise.all([worker('A', location), worker('B', location)]);
+    const lease = await acquire(a, 1_000, 'holder-a', 100);
+    expect(lease.expiresAt).toBe(1_100);
+    expect(heldFrom(await ok(b, { op: 'acquire', at: 1_099, holder: 'holder-b', leaseMilliseconds: 100 }))).toEqual({ holder: 'holder-a', expiresAt: 1_100 });
+    expect(attemptFrom(await ok(a, { op: 'allocate', at: 1_099, key: 'last-moment' })).state).toBe('allocated');
+    const before = snapshot(location);
+    expectRefused(await a.step({ op: 'allocate', at: 1_100, key: 'at-expiry' }), 'StaleWriterError', /expired at 1100$/u);
+    expectRefused(await a.step({ op: 'renew', at: 1_100, leaseMilliseconds: 100 }), 'StaleWriterError', /expired at 1100$/u);
+    const after = snapshot(location);
+    expect(authorityOf(after)).toEqual(authorityOf(before));
+    expect(after.timeHighWater).toBe(1_100);
+    expect(await acquire(b, 1_100, 'holder-b', 100)).toEqual({ holder: 'holder-b', fence: lease.fence + 1, expiresAt: 1_200 });
   }, scenarioTimeout);
 
   test('W3: an expired lease never revives in another process at a regressed clock reading, and the next grant is evaluated at the high-water', async () => {
@@ -378,9 +490,18 @@ describe('lifecycle guards under the current holder', () => {
 });
 
 describe('the enumeration itself', () => {
-  test('covers every takeover, stale operation and position exactly once', () => {
-    expect(staleCases).toHaveLength(takeovers.length * staleOperations.length * positions.length);
-    const keys = new Set(staleCases.map((entry) => `${entry.takeover.name}|${entry.operation}|${entry.position}`));
-    expect(keys.size).toBe(staleCases.length);
+  test('covers every varied dimension exactly once: 84 takeover cases, 7 expiry cases and 12 cases on the successor’s attempt', () => {
+    const keys = [
+      ...takeoverCases.map((entry) => `T|${entry.takeover.name}|${entry.operation}|${entry.position}`),
+      ...expiryCases.map((entry) => `T0|${entry.operation}`),
+      ...onBehalfCases.map((entry) => `O|${entry.takeover.name}|${entry.operation}`),
+    ];
+    expect([takeoverCases.length, expiryCases.length, onBehalfCases.length]).toEqual([
+      takeovers.length * staleOperations.length * positions.length,
+      staleOperations.length,
+      takeovers.length * successorAttemptOperations.length,
+    ]);
+    expect([takeoverCases.length, expiryCases.length, onBehalfCases.length]).toEqual([84, 7, 12]);
+    expect(new Set(keys).size).toBe(keys.length);
   });
 });

@@ -7,8 +7,13 @@
  * @see https://nodejs.org/api/cli.html#--unhandled-rejectionsmode
  */
 import { describe, expect, test } from '@jest/globals';
-import { spawnSync } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+
+import { SqliteBusyError } from '@microdelta/machine';
 
 import { createNodeSqlite } from '../src/index.js';
 import { describeSqliteCapabilityConformance } from './sqlite-conformance.js';
@@ -76,5 +81,63 @@ describe('Node SQLite process boundary', () => {
 
     expect({ status: result.status, stderr: result.stderr }).toEqual({ status: 0, stderr: '' });
     expect(JSON.parse(result.stdout)).toEqual({ rejectedWithTypeError: [true, true, true, true], total: 0, thenGetterReads: 0 });
+  });
+});
+
+/**
+ * A foreign process that creates a rollback-journal database and holds an
+ * exclusive lock on it until its stdin closes. Only the Node Machine
+ * implementation may import the native driver, so the foreign locker is a
+ * separate program that resolves the driver itself.
+ */
+const exclusiveLocker = `
+import { createRequire } from 'node:module';
+const require = createRequire(process.env.MICRODELTA_ADAPTER_ENTRY);
+const Database = require('better-sqlite3');
+const db = new Database(process.env.MICRODELTA_STORE);
+db.exec('CREATE TABLE probe (value TEXT)');
+db.exec('BEGIN EXCLUSIVE');
+process.stdout.write('locked\\n');
+process.stdin.resume();
+process.stdin.on('end', () => { db.exec('COMMIT'); db.close(); });
+`;
+
+describe('Node SQLite open under contention', () => {
+  test('an open that cannot switch the file to WAL within the busy wait fails with SqliteBusyError, then succeeds once the lock is released', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-sqlite-open-busy-'));
+    const path = join(directory, 'locked.sqlite');
+    const locker = spawn(process.execPath, ['--input-type=module', '--eval', exclusiveLocker], {
+      env: { ...process.env, MICRODELTA_ADAPTER_ENTRY: adapterEntry, MICRODELTA_STORE: path },
+      stdio: ['pipe', 'pipe', 'inherit'],
+    });
+    try {
+      await new Promise<void>((resolve, reject) => {
+        locker.stdout.once('data', () => { resolve(); });
+        locker.once('error', reject);
+        locker.once('exit', (code) => { reject(new Error(`locker exited ${String(code)} before locking`)); });
+      });
+      // The WAL switch needs exclusive access, so it waits out its whole budget.
+      const startedAt = Date.now();
+      let thrown: unknown;
+      try {
+        createNodeSqlite().openSqlite(path);
+      } catch (error: unknown) {
+        thrown = error;
+      }
+      const elapsed = Date.now() - startedAt;
+      expect(thrown).toBeInstanceOf(SqliteBusyError);
+      expect(elapsed).toBeGreaterThanOrEqual(400);
+      expect(elapsed).toBeLessThan(5000);
+
+      const released = new Promise<void>((resolve) => { locker.once('exit', () => { resolve(); }); });
+      locker.stdin.end();
+      await released;
+      const connection = createNodeSqlite().openSqlite(path);
+      expect(connection.prepare('PRAGMA journal_mode').get()).toEqual({ journal_mode: 'wal' });
+      connection.close();
+    } finally {
+      locker.kill();
+      rmSync(directory, { recursive: true, force: true });
+    }
   });
 });

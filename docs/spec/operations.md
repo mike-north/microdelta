@@ -93,6 +93,15 @@ declared graph.
 locality policy. These requirements do not select a general scheduler, queue
 service, or worker deployment.
 
+**Owner decision (2026-09-30).** One fenced writer per store. Members run
+concurrently inside one process under a bounded permit pool, and a permit guards
+only real execution. Another process that needs to write waits for the writer
+lease, taking over an expired lease only through fencing, until an
+operator-supplied deadline. There is no default deadline. At the deadline it
+fails with a typed writer-busy outcome that names the current holder. Read-only
+check and inspection never need the lease. Multi-process write parallelism is
+deferred until measurement justifies it (M7).
+
 ## Readiness, discovery, and previews
 
 ### RUN-003 — Readiness is scoped to the consuming calculation
@@ -269,6 +278,11 @@ of a gated-out member ([CMP-8](composition.md)): the gate declares the required
 population, and a skipped member is an explicit data-free entry outside it.
 Tolerant/outcome-fold treatment of skips remains open.
 
+**Owner decision (2026-09-30).** Outcome (tolerant) folds are in M5 scope. They
+receive every member's settled status with coverage. They never claim completeness
+while discovery or required attempts are unsettled, and repairing a failed member
+makes them reconsider their input.
+
 ### RUN-011 — Retry support includes unattended quota waits
 
 The system MUST support retries for recognized recoverable failures and rate
@@ -298,6 +312,21 @@ during the wait and claim ownership through the selected deferral protocol.
 during long deferral, deadlines, and durable deferred-work recovery after process
 restart. Durable deferral is not promised merely because results are durable.
 
+**Owner decision (2026-09-30).**
+- **Retries by default.** Rate-limit and quota responses that carry a retry time
+  are retried by default.
+- **Deferral.** The retry goes through a **durable deferral** that records "not
+  before T". The deferral releases the writer lease and holds no execution permit.
+- **Waiting mode.** By default the process sleeps and resumes. A run may instead
+  exit and report "waiting until T".
+- **Restarts.** Later runs admit the deferred work no earlier than T and reuse
+  completed work.
+- **Other failures.** Other transient failures retry only under an author-declared
+  policy with limits and backoff.
+- **Mutations** never retry blindly.
+
+[EXP-8](experiments.md) selects the concrete deferral record and resume mechanics.
+
 ### RUN-012 — External idempotency belongs to the logical operation
 
 Supported retry facilities MUST accommodate provider idempotency for ambiguous
@@ -323,6 +352,12 @@ promised, interrupt before/after send and prove the original binding is recovere
 recovery policy. General reconciliation and universal exactly-once remote
 execution are outside this requirement.
 
+**Owner decision (2026-09-30).** A stable operation identity is persisted before
+every external call. When the provider offers no idempotency and a response is
+lost, the outcome is **unknown** and there is no automatic replay. The author may
+declare an operation safe to repeat, which permits a retry under the same
+operation identity. Otherwise the operator decides.
+
 ### RUN-013 — Retry history is part of supervision
 
 Observations MUST correlate the logical external operation, its request attempts,
@@ -335,6 +370,12 @@ as another completed request or settled member.
 exhaustion with continuing siblings, and an idempotent recovery all preserve
 correlation and ordering. Attaching a trace consumer does not initiate a retry.
 ACC-002 and ACC-003 prevent duplicated resource totals across these views.
+
+**Owner decision (2026-09-30).** Every retry is correlated with its operation,
+attempt, member and run identities. Inspectable events carry identifiers,
+statuses, timings, usage figures and exact result references only. They never
+carry input, output or argument values, or provider request or response bodies.
+Diagnostics name fields and keys, not their contents.
 
 ### RUN-014 — Cancellation conveys escalating intent honestly
 
@@ -363,6 +404,13 @@ Exercise shared consumers without silently transferring cancellation authority.
 **Open:** active-work policy, exact propagation scopes, shared-work ownership,
 deadlines, publication/cancellation race rule, and final exit behavior. These must
 be specified and tested before end-to-end cancellation is declared complete.
+
+**Owner decision (2026-09-30).** A soft stop admits no new work and drains
+in-flight work, with **no default deadline**. An operator deadline or a hard stop
+escalates it. A hard stop aborts author bodies and marks their attempts
+interrupted. Remote state is recorded as cancelled, still running or unknown,
+never omitted. [EXP-8](experiments.md) selects the drain unit, the escalation
+mechanics and the publication/cancellation race rule.
 
 ### RUN-015 — Partial work is not a completed result
 
@@ -431,6 +479,13 @@ performs writes.
 **Open:** separate storage remains the recommended default, but exact backend or
 namespace routing, external destinations, and deliberate import/promotion rules
 are unresolved. This does not select a promotion feature.
+
+**Owner decision (2026-09-30), superseding the separate-storage recommendation
+above.** Environments are **namespaced within one store**. Results, current heads,
+claims, acceptances, accounting and cleanup are all isolated per environment.
+Trial work satisfies production only through an explicit, recorded promotion. The
+environment is selected per run, never process-wide. External destinations remain
+open.
 
 ### RUN-018 — Trial adequacy is distinct from execution success
 
@@ -580,6 +635,11 @@ distinct actual reported consumption still count separately.
 concurrent report protocol. No arbitrary user-defined aggregation engine is
 required to distinguish deltas, snapshots, and derived totals.
 
+**Owner decision (2026-09-30).** Each reported usage observation is identified
+by (operation identity, report identity). Duplicate delivery of the same report is
+idempotent and is never summed twice. Correction and ordering rules follow
+[EXP-8](experiments.md).
+
 ### ACC-004 — Resource state is not additive consumption
 
 Remaining quota, reset time, and similar current resource-state observations MUST
@@ -644,6 +704,14 @@ and do not make a crash-durability claim from a normal-shutdown test.
 behavior, and which acknowledgment guarantee is the default. These must be settled
 before the corresponding reporting API and operational milestone can be claimed
 complete. This rule does not itself select synchronous blocking or await syntax.
+
+**Owner decision (2026-09-30).** **Intent before send.** An "operation started"
+record is made durable before each paid call. Usage is recorded afterwards as an
+idempotent acknowledgment keyed by operation and report identity. A crash between
+the two leaves that operation's usage **unknown**, never zero (ACC-005). The
+default acknowledgment guarantee is durable persistence, before the report is
+acknowledged to the caller. [EXP-8](experiments.md) selects the concrete record
+shapes.
 
 ### ACC-008 — Accounting supplies evidence, not execution policy
 

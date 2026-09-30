@@ -31,6 +31,7 @@ Faults ==
     "renew-ignores-fence",
     "holder-ignores-fence",
     "holder-ignores-expiry",
+    "holder-expiry-inclusive",
     "acquire-ignores-expiry",
     "waiter-advances-fence",
     "ignore-high-water" }
@@ -55,10 +56,11 @@ DurableType ==
     highWater : 0..MaxTime,
     dataFence : 0..MaxFence ]
 
-\* A process's in-memory lease object: the holder name and fence it was
-\* granted. A lease object is never discarded, so a process can present a
-\* stale one at any later step; a crashed process is one that takes no
-\* further step, and a restarted one acquires a new lease object.
+\* A process's in-memory lease object: the holder name and fence of its latest
+\* grant. A process keeps that object until it is granted again, so it can
+\* present it at any later step after it has gone stale; a new grant replaces
+\* it. A crashed process is one that takes no further step, and a restarted
+\* one acquires a new lease object.
 ProcessType ==
   [ name : [Processes -> HolderNames \cup {NoHolder}],
     token : [Processes -> 0..MaxFence] ]
@@ -164,13 +166,16 @@ Held(p, reading) ==
      /\ UNCHANGED process
 
 \* The shared asHolder guard: holder name, fence and unexpired lease must all
-\* match the durable row at the evaluated time. Faults weaken one conjunct.
+\* match the durable row at the evaluated time. A lease is expired from its
+\* recorded expiry onwards. Faults weaken one conjunct.
 Authorized(p, op, now) ==
   /\ durable.holder = process.name[p]
   /\ \/ durable.fence = process.token[p]
      \/ Fault = "holder-ignores-fence"
      \/ (Fault = "renew-ignores-fence" /\ op = "renew")
-  /\ (now < durable.expires \/ Fault = "holder-ignores-expiry")
+  /\ \/ now < durable.expires
+     \/ Fault = "holder-ignores-expiry"
+     \/ (Fault = "holder-expiry-inclusive" /\ now = durable.expires)
 
 \* Accepted effects mirror the production statements, which write the
 \* presented lease's fence back into the writer row on renew and release.
@@ -239,16 +244,14 @@ WaiterPreservesAuthorityState ==
 InspectionChangesNothing ==
   observations.lastAction = "inspect" => durable = observations.prior
 
-\* Consequences a guard defect must not be able to hide.
+\* The lease promise: authority is exercised only inside an unexpired lease,
+\* and a lease once found ended never acts again. With fencing intact these
+\* protect the holder's lease, not storage: an expired holder that has not been
+\* superseded still writes under the latest fence.
 
-\* An accepted mutation came from the process that received the latest grant,
-\* presenting that grant's name and fence inside its unexpired lease.
-AcceptedByCurrentAuthority ==
-  observations.lastAction = "accepted" =>
-    /\ observations.actor = observations.grantee
-    /\ observations.presentedName = observations.prior.holder
-    /\ observations.presentedFence = observations.prior.fence
-    /\ observations.now < observations.prior.expires
+\* An accepted mutation was evaluated before the lease's recorded expiry.
+AcceptedWithinLease ==
+  observations.lastAction = "accepted" => observations.now < observations.prior.expires
 
 \* Once any evaluation found a fence expired, released or superseded, that
 \* fence never again mutates the store, whatever the host clock later reads.
@@ -256,6 +259,16 @@ AcceptedByCurrentAuthority ==
 \* legitimate release is not judged by the ending it causes.
 EndedAuthorityNeverActs ==
   observations.lastAction = "accepted" => ~observations.presentedWasEnded
+
+\* Storage safety: consequences a guard defect must not be able to hide.
+
+\* An accepted mutation came from the process that received the latest grant,
+\* presenting that grant's name and fence.
+AcceptedFromLatestGrant ==
+  observations.lastAction = "accepted" =>
+    /\ observations.actor = observations.grantee
+    /\ observations.presentedName = observations.prior.holder
+    /\ observations.presentedFence = observations.prior.fence
 
 \* A rejected mutation changes nothing except the clock high-water.
 RejectedPreservesAuthorityState ==

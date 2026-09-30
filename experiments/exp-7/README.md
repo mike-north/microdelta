@@ -61,8 +61,9 @@ Durable state is:
 - the fence of the latest data write, which stands for the rows that record
   `allocated_fence`, `ended_fence`, `published_fence` and the acceptance fence.
 
-Each process keeps its lease object (name and fence) indefinitely, so a stale
-process can present it at any later step. A crashed process is one that takes
+Each process keeps the lease object (name and fence) of its latest grant until
+it is granted again, so it can present that object at any later step after it
+has gone stale. A crashed process is one that takes
 no further step, and a restarted one acquires a new lease object. Every
 operation reads an arbitrary host clock value, so readings may move backwards
 or jump forwards between any two steps. History evaluates the larger of that
@@ -110,34 +111,46 @@ unrestricted concurrency safety.
 
 Each known-bad configuration sets `Fault` to weaken exactly one guard and
 checks the same invariants over the same bounds. TLC must find a violation.
+The guards fall into three kinds:
 
-| Configuration | Weakened guard | Expected first violation |
-| --- | --- | --- |
-| `PublicationBad.cfg` | publication without holder/fence equality | `PublicationUsedCurrentAuthority` |
-| `PublicationBad-abandon-completed.cfg` | abandonment of a completed attempt | `CurrentIsComplete` |
-| `PublicationBad-accept-moves-current.cfg` | acceptance rewinds the current pointer | `AcceptanceKeepsCurrentAndHistory` |
-| `WriterLeaseBad-takeover-without-fence.cfg` | takeover reuses the previous fence | `GrantIssuesFreshFence` |
-| `WriterLeaseBad-renew-ignores-fence.cfg` | renewal checks holder and expiry, not fence | `AcceptedByCurrentAuthority` |
-| `WriterLeaseBad-holder-ignores-fence.cfg` | every holder mutation skips the fence | `AcceptedByCurrentAuthority` |
-| `WriterLeaseBad-holder-ignores-expiry.cfg` | every holder mutation skips expiry | `AcceptedByCurrentAuthority` |
-| `WriterLeaseBad-acquire-ignores-expiry.cfg` | acquisition takes over an unexpired holder | `TakeoverOnlyAfterExpiry` |
-| `WriterLeaseBad-waiter-advances-fence.cfg` | a `held` observation advances the fence | `WaiterPreservesAuthorityState` |
-| `WriterLeaseBad-ignore-high-water.cfg` | time is the raw host reading | `EffectiveTimeNeverRegresses` |
+- **Storage guards.** A defect lets a superseded writer change storage.
+- **Lease-promise guards.** A defect breaks the holder's lease or the clock
+  policy, but storage stays safe because the fence still refuses every
+  superseded writer.
+- **Restating guards.** The invariant that catches the defect restates the
+  guard itself.
 
-Four faults are first reported against a direct statement of the protocol.
-Their `WriterLeaseConsequence-<fault>.cfg` runs omit those statements, which
-shows whether the weakened guard also reaches a storage-safety violation:
+| Configuration | Weakened guard | Kind | First violation |
+| --- | --- | --- | --- |
+| `PublicationBad.cfg` | publication without holder/fence equality | storage | `PublicationUsedCurrentAuthority` |
+| `PublicationBad-abandon-completed.cfg` | abandonment of a completed attempt | storage (retained history) | `CurrentIsComplete` |
+| `PublicationBad-accept-moves-current.cfg` | acceptance rewinds the current pointer | restating | `AcceptanceKeepsCurrentAndHistory` |
+| `WriterLeaseBad-takeover-without-fence.cfg` | takeover reuses the previous fence | storage | `GrantIssuesFreshFence` (storage-only run: `AtMostOneAuthority`) |
+| `WriterLeaseBad-renew-ignores-fence.cfg` | renewal checks holder and expiry, not fence | storage | `AcceptedFromLatestGrant` |
+| `WriterLeaseBad-holder-ignores-fence.cfg` | every holder mutation skips the fence | storage | `AcceptedFromLatestGrant` |
+| `WriterLeaseBad-holder-ignores-expiry.cfg` | every holder mutation skips expiry | lease promise | `AcceptedWithinLease` |
+| `WriterLeaseBad-holder-expiry-inclusive.cfg` | the expiry instant still counts as live | lease promise | `AcceptedWithinLease` |
+| `WriterLeaseBad-acquire-ignores-expiry.cfg` | acquisition takes over an unexpired holder | lease promise | `TakeoverOnlyAfterExpiry` |
+| `WriterLeaseBad-waiter-advances-fence.cfg` | a `held` observation advances the fence | lease promise | `WaiterPreservesAuthorityState` |
+| `WriterLeaseBad-ignore-high-water.cfg` | time is the raw host reading | lease promise | `EffectiveTimeNeverRegresses` |
 
-- Takeover without a fence increment reaches `AtMostOneAuthority`.
-- Ignoring the high-water reaches `EndedAuthorityNeverActs`, an expired lease
-  revived at a regressed reading.
-- Early takeover and a fence-advancing waiter exhaust without a storage-safety
-  violation. The fence alone keeps storage safe; waiting for expiry is the
-  lease promise the owner's decision makes to the holder.
+The kinds are established by storage-only runs. Each
+`WriterLeaseConsequence-<fault>.cfg` checks only the storage-safety invariants
+for the six faults not first caught by one:
 
-The Node mutation controls in
-`packages/core/test/concurrency/controls/controls.mjs` plant each
-`WriterLease` fault into History's emitted build.
+- takeover without a fence increment reaches `AtMostOneAuthority`;
+- the other five exhaust without a storage-safety violation.
+
+`PublicationConsequence-accept-moves-current.cfg` omits the restating
+invariant and exhausts: a rewound current pointer still names a retained,
+complete result. That violates RES-007's acceptance semantics, not
+retained-history integrity.
+
+Code controls in `packages/core/test/concurrency/controls/controls.mjs` plant
+each `WriterLease` fault, `abandon-completed` and `accept-moves-current` into
+History's emitted build; `omit-publish-fence`'s control is "publication
+ignores the fence" in
+`packages/core/test/durable-history/controls/history-mutation-controls.mjs`.
 
 ## Invariants
 
@@ -166,30 +179,32 @@ The Node mutation controls in
 - `AcceptanceKeepsCurrentAndHistory` requires an acceptance to name a retained
   result and leave the current pointer where it found it.
 
-`WriterLease.tla`, first the direct protocol statements:
+`WriterLease.tla` storage-safety invariants:
 
+- `AcceptedFromLatestGrant`: an accepted mutation came from the process that
+  received the latest grant (a ghost fact independent of holder names),
+  presenting that grant's name and fence.
+- `StorageSeesNonDecreasingFences`: data writes arrive in non-decreasing fence
+  order.
+- `AtMostOneAuthority`: at most one process holds a lease object the durable
+  row would accept.
+- `FenceNeverRegresses`: the durable fence is never below any issued fence.
+- `RejectedPreservesAuthorityState`: a refusal changes only the high-water.
+
+`WriterLease.tla` lease-promise invariants and direct protocol statements:
+
+- `AcceptedWithinLease`: an accepted mutation was evaluated before the lease's
+  recorded expiry.
+- `EndedAuthorityNeverActs`: a fence once found expired, released or superseded
+  never mutates again.
+- `EffectiveTimeNeverRegresses`: the persisted high-water is never below any
+  evaluated time.
 - `GrantIssuesFreshFence`: every grant issues the previous fence plus one.
 - `TakeoverOnlyAfterExpiry`: a recorded holder is taken over only once its
   lease has expired at the evaluated time.
 - `WaiterPreservesAuthorityState`: a `held` observation leaves holder, fence,
   expiry and data untouched and can only raise the high-water.
 - `InspectionChangesNothing`: a lease-free read changes no durable state.
-- `EffectiveTimeNeverRegresses`: the persisted high-water is never below any
-  evaluated time.
-
-Then the storage-safety consequences:
-
-- `AcceptedByCurrentAuthority`: an accepted mutation came from the process that
-  received the latest grant (a ghost fact independent of holder names),
-  presenting that grant's name and fence within its unexpired lease.
-- `EndedAuthorityNeverActs`: a fence once found expired, released or superseded
-  never mutates again.
-- `RejectedPreservesAuthorityState`: a refusal changes only the high-water.
-- `StorageSeesNonDecreasingFences`: data writes arrive in non-decreasing fence
-  order.
-- `FenceNeverRegresses`: the durable fence is never below any issued fence.
-- `AtMostOneAuthority`: at most one process holds a lease object the durable
-  row would accept.
 
 Event-specific ghost witnesses are reset on unrelated transitions. Only
 cumulative facts persist: acknowledgments, high-water maxima, the latest
@@ -229,12 +244,16 @@ root:
 
 ```sh
 mkdir -p scratch/tla-toolchain
-# place tla2tools.jar and an unpacked Java 17 JDK in scratch/tla-toolchain, then:
+# place tla2tools.jar and an unpacked Temurin 17 JDK in scratch/tla-toolchain, then:
 shasum -a 256 scratch/tla-toolchain/tla2tools.jar
+# The JDK tarball's layout differs by platform. macOS:
 JAVA=scratch/tla-toolchain/jdk-17.0.20.1+1/Contents/Home/bin/java
+# Linux instead: JAVA=scratch/tla-toolchain/jdk-17.0.20.1+1/bin/java
+"$JAVA" -version
 cd experiments/exp-7
 for cfg in PublicationBad.cfg PublicationBad-abandon-completed.cfg \
-    PublicationBad-accept-moves-current.cfg Publication.cfg; do
+    PublicationBad-accept-moves-current.cfg PublicationConsequence-accept-moves-current.cfg \
+    Publication.cfg; do
   ../../"$JAVA" -cp ../../scratch/tla-toolchain/tla2tools.jar tlc2.TLC -workers 1 \
     -metadir "../../scratch/tlc-meta/${cfg%.cfg}" -config "$cfg" Publication.tla
 done
@@ -246,9 +265,9 @@ done
 ```
 
 Every known-bad configuration is expected to stop with exit code 12 at the
-violation listed above. Every good configuration, and the two consequence runs
-without a storage-safety violation, is expected to exhaust its finite
-reachable state graph with exit code 0. The
+violation listed above, as is `WriterLeaseConsequence-takeover-without-fence.cfg`.
+Every good configuration and every other consequence run is expected to
+exhaust its finite reachable state graph with exit code 0. The
 [observed evidence](evidence.md) records the 2026-09-26 EXP-3-era runs. The
 [M5 validation record](../../docs/validation/m5-concurrency-2026-09-30.md)
 records the current models' counts, exits and counterexamples. These results

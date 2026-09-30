@@ -12,6 +12,7 @@ import { FingerprintAlgorithmMismatchError } from '@microdelta/history';
 import { GenerationPatch } from '@microdelta/history';
 import { GenerationRow } from '@microdelta/history';
 import { GenerationState } from '@microdelta/history';
+import type { IAbortSignal as IAbortSignal_2 } from '@microdelta/supervision';
 import type { IAdmissionDecision as IAdmissionDecision_2 } from '@microdelta/resolution';
 import type { IAdmissionRequest as IAdmissionRequest_2 } from '@microdelta/resolution';
 import type { IAnyTemplateDeclaration as IAnyTemplateDeclaration_2 } from '@microdelta/definition';
@@ -53,6 +54,7 @@ import type { IOrdinaryPhase as IOrdinaryPhase_2 } from '@microdelta/supervision
 import type { IPathInput as IPathInput_2 } from '@microdelta/definition';
 import type { IPreviousResult as IPreviousResult_2 } from '@microdelta/resolution';
 import type { IRecoveryResult as IRecoveryResult_2 } from '@microdelta/resolution';
+import type { IRemoteState as IRemoteState_2 } from '@microdelta/supervision';
 import type { IRequestOptions as IRequestOptions_2 } from '@microdelta/supervision';
 import type { IResolutionErrorCode as IResolutionErrorCode_2 } from '@microdelta/resolution';
 import type { IResolutionFamily } from '@microdelta/resolution';
@@ -61,13 +63,22 @@ import type { IResultView as IResultView_2 } from '@microdelta/resolution';
 import type { IRun } from '@microdelta/supervision';
 import type { IRunContext as IRunContext_2 } from '@microdelta/supervision';
 import type { IRunEvent as IRunEvent_2 } from '@microdelta/supervision';
+import type { IRunExecution as IRunExecution_2 } from '@microdelta/supervision';
 import type { IRunObserver as IRunObserver_2 } from '@microdelta/supervision';
 import type { IRunResult as IRunResult_2 } from '@microdelta/supervision';
+import type { ISendInterruption as ISendInterruption_2 } from '@microdelta/supervision';
+import type { ISendPhase as ISendPhase_2 } from '@microdelta/supervision';
+import type { ISendRequest as ISendRequest_2 } from '@microdelta/supervision';
 import type { ISkippedEntry as ISkippedEntry_2 } from '@microdelta/definition';
 import type { ISlotSubject as ISlotSubject_2 } from '@microdelta/definition';
 import type { ISourceOutcome as ISourceOutcome_2 } from '@microdelta/resolution';
 import type { ISourceOutcomes as ISourceOutcomes_2 } from '@microdelta/resolution';
 import type { IStepSlot as IStepSlot_2 } from '@microdelta/definition';
+import type { IStopCause as IStopCause_2 } from '@microdelta/supervision';
+import type { IStopController as IStopController_2 } from '@microdelta/supervision';
+import type { IStopLevel as IStopLevel_2 } from '@microdelta/supervision';
+import type { IStopRequest as IStopRequest_2 } from '@microdelta/supervision';
+import type { IStopState as IStopState_2 } from '@microdelta/supervision';
 import type { IStrictFoldOutcome as IStrictFoldOutcome_2 } from '@microdelta/supervision';
 import type { ISucceededEntry as ISucceededEntry_2 } from '@microdelta/definition';
 import type { ISupervisionErrorCode as ISupervisionErrorCode_2 } from '@microdelta/supervision';
@@ -97,6 +108,12 @@ export function authoring<TInputs extends object, THelpers extends object>(): IA
 export function createMemoryStore(options?: MemoryStoreOptions): Store;
 
 // @alpha
+export function createStopController(): IStopController;
+
+// @alpha
+export function currentExecution(): IRunExecution;
+
+// @alpha
 export function currentRun(): IRunContext;
 
 export { Divergence }
@@ -114,6 +131,9 @@ export { GenerationPatch }
 export { GenerationRow }
 
 export { GenerationState }
+
+// @alpha
+export type IAbortSignal = IAbortSignal_2;
 
 // @alpha
 export type IAdmissionDecision = IAdmissionDecision_2;
@@ -237,6 +257,9 @@ export type IPreviousResult<T> = IPreviousResult_2<T>;
 export type IRecoveryResult = IRecoveryResult_2;
 
 // @alpha
+export type IRemoteState = IRemoteState_2;
+
+// @alpha
 export type IRequestOptions = IRequestOptions_2;
 
 // @alpha
@@ -255,10 +278,22 @@ export type IRunContext = IRunContext_2;
 export type IRunEvent = IRunEvent_2;
 
 // @alpha
+export type IRunExecution = IRunExecution_2;
+
+// @alpha
 export type IRunObserver = IRunObserver_2;
 
 // @alpha
 export type IRunResult<T> = IRunResult_2<T>;
+
+// @alpha
+export type ISendInterruption = ISendInterruption_2;
+
+// @alpha
+export type ISendPhase = ISendPhase_2;
+
+// @alpha
+export type ISendRequest<T> = ISendRequest_2<T>;
 
 // @alpha
 export type ISkippedEntry = ISkippedEntry_2;
@@ -277,6 +312,21 @@ export type IStepDescriptor = IBindingDescriptor;
 
 // @alpha
 export type IStepSlot<TInputs extends object, THelpers extends object, TParameters extends readonly unknown[], TResult> = IStepSlot_2<IAuthoringFamily<TInputs, THelpers>, TParameters, TResult>;
+
+// @alpha
+export type IStopCause = IStopCause_2;
+
+// @alpha
+export type IStopController = IStopController_2;
+
+// @alpha
+export type IStopLevel = IStopLevel_2;
+
+// @alpha
+export type IStopRequest = IStopRequest_2;
+
+// @alpha
+export type IStopState = IStopState_2;
 
 // @alpha
 export type IStrictFoldOutcome = IStrictFoldOutcome_2;
@@ -328,7 +378,10 @@ export interface IWorkspaceRunOptions<TInputs extends object, THelpers extends o
     readonly composition: IComposition<TInputs, THelpers>;
     readonly environment: string;
     readonly observers?: readonly IRunObserver[];
+    readonly permits?: number;
     readonly runId?: string;
+    readonly stop?: IStopController;
+    readonly window?: number;
 }
 
 export { MemoryStoreOptions }

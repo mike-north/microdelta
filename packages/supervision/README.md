@@ -11,9 +11,10 @@ declaration; spellings are not a public contract. See the
 
 It consumes Definition and Resolution through their generated alpha
 declarations only. It has no Machine or Node import: the asynchronous scope
-is a structurally injected capability (`{ createAsyncContext<T>() }`), which
-assembly supplies. It never decides reuse, touches History or threads a
-context argument through author helpers.
+(`{ createAsyncContext<T>() }`) and the timer that arms stop deadlines and
+waits (`{ currentEpochMilliseconds(), schedule() }`) are structurally injected
+capabilities, which assembly supplies. It never decides reuse, touches History
+or threads a context argument through author helpers.
 
 ## A run
 
@@ -46,7 +47,8 @@ supervised run and returns `{ context, value, diagnostics }`:
 - **Admission.** The caller's policy decides admission of work Resolution
   presents after reuse had its chance; the default admits everything. A
   policy may deny work (it stays pending) or cancel it (withdrawn from this
-  run); only the decision is injected here, not cancellation mechanics.
+  run). Once the run is stopped, Supervision cancels every later admission
+  itself (see below).
 - **Member outcomes.** `resolveMembers({ template, step }, { requestKey })` is
   a normal request for one template step across every current member. It
   reports discovery (`keyed` with its completion status, `rejected` with
@@ -80,7 +82,66 @@ supervised run and returns `{ context, value, diagnostics }`:
   scope, observed at `begin`/`end`/`fail`. It has no completed-result identity
   and no hidden memoization.
 
-Retry, wait and cancellation mechanics and scheduling remain later work.
+## Stop control, permits and execution controls
+
+These implement RUN-002, RUN-014 and RUN-015 as the M5 plan's selected
+execution contract describes them (EXP-8 mechanisms 1 and 2, ruling R).
+
+- **Stop controller.** `createStopController({ timer })` holds an operator's
+  stop intent; a run receives it as `options.stop`. Levels only escalate:
+  - A **soft stop** admits no new work: Supervision's admission port
+    cancels every later admission except the first attempts of children a
+    draining step's body demands (see below). Admitted steps drain, with
+    **no default deadline**.
+  - An **operator deadline** on a soft stop escalates it to hard when it
+    passes. The deadline timer never keeps the host alive on its own.
+  - A **hard stop** aborts the run's signal. Admitted bodies are
+    interrupted at once, even ones that never settle. Sends in flight,
+    permit waits and waits for a time are aborted. Nothing new is committed.
+- **Drain unit and taint.** The drain unit is the admitted step attempt: it
+  keeps running, issues its remaining first-attempt requests and publishes.
+  Authors isolate each paid call in its own child step, so a child an
+  admitted, still-executing step's body demands is part of its drain and is
+  admitted as a first attempt, transitively. Retries, deferred resumptions
+  and waits stay refused, and work no executing admitted body demands (a new
+  request, a fan-out member not yet started) is cancelled. A step whose send
+  or wait was refused or aborted is tainted: whatever its body returns, its
+  execution ends `interrupted`, so partial work is never published, and it
+  sends nothing more and obtains no further child.
+- **Publication commit.** Resolution asks `publicationRefusal()` in the same
+  synchronous turn as each commit, so the commit is the linearization point:
+  a hard stop effective before it discards the output, one after it cannot
+  undo it. History's commit re-reads the writer lease durably, so a drain
+  that outlives its lease cannot publish either.
+- **Permits and window.** `options.permits` (default 1) bounds sends in
+  flight. A permit guards only a real send, never waiting for a permit,
+  children or a time. `options.window` (default 8, independent of permits)
+  bounds how many fan-out members actively resolve at once: Resolution runs
+  each member through the cancellation port's `member()`, which grants lanes
+  first in, first out in canonical key order. A member waiting for a time
+  lends its lane and, on waking, reclaims one ahead of members that have not
+  started, so it never stalls its siblings. The window bounds members holding
+  a lane, not every branch of a member's body; permits still bound its sends.
+  The lane pool is run-wide, so member work must never start a nested
+  fan-out under it.
+- **Execution controls.** `supervision.execution()` gives author code and
+  adapters the live run's controls by scoped lookup:
+  - `send({ label, retry?, perform, cancel? })` holds one permit per send. A
+    hard stop refuses or aborts it; a soft stop refuses retries and sends
+    outside an admitted step. After a local abort the provider's `cancel` is
+    asked, and the remote state (`cancelled`, `running` or `unknown`) is
+    reported as a `send` event and in `result.interruptions`.
+  - `sleepUntil(time)` waits, holding no permit, for a retry or deferred
+    resumption; any stop ends it at once.
+
+  The controls are attributed to the admitted step whose body is running
+  (`step`). Each run's controls are its own, and after close they fail with
+  `run-closed`.
+- **Events.** Observers also see `stop` events (level, cause) and `send`
+  events (label, phase, remote state), never values.
+
+External-operation identity, retry and deferral policy, and writer-lease
+waiting build on these primitives and are not decided here.
 
 ## Tests
 

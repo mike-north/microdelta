@@ -18,7 +18,7 @@ import type { IDurableHistory, IWriterLease } from '@microdelta/history';
 import { controlledClock, freshLocation, openHistory, openRaw } from '../durable-history/support.js';
 import type { ISqliteRow } from '../durable-history/support.js';
 import { concurrencyStore } from './fixture.js';
-import { isRecord, numberField, parseLease, parseReply, stringField } from './protocol.js';
+import { hostMonotonicMilliseconds, isRecord, lifecyclePrefix, numberField, parseLease, parseReply, stringField } from './protocol.js';
 import type { IHarnessCommand, IHarnessReply, IWorkerLaunch } from './protocol.js';
 
 /** The emitted worker module beside this driver. */
@@ -59,32 +59,94 @@ interface IPending {
   readonly reject: (error: Error) => void;
 }
 
+/** What the driver is waiting on from one worker, for diagnosing an early exit. */
+interface IAwaited {
+  /** `ready` for start-up, otherwise the command's operation. */
+  readonly what: string;
+  /** When it began, on the host monotonic clock. */
+  readonly since: number;
+}
+
 /**
- * Start one worker process and wait until it has opened History on the
- * shared file. Its stderr is kept for diagnostics.
+ * The parts of a worker's child process the driver relies on. `ChildProcess`
+ * satisfies it; the driver's own tests substitute a scripted child to emit
+ * process events in chosen orders.
  */
+export interface IWorkerProcess {
+  /** Whether the IPC channel is still open for sending. */
+  readonly connected: boolean;
+  /** The worker's stderr, kept for diagnostics. */
+  readonly stderr: { setEncoding(encoding: BufferEncoding): unknown; on(event: 'data', listener: (chunk: string) => void): unknown } | null;
+  /** Send one command over the IPC channel. */
+  send(message: IHarnessCommand): boolean;
+  /** The process ended. */
+  on(event: 'exit', listener: (code: number | null, signal: NodeJS.Signals | null) => void): this;
+  /** The process ended and its stdio and IPC channel have closed. */
+  on(event: 'close', listener: () => void): this;
+  /** A message arrived over the IPC channel. */
+  on(event: 'message', listener: (message: unknown) => void): this;
+}
+
+/** Start one worker process on the shared file and wait until it has opened History. */
 export function startWorker(name: string, launch: IWorkerLaunch): Promise<IWorkerHandle> {
   const child = fork(workerPath, [JSON.stringify(launch)], { stdio: ['ignore', 'ignore', 'pipe', 'ipc'], serialization: 'json' });
   running.add(child);
+  child.on('exit', () => {
+    running.delete(child);
+  });
+  return attachWorker(name, child);
+}
+
+/**
+ * Drive one worker process: send it commands one at a time and wait until it
+ * reports ready. Its stderr is kept for diagnostics, with the worker's
+ * lifecycle markers held apart from anything else it writes.
+ *
+ * A worker that ends while the driver awaits it fails whatever was awaited.
+ * The failure is decided when the child's stdio and IPC channel have closed,
+ * not at its exit event, so every reply and marker it wrote has been read.
+ * The error names what was awaited (`ready` or the pending operation), how
+ * long ago it was sent, the exit code or signal, and the worker's markers.
+ */
+export function attachWorker(name: string, child: IWorkerProcess): Promise<IWorkerHandle> {
   let stderr = '';
   child.stderr?.setEncoding('utf8');
   child.stderr?.on('data', (chunk: string) => {
     stderr += chunk;
   });
+  /** Lines the worker wrote to stderr that are not lifecycle markers. */
+  const unexpectedStderr = (): string => stderr.split('\n').filter((line) => line.length > 0 && !line.startsWith(lifecyclePrefix)).join('\n');
+  /** The worker's lifecycle markers, oldest first. */
+  const lifecycle = (): string => stderr.split('\n').filter((line) => line.startsWith(lifecyclePrefix)).map((line) => line.slice(lifecyclePrefix.length)).join(' > ');
+
   let pending: IPending | undefined;
   let ready: IPending | undefined;
+  let awaited: IAwaited | undefined = { what: 'ready', since: hostMonotonicMilliseconds() };
+  let ended: IWorkerExit | undefined;
+
   const exit = new Promise<IWorkerExit>((resolve) => {
     child.on('exit', (code, signal) => {
-      running.delete(child);
-      const ended = new Error(`worker ${name} exited (code ${String(code)}, signal ${String(signal)}) ${stderr}`);
-      pending?.reject(ended);
-      ready?.reject(ended);
-      pending = undefined;
-      ready = undefined;
-      resolve({ code, signal });
+      ended = { code, signal };
+      resolve(ended);
     });
   });
+  // Decide at `close`, never at `exit`: `exit` can precede the reading of the
+  // last messages the worker wrote, so a worker that answered and then ended
+  // would be misreported as dead. `close` follows the IPC channel's end, after
+  // every message the worker wrote has been delivered.
+  child.on('close', () => {
+    if (pending === undefined && ready === undefined) {
+      return;
+    }
+    const waiting = awaited === undefined ? 'nothing' : `${awaited.what} (sent ${(hostMonotonicMilliseconds() - awaited.since).toFixed(1)} ms earlier)`;
+    const error = new Error(`worker ${name} exited (code ${String(ended?.code)}, signal ${String(ended?.signal)}) while awaiting ${waiting}; lifecycle: ${lifecycle() || 'none'}; stderr: ${unexpectedStderr() || 'none'}`);
+    pending?.reject(error);
+    ready?.reject(error);
+    pending = undefined;
+    ready = undefined;
+  });
   child.on('message', (message: unknown) => {
+    awaited = undefined;
     if (ready !== undefined) {
       const waiting = ready;
       ready = undefined;
@@ -117,7 +179,7 @@ export function startWorker(name: string, launch: IWorkerLaunch): Promise<IWorke
       return new Promise<IHarnessReply>((resolve, reject) => {
         const timer = setTimeout(() => {
           pending = undefined;
-          reject(new Error(`worker ${name} did not answer ${command.op} within ${String(commandTimeoutMilliseconds)} ms`));
+          reject(new Error(`worker ${name} did not answer ${command.op} within ${String(commandTimeoutMilliseconds)} ms; lifecycle: ${lifecycle() || 'none'}`));
         }, commandTimeoutMilliseconds);
         pending = {
           resolve: (reply) => {
@@ -129,11 +191,14 @@ export function startWorker(name: string, launch: IWorkerLaunch): Promise<IWorke
             reject(error);
           },
         };
-        if (!child.connected || !child.send(command)) {
+        if (!child.connected) {
           clearTimeout(timer);
           pending = undefined;
-          reject(new Error(`worker ${name} exited before ${command.op}`));
+          reject(new Error(`worker ${name} had already disconnected before ${command.op}; lifecycle: ${lifecycle() || 'none'}`));
+          return;
         }
+        awaited = { what: command.op, since: hostMonotonicMilliseconds() };
+        child.send(command);
       });
     },
     async close(): Promise<void> {
@@ -141,9 +206,9 @@ export function startWorker(name: string, launch: IWorkerLaunch): Promise<IWorke
       if (!reply.ok) {
         throw new Error(`worker ${name} failed to close: ${reply.message}`);
       }
-      const ended = await exit;
-      if (ended.code !== 0 || stderr !== '') {
-        throw new Error(`worker ${name} ended abnormally: ${JSON.stringify(ended)} ${stderr}`);
+      const result = await exit;
+      if (result.code !== 0 || unexpectedStderr() !== '') {
+        throw new Error(`worker ${name} ended abnormally: ${JSON.stringify(result)} ${unexpectedStderr()}`);
       }
     },
   };

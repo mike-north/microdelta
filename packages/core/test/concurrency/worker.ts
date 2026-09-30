@@ -13,9 +13,12 @@
  * during a read would be refused. With the host clock, History reads Node's
  * wall clock, which the free-running `contend` loop uses. A planted
  * pre-commit fault (`arm`) SIGKILLs the process inside the chosen
- * transaction, before SQLite commits.
+ * transaction, before SQLite commits. At each point of its life the worker
+ * writes a lifecycle marker to stderr synchronously, so a driver that sees it
+ * end unexpectedly can report how far it got.
  * @packageDocumentation
  */
+import { writeSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 
 import type { IAttemptRecord, IClockCapability, IDurableHistory, IWriterLease } from '@microdelta/history';
@@ -23,8 +26,24 @@ import { createNodeClock } from '@microdelta/machine-node';
 
 import { controlledClock, observedSqlite, openHistory } from '../durable-history/support.js';
 import { attemptRequest, evidence, labelAddress, lastPartAddress, payload, provenance, subject } from './fixture.js';
-import { hostMonotonicMilliseconds, parseCommand, parseLaunch } from './protocol.js';
+import { hostMonotonicMilliseconds, lifecyclePrefix, parseCommand, parseLaunch } from './protocol.js';
 import type { IContentionEvent, IHarnessCommand, IHarnessReply } from './protocol.js';
+
+/** Record how far this worker got, synchronously, so the record survives an abrupt end. */
+function mark(point: string): void {
+  writeSync(2, `${lifecyclePrefix}${point}\n`);
+}
+
+mark('module evaluated');
+process.on('beforeExit', (code) => {
+  mark(`event loop drained (beforeExit ${String(code)})`);
+});
+process.on('exit', (code) => {
+  mark(`exit ${String(code)}`);
+});
+process.on('disconnect', () => {
+  mark('ipc disconnected');
+});
 
 const encoded = process.argv[2];
 if (encoded === undefined) {
@@ -35,6 +54,7 @@ const controlled = controlledClock(0);
 const clock: IClockCapability = launch.clock === 'host' ? createNodeClock() : controlled;
 const sqlite = observedSqlite();
 const history: IDurableHistory = openHistory({ location: launch.location, clock, sqlite: sqlite.capability, store: launch.store });
+mark('history opened');
 
 /** The most recent lease this process was granted or renewed; kept after it goes stale. */
 let lease: IWriterLease | undefined;
@@ -228,6 +248,7 @@ function perform(command: IHarnessCommand): unknown {
 /** Answer the parent; a closed worker then disconnects so the process can end. */
 function reply(message: IHarnessReply, closing: boolean): void {
   process.send?.(message, undefined, undefined, () => {
+    mark('replied');
     if (closing) {
       process.disconnect();
     }
@@ -238,6 +259,7 @@ process.on('message', (message: unknown) => {
   let command: IHarnessCommand;
   try {
     command = parseCommand(message);
+    mark(`received ${command.op}`);
   } catch (error: unknown) {
     const now = hostNow();
     reply({ ok: false, error: 'HarnessProtocolError', message: error instanceof Error ? error.message : String(error), startedAt: now, endedAt: now }, false);
@@ -256,4 +278,7 @@ process.on('message', (message: unknown) => {
   }
 });
 
-process.send?.({ ready: true });
+mark('listener registered');
+process.send?.({ ready: true }, undefined, undefined, () => {
+  mark('ready sent');
+});

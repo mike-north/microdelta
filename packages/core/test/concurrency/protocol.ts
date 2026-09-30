@@ -115,6 +115,16 @@ export function hostMonotonicMilliseconds(): number {
   return Number(process.hrtime.bigint()) / 1_000_000;
 }
 
+/**
+ * The prefix of a worker's lifecycle markers on stderr. A worker writes one
+ * synchronously at each point of its life (module evaluated, History opened,
+ * listener registered, ready sent, each command received and answered, event
+ * loop drained, exit), so a driver that sees it end unexpectedly can say how
+ * far it got. Marker lines are diagnostics, not errors: the driver's
+ * clean-close check ignores them.
+ */
+export const lifecyclePrefix = '[worker-lifecycle] ';
+
 /** Whether a value is a non-null, non-array object. */
 export function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);

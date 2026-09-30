@@ -82,4 +82,10 @@ export interface ITimerOptions {
     readonly keepAlive?: boolean;
 }
 
+// @alpha
+export class SqliteBusyError extends Error {
+    constructor(message: string, waitedMilliseconds: number, options?: ErrorOptions);
+    readonly waitedMilliseconds: number;
+}
+
 ```

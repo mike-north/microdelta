@@ -137,7 +137,8 @@ export type ISqliteSynchronousResult<T> = 0 extends 1 & T
  * configuration for every connection: write-ahead logging, FULL synchronous
  * commits, enforced foreign keys and a bounded wait on a locked database.
  * Callers supply every SQL statement and schema; the connection has no
- * knowledge of what the tables mean.
+ * knowledge of what the tables mean. A statement, exec or transaction that
+ * cannot get a lock within the bounded wait fails with `SqliteBusyError`.
  *
  * Transactions are synchronous, top-level and IMMEDIATE: the write lock is
  * taken before the callback runs, the callback's writes commit together when
@@ -176,12 +177,35 @@ export interface ISqliteConnection {
 }
 
 /**
+ * The SQLite capability gave up waiting for another connection, possibly in
+ * another process, to release a lock it needs. A host raises it, instead of
+ * any driver-specific error, when its bounded busy wait is exhausted while
+ * opening a store or running a statement or transaction. The failed operation
+ * had no effect, so the caller may retry it or report contention to its own
+ * caller; telling a busy store apart from a broken one is the purpose of this
+ * type. Hosts never use it for corruption, misuse or other failures.
+ * @alpha
+ */
+export class SqliteBusyError extends Error {
+  /** How long, in milliseconds, the host waited before giving up. */
+  public readonly waitedMilliseconds: number;
+
+  /** Create a busy-exhaustion failure that records the wait that was spent. */
+  public constructor(message: string, waitedMilliseconds: number, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'SqliteBusyError';
+    this.waitedMilliseconds = waitedMilliseconds;
+  }
+}
+
+/**
  * Opens persistent local SQLite databases for a consumer that owns its own
  * SQL and schema, such as History's durable authority. Opening fails for a
  * directory, a missing parent directory, a file that is not a SQLite database,
  * or a location that cannot hold a persistent write-ahead-logged database,
  * including `:memory:` and the empty path. Opening never silently weakens the
- * host's durable configuration.
+ * host's durable configuration. Processes that open one new store at the same
+ * time all succeed within the bounded busy wait or fail with `SqliteBusyError`.
  * @alpha
  */
 export interface ISqliteCapability {

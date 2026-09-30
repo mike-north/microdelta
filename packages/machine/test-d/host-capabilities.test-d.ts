@@ -1,5 +1,6 @@
 import { expectAssignable, expectError, expectNotAssignable, expectType } from 'tsd';
 
+import { SqliteBusyError } from '../dist/src/index.js';
 import type {
   IClockCapability,
   IMachine,
@@ -95,3 +96,12 @@ expectAssignable<IMachine>({
 });
 expectNotAssignable<ISqliteCapability>(machine);
 expectNotAssignable<IClockCapability>(machine);
+
+// Busy exhaustion is a typed Error that records the wait that was spent.
+declare const busy: SqliteBusyError;
+expectAssignable<Error>(busy);
+expectType<number>(busy.waitedMilliseconds);
+expectType<SqliteBusyError>(new SqliteBusyError('busy', 500, { cause: new Error('driver') }));
+expectError(new SqliteBusyError('busy'));
+expectError(new SqliteBusyError('busy', '500'));
+expectError((busy.waitedMilliseconds = 1));

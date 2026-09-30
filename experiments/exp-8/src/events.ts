@@ -54,7 +54,8 @@ export type IEventStatus =
   | 'waiting'
   | 'stopped'
   | 'settled'
-  | 'writer-busy';
+  | 'writer-busy'
+  | 'lease-lost';
 
 /**
  * Why something happened, as a closed code. Provider error messages and body
@@ -74,7 +75,8 @@ export type IReasonCode =
   | 'not-repeat-safe'
   | 'body-failed'
   | 'partial-output-discarded'
-  | 'recovered-after-crash';
+  | 'recovered-after-crash'
+  | 'lease-lost';
 
 /**
  * One inspection event. Identifier fields are store-allocated or author-chosen
@@ -100,11 +102,31 @@ export interface IEvent {
   readonly fence?: number;
 }
 
+/**
+ * Usage unit names are provider-supplied, so an event only carries a unit whose
+ * name is a lower-case identifier (letter first; letters, digits and
+ * underscores; at most 32 characters). Any other unit is dropped from the event
+ * and diagnosed. The durable accounting record keeps it; only the inspection
+ * view omits it.
+ * @internal
+ */
+export function isUnitName(unit: string): boolean {
+  return /^[a-z][a-z0-9_]{0,31}$/u.test(unit);
+}
+
 /** The fields a producer supplies; sequence, time and run are stamped by the log. @internal */
 export type IEventFields = Omit<IEvent, 'sequence' | 'at' | 'runId'>;
 
 /** Structured diagnostic codes. There is intentionally no message field. @internal */
-export type IDiagnosticCode = 'observer-failed' | 'usage-conflict' | 'usage-not-durable' | 'acknowledgment-lost' | 'body-failed';
+export type IDiagnosticCode =
+  | 'observer-failed'
+  | 'usage-conflict'
+  | 'usage-not-durable'
+  | 'usage-durability-unknown'
+  | 'usage-unattributable'
+  | 'usage-unit-dropped'
+  | 'acknowledgment-lost'
+  | 'body-failed';
 
 /** A diagnostic: a code plus identifiers, with the same privacy rule as events. @internal */
 export interface IDiagnostic {
@@ -139,9 +161,18 @@ export class EventLog {
 
   /** Append and deliver a frozen event; observer exceptions become diagnostics, never control flow. */
   emit(fields: IEventFields): IEvent {
-    const quantities = fields.quantities === undefined ? {} : { quantities: Object.freeze({ ...fields.quantities }) };
+    const reported = Object.entries(fields.quantities ?? {});
+    const kept = reported.filter(([unit]) => isUnitName(unit));
+    const quantities = fields.quantities === undefined ? {} : { quantities: Object.freeze(Object.fromEntries(kept)) };
     const event: IEvent = Object.freeze({ ...fields, ...quantities, sequence: this.events.length + 1, at: this.now(), runId: this.runId });
     this.events.push(event);
+    if (kept.length < reported.length) {
+      this.diagnose({
+        code: 'usage-unit-dropped',
+        sequence: event.sequence,
+        ...(fields.operationId === undefined ? {} : { operationId: fields.operationId }),
+      });
+    }
     this.observers.forEach((observer, index) => {
       try {
         observer(event);

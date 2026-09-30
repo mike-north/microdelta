@@ -51,9 +51,23 @@ export class FakeClock implements IClock {
   onSleep: ((until: number) => void) | undefined;
   private current: number;
   private readonly timers: { readonly time: number; readonly callback: () => void }[] = [];
+  private readonly sleepers: (() => void)[] = [];
 
-  constructor(start: number) {
+  /** A gated clock's `sleepUntil` stays pending until `wake()`, so a test can act during a wait. */
+  constructor(start: number, private readonly gated = false) {
     this.current = start;
+  }
+
+  /** How many gated sleeps are pending. */
+  get sleeping(): number {
+    return this.sleepers.length;
+  }
+
+  /** Resolve every pending gated sleep. */
+  wake(): void {
+    for (const resume of this.sleepers.splice(0)) {
+      resume();
+    }
   }
 
   now(): number {
@@ -77,6 +91,14 @@ export class FakeClock implements IClock {
   sleepUntil(time: number): Promise<void> {
     this.sleeps.push(time);
     this.onSleep?.(time);
+    if (this.gated) {
+      return new Promise(resolve => {
+        this.sleepers.push(() => {
+          this.advance(time);
+          resolve();
+        });
+      });
+    }
     this.advance(time);
     return Promise.resolve();
   }
@@ -88,7 +110,13 @@ export class FakeClock implements IClock {
 
 /** One scripted provider behavior for the n-th request of an operation name. */
 export type IScriptStep =
-  | { readonly kind: 'ok'; readonly usage?: Readonly<Record<string, number>> | null; readonly late?: 'duplicate' | 'conflict'; readonly lateAt?: number }
+  | {
+      readonly kind: 'ok';
+      readonly usage?: Readonly<Record<string, number>> | null;
+      readonly reportId?: string;
+      readonly late?: 'duplicate' | 'conflict';
+      readonly lateAt?: number;
+    }
   | { readonly kind: 'rate-limited'; readonly retryAt: number | null }
   | { readonly kind: 'unavailable' }
   | { readonly kind: 'rejected' }
@@ -215,7 +243,7 @@ export class FakeProvider implements IProvider {
   }
 
   private success(request: IProviderRequest, index: number, step: Extract<IScriptStep, { kind: 'ok' }>): IProviderResponse {
-    const usage = step.usage === null ? null : { reportId: this.reportId(request.name, index), quantities: step.usage ?? { tokens: 100 } };
+    const usage = step.usage === null ? null : { reportId: step.reportId ?? this.reportId(request.name, index), quantities: step.usage ?? { tokens: 100 } };
     if (usage !== null && step.late !== undefined) {
       const quantities = step.late === 'duplicate' ? usage.quantities : { tokens: 999 };
       this.ledger.late.push({
@@ -292,11 +320,14 @@ export class FakeProvider implements IProvider {
   }
 }
 
-/** A port fault: fail before writing, or write and then lose the acknowledgment. */
+/**
+ * A port fault: fail before writing; write and then lose the acknowledgment;
+ * or report an ambiguous outcome without having written.
+ */
 export interface IPortFault {
   readonly boundary: ICommitBoundary;
   readonly subject?: string;
-  readonly mode: 'fail-before' | 'ack-lost';
+  readonly mode: 'fail-before' | 'ack-lost' | 'unknown-not-written';
 }
 
 /** An in-memory durable port that serializes every commit, so state crosses a JSON boundary. */
@@ -315,6 +346,9 @@ export class MemoryPort implements IDurablePort {
     const fault = index < 0 ? undefined : this.faults.splice(index, 1)[0];
     if (fault?.mode === 'fail-before') {
       throw new Error('disk full');
+    }
+    if (fault?.mode === 'unknown-not-written') {
+      throw new CommitUnknownError(boundary);
     }
     this.text = JSON.stringify(state);
     this.commits.push({ boundary, subject });

@@ -154,9 +154,10 @@ export function usageKey(operationId: string, reportId: string): string {
 
 /**
  * Resource Accounting's read-side view over the durable facts. `known` sums
- * each acknowledged report once, by unit. `unknownRequests` lists settled
- * request attempts with no acknowledged report: their usage is unknown, never
- * zero (ACC-005). `pendingRequests` are live intents in the current process.
+ * each acknowledged report once, by unit. `unknownRequests` lists request
+ * attempts with no acknowledged report whose outcome is settled, or whose
+ * intent is dead: their usage is unknown, never zero (ACC-005).
+ * `pendingRequests` are live intents only.
  * @internal
  */
 export interface IUsageSummary {
@@ -165,8 +166,15 @@ export interface IUsageSummary {
   readonly pendingRequests: readonly string[];
 }
 
-/** Derive the usage view from durable facts only; nothing in memory contributes. @internal */
-export function summarizeUsage(state: IDurableState): IUsageSummary {
+/**
+ * Derive the usage view from durable facts only; nothing in memory
+ * contributes. A `pending` intent is live only while its own run holds an
+ * unexpired lease at `now`; otherwise its process is gone and the view reports
+ * it as unknown. This view needs no writer: making that recovery durable is the
+ * next writer's job (`Store.acquire`).
+ * @internal
+ */
+export function summarizeUsage(state: IDurableState, now: number): IUsageSummary {
   const known: Record<string, number> = {};
   const reported = new Set<string>();
   for (const usage of Object.values(state.usage)) {
@@ -175,11 +183,15 @@ export function summarizeUsage(state: IDurableState): IUsageSummary {
       known[unit] = (known[unit] ?? 0) + amount;
     }
   }
+  const lease = state.lease;
+  const live = (runId: string): boolean => lease.holder === runId && lease.expiresAt > now;
   const requests = Object.entries(state.requests);
   return {
     known,
-    unknownRequests: requests.filter(([id, request]) => request.state !== 'pending' && !reported.has(id)).map(([id]) => id),
-    pendingRequests: requests.filter(([, request]) => request.state === 'pending').map(([id]) => id),
+    unknownRequests: requests
+      .filter(([id, request]) => !reported.has(id) && (request.state !== 'pending' || !live(request.runId)))
+      .map(([id]) => id),
+    pendingRequests: requests.filter(([, request]) => request.state === 'pending' && live(request.runId)).map(([id]) => id),
   };
 }
 

@@ -14,22 +14,10 @@
  */
 import { beforeEach, describe, expect, test } from '@jest/globals';
 
-import { ContextClosedError, Permits, StopController, Store, runPass, summarizeUsage } from '../src/protocol.js';
-import type {
-  IDrainUnit,
-  IEvent,
-  IEventKind,
-  IMemberDeclaration,
-  IObserver,
-  IProviderRequest,
-  IRemoteCancel,
-  IRunReport,
-  IStepContext,
-  IWaitMode,
-} from '../src/protocol.js';
+import { ContextClosedError, Permits, StopController, Store, summarizeUsage } from '../src/protocol.js';
+import type { IMemberDeclaration, IRunReport, IStepContext } from '../src/protocol.js';
 import {
   FakeClock,
-  FakeProvider,
   HOUR,
   MemoryPort,
   T0,
@@ -44,93 +32,7 @@ import {
   quotaMember,
   secrets,
 } from './fakes.js';
-import type { ILedger, IScript } from './fakes.js';
-
-/** Everything one in-process pass needs; omitted parts get fresh defaults. */
-interface ISetup {
-  readonly members: readonly IMemberDeclaration[];
-  readonly script?: IScript;
-  readonly port?: MemoryPort;
-  readonly clock?: FakeClock;
-  readonly ledger?: ILedger;
-  readonly stop?: StopController;
-  readonly observers?: readonly IObserver[];
-  readonly permits?: Permits;
-  readonly maxActive?: number;
-  readonly waitMode?: IWaitMode;
-  readonly drainUnit?: IDrainUnit;
-  readonly idempotencyKeys?: boolean;
-  readonly cancelAnswer?: IRemoteCancel | 'unsupported' | 'no-answer';
-  readonly onReceive?: (request: IProviderRequest, index: number, harness: IHarness) => void;
-}
-
-/** The live parts of one pass, for scripted operator actions and later inspection. */
-interface IHarness {
-  readonly port: MemoryPort;
-  readonly clock: FakeClock;
-  readonly stop: StopController;
-  readonly provider: FakeProvider;
-  readonly permits: Permits;
-  readonly run: () => Promise<IRunReport>;
-}
-
-/** Wire a pass over fakes. Nothing runs until `run` is called. */
-function prepare(setup: ISetup): IHarness {
-  const port = setup.port ?? new MemoryPort();
-  const clock = setup.clock ?? new FakeClock(T0);
-  const stop = setup.stop ?? new StopController();
-  const permits = setup.permits ?? new Permits(2);
-  // The provider's receipt hook needs the finished harness; it is filled in below.
-  const live: { harness?: IHarness } = {};
-  const provider = new FakeProvider(setup.script ?? baseScript(), {
-    clock,
-    ledger: setup.ledger ?? emptyLedger(),
-    ...(setup.idempotencyKeys === undefined ? {} : { idempotencyKeys: setup.idempotencyKeys }),
-    ...(setup.cancelAnswer === undefined ? {} : { cancelAnswer: setup.cancelAnswer }),
-    onReceive: (request, index) => {
-      if (live.harness !== undefined) {
-        setup.onReceive?.(request, index, live.harness);
-      }
-    },
-  });
-  const store = new Store(port, leaseTtlMs);
-  const harness: IHarness = {
-    port,
-    clock,
-    stop,
-    provider,
-    permits,
-    run: () => runPass({
-      store,
-      clock,
-      provider,
-      members: setup.members,
-      stop,
-      permits,
-      ...(setup.observers === undefined ? {} : { observers: setup.observers }),
-      ...(setup.maxActive === undefined ? {} : { maxActive: setup.maxActive }),
-      ...(setup.waitMode === undefined ? {} : { waitMode: setup.waitMode }),
-      ...(setup.drainUnit === undefined ? {} : { drainUnit: setup.drainUnit }),
-    }),
-  };
-  live.harness = harness;
-  return harness;
-}
-
-/** Run an operator action after the current provider call has returned its promise. */
-function later(action: () => void): void {
-  void Promise.resolve().then(action);
-}
-
-/** Events of one kind, optionally for one member. */
-function eventsOf(report: IRunReport, kind: IEventKind, member?: string): readonly IEvent[] {
-  return report.events.filter(event => event.kind === kind && (member === undefined || event.member === member));
-}
-
-/** The kinds of the events, in order. */
-function kindsOf(events: readonly IEvent[]): readonly IEventKind[] {
-  return events.map(event => event.kind);
-}
+import { afterRuns, eventsOf, kindsOf, later, prepare } from './harness.js';
 
 beforeEach(() => {
   finishedBodies.length = 0;
@@ -221,12 +123,14 @@ describe('Criterion 1: stop, drain, escalation and honest remote state (RUN-014,
     expect(harness.provider.ledger.calls).toEqual({ fetch: 1, generate: 1 });
     const state = harness.port.load();
     expect(state.results).toEqual({});
-    expect(summarizeUsage(state).known).toEqual({ tokens: 200 });
+    expect(summarizeUsage(state, afterRuns).known).toEqual({ tokens: 200 });
   });
 
   test('soft stop has no default deadline: time alone never escalates it', async () => {
     const harness = prepare({
       members: [cancelMember()],
+      // The operator's lease TTL exceeds this 30-day request, so the drained step keeps publication authority.
+      leaseTtlMs: 60 * 24 * HOUR,
       onReceive: (request, _index, live) => {
         if (request.name === 'generate') {
           live.stop.request({ level: 'soft' });
@@ -248,6 +152,8 @@ describe('Criterion 1: stop, drain, escalation and honest remote state (RUN-014,
     const deadline = T0 + 10 * 60_000;
     const harness = prepare({
       members: [cancelMember()],
+      // The lease TTL exceeds the deadline, so the escalation can still record the remote state durably.
+      leaseTtlMs: HOUR,
       onReceive: (request, _index, live) => {
         if (request.name === 'generate') {
           live.stop.request({ level: 'soft', deadline });
@@ -346,7 +252,7 @@ describe('Criterion 1: stop, drain, escalation and honest remote state (RUN-014,
     const state = harness.port.load();
     expect(Object.keys(state.results)).toEqual(['m-ok']);
     const generate = harness.provider.ledger.received.find(request => request.name === 'generate');
-    const usage = summarizeUsage(state);
+    const usage = summarizeUsage(state, afterRuns);
     expect(usage.known).toEqual({ tokens: 200 });
     expect(usage.unknownRequests).toEqual([generate?.requestAttemptId]);
   });
@@ -578,10 +484,11 @@ describe('Criterion 4: intent-before-call accounting and keyed acknowledgment (A
     const report = await prepare({ members: [okMember()], port }).run();
     expect(report.members['m-ok']).toMatchObject({ status: 'published' });
     expect(report.diagnostics.map(diagnostic => diagnostic.code)).toContain('acknowledgment-lost');
-    expect(eventsOf(report, 'usage-acknowledged').map(event => event.status)).toEqual(['duplicate']);
+    // The reload shows this attempt's own write landed: it is this attempt's acknowledgment, not a duplicate.
+    expect(eventsOf(report, 'usage-acknowledged')).toEqual([expect.objectContaining({ status: 'acknowledged', quantities: { tokens: 100 } })]);
     const state = port.load();
     expect(Object.keys(state.usage)).toHaveLength(1);
-    expect(summarizeUsage(state).known).toEqual({ tokens: 100 });
+    expect(summarizeUsage(state, afterRuns).known).toEqual({ tokens: 100 });
   });
 
   test('duplicate delivery of one report counts once', async () => {
@@ -590,7 +497,7 @@ describe('Criterion 4: intent-before-call accounting and keyed acknowledgment (A
     expect(eventsOf(report, 'usage-acknowledged').map(event => event.status)).toEqual(['acknowledged', 'duplicate']);
     const state = port.load();
     expect(Object.keys(state.usage)).toHaveLength(1);
-    expect(summarizeUsage(state).known).toEqual({ tokens: 100 });
+    expect(summarizeUsage(state, afterRuns).known).toEqual({ tokens: 100 });
   });
 
   test('a conflicting redelivery keeps the first quantities and is diagnosed', async () => {
@@ -598,7 +505,7 @@ describe('Criterion 4: intent-before-call accounting and keyed acknowledgment (A
     const report = await prepare({ members: [okMember()], port, script: { summarize: [{ kind: 'ok', late: 'conflict' }] } }).run();
     expect(eventsOf(report, 'usage-acknowledged').map(event => event.status)).toEqual(['acknowledged', 'conflict']);
     expect(report.diagnostics.map(diagnostic => diagnostic.code)).toContain('usage-conflict');
-    expect(summarizeUsage(port.load()).known).toEqual({ tokens: 100 });
+    expect(summarizeUsage(port.load(), afterRuns).known).toEqual({ tokens: 100 });
   });
 
   test('failed persistence issues no acknowledgment and leaves the usage unknown, not zero', async () => {
@@ -609,7 +516,7 @@ describe('Criterion 4: intent-before-call accounting and keyed acknowledgment (A
     expect(eventsOf(report, 'usage-acknowledged')).toEqual([]);
     expect(report.diagnostics.map(diagnostic => diagnostic.code)).toContain('usage-not-durable');
     expect(report.members['m-ok']).toMatchObject({ status: 'published' });
-    const usage = summarizeUsage(port.load());
+    const usage = summarizeUsage(port.load(), afterRuns);
     expect(usage.known).toEqual({});
     expect(usage.unknownRequests).toEqual([harness.provider.ledger.received[0]?.requestAttemptId]);
   });
@@ -617,7 +524,7 @@ describe('Criterion 4: intent-before-call accounting and keyed acknowledgment (A
   test('a response without a usage report reads as unknown usage, not zero', async () => {
     const port = new MemoryPort();
     await prepare({ members: [okMember()], port, script: { summarize: [{ kind: 'ok', usage: null }] } }).run();
-    const usage = summarizeUsage(port.load());
+    const usage = summarizeUsage(port.load(), afterRuns);
     expect(usage.known.tokens).toBeUndefined();
     expect(usage.unknownRequests).toHaveLength(1);
   });
@@ -631,7 +538,7 @@ describe('Criterion 4: intent-before-call accounting and keyed acknowledgment (A
     }).run();
     const state = port.load();
     expect(Object.keys(state.usage)).toHaveLength(2);
-    expect(summarizeUsage(state).known).toEqual({ requests: 1, tokens: 100 });
+    expect(summarizeUsage(state, afterRuns).known).toEqual({ requests: 1, tokens: 100 });
   });
 });
 
@@ -834,6 +741,6 @@ describe('A-18 and writer lease', () => {
     expect(state.attempts[stepAttemptId]?.state).toBe('interrupted');
     expect(state.requests[intent.requestAttemptId]?.state).toBe('unknown');
     expect(state.operations[intent.operationId]?.state).toBe('unknown');
-    expect(summarizeUsage(state).unknownRequests).toEqual([intent.requestAttemptId]);
+    expect(summarizeUsage(state, T0 + HOUR).unknownRequests).toEqual([intent.requestAttemptId]);
   });
 });

@@ -20,9 +20,9 @@ import { fileURLToPath } from 'node:url';
 
 import { describe, expect, test } from '@jest/globals';
 
-import { parseState } from '../src/protocol.js';
+import { parseState, summarizeUsage } from '../src/protocol.js';
 import type { IDurableState } from '../src/protocol.js';
-import { plantedValues, quotaAt, secrets } from './fakes.js';
+import { HOUR, T0, plantedValues, quotaAt, secrets } from './fakes.js';
 
 /** The emitted driver; every stage runs it as its own OS process. */
 const entry = fileURLToPath(new URL('./process-entry.js', import.meta.url));
@@ -37,6 +37,7 @@ type IEnding = 'exits' | 'killed' | 'fails';
 interface IStageRun {
   readonly report: unknown;
   readonly stdout: string;
+  readonly stderr: string;
 }
 
 /** Run one stage in a separate process and check how it ended. */
@@ -44,7 +45,7 @@ function stage(directory: string, scenario: string, name: 'A' | 'B' | 'C', endin
   const child = spawnSync(process.execPath, [entry, directory, scenario, name], { encoding: 'utf8' });
   if (ending === 'killed') {
     expect(child.signal).toBe('SIGKILL');
-    return { report: undefined, stdout: child.stdout };
+    return { report: undefined, stdout: child.stdout, stderr: child.stderr };
   }
   if (ending === 'fails') {
     expect(child.status).toBe(1);
@@ -54,7 +55,7 @@ function stage(directory: string, scenario: string, name: 'A' | 'B' | 'C', endin
     expect(child.status).toBe(0);
   }
   const report: unknown = JSON.parse(child.stdout);
-  return { report, stdout: child.stdout };
+  return { report, stdout: child.stdout, stderr: child.stderr };
 }
 
 /** Read the store file exactly as a later process would. */
@@ -248,6 +249,8 @@ describe('Criterion 4 and 5: accounting and replay at every fault point (separat
       const afterA = await persisted(directory);
       const [intent] = requestsOf(afterA, 'm-ok', 'summarize');
       expect(intent?.state).toBe('pending');
+      // Read-only view of the crashed store before any writer recovers it: the dead intent is unknown, not live.
+      expect(summarizeUsage(afterA, T0 + HOUR)).toMatchObject({ known: {}, unknownRequests: [intent?.id], pendingRequests: [] });
       const b = stage(directory, 'kill-after-intent', 'B').report;
       expect(b).toMatchObject({
         members: { 'm-ok': { status: 'unknown-outcome', operationId: intent?.operationId } },
@@ -394,7 +397,8 @@ describe('Criterion 7 across processes', () => {
     ] as const) {
       await inDirectory(async directory => {
         for (const name of stages) {
-          outputs.push(stage(directory, scenario, name, scenario === 'observer-presenter-throw' && name === 'A' ? 'fails' : 'exits').stdout);
+          const run = stage(directory, scenario, name, scenario === 'observer-presenter-throw' && name === 'A' ? 'fails' : 'exits');
+          outputs.push(run.stdout, run.stderr);
         }
         storeText += await readFile(path.join(directory, 'store.json'), 'utf8');
       });

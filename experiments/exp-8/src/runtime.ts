@@ -19,6 +19,11 @@
  *   (operation ID, report ID); an ambiguous outcome is never replayed unless
  *   the operation is declared safe to repeat (or the provider deduplicates
  *   operation identifiers) and an author retry policy allows another attempt.
+ * - An author's catch-and-retry cannot bypass these rules: once an attempt is
+ *   tainted it sends nothing more, and a call that reuses an unresolved or
+ *   deferred operation is refused without sending.
+ * - Every durable write requires an unexpired, current lease; a drain that
+ *   outlives the lease ends interrupted and publishes nothing.
  */
 import { Permits } from './control.js';
 import type { IAbortSignal, IClock, IStopLevel, IStopRequest, StopController } from './control.js';
@@ -27,7 +32,7 @@ import type { IData } from './data.js';
 import { EventLog } from './events.js';
 import type { IDiagnostic, IEvent, IObserver, IReasonCode } from './events.js';
 import type { IProvider, IProviderResponse, IUsageReport } from './provider.js';
-import { CommitUnknownError } from './store.js';
+import { CommitUnknownError, LeaseLostError, UnattributableReportError } from './store.js';
 import type { IAcknowledgment, Store } from './store.js';
 import type { IOperationRecord, IRetryPolicy } from './state.js';
 
@@ -104,7 +109,7 @@ export type IMemberOutcome =
  */
 export interface IRunReport {
   readonly runId: string;
-  readonly status: 'settled' | 'waiting' | 'stopped' | 'writer-busy';
+  readonly status: 'settled' | 'waiting' | 'stopped' | 'writer-busy' | 'lease-lost';
   readonly waitingUntil: number | null;
   readonly members: Readonly<Record<string, IMemberOutcome>>;
   readonly events: readonly IEvent[];
@@ -151,6 +156,14 @@ class UnknownOutcomeSignal extends Error {
   }
 }
 
+/** Thrown into a body when this writer lost publication authority (its lease expired or was taken over). */
+class LeaseLostSignal extends Error {
+  constructor() {
+    super('EXP-8 lease lost');
+    this.name = 'LeaseLostSignal';
+  }
+}
+
 /** Default cap on rate-limit deferrals of one operation when the author declares no policy. @internal */
 export const defaultRateLimitAttempts = 5;
 
@@ -167,16 +180,29 @@ type ITaint =
   | { readonly kind: 'deferred'; readonly notBefore: number }
   | { readonly kind: 'unknown-outcome'; readonly operationId: string; readonly reason: IReasonCode };
 
-/** How one send attempt ended from the runtime's point of view. */
+/** How one send attempt ended from the runtime's point of view. `not-sent`: aborted before the provider was called. */
 type ISendOutcome =
   | { readonly kind: 'response'; readonly value: IProviderResponse }
   | { readonly kind: 'lost' }
-  | { readonly kind: 'aborted' };
+  | { readonly kind: 'aborted' }
+  | { readonly kind: 'not-sent' };
+
+/** The signal a tainted attempt rethrows when its body calls again: the original refusal, never a send. */
+function taintSignal(taint: ITaint): Error {
+  switch (taint.kind) {
+    case 'interrupted':
+      return taint.reason === 'lease-lost' ? new LeaseLostSignal() : new StopSignal(taint.reason === 'stop-soft' ? 'soft' : 'hard');
+    case 'deferred':
+      return new DeferralSignal(taint.notBefore);
+    case 'unknown-outcome':
+      return new UnknownOutcomeSignal(taint.operationId);
+  }
+}
 
 /** A member's admission decision at a point in time. */
 type IClassification =
   | { readonly kind: 'reused'; readonly reference: string }
-  | { readonly kind: 'blocked'; readonly operationId: string }
+  | { readonly kind: 'blocked'; readonly operationId: string; readonly reason: IReasonCode }
   | { readonly kind: 'waiting'; readonly notBefore: number }
   | { readonly kind: 'stopped'; readonly level: IStopLevel }
   | { readonly kind: 'admissible' };
@@ -195,6 +221,10 @@ function raceAbort(send: () => Promise<IProviderResponse>, signal: IAbortSignal)
         resolve(outcome);
       }
     };
+    if (signal.aborted) {
+      finish({ kind: 'not-sent' });
+      return;
+    }
     signal.onAbort(() => {
       finish({ kind: 'aborted' });
     });
@@ -255,8 +285,10 @@ class Run {
   private readonly drainUnit: IDrainUnit;
   private readonly outcomes = new Map<string, IMemberOutcome>();
   private readonly announcedWaits = new Set<string>();
+  private readonly stopWaiters: (() => void)[] = [];
   private runId = '';
   private holding = false;
+  private leaseLost = false;
   private finished = false;
 
   constructor(options: IRunOptions) {
@@ -281,6 +313,11 @@ class Run {
       return;
     }
     const scope = stop.member === undefined ? {} : { member: stop.member };
+    if (stop.member === undefined) {
+      for (const wake of this.stopWaiters.splice(0)) {
+        wake();
+      }
+    }
     if (stop.cause === 'deadline') {
       this.log.emit({ kind: 'stop-escalated', level: stop.level, reason: 'deadline', ...scope });
     } else {
@@ -303,6 +340,19 @@ class Run {
     return repeatSafe && operation.retry !== null && this.store.requestCount(operationId) < operation.retry.maxAttempts;
   }
 
+  /**
+   * Why an ambiguous (`unknown` or `running`) operation may not be replayed, or
+   * null when it may be (or is not ambiguous). A repeat-safe operation whose
+   * policy has run out is `policy-exhausted`; any other is `not-repeat-safe`.
+   */
+  private replayBlock(operationId: string, operation: IOperationRecord): IReasonCode | null {
+    if ((operation.state !== 'unknown' && operation.state !== 'running') || this.repeatAllowed(operationId, operation)) {
+      return null;
+    }
+    const repeatSafe = (operation.safeToRepeat || this.provider.idempotencyKeys) && operation.retry !== null;
+    return repeatSafe ? 'policy-exhausted' : 'not-repeat-safe';
+  }
+
   /** Decide a member's admission from durable facts and current stop intent. */
   private classify(member: string): IClassification {
     const state = this.store.state;
@@ -311,10 +361,11 @@ class Run {
       return { kind: 'reused', reference: result.reference };
     }
     const operations = Object.entries(state.operations).filter(([, operation]) => operation.member === member);
-    const ambiguous = operations.find(([id, operation]) => (operation.state === 'unknown' || operation.state === 'running')
-      && !this.repeatAllowed(id, operation));
-    if (ambiguous !== undefined) {
-      return { kind: 'blocked', operationId: ambiguous[0] };
+    for (const [id, operation] of operations) {
+      const reason = this.replayBlock(id, operation);
+      if (reason !== null) {
+        return { kind: 'blocked', operationId: id, reason };
+      }
     }
     const now = this.clock.now();
     const waits = operations.flatMap(([, operation]) => operation.state === 'deferred' && operation.notBefore !== null
@@ -326,29 +377,37 @@ class Run {
     return level === 'none' ? { kind: 'admissible' } : { kind: 'stopped', level };
   }
 
-  /** Durably acknowledge a usage report; a lost acknowledgment is resolved by reloading and re-acknowledging once. */
+  /**
+   * Durably acknowledge a usage report. After an ambiguous commit the store has
+   * reloaded: if this attempt's own write is there, it is `acknowledged`;
+   * otherwise it is re-acknowledged once. A second ambiguous commit leaves
+   * durability unknown, which is not the same as a failed write. A report that
+   * names an unknown operation, or another operation's request, is refused.
+   */
   private acknowledge(operationId: string, requestAttemptId: string, report: IUsageReport): void {
     const member = this.store.state.requests[requestAttemptId]?.member;
-    if (member === undefined) {
-      // A report for a request this store never recorded cannot be attributed; it stays with the provider.
-      return;
-    }
-    const ids = { member, operationId, requestAttemptId };
-    const attempt = (): IAcknowledgment => this.store.acknowledgeUsage(operationId, requestAttemptId, report, this.clock.now());
-    let result: IAcknowledgment;
-    try {
-      result = attempt();
-    } catch (error) {
-      if (!(error instanceof CommitUnknownError)) {
-        this.log.diagnose({ code: 'usage-not-durable', ...ids });
-        return;
-      }
-      this.log.diagnose({ code: 'acknowledgment-lost', ...ids });
+    const ids = { ...(member === undefined ? {} : { member }), operationId, requestAttemptId };
+    let result: IAcknowledgment | null = null;
+    for (let tries = 0; result === null; tries++) {
       try {
-        result = attempt();
-      } catch {
-        this.log.diagnose({ code: 'usage-not-durable', ...ids });
-        return;
+        result = this.store.acknowledgeUsage(operationId, requestAttemptId, report, this.clock.now());
+      } catch (error) {
+        if (error instanceof UnattributableReportError) {
+          this.log.diagnose({ code: 'usage-unattributable', ...ids });
+          return;
+        }
+        if (!(error instanceof CommitUnknownError)) {
+          // A failed write, or no authority to write (lease lost): no durable acknowledgment exists.
+          this.log.diagnose({ code: 'usage-not-durable', ...ids });
+          return;
+        }
+        this.log.diagnose({ code: 'acknowledgment-lost', ...ids });
+        if (this.store.holdsUsage(operationId, requestAttemptId, report)) {
+          result = 'acknowledged';
+        } else if (tries >= 1) {
+          this.log.diagnose({ code: 'usage-durability-unknown', ...ids });
+          return;
+        }
       }
     }
     if (result === 'conflict') {
@@ -397,12 +456,72 @@ class Run {
     return null;
   }
 
-  /** One logical operation for a body: intent, permit, send, account, settle, retry or defer. */
+  /** This pass may no longer write: stop admitting, publishing and releasing. */
+  private loseLease(): void {
+    this.leaseLost = true;
+    this.holding = false;
+  }
+
+  /**
+   * Wait for a request permit unless a hard stop reaches the member first
+   * (RUN-014). A permit granted after the abort is handed straight back.
+   */
+  private acquirePermit(signal: IAbortSignal): Promise<(() => void) | null> {
+    return new Promise(resolve => {
+      let decided = false;
+      signal.onAbort(() => {
+        if (!decided) {
+          decided = true;
+          resolve(null);
+        }
+      });
+      void this.permits.acquire().then(release => {
+        if (decided) {
+          release();
+        } else {
+          decided = true;
+          resolve(release);
+        }
+      });
+    });
+  }
+
+  /** One logical operation for a body; losing the lease at any write interrupts the attempt. */
   async operate(context: StepContext, declaration: IOperationDeclaration): Promise<IData> {
+    try {
+      return await this.operateWithAuthority(context, declaration);
+    } catch (error) {
+      if (error instanceof LeaseLostError) {
+        this.loseLease();
+        context.mark({ kind: 'interrupted', reason: 'lease-lost' });
+        throw new LeaseLostSignal();
+      }
+      throw error;
+    }
+  }
+
+  /** Intent, permit, send, account, settle, retry or defer, while this writer holds the lease. */
+  private async operateWithAuthority(context: StepContext, declaration: IOperationDeclaration): Promise<IData> {
+    if (context.taint !== null) {
+      // A tainted attempt cannot publish, so any further paid call is waste or a blind replay.
+      throw taintSignal(context.taint);
+    }
     const { member, stepAttemptId } = context;
     const bindingDigest = canonical(declaration.binding);
     const policy = declaration.retry ?? null;
     let operationId = this.store.openOperation(member, declaration.name, bindingDigest);
+    const reused = operationId === undefined ? undefined : this.store.state.operations[operationId];
+    if (operationId !== undefined && reused !== undefined) {
+      const block = this.replayBlock(operationId, reused);
+      if (block !== null) {
+        context.mark({ kind: 'unknown-outcome', operationId, reason: block });
+        throw new UnknownOutcomeSignal(operationId);
+      }
+      if (reused.state === 'deferred' && reused.notBefore !== null && reused.notBefore > this.clock.now()) {
+        context.mark({ kind: 'deferred', notBefore: reused.notBefore });
+        throw new DeferralSignal(reused.notBefore);
+      }
+    }
     let retry = operationId !== undefined;
     const initial = this.stopForbids(member, retry);
     if (initial !== null) {
@@ -412,7 +531,10 @@ class Run {
       this.log.emit({ kind: 'retry-started', member, stepAttemptId, operationId });
     }
     for (;;) {
-      const release = await this.permits.acquire();
+      const release = await this.acquirePermit(context.signal);
+      if (release === null) {
+        this.refuse(context, 'hard');
+      }
       const forbidden = this.stopForbids(member, retry);
       if (forbidden !== null || context.closed) {
         release();
@@ -436,6 +558,10 @@ class Run {
       this.log.emit({ kind: 'request-started', ...event });
       const outcome = await raceAbort(() => this.provider.send({ operationId: ids.operationId, requestAttemptId, name: declaration.name, binding: declaration.binding }, context.signal), context.signal);
       release();
+      if (outcome.kind === 'not-sent') {
+        this.store.settleRequest(requestAttemptId, 'not-applied', 'pending', null, this.clock.now());
+        this.refuse(context, 'hard');
+      }
       if (outcome.kind === 'aborted') {
         await this.recordAbort(context, operationId, requestAttemptId);
         throw new StopSignal('hard');
@@ -444,9 +570,9 @@ class Run {
         this.store.settleRequest(requestAttemptId, 'unknown', 'unknown', null, this.clock.now());
         this.log.emit({ kind: 'request-settled', status: 'unknown', reason: 'lost-response', ...event });
         const operation = this.store.state.operations[operationId];
-        if (operation === undefined || !this.repeatAllowed(operationId, operation)) {
-          const repeatSafe = operation !== undefined && (operation.safeToRepeat || this.provider.idempotencyKeys) && operation.retry !== null;
-          context.mark({ kind: 'unknown-outcome', operationId, reason: repeatSafe ? 'policy-exhausted' : 'not-repeat-safe' });
+        const block = operation === undefined ? 'not-repeat-safe' : this.replayBlock(operationId, operation);
+        if (operation === undefined || block !== null) {
+          context.mark({ kind: 'unknown-outcome', operationId, reason: block ?? 'not-repeat-safe' });
           throw new UnknownOutcomeSignal(operationId);
         }
         // The persisted policy decided eligibility, so it also sets the backoff.
@@ -522,7 +648,18 @@ class Run {
   /** Run one admitted step attempt to publication or to an explicit non-success state. */
   private async runStep(member: IMemberDeclaration): Promise<void> {
     const key = member.key;
-    const stepAttemptId = this.store.beginAttempt(key, this.runId, this.clock.now());
+    let stepAttemptId: string;
+    try {
+      stepAttemptId = this.store.beginAttempt(key, this.runId, this.clock.now());
+    } catch (error) {
+      if (!(error instanceof LeaseLostError)) {
+        throw error;
+      }
+      this.loseLease();
+      this.outcomes.set(key, { status: 'not-admitted' });
+      this.log.emit({ kind: 'member-not-admitted', status: 'lease-lost', reason: 'lease-lost', member: key });
+      return;
+    }
     this.log.emit({ kind: 'step-admitted', member: key, stepAttemptId });
     const context = new StepContext(this, key, stepAttemptId);
     let output: unknown;
@@ -536,11 +673,31 @@ class Run {
     }
     context.closed = true;
     const taint = context.taint;
+    // Without an unexpired, current lease nothing can be written: the attempt ends interrupted in this
+    // pass, and the next writer's recovery records it durably.
+    const lost = (): void => {
+      this.loseLease();
+      this.outcomes.set(key, { status: 'interrupted' });
+      this.log.emit({ kind: 'step-settled', status: 'interrupted', reason: 'lease-lost', member: key, stepAttemptId });
+    };
+    if (this.leaseLost || (taint?.kind === 'interrupted' && taint.reason === 'lease-lost')) {
+      lost();
+      return;
+    }
     const hard = this.stop.levelFor(key) === 'hard';
     const now = this.clock.now();
     if (returned && taint === null && !hard && isData(output)) {
       // Publication is the linearization point: nothing after this commit can turn it into a failure.
-      const reference = this.store.publish(key, stepAttemptId, output, now);
+      let reference: string;
+      try {
+        reference = this.store.publish(key, stepAttemptId, output, now);
+      } catch (error) {
+        if (error instanceof LeaseLostError) {
+          lost();
+          return;
+        }
+        throw error;
+      }
       this.outcomes.set(key, { status: 'published', reference });
       this.log.emit({ kind: 'published', status: 'completed', member: key, stepAttemptId, reference });
       return;
@@ -561,7 +718,15 @@ class Run {
       }
       settled = { state: 'failed', reason, outcome: { status: 'failed' } };
     }
-    this.store.settleAttempt(stepAttemptId, settled.state, now);
+    try {
+      this.store.settleAttempt(stepAttemptId, settled.state, now);
+    } catch (error) {
+      if (error instanceof LeaseLostError) {
+        lost();
+        return;
+      }
+      throw error;
+    }
     this.outcomes.set(key, settled.outcome);
     const reason = returned && taint !== null ? 'partial-output-discarded' : settled.reason;
     this.log.emit({ kind: 'step-settled', status: settled.state, reason, member: key, stepAttemptId });
@@ -577,7 +742,7 @@ class Run {
         return undefined;
       case 'blocked':
         this.outcomes.set(key, { status: 'unknown-outcome', operationId: classification.operationId });
-        this.log.emit({ kind: 'member-blocked', status: 'unknown-outcome', reason: 'not-repeat-safe', member: key, operationId: classification.operationId });
+        this.log.emit({ kind: 'member-blocked', status: 'unknown-outcome', reason: classification.reason, member: key, operationId: classification.operationId });
         return undefined;
       case 'waiting': {
         this.outcomes.set(key, { status: 'waiting', notBefore: classification.notBefore });
@@ -610,6 +775,31 @@ class Run {
     this.store.release(this.clock.now());
     this.holding = false;
     this.log.emit({ kind: 'lease-released' });
+  }
+
+  /**
+   * Sleep until a wait ends, unless a run-wide stop arrives first; resolves
+   * whether the wait completed. A stop never waits for T.
+   */
+  private sleepOrStop(until: number): Promise<boolean> {
+    if (this.stop.runLevel() !== 'none') {
+      return Promise.resolve(false);
+    }
+    return new Promise(resolve => {
+      let decided = false;
+      this.stopWaiters.push(() => {
+        if (!decided) {
+          decided = true;
+          resolve(false);
+        }
+      });
+      void this.clock.sleepUntil(until).then(() => {
+        if (!decided) {
+          decided = true;
+          resolve(true);
+        }
+      });
+    });
   }
 
   /** Acquire (or re-acquire) the lease and report recovered intents. */
@@ -668,7 +858,7 @@ class Run {
     const active = new Map<string, Promise<void>>();
     for (;;) {
       let earliest: number | null = null;
-      for (const member of this.members) {
+      for (const member of this.leaseLost ? [] : this.members) {
         const prior = this.outcomes.get(member.key);
         if (active.has(member.key) || (prior !== undefined && prior.status !== 'waiting')) {
           continue;
@@ -688,6 +878,9 @@ class Run {
         await Promise.race(active.values());
         continue;
       }
+      if (this.leaseLost) {
+        return this.finish('lease-lost', earliest);
+      }
       const stopped = this.stop.runLevel() !== 'none';
       if (earliest === null || stopped) {
         return this.finish(stopped ? 'stopped' : 'settled', earliest);
@@ -697,8 +890,8 @@ class Run {
       if (this.waitMode === 'exit') {
         return this.finish('waiting', earliest);
       }
-      await this.clock.sleepUntil(earliest);
-      if (this.stop.runLevel() !== 'none') {
+      const woke = await this.sleepOrStop(earliest);
+      if (!woke || this.stop.runLevel() !== 'none') {
         return this.finish('stopped', earliest);
       }
       if (!this.acquire()) {

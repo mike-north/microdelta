@@ -58,6 +58,27 @@ export class CommitUnknownError extends Error {
   }
 }
 
+/**
+ * This writer no longer holds an unexpired, current lease (it expired, or
+ * another writer took it over). PUB-004: every holder mutation requires that
+ * authority, so nothing is written; there is no timer-driven renewal (RUN-015).
+ * @internal
+ */
+export class LeaseLostError extends Error {
+  constructor() {
+    super('EXP-8 store: this writer no longer holds an unexpired, current lease');
+    this.name = 'LeaseLostError';
+  }
+}
+
+/** A usage report that cannot be attributed to a known request of its operation. @internal */
+export class UnattributableReportError extends Error {
+  constructor() {
+    super('EXP-8 store: the usage report does not name a known request of its operation');
+    this.name = 'UnattributableReportError';
+  }
+}
+
 /** A request attempt settled while its intent was still pending in a dead process. @internal */
 export interface IRecoveredRequest {
   readonly requestAttemptId: string;
@@ -144,17 +165,21 @@ export class Store {
     this.current = next;
   }
 
-  /** Fencing: only the identity that acquired the current lease may write. */
-  private assertHolder(): void {
-    const lease = this.current.lease;
-    if (this.holder === null || lease.holder !== this.holder.runId || lease.fence !== this.holder.fence) {
-      throw new Error('EXP-8 store: this writer does not hold the current lease');
+  /**
+   * Fencing: only the identity that acquired the lease may write, and only
+   * while the *durable* lease is still its own and unexpired. The in-memory
+   * snapshot is never trusted for this: another process may have taken over.
+   */
+  private assertHolder(now: number): void {
+    const lease = this.port.load().lease;
+    if (this.holder === null || lease.holder !== this.holder.runId || lease.fence !== this.holder.fence || lease.expiresAt <= now) {
+      throw new LeaseLostError();
     }
   }
 
   /** A holder mutation: fence check, change, progress-driven lease renewal, commit. */
   private transact(boundary: ICommitBoundary, subject: string | null, now: number, change: (state: IDurableState) => IDurableState): void {
-    this.assertHolder();
+    this.assertHolder(now);
     const changed = change(this.current);
     this.write(boundary, { ...changed, lease: { ...changed.lease, expiresAt: now + this.leaseTtlMs } }, subject);
   }
@@ -202,7 +227,7 @@ export class Store {
 
   /** Release the lease so another process may write; this store must re-acquire before writing again. */
   release(now: number): void {
-    this.assertHolder();
+    this.assertHolder(now);
     this.write('lease-released', { ...this.current, lease: { ...this.current.lease, holder: null, expiresAt: now } }, null);
     this.holder = null;
   }
@@ -231,8 +256,16 @@ export class Store {
     return Object.values(this.current.requests).filter(request => request.operationId === operationId).length;
   }
 
-  /** Durable "operation started" intent before a paid call; creates the operation if new. */
+  /**
+   * Durable "operation started" intent before a paid call; creates the
+   * operation if new. A deferred operation cannot be restarted before its
+   * "not before" time: the deferral is never cleared early.
+   */
   intent(input: IIntentInput, operationId: string | undefined, now: number): { readonly operationId: string; readonly requestAttemptId: string } {
+    const prior = operationId === undefined ? undefined : this.current.operations[operationId];
+    if (prior?.state === 'deferred' && prior.notBefore !== null && prior.notBefore > now) {
+      throw new Error(`EXP-8 store: operation ${operationId ?? ''} is deferred until ${String(prior.notBefore)}`);
+    }
     let ids = { operationId: '', requestAttemptId: '' };
     this.transact('operation-intent', input.member, now, state => {
       const [opId, withOperation] = operationId === undefined ? allocate(state, 'op') : [operationId, state] as const;
@@ -265,20 +298,31 @@ export class Store {
    * Idempotently acknowledge a usage report under its (operation ID, report ID)
    * key. A redelivery with equal quantities is a duplicate; with different
    * quantities it is a conflict and the first acknowledgment stands. Only
-   * `acknowledged` performs a commit.
+   * `acknowledged` performs a commit. Report IDs are unique **per operation**
+   * (not globally), which is why the operation is part of the key. A report
+   * must name a known request attempt of that same operation.
    */
   acknowledgeUsage(operationId: string, requestAttemptId: string, report: IUsageReport, now: number): IAcknowledgment {
+    const request = this.current.requests[requestAttemptId];
+    if (this.current.operations[operationId] === undefined || request?.operationId !== operationId) {
+      throw new UnattributableReportError();
+    }
     const key = usageKey(operationId, report.reportId);
     const prior = this.current.usage[key];
     if (prior !== undefined) {
       return canonical(prior.quantities) === canonical(report.quantities) ? 'duplicate' : 'conflict';
     }
-    const request = existing(this.current.requests, requestAttemptId, 'request attempt');
     this.transact('usage-acknowledged', request.member, now, state => ({
       ...state,
       usage: { ...state.usage, [key]: { operationId, requestAttemptId, reportId: report.reportId, quantities: { ...report.quantities } } },
     }));
     return 'acknowledged';
+  }
+
+  /** Whether this exact acknowledgment (same key, request attempt and quantities) is in the last known durable snapshot. */
+  holdsUsage(operationId: string, requestAttemptId: string, report: IUsageReport): boolean {
+    const stored = this.current.usage[usageKey(operationId, report.reportId)];
+    return stored !== undefined && stored.requestAttemptId === requestAttemptId && canonical(stored.quantities) === canonical(report.quantities);
   }
 
   /** Record a request outcome and the operation state it implies, with any "not before" time. */

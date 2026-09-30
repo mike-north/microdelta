@@ -356,7 +356,7 @@ async function runStage(directory: string, scenarioName: string, stageName: 'A' 
   });
   emit({
     ...report,
-    usage: summarizeUsage(port.load()),
+    usage: summarizeUsage(port.load(), clock.now()),
     provider: {
       calls: provider.ledger.calls,
       applied: provider.ledger.applied,

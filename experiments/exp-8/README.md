@@ -16,8 +16,10 @@ The portable candidate lives in `src/`:
 - `runtime.ts`: one supervised pass (admission, drain, deferral, retry, abort, publication).
 
 Only `test/` uses Node file and child-process APIs. `test/fakes.ts` holds the
-fake clock, the scripted fake provider, an in-memory durable port with fault
-injection, and the bounded run's three members. `test/process-entry.ts` runs
+fake clock (instant or gated sleeps), the scripted fake provider, an in-memory
+durable port with fault injection, and the bounded run's three members.
+`test/harness.ts` wires one in-process pass for `protocol.test.ts` and
+`review.test.ts` (the assertions added from the PR review). `test/process-entry.ts` runs
 one stage of a scenario as a separate OS process over a JSON store file and a
 JSON provider ledger; kill points send SIGKILL to that process at a named
 commit boundary. `test-d/` checks the event schema's type contract.

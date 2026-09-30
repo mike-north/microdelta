@@ -8,7 +8,9 @@
  * operations, and reports on fd 1:
  *
  * - `{ t: 'trace', ... }` lines from author helpers (bodies, checks, finality);
- * - `{ t: 'event', ... }` lines from a run observer (step and ordinary events);
+ * - `{ t: 'event', ... }` lines from a run observer (step and ordinary events),
+ *   and `{ t: 'stop', ... }` and `{ t: 'send', ... }` lines for stop intent
+ *   and sends;
  * - `{ t: 'result', ... }` or `{ t: 'error', ... }` as the final line.
  *
  * Every line is written synchronously, so a SIGKILL leaves an honest trace of
@@ -17,7 +19,7 @@
  */
 import { readFileSync, writeSync } from 'node:fs';
 
-import { openWorkspace } from 'microdelta';
+import { createStopController, openWorkspace } from 'microdelta';
 import type { IAdmissionDecision, IAdmissionRequest, IResolutionOutcome, IRunEvent, IWorkspaceRun } from 'microdelta';
 
 import { composeAnalysis, memberKeys } from './analysis.js';
@@ -48,6 +50,14 @@ export interface IJob {
   readonly deny?: readonly ({ readonly kind: 'source' | 'memo' } | { readonly memberKey: IMemberKey; readonly slot: string })[];
   /** A run observer throws at this step lifecycle position. */
   readonly throwAt?: { readonly phase: string; readonly memberKey: IMemberKey; readonly slot: string };
+  /**
+   * The operator requests this stop level through the run's stop controller
+   * when the run's observer sees this step lifecycle position, standing in
+   * for an interrupt arriving exactly then.
+   */
+  readonly stopAt?: { readonly level: 'soft' | 'hard'; readonly phase: string; readonly memberKey: IMemberKey; readonly slot: string };
+  /** The report command's presenter (its ordinary report assembly) fails after every summary resolved. */
+  readonly failPresenter?: boolean;
 }
 
 /** Write one line synchronously. */
@@ -105,13 +115,18 @@ async function perform(job: IJob, run: IWorkspaceRun, analysis: ReturnType<typeo
       }
       const validation = readEvidence(validationStart);
       const reportStart = markReads();
-      const report = await run.ordinary('report', () => [...memberKeys].sort().map((member) => {
-        const outcome = outcomes[member];
-        if (outcome === undefined || outcome.kind === 'refused' || outcome.kind === 'skipped') {
-          return { key: member, refused: true };
+      const report = await run.ordinary('report', () => {
+        if (job.failPresenter === true) {
+          throw new Error('acceptance presenter failure');
         }
-        return { key: member, ...run.read<ISummary>(outcome.reference) };
-      }));
+        return [...memberKeys].sort().map((member) => {
+          const outcome = outcomes[member];
+          if (outcome === undefined || outcome.kind === 'refused' || outcome.kind === 'skipped') {
+            return { key: member, refused: true };
+          }
+          return { key: member, ...run.read<ISummary>(outcome.reference) };
+        });
+      });
       return {
         outcomes: Object.fromEntries(Object.entries(outcomes).map(([member, outcome]) => [member, describeOutcome(outcome)])),
         report,
@@ -159,10 +174,13 @@ async function main(job: IJob): Promise<void> {
   const workspace = openWorkspace({ location: job.location, logicalStore: job.logicalStore, ...(job.leaseMilliseconds === undefined ? {} : { leaseMilliseconds: job.leaseMilliseconds }) });
   try {
     const deny = job.deny ?? [];
+    const stopAt = job.stopAt;
+    const stop = stopAt === undefined ? undefined : createStopController();
     const result = await workspace.run({
       authoring: analysis.authoring,
       composition: analysis.composition,
       environment: job.environment,
+      ...(stop === undefined ? {} : { stop }),
       admission: {
         admit(request: IAdmissionRequest): IAdmissionDecision {
           const denied = deny.some((rule) => ('kind' in rule ? rule.kind === request.kind : rule.memberKey === request.step.memberKey && rule.slot === request.step.slot));
@@ -176,8 +194,19 @@ async function main(job: IJob): Promise<void> {
             emit({ t: 'event', label: event.label, phase: event.phase });
             return;
           }
+          if (event.kind === 'stop') {
+            emit({ t: 'stop', level: event.level, cause: event.cause ?? null });
+            return;
+          }
+          if (event.kind === 'send') {
+            emit({ t: 'send', label: event.label, phase: event.phase, ...(event.phase === 'remote-state' ? { remote: event.remote } : {}) });
+            return;
+          }
           const { step, phase, reference } = event.event;
           emit({ t: 'event', member: step.memberKey, slot: step.slot, phase, ...(reference === undefined ? {} : { reference: reference.locator }) });
+          if (stop !== undefined && stopAt !== undefined && stopAt.phase === phase && stopAt.memberKey === step.memberKey && stopAt.slot === step.slot) {
+            stop.request({ level: stopAt.level });
+          }
           if (job.throwAt !== undefined && job.throwAt.phase === phase && job.throwAt.memberKey === step.memberKey && job.throwAt.slot === step.slot) {
             throw new Error(`acceptance observer failure at ${phase}`);
           }

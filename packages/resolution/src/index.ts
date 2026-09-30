@@ -7,8 +7,9 @@
  * project-private `@alpha` contract; spellings are not a public API.
  *
  * Resolution never mutates History rows directly, never stores a finality
- * answer, and never replays a body as validation. Admission policy and run
- * lifetime belong to Run Supervision; storage consistency to History.
+ * answer, and never replays a body as validation. Admission policy, run
+ * lifetime, run cancellation and the fan-out window belong to Run
+ * Supervision, reached through its ports; storage consistency to History.
  * @packageDocumentation
  */
 export { ResolutionError, type IResolutionErrorCode } from './errors.js';
@@ -34,6 +35,7 @@ export type {
   ICheckRequest,
   IDiscoveryOutcome,
   IExecutionAdmission,
+  IExecutionSupervision,
   IFoldCoverage,
   IFoldOutcome,
   IFoldRequest,
@@ -58,5 +60,6 @@ export type {
   IResolveRequest,
   IReuseBasis,
   IStepKind,
+  ISupervisedExecution,
 } from './contracts.js';
 export { createResolution } from './resolution.js';

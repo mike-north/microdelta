@@ -561,7 +561,7 @@ describe('observer positions (REUSE-009, A-19)', () => {
     const second: IRunEvent[] = [];
     const { options } = runOptions({ runId: 'run:observed', observers: [{ observe: (event) => first.push(event) }, { observe: (event) => second.push(event) }] });
     await supervisor.run(options, (run) => run.resolve(step, { requestKey: 'request:1' }));
-    expect(first.map((event) => event.kind === 'step' ? event.event.phase : event.phase)).toEqual(['verify', 'admit', 'claim', 'execute', 'publish']);
+    expect(first.map((event) => event.kind === 'step' ? event.event.phase : event.kind === 'stop' ? event.level : event.phase)).toEqual(['verify', 'admit', 'claim', 'execute', 'publish']);
     expect(second).toEqual(first);
     expect(first.every((event) => Object.isFrozen(event) && event.runId === 'run:observed')).toBe(true);
   });

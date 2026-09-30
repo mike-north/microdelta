@@ -14,6 +14,8 @@ expectType<Store>(createMemoryStore());
 expectError(facade.authoring);
 expectError(facade.openWorkspace);
 expectError(facade.currentRun);
+expectError(facade.currentExecution);
+expectError(facade.createStopController);
 expectError(facade.sourceOutcome);
 expectError(facade.stepLifecycle);
 expectError(facade.ResolutionError);

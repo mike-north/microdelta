@@ -17,6 +17,7 @@ import { types } from 'node:util';
 
 import Database from 'better-sqlite3';
 
+import { SqliteBusyError } from '@microdelta/machine';
 import type { ISqliteCapability, ISqliteConnection, ISqliteRow, ISqliteRunResult, ISqliteStatement, ISqliteSynchronousResult, ISqliteValue } from '@microdelta/machine';
 
 /** The bounded wait, in milliseconds, before a locked database fails with SQLITE_BUSY. */
@@ -34,6 +35,9 @@ const selectedConfiguration: readonly { readonly assignment: string; readonly se
   { assignment: 'foreign_keys = ON', setting: 'foreign_keys', expected: 1 },
   { assignment: `busy_timeout = ${String(busyTimeoutMilliseconds)}`, setting: 'busy_timeout', expected: busyTimeoutMilliseconds },
 ];
+
+/** The longest pause, in milliseconds, between attempts to configure a store that is busy. */
+const maximumRetryPauseMilliseconds = 10;
 
 /** Locations that cannot hold the persistent WAL file this capability promises. */
 const nonPersistentLocations: ReadonlySet<string> = new Set(['', ':memory:']);
@@ -56,7 +60,73 @@ export function _createNodeSqliteImplementation(): ISqliteCapability {
 }
 
 /**
- * Open and configure one database file. A failure after the driver opened the
+ * Recognize a driver failure that means another connection holds a lock this
+ * one needs: `SQLITE_BUSY` and its extended variants. Other failures, such as
+ * corruption or misuse, are never contention.
+ */
+function isDriverBusy(error: unknown): boolean {
+  return error instanceof Database.SqliteError && error.code.startsWith('SQLITE_BUSY');
+}
+
+/** Describe exhausted contention as the portable typed failure, keeping the driver error as its cause. */
+function busyFailure(error: unknown, startedAt: number): SqliteBusyError {
+  const waited = Date.now() - startedAt;
+  const reason = error instanceof Error ? error.message : 'the database is locked';
+  return new SqliteBusyError(`SQLite store stayed busy for ${String(waited)} ms: ${reason}`, waited, { cause: error });
+}
+
+/**
+ * Run one driver call and surface contention as {@link SqliteBusyError}. The
+ * driver already waited out the connection's busy timeout before failing, so
+ * a busy error here means the budget is spent. Every other failure, including
+ * values thrown by caller code, passes through unchanged.
+ */
+function typedBusy<T>(operation: () => T): T {
+  const startedAt = Date.now();
+  try {
+    return operation();
+  } catch (error: unknown) {
+    throw isDriverBusy(error) ? busyFailure(error, startedAt) : error;
+  }
+}
+
+/** Block this thread for `milliseconds` without spinning; the capability is synchronous by contract. */
+function pause(milliseconds: number): void {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT)), 0, 0, milliseconds);
+}
+
+/**
+ * Repeat an idempotent setup step while the store is busy, until the busy
+ * budget measured from `startedAt` is spent. SQLite does not always run its
+ * busy handler: changing a file's journal mode to WAL needs exclusive access,
+ * and when another connection holds a lock the engine may fail at once rather
+ * than wait, to avoid a deadlock. Concurrent first opens of a new store hit
+ * exactly that, so waiting inside the driver is not enough and the whole step
+ * is retried with short randomized pauses that de-synchronize the contenders.
+ * Once the budget is spent the last contention is reported as
+ * {@link SqliteBusyError}.
+ */
+function retryWhileBusy(startedAt: number, step: () => void): void {
+  for (;;) {
+    try {
+      step();
+      return;
+    } catch (error: unknown) {
+      if (!isDriverBusy(error)) {
+        throw error;
+      }
+      if (Date.now() - startedAt >= busyTimeoutMilliseconds) {
+        throw busyFailure(error, startedAt);
+      }
+      pause(1 + Math.floor(Math.random() * maximumRetryPauseMilliseconds));
+    }
+  }
+}
+
+/**
+ * Open and configure one database file. Processes may open the same new store
+ * at once: configuration is retried within the busy budget, and a spent budget
+ * fails with {@link SqliteBusyError}, never a raw driver error. A failure after the driver opened the
  * file closes that handle before rethrowing; files themselves are never
  * removed, because an existing file may hold another owner's data.
  */
@@ -64,15 +134,18 @@ function openConnection(location: string): ISqliteConnection {
   if (nonPersistentLocations.has(location)) {
     throw new TypeError(`SQLite location ${JSON.stringify(location)} cannot hold a persistent write-ahead-logged database`);
   }
-  const driver = new Database(location, { timeout: busyTimeoutMilliseconds });
+  const startedAt = Date.now();
+  const driver = typedBusy(() => new Database(location, { timeout: busyTimeoutMilliseconds }));
   try {
-    for (const { assignment, setting, expected } of selectedConfiguration) {
-      driver.pragma(assignment);
-      const actual = driver.pragma(setting, { simple: true });
-      if (actual !== expected) {
-        throw new Error(`SQLite ${setting} read back ${String(actual)} instead of the selected ${String(expected)}`);
+    retryWhileBusy(startedAt, () => {
+      for (const { assignment, setting, expected } of selectedConfiguration) {
+        driver.pragma(assignment);
+        const actual = driver.pragma(setting, { simple: true });
+        if (actual !== expected) {
+          throw new Error(`SQLite ${setting} read back ${String(actual)} instead of the selected ${String(expected)}`);
+        }
       }
-    }
+    });
   } catch (error: unknown) {
     driver.close();
     throw error;
@@ -105,12 +178,12 @@ function createConnection(driver: Database.Database): ISqliteConnection {
   const connection: ISqliteConnection = {
     exec(sql: string): void {
       assertUsable();
-      driver.exec(sql);
+      typedBusy(() => { driver.exec(sql); });
     },
 
     prepare(sql: string): ISqliteStatement {
       assertUsable();
-      return createStatement(driver.prepare(sql), assertUsable);
+      return createStatement(typedBusy(() => driver.prepare(sql)), assertUsable);
     },
 
     transaction<T>(operation: () => T & ISqliteSynchronousResult<T>): T {
@@ -121,7 +194,7 @@ function createConnection(driver: Database.Database): ISqliteConnection {
       const lifetime: ITransactionLifetime = { live: true };
       inTransaction = true;
       try {
-        return inherited.run(lifetime, () => driver.transaction(() => {
+        return typedBusy(() => inherited.run(lifetime, () => driver.transaction(() => {
           const result = operation();
           if (types.isPromise(result)) {
             containNativeRejection(result);
@@ -131,7 +204,7 @@ function createConnection(driver: Database.Database): ISqliteConnection {
             throw new TypeError('SQLite transaction callbacks must be synchronous; a thenable result, or one whose then cannot be inspected, was rolled back');
           }
           return result;
-        }).immediate());
+        }).immediate()));
       } finally {
         lifetime.live = false;
         inTransaction = false;
@@ -176,15 +249,15 @@ function createStatement(statement: Database.Statement<unknown[], unknown>, asse
 
   return Object.freeze({
     run(...values: readonly ISqliteValue[]): ISqliteRunResult {
-      const result = statement.run(...prepareCall(values));
+      const result = typedBusy(() => statement.run(...prepareCall(values)));
       return { changes: result.changes };
     },
     get(...values: readonly ISqliteValue[]): ISqliteRow | undefined {
-      const cells: unknown = statement.get(...prepareCall(values));
+      const cells: unknown = typedBusy(() => statement.get(...prepareCall(values)));
       return cells === undefined ? undefined : toRow(statement, cells);
     },
     all(...values: readonly ISqliteValue[]): readonly ISqliteRow[] {
-      const rows: readonly unknown[] = statement.all(...prepareCall(values));
+      const rows: readonly unknown[] = typedBusy(() => statement.all(...prepareCall(values)));
       return rows.map((cells) => toRow(statement, cells));
     },
   });

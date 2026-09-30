@@ -19,6 +19,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { SqliteBusyError } from '@microdelta/machine';
 import type { ISqliteCapability, ISqliteConnection, ISqliteRow } from '@microdelta/machine';
 
 /** A throwaway table whose single text column makes committed effects countable. */
@@ -154,6 +155,60 @@ export function describeSqliteCapabilityConformance(hostName: string, createCapa
         });
         expect(second.prepare('INSERT INTO entries (value) VALUES (?)').run('after')).toEqual({ changes: 1 });
         expect(values(first)).toEqual(['after']);
+      });
+    });
+
+    describe('busy exhaustion', () => {
+      /** Returns what `operation` throws, failing the test if it does not throw. */
+      function thrownBy(operation: () => unknown): unknown {
+        try {
+          operation();
+        } catch (error: unknown) {
+          return error;
+        }
+        throw new Error('expected the operation to throw');
+      }
+
+      /** Asserts a typed busy failure that waited roughly the selected 500 ms budget and no longer than a generous bound. */
+      function expectBusy(error: unknown, startedAt: number): void {
+        const elapsed = Date.now() - startedAt;
+        expect(error).toBeInstanceOf(SqliteBusyError);
+        expect(error).toMatchObject({ name: 'SqliteBusyError' });
+        expect(error instanceof SqliteBusyError ? error.waitedMilliseconds : undefined).toBeGreaterThanOrEqual(400);
+        expect(elapsed).toBeGreaterThanOrEqual(400);
+        expect(elapsed).toBeLessThan(5000);
+      }
+
+      test('a statement that cannot get the write lock within the busy wait fails with SqliteBusyError', () => {
+        const { connection: holder, path } = openEntries();
+        const waiter = open(path);
+        holder.transaction(() => {
+          const startedAt = Date.now();
+          const error = thrownBy(() => waiter.prepare('INSERT INTO entries (value) VALUES (?)').run('blocked'));
+          expectBusy(error, startedAt);
+        });
+        expect(values(holder)).toEqual([]);
+        expect(waiter.prepare('INSERT INTO entries (value) VALUES (?)').run('after')).toEqual({ changes: 1 });
+      });
+
+      test('a transaction that cannot begin IMMEDIATE within the busy wait fails with SqliteBusyError without running its callback', () => {
+        const { connection: holder, path } = openEntries();
+        const waiter = open(path);
+        let ran = false;
+        holder.transaction(() => {
+          const startedAt = Date.now();
+          const error = thrownBy(() => waiter.transaction(() => { ran = true; }));
+          expectBusy(error, startedAt);
+        });
+        expect(ran).toBe(false);
+        expect(waiter.transaction(() => 'free')).toBe('free');
+      });
+
+      test('an error thrown by a transaction callback that is not contention is never reported as busy', () => {
+        const { connection } = openEntries();
+        const failure = new Error('author failure');
+        expect(thrownBy(() => connection.transaction(() => { throw failure; }))).toBe(failure);
+        expect(thrownBy(() => connection.prepare('SELECT * FROM missing_table'))).not.toBeInstanceOf(SqliteBusyError);
       });
     });
 

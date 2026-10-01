@@ -1,6 +1,9 @@
 # M5 independent-process acceptance (issue #122)
 
-Implementation base: `30b5bdd` (`origin/main` on 2026-10-01, after #142).
+Implementation base: `30b5bdd` (`origin/main` on 2026-10-01, after #142),
+later merged with `origin/main` at `18af318`, which brings #143 (#135, the
+control anchor drift guard) and #148 (#147, the fixes for the defects this
+suite found).
 Every M5 implementation issue is merged there: #110, #113, #115, #116, #117,
 #118, #119, #120, #121 and the follow-ups #131, #136 and #139. Local runs used
 Node v24.14.0 on macOS (arm64) with SQLite through better-sqlite3 12.9.0 via
@@ -88,7 +91,7 @@ test names are abbreviated below.
 | Deterministic interleavings and fresh processes: stale workers cannot publish, renew or release for another holder | `stale-holder-interleavings`, `drain-outlives-lease`, `writer-wait-and-takeover` |
 | Known usage survives faults once; unknown work is never reported free | `usage-exactly-once`; usage assertions in `no-blind-replay`, `operator-resolves-unknown`, `soft-then-hard-stop`, `stale-holder-interleavings`, `drain-outlives-lease` and `lifecycle-isolation` |
 | Presentation failure never re-executes committed success | `publication-commit-race` |
-| RUN-013 private events | `event-privacy`; framework failure messages that repeat author error text are defect 3 below (#147) |
+| RUN-013 private events | `event-privacy`, including no author error text in framework failure messages from a member body, a fold body or a source check (the regression test for defect 3, fixed by #148) |
 | RUN-016/017 environments with recorded promotion | `trial-production-isolation`, `lifecycle-isolation` (two environments in one process) |
 
 ## Planned evidence names
@@ -103,11 +106,11 @@ test names are abbreviated below.
 | `usage-exactly-once` | `usage.test.ts` | SIGKILL before the send, after the provider applied the effect, and after the usage acknowledgment: by hand, the usage another process reads straight from Accounting, then after the next process (which records the operation unknown and never resends it), then after a third (no change). A lost acknowledgment whose commit landed is counted once and the outcome stands; one that recorded nothing leaves that attempt unknown, never zero. A report redelivered after a crash (idempotency key, the provider answers from its first application) is counted once and reported as a `conflict`; the retry that only redelivered it has unknown usage of its own. The same report identity on two operations is two reports |
 | `no-blind-replay` | `replay.test.ts` | A lost response with an attempt policy but no safety basis is sent once; the author's catch-and-retry sends nothing; the member stays pending (`not-repeat-safe`) and two later processes deny it without a body or send. A different fallback operation the author makes instead is never minted or sent: the step attempt is tainted. Safe to repeat: retried under the same operation, a new request attempt, two effects accepted. Provider idempotency: both sends carry the operation identity as key; the provider applies once |
 | `operator-resolves-unknown` | `replay.test.ts` | Resolving as failed is recorded with action, outcome, operator and time; the next process sends a new operation and the member succeeds. Resolving as succeeded with the operator's usage acknowledges it once (`operator:invoice-7`, usage now complete); later processes fail the member with `operation-resolved` and send nothing; abandoning keeps the earlier resolution for the audit trail and frees the address. Abandoning leaves the usage unknown |
-| `drain-outlives-lease` | `writer.test.ts` | A soft-stop drain outlives its lease while a successor holds it (fence + 1). The late completion changes no History row and leaves the successor's lease exactly as it was; it reports `lease-lost`; its usage is still recorded; the successor finishes writing only under its own fence. Ruling R's typed ending (the drained run completes, pr-1 pending with an `unrecorded` unknown outcome, nothing succeeded under stale authority) is a `test.failing` DEFECT (#147): today History's raw `StaleWriterError` escapes `resolveMembers` |
+| `drain-outlives-lease` | `writer.test.ts` | A soft-stop drain outlives its lease while a successor holds it (fence + 1). The late completion changes no History row and leaves the successor's lease exactly as it was; it reports `lease-lost`; its usage is still recorded; the successor finishes writing only under its own fence. Ruling R's typed ending, the regression test for defect 4 (fixed by #148): the drained run completes; pr-1 is `request-settled:unknown:lease-lost` and pending on an `unrecorded` unknown outcome, pr-2 (whose reuse needed an acceptance the stale lease cannot record) is pending `lease-lost`, pr-3 is cancelled by the soft stop; no History row is written under the stale lease |
 | `trial-production-isolation` | `environments.test.ts` | A trial run pays for three assessments. A production check finds nothing reusable and writes nothing. A promotion recorded under the writer lease names the five results the trial report rests on; afterwards production reuses every one with its exact trial reference, runs no body, sends nothing, and its usage is empty while the trial's is its own. Without a promotion, production executes and pays for its own work under its own operations, and the trial still reuses exactly its own results |
 | `outcome-fold-coverage` | `outcome-fold.test.ts` | pr-1 succeeds, pr-2's response is lost (pending), pr-3 is refused (failed). The strict report fails (`failed [pr-3]`, `pending [pr-2]`) without a body. The outcome fold waits with coverage `succeeded [pr-1]`, `failed [pr-3]`, `pending [pr-2]`, `complete: false`, without a body or publication. After the operator abandons pr-2's operation it folds `succeeded [pr-1, pr-2]`, `failed [pr-3]`, `complete: true`. Repairing pr-3 publishes a new fold result while pr-1 and pr-2 are reused unexecuted; an unchanged run reuses it |
 | `lifecycle-isolation` | `lifecycle.test.ts` | One process runs two workspaces over two stores in `env:alpha` and `env:beta` concurrently. Every body sees its own run and environment before and after its awaits; every event names its own run. Hard-stopping beta never reaches alpha, which publishes. After a nested frame throws, alpha's context and attribution are its own (outside any step). After alpha closes, an escaped continuation's `currentRun`, `currentExecution`, `resolve` and exact `read` each fail with `run-closed` and send nothing. Each store holds only its own environment's results and usage |
-| `event-privacy` | `privacy.test.ts` | A workload over five PRs reaches success, a lost response, a permanent refusal, a sleeping rate limit, a hard-stopped stall, a process killed after the provider applied an effect and its recovery, an acknowledgment that recorded nothing, an observer throwing after a commit, operator settlement and both folds. No process's stdout or stderr (every event, diagnostic, typed outcome, operator view and usage summary) contains the provider's planted value, the planted titles, the answer text or any binding digest. Author failures are excluded from that workload: a framework message repeating an author error's text is defect 3 (#147), planted at three sites in its own `test.failing` DEFECT |
+| `event-privacy` | `privacy.test.ts` | A workload over five PRs reaches success, a lost response, a permanent refusal, a sleeping rate limit, a hard-stopped stall, a process killed after the provider applied an effect and its recovery, an acknowledgment that recorded nothing, an observer throwing after a commit, operator settlement and both folds. No process's stdout or stderr (every event, diagnostic, typed outcome, operator view and usage summary) contains the provider's planted value, the planted titles, the answer text or any binding digest. A second test plants author failures whose messages carry the planted titles at a member body, a fold body and a source check: no output repeats them (the regression test for defect 3, fixed by #148) |
 
 ## Outcome rows of the plan
 
@@ -264,8 +267,8 @@ the negative controls below. First-run observations, per suite:
     asserted the drained run's raw `StaleWriterError`, which was the observed
     behavior, not ruling R's. The test now asserts only the outcome-neutral
     facts (no row changes, `lease-lost`, usage preserved, the successor
-    untouched), and ruling R's typed ending is a `test.failing` DEFECT
-    (#147), which fails today on the escaping `StaleWriterError`.
+    untouched), and ruling R's typed ending became a `test.failing` DEFECT
+    (#147), which failed on the escaping `StaleWriterError` until #148.
   - *Paid work across a step's publication* (`publication-commit-race`):
     the three kill cases passed on their first run.
   - *Privacy DEFECT at three sites*: a probe before running the test showed
@@ -276,9 +279,15 @@ the negative controls below. First-run observations, per suite:
     grant's own expiry; the busy waiter is bounded at 10 s, which lets the
     deadline control join the runner. The suite passed 53 of 53 on its
     first full run after these changes.
-- **Defects found** (each kept as a clearly marked `test.failing` test citing
-  [#147](https://github.com/mike-north/microdelta/issues/147), so the suite
-  stays green until the owner fixes it; none is fixed here):
+- **Defects found, filed as
+  [#147](https://github.com/mike-north/microdelta/issues/147) and fixed by
+  #148.** Until #148 merged, each was a clearly marked `test.failing` DEFECT
+  test, so the suite stayed green while recording it. After merging
+  `origin/main` at `18af318`, all four `test.failing` cases reported failure
+  because every assertion now held. Each was then turned into an ordinary
+  regression test referencing #147, and all four passed on their first run.
+  The drain test's expectation was checked against ruling R and tightened to
+  the exact typed ending (above), not adjusted to fit:
   1. **A hard stop requested as a run starts to sleep leaves the process
      alive until T.** `sleepForDeferral` (`packages/supervision/src/supervision.ts`)
      registers its abort listener first; for a signal already aborted the
@@ -287,15 +296,17 @@ the negative controls below. First-run observations, per suite:
      process cannot exit until the deferral's time, which for a quota deferral
      is hours. Reproduced with a synchronous stop at the `sleeping` event: a
      3 s deferral kept the process for 3 061 ms, against 164 ms when the stop
-     came 100 ms later. Test: `soft-then-hard-stop … DEFECT (#147, stop
-     during sleep)`. The planned case itself passes with a stop during the
+     came 100 ms later. Regression test: `soft-then-hard-stop … a hard stop
+     requested as the run starts to sleep lets the process exit before T
+     (#147)`. The planned case itself passes with a stop during the
      sleep.
   2. **The `resumed` wait event reports `released: false`.** For a wait whose
      lease the run did release, `sleeping` reports `true` (as would `stopped`),
      but `resumed` is emitted with a literal `false`, contrary to
      `IWaitEvent.released` ("whether the run released its writer lease for the
-     wait"). The durable release is proven through the writer row. Test:
-     `durable-quota-deferral … DEFECT (#147, event content)`.
+     wait"). The durable release is proven through the writer row. Regression test:
+     `durable-quota-deferral … the resumed wait event reports that the run
+     released its lease for that wait (#147)`.
   3. **Framework failure messages repeat author error text.** Reuse
      Resolution builds its typed failures' messages from the author error's
      message (`describe(cause)` in `packages/resolution/src/resolution.ts`),
@@ -308,16 +319,17 @@ the negative controls below. First-run observations, per suite:
      failed: …", rejecting the run) and a source check ("Source check of
      <step> failed: …", rejecting the run). The same `describe(cause)` pattern
      also builds the finality-hook, supplied-step and child-failure messages,
-     which this suite does not plant. Test: `event-privacy … DEFECT (#147,
-     privacy)`. The planned privacy case passes without author failures in its
-     workload.
+     which this suite does not plant. Regression test: `event-privacy … no framework
+     failure message repeats an author error's text, from a member body, a
+     fold body or a source check (#147)`.
   4. **A drain that outlives its lease fails its whole run with a raw
      `StaleWriterError`.** After the refused late completion, the drained
      members request meets the successor's newer pr-2 result, cannot record
      its acceptance without authority, and History's error escapes
      `resolveMembers` instead of ending the pass `lease-lost` with typed
-     outcomes (ruling R). Test: `drain-outlives-lease … DEFECT (#147, ruling
-     R)`.
+     outcomes (ruling R). Regression test: `drain-outlives-lease … the drained
+     run ends its pass lease-lost with typed outcomes, not a raw
+     StaleWriterError (#147, ruling R)`.
 
 ## Negative controls
 
@@ -332,9 +344,16 @@ test fails or if any case it predicts still passes. Every prediction was
 written before the control ran. `--check-anchors` verifies every anchor
 matches exactly once without running a suite.
 
-Final run, in the fix-round gate below after the clean build: **PASS, 32 of
+Final run, in the post-merge gate below after the clean build: **PASS, 32 of
 32 rejected**, with every predicted case failing; baseline and restored
-53/53, 0 failing; 1 472 s. The review round added two controls: the holder
+53/53, 0 failing; 1 361 s. #148 moved `sleepForDeferral`, so "a stop does not
+end a deferral sleep" was re-anchored to the stop-listener registration that
+now follows the timer (`remove = state.stopped.signal.onAbort(…)` becomes
+`remove = () => undefined;`), verified against the emitted build. The runner
+answers `--check-anchors` through #143's shared `anchor-check.mjs`, and
+`npm test`'s drift guard (`anchor-check.test.mjs`) now covers it. The
+fix-round run before the merge (on `919f5f9`: PASS 32/32, 53/53, 1 472 s)
+also rejected every control with its predicted cases. The review round added two controls: the holder
 guard without its fence check (rejected only by the one-run, two-tenure case)
 and the waiter that ignores its operator deadline (rejected by the busy
 waiter, whose process is bounded at 10 s). Earlier runs on intermediate code
@@ -347,33 +366,33 @@ exhaustion controls added, before the 30-control run on `fb26bb5` (PASS 30/30,
 
 | Guard | Planted defect | Target | Tests failing | Predicted cases, all failing | Other cases failing |
 | --- | --- | --- | --- | --- | --- |
-| stop | a soft stop admits new work | supervision | 3 | `soft-then-hard-stop` | none |
+| stop | a soft stop admits new work | supervision | 4 | `soft-then-hard-stop` | `drain-outlives-lease` |
 | stop | a soft stop does not refuse a retry | execution (2 edits) | 2 | `soft-then-hard-stop` | none |
 | stop | a stop does not end a deferral sleep | supervision | 1 | `soft-then-hard-stop` | none |
 | stop | a hard stop's remote state is not made durable | engine | 5 | `soft-then-hard-stop` | `event-privacy` |
 | deferral | a deferral is not honored before its time | engine | 1 | `durable-quota-deferral` | none |
-| deferral | the writer lease is kept while only deferred work remains | supervision | 1 | `durable-quota-deferral` | none |
+| deferral | the writer lease is kept while only deferred work remains | supervision | 2 | `durable-quota-deferral` | none |
 | deferral | a timed wait keeps its window lane | execution | 1 | `durable-quota-deferral` | none |
 | deferral | an unsettled address is forgotten, so a resumed deferral mints a new operation | engine | 5 | `durable-quota-deferral` | `usage-exactly-once`, `operator-resolves-unknown` |
 | deferral | the rate-limit retry cap is not enforced | engine | 1 | `durable-quota-deferral` | none |
 | deferral | a transient failure is retried beyond the author's attempts | engine | 1 | `durable-quota-deferral` | none |
-| no-replay | an unknown outcome is replayed blindly | records | 16 | `no-blind-replay` | `writer-wait-and-takeover`, `stale-holder-interleavings`, `drain-outlives-lease`, `soft-then-hard-stop`, `usage-exactly-once`, `event-privacy`, `operator-resolves-unknown`, `outcome-fold-coverage` |
+| no-replay | an unknown outcome is replayed blindly | records | 16 | `no-blind-replay` | `writer-wait-and-takeover`, `stale-holder-interleavings`, `drain-outlives-lease`, `usage-exactly-once`, `event-privacy`, `soft-then-hard-stop`, `operator-resolves-unknown`, `outcome-fold-coverage` |
 | no-replay | a tainted step attempt keeps sending | engine | 1 | `no-blind-replay` | none |
 | no-replay | an address resolved as succeeded is minted and sent again | records | 1 | `operator-resolves-unknown` | none |
 | no-replay | the provider idempotency key is not sent | engine | 2 | `no-blind-replay`, `usage-exactly-once` | none |
-| accounting | a usage report is acknowledged twice | engine | 25 | `usage-exactly-once` | `no-blind-replay`, `operator-resolves-unknown`, `stale-holder-interleavings`, `drain-outlives-lease`, `soft-then-hard-stop`, `durable-quota-deferral`, `publication-commit-race`, `trial-production-isolation`, `lifecycle-isolation` |
+| accounting | a usage report is acknowledged twice | engine | 25 | `usage-exactly-once` | `no-blind-replay`, `operator-resolves-unknown`, `stale-holder-interleavings`, `drain-outlives-lease`, `durable-quota-deferral`, `publication-commit-race`, `soft-then-hard-stop`, `trial-production-isolation`, `lifecycle-isolation` |
 | accounting | an unknown outcome is reported as zero usage | engine | 4 | `no-blind-replay`, `operator-resolves-unknown` | `soft-then-hard-stop` |
 | accounting | the usage intent is not recorded before the send | engine | 27 | `usage-exactly-once` | `soft-then-hard-stop`, `no-blind-replay`, `operator-resolves-unknown`, `stale-holder-interleavings`, `drain-outlives-lease`, `durable-quota-deferral`, `publication-commit-race`, `trial-production-isolation`, `lifecycle-isolation` |
-| accounting | Accounting records a redelivered report again | accounting | 25 | `usage-exactly-once` | `stale-holder-interleavings`, `drain-outlives-lease`, `soft-then-hard-stop`, `durable-quota-deferral`, `publication-commit-race`, `no-blind-replay`, `operator-resolves-unknown`, `trial-production-isolation`, `lifecycle-isolation` |
+| accounting | Accounting records a redelivered report again | accounting | 25 | `usage-exactly-once` | `stale-holder-interleavings`, `drain-outlives-lease`, `durable-quota-deferral`, `publication-commit-race`, `soft-then-hard-stop`, `no-blind-replay`, `operator-resolves-unknown`, `trial-production-isolation`, `lifecycle-isolation` |
 | accounting | Accounting keys a report identity globally rather than per operation | accounting | 1 | `usage-exactly-once` | none |
 | accounting | Accounting counts unreported request attempts as reported (zero) | summary | 12 | `usage-exactly-once` | `stale-holder-interleavings`, `drain-outlives-lease`, `soft-then-hard-stop`, `no-blind-replay`, `operator-resolves-unknown`, `lifecycle-isolation` |
 | fence | the holder guard checks the holder name but not the fence | history | 1 | `stale-holder-interleavings` | none |
 | fence | the holder guard ignores lease expiry | history | 4 | `stale-holder-interleavings` | none |
 | fence | acquisition takes over an unexpired holder | history | 3 | `writer-wait-and-takeover` | `stale-holder-interleavings` |
 | fence | waiting ignores the operator deadline | wait | 1 | `writer-wait-and-takeover` | none |
-| fence | a takeover reuses the previous fence | history | 16 | `writer-wait-and-takeover`, `stale-holder-interleavings` | `drain-outlives-lease`, `usage-exactly-once`, `event-privacy` |
+| fence | a takeover reuses the previous fence | history | 17 | `writer-wait-and-takeover`, `stale-holder-interleavings` | `drain-outlives-lease`, `usage-exactly-once`, `event-privacy` |
 | fence | a waiter's observation advances the fence | history | 3 | `writer-wait-and-takeover` | `stale-holder-interleavings` |
-| fence | release clears the writer row without the holder guard | history | 6 | `stale-holder-interleavings` | `drain-outlives-lease` |
+| fence | release clears the writer row without the holder guard | history | 7 | `stale-holder-interleavings` | `drain-outlives-lease` |
 | fence | the facade's writer port keeps a stale lease instead of acquiring afresh | port | 4 | `stale-holder-interleavings` | none |
 | privacy | operation events carry the request binding | engine | 1 | `event-privacy` | none |
 | privacy | a diagnostic repeats the adapter's error text | engine | 1 | `event-privacy` | none |
@@ -395,23 +414,25 @@ The implementer ran these sequentially, each step logged with its exit code
 by a script in `scratch/` (not committed), on Node v24.14.0, macOS. Record
 edits after the gates change no code.
 
-**Fix-round gate, on the suite's final commit `919f5f9`** (base `30b5bdd`),
-after `npm run clean`:
+**Post-merge gate, on `5263fd8`** (the branch after merging `origin/main` at
+`18af318` and turning the defect records into regression tests), after
+`npm run clean`:
 
 | Command | Result |
 | --- | --- |
 | `npm run clean` | exit 0 |
-| `npm run build` | exit 0 (21 s) |
-| `npm run check` | exit 0 (38 s) |
-| `npm test` | exit 0 (268 s). Facade Jest 797/797 in 70 suites, including the ten M5 acceptance suites (53 tests, four of them the `test.failing` DEFECT records of #147). Facade tsd and controls checks, every other workspace suite (including tracking's own control runner), the experiments and the example pass |
-| M5 acceptance alone, three times | 53/53 each (43 s, 42 s, 42 s) |
+| `npm run build` | exit 0 (20 s) |
+| `npm run check` | exit 0 (40 s) |
+| `npm test` | exit 0 (265 s). Facade Jest 819/819, including the ten M5 acceptance suites (53 tests, none `test.failing`). The anchor drift guard reports every runner's anchors matching exactly once, `m5-acceptance/controls/m5-mutation-controls.mjs` included. Facade tsd and controls checks, every other workspace suite, the experiments and the example pass |
+| M5 acceptance alone, three times | 53/53 each (39 s, 38 s, 39 s) |
 | `m5-mutation-controls.mjs` | PASS 32/32; baseline and restored 53/53 |
-| `m5-mutation-controls.mjs --check-anchors` | `ANCHORS OK: 32 controls` |
+| `--check-anchors`, every runner | `ANCHORS OK` for all twelve: acceptance 13, accounting 12, concurrency 19, history 25, journal 11, M4 23, M5 32, operations 47, outcome-fold 11, resolution 29, workspace 23, facade-operations 12 |
 
-The earlier gate on `fb26bb5` (48 tests, 30 controls) passed the same steps
-and is superseded by this one.
+The earlier gates on `919f5f9` (53 tests, four of them `test.failing` DEFECT
+records; 32 controls) and on `fb26bb5` (48 tests, 30 controls) passed the same
+steps before the merge and are superseded by this one.
 
-**Every other control runner, on `2a5c4c5`** (none of these runners runs the
+**Every other control runner in full, on `2a5c4c5`, before the merge** (none of these runners runs the
 M5 suites, and no later commit of this branch changes a file outside
 `packages/core/test/m5-acceptance` and this record), after its own clean
 build, check and test, all exit 0:
@@ -430,14 +451,10 @@ build, check and test, all exit 0:
 | `resolution-mutation-controls.mjs` | FAIL: the 21 controls that ran were all rejected; 8 anchors match 0, 2, 3 or 5 times |
 | `workspace-mutation-controls.mjs` | CONTROL RUN INVALID at its baseline: it builds each Jest path by joining a regular-expression pattern into the suite path (`join(dirname(config), pattern, suite)`), so no suite file is found |
 
-This PR changes none of the four failing runners, their targets, suites or
-anchors, so their outcomes are not caused by it. Their stale anchors are the
-condition #135 tracks, which the open #143 re-anchors (the concurrency
-record's addendum reports the same M3 anchors); they were not rerun
-separately on `main` for this record. The anchor drift guard of #143 is not on
-`main` yet. When it lands, its `*-mutation-controls.mjs` discovery finds
-`m5-mutation-controls.mjs`, which already answers `--check-anchors`
-(`ANCHORS OK: 32 controls`).
+This PR changes none of the four runners that failed there, their targets,
+suites or anchors. Their stale anchors were the condition #135 tracked, which
+#143 re-anchored; after the merge every runner's `--check-anchors` passes
+(above). Those runners were not rerun in full for this record.
 
 Main-branch results, to be filled at acceptance (#123):
 
@@ -512,10 +529,8 @@ Main-branch results, to be filled at acceptance (#123):
   gaps, five fault sites no suite rejects.
 - [#145](https://github.com/mike-north/microdelta/issues/145): context import
   rules do not cover dynamic `import()`.
-- [#147](https://github.com/mike-north/microdelta/issues/147): the four
-  defects above (stop during sleep, `resumed.released`, author error text in
-  framework failure messages, and the drain's raw `StaleWriterError`). Each
-  is a `test.failing` DEFECT here, to become a normal test when #147 lands.
-  The control "a stop does not end a deferral sleep" anchors in
-  `sleepForDeferral`, which #147 changes; its anchor is to be re-taken after
-  that merge (`--check-anchors` reports it).
+- [#147](https://github.com/mike-north/microdelta/issues/147), the four
+  defects above, is fixed by #148 (merged as `18af318`); each is now an
+  ordinary regression test here. #148 moved `sleepForDeferral`, so the
+  control "a stop does not end a deferral sleep" was re-anchored to the
+  stop-listener registration that now follows the timer.

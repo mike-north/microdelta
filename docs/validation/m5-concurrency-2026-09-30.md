@@ -829,9 +829,9 @@ after the build and the facade and Supervision test builds.
 - A control with no model counterpart must state why, and `controls.test.mjs`
   enforces that.
 
-Final run, after the fix round on the merged head: exit 0, `PASS: 18 controls`.
-The concurrency group's baseline was 139 tests, 0 failing; the supervision
-group's was 33, 0 failing. Both groups' restored builds passed in full.
+Final run, after the second fix round: exit 0, `PASS: 19 controls`. The
+concurrency group's baseline was 139 tests, 0 failing; the supervision group's
+was 37, 0 failing. Both groups' restored builds passed in full.
 
 | Control (model fault) | Target | Failing tests | New tests among them |
 | --- | --- | --- | --- |
@@ -851,6 +851,7 @@ group's was 33, 0 failing. Both groups' restored builds passed in full.
 | every failure of acquisition becomes contention (no model counterpart: SQLite contention is not modeled; fix round) | History | 2 | H5, P4 |
 | the port treats a busy renewal as stale and swallows renewal failures (no model counterpart; fix round) | facade port | 2 | P2, P4 |
 | a wait keeps its abort listener after waking (no model counterpart: listeners are not modeled; fix round, supervision group) | Supervision test build | 2 | Supervision "each sleep registers one listener and removes it on waking…", "a deadline reached after sleeps leaves no listener behind" |
+| F1: an outcome-fold request tries the writer once and fails busy instead of waiting (no model counterpart; second fix round, supervision group) | Supervision test build | 1 | Supervision "a resolveOutcomeFold request waits for a held lease…" |
 | abandonment ends a completed attempt (`Publication` `abandon-completed`) | History | 1 | none (E1) |
 | acceptance rewinds current (`Publication` `accept-moves-current`) | History | 1 | none (A1) |
 
@@ -875,18 +876,18 @@ results held again on the fix round's head.
 writer controls now plant into the facade port's test build. Its Jest
 patterns now name exactly the suites it judges, including the facade's
 `writer-wait.test.ts`; previously, suites added to those directories made the
-baseline invalid. On the fix round's head:
-- the baseline is 96 tests, 0 failing;
+baseline invalid. On the second fix round's head:
+- the baseline is 99 tests, 0 failing;
 - "an expired writer lease is kept instead of re-acquired" is rejected by 1
   test;
 - "releasing an expired lease is reported as a failure" is rejected by 1 test;
 - the restored build passes.
 
-The runner still ends `FAIL`, because nine of its anchors predate this work
-and no longer match: six Supervision run-lifetime anchors, the Supervision
-recovery anchor (which the merge of #133 changed) and two example anchors.
-The recovery anchor is fixed here in both this runner and the acceptance
-runner; the others are left for their own issue. The acceptance runner first reported a `CONTROL RUN INVALID`
+The runner still ends `FAIL`, because eight of its anchors predate this work
+and no longer match: six Supervision run-lifetime anchors and two example
+anchors. They are left for their own issue. The Supervision recovery anchor,
+which the merge of #133 changed, is fixed here in both this runner and the
+acceptance runner. The acceptance runner first reported a `CONTROL RUN INVALID`
 because #128 added `stop-publication.test.ts` without adding it to the
 runner's suite list. That list now names all nine acceptance suites, and one
 control that planted the removed `writer.lease()` call plants

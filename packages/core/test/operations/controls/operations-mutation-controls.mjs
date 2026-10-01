@@ -16,12 +16,17 @@
  * `npm run build` and `npm run test:unit --workspace microdelta` first, then
  * `node packages/core/test/operations/controls/operations-mutation-controls.mjs`.
  * Controls must run serially.
+ *
+ * `--check-anchors` verifies that every anchor matches exactly once in the
+ * current builds and exits without running any suite; `npm test` runs it for
+ * every runner (anchor-check.test.mjs) so drift fails early.
  */
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
+import { anchorCheckRequested, anchorProblems, reportAnchorCheck } from '../../durable-history/controls/anchor-check.mjs';
 import { judgeRun } from '../../durable-history/controls/control-outcome.mjs';
 
 const root = new URL('../../../../../', import.meta.url).pathname;
@@ -243,10 +248,61 @@ const controls = [
     directory: resolution, file: 'resolution.js',
     anchor: 'return historical.analysis === analysis;', replacement: 'return historical.analysis === analysis && historical.environment === environment;',
   },
+  {
+    // The original race: a stop already in force ran the listener before `cancel` was assigned, so the timer stayed armed.
+    name: 'a stop that lands as the deferral sleep begins still arms its keep-alive timer',
+    directory: supervision, file: 'supervision.js',
+    anchor: "if (state.stopped.signal.aborted) {\n                return Promise.resolve(false);\n            }\n            return new Promise((resolve) => {\n                let remove = () => undefined;\n                const cancel = clock.schedule(until, () => {\n                    remove();\n                    resolve(true);\n                }, { keepAlive: true });\n                remove = state.stopped.signal.onAbort(() => {\n                    cancel();\n                    resolve(false);\n                });\n            });",
+    replacement: "return new Promise((resolve) => {\n                let cancel = () => undefined;\n                const remove = state.stopped.signal.onAbort(() => {\n                    cancel();\n                    resolve(false);\n                });\n                cancel = clock.schedule(until, () => {\n                    remove();\n                    resolve(true);\n                }, { keepAlive: true });\n            });",
+  },
+  {
+    name: 'the resumed wait event reports the lease kept',
+    directory: supervision, file: 'supervision.js',
+    anchor: "waitEvent('resumed', until, wait.released);", replacement: "waitEvent('resumed', until, false);",
+  },
+  {
+    name: 'a release made while a request sleeps is not recorded for its wait',
+    directory: supervision, file: 'supervision.js',
+    anchor: 'for (const sleeper of sleepers) {\n                    sleeper.released = true;\n                }', replacement: 'void sleepers;',
+  },
+  {
+    name: "a body failure's message repeats the author's error text",
+    directory: resolution, file: 'resolution.js',
+    anchor: '`Body of ${stepKey(step)} failed`, cause);', replacement: '`Body of ${stepKey(step)} failed: ${frameworkDetail(cause)}`, cause);',
+  },
+  {
+    name: 'a write the lost lease refuses escapes as a raw History error',
+    directory: resolution, file: 'resolution.js',
+    anchor: 'if (error instanceof StaleWriterError) {', replacement: 'if (false) {',
+  },
+  {
+    name: "a failed body's attempt ending stores the author's error text",
+    directory: resolution, file: 'resolution.js',
+    anchor: "detail: 'the body failed'", replacement: 'detail: frameworkDetail(cause)',
+  },
+  {
+    name: 'every History write failure is reported as a lost lease',
+    directory: resolution, file: 'resolution.js',
+    anchor: 'if (error instanceof StaleWriterError) {', replacement: 'if (true) {',
+  },
+  {
+    name: 'History integrity damage is masked as a lost lease',
+    directory: resolution, file: 'resolution.js',
+    anchor: 'if (error instanceof StaleWriterError) {', replacement: 'if (error instanceof StaleWriterError || error instanceof HistoryIntegrityError) {',
+  },
 ];
 
 /** Emitted files a control may plant into, with their original bytes. */
 const originals = new Map([...new Set(controls.map((control) => join(control.directory, control.file)))].map((path) => [path, readFileSync(path, 'utf8')]));
+
+// Drift guard: `--check-anchors` verifies every anchor against the current builds and runs no suite.
+if (anchorCheckRequested()) {
+  const plants = controls.flatMap((control) => {
+    const path = join(control.directory, control.file);
+    return (control.edits ?? [{ anchor: control.anchor }]).map((edit) => ({ control: control.name, file: path, text: originals.get(path), anchor: edit.anchor }));
+  });
+  process.exit(reportAnchorCheck(anchorProblems(plants), controls.length));
+}
 
 /** Restore every emitted file a control may have planted into. */
 function restoreAll() {

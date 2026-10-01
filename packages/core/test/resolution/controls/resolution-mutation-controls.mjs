@@ -15,12 +15,17 @@
  * `npm run build` and `npm run test:unit --workspace microdelta` first, then
  * `node packages/core/test/resolution/controls/resolution-mutation-controls.mjs`.
  * Controls must run serially.
+ *
+ * `--check-anchors` verifies that every anchor matches exactly once in the
+ * current builds and exits without running any suite; `npm test` runs it for
+ * every runner (anchor-check.test.mjs) so drift fails early.
  */
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
+import { anchorCheckRequested, anchorProblems, reportAnchorCheck } from '../../durable-history/controls/anchor-check.mjs';
 import { judgeRun } from '../../durable-history/controls/control-outcome.mjs';
 
 const root = new URL('../../../../../', import.meta.url).pathname;
@@ -31,9 +36,9 @@ const core = join(root, 'packages/core');
 const suites = Object.freeze(['source-policy.test.js', 'summary-validation.test.js', 'admission-recovery.test.js']);
 
 const controls = [
-  { name: 'source candidates skip their own implementation and input validation', file: 'resolution.js', anchor: "if (comparison.kind === 'equal') {", replacement: 'if (true) {' },
+  { name: "source candidates skip their own implementation and input validation", file: 'resolution.js', anchor: "const comparison = compare(own, ownFactProvider({ validation, slots: request.slots, self: declaration.run, member: memberRecord(request, step) }));\n            if (comparison.kind === 'equal') {", replacement: "const comparison = compare(own, ownFactProvider({ validation, slots: request.slots, self: declaration.run, member: memberRecord(request, step) }));\n            if (true) {" },
   { name: 'a false finality answer retains', file: 'resolution.js', anchor: 'if (decided.value) {', replacement: 'if (true) {' },
-  { name: 'a throwing finality hook becomes acceptance', file: 'resolution.js', anchor: "throw new ResolutionError('policy-failure', `Current finality of ${stepKey(step)} failed: ${describe(error)}`, error);", replacement: 'decided = { value: true, observations: [] };' },
+  { name: "a throwing finality hook becomes acceptance", file: 'resolution.js', anchor: "if (evaluated.kind === 'threw') {\n                    throw new ResolutionError('policy-failure', `Current finality of ${stepKey(step)} threw`, evaluated.error);\n                }\n                const decided = evaluated.value;", replacement: "const decided = evaluated.kind === 'threw' ? { value: true, observations: [] } : evaluated.value;" },
   { name: 'a non-boolean finality answer is accepted', file: 'resolution.js', anchor: "if (typeof decided.value !== 'boolean') {", replacement: 'if (false) {' },
   { name: 'retention is not tied to its own eligible carrier', file: 'resolution.js', anchor: 'if (eligible === undefined || held === undefined || held.token !== token || held.reference.locator !== eligible.reference.locator) {', replacement: 'if (eligible === undefined) {' },
   { name: 'look-alike envelopes are treated as controls', file: 'outcome.js', anchor: 'minted.get(value) : undefined;', replacement: '(minted.get(value) ?? value) : undefined;' },
@@ -43,27 +48,33 @@ const controls = [
   { name: 'a recorded child need not be an exact dependency', file: 'resolution.js', anchor: 'if (!candidate.dependencies.some((dependency) => dependency.locator === child.reference.locator)) {', replacement: 'if (false) {' },
   { name: 'check-only evaluation proceeds to source work', file: 'resolution.js', anchor: "return done({ kind: 'uncertain', boundary: step });", replacement: 'void 0;' },
   { name: 'check-only memo reuse records acceptance', file: 'resolution.js', anchor: "return done({ kind: 'reused', basis: 'validated', reference: candidate.reference, acceptance: undefined });", replacement: 'void 0;' },
-  { name: 'a memo admission refusal is ignored', file: 'resolution.js', anchor: "const refusal = await admit(request, evidence, step, 'memo', declaration, candidates.length > 0 ? 'invalid' : 'cold');", replacement: "await admit(request, evidence, step, 'memo', declaration, candidates.length > 0 ? 'invalid' : 'cold'); const refusal = undefined;" },
-  { name: 'the intent digest ignores the invocation', file: 'intent.js', anchor: 'return `mdi1:${options.host.sha256(JSON.stringify(intent))}`;', replacement: 'return `mdi1:constant`;' },
-  { name: 'the attempt key ignores the request key', file: 'intent.js', anchor: '1, requestKey, structural(step)]', replacement: '1, structural(step)]' },
+  { name: "a memo admission refusal is ignored", file: 'resolution.js', anchor: "const refusal = await admit(request, evidence, step, 'memo', versioned(declaration), candidates.length > 0 ? 'invalid' : 'cold');", replacement: "await admit(request, evidence, step, 'memo', versioned(declaration), candidates.length > 0 ? 'invalid' : 'cold'); const refusal = undefined;" },
+  { name: "the intent digest ignores the invocation", file: 'intent.js', anchor: "options.step)]] : []),\n    ];\n    return `mdi1:${options.host.sha256(JSON.stringify(intent))}`;", replacement: "options.step)]] : []),\n    ];\n    return `mdi1:constant`;" },
+  { name: "the attempt key ignores the request key", file: 'intent.js', anchor: "1, requestKey, structural(step), ...invocation]", replacement: "1, structural(step), ...invocation]" },
   { name: 'candidate lookup ignores the compatibility version', file: 'resolution.js', anchor: 'subject: declaration.subject, version: declaration.version });', replacement: 'subject: declaration.subject, version: 1 });' },
   { name: 'declared helpers are not tracked', file: 'resolution.js', anchor: 'helpers[slot] = tracking.tracked(state.value, { path: bindingPaths.callable(slot) });', replacement: 'helpers[slot] = state.value;' },
-  { name: "the author callback is not tracked as the step's own implementation", file: 'resolution.js', anchor: 'const authored = tracking.tracked(callback, { path: bindingPaths.self });', replacement: 'const authored = callback;' },
-  { name: 'direct invocations are not shared within a request', file: 'resolution.js', anchor: 'if (existing !== undefined) {', replacement: 'if (false) {' },
+  { name: "the author callback is not tracked as the step's own implementation", file: 'resolution.js', anchor: "\n            const authored = tracking.tracked(callback, { path: bindingPaths.self });", replacement: "\n            const authored = callback;" },
+  { name: "direct source invocations are not shared within a request", file: 'resolution.js', anchor: "const existing = request.sources.get(key);\n        if (existing !== undefined) {", replacement: "const existing = request.sources.get(key);\n        if (false) {" },
   { name: 'a body that swallowed a failed child still publishes', file: 'resolution.js', anchor: 'if (frame.failed !== undefined) {', replacement: 'if (false) {' },
   { name: 'a committed request key is served again by a normal request', file: 'resolution.js', anchor: "if (prior.kind !== 'absent') {", replacement: "if (prior.kind !== 'absent' && prior.kind !== 'completed') {" },
   { name: 'a child view is resolved through Promise assimilation', file: 'resolution.js', anchor: 'return Object.freeze({ data: materialization.materializeView(reference, { path: bindingPaths.child(slot) }) });', replacement: 'const view = materialization.materializeView(reference, { path: bindingPaths.child(slot) }); await view; return Object.freeze({ data: view });' },
   { name: 'a different current child subject is treated as lost correspondence', file: 'resolution.js', anchor: 'const resolved = await resolveSourceShared(request, childStep, childDeclaration);', replacement: "if (historical.subject !== childDeclaration.subject) { return { verdict: 'miss', miss: miss(candidate.reference, 'correspondence', 'subject differs') }; } const resolved = await resolveSourceShared(request, childStep, childDeclaration);" },
   { name: 'nested post-commit diagnostics stay with each step', file: 'resolution.js', anchor: 'return { misses: [], trace: [], diagnostics: request.diagnostics };', replacement: 'return { misses: [], trace: [], diagnostics: [] };' },
-  { name: 'supported provenance need not carry its own implementation evidence', file: 'evidence.js', anchor: 'if (!observations.some(isOwnImplementation)) {', replacement: 'if (false) {' },
+  { name: "supported source and memo provenance need not carry its own implementation evidence", file: 'evidence.js', anchor: "if (!observations.some(isOwnImplementation)) {\n        return malformed(`${kind} provenance lacks its own implementation observation`);\n    }\n    if (kind === 'source' && children.length > 0) {", replacement: "if (false) {\n        return malformed(`${kind} provenance lacks its own implementation observation`);\n    }\n    if (kind === 'source' && children.length > 0) {" },
   { name: 'supported source provenance may carry child edges', file: 'evidence.js', anchor: "if (kind === 'source' && children.length > 0) {", replacement: 'if (false) {' },
   { name: 'an unsuccessful attempt ending is not announced as abandon', file: 'resolution.js', anchor: "if (ending.ending !== 'retained') {", replacement: 'if (false) {' },
-  { name: 'an ending History refused is still announced', file: 'resolution.js', anchor: 'could not be ended: ${describe(error)}`);', replacement: "could not be ended: ${describe(error)}`); emit(request, evidence, step, 'abandon');" },
+  { name: 'an ending History refused is still announced', file: 'resolution.js', anchor: 'could not be ended: ${frameworkDetail(error)}`);', replacement: "could not be ended: ${frameworkDetail(error)}`); emit(request, evidence, step, 'abandon');" },
   { name: 'a post-commit observer failure fails the call', file: 'resolution.js', anchor: 'if (preExecution.has(phase)) {', replacement: 'if (true) {' },
 ];
 
 /** Emitted files a control may plant into, with their original bytes. */
 const originals = new Map([...new Set(controls.map((control) => control.file))].map((file) => [file, readFileSync(join(dist, file), 'utf8')]));
+
+// Drift guard: `--check-anchors` verifies every anchor against the current build and runs no suite.
+if (anchorCheckRequested()) {
+  const plants = controls.map((control) => ({ control: control.name, file: join(dist, control.file), text: originals.get(control.file), anchor: control.anchor }));
+  process.exit(reportAnchorCheck(anchorProblems(plants), controls.length));
+}
 
 /** Restore every emitted file a control may have planted into. */
 function restoreAll() {

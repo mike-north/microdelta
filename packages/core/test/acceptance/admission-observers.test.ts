@@ -98,7 +98,8 @@ describe('admission-and-observer-boundaries (A-19)', () => {
   test('a post-commit observer failure is a diagnostic beside the committed result, which a new process reuses exactly', () => {
     const committed = s.run({ kind: 'resolve', member: 'person:ada' }, { keys: s.saveKeys('observer-post').file, throwAt: { phase: 'publish', memberKey: 'person:ada', slot: 'summary' } });
     expect(outcomeOf(committed)).toMatchObject({ kind: 'published' });
-    expect(committed.result?.['diagnostics']).toEqual([expect.stringContaining('acceptance observer failure at publish')]);
+    // The diagnostic names the phase; the observer's own error text never enters it (RUN-013).
+    expect(committed.result?.['diagnostics']).toEqual([expect.stringContaining('Lifecycle observer failed at publish')]);
     const reused = s.run({ kind: 'resolve', member: 'person:ada' }, { keys: s.saveKeys('after').file });
     expect(outcomeOf(reused)).toMatchObject({ kind: 'reused', reference: referenceOf(committed) });
     expect(reused.count('summary')).toBe(0);

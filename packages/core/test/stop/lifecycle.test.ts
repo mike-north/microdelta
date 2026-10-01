@@ -94,7 +94,8 @@ describe('bounded nested waiting under run cancellation (#106)', () => {
       const failure = await running.then(() => undefined, (error: unknown) => error);
       expect(failure).toBeInstanceOf(ResolutionError);
       expect(failure).toMatchObject({ code: 'execution-failure' });
-      expect(failure instanceof Error ? failure.message : '').toMatch(/body failure/u);
+      // The body's own error is the cause; the framework message never repeats author text (RUN-013).
+      expect(failure instanceof Error && failure.cause instanceof Error ? failure.cause.message : '').toMatch(/body failure/u);
       expect(publishedSubjects(store.location)).toEqual([]);
       expect(attemptsAt(store.location).find((row) => row.subject === 'throwing:stop')).toMatchObject({ state: 'failed' });
     } finally {

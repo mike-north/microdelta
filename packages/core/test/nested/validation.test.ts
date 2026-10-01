@@ -577,7 +577,9 @@ describe('honest misses', () => {
     world.failAssessment = 101;
     await withNestedSession(location, { rubricInput: { ...defaultRubric, mergedWeight: 3 } }, async (session) => {
       const failure = await expectFailure(session.resolve(session.nested.steps['person:ada'].summary), 'execution-failure');
-      expect(failure.message).toMatch(/fixture assessment failure for 101/u);
+      // The child's error is the cause; the framework message never repeats author text (RUN-013).
+      expect(failure.cause instanceof Error ? failure.cause.message : '').toMatch(/fixture assessment failure for 101/u);
+      expect(failure.message).not.toMatch(/fixture assessment failure/u);
       expect(session.admissions.filter((request) => request.step.slot === 'summary')).toEqual([]);
     });
     expect(world.assessments).toEqual({ 101: 1 });

@@ -9,7 +9,10 @@
  * contents; usage units in events are validated identifiers.
  *
  * The planted value appears in every provider response, every provider error
- * message and every request binding (see `provider.ts` and `fixture.ts`).
+ * message and every request binding (see `provider.ts` and `fixture.ts`), and
+ * in the error an author's body throws under the `author-throws` plan. A
+ * framework failure names the step and the failure kind only; the author's
+ * error stays available to the caller as the failure's `cause`.
  *
  * The conformance test is type-level evidence in a non-published location:
  * History's operation journal port and Accounting's durable adapter satisfy
@@ -21,15 +24,20 @@
  * @see ../../../../experiments/exp-8/decision.md (mechanism 7, resolution 7)
  * @see ../../../../docs/plans/m5-operations.md (planned evidence `event-privacy`)
  */
+import { readFileSync, readdirSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+
 import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
 import type { IDurableAccounting } from '@microdelta/accounting';
 import type { IOperationJournal } from '@microdelta/history';
 import { createStopController } from '@microdelta/supervision';
 import type { IOperationAccounting, IOperationJournalPort, IOperationResponse } from '@microdelta/supervision';
 
-import { createWorld, installWorld } from './fixture.js';
+import { ResolutionError } from '@microdelta/resolution';
+
+import { childSecret, createWorld, installWorld } from './fixture.js';
 import type { IWorld } from './fixture.js';
-import { fakeTimer, openSession, tempStores, until } from './harness.js';
+import { fakeTimer, freshKey, openSession, statuses, tempStores, until } from './harness.js';
 import type { IFakeTimer, IOperationStores } from './harness.js';
 import { planted } from './provider.js';
 import { driveUntilSettled, members, received } from './support.js';
@@ -47,6 +55,21 @@ beforeEach(() => {
 afterEach(() => {
   stores.remove();
 });
+
+/** Whether any file beside the History store (History, Accounting, WAL and journal files) contains `text`. */
+function storeContains(text: string): boolean {
+  const directory = dirname(stores.history);
+  return readdirSync(directory).some((name) => readFileSync(join(directory, name)).includes(text));
+}
+
+/** The innermost cause of a failure: the value author code threw, beneath every framework failure wrapping it. */
+function rootCause(error: unknown): unknown {
+  let current = error;
+  while (current instanceof ResolutionError && current.cause !== undefined) {
+    current = current.cause;
+  }
+  return current;
+}
 
 /** The planted marker's distinctive core, which any leak of a body, error message or binding contains. */
 const marker = 'c0ffee';
@@ -86,6 +109,51 @@ describe('event privacy (RUN-013)', () => {
     } finally {
       session.close();
     }
+  });
+
+  test('an author error carrying the planted value reaches the caller only as the failure\'s cause: never its message, an event or a diagnostic', async () => {
+    world.plans['pr-1'] = 'author-throws';
+    const session = openSession(stores, timer);
+    try {
+      const started = members(session);
+      const result = await started.done;
+      const failed = result.value.members.find((member) => member.key === 'pr-1');
+      if (failed?.status !== 'failed') {
+        throw new Error(`expected pr-1 to fail, observed ${String(failed?.status)}`);
+      }
+      expect(failed.error.code).toBe('execution-failure');
+      // The framework message names the failing step; the author's own error is its cause, unchanged.
+      expect(failed.error.message).toContain('assess');
+      expect(failed.error.message).not.toContain(marker);
+      expect(failed.error.cause instanceof Error ? failed.error.cause.message : undefined).toBe(`author assessment of pr-1 rejected ${planted}`);
+      expect(JSON.stringify(started.events)).not.toContain(marker);
+      expect(JSON.stringify(result.diagnostics)).not.toContain(marker);
+      expect(statuses(result.value.members)).toEqual({ 'pr-1': 'failed', 'pr-2': 'succeeded', 'pr-3': 'succeeded', 'pr-4': 'succeeded', 'pr-5': 'succeeded' });
+    } finally {
+      session.close();
+    }
+  });
+
+  test('a declared child that fails with an author error fails its parent typed; neither its message, an event nor a stored record repeats the error', async () => {
+    world.gates.open('parent');
+    world.paidThrows = true;
+    const session = openSession(stores, timer);
+    try {
+      const started = session.start({}, (run) => run.resolve(session.fixture.parent, freshKey()));
+      const failure = await started.done.then(() => undefined, (error: unknown) => error);
+      expect(failure).toBeInstanceOf(ResolutionError);
+      expect(failure instanceof ResolutionError ? failure.code : undefined).toBe('execution-failure');
+      // The framework message names the parent; the child's author error is reached only through the cause chain.
+      expect(failure instanceof Error ? failure.message : '').toContain('parent');
+      expect(failure instanceof Error ? failure.message : '').not.toContain(childSecret);
+      const thrown = rootCause(failure);
+      expect(thrown instanceof Error ? thrown.message : undefined).toBe(`paid assessment refused ${childSecret}`);
+      expect(JSON.stringify(started.events)).not.toContain(childSecret);
+    } finally {
+      session.close();
+    }
+    // Both attempts ended failed, and neither ending record holds the author's text.
+    expect(storeContains(childSecret)).toBe(false);
   });
 
   test('a usage unit that is not an identifier is dropped from the event and diagnosed by code, while Accounting keeps it', async () => {

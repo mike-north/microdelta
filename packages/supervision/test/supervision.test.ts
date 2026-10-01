@@ -234,8 +234,9 @@ function recordingResolution(): { readonly double: IDouble; readonly factory: IR
         const diagnostics: string[] = [...double.diagnostics];
         try {
           emit('publish');
-        } catch (error: unknown) {
-          diagnostics.push(`observer failed at publish: ${error instanceof Error ? error.message : String(error)}`);
+        } catch {
+          // As Resolution does: the diagnostic names the position, never the observer's error text (RUN-013).
+          diagnostics.push('observer failed at publish');
         }
         return Object.freeze({ kind: 'published', step, reference, attemptId: 1, misses: [], trace: [], diagnostics });
       },
@@ -587,14 +588,16 @@ describe('observer positions (REUSE-009, A-19)', () => {
     const later: string[] = [];
     const { options } = runOptions({
       observers: [
-        { observe: (event) => { if (event.kind === 'step' && event.event.phase === 'publish') { throw new Error('first observer failed'); } } },
+        { observe: (event) => { if (event.kind === 'step' && event.event.phase === 'publish') { throw new Error('first observer AUTHOR-SECRET'); } } },
         { observe: (event) => { if (event.kind === 'step') { later.push(event.event.phase); } } },
       ],
     });
     const result = await supervisor.run(options, (run) => run.resolve(step, { requestKey: 'request:1' }));
     expect(later).toContain('publish');
     expect(result.value).toMatchObject({ kind: 'published', reference });
-    expect(result.diagnostics).toEqual([expect.stringContaining('first observer failed')]);
+    // The diagnostic names the position; the observer's own error text never enters it (RUN-013).
+    expect(result.diagnostics).toEqual([expect.stringContaining('publish')]);
+    expect(result.diagnostics.join('\n')).not.toContain('AUTHOR-SECRET');
   });
 
   test('observers are captured when the run starts, and their return values never veto work', async () => {
@@ -649,12 +652,18 @@ describe('ordinary nonmemoized work (DOM-2, REUSE-009)', () => {
 
   test('an observer failure at begin stops only that call before its work runs', async () => {
     const supervisor = supervision();
+    const thrown = new Error('begin AUTHOR-SECRET');
     let ran = 0;
     const { options } = runOptions({
-      observers: [{ observe: (event) => { if (event.kind === 'ordinary' && event.phase === 'begin' && event.label === 'first') { throw new Error('begin failed'); } } }],
+      observers: [{ observe: (event) => { if (event.kind === 'ordinary' && event.phase === 'begin' && event.label === 'first') { throw thrown; } } }],
     });
     const result = await supervisor.run(options, async (run) => {
-      await expectSupervisionError(run.ordinary('first', () => { ran += 1; }), 'observer-failure');
+      const failure = await run.ordinary('first', () => { ran += 1; }).then(() => undefined, (error: unknown) => error);
+      expect(failure).toBeInstanceOf(SupervisionError);
+      // The failure names the work; the observer's error is its cause and never its message (RUN-013).
+      expect(failure instanceof SupervisionError ? [failure.code, failure.cause] : undefined).toEqual(['observer-failure', thrown]);
+      expect(failure instanceof Error ? failure.message : '').toContain('first');
+      expect(failure instanceof Error ? failure.message : '').not.toContain('AUTHOR-SECRET');
       return run.ordinary('second', () => { ran += 1; return 'second ran'; });
     });
     expect(ran).toBe(1);
@@ -664,11 +673,12 @@ describe('ordinary nonmemoized work (DOM-2, REUSE-009)', () => {
   test('an observer failure after ordinary work finished is a diagnostic beside its value', async () => {
     const supervisor = supervision();
     const { options } = runOptions({
-      observers: [{ observe: (event) => { if (event.kind === 'ordinary' && event.phase === 'end') { throw new Error('end failed'); } } }],
+      observers: [{ observe: (event) => { if (event.kind === 'ordinary' && event.phase === 'end') { throw new Error('end AUTHOR-SECRET'); } } }],
     });
     const result = await supervisor.run(options, (run) => run.ordinary('report', () => 'value'));
     expect(result.value).toBe('value');
-    expect(result.diagnostics).toEqual([expect.stringContaining('end failed')]);
+    expect(result.diagnostics).toEqual([expect.stringContaining('report')]);
+    expect(result.diagnostics.join('\n')).not.toContain('AUTHOR-SECRET');
   });
 
   test('failing ordinary work is observed as fail and its own error is preserved', async () => {
@@ -1035,7 +1045,7 @@ describe('lifetime of operations the run already started (RUN-001)', () => {
     held.open();
     const result = await running;
     expect(result.value).toBe('fast');
-    expect(result.diagnostics).toEqual([expect.stringContaining('slow end observer failed')]);
+    expect(result.diagnostics).toEqual([expect.stringContaining('end of ordinary work slow')]);
     expect(writer.releases.count).toBe(1);
   });
 

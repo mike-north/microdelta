@@ -170,8 +170,14 @@ function positiveCount(value: unknown, fallback: number, name: string): number {
 /** An observer's `observe` function as captured when its run started. */
 type ICapturedObserver = (event: IRunEvent) => void;
 
-/** A readable diagnostic from any thrown value. */
-function describe(error: unknown): string {
+/**
+ * The text of a failure the framework's own ports raised (the writer lease),
+ * for a diagnostic. Never applied to a value author or caller code threw
+ * (observers, abort listeners, bodies): those diagnostics and messages name
+ * the position only, and the error itself stays the cause where there is one
+ * (RUN-013: diagnostics name fields and keys, not their contents).
+ */
+function frameworkDetail(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
@@ -457,8 +463,9 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     /** The stop intent in force when the run closed; captured in the turn that closes it. */
     let closingStop: IStopState = controller.state;
     /** Where a failing listener of one of the run's abort signals is reported: a diagnostic, never a failure of the stop. */
-    const listenerFailure = (signal: string) => (error: unknown): void => {
-      diagnostics.push(`A ${signal} listener of run ${context.runId} failed: ${describe(error)}`);
+    // A listener is author or adapter code: the diagnostic names the signal, never the listener's error text (RUN-013).
+    const listenerFailure = (signal: string) => (): void => {
+      diagnostics.push(`A ${signal} listener of run ${context.runId} failed`);
     };
 
     /**
@@ -503,8 +510,9 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       report(event: IRunEvent, position: string): void {
         try {
           notify(observers, event);
-        } catch (error: unknown) {
-          diagnostics.push(`Run observer failed at ${position}: ${describe(error)}`);
+        } catch {
+          // An observer is the caller's code: the diagnostic names the position, never the observer's error text (RUN-013).
+          diagnostics.push(`Run observer failed at ${position}`);
         }
       },
       track<TResult>(operation: () => Promise<TResult>): Promise<TResult> {
@@ -711,13 +719,20 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
 
     /** Normal request passes in progress (not sleeping), and requests asleep until a deferral is due. */
     const passes = { active: 0, sleeping: 0 };
+    /**
+     * The deferral waits now asleep, each recording whether the run has
+     * released its writer lease since the wait began. A wait that began while
+     * another pass held the lease learns of the release that pass's end makes.
+     */
+    const sleepers = new Set<{ released: boolean }>();
     /** The earliest "not before" time of deferred work this run left waiting, if any. */
     let waitingUntil: number | undefined;
 
     /**
      * Release the writer lease once only deferred work remains: no normal
      * request pass is active and at least one request waits for a deferral
-     * (EXP-8 resolution 1). Returns whether the lease is now free of this run.
+     * (EXP-8 resolution 1). Returns whether the lease is now free of this run,
+     * and marks every wait asleep now as one the run released its lease for.
      */
     function releaseIfOnlyDeferred(): boolean {
       if (passes.active > 0) {
@@ -725,25 +740,40 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       }
       try {
         writer.release();
+        for (const sleeper of sleepers) {
+          sleeper.released = true;
+        }
         return true;
       } catch (error: unknown) {
-        diagnostics.push(`Run ${context.runId} could not release its writer for a deferral: ${describe(error)}`);
+        diagnostics.push(`Run ${context.runId} could not release its writer for a deferral: ${frameworkDetail(error)}`);
         return false;
       }
     }
 
-    /** Wait until `until`, holding nothing; any stop ends the wait. Resolves whether the time came. */
+    /**
+     * Wait until `until`, holding nothing; any stop ends the wait. Resolves
+     * whether the time came. The keep-alive timer is armed only for a run not
+     * yet stopped, and is always cancelled by the stop that ends the wait: a
+     * stopped run never leaves a timer that would hold its host process open
+     * until `until`. A stop already in force, including one requested while
+     * the run offered its `sleeping` event, ends the wait before any timer is
+     * armed; the timer is armed before the stop listener is registered, so a
+     * listener that runs at once still finds it to cancel.
+     */
     function sleepForDeferral(until: number, clock: IRunTimer): Promise<boolean> {
+      if (state.stopped.signal.aborted) {
+        return Promise.resolve(false);
+      }
       return new Promise<boolean>((resolve) => {
-        let cancel: () => void = () => undefined;
-        const remove = state.stopped.signal.onAbort(() => {
-          cancel();
-          resolve(false);
-        });
-        cancel = clock.schedule(until, () => {
+        let remove: () => void = () => undefined;
+        const cancel = clock.schedule(until, () => {
           remove();
           resolve(true);
         }, { keepAlive: true });
+        remove = state.stopped.signal.onAbort(() => {
+          cancel();
+          resolve(false);
+        });
       });
     }
 
@@ -811,22 +841,25 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
           return reported;
         }
         passes.sleeping += 1;
+        // Whether the run released its writer lease for this wait: at its start, or later, when the last active pass ends.
+        const wait = { released: false };
         let came: boolean;
-        let released: boolean;
         try {
-          released = releaseIfOnlyDeferred();
-          waitEvent('sleeping', until, released);
+          sleepers.add(wait);
+          wait.released = releaseIfOnlyDeferred();
+          waitEvent('sleeping', until, wait.released);
           came = await sleepForDeferral(until, timer);
         } finally {
+          sleepers.delete(wait);
           passes.sleeping -= 1;
         }
         if (!came) {
           waitingUntil = Math.min(waitingUntil ?? until, until);
-          waitEvent('stopped', until, released);
+          waitEvent('stopped', until, wait.released);
           return reported;
         }
-        waitEvent('resumed', until, false);
-        woken = { until, released };
+        waitEvent('resumed', until, wait.released);
+        woken = { until, released: wait.released };
       }
     }
 
@@ -866,7 +899,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       try {
         notify(observers, Object.freeze({ kind: 'ordinary', runId: context.runId, label, phase }));
       } catch (error: unknown) {
-        diagnostics.push(`Run observer failed at ${phase} of ordinary work ${label}: ${describe(error)}`);
+        diagnostics.push(`Run observer failed at ${phase} of ordinary work ${label}`);
       }
     }
 
@@ -940,7 +973,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
           try {
             notify(observers, Object.freeze({ kind: 'ordinary', runId: context.runId, label, phase: 'begin' }));
           } catch (error: unknown) {
-            throw new SupervisionError('observer-failure', `Run observer failed before ordinary work ${label}: ${describe(error)}`, error);
+            throw new SupervisionError('observer-failure', `Run observer failed before ordinary work ${label}`, error);
           }
           let value: Awaited<TWork>;
           try {
@@ -1014,7 +1047,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       try {
         writer.release();
       } catch (error: unknown) {
-        diagnostics.push(`Run ${context.runId} could not release its writer: ${describe(error)}`);
+        diagnostics.push(`Run ${context.runId} could not release its writer: ${frameworkDetail(error)}`);
       }
     }
     return Object.freeze({

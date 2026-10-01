@@ -779,7 +779,7 @@ describe('stop events and the run report', () => {
     const result = await supervisionWith(timer).run(optionsFor(double, {
       stop: controller,
       observers: [
-        { observe: (event) => { if (event.kind === 'stop') { throw new Error('observer failed'); } } },
+        { observe: (event) => { if (event.kind === 'stop') { throw new Error('observer AUTHOR-SECRET'); } } },
         { observe: (event) => events.push(event) },
       ],
     }), async () => {
@@ -790,7 +790,47 @@ describe('stop events and the run report', () => {
     expect(controlEvents(events)).toEqual(['stop:soft:operator', 'stop:hard:deadline']);
     expect(result.value).toMatchObject({ kind: 'cancelled' });
     expect(result.stop).toEqual(state('hard', 'deadline'));
-    expect(result.diagnostics).toEqual([expect.stringContaining('observer failed'), expect.stringContaining('observer failed')]);
+    // Each diagnostic names the position; the observer's own error text never enters it (RUN-013).
+    expect(result.diagnostics).toEqual([expect.stringContaining('stop'), expect.stringContaining('stop')]);
+    expect(result.diagnostics.join('\n')).not.toContain('AUTHOR-SECRET');
+  });
+
+  test('a failing abort listener of the run\'s signal is a diagnostic naming the signal, never repeating the listener\'s error text (RUN-013)', async () => {
+    const controller = createStopController();
+    const supervisor = supervisionWith(fakeTimer());
+    const result = await supervisor.run(optionsFor(portDouble(), { stop: controller }), () => {
+      supervisor.execution().signal.onAbort(() => {
+        throw new Error('listener AUTHOR-SECRET');
+      });
+      controller.request({ level: 'hard' });
+      return 'stopped';
+    });
+    expect(result.diagnostics).toEqual([expect.stringContaining('hard stop listener')]);
+    expect(result.diagnostics.join('\n')).not.toContain('AUTHOR-SECRET');
+  });
+
+  test('a failing abort listener of a send\'s signal is a diagnostic naming the send, never repeating the listener\'s error text (RUN-013)', async () => {
+    const controller = createStopController();
+    const supervisor = supervisionWith(fakeTimer());
+    const result = await supervisor.run(optionsFor(portDouble(), { stop: controller }), async () => {
+      const sending = codeOf(supervisor.execution().send({
+        label: 'generate',
+        perform: (signal) => new Promise<string>((_resolve, reject) => {
+          signal.onAbort(() => {
+            throw new Error('listener AUTHOR-SECRET');
+          });
+          signal.onAbort(() => {
+            reject(new Error('aborted'));
+          });
+        }),
+      }));
+      await settle();
+      controller.request({ level: 'hard' });
+      return sending;
+    });
+    expect(result.value).toBe('stopped');
+    expect(result.diagnostics).toEqual([expect.stringContaining('send generate')]);
+    expect(result.diagnostics.join('\n')).not.toContain('AUTHOR-SECRET');
   });
 
   test('a stop requested after the run closed is not reported by it', async () => {

@@ -15,8 +15,9 @@
  * - an operator deadline or a hard stop escalates: sends, permit waits and
  *   waits for a time are aborted, the attempt ends interrupted, the remote
  *   state is recorded, and returned but uncommitted output is discarded;
- * - a drain that outlives the writer lease cannot publish, and a successor's
- *   lease is untouched.
+ * - a drain that outlives the writer lease cannot publish, a successor's
+ *   lease is untouched, and the request ends with a typed `lease-lost`
+ *   denial rather than History's raw stale-writer error.
  *
  * @see ../../../../docs/spec/operations.md (RUN-002, RUN-014, RUN-015)
  * @see ../../../../docs/spec/acceptance.md (A-13)
@@ -363,7 +364,7 @@ describe('deadline and hard stop (RUN-014, RUN-015)', () => {
 });
 
 describe('a drain that outlives the writer lease cannot publish (ruling R)', () => {
-  test.each(['a successor takes the lease over', 'the lease simply expires'] as const)('%s: the late completion publishes nothing', async (situation) => {
+  test.each(['a successor takes the lease over', 'the lease simply expires'] as const)('%s: the late completion publishes nothing and the request is denied lease-lost', async (situation) => {
     world.keys = ['item:1'];
     const leaseMilliseconds = 150;
     const session = openStopSession(store.location, { leaseMilliseconds });
@@ -379,8 +380,8 @@ describe('a drain that outlives the writer lease cannot publish (ruling R)', () 
         expect(successor.kind).toBe('acquired');
       }
       world.provider.release('item:1');
-      const failure = await running.then(() => undefined, (error: unknown) => error);
-      expect(failure).toMatchObject({ name: 'StaleWriterError' });
+      const result = await running;
+      expect(result.value).toMatchObject({ kind: 'refused', reason: 'lease-lost', disposition: 'denied' });
       expect(publishedSubjects(store.location)).not.toContain(workSubject('item:1'));
       if (successor?.kind === 'acquired') {
         expect(probe.currentWriter()).toEqual(successor.lease);

@@ -42,7 +42,9 @@ export type IResolutionErrorCode =
 /**
  * A failed resolution. The underlying author, History or host failure, when
  * there is one, is preserved as `cause` rather than translated into success,
- * a miss or a retry.
+ * a miss or a retry. The message names the step and the failure kind; it
+ * never repeats the text of anything author or caller code threw, which
+ * reaches the caller only as `cause` (RUN-013).
  * @alpha
  */
 export class ResolutionError extends Error {

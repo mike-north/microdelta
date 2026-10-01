@@ -17,7 +17,6 @@
 import type { ISourceDeclaration } from './declaration.js';
 import { DefinitionError } from './errors.js';
 import type { IBindingFamily } from './family.js';
-import { thrownDetail } from './thrown.js';
 
 /**
  * Whether discovery reported its member list as closed (`complete`) or as
@@ -264,8 +263,9 @@ function memberKey(strategy: IKeyStrategy, member: object):
     try {
       // Trusted caller contract: the member is a record of this collection's result.
       raw = Reflect.apply(strategy.customKey, undefined, [member]);
-    } catch (error: unknown) {
-      return { status: 'failed', failure: { reason: 'key-function-failed', key: undefined, detail: thrownDetail(error) } };
+    } catch {
+      // What the author's key function threw is author text, which the diagnostic never repeats (RUN-013).
+      return { status: 'failed', failure: { reason: 'key-function-failed', key: undefined, detail: undefined } };
     }
   }
   if (raw === undefined) {
@@ -293,7 +293,7 @@ function rejection(strategy: IKeyStrategy, failure: IFailure): IKeyedSnapshot {
     'non-string-key': `has a member whose key from ${origin} is ${detail ?? 'not a string'}, not a string.`,
     'empty-key': `has a member with an empty key from ${origin}.`,
     'duplicate-key': `has duplicate member key ${JSON.stringify(key)} from ${origin}; member keys must be unique.`,
-    'key-function-failed': `could not be keyed because the custom key threw: ${detail ?? 'unknown failure'}.`,
+    'key-function-failed': 'could not be keyed because the custom key threw.',
   };
   const diagnostic: IKeyingDiagnostic = Object.freeze({
     reason,

@@ -596,9 +596,9 @@ export function isDeclaration(value: unknown): boolean {
   return typeof value === 'object' && value !== null && minted.has(value);
 }
 
-/** Reject a construction error with its Definition code. */
-export function reject(code: DefinitionError['code'], message: string): never {
-  throw new DefinitionError(code, message);
+/** Reject a construction error with its Definition code, and the value an author callback threw, if any, as its cause. */
+export function reject(code: DefinitionError['code'], message: string, cause?: unknown): never {
+  throw new DefinitionError(code, message, cause);
 }
 
 /** An author options record's own data properties, read without invoking accessors. */

@@ -3,6 +3,9 @@ EXTENDS Naturals, FiniteSets
 
 \* This finite model preserves the EXP-3 publication authority boundary while
 \* separating durable records from process-local credentials and ghost evidence.
+\* It also represents production History's abandonment and acceptance
+\* transitions. WriterLease.tla owns the writer lease under the owner-decided
+\* waiting policy and the clock high-water; here time is a global tick.
 CONSTANTS
   Contenders,
   AttemptKeys,
@@ -10,7 +13,13 @@ CONSTANTS
   MaxFence,
   MaxTime,
   LeaseLength,
-  OmitPublishFence
+  Fault
+
+\* Each known-bad configuration weakens exactly one guard; "none" is the
+\* protocol. "omit-publish-fence" drops holder/fence equality from
+\* publication; "abandon-completed" lets abandonment end a completed attempt;
+\* "accept-moves-current" lets an acceptance record rewind the current pointer.
+Faults == {"none", "omit-publish-fence", "abandon-completed", "accept-moves-current"}
 
 \* Sentinels represent absent credentials and references; stable attempt keys
 \* retain identity across process death and successor rebinding.
@@ -22,12 +31,20 @@ AbandonedKey == "abandoned"
 SuccessorKey == "successor"
 
 \* Lifecycle phases distinguish reserved/staged work from retained success.
-PhaseNames == {"unused", "allocated", "staged", "completed"}
+\* "ended" is production's failed or interrupted attempt: terminal, without a
+\* result, its generation consumed.
+PhaseNames == {"unused", "allocated", "staged", "completed", "ended"}
 \* Event labels select only the witness relevant to the latest transition.
 ActionNames == {"init", "acquire", "held", "reclaim", "tick", "renew",
   "reject-renew", "release", "reject-release", "allocate", "rebind", "execute",
   "stage", "publish", "abort-publish", "ack", "retry-completed",
-  "read-exact", "crash", "restart"}
+  "read-exact", "crash", "restart", "abandon", "accept"}
+
+\* An acceptance names an existing result; the witness keeps the accepted
+\* reference and the current pointer the acceptance found.
+AcceptanceWitnessType ==
+  [ ref : 0..MaxGeneration,
+    currentBefore : 0..MaxGeneration ]
 
 \* Independent pre-state authority evidence prevents a guard from proving itself.
 PublishWitnessType ==
@@ -80,6 +97,7 @@ ObservationType ==
     retryCallsBefore : 0..2,
     readRef : 0..MaxGeneration,
     readKey : AttemptKeys \cup {NoKey},
+    acceptance : AcceptanceWitnessType,
     acknowledged : SUBSET (1..MaxGeneration) ]
 
 VARIABLES durable, process, bodyCalls, now, observations
@@ -100,6 +118,8 @@ EmptyRejectedLease ==
     fence |-> 0,
     current |-> 0 ]
 
+EmptyAcceptance == [ ref |-> NoRef, currentBefore |-> NoRef ]
+
 \* Event-specific witnesses describe only the latest event; clearing stale
 \* payloads keeps unrelated history out of the finite state cross-product.
 Observe(actionName) ==
@@ -111,13 +131,15 @@ Observe(actionName) ==
     !.retryRef = NoRef,
     !.retryCallsBefore = 0,
     !.readRef = NoRef,
-    !.readKey = NoKey]
+    !.readKey = NoKey,
+    !.acceptance = EmptyAcceptance]
 
 vars == <<durable, process, bodyCalls, now, observations>>
 
 \* Durable records carry the claim, attempt lifecycle, immutable snapshots, and
 \* current pointer. Acknowledgment is tracked only as a ghost observation below.
 TypeOK ==
+  /\ Fault \in Faults
   /\ durable \in DurableType
   /\ process \in ProcessType
   /\ bodyCalls \in [AttemptKeys -> 0..2]
@@ -192,6 +214,22 @@ ExactReferenceReadIsStable ==
   observations.lastAction = "read-exact" =>
     durable.snapshots[observations.readRef] = observations.readKey
 
+\* An abandoned (failed or interrupted) attempt is never a result and never
+\* current, and keeps the generation it consumed so it is never reissued.
+EndedAttemptIsNeverAResult ==
+  \A key \in AttemptKeys:
+    durable.phase[key] = "ended" =>
+      /\ durable.ref[key] \in 1..MaxGeneration
+      /\ durable.snapshots[durable.ref[key]] # key
+      /\ durable.current # durable.ref[key]
+
+\* Recording an acceptance names an existing retained result and never moves
+\* the current pointer or rewrites retained history (RES-007).
+AcceptanceKeepsCurrentAndHistory ==
+  observations.lastAction = "accept" =>
+    /\ durable.current = observations.acceptance.currentBefore
+    /\ durable.snapshots[observations.acceptance.ref] # NoKey
+
 \* The seed is a retained successful result; the two later keys model an
 \* abandoned attempt and its successor without inventing partial commit states.
 Init ==
@@ -235,6 +273,7 @@ Init ==
          retryCallsBefore |-> 0,
          readRef |-> NoRef,
          readKey |-> NoKey,
+         acceptance |-> EmptyAcceptance,
          acknowledged |-> {} ]
 
 \* An unexpired lease is necessary but not sufficient: publication and every
@@ -396,7 +435,7 @@ AtomicPublish(c, key) ==
   /\ process.activeKey[c] = key
   /\ durable.phase[key] = "staged"
   /\ LeaseIsLive(c)
-  /\ (OmitPublishFence \/ CurrentFence(c))
+  /\ (Fault = "omit-publish-fence" \/ CurrentFence(c))
   /\ LET generation == durable.ref[key]
      IN /\ durable' =
               [durable EXCEPT
@@ -428,6 +467,40 @@ AbortPublish(c, key) ==
   /\ durable.phase[key] = "staged"
   /\ observations' = Observe("abort-publish")
   /\ UNCHANGED <<durable, process, bodyCalls, now>>
+
+\* abandonAttempt: under current authority, an incomplete attempt ends without
+\* a result. Its generation stays consumed and its evidence is retained.
+Abandon(c, key) ==
+  /\ c \in Contenders
+  /\ key \in AttemptKeys
+  /\ Authorized(c)
+  /\ \/ durable.phase[key] \in {"allocated", "staged"}
+     \/ (Fault = "abandon-completed" /\ durable.phase[key] = "completed")
+  /\ durable' = [durable EXCEPT !.phase[key] = "ended"]
+  /\ process' =
+       [process EXCEPT
+         !.activeKey[c] = IF @ = key THEN NoKey ELSE @,
+         !.bodyDone[c] = IF process.activeKey[c] = key THEN FALSE ELSE @]
+  /\ observations' = Observe("abandon")
+  /\ UNCHANGED <<bodyCalls, now>>
+
+\* recordAcceptance: under current authority, record that an existing
+\* retained result was accepted. No model transition reads acceptance records,
+\* so they are witnessed rather than stored; only the current pointer and
+\* retained history are durable facts an acceptance could disturb.
+Accept(c, generation) ==
+  /\ c \in Contenders
+  /\ generation \in 1..MaxGeneration
+  /\ Authorized(c)
+  /\ durable.snapshots[generation] # NoKey
+  /\ durable' =
+       IF Fault = "accept-moves-current"
+         THEN [durable EXCEPT !.current = generation]
+         ELSE durable
+  /\ observations' =
+       [Observe("accept") EXCEPT
+         !.acceptance = [ ref |-> generation, currentBefore |-> durable.current ]]
+  /\ UNCHANGED <<process, bodyCalls, now>>
 
 Ack(c) ==
   /\ c \in Contenders
@@ -505,6 +578,8 @@ Next ==
   \/ \E c \in Contenders, key \in AttemptKeys: Stage(c, key)
   \/ \E c \in Contenders, key \in AttemptKeys: AtomicPublish(c, key)
   \/ \E c \in Contenders, key \in AttemptKeys: AbortPublish(c, key)
+  \/ \E c \in Contenders, key \in AttemptKeys: Abandon(c, key)
+  \/ \E c \in Contenders, generation \in 1..MaxGeneration: Accept(c, generation)
   \/ \E c \in Contenders: Ack(c)
   \/ \E key \in AttemptKeys: RetryCompleted(key)
   \/ \E generation \in 1..MaxGeneration: ReadExact(generation)

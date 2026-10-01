@@ -3,8 +3,10 @@
  * folds: only a keyed collection result may declare a designated identity,
  * and only a string field may be it; a template's custom key and gate see the
  * collection's member type (the gate through the facade's view); member steps
- * take only symbolic member subjects; a fold names a declared template step
- * and sees explicit keyed entries whose data exists only on succeeded ones.
+ * take only symbolic member subjects; a strict or outcome fold names a
+ * declared template step and sees explicit keyed entries whose data exists
+ * only on succeeded ones. An outcome fold's entries also carry the failed and
+ * cancelled statuses, which a strict fold's never do.
  *
  * @see ../../../docs/spec/composition.md (CMP-4, CMP-8, EXP-4 selections)
  * @see ../../../docs/spec/tracking.md (COL-1)
@@ -20,6 +22,7 @@ import {
   type ICollectionResult,
   type IFoldEntry,
   type IGateInvocation,
+  type IOutcomeEntry,
   type IGateOutcome,
   type IIdentityField,
   type IInvocation,
@@ -60,7 +63,7 @@ interface IFamily extends IBindingFamily {
   readonly memo: { readonly minimumAuthored: number };
 }
 
-const { source, template, fold, compose, openInvocation, gateOf, stepSlot } = declarations<IFamily>();
+const { source, template, fold, outcomeFold, compose, openInvocation, gateOf, stepSlot } = declarations<IFamily>();
 
 interface IContributor {
   readonly key?: string;
@@ -163,15 +166,54 @@ expectError(fold({ subject: 'r', over: { template: contributor, step: 'summary' 
 declare const skipped: IFoldEntry<string> & { readonly status: 'skipped' };
 expectError(skipped.data);
 
+// Outcome folds see every settled status; data exists only on succeeded entries.
+const tally = outcomeFold({
+  subject: 'tally',
+  over: { template: contributor, step: 'summary' },
+  run: ({ members, minimumAuthored }) => {
+    expectType<number>(minimumAuthored);
+    expectType<readonly IOutcomeEntry<IView<{ sentence: string }>>[]>(members);
+    return members.map((entry) => {
+      switch (entry.status) {
+        case 'succeeded':
+          return entry.data.sentence;
+        case 'skipped':
+        case 'failed':
+        case 'cancelled':
+          return `${entry.key} ${entry.status}`;
+        default: {
+          const exhaustive: never = entry;
+          return exhaustive;
+        }
+      }
+    });
+  },
+});
+expectType<string[]>(tally.run({ minimumAuthored: 1, members: [] }));
+expectError(outcomeFold({ subject: 't', over: { template: contributor, step: 'assessment' }, run: () => 1 }));
+// eslint-disable-next-line @typescript-eslint/no-unsafe-return -- This negative tsd case intentionally reads data before narrowing to a succeeded entry.
+expectError(outcomeFold({ subject: 't', over: { template: contributor, step: 'summary' }, run: ({ members }) => members.map((entry) => entry.data) }));
+declare const failed: IOutcomeEntry<string> & { readonly status: 'failed' };
+expectError(failed.data);
+declare const cancelled: IOutcomeEntry<string> & { readonly status: 'cancelled' };
+expectError(cancelled.data);
+// A strict fold's entries never carry failed or cancelled statuses.
+expectNotAssignable<IFoldEntry<string>>({ key: 'person:ada', status: 'failed' });
+expectNotAssignable<IFoldEntry<string>>({ key: 'person:ada', status: 'cancelled' });
+expectAssignable<IOutcomeEntry<string>>({ key: 'person:ada', status: 'failed' });
+// Pending and unknown are unsettled: never an outcome fold entry.
+expectNotAssignable<IOutcomeEntry<string>>({ key: 'person:ada', status: 'pending' });
+expectNotAssignable<IOutcomeEntry<string>>({ key: 'person:ada', status: 'unknown' });
+
 // Compositions accept composition-level steps and templates; invocations include folds.
 const composition = compose({
   scope: 'report',
-  steps: [{ slot: 'contributors', declaration: contributors }, { slot: 'report', declaration: report }],
+  steps: [{ slot: 'contributors', declaration: contributors }, { slot: 'report', declaration: report }, { slot: 'tally', declaration: tally }],
   templates: [contributor],
 });
 declare const port: Parameters<typeof openInvocation>[2];
 const invocation: IInvocation<IFamily> = openInvocation(composition, { scope: 'report', role: 'step', slot: 'report' }, port);
-if (invocation.kind === 'fold') {
+if (invocation.kind === 'fold' || invocation.kind === 'outcome-fold') {
   expectType<IBindingDescriptor>(invocation.over);
 }
 expectType<IKeyedSnapshot>(composition.keyMembers('contributor', {}));

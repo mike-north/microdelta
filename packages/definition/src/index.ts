@@ -1,6 +1,6 @@
 /**
  * Definition & Binding: frozen declarations, the fixed step graph (including
- * keyed fanout templates, their gates and strict folds), current structural
+ * keyed fanout templates, their gates, strict folds and outcome folds), current structural
  * correspondence, member keying, supplied step slots, declared child-call handles
  * with their argument recipes and versioned invocation witnesses, and the
  * invocation bridge that pairs a reconnected step's actual author callback with
@@ -72,6 +72,8 @@ export {
 } from './template.js';
 export type {
   IAnyFoldDeclaration,
+  ICancelledEntry,
+  IFailedEntry,
   IFoldDeclaration,
   IFoldEntry,
   IFoldInvocation,
@@ -80,10 +82,19 @@ export type {
   IFoldOver,
   IFoldRunContext,
   IFoldTopology,
+  IOutcomeEntry,
   ISkippedEntry,
   IStepsOf,
   ISucceededEntry,
 } from './fold.js';
+export type {
+  IAnyOutcomeFoldDeclaration,
+  IOutcomeFoldDeclaration,
+  IOutcomeFoldInvocation,
+  IOutcomeFoldMemberSupplier,
+  IOutcomeFoldOptions,
+  IOutcomeFoldRunContext,
+} from './outcome-fold.js';
 
 export {
   type IBindingResolution,

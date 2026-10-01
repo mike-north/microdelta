@@ -10,7 +10,7 @@
  * configuration values. Callables are composition-wide callable slots holding
  * either a supplied helper function or a supplied step implementation; the two
  * share one namespace, so a slot name denotes at most one of them. Steps are
- * source, memoized or strict fold declarations at the composition level,
+ * source, memoized, strict fold or outcome fold declarations at the composition level,
  * within an explicitly keyed member, or within a keyed fanout template.
  * @alpha
  */

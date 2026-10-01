@@ -34,6 +34,7 @@
  * or distributed-time guarantee.
  * @packageDocumentation
  */
+import { SqliteBusyError } from '@microdelta/machine';
 import type { IClockCapability, ISqliteConnection, ISqliteRow } from '@microdelta/machine';
 import { decodeSnapshot, encodeSnapshot } from '@microdelta/value';
 
@@ -61,7 +62,9 @@ import type {
   IVersionedSubject,
   IWriterAcquisition,
   IWriterAcquisitionRequest,
+  IWriterContention,
   IWriterLease,
+  IWriterRenewal,
 } from './contracts.js';
 import {
   AttemptConflictError,
@@ -316,6 +319,42 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
   }
 
   /**
+   * The contention outcome of a lease operation whose transaction could not
+   * take SQLite's write lock (PUB-005). The recorded writer is read without
+   * the write lock; a read that is itself busy leaves it undefined rather than
+   * guessed, while any other read failure, such as a missing writer row, is
+   * thrown as the failure it is.
+   */
+  function contention(busy: SqliteBusyError): IWriterContention {
+    let writer: IWriterLease | undefined;
+    try {
+      const recorded = readWriter();
+      writer = recorded.holder === null ? undefined : Object.freeze({ holder: recorded.holder, fence: recorded.lastFence, expiresAt: recorded.expiresAt });
+    } catch (error: unknown) {
+      if (!(error instanceof SqliteBusyError)) {
+        throw error;
+      }
+    }
+    return Object.freeze({ kind: 'contended', writer, detail: busy.message });
+  }
+
+  /**
+   * Run a lease operation that a waiter repeats, reporting SQLite contention
+   * as History's typed outcome. Only the host's busy failure qualifies, and it
+   * guarantees the transaction changed nothing; every other failure is thrown.
+   */
+  function orContended<T>(operation: () => T): T | IWriterContention {
+    try {
+      return operation();
+    } catch (error: unknown) {
+      if (!(error instanceof SqliteBusyError)) {
+        throw error;
+      }
+      return contention(error);
+    }
+  }
+
+  /**
    * Run one ownership-sensitive mutation. Inside one transaction the time is
    * observed and holder, fence and unexpired lease are checked before
    * `operation` runs. A stale lease commits only the time observation and then
@@ -559,7 +598,7 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
       const holder = requireName(request.holder, 'holder');
       const leaseMilliseconds = requirePositive(request.leaseMilliseconds, 'leaseMilliseconds');
       let acquisition: IWriterAcquisition | undefined;
-      connection.transaction(() => {
+      const busy = orContended(() => connection.transaction(() => {
         const writer = readWriter();
         const now = observeTime(writer);
         if (writer.holder !== null && writer.expiresAt > now) {
@@ -571,20 +610,23 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
         statements.setHolder.run(fence, holder, expiresAt);
         acquisition = Object.freeze({ kind: 'acquired', lease: Object.freeze({ holder, fence, expiresAt }) });
         return undefined;
-      });
+      }));
+      if (busy !== undefined) {
+        return busy;
+      }
       if (acquisition === undefined) {
         throw new HistoryIntegrityError('Writer acquisition produced no outcome');
       }
       return acquisition;
     },
 
-    renewWriter(lease: IWriterLease, leaseMilliseconds: number): IWriterLease {
+    renewWriter(lease: IWriterLease, leaseMilliseconds: number): IWriterRenewal {
       const duration = requirePositive(leaseMilliseconds, 'leaseMilliseconds');
-      return asHolder(lease, (now) => {
+      return orContended(() => asHolder(lease, (now): IWriterRenewal => {
         const expiresAt = safeSum(now, duration, 'lease expiry');
         statements.extendHolder.run(expiresAt);
-        return Object.freeze({ holder: lease.holder, fence: lease.fence, expiresAt });
-      });
+        return Object.freeze({ kind: 'renewed', lease: Object.freeze({ holder: lease.holder, fence: lease.fence, expiresAt }) });
+      }));
     },
 
     releaseWriter(lease: IWriterLease): void {

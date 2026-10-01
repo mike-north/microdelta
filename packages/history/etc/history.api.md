@@ -244,7 +244,7 @@ export interface IDurableHistory {
     recordAcceptance(lease: IWriterLease, request: IAcceptanceRequest): IAcceptanceRecord;
     recoverAttempt(request: IAttemptRequest): IRecoveryOutcome;
     releaseWriter(lease: IWriterLease): void;
-    renewWriter(lease: IWriterLease, leaseMilliseconds: number): IWriterLease;
+    renewWriter(lease: IWriterLease, leaseMilliseconds: number): IWriterRenewal;
     stageAttempt(lease: IWriterLease, request: IStageRequest): IAttemptRecord;
     verifyResult(reference: ICompletedResultReference): IResultVerification;
 }
@@ -532,7 +532,7 @@ export type IWriterAcquisition = {
     readonly kind: 'held';
     readonly holder: string;
     readonly expiresAt: number;
-};
+} | IWriterContention;
 
 // @alpha
 export interface IWriterAcquisitionRequest {
@@ -541,11 +541,24 @@ export interface IWriterAcquisitionRequest {
 }
 
 // @alpha
+export interface IWriterContention {
+    readonly detail: string;
+    readonly kind: 'contended';
+    readonly writer: IWriterLease | undefined;
+}
+
+// @alpha
 export interface IWriterLease {
     readonly expiresAt: number;
     readonly fence: number;
     readonly holder: string;
 }
+
+// @alpha
+export type IWriterRenewal = {
+    readonly kind: 'renewed';
+    readonly lease: IWriterLease;
+} | IWriterContention;
 
 // @alpha
 export class JournalConflictError extends Error {
@@ -627,12 +640,6 @@ export type ResultKey = {
     revision: number;
     subjectHash: string;
 };
-
-// @alpha
-export class SqliteBusyError extends Error {
-    constructor(message: string, waitedMilliseconds: number, options?: ErrorOptions);
-    readonly waitedMilliseconds: number;
-}
 
 // @alpha
 export class StaleWriterError extends Error {

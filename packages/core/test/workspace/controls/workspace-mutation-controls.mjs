@@ -15,17 +15,24 @@
  * rebuilding restores the files.
  *
  * It is an on-demand evidence command, not part of `npm test`: run
- * `npm run build`, `npm run test:unit --workspace @microdelta/supervision` and
- * `npm run test:unit --workspace microdelta` first, then
+ * `npm run build` and `npm run test:unit --workspace microdelta` first, then
  * `node packages/core/test/workspace/controls/workspace-mutation-controls.mjs`.
+ * The runner compiles Supervision's test build itself and stops with the
+ * command to run when another build it plants into is missing.
  * Controls must run serially.
+ *
+ * `--check-anchors` verifies that every anchor matches exactly once in the
+ * current builds and exits without running any suite; `npm test` runs it for
+ * every runner (anchor-check.test.mjs) so drift fails early.
  */
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 
+import { anchorCheckRequested, anchorProblems, reportAnchorCheck } from '../../durable-history/controls/anchor-check.mjs';
 import { judgeRun } from '../../durable-history/controls/control-outcome.mjs';
+import { ensureSupervisionTestBuild } from '../../durable-history/controls/prerequisites.mjs';
 
 const root = new URL('../../../../../', import.meta.url).pathname;
 
@@ -34,21 +41,21 @@ const targets = Object.freeze({
   supervision: [join(root, 'packages/supervision/dist/src/supervision.js'), join(root, 'packages/supervision/.test-build/src/supervision.js')],
   workspace: [join(root, 'packages/core/.test-build/src/workspace.js')],
   writer: [join(root, 'packages/core/.test-build/src/writer.js')],
-  activity: [join(root, 'examples/contribution-report/dist/activity.js')],
+  fixture: [join(root, 'examples/contribution-report/dist/fixture.js')],
 });
 
 const controls = [
   { name: 'context lookup ignores the composition phase', target: 'supervision', anchor: "if (isComposing()) {\n            throw new SupervisionError('composition-phase', 'Runtime context", replacement: "if (false) {\n            throw new SupervisionError('composition-phase', 'Runtime context" },
-  { name: 'a closed run still answers context lookups', target: 'supervision', anchor: "if (!frame.open) {\n            throw new SupervisionError('run-closed', `Run ${frame.context.runId} has closed; its context", replacement: "if (false) {\n            throw new SupervisionError('run-closed', `Run ${frame.context.runId} has closed; its context" },
-  { name: 'a closed run still accepts new work', target: 'supervision', anchor: "if (!frame.open) {\n                throw new SupervisionError('run-closed', `Run ${context.runId} has closed and accepts", replacement: "if (false) {\n                throw new SupervisionError('run-closed', `Run ${context.runId} has closed and accepts" },
-  { name: 'work presented after close is admitted', target: 'supervision', anchor: "if (!frame.open) {\n                    return closedDenial();", replacement: "if (false) {\n                    return closedDenial();" },
-  { name: 'an admission decided after actual closure is not denied', target: 'supervision', anchor: 'return frame.open ? decision : closedDenial();', replacement: 'return decision;' },
-  { name: 'the run closes without waiting for operations it started', target: 'supervision', anchor: 'await drainAndClose();', replacement: 'frame.open = false;' },
-  { name: 'the run yields between its final empty check and closing', target: 'supervision', anchor: '            }\n            frame.open = false;', replacement: '            }\n            await Promise.resolve();\n            frame.open = false;' },
+  { name: "a closed run still answers context lookups", target: 'supervision', anchor: "if (!frame.run.open) {\n            throw new SupervisionError('run-closed', `Run ${frame.run.context.runId} has closed; its context", replacement: "if (false) {\n            throw new SupervisionError('run-closed', `Run ${frame.run.context.runId} has closed; its context" },
+  { name: "a closed run still accepts new work", target: 'supervision', anchor: "if (!state.open) {\n                    return Promise.reject(new SupervisionError('run-closed', `Run ${context.runId} has closed and accepts", replacement: "if (false) {\n                    return Promise.reject(new SupervisionError('run-closed', `Run ${context.runId} has closed and accepts" },
+  { name: "work presented after close is admitted", target: 'supervision', anchor: "async admit(request) {\n                if (!state.open) {\n                    return closedDenial();", replacement: "async admit(request) {\n                if (false) {\n                    return closedDenial();" },
+  { name: "an admission decided after actual closure is not denied", target: 'supervision', anchor: "if (!state.open) {\n                    return closedDenial();\n                }\n                const after = stopRefusal(demandedBy);", replacement: "if (false) {\n                    return closedDenial();\n                }\n                const after = stopRefusal(demandedBy);" },
+  { name: "the run closes without waiting for operations it started", target: 'supervision', anchor: "await drainAndClose();", replacement: "state.open = false;" },
+  { name: "the run yields between its final empty check and closing", target: 'supervision', anchor: "            }\n            state.open = false;\n            closingStop = controller.state;", replacement: "            }\n            await Promise.resolve();\n            state.open = false;\n            closingStop = controller.state;" },
   { name: 'started operations are not accounted to the run', target: 'supervision', anchor: 'started.add(settled);', replacement: 'void settled;' },
-  { name: 'the caller admission policy is ignored', target: 'supervision', anchor: 'const decision = await policy.admit(request);', replacement: "const decision = Object.freeze({ kind: 'admitted' });" },
+  { name: "the caller admission policy is ignored", target: 'supervision', anchor: "const decided = await raceAbort(Promise.resolve(policy.admit(request)), state.hard.signal);", replacement: "const decided = { aborted: false, value: Object.freeze({ kind: 'admitted' }) };" },
   { name: 'recovery takes the writer lease', target: 'supervision', anchor: "return within(() => resolution.recover({ step, requestKey: request.requestKey }), 'recover');", replacement: "return within(() => { writer.tryLease(); return resolution.recover({ step, requestKey: request.requestKey }); }, 'recover');" },
-  { name: 'the writer lease is never released', target: 'supervision', anchor: 'writer.release();', replacement: 'void writer;' },
+  { name: "the writer lease is never released", target: 'supervision', anchor: "try {\n                writer.release();\n            }\n            catch (error) {\n                diagnostics.push(`Run ${context.runId} could not release its writer: ", replacement: "try {\n                void writer;\n            }\n            catch (error) {\n                diagnostics.push(`Run ${context.runId} could not release its writer: " },
   { name: 'observer failures are swallowed', target: 'supervision', anchor: 'throw failure.error;', replacement: 'void failure;' },
   { name: 'observers are read live instead of captured at start', target: 'supervision', anchor: 'Reflect.apply(observe, observer, [event]);', replacement: "Reflect.apply(Reflect.get(observer, 'observe'), observer, [event]);" },
   { name: 'a failing begin observer does not stop ordinary work', target: 'supervision', anchor: "throw new SupervisionError('observer-failure', `Run observer failed before ordinary work", replacement: "void new SupervisionError('observer-failure', `Run observer failed before ordinary work" },
@@ -59,12 +66,46 @@ const controls = [
   { name: 'an expired writer lease is kept instead of re-acquired', target: 'writer', anchor: 'if (!(error instanceof StaleWriterError)) {\n                        throw error;\n                    }\n                    held = undefined;', replacement: 'if (true) {\n                        throw error;\n                    }\n                    held = undefined;' },
   { name: 'releasing an expired lease is reported as a failure', target: 'writer', anchor: 'if (!(error instanceof StaleWriterError)) {\n                        throw error;\n                    }\n                }\n            }', replacement: 'if (true) {\n                        throw error;\n                    }\n                }\n            }' },
   { name: 'every run of a workspace uses the same writer holder name', target: 'workspace', anchor: 'writer: writerFor(history, `microdelta-run:${runId}`, leaseMilliseconds),', replacement: 'writer: writerFor(history, `microdelta-run:${composition.scope}`, leaseMilliseconds),' },
-  { name: 'the example counts pending reviews', target: 'activity', anchor: "review.state === 'submitted' && ", replacement: '' },
-  { name: 'the example window end is inclusive', target: 'activity', anchor: 'return time >= Date.parse(`${window.start}T00:00:00Z`) && time < Date.parse(', replacement: 'return time >= Date.parse(`${window.start}T00:00:00Z`) && time <= Date.parse(' },
+  { name: "the example counts pending reviews", target: 'fixture', anchor: "review.state === 'submitted' && ", replacement: "" },
+  { name: "the example window end is inclusive", target: 'fixture', anchor: "return time >= Date.parse(`${window.start}T00:00:00Z`) && time < Date.parse(", replacement: "return time >= Date.parse(`${window.start}T00:00:00Z`) && time <= Date.parse(" },
 ];
+
+/**
+ * Make the builds the controls plant into exist, or stop with the command that
+ * produces them. Supervision's test build is compiled here (it is small and
+ * only this runner, the concurrency runner and its owner suite read it); the
+ * other builds are slower and shared, so they are checked rather than rebuilt.
+ */
+function ensurePrerequisites() {
+  ensureSupervisionTestBuild(root);
+  const advice = {
+    'packages/supervision/dist': 'npm run build',
+    'packages/core/.test-build': 'npm run test:unit --workspace microdelta',
+    'examples/contribution-report/dist': 'npm run build',
+  };
+  for (const file of Object.values(targets).flat()) {
+    if (!existsSync(file)) {
+      const owner = Object.keys(advice).find((prefix) => file.startsWith(join(root, prefix)));
+      throw new Error(`missing ${file}; run \`${advice[owner ?? 'packages/supervision/dist']}\` first`);
+    }
+  }
+}
+
+try {
+  ensurePrerequisites();
+} catch (error) {
+  console.log(`CONTROL RUN INVALID: ${error instanceof Error ? error.message : String(error)}`);
+  process.exit(1);
+}
 
 /** The original bytes of every target file. */
 const originals = new Map(Object.values(targets).flat().map((file) => [file, readFileSync(file, 'utf8')]));
+
+// Drift guard: `--check-anchors` verifies every anchor in every file it plants into and runs no suite.
+if (anchorCheckRequested()) {
+  const plants = controls.flatMap((control) => targets[control.target].map((file) => ({ control: control.name, file, text: originals.get(file), anchor: control.anchor })));
+  process.exit(reportAnchorCheck(anchorProblems(plants), controls.length));
+}
 
 /** Restore every target file. */
 function restoreAll() {
@@ -107,13 +148,13 @@ function spawnChild(args, cwd) {
 }
 
 /** Run one Jest suite set and judge it fail-closed. */
-async function runJest(config, pattern, suites, expectedTitles) {
+async function runJest(config, suiteDirectory, suites, expectedTitles) {
   const directory = mkdtempSync(join(tmpdir(), 'workspace-controls-'));
   reportDirectory = directory;
   try {
     const out = join(directory, 'report.json');
     // Exactly the intended suite files run, so a suite added beside them never invalidates the run.
-    const paths = suites.map((suite) => join(dirname(config), pattern, suite));
+    const paths = suites.map((suite) => join(dirname(config), suiteDirectory, suite));
     const { code } = await spawnChild(['--experimental-vm-modules', join(root, 'node_modules/jest/bin/jest.js'), '--config', config, '--runInBand', '--json', `--outputFile=${out}`, '--runTestsByPath', ...paths], root);
     return judgeRun({ exitStatus: code, reportText: existsSync(out) ? readFileSync(out, 'utf8') : undefined, expectedTitles, suites });
   } finally {
@@ -145,9 +186,9 @@ async function runExample(expectedTitles) {
 
 /** Run every suite once; `baseline` holds the expected titles per suite set. */
 async function runAll(baseline) {
-  // Patterns name exactly the suites judged, so suites added to these directories later do not invalidate the run.
-  const supervision = await runJest(join(root, 'packages/supervision/jest.config.mjs'), '.test-build/test/supervision\\.test\\.js$', ['supervision.test.js'], baseline?.supervision);
-  const workspace = await runJest(join(root, 'packages/core/jest.config.mjs'), '.test-build/test/workspace/(admission-observers|contribution-run|recovery|scope|writer-wait)\\.test\\.js$',
+  // The suite lists name exactly the files judged, so suites added to these directories later do not invalidate the run.
+  const supervision = await runJest(join(root, 'packages/supervision/jest.config.mjs'), '.test-build/test', ['supervision.test.js'], baseline?.supervision);
+  const workspace = await runJest(join(root, 'packages/core/jest.config.mjs'), '.test-build/test/workspace',
     ['admission-observers.test.js', 'contribution-run.test.js', 'recovery.test.js', 'scope.test.js', 'writer-wait.test.js'], baseline?.workspace);
   const example = await runExample(baseline?.example);
   return {

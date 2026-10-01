@@ -19,17 +19,39 @@
  * into both test builds), then
  * `node packages/core/test/concurrency/controls/concurrency-mutation-controls.mjs`.
  * Controls must run serially.
+ *
+ * `--check-anchors` verifies that every anchor matches exactly once in the
+ * current builds and exits without running any suite; `npm test` runs it for
+ * every runner (anchor-check.test.mjs) so drift fails early.
  */
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { anchorCheckRequested, reportAnchorCheck } from '../../durable-history/controls/anchor-check.mjs';
 import { judgeRun } from '../../durable-history/controls/control-outcome.mjs';
+import { ensureSupervisionTestBuild } from '../../durable-history/controls/prerequisites.mjs';
 import { controls, groupOf, groups, plant, repositoryRoot, targetOf, targets } from './controls.mjs';
+
+// The controls plant into Supervision's test build too, which only its own owner suite would otherwise produce.
+ensureSupervisionTestBuild(repositoryRoot);
 
 /** The original emitted bytes of every target, by repository-relative path. */
 const originals = new Map(targets.map((path) => [path, readFileSync(join(repositoryRoot, path), 'utf8')]));
+
+// Drift guard: `--check-anchors` plants every control into the current builds in memory and runs no suite.
+if (anchorCheckRequested()) {
+  const problems = controls.flatMap((control) => {
+    try {
+      plant(originals.get(targetOf(control)) ?? '', control);
+      return [];
+    } catch (error) {
+      return [`ANCHOR: ${error instanceof Error ? error.message : String(error)}`];
+    }
+  });
+  process.exit(reportAnchorCheck(problems, controls.length));
+}
 
 /** Restore every target to its original bytes. */
 function restore() {

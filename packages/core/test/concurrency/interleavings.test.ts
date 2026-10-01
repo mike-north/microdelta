@@ -704,6 +704,20 @@ describe('waiting for the writer lease across processes (L1–L7)', () => {
     expect(snapshot(location).writer).toEqual({ holder: 'holder-a', lastFence: lease.fence, expiresAt: 1_100 });
   }, scenarioTimeout);
 
+  test('L8: when another process takes over between the waiter’s tries, writer-busy names the holder of the final try, not the one it first saw', async () => {
+    const location = freshStore();
+    const [a, b, w] = await Promise.all([worker('A', location), worker('B', location), worker('W', location)]);
+    await acquire(a, 1_000, 'holder-a', 100);
+    let status = await waitStep(w, { op: 'wait-start', at: 1_010, holder: 'waiter-w', leaseMilliseconds: 1_000, pollMilliseconds: 10_000, deadline: 1_150, key: 'w-work' });
+    expect(status.attempts).toEqual([{ at: 1_010, kind: 'held', holder: 'holder-a', expiresAt: 1_100, fence: null }]);
+    // B takes over at the expiry instant, before the waiter's own wake-up at 1 100 runs.
+    const successor = await acquire(b, 1_100, 'holder-b', 500);
+    status = await waitStep(w, { op: 'wait-advance', at: 1_150 });
+    expect(tries(status)).toEqual(['1010:held', '1100:held', '1150:held']);
+    expect(status.outcome).toMatchObject({ kind: 'busy', holder: 'holder-b', expiresAt: successor.expiresAt, deadline: 1_150, contended: false });
+    await waitStep(w, { op: 'wait-finish', at: 1_151 });
+  }, scenarioTimeout);
+
   test('L7: SQLITE_BUSY exhaustion while another process holds SQLite’s write lock is a typed contended outcome, and at the deadline the typed writer-busy error naming the recorded holder, never a raw driver error', async () => {
     const location = freshStore();
     const [a, w] = await Promise.all([worker('A', location), worker('W', location)]);
@@ -737,7 +751,7 @@ describe('renewal and release keep the durable fence (defense in depth, #110 fin
     const first = leaseFrom(history.acquireWriter({ holder: 'holder-a', leaseMilliseconds: 100 }));
     expect(traced.fenceWrites()).toEqual([{ from: 0, to: first.fence }]);
     clock.set(1_050);
-    const renewed = history.renewWriter(first, 100);
+    const renewed = leaseFrom(history.renewWriter(first, 100));
     expect(renewed).toEqual({ holder: 'holder-a', fence: first.fence, expiresAt: 1_150 });
     clock.set(1_060);
     history.releaseWriter(renewed);
@@ -748,7 +762,7 @@ describe('renewal and release keep the durable fence (defense in depth, #110 fin
     const second = leaseFrom(history.acquireWriter({ holder: 'holder-a', leaseMilliseconds: 100 }));
     expect(second.fence).toBe(first.fence + 1);
     clock.set(1_080);
-    history.releaseWriter(history.renewWriter(second, 100));
+    history.releaseWriter(leaseFrom(history.renewWriter(second, 100)));
     expect(traced.fenceWrites()).toEqual([{ from: 0, to: first.fence }, { from: first.fence, to: second.fence }]);
     history.close();
   });

@@ -37,7 +37,8 @@ Faults ==
     "waiter-advances-fence",
     "ignore-high-water",
     "takeover-before-expiry",
-    "busy-without-holder" }
+    "busy-without-holder",
+    "busy-on-stale-observation" }
 
 \* Every lease-guarded History mutation. The five data operations write rows
 \* that record the writing fence (allocated_fence, ended_fence,
@@ -183,10 +184,12 @@ Held(p, reading) ==
 \* typed writer-busy outcome naming that holder. Durably this is exactly a
 \* `held` observation; giving up is process-local. The deadline is
 \* process-local arithmetic and is not represented: a waiter may give up at any
-\* held observation, which covers every deadline.
+\* held observation, which covers every deadline. The `busy-on-stale-observation`
+\* fault gives up whenever any holder is recorded, as a waiter reporting an
+\* earlier try instead of its final one would.
 Busy(p, reading) ==
   LET now == Effective(reading)
-  IN /\ Contested(now)
+  IN /\ IF Fault = "busy-on-stale-observation" THEN durable.holder # NoHolder ELSE Contested(now)
      /\ durable' = [durable EXCEPT !.highWater = now]
      /\ observations' =
           [Witness("busy", "none", p, now, NoHolder, 0) EXCEPT

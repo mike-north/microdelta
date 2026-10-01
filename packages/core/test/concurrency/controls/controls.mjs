@@ -26,16 +26,52 @@ export const target = 'packages/history/dist/src/durable/index.js';
 /** Run Supervision's emitted wait for the writer lease, relative to the repository root. */
 export const waitTarget = 'packages/supervision/dist/src/writer.js';
 
+/**
+ * Run Supervision's wait as its own owner tests load it: their test build
+ * compiles the same source with the same compiler, so its JavaScript matches
+ * `waitTarget` apart from the source-map comment.
+ */
+export const waitTestTarget = 'packages/supervision/.test-build/src/writer.js';
+
+/** The facade's writer port as the facade's tests and workers load it, from the facade's test build. */
+export const portTarget = 'packages/core/.test-build/src/writer.js';
+
 /** Every emitted file some control plants into. */
-export const targets = Object.freeze([target, waitTarget]);
+export const targets = Object.freeze([target, waitTarget, waitTestTarget, portTarget]);
 
 /** The file one control plants into. */
 export function targetOf(control) {
   return control.target ?? target;
 }
 
-/** The concurrency suite files every control run must execute, and no others. */
-export const suites = Object.freeze(['interleavings.test.js', 'contention.test.js']);
+/**
+ * The emitted file whose text proves a control's anchors in `npm test`. A
+ * test-build target is checked through its package's build output when the
+ * test build does not exist yet (the workspace runs packages' tests in
+ * name order), since both compile the same source to the same JavaScript.
+ */
+export function anchorSourceOf(control) {
+  return targetOf(control) === waitTestTarget ? waitTarget : targetOf(control);
+}
+
+/**
+ * The suites a control run executes, by group. `concurrency` (the default) is
+ * the facade's cross-process and port suites; `supervision` is Run
+ * Supervision's own writer-wait suite, for a defect only an owner test can
+ * observe, such as a retained abort listener.
+ */
+export const groups = Object.freeze({
+  concurrency: Object.freeze({ cwd: 'packages/core', directory: '.test-build/test/concurrency', suites: Object.freeze(['interleavings.test.js', 'contention.test.js', 'writer-port.test.js']) }),
+  supervision: Object.freeze({ cwd: 'packages/supervision', directory: '.test-build/test', suites: Object.freeze(['writer-wait.test.js']) }),
+});
+
+/** The run group of one control. */
+export function groupOf(control) {
+  return control.group ?? 'concurrency';
+}
+
+/** The concurrency suite files every default control run must execute, and no others. */
+export const suites = groups.concurrency.suites;
 
 /** One planted defect: which model fault it reproduces and the edits that plant it. */
 export const controls = Object.freeze([
@@ -88,7 +124,7 @@ export const controls = Object.freeze([
     name: 'renewal adopts the current fence instead of checking the presented one',
     model: 'WriterLease',
     fault: 'renew-ignores-fence',
-    edits: [{ anchor: 'return asHolder(lease, (now) => {', replacement: 'return asHolder({ ...lease, fence: readWriter().lastFence }, (now) => {' }],
+    edits: [{ anchor: 'return orContended(() => asHolder(lease, (now) => {', replacement: 'return orContended(() => asHolder({ ...lease, fence: readWriter().lastFence }, (now) => {' }],
   },
   {
     name: 'acquisition takes over one millisecond before the recorded expiry',
@@ -118,6 +154,50 @@ export const controls = Object.freeze([
     unmodeled: 'The deadline is process-local arithmetic; the model lets a waiter give up at any held observation and does not represent deadlines or liveness.',
     target: waitTarget,
     edits: [{ anchor: 'if (deadline !== undefined && now >= deadline) {', replacement: 'if (false) {' }],
+  },
+  {
+    name: 'writer-busy reports an earlier try instead of the final one',
+    model: 'WriterLease',
+    fault: 'busy-on-stale-observation',
+    target: waitTarget,
+    edits: [
+      { anchor: 'for (;;) {', replacement: 'let earliest; for (;;) {' },
+      { anchor: 'const attempt = wait.writer.tryLease();', replacement: "const attempt = wait.writer.tryLease(); if (attempt.kind !== 'acquired') { earliest ??= attempt; }" },
+      { anchor: 'throw new WriterBusyError(attempt, deadline);', replacement: 'throw new WriterBusyError(earliest ?? attempt, deadline);' },
+    ],
+  },
+  {
+    name: 'every failure of acquisition becomes contention',
+    model: null,
+    unmodeled: 'SQLite locks and host failures are outside the model; the port suite shows that damaged storage and clock failures must stay failures.',
+    edits: [{
+      anchor: 'const busy = orContended(() => connection.transaction(() => {',
+      replacement: 'const busy = ((operation) => { try { return operation(); } catch (error) { return contention(error); } })(() => connection.transaction(() => {',
+    }],
+  },
+  {
+    name: 'the port treats a busy renewal as stale and swallows renewal failures',
+    model: null,
+    unmodeled: 'The port is a translation layer outside the model; the model has no storage contention for a renewal to report.',
+    target: portTarget,
+    edits: [
+      {
+        anchor: "if (renewal.kind === 'contended') {\n                        return contended(renewal, held);\n                    }",
+        replacement: "if (renewal.kind === 'contended') {\n                        throw new StaleWriterError('treated as stale');\n                    }",
+      },
+      {
+        anchor: 'if (!(error instanceof StaleWriterError)) {\n                        throw error;\n                    }\n                    held = undefined;',
+        replacement: 'held = undefined;',
+      },
+    ],
+  },
+  {
+    name: 'a wait does not remove its abort listener on waking',
+    model: null,
+    unmodeled: 'Listener retention is a resource property of one process; the model has no listeners. Only the owner suite can count them.',
+    target: waitTestTarget,
+    group: 'supervision',
+    edits: [{ anchor: 'removeListener();\n            resolve();', replacement: 'resolve();' }],
   },
   {
     // Both layers are weakened: the lifecycle check and the SQL state predicate.

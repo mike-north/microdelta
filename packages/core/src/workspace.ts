@@ -336,7 +336,11 @@ export interface IWorkspace {
    * `options.writerWait`, taking it over through History's fencing once the
    * holder releases it or its lease expires, and fail with
    * `WriterBusyError` naming the holder if the operator's deadline
-   * passes first. `check` and `recover` never wait. The run stays live, with its context,
+   * passes first. `check` and `recover` never wait. A run cannot start from
+   * inside an open run of the same workspace, including its ordinary work and
+   * author code: it would wait for the lease its own caller holds, so it is
+   * refused at once with `invalid-request`. A run of another workspace, or
+   * one started after the outer run closed, is unaffected. The run stays live, with its context,
    * exact reads and writer, until the body and every operation started
    * through the run have settled, even when the body stopped awaiting them
    * early (for example a `Promise.all` whose sibling failed); the body's own
@@ -397,6 +401,27 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
   let open = true;
   /** Process-local counter distinguishing this workspace's runs. */
   let runCounter = 0;
+  /** The contexts of this workspace's runs whose bodies have started and that have not yet settled. */
+  const liveRuns = new Set<IRunContext>();
+
+  /**
+   * The open run of this workspace whose asynchronous context the caller is
+   * in, if any. A run started there would wait for the writer lease its own
+   * caller holds, and with no default deadline it would wait forever.
+   */
+  function enclosingRun(): IRunContext | undefined {
+    let context: IRunContext;
+    try {
+      context = supervision.current();
+    } catch (error: unknown) {
+      // Outside any live run (or while composing): there is no enclosing run of this workspace.
+      if (error instanceof SupervisionErrorClass) {
+        return undefined;
+      }
+      throw error;
+    }
+    return liveRuns.has(context) ? context : undefined;
+  }
 
   return Object.freeze({
     logicalStore: history.logicalStore,
@@ -407,11 +432,20 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
       if (!open) {
         return Promise.reject(new SupervisionErrorClass('invalid-request', 'This workspace has been closed'));
       }
+      const enclosing = enclosingRun();
+      if (enclosing !== undefined) {
+        return Promise.reject(new SupervisionErrorClass(
+          'invalid-request',
+          `A workspace run cannot start inside an open run of the same workspace (${enclosing.runId}): it would wait for the writer lease that run holds`,
+        ));
+      }
       const { authoring, composition } = runOptions;
       runCounter += 1;
       // A volatile identity for this run, used for its writer holder and context; never reuse evidence.
       const runId = runOptions.runId ?? `run:${String(runCounter)}:${composition.scope}`;
-      return supervision.run({
+      /** This run's context once its body has started. */
+      let started: IRunContext | undefined;
+      const settled = supervision.run({
         analysis: composition.scope,
         environment: runOptions.environment,
         runId,
@@ -436,6 +470,8 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
           execution: ports.execution,
         }),
       }, (live) => {
+        started = live.context;
+        liveRuns.add(live.context);
         const run: IWorkspaceRun = Object.freeze({
           context: live.context,
           get open(): boolean {
@@ -458,6 +494,13 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
         });
         return body(run);
       });
+      const forget = (): void => {
+        if (started !== undefined) {
+          liveRuns.delete(started);
+        }
+      };
+      settled.then(forget, forget);
+      return settled;
     },
     close(): void {
       if (open) {

@@ -251,24 +251,38 @@ describe('normal entry operation', () => {
     const workspace = openWorkspace({ location: store.location, logicalStore });
     const contributors = composeContributors();
     const options = { authoring: contributors.authoring, composition: contributors.composition, environment };
+    let holding: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      holding = resolve;
+    });
+    let finish: () => void = () => undefined;
+    const finished = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
     try {
-      await workspace.run({ ...options, runId: 'run:first' }, async (first) => {
-        await first.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
-        // A deadline is required here: without one the nested run would wait for the run that awaits it.
-        await workspace.run({ ...options, runId: 'run:second', writerWait: { deadline: Date.now() } }, async (second) => {
-          let caught: unknown;
-          try {
-            await second.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
-          } catch (error: unknown) {
-            caught = error;
-          }
-          expect(caught instanceof SupervisionError ? caught.code : undefined).toBe('writer-busy');
-          expect(caught instanceof WriterBusyError ? caught.holder : undefined).toBe('microdelta-run:run:first');
-          expect(caught instanceof Error ? caught.message : '').toContain('run:first');
-          await expect(second.check(contributors.steps['person:ada'].summary)).resolves.toMatchObject({ kind: 'reusable' });
-        });
+      const first = workspace.run({ ...options, runId: 'run:first' }, async (run) => {
+        await run.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
+        holding();
+        await finished;
       });
+      await held;
+      // A concurrent caller, outside the first run; its deadline has passed, so it makes one attempt.
+      await workspace.run({ ...options, runId: 'run:second', writerWait: { deadline: Date.now() } }, async (second) => {
+        let caught: unknown;
+        try {
+          await second.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
+        } catch (error: unknown) {
+          caught = error;
+        }
+        expect(caught instanceof SupervisionError ? caught.code : undefined).toBe('writer-busy');
+        expect(caught instanceof WriterBusyError ? caught.holder : undefined).toBe('microdelta-run:run:first');
+        expect(caught instanceof Error ? caught.message : '').toContain('run:first');
+        await expect(second.check(contributors.steps['person:ada'].summary)).resolves.toMatchObject({ kind: 'reusable' });
+      });
+      finish();
+      await first;
     } finally {
+      finish();
       workspace.close();
     }
   });

@@ -1,18 +1,22 @@
 /**
  * Behavioral discrimination controls for the M5 concurrency suites. Each
  * control in `controls.mjs` plants exactly one weakened guard into its
- * target's emitted build (History's lease authority or Run Supervision's
- * writer wait), reruns the unchanged interleaving and contention suites, and
- * records which named tests fail; the emitted file is restored afterwards and
- * the restored build must pass every test. A control whose anchors do not
- * each match exactly once, or that no test rejects, fails the run. Every Jest
- * run is judged fail-closed by `control-outcome.mjs` against exactly the two
- * concurrency suites. Every target is restored after each control, on error
+ * target's emitted build (History's lease authority, Run Supervision's writer
+ * wait or the facade's writer port), reruns its group's unchanged suites (by
+ * default the interleaving, contention and writer-port suites; for an owner-only
+ * defect, Run Supervision's writer-wait suite), and records which named tests
+ * fail; the emitted file is restored afterwards and each group's restored build
+ * must pass every test. A control whose anchors do not each match exactly
+ * once, or that no test rejects, fails the run. Every Jest run is judged
+ * fail-closed by `control-outcome.mjs` against exactly its group's suites.
+ * Every target is restored after each control, on error
  * and on SIGINT/SIGTERM/SIGHUP, and its final bytes are compared with the
  * original; rebuilding the package restores it after a SIGKILL.
  *
- * On-demand evidence command, not part of `npm test`: run `npm run build` and
- * `npm run test:unit --workspace microdelta` first, then
+ * On-demand evidence command, not part of `npm test`: run `npm run build`,
+ * `npm run test:unit --workspace microdelta` and
+ * `npm run test:unit --workspace @microdelta/supervision` first (controls plant
+ * into both test builds), then
  * `node packages/core/test/concurrency/controls/concurrency-mutation-controls.mjs`.
  * Controls must run serially.
  */
@@ -22,9 +26,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { judgeRun } from '../../durable-history/controls/control-outcome.mjs';
-import { controls, plant, repositoryRoot, suites, targetOf, targets } from './controls.mjs';
+import { controls, groupOf, groups, plant, repositoryRoot, targetOf, targets } from './controls.mjs';
 
-const core = join(repositoryRoot, 'packages/core');
 /** The original emitted bytes of every target, by repository-relative path. */
 const originals = new Map(targets.map((path) => [path, readFileSync(join(repositoryRoot, path), 'utf8')]));
 
@@ -56,15 +59,16 @@ for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
   });
 }
 
-/** Run both concurrency suites once, judged fail-closed; returns the failing titles. */
-async function runSuites(expectedTitles) {
+/** Run one group's suites once, judged fail-closed; returns the failing titles. */
+async function runSuites(groupName, expectedTitles) {
+  const { cwd, directory: suiteDirectory, suites } = groups[groupName];
   const directory = mkdtempSync(join(tmpdir(), 'concurrency-controls-'));
   reportDirectory = directory;
   try {
     const out = join(directory, 'report.json');
-    const paths = suites.map((suite) => `.test-build/test/concurrency/${suite}`);
+    const paths = suites.map((suite) => `${suiteDirectory}/${suite}`);
     const exitStatus = await new Promise((resolve, reject) => {
-      running = spawn(process.execPath, ['--experimental-vm-modules', join(repositoryRoot, 'node_modules/jest/bin/jest.js'), '--config', 'jest.config.mjs', '--runInBand', '--json', `--outputFile=${out}`, ...paths], { cwd: core, stdio: 'ignore' });
+      running = spawn(process.execPath, ['--experimental-vm-modules', join(repositoryRoot, 'node_modules/jest/bin/jest.js'), '--config', 'jest.config.mjs', '--runInBand', '--json', `--outputFile=${out}`, ...paths], { cwd: join(repositoryRoot, cwd), stdio: 'ignore' });
       running.on('error', reject);
       running.on('exit', (code) => {
         resolve(code);
@@ -79,11 +83,18 @@ async function runSuites(expectedTitles) {
 }
 
 let failures = 0;
+/** The groups the controls use, in first-use order. */
+const usedGroups = [...new Set(controls.map(groupOf))];
 try {
-  const baseline = await runSuites(undefined);
-  console.log(`baseline: ${String(baseline.titles.size)} tests, ${String(baseline.failed.length)} failing`);
-  if (baseline.failed.length > 0) {
-    throw new Error('the unmodified build must pass every test before controls run');
+  /** Each group's baseline titles; every group's unmodified build must pass before any control runs. */
+  const baselines = new Map();
+  for (const group of usedGroups) {
+    const baseline = await runSuites(group, undefined);
+    console.log(`baseline (${group}): ${String(baseline.titles.size)} tests, ${String(baseline.failed.length)} failing`);
+    if (baseline.failed.length > 0) {
+      throw new Error(`the unmodified build must pass every ${group} test before controls run`);
+    }
+    baselines.set(group, baseline.titles);
   }
   for (const control of controls) {
     const path = targetOf(control);
@@ -101,9 +112,9 @@ try {
     }
     writeFileSync(join(repositoryRoot, path), planted);
     try {
-      const { failed } = await runSuites(baseline.titles);
+      const { failed } = await runSuites(groupOf(control), baselines.get(groupOf(control)));
       const model = control.model === null ? 'no model counterpart' : `${control.model} fault ${control.fault}`;
-      console.log(`\n## ${control.name} (${model}; ${path}): ${String(failed.length)} failing`);
+      console.log(`\n## ${control.name} (${model}; ${path}; ${groupOf(control)} suites): ${String(failed.length)} failing`);
       for (const name of failed) console.log(`- ${name}`);
       if (failed.length === 0) failures += 1;
     } finally {
@@ -113,9 +124,11 @@ try {
       throw new Error(`${unrestored().join(', ')} not restored after ${control.name}`);
     }
   }
-  const restored = await runSuites(baseline.titles);
-  console.log(`\nrestored: ${String(restored.titles.size)} tests, ${String(restored.failed.length)} failing`);
-  if (restored.failed.length > 0) failures += 1;
+  for (const group of usedGroups) {
+    const restored = await runSuites(group, baselines.get(group));
+    console.log(`\nrestored (${group}): ${String(restored.titles.size)} tests, ${String(restored.failed.length)} failing`);
+    if (restored.failed.length > 0) failures += 1;
+  }
 } catch (error) {
   console.log(`CONTROL RUN INVALID: ${error instanceof Error ? error.message : String(error)}`);
   failures += 1;

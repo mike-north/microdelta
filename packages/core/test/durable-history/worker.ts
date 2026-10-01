@@ -121,9 +121,14 @@ function apply(step: IWorkerStep): unknown {
     case 'use-lease':
       lease = step.lease;
       return lease;
-    case 'renew':
-      lease = history.renewWriter(requireLease(), step.lease);
+    case 'renew': {
+      const renewal = history.renewWriter(requireLease(), step.lease);
+      if (renewal.kind === 'contended') {
+        return renewal;
+      }
+      lease = renewal.lease;
       return lease;
+    }
     case 'release':
       history.releaseWriter(requireLease());
       return null;

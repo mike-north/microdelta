@@ -15,16 +15,12 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 
-import { controls, plant, repositoryRoot, targetOf, targets } from './controls.mjs';
+import { anchorSourceOf, controls, groupOf, groups, plant, repositoryRoot, targetOf, targets } from './controls.mjs';
 
-/** The current emitted text of every target, by its repository-relative path. */
-const emitted = new Map(targets.map((path) => [path, readFileSync(join(repositoryRoot, path), 'utf8')]));
-
-/** The emitted text a control plants into. */
+/** The emitted text that proves a control's anchors: its target, or that target's package build. */
 function emittedFor(control) {
-  const text = emitted.get(targetOf(control));
-  assert.ok(text !== undefined, `${control.name}: known target`);
-  return text;
+  assert.ok(targets.includes(targetOf(control)), `${control.name}: known target`);
+  return readFileSync(join(repositoryRoot, anchorSourceOf(control)), 'utf8');
 }
 
 /** The known-bad configuration file of a model fault. */
@@ -45,6 +41,12 @@ test('every control anchor occurs exactly once in its emitted target and plantin
       assert.notEqual(edit.replacement, edit.anchor, `${control.name}: replacement is a change`);
     }
     assert.notEqual(plant(text, control), text, `${control.name}: planted build differs`);
+  }
+});
+
+test('every control names a known run group', () => {
+  for (const control of controls) {
+    assert.ok(Object.hasOwn(groups, groupOf(control)), `${control.name}: known run group`);
   }
 });
 

@@ -159,6 +159,12 @@ function contend(holder: string, durationMilliseconds: number, leaseMilliseconds
       sleep(1 + pause);
       continue;
     }
+    if (acquisition.kind === 'contended') {
+      // History's typed contention outcome: SQLite stayed locked past its busy wait and nothing changed.
+      log.push({ op: 'acquire', ok: false, fence: 0, contended: true, ...(acquisition.writer === undefined ? {} : { heldBy: acquisition.writer.holder }) });
+      sleep(1 + pause);
+      continue;
+    }
     lease = acquisition.lease;
     const fence = lease.fence;
     log.push({ op: 'acquire', ok: true, fence });
@@ -170,9 +176,18 @@ function contend(holder: string, durationMilliseconds: number, leaseMilliseconds
     if (attempt(log, 'allocate', fence, () => allocate(staged))) {
       attempt(log, 'stage', fence, () => stage(staged, staged));
     }
-    attempt(log, 'renew', fence, () => {
-      lease = history.renewWriter(requireLease(), leaseMilliseconds);
-    });
+    try {
+      const renewal = history.renewWriter(requireLease(), leaseMilliseconds);
+      if (renewal.kind === 'contended') {
+        // A busy renewal keeps the lease as it was; it is neither granted nor refused.
+        log.push({ op: 'renew', ok: false, fence, contended: true });
+      } else {
+        lease = renewal.lease;
+        log.push({ op: 'renew', ok: true, fence });
+      }
+    } catch (error: unknown) {
+      log.push({ op: 'renew', ok: false, fence, error: error instanceof Error ? error.name : 'unknown' });
+    }
     // Outlive the lease on the shared host clock, then present it again.
     sleep(lease.expiresAt - Date.now() + 5);
     if (attempts.has(staged)) {
@@ -522,10 +537,15 @@ function perform(command: Exclude<IHarnessCommand, IWaitCommand>): unknown {
       }
       return acquisition;
     }
-    case 'renew':
+    case 'renew': {
       controlled.set(command.at);
-      lease = history.renewWriter(requireLease(), command.leaseMilliseconds);
+      const renewal = history.renewWriter(requireLease(), command.leaseMilliseconds);
+      if (renewal.kind === 'contended') {
+        return renewal;
+      }
+      lease = renewal.lease;
       return lease;
+    }
     case 'release':
       controlled.set(command.at);
       history.releaseWriter(requireLease());

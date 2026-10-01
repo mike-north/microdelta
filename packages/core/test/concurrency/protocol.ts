@@ -189,6 +189,8 @@ export interface IContentionEvent {
   readonly heldBy?: string;
   /** For a refusal, the thrown class name. */
   readonly error?: string;
+  /** For an acquisition or renewal History reported as storage contention: nothing was granted, refused or changed. */
+  readonly contended?: boolean;
 }
 
 /**
@@ -376,7 +378,8 @@ export function parseContentionLog(value: unknown): readonly IContentionEvent[] 
     }
     const heldBy = entry.heldBy === undefined ? {} : { heldBy: stringField(entry, 'heldBy') };
     const error = entry.error === undefined ? {} : { error: stringField(entry, 'error') };
-    return { op, ok: entry.ok, fence: numberField(entry, 'fence'), ...heldBy, ...error };
+    const contended = entry.contended === true ? { contended: true } : {};
+    return { op, ok: entry.ok, fence: numberField(entry, 'fence'), ...heldBy, ...error, ...contended };
   });
 }
 

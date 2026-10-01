@@ -160,10 +160,19 @@ describe('free-running contention with the host clock (C2)', () => {
 
     const all: readonly (IContentionEvent & { readonly holder: string })[] = logs.flatMap(({ holder, log }) => log.map((event) => ({ ...event, holder })));
     for (const event of all) {
-      if (event.op === 'acquire' && !event.ok) {
+      if (event.contended === true) {
+        // History's typed contention outcome (issue #136): only acquisition and renewal report it, nothing
+        // changed, and a writer it names was really granted the writer.
+        expect(['acquire', 'renew']).toContain(event.op);
+        expect(event.error).toBeUndefined();
+        if (event.heldBy !== undefined) {
+          expect(names.map((name) => `free-${name}`)).toContain(event.heldBy);
+        }
+      } else if (event.op === 'acquire' && !event.ok) {
         // A refused acquisition names a holder that really was granted the writer.
         expect(names.map((name) => `free-${name}`)).toContain(event.heldBy);
       } else if (!event.ok) {
+        // Every other refusal is History's typed stale-writer refusal; a raw driver error such as SQLITE_BUSY fails here.
         expect(event.error).toBe('StaleWriterError');
       } else if (event.op !== 'acquire') {
         // An accepted mutation presented a fence this process was granted.
@@ -184,7 +193,7 @@ describe('free-running contention with the host clock (C2)', () => {
 
     // The run exercised contention rather than a single uncontested holder.
     expect(grants.length).toBeGreaterThanOrEqual(2);
-    expect(all.some((event) => event.op === 'acquire' && !event.ok)).toBe(true);
+    expect(all.some((event) => event.op === 'acquire' && !event.ok && event.contended !== true)).toBe(true);
     expect(all.some((event) => event.error === 'StaleWriterError')).toBe(true);
     expect(state.results.length).toBeGreaterThanOrEqual(2);
   }, 120_000);

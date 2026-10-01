@@ -33,6 +33,7 @@ const root = new URL('../../../../../', import.meta.url).pathname;
 const targets = Object.freeze({
   supervision: [join(root, 'packages/supervision/dist/src/supervision.js'), join(root, 'packages/supervision/.test-build/src/supervision.js')],
   workspace: [join(root, 'packages/core/.test-build/src/workspace.js')],
+  writer: [join(root, 'packages/core/.test-build/src/writer.js')],
   activity: [join(root, 'examples/contribution-report/dist/activity.js')],
 });
 
@@ -55,8 +56,8 @@ const controls = [
   { name: 'request diagnostics are not collected by the run', target: 'supervision', anchor: 'diagnostics.push(...outcome.diagnostics);', replacement: 'void outcome;' },
   { name: 'Resolution uses a fixed environment instead of the selected one', target: 'workspace', anchor: "                    environment: runOptions.environment,\n                    history,", replacement: "                    environment: 'env:fixture',\n                    history," },
   { name: 'a closed run can still read results', target: 'workspace', anchor: 'if (!live.open) {', replacement: 'if (false) {' },
-  { name: 'an expired writer lease is kept instead of re-acquired', target: 'workspace', anchor: 'if (!(error instanceof StaleWriterError)) {\n                        throw error;\n                    }\n                    held = undefined;', replacement: 'if (true) {\n                        throw error;\n                    }\n                    held = undefined;' },
-  { name: 'releasing an expired lease is reported as a failure', target: 'workspace', anchor: 'if (!(error instanceof StaleWriterError)) {\n                        throw error;\n                    }\n                }\n            }', replacement: 'if (true) {\n                        throw error;\n                    }\n                }\n            }' },
+  { name: 'an expired writer lease is kept instead of re-acquired', target: 'writer', anchor: 'if (!(error instanceof StaleWriterError)) {\n                        throw error;\n                    }\n                    held = undefined;', replacement: 'if (true) {\n                        throw error;\n                    }\n                    held = undefined;' },
+  { name: 'releasing an expired lease is reported as a failure', target: 'writer', anchor: 'if (!(error instanceof StaleWriterError)) {\n                        throw error;\n                    }\n                }\n            }', replacement: 'if (true) {\n                        throw error;\n                    }\n                }\n            }' },
   { name: 'every run of a workspace uses the same writer holder name', target: 'workspace', anchor: 'writer: writerFor(history, `microdelta-run:${runId}`, leaseMilliseconds),', replacement: 'writer: writerFor(history, `microdelta-run:${composition.scope}`, leaseMilliseconds),' },
   { name: 'the example counts pending reviews', target: 'activity', anchor: "review.state === 'submitted' && ", replacement: '' },
   { name: 'the example window end is inclusive', target: 'activity', anchor: 'return time >= Date.parse(`${window.start}T00:00:00Z`) && time < Date.parse(', replacement: 'return time >= Date.parse(`${window.start}T00:00:00Z`) && time <= Date.parse(' },

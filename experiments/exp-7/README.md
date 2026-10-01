@@ -141,13 +141,14 @@ The guards fall into three kinds:
 | `WriterLeaseBad-ignore-high-water.cfg` | time is the raw host reading | lease promise | `EffectiveTimeNeverRegresses` |
 | `WriterLeaseBad-takeover-before-expiry.cfg` | acquisition takes over one tick before the recorded expiry | lease promise | `TakeoverOnlyAfterExpiry` |
 | `WriterLeaseBad-busy-without-holder.cfg` | writer-busy names no holder | restating | `BusyNamesUnexpiredHolder` |
+| `WriterLeaseBad-busy-on-stale-observation.cfg` | a waiter gives up whenever any holder is recorded, as if reporting an earlier try | restating | `BusyNamesUnexpiredHolder` |
 
 The kinds are established by storage-only runs. Each
 `WriterLeaseConsequence-<fault>.cfg` checks only the storage-safety invariants
-for the eight faults not first caught by one:
+for the nine faults not first caught by one:
 
 - takeover without a fence increment reaches `AtMostOneAuthority`;
-- the other seven exhaust without a storage-safety violation.
+- the other eight exhaust without a storage-safety violation.
 
 `PublicationConsequence-accept-moves-current.cfg` omits the restating
 invariant and exhausts: a rewound current pointer still names a retained,
@@ -159,11 +160,18 @@ each `WriterLease` fault, `abandon-completed` and `accept-moves-current` into
 History's emitted build; `omit-publish-fence`'s control is "publication
 ignores the fence" in
 `packages/core/test/durable-history/controls/history-mutation-controls.mjs`.
-`busy-without-holder` plants into Run Supervision's emitted writer wait. Two
-code controls there have no model fault, and say why: waiting that ignores
-the operator deadline (deadlines are not modeled), and renewal and release
-writing the presented fence back (indistinguishable from the fixed effect
-while the holder guard holds; a connection-local trigger test observes it).
+`busy-without-holder` and `busy-on-stale-observation` plant into Run
+Supervision's emitted writer wait; the latter's code control builds
+writer-busy from an earlier try than the final one. Several code controls
+have no model fault, and each says why:
+- waiting that ignores the operator deadline (deadlines are not modeled);
+- renewal and release writing the presented fence back (indistinguishable
+  from the fixed effect while the holder guard holds; a connection-local
+  trigger test observes it);
+- acquisition reporting every failure as contention, and the facade's port
+  treating a busy renewal as stale (SQLite contention is not modeled);
+- a wait that keeps its abort listener after waking (a resource property of
+  one process).
 
 ## Invariants
 

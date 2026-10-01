@@ -21,8 +21,8 @@ import type { IWriterLease } from '@microdelta/history';
 import { createNodeClock } from '@microdelta/machine-node';
 
 import { SupervisionError, WriterBusyError, createStopController, openWorkspace } from '../../src/index.js';
-import type { IResolutionOutcome, IRunResult, IWorkspace, IWorkspaceRunOptions } from '../../src/index.js';
-import { openHistory } from '../durable-history/support.js';
+import type { IWorkspace, IWorkspaceRunOptions } from '../../src/index.js';
+import { cleanup, openHistory, openRaw } from '../durable-history/support.js';
 import { composeContributors, resetWorld } from './fixture.js';
 import type { IContributors, IHelpers, IInputs } from './fixture.js';
 import { caughtCode, environment, freshRequestKey, locatorOf, logicalStore, tempStore } from './support.js';
@@ -41,6 +41,7 @@ beforeEach(() => {
 
 afterEach(() => {
   workspace.close();
+  cleanup();
   store.remove();
 });
 
@@ -59,6 +60,15 @@ function recordedWriter(): IWriterLease | undefined {
   }
 }
 
+/** A one-shot gate a test opens to let awaiting work continue. */
+function gate(): { readonly opened: Promise<void>; open(): void } {
+  let open: () => void = () => undefined;
+  const opened = new Promise<void>((resolve) => {
+    open = resolve;
+  });
+  return { opened, open };
+}
+
 /** Wait for real time; used only to let a waiter poll while the holder still holds. */
 function elapse(milliseconds: number): Promise<void> {
   return new Promise((resolve) => {
@@ -68,18 +78,25 @@ function elapse(milliseconds: number): Promise<void> {
 
 describe('waiting for the writer lease through the workspace (RUN-002 owner decision)', () => {
   test('a second run waits while the first holds the writer, then publishes under the next fence once the first run closes', async () => {
-    let second: Promise<IRunResult<IResolutionOutcome>> | undefined;
+    const holding = gate();
+    const finish = gate();
     let held: IWriterLease | undefined;
-    await workspace.run(options('run:first'), async (first) => {
-      await first.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
+    // The second run starts outside the first run's asynchronous context, as another caller would.
+    const first = workspace.run(options('run:first'), async (run) => {
+      await run.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
       held = recordedWriter();
-      second = workspace.run(options('run:second', { writerWait: { pollMilliseconds: 10 } }), (run) => run.resolve(contributors.steps['person:ben'].summary, { requestKey: freshRequestKey() }));
-      // The second run polls several times meanwhile and changes nothing the first holds.
-      await elapse(60);
-      expect(recordedWriter()).toEqual(held);
+      holding.open();
+      await finish.opened;
     });
-    if (second === undefined || held === undefined) {
-      throw new Error('the first run did not start the second');
+    await holding.opened;
+    const second = workspace.run(options('run:second', { writerWait: { pollMilliseconds: 10 } }), (run) => run.resolve(contributors.steps['person:ben'].summary, { requestKey: freshRequestKey() }));
+    // The second run polls several times meanwhile and changes nothing the first holds.
+    await elapse(60);
+    expect(recordedWriter()).toEqual(held);
+    finish.open();
+    await first;
+    if (held === undefined) {
+      throw new Error('the first run did not hold the writer');
     }
     const result = await second;
     expect(result.value.kind).toBe('published');
@@ -139,11 +156,92 @@ describe('waiting for the writer lease through the workspace (RUN-002 owner deci
     other.close();
   });
 
+  test('SQLITE_BUSY exhaustion while waiting surfaces as the typed writer-busy outcome, marked contended and naming the recorded holder', async () => {
+    const other = openHistory({ location: store.location, store: logicalStore, clock: createNodeClock() });
+    const acquisition = other.acquireWriter({ holder: 'process:other', leaseMilliseconds: 60_000 });
+    const locker = openRaw(store.location);
+    locker.exec('BEGIN IMMEDIATE');
+    let caught: unknown;
+    try {
+      await workspace.run(options('run:contended', { writerWait: { deadline: Date.now() } }), async (run) => {
+        try {
+          await run.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
+        } catch (error: unknown) {
+          caught = error;
+        }
+      });
+    } finally {
+      locker.exec('ROLLBACK');
+    }
+    expect(caught).toBeInstanceOf(WriterBusyError);
+    if (!(caught instanceof WriterBusyError)) {
+      throw new Error(`expected WriterBusyError, got ${String(caught)}`);
+    }
+    expect([caught.contended, caught.holder, caught.heldByThisRun]).toEqual([true, 'process:other', false]);
+    expect(caught.message).toMatch(/busy/u);
+    expect(other.currentWriter()).toEqual(acquisition.kind === 'acquired' ? acquisition.lease : undefined);
+  });
+
   test.each([
     ['a zero poll interval', { pollMilliseconds: 0 }],
     ['a negative deadline', { deadline: -1 }],
   ])('%s is refused as an invalid request before any work', async (_name, writerWait) => {
     expect(await caughtCode(() => workspace.run(options('run:invalid', { writerWait }), () => 'never'))).toBe('invalid-request');
     expect(recordedWriter()).toBeUndefined();
+  });
+});
+
+describe('a run started from inside an open run of the same workspace', () => {
+  test('is refused promptly with invalid-request instead of waiting forever for the lease its caller holds', async () => {
+    let outcome: unknown;
+    let elapsed = Number.POSITIVE_INFINITY;
+    await workspace.run(options('run:outer'), async (outer) => {
+      await outer.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
+      const started = Date.now();
+      // No deadline: before the refusal existed, the inner run waited for the outer run's lease forever.
+      const inner = workspace.run(options('run:inner'), (run) => run.resolve(contributors.steps['person:ben'].summary, { requestKey: freshRequestKey() }));
+      outcome = await Promise.race([inner.then(() => 'completed', (error: unknown) => error), elapse(2_000).then(() => 'still waiting after 2 s')]);
+      elapsed = Date.now() - started;
+    });
+    expect(outcome).toBeInstanceOf(SupervisionError);
+    expect(outcome instanceof SupervisionError ? outcome.code : undefined).toBe('invalid-request');
+    expect(outcome instanceof Error ? outcome.message : '').toMatch(/inside an open run of the same workspace/u);
+    expect(elapsed).toBeLessThan(1_000);
+  });
+
+  test('is refused from ordinary work and nested helpers too, and the outer run still completes normally', async () => {
+    const result = await workspace.run(options('run:outer'), async (outer) => {
+      const inner = await outer.ordinary('nested attempt', () => caughtCode(workspace.run(options('run:inner'), () => 'never')));
+      const published = await outer.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
+      return [inner, published.kind];
+    });
+    expect(result.value).toEqual(['invalid-request', 'published']);
+  });
+
+  test('is allowed for another workspace over another store, which holds its own lease', async () => {
+    const otherStore = tempStore();
+    const otherWorkspace = openWorkspace({ location: otherStore.location, logicalStore });
+    try {
+      const result = await workspace.run(options('run:outer'), async (outer) => {
+        await outer.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
+        const inner = await otherWorkspace.run(options('run:other-store'), (run) => run.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() }));
+        return inner.value.kind;
+      });
+      expect(result.value).toBe('published');
+    } finally {
+      otherWorkspace.close();
+      otherStore.remove();
+    }
+  });
+
+  test('is allowed once the outer run has closed, from code that outlived it', async () => {
+    let escaped: (() => Promise<unknown>) | undefined;
+    await workspace.run(options('run:outer'), () => {
+      escaped = () => workspace.run(options('run:after'), (run) => run.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() }));
+    });
+    if (escaped === undefined) {
+      throw new Error('the outer run did not capture its callback');
+    }
+    await expect(escaped()).resolves.toMatchObject({ value: { kind: 'published' } });
   });
 });

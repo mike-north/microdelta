@@ -102,6 +102,12 @@ fails with a typed writer-busy outcome that names the current holder. Read-only
 check and inspection never need the lease. Multi-process write parallelism is
 deferred until measurement justifies it (M7).
 
+**M5 selection ([#120](https://github.com/mike-north/microdelta/issues/120)).** The
+run-wide active window serves only fan-out started by the run's own operations.
+Author code may keep the run and start another operation from inside member or
+step work. That fan-out resolves its members one at a time on a lane of its own.
+It never waits for a run-wide lane that its waiting caller may hold.
+
 ## Readiness, discovery, and previews
 
 ### RUN-003 — Readiness is scoped to the consuming calculation
@@ -271,17 +277,44 @@ each member; representation follows the tracking contract.
 fold reports the failure. Repair it, then verify the tolerant/success-only fold
 reconsiders its input and unaffected member bodies stay unexecuted.
 
-**Open:** exact outcome-collection API and operator repair within an active run.
-Do not conflate skipped, pending, cancelled, failed, and successful-empty outcomes.
+**Open:** operator repair within an active run. Do not conflate skipped,
+pending, cancelled, failed, and successful-empty outcomes.
 [EXP-4](../../experiments/exp-4/decision.md) selects the strict fold's treatment
 of a gated-out member ([CMP-8](composition.md)): the gate declares the required
-population, and a skipped member is an explicit data-free entry outside it.
-Tolerant/outcome-fold treatment of skips remains open.
+population, and a skipped member is an explicit data-free entry outside it. The
+M5 selection below settles the outcome-fold API and its treatment of skips.
 
 **Owner decision (2026-09-30).** Outcome (tolerant) folds are in M5 scope. They
 receive every member's settled status with coverage. They never claim completeness
 while discovery or required attempts are unsettled, and repairing a failed member
 makes them reconsider their input.
+
+**M5 selection ([#120](https://github.com/mike-north/microdelta/issues/120)).**
+- **Declaration.** An outcome fold is its own composition-level step kind, never
+  a child, member step or template step. It names the consumed template step as a
+  strict fold does.
+- **Settled statuses.** Each member settles in the pass as succeeded (an accepted
+  result), skipped (its gate), failed (a member-attributable typed failure) or
+  cancelled (work withdrawn from the run through admission, for example after a
+  stop). Denied work leaves a member pending, which is unsettled. An unresolved
+  operation outcome is unsettled too.
+- **Completeness.** While discovery is open or a member is unsettled, the fold
+  waits with partial coverage. It runs no body, admits no fold work and publishes
+  nothing. A rejected or cancelled discovery fails it, because no population can
+  be established in that pass.
+- **Entries.** Once every member of a closed population has settled, the body
+  receives one entry per member with its status. Only a succeeded entry carries
+  data. A gated-out member is an explicit skipped entry, which settles the open
+  question about tolerant treatment of skips.
+- **Verification.** The fold's evidence is its membership-and-status fact plus
+  the member facts its body read. Repairing a failed member changes that fact, so
+  the fold reconsiders, while unaffected member results are reused.
+- **Coverage.** Framework coverage names every member under exactly one status,
+  whether discovery is open, and whether the set is complete. It is never a claim
+  of complete success. A cancelled member is settled-not-successful for that run
+  only; a later run attempts it again.
+- **Separation.** Strict and outcome fold results use distinct evidence versions,
+  so neither contract ever accepts the other's result.
 
 ### RUN-011 — Retry support includes unattended quota waits
 

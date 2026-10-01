@@ -1,7 +1,7 @@
 /**
  * Run Supervision: the scoped run lifetime and selected environment, admission
  * of work that Reuse Resolution could not avoid, the fixed lifecycle
- * positions observers see, each template member's and strict fold's typed
+ * positions observers see, each template member's, strict fold's and outcome fold's typed
  * outcome in a run, the run's permit pool and bounded fan-out window, and
  * operator stop intent: soft and hard stops, deadline escalation, the abort
  * signal bodies receive and the publication-commit rule (ARC-001, DOM-2,
@@ -33,6 +33,8 @@ export type {
   IMemberOutcome,
   IMembersReport,
   IMembersTarget,
+  IOutcomeFoldReport,
+  IOutcomeFoldRunOutcome,
   IOrdinaryPhase,
   IRemoteState,
   IRequestOptions,

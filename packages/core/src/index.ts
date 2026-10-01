@@ -3,10 +3,10 @@
  * factory, composing its required host capability at the application boundary.
  * Its project-private `@alpha` surface is the workspace authoring and run path:
  * authoring builders (including keyed collections, gated fanout templates,
- * supplied step slots, forwarded arguments and strict folds), durable
- * workspaces supervised by Run Supervision, the normal, members, fold and
- * recovery entry operations with their typed reports, and runtime context
- * lookup. Context
+ * supplied step slots, forwarded arguments, strict folds and outcome folds),
+ * durable workspaces supervised by Run Supervision, the normal, members,
+ * strict fold, outcome fold and recovery entry operations with their typed
+ * reports, and runtime context lookup. Context
  * code may use owner contracts directly, never this assembly facade.
  * @packageDocumentation
  */
@@ -62,6 +62,8 @@ export {
   type IComposition,
   type IDeclaredCallHandle,
   type IDerivedArguments,
+  type ICancelledEntry,
+  type IFailedEntry,
   type IFoldDeclaration,
   type IFoldEntry,
   type IForward,
@@ -72,6 +74,8 @@ export {
   type IKeyingFailure,
   type IMemberBinding,
   type IMemberBuilder,
+  type IOutcomeEntry,
+  type IOutcomeFoldDeclaration,
   type IPathInput,
   type IPreviousResult,
   type IResultView,
@@ -115,6 +119,10 @@ export {
   type IMembersReport,
   type IMembersTarget,
   type IOrdinaryPhase,
+  type IOutcomeFoldCoverage,
+  type IOutcomeFoldOutcome,
+  type IOutcomeFoldReport,
+  type IOutcomeFoldRunOutcome,
   type IRecoveryResult,
   type IRemoteState,
   type IRequestOptions,

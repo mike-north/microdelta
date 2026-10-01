@@ -39,6 +39,7 @@ import type { IRemoteState, IRunContext, IRunEvent, IRunExecution, ISendInterrup
 import { createAbortSource } from './control.js';
 import type { IAbortSignal, IAbortSource, IRunTimer, IStopController, IStopState } from './control.js';
 import { SupervisionError } from './errors.js';
+import { createPermitPool } from './permits.js';
 import type { IPermit, IPermitPool } from './permits.js';
 
 /**
@@ -67,6 +68,8 @@ export interface IAttemptFrame {
  * (the window bounds members holding a lane, not every branch of a body).
  */
 export interface IMemberLane {
+  /** The pool the lane is drawn from, lent back to and reclaimed from. */
+  readonly pool: IPermitPool;
   /** The lane held now, if any. */
   permit: IPermit | undefined;
   /** Timed waits in progress in this member's work. */
@@ -114,15 +117,44 @@ export interface ISupervisedRun {
 
 /**
  * What the run's asynchronous scope carries: the run, the admitted step
- * attempt whose body is executing there, if any, and the window lane of the
- * fan-out member it belongs to, if any. A nested execution gets its own frame
- * (inheriting the member's lane); the parent's is restored when it returns or
+ * attempt whose body is executing there, if any, the window lane of the
+ * fan-out member it belongs to, if any, and the lane pool a member fan-out
+ * started here draws from. A nested execution gets its own frame (inheriting
+ * the member's lane and pool); the parent's is restored when it returns or
  * throws.
+ *
+ * Only the run's root frame draws from the run-wide window. A member's frame,
+ * and the frame of a run operation started from inside a member or a step
+ * attempt, each carry a single-lane pool of their own, so a fan-out started
+ * there never waits for a lane that the work waiting for it holds (RUN-002's
+ * nested rule): it resolves its members one at a time instead.
  */
 export interface IRunFrame {
   readonly run: ISupervisedRun;
   readonly attempt: IAttemptFrame | undefined;
   readonly lane: IMemberLane | undefined;
+  /** The pool a member fan-out started in this frame draws its lanes from. */
+  readonly lanes: IPermitPool;
+}
+
+/**
+ * The frame a run operation runs in, given the frame it was started from.
+ * Started from the run body (or outside any member and attempt) it is the
+ * run's root frame, whose fan-out draws from the run-wide window. Started
+ * from inside a member or a step attempt (author code that kept the run and
+ * called it there), it is a fresh frame with no attempt or lane and a
+ * single-lane pool of its own: the caller may hold a run-wide lane while it
+ * waits for this operation, so this operation's fan-out must never wait for
+ * one (RUN-002's nested rule).
+ * @param root - The run's root frame.
+ * @param caller - The caller's frame of this run, if any.
+ * @returns The operation's frame.
+ */
+export function operationFrame(root: IRunFrame, caller: IRunFrame | undefined): IRunFrame {
+  if (caller === undefined || (caller.lane === undefined && caller.attempt === undefined)) {
+    return root;
+  }
+  return Object.freeze({ run: root.run, attempt: undefined, lane: undefined, lanes: createPermitPool(1) });
 }
 
 /** How a promise raced against a signal settled. */
@@ -189,9 +221,11 @@ export function supervisedExecution(run: ISupervisedRun, frames: IFrameAccess): 
         return { kind: 'interrupted', reason: 'a hard stop interrupted the step before it started' };
       }
       const attempt: IAttemptFrame = { step, taint: undefined, ended: false };
-      const lane = frames.current()?.lane;
+      const current = frames.current();
+      const lane = current?.lane;
+      const lanes = current?.lanes ?? run.lanes;
       try {
-        const raced = await raceAbort(started(() => frames.enter({ run, attempt, lane }, work)), run.hard.signal);
+        const raced = await raceAbort(started(() => frames.enter({ run, attempt, lane, lanes }, work)), run.hard.signal);
         if (raced.aborted) {
           return { kind: 'interrupted', reason: 'a hard stop interrupted the step' };
         }
@@ -208,15 +242,19 @@ export function supervisedExecution(run: ISupervisedRun, frames: IFrameAccess): 
       // reclaiming a lane. After a hard stop a member no longer waits for a
       // lane: its work is refused promptly anyway.
       //
-      // Invariant (RUN-002's nested rule): the lane pool is run-wide, so work
-      // run under a lane must never start another member fan-out (a nested
-      // settleMembers) under the same pool: a member holding a lane while
-      // waiting for lanes its own fan-out needs can deadlock the window. Today
-      // members cannot trigger fan-out (folds are not children, and run
-      // operations start from the run's root frame, not a member's).
-      const lane: IMemberLane = { permit: await run.lanes.acquire(run.hard.signal), waits: 0, closed: false };
+      // Invariant (RUN-002's nested rule): work run under a lane must never
+      // start another member fan-out under the pool that lane came from: a
+      // member holding a lane while waiting for lanes its own fan-out needs
+      // can deadlock the window. The member draws from the pool of the frame
+      // the fan-out started in: the run-wide window only at the run's root.
+      // Its own work runs with a single-lane pool of its own, and a run
+      // operation started from inside a member or attempt gets a fresh one
+      // ({@link operationFrame}), so nested fan-out resolves one member at a
+      // time and never waits on the lane its caller holds.
+      const pool = frames.current()?.lanes ?? run.lanes;
+      const lane: IMemberLane = { pool, permit: await pool.acquire(run.hard.signal), waits: 0, closed: false };
       try {
-        return await frames.enter({ run, attempt: undefined, lane }, work);
+        return await frames.enter({ run, attempt: undefined, lane, lanes: createPermitPool(1) }, work);
       } finally {
         lane.closed = true;
         lane.permit?.release();
@@ -255,7 +293,7 @@ async function reclaimLane(run: ISupervisedRun, lane: IMemberLane | undefined): 
   if (lane.waits > 0 || lane.permit !== undefined) {
     return true;
   }
-  const permit = await run.lanes.acquire(run.hard.signal, { priority: true });
+  const permit = await lane.pool.acquire(run.hard.signal, { priority: true });
   if (lane.closed) {
     // The member settled while this wait was reclaiming: hand the lane straight on.
     permit?.release();

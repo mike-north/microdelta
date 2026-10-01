@@ -5,7 +5,7 @@
  *   to the run body and to every request and ordinary call through the
  *   injected asynchronous scope, so author code finds it without a parameter;
  * - it stays live until its body *and* every operation started through the
- *   run (`resolve`, `resolveMembers`, `resolveFold`, `check`, `recover`,
+ *   run (`resolve`, `resolveMembers`, `resolveFold`, `resolveOutcomeFold`, `check`, `recover`,
  *   `ordinary`) have settled, including
  *   operations started while it waits and those whose aggregate (for example
  *   a `Promise.all` with a failing sibling) the body stopped awaiting early;
@@ -38,6 +38,8 @@ import type {
   IExecutionAdmission,
   IFoldOutcome,
   IFoldResolution,
+  IOutcomeFoldOutcome,
+  IOutcomeFoldResolution,
   ILifecycleEvent,
   ILifecycleObserver,
   IMemberResolution,
@@ -50,6 +52,8 @@ import type {
 import type {
   IDiscoveryReport,
   IFoldReport,
+  IOutcomeFoldReport,
+  IOutcomeFoldRunOutcome,
   IMemberOutcome,
   IMembersReport,
   IMembersTarget,
@@ -69,7 +73,7 @@ import type {
 import { createAbortSource, createStopController } from './control.js';
 import type { IStopLevel, IStopState } from './control.js';
 import { SupervisionError } from './errors.js';
-import { isDraining, raceAbort, runControls, supervisedExecution } from './execution.js';
+import { isDraining, operationFrame, raceAbort, runControls, supervisedExecution } from './execution.js';
 import type { IAttemptFrame, IFrameAccess, IRunFrame, ISupervisedRun } from './execution.js';
 import { createPermitPool } from './permits.js';
 
@@ -244,6 +248,42 @@ function foldReport(resolved: IFoldResolution): IFoldReport {
 }
 
 /**
+ * Classify an outcome fold's Resolution outcome as its typed run outcome
+ * (RUN-010). A reused or published fold folded its settled set, with its
+ * exact outcome and complete coverage; a wait keeps its partial coverage; a
+ * population that cannot be established is failed; the fold's own refused
+ * work is pending when denied, never failed, and cancelled when cancelled.
+ */
+function outcomeFoldRunOutcome(outcome: IOutcomeFoldOutcome): IOutcomeFoldRunOutcome {
+  switch (outcome.kind) {
+    case 'reused':
+    case 'published':
+      return Object.freeze({ status: 'folded', outcome });
+    case 'waiting':
+      return Object.freeze({ status: 'waiting', coverage: outcome.coverage });
+    case 'failed':
+      return Object.freeze({ status: 'failed', diagnostic: outcome.diagnostic });
+    case 'refused':
+      return Object.freeze({ status: outcome.disposition === 'cancelled' ? 'cancelled' : 'pending', refused: outcome.refused, reason: outcome.reason, coverage: outcome.coverage });
+    default: {
+      const exhaustive: never = outcome;
+      return exhaustive;
+    }
+  }
+}
+
+/** Report one outcome fold request: discovery and every member in Supervision's terms, and the fold's typed outcome. */
+function outcomeFoldReport(resolved: IOutcomeFoldResolution): IOutcomeFoldReport {
+  return Object.freeze({
+    fold: resolved.outcome.step,
+    over: resolved.over,
+    discovery: discoveryReport(resolved.discovery),
+    members: Object.freeze(resolved.members.map(memberOutcome)),
+    outcome: outcomeFoldRunOutcome(resolved.outcome),
+  });
+}
+
+/**
  * Create Run Supervision over an injected scope capability.
  * @param options - The structurally injected scope capability.
  * @returns The Supervision contract.
@@ -361,7 +401,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         return state.hard.signal.aborted ? 'a hard stop took effect before the publication commit' : undefined;
       },
     };
-    const frame: IRunFrame = Object.freeze({ run: state, attempt: undefined, lane: undefined });
+    const frame: IRunFrame = Object.freeze({ run: state, attempt: undefined, lane: undefined, lanes: state.lanes });
     /** Access to this run's frames in the shared scope; a frame of another run is not this run's. */
     const frames: IFrameAccess = Object.freeze({
       current: (): IRunFrame | undefined => {
@@ -457,10 +497,14 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
 
     /**
      * Run an operation inside this run's scope, after checking it is still
-     * open, and account for it until it settles.
+     * open, and account for it until it settles. Started from the run body it
+     * runs in the root frame; started from inside a member or a step attempt
+     * it runs in a frame whose member fan-out has a lane pool of its own
+     * (RUN-002's nested rule, {@link operationFrame}).
      */
     function within<TResult>(operation: () => TResult | Promise<TResult>): Promise<TResult> {
-      return state.track(() => scope.run(frame, async () => operation()));
+      const operating = operationFrame(frame, frames.current());
+      return state.track(() => scope.run(operating, async () => operation()));
     }
 
     /**
@@ -514,6 +558,13 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
           const resolved = await resolution.resolveFold({ step, requestKey: request.requestKey, lease: writer.lease() });
           diagnostics.push(...resolved.diagnostics);
           return foldReport(resolved);
+        });
+      },
+      resolveOutcomeFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IOutcomeFoldReport> {
+        return within(async () => {
+          const resolved = await resolution.resolveOutcomeFold({ step, requestKey: request.requestKey, lease: writer.lease() });
+          diagnostics.push(...resolved.diagnostics);
+          return outcomeFoldReport(resolved);
         });
       },
       check(step: IBindingDescriptor): Promise<ICheckOutcome> {

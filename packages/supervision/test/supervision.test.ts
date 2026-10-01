@@ -32,6 +32,9 @@ import type {
   IMemberResolution,
   IMembersRequest,
   IMembersResolution,
+  IOutcomeFoldCoverage,
+  IOutcomeFoldOutcome,
+  IOutcomeFoldResolution,
   IRecoveryResult,
   IResolution,
   IResolutionOutcome,
@@ -42,6 +45,7 @@ import { SupervisionError, createSupervision, ordinaryLifecycle, stepLifecycle }
 import type {
   IFoldReport,
   IMemberOutcome,
+  IOutcomeFoldReport,
   IResolutionPorts,
   IRun,
   IRunEvent,
@@ -110,7 +114,7 @@ interface IDouble {
   /** The ports Supervision supplied, once the factory ran. */
   ports: IResolutionPorts | undefined;
   /** Every request, in order. */
-  readonly calls: { readonly operation: 'resolve' | 'check' | 'recover' | 'members' | 'fold'; readonly lease?: IRunLease; readonly requestKey?: string; readonly template?: string; readonly step?: string }[];
+  readonly calls: { readonly operation: 'resolve' | 'check' | 'recover' | 'members' | 'fold' | 'outcome-fold'; readonly lease?: IRunLease; readonly requestKey?: string; readonly template?: string; readonly step?: string }[];
   /** The scripted members a members request settles, in the order discovery lists them. */
   members: readonly IMemberScript[];
   /** How the members request's discovery settles. */
@@ -123,6 +127,8 @@ interface IDouble {
   diagnostics: readonly string[];
   /** The fold outcome a fold request reports once its members settled. */
   fold: IFoldOutcome;
+  /** The outcome fold outcome an outcome fold request reports once its members settled. */
+  outcomeFold: IOutcomeFoldOutcome;
 }
 
 /** The fold step the double resolves, and the template step it consumes. */
@@ -131,6 +137,9 @@ const foldOver: IBindingDescriptor = Object.freeze({ scope: 'analysis:test', rol
 
 /** Evidence fields of a fold outcome that ran no fold work. */
 const noFoldWork = Object.freeze({ step: foldStep, misses: [], trace: [], diagnostics: [] });
+
+/** Outcome fold coverage with every status list empty. */
+const emptyCoverage: Omit<IOutcomeFoldCoverage, 'openDiscovery' | 'complete'> = Object.freeze({ succeeded: [], skipped: [], failed: [], cancelled: [], pending: [] });
 
 /** A Resolution double that follows the port contract: verify, admit, execute, publish. */
 function recordingResolution(): { readonly double: IDouble; readonly factory: IRunOptions['resolution'] } {
@@ -143,6 +152,7 @@ function recordingResolution(): { readonly double: IDouble; readonly factory: IR
     during: undefined,
     diagnostics: [],
     fold: Object.freeze({ ...noFoldWork, kind: 'waiting', pending: [], openDiscovery: true }),
+    outcomeFold: Object.freeze({ ...noFoldWork, kind: 'waiting', coverage: Object.freeze({ ...emptyCoverage, openDiscovery: true, complete: false as const }) }),
   };
   const factory = (ports: IResolutionPorts): IResolution => {
     double.ports = ports;
@@ -236,6 +246,11 @@ function recordingResolution(): { readonly double: IDouble; readonly factory: IR
         double.calls.push({ operation: 'fold', lease: request.lease, requestKey: request.requestKey, step: request.step.slot });
         const settled = await settleMembers('contributor', 'summary');
         return Object.freeze({ over: foldOver, discovery: settled.discovery, members: settled.members, outcome: double.fold, diagnostics: settled.diagnostics });
+      },
+      async resolveOutcomeFold(request: IFoldRequest): Promise<IOutcomeFoldResolution> {
+        double.calls.push({ operation: 'outcome-fold', lease: request.lease, requestKey: request.requestKey, step: request.step.slot });
+        const settled = await settleMembers('contributor', 'summary');
+        return Object.freeze({ over: foldOver, discovery: settled.discovery, members: settled.members, outcome: double.outcomeFold, diagnostics: settled.diagnostics });
       },
       async check(): Promise<ICheckOutcome> {
         double.calls.push({ operation: 'check' });
@@ -904,6 +919,62 @@ describe('typed strict fold outcomes (CMP-8, RUN-005, RUN-010)', () => {
       throw new Error('the run body did not run');
     }
     await expectSupervisionError(escaped.resolveFold(foldStep, { requestKey: 'request:late' }), 'run-closed');
+  });
+});
+
+describe('typed outcome fold outcomes (RUN-010)', () => {
+  /** An outcome fold request through one fresh run over the doubles, with `outcome` as Resolution's outcome fold outcome. */
+  async function outcomeReport(outcome: IOutcomeFoldOutcome): Promise<{ readonly report: IOutcomeFoldReport; readonly double: IDouble; readonly writer: ReturnType<typeof recordingWriter> }> {
+    const { options, double, writer } = runOptions();
+    double.members = [
+      { key: 'person:ben', gate: 'skipped' },
+      { key: 'person:ada', gate: 'required', body: 'publishes' },
+      { key: 'person:cy', gate: 'required', body: 'fails' },
+    ];
+    double.outcomeFold = outcome;
+    const result = await supervision().run(options, (run) => run.resolveOutcomeFold(foldStep, { requestKey: 'request:outcome-fold' }));
+    return { report: result.value, double, writer };
+  }
+
+  /** Complete coverage of Ada succeeded, Ben skipped and Cy failed. */
+  const complete = Object.freeze({ ...emptyCoverage, succeeded: ['person:ada'], skipped: ['person:ben'], failed: ['person:cy'], pending: [] as const, openDiscovery: false as const, complete: true as const });
+
+  test('a folded outcome keeps its exact outcome and complete coverage, failures included, beside every member outcome', async () => {
+    const published: IOutcomeFoldOutcome = Object.freeze({ ...noFoldWork, kind: 'published', reference: Object.freeze({ kind: 'completed-result' as const, locator: 'mdh1:test:tally' }), attemptId: 9, coverage: complete });
+    const { report, double, writer } = await outcomeReport(published);
+    expect(double.calls).toEqual([{ operation: 'outcome-fold', lease: writer.leases[0], requestKey: 'request:outcome-fold', step: 'report' }]);
+    expect(report.fold).toBe(foldStep);
+    expect(report.over).toBe(foldOver);
+    expect(report.members.map((member) => [member.key, member.status])).toEqual([['person:ada', 'succeeded'], ['person:ben', 'skipped'], ['person:cy', 'failed']]);
+    expect(report.outcome).toEqual({ status: 'folded', outcome: published });
+    expect(report.outcome.status === 'folded' ? report.outcome.outcome.coverage : undefined).toBe(complete);
+  });
+
+  test('a waiting outcome fold keeps its partial coverage; a population that cannot be established fails', async () => {
+    const partial = Object.freeze({ ...emptyCoverage, succeeded: ['person:ada'], failed: ['person:cy'], pending: ['person:dee'], openDiscovery: true, complete: false as const });
+    const waiting = await outcomeReport(Object.freeze({ ...noFoldWork, kind: 'waiting', coverage: partial }));
+    expect(waiting.report.outcome).toEqual({ status: 'waiting', coverage: partial });
+    const failed = await outcomeReport(Object.freeze({ ...noFoldWork, kind: 'failed', diagnostic: 'discovery was rejected' }));
+    expect(failed.report.outcome).toEqual({ status: 'failed', diagnostic: 'discovery was rejected' });
+  });
+
+  test('the outcome fold\'s own refused work is pending when denied and cancelled when cancelled, with the coverage it would have folded', async () => {
+    for (const [disposition, status] of [['denied', 'pending'], ['cancelled', 'cancelled']] as const) {
+      const { report } = await outcomeReport(Object.freeze({ ...noFoldWork, kind: 'refused', refused: foldStep, reason: `fold work ${disposition}`, disposition, coverage: complete }));
+      expect(report.outcome).toEqual({ status, refused: foldStep, reason: `fold work ${disposition}`, coverage: complete });
+    }
+  });
+
+  test('an outcome fold request after the run closed is rejected as new work', async () => {
+    const { options } = runOptions();
+    let escaped: IRun | undefined;
+    await supervision().run(options, (run) => {
+      escaped = run;
+    });
+    if (escaped === undefined) {
+      throw new Error('the run body did not run');
+    }
+    await expectSupervisionError(escaped.resolveOutcomeFold(foldStep, { requestKey: 'request:late' }), 'run-closed');
   });
 });
 

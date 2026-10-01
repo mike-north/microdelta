@@ -15,6 +15,8 @@ import type {
   IExecutionAdmission,
   IFoldCoverage as IResolutionFoldCoverage,
   IFoldOutcome as IResolutionFoldOutcome,
+  IOutcomeFoldCoverage as IResolutionOutcomeFoldCoverage,
+  IOutcomeFoldOutcome as IResolutionOutcomeFoldOutcome,
   IGateEvidence as IResolutionGateEvidence,
   ILifecycleEvent as IResolutionLifecycleEvent,
   ILifecyclePhase as IResolutionLifecyclePhase,
@@ -58,6 +60,8 @@ import type {
   IMemberOutcome as ISupervisionMemberOutcome,
   IMembersReport as ISupervisionMembersReport,
   IMembersTarget as ISupervisionMembersTarget,
+  IOutcomeFoldReport as ISupervisionOutcomeFoldReport,
+  IOutcomeFoldRunOutcome as ISupervisionOutcomeFoldRunOutcome,
   IRunEvent as ISupervisionRunEvent,
   IRunObserver as ISupervisionRunObserver,
   IRunResult as ISupervisionRunResult,
@@ -146,6 +150,37 @@ export type IFoldOutcome = IResolutionFoldOutcome;
  * @alpha
  */
 export type IFoldCoverage = IResolutionFoldCoverage;
+
+/**
+ * One outcome (tolerant) fold request's report: how discovery settled, every
+ * current member's typed outcome in canonical key order, and the outcome
+ * fold's typed outcome.
+ * @alpha
+ */
+export type IOutcomeFoldReport = ISupervisionOutcomeFoldReport;
+
+/**
+ * An outcome fold's typed outcome in a run: `folded` with its settled
+ * reference and complete coverage (which may list failed and cancelled
+ * members, so it is never strict complete success), `waiting` with the
+ * partial coverage while discovery is open or a member is pending, `failed`
+ * when no population can be established, or `pending` or `cancelled` when
+ * the fold's own work was refused. Only `folded` ran or reused the fold.
+ * @alpha
+ */
+export type IOutcomeFoldRunOutcome = ISupervisionOutcomeFoldRunOutcome;
+
+/** Resolution's settled outcome fold outcome, carried by a folded {@link IOutcomeFoldRunOutcome}. @alpha */
+export type IOutcomeFoldOutcome = IResolutionOutcomeFoldOutcome;
+
+/**
+ * Framework coverage of an outcome fold: every current member in exactly one
+ * of succeeded, skipped, failed, cancelled or pending, whether discovery is
+ * open, and whether the set is complete (closed and nothing pending). Derived
+ * from how members settled, never from what the fold body reports.
+ * @alpha
+ */
+export type IOutcomeFoldCoverage = IResolutionOutcomeFoldCoverage;
 
 /** Why one earlier candidate result was not reused. @alpha */
 export type ICandidateMiss = IResolutionCandidateMiss;
@@ -460,6 +495,7 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
           resolve: live.resolve,
           resolveMembers: live.resolveMembers,
           resolveFold: live.resolveFold,
+          resolveOutcomeFold: live.resolveOutcomeFold,
           check: live.check,
           recover: live.recover,
           ordinary: live.ordinary,

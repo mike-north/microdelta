@@ -207,7 +207,7 @@ function perform(command: IHarnessCommand): unknown {
       return summarize(history.abandonAttempt(requireLease(), { attemptId: command.attemptId ?? requireAttempt(command.key), outcome: 'interrupted', evidence: evidence('abandoned') }));
     case 'accept': {
       controlled.set(command.at);
-      const record = history.recordAcceptance(requireLease(), { reference: { kind: 'completed-result', locator: command.locator }, evidence: evidence('accepted'), dependencies: [] });
+      const record = history.recordAcceptance(requireLease(), { reference: { kind: 'completed-result', locator: command.locator }, evidence: evidence('accepted'), dependencies: [], environment: subject.environment });
       return { acceptanceId: record.acceptanceId, fence: record.fence };
     }
     case 'recover': {

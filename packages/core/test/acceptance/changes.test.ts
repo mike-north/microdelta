@@ -13,7 +13,7 @@
 import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
 
 import type { IWorld } from './analysis.js';
-import { baseWorld, outcomeOf, referenceOf, scenario, subjectOf } from './harness.js';
+import { baseWorld, environment, outcomeOf, referenceOf, scenario, subjectOf } from './harness.js';
 import type { IProcessRun, IScenario } from './harness.js';
 import { adaExpected, benExpected } from './expected.js';
 
@@ -127,7 +127,7 @@ describe('equal-name-profile-rebinding (A-04)', () => {
       const [originalChild] = history.readEnvelope(summary).dependencies;
       expect(originalChild === undefined ? undefined : history.reader.readSubtree(originalChild, [{ kind: 'property', key: 'profile' }])).toEqual({ id: 'gh:1001', name: 'Ada', avatarUrl: 'https://avatars.example/ada.png' });
       // The new current acceptance names the new child, whose profile is the replacement.
-      const [currentChild] = history.readAcceptances(summary).at(-1)?.dependencies ?? [];
+      const [currentChild] = history.readAcceptances(summary, environment).at(-1)?.dependencies ?? [];
       expect(currentChild === undefined ? [] : [currentChild.locator]).toEqual(accepted);
       expect(currentChild?.locator).not.toBe(originalChild?.locator);
       expect(currentChild === undefined ? undefined : history.reader.readSubtree(currentChild, [{ kind: 'property', key: 'profile' }])).toEqual({ id: 'gh:9001', name: 'Ada', avatarUrl: 'https://avatars.example/ada.png' });

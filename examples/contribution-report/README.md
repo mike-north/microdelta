@@ -209,7 +209,7 @@ the Node SQLite capability it opens with, as the facade's caller.
 | `status` | The outcome (tolerant) status report: every contributor's settled status, failures included, with coverage; it waits while a member is unsettled |
 | `operations` | The environment's external operations, usage summary and promotions; needs no writer lease |
 | `settle --operation ID --abandon` or `--resolve succeeded\|failed` | The operator's settlement of an unknown operation |
-| `promote --from trial --to production` | Promote every result the source environment's current report rests on; executes nothing |
+| `promote --from trial --to production` | Promote every result the source environment's current report rests on into the target; executes nothing. `operations --environment production` then lists the promotions recorded *into* production |
 
 Usage is counted once per report. An attempt whose response was lost, or whose
 process died before its report, is **unknown**, never zero, and is never
@@ -218,6 +218,24 @@ only that assessment; its siblings finish, and no run sends it before the time.
 Trial results satisfy production only through a recorded promotion, after
 which production reuses them and pays nothing. `npm run test:examples` drives
 each of these through separate processes (`test/paid.test.mjs`).
+
+### Settling an unknown operation
+
+An operator settles an unknown operation (a lost response, or a request whose
+process died) in one of three ways:
+
+- `--resolve failed` asserts nothing happened. The address is free, and the
+  next run sends a new operation.
+- `--abandon` leaves the usage unknown and frees the address. It is the
+  operator's explicit authorization of a possible second effect: the next run
+  sends a new operation.
+- `--resolve succeeded` asserts the effect happened, so the operation's
+  address stays **consumed**. Every later run's call there sends nothing and
+  fails with `operation-resolved`, without any value: an author may catch it
+  and fall back, and otherwise the member fails (`run --json` shows its
+  `cause`) and keeps failing. A resolution that carries the result is later
+  work. To run the member again, the operator then abandons the resolved
+  operation, which authorizes the possible second effect.
 
 ## Limits
 

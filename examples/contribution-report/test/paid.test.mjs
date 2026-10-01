@@ -190,12 +190,25 @@ test('paid-like-assessor-cold-run: six paid assessments, each usage report count
 });
 
 test('durable-quota-deferral: exit mode reports "waiting until T", a run before T sends nothing, a resume run after T retries the same operation, and no two processes share a run ID', () => {
-  return withStore(async (store) => {
-    // Ben's merged PR 201 is rate-limited with a retry delay of 3 s; everything else answers.
-    script(store, { 201: ['rate-limit:3000'] });
-    const first = cli('run', '--store', store, '--rubric', 'P', '--deferral', 'exit');
-    const [refused] = ledger(store).filter((entry) => entry.kind === 'received' && entry.pullRequest === 201);
-    const T = refused.at + 3_000;
+  return withStore(async (root) => {
+    // Ben's merged PR 201 is rate-limited with a retry delay; everything else answers. A run started right after the
+    // first must finish before T for the before-T case; on a host too slow for that, retry with a longer delay instead
+    // of reporting a wrong-behavior failure, and fail only when even the longest delay is not enough.
+    let attempt;
+    for (const delayMilliseconds of [3_000, 6_000, 12_000]) {
+      const store = path.join(root, `retry-${String(delayMilliseconds)}`);
+      script(store, { 201: [`rate-limit:${String(delayMilliseconds)}`] });
+      const first = cli('run', '--store', store, '--rubric', 'P', '--deferral', 'exit');
+      const [refused] = ledger(store).filter((entry) => entry.kind === 'received' && entry.pullRequest === 201);
+      const T = refused.at + delayMilliseconds;
+      const early = cli('run', '--store', store, '--rubric', 'P', '--deferral', 'exit');
+      if (Date.now() < T) {
+        attempt = { store, first, refused, T, early };
+        break;
+      }
+    }
+    assert.ok(attempt !== undefined, 'precondition: even with a 12 s retry delay, the run after the deferral did not finish before T');
+    const { store, first, refused, T, early } = attempt;
     assert.equal(first.waitingUntil, T);
     assert.equal(first.text, [
       'Report waiting: discovery is closed; pending members: person:ben',
@@ -207,8 +220,6 @@ test('durable-quota-deferral: exit mode reports "waiting until T", a run before 
     assert.deepEqual(usageOf(first), { status: 'complete', observed: [{ unit: 'requests', amount: 1 }, { unit: 'tokens', amount: 400 }], unknown: 0, operations: 5, reports: 5, requestAttempts: 5 });
 
     // A run before T admits nothing of Ben's deferred work and sends nothing; it reports the same T.
-    const early = cli('run', '--store', store, '--rubric', 'P', '--deferral', 'exit');
-    assert.ok(Date.now() < T, 'precondition: the early run finished before T (the host was too slow for this case)');
     assert.equal(early.waitingUntil, T);
     assert.equal(early.members[ben].status, 'pending');
     assert.deepEqual(early.members[ben].blocked, { kind: 'deferred', operation: refused.operation, notBefore: T });
@@ -401,10 +412,45 @@ test('outcome-fold-coverage: the status report never claims completeness while a
   });
 });
 
+test('operator-resolves-unknown: resolving a lost response as succeeded keeps its address consumed, failing the member with operation-resolved and sending nothing, until the operator abandons it', () => {
+  return withStore((store) => {
+    // 201's response is lost: the provider performed the assessment, and the outcome is unknown.
+    script(store, { 201: ['lost'] });
+    const lost = cli('run', '--store', store, '--rubric', 'P');
+    assert.equal(lost.members[ben].status, 'pending');
+    const unknown = operationOf(store, cli('operations', '--store', store), 201)[0];
+    assert.equal(unknown.status, 'unknown');
+
+    // The operator learned the effect happened and resolves it as succeeded (a result-carrying resolution is later work).
+    const resolved = cli('settle', '--store', store, '--operation', unknown.operation, '--resolve', 'succeeded', '--operator', 'operator.ada');
+    assert.equal(resolved.operation.status, 'resolved');
+    assert.equal(resolved.operation.settlement.outcome, 'succeeded');
+
+    // Every later run fails Ben's member naming the code, without any value, and sends nothing.
+    for (let pass = 0; pass < 2; pass += 1) {
+      const failing = cli('run', '--store', store, '--rubric', 'P');
+      assert.equal(failing.members[ben].status, 'failed');
+      assert.equal(failing.members[ben].cause, 'operation-resolved');
+      assert.equal(failing.fold.status, 'failed');
+      assert.deepEqual(failing.fold.failed, [ben]);
+      assert.deepEqual(numbers(store, 'received').filter((number) => number === 201), [201]);
+    }
+
+    // Abandoning it is the operator's explicit authorization of a possible second effect: the member is retried and succeeds.
+    const abandoned = cli('settle', '--store', store, '--operation', unknown.operation, '--abandon', '--operator', 'operator.ada');
+    assert.equal(abandoned.operation.status, 'abandoned');
+    const repaired = cli('run', '--store', store, '--rubric', 'P');
+    assert.equal(repaired.text, coldText);
+    const requests201 = ledger(store).filter((entry) => entry.kind === 'received' && entry.pullRequest === 201);
+    assert.equal(requests201.length, 2);
+    assert.notEqual(requests201[1].operation, unknown.operation);
+  });
+});
+
 test('writer-wait-and-takeover: a second process waits for the lease instead of failing, and an operator deadline yields writer-busy naming the holder', () => {
   return withStore(async (store) => {
-    // Ada's 101 answers after 3 s, so the first process holds the writer lease meanwhile.
-    script(store, { 101: ['slow:3000'] });
+    // Ada's 101 answers after 5 s, so the first process holds the writer lease meanwhile.
+    script(store, { 101: ['slow:5000'] });
     const holder = started('run', '--store', store, '--rubric', 'P');
     await until(() => numbers(store, 'received').includes(101), 'the holder sent 101');
 
@@ -416,6 +462,15 @@ test('writer-wait-and-takeover: a second process waits for the lease instead of 
     // Without a deadline, a second process started while the holder's request is still in flight waits.
     assert.deepEqual(numbers(store, 'applied'), []);
     const waiter = started('run', '--store', store, '--rubric', 'P');
+    const exits = [];
+    void holder.exited.then(() => exits.push('holder'));
+    void waiter.exited.then(() => exits.push('waiter'));
+    // A second later the holder's request is still in flight and the waiter has neither failed nor finished:
+    // it met the held lease and is waiting for it (a waiter that never met it would have reused nothing and sent).
+    await delay(1_000);
+    assert.deepEqual(numbers(store, 'applied'), []);
+    assert.deepEqual(exits, []);
+    assert.equal(waiter.child.exitCode, null);
     const held = await holder.exited;
     assert.equal(held.status, 0, held.stderr);
     const first = JSON.parse(held.stdout);
@@ -423,6 +478,8 @@ test('writer-wait-and-takeover: a second process waits for the lease instead of 
     assert.ok(busy.stderr.includes(`microdelta-run:${first.runId} `), busy.stderr);
     const waited = await waiter.exited;
     assert.equal(waited.status, 0, waited.stderr);
+    // The waiter finished only after the holder did.
+    assert.deepEqual(exits, ['holder', 'waiter']);
     const second = JSON.parse(waited.stdout);
     // The waiter ran after the holder published: it reused every result and sent nothing.
     assert.equal(second.text, coldText);

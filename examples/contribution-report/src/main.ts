@@ -50,7 +50,7 @@ import { join } from 'node:path';
 
 import { openDurableAccounting } from '@microdelta/accounting';
 import { createNodeSqlite } from '@microdelta/machine-node';
-import { createStopController, openWorkspace } from 'microdelta';
+import { SupervisionError, createStopController, openWorkspace } from 'microdelta';
 import type {
   IAdmissionPolicy,
   ICompletedResultReference,
@@ -145,13 +145,29 @@ function describeMember(member: IMemberOutcome): Record<string, unknown> {
     case 'pending':
     case 'cancelled':
       return { status: member.status, reason: member.reason, ...(member.blocked === undefined ? {} : { blocked: member.blocked }) };
-    case 'failed':
-      return { status: member.status, code: member.error.code, message: member.error.message };
+    case 'failed': {
+      const cause = supervisionCause(member.error);
+      return { status: member.status, code: member.error.code, message: member.error.message, ...(cause === undefined ? {} : { cause }) };
+    }
     default: {
       const exhaustive: never = member;
       return exhaustive;
     }
   }
+}
+
+/**
+ * The Supervision code behind a member's failure, if any: for example
+ * `operation-resolved` when an operator resolved the member's operation as
+ * succeeded, so its address stays consumed. It names a code, never a value.
+ */
+function supervisionCause(error: unknown): string | undefined {
+  for (let current: unknown = error; current instanceof Error; current = current.cause) {
+    if (current instanceof SupervisionError) {
+      return current.code;
+    }
+  }
+  return undefined;
 }
 
 /** A JSON-safe description of the strict report's typed outcome. */
@@ -493,7 +509,7 @@ async function operations(args: IArguments): Promise<Record<string, unknown>> {
     const result = await opened.workspace.run(runOptions(composeAnalysis(), args.environment, () => undefined), async (run) => ({
       operations: await run.inspectOperations(),
       usage: run.usage(),
-      promotions: run.promotions().map(describePromotion),
+      promotions: (await run.promotions()).map(describePromotion),
     }));
     return { command: 'operations', environment: args.environment, ...result.value };
   } finally {

@@ -13,8 +13,8 @@
  *   lookups and admission decisions all fail or are denied. The body's own
  *   outcome, value or failure, is what the run reports;
  * - storage's writer lease is taken only for normal requests and for
- *   operator work recorded under it (an operation's settlement, or work run
- *   through `withWriterLease` such as a promotion), and released exactly once
+ *   operator work recorded under it (an operation's settlement, or a
+ *   promotion between environments), and released exactly once
  *   at actual close, so a refused miss, a check or a recovery never strands
  *   it and started work never loses it. A normal request that
  *   finds another process holding it waits under the operator's policy (no
@@ -96,6 +96,8 @@ import { createOperationEngine } from './operation-engine.js';
 import type { IOperationEngine } from './operation-engine.js';
 import type { IDeferralMode, IOperationSettlement, IOperationStatus, IOperationView, IWaitEvent } from './operations.js';
 import { createPermitPool } from './permits.js';
+import { readPromotionRequest } from './promotion.js';
+import type { IPromotionRecord, IPromotionRequest, IRunPromotionPort } from './promotion.js';
 import { awaitWriter, writerWaitPolicy } from './writer.js';
 
 /**
@@ -226,7 +228,7 @@ function notify(observers: readonly ICapturedObserver[], event: IRunEvent): void
 }
 
 /** Every {@link IRunOperationName}, for the runtime check of untyped callers. */
-const runOperationNames: ReadonlySet<string> = new Set<IRunOperationName>(['check', 'inspectOperations', 'ordinary', 'read', 'recover', 'resolve', 'resolveFold', 'resolveMembers', 'resolveOutcomeFold', 'settleOperation', 'withWriterLease']);
+const runOperationNames: ReadonlySet<string> = new Set<IRunOperationName>(['check', 'inspectOperations', 'ordinary', 'read', 'recover', 'resolve', 'resolveFold', 'resolveMembers', 'resolveOutcomeFold', 'settleOperation', 'promote', 'promotions']);
 
 /**
  * Classify one member's Resolution outcome as its typed member outcome
@@ -432,6 +434,10 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     const random = operationPorts !== undefined && typeof randomPort === 'object' && randomPort !== null && typeof Reflect.get(randomPort, 'randomIdentifier') === 'function' ? operationPorts.random : undefined;
     if (operationPorts !== undefined && (timer === undefined || random === undefined)) {
       throw new SupervisionError('invalid-request', 'External operations need the Supervision\'s timer and random identifier source');
+    }
+    const promotion: unknown = runOptions.promotion;
+    if (promotion !== undefined && (typeof promotion !== 'object' || promotion === null || typeof Reflect.get(promotion, 'promoteResults') !== 'function' || typeof Reflect.get(promotion, 'readPromotions') !== 'function')) {
+      throw new SupervisionError('invalid-request', 'A run\'s promotion port needs promoteResults and readPromotions');
     }
     const controller = runOptions.stop ?? createStopController();
     if (typeof controller !== 'object' || controller === null || typeof Reflect.get(controller, 'subscribe') !== 'function') {
@@ -830,6 +836,15 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       return engine;
     }
 
+    /** The run's promotion port, or the refusal of a promotion action on a run without one. */
+    function promotionPort(action: string): IRunPromotionPort {
+      const port = runOptions.promotion;
+      if (port === undefined) {
+        throw new SupervisionError('invalid-request', `${action} needs a promotion port, which this run was not given`);
+      }
+      return port;
+    }
+
     /** Offer a post-work ordinary event; a failure there is a diagnostic. */
     function afterOrdinary(label: string, phase: IOrdinaryPhase): void {
       try {
@@ -940,16 +955,37 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         // An operator's settlement is recorded under the writer lease, obtained as any normal request obtains it.
         return within(async () => operationsOf('Settling an operation').settle(settlement, await writerLease()), 'settleOperation');
       },
-      withWriterLease<TWork>(work: (lease: IRunLease) => TWork | Promise<TWork>): Promise<Awaited<TWork>> {
-        // Operator work recorded under the lease obtains it as a normal request and a settlement do.
-        return within(async (): Promise<Awaited<TWork>> => {
-          if (typeof work !== 'function') {
-            throw new SupervisionError('invalid-request', 'Operator work under the writer lease must be a function');
+      promote(request: IPromotionRequest): Promise<IPromotionRecord> {
+        return within(async (): Promise<IPromotionRecord> => {
+          const port = promotionPort('Promoting results');
+          const valid = readPromotionRequest(request);
+          if (valid === undefined) {
+            throw new SupervisionError('invalid-request', 'A promotion needs a target environment, a list of exact result references and versioned evidence');
           }
-          const lease = await writerLease();
-          const value: Awaited<TWork> = await work(lease);
-          return value;
-        }, 'withWriterLease');
+          // The lease is obtained as every normal request and settlement obtains it: waiting under the operator's policy.
+          const promotionLease = await writerLease();
+          // Stop intent is checked in the same synchronous turn as the commit, so nothing can intervene between them.
+          if (state.stopped.signal.aborted) {
+            throw new SupervisionError('stopped', `Run ${context.runId} is stopped: it records no promotion`);
+          }
+          const record = port.promoteResults(promotionLease, {
+            target: { analysis: context.analysis, environment: valid.into },
+            references: valid.references,
+            evidence: valid.evidence,
+          });
+          state.report(Object.freeze({
+            kind: 'promotion',
+            runId: context.runId,
+            promotionId: record.promotionId,
+            analysis: context.analysis,
+            into: valid.into,
+            references: valid.references,
+          }), 'promotion');
+          return record;
+        }, 'promote');
+      },
+      promotions(): Promise<readonly IPromotionRecord[]> {
+        return within(() => promotionPort('Reading promotions').readPromotions({ target: { analysis: context.analysis, environment: context.environment } }), 'promotions');
       },
     });
 

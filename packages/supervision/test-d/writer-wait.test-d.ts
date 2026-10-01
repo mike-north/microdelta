@@ -11,7 +11,7 @@
 import { expectAssignable, expectError, expectNotAssignable, expectType } from 'tsd';
 
 import { SupervisionError, WriterBusyError } from '../dist/src/index.js';
-import type { IRun, IRunLease, IRunOperationName, IRunOptions, IRunWriter, ISupervisionErrorCode, IWriterAttempt, IWriterBusyObservation, IWriterWaitOptions } from '../dist/src/index.js';
+import type { IPromotionRecord, IPromotionRequest, IRun, IRunLease, IRunOperationName, IRunPromotionPort, IRunOptions, IRunWriter, ISupervisionErrorCode, IWriterAttempt, IWriterBusyObservation, IWriterWaitOptions } from '../dist/src/index.js';
 
 declare const lease: IRunLease;
 declare const attempt: IWriterAttempt;
@@ -63,8 +63,13 @@ expectType<WriterBusyError>(new WriterBusyError({ kind: 'held', holder: 'run:oth
 expectError(new WriterBusyError({ kind: 'acquired', lease }, 1));
 expectError(new WriterBusyError({ kind: 'held', holder: 'run:other', expiresAt: 2 }));
 
-// Operator work under the writer lease receives the lease and returns its own (awaited) value; it is a named run operation.
-expectType<Promise<number>>(run.withWriterLease((held: IRunLease) => held.fence));
-expectType<Promise<string>>(run.withWriterLease(() => Promise.resolve('recorded')));
-expectAssignable<IRunOperationName>('withWriterLease');
-expectError(run.withWriterLease());
+// A promotion is a named run operation over the structural promotion port; reading promotions is one too.
+declare const promotionRequest: IPromotionRequest;
+expectType<Promise<IPromotionRecord>>(run.promote(promotionRequest));
+expectType<Promise<readonly IPromotionRecord[]>>(run.promotions());
+expectAssignable<IRunOperationName>('promote');
+expectAssignable<IRunOperationName>('promotions');
+expectNotAssignable<IRunOperationName>('withWriterLease');
+expectError(run.withWriterLease);
+expectError(run.promote({ references: [], evidence: { format: 'f', formatVersion: 1, content: null } }));
+expectType<IRunPromotionPort | undefined>(options.promotion);

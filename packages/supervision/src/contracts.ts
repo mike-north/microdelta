@@ -49,6 +49,7 @@ import type {
   IRunOperationPorts,
   IWaitEvent,
 } from './operations.js';
+import type { IPromotionEvent, IPromotionRecord, IPromotionRequest, IRunPromotionPort } from './promotion.js';
 
 /**
  * One asynchronous scope slot: a value attached to the current asynchronous
@@ -262,8 +263,8 @@ export type ISendPhase = 'refused' | 'begin' | 'end' | 'fail' | 'aborted' | 'can
 /**
  * One event offered to run observers: a framework lifecycle event of a
  * resolved step, a phase of ordinary work, a change of stop intent, a
- * position of a send, a position of an external operation, or the run's
- * waiting for deferred work. Events are frozen, name the run they belong to,
+ * position of a send, a position of an external operation, the run's
+ * waiting for deferred work, or a recorded promotion. Events are frozen, name the run they belong to,
  * and carry identifiers, levels, statuses, times and usage figures only,
  * never values (RUN-013).
  * @alpha
@@ -275,7 +276,8 @@ export type IRunEvent =
   | { readonly kind: 'send'; readonly runId: string; readonly label: string; readonly phase: Exclude<ISendPhase, 'remote-state'> }
   | { readonly kind: 'send'; readonly runId: string; readonly label: string; readonly phase: 'remote-state'; readonly remote: IRemoteState }
   | IOperationEvent
-  | IWaitEvent;
+  | IWaitEvent
+  | IPromotionEvent;
 
 /**
  * An observer of a run. Observers cover memoized and nonmemoized work alike,
@@ -355,6 +357,12 @@ export interface IRunOptions {
    * resumes; `exit` returns, reporting the time it waits until.
    */
   readonly deferral?: IDeferralMode;
+  /**
+   * The port promotions are recorded and read through: History's durable
+   * store over the run's store. Without it the run's `promote` and
+   * `promotions` are invalid requests.
+   */
+  readonly promotion?: IRunPromotionPort;
 }
 
 /**
@@ -675,31 +683,39 @@ export interface IRun {
    * outcome the operator learned (and any usage, acknowledged under the
    * operator namespace before the settlement is recorded), or abandon it,
    * leaving its usage unknown. Either is recorded durably under the writer
-   * lease and unblocks the operation's step. Fails with `invalid-request` for
-   * an operation that is missing or not unknown.
+   * lease and unblocks the operation's step. An operation resolved as
+   * succeeded keeps its address consumed, so every later call there fails
+   * with `operation-resolved`, until the operator abandons it: abandoning is
+   * the operator's explicit authorization of a possible second effect, and
+   * frees the address. Fails with `invalid-request` for an operation that is
+   * missing, or that is neither unknown nor (for abandoning) resolved as
+   * succeeded.
    */
   settleOperation(settlement: IOperationSettlement): Promise<IOperationView>;
   /**
-   * Run operator work that History must record under the store's writer
-   * lease, such as a recorded promotion into another environment (RUN-017).
-   * The lease is obtained exactly as a normal request obtains it (RUN-002
-   * owner decision): renewed or acquired at once when possible, otherwise
-   * waited for under the run's `writerWait` policy, with no default deadline,
-   * failing with `WriterBusyError` at the operator's deadline, and ended by
-   * any stop with `stopped`. `work` then runs once with that valid lease and
-   * its value or failure is the operation's. Supervision hands the lease
-   * over without interpreting the work: the assembly that composes History
-   * performs the commit, and History alone re-checks the lease's authority
-   * there. Keep `work` to short commits; the lease is held, as for every
-   * operation of the run, until the run closes.
+   * Record an operator's promotion of exact results of the run's analysis
+   * into another environment (RUN-017 owner decision), through the run's
+   * promotion port. The store's writer lease is obtained exactly as a normal
+   * request obtains it (RUN-002 owner decision): waited for under the run's
+   * `writerWait` policy, with no default deadline, failing with
+   * `WriterBusyError` at the operator's deadline. Stop intent is checked
+   * immediately before the commit: any stop in force refuses the promotion
+   * with `stopped`, and a stop during the wait ends it. The commit is one
+   * synchronous call of the port, which re-checks the lease; the run then
+   * offers an identifier-only `promotion` event. Fails with `invalid-request`
+   * for a malformed request or a run without a promotion port.
    *
-   * It is `@alpha` for the same reason as {@link IRun.assertDeclaredCall}:
-   * the facade composes it into its own operator actions, and its
-   * author-facing run never hands the lease out.
-   * @param work - The operator work, given the run's valid writer lease.
-   * @returns The work's value.
+   * It targets another environment (`request.into`), while
+   * {@link IRun.promotions} lists the promotions into the run's own.
    */
-  withWriterLease<T>(work: (lease: IRunLease) => T | Promise<T>): Promise<Awaited<T>>;
+  promote(request: IPromotionRequest): Promise<IPromotionRecord>;
+  /**
+   * The promotions recorded into this run's own environment, in record order:
+   * what production can reuse from other environments. Read-only; it needs no
+   * writer lease. Fails with `invalid-request` for a run without a promotion
+   * port.
+   */
+  promotions(): Promise<readonly IPromotionRecord[]>;
   /**
    * Assert that a call of the run operation `operation` is a declared one.
    * Invoked from inside a member's work or a step attempt of this open run,
@@ -736,7 +752,8 @@ export type IRunOperationName =
   | 'resolveMembers'
   | 'resolveOutcomeFold'
   | 'settleOperation'
-  | 'withWriterLease';
+  | 'promote'
+  | 'promotions';
 
 /**
  * A send a hard stop aborted, with its recorded remote state.

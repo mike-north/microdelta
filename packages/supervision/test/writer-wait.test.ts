@@ -38,7 +38,7 @@ import type {
 } from '@microdelta/resolution';
 
 import { SupervisionError, WriterBusyError, createStopController, createSupervision } from '../src/index.js';
-import type { IAbortSignal, IRun, IRunLease, IRunOptions, IRunWriter, ISupervision, IWriterAttempt } from '../src/index.js';
+import type { IAbortSignal, IPromotionRecord, IPromotionRequest, IRun, IRunEvent, IRunLease, IRunOptions, IRunPromotionPort, IRunResultReference, IRunWriter, ISupervision, IWriterAttempt } from '../src/index.js';
 import { awaitWriter, writerWaitPolicy } from '../src/writer.js';
 import { T0, codeOf, fakeTimer, hour, nodeScopes, settle, stepOf } from './support.js';
 import type { IFakeTimer } from './support.js';
@@ -688,92 +688,168 @@ describe('stops, failures and lease-free requests while waiting', () => {
 });
 
 /**
- * Operator work committed under the writer lease, such as a recorded
- * promotion (RUN-017 owner decision): it is run work like a settlement, so it
- * obtains the lease exactly as a normal request does (RUN-002 owner
- * decision), and Supervision hands the lease to the caller's work without
- * interpreting it. Supervision never touches History itself.
+ * A recorded promotion between environments (RUN-017 owner decision), as a
+ * named run operation over Supervision's structural promotion port. The
+ * promotion is operator work recorded by History under the writer lease, so
+ * the run obtains that lease exactly as a normal request does (RUN-002 owner
+ * decision), checks stop intent immediately before the commit, commits once
+ * through the port, and offers an identifier-only event. Reading the
+ * promotions into the run's own environment needs no lease. The port double
+ * records exactly what Supervision asks of History.
  */
-describe('operator work under the writer lease (RUN-002, RUN-017)', () => {
-  test('the work runs once with the lease a normal request would hold, its value is returned, and the run releases the lease once at close', async () => {
+describe('recorded promotion (RUN-002, RUN-013, RUN-017)', () => {
+  /** A reference as History names one. */
+  const reference = (locator: string): IRunResultReference => Object.freeze({ kind: 'completed-result', locator });
+
+  /** A promotion port double: every commit and read Supervision asked for. */
+  interface IPromotionDouble {
+    readonly port: IRunPromotionPort;
+    readonly commits: { readonly lease: IRunLease; readonly request: Parameters<IRunPromotionPort['promoteResults']>[1] }[];
+    readonly reads: Parameters<IRunPromotionPort['readPromotions']>[0][];
+  }
+
+  /** Create a promotion port double whose records carry the committing lease's fence. */
+  function promotionDouble(): IPromotionDouble {
+    const commits: IPromotionDouble['commits'] = [];
+    const reads: IPromotionDouble['reads'] = [];
+    const records: IPromotionRecord[] = [];
+    return {
+      commits,
+      reads,
+      port: {
+        promoteResults(lease, request): IPromotionRecord {
+          commits.push({ lease, request });
+          const record: IPromotionRecord = Object.freeze({ promotionId: commits.length, target: request.target, references: request.references, evidence: request.evidence, fence: lease.fence });
+          records.push(record);
+          return record;
+        },
+        readPromotions(query): readonly IPromotionRecord[] {
+          reads.push(query);
+          return records.filter((record) => record.target.analysis === query.target.analysis && record.target.environment === query.target.environment);
+        },
+      },
+    };
+  }
+
+  /** One promotion request into production. */
+  const request: IPromotionRequest = Object.freeze({
+    into: 'env:production',
+    references: [reference('mdh1:test:report')],
+    evidence: Object.freeze({ format: 'test.promotion', formatVersion: 1, content: { reason: 'trial reviewed' } }),
+  });
+
+  test('a promotion obtains the lease a normal request would hold, commits once into the requested environment of the run\'s analysis, and offers an identifier-only event', async () => {
     const timer = fakeTimer();
     const port = scriptedWriter(timer, (now) => Object.freeze({ kind: 'acquired', lease: leaseOf(1, now) }));
-    const seen: IRunLease[] = [];
-    const result = await supervisionWith(timer).run(optionsOver(port.writer, leaseRecorder()), (live) => live.withWriterLease((lease) => {
-      seen.push(lease);
-      return 'recorded';
-    }));
-    expect(result.value).toBe('recorded');
-    expect(seen).toEqual([leaseOf(1, T0)]);
+    const promotion = promotionDouble();
+    const events: IRunEvent[] = [];
+    const result = await supervisionWith(timer).run(optionsOver(port.writer, leaseRecorder(), { promotion: promotion.port, observers: [{ observe: (event) => events.push(event) }] }), (live) => live.promote(request));
+    expect(promotion.commits).toEqual([{ lease: leaseOf(1, T0), request: { target: { analysis: 'analysis:test', environment: 'env:production' }, references: request.references, evidence: request.evidence } }]);
+    expect(result.value).toEqual({ promotionId: 1, target: { analysis: 'analysis:test', environment: 'env:production' }, references: request.references, evidence: request.evidence, fence: 1 });
     expect(port.attempts).toEqual([T0]);
     expect(port.releases.count).toBe(1);
+    // The event names the promotion, its target and the exact references; never the evidence.
+    expect(events).toEqual([{ kind: 'promotion', runId: result.context.runId, promotionId: 1, analysis: 'analysis:test', into: 'env:production', references: request.references }]);
   });
 
-  test('a normal request and later operator work of one run hold the same renewed lease', async () => {
-    const timer = fakeTimer();
-    const recorder = leaseRecorder();
-    const port = scriptedWriter(timer, (now) => Object.freeze({ kind: 'acquired', lease: leaseOf(3, now) }));
-    const result = await supervisionWith(timer).run(optionsOver(port.writer, recorder), async (live) => {
-      await live.resolve(step, { requestKey: 'request:1' });
-      return live.withWriterLease((lease) => lease.fence);
-    });
-    expect(result.value).toBe(3);
-    expect(recorder.leases).toEqual([leaseOf(3, T0)]);
-    expect(port.attempts).toEqual([T0, T0]);
-  });
-
-  test('while another process holds the lease the work waits at the poll interval and runs only once the lease is granted', async () => {
+  test('while another process holds the lease the promotion waits at the poll interval, and commits only once the lease is granted', async () => {
     const timer = fakeTimer();
     const port = scriptedWriter(timer, (now) => (now < T0 + 2_500 ? heldUntil(T0 + hour) : Object.freeze({ kind: 'acquired', lease: leaseOf(2, now) })));
-    const seen: IRunLease[] = [];
-    const run = supervisionWith(timer).run(optionsOver(port.writer, leaseRecorder(), { writerWait: { pollMilliseconds: 1_000 } }), (live) => live.withWriterLease((lease) => {
-      seen.push(lease);
-    }));
+    const promotion = promotionDouble();
+    const run = supervisionWith(timer).run(optionsOver(port.writer, leaseRecorder(), { promotion: promotion.port, writerWait: { pollMilliseconds: 1_000 } }), (live) => live.promote(request));
     await advance(timer, 2_000, 1_000);
     expect(port.attempts).toEqual([T0, T0 + 1_000, T0 + 2_000]);
-    expect(seen).toEqual([]);
+    expect(promotion.commits).toEqual([]);
     await advance(timer, 1_000);
-    await run;
-    expect(seen).toEqual([leaseOf(2, T0 + 3_000)]);
+    expect((await run).value.fence).toBe(2);
+    expect(promotion.commits.map((commit) => commit.lease)).toEqual([leaseOf(2, T0 + 3_000)]);
   });
 
-  test('at the operator deadline the work fails with writer-busy naming the holder, and never runs', async () => {
+  test('at the operator deadline the promotion fails with writer-busy naming the holder, and nothing is committed', async () => {
     const timer = fakeTimer();
     const port = scriptedWriter(timer, () => heldUntil(T0 + hour));
-    let ran = false;
+    const promotion = promotionDouble();
     let outcome: { readonly current: () => ISettlement<unknown> } | undefined;
-    const run = supervisionWith(timer).run(optionsOver(port.writer, leaseRecorder(), { writerWait: { deadline: T0 + 1_000, pollMilliseconds: 500 } }), (live) => {
-      const pending = live.withWriterLease(() => {
-        ran = true;
-      });
+    const run = supervisionWith(timer).run(optionsOver(port.writer, leaseRecorder(), { promotion: promotion.port, writerWait: { deadline: T0 + 1_000, pollMilliseconds: 500 } }), (live) => {
+      const pending = live.promote(request);
       outcome = track(pending);
       return pending.then(() => 'done', () => 'failed');
     });
     await advance(timer, 1_000, 500);
     expect((await run).value).toBe('failed');
-    const busy = busyOf(outcome?.current() ?? { settled: false });
-    expect(busy.holder).toBe(otherHolder);
-    expect(ran).toBe(false);
+    expect(busyOf(outcome?.current() ?? { settled: false }).holder).toBe(otherHolder);
+    expect(promotion.commits).toEqual([]);
   });
 
-  test('a failure of the work is the operation\'s failure, and the run still releases the lease', async () => {
+  test('a stop that takes effect while the promotion waits for the lease ends it with stopped, and nothing is committed', async () => {
     const timer = fakeTimer();
-    const port = scriptedWriter(timer, (now) => Object.freeze({ kind: 'acquired', lease: leaseOf(1, now) }));
-    const result = await supervisionWith(timer).run(optionsOver(port.writer, leaseRecorder()), (live) => codeOf(live.withWriterLease(() => {
-      throw new SupervisionError('integrity', 'the operator work failed');
-    })));
-    expect(result.value).toBe('integrity');
-    expect(port.releases.count).toBe(1);
+    const port = scriptedWriter(timer, () => heldUntil(T0 + hour));
+    const promotion = promotionDouble();
+    const stop = createStopController({ timer });
+    const run = supervisionWith(timer).run(optionsOver(port.writer, leaseRecorder(), { promotion: promotion.port, stop, writerWait: { pollMilliseconds: 1_000 } }), (live) => codeOf(live.promote(request)));
+    await advance(timer, 1_000);
+    stop.request({ level: 'soft' });
+    expect((await run).value).toBe('stopped');
+    expect(promotion.commits).toEqual([]);
   });
 
-  test('operator work offered after the run closed fails with run-closed and takes no lease', async () => {
+  test('stop intent in force when the lease is granted refuses the commit: the stop is checked immediately before it', async () => {
     const timer = fakeTimer();
     const port = scriptedWriter(timer, (now) => Object.freeze({ kind: 'acquired', lease: leaseOf(1, now) }));
+    const promotion = promotionDouble();
+    const stop = createStopController({ timer });
+    stop.request({ level: 'soft' });
+    const result = await supervisionWith(timer).run(optionsOver(port.writer, leaseRecorder(), { promotion: promotion.port, stop }), (live) => codeOf(live.promote(request)));
+    expect(result.value).toBe('stopped');
+    expect(promotion.commits).toEqual([]);
+  });
+
+  test('the promotions into the run\'s own environment are read without the writer lease', async () => {
+    const timer = fakeTimer();
+    const port = scriptedWriter(timer, (now) => Object.freeze({ kind: 'acquired', lease: leaseOf(1, now) }));
+    const promotion = promotionDouble();
+    const result = await supervisionWith(timer).run(optionsOver(port.writer, leaseRecorder(), { promotion: promotion.port, environment: 'env:production' }), (live) => live.promotions());
+    expect(result.value).toEqual([]);
+    expect(promotion.reads).toEqual([{ target: { analysis: 'analysis:test', environment: 'env:production' } }]);
+    expect(port.attempts).toEqual([]);
+  });
+
+  test('without a promotion port, promoting and reading promotions are invalid requests that take no lease', async () => {
+    const timer = fakeTimer();
+    const port = scriptedWriter(timer, (now) => Object.freeze({ kind: 'acquired', lease: leaseOf(1, now) }));
+    const result = await supervisionWith(timer).run(optionsOver(port.writer, leaseRecorder()), async (live) => [await codeOf(live.promote(request)), await codeOf(live.promotions())]);
+    expect(result.value).toEqual(['invalid-request', 'invalid-request']);
+    expect(port.attempts).toEqual([]);
+  });
+
+  test.each([
+    ['an empty target environment', { ...request, into: '' }],
+    ['references that are not a list', { ...request, references: 'mdh1:test:report' }],
+    ['missing evidence', { into: request.into, references: request.references }],
+  ])('%s is an invalid request, refused before any lease is taken', async (_name, malformed) => {
+    const timer = fakeTimer();
+    const port = scriptedWriter(timer, (now) => Object.freeze({ kind: 'acquired', lease: leaseOf(1, now) }));
+    const promotion = promotionDouble();
+    const result = await supervisionWith(timer).run(optionsOver(port.writer, leaseRecorder(), { promotion: promotion.port }), (live) => codeOf(async () => {
+      // An untyped caller's malformed request, as JavaScript could pass it.
+      const pending: unknown = Reflect.apply(live.promote, live, [malformed]);
+      await pending;
+    }));
+    expect(result.value).toBe('invalid-request');
+    expect(port.attempts).toEqual([]);
+    expect(promotion.commits).toEqual([]);
+  });
+
+  test('a promotion offered after the run closed fails with run-closed and takes no lease', async () => {
+    const timer = fakeTimer();
+    const port = scriptedWriter(timer, (now) => Object.freeze({ kind: 'acquired', lease: leaseOf(1, now) }));
+    const promotion = promotionDouble();
     let kept: IRun | undefined;
-    await supervisionWith(timer).run(optionsOver(port.writer, leaseRecorder()), (live) => {
+    await supervisionWith(timer).run(optionsOver(port.writer, leaseRecorder(), { promotion: promotion.port }), (live) => {
       kept = live;
     });
-    expect(await codeOf(kept?.withWriterLease(() => 'late') ?? Promise.resolve())).toBe('run-closed');
+    expect(await codeOf(kept?.promote(request) ?? Promise.resolve())).toBe('run-closed');
     expect(port.attempts).toEqual([]);
+    expect(promotion.commits).toEqual([]);
   });
 });

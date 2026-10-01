@@ -265,6 +265,7 @@ function waiterResolution(key: string, granted: (lease: IWriterLease, published:
     },
     resolveMembers: unused,
     resolveFold: unused,
+    resolveOutcomeFold: unused,
     check(): Promise<ICheckOutcome> {
       checked();
       return Promise.resolve(Object.freeze({ kind: 'execution-required', step: waiterStep, misses: [] }));

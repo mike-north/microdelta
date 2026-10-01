@@ -115,6 +115,7 @@ function leaseRecorder(): ILeaseRecorder {
     },
     resolveMembers: unused,
     resolveFold: unused,
+    resolveOutcomeFold: unused,
     check(): Promise<ICheckOutcome> {
       inspections.count += 1;
       return Promise.resolve(Object.freeze({ kind: 'execution-required', step, misses: [] }));

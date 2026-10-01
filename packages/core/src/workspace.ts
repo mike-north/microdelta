@@ -6,6 +6,15 @@
  * store with Tracking evidence and Materialization views. The facade composes
  * owners only: it adds no policy, no cache and no seventh authority. Every
  * export is a facade-local `@alpha` declaration; spellings are not a public API.
+ *
+ * The operational surface (M5) is assembled here too. When the caller supplies
+ * a Resource Accounting port, every run receives Supervision's operation
+ * ports: History's operation journal and the host's random source, which the
+ * facade builds, and the caller's Accounting port. Accounting is injected
+ * through Supervision's structural port (plus a summary accessor) so that the
+ * published facade takes no runtime or type dependency on the Accounting
+ * package. Runs also offer recorded promotion between environments, under the
+ * writer lease Supervision obtains, and the run environment's usage summary.
  */
 import type {
   ICandidateMiss as IResolutionCandidateMiss,
@@ -27,7 +36,11 @@ import type {
   IResolutionOutcome as IResolutionOutcomeOf,
 } from '@microdelta/resolution';
 import { openDurableHistory } from '@microdelta/history';
-import type { ICompletedResultReference as IHistoryReference } from '@microdelta/history';
+import type {
+  ICompletedResultReference as IHistoryReference,
+  IPromotionRecord as IHistoryPromotionRecord,
+  IVersionedRecord as IHistoryVersionedRecord,
+} from '@microdelta/history';
 import { canonicalNodeLocation, createNodeClock, createNodeSqlite, createNodeTimer } from '@microdelta/machine-node';
 import { ResolutionError as ResolutionErrorClass, createResolution } from '@microdelta/resolution';
 import {
@@ -35,11 +48,36 @@ import {
   WriterBusyError as WriterBusyErrorClass,
   createStopController as createSupervisionStopController,
   createSupervision,
+  operationJournalDeclaration,
   ordinaryLifecycle as supervisionOrdinaryLifecycle,
   stepLifecycle as supervisionStepLifecycle,
 } from '@microdelta/supervision';
 import type {
   IAbortSignal as ISupervisionAbortSignal,
+  IAttemptUsage as ISupervisionAttemptUsage,
+  IDeferralMode as ISupervisionDeferralMode,
+  IOperationAccounting,
+  IOperationAttribution as ISupervisionOperationAttribution,
+  IOperationBlock as ISupervisionOperationBlock,
+  IOperationEvent as ISupervisionOperationEvent,
+  IOperationPhase as ISupervisionOperationPhase,
+  IOperationQuantity as ISupervisionOperationQuantity,
+  IOperationReason as ISupervisionOperationReason,
+  IOperationRemoteState as ISupervisionOperationRemoteState,
+  IOperationRequest as ISupervisionOperationRequest,
+  IOperationResponse as ISupervisionOperationResponse,
+  IOperationRetryPolicy as ISupervisionOperationRetryPolicy,
+  IOperationSend as ISupervisionOperationSend,
+  IOperationSettlement as ISupervisionOperationSettlement,
+  IOperationSettlementRecord as ISupervisionOperationSettlementRecord,
+  IOperationStatus as ISupervisionOperationStatus,
+  IOperationSubject as ISupervisionOperationSubject,
+  IOperationUsage as ISupervisionOperationUsage,
+  IOperationView as ISupervisionOperationView,
+  IRequestAttemptStatus as ISupervisionRequestAttemptStatus,
+  IRequestAttemptView as ISupervisionRequestAttemptView,
+  IRunOperationPorts,
+  IWaitEvent as ISupervisionWaitEvent,
   IRemoteState as ISupervisionRemoteState,
   IRunExecution as ISupervisionRunExecution,
   ISendInterruption as ISupervisionSendInterruption,
@@ -73,7 +111,7 @@ import type {
 } from '@microdelta/supervision';
 
 import type { IAuthoring, IComposition } from './authoring.js';
-import { machine } from './host.js';
+import { machine, random } from './host.js';
 import { writerFor } from './writer.js';
 
 /** An exact reference to one completed result. @alpha */
@@ -248,8 +286,180 @@ export type ISendInterruption = ISupervisionSendInterruption;
  */
 export type IWriterWaitOptions = ISupervisionWriterWaitOptions;
 
-/** The live run's execution controls: stop intent, abort signal, permit-guarded sends and stop-aware waits. @alpha */
+/**
+ * The live run's execution controls: stop intent, abort signal, permit-guarded
+ * sends, stop-aware waits, and `operation`, the handle through which author
+ * code makes one declared external operation (see {@link IOperationRequest}).
+ * @alpha
+ */
 export type IRunExecution = ISupervisionRunExecution;
+
+/**
+ * One external operation an author asks the live run to perform through
+ * `currentExecution().operation(request)`: an identifier name, a binding
+ * digest of the request (never its value), its safety declarations and retry
+ * policy, and `perform`, which sends one request attempt. A stable operation
+ * identity is persisted before every send, and usage is counted once
+ * (RUN-012, ACC-007). It is available only in workspaces given an Accounting
+ * port.
+ * @alpha
+ */
+export type IOperationRequest<T> = ISupervisionOperationRequest<T>;
+
+/** What one request attempt's send receives: the operation and attempt identities, the idempotency key when declared, and the abort signal. @alpha */
+export type IOperationSend = ISupervisionOperationSend;
+
+/** How one request attempt answered: succeeded, failed, rate-limited (optionally with a retry time) or unknown, each with any usage report. @alpha */
+export type IOperationResponse<T> = ISupervisionOperationResponse<T>;
+
+/** One usage report of a request attempt: the provider's report identity and its quantities. @alpha */
+export type IOperationUsage = ISupervisionOperationUsage;
+
+/** One reported usage quantity; its unit is an identifier. @alpha */
+export type IOperationQuantity = ISupervisionOperationQuantity;
+
+/** An author's retry policy for one operation: transient attempts, backoff and the rate-limit retry cap. @alpha */
+export type IOperationRetryPolicy = ISupervisionOperationRetryPolicy;
+
+/** The status of one external operation as the journal records it. @alpha */
+export type IOperationStatus = ISupervisionOperationStatus;
+
+/** The status of one request attempt of an external operation. @alpha */
+export type IRequestAttemptStatus = ISupervisionRequestAttemptStatus;
+
+/** Whether a request attempt's usage was acknowledged, left unrecorded, or none was reported. @alpha */
+export type IAttemptUsage = ISupervisionAttemptUsage;
+
+/** What is known about an aborted request attempt's remote work: cancelled, running or unknown. @alpha */
+export type IOperationRemoteState = ISupervisionOperationRemoteState;
+
+/** The History subject of the step attempt that made an operation. @alpha */
+export type IOperationSubject = ISupervisionOperationSubject;
+
+/** One request attempt as an operator inspects it, with the run, step attempt and usage it is attributed to. @alpha */
+export type IRequestAttemptView = ISupervisionRequestAttemptView;
+
+/** The operator's recorded settlement of an unknown operation. @alpha */
+export type IOperationSettlementRecord = ISupervisionOperationSettlementRecord;
+
+/** One external operation as an operator inspects it: identities, status, attempts and settlement, never values. @alpha */
+export type IOperationView = ISupervisionOperationView;
+
+/** An operator's settlement of an unknown operation: resolve it with the learned outcome (and any usage), or abandon it. @alpha */
+export type IOperationSettlement = ISupervisionOperationSettlement;
+
+/** What holds a pending member back: a deferral not yet due, or an unknown outcome awaiting the operator. @alpha */
+export type IOperationBlock = ISupervisionOperationBlock;
+
+/** One correlated, privacy-restricted operation event, as run observers see it. @alpha */
+export type IOperationEvent = ISupervisionOperationEvent;
+
+/** The closed phases of operation events. @alpha */
+export type IOperationPhase = ISupervisionOperationPhase;
+
+/** The closed reason codes of operation events. @alpha */
+export type IOperationReason = ISupervisionOperationReason;
+
+/** A run's wait for deferred work: sleeping, exiting, resumed or stopped, with the time it waits until. @alpha */
+export type IWaitEvent = ISupervisionWaitEvent;
+
+/**
+ * How a normal request treats deferred work once only deferred work remains:
+ * `sleep` (the default) waits until the earliest time and resumes; `exit`
+ * returns and reports that time as the run result's `waitingUntil`.
+ * @alpha
+ */
+export type IDeferralMode = ISupervisionDeferralMode;
+
+/** The run, member and step attempt a usage observation is attributed to. @alpha */
+export type IOperationAttribution = ISupervisionOperationAttribution;
+
+/**
+ * Narrows a usage summary within the run's environment: to one member,
+ * operation, run or step attempt. The environment is always the run's own.
+ * @alpha
+ */
+export interface IUsageFilter {
+  readonly member?: string;
+  readonly operation?: string;
+  readonly run?: string;
+  readonly stepAttempt?: string;
+}
+
+/** One usage summary query of the Accounting port: an environment and an optional narrowing. @alpha */
+export interface IUsageQuery extends IUsageFilter {
+  /** The environment whose usage is summarized; summaries never mix environments. */
+  readonly environment: string;
+}
+
+/** One request attempt whose usage is unknown: its intent was recorded, but no report was acknowledged. Unknown is never zero. @alpha */
+export interface IUnknownUsage {
+  readonly operation: string;
+  readonly requestAttempt: string;
+  readonly attribution: IOperationAttribution;
+}
+
+/**
+ * Resource Accounting's summary of one environment, as the facade reads it
+ * structurally: observed quantities summed by unit with every report counted
+ * once, kept apart from the request attempts whose usage is unknown, and the
+ * counts behind them. `complete` holds exactly when nothing is unknown; an
+ * observed total is never a bill (ACC-003, ACC-005).
+ * @alpha
+ */
+export interface IUsageSummary {
+  readonly environment: string;
+  readonly status: 'complete' | 'incomplete';
+  readonly observed: readonly IOperationQuantity[];
+  readonly unknown: readonly IUnknownUsage[];
+  /** How many operations recorded usage intent. */
+  readonly operations: number;
+  /** How many usage reports were acknowledged. */
+  readonly reports: number;
+  /** How many request attempts recorded usage intent. */
+  readonly requestAttempts: number;
+}
+
+/**
+ * The caller-supplied Resource Accounting port of a workspace: Supervision's
+ * structural accounting port, through which runs record usage intent before
+ * each send and acknowledge usage reports, plus the summary accessor the
+ * facade surfaces through {@link IWorkspaceRun.usage}. Accounting's durable
+ * adapter satisfies it. The caller opens and closes it; the workspace never
+ * does.
+ * @alpha
+ */
+export interface IWorkspaceAccounting extends IOperationAccounting {
+  /** Summarize one environment's usage. */
+  summarizeUsage(query: IUsageQuery): IUsageSummary;
+}
+
+/** The versioned evidence a promotion records: why the operator promoted, in the caller's own format. @alpha */
+export type IPromotionEvidence = IHistoryVersionedRecord;
+
+/**
+ * One recorded promotion: exact results of other environments admitted into
+ * a target environment of the same analysis, with its evidence and the
+ * writer fence it was recorded under. Promoted results keep their original
+ * provenance.
+ * @alpha
+ */
+export type IPromotionRecord = IHistoryPromotionRecord;
+
+/**
+ * An operator's request to promote exact results of the run's analysis into
+ * another environment (RUN-017 owner decision): trial work satisfies
+ * production only through such an explicit, recorded promotion.
+ * @alpha
+ */
+export interface IPromotionRequest {
+  /** The environment the results are promoted into; never the environment they were published in. */
+  readonly into: string;
+  /** The exact completed results promoted, each named once. */
+  readonly references: readonly ICompletedResultReference[];
+  /** Why the operator promoted them. */
+  readonly evidence: IPromotionEvidence;
+}
 
 /**
  * A failed resolution; `code` names the violated contract.
@@ -310,6 +520,14 @@ export interface IWorkspaceOptions {
    * longer than the slowest single request.
    */
   readonly leaseMilliseconds?: number;
+  /**
+   * The caller's Resource Accounting port. With it, every run of the
+   * workspace offers external operations (`currentExecution().operation`),
+   * operator inspection and settlement, and usage summaries; the workspace
+   * builds History's operation journal and the host's random source itself.
+   * Without it, those fail with `invalid-request`.
+   */
+  readonly accounting?: IWorkspaceAccounting;
 }
 
 /**
@@ -323,7 +541,12 @@ export interface IWorkspaceRunOptions<TInputs extends object, THelpers extends o
   readonly composition: IComposition<TInputs, THelpers>;
   /** The environment selected for the whole run. */
   readonly environment: string;
-  /** Optional volatile run identifier. */
+  /**
+   * Optional volatile run identifier. When absent, the facade mints
+   * `run:<32 hex digits>` from 128 random host bits, unique per run across
+   * processes and hosts. A caller that supplies one must keep it unique per
+   * run: retries and usage are correlated by run identity.
+   */
   readonly runId?: string;
   /** Admission policy for work validation could not avoid; admits everything when absent. */
   readonly admission?: IAdmissionPolicy;
@@ -348,15 +571,23 @@ export interface IWorkspaceRunOptions<TInputs extends object, THelpers extends o
    * `WriterBusyError`. Check-only and recovery requests never wait.
    */
   readonly writerWait?: IWriterWaitOptions;
+  /**
+   * What a normal request does once only deferred work remains: sleep until
+   * the earliest "not before" time and resume (the default), or exit and
+   * report that time as the result's `waitingUntil`.
+   */
+  readonly deferral?: IDeferralMode;
 }
 
 /**
  * A live workspace run: Supervision's run operations plus an exact read of a
- * completed result's data for ordinary work such as report assembly. It omits
- * Supervision's declared-call check, which only the facade's own handle uses.
+ * completed result's data for ordinary work such as report assembly, recorded
+ * promotion, and its environment's usage summary. It omits Supervision's
+ * declared-call check and its operator work under the writer lease, which only
+ * the facade's own handle uses: the lease is never handed to callers.
  * @alpha
  */
-export interface IWorkspaceRun extends Omit<IRun, 'assertDeclaredCall'> {
+export interface IWorkspaceRun extends Omit<IRun, 'assertDeclaredCall' | 'withWriterLease'> {
   /**
    * The deeply frozen data of one exact completed result in this workspace.
    * It is an exact-reference read: it records no acceptance, observation or
@@ -364,6 +595,26 @@ export interface IWorkspaceRun extends Omit<IRun, 'assertDeclaredCall'> {
    * retargeting. It fails with `run-closed` once the run has actually closed.
    */
   read<T>(reference: ICompletedResultReference): T;
+  /**
+   * Promote exact results of this run's analysis into `request.into`, recorded
+   * by History under the store's writer lease, which the run obtains as a
+   * normal request does (waiting under `writerWait`, failing with
+   * `WriterBusyError` at the operator's deadline). Afterwards those results
+   * are candidates there, with their original provenance; nothing else
+   * changes. History refuses a reference of another analysis or one
+   * published in the target environment. Like every run operation it is
+   * refused as an undeclared call inside member or step work.
+   */
+  promote(request: IPromotionRequest): Promise<IPromotionRecord>;
+  /** The promotions recorded into this run's environment, in order. Read-only; it needs no writer lease. */
+  promotions(): readonly IPromotionRecord[];
+  /**
+   * Resource Accounting's usage summary of this run's environment, optionally
+   * narrowed, read through the workspace's Accounting port. Read-only.
+   * Fails with `invalid-request` when the workspace has no Accounting port,
+   * and with `run-closed` once the run has closed.
+   */
+  usage(filter?: IUsageFilter): IUsageSummary;
 }
 
 /**
@@ -499,9 +750,20 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
    * key for nested-run refusal. The file exists once History has opened it.
    */
   const store = canonicalNodeLocation(options.location);
+  const accounting = options.accounting;
+  if (accounting !== undefined && (typeof accounting !== 'object' || accounting === null || typeof Reflect.get(accounting, 'summarizeUsage') !== 'function')) {
+    history.close();
+    throw new SupervisionErrorClass('invalid-request', 'A workspace Accounting port needs Supervision\'s accounting port and a usage summary accessor');
+  }
+  /**
+   * Supervision's operation ports, when the caller supplied Accounting: the
+   * workspace's History operation journal, the caller's Accounting port, and
+   * the host's random source for operation identities. Shared by every run.
+   */
+  const operations: IRunOperationPorts | undefined = accounting === undefined
+    ? undefined
+    : Object.freeze({ journal: history.openJournal(operationJournalDeclaration), accounting, random });
   let open = true;
-  /** Process-local counter distinguishing this workspace's runs. */
-  let runCounter = 0;
 
   return Object.freeze({
     logicalStore: history.logicalStore,
@@ -521,9 +783,9 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
         ));
       }
       const { authoring, composition } = runOptions;
-      runCounter += 1;
-      // A volatile identity for this run, used for its writer holder and context; never reuse evidence.
-      const runId = runOptions.runId ?? `run:${String(runCounter)}:${composition.scope}`;
+      // A volatile identity for this run, used for its writer holder, context and operation correlation; never
+      // reuse evidence. Minted from 128 random host bits, so no two runs of any process or host share one.
+      const runId = runOptions.runId ?? `run:${random.randomIdentifier()}`;
       /** This run's context once its body has started. */
       let started: IRunContext | undefined;
       const settled = supervision.run({
@@ -536,6 +798,8 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
         ...(runOptions.permits === undefined ? {} : { permits: runOptions.permits }),
         ...(runOptions.window === undefined ? {} : { window: runOptions.window }),
         ...(runOptions.writerWait === undefined ? {} : { writerWait: runOptions.writerWait }),
+        ...(runOptions.deferral === undefined ? {} : { deferral: runOptions.deferral }),
+        ...(operations === undefined ? {} : { operations }),
         // The holder names this run for diagnostics; History's fence, not the name, orders writers.
         writer: writerFor(history, `microdelta-run:${runId}`, leaseMilliseconds),
         resolution: (ports) => createResolution({
@@ -565,9 +829,33 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
           check: live.check,
           recover: live.recover,
           ordinary: live.ordinary,
-          // The workspace supplies no operation ports yet, so these fail with `invalid-request`.
+          // Without the caller's Accounting port the run has no operation ports, so these fail with `invalid-request`.
           inspectOperations: live.inspectOperations,
           settleOperation: live.settleOperation,
+          promote(request: IPromotionRequest): Promise<IPromotionRecord> {
+            // History records the promotion under the lease Supervision obtained; the facade only composes the two.
+            return live.withWriterLease((lease) => history.promoteResults(lease, {
+              target: { analysis: live.context.analysis, environment: request.into },
+              references: request.references,
+              evidence: request.evidence,
+            }));
+          },
+          promotions(): readonly IPromotionRecord[] {
+            if (!live.open) {
+              throw new SupervisionErrorClass('run-closed', `Run ${live.context.runId} has closed and accepts no new work`);
+            }
+            return history.readPromotions({ target: { analysis: live.context.analysis, environment: live.context.environment } });
+          },
+          usage(filter: IUsageFilter = {}): IUsageSummary {
+            if (!live.open) {
+              throw new SupervisionErrorClass('run-closed', `Run ${live.context.runId} has closed and accepts no new work`);
+            }
+            if (accounting === undefined) {
+              throw new SupervisionErrorClass('invalid-request', 'Usage summaries need the workspace\'s Accounting port, which this workspace was not given');
+            }
+            // The run's own environment always wins: a summary never reads another environment's usage.
+            return accounting.summarizeUsage({ ...filter, environment: live.context.environment });
+          },
           read<TData>(reference: ICompletedResultReference): TData {
             // An exact read is a result read, so it obeys the run's undeclared-call rule (CMP-9).
             live.assertDeclaredCall('read');

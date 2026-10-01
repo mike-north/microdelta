@@ -6,7 +6,11 @@
  * supplied step slots, forwarded arguments, strict folds and outcome folds),
  * durable workspaces supervised by Run Supervision, the normal, members,
  * strict fold, outcome fold and recovery entry operations with their typed
- * reports, and runtime context lookup. Context
+ * reports, and runtime context lookup; and the operational surface: the
+ * external operation handle with operator inspection and settlement, stop
+ * control, the writer-wait deadline, the deferral mode, environments with
+ * recorded promotion, usage summaries through the caller's injected
+ * Accounting port, and the privacy-restricted run events. Context
  * code may use owner contracts directly, never this assembly facade.
  * @packageDocumentation
  */
@@ -103,6 +107,7 @@ export {
   ordinaryLifecycle,
   stepLifecycle,
   type IAbortSignal,
+  type IAttemptUsage,
   type IAdmissionDecision,
   type IAdmissionPolicy,
   type IAdmissionRequest,
@@ -110,6 +115,7 @@ export {
   type ICheckOutcome,
   type ICompletedResultReference,
   type ICompleteOutcomeFoldCoverage,
+  type IDeferralMode,
   type IDiscoveryReport,
   type IFoldCoverage,
   type IFoldOutcome,
@@ -121,13 +127,35 @@ export {
   type IMemberOutcome,
   type IMembersReport,
   type IMembersTarget,
+  type IOperationAttribution,
+  type IOperationBlock,
+  type IOperationEvent,
+  type IOperationPhase,
+  type IOperationQuantity,
+  type IOperationReason,
+  type IOperationRemoteState,
+  type IOperationRequest,
+  type IOperationResponse,
+  type IOperationRetryPolicy,
+  type IOperationSend,
+  type IOperationSettlement,
+  type IOperationSettlementRecord,
+  type IOperationStatus,
+  type IOperationSubject,
+  type IOperationUsage,
+  type IOperationView,
   type IOrdinaryPhase,
   type IOutcomeFoldCoverage,
   type IOutcomeFoldOutcome,
   type IOutcomeFoldReport,
   type IOutcomeFoldRunOutcome,
+  type IPromotionEvidence,
+  type IPromotionRecord,
+  type IPromotionRequest,
   type IRecoveryResult,
   type IRemoteState,
+  type IRequestAttemptStatus,
+  type IRequestAttemptView,
   type IRequestOptions,
   type IResolutionErrorCode,
   type IResolutionOutcome,
@@ -146,7 +174,13 @@ export {
   type IStopState,
   type IStrictFoldOutcome,
   type ISupervisionErrorCode,
+  type IUnknownUsage,
+  type IUsageFilter,
+  type IUsageQuery,
+  type IUsageSummary,
+  type IWaitEvent,
   type IWorkspace,
+  type IWorkspaceAccounting,
   type IWorkspaceOptions,
   type IWorkspaceRun,
   type IWorkspaceRunOptions,

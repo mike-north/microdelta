@@ -8,9 +8,11 @@
  * ports exactly as assembly would, supplies a controlled clock for
  * Supervision's deferral times, and records the events a run offers.
  *
- * The facade does not yet expose accounting wiring (decided with the facade
- * assembly issue), so these suites assemble Supervision directly. Accounting
- * is a development dependency of the facade package and is composed only here.
+ * These suites assemble Supervision directly because they need a controlled
+ * clock, which the facade's Node timer does not offer; the facade's own
+ * assembly of the same ports is exercised in `test/workspace-operations`.
+ * Accounting is a development dependency of the facade package: tests inject
+ * its durable adapter, and the facade itself never imports it.
  *
  * @see ../../../../docs/spec/operations.md (RUN-011 to RUN-017, ACC-003, ACC-005, ACC-007)
  * @see ../../../../experiments/exp-8/decision.md

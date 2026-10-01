@@ -16,6 +16,7 @@ import type { IAbortSignal as IAbortSignal_2 } from '@microdelta/supervision';
 import type { IAdmissionDecision as IAdmissionDecision_2 } from '@microdelta/resolution';
 import type { IAdmissionRequest as IAdmissionRequest_2 } from '@microdelta/resolution';
 import type { IAnyTemplateDeclaration as IAnyTemplateDeclaration_2 } from '@microdelta/definition';
+import type { IAttemptUsage as IAttemptUsage_2 } from '@microdelta/supervision';
 import type { IBindingDescriptor } from '@microdelta/definition';
 import type { ICancelledEntry as ICancelledEntry_2 } from '@microdelta/definition';
 import type { ICandidateMiss as ICandidateMiss_2 } from '@microdelta/resolution';
@@ -28,6 +29,7 @@ import type { ICompleteOutcomeFoldCoverage as ICompleteOutcomeFoldCoverage_2 } f
 import type { IComposition as IComposition_2 } from '@microdelta/definition';
 import type { IDeclarations } from '@microdelta/definition';
 import type { IDeclaredCallHandle as IDeclaredCallHandle_2 } from '@microdelta/definition';
+import type { IDeferralMode as IDeferralMode_2 } from '@microdelta/supervision';
 import { Identity } from '@microdelta/history';
 import type { IDerivedArguments as IDerivedArguments_2 } from '@microdelta/definition';
 import type { IDiscoveryReport as IDiscoveryReport_2 } from '@microdelta/supervision';
@@ -54,6 +56,24 @@ import type { IMemberOutcome as IMemberOutcome_2 } from '@microdelta/supervision
 import type { IMembersReport as IMembersReport_2 } from '@microdelta/supervision';
 import type { IMembersTarget as IMembersTarget_2 } from '@microdelta/supervision';
 import { InvalidStorePatchError } from '@microdelta/history';
+import type { IOperationAccounting } from '@microdelta/supervision';
+import type { IOperationAttribution as IOperationAttribution_2 } from '@microdelta/supervision';
+import type { IOperationBlock as IOperationBlock_2 } from '@microdelta/supervision';
+import type { IOperationEvent as IOperationEvent_2 } from '@microdelta/supervision';
+import type { IOperationPhase as IOperationPhase_2 } from '@microdelta/supervision';
+import type { IOperationQuantity as IOperationQuantity_2 } from '@microdelta/supervision';
+import type { IOperationReason as IOperationReason_2 } from '@microdelta/supervision';
+import type { IOperationRemoteState as IOperationRemoteState_2 } from '@microdelta/supervision';
+import type { IOperationRequest as IOperationRequest_2 } from '@microdelta/supervision';
+import type { IOperationResponse as IOperationResponse_2 } from '@microdelta/supervision';
+import type { IOperationRetryPolicy as IOperationRetryPolicy_2 } from '@microdelta/supervision';
+import type { IOperationSend as IOperationSend_2 } from '@microdelta/supervision';
+import type { IOperationSettlement as IOperationSettlement_2 } from '@microdelta/supervision';
+import type { IOperationSettlementRecord as IOperationSettlementRecord_2 } from '@microdelta/supervision';
+import type { IOperationStatus as IOperationStatus_2 } from '@microdelta/supervision';
+import type { IOperationSubject as IOperationSubject_2 } from '@microdelta/supervision';
+import type { IOperationUsage as IOperationUsage_2 } from '@microdelta/supervision';
+import type { IOperationView as IOperationView_2 } from '@microdelta/supervision';
 import type { IOrdinaryPhase as IOrdinaryPhase_2 } from '@microdelta/supervision';
 import type { IOutcomeEntry as IOutcomeEntry_2 } from '@microdelta/definition';
 import type { IOutcomeFoldCoverage as IOutcomeFoldCoverage_2 } from '@microdelta/resolution';
@@ -63,8 +83,11 @@ import type { IOutcomeFoldReport as IOutcomeFoldReport_2 } from '@microdelta/sup
 import type { IOutcomeFoldRunOutcome as IOutcomeFoldRunOutcome_2 } from '@microdelta/supervision';
 import type { IPathInput as IPathInput_2 } from '@microdelta/definition';
 import type { IPreviousResult as IPreviousResult_2 } from '@microdelta/resolution';
+import type { IPromotionRecord as IPromotionRecord_2 } from '@microdelta/history';
 import type { IRecoveryResult as IRecoveryResult_2 } from '@microdelta/resolution';
 import type { IRemoteState as IRemoteState_2 } from '@microdelta/supervision';
+import type { IRequestAttemptStatus as IRequestAttemptStatus_2 } from '@microdelta/supervision';
+import type { IRequestAttemptView as IRequestAttemptView_2 } from '@microdelta/supervision';
 import type { IRequestOptions as IRequestOptions_2 } from '@microdelta/supervision';
 import type { IResolutionErrorCode as IResolutionErrorCode_2 } from '@microdelta/resolution';
 import type { IResolutionFamily } from '@microdelta/resolution';
@@ -97,6 +120,8 @@ import type { ISuppliedStepRegistration as ISuppliedStepRegistration_2 } from '@
 import type { ITrackedHelpers as ITrackedHelpers_2 } from '@microdelta/resolution';
 import type { ITrackedView as ITrackedView_2 } from '@microdelta/tracking';
 import type { IUntrackedRead as IUntrackedRead_2 } from '@microdelta/resolution';
+import type { IVersionedRecord } from '@microdelta/history';
+import type { IWaitEvent as IWaitEvent_2 } from '@microdelta/supervision';
 import type { IWriterWaitOptions as IWriterWaitOptions_2 } from '@microdelta/supervision';
 import { MemoryStoreOptions } from '@microdelta/history';
 import { MissingRowError } from '@microdelta/history';
@@ -160,6 +185,9 @@ export type IAdmissionRequest = IAdmissionRequest_2;
 export type IAnyTemplateDeclaration<TInputs extends object, THelpers extends object> = IAnyTemplateDeclaration_2<IAuthoringFamily<TInputs, THelpers>>;
 
 // @alpha
+export type IAttemptUsage = IAttemptUsage_2;
+
+// @alpha
 export type IAuthoring<TInputs extends object, THelpers extends object> = IDeclarations<IAuthoringFamily<TInputs, THelpers>>;
 
 // @alpha
@@ -194,6 +222,9 @@ export type IComposition<TInputs extends object, THelpers extends object> = ICom
 
 // @alpha
 export type IDeclaredCallHandle<T> = IDeclaredCallHandle_2<T>;
+
+// @alpha
+export type IDeferralMode = IDeferralMode_2;
 
 export { Identity }
 
@@ -269,6 +300,57 @@ export type IMembersTarget = IMembersTarget_2;
 export { InvalidStorePatchError }
 
 // @alpha
+export type IOperationAttribution = IOperationAttribution_2;
+
+// @alpha
+export type IOperationBlock = IOperationBlock_2;
+
+// @alpha
+export type IOperationEvent = IOperationEvent_2;
+
+// @alpha
+export type IOperationPhase = IOperationPhase_2;
+
+// @alpha
+export type IOperationQuantity = IOperationQuantity_2;
+
+// @alpha
+export type IOperationReason = IOperationReason_2;
+
+// @alpha
+export type IOperationRemoteState = IOperationRemoteState_2;
+
+// @alpha
+export type IOperationRequest<T> = IOperationRequest_2<T>;
+
+// @alpha
+export type IOperationResponse<T> = IOperationResponse_2<T>;
+
+// @alpha
+export type IOperationRetryPolicy = IOperationRetryPolicy_2;
+
+// @alpha
+export type IOperationSend = IOperationSend_2;
+
+// @alpha
+export type IOperationSettlement = IOperationSettlement_2;
+
+// @alpha
+export type IOperationSettlementRecord = IOperationSettlementRecord_2;
+
+// @alpha
+export type IOperationStatus = IOperationStatus_2;
+
+// @alpha
+export type IOperationSubject = IOperationSubject_2;
+
+// @alpha
+export type IOperationUsage = IOperationUsage_2;
+
+// @alpha
+export type IOperationView = IOperationView_2;
+
+// @alpha
 export type IOrdinaryPhase = IOrdinaryPhase_2;
 
 // @alpha
@@ -296,10 +378,29 @@ export type IPathInput = IPathInput_2;
 export type IPreviousResult<T> = IPreviousResult_2<T>;
 
 // @alpha
+export type IPromotionEvidence = IVersionedRecord;
+
+// @alpha
+export type IPromotionRecord = IPromotionRecord_2;
+
+// @alpha
+export interface IPromotionRequest {
+    readonly evidence: IPromotionEvidence;
+    readonly into: string;
+    readonly references: readonly ICompletedResultReference[];
+}
+
+// @alpha
 export type IRecoveryResult = IRecoveryResult_2;
 
 // @alpha
 export type IRemoteState = IRemoteState_2;
+
+// @alpha
+export type IRequestAttemptStatus = IRequestAttemptStatus_2;
+
+// @alpha
+export type IRequestAttemptView = IRequestAttemptView_2;
 
 // @alpha
 export type IRequestOptions = IRequestOptions_2;
@@ -392,7 +493,52 @@ export type ITrackedHelpers<THelpers extends object> = ITrackedHelpers_2<THelper
 export type ITrackedView<T> = ITrackedView_2<T>;
 
 // @alpha
+export interface IUnknownUsage {
+    // (undocumented)
+    readonly attribution: IOperationAttribution;
+    // (undocumented)
+    readonly operation: string;
+    // (undocumented)
+    readonly requestAttempt: string;
+}
+
+// @alpha
 export type IUntrackedRead = IUntrackedRead_2;
+
+// @alpha
+export interface IUsageFilter {
+    // (undocumented)
+    readonly member?: string;
+    // (undocumented)
+    readonly operation?: string;
+    // (undocumented)
+    readonly run?: string;
+    // (undocumented)
+    readonly stepAttempt?: string;
+}
+
+// @alpha
+export interface IUsageQuery extends IUsageFilter {
+    readonly environment: string;
+}
+
+// @alpha
+export interface IUsageSummary {
+    // (undocumented)
+    readonly environment: string;
+    // (undocumented)
+    readonly observed: readonly IOperationQuantity[];
+    readonly operations: number;
+    readonly reports: number;
+    readonly requestAttempts: number;
+    // (undocumented)
+    readonly status: 'complete' | 'incomplete';
+    // (undocumented)
+    readonly unknown: readonly IUnknownUsage[];
+}
+
+// @alpha
+export type IWaitEvent = IWaitEvent_2;
 
 // @alpha
 export interface IWorkspace {
@@ -402,15 +548,24 @@ export interface IWorkspace {
 }
 
 // @alpha
+export interface IWorkspaceAccounting extends IOperationAccounting {
+    summarizeUsage(query: IUsageQuery): IUsageSummary;
+}
+
+// @alpha
 export interface IWorkspaceOptions {
+    readonly accounting?: IWorkspaceAccounting;
     readonly leaseMilliseconds?: number;
     readonly location: string;
     readonly logicalStore: string;
 }
 
 // @alpha
-export interface IWorkspaceRun extends Omit<IRun, 'assertDeclaredCall'> {
+export interface IWorkspaceRun extends Omit<IRun, 'assertDeclaredCall' | 'withWriterLease'> {
+    promote(request: IPromotionRequest): Promise<IPromotionRecord>;
+    promotions(): readonly IPromotionRecord[];
     read<T>(reference: ICompletedResultReference): T;
+    usage(filter?: IUsageFilter): IUsageSummary;
 }
 
 // @alpha
@@ -418,6 +573,7 @@ export interface IWorkspaceRunOptions<TInputs extends object, THelpers extends o
     readonly admission?: IAdmissionPolicy;
     readonly authoring: IAuthoring<TInputs, THelpers>;
     readonly composition: IComposition<TInputs, THelpers>;
+    readonly deferral?: IDeferralMode;
     readonly environment: string;
     readonly observers?: readonly IRunObserver[];
     readonly permits?: number;

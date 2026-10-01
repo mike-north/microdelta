@@ -4,8 +4,8 @@
  * facade's own import of `@microdelta/machine-node` to this module, so the
  * assembled workspace runs over:
  *
- * - the real Node Machine, clock, timer and canonical store location,
- *   re-exported unchanged;
+ * - the real Node Machine, clock, timer, random identifier source and
+ *   canonical store location, re-exported unchanged;
  * - the real Node SQLite capability, wrapped to *observe* every production
  *   statement (its role tag and any author-payload cells it returned) and to
  *   *interrupt* the process with SIGKILL immediately before or after the
@@ -21,9 +21,9 @@
 import { writeSync } from 'node:fs';
 
 import type { ISqliteCapability } from '@microdelta/history';
-import { canonicalNodeLocation, createNodeClock, createNodeMachine, createNodeSqlite as createRealNodeSqlite, createNodeTimer } from '@microdelta/machine-node';
+import { canonicalNodeLocation, createNodeClock, createNodeMachine, createNodeRandom, createNodeSqlite as createRealNodeSqlite, createNodeTimer } from '@microdelta/machine-node';
 
-export { canonicalNodeLocation, createNodeClock, createNodeMachine, createNodeTimer };
+export { canonicalNodeLocation, createNodeClock, createNodeMachine, createNodeRandom, createNodeTimer };
 
 /** One live connection as History receives it. */
 type IConnection = ReturnType<ISqliteCapability['openSqlite']>;

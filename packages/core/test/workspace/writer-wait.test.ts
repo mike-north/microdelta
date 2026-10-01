@@ -16,6 +16,10 @@
  * @see ../../../../docs/spec/execution.md (PUB-002, PUB-005)
  * @see ../../../../docs/plans/m5-operations.md (Writer lease)
  */
+import { mkdtempSync, rmSync, symlinkSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { basename, dirname, join } from 'node:path';
+
 import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
 import type { IWriterLease } from '@microdelta/history';
 import { createNodeClock } from '@microdelta/machine-node';
@@ -191,6 +195,76 @@ describe('waiting for the writer lease through the workspace (RUN-002 owner deci
   });
 });
 
+/**
+ * Start a nested run from inside `outer`'s run and report how it settled
+ * within 2 s: its error, `completed`, or that it was still waiting.
+ */
+async function nestedOutcome(start: () => Promise<unknown>): Promise<{ readonly outcome: unknown; readonly elapsed: number }> {
+  const started = Date.now();
+  const outcome = await Promise.race([start().then(() => 'completed', (error: unknown) => error), elapse(2_000).then(() => 'still waiting after 2 s')]);
+  return { outcome, elapsed: Date.now() - started };
+}
+
+/** Assert a nested run was refused promptly with the typed invalid-request that names the reason. */
+function expectNestedRefusal(result: { readonly outcome: unknown; readonly elapsed: number } | undefined): void {
+  expect(result?.outcome).toBeInstanceOf(SupervisionError);
+  expect(result?.outcome instanceof SupervisionError ? result.outcome.code : undefined).toBe('invalid-request');
+  expect(result?.outcome instanceof Error ? result.outcome.message : '').toMatch(/inside an open run over the same store/u);
+  expect(result?.elapsed).toBeLessThan(1_000);
+}
+
+describe('a run started from inside an open run over the same store', () => {
+  test('is refused for a second workspace object opened over the same store file', async () => {
+    const second = openWorkspace({ location: store.location, logicalStore });
+    let result: { readonly outcome: unknown; readonly elapsed: number } | undefined;
+    try {
+      await workspace.run(options('run:outer'), async (outer) => {
+        await outer.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
+        result = await nestedOutcome(() => second.run(options('run:inner'), (run) => run.resolve(contributors.steps['person:ben'].summary, { requestKey: freshRequestKey() })));
+      });
+    } finally {
+      second.close();
+    }
+    expectNestedRefusal(result);
+  });
+
+  test('is refused when the second workspace names the same file by another spelling, through a symbolic link', async () => {
+    const linkDirectory = mkdtempSync(join(tmpdir(), 'microdelta-link-'));
+    const link = join(linkDirectory, 'store-link');
+    symlinkSync(dirname(store.location), link);
+    const second = openWorkspace({ location: `${link}/./${basename(store.location)}`, logicalStore });
+    let result: { readonly outcome: unknown; readonly elapsed: number } | undefined;
+    try {
+      await workspace.run(options('run:outer'), async (outer) => {
+        await outer.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
+        result = await nestedOutcome(() => second.run(options('run:inner'), (run) => run.resolve(contributors.steps['person:ben'].summary, { requestKey: freshRequestKey() })));
+      });
+    } finally {
+      second.close();
+      rmSync(linkDirectory, { recursive: true, force: true });
+    }
+    expectNestedRefusal(result);
+  });
+
+  test('is refused when a run over another store sits between it and the enclosing run over the same store', async () => {
+    const otherStore = tempStore();
+    const otherWorkspace = openWorkspace({ location: otherStore.location, logicalStore });
+    let result: { readonly outcome: unknown; readonly elapsed: number } | undefined;
+    try {
+      await workspace.run(options('run:outer'), async (outer) => {
+        await outer.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
+        await otherWorkspace.run(options('run:middle'), async () => {
+          result = await nestedOutcome(() => workspace.run(options('run:inner'), (run) => run.resolve(contributors.steps['person:ben'].summary, { requestKey: freshRequestKey() })));
+        });
+      });
+    } finally {
+      otherWorkspace.close();
+      otherStore.remove();
+    }
+    expectNestedRefusal(result);
+  });
+});
+
 describe('a run started from inside an open run of the same workspace', () => {
   test('is refused promptly with invalid-request instead of waiting forever for the lease its caller holds', async () => {
     let outcome: unknown;
@@ -205,7 +279,7 @@ describe('a run started from inside an open run of the same workspace', () => {
     });
     expect(outcome).toBeInstanceOf(SupervisionError);
     expect(outcome instanceof SupervisionError ? outcome.code : undefined).toBe('invalid-request');
-    expect(outcome instanceof Error ? outcome.message : '').toMatch(/inside an open run of the same workspace/u);
+    expect(outcome instanceof Error ? outcome.message : '').toMatch(/inside an open run over the same store/u);
     expect(elapsed).toBeLessThan(1_000);
   });
 

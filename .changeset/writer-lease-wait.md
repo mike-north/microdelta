@@ -1,5 +1,6 @@
 ---
 "@microdelta/history": minor
+"@microdelta/machine-node": minor
 "@microdelta/supervision": minor
 "microdelta": minor
 ---
@@ -16,5 +17,5 @@ Wait for the store's writer lease until an operator deadline, with a typed write
   - `renewWriter` now returns an `IWriterRenewal`, either `renewed` with the extended lease or `contended`. A busy renewal therefore leaves the lease in place instead of being treated as stale.
 
   Neither ever surfaces a raw driver error. Renewal and release no longer assign the writer row's fence column; only a grant writes it.
-- **Nested runs.** A workspace run started from inside an open run of the same workspace is refused at once with `invalid-request`; it would otherwise wait forever for the lease its caller holds.
+- **Nested runs.** A workspace run started from inside an open run over the same store file is refused at once with `invalid-request`; it would otherwise wait forever for the lease its caller holds. This holds whichever workspace object opened the file and however its location was spelled, using machine-node's new `canonicalNodeLocation`, which gives an existing file's real path.
 - **Facade.** Workspace runs accept `writerWait`, and the facade exports `WriterBusyError` and `IWriterWaitOptions`.

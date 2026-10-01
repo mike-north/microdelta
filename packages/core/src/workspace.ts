@@ -28,7 +28,7 @@ import type {
 } from '@microdelta/resolution';
 import { openDurableHistory } from '@microdelta/history';
 import type { ICompletedResultReference as IHistoryReference } from '@microdelta/history';
-import { createNodeClock, createNodeSqlite, createNodeTimer } from '@microdelta/machine-node';
+import { canonicalNodeLocation, createNodeClock, createNodeSqlite, createNodeTimer } from '@microdelta/machine-node';
 import { ResolutionError as ResolutionErrorClass, createResolution } from '@microdelta/resolution';
 import {
   SupervisionError as SupervisionErrorClass,
@@ -381,10 +381,12 @@ export interface IWorkspace {
    * holder releases it or its lease expires, and fail with
    * `WriterBusyError` naming the holder if the operator's deadline
    * passes first. `check` and `recover` never wait. A run cannot start from
-   * inside an open run of the same workspace, including its ordinary work and
-   * author code: it would wait for the lease its own caller holds, so it is
-   * refused at once with `invalid-request`. A run of another workspace, or
-   * one started after the outer run closed, is unaffected. The run stays live, with its context,
+   * inside an open run over the same store file, including that run's
+   * ordinary work and author code, whichever workspace object opened the file
+   * and however its location was spelled, and also when runs over other
+   * stores stand between them: it would wait for the lease its own caller
+   * holds, so it is refused at once with `invalid-request`. A run over another
+   * store, or one started after the outer run closed, is unaffected. The run stays live, with its context,
    * exact reads and writer, until the body and every operation started
    * through the run have settled, even when the body stopped awaiting them
    * early (for example a `Promise.all` whose sibling failed); the body's own
@@ -412,6 +414,55 @@ const timer = createNodeTimer();
  * whichever run is live in its asynchronous execution.
  */
 const supervision = createSupervision({ context: machine, timer });
+
+/** Where one live workspace run stands: the store it writes and the run it was started inside, if any. */
+interface ILiveRun {
+  /** The canonical location of the store file the run's workspace opened. */
+  readonly store: string;
+  /** The live run whose asynchronous context started this one, of any workspace. */
+  readonly parent: IRunContext | undefined;
+}
+
+/**
+ * Every workspace run in this process whose body has started and that has
+ * not yet settled, across all workspace objects, since they share the one
+ * Supervision above. Runs are keyed by their context, the object
+ * `currentRun()` returns, and record their store and their enclosing run, so
+ * a nested run is recognized by its store however many workspace objects, and
+ * runs over other stores, stand between them. An entry is removed when its run
+ * settles; a closed run is never found anyway, because lookups inside it fail
+ * with `run-closed`, so removal only keeps this registry from growing with
+ * every run a process ever started.
+ */
+const liveRuns = new Map<IRunContext, ILiveRun>();
+
+/** The live run of the current asynchronous execution, of any workspace, or undefined outside one. */
+function currentLiveRun(): IRunContext | undefined {
+  try {
+    return supervision.current();
+  } catch (error: unknown) {
+    // Outside any live run, inside a closed one, or while composing: no run encloses the caller.
+    if (error instanceof SupervisionErrorClass) {
+      return undefined;
+    }
+    throw error;
+  }
+}
+
+/**
+ * The open run over `store` that encloses `context`, directly or through
+ * runs over other stores, if any. A run started there would wait for the
+ * writer lease its own caller holds, and with no default deadline it would
+ * wait forever.
+ */
+function enclosingRunOver(store: string, context: IRunContext | undefined): IRunContext | undefined {
+  for (let current = context; current !== undefined; current = liveRuns.get(current)?.parent) {
+    if (liveRuns.get(current)?.store === store) {
+      return current;
+    }
+  }
+  return undefined;
+}
 
 /** Deeply freeze decoded result data so a read can never be mutated into looking current. */
 function deepFreeze<T>(value: T): T {
@@ -442,30 +493,15 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
     location: options.location,
     logicalStore: options.logicalStore,
   });
+  /**
+   * The store's file identity, however the caller spelled its location:
+   * workspace objects over one file share one writer lease, so they share one
+   * key for nested-run refusal. The file exists once History has opened it.
+   */
+  const store = canonicalNodeLocation(options.location);
   let open = true;
   /** Process-local counter distinguishing this workspace's runs. */
   let runCounter = 0;
-  /** The contexts of this workspace's runs whose bodies have started and that have not yet settled. */
-  const liveRuns = new Set<IRunContext>();
-
-  /**
-   * The open run of this workspace whose asynchronous context the caller is
-   * in, if any. A run started there would wait for the writer lease its own
-   * caller holds, and with no default deadline it would wait forever.
-   */
-  function enclosingRun(): IRunContext | undefined {
-    let context: IRunContext;
-    try {
-      context = supervision.current();
-    } catch (error: unknown) {
-      // Outside any live run (or while composing): there is no enclosing run of this workspace.
-      if (error instanceof SupervisionErrorClass) {
-        return undefined;
-      }
-      throw error;
-    }
-    return liveRuns.has(context) ? context : undefined;
-  }
 
   return Object.freeze({
     logicalStore: history.logicalStore,
@@ -476,11 +512,12 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
       if (!open) {
         return Promise.reject(new SupervisionErrorClass('invalid-request', 'This workspace has been closed'));
       }
-      const enclosing = enclosingRun();
+      const parent = currentLiveRun();
+      const enclosing = enclosingRunOver(store, parent);
       if (enclosing !== undefined) {
         return Promise.reject(new SupervisionErrorClass(
           'invalid-request',
-          `A workspace run cannot start inside an open run of the same workspace (${enclosing.runId}): it would wait for the writer lease that run holds`,
+          `A workspace run cannot start inside an open run over the same store (${enclosing.runId}): it would wait for the writer lease that run holds`,
         ));
       }
       const { authoring, composition } = runOptions;
@@ -515,7 +552,7 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
         }),
       }, (live) => {
         started = live.context;
-        liveRuns.add(live.context);
+        liveRuns.set(live.context, Object.freeze({ store, parent }));
         const run: IWorkspaceRun = Object.freeze({
           context: live.context,
           get open(): boolean {
@@ -541,6 +578,8 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
         });
         return body(run);
       });
+      // Forgetting a settled run only bounds the registry's memory: a closed run
+      // can no longer enclose anything, since lookups inside it fail with run-closed.
       const forget = (): void => {
         if (started !== undefined) {
           liveRuns.delete(started);

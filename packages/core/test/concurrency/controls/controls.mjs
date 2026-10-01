@@ -36,8 +36,11 @@ export const waitTestTarget = 'packages/supervision/.test-build/src/writer.js';
 /** The facade's writer port as the facade's tests and workers load it, from the facade's test build. */
 export const portTarget = 'packages/core/.test-build/src/writer.js';
 
+/** Run Supervision's run engine as its own owner tests load it, from its test build. */
+export const runTestTarget = 'packages/supervision/.test-build/src/supervision.js';
+
 /** Every emitted file some control plants into. */
-export const targets = Object.freeze([target, waitTarget, waitTestTarget, portTarget]);
+export const targets = Object.freeze([target, waitTarget, waitTestTarget, portTarget, runTestTarget]);
 
 /** The file one control plants into. */
 export function targetOf(control) {
@@ -51,7 +54,8 @@ export function targetOf(control) {
  * name order), since both compile the same source to the same JavaScript.
  */
 export function anchorSourceOf(control) {
-  return targetOf(control) === waitTestTarget ? waitTarget : targetOf(control);
+  const path = targetOf(control);
+  return path.startsWith('packages/supervision/.test-build/') ? path.replace('/.test-build/', '/dist/') : path;
 }
 
 /**
@@ -198,6 +202,17 @@ export const controls = Object.freeze([
     target: waitTestTarget,
     group: 'supervision',
     edits: [{ anchor: 'removeListener();\n            resolve();', replacement: 'resolve();' }],
+  },
+  {
+    name: 'an outcome-fold request tries the writer once and fails busy instead of waiting',
+    model: null,
+    unmodeled: 'Which run operation waits is Supervision wiring outside the model; the owner suite runs the wait over every normal request.',
+    target: runTestTarget,
+    group: 'supervision',
+    edits: [{
+      anchor: 'const lease = await writerLease();\n                    const resolved = await resolution.resolveOutcomeFold(',
+      replacement: "const tried = writer.tryLease();\n                    if (tried.kind !== 'acquired') {\n                        throw new SupervisionError('writer-busy', 'single try without waiting');\n                    }\n                    const lease = tried.lease;\n                    const resolved = await resolution.resolveOutcomeFold(",
+    }],
   },
   {
     // Both layers are weakened: the lifecycle check and the SQL state predicate.

@@ -23,7 +23,19 @@
  */
 import { describe, expect, test } from '@jest/globals';
 import type { IBindingDescriptor } from '@microdelta/definition';
-import type { ICheckOutcome, IRecoveryResult, IResolution, IResolutionOutcome, IResolveRequest } from '@microdelta/resolution';
+import type {
+  ICheckOutcome,
+  IDiscoveryOutcome,
+  IFoldRequest,
+  IFoldResolution,
+  IMembersRequest,
+  IMembersResolution,
+  IOutcomeFoldResolution,
+  IRecoveryResult,
+  IResolution,
+  IResolutionOutcome,
+  IResolveRequest,
+} from '@microdelta/resolution';
 
 import { SupervisionError, WriterBusyError, createStopController, createSupervision } from '../src/index.js';
 import type { IAbortSignal, IRun, IRunLease, IRunOptions, IRunWriter, ISupervision, IWriterAttempt } from '../src/index.js';
@@ -86,10 +98,22 @@ function heldThenExpires(expiresAt: number): (now: number) => IWriterAttempt {
   return (now) => (now < expiresAt ? heldUntil(expiresAt) : Object.freeze({ kind: 'acquired', lease: leaseOf(2, now) }));
 }
 
+/** The template step a fold consumes, as the doubles below report it. */
+const foldOver: IBindingDescriptor = Object.freeze({ scope: 'analysis:test', role: 'step', slot: 'summary', template: 'contributor', collection: 'contributors' });
+
+/** Discovery that keyed no members yet: enough for a members or fold request to settle without member work. */
+const noMembers: IDiscoveryOutcome = Object.freeze({
+  kind: 'keyed',
+  collection: Object.freeze({ scope: 'analysis:test', role: 'step', slot: 'contributors' }),
+  reference: Object.freeze({ kind: 'completed-result', locator: 'mdh1:test:collection' }),
+  completion: 'open',
+  keys: [],
+});
+
 /** A Resolution double that records the lease of every normal request and publishes. */
 interface ILeaseRecorder {
   readonly factory: IRunOptions['resolution'];
-  /** The lease every `resolve` received, in call order. */
+  /** The lease every normal request (resolve, members, fold or outcome fold) received, in call order. */
   readonly leases: IRunLease[];
   /** How many check and recover requests reached Resolution. */
   readonly inspections: { count: number };
@@ -99,7 +123,6 @@ interface ILeaseRecorder {
 function leaseRecorder(): ILeaseRecorder {
   const leases: IRunLease[] = [];
   const inspections = { count: 0 };
-  const unused = (): Promise<never> => Promise.reject(new Error('not used by this suite'));
   const resolution: IResolution = {
     resolve(request: IResolveRequest): Promise<IResolutionOutcome> {
       leases.push(request.lease);
@@ -113,9 +136,37 @@ function leaseRecorder(): ILeaseRecorder {
         diagnostics: [],
       }));
     },
-    resolveMembers: unused,
-    resolveFold: unused,
-    resolveOutcomeFold: unused,
+    resolveMembers(request: IMembersRequest): Promise<IMembersResolution> {
+      leases.push(request.lease);
+      return Promise.resolve(Object.freeze({ template: request.template, discovery: noMembers, members: [], diagnostics: [] }));
+    },
+    resolveFold(request: IFoldRequest): Promise<IFoldResolution> {
+      leases.push(request.lease);
+      return Promise.resolve(Object.freeze({
+        over: foldOver,
+        discovery: noMembers,
+        members: [],
+        outcome: Object.freeze({ step: request.step, misses: [], trace: [], diagnostics: [], kind: 'waiting', pending: [], openDiscovery: true }),
+        diagnostics: [],
+      }));
+    },
+    resolveOutcomeFold(request: IFoldRequest): Promise<IOutcomeFoldResolution> {
+      leases.push(request.lease);
+      return Promise.resolve(Object.freeze({
+        over: foldOver,
+        discovery: noMembers,
+        members: [],
+        outcome: Object.freeze({
+          step: request.step,
+          misses: [],
+          trace: [],
+          diagnostics: [],
+          kind: 'waiting',
+          coverage: Object.freeze({ succeeded: [], skipped: [], failed: [], cancelled: [], pending: [], openDiscovery: true, complete: false as const }),
+        }),
+        diagnostics: [],
+      }));
+    },
     check(): Promise<ICheckOutcome> {
       inspections.count += 1;
       return Promise.resolve(Object.freeze({ kind: 'execution-required', step, misses: [] }));
@@ -227,6 +278,32 @@ describe('waiting for the writer lease (RUN-002 owner decision)', () => {
     expect(port.attempts).toEqual([T0, T0 + 1_000, T0 + 2_000, T0 + 3_000]);
     expect(recorder.leases).toEqual([leaseOf(2, T0 + 3_000)]);
     expect(request.current().value?.kind).toBe('published');
+    expect(port.releases.count).toBe(1);
+  });
+
+  test.each([
+    ['resolve', (live: IRun): Promise<unknown> => live.resolve(step, { requestKey: 'request:1' })],
+    ['resolveMembers', (live: IRun): Promise<unknown> => live.resolveMembers({ template: 'contributor', step: 'summary' }, { requestKey: 'request:1' })],
+    ['resolveFold', (live: IRun): Promise<unknown> => live.resolveFold(stepOf('report'), { requestKey: 'request:1' })],
+    ['resolveOutcomeFold', (live: IRun): Promise<unknown> => live.resolveOutcomeFold(stepOf('tally'), { requestKey: 'request:1' })],
+  ] as const)('a %s request waits for a held lease at the poll interval and runs with the lease once it is granted', async (_operation, request) => {
+    const timer = fakeTimer();
+    const recorder = leaseRecorder();
+    const port = scriptedWriter(timer, (now) => (now < T0 + 2_500 ? heldUntil(T0 + hour) : Object.freeze({ kind: 'acquired', lease: leaseOf(2, now) })));
+    let pending: { readonly current: () => ISettlement<unknown> } | undefined;
+    const run = supervisionWith(timer).run(optionsOver(port.writer, recorder, { writerWait: { pollMilliseconds: 1_000 } }), (live) => {
+      const work = request(live);
+      pending = track(work);
+      return work.then(() => 'done', () => 'failed');
+    });
+    await advance(timer, 2_000, 1_000);
+    expect(port.attempts).toEqual([T0, T0 + 1_000, T0 + 2_000]);
+    expect(pending?.current().settled).toBe(false);
+    expect(recorder.leases).toEqual([]);
+    await advance(timer, 1_000);
+    expect(await run).toMatchObject({ value: 'done' });
+    expect(port.attempts).toEqual([T0, T0 + 1_000, T0 + 2_000, T0 + 3_000]);
+    expect(recorder.leases).toEqual([leaseOf(2, T0 + 3_000)]);
     expect(port.releases.count).toBe(1);
   });
 

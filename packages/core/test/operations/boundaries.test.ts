@@ -31,7 +31,9 @@ import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
 import { createNodeSqlite } from '@microdelta/machine-node';
 import { ResolutionError } from '@microdelta/resolution';
 import { SupervisionError, createStopController, operationsCollection } from '@microdelta/supervision';
-import type { ICompletedResultReference } from '@microdelta/history';
+import { AttemptConflictError, HistoryIntegrityError } from '@microdelta/history';
+import type { ICompletedResultReference, IDurableHistory } from '@microdelta/history';
+import type { IResolutionHistory } from '@microdelta/resolution';
 
 import { faultySqlite } from '../accounting/support.js';
 import { analysis, createWorld, installWorld } from './fixture.js';
@@ -634,6 +636,85 @@ describe('ended attempts and request keys', () => {
       ])).done;
       expect(codes.value).toEqual(['invalid-request', 'invalid-request', 'invalid-request']);
       expect(world.provider.ledger()).toEqual([]);
+    } finally {
+      session.close();
+    }
+  });
+});
+
+/** The History writes Resolution makes under the writer lease. */
+type ILeaseWrite = 'allocateAttempt' | 'stageAttempt' | 'publishAttempt' | 'recordAcceptance' | 'abandonAttempt';
+
+/** A History port double whose one write `write` always fails with `failure`; every other operation is the real one. */
+function failingAt(write: ILeaseWrite, failure: () => Error): (history: IDurableHistory) => IResolutionHistory {
+  return (history) => {
+    const fail = (): never => {
+      throw failure();
+    };
+    switch (write) {
+      case 'allocateAttempt':
+        return { ...history, allocateAttempt: fail };
+      case 'stageAttempt':
+        return { ...history, stageAttempt: fail };
+      case 'publishAttempt':
+        return { ...history, publishAttempt: fail };
+      case 'recordAcceptance':
+        return { ...history, recordAcceptance: fail };
+      case 'abandonAttempt':
+        return { ...history, abandonAttempt: fail };
+      default: {
+        const exhaustive: never = write;
+        return exhaustive;
+      }
+    }
+  };
+}
+
+describe('History failures other than a stale lease keep their own typed outcomes, never lease-lost (EXP-8 ruling R, A-10)', () => {
+  // Only History's stale-writer refusal means the lease is lost. Integrity damage, an attempt key bound to another
+  // intent and unsupported result data each have their own typed outcome, which a lease-lost denial must never mask.
+  test.each([
+    { label: 'claim', write: 'allocateAttempt', failure: () => new HistoryIntegrityError('the attempt index is damaged'), code: 'integrity' },
+    { label: 'allocation', write: 'allocateAttempt', failure: () => new AttemptConflictError('the attempt key is bound to another intent'), code: 'wrong-intent' },
+    { label: 'staging', write: 'stageAttempt', failure: () => new TypeError('the result holds unsupported data'), code: 'unsupported-result' },
+    { label: 'publication', write: 'publishAttempt', failure: () => new HistoryIntegrityError('the staged result is damaged'), code: 'integrity' },
+  ] as const)('the $label write that fails with $code ends the request with $code', async ({ write, failure, code }) => {
+    world.gates.open('parent');
+    const session = openSession(stores, timer, { wrapHistory: failingAt(write, failure) });
+    try {
+      expect(await codeOf(session.start({}, (run) => run.resolve(session.fixture.parent, freshKey())).done)).toBe(code);
+    } finally {
+      session.close();
+    }
+  });
+
+  test('an acceptance write that fails with integrity damage ends the request with integrity', async () => {
+    world.gates.open('parent');
+    const first = openSession(stores, timer);
+    try {
+      expect((await first.start({}, (run) => run.resolve(first.fixture.parent, freshKey())).done).value).toMatchObject({ kind: 'published' });
+    } finally {
+      first.close();
+    }
+    const damaged = openSession(stores, timer, { wrapHistory: failingAt('recordAcceptance', () => new HistoryIntegrityError('the acceptance index is damaged')) });
+    try {
+      expect(await codeOf(damaged.start({}, (run) => run.resolve(damaged.fixture.parent, freshKey())).done)).toBe('integrity');
+    } finally {
+      damaged.close();
+    }
+  });
+
+  test('an attempt ending that fails with integrity damage keeps the step\'s own outcome and is diagnosed as such, not as a lost lease', async () => {
+    world.gates.open('parent');
+    world.provider.script('paid', 'parent', ['rate-limit:3600000']);
+    const session = openSession(stores, timer, { wrapHistory: failingAt('abandonAttempt', () => new HistoryIntegrityError('the attempt row is damaged')) });
+    try {
+      const result = await session.start({ deferral: 'exit' }, (run) => run.resolve(session.fixture.parent, freshKey())).done;
+      // The deferred child withholds its attempt; the parent is refused with the child's own pending reason.
+      expect(result.value).toMatchObject({ kind: 'refused', disposition: 'denied' });
+      expect(result.value).not.toMatchObject({ reason: 'lease-lost' });
+      expect(result.diagnostics.filter((line) => line.includes('could not be ended: the attempt row is damaged')).length).toBeGreaterThan(0);
+      expect(result.diagnostics.join('\n')).not.toContain('no longer current');
     } finally {
       session.close();
     }

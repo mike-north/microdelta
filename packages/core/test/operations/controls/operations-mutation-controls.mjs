@@ -270,6 +270,21 @@ const controls = [
     directory: resolution, file: 'resolution.js',
     anchor: 'if (error instanceof StaleWriterError) {', replacement: 'if (false) {',
   },
+  {
+    name: "a failed body's attempt ending stores the author's error text",
+    directory: resolution, file: 'resolution.js',
+    anchor: "detail: 'the body failed'", replacement: 'detail: frameworkDetail(cause)',
+  },
+  {
+    name: 'every History write failure is reported as a lost lease',
+    directory: resolution, file: 'resolution.js',
+    anchor: 'if (error instanceof StaleWriterError) {', replacement: 'if (true) {',
+  },
+  {
+    name: 'History integrity damage is masked as a lost lease',
+    directory: resolution, file: 'resolution.js',
+    anchor: 'if (error instanceof StaleWriterError) {', replacement: 'if (error instanceof StaleWriterError || error instanceof HistoryIntegrityError) {',
+  },
 ];
 
 /** Emitted files a control may plant into, with their original bytes. */

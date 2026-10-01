@@ -95,7 +95,12 @@ export interface IWorld {
   log: string[];
   /** Gates the test opens. */
   gates: IGates;
+  /** Whether the parent's declared child `paid` fails with the author's own error, carrying {@link childSecret}, before its operation. */
+  paidThrows: boolean;
 }
+
+/** A value planted in the error a failing `paid` child throws: author text no framework message, event or record may repeat (RUN-013). */
+export const childSecret = 'AUTHOR-SECRET-c41d';
 
 /** The Supervision the fixture's helpers look the live run up in. */
 let supervision: ISupervision | undefined;
@@ -110,7 +115,7 @@ export let world: IWorld = createWorld(() => 0);
 
 /** A fresh world over `keys`. */
 export function createWorld(now: () => number, keys: readonly string[] = ['pr-1', 'pr-2', 'pr-3'], ledgerPath?: string): IWorld {
-  return { keys, plans: {}, options: {}, provider: fakeProvider(now, ledgerPath), bindingSuffix: '', cancel: undefined, log: [], gates: gates() };
+  return { keys, plans: {}, options: {}, provider: fakeProvider(now, ledgerPath), bindingSuffix: '', cancel: undefined, log: [], gates: gates(), paidThrows: false };
 }
 
 /** Install a world. */
@@ -262,6 +267,9 @@ async function gate(label: string): Promise<void> {
 /** The child's one paid operation. */
 function paid(): Promise<IAssessment> {
   world.log.push('paid-start');
+  if (world.paidThrows) {
+    return Promise.reject(new Error(`paid assessment refused ${childSecret}`));
+  }
   return operation('paid', 'parent');
 }
 

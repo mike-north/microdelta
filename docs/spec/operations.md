@@ -501,6 +501,8 @@ and diagnostics name the step or position and the failure kind only. What author
 or caller code throws (bodies, checks, hooks, gates, custom keys, subject
 functions, admission, observers, abort listeners) never enters them. Where a
 failure is returned to the caller, that error is kept as its `cause`.
+Admission-denial reasons are strings the caller's admission policy chooses, not
+author error text, and are repeated as given.
 
 ### RUN-014 — Cancellation conveys escalating intent honestly
 

@@ -1327,9 +1327,9 @@ export function createResolution<TInputs extends object, THelpers extends object
       throw new ResolutionError('unsupported-result', `Step ${stepKey(step)} produced a result without a record or array root`);
     }
     try {
-      underLease(() => {
+      integrity(() => underLease(() => {
         history.stageAttempt(lease, { attemptId, payload: content.payload, provenance: provenanceRecord(content.provenance), dependencies: content.dependencies });
-      });
+      }));
     } catch (error: unknown) {
       abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: frameworkDetail(error) });
       if (error instanceof TypeError) {
@@ -1337,7 +1337,7 @@ export function createResolution<TInputs extends object, THelpers extends object
       }
       throw error;
     }
-    const reference = underLease(() => history.publishAttempt(lease, attemptId));
+    const reference = integrity(() => underLease(() => history.publishAttempt(lease, attemptId)));
     emit(request, evidence, step, 'publish', reference);
     return { kind: 'published', reference, attemptId };
   }

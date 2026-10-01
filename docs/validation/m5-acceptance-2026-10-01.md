@@ -110,7 +110,7 @@ test names are abbreviated below.
 | `trial-production-isolation` | `environments.test.ts` | A trial run pays for three assessments. A production check finds nothing reusable and writes nothing. A promotion recorded under the writer lease names the five results the trial report rests on; afterwards production reuses every one with its exact trial reference, runs no body, sends nothing, and its usage is empty while the trial's is its own. Without a promotion, production executes and pays for its own work under its own operations, and the trial still reuses exactly its own results |
 | `outcome-fold-coverage` | `outcome-fold.test.ts` | pr-1 succeeds, pr-2's response is lost (pending), pr-3 is refused (failed). The strict report fails (`failed [pr-3]`, `pending [pr-2]`) without a body. The outcome fold waits with coverage `succeeded [pr-1]`, `failed [pr-3]`, `pending [pr-2]`, `complete: false`, without a body or publication. After the operator abandons pr-2's operation it folds `succeeded [pr-1, pr-2]`, `failed [pr-3]`, `complete: true`. Repairing pr-3 publishes a new fold result while pr-1 and pr-2 are reused unexecuted; an unchanged run reuses it |
 | `lifecycle-isolation` | `lifecycle.test.ts` | One process runs two workspaces over two stores in `env:alpha` and `env:beta` concurrently. Every body sees its own run and environment before and after its awaits; every event names its own run. Hard-stopping beta never reaches alpha, which publishes. After a nested frame throws, alpha's context and attribution are its own (outside any step). After alpha closes, an escaped continuation's `currentRun`, `currentExecution`, `resolve` and exact `read` each fail with `run-closed` and send nothing. Each store holds only its own environment's results and usage |
-| `event-privacy` | `privacy.test.ts` | A workload over five PRs reaches success, a lost response, a permanent refusal, a sleeping rate limit, a hard-stopped stall, a process killed after the provider applied an effect and its recovery, an acknowledgment that recorded nothing, an observer throwing after a commit, operator settlement and both folds. No process's stdout or stderr (every event, diagnostic, typed outcome, operator view and usage summary) contains the provider's planted value, the planted titles, the answer text or any binding digest. A second test plants author failures whose messages carry the planted titles at a member body, a fold body and a source check: no output repeats them (the regression test for defect 3, fixed by #148) |
+| `event-privacy` | `privacy.test.ts` | A workload over five PRs reaches success, a lost response, a permanent refusal, a sleeping rate limit, a hard-stopped stall, a process killed after the provider applied an effect and its recovery, an acknowledgment that recorded nothing, an observer throwing after a commit, operator settlement and both folds. No process's stdout or stderr (every event, diagnostic, typed outcome, operator view and usage summary) contains the provider's planted value, the planted titles, the answer text or any binding digest. A second test plants author failures whose messages carry the planted titles at a member body, a fold body and a source check. It first proves each fired as its kind (pr-1 `failed` with `execution-failure`; the fold body and the source check each fail the run with a `ResolutionError` coded `execution-failure` naming that step), then that no output repeats them (the regression test for defect 3, fixed by #148) |
 
 ## Outcome rows of the plan
 
@@ -279,6 +279,19 @@ the negative controls below. First-run observations, per suite:
     grant's own expiry; the busy waiter is bounded at 10 s, which lets the
     deadline control join the runner. The suite passed 53 of 53 on its
     first full run after these changes.
+- **Final review round** (review of `9922587`). The privacy regression only
+  checked that nothing planted appeared, so it would pass if a planted
+  failure stopped firing. It now asserts a precondition per site first; the
+  worker prints Resolution's failure code for a run failure. Each
+  precondition was shown to fail when its failure does not fire: with each
+  planted throw disabled in the emitted fixture in turn, the test failed at
+  that site's precondition (member body, fold body, source check), and
+  passed again once restored. The drain regression now pins pr-1's refusal
+  reason (`Operation <id> has an unknown outcome (unrecorded); it is not
+  replayed`), and the strict fold's failure is asserted exactly, diagnostic
+  included (`Strict fold report requires every required member of pr step
+  assess: failed [pr-3], cancelled [], pending [pr-2], discovery closed`).
+  A 33rd control removes #148's lease-lost mapping.
 - **Defects found, filed as
   [#147](https://github.com/mike-north/microdelta/issues/147) and fixed by
   #148.** Until #148 merged, each was a clearly marked `test.failing` DEFECT
@@ -344,7 +357,14 @@ test fails or if any case it predicts still passes. Every prediction was
 written before the control ran. `--check-anchors` verifies every anchor
 matches exactly once without running a suite.
 
-Final run, in the post-merge gate below after the clean build: **PASS, 32 of
+The final review round added a 33rd control, "a lost lease escapes
+Resolution as History's raw error instead of ending the step lease-lost": it
+plants #148's mapping away in Resolution's emitted `resolution.js`
+(`withLeaseAuthority` rethrows the History error). Run alone with `--only`
+on `43dcd26`, it is rejected by exactly the drain regression test (1 failing;
+baseline and restored 53/53). The full run below has the other 32.
+
+Final full run, in the post-merge gate below after the clean build: **PASS, 32 of
 32 rejected**, with every predicted case failing; baseline and restored
 53/53, 0 failing; 1 361 s. #148 moved `sleepForDeferral`, so "a stop does not
 end a deferral sleep" was re-anchored to the stop-listener registration that
@@ -393,6 +413,7 @@ exhaustion controls added, before the 30-control run on `fb26bb5` (PASS 30/30,
 | fence | a takeover reuses the previous fence | history | 17 | `writer-wait-and-takeover`, `stale-holder-interleavings` | `drain-outlives-lease`, `usage-exactly-once`, `event-privacy` |
 | fence | a waiter's observation advances the fence | history | 3 | `writer-wait-and-takeover` | `stale-holder-interleavings` |
 | fence | release clears the writer row without the holder guard | history | 7 | `stale-holder-interleavings` | `drain-outlives-lease` |
+| fence | a lost lease escapes Resolution as History's raw error instead of ending the step lease-lost (run alone, final round) | resolution | 1 | `drain-outlives-lease` | none |
 | fence | the facade's writer port keeps a stale lease instead of acquiring afresh | port | 4 | `stale-holder-interleavings` | none |
 | privacy | operation events carry the request binding | engine | 1 | `event-privacy` | none |
 | privacy | a diagnostic repeats the adapter's error text | engine | 1 | `event-privacy` | none |
@@ -402,7 +423,8 @@ exhaustion controls added, before the 30-control run on `fb26bb5` (PASS 30/30,
 Targets: `engine`, `records`, `supervision` and `execution` are Supervision's
 emitted `operation-engine.js`, `records.js`, `supervision.js` and
 `execution.js`, and `wait` its `writer.js`; `history` is History's `durable/index.js`; `accounting` and
-`summary` are Accounting's `sqlite/index.js` and `summary.js`; `port` is the
+`summary` are Accounting's `sqlite/index.js` and `summary.js`; `resolution`
+is Resolution's `resolution.js`; `port` is the
 facade's `writer.js`. Every planned evidence case is rejected by at least one
 control. `outcome-fold-coverage` is rejected only by the blind-replay control
 here; the outcome-fold guards themselves have their own runner
@@ -413,6 +435,16 @@ here; the outcome-fold guards themselves have their own runner
 The implementer ran these sequentially, each step logged with its exit code
 by a script in `scratch/` (not committed), on Node v24.14.0, macOS. Record
 edits after the gates change no code.
+
+**Final-round gate, on `43dcd26`**, after `npm run clean`:
+
+| Command | Result |
+| --- | --- |
+| `npm run clean` / `npm run build` / `npm run check` | exit 0 / exit 0 (31 s) / exit 0 (48 s) |
+| `npm test` | exit 0 (312 s). Facade Jest 819/819, including the ten M5 acceptance suites (53 tests); the drift guard passes `m5-mutation-controls.mjs` |
+| M5 acceptance alone, once | 53/53 (40 s) |
+| `m5-mutation-controls.mjs --check-anchors` | `ANCHORS OK: 33 controls` |
+| `m5-mutation-controls.mjs --only "lost lease escapes"` | PASS 1/1: rejected by the drain regression test; baseline and restored 53/53 |
 
 **Post-merge gate, on `5263fd8`** (the branch after merging `origin/main` at
 `18af318` and turning the defect records into regression tests), after
@@ -428,9 +460,11 @@ edits after the gates change no code.
 | `m5-mutation-controls.mjs` | PASS 32/32; baseline and restored 53/53 |
 | `--check-anchors`, every runner | `ANCHORS OK` for all twelve: acceptance 13, accounting 12, concurrency 19, history 25, journal 11, M4 23, M5 32, operations 47, outcome-fold 11, resolution 29, workspace 23, facade-operations 12 |
 
-The earlier gates on `919f5f9` (53 tests, four of them `test.failing` DEFECT
-records; 32 controls) and on `fb26bb5` (48 tests, 30 controls) passed the same
-steps before the merge and are superseded by this one.
+The post-merge gate's full controls run (32 controls) stands for the 32
+controls unchanged since; the final-round gate adds the 33rd. The earlier
+gates on `919f5f9` (53 tests, four of them `test.failing` DEFECT records; 32
+controls) and on `fb26bb5` (48 tests, 30 controls) passed the same steps
+before the merge and are superseded.
 
 **Every other control runner in full, on `2a5c4c5`, before the merge** (none of these runners runs the
 M5 suites, and no later commit of this branch changes a file outside

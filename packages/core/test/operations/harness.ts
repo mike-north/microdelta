@@ -27,7 +27,7 @@ import { createNodeMachine, createNodeRandom, createNodeSqlite } from '@microdel
 import { createResolution } from '@microdelta/resolution';
 import type { IResolutionHistory } from '@microdelta/resolution';
 import { SupervisionError, createSupervision, operationJournalDeclaration } from '@microdelta/supervision';
-import type { IDeferralMode, IOperationAccounting, IRun, IRunEvent, IRunResult, IRunTimer, IRunWriter, IStopController, ISupervision } from '@microdelta/supervision';
+import type { IDeferralMode, IOperationAccounting, IRunRandom, IRun, IRunEvent, IRunResult, IRunTimer, IRunWriter, IStopController, ISupervision } from '@microdelta/supervision';
 import { createTrackingObserver } from '@microdelta/tracking';
 
 import { composeOperations, useSupervision } from './fixture.js';
@@ -208,6 +208,8 @@ export interface ISessionOptions {
   readonly wrapHistory?: (history: IDurableHistory) => IResolutionHistory;
   /** The SQLite capability Accounting's adapter opens its file with; Node's real one when absent. */
   readonly accountingSqlite?: ISqliteCapability;
+  /** The random identifier source of the operation ports; Node's secure one when absent. */
+  readonly random?: IRunRandom;
 }
 
 /** Open a session over `stores`, with Supervision's clock at `timer`. */
@@ -216,7 +218,8 @@ export function openSession(stores: Pick<IOperationStores, 'history' | 'accounti
   const history = openDurableHistory({ sqlite: createNodeSqlite(), clock: { currentEpochMilliseconds: () => timer.currentEpochMilliseconds() }, sha256: machine, location: stores.history, logicalStore });
   const accounting = openDurableAccounting({ sqlite: options.accountingSqlite ?? createNodeSqlite(), location: stores.accounting, logicalStore });
   const journal = history.openJournal(operationJournalDeclaration);
-  const supervision = createSupervision({ context: machine, timer, random: createNodeRandom() });
+  const supervision = createSupervision({ context: machine, timer });
+  const random = options.random ?? createNodeRandom();
   const fixture = composeOperations();
   useSupervision(supervision);
   const leaseMilliseconds = options.leaseMilliseconds ?? 24 * hour;
@@ -238,7 +241,7 @@ export function openSession(stores: Pick<IOperationStores, 'history' | 'accounti
         runId,
         writer: writerFor(history, `ops:${runId}`, leaseMilliseconds),
         observers: [{ observe: (event) => events.push(event) }],
-        ...(runOptions.operations === false ? {} : { operations: { journal, accounting: options.wrapAccounting?.(accounting) ?? accounting } }),
+        ...(runOptions.operations === false ? {} : { operations: { journal, accounting: options.wrapAccounting?.(accounting) ?? accounting, random } }),
         ...(runOptions.deferral === undefined ? {} : { deferral: runOptions.deferral }),
         ...(runOptions.stop === undefined ? {} : { stop: runOptions.stop }),
         ...(runOptions.permits === undefined ? {} : { permits: runOptions.permits }),

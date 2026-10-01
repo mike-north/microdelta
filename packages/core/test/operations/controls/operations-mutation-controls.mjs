@@ -150,7 +150,7 @@ const controls = [
   {
     name: 'an Accounting intent that is not durable fails the member',
     directory: supervision, file: 'operation-engine.js',
-    anchor: 'const notBefore = now() + intentRetryMilliseconds;', replacement: "throw new SupervisionError('operation-unrecorded', 'intent not durable');",
+    anchor: "const restored = current.revision !== before.revision && current.record.status === 'deferred' ? current.record.notBefore : undefined;", replacement: "throw new SupervisionError('operation-unrecorded', 'intent not durable');",
   },
   {
     name: 'waking while another holder has the lease rejects the request',
@@ -174,6 +174,21 @@ const controls = [
     name: 'the relaxed historical check admits a dependency of another analysis',
     directory: resolution, file: 'resolution.js',
     anchor: 'return historical.analysis === analysis;', replacement: 'return true;',
+  },
+  {
+    name: 'a retry after an unconfirmed intent mints a new request attempt (M3)',
+    directory: supervision, file: 'operation-engine.js',
+    anchor: "const unsent = last?.status === 'not-sent' ? last : undefined;", replacement: 'const unsent = undefined;',
+  },
+  {
+    name: 'the intent retry delay does not grow',
+    directory: supervision, file: 'operation-engine.js',
+    anchor: 'const doublings = Math.max(0, failures - 1);', replacement: 'const doublings = 0;',
+  },
+  {
+    name: 'a random identifier of any alphanumeric shape is accepted',
+    directory: supervision, file: 'operation-engine.js',
+    anchor: 'const randomRule = /^[0-9a-f]{32}$/u;', replacement: 'const randomRule = /^[0-9a-z]{16,64}$/u;',
   },
   {
     name: "Resolution refuses a promoted candidate's trial provenance",

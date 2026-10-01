@@ -38,7 +38,7 @@ import { createWorld, installWorld } from './fixture.js';
 import type { IWorld } from './fixture.js';
 import { T0, fakeTimer, freshKey, hour, openSession, statuses, tempStores, until } from './harness.js';
 import type { IFakeTimer, IOperationStores } from './harness.js';
-import { applied, driveUntilSettled, fold, memberOf, members, received } from './support.js';
+import { applied, driveUntilSettled, failureCode, fold, journalContents, memberOf, members, received } from './support.js';
 
 let stores: IOperationStores;
 let timer: IFakeTimer;
@@ -267,6 +267,69 @@ describe('an Accounting intent that is not durable (ACC-007)', () => {
       expect(received('pr-1')).toHaveLength(1);
       expect(applied('pr-1')).toHaveLength(1);
       expect(session.usage()).toEqual(expect.objectContaining({ status: 'complete', requestAttempts: 1 }));
+    } finally {
+      session.close();
+    }
+  });
+});
+
+describe('an intent that landed though its commit was not confirmed (ACC-007, ACC-005)', () => {
+  test('the retry reuses the unsent request attempt, so the landed intent gets its usage and the summary is complete with one intent', async () => {
+    world.keys = ['pr-1'];
+    const faulty = faultySqlite();
+    const session = openSession(stores, timer, { accountingSqlite: faulty.capability });
+    try {
+      // The intent commits, then the adapter cannot confirm it: AccountingDurabilityUnknownError with the intent durable.
+      faulty.arm({ role: 'intent', timing: 'after-commit', action: 'throw' });
+      const result = await driveUntilSettled(timer, members(session));
+      expect(memberOf(result.value, 'pr-1').status).toBe('succeeded');
+      expect(received('pr-1')).toHaveLength(1);
+      const [request] = received('pr-1');
+      // Exactly one intent, the landed one, and it has its usage: nothing reads unknown forever.
+      expect(session.usage()).toEqual(expect.objectContaining({ status: 'complete', requestAttempts: 1, reports: 1, unknown: [] }));
+      expect(request?.requestAttempt.endsWith('/1')).toBe(true);
+    } finally {
+      session.close();
+    }
+  });
+});
+
+describe('the backoff of non-durable intents and the shape of identities', () => {
+  test('consecutive non-durable intents of one operation back off 1 s, doubling, capped at 60 s, recorded durably', async () => {
+    world.keys = ['pr-1'];
+    const faulty = faultySqlite();
+    const session = openSession(stores, timer, { accountingSqlite: faulty.capability });
+    try {
+      const delays: number[] = [];
+      for (let round = 0; round < 8; round += 1) {
+        faulty.arm({ role: 'intent', timing: 'before-commit', action: 'throw' });
+        const before = timer.currentEpochMilliseconds();
+        const result = await members(session, { deferral: 'exit' }).done;
+        expect(memberOf(result.value, 'pr-1').status).toBe('pending');
+        const deferred = journalContents(session).find((content) => typeof content === 'object' && content !== null && Reflect.get(content, 'member') === 'pr-1');
+        const notBefore: unknown = typeof deferred === 'object' && deferred !== null ? Reflect.get(deferred, 'notBefore') : undefined;
+        expect(result.waitingUntil).toBe(notBefore);
+        delays.push(typeof notBefore === 'number' ? notBefore - before : Number.NaN);
+        timer.advanceTo(typeof notBefore === 'number' ? notBefore : before);
+      }
+      expect(delays).toEqual([1_000, 2_000, 4_000, 8_000, 16_000, 32_000, 60_000, 60_000]);
+      expect(received('pr-1')).toHaveLength(0);
+      const done = await members(session, { deferral: 'exit' }).done;
+      expect(memberOf(done.value, 'pr-1').status).toBe('succeeded');
+      expect(session.usage()).toEqual(expect.objectContaining({ status: 'complete', requestAttempts: 1 }));
+    } finally {
+      session.close();
+    }
+  });
+
+  test('an identifier from the random source that is not exactly 32 lowercase hexadecimal characters is refused before anything is sent', async () => {
+    world.keys = ['pr-1'];
+    const session = openSession(stores, timer, { random: { randomIdentifier: () => '0123456789abcdefghij0123456789ab' } });
+    try {
+      const result = await members(session).done;
+      expect(failureCode(memberOf(result.value, 'pr-1'))).toBe('invalid-request');
+      expect(received('pr-1')).toHaveLength(0);
+      expect(journalContents(session)).toEqual([]);
     } finally {
       session.close();
     }

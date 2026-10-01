@@ -254,7 +254,8 @@ export interface IOperationSettlementRecord {
 
 /**
  * One external operation as an operator inspects it: identities, statuses,
- * times and its settlement, never its binding or any value.
+ * times, its settlement and any resolution that settlement superseded, never
+ * its binding or any value.
  * @alpha
  */
 export interface IOperationView {
@@ -274,6 +275,13 @@ export interface IOperationView {
   readonly attempts: readonly IRequestAttemptView[];
   /** The operator's settlement, once recorded. */
   readonly settlement: IOperationSettlementRecord | undefined;
+  /**
+   * The operator's earlier resolution as succeeded that a later abandonment
+   * superseded, kept for the audit trail: who asserted the effect happened,
+   * when, and the usage report it acknowledged. Undefined unless the
+   * operation was abandoned after such a resolution.
+   */
+  readonly resolution: IOperationSettlementRecord | undefined;
 }
 
 /**

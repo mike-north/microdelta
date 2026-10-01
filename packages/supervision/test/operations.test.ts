@@ -27,6 +27,7 @@ import type {
   IOperationJournalPort,
   IOperationRequest,
   IResolutionPorts,
+  IRun,
   IRunEvent,
   IRunOptions,
   IRunRandom,
@@ -373,6 +374,54 @@ describe('records written before the intent mark existed', () => {
     expect(sent.count).toBe(1);
     expect(accounting.intents).toEqual([requestAttempt]);
     expect(journal.operation(firstOperation)).toEqual(expect.objectContaining({ status: 'succeeded', attempts: [expect.objectContaining({ requestAttempt, run: 'run:old', status: 'succeeded' })] }));
+  });
+});
+
+describe('records written before the superseded resolution existed', () => {
+  /** A resolved-as-succeeded operation record as earlier releases wrote it: no `resolution` field. */
+  const resolvedRecord = (extra: Record<string, unknown> = {}): Record<string, unknown> => ({
+    operation: firstOperation,
+    subject: 'assess',
+    version: 1,
+    member: 'pr-1',
+    name: 'assess',
+    binding: 'sha256:binding',
+    safety: 'none',
+    maxAttempts: 1,
+    rateLimitRetries: 5,
+    status: 'resolved',
+    unrecorded: 0,
+    notBefore: null,
+    attempts: [{ requestAttempt: `${firstOperation}/1`, run: 'run:old', stepAttempt: '3', status: 'unknown', remote: null, usage: null, intent: null }],
+    settlement: { action: 'resolve', outcome: 'succeeded', operator: 'operator.ada', at: T0 - 1_000, report: 'operator:invoice-1' },
+    ...extra,
+  });
+
+  /** One run over a journal holding `record`, whose body runs `body` with the live run. */
+  async function withRecord<T>(record: Record<string, unknown>, body: (run: IRun) => Promise<T>): Promise<T> {
+    const journal = memoryJournal();
+    journal.put(operationsCollection, firstOperation, record, 'microdelta.supervision.operation');
+    journal.put('microdelta.supervision.blocks', JSON.stringify(['assess', 1]), { subject: 'assess', version: 1, operations: [{ operation: firstOperation, name: 'assess', binding: 'sha256:binding' }] });
+    const supervision = createSupervision({ context: nodeScopes, timer: fakeTimer() });
+    const double = executing(() => Promise.resolve());
+    return (await supervision.run({ analysis: 'analysis:test', environment: 'env:test', resolution: double.factory, writer: grantingWriter, operations: { journal, accounting: memoryAccounting(), random: countingRandom() } }, body)).value;
+  }
+
+  test('a record without the field superseded no resolution, and abandoning it keeps its resolution as the superseded one', async () => {
+    const [viewed, abandoned] = await withRecord(resolvedRecord(), async (run) => [await run.inspectOperations(), await run.settleOperation({ action: 'abandon', operation: firstOperation, operator: 'operator.ben' })] as const);
+    expect(viewed.map((view) => view.resolution)).toEqual([undefined]);
+    expect(abandoned).toEqual(expect.objectContaining({
+      status: 'abandoned',
+      settlement: { action: 'abandon', outcome: undefined, operator: 'operator.ben', at: T0, report: undefined },
+      resolution: { action: 'resolve', outcome: 'succeeded', operator: 'operator.ada', at: T0 - 1_000, report: 'operator:invoice-1' },
+    }));
+  });
+
+  test.each([
+    ['a resolution that is not a record', 'resolve'],
+    ['a resolution with an unknown action', { action: 'withdraw', outcome: 'succeeded', operator: 'operator.ada', at: T0, report: null }],
+  ])('%s is integrity damage, never a guess', async (_label, resolution) => {
+    expect(await withRecord(resolvedRecord({ resolution }), (run) => codeOf(run.inspectOperations()))).toBe('integrity');
   });
 });
 

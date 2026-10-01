@@ -77,9 +77,10 @@ export interface IPromotionRecord {
  * An operator's request to promote exact results of the run's analysis.
  *
  * Note the asymmetry with {@link IRun.promotions}: a promotion targets
- * *another* environment, named by `into` (typically a production run's trial
- * results are promoted from a trial run), while `promotions()` lists the
- * promotions recorded *into the run's own* environment.
+ * *another* environment, named by `into` (typically a trial run promotes its
+ * results `into` production), while `promotions()` lists the promotions
+ * recorded *into the run's own* environment (a production run lists what was
+ * promoted into production).
  * @alpha
  */
 export interface IPromotionRequest {

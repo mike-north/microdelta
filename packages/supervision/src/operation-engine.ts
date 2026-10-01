@@ -573,6 +573,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
         notBefore: undefined,
         attempts: [],
         settlement: undefined,
+        resolution: undefined,
         unrecorded: 0,
       };
       current = { record, revision: 0, fence: undefined };
@@ -911,6 +912,8 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
         ...stored.record,
         status: action === 'resolve' ? 'resolved' : 'abandoned',
         settlement: { action, outcome: action === 'resolve' && (outcome === 'succeeded' || outcome === 'failed') ? outcome : undefined, operator, at: now(), report },
+        // Abandoning a resolved operation keeps the resolution it supersedes: the audit trail of the asserted effect.
+        resolution: consumed ? stored.record.settlement : stored.record.resolution,
       };
       write(lease, settled, stored.revision);
       emit(action === 'resolve' ? 'resolved' : 'abandoned', settled, { requestAttempt: last?.requestAttempt, status: settled.status, reason: 'operator' });

@@ -316,6 +316,7 @@ export interface IOperationView {
     readonly name: string;
     readonly notBefore: number | undefined;
     readonly operation: string;
+    readonly resolution: IOperationSettlementRecord | undefined;
     readonly settlement: IOperationSettlementRecord | undefined;
     readonly status: IOperationStatus;
     readonly subject: IOperationSubject;

@@ -11,7 +11,7 @@
  * custom key, optionally gated), member steps that read their member through
  * the member binding, supplied step slots bound at composition, canonical
  * `forward` origins for arguments, the observed untracked read, and strict
- * folds over a template step's members.
+ * folds and outcome (tolerant) folds over a template step's members.
  *
  * Every type here is a facade-local `@alpha` alias of its owner's contract,
  * declared locally so the default public declaration view never references a
@@ -28,8 +28,12 @@ import type {
   IDeclarations,
   IDeclaredCallHandle as IDefinitionDeclaredCallHandle,
   IDerivedArguments as IDefinitionDerivedArguments,
+  ICancelledEntry as IDefinitionCancelledEntry,
+  IFailedEntry as IDefinitionFailedEntry,
   IFoldDeclaration as IDefinitionFoldDeclaration,
   IFoldEntry as IDefinitionFoldEntry,
+  IOutcomeEntry as IDefinitionOutcomeEntry,
+  IOutcomeFoldDeclaration as IDefinitionOutcomeFoldDeclaration,
   IForward as IDefinitionForward,
   IForwarded as IDefinitionForwarded,
   IKeyedMember as IDefinitionKeyedMember,
@@ -67,7 +71,7 @@ export type IAuthoringFamily<TInputs extends object, THelpers extends object> = 
 
 /**
  * Builders bound to one analysis's declared inputs and helpers: `source`,
- * `memo`, `template`, `fold`, `stepSlot`, `suppliedStep`, `supply`, the
+ * `memo`, `template`, `fold`, `outcomeFold`, `stepSlot`, `suppliedStep`, `supply`, the
  * canonical `forward` origins, `compose`, and the invocation bridge the
  * workspace uses.
  * @alpha
@@ -206,6 +210,30 @@ export type ISucceededEntry<T> = IDefinitionSucceededEntry<T>;
 
 /** A strict fold entry for a member its gate skipped; it carries no data. @alpha */
 export type ISkippedEntry = IDefinitionSkippedEntry;
+
+/**
+ * An outcome (tolerant) fold declaration over one template step: its body
+ * receives every member's settled status rather than requiring complete
+ * success (RUN-010).
+ * @alpha
+ */
+export type IOutcomeFoldDeclaration<TInputs extends object, THelpers extends object, TMemberResult, TResult> = IDefinitionOutcomeFoldDeclaration<IAuthoringFamily<TInputs, THelpers>, TMemberResult, TResult>;
+
+/**
+ * One explicit keyed entry an outcome fold body receives per current member,
+ * in canonical key order, with its settled status: succeeded with a view of
+ * the member's result, or skipped, failed or cancelled with no data. A
+ * pending member is never an entry: the body runs only once every member has
+ * settled.
+ * @alpha
+ */
+export type IOutcomeEntry<T> = IDefinitionOutcomeEntry<T>;
+
+/** An outcome fold entry for a member whose work failed in this pass; it carries no data. @alpha */
+export type IFailedEntry = IDefinitionFailedEntry;
+
+/** An outcome fold entry for a member whose work was cancelled for this run; settled, never a success, and it carries no data. @alpha */
+export type ICancelledEntry = IDefinitionCancelledEntry;
 
 /** One collection snapshot keyed by a composition's template, or its keying rejection. @alpha */
 export type IKeyedSnapshot = IDefinitionKeyedSnapshot;

@@ -26,7 +26,8 @@ composes the owners and adds no policy of its own:
   Resolution's binding family: `source` (including keyed collection sources),
   `memo`, `template` (fanout over a keyed collection with an optional custom
   key and tracked gate; member steps read their member through the `member`
-  binding), `fold` (a strict fold over one template step), `stepSlot`,
+  binding), `fold` (a strict fold over one template step), `outcomeFold` (an
+  outcome fold over every member's settled status), `stepSlot`,
   `suppliedStep` and `supply` (callable step slots bound at composition),
   the canonical `forward` argument origins, and `compose`. Step callbacks also
   receive the observed `untracked` read.
@@ -36,7 +37,10 @@ composes the owners and adds no policy of its own:
   operation `resolve(step, { requestKey })`, `resolveMembers(target, {
   requestKey })` for every current member of a template step,
   `resolveFold(step, { requestKey })` for a strict fold (reporting discovery,
-  each member's typed outcome and the fold's outcome with coverage), the
+  each member's typed outcome and the fold's outcome with coverage),
+  `resolveOutcomeFold(step, { requestKey })` for an outcome fold (the same
+  report, with an outcome that folds every settled status and coverage that
+  never claims a complete set while anything is unsettled), the
   recovery entry operation `recover(step, { requestKey })`, `check(step)`,
   observed nonmemoized `ordinary(label, work)`, and exact `read(reference)`.
   A run's options may also carry an operator stop controller (`stop`), its
@@ -55,8 +59,9 @@ composes the owners and adds no policy of its own:
 
 The alpha view names the owners' contracts through facade-local aliases, so a
 consumer imports only `microdelta`: for example `IMemberBuilder`,
-`IStepSlot`, `IForwarded`, `IFoldEntry`, `IFoldReport`, `IStrictFoldOutcome`
-and `IFoldCoverage`.
+`IStepSlot`, `IForwarded`, `IFoldEntry`, `IFoldReport`, `IStrictFoldOutcome`,
+`IFoldCoverage`, `IOutcomeEntry`, `IOutcomeFoldReport`,
+`IOutcomeFoldRunOutcome` and `IOutcomeFoldCoverage`.
 
 The [contribution report example](../../examples/contribution-report/README.md)
 uses this path through the installed workspace's generated alpha declarations.

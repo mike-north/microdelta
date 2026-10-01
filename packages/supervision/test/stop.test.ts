@@ -22,7 +22,9 @@ import type { IAbortSource } from '../src/control.js';
 import { raceAbort, runControls } from '../src/execution.js';
 import type { ISupervisedRun } from '../src/execution.js';
 import { SupervisionError, createStopController, createSupervision } from '../src/index.js';
-import type { IAbortSignal, IRunEvent, IRunExecution, IRunObserver, IRunOptions, IStopState, ISupervision } from '../src/index.js';
+import type { IResolution } from '@microdelta/resolution';
+
+import type { IAbortSignal, IResolutionPorts, IRunEvent, IRunExecution, IRunObserver, IRunOptions, IStopState, ISupervision } from '../src/index.js';
 import { createPermitPool } from '../src/permits.js';
 import { T0, admissionFor, codeOf, controlEvents, deferred, fakeTimer, hour, nodeScopes, optionsFor, portDouble, settle, stepOf, stubProvider, supervisionWith } from './support.js';
 
@@ -377,6 +379,109 @@ describe('the permit pool (RUN-002)', () => {
     });
     // Woken members resume before any unstarted member starts, in the order they woke.
     expect(order).toEqual(['first:start', 'second:start', 'holder:start', 'holder:end', 'first:woke', 'second:woke', 'q1:start', 'q2:start', 'q3:start']);
+  });
+
+  test('CMP-9: every run operation, started inside a member or a step attempt, is refused at once as an undeclared call, and the run completes (RUN-002)', async () => {
+    let captured: IResolutionPorts | undefined;
+    const resolution = (ports: IResolutionPorts): IResolution => {
+      captured = ports;
+      return portDouble().factory(ports);
+    };
+    const step = stepOf('summary', 'person:ada');
+    const request = { requestKey: 'nested' };
+    const result = await supervisionWith(fakeTimer()).run({ ...optionsFor(portDouble(), { window: 1 }), resolution }, async (run) => {
+      const { execution } = captured ?? (() => {
+        throw new Error('the run has not started');
+      })();
+      /** Call every run operation where this runs; each settles to its Supervision code. */
+      const callEach = (): Promise<(string | undefined)[]> => Promise.all([
+        codeOf(run.resolve(step, request)),
+        codeOf(run.resolveMembers({ template: 'contributor', step: 'summary' }, request)),
+        codeOf(run.resolveFold(stepOf('report'), request)),
+        codeOf(run.resolveOutcomeFold(stepOf('tally'), request)),
+        codeOf(run.check(step)),
+        codeOf(run.recover(step, request)),
+        codeOf(run.ordinary('note', () => 'noted')),
+        codeOf(() => {
+          run.assertDeclaredCall('read');
+        }),
+      ]);
+      // The member holds the run's only lane: a refusal must never wait for one.
+      const fromMember = await execution.member(callEach);
+      const fromAttempt = await execution.execute(step, callEach);
+      // The same operations from the run body itself are not refused.
+      const fromBody = await codeOf(run.ordinary('note', () => 'noted'));
+      return { fromMember, fromAttempt, fromBody };
+    });
+    const refused = Array.from({ length: 8 }, () => 'undeclared-call');
+    expect(result.value.fromMember).toEqual(refused);
+    expect(result.value.fromAttempt).toEqual({ kind: 'returned', value: refused });
+    expect(result.value.fromBody).toBeUndefined();
+    // Each refusal is a run diagnostic naming the operation and where it was called, by identifiers only.
+    const refusals = result.diagnostics.filter((diagnostic) => diagnostic.includes('undeclared call'));
+    expect(refusals).toHaveLength(16);
+    for (const operation of ['resolve', 'resolveMembers', 'resolveFold', 'resolveOutcomeFold', 'check', 'recover', 'ordinary', 'read']) {
+      expect(refusals).toContain(`Run ${result.context.runId} refused ${operation} from inside member work: an undeclared call (CMP-9)`);
+      expect(refusals).toContain(`Run ${result.context.runId} refused ${operation} from inside the step attempt of summary/person:ada: an undeclared call (CMP-9)`);
+    }
+  });
+
+  test('assertDeclaredCall accepts only a run operation name: anything else is an invalid request, recorded nowhere (RUN-013)', async () => {
+    let captured: IResolutionPorts | undefined;
+    const resolution = (ports: IResolutionPorts): IResolution => {
+      captured = ports;
+      return portDouble().factory(ports);
+    };
+    const planted = 'SECRET-value-a';
+    const result = await supervisionWith(fakeTimer()).run({ ...optionsFor(portDouble(), { window: 1 }), resolution }, async (run) => {
+      const { execution } = captured ?? (() => {
+        throw new Error('the run has not started');
+      })();
+      /** Call the check with author text, as untyped author code could. */
+      const forged = (): Promise<string | undefined> => codeOf(() => {
+        Reflect.apply(run.assertDeclaredCall, run, [planted]);
+      });
+      const fromBody = await forged();
+      const fromMember = await execution.member(forged);
+      // Repeated forged calls never grow the run's diagnostics.
+      for (let call = 0; call < 50; call += 1) {
+        await execution.member(forged);
+      }
+      const declaredFromBody = await codeOf(() => {
+        run.assertDeclaredCall('read');
+      });
+      return { fromBody, fromMember, declaredFromBody };
+    });
+    expect(result.value).toEqual({ fromBody: 'invalid-request', fromMember: 'invalid-request', declaredFromBody: undefined });
+    expect(result.diagnostics).toEqual([]);
+    expect(JSON.stringify(result.diagnostics)).not.toContain(planted);
+  });
+
+  test('a run operation a member schedules for after the run closed reports run-closed, never undeclared-call (RUN-001)', async () => {
+    let captured: IResolutionPorts | undefined;
+    const resolution = (ports: IResolutionPorts): IResolution => {
+      captured = ports;
+      return portDouble().factory(ports);
+    };
+    const closed = deferred();
+    const late = deferred<string | undefined>();
+    const result = await supervisionWith(fakeTimer()).run({ ...optionsFor(portDouble(), { window: 1 }), resolution }, async (run) => {
+      const { execution } = captured ?? (() => {
+        throw new Error('the run has not started');
+      })();
+      await execution.member(() => {
+        // The callback keeps the member's asynchronous context, and runs only once the run has closed.
+        void closed.promise.then(() => new Promise((resolve) => {
+          setTimeout(resolve, 0);
+        })).then(() => codeOf(run.resolveMembers({ template: 'contributor', step: 'summary' }, { requestKey: 'late' }))).then(late.resolve);
+        return Promise.resolve();
+      });
+      return run;
+    });
+    expect(result.value.open).toBe(false);
+    closed.resolve();
+    expect(await late.promise).toBe('run-closed');
+    expect(result.diagnostics.filter((diagnostic) => diagnostic.includes('undeclared call'))).toEqual([]);
   });
 
   test.each([

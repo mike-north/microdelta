@@ -428,7 +428,7 @@ export function declareTemplate<TFamily extends IBindingFamily, TCollection exte
       reject('invalid-template', 'A member step cannot be a keyed collection; templates do not nest.');
     }
     if (fields.has('over')) {
-      reject('illegal-edge', 'Only a strict fold names the template step it consumes.');
+      reject('illegal-edge', 'Only a strict or outcome fold names the template step it consumes.');
     }
   };
   const adopt = (declaration: object): void => {

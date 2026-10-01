@@ -17,12 +17,14 @@ import type { IAdmissionDecision as IAdmissionDecision_2 } from '@microdelta/res
 import type { IAdmissionRequest as IAdmissionRequest_2 } from '@microdelta/resolution';
 import type { IAnyTemplateDeclaration as IAnyTemplateDeclaration_2 } from '@microdelta/definition';
 import type { IBindingDescriptor } from '@microdelta/definition';
+import type { ICancelledEntry as ICancelledEntry_2 } from '@microdelta/definition';
 import type { ICandidateMiss as ICandidateMiss_2 } from '@microdelta/resolution';
 import type { ICheckOutcome as ICheckOutcome_2 } from '@microdelta/resolution';
 import type { IChildResult as IChildResult_2 } from '@microdelta/definition';
 import type { ICollectionResult as ICollectionResult_2 } from '@microdelta/definition';
 import type { ICollectionStatus as ICollectionStatus_2 } from '@microdelta/definition';
 import type { ICompletedResultReference as ICompletedResultReference_2 } from '@microdelta/history';
+import type { ICompleteOutcomeFoldCoverage as ICompleteOutcomeFoldCoverage_2 } from '@microdelta/resolution';
 import type { IComposition as IComposition_2 } from '@microdelta/definition';
 import type { IDeclarations } from '@microdelta/definition';
 import type { IDeclaredCallHandle as IDeclaredCallHandle_2 } from '@microdelta/definition';
@@ -30,6 +32,7 @@ import { Identity } from '@microdelta/history';
 import type { IDerivedArguments as IDerivedArguments_2 } from '@microdelta/definition';
 import type { IDiscoveryReport as IDiscoveryReport_2 } from '@microdelta/supervision';
 import type { IExecutionAdmission } from '@microdelta/resolution';
+import type { IFailedEntry as IFailedEntry_2 } from '@microdelta/definition';
 import type { IFoldCoverage as IFoldCoverage_2 } from '@microdelta/resolution';
 import type { IFoldDeclaration as IFoldDeclaration_2 } from '@microdelta/definition';
 import type { IFoldEntry as IFoldEntry_2 } from '@microdelta/definition';
@@ -38,6 +41,7 @@ import type { IFoldReport as IFoldReport_2 } from '@microdelta/supervision';
 import type { IForward as IForward_2 } from '@microdelta/definition';
 import type { IForwarded as IForwarded_2 } from '@microdelta/definition';
 import type { IGateEvidence as IGateEvidence_2 } from '@microdelta/resolution';
+import type { IIncompleteOutcomeFoldCoverage as IIncompleteOutcomeFoldCoverage_2 } from '@microdelta/resolution';
 import type { IKeyedMember as IKeyedMember_2 } from '@microdelta/definition';
 import type { IKeyedSnapshot as IKeyedSnapshot_2 } from '@microdelta/definition';
 import type { IKeyingDiagnostic as IKeyingDiagnostic_2 } from '@microdelta/definition';
@@ -51,6 +55,12 @@ import type { IMembersReport as IMembersReport_2 } from '@microdelta/supervision
 import type { IMembersTarget as IMembersTarget_2 } from '@microdelta/supervision';
 import { InvalidStorePatchError } from '@microdelta/history';
 import type { IOrdinaryPhase as IOrdinaryPhase_2 } from '@microdelta/supervision';
+import type { IOutcomeEntry as IOutcomeEntry_2 } from '@microdelta/definition';
+import type { IOutcomeFoldCoverage as IOutcomeFoldCoverage_2 } from '@microdelta/resolution';
+import type { IOutcomeFoldDeclaration as IOutcomeFoldDeclaration_2 } from '@microdelta/definition';
+import type { IOutcomeFoldOutcome as IOutcomeFoldOutcome_2 } from '@microdelta/resolution';
+import type { IOutcomeFoldReport as IOutcomeFoldReport_2 } from '@microdelta/supervision';
+import type { IOutcomeFoldRunOutcome as IOutcomeFoldRunOutcome_2 } from '@microdelta/supervision';
 import type { IPathInput as IPathInput_2 } from '@microdelta/definition';
 import type { IPreviousResult as IPreviousResult_2 } from '@microdelta/resolution';
 import type { IRecoveryResult as IRecoveryResult_2 } from '@microdelta/resolution';
@@ -154,6 +164,9 @@ export type IAuthoring<TInputs extends object, THelpers extends object> = IDecla
 export type IAuthoringFamily<TInputs extends object, THelpers extends object> = IResolutionFamily<TInputs, THelpers>;
 
 // @alpha
+export type ICancelledEntry = ICancelledEntry_2;
+
+// @alpha
 export type ICandidateMiss = ICandidateMiss_2;
 
 // @alpha
@@ -172,6 +185,9 @@ export type ICollectionStatus = ICollectionStatus_2;
 export type ICompletedResultReference = ICompletedResultReference_2;
 
 // @alpha
+export type ICompleteOutcomeFoldCoverage = ICompleteOutcomeFoldCoverage_2;
+
+// @alpha
 export type IComposition<TInputs extends object, THelpers extends object> = IComposition_2<IAuthoringFamily<TInputs, THelpers>>;
 
 // @alpha
@@ -184,6 +200,9 @@ export type IDerivedArguments<TParameters extends readonly unknown[]> = IDerived
 
 // @alpha
 export type IDiscoveryReport = IDiscoveryReport_2;
+
+// @alpha
+export type IFailedEntry = IFailedEntry_2;
 
 // @alpha
 export type IFoldCoverage = IFoldCoverage_2;
@@ -208,6 +227,9 @@ export type IForwarded<T = unknown> = IForwarded_2<T>;
 
 // @alpha
 export type IGateEvidence = IGateEvidence_2;
+
+// @alpha
+export type IIncompleteOutcomeFoldCoverage = IIncompleteOutcomeFoldCoverage_2;
 
 // @alpha
 export type IKeyedMember = IKeyedMember_2;
@@ -246,6 +268,24 @@ export { InvalidStorePatchError }
 
 // @alpha
 export type IOrdinaryPhase = IOrdinaryPhase_2;
+
+// @alpha
+export type IOutcomeEntry<T> = IOutcomeEntry_2<T>;
+
+// @alpha
+export type IOutcomeFoldCoverage = IOutcomeFoldCoverage_2;
+
+// @alpha
+export type IOutcomeFoldDeclaration<TInputs extends object, THelpers extends object, TMemberResult, TResult> = IOutcomeFoldDeclaration_2<IAuthoringFamily<TInputs, THelpers>, TMemberResult, TResult>;
+
+// @alpha
+export type IOutcomeFoldOutcome = IOutcomeFoldOutcome_2;
+
+// @alpha
+export type IOutcomeFoldReport = IOutcomeFoldReport_2;
+
+// @alpha
+export type IOutcomeFoldRunOutcome = IOutcomeFoldRunOutcome_2;
 
 // @alpha
 export type IPathInput = IPathInput_2;
@@ -367,7 +407,7 @@ export interface IWorkspaceOptions {
 }
 
 // @alpha
-export interface IWorkspaceRun extends IRun {
+export interface IWorkspaceRun extends Omit<IRun, 'assertDeclaredCall'> {
     read<T>(reference: ICompletedResultReference): T;
 }
 

@@ -5,7 +5,7 @@
  *   to the run body and to every request and ordinary call through the
  *   injected asynchronous scope, so author code finds it without a parameter;
  * - it stays live until its body *and* every operation started through the
- *   run (`resolve`, `resolveMembers`, `resolveFold`, `check`, `recover`,
+ *   run (`resolve`, `resolveMembers`, `resolveFold`, `resolveOutcomeFold`, `check`, `recover`,
  *   `ordinary`) have settled, including
  *   operations started while it waits and those whose aggregate (for example
  *   a `Promise.all` with a failing sibling) the body stopped awaiting early;
@@ -42,6 +42,8 @@ import type {
   ILifecycleObserver,
   IMemberResolution,
   IMembersResolution,
+  IOutcomeFoldOutcome,
+  IOutcomeFoldResolution,
   IRecoveryResult,
   IResolution,
   IResolutionOutcome,
@@ -54,11 +56,14 @@ import type {
   IMembersReport,
   IMembersTarget,
   IOrdinaryPhase,
+  IOutcomeFoldReport,
+  IOutcomeFoldRunOutcome,
   IRequestOptions,
   IRun,
   IRunContext,
   IRunEvent,
   IRunExecution,
+  IRunOperationName,
   IRunOptions,
   IRunResult,
   IRunScope,
@@ -169,6 +174,9 @@ function notify(observers: readonly ICapturedObserver[], event: IRunEvent): void
   }
 }
 
+/** Every {@link IRunOperationName}, for the runtime check of untyped callers. */
+const runOperationNames: ReadonlySet<string> = new Set<IRunOperationName>(['check', 'ordinary', 'read', 'recover', 'resolve', 'resolveFold', 'resolveMembers', 'resolveOutcomeFold']);
+
 /**
  * Classify one member's Resolution outcome as its typed member outcome
  * (CMP-8, RUN-010). An admission denial leaves the member pending, never
@@ -240,6 +248,42 @@ function foldReport(resolved: IFoldResolution): IFoldReport {
     discovery: discoveryReport(resolved.discovery),
     members: Object.freeze(resolved.members.map(memberOutcome)),
     outcome: strictFoldOutcome(resolved.outcome),
+  });
+}
+
+/**
+ * Classify an outcome fold's Resolution outcome as its typed run outcome
+ * (RUN-010). A reused or published fold folded its settled set, with its
+ * exact outcome and complete coverage; a wait keeps its partial coverage; a
+ * population that cannot be established is failed; the fold's own refused
+ * work is pending when denied, never failed, and cancelled when cancelled.
+ */
+function outcomeFoldRunOutcome(outcome: IOutcomeFoldOutcome): IOutcomeFoldRunOutcome {
+  switch (outcome.kind) {
+    case 'reused':
+    case 'published':
+      return Object.freeze({ status: 'folded', outcome });
+    case 'waiting':
+      return Object.freeze({ status: 'waiting', coverage: outcome.coverage });
+    case 'failed':
+      return Object.freeze({ status: 'failed', diagnostic: outcome.diagnostic });
+    case 'refused':
+      return Object.freeze({ status: outcome.disposition === 'cancelled' ? 'cancelled' : 'pending', refused: outcome.refused, reason: outcome.reason, coverage: outcome.coverage });
+    default: {
+      const exhaustive: never = outcome;
+      return exhaustive;
+    }
+  }
+}
+
+/** Report one outcome fold request: discovery and every member in Supervision's terms, and the fold's typed outcome. */
+function outcomeFoldReport(resolved: IOutcomeFoldResolution): IOutcomeFoldReport {
+  return Object.freeze({
+    fold: resolved.outcome.step,
+    over: resolved.over,
+    discovery: discoveryReport(resolved.discovery),
+    members: Object.freeze(resolved.members.map(memberOutcome)),
+    outcome: outcomeFoldRunOutcome(resolved.outcome),
   });
 }
 
@@ -456,10 +500,39 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     const resolution: IResolution = runOptions.resolution(Object.freeze({ admission, observer, execution: supervisedExecution(state, frames) }));
 
     /**
-     * Run an operation inside this run's scope, after checking it is still
-     * open, and account for it until it settles.
+     * The refusal of a run operation called from inside a member's work or a
+     * step attempt (any admitted body, a fold's included) of this open run,
+     * or undefined when it may proceed. Every run operation resolves or reads
+     * framework results, and whatever such a call obtained would enter no
+     * evidence of the calling body: it is an undeclared call (CMP-9). The
+     * refusal is decided synchronously, before any admission, claim or lane,
+     * so it never waits; because of it, a lane holder can never await the
+     * run-wide lane pool (RUN-002's nested rule). It is recorded as a run
+     * diagnostic naming the operation and the calling step by identifiers
+     * only. A closed run's operations are left to report `run-closed`.
      */
-    function within<TResult>(operation: () => TResult | Promise<TResult>): Promise<TResult> {
+    function undeclaredCall(operation: IRunOperationName): SupervisionError | undefined {
+      const caller = frames.current();
+      if (!state.open || caller === undefined || (caller.attempt === undefined && caller.lane === undefined)) {
+        return undefined;
+      }
+      const step = caller.attempt?.step;
+      const inside = step === undefined ? 'member work' : `the step attempt of ${step.slot}${step.memberKey === undefined ? '' : `/${step.memberKey}`}`;
+      const message = `Run ${context.runId} refused ${operation} from inside ${inside}: an undeclared call (CMP-9)`;
+      diagnostics.push(message);
+      return new SupervisionError('undeclared-call', message);
+    }
+
+    /**
+     * Run the operation `name` inside this run's scope, after refusing an
+     * undeclared call and checking the run is still open, and account for it
+     * until it settles.
+     */
+    function within<TResult>(operation: () => TResult | Promise<TResult>, name: IRunOperationName): Promise<TResult> {
+      const refusal = undeclaredCall(name);
+      if (refusal !== undefined) {
+        return Promise.reject(refusal);
+      }
       return state.track(() => scope.run(frame, async () => operation()));
     }
 
@@ -500,27 +573,34 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
           const outcome = await resolution.resolve({ step, requestKey: request.requestKey, lease: writer.lease() });
           diagnostics.push(...outcome.diagnostics);
           return outcome;
-        });
+        }, 'resolve');
       },
       resolveMembers(target: IMembersTarget, request: IRequestOptions): Promise<IMembersReport> {
         return within(async () => {
           const resolved = await resolution.resolveMembers({ template: target.template, step: target.step, requestKey: request.requestKey, lease: writer.lease() });
           diagnostics.push(...resolved.diagnostics);
           return membersReport(target.step, resolved);
-        });
+        }, 'resolveMembers');
       },
       resolveFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IFoldReport> {
         return within(async () => {
           const resolved = await resolution.resolveFold({ step, requestKey: request.requestKey, lease: writer.lease() });
           diagnostics.push(...resolved.diagnostics);
           return foldReport(resolved);
-        });
+        }, 'resolveFold');
+      },
+      resolveOutcomeFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IOutcomeFoldReport> {
+        return within(async () => {
+          const resolved = await resolution.resolveOutcomeFold({ step, requestKey: request.requestKey, lease: writer.lease() });
+          diagnostics.push(...resolved.diagnostics);
+          return outcomeFoldReport(resolved);
+        }, 'resolveOutcomeFold');
       },
       check(step: IBindingDescriptor): Promise<ICheckOutcome> {
-        return within(() => resolution.check({ step }));
+        return within(() => resolution.check({ step }), 'check');
       },
       recover(step: IBindingDescriptor, request: IRequestOptions): Promise<IRecoveryResult> {
-        return within(() => resolution.recover({ step, requestKey: request.requestKey }));
+        return within(() => resolution.recover({ step, requestKey: request.requestKey }), 'recover');
       },
       ordinary<TWork>(label: string, work: () => TWork | Promise<TWork>): Promise<Awaited<TWork>> {
         return within(async (): Promise<Awaited<TWork>> => {
@@ -541,7 +621,18 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
           }
           afterOrdinary(label, 'end');
           return value;
-        });
+        }, 'ordinary');
+      },
+      assertDeclaredCall(operation: IRunOperationName): void {
+        // Checked at runtime too: untyped callers may pass any value, which must never reach a diagnostic.
+        const named: unknown = operation;
+        if (typeof named !== 'string' || !runOperationNames.has(named)) {
+          throw new SupervisionError('invalid-request', 'assertDeclaredCall needs a run operation name');
+        }
+        const refusal = undeclaredCall(operation);
+        if (refusal !== undefined) {
+          throw refusal;
+        }
       },
     });
 

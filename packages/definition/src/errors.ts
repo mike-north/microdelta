@@ -32,6 +32,7 @@
  * - `invalid-collection`: a keyed collection declaration or a template's collection binding is unsupported (COL-1).
  * - `invalid-members`: fold member outcomes supplied by Resolution are not explicit, uniquely keyed entries.
  * - `skipped-member`: author code read data from a skipped fold entry, which has none (CMP-8).
+ * - `unsuccessful-member`: author code read data from a failed or cancelled outcome fold entry, which has none (RUN-010).
  * @alpha
  */
 export type IDefinitionErrorCode =
@@ -59,7 +60,8 @@ export type IDefinitionErrorCode =
   | 'invalid-template'
   | 'invalid-collection'
   | 'invalid-members'
-  | 'skipped-member';
+  | 'skipped-member'
+  | 'unsuccessful-member';
 
 /**
  * A rejected declaration, composition or invocation. Rejection always happens

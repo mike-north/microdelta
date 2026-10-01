@@ -5,8 +5,9 @@
  *
  * Supervision owns *when* work may happen: the run's environment and
  * lifetime, admission of work Resolution could not avoid, the positions at
- * which observers see work, the typed outcome of each template member and
- * strict fold in a run (RUN-005, RUN-010), the permits that bound real sends,
+ * which observers see work, the typed outcome of each template member, strict
+ * fold and outcome fold in a run (RUN-005, RUN-010), the permits that bound
+ * real sends,
  * the fan-out window, and the operator's stop intent as it reaches admission,
  * bodies, sends, waits and the publication commit. It does not decide reuse
  * (Reuse Resolution), own claims or publication (Result History), or read the
@@ -24,6 +25,9 @@ import type {
   IExecutionSupervision,
   IFoldOutcome,
   IGateEvidence,
+  IIncompleteOutcomeFoldCoverage,
+  ICompleteOutcomeFoldCoverage,
+  IOutcomeFoldOutcome,
   ILifecycleEvent,
   ILifecycleObserver,
   IRecoveryResult,
@@ -228,7 +232,11 @@ export interface IRunOptions {
   readonly permits?: number;
   /**
    * The bounded active window of member fan-out: how many members of the
-   * run's members requests and strict folds actively resolve at once. It is
+   * run's members requests, strict folds and outcome folds actively resolve
+   * at once. Every run operation called from inside member or step work
+   * (through a run the author code kept) is refused as an undeclared call
+   * (CMP-9), so no fan-out ever waits for this window from inside a lane
+   * holder (RUN-002). It is
    * independent of `permits`: the window bounds active member work and its
    * memory, permits bound provider requests. A member waiting for a time
    * lends its lane, so it never stalls its siblings. A positive safe integer;
@@ -416,9 +424,81 @@ export interface IFoldReport {
 }
 
 /**
+ * The typed outcome of one outcome (tolerant) fold in this run (RUN-010). Its
+ * statuses never collapse into one another, nor into a strict fold's:
+ *
+ * - `folded`: discovery is closed and every member has settled (succeeded,
+ *   skipped, failed or cancelled), and the fold's result over those settled
+ *   statuses is current, reused or newly published. Its outcome carries the
+ *   framework's complete coverage, independent of what the body reported. It
+ *   is not complete success: its coverage may list failed or cancelled
+ *   members, which a strict fold would never fold.
+ * - `waiting`: discovery is open (or its work was denied) or a member is
+ *   pending, so the fold claims no complete set; it carries the partial
+ *   coverage settled so far. Never terminal.
+ * - `failed`: discovery was rejected or cancelled, so no population can be
+ *   established in this run.
+ * - `pending`: the set settled, but admission denied the fold's own work;
+ *   never a terminal failure.
+ * - `cancelled`: the set settled, but Supervision withdrew the fold's own
+ *   work through the admission port (for example after a stop); terminal for
+ *   this run.
+ *
+ * Only `folded` ran or reused the fold body; the others published nothing.
+ * @alpha
+ */
+export type IOutcomeFoldRunOutcome =
+  | {
+      readonly status: 'folded';
+      /** The reused or published outcome, with its exact reference and complete coverage. */
+      readonly outcome: Extract<IOutcomeFoldOutcome, { readonly kind: 'reused' | 'published' }>;
+    }
+  | {
+      readonly status: 'waiting';
+      /** The members settled so far, the pending ones and whether discovery is open. */
+      readonly coverage: IIncompleteOutcomeFoldCoverage;
+    }
+  | {
+      readonly status: 'failed';
+      /** Why no population can be established. */
+      readonly diagnostic: string;
+    }
+  | {
+      readonly status: 'pending' | 'cancelled';
+      /** The fold step whose own work was refused. */
+      readonly refused: IBindingDescriptor;
+      readonly reason: string;
+      /** The complete coverage of the settled set the fold would have folded. */
+      readonly coverage: ICompleteOutcomeFoldCoverage;
+    };
+
+/**
+ * One outcome fold request's report: discovery, every current member's typed
+ * outcome of the consumed template step in canonical key order (none unless
+ * discovery keyed), and the outcome fold's typed outcome.
+ * @alpha
+ */
+export interface IOutcomeFoldReport {
+  /** The outcome fold's composition-level step. */
+  readonly fold: IBindingDescriptor;
+  /** The template step descriptor (no member key) the fold consumes. */
+  readonly over: IBindingDescriptor;
+  /** How discovery settled. */
+  readonly discovery: IDiscoveryReport;
+  /** Every current member's typed outcome, in canonical key order. */
+  readonly members: readonly IMemberOutcome[];
+  /** The outcome fold's typed outcome. */
+  readonly outcome: IOutcomeFoldRunOutcome;
+}
+
+/**
  * A live run. Every operation executes inside the run's scope, so author code
  * it reaches can look up the run context without a parameter. After the run
- * closes, every operation rejects with `run-closed`.
+ * closes, every operation rejects with `run-closed`. Every operation belongs
+ * to the run body: called from inside a member's work or any step attempt
+ * (author code that kept the run), it rejects at once with `undeclared-call`
+ * (CMP-9), because what it resolves or reads would enter no evidence of the
+ * calling body. Read-only inspection outside a run is unaffected.
  * @alpha
  */
 export interface IRun {
@@ -448,13 +528,56 @@ export interface IRun {
    * no body, admits no fold work and publishes nothing.
    */
   resolveFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IFoldReport>;
+  /**
+   * Resolve one outcome (tolerant) fold and report it: every current member
+   * of the consumed template step progresses independently first; then,
+   * while discovery is open or a member is pending, the fold waits with the
+   * coverage settled so far, and once every member of a closed population has
+   * settled it is validated or executed over their settled statuses. A
+   * waiting or failed outcome fold runs no body, admits no fold work and
+   * publishes nothing.
+   */
+  resolveOutcomeFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IOutcomeFoldReport>;
   /** Report what a normal request would do, without admission, claims, bodies or writes. */
   check(step: IBindingDescriptor): Promise<ICheckOutcome>;
   /** Report the durable outcome of the execution a saved request key identifies, without executing (recovery entry operation). */
   recover(step: IBindingDescriptor, request: IRequestOptions): Promise<IRecoveryResult>;
   /** Run ordinary nonmemoized work, observed but with no completed-result identity. */
   ordinary<T>(label: string, work: () => T | Promise<T>): Promise<Awaited<T>>;
+  /**
+   * Assert that a call of the run operation `operation` is a declared one.
+   * Invoked from inside a member's work or a step attempt of this open run,
+   * it records the run diagnostic and throws the CMP-9 refusal,
+   * `SupervisionError('undeclared-call')`; otherwise it returns. The facade's
+   * synchronous exact `read` calls it first, so that result read obeys the
+   * same rule as the run's own operations. `operation` must be one of the
+   * closed {@link IRunOperationName}s: anything else throws `invalid-request`
+   * and records nothing, so author text never reaches a diagnostic (RUN-013).
+   *
+   * It is `@alpha` rather than `@internal` only because the facade is a
+   * separate package that consumes Supervision's generated alpha
+   * declarations, from which API Extractor trims `@internal` members. It is
+   * not meant for authors: the facade's author-facing run omits it.
+   * @param operation - The run operation being called.
+   */
+  assertDeclaredCall(operation: IRunOperationName): void;
 }
+
+/**
+ * The closed set of run operation names: each operation a live run offers,
+ * plus `read`, the facade's exact result read. A refusal diagnostic names
+ * one of them, so a diagnostic never carries author-supplied text.
+ * @alpha
+ */
+export type IRunOperationName =
+  | 'check'
+  | 'ordinary'
+  | 'read'
+  | 'recover'
+  | 'resolve'
+  | 'resolveFold'
+  | 'resolveMembers'
+  | 'resolveOutcomeFold';
 
 /**
  * A send a hard stop aborted, with its recorded remote state.

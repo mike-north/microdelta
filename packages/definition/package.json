@@ -1,6 +1,6 @@
 {
   "name": "@microdelta/definition",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Existing definition context capability; implementation incomplete",
   "license": "UNLICENSED",
   "repository": {
@@ -37,7 +37,7 @@
     "directory": "test-d"
   },
   "dependencies": {
-    "@microdelta/value": "0.1.0"
+    "@microdelta/value": "0.1.1"
   },
   "publishConfig": {
     "access": "public"

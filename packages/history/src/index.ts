@@ -76,8 +76,12 @@ export type {
  * Machine host contracts surfaced by the durable authority's options and by
  * the connections its SQLite capability returns. They are re-exported
  * intentionally, as Value and Tracking re-export the host contracts they
- * surface, so alpha consumers name Machine's exact types from History.
+ * surface, so alpha consumers name Machine's exact types from History. The
+ * busy failure is re-exported as a value because History's operations surface
+ * it unchanged as their typed storage-contention failure, which consumers
+ * must be able to recognize.
  */
+export { SqliteBusyError } from '@microdelta/machine';
 export type {
   IClockCapability,
   ISha256Capability,

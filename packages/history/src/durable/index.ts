@@ -10,6 +10,8 @@
  * | Transition | Durable change | Death before commit | Death after commit |
  * | --- | --- | --- | --- |
  * | acquire | new holder, fence + 1, expiry | no change | lease held until expiry |
+ * | renew | later expiry; fence unchanged | lease unchanged | lease extended |
+ * | release | no holder; fence unchanged | lease held until expiry | next grant needs no expiry |
  * | allocate | attempt counter + 1, `allocated` attempt with key and intent | identity never issued | identity consumed, no result |
  * | stage | `staged` content and dependencies | attempt stays `allocated` | candidate evidence only, never a result |
  * | publish | result, index, provenance, `completed`, current pointer | attempt stays `staged` | complete result; recover by key |
@@ -201,7 +203,13 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
   const statements = {
     writer: connection.prepare(sql`/* writer */ SELECT last_fence, holder, expires_at, time_high_water FROM history_writer WHERE singleton = 1`),
     observeTime: connection.prepare(sql`/* writer */ UPDATE history_writer SET time_high_water = ? WHERE singleton = 1`),
+    // Only a grant writes the fence. Renewal and release leave last_fence as
+    // they found it rather than writing back the presented lease's fence: the
+    // holder guard has already proved the two equal, and never assigning the
+    // column there means no future weakening of that guard could regress it.
     setHolder: connection.prepare(sql`/* writer */ UPDATE history_writer SET last_fence = ?, holder = ?, expires_at = ? WHERE singleton = 1`),
+    extendHolder: connection.prepare(sql`/* writer */ UPDATE history_writer SET expires_at = ? WHERE singleton = 1`),
+    clearHolder: connection.prepare(sql`/* writer */ UPDATE history_writer SET holder = NULL, expires_at = ? WHERE singleton = 1`),
     sequences: connection.prepare(sql`/* sequence */ SELECT last_attempt, last_publication, last_acceptance FROM history_sequences WHERE singleton = 1`),
     setAttemptSequence: connection.prepare(sql`/* allocate */ UPDATE history_sequences SET last_attempt = ? WHERE singleton = 1`),
     setPublicationSequence: connection.prepare(sql`/* publish */ UPDATE history_sequences SET last_publication = ? WHERE singleton = 1`),
@@ -517,15 +525,15 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
       const duration = requirePositive(leaseMilliseconds, 'leaseMilliseconds');
       return asHolder(lease, (now) => {
         const expiresAt = safeSum(now, duration, 'lease expiry');
-        statements.setHolder.run(lease.fence, lease.holder, expiresAt);
+        statements.extendHolder.run(expiresAt);
         return Object.freeze({ holder: lease.holder, fence: lease.fence, expiresAt });
       });
     },
 
     releaseWriter(lease: IWriterLease): void {
       asHolder(lease, (now) => {
-        // Release clears the holder but never resets the fence counter.
-        statements.setHolder.run(lease.fence, null, now);
+        // Release clears the holder but never touches the fence counter.
+        statements.clearHolder.run(now);
       });
     },
 

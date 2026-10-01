@@ -302,6 +302,14 @@ export interface IDurableHistoryOptions {
  * larger fence. A host reading that is not a nonnegative safe integer fails
  * the operation without any change. This is a local single-file policy, not a
  * distributed-time or liveness guarantee.
+ *
+ * Storage contention: every mutation, including acquisition, is one IMMEDIATE
+ * SQLite transaction. When another connection, possibly in another process,
+ * holds SQLite's write lock past the host's bounded busy wait, the operation
+ * fails with Machine's `SqliteBusyError` (re-exported here) and changes
+ * nothing. That is contention, not an ownership fact: acquisition reports
+ * `held` only for an observed unexpired holder (PUB-005), and whether to try
+ * again is the caller's policy, never History's.
  * @alpha
  */
 export interface IDurableHistory {
@@ -312,9 +320,13 @@ export interface IDurableHistory {
 
   /** Acquire the single logical writer, or report the observed unexpired holder. */
   acquireWriter(request: IWriterAcquisitionRequest): IWriterAcquisition;
-  /** Extend a still-valid lease; a stale or expired lease is rejected. */
+  /**
+   * Extend a still-valid lease; a stale or expired lease is rejected. Only the
+   * expiry changes: the durable fence is left as it is, never rewritten from
+   * the presented lease.
+   */
   renewWriter(lease: IWriterLease, leaseMilliseconds: number): IWriterLease;
-  /** End a still-valid lease without resetting the fence. */
+  /** End a still-valid lease; the durable fence is left as it is, so the next grant still advances it. */
   releaseWriter(lease: IWriterLease): void;
   /** Inspect the recorded holder, if any, without granting authority. */
   currentWriter(): IWriterLease | undefined;

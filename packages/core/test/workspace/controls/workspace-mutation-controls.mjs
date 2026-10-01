@@ -47,7 +47,7 @@ const controls = [
   { name: 'the run yields between its final empty check and closing', target: 'supervision', anchor: '            }\n            frame.open = false;', replacement: '            }\n            await Promise.resolve();\n            frame.open = false;' },
   { name: 'started operations are not accounted to the run', target: 'supervision', anchor: 'started.add(settled);', replacement: 'void settled;' },
   { name: 'the caller admission policy is ignored', target: 'supervision', anchor: 'const decision = await policy.admit(request);', replacement: "const decision = Object.freeze({ kind: 'admitted' });" },
-  { name: 'recovery takes the writer lease', target: 'supervision', anchor: 'return within(() => resolution.recover({ step, requestKey: request.requestKey }));', replacement: 'return within(() => { writer.tryLease(); return resolution.recover({ step, requestKey: request.requestKey }); });' },
+  { name: 'recovery takes the writer lease', target: 'supervision', anchor: "return within(() => resolution.recover({ step, requestKey: request.requestKey }), 'recover');", replacement: "return within(() => { writer.tryLease(); return resolution.recover({ step, requestKey: request.requestKey }); }, 'recover');" },
   { name: 'the writer lease is never released', target: 'supervision', anchor: 'writer.release();', replacement: 'void writer;' },
   { name: 'observer failures are swallowed', target: 'supervision', anchor: 'throw failure.error;', replacement: 'void failure;' },
   { name: 'observers are read live instead of captured at start', target: 'supervision', anchor: 'Reflect.apply(observe, observer, [event]);', replacement: "Reflect.apply(Reflect.get(observer, 'observe'), observer, [event]);" },
@@ -143,9 +143,10 @@ async function runExample(expectedTitles) {
 
 /** Run every suite once; `baseline` holds the expected titles per suite set. */
 async function runAll(baseline) {
-  const supervision = await runJest(join(root, 'packages/supervision/jest.config.mjs'), '.test-build/test', ['supervision.test.js'], baseline?.supervision);
-  const workspace = await runJest(join(root, 'packages/core/jest.config.mjs'), '.test-build/test/workspace',
-    ['admission-observers.test.js', 'contribution-run.test.js', 'recovery.test.js', 'scope.test.js'], baseline?.workspace);
+  // Patterns name exactly the suites judged, so suites added to these directories later do not invalidate the run.
+  const supervision = await runJest(join(root, 'packages/supervision/jest.config.mjs'), '.test-build/test/supervision\\.test\\.js$', ['supervision.test.js'], baseline?.supervision);
+  const workspace = await runJest(join(root, 'packages/core/jest.config.mjs'), '.test-build/test/workspace/(admission-observers|contribution-run|recovery|scope|writer-wait)\\.test\\.js$',
+    ['admission-observers.test.js', 'contribution-run.test.js', 'recovery.test.js', 'scope.test.js', 'writer-wait.test.js'], baseline?.workspace);
   const example = await runExample(baseline?.example);
   return {
     titles: { supervision: supervision.titles, workspace: workspace.titles, example: example.titles },

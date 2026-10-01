@@ -49,7 +49,7 @@ const controls = [
   { name: 'an incomplete attempt is reported as absent', target: 'history', anchor: "case 'staged':\n                return Object.freeze({ kind: 'incomplete', attempt });", replacement: "case 'staged':\n                return Object.freeze({ kind: 'absent' });" },
   { name: 'fingerprint validation also materializes the source result payload', target: 'index', anchor: 'resolveFingerprint(reference, request) {\n            const resultId = resolve(reference);', replacement: 'resolveFingerprint(reference, request) {\n            const resultId = resolve(reference);\n            statements.payload.get(resultId);' },
   { name: 'a selected scalar read also loads the whole root payload', target: 'index', anchor: 'const row = statements.scalarPayload.get(resultId, metadata.nodeId);', replacement: 'statements.payload.get(resultId); const row = statements.scalarPayload.get(resultId, metadata.nodeId);' },
-  { name: 'recovery takes the writer lease', target: 'supervision', anchor: 'return within(() => resolution.recover({ step, requestKey: request.requestKey }));', replacement: 'return within(() => { writer.tryLease(); return resolution.recover({ step, requestKey: request.requestKey }); });' },
+  { name: 'recovery takes the writer lease', target: 'supervision', anchor: "return within(() => resolution.recover({ step, requestKey: request.requestKey }), 'recover');", replacement: "return within(() => { writer.tryLease(); return resolution.recover({ step, requestKey: request.requestKey }); }, 'recover');" },
 ];
 
 /** Original bytes of every target. */

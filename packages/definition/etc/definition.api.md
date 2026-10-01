@@ -9,7 +9,7 @@ export function declarations<TFamily extends IBindingFamily>(): IDeclarations<TF
 
 // @alpha
 export class DefinitionError extends Error {
-    constructor(code: IDefinitionErrorCode, message: string);
+    constructor(code: IDefinitionErrorCode, message: string, cause?: unknown);
     readonly code: IDefinitionErrorCode;
 }
 

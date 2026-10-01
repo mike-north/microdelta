@@ -65,7 +65,9 @@ export type IDefinitionErrorCode =
 
 /**
  * A rejected declaration, composition or invocation. Rejection always happens
- * before any affected author callback or port dispatch runs.
+ * before any affected author callback or port dispatch runs. When an author
+ * callback Definition invoked (a slot subject function) threw, the thrown
+ * value is the error's `cause`; the message never repeats its text (RUN-013).
  * @alpha
  */
 export class DefinitionError extends Error {
@@ -75,9 +77,10 @@ export class DefinitionError extends Error {
   /**
    * @param code - The violated contract.
    * @param message - Human-readable diagnostic detail.
+   * @param cause - The value an author callback threw, when one did.
    */
-  public constructor(code: IDefinitionErrorCode, message: string) {
-    super(message);
+  public constructor(code: IDefinitionErrorCode, message: string, cause?: unknown) {
+    super(message, cause === undefined ? undefined : { cause });
     this.name = 'DefinitionError';
     this.code = code;
   }

@@ -241,7 +241,11 @@ accounting }`, which needs the Supervision's timer:
   cancellation settles the operation, otherwise it is unknown.
 - **Lease authority.** Every commit uses the lease of the pass, so a pass
   that lost its lease records nothing: its operation stays `pending` and any
-  later run records it unknown (ruling R).
+  later run records it unknown (ruling R). The pass still ends with typed
+  outcomes. Each step whose claim, publication or acceptance the lost lease no
+  longer authorizes is denied with reason `lease-lost`, so its member stays
+  pending, rather than the request rejecting with History's raw stale-writer
+  error.
 - **Operator settlement.** `run.inspectOperations()` lists the environment's
   operations; `run.settleOperation({ action: 'resolve' | 'abandon', ... })`
   settles an unknown one under the writer lease. Usage the operator learned

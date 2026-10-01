@@ -127,6 +127,8 @@ export interface IOperationRunOptions {
   readonly writerWait?: IWriterWaitOptions;
   /** False to run without operation ports. */
   readonly operations?: boolean;
+  /** Also offered every run event, synchronously and after the session records it, as any run observer is. */
+  readonly observe?: (event: IRunEvent) => void;
 }
 
 /** A started run with the events it offered so far. */
@@ -202,7 +204,12 @@ export function openSession(stores: Pick<IOperationStores, 'history' | 'accounti
         environment,
         runId,
         writer: writerFor(history, `ops:${runId}`, leaseMilliseconds),
-        observers: [{ observe: (event) => events.push(event) }],
+        observers: [{
+          observe: (event) => {
+            events.push(event);
+            runOptions.observe?.(event);
+          },
+        }],
         ...(runOptions.operations === false ? {} : { operations: { journal, accounting: options.wrapAccounting?.(accounting) ?? accounting, random } }),
         ...(runOptions.deferral === undefined ? {} : { deferral: runOptions.deferral }),
         ...(runOptions.stop === undefined ? {} : { stop: runOptions.stop }),

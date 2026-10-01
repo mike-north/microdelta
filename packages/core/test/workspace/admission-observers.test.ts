@@ -208,6 +208,23 @@ describe('observer positions (A-19, REUSE-009)', () => {
     }
   });
 
+  test('an observer failure after ordinary work is a diagnostic naming the work and phase, never the observer\'s error text (RUN-013)', async () => {
+    const session = openSession(store.location);
+    try {
+      const result = await session.workspace.run<IInputs, IHelpers, string>({
+        authoring: session.contributors.authoring,
+        composition: session.contributors.composition,
+        environment,
+        observers: [{ observe: (event) => { if (event.kind === 'ordinary' && event.phase === 'end') { throw new Error('observer AUTHOR-SECRET-0rd1'); } } }],
+      }, (run) => run.ordinary('report', () => 'value'));
+      expect(result.value).toBe('value');
+      expect(result.diagnostics).toEqual([expect.stringContaining('end of ordinary work report')]);
+      expect(result.diagnostics.join('\n')).not.toContain('AUTHOR-SECRET-0rd1');
+    } finally {
+      session.close();
+    }
+  });
+
   test('a post-commit observer failure preserves committed success and its exact reference', async () => {
     const session = openSession(store.location);
     let published: string;
@@ -218,7 +235,8 @@ describe('observer positions (A-19, REUSE-009)', () => {
       expect(committed.error).toBeUndefined();
       expect(committed.outcome).toMatchObject({ kind: 'published' });
       published = committed.outcome === undefined ? '' : locatorOf(committed.outcome);
-      expect(committed.diagnostics).toEqual([expect.stringContaining('observer failure at publish')]);
+      // The diagnostic names the phase; the observer's own error text never enters it (RUN-013).
+      expect(committed.diagnostics).toEqual([expect.stringContaining('Lifecycle observer failed at publish')]);
       expect(world.summaries['person:ada']).toBe(1);
     } finally {
       session.close();

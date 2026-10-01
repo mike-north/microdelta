@@ -19,7 +19,16 @@
  *   after T under the same operation identity, with new request attempt,
  *   step attempt and run identities;
  * - a hard stop's remote state is durable for the next process;
- * - no process writes a planted value to stdout or stderr.
+ * - a soft-stop drain that outlives its lease while a successor process takes
+ *   over writes nothing more: its late completion ends `lease-lost`, and the
+ *   members it meets afterwards, including ones the successor published, end
+ *   pending as `lease-lost` instead of escaping as a raw History error (EXP-8
+ *   ruling R);
+ * - a hard stop requested as the run starts its deferral sleep leaves nothing
+ *   that keeps the process alive: on Node's real timer it exits long before
+ *   the deferral's time (A-13, RUN-014);
+ * - no process writes a planted value to stdout or stderr, including one an
+ *   author put in its own error.
  *
  * This proves the single-host process-termination scope only, not power loss.
  *
@@ -214,6 +223,41 @@ describe('durable remote state after a hard stop (RUN-014)', () => {
   });
 });
 
+describe('a drain that outlives its lease (A-09, EXP-8 ruling R)', () => {
+  test('the late completion ends lease-lost, the members met afterwards end pending as lease-lost, and the drained run writes nothing under the lost lease', () => {
+    const successorAt = T0 + 10_000;
+    const drained = clean({ now: T0, runId: 'run:drain', action: 'members', drainPastLease: { now: successorAt, runId: 'run:successor' } });
+    // The successor took the lease over, found pr-1 in flight, and settled the other members.
+    expect(drained.successor?.statuses).toEqual({ 'pr-1': 'pending', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
+    // The drained run: its late completion of pr-1 could not be recorded, and it could record nothing for pr-2 or pr-3,
+    // not even an acceptance of the successor's results. Every member has a typed outcome.
+    expect(trace(drained)).toContain('assess@pr-1:request-settled:unknown:lease-lost');
+    expect(drained.statuses).toEqual({ 'pr-1': 'pending', 'pr-2': 'pending', 'pr-3': 'pending' });
+    expect(drained.reasons?.['pr-2']).toBe('lease-lost');
+    expect(drained.reasons?.['pr-3']).toBe('lease-lost');
+    // Nothing the drained run did after the takeover is durable: the successor's records stand as it left them.
+    const after = clean({ now: successorAt + 10_000, runId: 'run:read', action: 'inspect' });
+    const byMember = (report: IWorkerReport): Readonly<Record<string, unknown>> => Object.fromEntries(report.operations.flatMap((view) => typeof view === 'object' && view !== null ? [[String(Reflect.get(view, 'member')), view]] : []));
+    expect(byMember(after)).toEqual(byMember(drained.successor ?? { events: [], operations: [], usage: undefined }));
+    expect(pr1Operations(after)).toEqual([expect.objectContaining({ status: 'unknown' })]);
+  });
+});
+
+describe('a hard stop at the start of a deferral sleep (A-13, RUN-014)', () => {
+  test('a hard stop requested while the run offers its sleeping event lets the process exit long before the deferral time, on Node\'s real timer', () => {
+    const retryMilliseconds = 20_000;
+    const before = Date.now();
+    const report = clean({ now: before, runId: 'run:sleep-stop', action: 'members', deferral: 'sleep', clock: 'node', hardStopOn: 'sleeping', scripts: [{ name: 'assess', key: 'pr-1', entries: ['rate-limit:20000'] }] });
+    const elapsed = Date.now() - before;
+    expect(report.events.flatMap((event) => event.kind === 'wait' ? [`${event.phase}:${String(event.released)}`] : [])).toEqual(['sleeping:true', 'stopped:true']);
+    expect(report.statuses).toEqual({ 'pr-1': 'pending', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
+    // The deferral stays durable for a later process: the run reports the time it waits until.
+    expect(report.waitingUntil).toBeGreaterThanOrEqual(before + retryMilliseconds);
+    // Nothing kept the process alive until that time; a process start takes well under half of it.
+    expect(elapsed).toBeLessThan(retryMilliseconds / 2);
+  }, 60_000);
+});
+
 describe('privacy of process output (RUN-013)', () => {
   test('no stage of a mixed workload writes the planted value to stdout or stderr', () => {
     outputs.length = 0;
@@ -229,6 +273,18 @@ describe('privacy of process output (RUN-013)', () => {
     clean({ now: T0 + hour, runId: 'run:E', environment: 'env:trial', action: 'inspect' });
     expect(outputs.join('').length).toBeGreaterThan(0);
     expect(planted).toContain('c0ffee');
+    for (const output of outputs) {
+      expect(output).not.toContain('c0ffee');
+    }
+  });
+
+  test('an author error carrying the planted value fails its member with a typed failure whose message, and the process output, never repeat it', () => {
+    outputs.length = 0;
+    const report = clean({ now: T0, runId: 'run:author', action: 'members', plans: { 'pr-1': 'author-throws' } });
+    expect(report.statuses).toEqual({ 'pr-1': 'failed', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
+    // The framework message names the step and the failure kind.
+    expect(report.failures?.['pr-1']).toEqual({ code: 'execution-failure', message: expect.stringContaining('assess') });
+    expect(outputs.join('').length).toBeGreaterThan(0);
     for (const output of outputs) {
       expect(output).not.toContain('c0ffee');
     }

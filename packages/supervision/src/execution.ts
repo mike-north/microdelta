@@ -495,8 +495,9 @@ export function runControls(frame: IRunFrame): IRunExecution {
     // detached from the run as soon as the send settles. An adapter listener
     // that is never removed therefore stays on this short-lived signal and
     // cannot keep its closure reachable until the run closes.
-    const own = createAbortSource((error: unknown) => {
-      run.diagnose(`An abort listener of send ${label} failed: ${error instanceof Error ? error.message : String(error)}`);
+    // An abort listener is adapter code: the diagnostic names the send, never the listener's error text (RUN-013).
+    const own = createAbortSource(() => {
+      run.diagnose(`An abort listener of send ${label} failed`);
     });
     const detach = run.hard.signal.onAbort(() => {
       own.abort();

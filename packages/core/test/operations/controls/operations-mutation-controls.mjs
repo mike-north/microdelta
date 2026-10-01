@@ -248,6 +248,48 @@ const controls = [
     directory: resolution, file: 'resolution.js',
     anchor: 'return historical.analysis === analysis;', replacement: 'return historical.analysis === analysis && historical.environment === environment;',
   },
+  {
+    // The original race: a stop already in force ran the listener before `cancel` was assigned, so the timer stayed armed.
+    name: 'a stop that lands as the deferral sleep begins still arms its keep-alive timer',
+    directory: supervision, file: 'supervision.js',
+    anchor: "if (state.stopped.signal.aborted) {\n                return Promise.resolve(false);\n            }\n            return new Promise((resolve) => {\n                let remove = () => undefined;\n                const cancel = clock.schedule(until, () => {\n                    remove();\n                    resolve(true);\n                }, { keepAlive: true });\n                remove = state.stopped.signal.onAbort(() => {\n                    cancel();\n                    resolve(false);\n                });\n            });",
+    replacement: "return new Promise((resolve) => {\n                let cancel = () => undefined;\n                const remove = state.stopped.signal.onAbort(() => {\n                    cancel();\n                    resolve(false);\n                });\n                cancel = clock.schedule(until, () => {\n                    remove();\n                    resolve(true);\n                }, { keepAlive: true });\n            });",
+  },
+  {
+    name: 'the resumed wait event reports the lease kept',
+    directory: supervision, file: 'supervision.js',
+    anchor: "waitEvent('resumed', until, wait.released);", replacement: "waitEvent('resumed', until, false);",
+  },
+  {
+    name: 'a release made while a request sleeps is not recorded for its wait',
+    directory: supervision, file: 'supervision.js',
+    anchor: 'for (const sleeper of sleepers) {\n                    sleeper.released = true;\n                }', replacement: 'void sleepers;',
+  },
+  {
+    name: "a body failure's message repeats the author's error text",
+    directory: resolution, file: 'resolution.js',
+    anchor: '`Body of ${stepKey(step)} failed`, cause);', replacement: '`Body of ${stepKey(step)} failed: ${frameworkDetail(cause)}`, cause);',
+  },
+  {
+    name: 'a write the lost lease refuses escapes as a raw History error',
+    directory: resolution, file: 'resolution.js',
+    anchor: 'if (error instanceof StaleWriterError) {', replacement: 'if (false) {',
+  },
+  {
+    name: "a failed body's attempt ending stores the author's error text",
+    directory: resolution, file: 'resolution.js',
+    anchor: "detail: 'the body failed'", replacement: 'detail: frameworkDetail(cause)',
+  },
+  {
+    name: 'every History write failure is reported as a lost lease',
+    directory: resolution, file: 'resolution.js',
+    anchor: 'if (error instanceof StaleWriterError) {', replacement: 'if (true) {',
+  },
+  {
+    name: 'History integrity damage is masked as a lost lease',
+    directory: resolution, file: 'resolution.js',
+    anchor: 'if (error instanceof StaleWriterError) {', replacement: 'if (error instanceof StaleWriterError || error instanceof HistoryIntegrityError) {',
+  },
 ];
 
 /** Emitted files a control may plant into, with their original bytes. */

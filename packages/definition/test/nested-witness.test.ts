@@ -18,6 +18,7 @@
 import { describe, expect, test } from '@jest/globals';
 import { encodeSnapshot } from '@microdelta/value';
 
+import { DefinitionError } from '../src/index.js';
 import type { IBindingDescriptor, IWitnessResolution } from '../src/index.js';
 import { compose, memo, type ITestFamily } from './fixtures/contributors.js';
 import { assessmentSubject, buildNested, nestedScope, rubric, stepSlot, supply, type IAssessment, type IAssessorParameters } from './fixtures/nested.js';
@@ -306,6 +307,24 @@ describe('recomputed slot subjects (acceptance 6)', () => {
     }
     const { child, witness } = resolution;
     expectDefinitionError(() => child.subjectFor(witness.arguments), 'invalid-subject');
+  });
+
+  test('RES-001, RUN-013: a subject function that throws rejects with invalid-subject; its error is the cause, never the message', () => {
+    const thrown = new Error('subject lookup failed AUTHOR-SECRET-7e57');
+    const resolution = buildNested({ subject: () => { throw thrown; } }).composition.resolveWitness(assessorWitness('person:ada'));
+    if (resolution.status !== 'bound' || resolution.child.role !== 'callable' || resolution.witness.version !== 2) {
+      throw new Error('expected a bound slot witness');
+    }
+    const { child, witness } = resolution;
+    let caught: unknown;
+    try {
+      child.subjectFor(witness.arguments);
+    } catch (error: unknown) {
+      caught = error;
+    }
+    expect(caught).toBeInstanceOf(DefinitionError);
+    expect(caught instanceof DefinitionError ? [caught.code, caught.cause] : undefined).toEqual(['invalid-subject', thrown]);
+    expect(caught instanceof Error ? caught.message : '').not.toContain('AUTHOR-SECRET-7e57');
   });
 
 });

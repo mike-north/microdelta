@@ -266,6 +266,17 @@ integrity failure.
 An outcome's `trace` is the requested step's own lifecycle; its `diagnostics`
 cover the whole request, including nested children, once each.
 
+A write that needs the request's writer lease (a claim, a publication, an
+acceptance, an attempt ending) may be refused by History because the lease
+expired or a successor took it over. That write records nothing, and the step
+that needed it is denied with reason `lease-lost` instead of the request
+rejecting with History's stale-writer error. An attempt it had claimed stays
+incomplete for the successor to recover (EXP-8 ruling R).
+
+Failure messages and diagnostics name the step and the failure kind. They never
+repeat what author or caller code threw; the thrown value is the failure's
+`cause`.
+
 ## Tests
 
 Owner tests cover the outcome-envelope registry and the typed family (`tsd`).

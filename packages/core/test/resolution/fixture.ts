@@ -29,6 +29,13 @@ import type { ITrackedView } from '@microdelta/tracking';
 /** The analysis scope of the fixture composition. */
 export const analysis = 'contribution-report:acme/widget';
 
+/**
+ * A value planted in every error the fixture's author callbacks throw (and
+ * the session's admission and observer doubles): author text that no
+ * framework message, event, diagnostic or stored record may repeat (RUN-013).
+ */
+export const authorSecret = 'AUTHOR-SECRET-7e57';
+
 /** The two explicitly selected contributor keys. */
 export type IMemberKey = 'person:ada' | 'person:ben';
 
@@ -112,6 +119,8 @@ export interface IWorld {
   summaryThrows: Record<IMemberKey, boolean>;
   /** Test-controlled effect run inside a summary body just before it throws. */
   beforeSummaryThrows: (() => void) | undefined;
+  /** Test-controlled effect run inside every summary body that does not throw, before it returns. */
+  duringSummary: (() => void) | undefined;
   /** Counts of source check/retrieval runs per member. */
   checks: Record<IMemberKey, number>;
   /** Counts of finality hook evaluations per member. */
@@ -163,6 +172,7 @@ export function createWorld(): IWorld {
     finality: { 'person:ada': 'final', 'person:ben': 'final' },
     summaryThrows: { 'person:ada': false, 'person:ben': false },
     beforeSummaryThrows: undefined,
+    duringSummary: undefined,
     checks: { 'person:ada': 0, 'person:ben': 0 },
     finalities: { 'person:ada': 0, 'person:ben': 0 },
     summaries: { 'person:ada': 0, 'person:ben': 0 },
@@ -242,7 +252,7 @@ function checkActivity(previous: IPreviousResult<IActivity> | undefined, config:
     case 'return-raw-data':
       return forged<ISourceOutcome<IActivity>>(copy(world.remote[key]));
     case 'throw':
-      throw new Error('fixture source unavailable');
+      throw new Error(`fixture source unavailable ${authorSecret}`);
     default: {
       const exhaustive: never = policy;
       return exhaustive;
@@ -258,7 +268,7 @@ function acceptActivity(previous: IPreviousResult<IActivity>, config: ITrackedVi
   }
   const policy = world.finality[key];
   if (policy === 'throw') {
-    throw new Error('fixture finality policy unavailable');
+    throw new Error(`fixture finality policy unavailable ${authorSecret}`);
   }
   return policy === 'non-boolean' ? 'yes' : policy === 'final';
 }
@@ -272,8 +282,9 @@ function summarize(activity: IResultView<IActivity>, format: ITrackedView<IForma
   world.summaries[key] += 1;
   if (world.summaryThrows[key]) {
     world.beforeSummaryThrows?.();
-    throw new Error('fixture summary failure');
+    throw new Error(`fixture summary failure ${authorSecret}`);
   }
+  world.duringSummary?.();
   let merged = 0;
   const authored = activity.pullRequests.length;
   for (let index = 0; index < authored; index += 1) {

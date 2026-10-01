@@ -107,8 +107,12 @@ export interface IAnySuppliedStepDeclaration<TFamily extends IBindingFamily> ext
  */
 export interface ISuppliedStepDeclaration<TFamily extends IBindingFamily, TParameters extends readonly unknown[], TResult>
   extends IAnySuppliedStepDeclaration<TFamily> {
-  /** The author's actual computation callback, typed by its call signature. */
-  readonly run: (context: ISuppliedStepRunContext<TFamily, TParameters>) => TResult;
+  /**
+   * The author's actual computation callback, typed by its call signature.
+   * Like a memo body it may be asynchronous (for example one awaited external
+   * operation per call); the call's result is its settled value.
+   */
+  readonly run: (context: ISuppliedStepRunContext<TFamily, TParameters>) => TResult | Promise<TResult>;
 }
 
 /**
@@ -121,8 +125,8 @@ export interface ISuppliedStepOptions<TFamily extends IBindingFamily, TParameter
   readonly version?: number;
   /** Display metadata only; never identity or correspondence. */
   readonly label?: string;
-  /** The author's computation callback. */
-  readonly run: (context: ISuppliedStepRunContext<TFamily, TParameters>) => TResult;
+  /** The author's computation callback; it may be asynchronous, and the call's result is its settled value. */
+  readonly run: (context: ISuppliedStepRunContext<TFamily, TParameters>) => TResult | Promise<TResult>;
 }
 
 /**

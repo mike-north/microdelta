@@ -5,7 +5,8 @@ EXTENDS Naturals, FiniteSets
 \* (packages/history/src/durable/index.ts) under the owner-decided concurrency
 \* policy: one fenced writer per store; a contending process observes the
 \* holder and waits, taking over only after the lease expires, and always
-\* through a fresh fence; inspection needs no lease. It complements
+\* through a fresh fence, or gives up at its operator deadline with a
+\* writer-busy outcome naming the holder; inspection needs no lease. It complements
 \* Publication.tla, which owns the attempt lifecycle and exact references, by
 \* checking the one authority guard every holder mutation shares, the waiter's
 \* durable footprint and the clock high-water policy under arbitrary host
@@ -34,7 +35,9 @@ Faults ==
     "holder-expiry-inclusive",
     "acquire-ignores-expiry",
     "waiter-advances-fence",
-    "ignore-high-water" }
+    "ignore-high-water",
+    "takeover-before-expiry",
+    "busy-without-holder" }
 
 \* Every lease-guarded History mutation. The five data operations write rows
 \* that record the writing fence (allocated_fence, ended_fence,
@@ -43,7 +46,7 @@ DataOps == {"allocate", "stage", "publish", "abandon", "accept"}
 HolderOps == {"renew", "release"} \cup DataOps
 
 \* Event labels select which pre-state witness an invariant reads.
-ActionNames == {"init", "grant", "held", "accepted", "rejected", "inspect"}
+ActionNames == {"init", "grant", "held", "busy", "accepted", "rejected", "inspect"}
 
 Max(a, b) == IF a >= b THEN a ELSE b
 
@@ -70,6 +73,7 @@ ProcessType ==
 \* independently of the holder name so a shared name cannot hide a stale
 \* actor; `ended` holds fences some evaluation found expired, released or
 \* superseded; the high marks are the strongest values ever issued/observed.
+\* `busyHolder` is the holder the latest writer-busy outcome named.
 ObservationType ==
   [ lastAction : ActionNames,
     op : HolderOps \cup {"none"},
@@ -82,7 +86,8 @@ ObservationType ==
     grantee : Processes \cup {NoProcess},
     ended : SUBSET (1..MaxFence),
     highFence : 0..MaxFence,
-    highNow : 0..MaxTime ]
+    highNow : 0..MaxTime,
+    busyHolder : HolderNames \cup {NoHolder} ]
 
 VARIABLES durable, process, observations
 
@@ -103,7 +108,8 @@ Init ==
   /\ observations =
        [ lastAction |-> "init", op |-> "none", actor |-> NoProcess, now |-> 0,
          prior |-> EmptyDurable, presentedName |-> NoHolder, presentedFence |-> 0,
-         presentedWasEnded |-> FALSE, grantee |-> NoProcess, ended |-> {}, highFence |-> 0, highNow |-> 0 ]
+         presentedWasEnded |-> FALSE, grantee |-> NoProcess, ended |-> {}, highFence |-> 0, highNow |-> 0,
+         busyHolder |-> NoHolder ]
 
 \* History evaluates "now" inside each writer transaction as the larger of the
 \* host reading and the persisted high-water, then persists it. The host
@@ -134,12 +140,20 @@ Witness(action, op, p, now, name, fence) ==
 \* the next fence. Release leaves no holder, so the next grant needs no expiry.
 HeldAt(now) == durable.holder # NoHolder /\ durable.expires > now
 
+\* Whether acquisition at `now` answers `held` rather than granting. Faults
+\* weaken the expiry comparison: ignore it entirely, or take over one tick
+\* before the recorded expiry.
+Contested(now) ==
+  CASE Fault = "acquire-ignores-expiry" -> FALSE
+    [] Fault = "takeover-before-expiry" -> HeldAt(now + 1)
+    [] OTHER -> HeldAt(now)
+
 Grant(p, name, reading) ==
   LET now == Effective(reading)
       fresh == IF Fault = "takeover-without-fence" /\ durable.fence > 0
                  THEN durable.fence
                  ELSE durable.fence + 1
-  IN /\ (~HeldAt(now) \/ Fault = "acquire-ignores-expiry")
+  IN /\ ~Contested(now)
      /\ durable.fence < MaxFence
      /\ durable' = [durable EXCEPT !.holder = name, !.fence = fresh,
                       !.expires = now + LeaseLength, !.highWater = now]
@@ -155,14 +169,28 @@ Grant(p, name, reading) ==
 \* persisted clock high-water; it grants, extends and advances nothing.
 Held(p, reading) ==
   LET now == Effective(reading)
-  IN /\ HeldAt(now)
-     /\ Fault # "acquire-ignores-expiry"
+  IN /\ Contested(now)
      /\ (Fault # "waiter-advances-fence" \/ durable.fence < MaxFence)
      /\ durable' =
           [durable EXCEPT
             !.highWater = now,
             !.fence = IF Fault = "waiter-advances-fence" THEN @ + 1 ELSE @]
      /\ observations' = Witness("held", "none", p, now, NoHolder, 0)
+     /\ UNCHANGED process
+
+\* A waiter giving up at its operator deadline (Run Supervision's policy): its
+\* final acquisition attempt observes an unexpired holder, so it reports the
+\* typed writer-busy outcome naming that holder. Durably this is exactly a
+\* `held` observation; giving up is process-local. The deadline is
+\* process-local arithmetic and is not represented: a waiter may give up at any
+\* held observation, which covers every deadline.
+Busy(p, reading) ==
+  LET now == Effective(reading)
+  IN /\ Contested(now)
+     /\ durable' = [durable EXCEPT !.highWater = now]
+     /\ observations' =
+          [Witness("busy", "none", p, now, NoHolder, 0) EXCEPT
+            !.busyHolder = IF Fault = "busy-without-holder" THEN NoHolder ELSE durable.holder]
      /\ UNCHANGED process
 
 \* The shared asHolder guard: holder name, fence and unexpired lease must all
@@ -177,13 +205,13 @@ Authorized(p, op, now) ==
      \/ Fault = "holder-ignores-expiry"
      \/ (Fault = "holder-expiry-inclusive" /\ now = durable.expires)
 
-\* Accepted effects mirror the production statements, which write the
-\* presented lease's fence back into the writer row on renew and release.
+\* Accepted effects mirror the production statements. Renew and release leave
+\* the fence as they found it: only a grant writes the fence.
 Effect(p, op, now) ==
   CASE op = "renew" ->
-         [durable EXCEPT !.fence = process.token[p], !.expires = now + LeaseLength, !.highWater = now]
+         [durable EXCEPT !.expires = now + LeaseLength, !.highWater = now]
     [] op = "release" ->
-         [durable EXCEPT !.holder = NoHolder, !.fence = process.token[p], !.expires = now, !.highWater = now]
+         [durable EXCEPT !.holder = NoHolder, !.expires = now, !.highWater = now]
     [] op \in DataOps ->
          [durable EXCEPT !.dataFence = process.token[p], !.highWater = now]
 
@@ -212,6 +240,7 @@ Inspect(p) ==
 Next ==
   \/ \E p \in Processes, name \in HolderNames, r \in 0..MaxTime: Grant(p, name, r)
   \/ \E p \in Processes, r \in 0..MaxTime: Held(p, r)
+  \/ \E p \in Processes, r \in 0..MaxTime: Busy(p, r)
   \/ \E p \in Processes, op \in HolderOps, r \in 0..MaxTime: HolderOp(p, op, r)
   \/ \E p \in Processes: Inspect(p)
 
@@ -230,15 +259,25 @@ TakeoverOnlyAfterExpiry ==
   (observations.lastAction = "grant" /\ observations.prior.holder # NoHolder)
     => observations.now >= observations.prior.expires
 
-\* A waiter's observation leaves holder, fence, expiry and data untouched and
-\* can only raise the clock high-water.
+\* A waiter's observation, including the one on which it gives up at its
+\* deadline, leaves holder, fence, expiry and data untouched and can only
+\* raise the clock high-water.
 WaiterPreservesAuthorityState ==
-  observations.lastAction = "held" =>
+  observations.lastAction \in {"held", "busy"} =>
     /\ durable.holder = observations.prior.holder
     /\ durable.fence = observations.prior.fence
     /\ durable.expires = observations.prior.expires
     /\ durable.dataFence = observations.prior.dataFence
     /\ durable.highWater >= observations.prior.highWater
+
+\* Writer-busy names the holder its final attempt observed, and that holder's
+\* lease was unexpired then: a waiter never gives up on a lease it could have
+\* taken over, and never reports busy without naming the holder.
+BusyNamesUnexpiredHolder ==
+  observations.lastAction = "busy" =>
+    /\ observations.busyHolder = observations.prior.holder
+    /\ observations.prior.holder # NoHolder
+    /\ observations.prior.expires > observations.now
 
 \* Inspection changes no durable state at all, including the high-water.
 InspectionChangesNothing ==

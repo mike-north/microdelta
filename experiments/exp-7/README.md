@@ -8,7 +8,8 @@ abandonment and acceptance transitions. `WriterLease.tla` models the production
 writer protocol (`packages/history/src/durable/index.ts`) under the owner's
 2026-09-30 concurrency decision. The decision's elements are one fenced writer
 per store, contending processes that wait and take over only an expired lease
-through a fresh fence, and inspection without a lease. The model also covers
+through a fresh fence or give up at an operator deadline with a writer-busy
+outcome naming the holder, and inspection without a lease. The model also covers
 the shared holder guard and the clock high-water policy under arbitrary host
 readings.
 
@@ -74,13 +75,18 @@ The model's actions:
 - `Grant`: `acquireWriter` taking the lease, either because none is recorded
   or because the recorded one has expired.
 - `Held`: `acquireWriter` observing an unexpired holder.
+- `Busy`: a waiter's final acquisition attempt at its operator deadline
+  (Run Supervision's `awaitWriter`) observing an unexpired holder, so it gives
+  up with the writer-busy outcome naming that holder. Durably it is exactly a
+  `held` observation. The deadline is process-local and not represented: a
+  waiter may give up at any held observation, which covers every deadline.
 - `HolderOp`: the shared `asHolder` guard, applied to `renew`, `release`,
   `allocate`, `stage`, `publish`, `abandon` and `accept`.
 - `Inspect`: a lease-free read.
 
-Accepted effects mirror the production statements, including renew and
-release writing the presented fence back into the writer row. A rejected
-mutation commits only the time observation.
+Accepted effects mirror the production statements. Renew and release leave
+the fence as they found it; only a grant writes it. A rejected mutation
+commits only the time observation.
 
 ## Bounds and interpretation
 
@@ -92,9 +98,9 @@ moves forward one tick at a time. `WriterLease.cfg` covers the clock policy that
 repeats it with three processes. Neither model makes a fairness or liveness
 claim. `CHECK_DEADLOCK FALSE` suppresses deadlock reporting because reaching a
 configured finite bound can intentionally leave no enabled transition. It does
-not assert that a production writer always makes progress, that a waiter is
-ever granted the lease, or anything about the operator deadline and typed
-writer-busy error, which are not yet implemented.
+not assert that a production writer always makes progress or that a waiter is
+ever granted the lease. The operator deadline is not modeled; `Busy` checks
+only what giving up may report and change.
 
 Staged payload bytes, fingerprints, and provenance are abstracted to the
 `staged` lifecycle value. The models have no per-subject table shape, schema
@@ -133,13 +139,15 @@ The guards fall into three kinds:
 | `WriterLeaseBad-acquire-ignores-expiry.cfg` | acquisition takes over an unexpired holder | lease promise | `TakeoverOnlyAfterExpiry` |
 | `WriterLeaseBad-waiter-advances-fence.cfg` | a `held` observation advances the fence | lease promise | `WaiterPreservesAuthorityState` |
 | `WriterLeaseBad-ignore-high-water.cfg` | time is the raw host reading | lease promise | `EffectiveTimeNeverRegresses` |
+| `WriterLeaseBad-takeover-before-expiry.cfg` | acquisition takes over one tick before the recorded expiry | lease promise | `TakeoverOnlyAfterExpiry` |
+| `WriterLeaseBad-busy-without-holder.cfg` | writer-busy names no holder | restating | `BusyNamesUnexpiredHolder` |
 
 The kinds are established by storage-only runs. Each
 `WriterLeaseConsequence-<fault>.cfg` checks only the storage-safety invariants
-for the six faults not first caught by one:
+for the eight faults not first caught by one:
 
 - takeover without a fence increment reaches `AtMostOneAuthority`;
-- the other five exhaust without a storage-safety violation.
+- the other seven exhaust without a storage-safety violation.
 
 `PublicationConsequence-accept-moves-current.cfg` omits the restating
 invariant and exhausts: a rewound current pointer still names a retained,
@@ -151,6 +159,11 @@ each `WriterLease` fault, `abandon-completed` and `accept-moves-current` into
 History's emitted build; `omit-publish-fence`'s control is "publication
 ignores the fence" in
 `packages/core/test/durable-history/controls/history-mutation-controls.mjs`.
+`busy-without-holder` plants into Run Supervision's emitted writer wait. Two
+code controls there have no model fault, and say why: waiting that ignores
+the operator deadline (deadlines are not modeled), and renewal and release
+writing the presented fence back (indistinguishable from the fixed effect
+while the holder guard holds; a connection-local trigger test observes it).
 
 ## Invariants
 
@@ -202,8 +215,11 @@ ignores the fence" in
 - `GrantIssuesFreshFence`: every grant issues the previous fence plus one.
 - `TakeoverOnlyAfterExpiry`: a recorded holder is taken over only once its
   lease has expired at the evaluated time.
-- `WaiterPreservesAuthorityState`: a `held` observation leaves holder, fence,
-  expiry and data untouched and can only raise the high-water.
+- `WaiterPreservesAuthorityState`: a `held` observation, and the `busy` one a
+  waiter gives up on, leaves holder, fence, expiry and data untouched and can
+  only raise the high-water.
+- `BusyNamesUnexpiredHolder`: writer-busy names the holder its final attempt
+  observed, whose lease was unexpired then.
 - `InspectionChangesNothing`: a lease-free read changes no durable state.
 
 Event-specific ghost witnesses are reset on unrelated transitions. Only
@@ -267,6 +283,8 @@ done
 
 Every known-bad configuration is expected to stop with exit code 12 at the
 violation listed above, as is `WriterLeaseConsequence-takeover-without-fence.cfg`.
+The writer-wait recheck of 2026-09-30 ran only the `WriterLease` loop, because
+`Publication.tla` did not change; its counts are in the record's addendum.
 Every good configuration and every other consequence run is expected to
 exhaust its finite reachable state graph with exit code 0. The
 [observed evidence](evidence.md) records the 2026-09-26 EXP-3-era runs. The
@@ -283,6 +301,6 @@ reproduce locally. This does not make TLC a mandatory dependency for CI, and it
 does not discharge M5's implementation concurrency gate, which the Node suites
 in `packages/core/test/concurrency` address. Reassess the mapping and rerun
 every configuration when the publication transitions, lease rules, clock
-policy, stable-key recovery, or model bounds change. Broader bounds and
+policy, waiting outcomes, stable-key recovery, or model bounds change. Broader bounds and
 toolchain upgrades have unmeasured maintenance costs. Routine Node CI remains
 independent of Java.

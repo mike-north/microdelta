@@ -40,7 +40,7 @@ remain separate choices.
 | **External operation** | One logical external call, such as a paid provider request. Its stable identity is persisted before the first send and shared by every retry, so a lost response is **unknown** rather than silently replayed. | Run Supervision, persisted through History; [RUN-012/013](operations.md) |
 | **Durable deferral** | A persisted "not before T" for operation work waiting on a rate or quota limit. It holds no execution permit, releases the writer lease once only deferred work remains, and is honored by later runs. | Run Supervision, persisted through History; [RUN-011](operations.md) |
 | **Unknown usage** | Usage for an operation that was started but has no acknowledged report. It is reported as unknown, never as zero. | Resource Accounting; [ACC-005](operations.md) |
-| **Writer-busy** | The typed outcome for a process that waited for a store's writer lease until the operator deadline passed. It names the current holder. | Result History with Run Supervision; [RUN-002](operations.md) |
+| **Writer-busy** | The typed outcome for a normal request that waited for a store's writer lease until the operator deadline passed. It reports the request's final attempt, made at or after the deadline: the holder it observed and that holder's expiry, or storage contention (SQLite stayed locked) with the writer recorded then, when it could be read. There is no default deadline; a stop also ends the wait, but as a stop, not as writer-busy. Waiting changes no authority or data. | Run Supervision (waiting policy) over Result History's lease authority; [RUN-002](operations.md) |
 
 ## Tracking and consumed evidence
 

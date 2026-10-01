@@ -63,8 +63,23 @@ export interface IFixture {
   readonly reviews: readonly IFixtureReview[];
 }
 
-/** The environment whose data the fixture adapters serve. */
-export const fixtureEnvironment = 'fixture';
+/**
+ * The environments the fixture adapters serve. A run selects one; each is a
+ * namespace of the one store (RUN-017), so a `trial` run's results never
+ * satisfy `production` except through a recorded promotion.
+ */
+export const environments = ['fixture', 'trial', 'production'] as const;
+
+/** One environment the fixture adapters serve. */
+export type IEnvironment = (typeof environments)[number];
+
+/** The environment a command selects when it names none. */
+export const fixtureEnvironment: IEnvironment = 'fixture';
+
+/** Whether a string names an environment the fixture adapters serve. */
+export function isEnvironment(value: string): value is IEnvironment {
+  return environments.some((environment) => environment === value);
+}
 
 /**
  * The listing status the upstream currently reports for its contributor list.

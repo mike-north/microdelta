@@ -65,7 +65,7 @@ async function resolveOne(session: ISession, step: IStepDescriptor, options: { r
   readonly events: ReturnType<typeof recorder>;
 }> {
   const events = recorder();
-  const throwing = { observe: (event: IRunEvent): void => { if (options.throwAt?.(event) === true) { throw new Error(`observer failure at ${event.kind === 'step' ? event.event.phase : event.kind === 'stop' ? event.level : event.phase}`); } } };
+  const throwing = { observe: (event: IRunEvent): void => { if (options.throwAt?.(event) === true) { throw new Error(`observer failure at ${event.kind === 'step' ? event.event.phase : event.kind === 'stop' ? event.level : event.kind === 'promotion' ? event.kind : event.phase}`); } } };
   let error: unknown;
   const result = await session.workspace.run<IInputs, IHelpers, IResolutionOutcome | undefined>({
     authoring: session.contributors.authoring,

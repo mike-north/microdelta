@@ -96,6 +96,11 @@ expectType<ISuppliedStepDeclaration<IFamily, IParameters, IAssessment>>(rubric);
 expectError(suppliedStep<IParameters, IAssessment>({ subject: 'assessment', run: () => ({ score: 1 }) }));
 expectError(suppliedStep<IParameters, IAssessment>({ children: { activity }, run: () => ({ score: 1 }) }));
 expectError(suppliedStep<IParameters, IAssessment>({ run: () => ({ score: 'high' }) }));
+// Like a memo body, a supplied implementation may be asynchronous: an author isolates one awaited external
+// operation per call in it (EXP-8 resolution 3), and its settled value is the call's result.
+const asynchronous = suppliedStep<IParameters, IAssessment>({ run: async ({ args }) => ({ score: args[1].merged ? 2 : 1 }) });
+expectType<ISuppliedStepDeclaration<IFamily, IParameters, IAssessment>>(asynchronous);
+expectError(suppliedStep<IParameters, IAssessment>({ run: async () => ({ score: 'high' }) }));
 
 // A memo child's view is its settled result; a slot handle takes the declared arguments.
 memo({

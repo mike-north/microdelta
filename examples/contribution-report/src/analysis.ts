@@ -19,6 +19,10 @@
  *   activity result. The summary consumes each assessment's `score` only.
  * - `report` is a strict fold over every member's summary: it runs only once
  *   discovery is closed and every required member succeeded.
+ * - `status` is an outcome (tolerant) fold over the same summaries: once
+ *   every member has settled it lists each contributor's settled status,
+ *   failures included, while the framework reports coverage; it never runs
+ *   while a member is unsettled.
  *
  * Subjects are complete opaque author strings; member subjects are
  * `prefix:key`. Callbacks use only their typed context and the canonical
@@ -30,6 +34,7 @@ import type {
   IComposition,
   IFoldEntry,
   IMemberBuilder,
+  IOutcomeEntry,
   IPreviousResult,
   IResultView,
   ISlotSubject,
@@ -41,7 +46,7 @@ import type {
 
 import { checkActivity, isFinal } from './activity.js';
 import type { IActivity, IPullRequest } from './activity.js';
-import { assessRubricA, assessRubricB, assessRubricC } from './assessment.js';
+import { assessRubricA, assessRubricB, assessRubricC, assessRubricP } from './assessment.js';
 import type { IAssessment, IAssessorParameters, IRubric } from './assessment.js';
 import { discover, isDiscoveryFinal } from './discovery.js';
 import type { IContributor, IContributors } from './discovery.js';
@@ -95,6 +100,27 @@ export interface IInputs {
   readonly config: IConfig;
 }
 
+/** One contributor's settled status as the status report lists it; only a succeeded member has a score. */
+export interface IStatusEntry {
+  readonly key: string;
+  readonly status: 'succeeded' | 'skipped' | 'failed' | 'cancelled';
+  readonly score: number | null;
+}
+
+/**
+ * The outcome fold's result: every current contributor's settled status in
+ * key order, with the scope it covers. Coverage is the framework's outcome,
+ * not something the report claims.
+ */
+export interface IStatusReport {
+  readonly repository: string;
+  readonly window: { readonly start: string; readonly end: string };
+  readonly entries: readonly IStatusEntry[];
+}
+
+/** The entries the status report receives: one per current member, with its settled status. */
+export type IStatusEntries = readonly IOutcomeEntry<IResultView<ISummary>>[];
+
 /** The deterministic sentence template. */
 export type IFormat = (name: string, authored: number, merged: number, reviews: number) => string;
 
@@ -110,9 +136,11 @@ export interface IHelpers {
   readonly assessRubricA: typeof assessRubricA;
   readonly assessRubricB: typeof assessRubricB;
   readonly assessRubricC: typeof assessRubricC;
+  readonly assessRubricP: typeof assessRubricP;
   readonly summarize: (activity: IResultView<IActivity>, scores: readonly number[], format: ITrackedView<IFormat>) => ISummary;
   readonly format: IFormat;
   readonly render: (members: ISummaryEntries, config: ITrackedView<IConfig>) => IReport;
+  readonly renderStatus: (members: IStatusEntries, config: ITrackedView<IConfig>) => IStatusReport;
 }
 
 /**
@@ -171,6 +199,19 @@ function render(members: ISummaryEntries, config: ITrackedView<IConfig>): IRepor
   };
 }
 
+/**
+ * The outcome fold body: every current member's settled status in the
+ * entries' canonical key order, with the score of each succeeded member
+ * (the only summary field it reads), and the repository and window.
+ */
+function renderStatus(members: IStatusEntries, config: ITrackedView<IConfig>): IStatusReport {
+  return {
+    repository: config.repository,
+    window: { start: config.window.start, end: config.window.end },
+    entries: members.map((entry) => ({ key: entry.key, status: entry.status, score: entry.status === 'succeeded' ? entry.data.score : null })),
+  };
+}
+
 /** Which member key the template uses: designated identity `key` or the custom key `id`. */
 export type IKeyChoice = 'key' | 'id';
 
@@ -195,6 +236,8 @@ export interface IAnalysis {
   readonly composition: IComposition<IInputs, IHelpers>;
   /** The strict report fold. */
   readonly report: IStepDescriptor;
+  /** The outcome (tolerant) status fold. */
+  readonly status: IStepDescriptor;
   /** The discovery collection source. */
   readonly discovery: IStepDescriptor;
   /** One member's summary instance. */
@@ -222,7 +265,7 @@ const assessmentSubject: ISlotSubject<IAssessorParameters> = (derived) => {
  */
 export function composeAnalysis(variation: IVariation = defaultVariation): IAnalysis {
   const builders = authoring<IInputs, IHelpers>();
-  const { source, template, fold, stepSlot, suppliedStep, supply, forward, compose } = builders;
+  const { source, template, fold, outcomeFold, stepSlot, suppliedStep, supply, forward, compose } = builders;
   const assessor = stepSlot<IAssessorParameters, IAssessment>({ slot: 'assessor' });
 
   const contributors = source<IContributors>({
@@ -286,10 +329,18 @@ export function composeAnalysis(variation: IVariation = defaultVariation): IAnal
     run: ({ members, inputs, helpers }) => helpers.render(members, inputs.config),
   });
 
+  const status = outcomeFold({
+    subject: 'status:acme/widget:2026-Q1',
+    label: 'contributor status',
+    over: { template: contributor, step: 'summary' },
+    run: ({ members, inputs, helpers }) => helpers.renderStatus(members, inputs.config),
+  });
+
   const rubricSteps = {
     A: suppliedStep<IAssessorParameters, IAssessment>({ label: 'rubric A', run: ({ args, helpers }) => helpers.assessRubricA(args[0], args[1]) }),
     B: suppliedStep<IAssessorParameters, IAssessment>({ label: 'rubric B', run: ({ args, helpers }) => helpers.assessRubricB(args[0], args[1]) }),
     C: suppliedStep<IAssessorParameters, IAssessment>({ label: 'rubric C', run: ({ args, helpers }) => helpers.assessRubricC(args[0], args[1]) }),
+    P: suppliedStep<IAssessorParameters, IAssessment>({ label: 'rubric P (paid-like)', run: ({ args, helpers }) => helpers.assessRubricP(args[0], args[1]) }),
   };
 
   const composition = compose({
@@ -303,11 +354,13 @@ export function composeAnalysis(variation: IVariation = defaultVariation): IAnal
       { slot: 'assessRubricA', helper: assessRubricA },
       { slot: 'assessRubricB', helper: assessRubricB },
       { slot: 'assessRubricC', helper: assessRubricC },
+      { slot: 'assessRubricP', helper: assessRubricP },
       { slot: 'summarize', helper: summarize },
       { slot: 'format', helper: format },
       { slot: 'render', helper: render },
+      { slot: 'renderStatus', helper: renderStatus },
     ], variation),
-    steps: ordered([{ slot: collectionSlot, declaration: contributors }, { slot: 'report', declaration: report }], variation),
+    steps: ordered([{ slot: collectionSlot, declaration: contributors }, { slot: 'report', declaration: report }, { slot: 'status', declaration: status }], variation),
     templates: [contributor],
     supplied: [supply({ slot: assessor, declaration: rubricSteps[variation.rubric], subject: assessmentSubject })],
   });
@@ -316,6 +369,7 @@ export function composeAnalysis(variation: IVariation = defaultVariation): IAnal
     authoring: builders,
     composition,
     report: Object.freeze({ scope: analysisScope, role: 'step', slot: 'report' }),
+    status: Object.freeze({ scope: analysisScope, role: 'step', slot: 'status' }),
     discovery: Object.freeze({ scope: analysisScope, role: 'step', slot: collectionSlot }),
     summary: (memberKey) => Object.freeze({ scope: analysisScope, role: 'step', slot: 'summary', template: templateSlot, collection: collectionSlot, memberKey }),
   };

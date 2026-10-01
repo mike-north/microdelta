@@ -254,7 +254,8 @@ export interface IOperationSettlementRecord {
 
 /**
  * One external operation as an operator inspects it: identities, statuses,
- * times and its settlement, never its binding or any value.
+ * times, its settlement and any resolution that settlement superseded, never
+ * its binding or any value.
  * @alpha
  */
 export interface IOperationView {
@@ -274,6 +275,13 @@ export interface IOperationView {
   readonly attempts: readonly IRequestAttemptView[];
   /** The operator's settlement, once recorded. */
   readonly settlement: IOperationSettlementRecord | undefined;
+  /**
+   * The operator's earlier resolution as succeeded that a later abandonment
+   * superseded, kept for the audit trail: who asserted the effect happened,
+   * when, and the usage report it acknowledged. Undefined unless the
+   * operation was abandoned after such a resolution.
+   */
+  readonly resolution: IOperationSettlementRecord | undefined;
 }
 
 /**
@@ -290,7 +298,10 @@ export interface IOperationView {
  *     makes a new operation.
  * - `abandon` gives it up; its usage stays unknown, because unknown is never
  *   zero (ACC-005). The address is free: abandoning is the operator's
- *   explicit authorization of a possible second effect.
+ *   explicit authorization of a possible second effect. An operation already
+ *   resolved as `succeeded` may also be abandoned, which frees its consumed
+ *   address; a second resolution, or abandoning one resolved as `failed`
+ *   (whose address is already free), is refused.
  *
  * Either one settles the operation, so its step's work is no longer blocked.
  * @alpha

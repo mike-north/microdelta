@@ -135,6 +135,61 @@ describe('operator settlement of an unknown operation (EXP-8 resolution 5)', () 
     }
   });
 
+  test('an address resolved as succeeded stays consumed until the operator abandons the operation, which authorizes a possible second effect (supervisor ruling on #121)', async () => {
+    const operation = await leaveUnknown();
+    const session = openSession(stores, timer);
+    try {
+      const resolvedAt = timer.currentEpochMilliseconds();
+      await session.start({}, (run) => run.settleOperation({
+        action: 'resolve',
+        operation,
+        operator: 'operator.ada',
+        outcome: 'succeeded',
+        usage: { report: 'invoice-9', quantities: [{ unit: 'tokens', amount: 100 }] },
+      })).done;
+      // While resolved, every run fails the member with the code and sends nothing.
+      for (let pass = 0; pass < 2; pass += 1) {
+        expect(failureCode(memberOf((await members(session).done).value, 'pr-1'))).toBe('operation-resolved');
+      }
+      expect(received('pr-1')).toHaveLength(1);
+      // Neither another resolution nor a resolution of an abandoned operation is accepted; abandoning the resolved one is.
+      const again = (await session.start({}, (run) => codeOf(run.settleOperation({ action: 'resolve', operation, operator: 'operator.ada', outcome: 'failed' }))).done).value;
+      expect(again).toBe('invalid-request');
+      timer.advanceTo(resolvedAt + 60_000);
+      const abandoned = (await session.start({}, (run) => run.settleOperation({ action: 'abandon', operation, operator: 'operator.ben' })).done).value;
+      // The audit trail keeps both: the operator's assertion of success, with its usage report link, and the later
+      // abandonment that authorized a possible second effect.
+      const trail = {
+        operation,
+        status: 'abandoned',
+        settlement: { action: 'abandon', outcome: undefined, operator: 'operator.ben', at: resolvedAt + 60_000, report: undefined },
+        resolution: { action: 'resolve', outcome: 'succeeded', operator: 'operator.ada', at: resolvedAt, report: 'operator:invoice-9' },
+      };
+      expect(abandoned).toEqual(expect.objectContaining(trail));
+      // Durably: a fresh inspection reads both back.
+      expect((await inspect(session)).find((entry) => entry.operation === operation)).toEqual(expect.objectContaining(trail));
+      expect((await session.start({}, (run) => codeOf(run.settleOperation({ action: 'abandon', operation, operator: 'operator.ada' }))).done).value).toBe('invalid-request');
+      // The address is free: the next execution makes, and sends, a new operation.
+      expect(memberOf((await members(session).done).value, 'pr-1').status).toBe('succeeded');
+      const requests = received('pr-1');
+      expect(requests).toHaveLength(2);
+      expect(requests[1]?.operation).not.toBe(operation);
+    } finally {
+      session.close();
+    }
+  });
+
+  test('an operation resolved as failed has a free address already, so it cannot be abandoned', async () => {
+    const operation = await leaveUnknown();
+    const session = openSession(stores, timer);
+    try {
+      await session.start({}, (run) => run.settleOperation({ action: 'resolve', operation, operator: 'operator.ada', outcome: 'failed' })).done;
+      expect((await session.start({}, (run) => codeOf(run.settleOperation({ action: 'abandon', operation, operator: 'operator.ada' }))).done).value).toBe('invalid-request');
+    } finally {
+      session.close();
+    }
+  });
+
   test('resolving as failed asserts no effect and frees the address: the next execution makes a new operation', async () => {
     const operation = await leaveUnknown();
     const session = openSession(stores, timer);
@@ -158,6 +213,8 @@ describe('operator settlement of an unknown operation (EXP-8 resolution 5)', () 
       const view = (await session.start({}, (run) => run.settleOperation({ action: 'abandon', operation, operator: 'operator.ada' })).done).value;
       expect(view.status).toBe('abandoned');
       expect(view.settlement).toEqual({ action: 'abandon', outcome: undefined, operator: 'operator.ada', at: timer.currentEpochMilliseconds(), report: undefined });
+      // An unknown operation abandoned directly superseded no resolution.
+      expect(view.resolution).toBeUndefined();
       const usage = session.accounting.summarizeUsage({ environment: 'env:production', operation });
       expect(usage.status).toBe('incomplete');
       // Abandoning is the operator's explicit authorization of a possible second effect: the address is free.

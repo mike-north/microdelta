@@ -316,6 +316,7 @@ export interface IOperationView {
     readonly name: string;
     readonly notBefore: number | undefined;
     readonly operation: string;
+    readonly resolution: IOperationSettlementRecord | undefined;
     readonly settlement: IOperationSettlementRecord | undefined;
     readonly status: IOperationStatus;
     readonly subject: IOperationSubject;
@@ -351,6 +352,46 @@ export type IOutcomeFoldRunOutcome = {
     readonly reason: string;
     readonly coverage: ICompleteOutcomeFoldCoverage;
 };
+
+// @alpha
+export interface IPromotionEvent {
+    readonly analysis: string;
+    readonly into: string;
+    // (undocumented)
+    readonly kind: 'promotion';
+    readonly promotionId: number;
+    readonly references: readonly IRunResultReference[];
+    readonly runId: string;
+}
+
+// @alpha
+export interface IPromotionEvidence {
+    readonly content: unknown;
+    readonly format: string;
+    readonly formatVersion: number;
+}
+
+// @alpha
+export interface IPromotionRecord {
+    readonly evidence: IPromotionEvidence;
+    readonly fence: number;
+    readonly promotionId: number;
+    readonly references: readonly IRunResultReference[];
+    readonly target: IPromotionScope;
+}
+
+// @alpha
+export interface IPromotionRequest {
+    readonly evidence: IPromotionEvidence;
+    readonly into: string;
+    readonly references: readonly IRunResultReference[];
+}
+
+// @alpha
+export interface IPromotionScope {
+    readonly analysis: string;
+    readonly environment: string;
+}
 
 // @alpha
 export type IRemoteState = 'cancelled' | 'running' | 'unknown';
@@ -390,6 +431,8 @@ export interface IRun {
     }): Promise<readonly IOperationView[]>;
     readonly open: boolean;
     ordinary<T>(label: string, work: () => T | Promise<T>): Promise<Awaited<T>>;
+    promote(request: IPromotionRequest): Promise<IPromotionRecord>;
+    promotions(): Promise<readonly IPromotionRecord[]>;
     recover(step: IBindingDescriptor, request: IRequestOptions): Promise<IRecoveryResult>;
     resolve(step: IBindingDescriptor, request: IRequestOptions): Promise<IResolutionOutcome>;
     resolveFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IFoldReport>;
@@ -431,7 +474,7 @@ export type IRunEvent = {
     readonly label: string;
     readonly phase: 'remote-state';
     readonly remote: IRemoteState;
-} | IOperationEvent | IWaitEvent;
+} | IOperationEvent | IWaitEvent | IPromotionEvent;
 
 // @alpha
 export interface IRunExecution {
@@ -453,7 +496,7 @@ export interface IRunObserver {
 }
 
 // @alpha
-export type IRunOperationName = 'check' | 'inspectOperations' | 'ordinary' | 'read' | 'recover' | 'resolve' | 'resolveFold' | 'resolveMembers' | 'resolveOutcomeFold' | 'settleOperation';
+export type IRunOperationName = 'check' | 'inspectOperations' | 'ordinary' | 'read' | 'recover' | 'resolve' | 'resolveFold' | 'resolveMembers' | 'resolveOutcomeFold' | 'settleOperation' | 'promote' | 'promotions';
 
 // @alpha
 export interface IRunOperationPorts {
@@ -471,12 +514,25 @@ export interface IRunOptions {
     readonly observers?: readonly IRunObserver[];
     readonly operations?: IRunOperationPorts;
     readonly permits?: number;
+    readonly promotion?: IRunPromotionPort;
     readonly resolution: (ports: IResolutionPorts) => IResolution;
     readonly runId?: string;
     readonly stop?: IStopController;
     readonly window?: number;
     readonly writer: IRunWriter;
     readonly writerWait?: IWriterWaitOptions;
+}
+
+// @alpha
+export interface IRunPromotionPort {
+    promoteResults(lease: IRunLease, request: {
+        readonly target: IPromotionScope;
+        readonly references: readonly IRunResultReference[];
+        readonly evidence: IPromotionEvidence;
+    }): IPromotionRecord;
+    readPromotions(query: {
+        readonly target: IPromotionScope;
+    }): readonly IPromotionRecord[];
 }
 
 // @alpha
@@ -493,6 +549,11 @@ export interface IRunResult<T> {
     readonly value: T;
     readonly waitingUntil: number | undefined;
 }
+
+// @alpha
+export type IRunResultReference = Extract<IRecoveryResult, {
+    readonly kind: 'recovered';
+}>['reference'];
 
 // @alpha
 export interface IRunScope<T> {

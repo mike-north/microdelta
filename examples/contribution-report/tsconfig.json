@@ -8,6 +8,8 @@
     "skipLibCheck": false,
     "paths": {
       "microdelta": ["../../node_modules/microdelta/dist/api/microdelta.alpha.d.ts"],
+      "@microdelta/accounting": ["../../node_modules/@microdelta/accounting/dist/api/accounting.alpha.d.ts"],
+      "@microdelta/machine-node": ["../../node_modules/@microdelta/machine-node/dist/api/machine-node.alpha.d.ts"],
       "@microdelta/definition": ["../../node_modules/@microdelta/definition/dist/api/definition.alpha.d.ts"],
       "@microdelta/history": ["../../node_modules/@microdelta/history/dist/api/history.alpha.d.ts"],
       "@microdelta/resolution": ["../../node_modules/@microdelta/resolution/dist/api/resolution.alpha.d.ts"],

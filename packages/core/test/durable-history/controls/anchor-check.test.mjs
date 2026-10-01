@@ -89,7 +89,9 @@ describe('every mutation-control runner keeps its anchors matching exactly once'
 
   for (const runner of found) {
     test(runner.slice(testRoot.length), () => {
-      const result = spawnSync(process.execPath, [runner, checkAnchorsFlag], { encoding: 'utf8' });
+      // A runner that ignored the flag would run its full controls and mutate builds; the timeout stops it quickly.
+      const result = spawnSync(process.execPath, [runner, checkAnchorsFlag], { encoding: 'utf8', timeout: 60_000, killSignal: 'SIGTERM' });
+      assert.equal(result.error, undefined, `the runner did not finish its anchor check within 60 s (does it support ${checkAnchorsFlag}?)`);
       assert.equal(result.status, 0, `anchor drift (build first with npm run build and npm run test:unit --workspace microdelta):\n${result.stdout}${result.stderr}`);
       assert.match(result.stdout, /^ANCHORS OK: \d+ controls$/mu);
     });

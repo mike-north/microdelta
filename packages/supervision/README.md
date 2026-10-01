@@ -196,10 +196,16 @@ accounting }`, which needs the Supervision's timer:
   commit it could not confirm), nothing is sent and the attempt is pending on
   a deferral, so its step waits and is retried, never failed. The deferral
   backs off exponentially per operation (1 s, doubling, capped at 60 s) and
-  resets once an intent is durable. The retry reuses the unsent request
-  attempt with the attribution it was first recorded with, so an intent that
-  landed without confirmation is restated idempotently and gets the send's
-  usage rather than reading unknown forever. A usage report is acknowledged under
+  resets once an intent is durable. When the intent may have landed
+  (`durability: 'unknown'`, Accounting's `AccountingDurabilityUnknownError`),
+  the retry reuses the unsent request attempt with the attribution it was
+  first recorded with, so the intent is restated idempotently and gets the
+  send's usage rather than reading unknown forever. When it recorded nothing
+  (for example `AccountingBusyError`), the unsent attempt stays in the record
+  as not sent and the retry is a fresh request attempt, credited to the run
+  and step attempt that send it. The "may have landed" mark is sticky: a
+  reused attempt stays unconfirmed whatever its own retry's failure is, and
+  an attempt recorded before the mark existed is read as unconfirmed. A usage report is acknowledged under
   `provider:<report>` before the outcome is committed; a failed
   acknowledgment is reported, never claimed, and leaves usage unknown.
 - **Outcomes and policy.** `succeeded` settles the operation. A permanent
@@ -261,8 +267,10 @@ accounting }`, which needs the Supervision's timer:
   another process holds it, the pass waits (taking it over through fenced
   takeover once it expires), until an operator `writerWait` deadline, where
   it fails with `WriterBusyError`. There is no default deadline, so without
-  one it waits until the lease is granted or a stop ends the wait with
-  `stopped`.
+  one it waits until the lease is granted or a stop ends the wait. A stop
+  during a woken pass's wait returns the earlier pass's report with
+  `waitingUntil`, as a stop during the sleep does; a stop during a first
+  pass's wait rejects with `stopped`, since there is no earlier report.
 - **Events.** `operation` events carry identifiers (operation, request
   attempt, step attempt, member, run), closed status and reason codes, times,
   usage figures with identifier units and the remote state; `wait` events

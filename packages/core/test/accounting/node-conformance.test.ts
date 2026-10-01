@@ -372,6 +372,20 @@ describe('commit boundaries (ACC-007)', () => {
     expect(() => accounting.recordUsageIntent(intentFor('op-1', 'req-1'))).toThrow(AccountingDurabilityUnknownError);
     expect(accounting.recordUsageIntent(intentFor('op-1', 'req-1'))).toBe('duplicate');
   });
+
+  test('a durability-unknown failure carries the structural mark consumers without an Accounting edge read', () => {
+    const sqlite = faultySqlite();
+    const accounting = openAccounting({ location: freshLocation(), sqlite: sqlite.capability });
+    sqlite.arm({ role: 'intent', timing: 'after-commit', action: 'throw' });
+    let thrown: unknown;
+    try {
+      accounting.recordUsageIntent(intentFor('op-1', 'req-1'));
+    } catch (error: unknown) {
+      thrown = error;
+    }
+    expect(thrown).toBeInstanceOf(AccountingDurabilityUnknownError);
+    expect(typeof thrown === 'object' && thrown !== null ? Reflect.get(thrown, 'durability') : undefined).toBe('unknown');
+  });
 });
 
 describe('schema ownership and immutability', () => {

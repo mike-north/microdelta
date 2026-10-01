@@ -120,6 +120,16 @@ function intentRetryDelay(failures: number): number {
 /** The shape of an operation identity's random part: exactly what the random identifier capability supplies. */
 const randomRule = /^[0-9a-f]{32}$/u;
 
+/**
+ * Whether a usage-intent write that threw may nevertheless have landed. The
+ * accounting port marks exactly that case with `durability: 'unknown'` (the
+ * write ran but its commit was not confirmed); every other failure, such as a
+ * busy store, recorded nothing (ACC-007).
+ */
+function intentMayHaveLanded(error: unknown): boolean {
+  return typeof error === 'object' && error !== null && Reflect.get(error, 'durability') === 'unknown';
+}
+
 /** Thrown from the intent hook when the step attempt ended before the send: nothing is recorded or sent. */
 class EndedAttemptError extends Error {}
 
@@ -607,12 +617,13 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     const stepAttempt = String(attempt.attemptId);
     const before = stored;
     const operation = before.record.operation;
-    // An attempt whose intent was not confirmed was never sent, but its intent may have landed. It is reused with the
+    // An attempt never sent whose intent may have landed (Accounting could not confirm its commit) is reused with the
     // attribution it was first recorded with, so restating the intent is an idempotent duplicate rather than a conflict,
-    // and a landed intent gets this send's usage instead of reading unknown forever (ACC-005, ACC-007). Its usage is
-    // therefore attributed to the run and step attempt that first recorded it.
+    // and a landed intent gets this send's usage instead of reading unknown forever (ACC-005, ACC-007). An attempt whose
+    // intent certainly recorded nothing (Accounting busy, or any other refusal) stays in the record as not sent, and the
+    // send is a fresh request attempt credited to the run and step attempt that make it.
     const last = before.record.attempts.at(-1);
-    const unsent = last?.status === 'not-sent' ? last : undefined;
+    const unsent = last?.status === 'not-sent' && last.intent === 'unconfirmed' ? last : undefined;
     const earlier = unsent !== undefined ? before.record.attempts.slice(0, -1) : before.record.attempts;
     const requestAttempt = unsent?.requestAttempt ?? `${operation}/${String(earlier.length + 1)}`;
     const attribution = { run: unsent?.run ?? context.runId, stepAttempt: unsent?.stepAttempt ?? stepAttempt };
@@ -632,7 +643,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
         status: 'pending',
         notBefore: undefined,
         unrecorded: before.record.unrecorded,
-        attempts: [...earlier, { requestAttempt, run: attribution.run, stepAttempt: attribution.stepAttempt, status: 'pending', remote: undefined, usage: undefined }],
+        attempts: [...earlier, { requestAttempt, run: attribution.run, stepAttempt: attribution.stepAttempt, status: 'pending', remote: undefined, usage: undefined, intent: undefined }],
       };
       current = write(lease, intent, before.revision);
       try {
@@ -650,7 +661,10 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
         // Nothing will be sent: record the attempt not sent and the operation as a short deferral, so the step stays pending
         // and the work is retried (a sleeping run after the delay, a later run when admitted) under the same identities.
         const failures = before.record.unrecorded + 1;
-        const restored: IOperationRecord = { ...withLast(intent, { status: 'not-sent' }), status: 'deferred', notBefore: now() + intentRetryDelay(failures), unrecorded: failures };
+        // The mark is sticky: a reused attempt whose intent may have landed in an earlier run stays unconfirmed whatever
+        // this retry's failure is, because a later failure (a busy store) cannot undo an intent that already landed.
+        const unconfirmed = intentMayHaveLanded(error) ? 'unconfirmed' : unsent?.intent;
+        const restored: IOperationRecord = { ...withLast(intent, { status: 'not-sent', intent: unconfirmed }), status: 'deferred', notBefore: now() + intentRetryDelay(failures), unrecorded: failures };
         try {
           current = write(lease, restored, current.revision);
         } catch {

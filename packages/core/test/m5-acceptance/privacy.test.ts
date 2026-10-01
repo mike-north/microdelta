@@ -91,14 +91,12 @@ describe('event-privacy (RUN-013)', () => {
     }
   });
 
-  // Observed defect (#147), kept failing on purpose. When author code fails, Reuse Resolution's typed failure builds
-  // its own message from the author error's message (`describe(cause)` in `packages/resolution/src/resolution.ts`):
-  // "Body of <step> failed: …" for a member body and for a fold body, and "Source check of <step> failed: …" for a
-  // source check. Author text, including any value the author put in its error, then reaches the typed outcome, the
-  // run's failure and every consumer that prints them. RUN-013 requires diagnostics to name fields and keys, not their
-  // contents; the author's error remains available unchanged as the failure's `cause`. Each site is planted separately,
-  // so a fix of one site alone leaves this test failing. Remove `.failing` once every framework message names the step.
-  test.failing('DEFECT (#147, privacy): no framework failure message repeats an author error\'s text, from a member body, a fold body or a source check', () => {
+  // Regression (#147): Reuse Resolution once built its typed failures' messages from the author error's message
+  // ("Body of <step> failed: …" for a member body and a fold body, "Source check of <step> failed: …" for a source
+  // check), so author text, including any value the author put in its error, reached the typed outcome, the run's
+  // failure and every consumer that prints them. RUN-013 requires diagnostics to name fields and keys, not their
+  // contents; the author's error stays available as the failure's `cause`. Each site is planted separately.
+  test('no framework failure message repeats an author error\'s text, from a member body, a fold body or a source check (#147)', () => {
     const leaks = (world: IWorld, command: ICommand): boolean => {
       const run = freshScenario(world).run(command, { window: 1 });
       const output = `${run.stdout}${run.stderr}`;

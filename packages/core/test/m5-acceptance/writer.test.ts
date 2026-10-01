@@ -312,18 +312,24 @@ describe('drain-outlives-lease (A-09, EXP-8 ruling R)', () => {
     expect(fencesWritten(before, s.rows())).toEqual([drainFence + 1]);
   });
 
-  // Observed defect (#147), kept failing on purpose. Ruling R: a drain that outlives its lease ends with its attempt
-  // interrupted and its pass `lease-lost`, as typed outcomes. Today, after the refused completion the drain meets the
-  // successor's newer pr-2 result, cannot record its acceptance without authority, and History's raw `StaleWriterError`
-  // escapes `resolveMembers`, failing the whole run. Remove `.failing` once #147 lands.
-  test.failing('DEFECT (#147, ruling R): the drained run ends with typed outcomes, not a raw StaleWriterError', async () => {
-    const { s, drained, successor } = await drainPastLease();
+  // Regression (#147): after its refused completion the drain meets the successor's newer pr-2 result and cannot record
+  // its acceptance without authority; History's raw `StaleWriterError` once escaped `resolveMembers` and failed the
+  // whole run. Ruling R: the pass ends `lease-lost`, with typed outcomes, and writes nothing under the stale lease.
+  test('the drained run ends its pass lease-lost with typed outcomes, not a raw StaleWriterError (#147, ruling R)', async () => {
+    const { s, drained, successor, before } = await drainPastLease();
     try {
       expect({ status: drained.status, error: drained.error }).toEqual({ status: 0, error: undefined });
-      // pr-1's attempt ended interrupted: the pass lost its lease, so its outcome is unrecorded and the member pending.
-      expect(drained.result.members['pr-1']).toMatchObject({ status: 'pending', blocked: { kind: 'unknown-outcome', reason: 'unrecorded' } });
-      // Nothing succeeded under the stale authority.
-      expect(Object.values(drained.result.members).filter((member) => member.status === 'succeeded')).toEqual([]);
+      expect(drained.operations).toContain('request-settled:unknown:lease-lost@pr-1');
+      expect(drained.result.members).toEqual({
+        // pr-1's attempt ended without authority: its outcome is unrecorded, so the member is pending on an unknown outcome.
+        'pr-1': { status: 'pending', reason: expect.any(String), blocked: { kind: 'unknown-outcome', operation: expect.any(String), reason: 'unrecorded' } },
+        // pr-2's reuse needed an acceptance the stale lease cannot record: pending, lease-lost.
+        'pr-2': { status: 'pending', reason: 'lease-lost' },
+        // pr-3 was never admitted after the soft stop.
+        'pr-3': { status: 'cancelled', reason: expect.stringContaining('a soft stop admits no new work') },
+      });
+      // Nothing was written under the stale lease, and the successor's lease is untouched.
+      expect(s.rows()).toEqual(before);
     } finally {
       s.open('successor');
       await successor.exited;

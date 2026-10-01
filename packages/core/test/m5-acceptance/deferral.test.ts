@@ -164,11 +164,10 @@ describe('durable-quota-deferral (A-11, A-12, RUN-011)', () => {
     expect(usageOf(run.result.usage)).toEqual({ status: 'complete', observed: [{ unit: 'requests', amount: 8 }, { unit: 'tokens', amount: 100 }], unknown: 0, operations: 3, reports: 9, requestAttempts: 9 });
   });
 
-  // Observed defect (#147), kept failing on purpose: the `resumed` wait event reports `released: false` for a wait whose lease
-  // the run did release (its `sleeping` event says true, and a `stopped` event for the same wait would say true).
-  // IWaitEvent.released is documented as "whether the run released its writer lease for the wait". The durable
-  // release itself is proven above through the writer row. Remove `.failing` once the event reports the wait's value.
-  test.failing('DEFECT (#147, event content): the resumed wait event reports whether the run released its lease for that wait', () => {
+  // Regression (#147): the `resumed` wait event once reported a literal `released: false` for a wait whose lease the run
+  // did release. IWaitEvent.released is "whether the run released its writer lease for the wait"; the durable release
+  // itself is proven above through the writer row.
+  test('the resumed wait event reports that the run released its lease for that wait (#147)', () => {
     const s = freshScenario(baseWorld({ script: { 'pr-2': [{ kind: 'rate-limit', retryMs: 300 }] } }));
     const run = clean(s.run({ kind: 'members' }, { deferral: 'sleep', window: 1, permits: 1 }));
     expect(run.events.filter((event) => event['kind'] === 'wait').map((event) => [event['phase'], event['released']])).toEqual([['sleeping', true], ['resumed', true]]);

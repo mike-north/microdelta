@@ -32,7 +32,8 @@
  * `npm run test:unit --workspace microdelta` first, then
  * `node packages/core/test/m5-acceptance/controls/m5-mutation-controls.mjs`.
  * `--check-anchors` verifies that every anchor matches exactly once in the
- * current builds and exits without running any suite; `--only <text>` runs
+ * current builds and exits without running any suite (`npm test` runs it
+ * through the shared drift guard, `anchor-check.test.mjs`); `--only <text>` runs
  * only the controls whose name contains `<text>`.
  */
 import { spawn } from 'node:child_process';
@@ -40,6 +41,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
+import { anchorCheckRequested, reportAnchorCheck } from '../../durable-history/controls/anchor-check.mjs';
 import { judgeRun } from '../../durable-history/controls/control-outcome.mjs';
 import { repositoryRoot } from '../../acceptance/controls/paths.mjs';
 
@@ -106,8 +108,9 @@ const controls = [
     guard: 'stop',
     name: 'a stop does not end a deferral sleep',
     target: 'supervision',
-    anchor: 'const remove = state.stopped.signal.onAbort(() => {\n                    cancel();\n                    resolve(false);\n                });',
-    replacement: 'const remove = () => undefined;',
+    // Re-anchored after #148, which arms the timer first and registers the stop listener after it.
+    anchor: 'remove = state.stopped.signal.onAbort(() => {\n                    cancel();\n                    resolve(false);\n                });',
+    replacement: 'remove = () => undefined;',
     breaks: ['soft-then-hard-stop'],
   },
   {
@@ -386,16 +389,12 @@ function planControl(control) {
 }
 
 // Drift guard: `--check-anchors` plans every control against the current builds and runs no suite.
-if (process.argv.includes('--check-anchors')) {
+if (anchorCheckRequested()) {
   const problems = controls.flatMap((control) => {
     const { error } = planControl(control);
     return error === undefined ? [] : [error];
   });
-  for (const problem of problems) {
-    console.log(problem);
-  }
-  console.log(`${problems.length === 0 ? 'ANCHORS OK' : 'ANCHORS FAIL'}: ${String(controls.length)} controls`);
-  process.exit(problems.length === 0 ? 0 : 1);
+  process.exit(reportAnchorCheck(problems, controls.length));
 }
 
 /** Restore every target. */

@@ -129,12 +129,10 @@ describe('soft-then-hard-stop (A-13, RUN-014)', () => {
     expect(Date.now()).toBeLessThan(T - 30_000);
   });
 
-  // Observed defect (#147), kept failing on purpose. A hard stop requested synchronously while the run offers its `sleeping`
-  // event (here by an observer reacting to it) ends the wait, and the run returns at once, but Supervision's
-  // `sleepForDeferral` then still arms its keep-alive timer for T: the abort listener ran before `cancel` was assigned.
-  // The process cannot exit until T, which for a real quota deferral is hours. Remove `.failing` once the timer is not
-  // armed for an already-stopped run.
-  test.failing('DEFECT (#147, stop during sleep): a hard stop requested as the run starts to sleep lets the process exit before T', () => {
+  // Regression (#147): a hard stop requested synchronously while the run offers its `sleeping` event (here by an
+  // observer reacting to it) once ended the wait but still armed the sleep's keep-alive timer for T, so the process
+  // could not exit until T, which for a quota deferral is hours.
+  test('a hard stop requested as the run starts to sleep lets the process exit before T (#147)', () => {
     const retryMs = 3_000;
     const s = freshScenario(baseWorld({ script: { 'pr-2': [{ kind: 'rate-limit', retryMs }] } }));
     const run = clean(s.run({ kind: 'members' }, { window: 1, permits: 1, deferral: 'sleep', stops: [{ on: { sleeping: true }, level: 'hard' }] }));

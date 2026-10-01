@@ -8,7 +8,8 @@
  * - `pr` is a template over it with one member memo, `assess`, whose body
  *   runs the world's plan for that member (see {@link IPlan}). Each member
  *   isolates its paid call in its own step (EXP-8 resolution 3).
- * - `report` is a strict fold over every member's `assess`.
+ * - `report` is a strict fold over every member's `assess`, and `tally` an
+ *   outcome fold over the same members that notes each settled status.
  *
  * Author callbacks capture nothing but their typed context: every effect goes
  * through a declared helper over the module's `world`, which each test
@@ -19,7 +20,7 @@
  * @see ../../../../experiments/exp-8/decision.md (mechanisms 3 to 7)
  */
 import { declarations } from '@microdelta/definition';
-import type { IFoldEntry, IMemberBuilder } from '@microdelta/definition';
+import type { IFoldEntry, IMemberBuilder, IOutcomeEntry } from '@microdelta/definition';
 import { SupervisionError } from '@microdelta/supervision';
 import type { IOperationRetryPolicy, ISupervision } from '@microdelta/supervision';
 
@@ -112,11 +113,20 @@ export interface IReport {
   readonly keys: readonly string[];
 }
 
+/** Outcome-fold entries over `assess`. */
+export type ITallyEntries = readonly IOutcomeEntry<ITrackedView<IAssessment>>[];
+
+/** The outcome fold's tally: each member's settled status. */
+export interface ITally {
+  readonly statuses: readonly string[];
+}
+
 /** The declared helper record. */
 export interface IHelpers {
   readonly roster: () => ISourceOutcome<IRoster>;
   readonly assess: (key: string) => Promise<IAssessment>;
   readonly render: (entries: IAssessmentEntries) => IReport;
+  readonly tally: (entries: ITallyEntries) => ITally;
 }
 
 /** The live run's execution controls through the session's Supervision. */
@@ -192,12 +202,21 @@ function render(entries: IAssessmentEntries): IReport {
   return { keys: entries.flatMap((entry) => entry.status === 'succeeded' ? [entry.key] : []) };
 }
 
+/** The outcome fold's tally, noted in the world's log so a test sees whether the body ran. */
+function tally(entries: ITallyEntries): ITally {
+  const statuses = entries.map((entry) => `${entry.key}=${entry.status}`);
+  world.log.push(`tally:${statuses.join(',')}`);
+  return { statuses };
+}
+
 /** One fresh composition with its builders and the descriptors tests use. */
 export interface IOperationsFixture {
   readonly builders: IAuthoring<IInputs, IHelpers>;
   readonly composition: IComposition<IInputs, IHelpers>;
   /** The strict fold over every member's assessment. */
   readonly report: IStepDescriptor;
+  /** The outcome fold over every member's assessment. */
+  readonly tally: IStepDescriptor;
   /** One member's `assess` instance. */
   instance(memberKey: string): IStepDescriptor;
 }
@@ -210,7 +229,7 @@ export function assessmentSubject(key: string): string {
 /** Compose the fixture with fresh allocations, standing in for a new process. */
 export function composeOperations(): IOperationsFixture {
   const builders: IAuthoring<IInputs, IHelpers> = declarations<IAuthoringFamily<IInputs, IHelpers>>();
-  const { source, template, fold, compose } = builders;
+  const { source, template, fold, outcomeFold, compose } = builders;
   const prs = source<IRoster>({
     subject: 'prs:acme/widget',
     collection: { identity: 'key' },
@@ -225,6 +244,7 @@ export function composeOperations(): IOperationsFixture {
   });
   const pr = template({ slot: 'pr', collection: prs, steps });
   const report = fold({ subject: 'report:acme/widget', over: { template: pr, step: 'assess' }, run: ({ members, helpers }) => helpers.render(members) });
+  const tallied = outcomeFold({ subject: 'tally:acme/widget', over: { template: pr, step: 'assess' }, run: ({ members, helpers }) => helpers.tally(members) });
   const composition = compose({
     scope: analysis,
     inputs: [],
@@ -232,10 +252,12 @@ export function composeOperations(): IOperationsFixture {
       { slot: 'roster', helper: roster },
       { slot: 'assess', helper: assess },
       { slot: 'render', helper: render },
+      { slot: 'tally', helper: tally },
     ],
     steps: [
       { slot: 'prs', declaration: prs },
       { slot: 'report', declaration: report },
+      { slot: 'tally', declaration: tallied },
     ],
     templates: [pr],
   });
@@ -243,6 +265,7 @@ export function composeOperations(): IOperationsFixture {
     builders,
     composition,
     report: Object.freeze({ scope: analysis, role: 'step', slot: 'report' }),
+    tally: Object.freeze({ scope: analysis, role: 'step', slot: 'tally' }),
     instance: (memberKey) => Object.freeze({ scope: analysis, role: 'step', slot: 'assess', template: 'pr', collection: 'prs', memberKey }),
   };
 }

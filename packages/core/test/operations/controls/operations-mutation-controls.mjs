@@ -30,7 +30,7 @@ const supervision = join(root, 'packages/supervision/dist/src');
 const resolution = join(root, 'packages/resolution/dist/src');
 
 /** The operation suite files every run must execute. */
-const suites = Object.freeze(['operations.test.js', 'replay.test.js', 'operator.test.js', 'environments.test.js', 'privacy.test.js', 'processes.test.js']);
+const suites = Object.freeze(['operations.test.js', 'replay.test.js', 'operator.test.js', 'environments.test.js', 'privacy.test.js', 'processes.test.js', 'outcome-fold.test.js']);
 
 const controls = [
   {

@@ -6,7 +6,7 @@
  */
 import { ResolutionError } from '@microdelta/resolution';
 import { SupervisionError, operationsCollection } from '@microdelta/supervision';
-import type { IFoldReport, IMemberOutcome, IMembersReport, IOperationView, IRun, IRunResult } from '@microdelta/supervision';
+import type { IFoldReport, IMemberOutcome, IMembersReport, IOperationView, IOutcomeFoldReport, IRun, IRunResult } from '@microdelta/supervision';
 
 import { analysis, world } from './fixture.js';
 import type { ILedgerEntry } from './provider.js';
@@ -21,6 +21,11 @@ export function members(session: IOperationSession, options: IOperationRunOption
 /** Resolve the strict fold over every PR's assessment in one run. */
 export function fold(session: IOperationSession, options: IOperationRunOptions = {}): IStartedRun<IFoldReport> {
   return session.start(options, (run: IRun) => run.resolveFold(session.fixture.report, freshKey()));
+}
+
+/** Resolve the outcome fold over every PR's assessment in one run. */
+export function outcomeFold(session: IOperationSession, options: IOperationRunOptions = {}): IStartedRun<IOutcomeFoldReport> {
+  return session.start(options, (run: IRun) => run.resolveOutcomeFold(session.fixture.tally, freshKey()));
 }
 
 /** Inspect the environment's operations in a short run that needs no lease. */

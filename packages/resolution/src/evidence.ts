@@ -27,15 +27,22 @@
  *     `entry` binding per included member. Gate observations are never part of
  *     it: a member's included-or-skipped outcome is the fold's evidence, and
  *     the gate's raw reads stay that instance's own evidence.
+ *   - Version 4 records an outcome (tolerant) fold (RUN-010) exactly as
+ *     version 3 records a strict fold, except that its kind is
+ *     `outcome-fold` and its membership-and-status fact also records `failed`
+ *     and `cancelled` members, neither with a reference. A separate version
+ *     keeps the two contracts apart: neither fold ever accepts the other's
+ *     result, and an older reader sees an unsupported record, an honest miss.
  *   A new execution writes version 2 exactly when version 1 cannot express it:
- *   a memo whose calls carry version-2 witnesses, or a supplied step; and
- *   version 3 exactly for a strict fold. Sources and M3-shaped memos keep
- *   writing version 1.
+ *   a memo whose calls carry version-2 witnesses, or a supplied step; version
+ *   3 exactly for a strict fold; and version 4 exactly for an outcome fold.
+ *   Sources and M3-shaped memos keep writing version 1.
  * - **Acceptance** (`microdelta.resolution.acceptance`) records a current
  *   verification of an existing result: its basis and the current work or
  *   children it followed (version 1), the current result of each recorded
  *   call by position (version 2), or the current result of each included
- *   member by key (version 3). It never rewrites provenance (RES-007).
+ *   member by key (version 3, for strict and outcome folds alike). It never
+ *   rewrites provenance (RES-007).
  * - **Attempt ending** (`microdelta.resolution.attempt-ending`, version 1)
  *   records why an admitted attempt ended without a new result.
  *
@@ -62,8 +69,10 @@ export const endingFormat = 'microdelta.resolution.attempt-ending';
 export const formatVersion = 1;
 /** The version of provenance and acceptance records that carry ordered nested calls. */
 export const nestedFormatVersion = 2;
-/** The version of provenance and acceptance records of a strict fold. */
+/** The version of provenance and acceptance records of a strict fold; outcome folds also write version-3 acceptance. */
 export const foldFormatVersion = 3;
+/** The version of provenance records of an outcome (tolerant) fold. */
+export const outcomeFoldFormatVersion = 4;
 
 /**
  * Tracking binding paths Resolution assigns, as structural correspondence
@@ -163,8 +172,34 @@ export interface IFoldProvenance {
   readonly membership: readonly IMembershipEntry[];
 }
 
+/**
+ * One member of an outcome fold's membership-and-status fact: a strict
+ * fold's included or skipped entry, or a member that settled without a
+ * result in that pass, `failed` or `cancelled`.
+ */
+export type IOutcomeMembershipEntry =
+  | IMembershipEntry
+  | { readonly key: string; readonly status: 'failed' }
+  | { readonly key: string; readonly status: 'cancelled' };
+
+/**
+ * Parsed version-4 provenance: an outcome fold with the template step it
+ * consumed, its membership-and-status fact over every settled status in
+ * canonical key order and its own observations, whose consumed member facts
+ * use `entry` bindings of included members.
+ */
+export interface IOutcomeFoldProvenance {
+  readonly version: 4;
+  readonly kind: 'outcome-fold';
+  readonly step: IBindingDescriptor;
+  /** The consumed template step: a template-bearing descriptor with no member key. */
+  readonly over: IBindingDescriptor;
+  readonly observations: readonly ITrackingObservation[];
+  readonly membership: readonly IOutcomeMembershipEntry[];
+}
+
 /** Parsed provenance of one completed result. */
-export type IProvenance = IDirectProvenance | INestedProvenance | IFoldProvenance;
+export type IProvenance = IDirectProvenance | INestedProvenance | IFoldProvenance | IOutcomeFoldProvenance;
 
 /** The outcome of reading a candidate's provenance. */
 export type IProvenanceReading =
@@ -173,16 +208,16 @@ export type IProvenanceReading =
 
 /** Build the stored provenance record of one execution, in the version its parsed form names. */
 export function provenanceRecord(provenance: IProvenance): IVersionedRecord {
-  if (provenance.version === foldFormatVersion) {
+  if (provenance.version === foldFormatVersion || provenance.version === outcomeFoldFormatVersion) {
     return {
       format: provenanceFormat,
-      formatVersion: foldFormatVersion,
+      formatVersion: provenance.version,
       content: {
         kind: provenance.kind,
         step: plainDescriptor(provenance.step),
         over: plainDescriptor(provenance.over),
         observations: provenance.observations.map(plainObservation),
-        membership: provenance.membership.map((entry) => entry.status === 'included'
+        membership: provenance.membership.map((entry: IOutcomeMembershipEntry) => entry.status === 'included'
           ? { key: entry.key, status: entry.status, reference: plainReference(entry.reference) }
           : { key: entry.key, status: entry.status }),
       },
@@ -540,6 +575,8 @@ export function readProvenance(envelope: ICompletedEnvelope): IProvenanceReading
         return readNested(record.content);
       case foldFormatVersion:
         return readFold(record.content);
+      case outcomeFoldFormatVersion:
+        return readOutcomeFold(record.content);
       default:
         break;
     }
@@ -669,8 +706,55 @@ function readFold(content: unknown): IProvenanceReading {
   if (field(content, 'kind') !== 'fold') {
     return malformed('fold step kind');
   }
+  const membership = readMembership(content, new Set(['skipped'] as const));
+  const observations = foldObservations(content, membership);
+  return {
+    status: 'supported',
+    provenance: Object.freeze({
+      version: foldFormatVersion,
+      kind: 'fold',
+      step: foldDescriptor(field(content, 'step')),
+      over: overDescriptor(field(content, 'over')),
+      observations,
+      // Only `skipped` was accepted beside `included`, so the filter only restates that for the type.
+      membership: Object.freeze(membership.flatMap((entry) => entry.status === 'included' || entry.status === 'skipped' ? [entry] : [])),
+    }),
+  };
+}
+
+/**
+ * Read version-4 provenance: an outcome fold's record, held to every rule of
+ * version 3 except that its kind is `outcome-fold` and its membership may
+ * also record `failed` and `cancelled` members, neither with a reference (a
+ * member without a result has no data to consume).
+ */
+function readOutcomeFold(content: unknown): IProvenanceReading {
+  if (field(content, 'kind') !== 'outcome-fold') {
+    return malformed('outcome fold step kind');
+  }
+  const membership = readMembership(content, new Set(['skipped', 'failed', 'cancelled'] as const));
+  const observations = foldObservations(content, membership);
+  return {
+    status: 'supported',
+    provenance: Object.freeze({
+      version: outcomeFoldFormatVersion,
+      kind: 'outcome-fold',
+      step: foldDescriptor(field(content, 'step')),
+      over: overDescriptor(field(content, 'over')),
+      observations,
+      membership: Object.freeze(membership),
+    }),
+  };
+}
+
+/**
+ * A stored membership-and-status fact: keys nonempty, unique and in strictly
+ * ascending canonical (code-unit) order; each entry `included` with an exact
+ * reference, or one of the reference-free `statuses` the fold's format allows.
+ */
+function readMembership(content: unknown, statuses: ReadonlySet<'skipped' | 'failed' | 'cancelled'>): readonly IOutcomeMembershipEntry[] {
   let previous: string | undefined;
-  const membership = list(field(content, 'membership'), 'membership').map((entry): IMembershipEntry => {
+  return list(field(content, 'membership'), 'membership').map((entry): IOutcomeMembershipEntry => {
     const key = text(field(entry, 'key'), 'member key');
     if (key.length === 0 || (previous !== undefined && !(previous < key))) {
       return malformed('membership keys are not unique and in canonical order');
@@ -680,11 +764,19 @@ function readFold(content: unknown): IProvenanceReading {
     if (status === 'included') {
       return Object.freeze({ key, status, reference: reference(field(entry, 'reference')) });
     }
-    if (status === 'skipped' && field(entry, 'reference') === undefined) {
+    if ((status === 'skipped' || status === 'failed' || status === 'cancelled') && statuses.has(status) && field(entry, 'reference') === undefined) {
       return Object.freeze({ key, status });
     }
     return malformed('membership entry');
   });
+}
+
+/**
+ * A stored fold's own observations: they must include the fold's own
+ * implementation, and every consumed member fact must be bound at `entry`
+ * and an included member's key.
+ */
+function foldObservations(content: unknown, membership: readonly IOutcomeMembershipEntry[]): readonly ITrackingObservation[] {
   const observations = Object.freeze(list(field(content, 'observations'), 'observations').map(observation));
   if (!observations.some(isOwnImplementation)) {
     return malformed('fold provenance lacks its own implementation observation');
@@ -693,17 +785,7 @@ function readFold(content: unknown): IProvenanceReading {
   if (observations.some((item) => item.binding.path[0] === 'entry' && (item.binding.path.length !== 2 || !included.has(item.binding.path[1] ?? '')))) {
     return malformed('a consumed member fact names no included member');
   }
-  return {
-    status: 'supported',
-    provenance: Object.freeze({
-      version: foldFormatVersion,
-      kind: 'fold',
-      step: foldDescriptor(field(content, 'step')),
-      over: overDescriptor(field(content, 'over')),
-      observations,
-      membership: Object.freeze(membership),
-    }),
-  };
+  return observations;
 }
 
 /** Whether an observation is the step's own author-callback implementation evidence. */

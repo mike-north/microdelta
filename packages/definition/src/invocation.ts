@@ -41,6 +41,7 @@ import type { IBindingDescriptor } from './descriptor.js';
 import { DefinitionError } from './errors.js';
 import type { IApply, IBindingFamily } from './family.js';
 import type { IFoldInvocation } from './fold.js';
+import type { IOutcomeFoldInvocation } from './outcome-fold.js';
 import type { IAnySuppliedStepDeclaration, IArgumentSupplier } from './slot.js';
 import type { IMemberSupplier } from './template.js';
 import type {
@@ -238,7 +239,12 @@ export interface ISuppliedInvocation<TFamily extends IBindingFamily> extends IIn
  * A live invocation of any step kind.
  * @alpha
  */
-export type IInvocation<TFamily extends IBindingFamily> = IMemoInvocation<TFamily> | ISourceInvocation<TFamily> | ISuppliedInvocation<TFamily> | IFoldInvocation<TFamily>;
+export type IInvocation<TFamily extends IBindingFamily> =
+  | IMemoInvocation<TFamily>
+  | ISourceInvocation<TFamily>
+  | ISuppliedInvocation<TFamily>
+  | IFoldInvocation<TFamily>
+  | IOutcomeFoldInvocation<TFamily>;
 
 /** What Definition can describe about each genuine handle; forged look-alikes are absent. */
 const handles = new WeakMap<object, IDirectChildWitness | IDeclaredCallDescription>();
@@ -255,7 +261,9 @@ const emptyArguments: IEmptyArguments = Object.freeze({ form: 'empty' });
  * `ambiguous-slot` (the EXP-4 supplied-callable selection). A template
  * instance is opened by its instance descriptor; its calls always record the
  * version-2 witness with template-bearing descriptors, and it alone has a
- * member binding to forward from. A strict fold opens a `fold` invocation.
+ * member binding to forward from. A strict fold opens a `fold` invocation and
+ * an outcome fold an `outcome-fold` invocation; both carry the template step
+ * they consume.
  * @param records - The builder instance's declaration records.
  * @param compositions - The builder instance's composition states.
  * @param composition - The frozen composition.
@@ -340,6 +348,26 @@ export function openInvocationIn<TFamily extends IBindingFamily>(
       },
     };
     return Object.freeze(fold);
+  }
+  if (record.kind === 'outcome-fold') {
+    const outcomeFoldRecord = record;
+    const over = state.folds.get(descriptorKey(frozenParent)) ?? reject('unresolved-parent', 'An outcome fold invocation requires the template step it consumes.');
+    const outcomeFold: IOutcomeFoldInvocation<TFamily> = {
+      kind: 'outcome-fold',
+      parent: frozenParent,
+      over,
+      get open(): boolean {
+        return open;
+      },
+      close(): void {
+        open = false;
+      },
+      apply: (bindings, members, invoke) => {
+        assertApplicable();
+        return outcomeFoldRecord.apply(bindings, members, invoke);
+      },
+    };
+    return Object.freeze(outcomeFold);
   }
   if (record.kind === 'supplied-step') {
     const suppliedRecord = record;

@@ -333,9 +333,11 @@ export function supervisedExecution(run: ISupervisedRun, frames: IFrameAccess): 
       // Invariant (RUN-002's nested rule): the lane pool is run-wide, so work
       // run under a lane must never start another member fan-out (a nested
       // settleMembers) under the same pool: a member holding a lane while
-      // waiting for lanes its own fan-out needs can deadlock the window. Today
-      // members cannot trigger fan-out (folds are not children, and run
-      // operations start from the run's root frame, not a member's).
+      // waiting for lanes its own fan-out needs can deadlock the window.
+      // Resolution never nests one (strict and outcome folds are never
+      // children), and the run refuses every run operation called from
+      // inside member work or a step attempt as an undeclared call (CMP-9),
+      // so the pool is never awaited from inside a lane holder.
       const request = frames.current()?.request;
       const lane: IMemberLane = { permit: await run.lanes.acquire(run.hard.signal), waits: 0, closed: false };
       try {

@@ -113,7 +113,7 @@ Definition's `declarations()`. Callbacks receive:
    operations. Without the port, work runs unsupervised and every commit may
    proceed.
 
-The members of one members request or strict fold resolve concurrently
+The members of one members request, strict fold or outcome fold resolve concurrently
 within Run Supervision's bounded active window: Resolution presents each
 member to the port's `member()` in canonical key order, and members are
 started and reported in that order (RUN-002). A member not yet started holds
@@ -201,6 +201,39 @@ reruns the fold, while a reorder or a threshold edit that flips no gate reruns
 nothing. A member change reruns the fold only when a fact it consumed changed.
 Skips and deletions retract nothing.
 
+## Outcome folds
+
+`resolveOutcomeFold({ step, requestKey, lease })` resolves one outcome
+(tolerant) fold (RUN-010). `resolve` and `check` refuse it with
+`invalid-request`, as they refuse a strict fold.
+
+1. **Members**: the consumed template step is settled for every current
+   member exactly as `resolveMembers` settles it. Each member settles as
+   `succeeded` (an accepted result), `skipped`, `failed` (a
+   member-attributable typed failure) or `cancelled` (work withdrawn from
+   this run: refused by admission as cancelled, or interrupted by a stop).
+   Denied work leaves it `pending`, which is unsettled.
+2. **Completeness**: no member status fails an outcome fold. A rejected
+   snapshot or cancelled discovery work makes the outcome `failed`, because no
+   population can be established in this pass. Otherwise open discovery,
+   denied discovery work or a pending member makes it `waiting`, with the
+   partial coverage settled so far. Neither runs the body, admits fold work or
+   publishes: the fold never claims a complete set while anything is unsettled.
+3. **Validate or execute**: once every member of a closed population has
+   settled, the fold is validated or executed exactly as a strict fold is. Its
+   body receives one entry per member with its settled status (only
+   `succeeded` carries data). Its membership-and-status fact also records
+   `failed` and `cancelled` members, so repairing a failed member changes it
+   and the fold reconsiders, while unaffected member results are reused.
+4. **Coverage**: every outcome except `failed` carries `coverage: {
+   succeeded, skipped, failed, cancelled, pending, openDiscovery, complete }`,
+   derived from how members settled, never from the body. `complete` is true
+   exactly when discovery is closed and nothing is pending; it is never a
+   claim of complete success.
+
+An outcome fold records version-4 provenance, so neither fold contract ever
+accepts the other's result: such a candidate is `unsupported-evidence`.
+
 ## Checks and recovery
 
 `check({ step })` reports `reusable`, `execution-required`, `uncertain` at a
@@ -208,7 +241,7 @@ needed source boundary, or `skipped` for a gated-out instance, without
 admission, attempts, bodies or writes.
 `recover({ step, requestKey })` recomputes the attempt key and intent without
 running author code and reports the identified execution's durable outcome,
-a strict fold's included. A different intent is rejected and nothing is
+a strict or outcome fold's included. A different intent is rejected and nothing is
 executed automatically.
 
 ## Durable evidence

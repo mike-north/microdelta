@@ -133,6 +133,7 @@ export function portDouble(): IPortDouble {
         resolve: (): Promise<IResolutionOutcome> => unused(),
         resolveMembers: unused,
         resolveFold: unused,
+        resolveOutcomeFold: unused,
         check: unused,
         recover: (): never => {
           throw new Error('the port double makes no requests');

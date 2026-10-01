@@ -143,6 +143,7 @@ function executing(body: () => Promise<unknown>): { readonly factory: IRunOption
         },
         resolveMembers: unused,
         resolveFold: unused,
+        resolveOutcomeFold: unused,
         check: unused,
         recover: (): never => {
           throw new Error('unused');
@@ -244,6 +245,24 @@ describe('lease authority (EXP-8 ruling R)', () => {
     expect(phases(outcome.events)).toEqual(['request-started', 'request-settled:lease-lost']);
     expect(journal.operation('op-7-1')).toEqual(expect.objectContaining({ status: 'pending' }));
     expect(outcome.diagnostics.some((line) => line.startsWith('lease-lost:'))).toBe(true);
+  });
+});
+
+describe('operator actions are run operations (CMP-9)', () => {
+  test('inspecting or settling operations from inside a step attempt is refused as an undeclared call', async () => {
+    const supervision = createSupervision({ context: nodeScopes, timer: fakeTimer() });
+    const codes: (string | undefined)[] = [];
+    let live: Parameters<Parameters<typeof supervision.run>[1]>[0] | undefined;
+    const double = executing(async () => {
+      if (live !== undefined) {
+        codes.push(await codeOf(live.inspectOperations()), await codeOf(live.settleOperation({ action: 'abandon', operation: 'op-7-1', operator: 'operator.ada' })));
+      }
+    });
+    await supervision.run({ analysis: 'analysis:test', environment: 'env:test', resolution: double.factory, writer: grantingWriter, operations: { journal: memoryJournal(), accounting: memoryAccounting() } }, async (run) => {
+      live = run;
+      await run.resolve(stepOf('assess', 'pr-1'), { requestKey: 'request:1' });
+    });
+    expect(codes).toEqual(['undeclared-call', 'undeclared-call']);
   });
 });
 

@@ -1,7 +1,7 @@
 /**
  * Family-bound builders. A facade calls `declarations<TFamily>()` once and
  * shares the instance with authors (source, memo, stepSlot, suppliedStep,
- * supply, forward, template, fold, compose) and Resolution (openInvocation,
+ * supply, forward, template, fold, outcomeFold, compose) and Resolution (openInvocation,
  * gateOf). The instance privately owns the records of the steps, templates and
  * compositions it minted; that ownership is also what lets `openInvocation`
  * and `gateOf` reach each declaration's typed closures without recovering them
@@ -24,6 +24,7 @@ import { forward, type IForward } from './arguments.js';
 import { composeIn, type IComposition, type ICompositionOptions, type ICompositionState } from './composition.js';
 import type { IBindingFamily } from './family.js';
 import { declareFold, type IFoldDeclaration, type IFoldOptions, type IStepsOf } from './fold.js';
+import { declareOutcomeFold, type IOutcomeFoldDeclaration, type IOutcomeFoldOptions } from './outcome-fold.js';
 import { openInvocationIn, type IInvocation, type IInvocationPort } from './invocation.js';
 import {
   declareTemplate,
@@ -76,6 +77,14 @@ export interface IDeclarations<TFamily extends IBindingFamily> {
   fold<TTemplate extends IAnyTemplateDeclaration<TFamily>, TStep extends keyof IStepsOf<TTemplate> & string, TResult>(
     options: IFoldOptions<TFamily, TTemplate, TStep, TResult>,
   ): IFoldDeclaration<TFamily, IResultOf<TFamily, IStepsOf<TTemplate>[TStep]>, TResult>;
+  /**
+   * Declare an outcome (tolerant) fold over one template step: it consumes
+   * every member's settled status rather than the complete success of a
+   * required population (RUN-010).
+   */
+  outcomeFold<TTemplate extends IAnyTemplateDeclaration<TFamily>, TStep extends keyof IStepsOf<TTemplate> & string, TResult>(
+    options: IOutcomeFoldOptions<TFamily, TTemplate, TStep, TResult>,
+  ): IOutcomeFoldDeclaration<TFamily, IResultOf<TFamily, IStepsOf<TTemplate>[TStep]>, TResult>;
   /** Freeze a composition of declarations this instance minted. */
   compose(options: ICompositionOptions<TFamily>): IComposition<TFamily>;
   /** Open a live invocation of one uniquely bound step, supplied slot or template instance of a composition this instance minted. */
@@ -114,6 +123,9 @@ export function declarations<TFamily extends IBindingFamily>(): IDeclarations<TF
     fold: <TTemplate extends IAnyTemplateDeclaration<TFamily>, TStep extends keyof IStepsOf<TTemplate> & string, TResult>(
       options: IFoldOptions<TFamily, TTemplate, TStep, TResult>,
     ) => declareFold(records, templates, options),
+    outcomeFold: <TTemplate extends IAnyTemplateDeclaration<TFamily>, TStep extends keyof IStepsOf<TTemplate> & string, TResult>(
+      options: IOutcomeFoldOptions<TFamily, TTemplate, TStep, TResult>,
+    ) => declareOutcomeFold(records, templates, options),
     compose: (options: ICompositionOptions<TFamily>) => composeIn(records, compositions, options, templates),
     openInvocation: (composition: IComposition<TFamily>, parent: IBindingDescriptor, port: IInvocationPort<TFamily>) =>
       openInvocationIn(records, compositions, composition, parent, port),

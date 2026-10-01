@@ -21,8 +21,8 @@
  * Keyed fanout templates bind to the one composition-level slot holding their
  * collection source. A template instance is addressed by its template step
  * descriptor plus the member key and is minted on demand, per composition,
- * from the frozen template; a strict fold is a composition-level step that
- * consumes one composed template step.
+ * from the frozen template; a strict or outcome fold is a composition-level
+ * step that consumes one composed template step.
  *
  * Each step registration keeps the declaration's own record, so the typed
  * invocation closures reached by `openInvocation` are exactly those retained
@@ -210,6 +210,8 @@ export interface ITopology {
   readonly templates: readonly ITemplateTopology[];
   /** Strict folds and the template steps they consume, in structural order. */
   readonly folds: readonly IFoldTopology[];
+  /** Outcome (tolerant) folds and the template steps they consume, in structural order. */
+  readonly outcomeFolds: readonly IFoldTopology[];
 }
 
 /**
@@ -271,7 +273,7 @@ export interface ICompositionState<TFamily extends IBindingFamily> {
   readonly registrations: ReadonlyMap<string, readonly IRegistration<TFamily>[]>;
   /** The composed templates: their instances, keying and gates. */
   readonly templates: IBoundTemplates<TFamily>;
-  /** The template step descriptor each fold consumes, by the fold's descriptor key. */
+  /** The template step descriptor each strict or outcome fold consumes, by the fold's descriptor key. */
   readonly folds: ReadonlyMap<string, IBindingDescriptor>;
 }
 
@@ -414,7 +416,7 @@ export function composeIn<TFamily extends IBindingFamily>(
         if (isMemberStep(record.declaration)) {
           return reject('invalid-template', `Step ${slot} holds a member step declaration, which is addressable only through its template.`);
         }
-        if (record.kind === 'fold' && memberKey !== undefined) {
+        if ((record.kind === 'fold' || record.kind === 'outcome-fold') && memberKey !== undefined) {
           return reject('illegal-edge', `Fold ${slot} must be a composition-level step, not a member step.`);
         }
         return { slot, record };
@@ -507,13 +509,14 @@ export function composeIn<TFamily extends IBindingFamily>(
     // A fold consumes a step of a template composed here; anything else is an undeclared edge.
     const folds = new Map<string, IBindingDescriptor>();
     const foldTopology: IFoldTopology[] = [];
+    const outcomeFoldTopology: IFoldTopology[] = [];
     for (const { slot, record } of compositionSteps) {
-      if (record.kind === 'fold') {
+      if (record.kind === 'fold' || record.kind === 'outcome-fold') {
         const over = boundTemplates.foldTarget(record.declaration.over.template, record.declaration.over.step)
           ?? reject('illegal-edge', `Fold ${slot} consumes template ${record.declaration.over.template.slot}, which this composition does not declare.`);
         const fold = stepDescriptor(scope, slot, undefined);
         folds.set(descriptorKey(fold), over);
-        foldTopology.push(Object.freeze({ fold, over }));
+        (record.kind === 'fold' ? foldTopology : outcomeFoldTopology).push(Object.freeze({ fold, over }));
       }
     }
     for (const slot of [...declaredSlots, ...suppliedSlots]) {
@@ -529,6 +532,7 @@ export function composeIn<TFamily extends IBindingFamily>(
       slots: Object.freeze([...declaredSlots].sort()),
       templates: boundTemplates.topology,
       folds: Object.freeze(foldTopology.sort((left, right) => compareDescriptors(left.fold, right.fold))),
+      outcomeFolds: Object.freeze(outcomeFoldTopology.sort((left, right) => compareDescriptors(left.fold, right.fold))),
     });
     const frozenRegistrations: ReadonlyMap<string, readonly IRegistration<TFamily>[]> = new Map(
       [...registrations].map(([key, occupants]) => [key, Object.freeze(occupants)]),

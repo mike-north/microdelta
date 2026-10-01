@@ -7,13 +7,16 @@
 import type { IAdmissionRequest } from '@microdelta/resolution';
 import type { IBindingDescriptor } from '@microdelta/definition';
 import type { ICheckOutcome } from '@microdelta/resolution';
+import type { ICompleteOutcomeFoldCoverage } from '@microdelta/resolution';
 import type { IDiscoveryOutcome } from '@microdelta/resolution';
 import type { IExecutionAdmission } from '@microdelta/resolution';
 import type { IExecutionSupervision } from '@microdelta/resolution';
 import type { IFoldOutcome } from '@microdelta/resolution';
 import type { IGateEvidence } from '@microdelta/resolution';
+import type { IIncompleteOutcomeFoldCoverage } from '@microdelta/resolution';
 import type { ILifecycleEvent } from '@microdelta/resolution';
 import type { ILifecycleObserver } from '@microdelta/resolution';
+import type { IOutcomeFoldOutcome } from '@microdelta/resolution';
 import type { IRecoveryResult } from '@microdelta/resolution';
 import type { IResolution } from '@microdelta/resolution';
 import type { IResolutionOutcome } from '@microdelta/resolution';
@@ -322,6 +325,34 @@ export interface IOperationView {
 export type IOrdinaryPhase = 'begin' | 'end' | 'fail';
 
 // @alpha
+export interface IOutcomeFoldReport {
+    readonly discovery: IDiscoveryReport;
+    readonly fold: IBindingDescriptor;
+    readonly members: readonly IMemberOutcome[];
+    readonly outcome: IOutcomeFoldRunOutcome;
+    readonly over: IBindingDescriptor;
+}
+
+// @alpha
+export type IOutcomeFoldRunOutcome = {
+    readonly status: 'folded';
+    readonly outcome: Extract<IOutcomeFoldOutcome, {
+        readonly kind: 'reused' | 'published';
+    }>;
+} | {
+    readonly status: 'waiting';
+    readonly coverage: IIncompleteOutcomeFoldCoverage;
+} | {
+    readonly status: 'failed';
+    readonly diagnostic: string;
+} | {
+    readonly status: 'pending' | 'cancelled';
+    readonly refused: IBindingDescriptor;
+    readonly reason: string;
+    readonly coverage: ICompleteOutcomeFoldCoverage;
+};
+
+// @alpha
 export type IRemoteState = 'cancelled' | 'running' | 'unknown';
 
 // @alpha
@@ -351,6 +382,7 @@ export interface IResolutionPorts {
 
 // @alpha
 export interface IRun {
+    assertDeclaredCall(operation: IRunOperationName): void;
     check(step: IBindingDescriptor): Promise<ICheckOutcome>;
     readonly context: IRunContext;
     inspectOperations(query?: {
@@ -362,6 +394,7 @@ export interface IRun {
     resolve(step: IBindingDescriptor, request: IRequestOptions): Promise<IResolutionOutcome>;
     resolveFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IFoldReport>;
     resolveMembers(target: IMembersTarget, request: IRequestOptions): Promise<IMembersReport>;
+    resolveOutcomeFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IOutcomeFoldReport>;
     settleOperation(settlement: IOperationSettlement): Promise<IOperationView>;
 }
 
@@ -418,6 +451,9 @@ export type IRunLease = IResolveRequest['lease'];
 export interface IRunObserver {
     observe(event: IRunEvent): void;
 }
+
+// @alpha
+export type IRunOperationName = 'check' | 'inspectOperations' | 'ordinary' | 'read' | 'recover' | 'resolve' | 'resolveFold' | 'resolveMembers' | 'resolveOutcomeFold' | 'settleOperation';
 
 // @alpha
 export interface IRunOperationPorts {
@@ -559,7 +595,7 @@ export interface ISupervision {
 }
 
 // @alpha
-export type ISupervisionErrorCode = 'outside-run' | 'run-closed' | 'composition-phase' | 'observer-failure' | 'writer-unavailable' | 'invalid-request' | 'stopped' | 'operation-failed' | 'operation-deferred' | 'operation-unknown' | 'operation-unrecorded' | 'integrity';
+export type ISupervisionErrorCode = 'outside-run' | 'run-closed' | 'composition-phase' | 'observer-failure' | 'writer-unavailable' | 'invalid-request' | 'stopped' | 'operation-failed' | 'operation-deferred' | 'operation-unknown' | 'operation-unrecorded' | 'integrity' | 'undeclared-call';
 
 // @alpha
 export interface ISupervisionOptions {

@@ -24,6 +24,9 @@
  *   replayed; the step attempt can no longer publish or send, and its work stays pending until an operator settles it.
  * - `operation-unrecorded`: an external operation's intent could not be made durable, so nothing was sent (ACC-007).
  * - `integrity`: a durable operation record Supervision wrote cannot be read back.
+ * - `undeclared-call`: a run operation was called from inside a member's work or a step attempt
+ *   (author code that kept the run). What it resolves or reads would enter no evidence of the
+ *   calling body, so it is refused before any admission or lane (CMP-9, RUN-002).
  * @alpha
  */
 export type ISupervisionErrorCode =
@@ -38,7 +41,8 @@ export type ISupervisionErrorCode =
   | 'operation-deferred'
   | 'operation-unknown'
   | 'operation-unrecorded'
-  | 'integrity';
+  | 'integrity'
+  | 'undeclared-call';
 
 /**
  * A failed supervision request. An underlying failure, when there is one, is

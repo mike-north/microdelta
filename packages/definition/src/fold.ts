@@ -1,5 +1,6 @@
 /**
- * Strict fold declarations (CMP-8, RUN-010).
+ * Strict fold declarations (CMP-8, RUN-010), and the keyed member entries
+ * and declaration checks every fold shares.
  *
  * A strict fold is a composition-level memoized step over one fanout template's
  * member step, named as `{ template, step }`. Its author callback receives one
@@ -9,6 +10,10 @@
  * a successful empty result. Definition validates and assembles those entries
  * from outcomes Resolution supplies; it never decides readiness, waits, fails
  * or publishes a fold, and never selects the member results themselves.
+ *
+ * An outcome (tolerant) fold (`outcome-fold.ts`) shares the `{ template,
+ * step }` checks and the entry vocabulary here, and additionally receives
+ * `failed` and `cancelled` entries, which a strict fold's entries never carry.
  */
 import {
   checkBindings,
@@ -61,6 +66,42 @@ export interface ISkippedEntry {
 export type IFoldEntry<T> = ISucceededEntry<T> | ISkippedEntry;
 
 /**
+ * A member whose required work failed in this pass: its gate or its
+ * resolution raised a member-attributable typed failure. It carries no data:
+ * the type has no `data` property, and reading `data` at runtime throws an
+ * `unsuccessful-member` DefinitionError. Only an outcome fold receives it.
+ * @alpha
+ */
+export interface IFailedEntry {
+  /** The member key. */
+  readonly key: string;
+  readonly status: 'failed';
+}
+
+/**
+ * A member whose work was withdrawn from this run: refused by admission as
+ * cancelled, or interrupted by a stop. It is settled but not successful for
+ * that run, and never a complete success. It carries no data:
+ * reading `data` at runtime throws an `unsuccessful-member` DefinitionError.
+ * Only an outcome fold receives it.
+ * @alpha
+ */
+export interface ICancelledEntry {
+  /** The member key. */
+  readonly key: string;
+  readonly status: 'cancelled';
+}
+
+/**
+ * One explicit keyed member entry of an outcome (tolerant) fold: every
+ * member's settled status (RUN-010). A pending member, or one whose
+ * operation outcome is unresolved, is unsettled and never an entry: an
+ * outcome fold body runs only once every member has settled.
+ * @alpha
+ */
+export type IOutcomeEntry<T> = ISucceededEntry<T> | ISkippedEntry | IFailedEntry | ICancelledEntry;
+
+/**
  * The step record of a template declaration.
  * @alpha
  */
@@ -76,7 +117,7 @@ export type IFoldRunContext<TFamily extends IBindingFamily, TMemberResult> = TFa
 };
 
 /**
- * The template step a strict fold consumes.
+ * The template step a fold, strict or outcome, consumes.
  * @alpha
  */
 export interface IFoldOver<TTemplate, TStep extends string> {
@@ -158,7 +199,9 @@ export interface IFoldInvocation<TFamily extends IBindingFamily> extends IInvoca
 }
 
 /**
- * One strict fold in a frozen composition's topology.
+ * One fold in a frozen composition's topology: its composition-level step and
+ * the template step it consumes. The topology list holding it names its
+ * contract: `folds` for strict folds, `outcomeFolds` for outcome folds.
  * @alpha
  */
 export interface IFoldTopology {
@@ -195,8 +238,41 @@ export function declareFold<
   templates: ITemplateRecords<TFamily>,
   options: IFoldOptions<TFamily, TTemplate, TStep, TResult>,
 ): IFoldDeclaration<TFamily, IResultOf<TFamily, IStepsOf<TTemplate>[TStep]>, TResult> {
-  const read = readOptions(options);
-  // Options of other declaration kinds never apply to a fold.
+  const common = foldCommon(readOptions(options), templates);
+  // `run` was just proven to be an own data property holding a function.
+  const { run } = options;
+  const declaration = mint<IFoldDeclaration<TFamily, IResultOf<TFamily, IStepsOf<TTemplate>[TStep]>, TResult>>({ kind: 'fold', ...common, run });
+  const record: IFoldRecord<TFamily> = {
+    kind: 'fold',
+    declaration,
+    apply<TOutcome>(bindings: TFamily['memo'], members: IFoldMemberSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>): TOutcome {
+      checkBindings(bindings, 'members');
+      const context: IFoldRunContext<TFamily, IResultOf<TFamily, IStepsOf<TTemplate>[TStep]>> = {
+        ...bindings,
+        members: foldEntries(members.outcomes(declaration)),
+      };
+      Object.freeze(context);
+      return invoke(run, context);
+    },
+  };
+  records.set(declaration, record);
+  return declaration;
+}
+
+/**
+ * The fields every fold declaration shares, strict or outcome: subject,
+ * compatibility version, label and the frozen `{ template, step }` it
+ * consumes. Options of other declaration kinds never apply to a fold, `run`
+ * must be the author's own function, the template must be one this builder
+ * instance minted and the step one of its declared step slots.
+ * @param read - The author's options, read once as own data.
+ * @param templates - The builder instance's template records.
+ * @returns The validated shared fields; the `over` record is a frozen copy.
+ */
+export function foldCommon<TFamily extends IBindingFamily>(
+  read: ReadonlyMap<string, unknown>,
+  templates: ITemplateRecords<TFamily>,
+): { readonly subject: string; readonly version: number; readonly label: string | undefined; readonly over: IFoldOver<IAnyTemplateDeclaration<TFamily>, string> } {
   if (read.has('children')) {
     reject('illegal-edge', 'A fold declares no child edges; it consumes the template step named by `over`.');
   }
@@ -223,47 +299,39 @@ export function declareFold<
   if (typeof step !== 'string' || !templateRecord.steps.has(step)) {
     return reject('illegal-edge', `A fold must consume a declared step of template ${templateRecord.declaration.slot}.`);
   }
-  // `run` was just proven to be an own data property holding a function.
-  const { run } = options;
-  const declaration = mint<IFoldDeclaration<TFamily, IResultOf<TFamily, IStepsOf<TTemplate>[TStep]>, TResult>>({
-    kind: 'fold',
-    subject,
-    version,
-    label,
-    over: Object.freeze({ template: templateRecord.declaration, step }),
-    run,
-  });
-  const record: IFoldRecord<TFamily> = {
-    kind: 'fold',
-    declaration,
-    apply<TOutcome>(bindings: TFamily['memo'], members: IFoldMemberSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>): TOutcome {
-      checkBindings(bindings, 'members');
-      const context: IFoldRunContext<TFamily, IResultOf<TFamily, IStepsOf<TTemplate>[TStep]>> = {
-        ...bindings,
-        members: foldEntries(members.outcomes(declaration)),
-      };
-      Object.freeze(context);
-      return invoke(run, context);
-    },
-  };
-  records.set(declaration, record);
-  return declaration;
+  return { subject, version, label, over: Object.freeze({ template: templateRecord.declaration, step }) };
+}
+
+/** The statuses a strict fold's entries carry (CMP-8): included or gated-out members only. */
+const strictStatuses: ReadonlySet<IOutcomeEntry<unknown>['status']> = new Set(['succeeded', 'skipped'] as const);
+
+/**
+ * Validate Resolution-supplied member outcomes for a strict fold: only
+ * succeeded and skipped entries, as {@link settledEntries} checks them.
+ */
+function foldEntries<T>(outcomes: readonly IFoldEntry<T>[]): readonly IFoldEntry<T>[] {
+  // Every entry is succeeded or skipped, as `strictStatuses` required; the filter only restates that for the type.
+  return Object.freeze(settledEntries(outcomes, strictStatuses).flatMap((entry) => entry.status === 'succeeded' || entry.status === 'skipped' ? [entry] : []));
 }
 
 /**
  * Validate Resolution-supplied member outcomes and rebuild them as frozen,
  * explicit entries in canonical key order. Each entry must be an own-data
- * record with a nonempty string key unique among the entries; a succeeded
- * entry must carry its own `data`, and a skipped entry must carry none.
+ * record with a nonempty string key unique among the entries and a status
+ * the consuming fold's contract delivers (`permitted`); a succeeded entry
+ * must carry its own `data`, and every other entry must carry none.
  * Accessors are never invoked. Data is passed through unread.
+ * @param outcomes - The member outcomes Resolution supplied.
+ * @param permitted - The statuses the consuming fold's contract delivers.
+ * @returns Frozen entries in canonical key order.
  */
-function foldEntries<T>(outcomes: readonly IFoldEntry<T>[]): readonly IFoldEntry<T>[] {
+export function settledEntries<T>(outcomes: readonly IOutcomeEntry<T>[], permitted: ReadonlySet<IOutcomeEntry<T>['status']>): readonly IOutcomeEntry<T>[] {
   // Checked through an untyped alias: narrowing the typed array itself would widen its entries to `any`.
   const supplied: unknown = outcomes;
   if (!Array.isArray(supplied)) {
     return reject('invalid-members', 'Fold member outcomes must be an array of explicit keyed entries.');
   }
-  const entries = new Map<string, IFoldEntry<T>>();
+  const entries = new Map<string, IOutcomeEntry<T>>();
   for (let index = 0; index < outcomes.length; index++) {
     const element = Object.getOwnPropertyDescriptor(outcomes, index);
     const entry = element !== undefined && 'value' in element ? outcomes[index] : undefined;
@@ -274,25 +342,37 @@ function foldEntries<T>(outcomes: readonly IFoldEntry<T>[]): readonly IFoldEntry
     if (typeof key !== 'string' || key.length === 0 || entries.has(key)) {
       return reject('invalid-members', 'Fold member keys must be unique nonempty strings.');
     }
+    if (!permitted.has(entry.status)) {
+      // Only a string status is named: converting another value could run its author code.
+      const status: unknown = entry.status;
+      return reject('invalid-members', `Fold member ${key} has status ${typeof status === 'string' ? status : typeof status}, which this fold's contract never delivers.`);
+    }
     if (entry.status === 'succeeded' && hasOwnData(entry, 'data')) {
       entries.set(key, Object.freeze({ key, status: 'succeeded', data: entry.data }));
-    } else if (entry.status === 'skipped' && !('data' in entry)) {
-      entries.set(key, skippedEntry(key));
+    } else if (entry.status !== 'succeeded' && !('data' in entry)) {
+      entries.set(key, dataFreeEntry(key, entry.status));
     } else {
-      return reject('invalid-members', `Fold member ${key} must be succeeded with its own data or skipped with no data.`);
+      return reject('invalid-members', `Fold member ${key} must be succeeded with its own data, or carry no data at all.`);
     }
   }
   // Canonical key order: UTF-16 code units, independent of supply order.
   return Object.freeze([...entries.keys()].sort((left, right) => (left < right ? -1 : left > right ? 1 : 0)).flatMap(key => entries.get(key) ?? []));
 }
 
-/** A frozen skipped entry whose non-enumerable `data` throws when read (CMP-8). */
-function skippedEntry(key: string): ISkippedEntry {
-  const entry: ISkippedEntry = { key, status: 'skipped' };
+/**
+ * A frozen data-free entry whose non-enumerable `data` throws when read, so
+ * a skipped, failed or cancelled member is never mistaken for a successful
+ * empty result (CMP-8, RUN-010): a skip reads as `skipped-member`, a failed
+ * or cancelled member as `unsuccessful-member`.
+ */
+function dataFreeEntry(key: string, status: 'skipped' | 'failed' | 'cancelled'): ISkippedEntry | IFailedEntry | ICancelledEntry {
+  const entry: ISkippedEntry | IFailedEntry | ICancelledEntry = { key, status };
   Object.defineProperty(entry, 'data', {
     enumerable: false,
     get(): never {
-      return reject('skipped-member', `Member ${key} was skipped by its gate and carries no data.`);
+      return status === 'skipped'
+        ? reject('skipped-member', `Member ${key} was skipped by its gate and carries no data.`)
+        : reject('unsuccessful-member', `Member ${key} ${status === 'failed' ? 'failed' : 'was cancelled'} in this pass and carries no data.`);
     },
   });
   return Object.freeze(entry);

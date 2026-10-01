@@ -2,10 +2,11 @@
  * The M4 keyed contributor fixture: a composition-level discovery source that
  * is a keyed collection with designated identity `key`, one fanout template
  * `contributor` built once against a symbolic member (an activity source and a
- * summary memo over it), an optional tracked gate and custom key, and a strict
- * fold `report` over the member summaries. Every build allocates fresh
- * declarations and callbacks, standing in for a new process, and counts its
- * own factory invocations.
+ * summary memo over it), an optional tracked gate and custom key, a strict
+ * fold `report` over the member summaries and, when the variation asks for
+ * it, an outcome (tolerant) fold `tally` over the same summaries. Every build
+ * allocates fresh declarations and callbacks, standing in for a new process,
+ * and counts its own factory invocations.
  *
  * @see ../../../../docs/plans/m4-composition.md (authoring shape; concrete fixture decisions)
  * @see ../../../../docs/spec/composition.md (CMP-4, CMP-8, EXP-4 template selection)
@@ -13,7 +14,7 @@
 import type { IBindingDescriptor, ICollectionResult, IMemberBinding, IMemberBuilder, ISourceDeclaration } from '../../src/index.js';
 import { builders, type ITestFamily } from './contributors.js';
 
-export const { source, memo, template, fold, compose, openInvocation, gateOf } = builders;
+export const { source, memo, template, fold, outcomeFold, compose, openInvocation, gateOf } = builders;
 
 /** The analysis scope of the keyed fixture. */
 export const keyedScope = 'contribution-report:acme/widget:m4';
@@ -52,6 +53,8 @@ export interface IKeyedVariation {
   readonly collectionSlot?: string;
   /** Register composition-level steps in reverse order. */
   readonly reversed?: boolean;
+  /** Also compose the outcome fold `tally` (it is always declared). */
+  readonly outcome?: boolean;
 }
 
 /** Callback invocation counts; composition, keying and resolution must leave these at zero. */
@@ -124,9 +127,18 @@ export function buildKeyed(variation: IKeyedVariation = {}) {
       return members.map((entry) => entry.status === 'succeeded' ? `${entry.key}=${entry.data}` : `${entry.key} skipped`).join('; ');
     },
   });
+  const tally = outcomeFold({
+    subject: 'tally:acme/widget:2026-Q1',
+    over: { template: contributor, step: 'summary' },
+    run: ({ members }): string => {
+      calls.bodies++;
+      return members.map((entry) => entry.status === 'succeeded' ? `${entry.key}=${entry.data}` : `${entry.key} ${entry.status}`).join('; ');
+    },
+  });
   const steps = [
     { slot: variation.collectionSlot ?? 'contributors', declaration: contributors },
     { slot: 'report', declaration: report },
+    ...(variation.outcome === true ? [{ slot: 'tally', declaration: tally }] : []),
   ];
   const composition = compose({ scope: keyedScope, steps: variation.reversed === true ? [...steps].reverse() : steps, templates: [contributor] });
   return {
@@ -134,6 +146,7 @@ export function buildKeyed(variation: IKeyedVariation = {}) {
     contributors,
     contributor,
     report,
+    tally,
     /** How many times this build's template factory has run. */
     factoryCalls: (): number => factoryCalls,
     /** The member builder the factory received, captured to probe post-freeze calls. */

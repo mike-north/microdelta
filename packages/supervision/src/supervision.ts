@@ -760,9 +760,24 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         throw new SupervisionError('invalid-request', `A normal request's key may not contain the reserved pass separator ${passSeparator}`);
       }
       let previous: R | undefined;
+      /** The deferral the previous pass waited for, and whether the run released its lease for that wait. */
+      let woken: { readonly until: number; readonly released: boolean } | undefined;
       let settled: ReadonlySet<string> = new Set();
       for (let number = 1; ; number += 1) {
-        const lease = await leaseForPass();
+        let lease: IRunLease;
+        try {
+          lease = await leaseForPass();
+        } catch (error: unknown) {
+          // A stop during a woken pass's wait for the lease ends the wait, as a stop during the sleep does: the request
+          // returns the earlier pass's report and the time its deferred work waits until. A first pass's stop rejects, as
+          // every normal request's does, because there is no earlier report.
+          if (previous === undefined || woken === undefined || !(error instanceof SupervisionError) || error.code !== 'stopped') {
+            throw error;
+          }
+          waitingUntil = Math.min(waitingUntil ?? woken.until, woken.until);
+          waitEvent('stopped', woken.until, woken.released);
+          return previous;
+        }
         const requestScope: IRequestScope = { lease, deferrals: [], blocks: new Map(), settled };
         passes.active += 1;
         let result: P;
@@ -803,6 +818,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
           return reported;
         }
         waitEvent('resumed', until, false);
+        woken = { until, released };
       }
     }
 

@@ -327,6 +327,30 @@ restart. Durable deferral is not promised merely because results are durable.
 
 [EXP-8](experiments.md) selects the concrete deferral record and resume mechanics.
 
+**Selected mechanism (M5, #119).**
+- **Policy.** A rate or quota response with a retry time defers its operation
+  durably ("not before T") and is retried by default, at most 5 times unless
+  the author's policy sets another cap; the next refusal fails it as
+  exhausted. A transient failure (including a rate limit without a retry time)
+  retries only within the author's `maxAttempts`, after a backoff that is
+  itself a short durable deferral holding no permit and lending its member's
+  window lane. A permanent refusal is final.
+- **Pending, not failed.** A deferral ends the step attempt without a result;
+  the step stays pending (never failed or cancelled) and its member reports
+  the deferral and its time.
+- **Passes.** A normal request runs in passes. Once only deferred work
+  remains, the run releases the writer lease. In sleep mode it waits for the
+  earliest time (any stop ends the wait) and runs another pass, under the
+  derived request key `<key>/pass:<n>`, in which the deferred work resumes
+  under the same operation identities and work that settled in an earlier
+  pass, such as a failed member, is not executed again. In exit mode it
+  returns and reports the time. A strict fold that has failed is returned
+  without waiting.
+- **Restarts.** Admission reads each step's unsettled operations before the
+  caller's policy: before T it denies the work and the run waits or exits
+  until T; after T it admits it, and the operation is retried under its
+  identity. A stop refuses resumed deferrals.
+
 ### RUN-012 — External idempotency belongs to the logical operation
 
 Supported retry facilities MUST accommodate provider idempotency for ambiguous
@@ -358,6 +382,31 @@ lost, the outcome is **unknown** and there is no automatic replay. The author ma
 declare an operation safe to repeat, which permits a retry under the same
 operation identity. Otherwise the operator decides.
 
+**Selected mechanism (M5, #119).**
+- **Addressing.** An operation is addressed by its step attempt's subject, an
+  identifier name and an author-supplied binding digest. An unsettled
+  operation at an address (pending, deferred or unknown) keeps its identity
+  for every retry; a settled address or a changed binding is a new operation.
+- **Intent before send.** After the permit is held and stop intent rechecked,
+  one fenced commit through History's operation journal records the operation
+  as pending with the new request attempt, then Accounting records the usage
+  intent; only then is the request sent. A failure of either write sends
+  nothing.
+- **Unknown outcomes.** A lost response, or one the adapter cannot classify,
+  is unknown. It is retried only with a safety basis (the author's
+  safe-to-repeat declaration, or provider idempotency keys, which carry the
+  operation identity) and a policy allowing another attempt. Otherwise the
+  step attempt is tainted: every later call it makes rethrows the signal
+  without sending, its step stays pending, and later runs are denied
+  admission until an operator resolves or abandons the operation. An
+  operation that a dead run, or a run that lost its lease, left in flight is
+  recorded unknown by the next writer.
+- **Operator settlement.** Resolving records the asserted outcome and
+  acknowledges usage the operator learned through Accounting under an
+  operator-namespaced report identity; abandoning leaves the usage unknown.
+  Both are fenced journal commits, and both unblock the step, whose next
+  execution makes a new operation.
+
 ### RUN-013 — Retry history is part of supervision
 
 Observations MUST correlate the logical external operation, its request attempts,
@@ -376,6 +425,15 @@ attempt, member and run identities. Inspectable events carry identifiers,
 statuses, timings, usage figures and exact result references only. They never
 carry input, output or argument values, or provider request or response bodies.
 Diagnostics name fields and keys, not their contents.
+
+**Selected mechanism (M5, #119).** Operation events carry the operation, request
+attempt, step attempt (History's never-reused attempt identity), member and run
+identities, a closed phase, status and reason code, the time, usage quantities
+whose units are identifiers (others are dropped from the event and diagnosed by
+code; Accounting keeps them), and the remote state. Wait events carry the
+earliest deferral time and whether the lease was released. Neither has a field
+for a binding, argument, value, provider body or error message, and operation
+names and operator identities must be identifiers.
 
 ### RUN-014 — Cancellation conveys escalating intent honestly
 
@@ -411,6 +469,12 @@ escalates it. A hard stop aborts author bodies and marks their attempts
 interrupted. Remote state is recorded as cancelled, still running or unknown,
 never omitted. [EXP-8](experiments.md) selects the drain unit, the escalation
 mechanics and the publication/cancellation race rule.
+
+**Selected mechanism (M5, #119).** The remote state of an external operation's
+aborted request attempt is committed through the operation journal by operation
+and request attempt, so later runs and the operator see it after a restart. A
+provider-confirmed cancellation settles the operation; `running` or `unknown`
+leaves it unknown and its step blocked until an operator settles it.
 
 ### RUN-015 — Partial work is not a completed result
 
@@ -639,6 +703,11 @@ required to distinguish deltas, snapshots, and derived totals.
 by (operation identity, report identity). Duplicate delivery of the same report is
 idempotent and is never summed twice. Correction and ordering rules follow
 [EXP-8](experiments.md).
+
+**Selected mechanism (M5, #119).** Run Supervision namespaces report identities
+by their source: a provider's report is acknowledged as `provider:<report>` and
+usage an operator learns while resolving an unknown operation as
+`operator:<report>`, so the two can never collide.
 
 ### ACC-004 — Resource state is not additive consumption
 

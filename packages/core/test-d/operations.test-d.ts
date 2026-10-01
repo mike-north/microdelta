@@ -15,17 +15,22 @@
  * @see ../../../docs/spec/operations.md (RUN-011, RUN-012, RUN-017, ACC-005)
  */
 import type { IDurableAccounting } from '@microdelta/accounting';
+import type { IDurableHistory } from '@microdelta/history';
+import type { IRunPromotionPort } from '@microdelta/supervision';
 import { expectAssignable, expectError, expectNotAssignable, expectType } from 'tsd';
 
 import type {
   IDeferralMode,
+  IOperationAccounting,
   IOperationEvent,
   IOperationRequest,
   IOperationResponse,
   IOperationView,
+  IPromotionEvent,
   IPromotionRecord,
   IRunEvent,
   IRunResult,
+  IUsageEstimate,
   IUsageSummary,
   IWaitEvent,
   IWorkspaceAccounting,
@@ -35,13 +40,18 @@ import type {
 } from '../dist/api/microdelta.alpha.js';
 
 declare const durable: IDurableAccounting;
+declare const history: IDurableHistory;
 declare const run: IWorkspaceRun;
 declare const result: IRunResult<unknown>;
 declare const runOptions: IWorkspaceRunOptions<object, object>;
 declare const event: IRunEvent;
 
-// Accounting's durable adapter is a structural Accounting port of the facade.
+// Accounting's durable adapter is a structural Accounting port of the facade, and of Supervision's operation port the facade names.
 expectAssignable<IWorkspaceAccounting>(durable);
+expectAssignable<IOperationAccounting>(durable);
+// History's durable store satisfies Supervision's structural promotion port, which the facade hands it as.
+expectAssignable<IRunPromotionPort>(history);
+expectNotAssignable<IRunPromotionPort>({ promoteResults: history.promoteResults });
 expectAssignable<IWorkspaceOptions>({ location: 'store.sqlite', logicalStore: 'store:a', accounting: durable });
 expectAssignable<IWorkspaceOptions>({ location: 'store.sqlite', logicalStore: 'store:a' });
 // A port without a summary accessor is not enough for the facade.
@@ -56,15 +66,17 @@ expectType<number | undefined>(result.waitingUntil);
 // Promotion, promotions and usage are run operations; the lease is never handed out.
 expectType<Promise<IPromotionRecord>>(run.promote({ into: 'env:production', references: [], evidence: { format: 'example.promotion', formatVersion: 1, content: null } }));
 expectError(run.promote({ references: [], evidence: { format: 'example.promotion', formatVersion: 1, content: null } }));
-expectType<readonly IPromotionRecord[]>(run.promotions());
+expectType<Promise<readonly IPromotionRecord[]>>(run.promotions());
 expectType<IUsageSummary>(run.usage());
 expectType<IUsageSummary>(run.usage({ member: 'pr-1' }));
 expectError(run.usage({ environment: 'env:other' }));
 expectError(run.withWriterLease);
 expectType<Promise<readonly IOperationView[]>>(run.inspectOperations());
 
-// A summary keeps unknown usage apart from observed quantities.
+// A summary keeps unknown usage apart from observed quantities, and estimates apart from both.
 declare const summary: IUsageSummary;
+expectType<readonly IUsageEstimate[]>(summary.estimates);
+expectType<string>(summary.estimates[0]?.basis.format ?? '');
 expectType<'complete' | 'incomplete'>(summary.status);
 expectType<string>(summary.unknown[0]?.operation ?? '');
 
@@ -79,4 +91,8 @@ if (event.kind === 'operation') {
 }
 if (event.kind === 'wait') {
   expectType<IWaitEvent>(event);
+}
+if (event.kind === 'promotion') {
+  expectType<IPromotionEvent>(event);
+  expectError(event.evidence);
 }

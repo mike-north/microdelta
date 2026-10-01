@@ -4,7 +4,8 @@
  * exactly one wrong behavior into emitted builds (never TypeScript source):
  * the facade's workspace module, both in its test build (which the facade's
  * operations suite imports) and in its `dist` (which the example's installed
- * `microdelta` resolves to), or the example's own `dist`. It then runs the
+ * `microdelta` resolves to), Run Supervision's `dist` (which both resolve
+ * to), or the example's own `dist`. It then runs the
  * unchanged suites (the facade's `workspace-operations` Jest suite and the
  * example's spawned-process `paid.test.mjs`) and records which named tests
  * fail. A control whose anchor does not match exactly once in every planted
@@ -33,12 +34,13 @@ const core = join(root, 'packages/core');
 /** Emitted files a control plants into, per target; each must contain the anchor exactly once. */
 const targets = Object.freeze({
   facade: [join(core, '.test-build/src/workspace.js'), join(core, 'dist/src/workspace.js')],
+  supervision: [join(root, 'packages/supervision/dist/src/supervision.js')],
   assessment: [join(root, 'examples/contribution-report/dist/assessment.js')],
   main: [join(root, 'examples/contribution-report/dist/main.js')],
 });
 
 /** The facade suite file every Jest run must execute. */
-const suites = Object.freeze(['operations.test.js']);
+const suites = Object.freeze(['operations.test.js', 'async-supplied.test.js']);
 
 const controls = [
   {
@@ -46,6 +48,12 @@ const controls = [
     target: 'facade',
     anchor: 'const runId = runOptions.runId ?? `run:${random.randomIdentifier()}`;',
     replacement: "const runId = runOptions.runId ?? `run:${'0'.repeat(32)}`;",
+  },
+  {
+    name: 'a caller may supply a run identifier in the facade\'s reserved minted form',
+    target: 'facade',
+    anchor: '|| mintedRunIdentifierRule.test(callerRunId))',
+    replacement: '|| false)',
   },
   {
     name: 'a workspace given Accounting supplies no operation ports to its runs',
@@ -66,10 +74,28 @@ const controls = [
     replacement: "return accounting.summarizeUsage({ ...filter, environment: 'env:production' });",
   },
   {
-    name: 'a promotion targets the run\'s own environment instead of the requested one',
+    name: 'the facade does not hand History to Supervision as the promotion port',
     target: 'facade',
-    anchor: 'target: { analysis: live.context.analysis, environment: request.into },',
-    replacement: 'target: { analysis: live.context.analysis, environment: live.context.environment },',
+    anchor: 'promotion: history,',
+    replacement: 'promotion: undefined,',
+  },
+  {
+    name: 'a promotion targets the run\'s own environment instead of the requested one',
+    target: 'supervision',
+    anchor: 'target: { analysis: context.analysis, environment: valid.into },',
+    replacement: 'target: { analysis: context.analysis, environment: context.environment },',
+  },
+  {
+    name: 'a promotion takes the writer lease without waiting for another holder',
+    target: 'supervision',
+    anchor: 'const promotionLease = await writerLease();',
+    replacement: 'const promotionLease = await awaitWriter({ writer, policy: { deadline: 0, pollMilliseconds: 1 }, timer, stop: state.stopped.signal, runId: context.runId });',
+  },
+  {
+    name: 'stop intent is not checked before the promotion commit',
+    target: 'supervision',
+    anchor: "if (state.stopped.signal.aborted) {\n                        throw new SupervisionError('stopped', `Run ${context.runId} is stopped: it records no promotion`);",
+    replacement: "if (false) {\n                        throw new SupervisionError('stopped', `Run ${context.runId} is stopped: it records no promotion`);",
   },
   {
     name: 'the paid-like assessment is declared safe to repeat, so a lost response is replayed',

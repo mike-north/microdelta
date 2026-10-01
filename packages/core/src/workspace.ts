@@ -13,8 +13,9 @@
  * facade builds, and the caller's Accounting port. Accounting is injected
  * through Supervision's structural port (plus a summary accessor) so that the
  * published facade takes no runtime or type dependency on the Accounting
- * package. Runs also offer recorded promotion between environments, under the
- * writer lease Supervision obtains, and the run environment's usage summary.
+ * package. History's durable store is also Supervision's promotion port, so
+ * runs offer Supervision's recorded promotion between environments, and the
+ * facade adds the run environment's usage summary.
  */
 import type {
   ICandidateMiss as IResolutionCandidateMiss,
@@ -36,11 +37,7 @@ import type {
   IResolutionOutcome as IResolutionOutcomeOf,
 } from '@microdelta/resolution';
 import { openDurableHistory } from '@microdelta/history';
-import type {
-  ICompletedResultReference as IHistoryReference,
-  IPromotionRecord as IHistoryPromotionRecord,
-  IVersionedRecord as IHistoryVersionedRecord,
-} from '@microdelta/history';
+import type { ICompletedResultReference as IHistoryReference } from '@microdelta/history';
 import { canonicalNodeLocation, createNodeClock, createNodeSqlite, createNodeTimer } from '@microdelta/machine-node';
 import { ResolutionError as ResolutionErrorClass, createResolution } from '@microdelta/resolution';
 import {
@@ -56,7 +53,7 @@ import type {
   IAbortSignal as ISupervisionAbortSignal,
   IAttemptUsage as ISupervisionAttemptUsage,
   IDeferralMode as ISupervisionDeferralMode,
-  IOperationAccounting,
+  IOperationAccounting as ISupervisionOperationAccounting,
   IOperationAttribution as ISupervisionOperationAttribution,
   IOperationBlock as ISupervisionOperationBlock,
   IOperationEvent as ISupervisionOperationEvent,
@@ -74,6 +71,10 @@ import type {
   IOperationSubject as ISupervisionOperationSubject,
   IOperationUsage as ISupervisionOperationUsage,
   IOperationView as ISupervisionOperationView,
+  IPromotionEvent as ISupervisionPromotionEvent,
+  IPromotionEvidence as ISupervisionPromotionEvidence,
+  IPromotionRecord as ISupervisionPromotionRecord,
+  IPromotionRequest as ISupervisionPromotionRequest,
   IRequestAttemptStatus as ISupervisionRequestAttemptStatus,
   IRequestAttemptView as ISupervisionRequestAttemptView,
   IRunOperationPorts,
@@ -375,14 +376,26 @@ export type IDeferralMode = ISupervisionDeferralMode;
 export type IOperationAttribution = ISupervisionOperationAttribution;
 
 /**
+ * Supervision's structural Accounting port: how a run records usage intent
+ * before each send and acknowledges each usage report, keyed by operation and
+ * report. {@link IWorkspaceAccounting} extends it with the summary accessor.
+ * @alpha
+ */
+export type IOperationAccounting = ISupervisionOperationAccounting;
+
+/**
  * Narrows a usage summary within the run's environment: to one member,
  * operation, run or step attempt. The environment is always the run's own.
  * @alpha
  */
 export interface IUsageFilter {
+  /** Only usage attributed to this member key. */
   readonly member?: string;
+  /** Only usage of this operation identity. */
   readonly operation?: string;
+  /** Only usage attributed to this run identifier. */
   readonly run?: string;
+  /** Only usage attributed to this step attempt identity. */
   readonly stepAttempt?: string;
 }
 
@@ -394,24 +407,58 @@ export interface IUsageQuery extends IUsageFilter {
 
 /** One request attempt whose usage is unknown: its intent was recorded, but no report was acknowledged. Unknown is never zero. @alpha */
 export interface IUnknownUsage {
+  /** The operation identity of the attempt. */
   readonly operation: string;
+  /** The request attempt identity whose usage is unknown. */
   readonly requestAttempt: string;
+  /** The run, member and step attempt the attempt is attributed to. */
   readonly attribution: IOperationAttribution;
+}
+
+/** How an estimate was reached, in the estimator's own versioned format; an estimate is never an observation. @alpha */
+export interface IUsageEstimateBasis {
+  /** The estimator's format identifier. */
+  readonly format: string;
+  /** The positive version of that format. */
+  readonly formatVersion: number;
+  /** The assumptions the estimate rests on, in that format. */
+  readonly assumptions: unknown;
+}
+
+/** One recorded usage estimate, kept apart from observed usage with its basis (ACC-006). @alpha */
+export interface IUsageEstimate {
+  /** The estimate's own identity. */
+  readonly estimate: string;
+  /** The environment it was recorded in. */
+  readonly environment: string;
+  /** The run, member and step attempt it is attributed to. */
+  readonly attribution: IOperationAttribution;
+  /** The estimated quantities; never summed into `observed`. */
+  readonly quantities: readonly IOperationQuantity[];
+  /** How the estimate was reached. */
+  readonly basis: IUsageEstimateBasis;
 }
 
 /**
  * Resource Accounting's summary of one environment, as the facade reads it
  * structurally: observed quantities summed by unit with every report counted
- * once, kept apart from the request attempts whose usage is unknown, and the
- * counts behind them. `complete` holds exactly when nothing is unknown; an
- * observed total is never a bill (ACC-003, ACC-005).
+ * once, kept apart from the request attempts whose usage is unknown and from
+ * estimates, and the counts behind them. `complete` holds exactly when
+ * nothing is unknown; an observed total is never a bill (ACC-003, ACC-005,
+ * ACC-006).
  * @alpha
  */
 export interface IUsageSummary {
+  /** The environment summarized. */
   readonly environment: string;
+  /** `complete` when no request attempt's usage is unknown, otherwise `incomplete`. */
   readonly status: 'complete' | 'incomplete';
+  /** Observed quantities, summed by unit, each acknowledged report counted once. */
   readonly observed: readonly IOperationQuantity[];
+  /** The request attempts whose usage is unknown; never counted as zero. */
   readonly unknown: readonly IUnknownUsage[];
+  /** Recorded estimates, with their basis; never part of `observed`. */
+  readonly estimates: readonly IUsageEstimate[];
   /** How many operations recorded usage intent. */
   readonly operations: number;
   /** How many usage reports were acknowledged. */
@@ -434,8 +481,8 @@ export interface IWorkspaceAccounting extends IOperationAccounting {
   summarizeUsage(query: IUsageQuery): IUsageSummary;
 }
 
-/** The versioned evidence a promotion records: why the operator promoted, in the caller's own format. @alpha */
-export type IPromotionEvidence = IHistoryVersionedRecord;
+/** The versioned evidence a promotion records: why the operator promoted, in the caller's own format. Never offered in an event. @alpha */
+export type IPromotionEvidence = ISupervisionPromotionEvidence;
 
 /**
  * One recorded promotion: exact results of other environments admitted into
@@ -444,22 +491,20 @@ export type IPromotionEvidence = IHistoryVersionedRecord;
  * provenance.
  * @alpha
  */
-export type IPromotionRecord = IHistoryPromotionRecord;
+export type IPromotionRecord = ISupervisionPromotionRecord;
 
 /**
  * An operator's request to promote exact results of the run's analysis into
- * another environment (RUN-017 owner decision): trial work satisfies
- * production only through such an explicit, recorded promotion.
+ * another environment, `into` (RUN-017 owner decision): trial work satisfies
+ * production only through such an explicit, recorded promotion. It targets
+ * another environment, while the run's `promotions()` lists the promotions
+ * recorded into the run's own.
  * @alpha
  */
-export interface IPromotionRequest {
-  /** The environment the results are promoted into; never the environment they were published in. */
-  readonly into: string;
-  /** The exact completed results promoted, each named once. */
-  readonly references: readonly ICompletedResultReference[];
-  /** Why the operator promoted them. */
-  readonly evidence: IPromotionEvidence;
-}
+export type IPromotionRequest = ISupervisionPromotionRequest;
+
+/** The identifier-only event of a recorded promotion: run, promotion identity, analysis, target environment and exact references. @alpha */
+export type IPromotionEvent = ISupervisionPromotionEvent;
 
 /**
  * A failed resolution; `code` names the violated contract.
@@ -544,8 +589,13 @@ export interface IWorkspaceRunOptions<TInputs extends object, THelpers extends o
   /**
    * Optional volatile run identifier. When absent, the facade mints
    * `run:<32 hex digits>` from 128 random host bits, unique per run across
-   * processes and hosts. A caller that supplies one must keep it unique per
-   * run: retries and usage are correlated by run identity.
+   * processes and hosts. A caller-supplied one must be an identifier
+   * (lower-case, starting with a letter, at most 64 of `a-z`, `0-9`, `.`,
+   * `_`, `:` and `-`, the rule of operation names) and must not take the
+   * minted form, which is reserved; anything else is refused with
+   * `invalid-request`. The caller must also keep it unique per run, since
+   * retries and usage are correlated by run identity; the facade does not
+   * detect collisions.
    */
   readonly runId?: string;
   /** Admission policy for work validation could not avoid; admits everything when absent. */
@@ -580,14 +630,14 @@ export interface IWorkspaceRunOptions<TInputs extends object, THelpers extends o
 }
 
 /**
- * A live workspace run: Supervision's run operations plus an exact read of a
- * completed result's data for ordinary work such as report assembly, recorded
- * promotion, and its environment's usage summary. It omits Supervision's
- * declared-call check and its operator work under the writer lease, which only
- * the facade's own handle uses: the lease is never handed to callers.
+ * A live workspace run: Supervision's run operations (including recorded
+ * promotion and the promotions into the run's environment) plus an exact read
+ * of a completed result's data for ordinary work such as report assembly, and
+ * its environment's usage summary. It omits Supervision's declared-call
+ * check, which only the facade's own handle uses.
  * @alpha
  */
-export interface IWorkspaceRun extends Omit<IRun, 'assertDeclaredCall' | 'withWriterLease'> {
+export interface IWorkspaceRun extends Omit<IRun, 'assertDeclaredCall'> {
   /**
    * The deeply frozen data of one exact completed result in this workspace.
    * It is an exact-reference read: it records no acceptance, observation or
@@ -595,19 +645,6 @@ export interface IWorkspaceRun extends Omit<IRun, 'assertDeclaredCall' | 'withWr
    * retargeting. It fails with `run-closed` once the run has actually closed.
    */
   read<T>(reference: ICompletedResultReference): T;
-  /**
-   * Promote exact results of this run's analysis into `request.into`, recorded
-   * by History under the store's writer lease, which the run obtains as a
-   * normal request does (waiting under `writerWait`, failing with
-   * `WriterBusyError` at the operator's deadline). Afterwards those results
-   * are candidates there, with their original provenance; nothing else
-   * changes. History refuses a reference of another analysis or one
-   * published in the target environment. Like every run operation it is
-   * refused as an undeclared call inside member or step work.
-   */
-  promote(request: IPromotionRequest): Promise<IPromotionRecord>;
-  /** The promotions recorded into this run's environment, in order. Read-only; it needs no writer lease. */
-  promotions(): readonly IPromotionRecord[];
   /**
    * Resource Accounting's usage summary of this run's environment, optionally
    * narrowed, read through the workspace's Accounting port. Read-only.
@@ -651,6 +688,16 @@ export interface IWorkspace {
   /** Close the store file; later runs fail. Close only after every run has settled: closing under a live run fails its later requests. */
   close(): void;
 }
+
+/**
+ * The identifier rule of a caller-supplied run identifier: the rule of
+ * operation names and operator identities, so a run identifier carried by
+ * every event and journal record is an identifier, never free text.
+ */
+const runIdentifierRule = /^[a-z][a-z0-9_.:-]{0,63}$/u;
+
+/** The form of the run identifiers the facade mints itself; reserved, so a caller's identifier never imitates one. */
+const mintedRunIdentifierRule = /^run:[0-9a-f]{32}$/u;
 
 /** The default writer lease duration: long enough for one normal request, renewed on the next. */
 const defaultLeaseMilliseconds = 30_000;
@@ -782,6 +829,10 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
           `A workspace run cannot start inside an open run over the same store (${enclosing.runId}): it would wait for the writer lease that run holds`,
         ));
       }
+      const callerRunId: unknown = runOptions.runId;
+      if (callerRunId !== undefined && (typeof callerRunId !== 'string' || !runIdentifierRule.test(callerRunId) || mintedRunIdentifierRule.test(callerRunId))) {
+        return Promise.reject(new SupervisionErrorClass('invalid-request', 'A caller-supplied run identifier must be an identifier (lower-case, starting with a letter, at most 64 of a-z, 0-9, ".", "_", ":" and "-") and not the facade\'s minted run:<32 hex digits> form'));
+      }
       const { authoring, composition } = runOptions;
       // A volatile identity for this run, used for its writer holder, context and operation correlation; never
       // reuse evidence. Minted from 128 random host bits, so no two runs of any process or host share one.
@@ -800,6 +851,8 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
         ...(runOptions.writerWait === undefined ? {} : { writerWait: runOptions.writerWait }),
         ...(runOptions.deferral === undefined ? {} : { deferral: runOptions.deferral }),
         ...(operations === undefined ? {} : { operations }),
+        // History's durable store is Supervision's structural promotion port.
+        promotion: history,
         // The holder names this run for diagnostics; History's fence, not the name, orders writers.
         writer: writerFor(history, `microdelta-run:${runId}`, leaseMilliseconds),
         resolution: (ports) => createResolution({
@@ -832,20 +885,9 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
           // Without the caller's Accounting port the run has no operation ports, so these fail with `invalid-request`.
           inspectOperations: live.inspectOperations,
           settleOperation: live.settleOperation,
-          promote(request: IPromotionRequest): Promise<IPromotionRecord> {
-            // History records the promotion under the lease Supervision obtained; the facade only composes the two.
-            return live.withWriterLease((lease) => history.promoteResults(lease, {
-              target: { analysis: live.context.analysis, environment: request.into },
-              references: request.references,
-              evidence: request.evidence,
-            }));
-          },
-          promotions(): readonly IPromotionRecord[] {
-            if (!live.open) {
-              throw new SupervisionErrorClass('run-closed', `Run ${live.context.runId} has closed and accepts no new work`);
-            }
-            return history.readPromotions({ target: { analysis: live.context.analysis, environment: live.context.environment } });
-          },
+          // Recorded promotion is Supervision's run operation over History's promotion port; the facade only forwards it.
+          promote: live.promote,
+          promotions: live.promotions,
           usage(filter: IUsageFilter = {}): IUsageSummary {
             if (!live.open) {
               throw new SupervisionErrorClass('run-closed', `Run ${live.context.runId} has closed and accepts no new work`);

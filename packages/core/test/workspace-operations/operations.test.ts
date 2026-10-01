@@ -35,7 +35,7 @@ import { openDurableAccounting } from '@microdelta/accounting';
 import type { IDurableAccounting } from '@microdelta/accounting';
 import { createNodeSqlite } from '@microdelta/machine-node';
 
-import { ResolutionError, SupervisionError, WriterBusyError, openWorkspace } from '../../src/index.js';
+import { ResolutionError, SupervisionError, WriterBusyError, createStopController, openWorkspace } from '../../src/index.js';
 import type { ICompletedResultReference, IMemberOutcome, IRunEvent, IWorkspace, IWorkspaceRunOptions } from '../../src/index.js';
 import { analysis, composeFixture, createWorld, installWorld } from './fixture.js';
 import type { IFixture, IHelpers, IInputs, IWorld } from './fixture.js';
@@ -240,6 +240,14 @@ describe('unique run identifiers (#121 supervisor note)', () => {
     expect(new Set(identifiers).size).toBe(4);
   });
 
+  test('a caller-supplied run identifier must be an identifier, and never the facade\'s own reserved form', async () => {
+    const accepted = await workspace.run(options(production, [], { runId: 'run:nightly-2026.10.01' }), (run) => run.context.runId);
+    expect(accepted.value).toBe('run:nightly-2026.10.01');
+    for (const runId of ['', 'Nightly run for Ada', 'run:' + '0123456789abcdef'.repeat(2)]) {
+      expect(await codeOf(workspace.run(options(production, [], { runId }), () => 'never'))).toBe('invalid-request');
+    }
+  });
+
   test('journal records attribute each request attempt to the run that sent it', async () => {
     // A real provider clock and a short retry time: the second run (sleep mode, the default) resumes the deferral once it is due.
     world = installWorld(createWorld(() => Date.now()));
@@ -259,17 +267,27 @@ describe('environments and recorded promotion (RUN-016, RUN-017)', () => {
   test('a trial fold satisfies production only through a promotion the run records under the writer lease, keeping its exact trial reference', async () => {
     const inTrial = await workspace.run(options(trial), (run) => run.resolveFold(fixture.report, key()));
     const trialReport = foldReference(inTrial.value.outcome);
-    const promoted = await workspace.run(options(trial), async (run) => ({
-      none: run.promotions(),
+    const events: IRunEvent[] = [];
+    const promoted = await workspace.run(options(trial, events), async (run) => ({
+      none: await run.promotions(),
       record: await run.promote({ into: production, references: [trialReport], evidence: { format: 'test.promotion', formatVersion: 1, content: { reason: 'trial reviewed' } } }),
     }));
     expect(promoted.value.none).toEqual([]);
+    // The run offers an identifier-only promotion event: the target and exact references, never the evidence.
+    expect(events.filter((event) => event.kind === 'promotion')).toEqual([{
+      kind: 'promotion',
+      runId: promoted.context.runId,
+      promotionId: promoted.value.record.promotionId,
+      analysis,
+      into: production,
+      references: [trialReport],
+    }]);
     expect(promoted.value.record).toEqual(expect.objectContaining({
       target: { analysis, environment: production },
       references: [trialReport],
       evidence: { format: 'test.promotion', formatVersion: 1, content: { reason: 'trial reviewed' } },
     }));
-    const inProduction = await workspace.run(options(production), async (run) => ({ report: await run.resolveFold(fixture.report, key()), promotions: run.promotions() }));
+    const inProduction = await workspace.run(options(production), async (run) => ({ report: await run.resolveFold(fixture.report, key()), promotions: await run.promotions() }));
     // The promoted fold is reused with its exact trial reference; production's members were resolved, and paid for, in production.
     expect(inProduction.value.report.outcome).toEqual({ status: 'succeeded', outcome: expect.objectContaining({ kind: 'reused', reference: trialReport }) });
     expect(statuses(inProduction.value.report.members)).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
@@ -320,5 +338,55 @@ describe('environments and recorded promotion (RUN-016, RUN-017)', () => {
     // Once the holder released the lease, the same promotion is recorded.
     const recorded = await workspace.run(options(trial), (run) => run.promote({ into: production, references: [holderResult.value], evidence: { format: 'test.promotion', formatVersion: 1, content: null } }));
     expect(recorded.value.references).toEqual([holderResult.value]);
+  });
+
+  test('without a deadline a promotion waits while another run holds the lease, and is recorded once that run releases it', async () => {
+    const inTrial = await workspace.run(options(trial), (run) => run.resolveFold(fixture.report, key()));
+    const trialReport = foldReference(inTrial.value.outcome);
+    let release: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let holding: () => void = () => undefined;
+    const started = new Promise<void>((resolve) => {
+      holding = resolve;
+    });
+    // Another run takes the writer lease with a normal request and keeps it until released.
+    const holder = workspace.run(options(trial), async (run) => {
+      await run.resolveFold(fixture.report, key());
+      holding();
+      await held;
+    });
+    await started;
+    const waiting = workspace.run(options(trial, [], { writerWait: { pollMilliseconds: 50 } }), (run) => run.promote({
+      into: production,
+      references: [trialReport],
+      evidence: { format: 'test.promotion', formatVersion: 1, content: null },
+    }));
+    let settled = false;
+    void waiting.then(() => {
+      settled = true;
+    }, () => {
+      settled = true;
+    });
+    await new Promise((resolve) => {
+      setTimeout(resolve, 300);
+    });
+    // Still waiting for the held lease: it neither failed nor recorded anything.
+    expect(settled).toBe(false);
+    expect((await workspace.run(options(production), (run) => run.promotions())).value).toEqual([]);
+    release();
+    await holder;
+    expect((await waiting).value.references).toEqual([trialReport]);
+  });
+
+  test('with stop intent in force a promotion is refused with stopped, and nothing is recorded', async () => {
+    const inTrial = await workspace.run(options(trial), (run) => run.resolveFold(fixture.report, key()));
+    const trialReport = foldReference(inTrial.value.outcome);
+    const stop = createStopController();
+    stop.request({ level: 'soft' });
+    const refused = await workspace.run(options(trial, [], { stop }), (run) => codeOf(run.promote({ into: production, references: [trialReport], evidence: { format: 'test.promotion', formatVersion: 1, content: null } })));
+    expect(refused.value).toBe('stopped');
+    expect((await workspace.run(options(production), (run) => run.promotions())).value).toEqual([]);
   });
 });

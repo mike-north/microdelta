@@ -56,7 +56,7 @@ import type { IMemberOutcome as IMemberOutcome_2 } from '@microdelta/supervision
 import type { IMembersReport as IMembersReport_2 } from '@microdelta/supervision';
 import type { IMembersTarget as IMembersTarget_2 } from '@microdelta/supervision';
 import { InvalidStorePatchError } from '@microdelta/history';
-import type { IOperationAccounting } from '@microdelta/supervision';
+import type { IOperationAccounting as IOperationAccounting_2 } from '@microdelta/supervision';
 import type { IOperationAttribution as IOperationAttribution_2 } from '@microdelta/supervision';
 import type { IOperationBlock as IOperationBlock_2 } from '@microdelta/supervision';
 import type { IOperationEvent as IOperationEvent_2 } from '@microdelta/supervision';
@@ -83,7 +83,10 @@ import type { IOutcomeFoldReport as IOutcomeFoldReport_2 } from '@microdelta/sup
 import type { IOutcomeFoldRunOutcome as IOutcomeFoldRunOutcome_2 } from '@microdelta/supervision';
 import type { IPathInput as IPathInput_2 } from '@microdelta/definition';
 import type { IPreviousResult as IPreviousResult_2 } from '@microdelta/resolution';
-import type { IPromotionRecord as IPromotionRecord_2 } from '@microdelta/history';
+import type { IPromotionEvent as IPromotionEvent_2 } from '@microdelta/supervision';
+import type { IPromotionEvidence as IPromotionEvidence_2 } from '@microdelta/supervision';
+import type { IPromotionRecord as IPromotionRecord_2 } from '@microdelta/supervision';
+import type { IPromotionRequest as IPromotionRequest_2 } from '@microdelta/supervision';
 import type { IRecoveryResult as IRecoveryResult_2 } from '@microdelta/resolution';
 import type { IRemoteState as IRemoteState_2 } from '@microdelta/supervision';
 import type { IRequestAttemptStatus as IRequestAttemptStatus_2 } from '@microdelta/supervision';
@@ -120,7 +123,6 @@ import type { ISuppliedStepRegistration as ISuppliedStepRegistration_2 } from '@
 import type { ITrackedHelpers as ITrackedHelpers_2 } from '@microdelta/resolution';
 import type { ITrackedView as ITrackedView_2 } from '@microdelta/tracking';
 import type { IUntrackedRead as IUntrackedRead_2 } from '@microdelta/resolution';
-import type { IVersionedRecord } from '@microdelta/history';
 import type { IWaitEvent as IWaitEvent_2 } from '@microdelta/supervision';
 import type { IWriterWaitOptions as IWriterWaitOptions_2 } from '@microdelta/supervision';
 import { MemoryStoreOptions } from '@microdelta/history';
@@ -300,6 +302,9 @@ export type IMembersTarget = IMembersTarget_2;
 export { InvalidStorePatchError }
 
 // @alpha
+export type IOperationAccounting = IOperationAccounting_2;
+
+// @alpha
 export type IOperationAttribution = IOperationAttribution_2;
 
 // @alpha
@@ -378,17 +383,16 @@ export type IPathInput = IPathInput_2;
 export type IPreviousResult<T> = IPreviousResult_2<T>;
 
 // @alpha
-export type IPromotionEvidence = IVersionedRecord;
+export type IPromotionEvent = IPromotionEvent_2;
+
+// @alpha
+export type IPromotionEvidence = IPromotionEvidence_2;
 
 // @alpha
 export type IPromotionRecord = IPromotionRecord_2;
 
 // @alpha
-export interface IPromotionRequest {
-    readonly evidence: IPromotionEvidence;
-    readonly into: string;
-    readonly references: readonly ICompletedResultReference[];
-}
+export type IPromotionRequest = IPromotionRequest_2;
 
 // @alpha
 export type IRecoveryResult = IRecoveryResult_2;
@@ -494,11 +498,8 @@ export type ITrackedView<T> = ITrackedView_2<T>;
 
 // @alpha
 export interface IUnknownUsage {
-    // (undocumented)
     readonly attribution: IOperationAttribution;
-    // (undocumented)
     readonly operation: string;
-    // (undocumented)
     readonly requestAttempt: string;
 }
 
@@ -506,14 +507,26 @@ export interface IUnknownUsage {
 export type IUntrackedRead = IUntrackedRead_2;
 
 // @alpha
+export interface IUsageEstimate {
+    readonly attribution: IOperationAttribution;
+    readonly basis: IUsageEstimateBasis;
+    readonly environment: string;
+    readonly estimate: string;
+    readonly quantities: readonly IOperationQuantity[];
+}
+
+// @alpha
+export interface IUsageEstimateBasis {
+    readonly assumptions: unknown;
+    readonly format: string;
+    readonly formatVersion: number;
+}
+
+// @alpha
 export interface IUsageFilter {
-    // (undocumented)
     readonly member?: string;
-    // (undocumented)
     readonly operation?: string;
-    // (undocumented)
     readonly run?: string;
-    // (undocumented)
     readonly stepAttempt?: string;
 }
 
@@ -524,16 +537,13 @@ export interface IUsageQuery extends IUsageFilter {
 
 // @alpha
 export interface IUsageSummary {
-    // (undocumented)
     readonly environment: string;
-    // (undocumented)
+    readonly estimates: readonly IUsageEstimate[];
     readonly observed: readonly IOperationQuantity[];
     readonly operations: number;
     readonly reports: number;
     readonly requestAttempts: number;
-    // (undocumented)
     readonly status: 'complete' | 'incomplete';
-    // (undocumented)
     readonly unknown: readonly IUnknownUsage[];
 }
 
@@ -561,9 +571,7 @@ export interface IWorkspaceOptions {
 }
 
 // @alpha
-export interface IWorkspaceRun extends Omit<IRun, 'assertDeclaredCall' | 'withWriterLease'> {
-    promote(request: IPromotionRequest): Promise<IPromotionRecord>;
-    promotions(): readonly IPromotionRecord[];
+export interface IWorkspaceRun extends Omit<IRun, 'assertDeclaredCall'> {
     read<T>(reference: ICompletedResultReference): T;
     usage(filter?: IUsageFilter): IUsageSummary;
 }

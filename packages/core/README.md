@@ -51,7 +51,9 @@ composes the owners and adds no policy of its own:
   and what it does once only deferred work remains (`deferral`: `sleep`, the
   default, or `exit`, reporting `waitingUntil`). Unless the caller supplies
   `runId`, every run is identified as `run:<32 hex digits>` from 128 random
-  host bits, so no two runs of any process share one.
+  host bits, so no two runs of any process share one. A caller-supplied
+  `runId` must be an identifier (`^[a-z][a-z0-9_.:-]{0,63}$`) other than that
+  reserved form, and keeping it unique is the caller's responsibility.
 - Operations: `openWorkspace({ ..., accounting })` takes the caller's
   Resource Accounting port (`IWorkspaceAccounting`, which Accounting's durable
   adapter satisfies structurally; the facade never imports Accounting). With
@@ -62,10 +64,13 @@ composes the owners and adds no policy of its own:
   run offers `inspectOperations()`, `settleOperation(settlement)` and
   `usage(filter?)`, its environment's usage summary with unknown usage kept
   apart.
-- Environments: a run selects its environment; `promote({ into, references,
-  evidence })` records a promotion of exact results into another environment
-  under the writer lease, and `promotions()` lists those recorded into the
-  run's environment. Trial results satisfy production only that way.
+- Environments: a run selects its environment. Supervision's run operation
+  `promote({ into, references, evidence })` records a promotion of exact
+  results into *another* environment, under the writer lease and refused when
+  a stop is in force, through History's durable store as Supervision's
+  structural promotion port; `promotions()` lists the promotions recorded
+  *into the run's own* environment. Trial results satisfy production only
+  that way.
 - `currentRun()`: the live run's context, looked up without a parameter.
 - `createStopController()`: operator stop intent with deadlines on Node's
   timer. A soft stop admits no new work and drains admitted steps (with the

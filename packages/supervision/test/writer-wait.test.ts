@@ -686,3 +686,94 @@ describe('stops, failures and lease-free requests while waiting', () => {
     expect(port.attempts).toEqual([]);
   });
 });
+
+/**
+ * Operator work committed under the writer lease, such as a recorded
+ * promotion (RUN-017 owner decision): it is run work like a settlement, so it
+ * obtains the lease exactly as a normal request does (RUN-002 owner
+ * decision), and Supervision hands the lease to the caller's work without
+ * interpreting it. Supervision never touches History itself.
+ */
+describe('operator work under the writer lease (RUN-002, RUN-017)', () => {
+  test('the work runs once with the lease a normal request would hold, its value is returned, and the run releases the lease once at close', async () => {
+    const timer = fakeTimer();
+    const port = scriptedWriter(timer, (now) => Object.freeze({ kind: 'acquired', lease: leaseOf(1, now) }));
+    const seen: IRunLease[] = [];
+    const result = await supervisionWith(timer).run(optionsOver(port.writer, leaseRecorder()), (live) => live.withWriterLease((lease) => {
+      seen.push(lease);
+      return 'recorded';
+    }));
+    expect(result.value).toBe('recorded');
+    expect(seen).toEqual([leaseOf(1, T0)]);
+    expect(port.attempts).toEqual([T0]);
+    expect(port.releases.count).toBe(1);
+  });
+
+  test('a normal request and later operator work of one run hold the same renewed lease', async () => {
+    const timer = fakeTimer();
+    const recorder = leaseRecorder();
+    const port = scriptedWriter(timer, (now) => Object.freeze({ kind: 'acquired', lease: leaseOf(3, now) }));
+    const result = await supervisionWith(timer).run(optionsOver(port.writer, recorder), async (live) => {
+      await live.resolve(step, { requestKey: 'request:1' });
+      return live.withWriterLease((lease) => lease.fence);
+    });
+    expect(result.value).toBe(3);
+    expect(recorder.leases).toEqual([leaseOf(3, T0)]);
+    expect(port.attempts).toEqual([T0, T0]);
+  });
+
+  test('while another process holds the lease the work waits at the poll interval and runs only once the lease is granted', async () => {
+    const timer = fakeTimer();
+    const port = scriptedWriter(timer, (now) => (now < T0 + 2_500 ? heldUntil(T0 + hour) : Object.freeze({ kind: 'acquired', lease: leaseOf(2, now) })));
+    const seen: IRunLease[] = [];
+    const run = supervisionWith(timer).run(optionsOver(port.writer, leaseRecorder(), { writerWait: { pollMilliseconds: 1_000 } }), (live) => live.withWriterLease((lease) => {
+      seen.push(lease);
+    }));
+    await advance(timer, 2_000, 1_000);
+    expect(port.attempts).toEqual([T0, T0 + 1_000, T0 + 2_000]);
+    expect(seen).toEqual([]);
+    await advance(timer, 1_000);
+    await run;
+    expect(seen).toEqual([leaseOf(2, T0 + 3_000)]);
+  });
+
+  test('at the operator deadline the work fails with writer-busy naming the holder, and never runs', async () => {
+    const timer = fakeTimer();
+    const port = scriptedWriter(timer, () => heldUntil(T0 + hour));
+    let ran = false;
+    let outcome: { readonly current: () => ISettlement<unknown> } | undefined;
+    const run = supervisionWith(timer).run(optionsOver(port.writer, leaseRecorder(), { writerWait: { deadline: T0 + 1_000, pollMilliseconds: 500 } }), (live) => {
+      const pending = live.withWriterLease(() => {
+        ran = true;
+      });
+      outcome = track(pending);
+      return pending.then(() => 'done', () => 'failed');
+    });
+    await advance(timer, 1_000, 500);
+    expect((await run).value).toBe('failed');
+    const busy = busyOf(outcome?.current() ?? { settled: false });
+    expect(busy.holder).toBe(otherHolder);
+    expect(ran).toBe(false);
+  });
+
+  test('a failure of the work is the operation\'s failure, and the run still releases the lease', async () => {
+    const timer = fakeTimer();
+    const port = scriptedWriter(timer, (now) => Object.freeze({ kind: 'acquired', lease: leaseOf(1, now) }));
+    const result = await supervisionWith(timer).run(optionsOver(port.writer, leaseRecorder()), (live) => codeOf(live.withWriterLease(() => {
+      throw new SupervisionError('integrity', 'the operator work failed');
+    })));
+    expect(result.value).toBe('integrity');
+    expect(port.releases.count).toBe(1);
+  });
+
+  test('operator work offered after the run closed fails with run-closed and takes no lease', async () => {
+    const timer = fakeTimer();
+    const port = scriptedWriter(timer, (now) => Object.freeze({ kind: 'acquired', lease: leaseOf(1, now) }));
+    let kept: IRun | undefined;
+    await supervisionWith(timer).run(optionsOver(port.writer, leaseRecorder()), (live) => {
+      kept = live;
+    });
+    expect(await codeOf(kept?.withWriterLease(() => 'late') ?? Promise.resolve())).toBe('run-closed');
+    expect(port.attempts).toEqual([]);
+  });
+});

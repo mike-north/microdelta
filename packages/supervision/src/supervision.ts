@@ -12,9 +12,11 @@
  *   only then does it close, and afterwards its operations, escaped context
  *   lookups and admission decisions all fail or are denied. The body's own
  *   outcome, value or failure, is what the run reports;
- * - storage's writer lease is taken only for normal requests and released
- *   exactly once at actual close, so a refused miss, a check or a recovery
- *   never strands it and started work never loses it. A normal request that
+ * - storage's writer lease is taken only for normal requests and for
+ *   operator work recorded under it (an operation's settlement, or work run
+ *   through `withWriterLease` such as a promotion), and released exactly once
+ *   at actual close, so a refused miss, a check or a recovery never strands
+ *   it and started work never loses it. A normal request that
  *   finds another process holding it waits under the operator's policy (no
  *   default deadline) and fails with a typed writer-busy error at the
  *   deadline (see `writer.ts`); History alone decides any takeover;
@@ -224,7 +226,7 @@ function notify(observers: readonly ICapturedObserver[], event: IRunEvent): void
 }
 
 /** Every {@link IRunOperationName}, for the runtime check of untyped callers. */
-const runOperationNames: ReadonlySet<string> = new Set<IRunOperationName>(['check', 'inspectOperations', 'ordinary', 'read', 'recover', 'resolve', 'resolveFold', 'resolveMembers', 'resolveOutcomeFold', 'settleOperation']);
+const runOperationNames: ReadonlySet<string> = new Set<IRunOperationName>(['check', 'inspectOperations', 'ordinary', 'read', 'recover', 'resolve', 'resolveFold', 'resolveMembers', 'resolveOutcomeFold', 'settleOperation', 'withWriterLease']);
 
 /**
  * Classify one member's Resolution outcome as its typed member outcome
@@ -937,6 +939,17 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       settleOperation(settlement: IOperationSettlement): Promise<IOperationView> {
         // An operator's settlement is recorded under the writer lease, obtained as any normal request obtains it.
         return within(async () => operationsOf('Settling an operation').settle(settlement, await writerLease()), 'settleOperation');
+      },
+      withWriterLease<TWork>(work: (lease: IRunLease) => TWork | Promise<TWork>): Promise<Awaited<TWork>> {
+        // Operator work recorded under the lease obtains it as a normal request and a settlement do.
+        return within(async (): Promise<Awaited<TWork>> => {
+          if (typeof work !== 'function') {
+            throw new SupervisionError('invalid-request', 'Operator work under the writer lease must be a function');
+          }
+          const lease = await writerLease();
+          const value: Awaited<TWork> = await work(lease);
+          return value;
+        }, 'withWriterLease');
       },
     });
 

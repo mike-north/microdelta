@@ -11,13 +11,14 @@
 import { expectAssignable, expectError, expectNotAssignable, expectType } from 'tsd';
 
 import { SupervisionError, WriterBusyError } from '../dist/src/index.js';
-import type { IRunLease, IRunOptions, IRunWriter, ISupervisionErrorCode, IWriterAttempt, IWriterBusyObservation, IWriterWaitOptions } from '../dist/src/index.js';
+import type { IRun, IRunLease, IRunOperationName, IRunOptions, IRunWriter, ISupervisionErrorCode, IWriterAttempt, IWriterBusyObservation, IWriterWaitOptions } from '../dist/src/index.js';
 
 declare const lease: IRunLease;
 declare const attempt: IWriterAttempt;
 declare const busy: WriterBusyError;
 declare const writer: IRunWriter;
 declare const options: IRunOptions;
+declare const run: IRun;
 
 // The port's one try returns an outcome; it is not a lease getter.
 expectType<IWriterAttempt>(writer.tryLease());
@@ -61,3 +62,9 @@ expectAssignable<IWriterAttempt>({ kind: 'contended', holder: undefined, expires
 expectType<WriterBusyError>(new WriterBusyError({ kind: 'held', holder: 'run:other', expiresAt: 2 }, 1));
 expectError(new WriterBusyError({ kind: 'acquired', lease }, 1));
 expectError(new WriterBusyError({ kind: 'held', holder: 'run:other', expiresAt: 2 }));
+
+// Operator work under the writer lease receives the lease and returns its own (awaited) value; it is a named run operation.
+expectType<Promise<number>>(run.withWriterLease((held: IRunLease) => held.fence));
+expectType<Promise<string>>(run.withWriterLease(() => Promise.resolve('recorded')));
+expectAssignable<IRunOperationName>('withWriterLease');
+expectError(run.withWriterLease());

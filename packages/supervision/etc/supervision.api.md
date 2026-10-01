@@ -396,6 +396,7 @@ export interface IRun {
     resolveMembers(target: IMembersTarget, request: IRequestOptions): Promise<IMembersReport>;
     resolveOutcomeFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IOutcomeFoldReport>;
     settleOperation(settlement: IOperationSettlement): Promise<IOperationView>;
+    withWriterLease<T>(work: (lease: IRunLease) => T | Promise<T>): Promise<Awaited<T>>;
 }
 
 // @alpha
@@ -453,7 +454,7 @@ export interface IRunObserver {
 }
 
 // @alpha
-export type IRunOperationName = 'check' | 'inspectOperations' | 'ordinary' | 'read' | 'recover' | 'resolve' | 'resolveFold' | 'resolveMembers' | 'resolveOutcomeFold' | 'settleOperation';
+export type IRunOperationName = 'check' | 'inspectOperations' | 'ordinary' | 'read' | 'recover' | 'resolve' | 'resolveFold' | 'resolveMembers' | 'resolveOutcomeFold' | 'settleOperation' | 'withWriterLease';
 
 // @alpha
 export interface IRunOperationPorts {

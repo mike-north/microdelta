@@ -680,6 +680,27 @@ export interface IRun {
    */
   settleOperation(settlement: IOperationSettlement): Promise<IOperationView>;
   /**
+   * Run operator work that History must record under the store's writer
+   * lease, such as a recorded promotion into another environment (RUN-017).
+   * The lease is obtained exactly as a normal request obtains it (RUN-002
+   * owner decision): renewed or acquired at once when possible, otherwise
+   * waited for under the run's `writerWait` policy, with no default deadline,
+   * failing with `WriterBusyError` at the operator's deadline, and ended by
+   * any stop with `stopped`. `work` then runs once with that valid lease and
+   * its value or failure is the operation's. Supervision hands the lease
+   * over without interpreting the work: the assembly that composes History
+   * performs the commit, and History alone re-checks the lease's authority
+   * there. Keep `work` to short commits; the lease is held, as for every
+   * operation of the run, until the run closes.
+   *
+   * It is `@alpha` for the same reason as {@link IRun.assertDeclaredCall}:
+   * the facade composes it into its own operator actions, and its
+   * author-facing run never hands the lease out.
+   * @param work - The operator work, given the run's valid writer lease.
+   * @returns The work's value.
+   */
+  withWriterLease<T>(work: (lease: IRunLease) => T | Promise<T>): Promise<Awaited<T>>;
+  /**
    * Assert that a call of the run operation `operation` is a declared one.
    * Invoked from inside a member's work or a step attempt of this open run,
    * it records the run diagnostic and throws the CMP-9 refusal,
@@ -714,7 +735,8 @@ export type IRunOperationName =
   | 'resolveFold'
   | 'resolveMembers'
   | 'resolveOutcomeFold'
-  | 'settleOperation';
+  | 'settleOperation'
+  | 'withWriterLease';
 
 /**
  * A send a hard stop aborted, with its recorded remote state.

@@ -405,6 +405,7 @@ describe('the permit pool (RUN-002)', () => {
         codeOf(() => {
           run.assertDeclaredCall('read');
         }),
+        codeOf(run.withWriterLease(() => 'recorded')),
       ]);
       // The member holds the run's only lane: a refusal must never wait for one.
       const fromMember = await execution.member(callEach);
@@ -413,14 +414,14 @@ describe('the permit pool (RUN-002)', () => {
       const fromBody = await codeOf(run.ordinary('note', () => 'noted'));
       return { fromMember, fromAttempt, fromBody };
     });
-    const refused = Array.from({ length: 8 }, () => 'undeclared-call');
+    const refused = Array.from({ length: 9 }, () => 'undeclared-call');
     expect(result.value.fromMember).toEqual(refused);
     expect(result.value.fromAttempt).toEqual({ kind: 'returned', value: refused });
     expect(result.value.fromBody).toBeUndefined();
     // Each refusal is a run diagnostic naming the operation and where it was called, by identifiers only.
     const refusals = result.diagnostics.filter((diagnostic) => diagnostic.includes('undeclared call'));
-    expect(refusals).toHaveLength(16);
-    for (const operation of ['resolve', 'resolveMembers', 'resolveFold', 'resolveOutcomeFold', 'check', 'recover', 'ordinary', 'read']) {
+    expect(refusals).toHaveLength(18);
+    for (const operation of ['resolve', 'resolveMembers', 'resolveFold', 'resolveOutcomeFold', 'check', 'recover', 'ordinary', 'read', 'withWriterLease']) {
       expect(refusals).toContain(`Run ${result.context.runId} refused ${operation} from inside member work: an undeclared call (CMP-9)`);
       expect(refusals).toContain(`Run ${result.context.runId} refused ${operation} from inside the step attempt of summary/person:ada: an undeclared call (CMP-9)`);
     }

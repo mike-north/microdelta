@@ -16,7 +16,11 @@ bounded keyed composition has verified acceptance: the EXP-4 decision, plan,
 component issues and independent-process acceptance issue are accepted, as mapped
 in the [M4 evidence record](validation/m4-2026-09-29.md);
 [#89](https://github.com/mike-north/microdelta/issues/89) records the final
-milestone decision. No M5 or later runtime milestone is complete.
+milestone decision. M5's bounded operational correctness has verified acceptance:
+the EXP-8 checkpoint, plan, component issues and independent-process acceptance
+issue are accepted, as mapped in the [M5 evidence record](validation/m5-2026-10-01.md);
+[#123](https://github.com/mike-north/microdelta/issues/123) records the final
+milestone decision. No M6 or later runtime milestone is complete.
 A milestone is a quality checkpoint, including experiments; it need not be a
 user-facing release.
 
@@ -166,6 +170,18 @@ fresh processes prove stale workers cannot publish/renew/release another holder;
 known usage survives faults once; unknown work is not reported free. Presentation
 failure cannot cause reexecution of committed success. No real paid acceptance
 before this milestone.
+
+**Evidence:** [M5 operational correctness record](validation/m5-2026-10-01.md). The
+[operations plan](plans/m5-operations.md) defines the delivered slice, and the
+owner's decisions of 2026-09-30 are recorded in [operations](spec/operations.md).
+The [EXP-8 decision](../experiments/exp-8/decision.md) selects the stop, publication,
+deferral, accounting, identity, retry and privacy mechanisms. The
+[concurrency record](validation/m5-concurrency-2026-09-30.md) rechecks the EXP-7
+writer and publication models against the production protocol (PUB-004) and maps
+them to code and named tests. The [acceptance record](validation/m5-acceptance-2026-10-01.md)
+maps each exit criterion to independent-process tests (#122). M5 keeps one fenced
+writer per store. Multi-writer parallelism, fairness and scale remain M7
+measurement topics, and result-carrying operator resolution and the CLI are M6.
 
 ## M6 — Usable CLI and inspection checkpoint
 

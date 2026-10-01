@@ -13,12 +13,17 @@
  * On-demand evidence command, not part of `npm test`: run `npm run build` and
  * `npm run test:unit --workspace microdelta` first, then
  * `node packages/core/test/acceptance/controls/acceptance-mutation-controls.mjs`.
+ *
+ * `--check-anchors` verifies that every anchor matches exactly once in the
+ * current builds and exits without running any suite; `npm test` runs it for
+ * every runner (anchor-check.test.mjs) so drift fails early.
  */
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
+import { anchorCheckRequested, anchorProblems, reportAnchorCheck } from '../../durable-history/controls/anchor-check.mjs';
 import { judgeRun } from '../../durable-history/controls/control-outcome.mjs';
 import { repositoryRoot } from './paths.mjs';
 
@@ -37,7 +42,7 @@ const targets = Object.freeze({
 const suites = Object.freeze(['admission-observers.test.js', 'changes.test.js', 'crash-recovery.test.js', 'integrity-io.test.js', 'lease-expiry.test.js', 'planned-fault.test.js', 'restart.test.js', 'source-policy.test.js', 'stop-publication.test.js']);
 
 const controls = [
-  { name: 'a source candidate skips its own implementation and input validation', target: 'resolution', anchor: "if (comparison.kind === 'equal') {", replacement: 'if (true) {' },
+  { name: 'a source candidate skips its own implementation and input validation', target: 'resolution', anchor: "const comparison = compare(own, ownFactProvider({ validation, slots: request.slots, self: declaration.run, member: memberRecord(request, step) }));\n            if (comparison.kind === 'equal') {", replacement: "const comparison = compare(own, ownFactProvider({ validation, slots: request.slots, self: declaration.run, member: memberRecord(request, step) }));\n            if (true) {" },
   { name: 'an eligible source never consults its current finality hook', target: 'resolution', anchor: 'if (eligible !== undefined && invocation.hasFinality) {', replacement: 'if (false) {' },
   { name: 'a false current finality answer retains', target: 'resolution', anchor: 'if (decided.value) {', replacement: 'if (true) {' },
   { name: 'consumed child output facts are not compared', target: 'resolution', anchor: "if (childComparison.kind !== 'equal') {", replacement: 'if (false) {' },
@@ -45,7 +50,7 @@ const controls = [
   { name: 'check-only proceeds to source work', target: 'resolution', anchor: "return done({ kind: 'uncertain', boundary: step });", replacement: 'void 0;' },
   { name: 'a memo admission refusal is ignored', target: 'resolution', anchor: "const refusal = await admit(request, evidence, step, 'memo'", replacement: "const refusal = undefined; await admit(request, evidence, step, 'memo'" },
   { name: 'a normal request resumes a key whose execution is incomplete', target: 'resolution', anchor: "if (prior.kind !== 'absent') {", replacement: "if (prior.kind === 'completed') {" },
-  { name: 'the recovery intent ignores the current declaration', target: 'intent', anchor: 'return `mdi1:${options.host.sha256(JSON.stringify(intent))}`;', replacement: 'return `mdi1:constant`;' },
+  { name: 'the recovery intent ignores the current declaration', target: 'intent', anchor: 'options.step)]] : []),\n    ];\n    return `mdi1:${options.host.sha256(JSON.stringify(intent))}`;', replacement: 'options.step)]] : []),\n    ];\n    return `mdi1:constant`;' },
   { name: 'an incomplete attempt is reported as absent', target: 'history', anchor: "case 'staged':\n                return Object.freeze({ kind: 'incomplete', attempt });", replacement: "case 'staged':\n                return Object.freeze({ kind: 'absent' });" },
   { name: 'fingerprint validation also materializes the source result payload', target: 'index', anchor: 'resolveFingerprint(reference, request) {\n            const resultId = resolve(reference);', replacement: 'resolveFingerprint(reference, request) {\n            const resultId = resolve(reference);\n            statements.payload.get(resultId);' },
   { name: 'a selected scalar read also loads the whole root payload', target: 'index', anchor: 'const row = statements.scalarPayload.get(resultId, metadata.nodeId);', replacement: 'statements.payload.get(resultId); const row = statements.scalarPayload.get(resultId, metadata.nodeId);' },
@@ -54,6 +59,12 @@ const controls = [
 
 /** Original bytes of every target. */
 const originals = new Map(Object.values(targets).map((file) => [file, readFileSync(file, 'utf8')]));
+
+// Drift guard: `--check-anchors` verifies every anchor against the current builds and runs no suite.
+if (anchorCheckRequested()) {
+  const plants = controls.map((control) => ({ control: control.name, file: targets[control.target], text: originals.get(targets[control.target]), anchor: control.anchor }));
+  process.exit(reportAnchorCheck(anchorProblems(plants), controls.length));
+}
 
 /** Restore every target. */
 function restoreAll() {

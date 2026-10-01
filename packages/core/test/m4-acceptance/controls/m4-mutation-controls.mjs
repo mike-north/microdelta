@@ -16,12 +16,17 @@
  * On-demand evidence command, not part of `npm test`: run `npm run build` and
  * `npm run test:unit --workspace microdelta` first, then
  * `node packages/core/test/m4-acceptance/controls/m4-mutation-controls.mjs`.
+ *
+ * `--check-anchors` verifies that every anchor matches exactly once in the
+ * current builds and exits without running any suite; `npm test` runs it for
+ * every runner (anchor-check.test.mjs) so drift fails early.
  */
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
+import { anchorCheckRequested, reportAnchorCheck } from '../../durable-history/controls/anchor-check.mjs';
 import { judgeRun } from '../../durable-history/controls/control-outcome.mjs';
 import { repositoryRoot } from '../../acceptance/controls/paths.mjs';
 
@@ -98,8 +103,9 @@ const controls = [
   {
     name: 'open discovery is treated as closed',
     target: 'resolution',
-    anchor: "const openDiscovery = population.completion === 'open';",
-    replacement: 'const openDiscovery = false;',
+    // Anchored through the strict fold's failure branch that follows it: the outcome fold computes the same expression.
+    anchor: "const openDiscovery = population.completion === 'open';\n        if (failed.length > 0 || cancelled.length > 0) {",
+    replacement: 'const openDiscovery = false;\n        if (failed.length > 0 || cancelled.length > 0) {',
     breaks: ['strict-fold-readiness', 'closed-empty-population'],
   },
   {
@@ -119,8 +125,9 @@ const controls = [
   {
     name: 'a closed empty population waits instead of completing',
     target: 'resolution',
-    anchor: 'if (openDiscovery || pending.length > 0) {',
-    replacement: 'if (openDiscovery || pending.length > 0 || membership.length === 0) {',
+    // Anchored through the strict fold's waiting result: the outcome fold has the same condition.
+    anchor: "if (openDiscovery || pending.length > 0) {\n            return { status: 'waiting', pending, openDiscovery };",
+    replacement: "if (openDiscovery || pending.length > 0 || membership.length === 0) {\n            return { status: 'waiting', pending, openDiscovery };",
     breaks: ['closed-empty-population'],
   },
   {
@@ -227,6 +234,34 @@ function editsOf(control) {
 /** Original bytes of every target. */
 const originals = new Map(Object.values(targets).map((file) => [file, readFileSync(file, 'utf8')]));
 
+/**
+ * Plan every edit of a control against the original bytes: the planted file
+ * contents, or the first anchor that does not match exactly once (a control
+ * with any bad anchor plants nothing).
+ */
+function planControl(control) {
+  const planted = new Map();
+  for (const edit of editsOf(control)) {
+    const file = targets[edit.target];
+    const current = planted.get(file) ?? originals.get(file);
+    const matches = current.split(edit.anchor).length - 1;
+    if (matches !== 1) {
+      return { error: `ANCHOR ${String(matches)}x in ${edit.target}: ${control.name}` };
+    }
+    planted.set(file, current.replace(edit.anchor, () => edit.replacement));
+  }
+  return { planted };
+}
+
+// Drift guard: `--check-anchors` plans every control against the current builds and runs no suite.
+if (anchorCheckRequested()) {
+  const problems = controls.flatMap((control) => {
+    const { error } = planControl(control);
+    return error === undefined ? [] : [error];
+  });
+  process.exit(reportAnchorCheck(problems, controls.length));
+}
+
 /** Restore every target. */
 function restoreAll() {
   for (const [file, content] of originals) {
@@ -280,21 +315,9 @@ try {
     throw new Error('the unmodified builds must pass every M4 acceptance test before controls run');
   }
   for (const control of controls) {
-    // Plan every edit against the original bytes first; a control with any bad anchor plants nothing.
-    const planted = new Map();
-    let anchored = true;
-    for (const edit of editsOf(control)) {
-      const file = targets[edit.target];
-      const current = planted.get(file) ?? originals.get(file);
-      const matches = current.split(edit.anchor).length - 1;
-      if (matches !== 1) {
-        console.log(`ANCHOR ${String(matches)}x in ${edit.target}: ${control.name}`);
-        anchored = false;
-        break;
-      }
-      planted.set(file, current.replace(edit.anchor, () => edit.replacement));
-    }
-    if (!anchored) {
+    const { planted, error } = planControl(control);
+    if (error !== undefined) {
+      console.log(error);
       failures += 1;
       continue;
     }

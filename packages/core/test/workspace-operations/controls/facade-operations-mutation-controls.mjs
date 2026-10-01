@@ -20,12 +20,17 @@
  * `npm run build` and `npm run test:unit --workspace microdelta` first, then
  * `node packages/core/test/workspace-operations/controls/facade-operations-mutation-controls.mjs`.
  * Controls must run serially.
+ *
+ * `--check-anchors` verifies that every anchor matches exactly once in the
+ * current builds and exits without running any suite; `npm test` runs it for
+ * every runner (anchor-check.test.mjs) so drift fails early.
  */
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
+import { anchorCheckRequested, anchorProblems, reportAnchorCheck } from '../../durable-history/controls/anchor-check.mjs';
 import { judgeRun } from '../../durable-history/controls/control-outcome.mjs';
 
 const root = new URL('../../../../../', import.meta.url).pathname;
@@ -119,6 +124,12 @@ const controls = [
 
 /** The original bytes of every target file. */
 const originals = new Map(Object.values(targets).flat().map((file) => [file, readFileSync(file, 'utf8')]));
+
+// Drift guard: `--check-anchors` verifies every anchor in every file it plants into and runs no suite.
+if (anchorCheckRequested()) {
+  const plants = controls.flatMap((control) => targets[control.target].map((file) => ({ control: control.name, file, text: originals.get(file), anchor: control.anchor })));
+  process.exit(reportAnchorCheck(anchorProblems(plants), controls.length));
+}
 
 /** Restore every target file. */
 function restoreAll() {

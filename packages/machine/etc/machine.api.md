@@ -25,6 +25,11 @@ export interface IMachine extends IAsyncContextCapability, ISnapshotCapability, 
 }
 
 // @alpha
+export interface IRandomIdentifierCapability {
+    randomIdentifier(): string;
+}
+
+// @alpha
 export interface ISha256Capability {
     sha256(input: string): string;
 }

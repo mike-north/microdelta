@@ -828,11 +828,18 @@ rejected by W4 and L4. Two controls have no model counterpart:
 - deadlines are not modeled.
 
 `history-mutation-controls.mjs` ran unchanged: `PASS: 25 controls`, with 41
-tests restored. The acceptance runner first reported a `CONTROL RUN INVALID`
+tests restored. `journal-mutation-controls.mjs`, which arrived with the merge
+of #127, also passed: `PASS: 11 controls`, with 17 tests restored. The acceptance runner first reported a `CONTROL RUN INVALID`
 because #128 added `stop-publication.test.ts` without adding it to the
 runner's suite list. That list now names all nine acceptance suites, and one
 control that planted the removed `writer.lease()` call plants
-`writer.tryLease()` instead.
+`writer.tryLease()` instead. With those changes the baseline (67 tests) and
+the restored build pass, and 11 of 13 controls are rejected, including
+"recovery takes the writer lease" (9 failing). The runner still ends `FAIL`.
+Two Resolution controls now find their anchors twice on `main` ("a source
+candidate skips its own implementation and input validation" and "the
+recovery intent ignores the current declaration"), a pre-existing condition;
+Resolution is untouched here.
 
 ### Observations
 

@@ -73,7 +73,13 @@ lost-acknowledgment recovery; see the
 [M3 acceptance record](validation/m3-acceptance-2026-09-28.md). The M4 independent-process
 acceptance suite (`packages/core/test/m4-acceptance`) drives the keyed
 discovery, gated template, nested supplied assessor and strict fold the same
-way; see the [M4 acceptance record](validation/m4-acceptance-2026-09-29.md).
+way; see the [M4 acceptance record](validation/m4-acceptance-2026-09-29.md). The M5
+independent-process acceptance suite (`packages/core/test/m5-acceptance`) drives
+the operational mechanisms through the built facade in separate processes, with
+Accounting's durable adapter injected as the caller's port. It covers lease waiting
+and takeover, stale holders, soft and hard stops, durable deferral, no blind replay,
+exactly-once usage, environments, outcome folds, lifecycle isolation and event
+privacy; see the [M5 acceptance record](validation/m5-acceptance-2026-10-01.md).
 
 The Tracking observer is bounded M2 owner functionality: it stores no binding
 catalog or History rows and does not decide source freshness or reusable results.

@@ -428,8 +428,11 @@ operation identity. Otherwise the operator decides.
   one fenced commit through History's operation journal records the operation
   as pending with the new request attempt, then Accounting records the usage
   intent; only then is the request sent. A failure of either write sends
-  nothing and leaves the step pending on a short deferral, never failed: the
-  work is retried after it. An operation identity carries 128 random bits from
+  nothing and leaves the step pending on a deferral, never failed: the work is
+  retried after it, backing off exponentially per operation (1 s, doubling,
+  capped at 60 s). The retry reuses the unsent request attempt with its
+  original attribution, so an intent that landed unconfirmed is restated
+  idempotently and receives the send's usage. An operation identity carries 128 random bits from
   the host, so it never repeats across stores, processes or hosts; it is also
   the provider idempotency key and is kept by every retry. Only one call at an
   address may be in progress in a run, and an attempt that ended sends

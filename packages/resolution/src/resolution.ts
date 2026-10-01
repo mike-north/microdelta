@@ -142,7 +142,7 @@ import type {
   ISuppliedStepDeclaration,
   ITemplateTopology,
 } from '@microdelta/definition';
-import { AttemptConflictError, HistoryIntegrityError } from '@microdelta/history';
+import { AttemptConflictError, HistoryIntegrityError, StaleWriterError } from '@microdelta/history';
 import type {
   IAcceptanceRecord,
   ICompletedEnvelope,
@@ -515,6 +515,26 @@ function changedCorrespondence(recorded: IBindingDescriptor, current: IBindingDe
 /** The miss of a candidate whose recorded step no longer corresponds to the current one. */
 function correspondenceMiss(candidate: ICompletedResultReference, recorded: IBindingDescriptor, current: IBindingDescriptor): ICandidateMiss {
   return miss(candidate, 'correspondence', `provenance names ${stepKey(recorded)}, not the current ${stepKey(current)}`);
+}
+
+/**
+ * The refusal reason of a step that needed a write its request's writer lease
+ * no longer authorizes: the lease expired or a successor took it over while
+ * the request ran (EXP-8 ruling R). The step is denied, not failed: its work
+ * stays pending for a run that holds the lease.
+ */
+const leaseLostReason = 'lease-lost';
+
+/**
+ * Raised inside Resolution, between a write History refused as stale and the
+ * step that made it, which ends with a {@link leaseLostReason} denial. It
+ * never escapes Resolution; the History error is its cause.
+ */
+class LeaseLost extends Error {
+  public constructor(cause: StaleWriterError) {
+    super('The request\'s writer lease is no longer current', { cause });
+    this.name = 'LeaseLost';
+  }
 }
 
 /**
@@ -906,6 +926,43 @@ export function createResolution<TInputs extends object, THelpers extends object
     return { step: target.step, declaration };
   }
 
+  /**
+   * Make one write that needs the request's writer lease. A write History
+   * refuses because the lease is no longer current (it expired, or a
+   * successor took it over) wrote nothing and becomes {@link LeaseLost}. A
+   * lost lease never becomes current again, so every later write under it is
+   * refused the same way (EXP-8 ruling R: nothing is written without lease
+   * authority).
+   */
+  function underLease<T>(write: () => T): T {
+    try {
+      return write();
+    } catch (error: unknown) {
+      if (error instanceof StaleWriterError) {
+        throw new LeaseLost(error);
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * A step's resolution, in which a write its lease no longer authorizes
+   * ends the step with a typed {@link leaseLostReason} denial instead of a raw
+   * History error. An attempt it had claimed stays incomplete, as it is when
+   * its process dies: the lease's successor recovers it. The request's other
+   * steps end the same way when they need a write (EXP-8 ruling R).
+   */
+  async function withLeaseAuthority(request: IRequestContext, step: IBindingDescriptor, resolving: Promise<IResolvedStep>): Promise<IResolvedStep> {
+    try {
+      return await resolving;
+    } catch (error: unknown) {
+      if (!(error instanceof LeaseLost)) {
+        throw error;
+      }
+      return { step, result: { kind: 'refused', refused: step, reason: leaseLostReason, disposition: 'denied' }, evidence: newEvidence(request) };
+    }
+  }
+
   /** A new request context with its declared slots reconnected once. */
   function newRequest(mode: 'normal' | 'check', requestKey: string | undefined, lease: IWriterLease | undefined): IRequestContext {
     return {
@@ -1129,9 +1186,11 @@ export function createResolution<TInputs extends object, THelpers extends object
    */
   function abandon(request: IRequestContext, evidence: IStepEvidence, step: IBindingDescriptor, attemptId: number, outcome: 'failed' | 'interrupted', ending: Parameters<typeof endingRecord>[0]): boolean {
     try {
-      history.abandonAttempt(leaseOf(request), { attemptId, outcome, evidence: endingRecord(ending) });
+      underLease(() => history.abandonAttempt(leaseOf(request), { attemptId, outcome, evidence: endingRecord(ending) }));
     } catch (error: unknown) {
-      evidence.diagnostics.push(`Attempt ${String(attemptId)} of ${stepKey(step)} could not be ended: ${frameworkDetail(error)}`);
+      evidence.diagnostics.push(error instanceof LeaseLost
+        ? `Attempt ${String(attemptId)} of ${stepKey(step)} stays incomplete: the request's writer lease is no longer current`
+        : `Attempt ${String(attemptId)} of ${stepKey(step)} could not be ended: ${frameworkDetail(error)}`);
       return false;
     }
     if (ending.ending !== 'retained') {
@@ -1209,7 +1268,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     const requestKey = request.requestKey ?? '';
     let attemptId: number;
     try {
-      attemptId = integrity(() => history.allocateAttempt(leaseOf(request), identity)).attemptId;
+      attemptId = integrity(() => underLease(() => history.allocateAttempt(leaseOf(request), identity))).attemptId;
     } catch (error: unknown) {
       return conflict(requestKey, step, error);
     }
@@ -1268,7 +1327,9 @@ export function createResolution<TInputs extends object, THelpers extends object
       throw new ResolutionError('unsupported-result', `Step ${stepKey(step)} produced a result without a record or array root`);
     }
     try {
-      history.stageAttempt(lease, { attemptId, payload: content.payload, provenance: provenanceRecord(content.provenance), dependencies: content.dependencies });
+      underLease(() => {
+        history.stageAttempt(lease, { attemptId, payload: content.payload, provenance: provenanceRecord(content.provenance), dependencies: content.dependencies });
+      });
     } catch (error: unknown) {
       abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: frameworkDetail(error) });
       if (error instanceof TypeError) {
@@ -1276,14 +1337,14 @@ export function createResolution<TInputs extends object, THelpers extends object
       }
       throw error;
     }
-    const reference = history.publishAttempt(lease, attemptId);
+    const reference = underLease(() => history.publishAttempt(lease, attemptId));
     emit(request, evidence, step, 'publish', reference);
     return { kind: 'published', reference, attemptId };
   }
 
   /** Record a current acceptance of an existing result and report it. */
   function accept(request: IRequestContext, evidence: IStepEvidence, step: IBindingDescriptor, basis: IReuseBasis, reference: ICompletedResultReference, record: Parameters<typeof acceptanceRecord>[0], dependencies: readonly ICompletedResultReference[]): IStepResult {
-    const acceptance = integrity(() => history.recordAcceptance(leaseOf(request), { reference, evidence: acceptanceRecord(record), dependencies, environment }));
+    const acceptance = integrity(() => underLease(() => history.recordAcceptance(leaseOf(request), { reference, evidence: acceptanceRecord(record), dependencies, environment })));
     emit(request, evidence, step, 'accept', reference);
     return { kind: 'reused', basis, reference, acceptance };
   }
@@ -1295,7 +1356,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     if (existing !== undefined) {
       return existing;
     }
-    const pending = resolveSource(request, step, declaration);
+    const pending = withLeaseAuthority(request, step, resolveSource(request, step, declaration));
     request.sources.set(key, pending);
     return pending;
   }
@@ -1941,7 +2002,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     if (existing !== undefined) {
       return existing;
     }
-    const pending = resolveSupplied(request, call);
+    const pending = withLeaseAuthority(request, call.slot, resolveSupplied(request, call));
     request.supplied.set(key, pending);
     return pending;
   }
@@ -2063,7 +2124,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     if (existing !== undefined) {
       return existing;
     }
-    const pending = resolveMemo(request, step, declaration);
+    const pending = withLeaseAuthority(request, step, resolveMemo(request, step, declaration));
     request.memos.set(key, pending);
     return pending;
   }
@@ -3308,7 +3369,7 @@ export function createResolution<TInputs extends object, THelpers extends object
       }
       const { population, settled } = await settleMembers(context, template, fold.over);
       const readiness = foldReadiness(fold, population, settled);
-      const resolved = readiness.status === 'ready' ? await resolveFoldStep(context, target.step, fold.over, { kind: 'fold', declaration, membership: readiness.membership }) : undefined;
+      const resolved = readiness.status === 'ready' ? await withLeaseAuthority(context, target.step, resolveFoldStep(context, target.step, fold.over, { kind: 'fold', declaration, membership: readiness.membership })) : undefined;
       // Converted after the fold settled, so every outcome reports the whole request's diagnostics.
       const outcome = foldOutcome(context, target.step, readiness, resolved);
       return Object.freeze({
@@ -3348,7 +3409,7 @@ export function createResolution<TInputs extends object, THelpers extends object
       const { population, settled } = await settleMembers(context, template, fold.over);
       const readiness = outcomeReadiness(fold, population, settled);
       const resolved = readiness.status === 'ready'
-        ? await resolveFoldStep(context, target.step, fold.over, { kind: 'outcome-fold', declaration, membership: readiness.membership })
+        ? await withLeaseAuthority(context, target.step, resolveFoldStep(context, target.step, fold.over, { kind: 'outcome-fold', declaration, membership: readiness.membership }))
         : undefined;
       // Converted after the fold settled, so every outcome reports the whole request's diagnostics.
       const outcome = outcomeFoldOutcome(context, target.step, readiness, resolved);

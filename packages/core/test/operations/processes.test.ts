@@ -19,6 +19,11 @@
  *   after T under the same operation identity, with new request attempt,
  *   step attempt and run identities;
  * - a hard stop's remote state is durable for the next process;
+ * - a soft-stop drain that outlives its lease while a successor process takes
+ *   over writes nothing more: its late completion ends `lease-lost`, and the
+ *   members it meets afterwards, including ones the successor published, end
+ *   pending as `lease-lost` instead of escaping as a raw History error (EXP-8
+ *   ruling R);
  * - a hard stop requested as the run starts its deferral sleep leaves nothing
  *   that keeps the process alive: on Node's real timer it exits long before
  *   the deferral's time (A-13, RUN-014);
@@ -215,6 +220,26 @@ describe('durable remote state after a hard stop (RUN-014)', () => {
       status: 'unknown',
       attempts: [expect.objectContaining({ status: 'unknown', remote: 'running' })],
     })]);
+  });
+});
+
+describe('a drain that outlives its lease (A-09, EXP-8 ruling R)', () => {
+  test('the late completion ends lease-lost, the members met afterwards end pending as lease-lost, and the drained run writes nothing under the lost lease', () => {
+    const successorAt = T0 + 10_000;
+    const drained = clean({ now: T0, runId: 'run:drain', action: 'members', drainPastLease: { now: successorAt, runId: 'run:successor' } });
+    // The successor took the lease over, found pr-1 in flight, and settled the other members.
+    expect(drained.successor?.statuses).toEqual({ 'pr-1': 'pending', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
+    // The drained run: its late completion of pr-1 could not be recorded, and it could record nothing for pr-2 or pr-3,
+    // not even an acceptance of the successor's results. Every member has a typed outcome.
+    expect(trace(drained)).toContain('assess@pr-1:request-settled:unknown:lease-lost');
+    expect(drained.statuses).toEqual({ 'pr-1': 'pending', 'pr-2': 'pending', 'pr-3': 'pending' });
+    expect(drained.reasons?.['pr-2']).toBe('lease-lost');
+    expect(drained.reasons?.['pr-3']).toBe('lease-lost');
+    // Nothing the drained run did after the takeover is durable: the successor's records stand as it left them.
+    const after = clean({ now: successorAt + 10_000, runId: 'run:read', action: 'inspect' });
+    const byMember = (report: IWorkerReport): Readonly<Record<string, unknown>> => Object.fromEntries(report.operations.flatMap((view) => typeof view === 'object' && view !== null ? [[String(Reflect.get(view, 'member')), view]] : []));
+    expect(byMember(after)).toEqual(byMember(drained.successor ?? { events: [], operations: [], usage: undefined }));
+    expect(pr1Operations(after)).toEqual([expect.objectContaining({ status: 'unknown' })]);
   });
 });
 

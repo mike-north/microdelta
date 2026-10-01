@@ -18,12 +18,21 @@
  * `hardStopOn: 'sleeping'` instead requests it synchronously while the run
  * offers its `sleeping` wait event, as an observer reacting to it would.
  *
+ * `drainPastLease` drains past the lease (EXP-8 ruling R): when the target's
+ * response arrives, the worker requests a soft stop, moves its controlled
+ * clock to the successor's time (past its own lease), and runs a successor
+ * stage, a separate worker process, to completion before the late response
+ * reaches Supervision. The successor takes the lease over and settles the
+ * other members; its report is included in this worker's.
+ *
  * Supervision's clock is a controlled clock at `now` unless `clock: 'node'`
  * selects Node's real timer, whose keep-alive timers hold the process open as
  * they would in production: a stage that must show the process is not kept
  * alive by a pending wait uses it.
  */
+import { spawnSync } from 'node:child_process';
 import { writeSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 
 import { createNodeTimer } from '@microdelta/machine-node';
 import { createStopController } from '@microdelta/supervision';
@@ -59,6 +68,8 @@ export interface IWorkerScript {
   readonly clock?: 'controlled' | 'node';
   /** Body plans by member key; `single` when absent. */
   readonly plans?: Readonly<Record<string, IPlan>>;
+  /** Drain past the lease while a successor stage, at `now` and `runId`, takes over (see the module comment). */
+  readonly drainPastLease?: { readonly now: number; readonly runId: string };
 }
 
 /** What one worker reports. */
@@ -69,6 +80,10 @@ export interface IWorkerReport {
   readonly diagnostics?: readonly string[];
   /** Each failed member's typed failure, as a consumer prints it: its code and framework message. */
   readonly failures?: Readonly<Record<string, { readonly code: string; readonly message: string }>>;
+  /** Each pending or cancelled member's reason. */
+  readonly reasons?: Readonly<Record<string, string>>;
+  /** The successor stage's report, when this worker drained past its lease. */
+  readonly successor?: IWorkerReport;
   readonly events: readonly IRunEvent[];
   readonly operations: readonly unknown[];
   readonly usage: unknown;
@@ -145,9 +160,33 @@ world.provider = {
     if (key === target && script.kill === 'after-send') {
       die();
     }
+    if (key === target && script.drainPastLease !== undefined) {
+      drainPastLease(script.drainPastLease);
+    }
     return answer;
   },
 };
+
+/** The successor stage's report, once it ran. */
+let successor: IWorkerReport | undefined;
+
+/**
+ * Soft-stop this run, move its clock past its lease to the successor's time,
+ * and run the successor stage to completion in a separate process while this
+ * run's response is still on its way.
+ */
+function drainPastLease(next: { readonly now: number; readonly runId: string }): void {
+  stop.request({ level: 'soft' });
+  timer.advanceTo(next.now);
+  const successorScript: IWorkerScript = { history: script.history, accounting: script.accounting, ledger: script.ledger, now: next.now, runId: next.runId, action: 'members' };
+  const ran = spawnSync(process.execPath, [fileURLToPath(import.meta.url), JSON.stringify(successorScript)], { encoding: 'utf8', timeout: 60_000 });
+  const line = ran.stdout.split('\n').find((text) => text.length > 0);
+  if (ran.status !== 0 || line === undefined) {
+    throw new Error(`the successor stage failed (${String(ran.status)}/${String(ran.signal)}): ${ran.stderr}`);
+  }
+  // The successor wrote exactly this shape with JSON.stringify.
+  successor = JSON.parse(line) as IWorkerReport;
+}
 
 /** Kill just after pr-1's usage acknowledgment, when planned. */
 function wrapAccounting(accounting: IOperationAccounting): IOperationAccounting {
@@ -182,6 +221,8 @@ if (script.action === 'members') {
     waitingUntil: result.waitingUntil ?? null,
     diagnostics: result.diagnostics,
     failures: Object.fromEntries(result.value.members.flatMap((member) => member.status === 'failed' ? [[member.key, { code: member.error.code, message: member.error.message }]] : [])),
+    reasons: Object.fromEntries(result.value.members.flatMap((member) => member.status === 'pending' || member.status === 'cancelled' ? [[member.key, member.reason]] : [])),
+    ...(successor === undefined ? {} : { successor }),
     events: started.events,
     operations,
     usage: session.usage(environment),

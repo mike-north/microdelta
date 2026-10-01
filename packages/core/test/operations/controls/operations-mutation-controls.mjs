@@ -265,6 +265,11 @@ const controls = [
     directory: resolution, file: 'resolution.js',
     anchor: '`Body of ${stepKey(step)} failed`, cause);', replacement: '`Body of ${stepKey(step)} failed: ${frameworkDetail(cause)}`, cause);',
   },
+  {
+    name: 'a write the lost lease refuses escapes as a raw History error',
+    directory: resolution, file: 'resolution.js',
+    anchor: 'if (error instanceof StaleWriterError) {', replacement: 'if (false) {',
+  },
 ];
 
 /** Emitted files a control may plant into, with their original bytes. */

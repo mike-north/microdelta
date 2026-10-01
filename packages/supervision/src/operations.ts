@@ -429,7 +429,9 @@ export interface IOperationAttribution {
 /**
  * Supervision's view of Resource Accounting's durable adapter (ACC-003,
  * ACC-005, ACC-007). Every write commits before it returns and needs no
- * writer lease; any thrown error means no acknowledgment was issued.
+ * writer lease; any thrown error means no acknowledgment was issued. An error
+ * whose `durability` is `'unknown'` means the write ran but its commit was not
+ * confirmed, so it may have landed; any other thrown error recorded nothing.
  * @alpha
  */
 export interface IOperationAccounting {

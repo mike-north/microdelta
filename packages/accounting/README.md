@@ -76,7 +76,8 @@ lock never makes a summary fail.
 
 Each write is one IMMEDIATE SQLite transaction that commits before returning
 (ACC-007). If the write's work completed but the commit did not confirm, the
-call fails with `AccountingDurabilityUnknownError` and issues no
+call fails with `AccountingDurabilityUnknownError` (whose `durability` is
+`'unknown'`, a structural mark for consumers without an Accounting edge) and issues no
 acknowledgment; redelivering the same fact resolves it (`duplicate` if it
 landed, recorded otherwise). No write needs History's writer lease or fence:
 each fact is keyed and idempotent, so a stale writer's late report is still

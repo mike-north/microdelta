@@ -274,7 +274,8 @@ describe('intent before send (ACC-007)', () => {
       }, (run) => run.resolve(stepOf('assess', 'pr-1'), { requestKey: `request:${String(round)}` }));
       const recorded = journal.operation(firstOperation);
       const notBefore: unknown = typeof recorded === 'object' && recorded !== null ? Reflect.get(recorded, 'notBefore') : undefined;
-      expect(recorded).toEqual(expect.objectContaining({ status: 'deferred', attempts: [expect.objectContaining({ status: 'not-sent' })] }));
+      // A plain failure recorded nothing, so each retry is a fresh request attempt and the earlier ones stay not sent.
+      expect(recorded).toEqual(expect.objectContaining({ status: 'deferred', attempts: Array.from({ length: round + 1 }, () => expect.objectContaining({ status: 'not-sent', intent: null })) }));
       delays.push(typeof notBefore === 'number' ? notBefore - before : Number.NaN);
       timer.advance(typeof notBefore === 'number' ? notBefore - before : 0);
     }

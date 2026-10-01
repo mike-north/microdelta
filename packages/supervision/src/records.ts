@@ -47,6 +47,12 @@ export interface IAttemptRecord {
   readonly status: IRequestAttemptStatus;
   readonly remote: IOperationRemoteState | undefined;
   readonly usage: IAttemptUsage | undefined;
+  /**
+   * For an attempt never sent, `unconfirmed` when its usage intent may have
+   * landed (Accounting could not confirm the commit), so a retry restates it
+   * under this attempt's identity and attribution; otherwise undefined.
+   */
+  readonly intent: 'unconfirmed' | undefined;
 }
 
 /** One external operation as stored. */
@@ -148,6 +154,7 @@ export function encodeOperation(record: IOperationRecord): IJournalRecordValue {
         status: attempt.status,
         remote: attempt.remote ?? null,
         usage: attempt.usage ?? null,
+        intent: attempt.intent ?? null,
       })),
       settlement: record.settlement === undefined ? null : {
         action: record.settlement.action,
@@ -259,6 +266,8 @@ export function decodeOperation(record: IJournalRecordValue): IOperationRecord {
       status: oneOf(attempt, 'status', attemptStatuses, what),
       remote: optionalOneOf(attempt, 'remote', remoteStates, what),
       usage: optionalOneOf(attempt, 'usage', usages, what),
+      // Absent in records written before the field existed: no landed intent is assumed.
+      intent: field(attempt, 'intent') === undefined ? undefined : optionalOneOf(attempt, 'intent', ['unconfirmed'], what),
     })),
     settlement: settlement === null ? undefined : {
       action: oneOf(settlement, 'action', ['resolve', 'abandon'], what),
@@ -294,7 +303,14 @@ export function viewOf(record: IOperationRecord, scope: { readonly analysis: str
     name: record.name,
     status: record.status,
     notBefore: record.notBefore,
-    attempts: Object.freeze(record.attempts.map((attempt): IRequestAttemptView => Object.freeze({ ...attempt }))),
+    attempts: Object.freeze(record.attempts.map((attempt): IRequestAttemptView => Object.freeze({
+      requestAttempt: attempt.requestAttempt,
+      run: attempt.run,
+      stepAttempt: attempt.stepAttempt,
+      status: attempt.status,
+      remote: attempt.remote,
+      usage: attempt.usage,
+    }))),
     settlement: record.settlement === undefined ? undefined : Object.freeze({ ...record.settlement }),
   });
 }

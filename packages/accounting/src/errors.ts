@@ -86,6 +86,13 @@ export class AccountingBusyError extends Error {
  * @alpha
  */
 export class AccountingDurabilityUnknownError extends Error {
+  /**
+   * The structural mark of this failure: the write may have landed. Consumers
+   * that cannot depend on this package, such as Run Supervision, read it to
+   * tell a write that may be durable from one that recorded nothing.
+   */
+  public readonly durability = 'unknown' as const;
+
   /** Create a durability-unknown failure carrying the storage error as its cause. */
   public constructor(message: string, cause: unknown) {
     super(message, { cause });

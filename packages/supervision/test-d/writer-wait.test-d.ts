@@ -11,7 +11,7 @@
 import { expectAssignable, expectError, expectNotAssignable, expectType } from 'tsd';
 
 import { SupervisionError, WriterBusyError } from '../dist/src/index.js';
-import type { IRunLease, IRunOptions, IRunWriter, IWriterAttempt, IWriterBusyObservation, IWriterWaitOptions } from '../dist/src/index.js';
+import type { IRunLease, IRunOptions, IRunWriter, ISupervisionErrorCode, IWriterAttempt, IWriterBusyObservation, IWriterWaitOptions } from '../dist/src/index.js';
 
 declare const lease: IRunLease;
 declare const attempt: IWriterAttempt;
@@ -47,7 +47,9 @@ expectType<IWriterWaitOptions | undefined>(options.writerWait);
 
 // Writer-busy is a typed Supervision error with the observation it gave up on.
 expectAssignable<SupervisionError>(busy);
-expectType<'outside-run' | 'run-closed' | 'composition-phase' | 'observer-failure' | 'writer-busy' | 'invalid-request' | 'stopped'>(busy.code);
+expectType<ISupervisionErrorCode>(busy.code);
+expectAssignable<ISupervisionErrorCode>('writer-busy');
+expectNotAssignable<ISupervisionErrorCode>('writer-unavailable');
 expectType<string | undefined>(busy.holder);
 expectType<number | undefined>(busy.expiresAt);
 expectType<number>(busy.deadline);

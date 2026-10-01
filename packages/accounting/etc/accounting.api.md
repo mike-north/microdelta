@@ -15,6 +15,7 @@ export class AccountingBusyError extends Error {
 // @alpha
 export class AccountingDurabilityUnknownError extends Error {
     constructor(message: string, cause: unknown);
+    readonly durability: "unknown";
 }
 
 // @alpha

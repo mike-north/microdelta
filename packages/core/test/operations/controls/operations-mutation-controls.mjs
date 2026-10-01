@@ -157,7 +157,7 @@ const controls = [
     directory: supervision, file: 'supervision.js',
     edits: [
       { anchor: 'function leaseForPass() {\n            return writerLease();\n        }', replacement: "function leaseForPass(number) {\n            if (number > 1 && writerPolicy.deadline !== undefined) {\n                const attempt = writer.tryLease();\n                if (attempt.kind !== 'acquired') {\n                    throw new SupervisionError('writer-busy', 'woken pass gave up');\n                }\n                return Promise.resolve(attempt.lease);\n            }\n            return writerLease();\n        }" },
-      { anchor: 'const lease = await leaseForPass();', replacement: 'const lease = await leaseForPass(number);' },
+      { anchor: 'lease = await leaseForPass();', replacement: 'lease = await leaseForPass(number);' },
     ],
   },
   {
@@ -166,7 +166,7 @@ const controls = [
     directory: supervision, file: 'supervision.js',
     edits: [
       { anchor: 'function leaseForPass() {\n            return writerLease();\n        }', replacement: "function leaseForPass(number) {\n            if (number > 1 && writerPolicy.deadline === undefined) {\n                const attempt = writer.tryLease();\n                return Promise.resolve(attempt.kind === 'acquired' ? attempt.lease : undefined);\n            }\n            return writerLease();\n        }" },
-      { anchor: 'const lease = await leaseForPass();', replacement: "const lease = await leaseForPass(number);\n                if (lease === undefined) {\n                    return previous;\n                }" },
+      { anchor: 'lease = await leaseForPass();', replacement: "lease = await leaseForPass(number);\n                    if (lease === undefined) {\n                        return previous;\n                    }" },
     ],
   },
   {
@@ -190,7 +190,7 @@ const controls = [
   {
     name: 'a retry after an unconfirmed intent mints a new request attempt (M3)',
     directory: supervision, file: 'operation-engine.js',
-    anchor: "const unsent = last?.status === 'not-sent' ? last : undefined;", replacement: 'const unsent = undefined;',
+    anchor: "const unsent = last?.status === 'not-sent' && last.intent === 'unconfirmed' ? last : undefined;", replacement: 'const unsent = undefined;',
   },
   {
     name: 'the intent retry delay does not grow',
@@ -201,6 +201,37 @@ const controls = [
     name: 'a random identifier of any alphanumeric shape is accepted',
     directory: supervision, file: 'operation-engine.js',
     anchor: 'const randomRule = /^[0-9a-f]{32}$/u;', replacement: 'const randomRule = /^[0-9a-z]{16,64}$/u;',
+  },
+  {
+    name: 'a durable intent does not reset the intent backoff (L4)',
+    directory: supervision, file: 'operation-engine.js',
+    anchor: 'if (intent.unrecorded !== 0) {', replacement: 'if (false) {',
+  },
+  {
+    name: 'settling an operation tries the writer once instead of waiting (L6)',
+    directory: supervision, file: 'supervision.js',
+    anchor: "operationsOf('Settling an operation').settle(settlement, await writerLease())",
+    replacement: "operationsOf('Settling an operation').settle(settlement, (() => { const tried = writer.tryLease(); if (tried.kind !== 'acquired') { throw new SupervisionError('writer-busy', 'single try without waiting'); } return tried.lease; })())",
+  },
+  {
+    name: "a stop during a woken pass's lease wait rejects instead of returning the earlier report",
+    directory: supervision, file: 'supervision.js',
+    anchor: "if (previous === undefined || woken === undefined || !(error instanceof SupervisionError) || error.code !== 'stopped') {", replacement: 'if (true) {',
+  },
+  {
+    name: 'an attempt whose intent recorded nothing is reused with its stale attribution',
+    directory: supervision, file: 'operation-engine.js',
+    anchor: "const unsent = last?.status === 'not-sent' && last.intent === 'unconfirmed' ? last : undefined;", replacement: "const unsent = last?.status === 'not-sent' ? last : undefined;",
+  },
+  {
+    name: "an unconfirmed attempt loses its mark when its reuse meets a failure that recorded nothing",
+    directory: supervision, file: 'operation-engine.js',
+    anchor: "const unconfirmed = intentMayHaveLanded(error) ? 'unconfirmed' : unsent?.intent;", replacement: "const unconfirmed = intentMayHaveLanded(error) ? 'unconfirmed' : undefined;",
+  },
+  {
+    name: 'a legacy not-sent attempt without the mark is read as having recorded nothing (P3)',
+    directory: supervision, file: 'records.js',
+    anchor: "? (field(attempt, 'status') === 'not-sent' ? 'unconfirmed' : undefined)", replacement: '? undefined',
   },
   {
     name: "Resolution refuses a promoted candidate's trial provenance",

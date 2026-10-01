@@ -30,7 +30,7 @@ const supervision = join(root, 'packages/supervision/dist/src');
 const resolution = join(root, 'packages/resolution/dist/src');
 
 /** The operation suite files every run must execute. */
-const suites = Object.freeze(['operations.test.js', 'replay.test.js', 'operator.test.js', 'environments.test.js', 'privacy.test.js', 'processes.test.js', 'outcome-fold.test.js']);
+const suites = Object.freeze(['operations.test.js', 'replay.test.js', 'operator.test.js', 'environments.test.js', 'privacy.test.js', 'processes.test.js', 'outcome-fold.test.js', 'boundaries.test.js']);
 
 const controls = [
   {
@@ -108,6 +108,74 @@ const controls = [
     anchor: "return { kind: 'refused', refused: step, reason, disposition: 'denied' };", replacement: "return { kind: 'refused', refused: step, reason, disposition: 'cancelled' };",
   },
   {
+    name: 'a resolved-succeeded address is minted and sent again',
+    directory: supervision, file: 'records.js',
+    anchor: "return isUnsettled(record.status) || (record.status === 'resolved' && record.settlement?.outcome === 'succeeded');", replacement: 'return isUnsettled(record.status);',
+  },
+  {
+    name: 'an operator identity that is not an identifier is accepted',
+    directory: supervision, file: 'operation-engine.js',
+    anchor: "if ((action !== 'resolve' && action !== 'abandon') || !nonempty(operation) || !isIdentifier(operator)) {", replacement: "if ((action !== 'resolve' && action !== 'abandon') || !nonempty(operation) || !nonempty(operator)) {",
+  },
+  {
+    name: 'a stop admits a resumable deferral',
+    directory: supervision, file: 'operation-engine.js',
+    anchor: 'if (resumable && stopped) {', replacement: 'if (false) {',
+  },
+  {
+    name: 'the lease is released while another pass is active',
+    directory: supervision, file: 'supervision.js',
+    anchor: 'if (passes.active > 0) {', replacement: 'if (false) {',
+  },
+  {
+    name: 'the lease is kept when the last active pass ends while a request sleeps',
+    directory: supervision, file: 'supervision.js',
+    anchor: 'if (passes.sleeping > 0) {', replacement: 'if (false) {',
+  },
+  {
+    name: 'a pending operation committed under the current fence is judged dead',
+    directory: supervision, file: 'operation-engine.js',
+    anchor: "return stored.record.status === 'pending' && lease !== undefined && stored.fence !== lease.fence;", replacement: "return stored.record.status === 'pending';",
+  },
+  {
+    name: 'two calls at one address may proceed at once',
+    directory: supervision, file: 'operation-engine.js',
+    anchor: 'if (inProgress.has(address)) {', replacement: 'if (false) {',
+  },
+  {
+    name: 'operation identities come from store-local attempt numbers',
+    directory: supervision, file: 'operation-engine.js',
+    anchor: 'operation: mintOperation(),', replacement: 'operation: `op-${stepAttempt}`,',
+  },
+  {
+    name: 'an Accounting intent that is not durable fails the member',
+    directory: supervision, file: 'operation-engine.js',
+    anchor: 'const notBefore = now() + intentRetryMilliseconds;', replacement: "throw new SupervisionError('operation-unrecorded', 'intent not durable');",
+  },
+  {
+    name: 'waking while another holder has the lease rejects the request',
+    directory: supervision, file: 'supervision.js',
+    anchor: "if (error instanceof SupervisionError && error.code === 'writer-unavailable') {", replacement: 'if (false) {',
+  },
+  {
+    name: 'an ended attempt may still send an operation',
+    directory: supervision, file: 'operation-engine.js',
+    edits: [
+      { anchor: "throw new SupervisionError('invalid-request', `Operation ${request.name} was called after its step attempt ended; nothing was sent`);", replacement: 'void 0;' },
+      { anchor: "throw new EndedAttemptError('the step attempt ended before the send');", replacement: 'void 0;' },
+    ],
+  },
+  {
+    name: 'a caller request key may take the reserved pass separator',
+    directory: supervision, file: 'supervision.js',
+    anchor: "if (typeof callerKey === 'string' && callerKey.includes(passSeparator)) {", replacement: 'if (false) {',
+  },
+  {
+    name: 'the relaxed historical check admits a dependency of another analysis',
+    directory: resolution, file: 'resolution.js',
+    anchor: 'return historical.analysis === analysis;', replacement: 'return true;',
+  },
+  {
     name: "Resolution refuses a promoted candidate's trial provenance",
     directory: resolution, file: 'resolution.js',
     anchor: 'return historical.analysis === analysis;', replacement: 'return historical.analysis === analysis && historical.environment === environment;',
@@ -172,13 +240,15 @@ try {
   for (const control of controls) {
     const path = join(control.directory, control.file);
     const original = originals.get(path);
-    const count = original.split(control.anchor).length - 1;
-    if (count !== 1) {
-      console.log(`ANCHOR ${String(count)}x: ${control.name}`);
+    // A control plants one edit, or several edits that together remove one behavior.
+    const edits = control.edits ?? [{ anchor: control.anchor, replacement: control.replacement }];
+    const counts = edits.map((edit) => original.split(edit.anchor).length - 1);
+    if (counts.some((count) => count !== 1)) {
+      console.log(`ANCHOR ${counts.join('/')}x: ${control.name}`);
       failures += 1;
       continue;
     }
-    writeFileSync(path, original.replace(control.anchor, control.replacement));
+    writeFileSync(path, edits.reduce((text, edit) => text.replace(edit.anchor, edit.replacement), original));
     try {
       const { failed } = await runSuites(baseline.titles);
       console.log(`\n## ${control.name}: ${String(failed.length)} failing`);

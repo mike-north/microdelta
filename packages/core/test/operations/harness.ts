@@ -20,17 +20,21 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { openDurableAccounting } from '@microdelta/accounting';
-import type { IDurableAccounting, IUsageSummary } from '@microdelta/accounting';
+import type { IDurableAccounting, IDurableAccountingOptions, IUsageSummary } from '@microdelta/accounting';
 import { StaleWriterError, openDurableHistory } from '@microdelta/history';
 import type { IDurableHistory, IOperationJournal, IWriterLease } from '@microdelta/history';
-import { createNodeMachine, createNodeSqlite } from '@microdelta/machine-node';
+import { createNodeMachine, createNodeRandom, createNodeSqlite } from '@microdelta/machine-node';
 import { createResolution } from '@microdelta/resolution';
+import type { IResolutionHistory } from '@microdelta/resolution';
 import { SupervisionError, createSupervision, operationJournalDeclaration } from '@microdelta/supervision';
 import type { IDeferralMode, IOperationAccounting, IRun, IRunEvent, IRunResult, IRunTimer, IRunWriter, IStopController, ISupervision } from '@microdelta/supervision';
 import { createTrackingObserver } from '@microdelta/tracking';
 
 import { composeOperations, useSupervision } from './fixture.js';
 import type { IOperationsFixture } from './fixture.js';
+
+/** The Machine SQLite capability as Accounting's adapter receives it. */
+export type ISqliteCapability = IDurableAccountingOptions['sqlite'];
 
 /** The Node host every session shares. */
 export const machine = createNodeMachine();
@@ -200,15 +204,19 @@ export interface ISessionOptions {
   readonly leaseMilliseconds?: number;
   /** Wrap the Accounting port Supervision receives, for fault injection around the real adapter. */
   readonly wrapAccounting?: (accounting: IOperationAccounting) => IOperationAccounting;
+  /** Wrap the History port Resolution receives, to present damaged evidence at the port boundary. */
+  readonly wrapHistory?: (history: IDurableHistory) => IResolutionHistory;
+  /** The SQLite capability Accounting's adapter opens its file with; Node's real one when absent. */
+  readonly accountingSqlite?: ISqliteCapability;
 }
 
 /** Open a session over `stores`, with Supervision's clock at `timer`. */
 export function openSession(stores: Pick<IOperationStores, 'history' | 'accounting'>, timer: IFakeTimer, options: ISessionOptions = {}): IOperationSession {
   // History's lease clock and Supervision's deferral clock are one controlled clock, so lease expiry across processes needs no real waiting.
   const history = openDurableHistory({ sqlite: createNodeSqlite(), clock: { currentEpochMilliseconds: () => timer.currentEpochMilliseconds() }, sha256: machine, location: stores.history, logicalStore });
-  const accounting = openDurableAccounting({ sqlite: createNodeSqlite(), location: stores.accounting, logicalStore });
+  const accounting = openDurableAccounting({ sqlite: options.accountingSqlite ?? createNodeSqlite(), location: stores.accounting, logicalStore });
   const journal = history.openJournal(operationJournalDeclaration);
-  const supervision = createSupervision({ context: machine, timer });
+  const supervision = createSupervision({ context: machine, timer, random: createNodeRandom() });
   const fixture = composeOperations();
   useSupervision(supervision);
   const leaseMilliseconds = options.leaseMilliseconds ?? 24 * hour;
@@ -240,7 +248,7 @@ export function openSession(stores: Pick<IOperationStores, 'history' | 'accounti
           composition: fixture.composition,
           bindings: { inputs: fixture.composition.topology.inputs, helpers: fixture.composition.topology.helpers },
           environment,
-          history,
+          history: options.wrapHistory?.(history) ?? history,
           tracking: createTrackingObserver(machine),
           host: machine,
           admission: ports.admission,

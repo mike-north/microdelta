@@ -10,6 +10,9 @@
  *   isolates its paid call in its own step (EXP-8 resolution 3).
  * - `report` is a strict fold over every member's `assess`, and `tally` an
  *   outcome fold over the same members that notes each settled status.
+ * - `parent` is a composition-level memo that waits for its gate and then
+ *   demands its child `paid`, a memo whose body makes one `paid` operation:
+ *   a well-authored parent isolating its paid call in a child step.
  *
  * Author callbacks capture nothing but their typed context: every effect goes
  * through a declared helper over the module's `world`, which each test
@@ -26,6 +29,8 @@ import type { IOperationRetryPolicy, ISupervision } from '@microdelta/supervisio
 
 import { sourceOutcome } from '../../src/index.js';
 import type { IAuthoring, IAuthoringFamily, IComposition, ISourceOutcome, IStepDescriptor, ITrackedView } from '../../src/index.js';
+import { gates } from '../stop/support.js';
+import type { IGates } from '../stop/support.js';
 import { fakeProvider } from './provider.js';
 import type { IAssessment, IFakeProvider } from './provider.js';
 
@@ -51,9 +56,16 @@ export interface IRoster {
  *   as a careless author's hand-written retry loop does (CX-6, CX-7); then
  *   return a fallback;
  * - `two-ops`: call `assess`, catch its failure, then call a second
- *   operation `polish` (a tainted attempt must send nothing more).
+ *   operation `polish` (a tainted attempt must send nothing more);
+ * - `concurrent`: start `assess`, wait for the `<key>:second` gate while it is
+ *   in flight, then call `assess` again at the same address; both outcomes
+ *   are noted;
+ * - `detached`: return at once, leaving an `assess` call that starts only
+ *   after the `<key>:late` gate opens (author code that kept the controls);
+ * - `twin`: start two `assess` calls at the same address in the same turn
+ *   and note both outcomes.
  */
-export type IPlan = 'single' | 'catch-retry' | 'two-ops';
+export type IPlan = 'single' | 'catch-retry' | 'two-ops' | 'concurrent' | 'detached' | 'twin';
 
 /** Per-member operation declarations a test chooses. */
 export interface IOperationOptions {
@@ -78,6 +90,8 @@ export interface IWorld {
   cancel: 'cancelled' | 'running' | undefined;
   /** Ordered notes: failure codes the bodies caught. */
   log: string[];
+  /** Gates the test opens. */
+  gates: IGates;
 }
 
 /** The Supervision the fixture's helpers look the live run up in. */
@@ -93,7 +107,7 @@ export let world: IWorld = createWorld(() => 0);
 
 /** A fresh world over `keys`. */
 export function createWorld(now: () => number, keys: readonly string[] = ['pr-1', 'pr-2', 'pr-3'], ledgerPath?: string): IWorld {
-  return { keys, plans: {}, options: {}, provider: fakeProvider(now, ledgerPath), bindingSuffix: '', cancel: undefined, log: [] };
+  return { keys, plans: {}, options: {}, provider: fakeProvider(now, ledgerPath), bindingSuffix: '', cancel: undefined, log: [], gates: gates() };
 }
 
 /** Install a world. */
@@ -127,6 +141,8 @@ export interface IHelpers {
   readonly assess: (key: string) => Promise<IAssessment>;
   readonly render: (entries: IAssessmentEntries) => IReport;
   readonly tally: (entries: ITallyEntries) => ITally;
+  readonly gate: (label: string) => Promise<void>;
+  readonly paid: () => Promise<IAssessment>;
 }
 
 /** The live run's execution controls through the session's Supervision. */
@@ -190,6 +206,27 @@ async function assess(key: string): Promise<IAssessment> {
         return { key, verdict: 'fallback' };
       }
     }
+    case 'concurrent': {
+      const first = operation('assess', key).then(() => 'first:succeeded', (error: unknown) => `first:${codeOf(error)}`);
+      await world.gates.wait(`${key}:second`);
+      const second = await operation('assess', key).then(() => 'second:succeeded', (error: unknown) => `second:${codeOf(error)}`);
+      world.log.push(`${key}:${second}`);
+      world.log.push(`${key}:${await first}`);
+      return { key, verdict: 'concurrent' };
+    }
+    case 'twin': {
+      const outcomes = await Promise.all([operation('assess', key), operation('assess', key)].map((call) => call.then(() => 'succeeded', (error: unknown) => codeOf(error))));
+      world.log.push(`${key}:twin:${outcomes.join(',')}`);
+      return { key, verdict: 'twin' };
+    }
+    case 'detached': {
+      void world.gates.wait(`${key}:late`).then(() => operation('assess', key)).then(() => {
+        world.log.push(`detached-sent:${key}`);
+      }, (error: unknown) => {
+        world.log.push(`caught-detached:${key}:${codeOf(error)}`);
+      });
+      return { key, verdict: 'detached' };
+    }
     default: {
       const exhaustive: never = plan;
       return exhaustive;
@@ -209,6 +246,18 @@ function tally(entries: ITallyEntries): ITally {
   return { statuses };
 }
 
+/** Wait for a gate the test opens, noting that the body waits. */
+async function gate(label: string): Promise<void> {
+  world.log.push(`waiting:${label}`);
+  await world.gates.wait(label);
+}
+
+/** The child's one paid operation. */
+function paid(): Promise<IAssessment> {
+  world.log.push('paid-start');
+  return operation('paid', 'parent');
+}
+
 /** One fresh composition with its builders and the descriptors tests use. */
 export interface IOperationsFixture {
   readonly builders: IAuthoring<IInputs, IHelpers>;
@@ -217,6 +266,8 @@ export interface IOperationsFixture {
   readonly report: IStepDescriptor;
   /** The outcome fold over every member's assessment. */
   readonly tally: IStepDescriptor;
+  /** The parent whose child makes a paid call. */
+  readonly parent: IStepDescriptor;
   /** One member's `assess` instance. */
   instance(memberKey: string): IStepDescriptor;
 }
@@ -229,7 +280,7 @@ export function assessmentSubject(key: string): string {
 /** Compose the fixture with fresh allocations, standing in for a new process. */
 export function composeOperations(): IOperationsFixture {
   const builders: IAuthoring<IInputs, IHelpers> = declarations<IAuthoringFamily<IInputs, IHelpers>>();
-  const { source, template, fold, outcomeFold, compose } = builders;
+  const { source, memo, template, fold, outcomeFold, compose } = builders;
   const prs = source<IRoster>({
     subject: 'prs:acme/widget',
     collection: { identity: 'key' },
@@ -244,6 +295,16 @@ export function composeOperations(): IOperationsFixture {
   });
   const pr = template({ slot: 'pr', collection: prs, steps });
   const report = fold({ subject: 'report:acme/widget', over: { template: pr, step: 'assess' }, run: ({ members, helpers }) => helpers.render(members) });
+  const paidStep = memo({ subject: 'paid:acme/widget', run: ({ helpers }) => helpers.paid() });
+  const parent = memo({
+    subject: 'parent:acme/widget',
+    children: { paid: paidStep },
+    run: async ({ calls, helpers }) => {
+      await helpers.gate('parent');
+      const child = await calls.paid();
+      return { key: 'parent', verdict: child.data.verdict };
+    },
+  });
   const tallied = outcomeFold({ subject: 'tally:acme/widget', over: { template: pr, step: 'assess' }, run: ({ members, helpers }) => helpers.tally(members) });
   const composition = compose({
     scope: analysis,
@@ -253,11 +314,15 @@ export function composeOperations(): IOperationsFixture {
       { slot: 'assess', helper: assess },
       { slot: 'render', helper: render },
       { slot: 'tally', helper: tally },
+      { slot: 'gate', helper: gate },
+      { slot: 'paid', helper: paid },
     ],
     steps: [
       { slot: 'prs', declaration: prs },
       { slot: 'report', declaration: report },
       { slot: 'tally', declaration: tallied },
+      { slot: 'paid', declaration: paidStep },
+      { slot: 'parent', declaration: parent },
     ],
     templates: [pr],
   });
@@ -266,6 +331,7 @@ export function composeOperations(): IOperationsFixture {
     composition,
     report: Object.freeze({ scope: analysis, role: 'step', slot: 'report' }),
     tally: Object.freeze({ scope: analysis, role: 'step', slot: 'tally' }),
+    parent: Object.freeze({ scope: analysis, role: 'step', slot: 'parent' }),
     instance: (memberKey) => Object.freeze({ scope: analysis, role: 'step', slot: 'assess', template: 'pr', collection: 'prs', memberKey }),
   };
 }

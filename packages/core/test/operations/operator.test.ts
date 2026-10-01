@@ -28,7 +28,7 @@ import { createWorld, installWorld } from './fixture.js';
 import type { IWorld } from './fixture.js';
 import { fakeTimer, openSession, operationTrace, statuses, tempStores, until } from './harness.js';
 import type { IFakeTimer, IOperationSession, IOperationStores } from './harness.js';
-import { inspect, memberOf, members, received } from './support.js';
+import { applied, failureCode, inspect, memberOf, members, received } from './support.js';
 
 let stores: IOperationStores;
 let timer: IFakeTimer;
@@ -66,7 +66,7 @@ function codeOf(pending: Promise<unknown>): Promise<string> {
 }
 
 describe('operator settlement of an unknown operation (EXP-8 resolution 5)', () => {
-  test('resolving with learned usage records it under the operator namespace, is recorded, and unblocks the member', async () => {
+  test('resolving as succeeded with learned usage records it under the operator namespace, is recorded, and consumes the address: the member is never sent again', async () => {
     const operation = await leaveUnknown();
     const session = openSession(stores, timer);
     try {
@@ -90,9 +90,59 @@ describe('operator settlement of an unknown operation (EXP-8 resolution 5)', () 
       expect(session.accounting.summarizeUsage({ environment: 'env:production', operation })).toEqual(expect.objectContaining({ status: 'complete', observed: [{ unit: 'tokens', amount: 100 }], reports: 1 }));
       // The settlement is durable: a fresh read sees it.
       expect((await inspect(session)).find((entry) => entry.operation === operation)?.status).toBe('resolved');
-      // The member is no longer blocked: its next execution makes a new operation.
+      // The member is no longer blocked, but the operator asserted the effect happened: a later call at the
+      // same address mints and sends nothing and fails with a typed code carrying no value (regression B1).
       const result = await members(session).done;
-      expect(statuses(result.value.members)).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
+      expect(statuses(result.value.members)).toEqual({ 'pr-1': 'failed', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
+      expect(failureCode(memberOf(result.value, 'pr-1'))).toBe('operation-resolved');
+      expect(received('pr-1')).toHaveLength(1);
+      expect(applied('pr-1')).toHaveLength(1);
+      // Inspection still shows the one resolved operation at the address.
+      expect((await inspect(session)).filter((entry) => entry.member === 'pr-1').map((entry) => [entry.operation, entry.status])).toEqual([[operation, 'resolved']]);
+    } finally {
+      session.close();
+    }
+  });
+
+  test('with provider idempotency keys too, a resolved-succeeded address is never sent again (regression B1)', async () => {
+    world.options['pr-1'] = { providerIdempotency: true };
+    const operation = await leaveUnknown();
+    const session = openSession(stores, timer);
+    try {
+      await session.start({}, (run) => run.settleOperation({ action: 'resolve', operation, operator: 'operator.ada', outcome: 'succeeded' })).done;
+      const result = await members(session).done;
+      expect(failureCode(memberOf(result.value, 'pr-1'))).toBe('operation-resolved');
+      expect(received('pr-1')).toHaveLength(1);
+      expect(applied('pr-1')).toHaveLength(1);
+    } finally {
+      session.close();
+    }
+  });
+
+  test('a body may catch the resolved code, and an uncaught one names it without any value', async () => {
+    const operation = await leaveUnknown();
+    world.plans['pr-1'] = 'catch-retry';
+    const session = openSession(stores, timer);
+    try {
+      await session.start({}, (run) => run.settleOperation({ action: 'resolve', operation, operator: 'operator.ada', outcome: 'succeeded' })).done;
+      const result = await members(session).done;
+      // The author caught it three times and returned a fallback, which publishes.
+      expect(world.log).toEqual(['caught:pr-1:operation-resolved', 'caught:pr-1:operation-resolved', 'caught:pr-1:operation-resolved']);
+      expect(memberOf(result.value, 'pr-1').status).toBe('succeeded');
+      expect(received('pr-1')).toHaveLength(1);
+    } finally {
+      session.close();
+    }
+  });
+
+  test('resolving as failed asserts no effect and frees the address: the next execution makes a new operation', async () => {
+    const operation = await leaveUnknown();
+    const session = openSession(stores, timer);
+    try {
+      const view = (await session.start({}, (run) => run.settleOperation({ action: 'resolve', operation, operator: 'operator.ada', outcome: 'failed' })).done).value;
+      expect(view.status).toBe('resolved');
+      const result = await members(session).done;
+      expect(memberOf(result.value, 'pr-1').status).toBe('succeeded');
       const requests = received('pr-1');
       expect(requests).toHaveLength(2);
       expect(requests[1]?.operation).not.toBe(operation);
@@ -110,8 +160,10 @@ describe('operator settlement of an unknown operation (EXP-8 resolution 5)', () 
       expect(view.settlement).toEqual({ action: 'abandon', outcome: undefined, operator: 'operator.ada', at: timer.currentEpochMilliseconds(), report: undefined });
       const usage = session.accounting.summarizeUsage({ environment: 'env:production', operation });
       expect(usage.status).toBe('incomplete');
+      // Abandoning is the operator's explicit authorization of a possible second effect: the address is free.
       const result = await members(session).done;
       expect(memberOf(result.value, 'pr-1').status).toBe('succeeded');
+      expect(received('pr-1')).toHaveLength(2);
     } finally {
       session.close();
     }
@@ -126,9 +178,23 @@ describe('operator settlement of an unknown operation (EXP-8 resolution 5)', () 
       const refused = await session.start({}, (run) => Promise.all([
         codeOf(run.settleOperation({ action: 'abandon', operation: succeeded?.operation ?? 'none', operator: 'operator.ada' })),
         codeOf(run.settleOperation({ action: 'abandon', operation: 'op-missing', operator: 'operator.ada' })),
-        codeOf(run.settleOperation({ action: 'abandon', operation: succeeded?.operation ?? 'none', operator: 'not an identifier!' })),
       ])).done;
-      expect(refused.value).toEqual(['invalid-request', 'invalid-request', 'invalid-request']);
+      expect(refused.value).toEqual(['invalid-request', 'invalid-request']);
+    } finally {
+      session.close();
+    }
+  });
+
+  test('an operator identity that is not an identifier is refused, and the unknown operation stays unsettled', async () => {
+    const operation = await leaveUnknown();
+    const session = openSession(stores, timer);
+    try {
+      const refused = await session.start({}, (run) => Promise.all([
+        codeOf(run.settleOperation({ action: 'abandon', operation, operator: 'not an identifier!' })),
+        codeOf(run.settleOperation({ action: 'resolve', operation, operator: 'Operator Ada', outcome: 'succeeded' })),
+      ])).done;
+      expect(refused.value).toEqual(['invalid-request', 'invalid-request']);
+      expect((await inspect(session)).find((view) => view.operation === operation)?.status).toBe('unknown');
     } finally {
       session.close();
     }

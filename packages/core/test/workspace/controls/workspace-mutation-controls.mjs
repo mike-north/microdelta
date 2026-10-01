@@ -33,6 +33,7 @@ const root = new URL('../../../../../', import.meta.url).pathname;
 const targets = Object.freeze({
   supervision: [join(root, 'packages/supervision/dist/src/supervision.js'), join(root, 'packages/supervision/.test-build/src/supervision.js')],
   workspace: [join(root, 'packages/core/.test-build/src/workspace.js')],
+  writer: [join(root, 'packages/core/.test-build/src/writer.js')],
   activity: [join(root, 'examples/contribution-report/dist/activity.js')],
 });
 
@@ -46,7 +47,7 @@ const controls = [
   { name: 'the run yields between its final empty check and closing', target: 'supervision', anchor: '            }\n            frame.open = false;', replacement: '            }\n            await Promise.resolve();\n            frame.open = false;' },
   { name: 'started operations are not accounted to the run', target: 'supervision', anchor: 'started.add(settled);', replacement: 'void settled;' },
   { name: 'the caller admission policy is ignored', target: 'supervision', anchor: 'const decision = await policy.admit(request);', replacement: "const decision = Object.freeze({ kind: 'admitted' });" },
-  { name: 'recovery takes the writer lease', target: 'supervision', anchor: 'return within(() => resolution.recover({ step, requestKey: request.requestKey }));', replacement: 'return within(() => { writer.lease(); return resolution.recover({ step, requestKey: request.requestKey }); });' },
+  { name: 'recovery takes the writer lease', target: 'supervision', anchor: "return within(() => resolution.recover({ step, requestKey: request.requestKey }), 'recover');", replacement: "return within(() => { writer.tryLease(); return resolution.recover({ step, requestKey: request.requestKey }); }, 'recover');" },
   { name: 'the writer lease is never released', target: 'supervision', anchor: 'writer.release();', replacement: 'void writer;' },
   { name: 'observer failures are swallowed', target: 'supervision', anchor: 'throw failure.error;', replacement: 'void failure;' },
   { name: 'observers are read live instead of captured at start', target: 'supervision', anchor: 'Reflect.apply(observe, observer, [event]);', replacement: "Reflect.apply(Reflect.get(observer, 'observe'), observer, [event]);" },
@@ -55,8 +56,8 @@ const controls = [
   { name: 'request diagnostics are not collected by the run', target: 'supervision', anchor: 'diagnostics.push(...outcome.diagnostics);', replacement: 'void outcome;' },
   { name: 'Resolution uses a fixed environment instead of the selected one', target: 'workspace', anchor: "                    environment: runOptions.environment,\n                    history,", replacement: "                    environment: 'env:fixture',\n                    history," },
   { name: 'a closed run can still read results', target: 'workspace', anchor: 'if (!live.open) {', replacement: 'if (false) {' },
-  { name: 'an expired writer lease is kept instead of re-acquired', target: 'workspace', anchor: 'if (!(error instanceof StaleWriterError)) {\n                        throw error;\n                    }\n                    held = undefined;', replacement: 'if (true) {\n                        throw error;\n                    }\n                    held = undefined;' },
-  { name: 'releasing an expired lease is reported as a failure', target: 'workspace', anchor: 'if (!(error instanceof StaleWriterError)) {\n                        throw error;\n                    }\n                }\n            }', replacement: 'if (true) {\n                        throw error;\n                    }\n                }\n            }' },
+  { name: 'an expired writer lease is kept instead of re-acquired', target: 'writer', anchor: 'if (!(error instanceof StaleWriterError)) {\n                        throw error;\n                    }\n                    held = undefined;', replacement: 'if (true) {\n                        throw error;\n                    }\n                    held = undefined;' },
+  { name: 'releasing an expired lease is reported as a failure', target: 'writer', anchor: 'if (!(error instanceof StaleWriterError)) {\n                        throw error;\n                    }\n                }\n            }', replacement: 'if (true) {\n                        throw error;\n                    }\n                }\n            }' },
   { name: 'every run of a workspace uses the same writer holder name', target: 'workspace', anchor: 'writer: writerFor(history, `microdelta-run:${runId}`, leaseMilliseconds),', replacement: 'writer: writerFor(history, `microdelta-run:${composition.scope}`, leaseMilliseconds),' },
   { name: 'the example counts pending reviews', target: 'activity', anchor: "review.state === 'submitted' && ", replacement: '' },
   { name: 'the example window end is inclusive', target: 'activity', anchor: 'return time >= Date.parse(`${window.start}T00:00:00Z`) && time < Date.parse(', replacement: 'return time >= Date.parse(`${window.start}T00:00:00Z`) && time <= Date.parse(' },
@@ -142,9 +143,10 @@ async function runExample(expectedTitles) {
 
 /** Run every suite once; `baseline` holds the expected titles per suite set. */
 async function runAll(baseline) {
-  const supervision = await runJest(join(root, 'packages/supervision/jest.config.mjs'), '.test-build/test', ['supervision.test.js'], baseline?.supervision);
-  const workspace = await runJest(join(root, 'packages/core/jest.config.mjs'), '.test-build/test/workspace',
-    ['admission-observers.test.js', 'contribution-run.test.js', 'recovery.test.js', 'scope.test.js'], baseline?.workspace);
+  // Patterns name exactly the suites judged, so suites added to these directories later do not invalidate the run.
+  const supervision = await runJest(join(root, 'packages/supervision/jest.config.mjs'), '.test-build/test/supervision\\.test\\.js$', ['supervision.test.js'], baseline?.supervision);
+  const workspace = await runJest(join(root, 'packages/core/jest.config.mjs'), '.test-build/test/workspace/(admission-observers|contribution-run|recovery|scope|writer-wait)\\.test\\.js$',
+    ['admission-observers.test.js', 'contribution-run.test.js', 'recovery.test.js', 'scope.test.js', 'writer-wait.test.js'], baseline?.workspace);
   const example = await runExample(baseline?.example);
   return {
     titles: { supervision: supervision.titles, workspace: workspace.titles, example: example.titles },

@@ -95,6 +95,7 @@ export {
 export {
   ResolutionError,
   SupervisionError,
+  WriterBusyError,
   createStopController,
   currentExecution,
   currentRun,
@@ -149,4 +150,5 @@ export {
   type IWorkspaceOptions,
   type IWorkspaceRun,
   type IWorkspaceRunOptions,
+  type IWriterWaitOptions,
 } from './workspace.js';

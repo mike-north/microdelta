@@ -3,7 +3,11 @@
  * production durable History over Node's real SQLite capability on the shared
  * file, then performs exactly the commands its parent sends, one at a time,
  * answering each with the operation's value or the class and message of what
- * History threw. It keeps every lease object it was granted and every attempt
+ * History threw. It can also host one real supervised run whose normal
+ * request waits for the writer lease through the facade's writer port, on a
+ * timer that reads the controlled clock and fires only when the parent
+ * advances it, so cross-process waiting, takeover and deadlines are driven
+ * without real sleeps. It keeps every lease object it was granted and every attempt
  * it allocated, so a later command can present a lease that another process
  * has since superseded: the stale holder is this live process, not a replayed
  * credential.
@@ -21,13 +25,18 @@
 import { writeSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 
+import type { IBindingDescriptor } from '@microdelta/definition';
 import type { IAttemptRecord, IClockCapability, IDurableHistory, IWriterLease } from '@microdelta/history';
-import { createNodeClock } from '@microdelta/machine-node';
+import { createNodeClock, createNodeMachine, createNodeTimer } from '@microdelta/machine-node';
+import type { ICheckOutcome, IRecoveryResult, IResolution, IResolutionOutcome, IResolveRequest } from '@microdelta/resolution';
+import { SupervisionError, WriterBusyError, createStopController, createSupervision } from '@microdelta/supervision';
+import type { IRun, IRunTimer, IRunWriter, IStopController, ISupervision, IWriterAttempt } from '@microdelta/supervision';
 
+import { writerFor } from '../../src/writer.js';
 import { controlledClock, observedSqlite, openHistory } from '../durable-history/support.js';
 import { attemptRequest, evidence, labelAddress, lastPartAddress, payload, provenance, subject } from './fixture.js';
 import { hostMonotonicMilliseconds, lifecyclePrefix, parseCommand, parseLaunch } from './protocol.js';
-import type { IContentionEvent, IHarnessCommand, IHarnessReply } from './protocol.js';
+import type { IContentionEvent, IHarnessCommand, IHarnessReply, IWaitAttempt, IWaitCommand, IWaitContentionEvent, IWaitOutcome, IWaitStatus } from './protocol.js';
 
 /** Record how far this worker got, synchronously, so the record survives an abrupt end. */
 function mark(point: string): void {
@@ -150,6 +159,12 @@ function contend(holder: string, durationMilliseconds: number, leaseMilliseconds
       sleep(1 + pause);
       continue;
     }
+    if (acquisition.kind === 'contended') {
+      // History's typed contention outcome: SQLite stayed locked past its busy wait and nothing changed.
+      log.push({ op: 'acquire', ok: false, fence: 0, contended: true, ...(acquisition.writer === undefined ? {} : { heldBy: acquisition.writer.holder }) });
+      sleep(1 + pause);
+      continue;
+    }
     lease = acquisition.lease;
     const fence = lease.fence;
     log.push({ op: 'acquire', ok: true, fence });
@@ -161,9 +176,18 @@ function contend(holder: string, durationMilliseconds: number, leaseMilliseconds
     if (attempt(log, 'allocate', fence, () => allocate(staged))) {
       attempt(log, 'stage', fence, () => stage(staged, staged));
     }
-    attempt(log, 'renew', fence, () => {
-      lease = history.renewWriter(requireLease(), leaseMilliseconds);
-    });
+    try {
+      const renewal = history.renewWriter(requireLease(), leaseMilliseconds);
+      if (renewal.kind === 'contended') {
+        // A busy renewal keeps the lease as it was; it is neither granted nor refused.
+        log.push({ op: 'renew', ok: false, fence, contended: true });
+      } else {
+        lease = renewal.lease;
+        log.push({ op: 'renew', ok: true, fence });
+      }
+    } catch (error: unknown) {
+      log.push({ op: 'renew', ok: false, fence, error: error instanceof Error ? error.name : 'unknown' });
+    }
     // Outlive the lease on the shared host clock, then present it again.
     sleep(lease.expiresAt - Date.now() + 5);
     if (attempts.has(staged)) {
@@ -174,8 +198,337 @@ function contend(holder: string, durationMilliseconds: number, leaseMilliseconds
   return log;
 }
 
+/** One wake-up a waiting run scheduled on the controlled timer. */
+interface IScheduledWake {
+  readonly at: number;
+  readonly callback: () => void;
+  done: boolean;
+}
+
+/** Wake-ups scheduled on the controlled timer, fired only by `wait-advance`. */
+const wakes: IScheduledWake[] = [];
+
+/**
+ * The timer a waiting run sees. With the controlled clock it reads the same
+ * controlled time History does and fires wake-ups only when the parent
+ * advances that time, so every poll happens at an instant the test chose and
+ * no real time passes. With the host clock it is Node's real timer.
+ */
+const runTimer: IRunTimer = launch.clock === 'host' ? createNodeTimer() : {
+  currentEpochMilliseconds: () => controlled.currentEpochMilliseconds(),
+  schedule(at: number, callback: () => void): () => void {
+    const wake: IScheduledWake = { at, callback, done: false };
+    wakes.push(wake);
+    return () => {
+      wake.done = true;
+    };
+  },
+};
+
+/** The real Run Supervision the waiting runs use, over Node's async context and this worker's run timer. */
+const supervision: ISupervision = createSupervision({ context: createNodeMachine(), timer: runTimer });
+
+/** The step a waiting run's normal request resolves; the Resolution double below publishes it. */
+const waiterStep: IBindingDescriptor = Object.freeze({ scope: subject.analysis, role: 'step', slot: 'waiter' });
+
+/** Let every queued continuation and the immediate after it run. */
+function settleTurn(): Promise<void> {
+  return new Promise((resolve) => {
+    setImmediate(resolve);
+  });
+}
+
+/** Wait for real time on the host clock without blocking the event loop. */
+function holdFor(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
+}
+
+/**
+ * A Resolution double whose normal request does real History work with the
+ * lease Supervision handed it: it allocates, stages and publishes `key`, so a
+ * granted lease is shown to be current authority with its own fence. The
+ * lease becomes this worker's lease object, so later commands can present it
+ * after it goes stale. Check and recovery count requests and touch nothing.
+ */
+function waiterResolution(key: string, granted: (lease: IWriterLease, published: string) => void, checked: () => void): IResolution {
+  const unused = (): Promise<never> => Promise.reject(new Error('not used by the waiting worker'));
+  return {
+    resolve(request: IResolveRequest): Promise<IResolutionOutcome> {
+      lease = request.lease;
+      allocate(key);
+      stage(key, key);
+      const reference = history.publishAttempt(request.lease, requireAttempt(key));
+      granted(request.lease, reference.locator);
+      return Promise.resolve(Object.freeze({ kind: 'published', step: request.step, reference, attemptId: requireAttempt(key), misses: [], trace: [], diagnostics: [] }));
+    },
+    resolveMembers: unused,
+    resolveFold: unused,
+    resolveOutcomeFold: unused,
+    check(): Promise<ICheckOutcome> {
+      checked();
+      return Promise.resolve(Object.freeze({ kind: 'execution-required', step: waiterStep, misses: [] }));
+    },
+    recover(): IRecoveryResult {
+      checked();
+      return Object.freeze({ kind: 'absent' });
+    },
+  };
+}
+
+/** Describe one try of the writer port as JSON. */
+function describeAttempt(at: number, attempt: IWriterAttempt): IWaitAttempt {
+  switch (attempt.kind) {
+    case 'acquired':
+      return { at, kind: attempt.kind, holder: attempt.lease.holder, expiresAt: attempt.lease.expiresAt, fence: attempt.lease.fence };
+    case 'held':
+      return { at, kind: attempt.kind, holder: attempt.holder, expiresAt: attempt.expiresAt, fence: null };
+    case 'contended':
+      return { at, kind: attempt.kind, holder: attempt.holder ?? null, expiresAt: attempt.expiresAt ?? null, fence: null };
+    default: {
+      const exhaustive: never = attempt;
+      return exhaustive;
+    }
+  }
+}
+
+/** Classify how a waiting request failed: the typed busy outcome, a stop, or anything else by class name. */
+function failureOutcome(error: unknown): IWaitOutcome {
+  if (error instanceof WriterBusyError) {
+    return { kind: 'busy', error: error.name, holder: error.holder ?? null, expiresAt: error.expiresAt ?? null, deadline: error.deadline, contended: error.contended, message: error.message };
+  }
+  if (error instanceof SupervisionError && error.code === 'stopped') {
+    return { kind: 'stopped', message: error.message };
+  }
+  return { kind: 'failed', error: error instanceof Error ? error.name : 'unknown', message: error instanceof Error ? error.message : String(error) };
+}
+
+/** The writer port wrapped so every try is recorded with the time it was made. */
+function observedWriter(port: IRunWriter, attempts: IWaitAttempt[]): IRunWriter {
+  return {
+    tryLease(): IWriterAttempt {
+      const at = runTimer.currentEpochMilliseconds();
+      const attempt = port.tryLease();
+      attempts.push(describeAttempt(at, attempt));
+      return attempt;
+    },
+    release(): void {
+      port.release();
+    },
+  };
+}
+
+/** The worker's one waiting run, between `wait-start` and its close. */
+interface IActiveWait {
+  readonly attempts: IWaitAttempt[];
+  outcome: IWaitOutcome;
+  checks: number;
+  readonly stop: IStopController;
+  live: IRun | undefined;
+  /** Lets the run's body return, so the run closes and releases its lease. */
+  readonly finish: () => void;
+  /** Settles when the run has closed; set once the run has started. */
+  closed: Promise<unknown>;
+}
+
+let active: IActiveWait | undefined;
+
+/** The active wait, or a harness error. */
+function requireWait(): IActiveWait {
+  if (active === undefined) {
+    throw new Error('this worker has no waiting run');
+  }
+  return active;
+}
+
+/** Report the waiting run's state. */
+function waitStatus(): IWaitStatus {
+  const wait = requireWait();
+  return { attempts: [...wait.attempts], outcome: wait.outcome, checks: wait.checks, pendingWakes: wakes.filter((wake) => !wake.done).length };
+}
+
+/**
+ * Start one supervised run whose single normal request waits for the writer
+ * lease through the facade's real writer port over this worker's History.
+ * The run stays open after its request settles until `wait-finish`.
+ */
+function startWait(command: Extract<IWaitCommand, { readonly op: 'wait-start' }>): void {
+  if (active !== undefined) {
+    throw new Error('this worker already has a waiting run');
+  }
+  let finish: () => void = () => undefined;
+  const finished = new Promise<void>((resolve) => {
+    finish = resolve;
+  });
+  const stop = createStopController({ timer: runTimer });
+  const attempts: IWaitAttempt[] = [];
+  let granted: { readonly lease: IWriterLease; readonly published: string } | undefined;
+  const wait: IActiveWait = {
+    attempts,
+    outcome: { kind: 'pending' },
+    checks: 0,
+    stop,
+    live: undefined,
+    finish: () => {
+      finish();
+    },
+    closed: Promise.resolve(),
+  };
+  const closed = supervision.run({
+    analysis: subject.analysis,
+    environment: subject.environment,
+    runId: `waiter:${command.key}`,
+    writer: observedWriter(writerFor(history, command.holder, command.leaseMilliseconds), attempts),
+    writerWait: command.deadline === undefined ? { pollMilliseconds: command.pollMilliseconds } : { deadline: command.deadline, pollMilliseconds: command.pollMilliseconds },
+    stop,
+    resolution: () => waiterResolution(command.key, (grantedLease, published) => {
+      granted = { lease: grantedLease, published };
+    }, () => {
+      wait.checks += 1;
+    }),
+  }, async (live) => {
+    wait.live = live;
+    try {
+      await live.resolve(waiterStep, { requestKey: `request:${command.key}` });
+      if (granted === undefined) {
+        throw new Error('the request settled without a grant');
+      }
+      wait.outcome = { kind: 'acquired', holder: granted.lease.holder, fence: granted.lease.fence, expiresAt: granted.lease.expiresAt, published: granted.published };
+    } catch (error: unknown) {
+      wait.outcome = failureOutcome(error);
+    }
+    await finished;
+  });
+  wait.closed = closed;
+  active = wait;
+}
+
+/**
+ * Move the controlled clock to `at`, firing every wake-up due by then at its
+ * own scheduled time and letting each resulting try run before the next.
+ */
+async function advanceTo(at: number): Promise<void> {
+  for (;;) {
+    const due = wakes.filter((wake) => !wake.done && wake.at <= at).sort((left, right) => left.at - right.at)[0];
+    if (due === undefined) {
+      break;
+    }
+    controlled.set(Math.max(due.at, 0));
+    due.done = true;
+    due.callback();
+    await settleTurn();
+    await settleTurn();
+  }
+  controlled.set(at);
+  await settleTurn();
+}
+
+/**
+ * Repeat whole waits on the host clock until the duration elapses. Each
+ * tenure is one real supervised run that waits up to `waitMilliseconds` for
+ * the lease, publishes once under the lease it obtains, holds the lease for
+ * `holdMilliseconds` and closes, releasing it, then rests for
+ * `restMilliseconds`. Waiting is not fair, so without the rest a releasing
+ * worker could take the lease straight back from waiters that poll later.
+ */
+async function contendWaiting(command: Extract<IWaitCommand, { readonly op: 'wait-contend' }>): Promise<readonly IWaitContentionEvent[]> {
+  const events: IWaitContentionEvent[] = [];
+  const end = performance.now() + command.durationMilliseconds;
+  for (let tenure = 1; performance.now() < end; tenure += 1) {
+    const key = `${command.holder}:tenure:${String(tenure)}`;
+    const counter = { tries: 0 };
+    const port = writerFor(history, command.holder, command.leaseMilliseconds);
+    const counted: IRunWriter = {
+      tryLease(): IWriterAttempt {
+        counter.tries += 1;
+        return port.tryLease();
+      },
+      release(): void {
+        port.release();
+      },
+    };
+    let granted: { readonly lease: IWriterLease; readonly published: string } | undefined;
+    try {
+      await supervision.run({
+        analysis: subject.analysis,
+        environment: subject.environment,
+        runId: key,
+        writer: counted,
+        writerWait: { deadline: Date.now() + command.waitMilliseconds, pollMilliseconds: command.pollMilliseconds },
+        resolution: () => waiterResolution(key, (grantedLease, published) => {
+          granted = { lease: grantedLease, published };
+        }, () => undefined),
+      }, async (live) => {
+        await live.resolve(waiterStep, { requestKey: `request:${key}` });
+        await holdFor(command.holdMilliseconds);
+      });
+      if (granted === undefined) {
+        throw new Error('the tenure settled without a grant');
+      }
+      events.push({ kind: 'granted', fence: granted.lease.fence, tries: counter.tries, published: granted.published });
+    } catch (error: unknown) {
+      const outcome = failureOutcome(error);
+      events.push(outcome.kind === 'busy'
+        ? { kind: 'busy', holder: outcome.holder, contended: outcome.contended, tries: counter.tries }
+        : { kind: 'failed', error: outcome.kind === 'failed' ? outcome.error : outcome.kind, message: 'message' in outcome ? outcome.message : '', tries: counter.tries });
+    }
+    await holdFor(command.restMilliseconds);
+  }
+  return events;
+}
+
+/** Perform one waiting-run command and return its JSON value. */
+async function performWait(command: IWaitCommand): Promise<unknown> {
+  switch (command.op) {
+    case 'wait-start':
+      controlled.set(command.at);
+      startWait(command);
+      await settleTurn();
+      await settleTurn();
+      return waitStatus();
+    case 'wait-advance':
+      await advanceTo(command.at);
+      return waitStatus();
+    case 'wait-stop':
+      requireWait().stop.request({ level: command.level });
+      await settleTurn();
+      await settleTurn();
+      return waitStatus();
+    case 'wait-check': {
+      const live = requireWait().live;
+      if (live === undefined) {
+        throw new Error('the waiting run has not started its body');
+      }
+      const checked = await live.check(waiterStep);
+      const recovered = await live.recover(waiterStep, { requestKey: 'request:never-made' });
+      return { ...waitStatus(), checked: checked.kind, recovered: recovered.kind };
+    }
+    case 'wait-finish': {
+      const wait = requireWait();
+      controlled.set(command.at);
+      wait.finish();
+      await wait.closed;
+      const status = waitStatus();
+      active = undefined;
+      return status;
+    }
+    case 'wait-contend':
+      return contendWaiting(command);
+    default: {
+      const exhaustive: never = command;
+      return exhaustive;
+    }
+  }
+}
+
+/** Whether a command drives a waiting run. */
+function isWaitCommand(command: IHarnessCommand): command is IWaitCommand & { readonly notBefore?: number } {
+  return command.op.startsWith('wait-');
+}
+
 /** Perform one command and return its JSON value. */
-function perform(command: IHarnessCommand): unknown {
+function perform(command: Exclude<IHarnessCommand, IWaitCommand>): unknown {
   switch (command.op) {
     case 'acquire': {
       controlled.set(command.at);
@@ -185,10 +538,15 @@ function perform(command: IHarnessCommand): unknown {
       }
       return acquisition;
     }
-    case 'renew':
+    case 'renew': {
       controlled.set(command.at);
-      lease = history.renewWriter(requireLease(), command.leaseMilliseconds);
+      const renewal = history.renewWriter(requireLease(), command.leaseMilliseconds);
+      if (renewal.kind === 'contended') {
+        return renewal;
+      }
+      lease = renewal.lease;
       return lease;
+    }
     case 'release':
       controlled.set(command.at);
       history.releaseWriter(requireLease());
@@ -235,6 +593,10 @@ function perform(command: IHarnessCommand): unknown {
       return null;
     case 'contend':
       return contend(command.holder, command.durationMilliseconds, command.leaseMilliseconds);
+    case 'die':
+      // The holder dies abruptly while it holds whatever lease it holds: no release, no reply.
+      process.kill(process.pid, 'SIGKILL');
+      return null;
     case 'close':
       history.close();
       return null;
@@ -269,12 +631,22 @@ process.on('message', (message: unknown) => {
     waitUntil(command.notBefore);
   }
   const startedAt = hostNow();
+  const replyFailure = (error: unknown): void => {
+    const endedAt = hostNow();
+    reply({ ok: false, error: error instanceof Error ? error.name : 'unknown', message: error instanceof Error ? error.message : String(error), startedAt, endedAt }, false);
+  };
+  if (isWaitCommand(command)) {
+    // A waiting run's commands settle asynchronously; the parent still sends one command at a time.
+    performWait(command).then((value) => {
+      reply({ ok: true, value, startedAt, endedAt: hostNow() }, false);
+    }, replyFailure);
+    return;
+  }
   try {
     const value = perform(command);
     reply({ ok: true, value, startedAt, endedAt: hostNow() }, command.op === 'close');
   } catch (error: unknown) {
-    const endedAt = hostNow();
-    reply({ ok: false, error: error instanceof Error ? error.name : 'unknown', message: error instanceof Error ? error.message : String(error), startedAt, endedAt }, false);
+    replyFailure(error);
   }
 });
 

@@ -13,6 +13,8 @@ import type {
   IDurableHistoryOptions,
   IRecoveryOutcome,
   IWriterAcquisition,
+  IWriterContention,
+  IWriterRenewal,
   IWriterLease,
 } from '../dist/api/history.alpha.js';
 import { HistoryIntegrityError, StaleWriterError, openDurableHistory } from '../dist/api/history.alpha.js';
@@ -31,13 +33,28 @@ expectError(openDurableHistory({ sqlite: options.sqlite, clock: options.clock, l
 expectError(openDurableHistory({ sqlite: options.sqlite, sha256: options.sha256, location: 'x', logicalStore: 'y' }));
 expectError(openDurableHistory({ clock: options.clock, sha256: options.sha256, location: 'x', logicalStore: 'y' }));
 
-// Only an acquired outcome carries a lease; a held outcome grants nothing.
+// Only an acquired outcome carries a lease; held and contended outcomes grant nothing.
 if (acquisition.kind === 'acquired') {
   expectType<IWriterLease>(acquisition.lease);
 } else {
-  expectType<'held'>(acquisition.kind);
+  expectType<'held' | 'contended'>(acquisition.kind);
   expectError(acquisition.lease);
 }
+if (acquisition.kind === 'contended') {
+  // Contention names the recorded writer when it could be read, never an invented one.
+  expectType<IWriterLease | undefined>(acquisition.writer);
+  expectType<string>(acquisition.detail);
+}
+
+// Renewal reports a renewed lease or contention; only renewed carries a lease.
+const renewal: IWriterRenewal = history.renewWriter(lease, 100);
+if (renewal.kind === 'renewed') {
+  expectType<IWriterLease>(renewal.lease);
+} else {
+  expectType<IWriterContention>(renewal);
+  expectError(renewal.lease);
+}
+expectError<IWriterLease>(history.renewWriter(lease, 100));
 
 // Leases, envelopes and records are read-only data.
 expectError((lease.fence = 2));

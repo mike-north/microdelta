@@ -55,6 +55,7 @@ import type {
   IRunScope,
   IRunScopeCapability,
   ISupervision,
+  IWriterAttempt,
 } from '../src/index.js';
 
 /** Node's real asynchronous context, supplied structurally as a host would. */
@@ -280,13 +281,13 @@ function recordingWriter(options: { readonly unavailable?: boolean; readonly rel
     leases,
     releases,
     writer: {
-      lease(): IRunLease {
+      tryLease(): IWriterAttempt {
         if (options.unavailable === true) {
-          throw new SupervisionError('writer-unavailable', 'another holder owns the store');
+          return Object.freeze({ kind: 'held', holder: 'run:other', expiresAt: 10_000 });
         }
         const lease = Object.freeze({ holder: 'run:test', fence: leases.length + 1, expiresAt: 10_000 });
         leases.push(lease);
-        return lease;
+        return Object.freeze({ kind: 'acquired', lease });
       },
       release(): void {
         releases.count += 1;
@@ -498,12 +499,12 @@ describe('writer ownership', () => {
     expect(writer.releases.count).toBe(1);
   });
 
-  test('an unavailable writer fails that normal request without blocking check-only or recovery', async () => {
-    const supervisor = supervision();
+  test('a writer held past the operator deadline fails that normal request as writer-busy without blocking check-only or recovery', async () => {
+    const supervisor = createSupervision({ context: nodeScopes, timer: { currentEpochMilliseconds: () => 20_000, schedule: () => () => undefined } });
     const { double, factory } = recordingResolution();
     const writer = recordingWriter({ unavailable: true });
-    await supervisor.run({ analysis: 'analysis:test', environment: 'env:test', resolution: factory, writer: writer.writer }, async (run) => {
-      await expectSupervisionError(run.resolve(step, { requestKey: 'request:1' }), 'writer-unavailable');
+    await supervisor.run({ analysis: 'analysis:test', environment: 'env:test', resolution: factory, writer: writer.writer, writerWait: { deadline: 20_000 } }, async (run) => {
+      await expectSupervisionError(run.resolve(step, { requestKey: 'request:1' }), 'writer-busy');
       await expect(run.check(step)).resolves.toMatchObject({ kind: 'execution-required' });
       await expect(run.recover(step, { requestKey: 'request:1' })).resolves.toEqual({ kind: 'absent' });
     });
@@ -1144,7 +1145,7 @@ describe('closure boundary (RUN-001)', () => {
       const supervisor = supervision();
       const held = gate();
       const events: string[] = [];
-      const writer = { lease: (): IRunLease => Object.freeze({ holder: 'h', fence: 1, expiresAt: 1 }), release: (): void => { events.push('writer:release'); } };
+      const writer = { tryLease: (): IWriterAttempt => Object.freeze({ kind: 'acquired', lease: Object.freeze({ holder: 'h', fence: 1, expiresAt: 1 }) }), release: (): void => { events.push('writer:release'); } };
       const { factory } = recordingResolution();
       let late: ReturnType<typeof settled_> | undefined;
       const running = supervisor.run({
@@ -1181,7 +1182,7 @@ describe('closure boundary (RUN-001)', () => {
       const first = gate();
       const second = gate();
       const events: string[] = [];
-      const writer = { lease: (): IRunLease => Object.freeze({ holder: 'h', fence: 1, expiresAt: 1 }), release: (): void => { events.push('writer:release'); } };
+      const writer = { tryLease: (): IWriterAttempt => Object.freeze({ kind: 'acquired', lease: Object.freeze({ holder: 'h', fence: 1, expiresAt: 1 }) }), release: (): void => { events.push('writer:release'); } };
       const { factory } = recordingResolution();
       let nested: ReturnType<typeof settled_> | undefined;
       const running = settled_(supervisor.run({

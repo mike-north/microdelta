@@ -18,6 +18,8 @@
  * | Transition | Durable change | Death before commit | Death after commit |
  * | --- | --- | --- | --- |
  * | acquire | new holder, fence + 1, expiry | no change | lease held until expiry |
+ * | renew | later expiry; fence unchanged | lease unchanged | lease extended |
+ * | release | no holder; fence unchanged | lease held until expiry | next grant needs no expiry |
  * | allocate | attempt counter + 1, `allocated` attempt with key and intent | identity never issued | identity consumed, no result |
  * | stage | `staged` content and dependencies | attempt stays `allocated` | candidate evidence only, never a result |
  * | publish | result, index, provenance, `completed`, current pointer | attempt stays `staged` | complete result; recover by key |
@@ -32,6 +34,7 @@
  * or distributed-time guarantee.
  * @packageDocumentation
  */
+import { SqliteBusyError } from '@microdelta/machine';
 import type { IClockCapability, ISqliteConnection, ISqliteRow } from '@microdelta/machine';
 import { decodeSnapshot, encodeSnapshot } from '@microdelta/value';
 
@@ -59,7 +62,9 @@ import type {
   IVersionedSubject,
   IWriterAcquisition,
   IWriterAcquisitionRequest,
+  IWriterContention,
   IWriterLease,
+  IWriterRenewal,
 } from './contracts.js';
 import {
   AttemptConflictError,
@@ -137,7 +142,13 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
   const statements = {
     writer: connection.prepare(sql`/* writer */ SELECT last_fence, holder, expires_at, time_high_water FROM history_writer WHERE singleton = 1`),
     observeTime: connection.prepare(sql`/* writer */ UPDATE history_writer SET time_high_water = ? WHERE singleton = 1`),
+    // Only a grant writes the fence. Renewal and release leave last_fence as
+    // they found it rather than writing back the presented lease's fence: the
+    // holder guard has already proved the two equal, and never assigning the
+    // column there means no future weakening of that guard could regress it.
     setHolder: connection.prepare(sql`/* writer */ UPDATE history_writer SET last_fence = ?, holder = ?, expires_at = ? WHERE singleton = 1`),
+    extendHolder: connection.prepare(sql`/* writer */ UPDATE history_writer SET expires_at = ? WHERE singleton = 1`),
+    clearHolder: connection.prepare(sql`/* writer */ UPDATE history_writer SET holder = NULL, expires_at = ? WHERE singleton = 1`),
     sequences: connection.prepare(sql`/* sequence */ SELECT last_attempt, last_publication, last_acceptance, last_promotion FROM history_sequences WHERE singleton = 1`),
     setAttemptSequence: connection.prepare(sql`/* allocate */ UPDATE history_sequences SET last_attempt = ? WHERE singleton = 1`),
     setPublicationSequence: connection.prepare(sql`/* publish */ UPDATE history_sequences SET last_publication = ? WHERE singleton = 1`),
@@ -305,6 +316,42 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
       statements.observeTime.run(now);
     }
     return now;
+  }
+
+  /**
+   * The contention outcome of a lease operation whose transaction could not
+   * take SQLite's write lock (PUB-005). The recorded writer is read without
+   * the write lock; a read that is itself busy leaves it undefined rather than
+   * guessed, while any other read failure, such as a missing writer row, is
+   * thrown as the failure it is.
+   */
+  function contention(busy: SqliteBusyError): IWriterContention {
+    let writer: IWriterLease | undefined;
+    try {
+      const recorded = readWriter();
+      writer = recorded.holder === null ? undefined : Object.freeze({ holder: recorded.holder, fence: recorded.lastFence, expiresAt: recorded.expiresAt });
+    } catch (error: unknown) {
+      if (!(error instanceof SqliteBusyError)) {
+        throw error;
+      }
+    }
+    return Object.freeze({ kind: 'contended', writer, detail: busy.message });
+  }
+
+  /**
+   * Run a lease operation that a waiter repeats, reporting SQLite contention
+   * as History's typed outcome. Only the host's busy failure qualifies, and it
+   * guarantees the transaction changed nothing; every other failure is thrown.
+   */
+  function orContended<T>(operation: () => T): T | IWriterContention {
+    try {
+      return operation();
+    } catch (error: unknown) {
+      if (!(error instanceof SqliteBusyError)) {
+        throw error;
+      }
+      return contention(error);
+    }
   }
 
   /**
@@ -551,7 +598,7 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
       const holder = requireName(request.holder, 'holder');
       const leaseMilliseconds = requirePositive(request.leaseMilliseconds, 'leaseMilliseconds');
       let acquisition: IWriterAcquisition | undefined;
-      connection.transaction(() => {
+      const busy = orContended(() => connection.transaction(() => {
         const writer = readWriter();
         const now = observeTime(writer);
         if (writer.holder !== null && writer.expiresAt > now) {
@@ -563,26 +610,29 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
         statements.setHolder.run(fence, holder, expiresAt);
         acquisition = Object.freeze({ kind: 'acquired', lease: Object.freeze({ holder, fence, expiresAt }) });
         return undefined;
-      });
+      }));
+      if (busy !== undefined) {
+        return busy;
+      }
       if (acquisition === undefined) {
         throw new HistoryIntegrityError('Writer acquisition produced no outcome');
       }
       return acquisition;
     },
 
-    renewWriter(lease: IWriterLease, leaseMilliseconds: number): IWriterLease {
+    renewWriter(lease: IWriterLease, leaseMilliseconds: number): IWriterRenewal {
       const duration = requirePositive(leaseMilliseconds, 'leaseMilliseconds');
-      return asHolder(lease, (now) => {
+      return orContended(() => asHolder(lease, (now): IWriterRenewal => {
         const expiresAt = safeSum(now, duration, 'lease expiry');
-        statements.setHolder.run(lease.fence, lease.holder, expiresAt);
-        return Object.freeze({ holder: lease.holder, fence: lease.fence, expiresAt });
-      });
+        statements.extendHolder.run(expiresAt);
+        return Object.freeze({ kind: 'renewed', lease: Object.freeze({ holder: lease.holder, fence: lease.fence, expiresAt }) });
+      }));
     },
 
     releaseWriter(lease: IWriterLease): void {
       asHolder(lease, (now) => {
-        // Release clears the holder but never resets the fence counter.
-        statements.setHolder.run(lease.fence, null, now);
+        // Release clears the holder but never touches the fence counter.
+        statements.clearHolder.run(now);
       });
     },
 

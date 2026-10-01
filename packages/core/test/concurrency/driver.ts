@@ -380,11 +380,11 @@ export function measureConcurrency(intervals: readonly { readonly startedAt: num
   return { skew: Math.max(...starts) - Math.min(...starts), overlap: Math.max(0, overlap) };
 }
 
-/** The lease of an `acquired` outcome, or a renewed lease. */
+/** The lease of an `acquired` or `renewed` outcome, or a bare lease. */
 export function leaseFrom(value: unknown): IWriterLease {
   if (isRecord(value) && value.kind !== undefined) {
-    if (value.kind !== 'acquired') {
-      throw new Error(`expected to acquire, observed ${JSON.stringify(value)}`);
+    if (value.kind !== 'acquired' && value.kind !== 'renewed') {
+      throw new Error(`expected to acquire or renew, observed ${JSON.stringify(value)}`);
     }
     return parseLease(value.lease);
   }

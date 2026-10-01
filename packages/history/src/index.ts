@@ -85,7 +85,9 @@ export type {
   IVersionedSubject,
   IWriterAcquisition,
   IWriterAcquisitionRequest,
+  IWriterContention,
   IWriterLease,
+  IWriterRenewal,
 } from './durable/contracts.js';
 /**
  * Machine host contracts surfaced by the durable authority's options and by

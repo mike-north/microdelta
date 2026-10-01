@@ -16,7 +16,7 @@ import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globa
 import type { IWriterLease } from '@microdelta/history';
 import { createNodeClock } from '@microdelta/machine-node';
 
-import { ResolutionError, SupervisionError, openWorkspace } from '../../src/index.js';
+import { ResolutionError, SupervisionError, WriterBusyError, openWorkspace } from '../../src/index.js';
 import type { IRecoveryResult, IStepDescriptor } from '../../src/index.js';
 import { openHistory } from '../durable-history/support.js';
 import { composeContributors, resetWorld } from './fixture.js';
@@ -138,15 +138,17 @@ describe('recovery entry operation', () => {
         const recovered = await recoverIn(session, session.contributors.steps['person:ben'].summary, keys['person:ben']);
         expect(recovered).toMatchObject({ kind: 'recovered', reference: { locator: refs['person:ben'] } });
         let caught: unknown;
-        await session.workspace.run({ authoring: session.contributors.authoring, composition: session.contributors.composition, environment }, async (run) => {
+        // The operator's deadline has already passed, so the normal request makes one attempt and reports the holder.
+        await session.workspace.run({ authoring: session.contributors.authoring, composition: session.contributors.composition, environment, writerWait: { deadline: Date.now() } }, async (run) => {
           try {
             await run.resolve(session.contributors.steps['person:ben'].summary, { requestKey: freshRequestKey() });
           } catch (error: unknown) {
             caught = error;
           }
         });
-        expect(caught).toBeInstanceOf(SupervisionError);
-        expect(caught instanceof SupervisionError ? caught.code : undefined).toBe('writer-unavailable');
+        expect(caught).toBeInstanceOf(WriterBusyError);
+        expect(caught instanceof SupervisionError ? caught.code : undefined).toBe('writer-busy');
+        expect(caught instanceof WriterBusyError ? caught.holder : undefined).toBe('process:lost-acknowledgment');
       });
     } finally {
       holder.close();
@@ -245,26 +247,42 @@ describe('normal entry operation', () => {
     }
   });
 
-  test('a second concurrent run on one workspace cannot write, names the other run as holder, and can still check', async () => {
+  test('a second concurrent run past its writer deadline cannot write, names the other run as holder, and can still check', async () => {
     const workspace = openWorkspace({ location: store.location, logicalStore });
     const contributors = composeContributors();
     const options = { authoring: contributors.authoring, composition: contributors.composition, environment };
+    let holding: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => {
+      holding = resolve;
+    });
+    let finish: () => void = () => undefined;
+    const finished = new Promise<void>((resolve) => {
+      finish = resolve;
+    });
     try {
-      await workspace.run({ ...options, runId: 'run:first' }, async (first) => {
-        await first.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
-        await workspace.run({ ...options, runId: 'run:second' }, async (second) => {
-          let caught: unknown;
-          try {
-            await second.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
-          } catch (error: unknown) {
-            caught = error;
-          }
-          expect(caught instanceof SupervisionError ? caught.code : undefined).toBe('writer-unavailable');
-          expect(caught instanceof Error ? caught.message : '').toContain('run:first');
-          await expect(second.check(contributors.steps['person:ada'].summary)).resolves.toMatchObject({ kind: 'reusable' });
-        });
+      const first = workspace.run({ ...options, runId: 'run:first' }, async (run) => {
+        await run.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
+        holding();
+        await finished;
       });
+      await held;
+      // A concurrent caller, outside the first run; its deadline has passed, so it makes one attempt.
+      await workspace.run({ ...options, runId: 'run:second', writerWait: { deadline: Date.now() } }, async (second) => {
+        let caught: unknown;
+        try {
+          await second.resolve(contributors.steps['person:ada'].summary, { requestKey: freshRequestKey() });
+        } catch (error: unknown) {
+          caught = error;
+        }
+        expect(caught instanceof SupervisionError ? caught.code : undefined).toBe('writer-busy');
+        expect(caught instanceof WriterBusyError ? caught.holder : undefined).toBe('microdelta-run:run:first');
+        expect(caught instanceof Error ? caught.message : '').toContain('run:first');
+        await expect(second.check(contributors.steps['person:ada'].summary)).resolves.toMatchObject({ kind: 'reusable' });
+      });
+      finish();
+      await first;
     } finally {
+      finish();
       workspace.close();
     }
   });

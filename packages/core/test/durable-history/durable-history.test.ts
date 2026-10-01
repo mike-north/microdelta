@@ -425,8 +425,9 @@ describe('single logical writer and clock policy', () => {
     expect(first).toEqual({ holder: 'first', fence: 1, expiresAt: 1_100 });
     expect(history.acquireWriter({ holder: 'second', leaseMilliseconds: 100 })).toEqual({ kind: 'held', holder: 'first', expiresAt: 1_100 });
     clock.set(1_050);
-    const renewed = history.renewWriter(first, 100);
-    expect(renewed).toEqual({ holder: 'first', fence: 1, expiresAt: 1_150 });
+    const renewal = history.renewWriter(first, 100);
+    expect(renewal).toEqual({ kind: 'renewed', lease: { holder: 'first', fence: 1, expiresAt: 1_150 } });
+    const renewed = renewal.kind === 'renewed' ? renewal.lease : first;
     expect(() => history.renewWriter(first, 100)).not.toThrow();
     history.releaseWriter(renewed);
     expect(history.currentWriter()).toBeUndefined();
@@ -444,7 +445,7 @@ describe('single logical writer and clock policy', () => {
     clock.set(500);
     expect(history.acquireWriter({ holder: 'second', leaseMilliseconds: 100 })).toEqual({ kind: 'held', holder: 'first', expiresAt: 1_100 });
     // Renewal at a regressed reading is evaluated at the 1090 high-water.
-    expect(history.renewWriter(first, 100)).toEqual({ holder: 'first', fence: 1, expiresAt: 1_190 });
+    expect(history.renewWriter(first, 100)).toEqual({ kind: 'renewed', lease: { holder: 'first', fence: 1, expiresAt: 1_190 } });
     clock.set(1_200);
     expect(() => history.renewWriter(first, 100)).toThrow(StaleWriterError);
     clock.set(1_000);

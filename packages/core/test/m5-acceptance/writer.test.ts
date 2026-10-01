@@ -39,9 +39,9 @@
  */
 import { describe, expect, test } from '@jest/globals';
 
-import { elapse } from './harness.js';
-import type { IFencedRows, IStartedProcess } from './harness.js';
-import { baseWorld, clean, freshScenario, operationOf, removeScenarios, statuses, usageOf } from './support.js';
+import { elapse, until } from './harness.js';
+import type { IFencedRows, IProcessRun, IScenario, IStartedProcess } from './harness.js';
+import { assessmentSubject, baseWorld, clean, freshScenario, operationOf, removeScenarios, statuses, usageOf } from './support.js';
 import type { IUsageView } from './support.js';
 
 removeScenarios();
@@ -96,7 +96,8 @@ describe('writer-wait-and-takeover (A-09, RUN-002)', () => {
     expect(held.writer.holder).toBe(holderOf(runIdOf(holder)));
 
     // With a 300 ms operator deadline a second process fails with the typed writer-busy error naming the holder.
-    const busy = s.run({ kind: 'members' }, { window: 1, writerDeadlineMs: 300 });
+    // Bounded at 10 s: a waiter that ignored its deadline would wait for the held gate until killed.
+    const busy = s.run({ kind: 'members' }, { window: 1, writerDeadlineMs: 300 }, 10_000);
     expect(busy.status).toBe(3);
     expect(busy.error).toMatchObject({ name: 'WriterBusyError', code: 'writer-busy', holder: held.writer.holder, expiresAt: held.writer.expiresAt });
     expect(s.rows()).toEqual(held);
@@ -132,12 +133,19 @@ describe('writer-wait-and-takeover (A-09, RUN-002)', () => {
     expect((await doomed.exited).signal).toBe('SIGKILL');
 
     const successor = s.start({ kind: 'members' }, { window: 1, leaseMilliseconds: longLease });
-    await successor.waitForLine((line) => line['t'] === 'event' && line['kind'] === 'operation' && line['phase'] === 'request-started' && line['member'] === 'pr-3', 'the successor is sending pr-3');
-    const taken = s.writer();
-    expect(taken.holder).toBe(holderOf(runIdOf(successor)));
-    expect(taken.lastFence).toBe(dead.lastFence + 1);
+    // The grant itself, read the moment the stored holder changes: its expiry is the grant time plus the lease.
+    let grant = s.writer();
+    await until(() => {
+      grant = s.writer();
+      return grant.holder !== dead.holder;
+    }, 'the successor is granted the lease');
+    expect(grant.lastFence).toBe(dead.lastFence + 1);
     // Granted no earlier than the dead holder's expiry.
-    expect(taken.expiresAt - longLease).toBeGreaterThanOrEqual(dead.expiresAt);
+    expect(grant.expiresAt - longLease).toBeGreaterThanOrEqual(dead.expiresAt);
+    await successor.waitForLine((line) => line['t'] === 'event' && line['kind'] === 'operation' && line['phase'] === 'request-started' && line['member'] === 'pr-3', 'the successor is sending pr-3');
+    // The same tenure throughout: the successor's one request never renewed it.
+    expect(s.writer()).toEqual(grant);
+    expect(grant.holder).toBe(holderOf(runIdOf(successor)));
     s.open('successor');
     const run = clean(await successor.exited);
     expect(run.operations).toContain('recovered:unknown:recovered-after-crash@pr-1');
@@ -244,24 +252,54 @@ describe('stale-holder-interleavings (A-09, A-10, PUB-004)', () => {
   });
 });
 
+describe('stale-holder-interleavings (A-09, PUB-004): one run, two tenures', () => {
+  test('a request still holding the run\'s expired lease cannot publish after the run\'s next request took the lease again under the same holder name', async () => {
+    // Two permits, so the second request is not queued behind the first one's held send.
+    const s = freshScenario(baseWorld({ script: { 'pr-1': [{ kind: 'gate', gate: 'late' }] } }));
+    const run = s.start({ kind: 'same-run', next: 'next' }, { permits: 2, leaseMilliseconds: shortLease });
+    await run.waitForLine((line) => line['t'] === 'event' && line['kind'] === 'operation' && line['phase'] === 'request-started' && line['member'] === 'pr-1', 'the first request is sending pr-1');
+    const first = s.writer();
+    await s.outlastLease();
+    s.open('next');
+    await run.waitForLine((line) => line['t'] === 'second', 'the second request finished');
+    // The run's second tenure: the same holder name, the next fence.
+    const second = s.writer();
+    expect(second).toMatchObject({ holder: first.holder, lastFence: first.lastFence + 1 });
+    expect(s.publications(assessmentSubject('pr-2'))).toEqual([first.lastFence + 1]);
+    const before = s.rows();
+
+    // The first request's late completion presents the run's own holder name with the old fence: only the fence refuses it.
+    s.open('late');
+    const done = clean(await run.exited);
+    expect(done.result.second).toBe('published');
+    expect(done.result.late).toBe('refused:denied');
+    expect(done.operations).toContain('request-settled:unknown:lease-lost@pr-1');
+    expect(s.publications(assessmentSubject('pr-1'))).toEqual([]);
+    // Nothing but the run's own release of its current lease changed: every other table is exactly as it was.
+    const after = s.rows();
+    expect({ ...after.tables, history_writer: [] }).toEqual({ ...before.tables, history_writer: [] });
+    expect(after.writer).toEqual({ lastFence: first.lastFence + 1, holder: null, expiresAt: expect.any(Number) });
+  });
+});
+
+/** A soft-stop drain held past its lease while a successor holds the lease mid-run; returns once the drain process has exited. */
+async function drainPastLease(): Promise<{ readonly s: IScenario; readonly drained: IProcessRun; readonly successor: IStartedProcess; readonly before: IFencedRows; readonly drainFence: number }> {
+  const s = freshScenario(baseWorld({ script: { 'pr-1': [{ kind: 'gate', gate: 'late' }], 'pr-3': [{ kind: 'gate', gate: 'successor' }] } }));
+  const draining = s.start({ kind: 'members' }, { window: 1, leaseMilliseconds: shortLease, stops: [{ on: { received: 'pr-1' }, level: 'soft' }] });
+  await draining.waitForLine((line) => line['t'] === 'event' && line['kind'] === 'stop' && line['level'] === 'soft', 'the drain began');
+  const drainFence = s.writer().lastFence;
+  await s.outlastLease();
+  const successor = s.start({ kind: 'members' }, { window: 1, leaseMilliseconds: longLease });
+  await successor.waitForLine((line) => line['t'] === 'event' && line['kind'] === 'operation' && line['phase'] === 'request-started' && line['member'] === 'pr-3', 'the successor holds the lease mid-run');
+  const before = s.rows();
+  expect(before.writer).toMatchObject({ lastFence: drainFence + 1, holder: holderOf(runIdOf(successor)) });
+  s.open('late');
+  return { s, drained: await draining.exited, successor, before, drainFence };
+}
+
 describe('drain-outlives-lease (A-09, EXP-8 ruling R)', () => {
   test('a soft-stop drain that outlives its lease while a successor holds it: the late completion is refused, the successor is untouched, and its usage is preserved', async () => {
-    const s = freshScenario(baseWorld({ script: { 'pr-1': [{ kind: 'gate', gate: 'late' }], 'pr-3': [{ kind: 'gate', gate: 'successor' }] } }));
-    const draining = s.start({ kind: 'members' }, { window: 1, leaseMilliseconds: shortLease, stops: [{ on: { received: 'pr-1' }, level: 'soft' }] });
-    await draining.waitForLine((line) => line['t'] === 'event' && line['kind'] === 'stop' && line['level'] === 'soft', 'the drain began');
-    const drainFence = s.writer().lastFence;
-    await s.outlastLease();
-    const successor = s.start({ kind: 'members' }, { window: 1, leaseMilliseconds: longLease });
-    await successor.waitForLine((line) => line['t'] === 'event' && line['kind'] === 'operation' && line['phase'] === 'request-started' && line['member'] === 'pr-3', 'the successor holds the lease mid-run');
-    const before = s.rows();
-    expect(before.writer).toMatchObject({ lastFence: drainFence + 1, holder: holderOf(runIdOf(successor)) });
-
-    s.open('late');
-    const drained = await draining.exited;
-    // A storage-ownership failure, distinguishable from a provider failure (RUN-009): after its refused completion the
-    // drain met the successor's newer pr-2 result, and a run without lease authority cannot record its acceptance.
-    expect(drained.status).toBe(3);
-    expect(drained.error).toMatchObject({ name: 'StaleWriterError' });
+    const { s, drained, successor, before, drainFence } = await drainPastLease();
     // The late completion published nothing and left the successor's lease and every row exactly as they were.
     expect(s.rows()).toEqual(before);
     expect(drained.operations).toContain('request-settled:unknown:lease-lost@pr-1');
@@ -272,5 +310,23 @@ describe('drain-outlives-lease (A-09, EXP-8 ruling R)', () => {
     const finished = clean(await successor.exited);
     expect(statuses(finished)).toEqual({ 'pr-1': 'pending', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
     expect(fencesWritten(before, s.rows())).toEqual([drainFence + 1]);
+  });
+
+  // Observed defect (#147), kept failing on purpose. Ruling R: a drain that outlives its lease ends with its attempt
+  // interrupted and its pass `lease-lost`, as typed outcomes. Today, after the refused completion the drain meets the
+  // successor's newer pr-2 result, cannot record its acceptance without authority, and History's raw `StaleWriterError`
+  // escapes `resolveMembers`, failing the whole run. Remove `.failing` once #147 lands.
+  test.failing('DEFECT (#147, ruling R): the drained run ends with typed outcomes, not a raw StaleWriterError', async () => {
+    const { s, drained, successor } = await drainPastLease();
+    try {
+      expect({ status: drained.status, error: drained.error }).toEqual({ status: 0, error: undefined });
+      // pr-1's attempt ended interrupted: the pass lost its lease, so its outcome is unrecorded and the member pending.
+      expect(drained.result.members['pr-1']).toMatchObject({ status: 'pending', blocked: { kind: 'unknown-outcome', reason: 'unrecorded' } });
+      // Nothing succeeded under the stale authority.
+      expect(Object.values(drained.result.members).filter((member) => member.status === 'succeeded')).toEqual([]);
+    } finally {
+      s.open('successor');
+      await successor.exited;
+    }
   });
 });

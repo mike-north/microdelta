@@ -138,6 +138,12 @@ export interface IProviderProcess {
   readonly onReceived: IReceiptListener;
   /** Called synchronously after an effect is recorded applied, before its response is returned. */
   readonly onApplied: IReceiptListener;
+  /**
+   * Called synchronously by an author body once its paid answer is back and
+   * before the body returns: `assess` (the call made in the step itself),
+   * `paid` (the isolated child) or `isolated` (the parent, after its child).
+   */
+  readonly onAnswered: (key: string, step: 'assess' | 'paid' | 'isolated') => void;
 }
 
 /** Wait `milliseconds`, rejecting at once when the send aborts. */

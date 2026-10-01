@@ -29,6 +29,7 @@ import { describe, expect, test } from '@jest/globals';
 import { bindingOf } from './analysis.js';
 import type { IWorld } from './analysis.js';
 import type { IProcessRun } from './harness.js';
+import type { ICommand } from './worker.js';
 import { planted } from './provider.js';
 import { baseWorld, freshScenario, operationOf, plantedTitle, removeScenarios } from './support.js';
 
@@ -90,15 +91,23 @@ describe('event-privacy (RUN-013)', () => {
     }
   });
 
-  // Observed defect, kept failing on purpose. When an author body fails, Reuse Resolution's typed failure
-  // (`execution-failure`) builds its own message as "Body of <step> failed: <the author error's message>", so author
-  // text, including any value the author put in its error, reaches the member's typed outcome and every consumer that
-  // prints it. RUN-013 requires diagnostics to name fields and keys, not their contents; the author's error remains
-  // available unchanged as the failure's `cause`. Remove `.failing` once the framework message names the step only.
-  test.failing('DEFECT (privacy): a member failure\'s framework message does not repeat the author error\'s text', () => {
-    const s = freshScenario(baseWorld({ declarations: { 'pr-1': { failAfter: true } } }));
-    const run = s.run({ kind: 'members' }, { window: 1 });
-    expect(run.result.members['pr-1']).toMatchObject({ status: 'failed', code: 'execution-failure' });
-    expect(run.stdout.includes(planted) || run.stdout.includes(plantedTitle)).toBe(false);
+  // Observed defect (#147), kept failing on purpose. When author code fails, Reuse Resolution's typed failure builds
+  // its own message from the author error's message (`describe(cause)` in `packages/resolution/src/resolution.ts`):
+  // "Body of <step> failed: …" for a member body and for a fold body, and "Source check of <step> failed: …" for a
+  // source check. Author text, including any value the author put in its error, then reaches the typed outcome, the
+  // run's failure and every consumer that prints them. RUN-013 requires diagnostics to name fields and keys, not their
+  // contents; the author's error remains available unchanged as the failure's `cause`. Each site is planted separately,
+  // so a fix of one site alone leaves this test failing. Remove `.failing` once every framework message names the step.
+  test.failing('DEFECT (#147, privacy): no framework failure message repeats an author error\'s text, from a member body, a fold body or a source check', () => {
+    const leaks = (world: IWorld, command: ICommand): boolean => {
+      const run = freshScenario(world).run(command, { window: 1 });
+      const output = `${run.stdout}${run.stderr}`;
+      return output.includes(planted) || output.includes(plantedTitle);
+    };
+    expect({
+      memberBody: leaks(baseWorld({ declarations: { 'pr-1': { failAfter: true } } }), { kind: 'members' }),
+      foldBody: leaks(baseWorld({ failures: { report: true } }), { kind: 'fold' }),
+      sourceCheck: leaks(baseWorld({ failures: { listing: true } }), { kind: 'fold' }),
+    }).toEqual({ memberBody: false, foldBody: false, sourceCheck: false });
   });
 });

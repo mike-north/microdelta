@@ -2,7 +2,7 @@
  * Negative controls for the M5 independent-process acceptance suite
  * (issue #122). Each control plants exactly one wrong behavior into an
  * owner's emitted production build (never TypeScript source): Run
- * Supervision's operation engine, run engine and execution controls,
+ * Supervision's operation engine, run engine, execution controls and writer wait,
  * History's durable lease authority and candidate lookup, Resource
  * Accounting's durable adapter and summary, or the facade's writer port. It
  * then reruns the unchanged M5 acceptance suites, whose worker processes load
@@ -20,13 +20,13 @@
  * planted file is restored after its control, on error, and on
  * SIGINT/SIGTERM/SIGHUP, and final bytes are compared with the originals.
  *
- * Two weakenings are deliberately absent because this layer cannot observe
- * them, and owner-level controls already cover them: a holder guard without
- * its fence check is masked here because the facade names every run's lease
- * holder uniquely (the concurrency controls of #110 plant it with shared
- * holder names), and a waiter that ignores the operator deadline would only
- * hang the waiting process (the concurrency controls run it against bounded
- * owner tests).
+ * A holder guard that checks the holder name but not the fence is observable
+ * here: one run keeps its holder name when it takes its own lease again after
+ * losing it, with the next fence, so only the fence refuses that run's
+ * earlier, stale request (`stale-holder-interleavings`, one run, two
+ * tenures). A waiter that ignores the operator deadline would wait for the
+ * held lease; the busy-waiter case bounds its process at 10 s, so that
+ * control costs about 10 s.
  *
  * On-demand evidence command, not part of `npm test`: run `npm run build` and
  * `npm run test:unit --workspace microdelta` first, then
@@ -50,6 +50,7 @@ const targets = Object.freeze({
   engine: join(root, 'packages/supervision/dist/src/operation-engine.js'),
   records: join(root, 'packages/supervision/dist/src/records.js'),
   supervision: join(root, 'packages/supervision/dist/src/supervision.js'),
+  wait: join(root, 'packages/supervision/dist/src/writer.js'),
   execution: join(root, 'packages/supervision/dist/src/execution.js'),
   history: join(root, 'packages/history/dist/src/durable/index.js'),
   accounting: join(root, 'packages/accounting/dist/src/sqlite/index.js'),
@@ -251,6 +252,14 @@ const controls = [
   // Fencing (PUB-004, ruling R): takeover only after expiry with the next fence; a stale holder cannot act.
   {
     guard: 'fence',
+    name: 'the holder guard checks the holder name but not the fence',
+    target: 'history',
+    anchor: 'if (writer.holder !== lease.holder || writer.lastFence !== lease.fence) {',
+    replacement: 'if (writer.holder !== lease.holder) {',
+    breaks: ['stale-holder-interleavings'],
+  },
+  {
+    guard: 'fence',
     name: 'the holder guard ignores lease expiry',
     target: 'history',
     anchor: 'else if (writer.expiresAt <= now) {',
@@ -262,6 +271,14 @@ const controls = [
     name: 'acquisition takes over an unexpired holder',
     target: 'history',
     anchor: 'if (writer.holder !== null && writer.expiresAt > now) {',
+    replacement: 'if (false) {',
+    breaks: ['writer-wait-and-takeover'],
+  },
+  {
+    guard: 'fence',
+    name: 'waiting ignores the operator deadline',
+    target: 'wait',
+    anchor: 'if (deadline !== undefined && now >= deadline) {',
     replacement: 'if (false) {',
     breaks: ['writer-wait-and-takeover'],
   },

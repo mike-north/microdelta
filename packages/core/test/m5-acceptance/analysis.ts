@@ -17,6 +17,10 @@
  *   never the request itself. Its safety declarations, retry policy and
  *   provider-cancellation support come from the world's per-PR declaration,
  *   as an author's adapter configuration would.
+ * - The template also has `paid`, a member memo making the same operation,
+ *   and `isolated`, a member memo whose body calls `paid` as its memoized
+ *   child: the author pattern that isolates each paid call in its own step,
+ *   so a resumed parent reuses a published child instead of paying again.
  * - `report` is a strict fold over every member's assessment: the succeeded
  *   members' scores, in canonical key order.
  * - `tally` is an outcome (tolerant) fold over the same members: each
@@ -25,7 +29,10 @@
  * Every pull request's title is a planted secret, and the provider's answer
  * carries planted text too. The folds consume only `score` and statuses, so
  * no fold result holds a planted value, and the worker never prints a body
- * value; the privacy case relies on both.
+ * value; the privacy case relies on both. The world can also plant author
+ * failures whose messages carry the planted titles: in a member body after
+ * its answer (`failAfter`), in the discovery source's check and in the
+ * report's fold body (`failures`).
  *
  * Every helper call that stands for a body writes one trace line
  * synchronously to fd 1, so the parent counts bodies from author-level
@@ -102,9 +109,21 @@ export interface IOperationDeclaration {
   readonly failAfter?: boolean;
 }
 
+/**
+ * Author failures the world plants in composition-level bodies, each with an
+ * error message that carries a planted title: the discovery source's check,
+ * and the strict report's fold body.
+ */
+export interface IWorldFailures {
+  readonly listing?: boolean;
+  readonly report?: boolean;
+}
+
 /** The external world one process sees, written by the parent before each process starts. */
 export interface IWorld {
   readonly pullRequests: readonly IWorldPullRequest[];
+  /** Author failures planted in composition-level bodies; none when absent. */
+  readonly failures?: IWorldFailures;
   /** Per-PR operation declarations by key. */
   readonly declarations: Readonly<Record<string, IOperationDeclaration>>;
   /** Per-PR provider scripts by key; see `provider.ts`. */
@@ -145,6 +164,8 @@ export type IInputs = Record<never, never>;
 export interface IHelpers {
   readonly listing: () => ISourceOutcome<IListing>;
   readonly assess: (key: string) => Promise<IAssessment>;
+  readonly paid: (key: string) => Promise<IAssessment>;
+  readonly answered: (key: string) => void;
   readonly render: (entries: readonly IFoldEntry<ITrackedView<IAssessment>>[]) => IReport;
   readonly tally: (entries: readonly IOutcomeEntry<ITrackedView<IAssessment>>[]) => ITally;
 }
@@ -191,15 +212,24 @@ export function bindingOf(pullRequest: IWorldPullRequest): string {
 /** Discovery: the world's pull requests, as a complete listing. */
 function listing(): ISourceOutcome<IListing> {
   trace({ helper: 'listing' });
+  const world = readWorld();
+  if (world.failures?.listing === true) {
+    throw new Error(`the listing failed at ${world.pullRequests.map((pullRequest) => pullRequest.title).join(', ')}`);
+  }
   return sourceOutcome.fresh<IListing>({ members: readWorld().pullRequests.map((pullRequest) => ({ key: pullRequest.key })), status: 'complete' });
+}
+
+/** The provider this process selected. */
+function selectedProvider(): IProviderProcess {
+  if (provider === undefined) {
+    throw new Error('no provider selected for this process');
+  }
+  return provider;
 }
 
 /** The operation request of one PR's assessment, under the world's declaration for it. */
 function assessmentRequest(pullRequest: IWorldPullRequest, declaration: IOperationDeclaration, script: readonly IScriptedResponse[]): IOperationRequest<IProviderAnswer> {
-  const selected = provider;
-  if (selected === undefined) {
-    throw new Error('no provider selected for this process');
-  }
+  const selected = selectedProvider();
   const cancelAnswer = declaration.cancel;
   return {
     name: operationName,
@@ -225,7 +255,7 @@ function assessmentRequest(pullRequest: IWorldPullRequest, declaration: IOperati
  * holds a pending signal. With `failAfter` the body fails after its answer with an author
  * error carrying planted text, which no framework output may repeat.
  */
-async function assess(key: string): Promise<IAssessment> {
+async function assessIn(key: string, step: 'assess' | 'paid'): Promise<IAssessment> {
   // The body's run context, read before the operation's awaits and again after them (RUN-001, A-18).
   const before = currentRun();
   trace({ helper: 'assess', key, run: before.runId, environment: before.environment });
@@ -253,12 +283,32 @@ async function assess(key: string): Promise<IAssessment> {
   if (declaration.failAfter === true) {
     throw new Error(`the author's summary of ${pullRequest.title} failed: ${answer.explanation}`);
   }
+  selectedProvider().onAnswered(key, step);
   return { score: answer.score, explanation: answer.explanation };
+}
+
+/** The `assess` memo's body: the paid call made in the step itself. */
+function assess(key: string): Promise<IAssessment> {
+  return assessIn(key, 'assess');
+}
+
+/** The `paid` child memo's body: the same paid call, isolated in its own step (EXP-8 resolution 3). */
+function paid(key: string): Promise<IAssessment> {
+  return assessIn(key, 'paid');
+}
+
+/** The `isolated` parent's observation that its child's paid answer came back, before the parent publishes. */
+function answered(key: string): void {
+  selectedProvider().onAnswered(key, 'isolated');
 }
 
 /** The strict report: succeeded members' scores. */
 function render(entries: readonly IFoldEntry<ITrackedView<IAssessment>>[]): IReport {
   trace({ helper: 'report' });
+  const world = readWorld();
+  if (world.failures?.report === true) {
+    throw new Error(`the report failed at ${world.pullRequests.map((pullRequest) => pullRequest.title).join(', ')}`);
+  }
   return { scores: entries.flatMap((entry): (readonly [string, number])[] => entry.status === 'succeeded' ? [[entry.key, entry.data.score]] : []) };
 }
 
@@ -278,6 +328,8 @@ export interface IAnalysis {
   readonly tally: IStepDescriptor;
   /** One member's assessment step. */
   assessment(memberKey: string): IStepDescriptor;
+  /** One member's `isolated` step, whose paid call is its `paid` child. */
+  isolated(memberKey: string): IStepDescriptor;
 }
 
 /** Compose the analysis with fresh allocations, as each process does. */
@@ -290,12 +342,26 @@ export function composeAnalysis(): IAnalysis {
     finality: () => true,
     run: ({ helpers }) => helpers.listing(),
   });
-  const steps = (member: IMemberBuilder<IInputs, IHelpers, IPullRequestRecord>) => ({
-    assess: member.memo({
+  const steps = (member: IMemberBuilder<IInputs, IHelpers, IPullRequestRecord>) => {
+    const assessed = member.memo({
       subject: member.subject('assessment'),
       run: ({ member: bound, helpers }) => helpers.assess(bound.key),
-    }),
-  });
+    });
+    const paidCall = member.memo({
+      subject: member.subject('paid'),
+      run: ({ member: bound, helpers }) => helpers.paid(bound.key),
+    });
+    const isolated = member.memo({
+      subject: member.subject('isolated'),
+      children: { paid: paidCall },
+      run: async ({ calls, member: bound, helpers }) => {
+        const child = await calls.paid();
+        helpers.answered(bound.key);
+        return { score: child.data.score, explanation: 'scored by the isolated paid child' };
+      },
+    });
+    return { assess: assessed, paid: paidCall, isolated };
+  };
   const pr = template({ slot: templateSlot, collection: prs, steps });
   const report = fold({ subject: 'report:acme/widget', over: { template: pr, step: stepSlot }, run: ({ members, helpers }) => helpers.render(members) });
   const tallied = outcomeFold({ subject: 'tally:acme/widget', over: { template: pr, step: stepSlot }, run: ({ members, helpers }) => helpers.tally(members) });
@@ -305,6 +371,8 @@ export function composeAnalysis(): IAnalysis {
     helpers: [
       { slot: 'listing', helper: listing },
       { slot: 'assess', helper: assess },
+      { slot: 'paid', helper: paid },
+      { slot: 'answered', helper: answered },
       { slot: 'render', helper: render },
       { slot: 'tally', helper: tally },
     ],
@@ -321,5 +389,6 @@ export function composeAnalysis(): IAnalysis {
     report: Object.freeze({ scope: analysisScope, role: 'step', slot: reportSlot }),
     tally: Object.freeze({ scope: analysisScope, role: 'step', slot: tallySlot }),
     assessment: (memberKey) => Object.freeze({ scope: analysisScope, role: 'step', slot: stepSlot, template: templateSlot, collection: collectionSlot, memberKey }),
+    isolated: (memberKey) => Object.freeze({ scope: analysisScope, role: 'step', slot: 'isolated', template: templateSlot, collection: collectionSlot, memberKey }),
   };
 }

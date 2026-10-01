@@ -33,6 +33,7 @@ import { SupervisionError, WriterBusyError, createStopController, currentExecuti
 import type {
   ICompletedResultReference,
   IDeferralMode,
+  IDiscoveryReport,
   IMemberOutcome,
   IOperationUsage,
   IOperationView,
@@ -74,11 +75,16 @@ export interface IStopPlan {
  * boundary of `key`'s request:
  * - `before-send`: the intent and usage intent are durable; the provider has received nothing;
  * - `after-send`: the provider applied the effect; no response reached Supervision;
- * - `after-usage`: the usage report was acknowledged durably; the outcome was never committed.
+ * - `after-usage`: the usage report was acknowledged durably; the outcome was never committed;
+ * - `after-answer`: the operation's outcome is committed and its answer is back in the author body
+ *   of `step`, which has not returned, so nothing of that step is published;
+ * - `after-publish`: an observer sees `step`'s `publish` position, so its result is committed.
  */
 export interface IKillPlan {
-  readonly at: 'before-send' | 'after-send' | 'after-usage';
+  readonly at: 'before-send' | 'after-send' | 'after-usage' | 'after-answer' | 'after-publish';
   readonly key: string;
+  /** The member step `after-answer` and `after-publish` concern: `assess` when absent. */
+  readonly step?: 'assess' | 'isolated';
 }
 
 /**
@@ -93,7 +99,7 @@ export interface IAckFault {
 
 /** One caller command. */
 export type ICommand =
-  | { readonly kind: 'members' }
+  | { readonly kind: 'members'; readonly step?: 'assess' | 'isolated' }
   | { readonly kind: 'fold' }
   | { readonly kind: 'tally' }
   | { readonly kind: 'check'; readonly key: string }
@@ -101,6 +107,7 @@ export type ICommand =
   | { readonly kind: 'settle'; readonly operation: string; readonly action: 'resolve' | 'abandon'; readonly outcome?: 'succeeded' | 'failed'; readonly usage?: IOperationUsage }
   | { readonly kind: 'promote'; readonly into: string }
   | { readonly kind: 'interleave'; readonly late: 'publish' | 'renew' | 'release'; readonly gate: string }
+  | { readonly kind: 'same-run'; readonly next: string }
   | { readonly kind: 'lifecycle'; readonly second: IStoreFiles };
 
 /** Everything one worker process is told. */
@@ -148,6 +155,8 @@ export interface IFoldJson {
   readonly failed?: readonly string[];
   readonly pending?: readonly string[];
   readonly cancelled?: readonly string[];
+  /** Why strict completion is impossible, as the framework words it, for a failed fold. */
+  readonly diagnostic?: string;
 }
 
 /** A JSON-safe description of an outcome fold's typed outcome. */
@@ -173,6 +182,8 @@ export interface IResultJson {
   readonly runId: string;
   readonly members: Readonly<Record<string, IMemberJson>>;
   readonly discovery: string | null;
+  /** What the framework says about discovery that did not key: a refusal's reason or a rejection's diagnostic message. */
+  readonly discoveryDetail: string | null;
   readonly fold: IFoldJson | null;
   readonly report: IReport | null;
   readonly tally: ITallyJson | null;
@@ -190,6 +201,8 @@ export interface IResultJson {
   readonly lifecycle: ILifecycleJson | null;
   /** The interleaving holder's outcome of its late action: `published`, `reused`, a refusal, or an error name. */
   readonly late: string | null;
+  /** The same-run case's second request outcome, which took the run's next lease. */
+  readonly second: string | null;
 }
 
 /** Write one line synchronously. */
@@ -234,6 +247,23 @@ function describeMember(member: IMemberOutcome): IMemberJson {
   }
 }
 
+/** What the framework says about discovery that did not key, as a consumer would print it. */
+function discoveryDetail(discovery: IDiscoveryReport): string | null {
+  switch (discovery.kind) {
+    case 'keyed':
+      return null;
+    case 'rejected':
+      return discovery.diagnostic.message;
+    case 'pending':
+    case 'cancelled':
+      return discovery.reason;
+    default: {
+      const exhaustive: never = discovery;
+      return exhaustive;
+    }
+  }
+}
+
 /** Describe a strict fold's typed outcome. */
 function describeFold(outcome: IStrictFoldOutcome): IFoldJson {
   switch (outcome.status) {
@@ -242,7 +272,7 @@ function describeFold(outcome: IStrictFoldOutcome): IFoldJson {
     case 'waiting':
       return { status: outcome.status, pending: outcome.pending };
     case 'failed':
-      return { status: outcome.status, failed: outcome.failed, cancelled: outcome.cancelled, pending: outcome.pending };
+      return { status: outcome.status, failed: outcome.failed, cancelled: outcome.cancelled, pending: outcome.pending, diagnostic: outcome.diagnostic };
     case 'pending':
     case 'cancelled':
       return { status: outcome.status };
@@ -306,6 +336,7 @@ function emptyResult(runId: string): IResultJson {
     runId,
     members: {},
     discovery: null,
+    discoveryDetail: null,
     fold: null,
     report: null,
     tally: null,
@@ -322,6 +353,7 @@ function emptyResult(runId: string): IResultJson {
     diagnostics: [],
     lifecycle: null,
     late: null,
+    second: null,
   };
 }
 
@@ -380,6 +412,11 @@ async function main(job: IJob): Promise<void> {
         die();
       }
     },
+    onAnswered: (key, step) => {
+      if (kill?.at === 'after-answer' && kill.key === key && step === (kill.step ?? 'assess')) {
+        die();
+      }
+    },
   });
   const analysis = composeAnalysis();
   const opened: { readonly workspace: IWorkspace; close(): void }[] = [];
@@ -423,6 +460,9 @@ async function main(job: IJob): Promise<void> {
       }
       if (event.kind === 'wait' && event.phase === 'sleeping') {
         trigger((on) => 'sleeping' in on);
+      }
+      if (kill?.at === 'after-publish' && event.kind === 'step' && event.event.phase === 'publish' && event.event.step.memberKey === kill.key && event.event.step.slot === (kill.step ?? 'assess')) {
+        die();
       }
       const throwAt = job.throwObserverAt;
       if (throwAt !== undefined && event.kind === 'step' && event.event.phase === throwAt.phase && event.event.step.memberKey === throwAt.key) {
@@ -480,20 +520,20 @@ async function command(job: IJob, given: Exclude<ICommand, { readonly kind: 'lif
     let result = emptyResult(live.context.runId);
     switch (given.kind) {
       case 'members': {
-        const report = await live.resolveMembers({ template: templateSlot, step: stepSlot }, requestKey());
-        result = { ...result, discovery: report.discovery.kind, members: Object.fromEntries(report.members.map((member) => [member.key, describeMember(member)])) };
+        const report = await live.resolveMembers({ template: templateSlot, step: given.step ?? stepSlot }, requestKey());
+        result = { ...result, discovery: report.discovery.kind, discoveryDetail: discoveryDetail(report.discovery), members: Object.fromEntries(report.members.map((member) => [member.key, describeMember(member)])) };
         break;
       }
       case 'fold': {
         const folded = await live.resolveFold(analysis.report, requestKey());
         const report = folded.outcome.status === 'succeeded' ? live.read<IReport>(folded.outcome.outcome.reference) : null;
-        result = { ...result, discovery: folded.discovery.kind, members: Object.fromEntries(folded.members.map((member) => [member.key, describeMember(member)])), fold: describeFold(folded.outcome), report };
+        result = { ...result, discovery: folded.discovery.kind, discoveryDetail: discoveryDetail(folded.discovery), members: Object.fromEntries(folded.members.map((member) => [member.key, describeMember(member)])), fold: describeFold(folded.outcome), report };
         break;
       }
       case 'tally': {
         const folded = await live.resolveOutcomeFold(analysis.tally, requestKey());
         const tallied = folded.outcome.status === 'folded' ? live.read<ITally>(folded.outcome.outcome.reference) : null;
-        result = { ...result, discovery: folded.discovery.kind, members: Object.fromEntries(folded.members.map((member) => [member.key, describeMember(member)])), tally: describeTally(folded.outcome), tallied };
+        result = { ...result, discovery: folded.discovery.kind, discoveryDetail: discoveryDetail(folded.discovery), members: Object.fromEntries(folded.members.map((member) => [member.key, describeMember(member)])), tally: describeTally(folded.outcome), tallied };
         break;
       }
       case 'check': {
@@ -522,6 +562,11 @@ async function command(job: IJob, given: Exclude<ICommand, { readonly kind: 'lif
           evidence: { format: 'm5-acceptance.promotion', formatVersion: 1, content: { from: job.environment, report: folded.outcome.outcome.reference.locator } },
         });
         result = { ...result, fold: describeFold(folded.outcome), promotion };
+        break;
+      }
+      case 'same-run': {
+        const sameRun = await sameRunTenures(live, analysis, given, job, requestKey);
+        result = { ...result, ...sameRun };
         break;
       }
       case 'interleave':
@@ -571,6 +616,25 @@ async function interleave(live: IWorkspaceRun, analysis: IAnalysis, given: { rea
     return describe(await live.resolve(analysis.assessment('pr-2'), requestKey()));
   }
   return first;
+}
+
+/**
+ * One run, two tenures of its own writer lease (PUB-004). The first request
+ * resolves pr-1, whose request the provider holds at gate `late`; while it is
+ * held, the parent lets the run's lease expire and opens gate `next`. The
+ * run's second request (pr-2) then takes the lease again under the *same*
+ * holder name with the next fence, and publishes. Only then does the parent
+ * open `late`, so the first request's late completion presents the run's own
+ * holder name with the old fence: History's fence check alone must refuse it.
+ */
+async function sameRunTenures(live: IWorkspaceRun, analysis: IAnalysis, given: { readonly next: string }, job: IJob, requestKey: () => { readonly requestKey: string }): Promise<{ readonly late: string; readonly second: string }> {
+  const describe = (outcome: Awaited<ReturnType<IWorkspaceRun['resolve']>>): string => outcome.kind === 'refused' ? `refused:${outcome.disposition}` : outcome.kind;
+  const first = live.resolve(analysis.assessment('pr-1'), requestKey()).then(describe, (error: unknown) => error instanceof Error ? error.name : 'unknown');
+  emit({ t: 'idle' });
+  await waitForFile(gateFile(job.provider, given.next));
+  const second = describe(await live.resolve(analysis.assessment('pr-2'), requestKey()));
+  emit({ t: 'second', outcome: second });
+  return { late: await first, second };
 }
 
 /**

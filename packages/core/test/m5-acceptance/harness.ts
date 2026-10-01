@@ -93,9 +93,17 @@ export interface IWriterRow {
   readonly expiresAt: number;
 }
 
-/** Every History row that records the fence it was written under, for comparing durable state before and after an action. */
+/**
+ * A snapshot of durable History for comparing state before and after an
+ * action: every row of every History table, plus the fenced rows in a compact
+ * form for reading which fences wrote what. The writer row's clock high-water
+ * is left out: the writer-lease model lets any writer transaction, including a
+ * refused one or a waiter's observation, raise it, and it grants no authority.
+ */
 export interface IFencedRows {
   readonly writer: IWriterRow;
+  /** Every row of every History table, as sorted JSON lines, by table (the writer row without its high-water). */
+  readonly tables: Readonly<Record<string, readonly string[]>>;
   /** `<attempt id> <subject> <environment> <state> <allocated fence> <ended fence>` */
   readonly attempts: readonly string[];
   /** `<result id> <subject> <environment> <published fence>` */
@@ -133,8 +141,12 @@ export interface IScenario {
   readonly provider: string;
   /** Write the world every later process reads. */
   writeWorld(world: IWorld): void;
-  /** Run one independent worker process to completion. */
-  run(command: ICommand, options?: IJobOptions): IProcessRun;
+  /**
+   * Run one independent worker process to completion. It is killed after
+   * `timeoutMilliseconds` (90 s when absent), so a case that expects a prompt
+   * exit can bound how long a defect that hangs may cost.
+   */
+  run(command: ICommand, options?: IJobOptions, timeoutMilliseconds?: number): IProcessRun;
   /** Start one independent worker process in the background. */
   start(command: ICommand, options?: IJobOptions): IStartedProcess;
   /** Open a provider gate, releasing every request held at it. */
@@ -145,7 +157,7 @@ export interface IScenario {
   keys(kind: ILedgerEntry['kind']): readonly string[];
   /** The History writer row now. */
   writer(): IWriterRow;
-  /** Every fenced History row now. */
+  /** Every History row now. */
   rows(): IFencedRows;
   /** Every attempt row of the subjects whose name starts with `prefix`, in allocation order. */
   attempts(prefix?: string): readonly IAttemptRow[];
@@ -276,8 +288,8 @@ export function scenario(): IScenario {
     writeWorld(world) {
       writeFileSync(worldFile, `${JSON.stringify(world, null, 2)}\n`);
     },
-    run(command, options = {}) {
-      const spawned = spawnSync(process.execPath, [worker, JSON.stringify(jobOf(command, options))], { encoding: 'utf8', timeout: 90_000 });
+    run(command, options = {}, timeoutMilliseconds = 90_000) {
+      const spawned = spawnSync(process.execPath, [worker, JSON.stringify(jobOf(command, options))], { encoding: 'utf8', timeout: timeoutMilliseconds });
       return processRun(spawned.status, spawned.signal, spawned.stdout, spawned.stderr);
     },
     start(command, options = {}) {
@@ -329,6 +341,10 @@ export function scenario(): IScenario {
     rows() {
       return {
         writer: writer(),
+        // Every table the store holds, read from SQLite's own catalog, so a table added to History's schema is compared too.
+        tables: Object.fromEntries(query(location, "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").map((entry) => String(entry['name'])).map((table) => [table, query(location, `SELECT * FROM ${table}`)
+          .map((row) => JSON.stringify(table === 'history_writer' ? { ...row, time_high_water: undefined } : row))
+          .sort()])),
         attempts: attempts().map((row) => `${row.subject} ${row.environment} ${row.state} ${String(row.allocatedFence)} ${String(row.endedFence)}`),
         results: query(location, 'SELECT result_id, subject, environment, published_fence FROM history_results ORDER BY result_id').map((row) => `${String(row['result_id'])} ${String(row['subject'])} ${String(row['environment'])} ${String(row['published_fence'])}`),
         journal: query(location, 'SELECT sequence, collection, journal_key, revision, fence FROM history_journal ORDER BY sequence').map((row) => `${String(row['sequence'])} ${String(row['collection'])} ${String(row['journal_key'])} r${String(row['revision'])} ${String(row['fence'])}`),

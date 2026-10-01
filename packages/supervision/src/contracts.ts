@@ -233,10 +233,10 @@ export interface IRunOptions {
   /**
    * The bounded active window of member fan-out: how many members of the
    * run's members requests, strict folds and outcome folds actively resolve
-   * at once. A fan-out started from inside member or step work (through a run
-   * operation the author code kept) never waits for this window's lanes: it
-   * resolves its members one at a time on a lane of its own, so it cannot
-   * deadlock behind the member that is waiting for it (RUN-002). It is
+   * at once. Every run operation called from inside member or step work
+   * (through a run the author code kept) is refused as an undeclared call
+   * (CMP-9), so no fan-out ever waits for this window from inside a lane
+   * holder (RUN-002). It is
    * independent of `permits`: the window bounds active member work and its
    * memory, permits bound provider requests. A member waiting for a time
    * lends its lane, so it never stalls its siblings. A positive safe integer;
@@ -494,7 +494,11 @@ export interface IOutcomeFoldReport {
 /**
  * A live run. Every operation executes inside the run's scope, so author code
  * it reaches can look up the run context without a parameter. After the run
- * closes, every operation rejects with `run-closed`.
+ * closes, every operation rejects with `run-closed`. Every operation belongs
+ * to the run body: called from inside a member's work or any step attempt
+ * (author code that kept the run), it rejects at once with `undeclared-call`
+ * (CMP-9), because what it resolves or reads would enter no evidence of the
+ * calling body. Read-only inspection outside a run is unaffected.
  * @alpha
  */
 export interface IRun {
@@ -540,6 +544,15 @@ export interface IRun {
   recover(step: IBindingDescriptor, request: IRequestOptions): Promise<IRecoveryResult>;
   /** Run ordinary nonmemoized work, observed but with no completed-result identity. */
   ordinary<T>(label: string, work: () => T | Promise<T>): Promise<Awaited<T>>;
+  /**
+   * Throw `SupervisionError('undeclared-call')`, recording the run diagnostic,
+   * when called from inside a member's work or a step attempt of this open
+   * run; otherwise do nothing. An assembly calls it first in every
+   * result-reading operation it adds to a run (for example an exact read), so
+   * those obey the same rule as the run's own operations (CMP-9).
+   * @param operation - The operation's name, for the diagnostic.
+   */
+  refuseUndeclaredCall(operation: string): void;
 }
 
 /**

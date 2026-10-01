@@ -22,7 +22,7 @@ import type { IAbortSource } from '../src/control.js';
 import { raceAbort, runControls } from '../src/execution.js';
 import type { ISupervisedRun } from '../src/execution.js';
 import { SupervisionError, createStopController, createSupervision } from '../src/index.js';
-import type { IMembersRequest, IMembersResolution, IResolution } from '@microdelta/resolution';
+import type { IResolution } from '@microdelta/resolution';
 
 import type { IAbortSignal, IResolutionPorts, IRunEvent, IRunExecution, IRunObserver, IRunOptions, IStopState, ISupervision } from '../src/index.js';
 import { createPermitPool } from '../src/permits.js';
@@ -381,54 +381,49 @@ describe('the permit pool (RUN-002)', () => {
     expect(order).toEqual(['first:start', 'second:start', 'holder:start', 'holder:end', 'first:woke', 'second:woke', 'q1:start', 'q2:start', 'q3:start']);
   });
 
-  test('a run operation started inside a member fans out on a single-lane pool of its own, never waiting on the run-wide lane its caller holds (RUN-002)', async () => {
+  test('CMP-9: every run operation, started inside a member or a step attempt, is refused at once as an undeclared call, and the run completes (RUN-002)', async () => {
     let captured: IResolutionPorts | undefined;
-    const nested: string[] = [];
-    let active = 0;
-    let peak = 0;
-    /** A Resolution whose members request fans out through the window port, as real Resolution's does. */
     const resolution = (ports: IResolutionPorts): IResolution => {
       captured = ports;
-      return Object.freeze({
-        ...portDouble().factory(ports),
-        resolveMembers: async (request: IMembersRequest): Promise<IMembersResolution> => {
-          const keys = ['x', 'y', 'z'];
-          await Promise.all(keys.map((key) => ports.execution.member(async () => {
-            active += 1;
-            peak = Math.max(peak, active);
-            nested.push(`${request.template}:${key}`);
-            await settle();
-            active -= 1;
-          })));
-          const reference = Object.freeze({ kind: 'completed-result' as const, locator: 'mdh1:test:items' });
-          return Object.freeze({ template: request.template, discovery: Object.freeze({ kind: 'keyed', collection: stepOf('items'), reference, completion: 'complete', keys }), members: [], diagnostics: [] });
-        },
-      });
+      return portDouble().factory(ports);
     };
-    const stop = createStopController();
-    const result = await supervisionWith(fakeTimer()).run({ ...optionsFor(portDouble(), { window: 1, stop }), resolution }, async (run) => {
+    const step = stepOf('summary', 'person:ada');
+    const request = { requestKey: 'nested' };
+    const result = await supervisionWith(fakeTimer()).run({ ...optionsFor(portDouble(), { window: 1 }), resolution }, async (run) => {
       const { execution } = captured ?? (() => {
         throw new Error('the run has not started');
       })();
-      // The outer member holds the run's only lane while its work waits for a nested members request.
-      const outer = execution.member(() => run.resolveMembers({ template: 'inner', step: 'echo' }, { requestKey: 'nested' })).then(() => 'completed' as const);
-      const bound = (async (): Promise<'deadlocked'> => {
-        for (let turn = 0; turn < 200; turn += 1) {
-          await settle();
-        }
-        return 'deadlocked';
-      })();
-      const settled = await Promise.race([outer, bound]);
-      if (settled === 'deadlocked') {
-        // Release the run so the failure is reported instead of hanging the suite.
-        stop.request({ level: 'hard' });
-      }
-      return settled;
+      /** Call every run operation where this runs; each settles to its Supervision code. */
+      const callEach = (): Promise<(string | undefined)[]> => Promise.all([
+        codeOf(run.resolve(step, request)),
+        codeOf(run.resolveMembers({ template: 'contributor', step: 'summary' }, request)),
+        codeOf(run.resolveFold(stepOf('report'), request)),
+        codeOf(run.resolveOutcomeFold(stepOf('tally'), request)),
+        codeOf(run.check(step)),
+        codeOf(run.recover(step, request)),
+        codeOf(run.ordinary('note', () => 'noted')),
+        codeOf(() => {
+          run.refuseUndeclaredCall('read');
+        }),
+      ]);
+      // The member holds the run's only lane: a refusal must never wait for one.
+      const fromMember = await execution.member(callEach);
+      const fromAttempt = await execution.execute(step, callEach);
+      // The same operations from the run body itself are not refused.
+      const fromBody = await codeOf(run.ordinary('note', () => 'noted'));
+      return { fromMember, fromAttempt, fromBody };
     });
-    expect(result.value).toBe('completed');
-    expect(nested).toEqual(['inner:x', 'inner:y', 'inner:z']);
-    // The nested fan-out resolves one member at a time on its own lane.
-    expect(peak).toBe(1);
+    const refused = Array.from({ length: 8 }, () => 'undeclared-call');
+    expect(result.value.fromMember).toEqual(refused);
+    expect(result.value.fromAttempt).toEqual({ kind: 'returned', value: refused });
+    expect(result.value.fromBody).toBeUndefined();
+    // Each refusal is a run diagnostic naming the operation and where it was called, by identifiers only.
+    const refusals = result.diagnostics.filter((diagnostic) => diagnostic.includes('undeclared call'));
+    expect(refusals).toHaveLength(16);
+    for (const operation of ['resolve', 'resolveMembers', 'resolveFold', 'resolveOutcomeFold', 'check', 'recover', 'ordinary', 'read']) {
+      expect(refusals).toContain(`Run ${result.context.runId} refused ${operation} from inside member work: an undeclared call (CMP-9)`);
+      expect(refusals).toContain(`Run ${result.context.runId} refused ${operation} from inside the step attempt of summary/person:ada: an undeclared call (CMP-9)`);
+    }
   });
 
   test.each([
@@ -986,7 +981,7 @@ describe('abort listeners are released once they can no longer run (regression: 
 
   test('each send gets its own signal, detached once the send settles, so an adapter that never removes its listener retains nothing through the run', async () => {
     const { run, hard } = handBuiltRun();
-    const controls = runControls({ run, attempt: undefined, lane: undefined, lanes: run.lanes });
+    const controls = runControls({ run, attempt: undefined, lane: undefined });
     const baseline = hard.listenerCount;
     const seen: IAbortSignal[] = [];
     for (let index = 0; index < 10; index += 1) {
@@ -1010,7 +1005,7 @@ describe('abort listeners are released once they can no longer run (regression: 
 
   test('a send\'s own signal still aborts when a hard stop lands while it is in flight', async () => {
     const { run, hard } = handBuiltRun();
-    const controls = runControls({ run, attempt: undefined, lane: undefined, lanes: run.lanes });
+    const controls = runControls({ run, attempt: undefined, lane: undefined });
     const aborted: string[] = [];
     const sending = controls.send({
       label: 'in-flight',

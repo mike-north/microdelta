@@ -155,7 +155,7 @@ describe('outcome fold declaration (RUN-010)', () => {
     expect(declared.over.step).toBe('summary');
   });
 
-  test('RUN-002: an outcome fold is never a child, a member step or a template step, so its fan-out never nests inside a member', () => {
+  test('CMP-9: an outcome fold is never a child, a member step or a template step: a declared edge never nests its fan-out inside a member (RUN-002)', () => {
     const built = buildKeyed();
     expectDefinitionError(() => callUntyped(memo, { subject: 'm', children: { tally: built.tally }, run: () => 1 }), 'illegal-edge');
     expectDefinitionError(() => compose({

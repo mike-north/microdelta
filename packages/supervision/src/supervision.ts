@@ -73,7 +73,7 @@ import type {
 import { createAbortSource, createStopController } from './control.js';
 import type { IStopLevel, IStopState } from './control.js';
 import { SupervisionError } from './errors.js';
-import { isDraining, operationFrame, raceAbort, runControls, supervisedExecution } from './execution.js';
+import { isDraining, raceAbort, runControls, supervisedExecution } from './execution.js';
 import type { IAttemptFrame, IFrameAccess, IRunFrame, ISupervisedRun } from './execution.js';
 import { createPermitPool } from './permits.js';
 
@@ -401,7 +401,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         return state.hard.signal.aborted ? 'a hard stop took effect before the publication commit' : undefined;
       },
     };
-    const frame: IRunFrame = Object.freeze({ run: state, attempt: undefined, lane: undefined, lanes: state.lanes });
+    const frame: IRunFrame = Object.freeze({ run: state, attempt: undefined, lane: undefined });
     /** Access to this run's frames in the shared scope; a frame of another run is not this run's. */
     const frames: IFrameAccess = Object.freeze({
       current: (): IRunFrame | undefined => {
@@ -496,15 +496,40 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     const resolution: IResolution = runOptions.resolution(Object.freeze({ admission, observer, execution: supervisedExecution(state, frames) }));
 
     /**
-     * Run an operation inside this run's scope, after checking it is still
-     * open, and account for it until it settles. Started from the run body it
-     * runs in the root frame; started from inside a member or a step attempt
-     * it runs in a frame whose member fan-out has a lane pool of its own
-     * (RUN-002's nested rule, {@link operationFrame}).
+     * The refusal of a run operation called from inside a member's work or a
+     * step attempt (any admitted body, a fold's included) of this open run,
+     * or undefined when it may proceed. Every run operation resolves or reads
+     * framework results, and whatever such a call obtained would enter no
+     * evidence of the calling body: it is an undeclared call (CMP-9). The
+     * refusal is decided synchronously, before any admission, claim or lane,
+     * so it never waits; because of it, a lane holder can never await the
+     * run-wide lane pool (RUN-002's nested rule). It is recorded as a run
+     * diagnostic naming the operation and the calling step by identifiers
+     * only. A closed run's operations are left to report `run-closed`.
      */
-    function within<TResult>(operation: () => TResult | Promise<TResult>): Promise<TResult> {
-      const operating = operationFrame(frame, frames.current());
-      return state.track(() => scope.run(operating, async () => operation()));
+    function undeclaredCall(operation: string): SupervisionError | undefined {
+      const caller = frames.current();
+      if (!state.open || caller === undefined || (caller.attempt === undefined && caller.lane === undefined)) {
+        return undefined;
+      }
+      const step = caller.attempt?.step;
+      const inside = step === undefined ? 'member work' : `the step attempt of ${step.slot}${step.memberKey === undefined ? '' : `/${step.memberKey}`}`;
+      const message = `Run ${context.runId} refused ${operation} from inside ${inside}: an undeclared call (CMP-9)`;
+      diagnostics.push(message);
+      return new SupervisionError('undeclared-call', message);
+    }
+
+    /**
+     * Run the operation `name` inside this run's scope, after refusing an
+     * undeclared call and checking the run is still open, and account for it
+     * until it settles.
+     */
+    function within<TResult>(operation: () => TResult | Promise<TResult>, name: string): Promise<TResult> {
+      const refusal = undeclaredCall(name);
+      if (refusal !== undefined) {
+        return Promise.reject(refusal);
+      }
+      return state.track(() => scope.run(frame, async () => operation()));
     }
 
     /**
@@ -544,34 +569,34 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
           const outcome = await resolution.resolve({ step, requestKey: request.requestKey, lease: writer.lease() });
           diagnostics.push(...outcome.diagnostics);
           return outcome;
-        });
+        }, 'resolve');
       },
       resolveMembers(target: IMembersTarget, request: IRequestOptions): Promise<IMembersReport> {
         return within(async () => {
           const resolved = await resolution.resolveMembers({ template: target.template, step: target.step, requestKey: request.requestKey, lease: writer.lease() });
           diagnostics.push(...resolved.diagnostics);
           return membersReport(target.step, resolved);
-        });
+        }, 'resolveMembers');
       },
       resolveFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IFoldReport> {
         return within(async () => {
           const resolved = await resolution.resolveFold({ step, requestKey: request.requestKey, lease: writer.lease() });
           diagnostics.push(...resolved.diagnostics);
           return foldReport(resolved);
-        });
+        }, 'resolveFold');
       },
       resolveOutcomeFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IOutcomeFoldReport> {
         return within(async () => {
           const resolved = await resolution.resolveOutcomeFold({ step, requestKey: request.requestKey, lease: writer.lease() });
           diagnostics.push(...resolved.diagnostics);
           return outcomeFoldReport(resolved);
-        });
+        }, 'resolveOutcomeFold');
       },
       check(step: IBindingDescriptor): Promise<ICheckOutcome> {
-        return within(() => resolution.check({ step }));
+        return within(() => resolution.check({ step }), 'check');
       },
       recover(step: IBindingDescriptor, request: IRequestOptions): Promise<IRecoveryResult> {
-        return within(() => resolution.recover({ step, requestKey: request.requestKey }));
+        return within(() => resolution.recover({ step, requestKey: request.requestKey }), 'recover');
       },
       ordinary<TWork>(label: string, work: () => TWork | Promise<TWork>): Promise<Awaited<TWork>> {
         return within(async (): Promise<Awaited<TWork>> => {
@@ -592,7 +617,13 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
           }
           afterOrdinary(label, 'end');
           return value;
-        });
+        }, 'ordinary');
+      },
+      refuseUndeclaredCall(operation: string): void {
+        const refusal = undeclaredCall(operation);
+        if (refusal !== undefined) {
+          throw refusal;
+        }
       },
     });
 

@@ -198,8 +198,8 @@ Skips and deletions retract nothing.
    member exactly as `resolveMembers` settles it. Each member settles as
    `succeeded` (an accepted result), `skipped`, `failed` (a
    member-attributable typed failure) or `cancelled` (work withdrawn from
-   this run through admission, for example after a stop). Denied work leaves
-   it `pending`, which is unsettled.
+   this run: refused by admission as cancelled, or interrupted by a stop).
+   Denied work leaves it `pending`, which is unsettled.
 2. **Completeness**: no member status fails an outcome fold. A rejected
    snapshot or cancelled discovery work makes the outcome `failed`, because no
    population can be established in this pass. Otherwise open discovery,

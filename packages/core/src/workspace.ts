@@ -15,6 +15,8 @@ import type {
   IExecutionAdmission,
   IFoldCoverage as IResolutionFoldCoverage,
   IFoldOutcome as IResolutionFoldOutcome,
+  ICompleteOutcomeFoldCoverage as IResolutionCompleteOutcomeFoldCoverage,
+  IIncompleteOutcomeFoldCoverage as IResolutionIncompleteOutcomeFoldCoverage,
   IOutcomeFoldCoverage as IResolutionOutcomeFoldCoverage,
   IOutcomeFoldOutcome as IResolutionOutcomeFoldOutcome,
   IGateEvidence as IResolutionGateEvidence,
@@ -181,6 +183,12 @@ export type IOutcomeFoldOutcome = IResolutionOutcomeFoldOutcome;
  * @alpha
  */
 export type IOutcomeFoldCoverage = IResolutionOutcomeFoldCoverage;
+
+/** Coverage of an outcome fold whose closed population has completely settled: nothing pending, discovery closed. @alpha */
+export type ICompleteOutcomeFoldCoverage = IResolutionCompleteOutcomeFoldCoverage;
+
+/** Coverage of an outcome fold whose set has not settled: discovery open or a member pending. @alpha */
+export type IIncompleteOutcomeFoldCoverage = IResolutionIncompleteOutcomeFoldCoverage;
 
 /** Why one earlier candidate result was not reused. @alpha */
 export type ICandidateMiss = IResolutionCandidateMiss;
@@ -499,7 +507,10 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
           check: live.check,
           recover: live.recover,
           ordinary: live.ordinary,
+          refuseUndeclaredCall: live.refuseUndeclaredCall,
           read<TData>(reference: ICompletedResultReference): TData {
+            // An exact read is a result read, so it obeys the run's undeclared-call rule (CMP-9).
+            live.refuseUndeclaredCall('read');
             // Reads belong to their own run, for exactly Supervision's lifetime of it.
             if (!live.open) {
               throw new SupervisionErrorClass('run-closed', `Run ${live.context.runId} has closed and accepts no new work`);

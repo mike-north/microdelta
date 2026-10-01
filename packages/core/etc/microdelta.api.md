@@ -24,6 +24,7 @@ import type { IChildResult as IChildResult_2 } from '@microdelta/definition';
 import type { ICollectionResult as ICollectionResult_2 } from '@microdelta/definition';
 import type { ICollectionStatus as ICollectionStatus_2 } from '@microdelta/definition';
 import type { ICompletedResultReference as ICompletedResultReference_2 } from '@microdelta/history';
+import type { ICompleteOutcomeFoldCoverage as ICompleteOutcomeFoldCoverage_2 } from '@microdelta/resolution';
 import type { IComposition as IComposition_2 } from '@microdelta/definition';
 import type { IDeclarations } from '@microdelta/definition';
 import type { IDeclaredCallHandle as IDeclaredCallHandle_2 } from '@microdelta/definition';
@@ -40,6 +41,7 @@ import type { IFoldReport as IFoldReport_2 } from '@microdelta/supervision';
 import type { IForward as IForward_2 } from '@microdelta/definition';
 import type { IForwarded as IForwarded_2 } from '@microdelta/definition';
 import type { IGateEvidence as IGateEvidence_2 } from '@microdelta/resolution';
+import type { IIncompleteOutcomeFoldCoverage as IIncompleteOutcomeFoldCoverage_2 } from '@microdelta/resolution';
 import type { IKeyedMember as IKeyedMember_2 } from '@microdelta/definition';
 import type { IKeyedSnapshot as IKeyedSnapshot_2 } from '@microdelta/definition';
 import type { IKeyingDiagnostic as IKeyingDiagnostic_2 } from '@microdelta/definition';
@@ -183,6 +185,9 @@ export type ICollectionStatus = ICollectionStatus_2;
 export type ICompletedResultReference = ICompletedResultReference_2;
 
 // @alpha
+export type ICompleteOutcomeFoldCoverage = ICompleteOutcomeFoldCoverage_2;
+
+// @alpha
 export type IComposition<TInputs extends object, THelpers extends object> = IComposition_2<IAuthoringFamily<TInputs, THelpers>>;
 
 // @alpha
@@ -222,6 +227,9 @@ export type IForwarded<T = unknown> = IForwarded_2<T>;
 
 // @alpha
 export type IGateEvidence = IGateEvidence_2;
+
+// @alpha
+export type IIncompleteOutcomeFoldCoverage = IIncompleteOutcomeFoldCoverage_2;
 
 // @alpha
 export type IKeyedMember = IKeyedMember_2;

@@ -149,6 +149,7 @@ export interface IRun {
     readonly open: boolean;
     ordinary<T>(label: string, work: () => T | Promise<T>): Promise<Awaited<T>>;
     recover(step: IBindingDescriptor, request: IRequestOptions): Promise<IRecoveryResult>;
+    refuseUndeclaredCall(operation: string): void;
     resolve(step: IBindingDescriptor, request: IRequestOptions): Promise<IResolutionOutcome>;
     resolveFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IFoldReport>;
     resolveMembers(target: IMembersTarget, request: IRequestOptions): Promise<IMembersReport>;
@@ -339,7 +340,7 @@ export interface ISupervision {
 }
 
 // @alpha
-export type ISupervisionErrorCode = 'outside-run' | 'run-closed' | 'composition-phase' | 'observer-failure' | 'writer-unavailable' | 'invalid-request' | 'stopped';
+export type ISupervisionErrorCode = 'outside-run' | 'run-closed' | 'composition-phase' | 'observer-failure' | 'writer-unavailable' | 'invalid-request' | 'stopped' | 'undeclared-call';
 
 // @alpha
 export interface ISupervisionOptions {

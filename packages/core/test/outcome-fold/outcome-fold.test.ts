@@ -163,6 +163,21 @@ describe('settled statuses with coverage (acceptance 1, 3)', () => {
     expect(readResult(location, tallyReference(report))).toEqual({ succeeded: 1, skipped: 1, failed: 1, cancelled: 1, total: 5 });
     // The fold's own work was admitted only after every member settled.
     expect(report.admissions.at(-1)).toBe(`outcome-fold:${tallySubject}`);
+
+    // Lift the cancellation: Dee now succeeds, which changes the membership-and-status fact.
+    world.decisions = {};
+    clearLog();
+    const lifted = await runTally(location, { minimumAuthored: 2 });
+    expect(logged(lifted, 'summary')).toEqual(['ben', 'dee']);
+    expect(lifted.tally).toEqual({
+      status: 'folded',
+      kind: 'published',
+      reference: expect.any(String),
+      misses: ['changed-membership'],
+      coverage: coverage({ succeeded: ['person:ada', 'person:dee'], skipped: ['person:cy'], failed: ['person:ben'], complete: true }),
+    });
+    expect(tallyReference(lifted)).not.toBe(tallyReference(report));
+    expect(readResult(location, tallyReference(lifted))).toEqual({ succeeded: 2, skipped: 1, failed: 1, cancelled: 0, total: 9 });
   });
 
   test('unchanged settled statuses reuse it without its body; a still-failing member is retried, the fold is not', async () => {
@@ -323,6 +338,59 @@ describe('stop interactions (RUN-014)', () => {
     const resumed = await runTally(location);
     expect(logged(resumed, 'summary')).toEqual(['ben', 'cy']);
     expect(resumed.tally).toMatchObject({ status: 'folded', kind: 'published', coverage: coverage({ succeeded: ['person:ada', 'person:ben', 'person:cy'], complete: true }) });
+  });
+});
+
+describe('stop interactions, continued (RUN-014)', () => {
+  test('a hard stop interrupts the executing member: it settles as cancelled with the queued members, and the outcome fold publishes nothing', async () => {
+    const location = freshLocation();
+    const stop = createStopController();
+    hold('ada');
+    const running = runTally(location, { stop, window: 1 });
+    await until(() => world.log.includes('summary:ada'), 'Ada\'s summary is executing');
+    // Ada's summary never settles on its own; the hard stop interrupts it.
+    stop.request({ level: 'hard' });
+    const stopped = await running;
+    expect(stopped.members).toEqual({
+      'person:ada': { status: 'cancelled' },
+      'person:ben': { status: 'cancelled' },
+      'person:cy': { status: 'cancelled' },
+    });
+    expect(stopped.tally).toEqual({
+      status: 'cancelled',
+      reason: expect.stringMatching(/hard stop/u),
+      refused: 'tally',
+      coverage: coverage({ cancelled: ['person:ada', 'person:ben', 'person:cy'], complete: true }),
+    });
+    expect(logged(stopped, 'tally')).toEqual([]);
+    expect(tallyCandidates(location)).toEqual([]);
+  });
+
+  test('under a soft stop, a recorded fold whose settled statuses still match is reused: nothing is published and an acceptance is recorded', async () => {
+    const location = freshLocation();
+    // Ben and Cy are cancelled by policy, without a stop, so the fold folds them as cancelled.
+    world.decisions = { 'person:ben': 'cancelled', 'person:cy': 'cancelled' };
+    const recorded = await runTally(location);
+    expect(recorded.tally).toMatchObject({ status: 'folded', kind: 'published', coverage: coverage({ succeeded: ['person:ada'], cancelled: ['person:ben', 'person:cy'], complete: true }) });
+
+    // A soft stop is in force from the start: Ada is reused, Ben and Cy are cancelled again, and the fold needs no admission.
+    world.decisions = {};
+    clearLog();
+    const stop = createStopController();
+    stop.request({ level: 'soft' });
+    const reused = await runTally(location, { stop });
+    expect(logged(reused, 'summary')).toEqual([]);
+    expect(logged(reused, 'tally')).toEqual([]);
+    expect(reused.tally).toEqual({
+      status: 'folded',
+      kind: 'reused',
+      reference: tallyReference(recorded),
+      misses: [],
+      coverage: coverage({ succeeded: ['person:ada'], cancelled: ['person:ben', 'person:cy'], complete: true }),
+      accepted: [memberReference(recorded, 'person:ada')],
+    });
+    expect(reused.events.filter((entry) => entry.startsWith('tally/'))).toEqual(['tally/:verify', 'tally/:accept']);
+    expect(tallyCandidates(location)).toEqual([tallyReference(recorded)]);
   });
 });
 

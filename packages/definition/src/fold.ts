@@ -79,9 +79,9 @@ export interface IFailedEntry {
 }
 
 /**
- * A member whose required work Run Supervision withdrew from this run
- * through admission (for example after a stop). It is settled but not
- * successful for that run, and never a complete success. It carries no data:
+ * A member whose work was withdrawn from this run: refused by admission as
+ * cancelled, or interrupted by a stop. It is settled but not successful for
+ * that run, and never a complete success. It carries no data:
  * reading `data` at runtime throws an `unsuccessful-member` DefinitionError.
  * Only an outcome fold receives it.
  * @alpha

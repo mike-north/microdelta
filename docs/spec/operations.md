@@ -103,10 +103,11 @@ check and inspection never need the lease. Multi-process write parallelism is
 deferred until measurement justifies it (M7).
 
 **M5 selection ([#120](https://github.com/mike-north/microdelta/issues/120)).** The
-run-wide active window serves only fan-out started by the run's own operations.
-Author code may keep the run and start another operation from inside member or
-step work. That fan-out resolves its members one at a time on a lane of its own.
-It never waits for a run-wide lane that its waiting caller may hold.
+run-wide active window serves only fan-out started by the run's own operations. A
+run operation that author code starts from inside member or step work, through a
+run it kept, is an undeclared call. It is refused under [CMP-9](composition.md)
+before any of its work is admitted, so a nested fan-out never waits for a lane its
+caller holds.
 
 ## Readiness, discovery, and previews
 
@@ -295,9 +296,11 @@ makes them reconsider their input.
   strict fold does.
 - **Settled statuses.** Each member settles in the pass as succeeded (an accepted
   result), skipped (its gate), failed (a member-attributable typed failure) or
-  cancelled (work withdrawn from the run through admission, for example after a
-  stop). Denied work leaves a member pending, which is unsettled. An unresolved
-  operation outcome is unsettled too.
+  cancelled (work withdrawn from this run: refused by admission as cancelled, or
+  interrupted by a stop). Denied work leaves a member pending, which is
+  unsettled. An operation whose outcome is unknown (RUN-012) is unsettled too;
+  [#119](https://github.com/mike-north/microdelta/issues/119) introduces that
+  status.
 - **Completeness.** While discovery is open or a member is unsettled, the fold
   waits with partial coverage. It runs no body, admits no fold work and publishes
   nothing. A rejected or cancelled discovery fails it, because no population can
@@ -313,8 +316,8 @@ makes them reconsider their input.
   whether discovery is open, and whether the set is complete. It is never a claim
   of complete success. A cancelled member is settled-not-successful for that run
   only; a later run attempts it again.
-- **Separation.** Strict and outcome fold results use distinct evidence versions,
-  so neither contract ever accepts the other's result.
+- **Separation.** Strict and outcome folds record distinct provenance versions and
+  step kinds, so neither contract ever accepts the other's result.
 
 ### RUN-011 — Retry support includes unattended quota waits
 

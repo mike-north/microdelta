@@ -94,8 +94,9 @@
  * reused. Its provenance is a version of its own, so neither fold contract
  * ever accepts the other's result. Neither kind of fold is ever a child, and
  * every fold or members request presents its members to Run Supervision's
- * window; Supervision, which owns the run-wide lane pool, keeps a fan-out
- * requested from inside member work off that pool (RUN-002's nested rule).
+ * window; Supervision refuses a run operation called from inside member work
+ * as an undeclared call (CMP-9), so no fan-out nests under that window
+ * (RUN-002's nested rule).
  */
 import { DefinitionError, derivedArguments, gateOutcome } from '@microdelta/definition';
 import type {
@@ -2636,9 +2637,9 @@ export function createResolution<TInputs extends object, THelpers extends object
      * pool; a member holding a lane while its own fan-out waits for lanes can
      * deadlock the window (RUN-002's nested rule). Resolution never nests one:
      * neither a strict nor an outcome fold can be a declared child. Author
-     * code that kept the run and starts a run operation from inside member
-     * work does nest one; Supervision, which owns the pool, gives such a
-     * fan-out a pool of its own.
+     * code that kept the run cannot nest one either: Supervision refuses a
+     * run operation called from inside member work or a step attempt as an
+     * undeclared call (CMP-9).
      */
     const member = async (key: string, position: number): Promise<void> => {
       if (runFailure.first !== undefined) {

@@ -688,8 +688,8 @@ export interface IFoldResolution {
  * - `succeeded`: an accepted result exists now;
  * - `skipped`: its gate excluded it, so it carries no data;
  * - `failed`: its gate or resolution raised a member-attributable typed failure;
- * - `cancelled`: its required work was withdrawn from this run through
- *   admission (for example after a stop): settled for this run, never a
+ * - `cancelled`: its work was withdrawn from this run (refused by admission
+ *   as cancelled, or interrupted by a stop): settled for this run, never a
  *   success;
  * - `pending`: its required work was denied in this pass, so it is unsettled.
  *

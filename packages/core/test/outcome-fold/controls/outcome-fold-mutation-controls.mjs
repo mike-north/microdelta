@@ -3,7 +3,7 @@
  * evidence `outcome-fold-coverage`). Each control plants exactly one wrong
  * behavior into an owner's emitted production build (never TypeScript
  * source), Reuse Resolution or Run Supervision, and reruns the unchanged
- * outcome-fold suites (in-process, nested-window and separate-process), whose
+ * outcome-fold suites (in-process, nested run operations and separate-process), whose
  * workspaces and worker processes load those builds through the built facade.
  * Every control names the planned evidence cases (the suites' `describe`
  * titles) it is predicted to break, written from the owning contract before
@@ -31,11 +31,11 @@ const root = repositoryRoot(import.meta.url);
 /** Emitted production files a control may plant into. */
 const targets = Object.freeze({
   resolution: join(root, 'packages/resolution/dist/src/resolution.js'),
-  execution: join(root, 'packages/supervision/dist/src/execution.js'),
+  supervision: join(root, 'packages/supervision/dist/src/supervision.js'),
 });
 
 /** The outcome-fold suite files every run must execute. */
-const suites = Object.freeze(['outcome-fold.test.js', 'nested-window.test.js', 'restart.test.js']);
+const suites = Object.freeze(['outcome-fold.test.js', 'nested-run-operations.test.js', 'restart.test.js']);
 
 /** The planned evidence cases: the suites' `describe` titles. */
 const cases = Object.freeze({
@@ -44,7 +44,7 @@ const cases = Object.freeze({
   repair: 'repair makes the outcome fold reconsider (acceptance 2)',
   separation: 'separation from strict folds (acceptance 3)',
   stop: 'stop interactions (RUN-014)',
-  nested: 'nested fan-out under the run-wide window (RUN-002)',
+  nested: 'nested run operations are undeclared calls (CMP-9, RUN-002)',
   processes: 'outcome-fold-coverage',
 });
 
@@ -96,6 +96,13 @@ const controls = [
     breaks: [cases.repair, cases.processes],
   },
   {
+    name: 'a cancelled member that now succeeds is not a membership change',
+    target: 'resolution',
+    anchor: 'else if (was !== status) {',
+    replacement: "else if (was !== status && !(was === 'cancelled' && status === 'included')) {",
+    breaks: [cases.settled],
+  },
+  {
     name: 'strict and outcome fold results are interchangeable candidates',
     target: 'resolution',
     anchor: "if (provenance.kind !== declaration.kind || (provenance.kind !== 'fold' && provenance.kind !== 'outcome-fold')) {",
@@ -103,9 +110,9 @@ const controls = [
     breaks: [cases.separation],
   },
   {
-    name: 'a fan-out started inside a member draws from the run-wide window',
-    target: 'execution',
-    anchor: 'if (caller === undefined || (caller.lane === undefined && caller.attempt === undefined)) {',
+    name: 'nested run operation not refused',
+    target: 'supervision',
+    anchor: 'if (!state.open || caller === undefined || (caller.attempt === undefined && caller.lane === undefined)) {',
     replacement: 'if (true) {',
     breaks: [cases.nested],
   },

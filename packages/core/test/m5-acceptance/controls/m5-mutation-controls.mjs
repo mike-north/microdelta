@@ -150,6 +150,22 @@ const controls = [
     replacement: 'let stored = undefined;',
     breaks: ['durable-quota-deferral'],
   },
+  {
+    guard: 'deferral',
+    name: 'the rate-limit retry cap is not enforced',
+    target: 'engine',
+    anchor: 'if (rateLimited(next) > request.rateLimitRetries) {',
+    replacement: 'if (false) {',
+    breaks: ['durable-quota-deferral'],
+  },
+  {
+    guard: 'deferral',
+    name: "a transient failure is retried beyond the author's attempts",
+    target: 'engine',
+    anchor: 'const retryable = transient && spentAttempts(failed) < request.maxAttempts;',
+    replacement: 'const retryable = transient;',
+    breaks: ['durable-quota-deferral'],
+  },
   // No blind replay (RUN-012): an unknown outcome is retried only with a safety basis, never by a tainted attempt.
   {
     guard: 'no-replay',

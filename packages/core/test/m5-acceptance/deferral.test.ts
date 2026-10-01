@@ -27,6 +27,11 @@
  *   timed wait holding no permit and lending its member's lane, so with one
  *   permit and one lane its siblings are sent meanwhile; the retry keeps the
  *   operation identity.
+ * - Exhaustion: a rate limit with a retry time is retried at most 5 times by
+ *   default, so its sixth refusal fails the operation as exhausted; a
+ *   transient failure is retried only within the author's `maxAttempts`.
+ *   Either fails only its own member, with the closed `policy-exhausted`
+ *   reason, under one operation identity throughout.
  *
  * @see ../../../../docs/spec/operations.md (RUN-011)
  * @see ../../../../docs/plans/m5-operations.md (Outcomes: quota response with a retry time 3h ahead)
@@ -136,6 +141,27 @@ describe('durable-quota-deferral (A-11, A-12, RUN-011)', () => {
     expect(retry.at).toBeGreaterThanOrEqual(failure.at + backoff);
     expect(run.operations).toContain('retry-scheduled:deferred:transient@pr-1');
     expect(statuses(run)).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
+  });
+
+  test('exhaustion: a rate limit beyond the default cap of five deferred retries, and a transient failure beyond the author\'s attempts, fail only their own members', () => {
+    // pr-1 is refused transiently twice under maxAttempts 2; pr-2 is rate-limited six times, 200 ms each, under the default cap.
+    const s = freshScenario(baseWorld({
+      script: { 'pr-1': [{ kind: 'transient' }, { kind: 'transient' }], 'pr-2': Array.from({ length: 6 }, () => ({ kind: 'rate-limit', retryMs: 200 }) as const) },
+      declarations: { 'pr-1': { maxAttempts: 2 } },
+    }));
+    const run = clean(s.run({ kind: 'members' }, { window: 1, permits: 1, deferral: 'sleep' }));
+    expect(statuses(run)).toEqual({ 'pr-1': 'failed', 'pr-2': 'failed', 'pr-3': 'succeeded' });
+    expect(run.result.members['pr-1']).toMatchObject({ cause: 'operation-failed' });
+    expect(run.result.members['pr-2']).toMatchObject({ cause: 'operation-failed' });
+    expect(run.operations).toContain('retry-exhausted:failed:policy-exhausted@pr-1');
+    expect(run.operations).toContain('retry-exhausted:failed:policy-exhausted@pr-2');
+    // One first request and five deferred retries of pr-2, all under one operation; two requests of pr-1.
+    const pr2 = s.ledger().filter((entry) => entry.kind === 'received' && entry.key === 'pr-2');
+    expect(pr2).toHaveLength(6);
+    expect(new Set(pr2.map((entry) => entry.operation)).size).toBe(1);
+    expect(s.keys('received').filter((key) => key === 'pr-1')).toHaveLength(2);
+    // Eight refusals report 1 request each; pr-3's answer reports 100 tokens.
+    expect(usageOf(run.result.usage)).toEqual({ status: 'complete', observed: [{ unit: 'requests', amount: 8 }, { unit: 'tokens', amount: 100 }], unknown: 0, operations: 3, reports: 9, requestAttempts: 9 });
   });
 
   // Observed defect, kept failing on purpose: the `resumed` wait event reports `released: false` for a wait whose lease

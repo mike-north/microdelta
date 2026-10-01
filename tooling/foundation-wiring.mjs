@@ -76,7 +76,7 @@ export function missingFoundationGates({ workspace, packages, workflow, extracto
   if ((scripts['build:fixtures'] ?? '').includes('--local')) {
     problems.push('build:fixtures uses local API report rewriting');
   }
-  for (const name of ['definition', 'tracking', 'history', 'value', 'materialization', 'resolution', 'supervision', 'core']) {
+  for (const name of ['definition', 'tracking', 'history', 'value', 'materialization', 'resolution', 'supervision', 'accounting', 'core']) {
     const packageName = name === 'core' ? 'microdelta' : `@microdelta/${name}`;
     includes('build:packages', scripts['build:packages'], `npm run build --workspace ${packageName}`);
     includes(`${name} build`, packages[name]?.scripts?.build, 'tsc -p tsconfig.build.json');
@@ -121,7 +121,7 @@ export function missingFoundationGates({ workspace, packages, workflow, extracto
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const root = fileURLToPath(new URL('../', import.meta.url));
   const readJson = async filename => JSON.parse(await readFile(path.join(root, filename), 'utf8'));
-  const names = ['core', 'definition', 'tracking', 'history', 'value', 'materialization', 'resolution', 'supervision'];
+  const names = ['core', 'definition', 'tracking', 'history', 'value', 'materialization', 'resolution', 'supervision', 'accounting'];
   const packages = Object.fromEntries(await Promise.all(names.map(async name => [name, await readJson(`packages/${name}/package.json`)])));
   const filenames = names.map(name => `packages/${name}/api-extractor.json`);
   filenames.push('packages/core/api-extractor-conformance.json', 'packages/history/api-extractor-conformance.json', 'packages/history/api-extractor-shared.json', 'fixtures/declarations/producer/api-extractor.json', 'fixtures/declarations/capture-producer/api-extractor.json', 'fixtures/declarations/forged/api-extractor.json');

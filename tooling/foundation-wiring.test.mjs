@@ -14,7 +14,7 @@ const readJson = async filename => JSON.parse(await readFile(path.join(root, fil
 
 /** Each exported entrypoint has a configured comparison report. */
 async function extractors() {
-  const names = ['core', 'definition', 'tracking', 'history', 'value', 'materialization', 'resolution', 'supervision'];
+  const names = ['core', 'definition', 'tracking', 'history', 'value', 'materialization', 'resolution', 'supervision', 'accounting'];
   const files = names.map(name => `packages/${name}/api-extractor.json`);
   files.push('packages/core/api-extractor-conformance.json', 'packages/history/api-extractor-conformance.json', 'packages/history/api-extractor-shared.json', 'fixtures/declarations/producer/api-extractor.json', 'fixtures/declarations/capture-producer/api-extractor.json', 'fixtures/declarations/forged/api-extractor.json');
   return Object.fromEntries(await Promise.all(files.map(async filename => [filename, await readJson(filename)])));
@@ -22,7 +22,7 @@ async function extractors() {
 
 test('clean CI reaches build, declaration, import, lint, and consumer gates', async () => {
   const workspace = await readJson('package.json');
-  const packages = Object.fromEntries(await Promise.all(['core', 'definition', 'tracking', 'history', 'value', 'materialization', 'resolution', 'supervision'].map(async name => [
+  const packages = Object.fromEntries(await Promise.all(['core', 'definition', 'tracking', 'history', 'value', 'materialization', 'resolution', 'supervision', 'accounting'].map(async name => [
     name, await readJson(`packages/${name}/package.json`),
   ])));
   const workflow = await readFile(path.join(root, '.github/workflows/check.yml'), 'utf8');
@@ -46,7 +46,7 @@ test('the declaration checker accepts the generated alpha package path needed by
 
 test('Value package build, checks, declaration views, and package order are required', async () => {
   const workspace = await readJson('package.json');
-  const names = ['core', 'definition', 'tracking', 'history', 'value', 'materialization', 'resolution', 'supervision'];
+  const names = ['core', 'definition', 'tracking', 'history', 'value', 'materialization', 'resolution', 'supervision', 'accounting'];
   const packages = Object.fromEntries(await Promise.all(names.map(async name => [name, await readJson(`packages/${name}/package.json`)])));
   const configs = await extractors();
   const result = missingFoundationGates({
@@ -67,6 +67,10 @@ test('Value package build, checks, declaration views, and package order are requ
   // Supervision consumes Resolution's declarations and the facade consumes Supervision's.
   assert.ok(packageBuild.indexOf('@microdelta/resolution') < packageBuild.indexOf('@microdelta/supervision'));
   assert.ok(packageBuild.indexOf('@microdelta/supervision') < packageBuild.indexOf('--workspace microdelta'));
+  // Accounting consumes Machine's and Value's declarations; Supervision will consume Accounting's.
+  assert.ok(packageBuild.indexOf('@microdelta/machine') < packageBuild.indexOf('@microdelta/accounting'));
+  assert.ok(packageBuild.indexOf('@microdelta/value') < packageBuild.indexOf('@microdelta/accounting'));
+  assert.ok(packageBuild.indexOf('@microdelta/accounting') < packageBuild.indexOf('@microdelta/supervision'));
 
   const skippedBuild = structuredClone(workspace);
   skippedBuild.scripts['build:packages'] = skippedBuild.scripts['build:packages'].replace('npm run build --workspace @microdelta/value', 'true');
@@ -93,6 +97,22 @@ test('Value package build, checks, declaration views, and package order are requ
     workflow: '',
     extractors: configs,
   }).join('\n'), /build:packages.*@microdelta\/supervision/u);
+  const skippedAccounting = structuredClone(workspace);
+  skippedAccounting.scripts['build:packages'] = skippedAccounting.scripts['build:packages'].replace('npm run build --workspace @microdelta/accounting', 'true');
+  assert.match(missingFoundationGates({
+    workspace: skippedAccounting,
+    packages,
+    workflow: '',
+    extractors: configs,
+  }).join('\n'), /build:packages.*@microdelta\/accounting/u);
+  const untestedAccounting = structuredClone(packages);
+  untestedAccounting.accounting.scripts.test = 'npm run test:types';
+  assert.match(missingFoundationGates({
+    workspace,
+    packages: untestedAccounting,
+    workflow: '',
+    extractors: configs,
+  }).join('\n'), /accounting test.*test:unit/u);
   const untestedResolution = structuredClone(packages);
   untestedResolution.resolution.scripts.test = 'npm run test:types';
   assert.match(missingFoundationGates({
@@ -110,7 +130,7 @@ test('Value package build, checks, declaration views, and package order are requ
  */
 test('the executable example is built, checked, linted and run by the aggregate gates', async () => {
   const workspace = await readJson('package.json');
-  const names = ['core', 'definition', 'tracking', 'history', 'value', 'materialization', 'resolution', 'supervision'];
+  const names = ['core', 'definition', 'tracking', 'history', 'value', 'materialization', 'resolution', 'supervision', 'accounting'];
   const packages = Object.fromEntries(await Promise.all(names.map(async name => [name, await readJson(`packages/${name}/package.json`)])));
   const eslintConfig = await readFile(path.join(root, 'eslint.config.mjs'), 'utf8');
   const inputs = { workspace, packages, workflow: '', extractors: await extractors(), eslintConfig };
@@ -134,7 +154,7 @@ test('the executable example is built, checked, linted and run by the aggregate 
 
 test('skipping an import, declaration, or API report checker is detected', async () => {
   const workspace = await readJson('package.json');
-  const packages = Object.fromEntries(await Promise.all(['core', 'definition', 'tracking', 'history', 'value', 'materialization', 'resolution', 'supervision'].map(async name => [
+  const packages = Object.fromEntries(await Promise.all(['core', 'definition', 'tracking', 'history', 'value', 'materialization', 'resolution', 'supervision', 'accounting'].map(async name => [
     name, await readJson(`packages/${name}/package.json`),
   ])));
   const workflow = await readFile(path.join(root, '.github/workflows/check.yml'), 'utf8');

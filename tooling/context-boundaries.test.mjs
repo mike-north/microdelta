@@ -39,6 +39,16 @@ test('implemented contexts and facade follow their directed package edges', asyn
     ['packages/materialization', "import type { IValue } from '@microdelta/value';", true],
     ['packages/materialization', "import type { ISha256Capability } from '@microdelta/machine';", false],
     ['packages/materialization', "import { createMemoryStore } from 'microdelta';", false],
+    // Resource Accounting persists through the Machine SQLite capability and
+    // encodes estimate bases with Value; it never reaches History, the Node
+    // host implementation, a native driver or a Node built-in.
+    ['packages/accounting', "import type { ISqliteCapability } from '@microdelta/machine';", true],
+    ['packages/accounting', "import { encodeSnapshot } from '@microdelta/value';", true],
+    ['packages/accounting', "import type { IDurableHistory } from '@microdelta/history';", false],
+    ['packages/accounting', "import { createNodeSqlite } from '@microdelta/machine-node';", false],
+    ['packages/accounting', "import Database from 'better-sqlite3';", false],
+    ['packages/accounting', "import { readFileSync } from 'node:fs';", false],
+    ['packages/accounting', "import type { IRun } from '@microdelta/supervision';", false],
   ]) {
     const messages = await diagnostics(owner, source);
     assert.deepEqual(messages.map(message => message.ruleId), allowed ? [] : [rule], `${owner}: ${source}: ${JSON.stringify(messages)}`);

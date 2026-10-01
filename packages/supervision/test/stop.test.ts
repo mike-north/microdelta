@@ -426,6 +426,64 @@ describe('the permit pool (RUN-002)', () => {
     }
   });
 
+  test('assertDeclaredCall accepts only a run operation name: anything else is an invalid request, recorded nowhere (RUN-013)', async () => {
+    let captured: IResolutionPorts | undefined;
+    const resolution = (ports: IResolutionPorts): IResolution => {
+      captured = ports;
+      return portDouble().factory(ports);
+    };
+    const planted = 'SECRET-value-a';
+    const result = await supervisionWith(fakeTimer()).run({ ...optionsFor(portDouble(), { window: 1 }), resolution }, async (run) => {
+      const { execution } = captured ?? (() => {
+        throw new Error('the run has not started');
+      })();
+      /** Call the check with author text, as untyped author code could. */
+      const forged = (): Promise<string | undefined> => codeOf(() => {
+        Reflect.apply(run.assertDeclaredCall, run, [planted]);
+      });
+      const fromBody = await forged();
+      const fromMember = await execution.member(forged);
+      // Repeated forged calls never grow the run's diagnostics.
+      for (let call = 0; call < 50; call += 1) {
+        await execution.member(forged);
+      }
+      const declaredFromBody = await codeOf(() => {
+        run.assertDeclaredCall('read');
+      });
+      return { fromBody, fromMember, declaredFromBody };
+    });
+    expect(result.value).toEqual({ fromBody: 'invalid-request', fromMember: 'invalid-request', declaredFromBody: undefined });
+    expect(result.diagnostics).toEqual([]);
+    expect(JSON.stringify(result.diagnostics)).not.toContain(planted);
+  });
+
+  test('a run operation a member schedules for after the run closed reports run-closed, never undeclared-call (RUN-001)', async () => {
+    let captured: IResolutionPorts | undefined;
+    const resolution = (ports: IResolutionPorts): IResolution => {
+      captured = ports;
+      return portDouble().factory(ports);
+    };
+    const closed = deferred();
+    const late = deferred<string | undefined>();
+    const result = await supervisionWith(fakeTimer()).run({ ...optionsFor(portDouble(), { window: 1 }), resolution }, async (run) => {
+      const { execution } = captured ?? (() => {
+        throw new Error('the run has not started');
+      })();
+      await execution.member(() => {
+        // The callback keeps the member's asynchronous context, and runs only once the run has closed.
+        void closed.promise.then(() => new Promise((resolve) => {
+          setTimeout(resolve, 0);
+        })).then(() => codeOf(run.resolveMembers({ template: 'contributor', step: 'summary' }, { requestKey: 'late' }))).then(late.resolve);
+        return Promise.resolve();
+      });
+      return run;
+    });
+    expect(result.value.open).toBe(false);
+    closed.resolve();
+    expect(await late.promise).toBe('run-closed');
+    expect(result.diagnostics.filter((diagnostic) => diagnostic.includes('undeclared call'))).toEqual([]);
+  });
+
   test.each([
     ['zero permits', { permits: 0 }],
     ['fractional permits', { permits: 1.5 }],

@@ -545,21 +545,39 @@ export interface IRun {
   /** Run ordinary nonmemoized work, observed but with no completed-result identity. */
   ordinary<T>(label: string, work: () => T | Promise<T>): Promise<Awaited<T>>;
   /**
-   * Assert that the current call is a declared one. Invoked from inside a
-   * member's work or a step attempt of this open run, it records the run
-   * diagnostic and throws the CMP-9 refusal, `SupervisionError('undeclared-call')`;
-   * otherwise it returns. The facade's synchronous exact `read` calls it
-   * first, so that result read obeys the same rule as the run's own
-   * operations.
+   * Assert that a call of the run operation `operation` is a declared one.
+   * Invoked from inside a member's work or a step attempt of this open run,
+   * it records the run diagnostic and throws the CMP-9 refusal,
+   * `SupervisionError('undeclared-call')`; otherwise it returns. The facade's
+   * synchronous exact `read` calls it first, so that result read obeys the
+   * same rule as the run's own operations. `operation` must be one of the
+   * closed {@link IRunOperationName}s: anything else throws `invalid-request`
+   * and records nothing, so author text never reaches a diagnostic (RUN-013).
    *
    * It is `@alpha` rather than `@internal` only because the facade is a
    * separate package that consumes Supervision's generated alpha
-   * declarations, from which API Extractor trims `@internal` members; it is
-   * not meant for authors.
-   * @param operation - The operation's name, for the diagnostic.
+   * declarations, from which API Extractor trims `@internal` members. It is
+   * not meant for authors: the facade's author-facing run omits it.
+   * @param operation - The run operation being called.
    */
-  assertDeclaredCall(operation: string): void;
+  assertDeclaredCall(operation: IRunOperationName): void;
 }
+
+/**
+ * The closed set of run operation names: each operation a live run offers,
+ * plus `read`, the facade's exact result read. A refusal diagnostic names
+ * one of them, so a diagnostic never carries author-supplied text.
+ * @alpha
+ */
+export type IRunOperationName =
+  | 'check'
+  | 'ordinary'
+  | 'read'
+  | 'recover'
+  | 'resolve'
+  | 'resolveFold'
+  | 'resolveMembers'
+  | 'resolveOutcomeFold';
 
 /**
  * A send a hard stop aborted, with its recorded remote state.

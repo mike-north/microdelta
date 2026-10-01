@@ -324,10 +324,11 @@ export interface IWorkspaceRunOptions<TInputs extends object, THelpers extends o
 
 /**
  * A live workspace run: Supervision's run operations plus an exact read of a
- * completed result's data for ordinary work such as report assembly.
+ * completed result's data for ordinary work such as report assembly. It omits
+ * Supervision's declared-call check, which only the facade's own handle uses.
  * @alpha
  */
-export interface IWorkspaceRun extends IRun {
+export interface IWorkspaceRun extends Omit<IRun, 'assertDeclaredCall'> {
   /**
    * The deeply frozen data of one exact completed result in this workspace.
    * It is an exact-reference read: it records no acceptance, observation or
@@ -507,7 +508,6 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
           check: live.check,
           recover: live.recover,
           ordinary: live.ordinary,
-          assertDeclaredCall: live.assertDeclaredCall,
           read<TData>(reference: ICompletedResultReference): TData {
             // An exact read is a result read, so it obeys the run's undeclared-call rule (CMP-9).
             live.assertDeclaredCall('read');

@@ -72,10 +72,21 @@ interface IHelpers {
   /** Call every run operation through the kept run handle and report how each settled. */
   readonly callEach: (where: string) => Promise<IAttempted>;
   readonly count: (entries: readonly IOutcomeEntry<ITrackedView<unknown>>[]) => ICount;
+  /** The outer gate's probe: pure member work, outside any step attempt. */
+  readonly gateProbe: () => boolean;
 }
 
 /** The live run, kept by the author as module state: the only path to a nested run operation. */
 let kept: IWorkspaceRun | undefined;
+
+/** How each outer gate's nested `check` settled, in gate order. */
+const gateCodes: Promise<string>[] = [];
+
+/** Released by the test once the run has closed. */
+let releaseLate: () => void = () => undefined;
+
+/** How the run operation member `a` scheduled for after the run closed settled. */
+let lateCode: Promise<string> | undefined;
 
 /** A composition-level step descriptor of this scope. */
 function step(slot: string): IStepDescriptor {
@@ -110,7 +121,26 @@ async function callEach(where: string): Promise<IAttempted> {
     codeOf(() => run.ordinary('note', () => 'noted')),
     codeOf(() => Promise.resolve().then(() => run.read({ kind: 'completed-result', locator: 'mdh1:any' }))),
   ]);
+  if (where === 'member a') {
+    // A timer the member schedules now, firing only after the run closed, keeps the member's context.
+    const closed = new Promise<void>((resolve) => {
+      releaseLate = resolve;
+    });
+    lateCode = closed.then(() => new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    })).then(() => codeOf(() => run.resolveMembers({ template: 'inner', step: 'echo' }, { requestKey: 'late' })));
+  }
   return { where, codes };
+}
+
+/** The gate calls a run operation from member work that is not a step attempt, then requires the member. */
+function gateProbe(): boolean {
+  const run = kept;
+  if (run === undefined) {
+    throw new Error('the run was not kept');
+  }
+  gateCodes.push(codeOf(() => run.check(step('people'))));
+  return true;
 }
 
 /**
@@ -122,7 +152,12 @@ function compose() {
   const builders = declarations<IAuthoringFamily<object, IHelpers>>();
   const { source, memo, template, fold, outcomeFold } = builders;
   const people = source<IRoster>({ subject: 'people', collection: { identity: 'key' }, run: ({ helpers }) => helpers.roster() });
-  const outer = template({ slot: 'outer', collection: people, steps: (member) => ({ visit: member.memo({ subject: member.subject('outer'), run: ({ member: bound, helpers }) => helpers.callEach(`member ${bound.key}`) }) }) });
+  const outer = template({
+    slot: 'outer',
+    collection: people,
+    gate: ({ helpers }) => helpers.gateProbe(),
+    steps: (member) => ({ visit: member.memo({ subject: member.subject('outer'), run: ({ member: bound, helpers }) => helpers.callEach(`member ${bound.key}`) }) }),
+  });
   const inner = template({ slot: 'inner', collection: people, steps: (member) => ({ echo: member.memo({ subject: member.subject('inner'), run: ({ member: bound }): IEcho => ({ key: bound.key }) }) }) });
   const top = memo({ subject: 'top', run: ({ helpers }) => helpers.callEach('top') });
   const outerTally = outcomeFold({
@@ -145,6 +180,7 @@ function compose() {
         },
       },
       { slot: 'callEach', helper: callEach },
+      { slot: 'gateProbe', helper: gateProbe },
       { slot: 'count', helper: (entries: readonly IOutcomeEntry<ITrackedView<unknown>>[]): ICount => ({ succeeded: entries.filter((entry) => entry.status === 'succeeded').length }) },
     ],
     steps: [
@@ -169,6 +205,8 @@ describe('nested run operations are undeclared calls (CMP-9, RUN-002)', () => {
   test('called inside a member body and a step attempt with a window of one lane, each is refused at once and the outer run completes', async () => {
     const { builders, composition } = compose();
     const workspace = openWorkspace({ location: freshLocation(), logicalStore: 'store:nested-run-operations' });
+    gateCodes.length = 0;
+    lateCode = undefined;
     try {
       const running = workspace.run({ authoring: builders, composition, environment: 'env:nested', window: 1 }, async (run) => {
         kept = run;
@@ -208,9 +246,12 @@ describe('nested run operations are undeclared calls (CMP-9, RUN-002)', () => {
         { where: 'outerTally', codes: refused },
         { where: 'top', codes: refused },
       ]);
+      // A gate is member work outside any step attempt: its nested call is refused too.
+      expect(await Promise.all(gateCodes)).toEqual(['undeclared-call', 'undeclared-call', 'undeclared-call']);
       // Each refusal is a run diagnostic naming the operation and where it was called, by identifiers only.
       const refusals = settled.diagnostics.filter((diagnostic) => diagnostic.includes('undeclared call'));
-      expect(refusals).toHaveLength(5 * operations.length);
+      expect(refusals).toHaveLength(5 * operations.length + 3);
+      expect(refusals.filter((refusal) => refusal === `Run ${settled.context.runId} refused check from inside member work: an undeclared call (CMP-9)`)).toHaveLength(3);
       for (const where of ['visit/a', 'visit/b', 'visit/c', 'outerTally', 'top']) {
         for (const operation of operations) {
           expect(refusals).toContain(`Run ${settled.context.runId} refused ${operation} from inside the step attempt of ${where}: an undeclared call (CMP-9)`);
@@ -219,6 +260,10 @@ describe('nested run operations are undeclared calls (CMP-9, RUN-002)', () => {
       for (const diagnostic of settled.diagnostics) {
         expect(diagnostic).not.toContain(planted);
       }
+      // After the run closed, the operation member a scheduled reports run-closed, never undeclared-call.
+      expect(settled.value.tally.members[0]?.key).toBe('a');
+      releaseLate();
+      expect(await lateCode).toBe('run-closed');
     } finally {
       kept = undefined;
       workspace.close();

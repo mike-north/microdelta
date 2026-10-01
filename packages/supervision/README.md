@@ -146,8 +146,10 @@ execution contract describes them (EXP-8 mechanisms 1 and 2, ruling R).
   lane holder never waits for the window (RUN-002's nested rule).
   `assertDeclaredCall(operation)` checks the same rule without running
   anything: inside member or step work it records the diagnostic and throws
-  the refusal, otherwise it returns. The facade's synchronous exact `read`
-  calls it first.
+  the refusal, otherwise it returns. Its `operation` is a closed
+  `IRunOperationName`; any other value throws `invalid-request` and records
+  nothing. The facade's synchronous exact `read` calls it first, and the
+  facade's author-facing run omits it.
 - **Execution controls.** `supervision.execution()` gives author code and
   adapters the live run's controls by scoped lookup:
   - `send({ label, retry?, perform, cancel? })` holds one permit per send. A

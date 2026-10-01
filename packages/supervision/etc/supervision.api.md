@@ -144,7 +144,7 @@ export interface IResolutionPorts {
 
 // @alpha
 export interface IRun {
-    assertDeclaredCall(operation: string): void;
+    assertDeclaredCall(operation: IRunOperationName): void;
     check(step: IBindingDescriptor): Promise<ICheckOutcome>;
     readonly context: IRunContext;
     readonly open: boolean;
@@ -208,6 +208,9 @@ export type IRunLease = IResolveRequest['lease'];
 export interface IRunObserver {
     observe(event: IRunEvent): void;
 }
+
+// @alpha
+export type IRunOperationName = 'check' | 'ordinary' | 'read' | 'recover' | 'resolve' | 'resolveFold' | 'resolveMembers' | 'resolveOutcomeFold';
 
 // @alpha
 export interface IRunOptions {

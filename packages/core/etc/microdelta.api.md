@@ -407,7 +407,7 @@ export interface IWorkspaceOptions {
 }
 
 // @alpha
-export interface IWorkspaceRun extends IRun {
+export interface IWorkspaceRun extends Omit<IRun, 'assertDeclaredCall'> {
     read<T>(reference: ICompletedResultReference): T;
 }
 

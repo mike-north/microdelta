@@ -116,6 +116,20 @@ const controls = [
     replacement: 'if (true) {',
     breaks: [cases.nested],
   },
+  {
+    name: 'a closed run reports undeclared-call instead of run-closed',
+    target: 'supervision',
+    anchor: 'if (!state.open || caller === undefined || (caller.attempt === undefined && caller.lane === undefined)) {',
+    replacement: 'if (caller === undefined || (caller.attempt === undefined && caller.lane === undefined)) {',
+    breaks: [cases.nested],
+  },
+  {
+    name: 'only a step attempt is refused, not member work',
+    target: 'supervision',
+    anchor: 'if (!state.open || caller === undefined || (caller.attempt === undefined && caller.lane === undefined)) {',
+    replacement: 'if (!state.open || caller === undefined || caller.attempt === undefined) {',
+    breaks: [cases.nested],
+  },
 ];
 
 /** The edits one control applies. */

@@ -63,6 +63,7 @@ import type {
   IRunContext,
   IRunEvent,
   IRunExecution,
+  IRunOperationName,
   IRunOptions,
   IRunResult,
   IRunScope,
@@ -172,6 +173,9 @@ function notify(observers: readonly ICapturedObserver[], event: IRunEvent): void
     throw failure.error;
   }
 }
+
+/** Every {@link IRunOperationName}, for the runtime check of untyped callers. */
+const runOperationNames: ReadonlySet<string> = new Set<IRunOperationName>(['check', 'ordinary', 'read', 'recover', 'resolve', 'resolveFold', 'resolveMembers', 'resolveOutcomeFold']);
 
 /**
  * Classify one member's Resolution outcome as its typed member outcome
@@ -507,7 +511,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
      * diagnostic naming the operation and the calling step by identifiers
      * only. A closed run's operations are left to report `run-closed`.
      */
-    function undeclaredCall(operation: string): SupervisionError | undefined {
+    function undeclaredCall(operation: IRunOperationName): SupervisionError | undefined {
       const caller = frames.current();
       if (!state.open || caller === undefined || (caller.attempt === undefined && caller.lane === undefined)) {
         return undefined;
@@ -524,7 +528,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
      * undeclared call and checking the run is still open, and account for it
      * until it settles.
      */
-    function within<TResult>(operation: () => TResult | Promise<TResult>, name: string): Promise<TResult> {
+    function within<TResult>(operation: () => TResult | Promise<TResult>, name: IRunOperationName): Promise<TResult> {
       const refusal = undeclaredCall(name);
       if (refusal !== undefined) {
         return Promise.reject(refusal);
@@ -619,7 +623,12 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
           return value;
         }, 'ordinary');
       },
-      assertDeclaredCall(operation: string): void {
+      assertDeclaredCall(operation: IRunOperationName): void {
+        // Checked at runtime too: untyped callers may pass any value, which must never reach a diagnostic.
+        const named: unknown = operation;
+        if (typeof named !== 'string' || !runOperationNames.has(named)) {
+          throw new SupervisionError('invalid-request', 'assertDeclaredCall needs a run operation name');
+        }
         const refusal = undeclaredCall(operation);
         if (refusal !== undefined) {
           throw refusal;

@@ -45,6 +45,7 @@ export type {
   IRunExecution,
   IRunLease,
   IRunObserver,
+  IRunOperationName,
   IRunOptions,
   IRunResult,
   IRunScope,

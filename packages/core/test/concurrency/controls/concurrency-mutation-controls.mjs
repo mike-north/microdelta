@@ -13,10 +13,9 @@
  * and on SIGINT/SIGTERM/SIGHUP, and its final bytes are compared with the
  * original; rebuilding the package restores it after a SIGKILL.
  *
- * On-demand evidence command, not part of `npm test`: run `npm run build`,
- * `npm run test:unit --workspace microdelta` and
- * `npm run test:unit --workspace @microdelta/supervision` first (controls plant
- * into both test builds), then
+ * On-demand evidence command, not part of `npm test`: run `npm run build` and
+ * `npm run test:unit --workspace microdelta` first (the runner compiles
+ * Supervision's test build itself, since controls plant into both), then
  * `node packages/core/test/concurrency/controls/concurrency-mutation-controls.mjs`.
  * Controls must run serially.
  *

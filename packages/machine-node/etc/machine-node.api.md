@@ -19,4 +19,9 @@ export function createNodeMachine(): IMachine;
 // @alpha
 export function createNodeSqlite(): ISqliteCapability;
 
+// Warning: (ae-forgotten-export) The symbol "ITimerCapability" needs to be exported by the entry point index.d.ts
+//
+// @alpha
+export function createNodeTimer(): ITimerCapability;
+
 ```

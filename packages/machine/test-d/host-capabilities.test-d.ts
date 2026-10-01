@@ -1,5 +1,6 @@
 import { expectAssignable, expectError, expectNotAssignable, expectType } from 'tsd';
 
+import { SqliteBusyError } from '../dist/src/index.js';
 import type {
   IClockCapability,
   IMachine,
@@ -9,8 +10,10 @@ import type {
   ISqliteRunResult,
   ISqliteStatement,
   ISqliteValue,
+  ITimerCapability,
 } from '../dist/src/index.js';
 
+declare const timer: ITimerCapability;
 declare const sqlite: ISqliteCapability;
 declare const connection: ISqliteConnection;
 declare const statement: ISqliteStatement;
@@ -77,6 +80,14 @@ connection.transaction(untypedResult);
 // A clock reading is a number of epoch milliseconds; policy is not part of the port.
 expectType<number>(clock.currentEpochMilliseconds());
 
+// A timer is a clock that schedules one-shot callbacks and returns their cancellation.
+expectAssignable<IClockCapability>(timer);
+expectType<() => void>(timer.schedule(0, () => undefined));
+expectType<() => void>(timer.schedule(0, () => undefined, { keepAlive: false }));
+expectError(timer.schedule('tomorrow', () => undefined));
+expectError(timer.schedule(0, () => undefined, { keepAlive: 'no' }));
+expectNotAssignable<ITimerCapability>(clock);
+
 // Existing IMachine consumers are unchanged: SQLite and clock remain separate capabilities.
 expectAssignable<IMachine>({
   createAsyncContext: machine.createAsyncContext.bind(machine),
@@ -85,3 +96,12 @@ expectAssignable<IMachine>({
 });
 expectNotAssignable<ISqliteCapability>(machine);
 expectNotAssignable<IClockCapability>(machine);
+
+// Busy exhaustion is a typed Error that records the wait that was spent.
+declare const busy: SqliteBusyError;
+expectAssignable<Error>(busy);
+expectType<number>(busy.waitedMilliseconds);
+expectType<SqliteBusyError>(new SqliteBusyError('busy', 500, { cause: new Error('driver') }));
+expectError(new SqliteBusyError('busy'));
+expectError(new SqliteBusyError('busy', '500'));
+expectError((busy.waitedMilliseconds = 1));

@@ -59,9 +59,10 @@ export interface ISha256Capability {
 /**
  * The host contract aggregates the capabilities selected by current runtime
  * consumers. Assembly supplies the adapter; canonical meaning remains owned by
- * Value Semantics and other context contracts. Durable SQLite storage and the
- * clock are separate capabilities, injected only where a consumer needs them,
- * so existing Machine consumers and test hosts are unaffected by them.
+ * Value Semantics and other context contracts. Durable SQLite storage, the
+ * clock and the timer are separate capabilities, injected only where a
+ * consumer needs them, so existing Machine consumers and test hosts are
+ * unaffected by them.
  * @alpha
  */
 export interface IMachine extends IAsyncContextCapability, ISnapshotCapability, ISha256Capability {}
@@ -136,7 +137,8 @@ export type ISqliteSynchronousResult<T> = 0 extends 1 & T
  * configuration for every connection: write-ahead logging, FULL synchronous
  * commits, enforced foreign keys and a bounded wait on a locked database.
  * Callers supply every SQL statement and schema; the connection has no
- * knowledge of what the tables mean.
+ * knowledge of what the tables mean. A statement, exec or transaction that
+ * cannot get a lock within the bounded wait fails with `SqliteBusyError`.
  *
  * Transactions are synchronous, top-level and IMMEDIATE: the write lock is
  * taken before the callback runs, the callback's writes commit together when
@@ -175,12 +177,35 @@ export interface ISqliteConnection {
 }
 
 /**
+ * The SQLite capability gave up waiting for another connection, possibly in
+ * another process, to release a lock it needs. A host raises it, instead of
+ * any driver-specific error, when its bounded busy wait is exhausted while
+ * opening a store or running a statement or transaction. The failed operation
+ * had no effect, so the caller may retry it or report contention to its own
+ * caller; telling a busy store apart from a broken one is the purpose of this
+ * type. Hosts never use it for corruption, misuse or other failures.
+ * @alpha
+ */
+export class SqliteBusyError extends Error {
+  /** How long, in milliseconds, the host waited before giving up. */
+  public readonly waitedMilliseconds: number;
+
+  /** Create a busy-exhaustion failure that records the wait that was spent. */
+  public constructor(message: string, waitedMilliseconds: number, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'SqliteBusyError';
+    this.waitedMilliseconds = waitedMilliseconds;
+  }
+}
+
+/**
  * Opens persistent local SQLite databases for a consumer that owns its own
  * SQL and schema, such as History's durable authority. Opening fails for a
  * directory, a missing parent directory, a file that is not a SQLite database,
  * or a location that cannot hold a persistent write-ahead-logged database,
  * including `:memory:` and the empty path. Opening never silently weakens the
- * host's durable configuration.
+ * host's durable configuration. Processes that open one new store at the same
+ * time all succeed within the bounded busy wait or fail with `SqliteBusyError`.
  * @alpha
  */
 export interface ISqliteCapability {
@@ -200,4 +225,42 @@ export interface ISqliteCapability {
 export interface IClockCapability {
   /** Return the current UTC epoch time in whole milliseconds, or throw if the host cannot provide one. */
   currentEpochMilliseconds(): number;
+}
+
+/**
+ * Options of one scheduled timer.
+ * @alpha
+ */
+export interface ITimerOptions {
+  /**
+   * Whether the pending timer by itself keeps the host alive. Defaults to
+   * true, so a waiting run does not end merely because nothing else is
+   * pending. A deadline that must never prolong the host's life passes false:
+   * it still fires on time whenever other work keeps the host running.
+   */
+  readonly keepAlive?: boolean;
+}
+
+/**
+ * Schedules a callback for a future wall-clock time, measured by the same
+ * whole-millisecond UTC epoch readings as {@link IClockCapability}. It exists
+ * so contexts can wait for a time (a stop deadline, a "not before T" wait)
+ * without reading host timers themselves, and so tests can substitute a
+ * controlled implementation.
+ *
+ * A scheduled callback runs at most once, never synchronously inside
+ * `schedule`, and only after a clock reading at or after the requested time:
+ * a host timer that fires early, or a clock that moved backwards, re-arms
+ * rather than firing. A time already reached fires as soon as the host
+ * allows. Waits longer than the host's own timer range are supported.
+ * @alpha
+ */
+export interface ITimerCapability extends IClockCapability {
+  /**
+   * Call `callback` once when the clock first reads at or after
+   * `epochMilliseconds`. Returns a function that cancels the pending call;
+   * cancelling after the call ran, or twice, does nothing. Throws a
+   * `RangeError` for a time that is not a safe integer of epoch milliseconds.
+   */
+  schedule(epochMilliseconds: number, callback: () => void, options?: ITimerOptions): () => void;
 }

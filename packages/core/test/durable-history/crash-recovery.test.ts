@@ -163,7 +163,7 @@ describe('process death at each publication boundary', () => {
 
   test('a kill inside the staging transaction leaves the attempt allocated without content', () => {
     const location = freshLocation();
-    seedPrevious(location);
+    const seed = seedPrevious(location);
     expectKilled(runWorker(location, [
       { op: 'time', at: 2_000 },
       { op: 'acquire', holder: 'killed', lease: 100 },
@@ -172,7 +172,8 @@ describe('process death at each publication boundary', () => {
       { op: 'stage', payload: adaActivity(), label: 'never-committed' },
     ]), 4);
 
-    expect(inspect(location).attempts).toEqual(['1:seed-request:completed:0', '2:killed-inside-stage:allocated:0']);
+    // The prior current result and the result set are intact; the killed staging left no content.
+    expect(inspect(location)).toMatchObject({ current: seed, results: 1, attempts: ['1:seed-request:completed:0', '2:killed-inside-stage:allocated:0'] });
   });
 
   test('a kill just before the publication commit publishes nothing; a later holder publishes without rerunning the body', () => {

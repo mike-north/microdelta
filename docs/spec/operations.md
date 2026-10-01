@@ -377,7 +377,8 @@ restart. Durable deferral is not promised merely because results are durable.
 - **Passes.** A normal request runs in passes. Once only deferred work
   remains, the run releases the writer lease. In sleep mode it waits for the
   earliest time (any stop ends the wait) and runs another pass, under the
-  derived request key `<key>/pass:<n>`, in which the deferred work resumes
+  derived request key `<key>#pass:<n>` (a caller's normal request key may not
+  contain `#pass:`), in which the deferred work resumes
   under the same operation identities and work that settled in an earlier
   pass, such as a failed member, is not executed again. In exit mode it
   returns and reports the time. A strict fold that has failed is returned
@@ -427,6 +428,11 @@ operation identity. Otherwise the operator decides.
   one fenced commit through History's operation journal records the operation
   as pending with the new request attempt, then Accounting records the usage
   intent; only then is the request sent. A failure of either write sends
+  nothing and leaves the step pending on a short deferral, never failed: the
+  work is retried after it. An operation identity carries 128 random bits from
+  the host, so it never repeats across stores, processes or hosts; it is also
+  the provider idempotency key and is kept by every retry. Only one call at an
+  address may be in progress in a run, and an attempt that ended sends
   nothing.
 - **Unknown outcomes.** A lost response, or one the adapter cannot classify,
   is unknown. It is retried only with a safety basis (the author's
@@ -440,8 +446,17 @@ operation identity. Otherwise the operator decides.
 - **Operator settlement.** Resolving records the asserted outcome and
   acknowledges usage the operator learned through Accounting under an
   operator-namespaced report identity; abandoning leaves the usage unknown.
-  Both are fenced journal commits, and both unblock the step, whose next
-  execution makes a new operation.
+  Both are fenced journal commits, and both unblock the step.
+  - **Resolved as succeeded.** The effect happened, so the address stays
+    consumed: a later call at the same subject, name and binding mints and
+    sends nothing and fails with a typed `operation-resolved` code that
+    carries no value. The author may catch it; uncaught, the step attempt
+    fails, naming the code. Mutations are never retried blindly (A-12).
+  - **Resolved as failed** asserts that nothing happened, and frees the
+    address for a new operation.
+  - **Abandoned.** The address is free: abandoning is the operator's explicit
+    authorization of a possible second effect.
+  - A resolution that supplies the operation's result is deferred to M6.
 
 ### RUN-013 — Retry history is part of supervision
 

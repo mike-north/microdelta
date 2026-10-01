@@ -1,6 +1,8 @@
 ---
 "@microdelta/supervision": minor
 "@microdelta/resolution": minor
+"@microdelta/machine": minor
+"@microdelta/machine-node": minor
 "microdelta": patch
 ---
 
@@ -11,7 +13,8 @@ Add external operations to Run Supervision, with retry and durable deferral, ope
 - **Retry and deferral.** Rate and quota responses with a retry time are deferred durably and retried by default, at most 5 times unless the author overrides it. Other transient failures retry only under an author policy. A lost response is never replayed without a safety basis (`safeToRepeat`, or `providerIdempotency`) and a policy. A step attempt that meets a deferral or unknown outcome sends nothing more and stays pending.
 - **Passes.** Members, strict-fold and outcome-fold requests run in passes. Once only deferred work remains, a run releases its writer lease and either sleeps and resumes in another pass (`deferral: 'sleep'`, the default) or returns with `waitingUntil` (`'exit'`). Admission in later runs honors the time and blocks unknown outcomes; pending members name the block.
 - **Hard stop.** An aborted request's remote state is recorded durably in the journal.
-- **Operator settlement.** `run.inspectOperations()` and `run.settleOperation({ action: 'resolve' | 'abandon', ... })` settle an unknown operation; operator usage is acknowledged under an operator-namespaced report identity.
+- **Operator settlement.** `run.inspectOperations()` and `run.settleOperation({ action: 'resolve' | 'abandon', ... })` settle an unknown operation; operator usage is acknowledged under an operator-namespaced report identity. A resolution as succeeded keeps the address consumed: a later call there sends nothing and fails with `operation-resolved`. A resolution as failed, or an abandonment, frees the address.
+- **Identities.** Operation identities, which are also provider idempotency keys, carry 128 random bits from the new Machine random identifier capability (`IRandomIdentifierCapability`, Node's `createNodeRandom()`), passed to Supervision as `options.random`. An intent that cannot be made durable sends nothing and leaves the step pending on a short deferral.
 - **Events.** New `operation` and `wait` run events carry identifiers, closed codes, times, usage with identifier units and remote state, never values. Exhaustive narrowing of `IRunEvent` must now handle them.
 - **Resolution.** The cancellation port's `execute` receives the claimed attempt's subject and identity, and may report an `unsettled` execution, which ends the attempt interrupted and leaves the step pending. A promoted candidate's recorded dependencies are accepted as historical evidence of the same analysis.
 - **Facade.** A workspace run passes `inspectOperations` and `settleOperation` through; without operation ports they fail with `invalid-request`.

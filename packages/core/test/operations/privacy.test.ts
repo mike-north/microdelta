@@ -123,10 +123,10 @@ describe('Supervision owns the ports History and Accounting satisfy', () => {
       expect([journal, accounting]).toEqual([session.journal, session.accounting]);
       // A port lacking a method is not assignable.
       const incomplete: Pick<IOperationJournal, 'read' | 'list'> = session.journal;
-      // @ts-expect-error -- a journal port without `commit` cannot record an intent before a send.
+      // @ts-expect-error: a journal port without `commit` cannot record an intent before a send.
       const refused: IOperationJournalPort = incomplete;
       const partial: Pick<IDurableAccounting, 'recordUsageIntent'> = session.accounting;
-      // @ts-expect-error -- an accounting port without `acknowledgeUsage` cannot acknowledge usage.
+      // @ts-expect-error: an accounting port without `acknowledgeUsage` cannot acknowledge usage.
       const alsoRefused: IOperationAccounting = partial;
       expect([refused, alsoRefused]).toHaveLength(2);
     } finally {

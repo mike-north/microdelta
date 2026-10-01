@@ -157,7 +157,7 @@ const controls = [
     directory: supervision, file: 'supervision.js',
     edits: [
       { anchor: 'function leaseForPass() {\n            return writerLease();\n        }', replacement: "function leaseForPass(number) {\n            if (number > 1 && writerPolicy.deadline !== undefined) {\n                const attempt = writer.tryLease();\n                if (attempt.kind !== 'acquired') {\n                    throw new SupervisionError('writer-busy', 'woken pass gave up');\n                }\n                return Promise.resolve(attempt.lease);\n            }\n            return writerLease();\n        }" },
-      { anchor: 'const lease = await leaseForPass();', replacement: 'const lease = await leaseForPass(number);' },
+      { anchor: 'lease = await leaseForPass();', replacement: 'lease = await leaseForPass(number);' },
     ],
   },
   {
@@ -166,7 +166,7 @@ const controls = [
     directory: supervision, file: 'supervision.js',
     edits: [
       { anchor: 'function leaseForPass() {\n            return writerLease();\n        }', replacement: "function leaseForPass(number) {\n            if (number > 1 && writerPolicy.deadline === undefined) {\n                const attempt = writer.tryLease();\n                return Promise.resolve(attempt.kind === 'acquired' ? attempt.lease : undefined);\n            }\n            return writerLease();\n        }" },
-      { anchor: 'const lease = await leaseForPass();', replacement: "const lease = await leaseForPass(number);\n                if (lease === undefined) {\n                    return previous;\n                }" },
+      { anchor: 'lease = await leaseForPass();', replacement: "lease = await leaseForPass(number);\n                    if (lease === undefined) {\n                        return previous;\n                    }" },
     ],
   },
   {
@@ -190,7 +190,7 @@ const controls = [
   {
     name: 'a retry after an unconfirmed intent mints a new request attempt (M3)',
     directory: supervision, file: 'operation-engine.js',
-    anchor: "const unsent = last?.status === 'not-sent' ? last : undefined;", replacement: 'const unsent = undefined;',
+    anchor: "const unsent = last?.status === 'not-sent' && last.intent === 'unconfirmed' ? last : undefined;", replacement: 'const unsent = undefined;',
   },
   {
     name: 'the intent retry delay does not grow',

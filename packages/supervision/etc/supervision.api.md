@@ -478,6 +478,11 @@ export interface IRunOptions {
 }
 
 // @alpha
+export interface IRunRandom {
+    randomIdentifier(): string;
+}
+
+// @alpha
 export interface IRunResult<T> {
     readonly context: IRunContext;
     readonly diagnostics: readonly string[];
@@ -595,18 +600,19 @@ export interface ISupervision {
 }
 
 // @alpha
-export type ISupervisionErrorCode = 'outside-run' | 'run-closed' | 'composition-phase' | 'observer-failure' | 'writer-unavailable' | 'invalid-request' | 'stopped' | 'operation-failed' | 'operation-deferred' | 'operation-unknown' | 'operation-unrecorded' | 'integrity' | 'undeclared-call';
+export type ISupervisionErrorCode = 'outside-run' | 'run-closed' | 'composition-phase' | 'observer-failure' | 'writer-unavailable' | 'invalid-request' | 'stopped' | 'operation-failed' | 'operation-deferred' | 'operation-unknown' | 'operation-unrecorded' | 'operation-resolved' | 'integrity' | 'undeclared-call';
 
 // @alpha
 export interface ISupervisionOptions {
     readonly context: IRunScopeCapability;
+    readonly random?: IRunRandom;
     readonly timer?: IRunTimer;
 }
 
 // @alpha
 export interface IWaitEvent {
     readonly kind: 'wait';
-    readonly phase: 'sleeping' | 'exiting' | 'resumed' | 'stopped';
+    readonly phase: 'sleeping' | 'exiting' | 'resumed' | 'stopped' | 'writer-busy';
     readonly released: boolean;
     readonly runId: string;
     readonly until: number;

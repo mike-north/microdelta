@@ -72,8 +72,6 @@ export interface IAttemptFrame {
   taint: string | undefined;
   /** The unsettled operation the attempt met, if any. */
   pending: IPendingSignal | undefined;
-  /** How many operations this attempt has minted, for their identities. */
-  minted: number;
   /** True once its execution returned, threw or was interrupted; a call made later belongs to no draining body. */
   ended: boolean;
 }
@@ -298,7 +296,6 @@ export function supervisedExecution(run: ISupervisedRun, frames: IFrameAccess): 
         member: step.memberKey ?? parent?.attempt?.member,
         taint: undefined,
         pending: undefined,
-        minted: 0,
         ended: false,
       };
       const lane = parent?.lane;

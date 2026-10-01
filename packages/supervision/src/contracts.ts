@@ -47,6 +47,7 @@ import type {
   IOperationStatus,
   IOperationView,
   IRunOperationPorts,
+  IRunRandom,
   IWaitEvent,
 } from './operations.js';
 
@@ -84,6 +85,12 @@ export interface ISupervisionOptions {
    * an invalid request.
    */
   readonly timer?: IRunTimer;
+  /**
+   * The structurally injected random identifier source that makes operation
+   * identities and provider idempotency keys globally unique. A run with
+   * operation ports needs it.
+   */
+  readonly random?: IRunRandom;
 }
 
 /**
@@ -766,13 +773,18 @@ export interface IRunExecution {
    * it rejects with a `SupervisionError`:
    *
    * - `operation-failed`: a permanent refusal, or an exhausted policy;
-   * - `operation-deferred`: a rate or quota limit deferred it until a time;
+   * - `operation-deferred`: a rate or quota limit deferred it until a time,
+   *   or its intent could not be made durable (Accounting busy, or a commit
+   *   it could not confirm), so nothing was sent and it is retried after a
+   *   short delay;
    * - `operation-unknown`: its outcome is unknown and it may not be retried;
-   * - `operation-unrecorded`: its intent could not be made durable, so
-   *   nothing was sent;
+   * - `operation-resolved`: an operator resolved the operation at this
+   *   address as succeeded, so nothing is sent again (no value is carried);
    * - `stopped`: stop intent refused or aborted it;
    * - `invalid-request`: a malformed request, a call outside an admitted
-   *   step attempt, or a run without operation ports or a timer.
+   *   step attempt or after it ended, a second call at an address while one
+   *   is in progress, or a run without operation ports, a timer or a random
+   *   identifier source.
    *
    * A deferral or an unknown outcome taints the step attempt: every later
    * operation or send it makes rethrows that signal without sending, and its

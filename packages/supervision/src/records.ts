@@ -11,11 +11,13 @@
  *   basis, policy, status, "not before" time, every request attempt and any
  *   operator settlement;
  * - **blocks** (`microdelta.supervision.blocks`), keyed by subject: the
- *   operations at that subject's addresses that are still unsettled
- *   (`pending`, `deferred` or `unknown`). Admission reads it to honor a
+ *   operations holding that subject's addresses: those still unsettled
+ *   (`pending`, `deferred` or `unknown`), and those an operator resolved as
+ *   succeeded, whose address stays consumed. Admission reads it to honor a
  *   deferral or an unknown outcome before any claim, and a call reads it to
- *   reuse an unsettled operation's identity. An operation leaves it, in the
- *   same commit, exactly when it settles.
+ *   reuse an unsettled operation's identity or to refuse a resolved address.
+ *   An operation leaves it, in the same commit, exactly when it settles any
+ *   other way.
  *
  * A stored record that does not decode is integrity damage, reported as a
  * typed error rather than guessed at.
@@ -79,6 +81,16 @@ const unsettled: ReadonlySet<IOperationStatus> = new Set<IOperationStatus>(['pen
 /** Whether an operation status is unsettled: pending, deferred or unknown. */
 export function isUnsettled(status: IOperationStatus): boolean {
   return unsettled.has(status);
+}
+
+/**
+ * Whether an operation holds its address in the subject's block index: while
+ * unsettled, and for good once an operator resolved it as succeeded, because
+ * its effect happened and the same intended request must never be sent again
+ * (RUN-012, A-12). Every other settlement frees the address.
+ */
+export function holdsAddress(record: Pick<IOperationRecord, 'status' | 'settlement'>): boolean {
+  return isUnsettled(record.status) || (record.status === 'resolved' && record.settlement?.outcome === 'succeeded');
 }
 
 /** The journal key of a subject's block index entry: its subject and compatibility group, unambiguously. */

@@ -29,8 +29,9 @@ import type {
   IResolutionPorts,
   IRunEvent,
   IRunOptions,
+  IRunRandom,
 } from '../src/index.js';
-import { admissionFor, codeOf, fakeTimer, grantingWriter, nodeScopes, stepOf } from './support.js';
+import { T0, admissionFor, codeOf, fakeTimer, grantingWriter, nodeScopes, stepOf } from './support.js';
 
 /** An in-memory journal port with failure injection. */
 interface IMemoryJournal extends IOperationJournalPort {
@@ -165,10 +166,24 @@ function operation(answer: () => Promise<Awaited<ReturnType<IOperationRequest<nu
   };
 }
 
-/** Run one step whose body performs `request`, returning the run's events, diagnostics and the body's failure code. */
-async function runOne(journal: IMemoryJournal, accounting: IMemoryAccounting, request: () => IOperationRequest<number>): Promise<{ readonly code: string | undefined; readonly events: readonly IRunEvent[]; readonly diagnostics: readonly string[] }> {
+/** A deterministic random identifier source: 32 hexadecimal characters counting up from 1. */
+function countingRandom(): IRunRandom {
+  let next = 0;
+  return {
+    randomIdentifier: () => {
+      next += 1;
+      return next.toString(16).padStart(32, '0');
+    },
+  };
+}
+
+/** The identity of the first operation a fresh {@link countingRandom} mints. */
+const firstOperation = `op-${'1'.padStart(32, '0')}`;
+
+/** Run one step whose body performs `request`, returning the run's events, diagnostics, the body's failure code and how its execution ended. */
+async function runOne(journal: IMemoryJournal, accounting: IMemoryAccounting, request: () => IOperationRequest<number>, random: IRunRandom = countingRandom()): Promise<{ readonly code: string | undefined; readonly result: string; readonly events: readonly IRunEvent[]; readonly diagnostics: readonly string[] }> {
   const timer = fakeTimer();
-  const supervision = createSupervision({ context: nodeScopes, timer });
+  const supervision = createSupervision({ context: nodeScopes, timer, random });
   let code: string | undefined;
   const double = executing(async () => {
     code = await codeOf(supervision.execution().operation(request()));
@@ -178,12 +193,15 @@ async function runOne(journal: IMemoryJournal, accounting: IMemoryAccounting, re
     analysis: 'analysis:test',
     environment: 'env:test',
     runId: 'run:test',
+    // Exit mode: a short deferral returns at once instead of sleeping on the controlled timer.
+    deferral: 'exit',
     resolution: double.factory,
     writer: grantingWriter,
     operations: { journal, accounting },
     observers: [{ observe: (event) => events.push(event) }],
   }, (run) => run.resolve(stepOf('assess', 'pr-1'), { requestKey: 'request:1' }));
-  return { code, events, diagnostics: result.diagnostics };
+  const outcome = result.value;
+  return { code, result: outcome.kind === 'refused' ? outcome.reason : outcome.kind, events, diagnostics: result.diagnostics };
 }
 
 /** The operation phases of a run's events. */
@@ -192,24 +210,36 @@ function phases(events: readonly IRunEvent[]): string[] {
 }
 
 describe('intent before send (ACC-007)', () => {
-  test('an intent the journal refuses sends nothing and fails as unrecorded', async () => {
+  test('an intent the journal refuses sends nothing and leaves the attempt pending on a short deferral, never failed', async () => {
     const journal = memoryJournal();
     journal.failFrom = 1;
     const sent = { count: 0 };
     const outcome = await runOne(journal, memoryAccounting(), () => operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent));
-    expect(outcome.code).toBe('operation-unrecorded');
+    expect(outcome.code).toBe('operation-deferred');
+    expect(outcome.result).toBe('unsettled');
     expect(sent.count).toBe(0);
+    expect(phases(outcome.events)).toEqual(['retry-scheduled:unrecorded']);
   });
 
-  test('an Accounting intent that fails sends nothing, and the attempt is recorded as never sent', async () => {
+  test('an Accounting intent that fails sends nothing, records the attempt never sent and the operation deferred briefly, and leaves the step pending', async () => {
     const journal = memoryJournal();
     const accounting = memoryAccounting();
     accounting.failIntents = true;
     const sent = { count: 0 };
     const outcome = await runOne(journal, accounting, () => operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent));
-    expect(outcome.code).toBe('operation-unrecorded');
+    expect(outcome.code).toBe('operation-deferred');
+    expect(outcome.result).toBe('unsettled');
     expect(sent.count).toBe(0);
-    expect(journal.operation('op-7-1')).toEqual(expect.objectContaining({ status: 'failed', attempts: [expect.objectContaining({ status: 'not-sent' })] }));
+    expect(journal.operation(firstOperation)).toEqual(expect.objectContaining({ status: 'deferred', notBefore: T0 + 1_000, attempts: [expect.objectContaining({ status: 'not-sent' })] }));
+  });
+
+  test('operation identities come from the injected random source, and a malformed identifier is refused before anything is recorded', async () => {
+    const journal = memoryJournal();
+    const sent = { count: 0 };
+    const outcome = await runOne(journal, memoryAccounting(), () => operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), { randomIdentifier: () => 'NOT RANDOM' });
+    expect(outcome.code).toBe('invalid-request');
+    expect(journal.commits).toBe(0);
+    expect(sent.count).toBe(0);
   });
 });
 
@@ -222,7 +252,7 @@ describe('usage acknowledgment (ACC-005, ACC-007)', () => {
     expect(outcome.code).toBeUndefined();
     expect(phases(outcome.events)).toEqual(['request-started', 'usage-unrecorded:unrecorded', 'request-settled']);
     expect(outcome.diagnostics.filter((line) => line.startsWith('usage-unrecorded:'))).toHaveLength(1);
-    expect(journal.operation('op-7-1')).toEqual(expect.objectContaining({ status: 'succeeded', attempts: [expect.objectContaining({ status: 'succeeded', usage: 'unrecorded' })] }));
+    expect(journal.operation(firstOperation)).toEqual(expect.objectContaining({ status: 'succeeded', attempts: [expect.objectContaining({ status: 'succeeded', usage: 'unrecorded' })] }));
   });
 
   test('a conflicting redelivery keeps the first report and is diagnosed', async () => {
@@ -243,14 +273,14 @@ describe('lease authority (EXP-8 ruling R)', () => {
     const outcome = await runOne(journal, memoryAccounting(), () => operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), { count: 0 }));
     expect(outcome.code).toBe('operation-unknown');
     expect(phases(outcome.events)).toEqual(['request-started', 'request-settled:lease-lost']);
-    expect(journal.operation('op-7-1')).toEqual(expect.objectContaining({ status: 'pending' }));
+    expect(journal.operation(firstOperation)).toEqual(expect.objectContaining({ status: 'pending' }));
     expect(outcome.diagnostics.some((line) => line.startsWith('lease-lost:'))).toBe(true);
   });
 });
 
 describe('operator actions are run operations (CMP-9)', () => {
   test('inspecting or settling operations from inside a step attempt is refused as an undeclared call', async () => {
-    const supervision = createSupervision({ context: nodeScopes, timer: fakeTimer() });
+    const supervision = createSupervision({ context: nodeScopes, timer: fakeTimer(), random: countingRandom() });
     const codes: (string | undefined)[] = [];
     let live: Parameters<Parameters<typeof supervision.run>[1]>[0] | undefined;
     const double = executing(async () => {
@@ -287,7 +317,11 @@ describe('malformed requests, options and records', () => {
     const double = executing(() => Promise.resolve());
     const base = { analysis: 'analysis:test', environment: 'env:test', resolution: double.factory, writer: grantingWriter };
     expect(await codeOf(supervision.run({ ...base, operations: { journal: memoryJournal(), accounting: memoryAccounting() } }, () => 'ran'))).toBe('invalid-request');
-    const timed = createSupervision({ context: nodeScopes, timer: fakeTimer() });
+    const timed = createSupervision({ context: nodeScopes, timer: fakeTimer(), random: countingRandom() });
+    // Operation ports need a random identifier source too.
+    expect(await codeOf(timed.run({ ...base, operations: { journal: memoryJournal(), accounting: memoryAccounting() } }, () => 'ran'))).not.toBe('invalid-request');
+    const unrandom = createSupervision({ context: nodeScopes, timer: fakeTimer() });
+    expect(await codeOf(unrandom.run({ ...base, operations: { journal: memoryJournal(), accounting: memoryAccounting() } }, () => 'ran'))).toBe('invalid-request');
     // A mode outside the closed set, as untyped configuration could supply.
     const untyped: IRunOptions = { ...base };
     Reflect.set(untyped, 'deferral', 'wait');
@@ -297,7 +331,7 @@ describe('malformed requests, options and records', () => {
   test('a block index naming a missing operation is integrity damage, never a silent admission', async () => {
     const journal = memoryJournal();
     journal.put('microdelta.supervision.blocks', JSON.stringify(['assess', 1]), { subject: 'assess', version: 1, operations: [{ operation: 'op-missing', name: 'assess', binding: 'b' }] });
-    const supervision = createSupervision({ context: nodeScopes, timer: fakeTimer() });
+    const supervision = createSupervision({ context: nodeScopes, timer: fakeTimer(), random: countingRandom() });
     const double = executing(() => Promise.resolve());
     await supervision.run({ analysis: 'analysis:test', environment: 'env:test', resolution: double.factory, writer: grantingWriter, operations: { journal, accounting: memoryAccounting() } }, async () => {
       const failure = await Promise.resolve().then(() => double.ports().admission.admit(admissionFor(stepOf('assess', 'pr-1')))).then(() => undefined, (error: unknown) => error);

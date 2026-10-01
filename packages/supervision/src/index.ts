@@ -95,6 +95,7 @@ export {
   type IRequestAttemptStatus,
   type IRequestAttemptView,
   type IRunOperationPorts,
+  type IRunRandom,
   type IWaitEvent,
 } from './operations.js';
 export { createSupervision } from './supervision.js';

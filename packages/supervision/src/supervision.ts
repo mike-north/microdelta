@@ -89,7 +89,7 @@ import { descriptorKey, isDraining, raceAbort, runControls, supervisedExecution 
 import type { IAttemptFrame, IFrameAccess, IRequestScope, IRunFrame, ISupervisedRun } from './execution.js';
 import { createOperationEngine } from './operation-engine.js';
 import type { IOperationEngine } from './operation-engine.js';
-import type { IDeferralMode, IOperationSettlement, IOperationStatus, IOperationView } from './operations.js';
+import type { IDeferralMode, IOperationSettlement, IOperationStatus, IOperationView, IWaitEvent } from './operations.js';
 import { createPermitPool } from './permits.js';
 
 /**
@@ -128,14 +128,21 @@ interface IPasses<P, R> {
 }
 
 /**
+ * The separator of a derived pass key. A caller's request key for a normal
+ * request may not contain it, so a derived key never collides with a key a
+ * caller chose (a recovery request may name a derived key).
+ */
+const passSeparator = '#pass:';
+
+/**
  * The request key of one pass of a normal request. The first pass uses the
  * caller's saved key unchanged; a later pass, after a deferral's wait, admits
- * its executions under `<key>/pass:<n>`, because a request key identifies
+ * its executions under `<key>#pass:<n>`, because a request key identifies
  * the admitted executions of one pass and each identified execution is never
  * re-admitted. A caller recovering a resumed request derives the same keys.
  */
 function passKey(requestKey: string, pass: number): string {
-  return pass === 1 ? requestKey : `${requestKey}/pass:${String(pass)}`;
+  return pass === 1 ? requestKey : `${requestKey}${passSeparator}${String(pass)}`;
 }
 
 /**
@@ -362,6 +369,7 @@ function outcomeFoldReport(resolved: IOutcomeFoldResolution, scope: IRequestScop
 export function createSupervision(options: ISupervisionOptions): ISupervision {
   const scope: IRunScope<IRunFrame> = options.context.createAsyncContext<IRunFrame>();
   const timer = options.timer;
+  const random = options.random;
   /** Process-local counter for generated run identifiers (volatile metadata). */
   let generated = 0;
 
@@ -414,8 +422,8 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     if (operationPorts !== undefined && (typeof operationPorts !== 'object' || operationPorts === null || typeof Reflect.get(operationPorts, 'journal') !== 'object' || typeof Reflect.get(operationPorts, 'accounting') !== 'object')) {
       throw new SupervisionError('invalid-request', 'A run\'s operation ports need a journal and an accounting port');
     }
-    if (operationPorts !== undefined && timer === undefined) {
-      throw new SupervisionError('invalid-request', 'External operations need the Supervision\'s timer');
+    if (operationPorts !== undefined && (timer === undefined || random === undefined)) {
+      throw new SupervisionError('invalid-request', 'External operations need the Supervision\'s timer and random identifier source');
     }
     const controller = runOptions.stop ?? createStopController();
     if (typeof controller !== 'object' || controller === null || typeof Reflect.get(controller, 'subscribe') !== 'function') {
@@ -450,9 +458,10 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
      * observer position and diagnostics are the run's; it is created before
      * the run state so the execution controls can reach it.
      */
-    const engine: IOperationEngine | undefined = operationPorts === undefined || timer === undefined ? undefined : createOperationEngine({
+    const engine: IOperationEngine | undefined = operationPorts === undefined || timer === undefined || random === undefined ? undefined : createOperationEngine({
       context,
       ports: operationPorts,
+      random,
       timer,
       report: (event, position) => {
         state.report(event, position);
@@ -698,7 +707,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     }
 
     /** Offer one wait event. */
-    function waitEvent(phase: 'sleeping' | 'exiting' | 'resumed' | 'stopped', until: number, released: boolean): void {
+    function waitEvent(phase: IWaitEvent['phase'], until: number, released: boolean): void {
       state.report(Object.freeze({ kind: 'wait', runId: context.runId, phase, until, released }), `wait ${phase}`);
     }
 
@@ -713,10 +722,25 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
      * its executions under its own request key (see {@link passKey}).
      */
     async function inPasses<P, R>(requestKey: string, request: IPasses<P, R>): Promise<R> {
+      const callerKey: unknown = requestKey;
+      if (typeof callerKey === 'string' && callerKey.includes(passSeparator)) {
+        throw new SupervisionError('invalid-request', `A normal request's key may not contain the reserved pass separator ${passSeparator}`);
+      }
       let previous: R | undefined;
+      let waited: number | undefined;
       let settled: ReadonlySet<string> = new Set();
       for (let number = 1; ; number += 1) {
-        const lease = writer.lease();
+        const lease = leaseForPass(number);
+        if (lease === undefined) {
+          // Woken while another holder has the writer lease: return waiting, as exit mode does; a later run resumes.
+          const until = waited ?? timer?.currentEpochMilliseconds() ?? 0;
+          waitingUntil = Math.min(waitingUntil ?? until, until);
+          waitEvent('writer-busy', until, true);
+          if (previous === undefined) {
+            throw new SupervisionError('invalid-request', 'A first pass has no earlier report');
+          }
+          return previous;
+        }
         const requestScope: IRequestScope = { lease, deferrals: [], blocks: new Map(), settled };
         passes.active += 1;
         let result: P;
@@ -736,6 +760,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         previous = reported;
         settled = new Set([...settled, ...request.settled(reported)]);
         const until = Math.min(...requestScope.deferrals);
+        waited = until;
         if (deferral === 'exit' || timer === undefined || state.stopped.signal.aborted) {
           waitingUntil = Math.min(waitingUntil ?? until, until);
           waitEvent(deferral === 'exit' || timer === undefined ? 'exiting' : 'stopped', until, releaseIfOnlyDeferred());
@@ -757,6 +782,27 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
           return reported;
         }
         waitEvent('resumed', until, false);
+      }
+    }
+
+    /**
+     * The writer lease for one pass. A first pass's failure to obtain it
+     * rejects the request, as before. A later pass, after a deferral's wait,
+     * that finds another holder returns undefined, so the request returns
+     * waiting instead of failing. This is the only place passes obtain the
+     * lease.
+     */
+    function leaseForPass(number: number): IRunLease | undefined {
+      if (number === 1) {
+        return writer.lease();
+      }
+      try {
+        return writer.lease();
+      } catch (error: unknown) {
+        if (error instanceof SupervisionError && error.code === 'writer-unavailable') {
+          return undefined;
+        }
+        throw error;
       }
     }
 

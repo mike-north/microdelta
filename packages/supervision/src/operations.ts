@@ -185,7 +185,8 @@ export interface IOperationRequest<T> {
  * flight; `deferred` until its "not before" time; `unknown` while its
  * outcome is not known; `succeeded`, `failed` and `cancelled` (a provider
  * confirmed cancellation after a hard stop) are settled; `resolved` and
- * `abandoned` record an operator's settlement of an unknown operation.
+ * `abandoned` record an operator's settlement of an unknown operation (a
+ * resolution as succeeded keeps its address consumed).
  * `pending`, `deferred` and `unknown` are unsettled: they keep their step's
  * work pending.
  * @alpha
@@ -281,11 +282,17 @@ export interface IOperationView {
  * - `resolve` asserts its outcome. Usage the operator learned is acknowledged
  *   through Accounting under the operator namespace (`operator:<report>`),
  *   attributed to the operation's last request attempt.
+ *   - As `succeeded`, the effect happened: the address stays consumed, and a
+ *     later call at it mints and sends nothing and fails with
+ *     `operation-resolved`, carrying no value. A resolution that supplies a
+ *     result is M6 work.
+ *   - As `failed`, nothing happened: the address is free, and a later call
+ *     makes a new operation.
  * - `abandon` gives it up; its usage stays unknown, because unknown is never
- *   zero (ACC-005).
+ *   zero (ACC-005). The address is free: abandoning is the operator's
+ *   explicit authorization of a possible second effect.
  *
- * Either one settles the operation, so its step's work is no longer blocked;
- * a later execution of the step makes a new operation at that address.
+ * Either one settles the operation, so its step's work is no longer blocked.
  * @alpha
  */
 export type IOperationSettlement =
@@ -556,8 +563,9 @@ export interface IOperationEvent {
  * One event of a run's waiting for deferred work: `sleeping` (the run
  * released its writer lease, if it held one, and waits until `until`),
  * `exiting` (exit mode returns waiting until `until`), `resumed` (the wait
- * ended and the work is presented again) or `stopped` (stop intent ended the
- * wait).
+ * ended and the work is presented again), `stopped` (stop intent ended the
+ * wait) or `writer-busy` (on waking another holder had the writer lease, so
+ * the run returns waiting until `until`, as exit mode does).
  * @alpha
  */
 export interface IWaitEvent {
@@ -566,11 +574,24 @@ export interface IWaitEvent {
   /** The run the event belongs to. */
   readonly runId: string;
   /** The position. */
-  readonly phase: 'sleeping' | 'exiting' | 'resumed' | 'stopped';
+  readonly phase: 'sleeping' | 'exiting' | 'resumed' | 'stopped' | 'writer-busy';
   /** The earliest "not before" time of the deferred work. */
   readonly until: number;
   /** Whether the run released its writer lease for the wait. */
   readonly released: boolean;
+}
+
+/**
+ * The host randomness Supervision needs, structurally identical to the
+ * Machine's random identifier capability: fresh identifiers of 128 secure
+ * random bits as lowercase hexadecimal. Operation identities, which are also
+ * provider idempotency keys, draw on it so they never repeat across stores,
+ * processes or hosts sharing a provider account. Assembly supplies it.
+ * @alpha
+ */
+export interface IRunRandom {
+  /** A fresh identifier of 32 lowercase hexadecimal characters. */
+  randomIdentifier(): string;
 }
 
 /** The collection of Supervision's operation records. @alpha */

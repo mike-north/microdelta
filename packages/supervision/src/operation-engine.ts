@@ -31,6 +31,12 @@
  * 6. **Hard stop.** An aborted request's remote state is committed to the
  *    journal by operation and request attempt; a provider-confirmed
  *    cancellation settles the operation, otherwise it is unknown.
+ * 7. **Operator settlement.** Resolving an unknown operation as succeeded
+ *    asserts its effect happened, so its address stays consumed: a later call
+ *    there mints and sends nothing and fails with `operation-resolved`, which
+ *    carries no value. Resolving as failed (no effect) or abandoning frees the
+ *    address; abandoning is the operator's explicit authorization of a
+ *    possible second effect. A resolution carrying a result is M6 work.
  *
  * Every commit uses the lease of the normal request pass the attempt belongs
  * to, so a pass that lost its lease commits nothing (ruling R): its operation
@@ -43,6 +49,7 @@ import type { IAdmissionDecision, IAdmissionRequest } from '@microdelta/resoluti
 
 import type { IRunContext, IRunEvent, IRunLease } from './contracts.js';
 import type { IRunTimer } from './control.js';
+import type { IRunRandom } from './operations.js';
 import { SupervisionError } from './errors.js';
 import { descriptorKey, pendingError } from './execution.js';
 import type { IAttemptFrame, IOperationTransport, IRequestScope, IRunFrame, IRunOperations, ITransmitted } from './execution.js';
@@ -70,7 +77,7 @@ import {
   decodeOperation,
   encodeBlocks,
   encodeOperation,
-  isUnsettled,
+  holdsAddress,
   rateLimited,
   spentAttempts,
   subjectKey,
@@ -88,6 +95,20 @@ const identifierRule = /^[a-z][a-z0-9_.:-]{0,63}$/u;
 
 /** The default cap on deferred retries of rate or quota responses (EXP-8 resolution 6). */
 const defaultRateLimitRetries = 5;
+
+/**
+ * How long after an intent that could not be made durable (Accounting busy,
+ * or a commit it could not confirm) the work is retried. Nothing was sent, so
+ * the step stays pending as a short deferral rather than failing: a sleeping
+ * run retries after it, and a later run admits it again.
+ */
+const intentRetryMilliseconds = 1_000;
+
+/** The shape of an operation identity's random part: what the host's random identifier source supplies. */
+const randomRule = /^[0-9a-z]{16,64}$/u;
+
+/** Thrown from the intent hook when the step attempt ended before the send: nothing is recorded or sent. */
+class EndedAttemptError extends Error {}
 
 /** Whether a value is an identifier under {@link identifierRule}. */
 function isIdentifier(value: unknown): value is string {
@@ -228,6 +249,8 @@ export interface IOperationEngineContext {
   readonly context: IRunContext;
   readonly ports: IRunOperationPorts;
   readonly timer: IRunTimer;
+  /** The host's random identifier source, which makes operation identities and idempotency keys globally unique. */
+  readonly random: IRunRandom;
   /** Offer an event to observers; a failure becomes a diagnostic. */
   report(event: IRunEvent, position: string): void;
   /** Record a run diagnostic; it names codes and identifiers only. */
@@ -255,7 +278,14 @@ export interface IOperationEngine extends IRunOperations {
  * @returns The engine.
  */
 export function createOperationEngine(engine: IOperationEngineContext): IOperationEngine {
-  const { context, ports, timer } = engine;
+  const { context, ports, timer, random } = engine;
+  /**
+   * Addresses with a call in progress in this run. A second call at an
+   * address while one is in progress, even one started in the same turn, is
+   * refused: two concurrent calls of the same intended request would mint two
+   * operations and send it twice.
+   */
+  const inProgress = new Set<string>();
   const namespace = { analysis: context.analysis, environment: context.environment };
   const now = (): number => timer.currentEpochMilliseconds();
 
@@ -281,7 +311,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     const subject = { subject: next.subject, version: next.version };
     const blocks = readBlocks(subject);
     const others = blocks.entries.filter((entry) => entry.operation !== next.operation);
-    const entries = isUnsettled(next.status) ? [...others, { operation: next.operation, name: next.name, binding: next.binding }] : others;
+    const entries = holdsAddress(next) ? [...others, { operation: next.operation, name: next.name, binding: next.binding }] : others;
     const writes = [{ collection: operationsCollection, key: next.operation, expectedRevision: expected, record: encodeOperation(next) }];
     const changed = entries.length !== blocks.entries.length || entries.some((entry, index) => entry.operation !== blocks.entries[index]?.operation);
     const committed = ports.journal.commit(lease, {
@@ -423,7 +453,21 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     }
   }
 
-  /** Locate the unsettled operation at an address, if any. */
+  /**
+   * A new operation identity: `op-` and an identifier from the host's random
+   * source, so it never repeats across stores, processes or hosts sharing a
+   * provider account. It is also the provider idempotency key, persisted with
+   * the operation and kept by every retry.
+   */
+  function mintOperation(): string {
+    const minted: unknown = random.randomIdentifier();
+    if (typeof minted !== 'string' || !randomRule.test(minted)) {
+      throw new SupervisionError('invalid-request', 'The random identifier source returned a malformed identifier');
+    }
+    return `op-${minted}`;
+  }
+
+  /** Locate the operation holding an address (unsettled, or resolved as succeeded), if any. */
   function locate(subject: IOperationSubject, name: string, binding: string): IStored | undefined {
     const entry = readBlocks(subject).entries.find((candidate) => candidate.name === name && candidate.binding === binding);
     return entry === undefined ? undefined : readOperation(entry.operation);
@@ -435,6 +479,27 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     if (attempt === undefined || attempt.subject === undefined || attempt.attemptId === undefined || scope === undefined) {
       throw new SupervisionError('invalid-request', `Operation ${request.name} must be called from the body of an admitted step attempt in a normal request`);
     }
+    if (attempt.ended) {
+      throw new SupervisionError('invalid-request', `Operation ${request.name} was called after its step attempt ended; nothing was sent`);
+    }
+    const address = JSON.stringify([subjectKey(attempt.subject), request.name, request.binding]);
+    if (inProgress.has(address)) {
+      throw new SupervisionError('invalid-request', `Operation ${request.name} is already being called at this address in this run`);
+    }
+    inProgress.add(address);
+    try {
+      return await callAt(attempt, scope, transport, request);
+    } finally {
+      inProgress.delete(address);
+    }
+  }
+
+  /** One call of a validated request by an admitted, live step attempt. */
+  async function callAt<T>(attempt: IAttemptFrame, scope: IRequestScope, transport: IOperationTransport, request: IValidatedRequest<T>): Promise<T> {
+    const subject = attempt.subject;
+    if (subject === undefined) {
+      throw new SupervisionError('invalid-request', `Operation ${request.name} needs an admitted step attempt`);
+    }
     if (attempt.pending !== undefined) {
       throw pendingError(attempt.pending);
     }
@@ -442,9 +507,13 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       throw new SupervisionError('stopped', `Operation ${request.name} was refused: ${attempt.taint}`);
     }
     const { lease } = scope;
-    const subject = attempt.subject;
     const stepAttempt = String(attempt.attemptId);
     let stored = locate(subject, request.name, request.binding);
+    if (stored?.record.status === 'resolved') {
+      // The operator asserted this request's effect happened: nothing is minted or sent again.
+      emit('blocked', stored.record, { stepAttempt, status: 'resolved', reason: 'operator' });
+      throw new SupervisionError('operation-resolved', `Operation ${stored.record.operation} was resolved as succeeded by an operator; it is not sent again`);
+    }
     if (stored !== undefined && stored.record.status === 'pending') {
       if (!leftByEarlierWriter(stored, lease)) {
         throw new SupervisionError('invalid-request', `Operation ${stored.record.operation} is already in flight in this run`);
@@ -467,9 +536,8 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     if (stored !== undefined) {
       current = stored;
     } else {
-      attempt.minted += 1;
       const record: IOperationRecord = {
-        operation: `op-${stepAttempt}-${String(attempt.minted)}`,
+        operation: mintOperation(),
         subject: subject.subject,
         version: subject.version,
         member: attempt.member,
@@ -525,7 +593,10 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     const stepAttempt = String(attempt.attemptId);
     const before = stored;
     const operation = before.record.operation;
-    const requestAttempt = `${operation}/${String(before.record.attempts.length + 1)}`;
+    // An attempt whose intent never became durable was never sent: its identity is reused, so Accounting's intent is idempotent.
+    const unsent = before.record.attempts.at(-1)?.status === 'not-sent';
+    const earlier = unsent ? before.record.attempts.slice(0, -1) : before.record.attempts;
+    const requestAttempt = `${operation}/${String(earlier.length + 1)}`;
     let current = before;
     const sent = await transport.transmit<IOperationResponse<T>>({
       label: request.name,
@@ -533,12 +604,15 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       perform: (signal) => request.perform({ signal, operation, requestAttempt, idempotencyKey: request.providerIdempotency ? operation : undefined }),
       cancel: request.cancel,
     }, () => {
+      if (attempt.ended) {
+        throw new EndedAttemptError('the step attempt ended before the send');
+      }
       // Intent before send: the operation record, then Accounting's usage intent.
       const intent: IOperationRecord = {
         ...before.record,
         status: 'pending',
         notBefore: undefined,
-        attempts: [...before.record.attempts, { requestAttempt, run: context.runId, stepAttempt, status: 'pending', remote: undefined, usage: undefined }],
+        attempts: [...earlier, { requestAttempt, run: context.runId, stepAttempt, status: 'pending', remote: undefined, usage: undefined }],
       };
       current = write(lease, intent, before.revision);
       try {
@@ -549,13 +623,15 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
           attribution: { run: context.runId, member: attempt.member ?? null, stepAttempt },
         });
       } catch (error: unknown) {
-        // Nothing will be sent: record the attempt not sent and restore the operation's earlier standing.
-        const restored: IOperationRecord = before.revision === 0
-          ? { ...withLast(intent, { status: 'not-sent' }), status: 'failed' }
-          : { ...withLast(intent, { status: 'not-sent' }), status: before.record.status, notBefore: before.record.notBefore };
+        // Nothing will be sent: record the attempt not sent and the operation as a short deferral, so the step stays pending
+        // and the work is retried (a sleeping run after the delay, a later run when admitted) under the same identities.
+        const restored: IOperationRecord = { ...withLast(intent, { status: 'not-sent' }), status: 'deferred', notBefore: now() + intentRetryMilliseconds };
         try {
           current = write(lease, restored, current.revision);
         } catch {
+          // Deliberately conservative: if recording the restoration fails too, the operation stays `pending` durably, and the
+          // next writer records it unknown (an operator then settles it), although nothing was sent. Treating an unconfirmed
+          // record as proof that nothing happened would be the optimistic error RUN-012 forbids.
           engine.diagnose(`lease-lost: operation ${operation} request attempt ${requestAttempt} stays pending though it was never sent`);
         }
         throw error;
@@ -563,7 +639,14 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       emit('request-started', intent, { stepAttempt, requestAttempt, status: 'pending' });
     });
     if (sent.kind === 'unrecorded') {
-      return { stored: current, outcome: { kind: 'error', error: new SupervisionError('operation-unrecorded', `Operation ${operation}'s intent could not be made durable, so nothing was sent`, sent.error) } };
+      if (sent.error instanceof EndedAttemptError) {
+        return { stored: current, outcome: { kind: 'error', error: new SupervisionError('invalid-request', `Operation ${operation} was called after its step attempt ended; nothing was sent`) } };
+      }
+      // Nothing was sent. The step stays pending, retried after a short delay; it never fails for a busy or unconfirmed write.
+      const notBefore = now() + intentRetryMilliseconds;
+      engine.diagnose(`operation-unrecorded: operation ${operation} request attempt ${requestAttempt} has no durable intent; nothing was sent`);
+      emit('retry-scheduled', current.record, { stepAttempt, requestAttempt, status: 'deferred', reason: 'unrecorded', notBefore });
+      return { stored: current, outcome: { kind: 'pending', block: { kind: 'deferred', operation, notBefore } } };
     }
     if (sent.kind === 'refused') {
       return { stored: current, outcome: { kind: 'error', error: new SupervisionError('stopped', `Operation ${operation} was refused: ${sent.reason}`) } };
@@ -708,6 +791,10 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
         let stored = readOperation(entry.operation);
         if (stored === undefined) {
           throw new SupervisionError('integrity', `The block index of ${request.subject.subject} names a missing operation`);
+        }
+        if (stored.record.status === 'resolved') {
+          // A consumed address neither blocks nor resumes: the body runs, and a call there fails with `operation-resolved`.
+          continue;
         }
         if (stored.record.status === 'pending') {
           if (!leftByEarlierWriter(stored, scope?.lease)) {

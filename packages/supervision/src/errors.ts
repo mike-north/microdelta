@@ -22,7 +22,10 @@
  *   time; the step attempt can no longer publish or send, and its work stays pending.
  * - `operation-unknown`: an external operation's outcome is unknown and it may not be retried (RUN-012). Nothing was
  *   replayed; the step attempt can no longer publish or send, and its work stays pending until an operator settles it.
- * - `operation-unrecorded`: an external operation's intent could not be made durable, so nothing was sent (ACC-007).
+ * - `operation-unrecorded`: usage an operator supplied could not be made durable, so nothing was settled (ACC-007). An
+ *   operation's own intent that cannot be made durable instead leaves its step pending on a short deferral.
+ * - `operation-resolved`: an operator resolved the operation at this address as succeeded, so its effect happened and it
+ *   is never sent again (RUN-012). It carries no value; the step attempt may handle it.
  * - `integrity`: a durable operation record Supervision wrote cannot be read back.
  * - `undeclared-call`: a run operation was called from inside a member's work or a step attempt
  *   (author code that kept the run). What it resolves or reads would enter no evidence of the
@@ -41,6 +44,7 @@ export type ISupervisionErrorCode =
   | 'operation-deferred'
   | 'operation-unknown'
   | 'operation-unrecorded'
+  | 'operation-resolved'
   | 'integrity'
   | 'undeclared-call';
 

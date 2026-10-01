@@ -192,8 +192,9 @@ accounting }`, which needs the Supervision's timer:
 - **Intent before send, usage before outcome.** Once the permit is held and
   stop intent rechecked, one journal commit records the operation `pending`
   with a new request attempt, then Accounting records the usage intent; only
-  then is the request sent. If either write fails, nothing is sent
-  (`operation-unrecorded`). A usage report is acknowledged under
+  then is the request sent. If either write fails (Accounting busy, or a
+  commit it could not confirm), nothing is sent and the attempt is pending on
+  a one-second deferral, so its step waits and is retried, never failed. A usage report is acknowledged under
   `provider:<report>` before the outcome is committed; a failed
   acknowledgment is reported, never claimed, and leaves usage unknown.
 - **Outcomes and policy.** `succeeded` settles the operation. A permanent
@@ -219,7 +220,8 @@ accounting }`, which needs the Supervision's timer:
   deferral ends with that work pending. Once only deferred work remains the
   run releases its writer lease; in `deferral: 'sleep'` mode (the default) it
   waits until the earliest time, any stop ending the wait, and runs another
-  pass under request key `<key>/pass:<n>`, where the deferred work resumes
+  pass under request key `<key>#pass:<n>` (a caller's normal request key
+  may not contain `#pass:`), where the deferred work resumes
   under the same operation identities and steps that settled earlier (for
   example failed members) are not executed again; in `'exit'` mode it
   returns, and `result.waitingUntil` reports the time. Later runs honor it.
@@ -233,9 +235,23 @@ accounting }`, which needs the Supervision's timer:
   operations; `run.settleOperation({ action: 'resolve' | 'abandon', ... })`
   settles an unknown one under the writer lease. Usage the operator learned
   is acknowledged under `operator:<report>`; an abandoned operation keeps its
-  usage unknown. Either unblocks the step, whose next execution makes a new
-  operation. Both are run operations, so a call from inside member or step
-  work is refused as an undeclared call (CMP-9).
+  usage unknown. Either unblocks the step. A resolution as `succeeded` keeps
+  the address consumed: a later call there mints and sends nothing and fails
+  with `operation-resolved` (no value; the author may catch it). A resolution
+  as `failed`, or an abandonment (the operator's explicit authorization of a
+  possible second effect), frees the address for a new operation. A
+  resolution carrying a result is M6 work. Both actions are run operations,
+  so a call from inside member or step work is refused as an undeclared call
+  (CMP-9).
+- **Identities.** An operation identity is `op-` and an identifier from the
+  injected random source (`options.random`, structurally the Machine's
+  random identifier capability), so it never repeats across stores,
+  processes or hosts; it is the provider idempotency key and every retry
+  keeps it. One call at an address may be in progress in a run, and an
+  attempt that ended sends nothing.
+- **Waking while the lease is held.** A sleeping request that wakes while
+  another holder has the writer lease returns waiting until its time, as
+  exit mode does (`wait` phase `writer-busy`).
 - **Events.** `operation` events carry identifiers (operation, request
   attempt, step attempt, member, run), closed status and reason codes, times,
   usage figures with identifier units and the remote state; `wait` events

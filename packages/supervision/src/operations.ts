@@ -290,7 +290,10 @@ export interface IOperationView {
  *     makes a new operation.
  * - `abandon` gives it up; its usage stays unknown, because unknown is never
  *   zero (ACC-005). The address is free: abandoning is the operator's
- *   explicit authorization of a possible second effect.
+ *   explicit authorization of a possible second effect. An operation already
+ *   resolved as `succeeded` may also be abandoned, which frees its consumed
+ *   address; a second resolution, or abandoning one resolved as `failed`
+ *   (whose address is already free), is refused.
  *
  * Either one settles the operation, so its step's work is no longer blocked.
  * @alpha

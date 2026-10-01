@@ -22,12 +22,13 @@ import type {
   IResolutionErrorCode as IResolutionErrorCodeOf,
   IResolutionOutcome as IResolutionOutcomeOf,
 } from '@microdelta/resolution';
-import { StaleWriterError, openDurableHistory } from '@microdelta/history';
-import type { ICompletedResultReference as IHistoryReference, IDurableHistory, IWriterLease } from '@microdelta/history';
+import { openDurableHistory } from '@microdelta/history';
+import type { ICompletedResultReference as IHistoryReference } from '@microdelta/history';
 import { createNodeClock, createNodeSqlite, createNodeTimer } from '@microdelta/machine-node';
 import { ResolutionError as ResolutionErrorClass, createResolution } from '@microdelta/resolution';
 import {
   SupervisionError as SupervisionErrorClass,
+  WriterBusyError as WriterBusyErrorClass,
   createStopController as createSupervisionStopController,
   createSupervision,
   ordinaryLifecycle as supervisionOrdinaryLifecycle,
@@ -37,7 +38,6 @@ import type {
   IAbortSignal as ISupervisionAbortSignal,
   IRemoteState as ISupervisionRemoteState,
   IRunExecution as ISupervisionRunExecution,
-  IRunWriter,
   ISendInterruption as ISupervisionSendInterruption,
   ISendPhase as ISupervisionSendPhase,
   ISendRequest as ISupervisionSendRequest,
@@ -46,6 +46,7 @@ import type {
   IStopLevel as ISupervisionStopLevel,
   IStopRequest as ISupervisionStopRequest,
   IStopState as ISupervisionStopState,
+  IWriterWaitOptions as ISupervisionWriterWaitOptions,
 } from '@microdelta/supervision';
 import { createTrackingObserver } from '@microdelta/tracking';
 import type {
@@ -67,6 +68,7 @@ import type {
 
 import type { IAuthoring, IComposition } from './authoring.js';
 import { machine } from './host.js';
+import { writerFor } from './writer.js';
 
 /** An exact reference to one completed result. @alpha */
 export type ICompletedResultReference = IHistoryReference;
@@ -195,6 +197,14 @@ export type ISendPhase = ISupervisionSendPhase;
 /** A send a hard stop aborted, with its recorded remote state. @alpha */
 export type ISendInterruption = ISupervisionSendInterruption;
 
+/**
+ * How a run's normal request waits when another process holds the store's
+ * writer lease: the operator's deadline (there is none by default) and the
+ * poll interval (one second by default).
+ * @alpha
+ */
+export type IWriterWaitOptions = ISupervisionWriterWaitOptions;
+
 /** The live run's execution controls: stop intent, abort signal, permit-guarded sends and stop-aware waits. @alpha */
 export type IRunExecution = ISupervisionRunExecution;
 
@@ -213,6 +223,17 @@ export type ResolutionError = ResolutionErrorClass;
 export const SupervisionError: typeof SupervisionErrorClass = SupervisionErrorClass;
 /** The instance type of the `SupervisionError` class. @alpha */
 export type SupervisionError = SupervisionErrorClass;
+
+/**
+ * The typed writer-busy outcome: a normal request waited for the store's
+ * writer lease until the operator's deadline passed. It names the holder its
+ * final attempt observed, with that holder's expiry, or reports that storage
+ * stayed too busy to decide (`contended`) with the writer recorded then.
+ * @alpha
+ */
+export const WriterBusyError: typeof WriterBusyErrorClass = WriterBusyErrorClass;
+/** The instance type of the `WriterBusyError` class. @alpha */
+export type WriterBusyError = WriterBusyErrorClass;
 
 /**
  * The fixed, framework-owned positions of one resolved step, in order.
@@ -277,6 +298,13 @@ export interface IWorkspaceRunOptions<TInputs extends object, THelpers extends o
    * `permits`; a member waiting for a time lends its lane. Defaults to 8.
    */
   readonly window?: number;
+  /**
+   * How a normal request waits while another run, in this or another
+   * process, holds the store's writer lease. Without a deadline it waits until
+   * it holds the lease or a stop ends the wait; at the deadline it fails with
+   * `WriterBusyError`. Check-only and recovery requests never wait.
+   */
+  readonly writerWait?: IWriterWaitOptions;
 }
 
 /**
@@ -304,8 +332,11 @@ export interface IWorkspace {
   /**
    * Run `body` as one supervised run over `options.composition`. One run at a
    * time holds the store's writer: while another run of this or any process
-   * holds it, this run's normal requests fail with `writer-unavailable`, while
-   * `check` and `recover` still work. The run stays live, with its context,
+   * holds it, this run's normal requests wait for it under
+   * `options.writerWait`, taking it over through History's fencing once the
+   * holder releases it or its lease expires, and fail with
+   * `WriterBusyError` naming the holder if the operator's deadline
+   * passes first. `check` and `recover` never wait. The run stays live, with its context,
    * exact reads and writer, until the body and every operation started
    * through the run have settled, even when the body stopped awaiting them
    * early (for example a `Promise.all` whose sibling failed); the body's own
@@ -323,7 +354,7 @@ export interface IWorkspace {
 /** The default writer lease duration: long enough for one normal request, renewed on the next. */
 const defaultLeaseMilliseconds = 30_000;
 
-/** Node's timer, which arms stop deadlines and waits for a time. */
+/** Node's timer, which arms stop deadlines, waits for a time and paces waits for the writer lease. */
 const timer = createNodeTimer();
 
 /**
@@ -343,54 +374,6 @@ function deepFreeze<T>(value: T): T {
     }
   }
   return value;
-}
-
-/**
- * History's single-writer lease as one run's writer port: acquired on the
- * run's first normal request, renewed on each later one, released once when
- * the run closes. A lease that expired between requests is not renewable; it
- * is dropped and a fresh lease with a new fence is acquired, so History's
- * fencing (not this port) still rejects anything the stale lease might have
- * written. Another unexpired holder makes normal requests fail with
- * `writer-unavailable`; it never blocks check-only or recovery requests.
- */
-function writerFor(history: IDurableHistory, holder: string, leaseMilliseconds: number): IRunWriter {
-  let held: IWriterLease | undefined;
-  return Object.freeze({
-    lease(): IWriterLease {
-      if (held !== undefined) {
-        try {
-          held = history.renewWriter(held, leaseMilliseconds);
-          return held;
-        } catch (error: unknown) {
-          if (!(error instanceof StaleWriterError)) {
-            throw error;
-          }
-          held = undefined;
-        }
-      }
-      const acquisition = history.acquireWriter({ holder, leaseMilliseconds });
-      if (acquisition.kind !== 'acquired') {
-        throw new SupervisionErrorClass('writer-unavailable', `History's writer lease is held by ${acquisition.holder} until ${String(acquisition.expiresAt)}`);
-      }
-      held = acquisition.lease;
-      return held;
-    },
-    release(): void {
-      if (held !== undefined) {
-        const lease = held;
-        held = undefined;
-        try {
-          history.releaseWriter(lease);
-        } catch (error: unknown) {
-          // An expired lease is no longer held by anyone on this run's behalf; there is nothing to release.
-          if (!(error instanceof StaleWriterError)) {
-            throw error;
-          }
-        }
-      }
-    },
-  });
 }
 
 /**
@@ -437,6 +420,7 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
         ...(runOptions.stop === undefined ? {} : { stop: runOptions.stop }),
         ...(runOptions.permits === undefined ? {} : { permits: runOptions.permits }),
         ...(runOptions.window === undefined ? {} : { window: runOptions.window }),
+        ...(runOptions.writerWait === undefined ? {} : { writerWait: runOptions.writerWait }),
         // The holder names this run for diagnostics; History's fence, not the name, orders writers.
         writer: writerFor(history, `microdelta-run:${runId}`, leaseMilliseconds),
         resolution: (ports) => createResolution({

@@ -11,9 +11,10 @@
  * order, which is the fencing property
  * `StorageSeesNonDecreasingFences` of `experiments/exp-7/WriterLease.tla`.
  *
- * The typed writer-busy error and the operator deadline of the owner's
- * concurrency decision are not implemented yet; the current refusal of an
- * acquisition is the `held` outcome.
+ * C1 and C2 drive History directly, where the refusal of an acquisition is
+ * the `held` outcome. C3 drives real waiters: Run Supervision's wait for the
+ * lease over the facade's writer port, on Node's real timer, with an operator
+ * deadline, so every wait must end granted or as the typed writer-busy error.
  *
  * @see ../../../../docs/spec/execution.md (PUB-002, PUB-004, PUB-005)
  * @see ../../../../experiments/exp-7/WriterLease.tla
@@ -27,7 +28,7 @@ import { cleanup } from '../durable-history/support.js';
 import { expectRefused, freshStore, heldFrom, leaseFrom, locatorFrom, measureConcurrency, reopenForReading, snapshot, startWorker, stopWorkers } from './driver.js';
 import type { IConcurrencyMeasure, IDurableState, IWorkerHandle } from './driver.js';
 import { attemptRequest, concurrencyStore, subject } from './fixture.js';
-import { hostMonotonicMilliseconds, parseContentionLog } from './protocol.js';
+import { hostMonotonicMilliseconds, parseContentionLog, parseWaitContention } from './protocol.js';
 import type { IContentionEvent, IHarnessCommand, IHarnessReply } from './protocol.js';
 
 afterEach(async () => {
@@ -186,5 +187,58 @@ describe('free-running contention with the host clock (C2)', () => {
     expect(all.some((event) => event.op === 'acquire' && !event.ok)).toBe(true);
     expect(all.some((event) => event.error === 'StaleWriterError')).toBe(true);
     expect(state.results.length).toBeGreaterThanOrEqual(2);
+  }, 120_000);
+});
+
+describe('real waiters contending for the lease with operator deadlines (C3)', () => {
+  test('four processes repeatedly wait for the writer through Run Supervision on Node’s real timer: every wait ends granted with a unique fence or as the typed writer-busy outcome naming a real holder, and nothing else', async () => {
+    const location = freshStore();
+    const names = ['Q0', 'Q1', 'Q2', 'Q3'];
+    const holders = names.map((name) => `waiter-${name}`);
+    const workers = await Promise.all(names.map((name) => startWorker(name, { location, store: concurrencyStore, clock: 'host' })));
+    // Each tenure waits at most 60 ms, polling every 5 ms, holds a granted lease for 25 ms and then rests 15 ms.
+    const replies = await together(workers, (target) => ({
+      op: 'wait-contend',
+      holder: `waiter-${target.name}`,
+      durationMilliseconds: 1_500,
+      leaseMilliseconds: 1_000,
+      waitMilliseconds: 60,
+      pollMilliseconds: 5,
+      holdMilliseconds: 25,
+      restMilliseconds: 15,
+    }));
+    const logs = workers.map((target, index) => ({ holder: `waiter-${target.name}`, log: parseWaitContention(valueOf(target, replies[index])) }));
+    expect(measureConcurrency(replies).overlap).toBeGreaterThan(1_000);
+    await Promise.all(workers.map((target) => target.close()));
+
+    const events = logs.flatMap(({ holder, log }) => log.map((event) => ({ event, worker: holder })));
+    // Every wait ended in exactly one of the two typed outcomes: no raw driver error, no other failure.
+    expect(events.filter(({ event }) => event.kind === 'failed')).toEqual([]);
+    const grants = events.flatMap(({ event, worker }) => (event.kind === 'granted' ? [{ ...event, worker }] : []));
+    const fences = grants.map((grant) => grant.fence).sort((left, right) => left - right);
+    // Each fence was granted to exactly one tenure, with no gap.
+    expect(fences).toEqual(Array.from({ length: fences.length }, (_, index) => index + 1));
+    const grantees = new Set(grants.map((grant) => grant.worker));
+    const busy = events.flatMap(({ event, worker }) => (event.kind === 'busy' ? [{ ...event, worker }] : []));
+    for (const event of busy) {
+      // Writer-busy names a holder that was really granted the writer; only contention may leave it unnamed.
+      if (event.holder === null) {
+        expect(event.contended).toBe(true);
+      } else {
+        expect(holders).toContain(event.holder);
+        expect(grantees).toContain(event.holder);
+      }
+      // Every wait made at least its one attempt; one attempt that SQLite kept busy past the deadline is enough.
+      expect(event.tries).toBeGreaterThanOrEqual(1);
+    }
+
+    const state = snapshot(location);
+    expectFenceOrderedStorage(state);
+    // Every grant published exactly once under its own fence, in fence order.
+    expect(state.results.map((result) => result.publishedFence)).toEqual(fences);
+    // Contention really happened: some waiters took over after waiting, and some reached their deadline.
+    expect(grants.length).toBeGreaterThanOrEqual(2);
+    expect(grants.some((grant) => grant.tries > 1)).toBe(true);
+    expect(busy.length).toBeGreaterThan(0);
   }, 120_000);
 });

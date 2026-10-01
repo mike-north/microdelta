@@ -56,8 +56,96 @@ export type IHarnessCommand = (
   | { readonly op: 'read'; readonly locator: string }
   | { readonly op: 'arm'; readonly role: string }
   | { readonly op: 'contend'; readonly holder: string; readonly durationMilliseconds: number; readonly leaseMilliseconds: number }
+  | IWaitCommand
+  | { readonly op: 'die' }
   | { readonly op: 'close' }
 ) & { readonly notBefore?: number };
+
+/**
+ * Commands that drive one supervised wait for the writer lease inside a
+ * worker: a real Run Supervision run over the facade's writer port and this
+ * worker's History, with the operator's deadline and poll interval.
+ *
+ * - `wait-start` starts the run's one normal request at controlled time `at`;
+ *   it makes its first attempt at once.
+ * - `wait-advance` moves the controlled clock to `at`, firing every wake-up
+ *   that falls due at its own scheduled time, so each poll happens exactly
+ *   when the waiter scheduled it. No real time passes.
+ * - `wait-stop` requests a soft or hard stop of the waiting run.
+ * - `wait-check` makes a check-only request through the same run while it
+ *   waits; it must neither need nor wait for the lease.
+ * - `wait-finish` lets the run close at `at`, which releases any lease it holds.
+ * - `wait-contend` repeats whole waits on the host clock and Node's real timer
+ *   until the duration elapses: each tenure waits up to `waitMilliseconds`,
+ *   publishes once with the lease it obtains, holds it for `holdMilliseconds`
+ *   and closes; the worker then rests for `restMilliseconds` before its next
+ *   tenure, so a releasing worker does not simply take the lease straight back.
+ */
+export type IWaitCommand =
+  | { readonly op: 'wait-start'; readonly at: number; readonly holder: string; readonly leaseMilliseconds: number; readonly pollMilliseconds: number; readonly deadline?: number; readonly key: string }
+  | { readonly op: 'wait-advance'; readonly at: number }
+  | { readonly op: 'wait-stop'; readonly level: 'soft' | 'hard' }
+  | { readonly op: 'wait-check' }
+  | { readonly op: 'wait-finish'; readonly at: number }
+  | {
+      readonly op: 'wait-contend';
+      readonly holder: string;
+      readonly durationMilliseconds: number;
+      readonly leaseMilliseconds: number;
+      readonly waitMilliseconds: number;
+      readonly pollMilliseconds: number;
+      readonly holdMilliseconds: number;
+      readonly restMilliseconds: number;
+    };
+
+/**
+ * One try of a waiting run's writer port, as the worker observed it: the
+ * controlled (or host) time of the try and what it reported. `fence` is set
+ * only for a grant; `holder` and `expiresAt` name the observed or recorded
+ * holder, when there was one.
+ */
+export interface IWaitAttempt {
+  readonly at: number;
+  readonly kind: 'acquired' | 'held' | 'contended';
+  readonly holder: string | null;
+  readonly expiresAt: number | null;
+  readonly fence: number | null;
+}
+
+/**
+ * How a waiting run's normal request has settled so far: still `pending`;
+ * `acquired` with the lease it received and the result it then published
+ * under that lease; the typed `busy` outcome; `stopped`; or any other failure,
+ * by class name.
+ */
+export type IWaitOutcome =
+  | { readonly kind: 'pending' }
+  | { readonly kind: 'acquired'; readonly holder: string; readonly fence: number; readonly expiresAt: number; readonly published: string }
+  | { readonly kind: 'busy'; readonly error: string; readonly holder: string | null; readonly expiresAt: number | null; readonly deadline: number; readonly contended: boolean; readonly message: string }
+  | { readonly kind: 'stopped'; readonly message: string }
+  | { readonly kind: 'failed'; readonly error: string; readonly message: string };
+
+/**
+ * The state of the worker's waiting run: every try since `wait-start`, the
+ * request's outcome, how many check-only requests reached Resolution, and how
+ * many wake-ups are still scheduled.
+ */
+export interface IWaitStatus {
+  readonly attempts: readonly IWaitAttempt[];
+  readonly outcome: IWaitOutcome;
+  readonly checks: number;
+  readonly pendingWakes: number;
+}
+
+/**
+ * One tenure of a `wait-contend` loop: a grant with the fence received, the
+ * number of tries it took and the result published under it; or the typed
+ * busy outcome with the holder it named; or any other failure, by class name.
+ */
+export type IWaitContentionEvent =
+  | { readonly kind: 'granted'; readonly fence: number; readonly tries: number; readonly published: string }
+  | { readonly kind: 'busy'; readonly holder: string | null; readonly contended: boolean; readonly tries: number }
+  | { readonly kind: 'failed'; readonly error: string; readonly message: string; readonly tries: number };
 
 /** The operation names a command may carry. */
 export type IHarnessOperation = IHarnessCommand['op'];
@@ -210,6 +298,42 @@ export function parseCommand(value: unknown): IHarnessCommand {
       return withBarrier({ op, role: stringField(value, 'role') }, notBefore);
     case 'contend':
       return withBarrier({ op, holder: stringField(value, 'holder'), durationMilliseconds: numberField(value, 'durationMilliseconds'), leaseMilliseconds: numberField(value, 'leaseMilliseconds') }, notBefore);
+    case 'wait-start': {
+      const deadline = optionalNumber(value, 'deadline');
+      const start = {
+        op,
+        at: numberField(value, 'at'),
+        holder: stringField(value, 'holder'),
+        leaseMilliseconds: numberField(value, 'leaseMilliseconds'),
+        pollMilliseconds: numberField(value, 'pollMilliseconds'),
+        key: stringField(value, 'key'),
+      };
+      return withBarrier(deadline === undefined ? start : { ...start, deadline }, notBefore);
+    }
+    case 'wait-advance':
+    case 'wait-finish':
+      return withBarrier({ op, at: numberField(value, 'at') }, notBefore);
+    case 'wait-stop': {
+      const level = value.level;
+      if (level !== 'soft' && level !== 'hard') {
+        throw new TypeError(`unsupported stop level ${JSON.stringify(level)}`);
+      }
+      return withBarrier({ op, level }, notBefore);
+    }
+    case 'wait-check':
+    case 'die':
+      return withBarrier({ op }, notBefore);
+    case 'wait-contend':
+      return withBarrier({
+        op,
+        holder: stringField(value, 'holder'),
+        durationMilliseconds: numberField(value, 'durationMilliseconds'),
+        leaseMilliseconds: numberField(value, 'leaseMilliseconds'),
+        waitMilliseconds: numberField(value, 'waitMilliseconds'),
+        pollMilliseconds: numberField(value, 'pollMilliseconds'),
+        holdMilliseconds: numberField(value, 'holdMilliseconds'),
+        restMilliseconds: numberField(value, 'restMilliseconds'),
+      }, notBefore);
     default:
       throw new TypeError(`unsupported harness operation ${op}`);
   }
@@ -253,5 +377,103 @@ export function parseContentionLog(value: unknown): readonly IContentionEvent[] 
     const heldBy = entry.heldBy === undefined ? {} : { heldBy: stringField(entry, 'heldBy') };
     const error = entry.error === undefined ? {} : { error: stringField(entry, 'error') };
     return { op, ok: entry.ok, fence: numberField(entry, 'fence'), ...heldBy, ...error };
+  });
+}
+
+/** Read a member that is a string or null. */
+function nullableString(record: Readonly<Record<string, unknown>>, name: string): string | null {
+  return record[name] === null ? null : stringField(record, name);
+}
+
+/** Read a member that is a finite number or null. */
+function nullableNumber(record: Readonly<Record<string, unknown>>, name: string): number | null {
+  return record[name] === null ? null : numberField(record, name);
+}
+
+/** Read a required boolean member. */
+function booleanField(record: Readonly<Record<string, unknown>>, name: string): boolean {
+  const value = record[name];
+  if (typeof value !== 'boolean') {
+    throw new TypeError(`expected boolean member ${name}, got ${JSON.stringify(value)}`);
+  }
+  return value;
+}
+
+/** Narrow one observed try of a waiting run's writer port. */
+function parseWaitAttempt(value: unknown): IWaitAttempt {
+  if (!isRecord(value)) {
+    throw new TypeError('wait attempt must be an object');
+  }
+  const kind = value.kind;
+  if (kind !== 'acquired' && kind !== 'held' && kind !== 'contended') {
+    throw new TypeError(`unsupported wait attempt ${JSON.stringify(kind)}`);
+  }
+  return { at: numberField(value, 'at'), kind, holder: nullableString(value, 'holder'), expiresAt: nullableNumber(value, 'expiresAt'), fence: nullableNumber(value, 'fence') };
+}
+
+/** Narrow a waiting request's outcome. */
+function parseWaitOutcome(value: unknown): IWaitOutcome {
+  if (!isRecord(value)) {
+    throw new TypeError('wait outcome must be an object');
+  }
+  const kind = stringField(value, 'kind');
+  switch (kind) {
+    case 'pending':
+      return { kind };
+    case 'acquired':
+      return { kind, holder: stringField(value, 'holder'), fence: numberField(value, 'fence'), expiresAt: numberField(value, 'expiresAt'), published: stringField(value, 'published') };
+    case 'busy':
+      return {
+        kind,
+        error: stringField(value, 'error'),
+        holder: nullableString(value, 'holder'),
+        expiresAt: nullableNumber(value, 'expiresAt'),
+        deadline: numberField(value, 'deadline'),
+        contended: booleanField(value, 'contended'),
+        message: stringField(value, 'message'),
+      };
+    case 'stopped':
+      return { kind, message: stringField(value, 'message') };
+    case 'failed':
+      return { kind, error: stringField(value, 'error'), message: stringField(value, 'message') };
+    default:
+      throw new TypeError(`unsupported wait outcome ${kind}`);
+  }
+}
+
+/** Narrow the status of a worker's waiting run. */
+export function parseWaitStatus(value: unknown): IWaitStatus {
+  if (!isRecord(value) || !Array.isArray(value.attempts)) {
+    throw new TypeError(`malformed wait status ${JSON.stringify(value)}`);
+  }
+  return {
+    attempts: value.attempts.map(parseWaitAttempt),
+    outcome: parseWaitOutcome(value.outcome),
+    checks: numberField(value, 'checks'),
+    pendingWakes: numberField(value, 'pendingWakes'),
+  };
+}
+
+/** Narrow the tenures a `wait-contend` loop returned. */
+export function parseWaitContention(value: unknown): readonly IWaitContentionEvent[] {
+  if (!Array.isArray(value)) {
+    throw new TypeError('expected a wait contention array');
+  }
+  return value.map((entry: unknown): IWaitContentionEvent => {
+    if (!isRecord(entry)) {
+      throw new TypeError('wait contention event must be an object');
+    }
+    const kind = stringField(entry, 'kind');
+    const tries = numberField(entry, 'tries');
+    switch (kind) {
+      case 'granted':
+        return { kind, fence: numberField(entry, 'fence'), tries, published: stringField(entry, 'published') };
+      case 'busy':
+        return { kind, holder: nullableString(entry, 'holder'), contended: booleanField(entry, 'contended'), tries };
+      case 'failed':
+        return { kind, error: stringField(entry, 'error'), message: stringField(entry, 'message'), tries };
+      default:
+        throw new TypeError(`unsupported wait contention event ${kind}`);
+    }
   });
 }

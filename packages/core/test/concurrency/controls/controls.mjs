@@ -1,11 +1,14 @@
 /**
  * The mutation controls of the M5 concurrency suites. Each control plants one
- * weakened guard into History's emitted build (never its TypeScript source)
- * and names the `experiments/exp-7` model fault it reproduces, so each
- * known-bad configuration with a code counterpart has a control that the Node
- * suites must reject. The first two are the controls the M5 issue requires:
- * the holder guard without its fence check, then without its expiry check.
- * A control is a list of edits; every anchor must occur exactly once.
+ * weakened guard into an emitted build (never TypeScript source): History's
+ * lease authority, or Run Supervision's wait for the writer lease. A control
+ * names the `experiments/exp-7` model fault it reproduces, so each known-bad
+ * configuration with a code counterpart has a control that the Node suites
+ * must reject; a control with no model counterpart instead states why the
+ * model cannot express it. The first two are the controls the M5 issue
+ * requires: the holder guard without its fence check, then without its expiry
+ * check. A control is a list of edits to one target; every anchor must occur
+ * exactly once in that target.
  *
  * `Publication.tla`'s `omit-publish-fence` fault has its code control in
  * `durable-history/controls/history-mutation-controls.mjs` ("publication
@@ -17,8 +20,19 @@ import { fileURLToPath } from 'node:url';
 /** The repository root for a module inside `packages/core/test/concurrency/controls/`. */
 export const repositoryRoot = fileURLToPath(new URL('../../../../../', import.meta.url));
 
-/** The emitted file every control plants into, relative to the repository root. */
+/** History's emitted durable authority, relative to the repository root: the default target. */
 export const target = 'packages/history/dist/src/durable/index.js';
+
+/** Run Supervision's emitted wait for the writer lease, relative to the repository root. */
+export const waitTarget = 'packages/supervision/dist/src/writer.js';
+
+/** Every emitted file some control plants into. */
+export const targets = Object.freeze([target, waitTarget]);
+
+/** The file one control plants into. */
+export function targetOf(control) {
+  return control.target ?? target;
+}
 
 /** The concurrency suite files every control run must execute, and no others. */
 export const suites = Object.freeze(['interleavings.test.js', 'contention.test.js']);
@@ -75,6 +89,35 @@ export const controls = Object.freeze([
     model: 'WriterLease',
     fault: 'renew-ignores-fence',
     edits: [{ anchor: 'return asHolder(lease, (now) => {', replacement: 'return asHolder({ ...lease, fence: readWriter().lastFence }, (now) => {' }],
+  },
+  {
+    name: 'acquisition takes over one millisecond before the recorded expiry',
+    model: 'WriterLease',
+    fault: 'takeover-before-expiry',
+    edits: [{ anchor: 'if (writer.holder !== null && writer.expiresAt > now) {', replacement: 'if (writer.holder !== null && writer.expiresAt > now + 1) {' }],
+  },
+  {
+    name: 'renewal and release write the presented fence back into the writer row',
+    model: null,
+    unmodeled: 'While the holder guard holds, the presented fence equals the durable one, so the model cannot tell writing it back from leaving it; F1 observes the column assignment itself.',
+    edits: [
+      { anchor: 'statements.extendHolder.run(expiresAt);', replacement: 'statements.setHolder.run(lease.fence, lease.holder, expiresAt);' },
+      { anchor: 'statements.clearHolder.run(now);', replacement: 'statements.setHolder.run(lease.fence, null, now);' },
+    ],
+  },
+  {
+    name: 'writer-busy reports no holder',
+    model: 'WriterLease',
+    fault: 'busy-without-holder',
+    target: waitTarget,
+    edits: [{ anchor: 'throw new WriterBusyError(attempt, deadline);', replacement: 'throw new WriterBusyError({ ...attempt, holder: undefined }, deadline);' }],
+  },
+  {
+    name: 'waiting ignores the operator deadline',
+    model: null,
+    unmodeled: 'The deadline is process-local arithmetic; the model lets a waiter give up at any held observation and does not represent deadlines or liveness.',
+    target: waitTarget,
+    edits: [{ anchor: 'if (deadline !== undefined && now >= deadline) {', replacement: 'if (false) {' }],
   },
   {
     // Both layers are weakened: the lifecycle check and the SQL state predicate.

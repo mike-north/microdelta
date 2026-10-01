@@ -1,14 +1,15 @@
 /**
  * Behavioral discrimination controls for the M5 concurrency suites. Each
- * control in `controls.mjs` plants exactly one weakened guard into
- * History's emitted build, reruns the unchanged interleaving and contention
- * suites, and records which named tests fail; the emitted file is restored
- * afterwards and the restored build must pass every test. A control whose
- * anchors do not each match exactly once, or that no test rejects, fails the run.
- * Every Jest run is judged fail-closed by `control-outcome.mjs` against
- * exactly the two concurrency suites. The planted file is restored after each
- * control, on error and on SIGINT/SIGTERM/SIGHUP, and its final bytes are
- * compared with the original; rebuilding History restores it after a SIGKILL.
+ * control in `controls.mjs` plants exactly one weakened guard into its
+ * target's emitted build (History's lease authority or Run Supervision's
+ * writer wait), reruns the unchanged interleaving and contention suites, and
+ * records which named tests fail; the emitted file is restored afterwards and
+ * the restored build must pass every test. A control whose anchors do not
+ * each match exactly once, or that no test rejects, fails the run. Every Jest
+ * run is judged fail-closed by `control-outcome.mjs` against exactly the two
+ * concurrency suites. Every target is restored after each control, on error
+ * and on SIGINT/SIGTERM/SIGHUP, and its final bytes are compared with the
+ * original; rebuilding the package restores it after a SIGKILL.
  *
  * On-demand evidence command, not part of `npm test`: run `npm run build` and
  * `npm run test:unit --workspace microdelta` first, then
@@ -21,15 +22,22 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { judgeRun } from '../../durable-history/controls/control-outcome.mjs';
-import { controls, plant, repositoryRoot, suites, target } from './controls.mjs';
+import { controls, plant, repositoryRoot, suites, targetOf, targets } from './controls.mjs';
 
-const file = join(repositoryRoot, target);
 const core = join(repositoryRoot, 'packages/core');
-const original = readFileSync(file, 'utf8');
+/** The original emitted bytes of every target, by repository-relative path. */
+const originals = new Map(targets.map((path) => [path, readFileSync(join(repositoryRoot, path), 'utf8')]));
 
-/** Restore the planted file. */
+/** Restore every target to its original bytes. */
 function restore() {
-  writeFileSync(file, original);
+  for (const [path, text] of originals) {
+    writeFileSync(join(repositoryRoot, path), text);
+  }
+}
+
+/** The targets whose bytes differ from the original. */
+function unrestored() {
+  return [...originals].filter(([path, text]) => readFileSync(join(repositoryRoot, path), 'utf8') !== text).map(([path]) => path);
 }
 
 /** The Jest child currently running and its report directory, so a signal can stop and remove them. */
@@ -43,7 +51,7 @@ for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
     if (reportDirectory !== undefined) {
       rmSync(reportDirectory, { recursive: true, force: true });
     }
-    console.log(`INTERRUPTED by ${signal}; emitted file restored`);
+    console.log(`INTERRUPTED by ${signal}; emitted files restored`);
     process.exit(130);
   });
 }
@@ -78,25 +86,31 @@ try {
     throw new Error('the unmodified build must pass every test before controls run');
   }
   for (const control of controls) {
+    const path = targetOf(control);
+    const original = originals.get(path);
     let planted;
     try {
+      if (original === undefined) {
+        throw new Error(`${control.name}: unknown target ${path}`);
+      }
       planted = plant(original, control);
     } catch (error) {
       console.log(`ANCHOR: ${error instanceof Error ? error.message : String(error)}`);
       failures += 1;
       continue;
     }
-    writeFileSync(file, planted);
+    writeFileSync(join(repositoryRoot, path), planted);
     try {
       const { failed } = await runSuites(baseline.titles);
-      console.log(`\n## ${control.name} (${control.model} fault ${control.fault}): ${String(failed.length)} failing`);
+      const model = control.model === null ? 'no model counterpart' : `${control.model} fault ${control.fault}`;
+      console.log(`\n## ${control.name} (${model}; ${path}): ${String(failed.length)} failing`);
       for (const name of failed) console.log(`- ${name}`);
       if (failed.length === 0) failures += 1;
     } finally {
       restore();
     }
-    if (readFileSync(file, 'utf8') !== original) {
-      throw new Error(`${target} was not restored after ${control.name}`);
+    if (unrestored().length > 0) {
+      throw new Error(`${unrestored().join(', ')} not restored after ${control.name}`);
     }
   }
   const restored = await runSuites(baseline.titles);
@@ -108,8 +122,8 @@ try {
 } finally {
   restore();
 }
-if (readFileSync(file, 'utf8') !== original) {
-  console.log(`NOT RESTORED: ${target}`);
+for (const path of unrestored()) {
+  console.log(`NOT RESTORED: ${path}`);
   failures += 1;
 }
 console.log(`\n${failures === 0 ? 'PASS' : 'FAIL'}: ${String(controls.length)} controls`);

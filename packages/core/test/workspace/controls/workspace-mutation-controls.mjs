@@ -46,7 +46,7 @@ const controls = [
   { name: 'the run yields between its final empty check and closing', target: 'supervision', anchor: '            }\n            frame.open = false;', replacement: '            }\n            await Promise.resolve();\n            frame.open = false;' },
   { name: 'started operations are not accounted to the run', target: 'supervision', anchor: 'started.add(settled);', replacement: 'void settled;' },
   { name: 'the caller admission policy is ignored', target: 'supervision', anchor: 'const decision = await policy.admit(request);', replacement: "const decision = Object.freeze({ kind: 'admitted' });" },
-  { name: 'recovery takes the writer lease', target: 'supervision', anchor: 'return within(() => resolution.recover({ step, requestKey: request.requestKey }));', replacement: 'return within(() => { writer.lease(); return resolution.recover({ step, requestKey: request.requestKey }); });' },
+  { name: 'recovery takes the writer lease', target: 'supervision', anchor: 'return within(() => resolution.recover({ step, requestKey: request.requestKey }));', replacement: 'return within(() => { writer.tryLease(); return resolution.recover({ step, requestKey: request.requestKey }); });' },
   { name: 'the writer lease is never released', target: 'supervision', anchor: 'writer.release();', replacement: 'void writer;' },
   { name: 'observer failures are swallowed', target: 'supervision', anchor: 'throw failure.error;', replacement: 'void failure;' },
   { name: 'observers are read live instead of captured at start', target: 'supervision', anchor: 'Reflect.apply(observe, observer, [event]);', replacement: "Reflect.apply(Reflect.get(observer, 'observe'), observer, [event]);" },

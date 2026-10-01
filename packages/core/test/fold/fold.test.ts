@@ -21,7 +21,7 @@ import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
 import { ResolutionError, openWorkspace } from '../../src/index.js';
 import type { IWorkspaceRun } from '../../src/index.js';
 import { cleanup, freshLocation } from '../durable-history/support.js';
-import { analysis, composeFold, contributors, createWorld, dee, resetWorld, world } from './fixture.js';
+import { analysis, composeFold, contributors, createWorld, dee, foldSecret, resetWorld, world } from './fixture.js';
 import type { IContributor, IFoldFixture, IVariation } from './fixture.js';
 import {
   candidates,
@@ -237,6 +237,21 @@ describe('explicit keyed entries (acceptance 2)', () => {
       cause: expect.stringMatching(/^DefinitionError: Member person:cy was skipped by its gate and carries no data/u),
     });
     expect(logged(report, 'report')).toEqual(['person:ada=succeeded,person:ben=succeeded,person:cy=skipped']);
+    expect(foldCandidates(location)).toEqual([]);
+  });
+
+  test('a fold body that throws its own error fails with execution-failure naming the fold; the error is the cause, never the message or a diagnostic (RUN-013)', async () => {
+    const location = freshLocation();
+    const report = await runFold(location, { report: 'throws' });
+    expect(report.fold).toEqual({
+      status: 'error',
+      code: 'execution-failure',
+      message: expect.stringContaining('report'),
+      cause: `Error: report service failed ${foldSecret}`,
+    });
+    expect(report.fold).toMatchObject({ message: expect.not.stringContaining(foldSecret) });
+    expect(JSON.stringify(report.diagnostics)).not.toContain(foldSecret);
+    expect(JSON.stringify(report.events)).not.toContain(foldSecret);
     expect(foldCandidates(location)).toEqual([]);
   });
 });

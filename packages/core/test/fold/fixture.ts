@@ -22,7 +22,8 @@
  *   every member, skipped ones as excluded by the gate; the `omits-skipped`
  *   body lists only succeeded members (so the framework's coverage, not the
  *   body, must report exclusions); the `reads-skipped` body reads a skipped
- *   entry's data, which strict fold entries forbid.
+ *   entry's data, which strict fold entries forbid; the `throws` body throws
+ *   the author's own error, whose message carries {@link foldSecret}.
  *
  * A `structure` variation keeps every subject but renames the consumed member
  * step or the template slot, or moves the collection to another slot, so the
@@ -113,6 +114,7 @@ export interface IHelpers {
   readonly render: (entries: ISummaryEntries) => IReport;
   readonly renderIncluded: (entries: ISummaryEntries) => IReport;
   readonly renderReadingSkipped: (entries: ISummaryEntries) => IReport;
+  readonly renderThrowing: (entries: ISummaryEntries) => IReport;
 }
 
 /** An admission decision the fixture policy returns. */
@@ -244,8 +246,17 @@ function renderReadingSkipped(entries: ISummaryEntries): IReport {
   return { lines: [], total: 0 };
 }
 
+/** A value planted in the error the `throws` fold body raises: author text no framework message or diagnostic may repeat (RUN-013). */
+export const foldSecret = 'AUTHOR-SECRET-f01d';
+
+/** A report body whose author code fails with its own error. */
+function renderThrowing(entries: ISummaryEntries): IReport {
+  logEntries(entries);
+  throw new Error(`report service failed ${foldSecret}`);
+}
+
 /** Which fold body a build declares. */
-export type IReportBody = 'lists-skipped' | 'omits-skipped' | 'reads-skipped';
+export type IReportBody = 'lists-skipped' | 'omits-skipped' | 'reads-skipped' | 'throws';
 
 /** Author-visible variations of one fixture build. */
 export interface IVariation {
@@ -326,7 +337,9 @@ export function composeFold(variation: IVariation = {}): IFoldFixture {
     ? fold({ subject: reportSubject, over, run: ({ members, helpers }) => helpers.renderIncluded(members) })
     : variation.report === 'reads-skipped'
       ? fold({ subject: reportSubject, over, run: ({ members, helpers }) => helpers.renderReadingSkipped(members) })
-      : fold({ subject: reportSubject, over, run: ({ members, helpers }) => helpers.render(members) });
+      : variation.report === 'throws'
+        ? fold({ subject: reportSubject, over, run: ({ members, helpers }) => helpers.renderThrowing(members) })
+        : fold({ subject: reportSubject, over, run: ({ members, helpers }) => helpers.render(members) });
 
   const inputs = [{ slot: 'config', value: { minimumAuthored: variation.minimumAuthored ?? 1 } }];
   const helpers = ordered([
@@ -337,6 +350,7 @@ export function composeFold(variation: IVariation = {}): IFoldFixture {
     { slot: 'render', helper: render },
     { slot: 'renderIncluded', helper: renderIncluded },
     { slot: 'renderReadingSkipped', helper: renderReadingSkipped },
+    { slot: 'renderThrowing', helper: renderThrowing },
   ], variation);
   const compositionSteps = ordered([{ slot: slots.collection, declaration: roster }, { slot: 'report', declaration: report }], variation);
   const composition = compose({ scope: analysis, inputs, helpers, steps: compositionSteps, templates: [contributor] });

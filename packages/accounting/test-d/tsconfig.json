@@ -1,0 +1,14 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "types": [],
+    "skipLibCheck": false,
+    "rootDirs": ["..", "../dist"],
+    "paths": {
+      "@microdelta/machine": ["../../machine/dist/api/machine.alpha.d.ts"],
+      "@microdelta/value": ["../../value/dist/api/value.alpha.d.ts"]
+    }
+  },
+  "include": ["*.ts"]
+}

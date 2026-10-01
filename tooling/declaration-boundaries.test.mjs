@@ -22,6 +22,7 @@ const packages = [
   { directory: 'history', basename: 'history' },
   { directory: 'value', basename: 'value' },
   { directory: 'supervision', basename: 'supervision' },
+  { directory: 'accounting', basename: 'accounting' },
 ];
 const fixture = path.join(root, 'fixtures/declarations/producer');
 const captureFixture = path.join(root, 'fixtures/declarations/capture-producer');
@@ -373,7 +374,8 @@ test('inherited paths and invented aliases cannot expose sibling source or untri
  * its assembly tests also consume Value's alpha entry for independent oracles
  * and the Definition, Materialization and Resolution alpha entries that
  * compose Resolution over real History, plus Supervision's alpha entry for the
- * workspace run path. The M3 acceptance harness imports the facade's own built
+ * workspace run path and Accounting's alpha entry for its durable SQLite port
+ * over the real Node host. The M3 acceptance harness imports the facade's own built
  * package, which own-package tests resolve through its untrimmed rollup
  * (PKG-004), reached through the workspace's installed package link.
  */
@@ -381,6 +383,7 @@ test('facade compiler maps each approved owner import, including both History en
   const config = JSON.parse(await readFile(path.join(root, 'packages/core/tsconfig.json'), 'utf8'));
   assert.deepEqual(config.compilerOptions.paths, {
     microdelta: ['../../node_modules/microdelta/dist/api/microdelta.untrimmed.d.ts'],
+    '@microdelta/accounting': ['../accounting/dist/api/accounting.alpha.d.ts'],
     '@microdelta/definition': ['../definition/dist/api/definition.alpha.d.ts'],
     '@microdelta/history': ['../history/dist/api/history.alpha.d.ts'],
     '@microdelta/history/conformance/store': ['../history/dist/api/history.conformance.store.alpha.d.ts'],

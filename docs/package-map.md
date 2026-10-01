@@ -15,10 +15,10 @@ delivery are separate gates recorded in the [M2 evidence record](validation/m2-2
 | Result History & Publication | `@microdelta/history` | Existing row Store contract and compatibility row schema; memory adapter receives a snapshot capability; alpha exact completed-result selection and fingerprint-reading ports; project-private alpha durable SQLite authority (`openDurableHistory`) over injected SQLite, clock and SHA-256 capabilities, owning the writer lease, attempts, atomic publication, current pointers, immutable results with a generated selected index, environment-scoped acceptance records, recorded promotions between environments, and Run Supervision's fenced operation journal of opaque versioned records | Value Semantics; `@microdelta/machine` |
 | Reuse Resolution | `@microdelta/resolution` | Project-private alpha `createResolution`: candidate lookup by scoped subject and version, own implementation/input/helper validation, current finality and explicit-retention source policy, direct-child witness reconnection with consumed-output comparison, admission before claims, check-only evaluation, request-key attempt identity with complete intent digests and no-execution recovery over History's durable authority; plus its binding family and minted source outcome envelopes | Definition, Tracking, History, Materialization |
 | Run Supervision | `@microdelta/supervision` | Project-private alpha `createSupervision({ context })` over a structurally injected async-scope capability: scoped runs with volatile run id, analysis and selected environment; `current()` lookup failing outside a live run, after close and during composition; lazy writer-lease use for normal requests only; the caller's admission policy; observe-only observers at the fixed `stepLifecycle` and `ordinaryLifecycle` positions; ordinary nonmemoized work; operator stop control (soft drain with no default deadline, deadline escalation, hard stop aborting bodies, sends, permit waits and timed waits), the publication-commit check, a bounded permit pool guarding real sends, the member fan-out window, and scoped execution controls over an injected timer. External-operation identity, retry and deferral policy remain unimplemented | Definition, Resolution, Accounting |
-| Resource Accounting | No package yet | Observation and acknowledgment ports remain unimplemented | None |
+| Resource Accounting | `@microdelta/accounting` (`packages/accounting`, workspace-private until its npm trusted-publishing registration) | Project-private alpha durable port (`IDurableAccounting`) and its SQLite adapter (`openDurableAccounting`) over the injected Machine SQLite capability: usage intents recorded for each request attempt before its paid call, usage reports keyed by (operation, report) and acknowledged only once durable, estimates with their basis kept apart from observations, and lock-free summaries that report a request attempt without a report of its own as unknown, never zero. Operation identities stay with Run Supervision. Every fact is environment-scoped, immutable and idempotent, so no write needs History's writer fence. Not yet consumed by Supervision | `@microdelta/machine`, Value Semantics |
 | Value Semantics | `@microdelta/value` (`packages/value`) | Supported canonical equality/snapshot encoding, structured observation addresses, selected facts, and fingerprints through Machine's SHA-256 capability | Machine |
 | Materialization | `@microdelta/materialization` (`packages/materialization`) | Bounded selected scalar loading, lazy nested views through an optional synchronous navigation capability, explicit detached output, and keyed projection observation through injected ports; each reader declares its supported capabilities | History, Tracking, Value Semantics |
-| Machine host contract | `@microdelta/machine` (`packages/machine`) | Portable async-context, detached-snapshot, SHA-256, SQLite, clock and timer capability contracts | Supporting contract; consumed by Tracking, History, Value Semantics, and the Node adapter |
+| Machine host contract | `@microdelta/machine` (`packages/machine`) | Portable async-context, detached-snapshot, SHA-256, SQLite, clock and timer capability contracts | Supporting contract; consumed by Tracking, History, Resource Accounting, Value Semantics, and the Node adapter |
 | Node Machine adapter | `@microdelta/machine-node` (`packages/machine-node`) | Implements the contracts with Node async hooks, V8 structured serialization, crypto SHA-256, SQLite, the wall clock and Node timers | `@microdelta/machine`; selected by the facade assembly |
 
 History's `types.ts` preserves the old row schema and the facade's existing
@@ -49,6 +49,13 @@ acceptance and attempt-ending evidence in its own versioned formats, and its
 behavioral suites also run in the facade's assembly tests
 (`packages/core/test/resolution`) over the real SQLite authority.
 
+Resource Accounting owns its persistence port and schema (`microdelta.accounting.durable`,
+the `accounting_` namespace) in its own SQLite file; it does not share History's
+file, whose exact-schema validation admits only History's objects. Its Node
+conformance and independent-process kill evidence runs in the facade's assembly
+tests (`packages/core/test/accounting`), which alone may compose it with the Node
+adapter; the facade consumes it there as a development dependency only.
+
 Run Supervision owns run lifetime, admission and observer positions without a
 Machine or History import: assembly injects the Node Machine as its scope
 capability, builds each run's Resolution over Supervision's admission and
@@ -77,8 +84,8 @@ the current-fact provider. It does not establish
 arbitrary JavaScript closure soundness.
 
 Each implemented package generates untrimmed, alpha, beta, and public declaration
-rollups plus a reviewed API report. Definition, Tracking, Resolution and
-Supervision's current exports are project-private `@alpha`, as are Value,
+rollups plus a reviewed API report. Definition, Tracking, Resolution,
+Supervision and Accounting's current exports are project-private `@alpha`, as are Value,
 Materialization, History's new reading ports and the facade's workspace path;
 History's existing facade exports remain `@public`. A project-private rollup may
 name its approved producers' alpha contracts; the declaration preflight admits

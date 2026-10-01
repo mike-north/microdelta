@@ -344,6 +344,38 @@ describe('operator actions are run operations (CMP-9)', () => {
   });
 });
 
+describe('records written before the intent mark existed', () => {
+  test('a not-sent attempt without the field is read as unconfirmed: its retry reuses it with its first attribution, keeping accounting complete', async () => {
+    const journal = memoryJournal();
+    const accounting = memoryAccounting();
+    const requestAttempt = `${firstOperation}/1`;
+    journal.put(operationsCollection, firstOperation, {
+      operation: firstOperation,
+      subject: 'assess',
+      version: 1,
+      member: 'pr-1',
+      name: 'assess',
+      binding: 'sha256:binding',
+      safety: 'none',
+      maxAttempts: 1,
+      rateLimitRetries: 5,
+      status: 'deferred',
+      unrecorded: 1,
+      notBefore: T0,
+      // An attempt recorded before the `intent` field existed.
+      attempts: [{ requestAttempt, run: 'run:old', stepAttempt: '3', status: 'not-sent', remote: null, usage: null }],
+      settlement: null,
+    }, 'microdelta.supervision.operation');
+    journal.put('microdelta.supervision.blocks', JSON.stringify(['assess', 1]), { subject: 'assess', version: 1, operations: [{ operation: firstOperation, name: 'assess', binding: 'sha256:binding' }] });
+    const sent = { count: 0 };
+    const outcome = await runOne(journal, accounting, () => operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent));
+    expect(outcome.code).toBeUndefined();
+    expect(sent.count).toBe(1);
+    expect(accounting.intents).toEqual([requestAttempt]);
+    expect(journal.operation(firstOperation)).toEqual(expect.objectContaining({ status: 'succeeded', attempts: [expect.objectContaining({ requestAttempt, run: 'run:old', status: 'succeeded' })] }));
+  });
+});
+
 describe('malformed requests, options and records', () => {
   test.each([
     ['a name that is not an identifier', { name: 'Assess Now' }],

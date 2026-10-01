@@ -659,7 +659,9 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
         // Nothing will be sent: record the attempt not sent and the operation as a short deferral, so the step stays pending
         // and the work is retried (a sleeping run after the delay, a later run when admitted) under the same identities.
         const failures = before.record.unrecorded + 1;
-        const unconfirmed = intentMayHaveLanded(error) ? 'unconfirmed' : undefined;
+        // The mark is sticky: a reused attempt whose intent may have landed in an earlier run stays unconfirmed whatever
+        // this retry's failure is, because a later failure (a busy store) cannot undo an intent that already landed.
+        const unconfirmed = intentMayHaveLanded(error) ? 'unconfirmed' : unsent?.intent;
         const restored: IOperationRecord = { ...withLast(intent, { status: 'not-sent', intent: unconfirmed }), status: 'deferred', notBefore: now() + intentRetryDelay(failures), unrecorded: failures };
         try {
           current = write(lease, restored, current.revision);

@@ -30,13 +30,13 @@
 import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
 import { createNodeSqlite } from '@microdelta/machine-node';
 import { ResolutionError } from '@microdelta/resolution';
-import { SupervisionError, createStopController } from '@microdelta/supervision';
+import { SupervisionError, createStopController, operationsCollection } from '@microdelta/supervision';
 import type { ICompletedResultReference } from '@microdelta/history';
 
 import { faultySqlite } from '../accounting/support.js';
-import { createWorld, installWorld } from './fixture.js';
+import { analysis, createWorld, installWorld } from './fixture.js';
 import type { IWorld } from './fixture.js';
-import { T0, fakeTimer, freshKey, hour, openSession, statuses, tempStores, until } from './harness.js';
+import { T0, fakeTimer, freshKey, hour, openSession, production, statuses, tempStores, until } from './harness.js';
 import type { IFakeTimer, IOperationStores } from './harness.js';
 import { applied, driveUntilSettled, failureCode, fold, journalContents, memberOf, members, received } from './support.js';
 
@@ -422,6 +422,75 @@ describe('the backoff of non-durable intents and the shape of identities', () =>
 });
 
 describe('operations follow-ups (#139)', () => {
+  test('a not-sent attempt in a record written before the intent mark existed is read as unconfirmed and reused, keeping accounting complete', async () => {
+    world.keys = ['pr-1'];
+    const session = openSession(stores, timer);
+    const holder = createNodeSqlite().openSqlite(stores.accounting);
+    try {
+      // Run A leaves a not-sent attempt (a busy store recorded nothing).
+      holder.exec('BEGIN IMMEDIATE');
+      const a = await members(session, { deferral: 'exit', runId: 'run:A' }).done;
+      holder.exec('ROLLBACK');
+      // Rewrite the record as an earlier release wrote it: its attempts carry no `intent` field.
+      const [entry] = session.journal.list({ analysis, environment: production, collection: operationsCollection });
+      if (entry === undefined) {
+        throw new Error('no operation record');
+      }
+      const content: unknown = entry.record.content;
+      const attempts: unknown = typeof content === 'object' && content !== null ? Reflect.get(content, 'attempts') : undefined;
+      const legacy = {
+        ...(typeof content === 'object' && content !== null ? content : {}),
+        attempts: Array.isArray(attempts) ? attempts.map((attempt: unknown) => Object.fromEntries(Object.entries(typeof attempt === 'object' && attempt !== null ? attempt : {}).filter(([key]) => key !== 'intent'))) : [],
+      };
+      const writer = session.history.acquireWriter({ holder: 'legacy', leaseMilliseconds: hour });
+      if (writer.kind !== 'acquired') {
+        throw new Error('the legacy writer did not acquire the lease');
+      }
+      session.journal.commit(writer.lease, { analysis, environment: production, writes: [{ collection: operationsCollection, key: entry.key, expectedRevision: entry.revision, record: { ...entry.record, content: legacy } }] });
+      session.history.releaseWriter(writer.lease);
+      timer.advanceTo(a.waitingUntil ?? T0);
+      const b = await members(session, { deferral: 'exit', runId: 'run:B' }).done;
+      expect(memberOf(b.value, 'pr-1').status).toBe('succeeded');
+      // Read conservatively as unconfirmed, /1 is reused with its first attribution.
+      expect(received('pr-1').map((sent) => sent.requestAttempt.split('/').at(-1))).toEqual(['1']);
+      expect(session.usage()).toEqual(expect.objectContaining({ status: 'complete', requestAttempts: 1, reports: 1 }));
+    } finally {
+      holder.close();
+      session.close();
+    }
+  });
+
+  test('regression: an unconfirmed intent stays unconfirmed when its reuse meets a busy store, so the landed intent still gets its usage', async () => {
+    world.keys = ['pr-1'];
+    const faulty = faultySqlite();
+    const session = openSession(stores, timer, { accountingSqlite: faulty.capability });
+    try {
+      // Run A: the intent lands, then its commit is not confirmed.
+      faulty.arm({ role: 'intent', timing: 'after-commit', action: 'throw' });
+      const a = await members(session, { deferral: 'exit', runId: 'run:A' }).done;
+      timer.advanceTo(a.waitingUntil ?? T0);
+      // Run B: the reuse of /1 finds Accounting busy, which recorded nothing; /1 may still have landed in run A.
+      const holder = createNodeSqlite().openSqlite(stores.accounting);
+      let b: Awaited<ReturnType<typeof members>['done']>;
+      try {
+        holder.exec('BEGIN IMMEDIATE');
+        b = await members(session, { deferral: 'exit', runId: 'run:B' }).done;
+        holder.exec('ROLLBACK');
+      } finally {
+        holder.close();
+      }
+      timer.advanceTo(b.waitingUntil ?? T0);
+      // Run C: /1 is reused again and sent, so the landed intent receives its usage.
+      const c = await members(session, { deferral: 'exit', runId: 'run:C' }).done;
+      expect(memberOf(c.value, 'pr-1').status).toBe('succeeded');
+      expect(received('pr-1').map((entry) => entry.requestAttempt.split('/').at(-1))).toEqual(['1']);
+      expect(session.usage()).toEqual(expect.objectContaining({ status: 'complete', requestAttempts: 1, reports: 1 }));
+      expect(session.accounting.summarizeUsage({ environment: 'env:production', run: 'run:A' })).toEqual(expect.objectContaining({ requestAttempts: 1, reports: 1 }));
+    } finally {
+      session.close();
+    }
+  });
+
   test('a durable intent resets the backoff: after Accounting recovers, the next non-durable intent waits 1 s again', async () => {
     world.keys = ['pr-1'];
     world.provider.script('assess', 'pr-1', ['rate-limit:60000', 'ok']);

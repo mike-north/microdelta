@@ -266,8 +266,11 @@ export function decodeOperation(record: IJournalRecordValue): IOperationRecord {
       status: oneOf(attempt, 'status', attemptStatuses, what),
       remote: optionalOneOf(attempt, 'remote', remoteStates, what),
       usage: optionalOneOf(attempt, 'usage', usages, what),
-      // Absent in records written before the field existed: no landed intent is assumed.
-      intent: field(attempt, 'intent') === undefined ? undefined : optionalOneOf(attempt, 'intent', ['unconfirmed'], what),
+      // Absent in records written before the field existed: a not-sent attempt is conservatively read as unconfirmed,
+      // as those records were written, so a retry restates its intent and accounting stays complete.
+      intent: field(attempt, 'intent') === undefined
+        ? (field(attempt, 'status') === 'not-sent' ? 'unconfirmed' : undefined)
+        : optionalOneOf(attempt, 'intent', ['unconfirmed'], what),
     })),
     settlement: settlement === null ? undefined : {
       action: oneOf(settlement, 'action', ['resolve', 'abandon'], what),

@@ -224,6 +224,16 @@ const controls = [
     anchor: "const unsent = last?.status === 'not-sent' && last.intent === 'unconfirmed' ? last : undefined;", replacement: "const unsent = last?.status === 'not-sent' ? last : undefined;",
   },
   {
+    name: "an unconfirmed attempt loses its mark when its reuse meets a failure that recorded nothing",
+    directory: supervision, file: 'operation-engine.js',
+    anchor: "const unconfirmed = intentMayHaveLanded(error) ? 'unconfirmed' : unsent?.intent;", replacement: "const unconfirmed = intentMayHaveLanded(error) ? 'unconfirmed' : undefined;",
+  },
+  {
+    name: 'a legacy not-sent attempt without the mark is read as having recorded nothing (P3)',
+    directory: supervision, file: 'records.js',
+    anchor: "? (field(attempt, 'status') === 'not-sent' ? 'unconfirmed' : undefined)", replacement: '? undefined',
+  },
+  {
     name: "Resolution refuses a promoted candidate's trial provenance",
     directory: resolution, file: 'resolution.js',
     anchor: 'return historical.analysis === analysis;', replacement: 'return historical.analysis === analysis && historical.environment === environment;',

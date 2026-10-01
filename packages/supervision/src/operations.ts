@@ -432,6 +432,9 @@ export interface IOperationAttribution {
  * writer lease; any thrown error means no acknowledgment was issued. An error
  * whose `durability` is `'unknown'` means the write ran but its commit was not
  * confirmed, so it may have landed; any other thrown error recorded nothing.
+ * An adapter, or any wrapper around one, must preserve that mark on every
+ * error where the write may have landed: dropping it makes Supervision treat
+ * a landed intent as never recorded, so its usage would read unknown forever.
  * @alpha
  */
 export interface IOperationAccounting {

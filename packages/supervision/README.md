@@ -203,7 +203,9 @@ accounting }`, which needs the Supervision's timer:
   send's usage rather than reading unknown forever. When it recorded nothing
   (for example `AccountingBusyError`), the unsent attempt stays in the record
   as not sent and the retry is a fresh request attempt, credited to the run
-  and step attempt that send it. A usage report is acknowledged under
+  and step attempt that send it. The "may have landed" mark is sticky: a
+  reused attempt stays unconfirmed whatever its own retry's failure is, and
+  an attempt recorded before the mark existed is read as unconfirmed. A usage report is acknowledged under
   `provider:<report>` before the outcome is committed; a failed
   acknowledgment is reported, never claimed, and leaves usage unknown.
 - **Outcomes and policy.** `succeeded` settles the operation. A permanent

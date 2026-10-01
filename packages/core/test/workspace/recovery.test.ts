@@ -59,7 +59,7 @@ async function savedColdReport(): Promise<{ readonly keys: Record<IMemberKey, st
 function acceptances(locator: string): number {
   const history = openHistory({ location: store.location, store: logicalStore });
   try {
-    return history.readAcceptances({ kind: 'completed-result', locator }).length;
+    return history.readAcceptances({ kind: 'completed-result', locator }, environment).length;
   } finally {
     history.close();
   }

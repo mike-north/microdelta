@@ -121,6 +121,7 @@ export interface IAbandonRequest {
 export interface IAcceptanceRecord {
     readonly acceptanceId: number;
     readonly dependencies: readonly ICompletedResultReference[];
+    readonly environment: string;
     readonly evidence: IVersionedRecord;
     readonly fence: number;
     readonly reference: ICompletedResultReference;
@@ -129,6 +130,7 @@ export interface IAcceptanceRecord {
 // @alpha
 export interface IAcceptanceRequest {
     readonly dependencies: readonly ICompletedResultReference[];
+    readonly environment: string;
     readonly evidence: IVersionedRecord;
     readonly reference: ICompletedResultReference;
 }
@@ -231,11 +233,14 @@ export interface IDurableHistory {
     currentWriter(): IWriterLease | undefined;
     findCandidates(subject: IVersionedSubject): readonly ICompletedEnvelope[];
     readonly logicalStore: string;
+    openJournal(declaration: IJournalDeclaration): IOperationJournal;
+    promoteResults(lease: IWriterLease, request: IPromotionRequest): IPromotionRecord;
     publishAttempt(lease: IWriterLease, attemptId: number): ICompletedResultReference;
-    readAcceptances(reference: ICompletedResultReference): readonly IAcceptanceRecord[];
+    readAcceptances(reference: ICompletedResultReference, environment: string): readonly IAcceptanceRecord[];
     readCurrent(subject: IScopedSubject): ICompletedResultReference | undefined;
     readEnvelope(reference: ICompletedResultReference): ICompletedEnvelope;
     readonly reader: ICompletedResultReader & ICompletedNavigationReader;
+    readPromotions(query: IPromotionQuery): readonly IPromotionRecord[];
     recordAcceptance(lease: IWriterLease, request: IAcceptanceRequest): IAcceptanceRecord;
     recoverAttempt(request: IAttemptRequest): IRecoveryOutcome;
     releaseWriter(lease: IWriterLease): void;
@@ -259,6 +264,51 @@ export interface IHistoryScope {
     readonly environment: string;
 }
 
+// @alpha
+export interface IJournalAddress extends IHistoryScope {
+    readonly collection: string;
+    readonly key: string;
+}
+
+// @alpha
+export interface IJournalCommit extends IHistoryScope {
+    readonly writes: readonly IJournalWrite[];
+}
+
+// @alpha
+export interface IJournalDeclaration {
+    readonly formats: readonly IJournalFormat[];
+}
+
+// @alpha
+export interface IJournalFormat {
+    readonly format: string;
+    readonly versions: readonly number[];
+}
+
+// @alpha
+export interface IJournalQuery extends IHistoryScope {
+    readonly collection: string;
+}
+
+// @alpha
+export interface IJournalRecord extends IHistoryScope {
+    readonly collection: string;
+    readonly fence: number;
+    readonly key: string;
+    readonly record: IVersionedRecord;
+    readonly revision: number;
+    readonly sequence: number;
+}
+
+// @alpha
+export interface IJournalWrite {
+    readonly collection: string;
+    readonly expectedRevision: number;
+    readonly key: string;
+    readonly record: IVersionedRecord;
+}
+
 // @public
 export class InvalidStorePatchError extends Error {
     constructor(message?: string);
@@ -266,6 +316,36 @@ export class InvalidStorePatchError extends Error {
 
 // @alpha
 export type IOperation = 'value' | 'own' | 'membership' | 'length' | 'keys';
+
+// @alpha
+export interface IOperationJournal {
+    commit(lease: IWriterLease, request: IJournalCommit): readonly IJournalRecord[];
+    readonly formats: readonly IJournalFormat[];
+    list(query: IJournalQuery): readonly IJournalRecord[];
+    read(address: IJournalAddress): IJournalRecord | undefined;
+}
+
+// @alpha
+export interface IPromotionQuery {
+    readonly reference?: ICompletedResultReference;
+    readonly target: IHistoryScope;
+}
+
+// @alpha
+export interface IPromotionRecord {
+    readonly evidence: IVersionedRecord;
+    readonly fence: number;
+    readonly promotionId: number;
+    readonly references: readonly ICompletedResultReference[];
+    readonly target: IHistoryScope;
+}
+
+// @alpha
+export interface IPromotionRequest {
+    readonly evidence: IVersionedRecord;
+    readonly references: readonly ICompletedResultReference[];
+    readonly target: IHistoryScope;
+}
 
 // @alpha
 export type IRecoveryOutcome = {
@@ -465,6 +545,16 @@ export interface IWriterLease {
     readonly expiresAt: number;
     readonly fence: number;
     readonly holder: string;
+}
+
+// @alpha
+export class JournalConflictError extends Error {
+    constructor(message: string);
+}
+
+// @alpha
+export class JournalVersionError extends Error {
+    constructor(message: string);
 }
 
 // @public

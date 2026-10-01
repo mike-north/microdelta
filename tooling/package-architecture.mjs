@@ -11,7 +11,7 @@ export const roles = Object.freeze({
   resolution: { directory: 'resolution', packageName: '@microdelta/resolution', kind: 'context', uses: ['definition', 'tracking', 'history', 'materialization'] },
   history: { directory: 'history', packageName: '@microdelta/history', kind: 'context', uses: ['value', 'machine'] },
   supervision: { directory: 'supervision', packageName: '@microdelta/supervision', kind: 'context', uses: ['definition', 'resolution', 'accounting'] },
-  accounting: { directory: null, packageName: '@microdelta/accounting', kind: 'context', uses: [] },
+  accounting: { directory: 'accounting', packageName: '@microdelta/accounting', kind: 'context', uses: ['machine', 'value'] },
   value: { directory: 'value', packageName: '@microdelta/value', kind: 'support', uses: ['machine'] },
   materialization: { directory: 'materialization', packageName: '@microdelta/materialization', kind: 'support', uses: ['history', 'tracking', 'value'] },
   machine: { directory: 'machine', packageName: '@microdelta/machine', kind: 'host-contract', uses: [] },

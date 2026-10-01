@@ -2,8 +2,10 @@
  * Result History & Publication. This entry exposes the existing row Store,
  * its memory adapter and compatibility schema unchanged, the exact
  * completed-result reading ports, and the project-private alpha durable
- * authority that owns attempts, the single logical writer, atomic publication
- * and acceptance records. It never decides candidate validity or freshness.
+ * authority that owns attempts, the single logical writer, atomic publication,
+ * acceptance records, environment namespaces, recorded promotions and Run
+ * Supervision's opaque operation journal. It never decides candidate validity
+ * or freshness and never interprets journal records.
  * @packageDocumentation
  */
 export {
@@ -48,6 +50,8 @@ export {
   HistoryClockError,
   HistoryIntegrityError,
   HistorySchemaError,
+  JournalConflictError,
+  JournalVersionError,
   StaleWriterError,
 } from './durable/errors.js';
 export { openDurableHistory } from './durable/index.js';
@@ -62,6 +66,17 @@ export type {
   IDurableHistory,
   IDurableHistoryOptions,
   IHistoryScope,
+  IJournalAddress,
+  IJournalCommit,
+  IJournalDeclaration,
+  IJournalFormat,
+  IJournalQuery,
+  IJournalRecord,
+  IJournalWrite,
+  IOperationJournal,
+  IPromotionQuery,
+  IPromotionRecord,
+  IPromotionRequest,
   IRecoveryOutcome,
   IResultVerification,
   IScopedSubject,

@@ -1,7 +1,8 @@
 /**
  * Independent child process for durable History recovery tests. It opens the
  * real SQLite-backed authority on a shared file and interprets a JSON script
- * of lifecycle steps, writing one JSON line per completed step directly to
+ * of lifecycle, acceptance, promotion and operation-journal steps, each in an
+ * explicit environment scope, writing one JSON line per completed step directly to
  * file descriptor 1 so the trace survives a SIGKILL. `kill` and an armed
  * pre-commit fault terminate the process without any JavaScript cleanup,
  * which is the process-termination boundary under test.
@@ -9,7 +10,18 @@
  */
 import { appendFileSync, writeFileSync, writeSync } from 'node:fs';
 
-import type { IAttemptRequest, IDurableHistory, IWriterLease } from '@microdelta/history';
+import type {
+  IAttemptRequest,
+  IDurableHistory,
+  IHistoryScope,
+  IJournalAddress,
+  IJournalFormat,
+  IJournalQuery,
+  IJournalWrite,
+  IOperationJournal,
+  IVersionedSubject,
+  IWriterLease,
+} from '@microdelta/history';
 
 import { controlledClock, observedSqlite, openHistory } from './support.js';
 
@@ -26,7 +38,13 @@ export type IWorkerStep =
   | { readonly op: 'stage'; readonly payload: unknown; readonly label: string; readonly dependencies?: readonly string[] }
   | { readonly op: 'publish' }
   | { readonly op: 'abandon'; readonly outcome: 'failed' | 'interrupted' }
-  | { readonly op: 'accept'; readonly locator: string }
+  | { readonly op: 'accept'; readonly locator: string; readonly environment: string }
+  | { readonly op: 'journal'; readonly formats: readonly IJournalFormat[] }
+  | { readonly op: 'journal-commit'; readonly scope: IHistoryScope; readonly writes: readonly IJournalWrite[] }
+  | { readonly op: 'journal-read'; readonly address: IJournalAddress }
+  | { readonly op: 'journal-list'; readonly query: IJournalQuery }
+  | { readonly op: 'promote'; readonly target: IHistoryScope; readonly locators: readonly string[]; readonly label: string }
+  | { readonly op: 'candidates'; readonly subject: IVersionedSubject }
   | { readonly op: 'recover'; readonly request: IAttemptRequest }
   | { readonly op: 'acknowledge'; readonly file: string }
   | { readonly op: 'arm'; readonly role: string }
@@ -59,6 +77,7 @@ const sqlite = observedSqlite();
 const history: IDurableHistory = openHistory({ location: script.location, clock, sqlite: sqlite.capability, store: script.store });
 
 let lease: IWriterLease | undefined;
+let journal: IOperationJournal | undefined;
 let attemptId: number | undefined;
 let lastReference: string | undefined;
 
@@ -76,6 +95,14 @@ function requireAttempt(): number {
     throw new Error('script step needs an attempt');
   }
   return attemptId;
+}
+
+/** The journal port a step needs; a missing port is a script error. */
+function requireJournal(): IOperationJournal {
+  if (journal === undefined) {
+    throw new Error('script step needs an open journal');
+  }
+  return journal;
 }
 
 /** Apply one step and return its traceable result. */
@@ -135,7 +162,25 @@ function apply(step: IWorkerStep): unknown {
         reference: { kind: 'completed-result', locator: step.locator },
         evidence: { format: 'test.acceptance', formatVersion: 1, content: { accepted: true } },
         dependencies: [],
+        environment: step.environment,
       });
+    case 'journal':
+      journal = history.openJournal({ formats: step.formats });
+      return journal.formats;
+    case 'journal-commit':
+      return requireJournal().commit(requireLease(), { ...step.scope, writes: step.writes });
+    case 'journal-read':
+      return requireJournal().read(step.address) ?? null;
+    case 'journal-list':
+      return requireJournal().list(step.query);
+    case 'promote':
+      return history.promoteResults(requireLease(), {
+        target: step.target,
+        references: step.locators.map((locator) => ({ kind: 'completed-result', locator })),
+        evidence: { format: 'test.promotion', formatVersion: 1, content: { label: step.label } },
+      });
+    case 'candidates':
+      return history.findCandidates(step.subject).map((candidate) => candidate.reference.locator);
     case 'recover':
       return history.recoverAttempt(step.request);
     case 'acknowledge':

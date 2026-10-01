@@ -322,7 +322,7 @@ function expectNoPartialResult(location: string, expected: { readonly seed: stri
   expect(history.recoverAttempt(attemptRequest('a-allocated'))).toMatchObject({ kind: 'incomplete', attempt: { state: 'allocated', result: null } });
   expect(history.recoverAttempt(attemptRequest('a-staged'))).toMatchObject({ kind: 'incomplete', attempt: { state: 'staged', result: null } });
   expect(history.recoverAttempt(attemptRequest('a-after-takeover'))).toEqual({ kind: 'absent' });
-  expect(history.readAcceptances({ kind: 'completed-result', locator: expected.seed })).toEqual([]);
+  expect(history.readAcceptances({ kind: 'completed-result', locator: expected.seed }, subject.environment)).toEqual([]);
   history.close();
 }
 

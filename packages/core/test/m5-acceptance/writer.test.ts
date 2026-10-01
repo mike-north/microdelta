@@ -320,9 +320,10 @@ describe('drain-outlives-lease (A-09, EXP-8 ruling R)', () => {
     try {
       expect({ status: drained.status, error: drained.error }).toEqual({ status: 0, error: undefined });
       expect(drained.operations).toContain('request-settled:unknown:lease-lost@pr-1');
+      const operation = operationOf(drained, 'pr-1');
       expect(drained.result.members).toEqual({
         // pr-1's attempt ended without authority: its outcome is unrecorded, so the member is pending on an unknown outcome.
-        'pr-1': { status: 'pending', reason: expect.any(String), blocked: { kind: 'unknown-outcome', operation: expect.any(String), reason: 'unrecorded' } },
+        'pr-1': { status: 'pending', reason: `Operation ${operation} has an unknown outcome (unrecorded); it is not replayed`, blocked: { kind: 'unknown-outcome', operation, reason: 'unrecorded' } },
         // pr-2's reuse needed an acceptance the stale lease cannot record: pending, lease-lost.
         'pr-2': { status: 'pending', reason: 'lease-lost' },
         // pr-3 was never admitted after the soft stop.

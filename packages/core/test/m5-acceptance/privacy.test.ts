@@ -97,15 +97,19 @@ describe('event-privacy (RUN-013)', () => {
   // failure and every consumer that prints them. RUN-013 requires diagnostics to name fields and keys, not their
   // contents; the author's error stays available as the failure's `cause`. Each site is planted separately.
   test('no framework failure message repeats an author error\'s text, from a member body, a fold body or a source check (#147)', () => {
-    const leaks = (world: IWorld, command: ICommand): boolean => {
+    /** Run one planted failure; the caller first proves the failure fired, then that nothing planted was printed. */
+    const plant = (world: IWorld, command: ICommand): { readonly run: IProcessRun; readonly leaked: boolean } => {
       const run = freshScenario(world).run(command, { window: 1 });
       const output = `${run.stdout}${run.stderr}`;
-      return output.includes(planted) || output.includes(plantedTitle);
+      return { run, leaked: output.includes(planted) || output.includes(plantedTitle) };
     };
-    expect({
-      memberBody: leaks(baseWorld({ declarations: { 'pr-1': { failAfter: true } } }), { kind: 'members' }),
-      foldBody: leaks(baseWorld({ failures: { report: true } }), { kind: 'fold' }),
-      sourceCheck: leaks(baseWorld({ failures: { listing: true } }), { kind: 'fold' }),
-    }).toEqual({ memberBody: false, foldBody: false, sourceCheck: false });
+    const memberBody = plant(baseWorld({ declarations: { 'pr-1': { failAfter: true } } }), { kind: 'members' });
+    const foldBody = plant(baseWorld({ failures: { report: true } }), { kind: 'fold' });
+    const sourceCheck = plant(baseWorld({ failures: { listing: true } }), { kind: 'fold' });
+    // Preconditions: each planted failure fired, as the kind of failure it is.
+    expect(memberBody.run.result.members['pr-1']).toMatchObject({ status: 'failed', code: 'execution-failure' });
+    expect({ status: foldBody.run.status, error: foldBody.run.error }).toMatchObject({ status: 3, error: { name: 'ResolutionError', resolution: 'execution-failure', message: expect.stringMatching(/^Body of strict fold \[.*"report".*\]/u) } });
+    expect({ status: sourceCheck.run.status, error: sourceCheck.run.error }).toMatchObject({ status: 3, error: { name: 'ResolutionError', resolution: 'execution-failure', message: expect.stringMatching(/^Source check of \[.*"prs".*\]/u) } });
+    expect({ memberBody: memberBody.leaked, foldBody: foldBody.leaked, sourceCheck: sourceCheck.leaked }).toEqual({ memberBody: false, foldBody: false, sourceCheck: false });
   });
 });

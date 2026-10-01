@@ -29,7 +29,7 @@ import { existsSync, writeSync } from 'node:fs';
 
 import { openDurableAccounting } from '@microdelta/accounting';
 import { createNodeSqlite } from '@microdelta/machine-node';
-import { SupervisionError, WriterBusyError, createStopController, currentExecution, currentRun, openWorkspace } from 'microdelta';
+import { ResolutionError, SupervisionError, WriterBusyError, createStopController, currentExecution, currentRun, openWorkspace } from 'microdelta';
 import type {
   ICompletedResultReference,
   IDeferralMode,
@@ -493,6 +493,8 @@ async function main(job: IJob): Promise<void> {
       code: supervisionCause(error) ?? null,
       message: error instanceof Error ? error.message : String(error),
       ...(error instanceof WriterBusyError ? { holder: error.holder ?? null, expiresAt: error.expiresAt ?? null, deadline: error.deadline } : {}),
+      // Resolution's typed failure code, which names the kind of failure without any author text.
+      ...(error instanceof ResolutionError ? { resolution: error.code } : {}),
     });
     process.exitCode = 3;
   } finally {

@@ -42,7 +42,14 @@ describe('outcome-fold-coverage (A-11, RUN-010)', () => {
 
     const strict = clean(s.run({ kind: 'fold' }, { window: 1 }));
     expect(statuses(strict)).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'pending', 'pr-3': 'failed' });
-    expect(strict.result.fold).toMatchObject({ status: 'failed', failed: ['pr-3'], cancelled: [], pending: ['pr-2'] });
+    expect(strict.result.fold).toEqual({
+      status: 'failed',
+      failed: ['pr-3'],
+      cancelled: [],
+      pending: ['pr-2'],
+      // The framework's diagnostic names the fold, the consumed template step and the keys only, never a value.
+      diagnostic: 'Strict fold report requires every required member of pr step assess: failed [pr-3], cancelled [], pending [pr-2], discovery closed',
+    });
     expect(strict.lines.filter((line) => line['t'] === 'trace' && line['helper'] === 'report')).toEqual([]);
 
     const waiting = clean(s.run({ kind: 'tally' }, { window: 1 }));

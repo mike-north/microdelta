@@ -2,9 +2,10 @@
  * Negative controls for the M5 independent-process acceptance suite
  * (issue #122). Each control plants exactly one wrong behavior into an
  * owner's emitted production build (never TypeScript source): Run
- * Supervision's operation engine, run engine, execution controls and writer wait,
- * History's durable lease authority and candidate lookup, Resource
- * Accounting's durable adapter and summary, or the facade's writer port. It
+ * Supervision's operation engine, run engine, execution controls and writer
+ * wait, History's durable lease authority and candidate lookup, Reuse
+ * Resolution's lease-lost mapping, Resource Accounting's durable adapter and
+ * summary, or the facade's writer port. It
  * then reruns the unchanged M5 acceptance suites, whose worker processes load
  * those builds through the built facade.
  *
@@ -55,6 +56,7 @@ const targets = Object.freeze({
   wait: join(root, 'packages/supervision/dist/src/writer.js'),
   execution: join(root, 'packages/supervision/dist/src/execution.js'),
   history: join(root, 'packages/history/dist/src/durable/index.js'),
+  resolution: join(root, 'packages/resolution/dist/src/resolution.js'),
   accounting: join(root, 'packages/accounting/dist/src/sqlite/index.js'),
   summary: join(root, 'packages/accounting/dist/src/summary.js'),
   port: join(root, 'packages/core/dist/src/writer.js'),
@@ -333,6 +335,15 @@ const controls = [
     anchor: 'const response = classify(sent);',
     replacement: "const response = classify(sent); if (sent.kind === 'threw') { engine.diagnose(`lost-response: ${String(sent.error)}`); }",
     breaks: ['event-privacy'],
+  },
+  {
+    // #148's ruling R mapping: a stale-lease write ends the step `lease-lost` instead of escaping the request.
+    guard: 'fence',
+    name: 'a lost lease escapes Resolution as History\'s raw error instead of ending the step lease-lost',
+    target: 'resolution',
+    anchor: 'if (!(error instanceof LeaseLost)) {',
+    replacement: 'if (true) { if (error instanceof LeaseLost && error.cause !== undefined) { throw error.cause; }',
+    breaks: ['drain-outlives-lease'],
   },
   // Environment isolation (RUN-017) and run-scope lifecycle (A-18).
   {

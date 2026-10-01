@@ -10,73 +10,17 @@
  * @see ../../../../docs/spec/execution.md (PUB-001 through PUB-004)
  * @see ../../../../experiments/exp-7/README.md (retained protocol model)
  */
-import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import { afterEach, describe, expect, test } from '@jest/globals';
 import { StaleWriterError } from '@microdelta/history';
 import type { IAttemptRequest, IDurableHistory, IWriterLease } from '@microdelta/history';
 
-import { adaActivity, cleanup, controlledClock, freshLocation, logicalStore, openHistory, openRaw, scope } from './support.js';
-import type { IWorkerScript, IWorkerStep } from './worker.js';
+import { expectClean, expectKilled, runWorker, valueOf } from './processes.js';
+import { adaActivity, cleanup, controlledClock, freshLocation, openHistory, openRaw, scope } from './support.js';
 
 afterEach(cleanup);
-
-/** One trace line written by a worker step. */
-interface ITraceEntry {
-  readonly index: number;
-  readonly op: string;
-  readonly ok: boolean;
-  readonly value?: unknown;
-  readonly error?: string;
-  readonly message?: string;
-}
-
-/** Outcome of one child process. */
-interface IWorkerRun {
-  readonly signal: NodeJS.Signals | null;
-  readonly status: number | null;
-  readonly trace: readonly ITraceEntry[];
-  readonly stderr: string;
-}
-
-/** The emitted worker module beside this test. */
-const workerPath = join(dirname(fileURLToPath(import.meta.url)), 'worker.js');
-
-/** Run one worker script in a fresh Node process and parse its trace. */
-function runWorker(location: string, steps: readonly IWorkerStep[]): IWorkerRun {
-  const script: IWorkerScript = { location, store: logicalStore, steps };
-  const result = spawnSync(process.execPath, [workerPath, JSON.stringify(script)], { encoding: 'utf8', timeout: 30_000 });
-  const trace = result.stdout
-    .split('\n')
-    .filter((line) => line.length > 0)
-    .map((line) => JSON.parse(line) as ITraceEntry);
-  return { signal: result.signal, status: result.status, trace, stderr: result.stderr };
-}
-
-/** Require that a worker finished normally with every step succeeding. */
-function expectClean(run: IWorkerRun): readonly ITraceEntry[] {
-  expect({ status: run.status, signal: run.signal, stderr: run.stderr }).toEqual({ status: 0, signal: null, stderr: '' });
-  expect(run.trace.filter((entry) => !entry.ok)).toEqual([]);
-  return run.trace;
-}
-
-/** Require that a worker died by SIGKILL after tracing exactly `completedSteps` successful steps. */
-function expectKilled(run: IWorkerRun, completedSteps: number): void {
-  expect(run.signal).toBe('SIGKILL');
-  expect(run.trace).toHaveLength(completedSteps);
-  expect(run.trace.every((entry) => entry.ok)).toBe(true);
-}
-
-/** Read a traced step's value with a narrow shape the test expects. */
-function valueOf<T>(entry: ITraceEntry | undefined): T {
-  if (entry === undefined || !entry.ok) {
-    throw new Error(`expected a successful step, got ${JSON.stringify(entry)}`);
-  }
-  return entry.value as T;
-}
 
 /** A stable execution request for Ada's summary. */
 function request(attemptKey: string, intentDigest = 'intent:summary:v1'): IAttemptRequest {
@@ -219,7 +163,7 @@ describe('process death at each publication boundary', () => {
 
   test('a kill inside the staging transaction leaves the attempt allocated without content', () => {
     const location = freshLocation();
-    seedPrevious(location);
+    const seed = seedPrevious(location);
     expectKilled(runWorker(location, [
       { op: 'time', at: 2_000 },
       { op: 'acquire', holder: 'killed', lease: 100 },
@@ -228,7 +172,8 @@ describe('process death at each publication boundary', () => {
       { op: 'stage', payload: adaActivity(), label: 'never-committed' },
     ]), 4);
 
-    expect(inspect(location).attempts).toEqual(['1:seed-request:completed:0', '2:killed-inside-stage:allocated:0']);
+    // The prior current result and the result set are intact; the killed staging left no content.
+    expect(inspect(location)).toMatchObject({ current: seed, results: 1, attempts: ['1:seed-request:completed:0', '2:killed-inside-stage:allocated:0'] });
   });
 
   test('a kill just before the publication commit publishes nothing; a later holder publishes without rerunning the body', () => {
@@ -335,7 +280,7 @@ describe('stale holders across processes', () => {
       { op: 'stage', payload: adaActivity(), label: 'late' },
       { op: 'publish' },
       { op: 'abandon', outcome: 'interrupted' },
-      { op: 'accept', locator: seed },
+      { op: 'accept', locator: seed, environment: scope.environment },
       { op: 'release' },
     ]);
     expect(stale.status).toBe(0);

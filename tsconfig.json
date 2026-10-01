@@ -4,6 +4,9 @@
     "noEmit": true,
     "baseUrl": ".",
     "paths": {
+      "@microdelta/accounting": [
+        "packages/accounting/dist/api/accounting.alpha.d.ts"
+      ],
       "@microdelta/definition": [
         "packages/definition/dist/api/definition.alpha.d.ts"
       ],

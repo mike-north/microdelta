@@ -193,7 +193,7 @@ describe('explicit recovery by saved request key', () => {
       const evidence = session.sqlite.evidence(start);
       expect(evidence.roles.accept).toBeUndefined();
       expect(evidence.roles.allocate).toBeUndefined();
-      expect(session.history.readAcceptances({ kind: 'completed-result', locator: published })).toHaveLength(0);
+      expect(session.history.readAcceptances({ kind: 'completed-result', locator: published }, 'env:fixture')).toHaveLength(0);
       // A subsequent normal request with a fresh key performs current source policy.
       const current = await session.resolve(session.contributors.steps['person:ada'].summary);
       expect(current.kind).toBe('reused');

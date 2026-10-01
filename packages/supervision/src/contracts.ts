@@ -47,7 +47,6 @@ import type {
   IOperationStatus,
   IOperationView,
   IRunOperationPorts,
-  IRunRandom,
   IWaitEvent,
 } from './operations.js';
 
@@ -85,12 +84,6 @@ export interface ISupervisionOptions {
    * an invalid request.
    */
   readonly timer?: IRunTimer;
-  /**
-   * The structurally injected random identifier source that makes operation
-   * identities and provider idempotency keys globally unique. A run with
-   * operation ports needs it.
-   */
-  readonly random?: IRunRandom;
 }
 
 /**
@@ -669,8 +662,11 @@ export interface IRunResult<T> {
   readonly interruptions: readonly ISendInterruption[];
   /**
    * The earliest "not before" time of deferred work the run left waiting, when
-   * it returned without it: in exit mode, or because a stop ended the wait.
-   * Undefined when no deferred work was left waiting. A later run honors it.
+   * it returned without it: in exit mode, because a stop ended the wait, or
+   * because on waking another holder had the writer lease (`writer-busy`).
+   * In that last case the time has already passed: it reads "eligible since
+   * T", and a later run admits the work at once. Undefined when no deferred
+   * work was left waiting. A later run honors it.
    */
   readonly waitingUntil: number | undefined;
 }

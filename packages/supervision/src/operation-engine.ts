@@ -97,15 +97,26 @@ const identifierRule = /^[a-z][a-z0-9_.:-]{0,63}$/u;
 const defaultRateLimitRetries = 5;
 
 /**
- * How long after an intent that could not be made durable (Accounting busy,
- * or a commit it could not confirm) the work is retried. Nothing was sent, so
- * the step stays pending as a short deferral rather than failing: a sleeping
- * run retries after it, and a later run admits it again.
+ * The backoff after an intent that could not be made durable (Accounting
+ * busy, or a commit it could not confirm). Nothing was sent, so the step
+ * stays pending on a deferral rather than failing: a sleeping run retries
+ * after it, and a later run admits it again. The first retry waits
+ * `initialMilliseconds`; each further consecutive failure of the same
+ * operation doubles the wait, up to `capMilliseconds`, so persistent
+ * contention is not hammered while a brief one clears quickly. A durable
+ * intent resets the count.
  */
-const intentRetryMilliseconds = 1_000;
+const intentRetryBackoff = Object.freeze({ initialMilliseconds: 1_000, capMilliseconds: 60_000 });
 
-/** The shape of an operation identity's random part: what the host's random identifier source supplies. */
-const randomRule = /^[0-9a-z]{16,64}$/u;
+/** The wait before retrying after the `failures`-th consecutive non-durable intent of an operation (1-based). */
+function intentRetryDelay(failures: number): number {
+  const doublings = Math.max(0, failures - 1);
+  // 2^6 already exceeds the cap, so larger exponents never need computing.
+  return doublings >= 6 ? intentRetryBackoff.capMilliseconds : Math.min(intentRetryBackoff.capMilliseconds, intentRetryBackoff.initialMilliseconds * 2 ** doublings);
+}
+
+/** The shape of an operation identity's random part: exactly what the random identifier capability supplies. */
+const randomRule = /^[0-9a-f]{32}$/u;
 
 /** Thrown from the intent hook when the step attempt ended before the send: nothing is recorded or sent. */
 class EndedAttemptError extends Error {}
@@ -550,6 +561,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
         notBefore: undefined,
         attempts: [],
         settlement: undefined,
+        unrecorded: 0,
       };
       current = { record, revision: 0, fence: undefined };
     }
@@ -593,10 +605,15 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     const stepAttempt = String(attempt.attemptId);
     const before = stored;
     const operation = before.record.operation;
-    // An attempt whose intent never became durable was never sent: its identity is reused, so Accounting's intent is idempotent.
-    const unsent = before.record.attempts.at(-1)?.status === 'not-sent';
-    const earlier = unsent ? before.record.attempts.slice(0, -1) : before.record.attempts;
-    const requestAttempt = `${operation}/${String(earlier.length + 1)}`;
+    // An attempt whose intent was not confirmed was never sent, but its intent may have landed. It is reused with the
+    // attribution it was first recorded with, so restating the intent is an idempotent duplicate rather than a conflict,
+    // and a landed intent gets this send's usage instead of reading unknown forever (ACC-005, ACC-007). Its usage is
+    // therefore attributed to the run and step attempt that first recorded it.
+    const last = before.record.attempts.at(-1);
+    const unsent = last?.status === 'not-sent' ? last : undefined;
+    const earlier = unsent !== undefined ? before.record.attempts.slice(0, -1) : before.record.attempts;
+    const requestAttempt = unsent?.requestAttempt ?? `${operation}/${String(earlier.length + 1)}`;
+    const attribution = { run: unsent?.run ?? context.runId, stepAttempt: unsent?.stepAttempt ?? stepAttempt };
     let current = before;
     const sent = await transport.transmit<IOperationResponse<T>>({
       label: request.name,
@@ -612,7 +629,8 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
         ...before.record,
         status: 'pending',
         notBefore: undefined,
-        attempts: [...earlier, { requestAttempt, run: context.runId, stepAttempt, status: 'pending', remote: undefined, usage: undefined }],
+        unrecorded: before.record.unrecorded,
+        attempts: [...earlier, { requestAttempt, run: attribution.run, stepAttempt: attribution.stepAttempt, status: 'pending', remote: undefined, usage: undefined }],
       };
       current = write(lease, intent, before.revision);
       try {
@@ -620,12 +638,17 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
           environment: context.environment,
           operation,
           requestAttempt,
-          attribution: { run: context.runId, member: attempt.member ?? null, stepAttempt },
+          attribution: { run: attribution.run, member: before.record.member ?? null, stepAttempt: attribution.stepAttempt },
         });
+        // The intent is durable: the consecutive non-durable count resets.
+        if (intent.unrecorded !== 0) {
+          current = write(lease, { ...intent, unrecorded: 0 }, current.revision);
+        }
       } catch (error: unknown) {
         // Nothing will be sent: record the attempt not sent and the operation as a short deferral, so the step stays pending
         // and the work is retried (a sleeping run after the delay, a later run when admitted) under the same identities.
-        const restored: IOperationRecord = { ...withLast(intent, { status: 'not-sent' }), status: 'deferred', notBefore: now() + intentRetryMilliseconds };
+        const failures = before.record.unrecorded + 1;
+        const restored: IOperationRecord = { ...withLast(intent, { status: 'not-sent' }), status: 'deferred', notBefore: now() + intentRetryDelay(failures), unrecorded: failures };
         try {
           current = write(lease, restored, current.revision);
         } catch {
@@ -642,8 +665,10 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       if (sent.error instanceof EndedAttemptError) {
         return { stored: current, outcome: { kind: 'error', error: new SupervisionError('invalid-request', `Operation ${operation} was called after its step attempt ended; nothing was sent`) } };
       }
-      // Nothing was sent. The step stays pending, retried after a short delay; it never fails for a busy or unconfirmed write.
-      const notBefore = now() + intentRetryMilliseconds;
+      // Nothing was sent. The step stays pending, retried after the backoff; it never fails for a busy or unconfirmed write.
+      // The durable restoration, when it was recorded, already carries the time.
+      const restored = current.revision !== before.revision && current.record.status === 'deferred' ? current.record.notBefore : undefined;
+      const notBefore = restored ?? now() + intentRetryDelay(before.record.unrecorded + 1);
       engine.diagnose(`operation-unrecorded: operation ${operation} request attempt ${requestAttempt} has no durable intent; nothing was sent`);
       emit('retry-scheduled', current.record, { stepAttempt, requestAttempt, status: 'deferred', reason: 'unrecorded', notBefore });
       return { stored: current, outcome: { kind: 'pending', block: { kind: 'deferred', operation, notBefore } } };

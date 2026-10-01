@@ -451,9 +451,11 @@ export interface IOperationAccounting {
 }
 
 /**
- * The ports a run's external operations persist through, supplied by
- * assembly: History's journal port over the run's store and Accounting's
- * durable adapter.
+ * The ports a run's external operations need, supplied by assembly:
+ * History's journal port over the run's store, Accounting's durable adapter,
+ * and the host's random identifier source that makes operation identities
+ * (and so provider idempotency keys) globally unique. The type requires all
+ * three; a run also refuses untyped configuration that lacks one.
  * @alpha
  */
 export interface IRunOperationPorts {
@@ -461,6 +463,8 @@ export interface IRunOperationPorts {
   readonly journal: IOperationJournalPort;
   /** Resource Accounting's durable adapter. */
   readonly accounting: IOperationAccounting;
+  /** The host's random identifier source, structurally the Machine's random identifier capability. */
+  readonly random: IRunRandom;
 }
 
 /**
@@ -565,7 +569,8 @@ export interface IOperationEvent {
  * `exiting` (exit mode returns waiting until `until`), `resumed` (the wait
  * ended and the work is presented again), `stopped` (stop intent ended the
  * wait) or `writer-busy` (on waking another holder had the writer lease, so
- * the run returns waiting until `until`, as exit mode does).
+ * the run returns waiting, as exit mode does; `until` has then already
+ * passed and reads "eligible since `until`").
  * @alpha
  */
 export interface IWaitEvent {

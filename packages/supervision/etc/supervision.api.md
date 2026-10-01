@@ -459,6 +459,7 @@ export type IRunOperationName = 'check' | 'inspectOperations' | 'ordinary' | 're
 export interface IRunOperationPorts {
     readonly accounting: IOperationAccounting;
     readonly journal: IOperationJournalPort;
+    readonly random: IRunRandom;
 }
 
 // @alpha
@@ -605,7 +606,6 @@ export type ISupervisionErrorCode = 'outside-run' | 'run-closed' | 'composition-
 // @alpha
 export interface ISupervisionOptions {
     readonly context: IRunScopeCapability;
-    readonly random?: IRunRandom;
     readonly timer?: IRunTimer;
 }
 

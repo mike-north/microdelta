@@ -194,7 +194,12 @@ accounting }`, which needs the Supervision's timer:
   with a new request attempt, then Accounting records the usage intent; only
   then is the request sent. If either write fails (Accounting busy, or a
   commit it could not confirm), nothing is sent and the attempt is pending on
-  a one-second deferral, so its step waits and is retried, never failed. A usage report is acknowledged under
+  a deferral, so its step waits and is retried, never failed. The deferral
+  backs off exponentially per operation (1 s, doubling, capped at 60 s) and
+  resets once an intent is durable. The retry reuses the unsent request
+  attempt with the attribution it was first recorded with, so an intent that
+  landed without confirmation is restated idempotently and gets the send's
+  usage rather than reading unknown forever. A usage report is acknowledged under
   `provider:<report>` before the outcome is committed; a failed
   acknowledgment is reported, never claimed, and leaves usage unknown.
 - **Outcomes and policy.** `succeeded` settles the operation. A permanent
@@ -244,14 +249,16 @@ accounting }`, which needs the Supervision's timer:
   so a call from inside member or step work is refused as an undeclared call
   (CMP-9).
 - **Identities.** An operation identity is `op-` and an identifier from the
-  injected random source (`options.random`, structurally the Machine's
-  random identifier capability), so it never repeats across stores,
+  random source in the operation ports (`operations.random`, structurally the
+  Machine's random identifier capability; exactly 32 lowercase hexadecimal
+  characters), so it never repeats across stores,
   processes or hosts; it is the provider idempotency key and every retry
   keeps it. One call at an address may be in progress in a run, and an
   attempt that ended sends nothing.
 - **Waking while the lease is held.** A sleeping request that wakes while
-  another holder has the writer lease returns waiting until its time, as
-  exit mode does (`wait` phase `writer-busy`).
+  another holder has the writer lease returns waiting, as exit mode does
+  (`wait` phase `writer-busy`); its `waitingUntil` has then already passed
+  and reads "eligible since T", so a later run admits the work at once.
 - **Events.** `operation` events carry identifiers (operation, request
   attempt, step attempt, member, run), closed status and reason codes, times,
   usage figures with identifier units and the remote state; `wait` events

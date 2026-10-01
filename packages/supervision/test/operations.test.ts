@@ -183,7 +183,7 @@ const firstOperation = `op-${'1'.padStart(32, '0')}`;
 /** Run one step whose body performs `request`, returning the run's events, diagnostics, the body's failure code and how its execution ended. */
 async function runOne(journal: IMemoryJournal, accounting: IMemoryAccounting, request: () => IOperationRequest<number>, random: IRunRandom = countingRandom()): Promise<{ readonly code: string | undefined; readonly result: string; readonly events: readonly IRunEvent[]; readonly diagnostics: readonly string[] }> {
   const timer = fakeTimer();
-  const supervision = createSupervision({ context: nodeScopes, timer, random });
+  const supervision = createSupervision({ context: nodeScopes, timer });
   let code: string | undefined;
   const double = executing(async () => {
     code = await codeOf(supervision.execution().operation(request()));
@@ -197,7 +197,7 @@ async function runOne(journal: IMemoryJournal, accounting: IMemoryAccounting, re
     deferral: 'exit',
     resolution: double.factory,
     writer: grantingWriter,
-    operations: { journal, accounting },
+    operations: { journal, accounting, random },
     observers: [{ observe: (event) => events.push(event) }],
   }, (run) => run.resolve(stepOf('assess', 'pr-1'), { requestKey: 'request:1' }));
   const outcome = result.value;
@@ -233,13 +233,60 @@ describe('intent before send (ACC-007)', () => {
     expect(journal.operation(firstOperation)).toEqual(expect.objectContaining({ status: 'deferred', notBefore: T0 + 1_000, attempts: [expect.objectContaining({ status: 'not-sent' })] }));
   });
 
-  test('operation identities come from the injected random source, and a malformed identifier is refused before anything is recorded', async () => {
+  test.each([
+    ['not hexadecimal', 'NOT RANDOM'],
+    ['upper-case hexadecimal', 'ABCDEF0123456789ABCDEF0123456789'],
+    ['31 characters', '0123456789abcdef0123456789abcde'],
+    ['33 characters', '0123456789abcdef0123456789abcdef0'],
+    ['alphanumeric beyond hexadecimal', '0123456789abcdefghij0123456789ab'],
+  ])('an identifier from the random source that is %s is refused before anything is recorded', async (_label, identifier) => {
     const journal = memoryJournal();
     const sent = { count: 0 };
-    const outcome = await runOne(journal, memoryAccounting(), () => operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), { randomIdentifier: () => 'NOT RANDOM' });
+    const outcome = await runOne(journal, memoryAccounting(), () => operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), { randomIdentifier: () => identifier });
     expect(outcome.code).toBe('invalid-request');
     expect(journal.commits).toBe(0);
     expect(sent.count).toBe(0);
+  });
+
+  test('a repeatedly non-durable intent backs off exponentially, durably and visibly, up to the cap, and a durable one ends the backoff', async () => {
+    const journal = memoryJournal();
+    const accounting = memoryAccounting();
+    accounting.failIntents = true;
+    const timer = fakeTimer();
+    const supervision = createSupervision({ context: nodeScopes, timer });
+    const random = countingRandom();
+    const sent = { count: 0 };
+    const double = executing(async () => {
+      await supervision.execution().operation(operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent)).catch(() => undefined);
+    });
+    const delays: number[] = [];
+    const events: IRunEvent[] = [];
+    for (let round = 0; round < 9; round += 1) {
+      const before = timer.currentEpochMilliseconds();
+      await supervision.run({
+        analysis: 'analysis:test',
+        environment: 'env:test',
+        deferral: 'exit',
+        resolution: double.factory,
+        writer: grantingWriter,
+        operations: { journal, accounting, random },
+        observers: [{ observe: (event) => events.push(event) }],
+      }, (run) => run.resolve(stepOf('assess', 'pr-1'), { requestKey: `request:${String(round)}` }));
+      const recorded = journal.operation(firstOperation);
+      const notBefore: unknown = typeof recorded === 'object' && recorded !== null ? Reflect.get(recorded, 'notBefore') : undefined;
+      expect(recorded).toEqual(expect.objectContaining({ status: 'deferred', attempts: [expect.objectContaining({ status: 'not-sent' })] }));
+      delays.push(typeof notBefore === 'number' ? notBefore - before : Number.NaN);
+      timer.advance(typeof notBefore === 'number' ? notBefore - before : 0);
+    }
+    // 1 s, doubling, capped at 60 s.
+    expect(delays).toEqual([1_000, 2_000, 4_000, 8_000, 16_000, 32_000, 60_000, 60_000, 60_000]);
+    expect(phases(events).filter((phase) => phase === 'retry-scheduled:unrecorded')).toHaveLength(9);
+    expect(sent.count).toBe(0);
+    // Once Accounting is free, the intent is durable, the request is sent once and the operation succeeds.
+    accounting.failIntents = false;
+    await supervision.run({ analysis: 'analysis:test', environment: 'env:test', deferral: 'exit', resolution: double.factory, writer: grantingWriter, operations: { journal, accounting, random } }, (run) => run.resolve(stepOf('assess', 'pr-1'), { requestKey: 'request:last' }));
+    expect(sent.count).toBe(1);
+    expect(journal.operation(firstOperation)).toEqual(expect.objectContaining({ status: 'succeeded' }));
   });
 });
 
@@ -280,7 +327,7 @@ describe('lease authority (EXP-8 ruling R)', () => {
 
 describe('operator actions are run operations (CMP-9)', () => {
   test('inspecting or settling operations from inside a step attempt is refused as an undeclared call', async () => {
-    const supervision = createSupervision({ context: nodeScopes, timer: fakeTimer(), random: countingRandom() });
+    const supervision = createSupervision({ context: nodeScopes, timer: fakeTimer() });
     const codes: (string | undefined)[] = [];
     let live: Parameters<Parameters<typeof supervision.run>[1]>[0] | undefined;
     const double = executing(async () => {
@@ -288,7 +335,7 @@ describe('operator actions are run operations (CMP-9)', () => {
         codes.push(await codeOf(live.inspectOperations()), await codeOf(live.settleOperation({ action: 'abandon', operation: 'op-7-1', operator: 'operator.ada' })));
       }
     });
-    await supervision.run({ analysis: 'analysis:test', environment: 'env:test', resolution: double.factory, writer: grantingWriter, operations: { journal: memoryJournal(), accounting: memoryAccounting() } }, async (run) => {
+    await supervision.run({ analysis: 'analysis:test', environment: 'env:test', resolution: double.factory, writer: grantingWriter, operations: { journal: memoryJournal(), accounting: memoryAccounting(), random: countingRandom() } }, async (run) => {
       live = run;
       await run.resolve(stepOf('assess', 'pr-1'), { requestKey: 'request:1' });
     });
@@ -316,12 +363,13 @@ describe('malformed requests, options and records', () => {
     const supervision = createSupervision({ context: nodeScopes });
     const double = executing(() => Promise.resolve());
     const base = { analysis: 'analysis:test', environment: 'env:test', resolution: double.factory, writer: grantingWriter };
-    expect(await codeOf(supervision.run({ ...base, operations: { journal: memoryJournal(), accounting: memoryAccounting() } }, () => 'ran'))).toBe('invalid-request');
-    const timed = createSupervision({ context: nodeScopes, timer: fakeTimer(), random: countingRandom() });
-    // Operation ports need a random identifier source too.
-    expect(await codeOf(timed.run({ ...base, operations: { journal: memoryJournal(), accounting: memoryAccounting() } }, () => 'ran'))).not.toBe('invalid-request');
-    const unrandom = createSupervision({ context: nodeScopes, timer: fakeTimer() });
-    expect(await codeOf(unrandom.run({ ...base, operations: { journal: memoryJournal(), accounting: memoryAccounting() } }, () => 'ran'))).toBe('invalid-request');
+    expect(await codeOf(supervision.run({ ...base, operations: { journal: memoryJournal(), accounting: memoryAccounting(), random: countingRandom() } }, () => 'ran'))).toBe('invalid-request');
+    const timed = createSupervision({ context: nodeScopes, timer: fakeTimer() });
+    expect(await codeOf(timed.run({ ...base, operations: { journal: memoryJournal(), accounting: memoryAccounting(), random: countingRandom() } }, () => 'ran'))).not.toBe('invalid-request');
+    // Operation ports need a random identifier source; the type requires it, and untyped configuration is refused at run time.
+    const unrandom: IRunOptions = { ...base, operations: { journal: memoryJournal(), accounting: memoryAccounting(), random: countingRandom() } };
+    Reflect.set(unrandom, 'operations', { journal: memoryJournal(), accounting: memoryAccounting() });
+    expect(await codeOf(timed.run(unrandom, () => 'ran'))).toBe('invalid-request');
     // A mode outside the closed set, as untyped configuration could supply.
     const untyped: IRunOptions = { ...base };
     Reflect.set(untyped, 'deferral', 'wait');
@@ -331,9 +379,9 @@ describe('malformed requests, options and records', () => {
   test('a block index naming a missing operation is integrity damage, never a silent admission', async () => {
     const journal = memoryJournal();
     journal.put('microdelta.supervision.blocks', JSON.stringify(['assess', 1]), { subject: 'assess', version: 1, operations: [{ operation: 'op-missing', name: 'assess', binding: 'b' }] });
-    const supervision = createSupervision({ context: nodeScopes, timer: fakeTimer(), random: countingRandom() });
+    const supervision = createSupervision({ context: nodeScopes, timer: fakeTimer() });
     const double = executing(() => Promise.resolve());
-    await supervision.run({ analysis: 'analysis:test', environment: 'env:test', resolution: double.factory, writer: grantingWriter, operations: { journal, accounting: memoryAccounting() } }, async () => {
+    await supervision.run({ analysis: 'analysis:test', environment: 'env:test', resolution: double.factory, writer: grantingWriter, operations: { journal, accounting: memoryAccounting(), random: countingRandom() } }, async () => {
       const failure = await Promise.resolve().then(() => double.ports().admission.admit(admissionFor(stepOf('assess', 'pr-1')))).then(() => undefined, (error: unknown) => error);
       expect(failure instanceof SupervisionError ? failure.code : failure).toBe('integrity');
     });

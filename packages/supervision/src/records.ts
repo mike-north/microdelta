@@ -63,6 +63,8 @@ export interface IOperationRecord {
   readonly maxAttempts: number;
   readonly rateLimitRetries: number;
   readonly status: IOperationStatus;
+  /** Consecutive intents of this operation that could not be made durable; it sets the intent retry backoff. */
+  readonly unrecorded: number;
   readonly notBefore: number | undefined;
   readonly attempts: readonly IAttemptRecord[];
   readonly settlement: IOperationSettlementRecord | undefined;
@@ -137,6 +139,7 @@ export function encodeOperation(record: IOperationRecord): IJournalRecordValue {
       maxAttempts: record.maxAttempts,
       rateLimitRetries: record.rateLimitRetries,
       status: record.status,
+      unrecorded: record.unrecorded,
       notBefore: record.notBefore ?? null,
       attempts: record.attempts.map((attempt) => ({
         requestAttempt: attempt.requestAttempt,
@@ -246,6 +249,7 @@ export function decodeOperation(record: IJournalRecordValue): IOperationRecord {
     safety: oneOf(content, 'safety', safeties, what),
     maxAttempts: whole(content, 'maxAttempts', what),
     rateLimitRetries: whole(content, 'rateLimitRetries', what),
+    unrecorded: whole(content, 'unrecorded', what),
     status: oneOf(content, 'status', statuses, what),
     notBefore: field(content, 'notBefore') === null ? undefined : whole(content, 'notBefore', what),
     attempts: attempts.map((attempt: unknown): IAttemptRecord => ({

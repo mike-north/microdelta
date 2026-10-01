@@ -116,3 +116,9 @@ expectAssignable<IOperationAccounting>({
 });
 expectNotAssignable<IOperationAccounting>({ recordUsageIntent: () => 'recorded' as const });
 expectType<readonly { readonly format: string; readonly versions: readonly number[] }[]>(operationJournalDeclaration.formats);
+
+// Operation ports require all three: the journal, Accounting and the random identifier source.
+declare const journalPort: IOperationJournalPort;
+declare const accountingPort: IOperationAccounting;
+expectAssignable<Pick<IRunOptions, 'operations'>>({ operations: { journal: journalPort, accounting: accountingPort, random: { randomIdentifier: () => '0'.repeat(32) } } });
+expectNotAssignable<Pick<IRunOptions, 'operations'>>({ operations: { journal: journalPort, accounting: accountingPort } });

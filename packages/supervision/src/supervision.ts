@@ -369,7 +369,6 @@ function outcomeFoldReport(resolved: IOutcomeFoldResolution, scope: IRequestScop
 export function createSupervision(options: ISupervisionOptions): ISupervision {
   const scope: IRunScope<IRunFrame> = options.context.createAsyncContext<IRunFrame>();
   const timer = options.timer;
-  const random = options.random;
   /** Process-local counter for generated run identifiers (volatile metadata). */
   let generated = 0;
 
@@ -422,6 +421,9 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     if (operationPorts !== undefined && (typeof operationPorts !== 'object' || operationPorts === null || typeof Reflect.get(operationPorts, 'journal') !== 'object' || typeof Reflect.get(operationPorts, 'accounting') !== 'object')) {
       throw new SupervisionError('invalid-request', 'A run\'s operation ports need a journal and an accounting port');
     }
+    // The type requires the random source; untyped configuration without one is refused here.
+    const randomPort: unknown = operationPorts === undefined ? undefined : Reflect.get(operationPorts, 'random');
+    const random = operationPorts !== undefined && typeof randomPort === 'object' && randomPort !== null && typeof Reflect.get(randomPort, 'randomIdentifier') === 'function' ? operationPorts.random : undefined;
     if (operationPorts !== undefined && (timer === undefined || random === undefined)) {
       throw new SupervisionError('invalid-request', 'External operations need the Supervision\'s timer and random identifier source');
     }

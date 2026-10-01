@@ -4,6 +4,7 @@ import { SqliteBusyError } from '../dist/src/index.js';
 import type {
   IClockCapability,
   IMachine,
+  IRandomIdentifierCapability,
   ISqliteCapability,
   ISqliteConnection,
   ISqliteRow,
@@ -105,3 +106,9 @@ expectType<SqliteBusyError>(new SqliteBusyError('busy', 500, { cause: new Error(
 expectError(new SqliteBusyError('busy'));
 expectError(new SqliteBusyError('busy', '500'));
 expectError((busy.waitedMilliseconds = 1));
+
+// A random identifier source is separate from the machine and takes no input.
+declare const random: IRandomIdentifierCapability;
+expectType<string>(random.randomIdentifier());
+expectError(random.randomIdentifier(16));
+expectNotAssignable<IRandomIdentifierCapability>(machine);

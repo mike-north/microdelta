@@ -17,6 +17,11 @@ export function createNodeClock(): IClockCapability;
 // @alpha
 export function createNodeMachine(): IMachine;
 
+// Warning: (ae-forgotten-export) The symbol "IRandomIdentifierCapability" needs to be exported by the entry point index.d.ts
+//
+// @alpha
+export function createNodeRandom(): IRandomIdentifierCapability;
+
 // Warning: (ae-forgotten-export) The symbol "ISqliteCapability" needs to be exported by the entry point index.d.ts
 //
 // @alpha

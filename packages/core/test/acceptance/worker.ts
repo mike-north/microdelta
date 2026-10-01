@@ -202,6 +202,10 @@ async function main(job: IJob): Promise<void> {
             emit({ t: 'send', label: event.label, phase: event.phase, ...(event.phase === 'remote-state' ? { remote: event.remote } : {}) });
             return;
           }
+          if (event.kind !== 'step') {
+            // This workload makes no external operations and never waits for a deferral.
+            return;
+          }
           const { step, phase, reference } = event.event;
           emit({ t: 'event', member: step.memberKey, slot: step.slot, phase, ...(reference === undefined ? {} : { reference: reference.locator }) });
           if (stop !== undefined && stopAt !== undefined && stopAt.phase === phase && stopAt.memberKey === step.memberKey && stopAt.slot === step.slot) {

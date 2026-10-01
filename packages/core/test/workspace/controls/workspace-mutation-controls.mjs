@@ -22,7 +22,7 @@
  */
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 import { judgeRun } from '../../durable-history/controls/control-outcome.mjs';
@@ -112,7 +112,9 @@ async function runJest(config, pattern, suites, expectedTitles) {
   reportDirectory = directory;
   try {
     const out = join(directory, 'report.json');
-    const { code } = await spawnChild(['--experimental-vm-modules', join(root, 'node_modules/jest/bin/jest.js'), '--config', config, '--runInBand', '--json', `--outputFile=${out}`, pattern], root);
+    // Exactly the intended suite files run, so a suite added beside them never invalidates the run.
+    const paths = suites.map((suite) => join(dirname(config), pattern, suite));
+    const { code } = await spawnChild(['--experimental-vm-modules', join(root, 'node_modules/jest/bin/jest.js'), '--config', config, '--runInBand', '--json', `--outputFile=${out}`, '--runTestsByPath', ...paths], root);
     return judgeRun({ exitStatus: code, reportText: existsSync(out) ? readFileSync(out, 'utf8') : undefined, expectedTitles, suites });
   } finally {
     rmSync(directory, { recursive: true, force: true });

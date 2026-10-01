@@ -565,6 +565,9 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
           check: live.check,
           recover: live.recover,
           ordinary: live.ordinary,
+          // The workspace supplies no operation ports yet, so these fail with `invalid-request`.
+          inspectOperations: live.inspectOperations,
+          settleOperation: live.settleOperation,
           read<TData>(reference: ICompletedResultReference): TData {
             // An exact read is a result read, so it obeys the run's undeclared-call rule (CMP-9).
             live.assertDeclaredCall('read');

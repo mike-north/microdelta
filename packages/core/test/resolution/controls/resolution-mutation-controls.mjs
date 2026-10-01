@@ -96,7 +96,7 @@ async function runSuites(expectedTitles) {
   try {
     const out = join(directory, 'report.json');
     const exitStatus = await new Promise((resolve, reject) => {
-      running = spawn(process.execPath, ['--experimental-vm-modules', join(root, 'node_modules/jest/bin/jest.js'), '--config', 'jest.config.mjs', '--runInBand', '--json', `--outputFile=${out}`, '.test-build/test/resolution'], { cwd: core, stdio: 'ignore' });
+      running = spawn(process.execPath, ['--experimental-vm-modules', join(root, 'node_modules/jest/bin/jest.js'), '--config', 'jest.config.mjs', '--runInBand', '--json', `--outputFile=${out}`, '--runTestsByPath', ...suites.map((suite) => `.test-build/test/resolution/${suite}`)], { cwd: core, stdio: 'ignore' });
       running.on('error', reject);
       running.on('exit', (code) => {
         resolve(code);

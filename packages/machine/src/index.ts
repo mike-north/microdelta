@@ -264,3 +264,21 @@ export interface ITimerCapability extends IClockCapability {
    */
   schedule(epochMilliseconds: number, callback: () => void, options?: ITimerOptions): () => void;
 }
+
+/**
+ * Supplies unguessable identifiers from the host's cryptographically secure
+ * random source. It exists so a context can mint an identity that must never
+ * collide with one minted by another store, process or host, such as a
+ * provider idempotency key, without reading host randomness itself, and so
+ * tests can substitute a deterministic implementation.
+ *
+ * Each identifier is exactly 32 lowercase hexadecimal characters carrying 128
+ * independent random bits. It names nothing and carries no value. A host that
+ * cannot supply secure randomness throws rather than returning a weaker or
+ * repeated identifier.
+ * @alpha
+ */
+export interface IRandomIdentifierCapability {
+  /** Return a fresh identifier of 32 lowercase hexadecimal characters, or throw. */
+  randomIdentifier(): string;
+}

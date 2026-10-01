@@ -204,14 +204,15 @@ export const controls = Object.freeze([
     edits: [{ anchor: 'removeListener();\n            resolve();', replacement: 'resolve();' }],
   },
   {
-    name: 'an outcome-fold request tries the writer once and fails busy instead of waiting',
+    // Every normal request (resolve, members, strict and outcome fold) obtains its first pass's lease in one place.
+    name: 'a normal request tries the writer once and fails busy instead of waiting',
     model: null,
     unmodeled: 'Which run operation waits is Supervision wiring outside the model; the owner suite runs the wait over every normal request.',
     target: runTestTarget,
     group: 'supervision',
     edits: [{
-      anchor: 'const lease = await writerLease();\n                    const resolved = await resolution.resolveOutcomeFold(',
-      replacement: "const tried = writer.tryLease();\n                    if (tried.kind !== 'acquired') {\n                        throw new SupervisionError('writer-busy', 'single try without waiting');\n                    }\n                    const lease = tried.lease;\n                    const resolved = await resolution.resolveOutcomeFold(",
+      anchor: 'function leaseForPass() {\n            return writerLease();\n        }',
+      replacement: "function leaseForPass() {\n            const tried = writer.tryLease();\n            if (tried.kind !== 'acquired') {\n                throw new SupervisionError('writer-busy', 'single try without waiting');\n            }\n            return Promise.resolve(tried.lease);\n        }",
     }],
   },
   {

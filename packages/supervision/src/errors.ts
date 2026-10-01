@@ -20,6 +20,17 @@ import type { IWriterAttempt } from './contracts.js';
  * - `stopped`: stop intent refused or aborted a send, a permit wait or a wait for a time (RUN-014). The
  *   step attempt it belonged to can no longer publish; its body may let this propagate. It also ends a
  *   normal request's wait for the writer lease, before that request has done anything.
+ * - `operation-failed`: an external operation settled as failed: its provider refused it permanently, or its retry
+ *   policy is exhausted (RUN-011). The step attempt may still handle it.
+ * - `operation-deferred`: an external operation is deferred until a later time (RUN-011). Nothing was sent before that
+ *   time; the step attempt can no longer publish or send, and its work stays pending.
+ * - `operation-unknown`: an external operation's outcome is unknown and it may not be retried (RUN-012). Nothing was
+ *   replayed; the step attempt can no longer publish or send, and its work stays pending until an operator settles it.
+ * - `operation-unrecorded`: usage an operator supplied could not be made durable, so nothing was settled (ACC-007). An
+ *   operation's own intent that cannot be made durable instead leaves its step pending on a short deferral.
+ * - `operation-resolved`: an operator resolved the operation at this address as succeeded, so its effect happened and it
+ *   is never sent again (RUN-012). It carries no value; the step attempt may handle it.
+ * - `integrity`: a durable operation record Supervision wrote cannot be read back.
  * - `undeclared-call`: a run operation was called from inside a member's work or a step attempt
  *   (author code that kept the run). What it resolves or reads would enter no evidence of the
  *   calling body, so it is refused before any admission or lane (CMP-9, RUN-002).
@@ -33,6 +44,12 @@ export type ISupervisionErrorCode =
   | 'writer-busy'
   | 'invalid-request'
   | 'stopped'
+  | 'operation-failed'
+  | 'operation-deferred'
+  | 'operation-unknown'
+  | 'operation-unrecorded'
+  | 'operation-resolved'
+  | 'integrity'
   | 'undeclared-call';
 
 /**

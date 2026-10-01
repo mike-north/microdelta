@@ -1,7 +1,7 @@
 import { expectError, expectType } from 'tsd';
 
-import { canonicalNodeLocation, createNodeClock, createNodeMachine, createNodeSqlite, createNodeTimer } from '../dist/src/index.js';
-import type { IClockCapability, IMachine, ISqliteCapability, ITimerCapability } from '@microdelta/machine';
+import { canonicalNodeLocation, createNodeClock, createNodeMachine, createNodeRandom, createNodeSqlite, createNodeTimer } from '../dist/src/index.js';
+import type { IClockCapability, IMachine, IRandomIdentifierCapability, ISqliteCapability, ITimerCapability } from '@microdelta/machine';
 
 expectType<IMachine>(createNodeMachine());
 expectType<ISqliteCapability>(createNodeSqlite());
@@ -14,3 +14,7 @@ expectType<() => void>(createNodeTimer().schedule(0, () => undefined, { keepAliv
 // A canonical location is a plain string derived from a location string.
 expectType<string>(canonicalNodeLocation('/tmp/history.sqlite'));
 expectError(canonicalNodeLocation());
+
+// The random identifier source returns a string and takes no argument.
+expectType<IRandomIdentifierCapability>(createNodeRandom());
+expectType<string>(createNodeRandom().randomIdentifier());

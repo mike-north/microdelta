@@ -166,12 +166,116 @@ execution contract describes them (EXP-8 mechanisms 1 and 2, ruling R).
 - **Events.** Observers also see `stop` events (level, cause) and `send`
   events (label, phase, remote state), never values.
 
-External-operation identity, retry and deferral policy, and writer-lease
-waiting build on these primitives and are not decided here.
+Writer-lease waiting builds on these primitives and is not decided here.
+
+## External operations
+
+These implement RUN-011 to RUN-014 and ACC-003/005/007 with the mechanisms
+EXP-8 selected (mechanisms 3 to 7, supervisor resolutions 1 to 8, ruling R).
+A run offers them when assembly passes `options.operations: { journal,
+accounting }`, which needs the Supervision's timer:
+
+- **Ports.** Both are structural and owned here, as the timer is: History's
+  operation journal (`IOperationJournalPort`, opened with
+  `operationJournalDeclaration`) and Accounting's durable adapter
+  (`IOperationAccounting`). Supervision imports neither package. It keeps
+  two collections of its own opaque records in the run's environment: one
+  record per operation (`microdelta.supervision.operations`), and a
+  per-subject index of the operations still unsettled at its addresses
+  (`microdelta.supervision.blocks`). It never touches History rows.
+- **The handle.** `execution().operation({ name, binding, perform, ... })`
+  is called from an admitted step attempt's body in a normal request. An
+  operation is addressed by the attempt's subject, its identifier `name` and
+  the author's opaque `binding` digest: an unsettled operation at the address
+  keeps its identity, a settled one or a changed binding is new (RUN-012).
+  Authors isolate each paid call in its own child step (EXP-8 resolution 3).
+- **Intent before send, usage before outcome.** Once the permit is held and
+  stop intent rechecked, one journal commit records the operation `pending`
+  with a new request attempt, then Accounting records the usage intent; only
+  then is the request sent. If either write fails (Accounting busy, or a
+  commit it could not confirm), nothing is sent and the attempt is pending on
+  a deferral, so its step waits and is retried, never failed. The deferral
+  backs off exponentially per operation (1 s, doubling, capped at 60 s) and
+  resets once an intent is durable. The retry reuses the unsent request
+  attempt with the attribution it was first recorded with, so an intent that
+  landed without confirmation is restated idempotently and gets the send's
+  usage rather than reading unknown forever. A usage report is acknowledged under
+  `provider:<report>` before the outcome is committed; a failed
+  acknowledgment is reported, never claimed, and leaves usage unknown.
+- **Outcomes and policy.** `succeeded` settles the operation. A permanent
+  refusal fails it. A transient failure retries only under the author's
+  `retry.maxAttempts`, waiting its backoff as a short durable deferral that
+  holds no permit and lends the member's lane. A rate or quota response with
+  a retry time defers the operation durably until then and is retried by
+  default, at most `retry.rateLimitRetries` times (5). A lost response
+  (`unknown`, or a rejected `perform`) is retried at once only with a safety
+  basis (`safeToRepeat`, or `providerIdempotency`, which sends the operation
+  identity as the key) and a policy allowing another attempt.
+- **Taint guard.** A deferral or an unknown outcome makes the step attempt
+  pending: every later operation or send it makes rethrows the signal
+  without sending, its execution ends `unsettled`, and its step stays
+  pending (never failed or cancelled), so a strict fold over it waits.
+- **Admission.** Before the caller's policy, admission reads the step's
+  unsettled operations: a deferral not yet due, or an unknown outcome that
+  may not be retried, denies the work with the block named on the pending
+  member (`blocked`); an operation a dead run left in flight is recorded
+  `unknown` first (`recovered`). Under stop intent a resumable deferral or
+  retry is cancelled.
+- **Deferral passes.** Each normal request runs in passes. A pass that met a
+  deferral ends with that work pending. Once only deferred work remains the
+  run releases its writer lease; in `deferral: 'sleep'` mode (the default) it
+  waits until the earliest time, any stop ending the wait, and runs another
+  pass under request key `<key>#pass:<n>` (a caller's normal request key
+  may not contain `#pass:`), where the deferred work resumes
+  under the same operation identities and steps that settled earlier (for
+  example failed members) are not executed again; in `'exit'` mode it
+  returns, and `result.waitingUntil` reports the time. Later runs honor it.
+- **Hard stop.** An aborted request's remote state (`cancelled`, `running` or
+  `unknown`) is committed by operation and request attempt; a confirmed
+  cancellation settles the operation, otherwise it is unknown.
+- **Lease authority.** Every commit uses the lease of the pass, so a pass
+  that lost its lease records nothing: its operation stays `pending` and any
+  later run records it unknown (ruling R).
+- **Operator settlement.** `run.inspectOperations()` lists the environment's
+  operations; `run.settleOperation({ action: 'resolve' | 'abandon', ... })`
+  settles an unknown one under the writer lease. Usage the operator learned
+  is acknowledged under `operator:<report>`; an abandoned operation keeps its
+  usage unknown. Either unblocks the step. A resolution as `succeeded` keeps
+  the address consumed: a later call there mints and sends nothing and fails
+  with `operation-resolved` (no value; the author may catch it). A resolution
+  as `failed`, or an abandonment (the operator's explicit authorization of a
+  possible second effect), frees the address for a new operation. A
+  resolution carrying a result is M6 work. Both actions are run operations,
+  so a call from inside member or step work is refused as an undeclared call
+  (CMP-9).
+- **Identities.** An operation identity is `op-` and an identifier from the
+  random source in the operation ports (`operations.random`, structurally the
+  Machine's random identifier capability; exactly 32 lowercase hexadecimal
+  characters), so it never repeats across stores,
+  processes or hosts; it is the provider idempotency key and every retry
+  keeps it. One call at an address may be in progress in a run, and an
+  attempt that ended sends nothing.
+- **Waking while the lease is held.** Every pass, the first or one waking
+  after a deferral's wait, and every operator settlement, obtains the writer
+  lease through the run's writer wait, as every normal request does: while
+  another process holds it, the pass waits (taking it over through fenced
+  takeover once it expires), until an operator `writerWait` deadline, where
+  it fails with `WriterBusyError`. There is no default deadline, so without
+  one it waits until the lease is granted or a stop ends the wait with
+  `stopped`.
+- **Events.** `operation` events carry identifiers (operation, request
+  attempt, step attempt, member, run), closed status and reason codes, times,
+  usage figures with identifier units and the remote state; `wait` events
+  carry the earliest time and whether the lease was released. Neither ever
+  carries the binding, arguments, values, provider bodies or error messages,
+  and diagnostics name codes and identifiers only (RUN-013).
 
 ## Tests
 
 Owner tests (`test/`) use Node's real AsyncLocalStorage through the
-structural capability and a recording Resolution port double; `test-d/`
-holds the type contracts. The same behaviors run over the real owner
-implementations in the facade's assembly suites (`packages/core/test/workspace`).
+structural capability, a recording Resolution port double and in-memory
+journal and accounting port doubles for failure paths; `test-d/` holds the
+type contracts. The same behaviors run over the real owner implementations
+in the facade's assembly suites (`packages/core/test/workspace`,
+`packages/core/test/stop` and `packages/core/test/operations`, which also
+holds the on-demand mutation controls of external operations).

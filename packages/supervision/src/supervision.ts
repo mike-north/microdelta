@@ -27,9 +27,19 @@
  *   sends, permit waits and waits for a time and forbids later commits (see
  *   `execution.ts`);
  * - the run owns a bounded permit pool for its sends and hands Resolution
- *   the bounded active window of member fan-out.
+ *   the bounded active window of member fan-out;
+ * - when assembly supplies operation ports, the run offers external
+ *   operations (see `operation-engine.ts`): its admission honors each step's
+ *   unsettled operations before the policy decides, and each normal request
+ *   runs in passes. A pass that left work deferred until a later time ends
+ *   with that work pending; once only deferred work remains the run releases
+ *   the writer lease and, in sleep mode, waits for the earliest time (any
+ *   stop ends the wait) and runs another pass, or in exit mode returns,
+ *   reporting the time it waits until.
  *
- * Supervision never decides reuse, touches History or reads the host itself.
+ * Supervision never decides reuse, touches History rows or reads the host
+ * itself; it persists operations only through its journal and accounting
+ * ports.
  */
 import { isComposing } from '@microdelta/definition';
 import type { IBindingDescriptor } from '@microdelta/definition';
@@ -76,10 +86,13 @@ import type {
   ISupervisionOptions,
 } from './contracts.js';
 import { createAbortSource, createStopController } from './control.js';
-import type { IStopLevel, IStopState } from './control.js';
+import type { IRunTimer, IStopLevel, IStopState } from './control.js';
 import { SupervisionError } from './errors.js';
-import { isDraining, raceAbort, runControls, supervisedExecution } from './execution.js';
-import type { IAttemptFrame, IFrameAccess, IRunFrame, ISupervisedRun } from './execution.js';
+import { descriptorKey, isDraining, raceAbort, runControls, supervisedExecution } from './execution.js';
+import type { IAttemptFrame, IFrameAccess, IRequestScope, IRunFrame, ISupervisedRun } from './execution.js';
+import { createOperationEngine } from './operation-engine.js';
+import type { IOperationEngine } from './operation-engine.js';
+import type { IDeferralMode, IOperationSettlement, IOperationStatus, IOperationView, IWaitEvent } from './operations.js';
 import { createPermitPool } from './permits.js';
 import { awaitWriter, writerWaitPolicy } from './writer.js';
 
@@ -104,6 +117,37 @@ const defaultPermits = 1;
  * concurrently admitted steps. Operators widen it for large fan-outs.
  */
 const defaultWindow = 8;
+
+/**
+ * One normal request run in passes: one pass under a lease and request key,
+ * the report of a pass given the previous pass's report, the steps a pass
+ * settled (which later passes do not execute again), and whether a report is
+ * final (no wait could change it).
+ */
+interface IPasses<P, R> {
+  pass(lease: IRunLease, requestKey: string): Promise<P>;
+  report(result: P, scope: IRequestScope, previous: R | undefined): R;
+  settled(report: R): readonly string[];
+  final(report: R): boolean;
+}
+
+/**
+ * The separator of a derived pass key. A caller's request key for a normal
+ * request may not contain it, so a derived key never collides with a key a
+ * caller chose (a recovery request may name a derived key).
+ */
+const passSeparator = '#pass:';
+
+/**
+ * The request key of one pass of a normal request. The first pass uses the
+ * caller's saved key unchanged; a later pass, after a deferral's wait, admits
+ * its executions under `<key>#pass:<n>`, because a request key identifies
+ * the admitted executions of one pass and each identified execution is never
+ * re-admitted. A caller recovering a resumed request derives the same keys.
+ */
+function passKey(requestKey: string, pass: number): string {
+  return pass === 1 ? requestKey : `${requestKey}${passSeparator}${String(pass)}`;
+}
 
 /**
  * A run's positive count option (its permits or window), or `fallback` when
@@ -180,7 +224,7 @@ function notify(observers: readonly ICapturedObserver[], event: IRunEvent): void
 }
 
 /** Every {@link IRunOperationName}, for the runtime check of untyped callers. */
-const runOperationNames: ReadonlySet<string> = new Set<IRunOperationName>(['check', 'ordinary', 'read', 'recover', 'resolve', 'resolveFold', 'resolveMembers', 'resolveOutcomeFold']);
+const runOperationNames: ReadonlySet<string> = new Set<IRunOperationName>(['check', 'inspectOperations', 'ordinary', 'read', 'recover', 'resolve', 'resolveFold', 'resolveMembers', 'resolveOutcomeFold', 'settleOperation']);
 
 /**
  * Classify one member's Resolution outcome as its typed member outcome
@@ -189,7 +233,7 @@ const runOperationNames: ReadonlySet<string> = new Set<IRunOperationName>(['chec
  * cancelled; a gated-out member is skipped with its gate evidence and no
  * result; a typed Resolution failure is failed.
  */
-function memberOutcome(member: IMemberResolution): IMemberOutcome {
+function memberOutcome(member: IMemberResolution, scope: IRequestScope | undefined): IMemberOutcome {
   const { key, step, gate, outcome } = member;
   switch (outcome.kind) {
     case 'reused':
@@ -197,8 +241,12 @@ function memberOutcome(member: IMemberResolution): IMemberOutcome {
       return Object.freeze({ status: 'succeeded', key, step, gate, outcome });
     case 'skipped':
       return Object.freeze({ status: 'skipped', key, step, gate: outcome.gate });
-    case 'refused':
-      return Object.freeze({ status: outcome.disposition === 'cancelled' ? 'cancelled' : 'pending', key, step, gate, refused: outcome.refused, reason: outcome.reason });
+    case 'refused': {
+      const status = outcome.disposition === 'cancelled' ? 'cancelled' : 'pending';
+      // A pending member names the unsettled external operation that holds it back, when one does.
+      const blocked = status === 'pending' ? scope?.blocks.get(descriptorKey(outcome.refused)) : undefined;
+      return Object.freeze({ status, key, step, gate, refused: outcome.refused, reason: outcome.reason, ...(blocked === undefined ? {} : { blocked }) });
+    }
     case 'failed':
       return Object.freeze({ status: 'failed', key, step, gate, error: outcome.error });
     default: {
@@ -215,9 +263,33 @@ function discoveryReport(discovery: IDiscoveryOutcome): IDiscoveryReport {
     : discovery;
 }
 
+/**
+ * Every member's typed outcome in one pass. A member whose step a later pass
+ * did not re-present, because it settled in an earlier pass of the same
+ * request, keeps that earlier outcome.
+ */
+function passMembers(resolved: readonly IMemberResolution[], scope: IRequestScope | undefined, previous: readonly IMemberOutcome[] | undefined): readonly IMemberOutcome[] {
+  const earlier = new Map((previous ?? []).map((member) => [member.key, member]));
+  return Object.freeze(resolved.map((member) => {
+    const outcome = memberOutcome(member, scope);
+    const kept = outcome.status === 'pending' && scope?.settled.has(descriptorKey(outcome.refused)) === true ? earlier.get(outcome.key) : undefined;
+    return kept ?? outcome;
+  }));
+}
+
+/**
+ * The steps whose members settled in a pass without being held back by an
+ * unsettled external operation: failed members, whose step a later pass of
+ * the same request must not execute again (a failure is final for the run;
+ * only deferred work resumes, EXP-8 mechanism 3).
+ */
+function settledSteps(members: readonly IMemberOutcome[]): readonly string[] {
+  return members.flatMap((member) => member.status === 'failed' ? [descriptorKey(member.step)] : []);
+}
+
 /** Report one members request: discovery in Supervision's terms and every member's typed outcome. */
-function membersReport(step: string, resolved: IMembersResolution): IMembersReport {
-  return Object.freeze({ template: resolved.template, step, discovery: discoveryReport(resolved.discovery), members: Object.freeze(resolved.members.map(memberOutcome)) });
+function membersReport(step: string, resolved: IMembersResolution, scope: IRequestScope | undefined, previous?: readonly IMemberOutcome[]): IMembersReport {
+  return Object.freeze({ template: resolved.template, step, discovery: discoveryReport(resolved.discovery), members: passMembers(resolved.members, scope, previous) });
 }
 
 /**
@@ -246,12 +318,12 @@ function strictFoldOutcome(outcome: IFoldOutcome): IStrictFoldOutcome {
 }
 
 /** Report one fold request: discovery and every member in Supervision's terms, and the fold's typed outcome. */
-function foldReport(resolved: IFoldResolution): IFoldReport {
+function foldReport(resolved: IFoldResolution, scope: IRequestScope | undefined, previous?: readonly IMemberOutcome[]): IFoldReport {
   return Object.freeze({
     fold: resolved.outcome.step,
     over: resolved.over,
     discovery: discoveryReport(resolved.discovery),
-    members: Object.freeze(resolved.members.map(memberOutcome)),
+    members: passMembers(resolved.members, scope, previous),
     outcome: strictFoldOutcome(resolved.outcome),
   });
 }
@@ -282,12 +354,12 @@ function outcomeFoldRunOutcome(outcome: IOutcomeFoldOutcome): IOutcomeFoldRunOut
 }
 
 /** Report one outcome fold request: discovery and every member in Supervision's terms, and the fold's typed outcome. */
-function outcomeFoldReport(resolved: IOutcomeFoldResolution): IOutcomeFoldReport {
+function outcomeFoldReport(resolved: IOutcomeFoldResolution, scope: IRequestScope | undefined, previous?: readonly IMemberOutcome[]): IOutcomeFoldReport {
   return Object.freeze({
     fold: resolved.outcome.step,
     over: resolved.over,
     discovery: discoveryReport(resolved.discovery),
-    members: Object.freeze(resolved.members.map(memberOutcome)),
+    members: passMembers(resolved.members, scope, previous),
     outcome: outcomeFoldRunOutcome(resolved.outcome),
   });
 }
@@ -345,6 +417,20 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     }
     const permits = positiveCount(runOptions.permits, defaultPermits, 'permits');
     const window = positiveCount(runOptions.window, defaultWindow, 'window');
+    const deferral: IDeferralMode = runOptions.deferral ?? 'sleep';
+    if (deferral !== 'sleep' && deferral !== 'exit') {
+      throw new SupervisionError('invalid-request', 'A run\'s deferral mode must be "sleep" or "exit"');
+    }
+    const operationPorts = runOptions.operations;
+    if (operationPorts !== undefined && (typeof operationPorts !== 'object' || operationPorts === null || typeof Reflect.get(operationPorts, 'journal') !== 'object' || typeof Reflect.get(operationPorts, 'accounting') !== 'object')) {
+      throw new SupervisionError('invalid-request', 'A run\'s operation ports need a journal and an accounting port');
+    }
+    // The type requires the random source; untyped configuration without one is refused here.
+    const randomPort: unknown = operationPorts === undefined ? undefined : Reflect.get(operationPorts, 'random');
+    const random = operationPorts !== undefined && typeof randomPort === 'object' && randomPort !== null && typeof Reflect.get(randomPort, 'randomIdentifier') === 'function' ? operationPorts.random : undefined;
+    if (operationPorts !== undefined && (timer === undefined || random === undefined)) {
+      throw new SupervisionError('invalid-request', 'External operations need the Supervision\'s timer and random identifier source');
+    }
     const controller = runOptions.stop ?? createStopController();
     if (typeof controller !== 'object' || controller === null || typeof Reflect.get(controller, 'subscribe') !== 'function') {
       throw new SupervisionError('invalid-request', 'A run\'s stop must be a stop controller');
@@ -374,6 +460,24 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
      */
     const started = new Set<Promise<unknown>>();
 
+    /**
+     * The run's external operations, over the ports assembly supplied. Its
+     * observer position and diagnostics are the run's; it is created before
+     * the run state so the execution controls can reach it.
+     */
+    const engine: IOperationEngine | undefined = operationPorts === undefined || timer === undefined || random === undefined ? undefined : createOperationEngine({
+      context,
+      ports: operationPorts,
+      random,
+      timer,
+      report: (event, position) => {
+        state.report(event, position);
+      },
+      diagnose: (message) => {
+        diagnostics.push(message);
+      },
+    });
+
     const state: ISupervisedRun = {
       context,
       open: true,
@@ -383,6 +487,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       permits: createPermitPool(permits),
       lanes: createPermitPool(window),
       timer,
+      operations: engine,
       interruptions: [],
       diagnose(message: string): void {
         diagnostics.push(message);
@@ -411,7 +516,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         return state.hard.signal.aborted ? 'a hard stop took effect before the publication commit' : undefined;
       },
     };
-    const frame: IRunFrame = Object.freeze({ run: state, attempt: undefined, lane: undefined });
+    const frame: IRunFrame = Object.freeze({ run: state, attempt: undefined, lane: undefined, request: undefined });
     /** Access to this run's frames in the shared scope; a frame of another run is not this run's. */
     const frames: IFrameAccess = Object.freeze({
       current: (): IRunFrame | undefined => {
@@ -480,10 +585,20 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
           return closedDenial();
         }
         // The body (if any) whose execution demands this work, as its asynchronous context carries it.
-        const demandedBy = frames.current()?.attempt;
+        const caller = frames.current();
+        const demandedBy = caller?.attempt;
         const before = stopRefusal(demandedBy);
         if (before !== undefined) {
           return before;
+        }
+        // A later pass resumes only deferred work: a step that settled in an earlier pass of the request is not executed again.
+        if (caller?.request?.settled.has(descriptorKey(request.step)) === true) {
+          return Object.freeze({ kind: 'denied', reason: `run ${context.runId} settled this step in an earlier pass of the request` });
+        }
+        // A deferral not yet due, or an unknown outcome that may not be retried, holds the step pending before any claim (RUN-011/012).
+        const blocked = engine?.admit(request, caller?.request, state.stopped.signal.aborted);
+        if (blocked !== undefined) {
+          return blocked;
         }
         const decided = await raceAbort(Promise.resolve(policy.admit(request)), state.hard.signal);
         if (!state.open) {
@@ -586,6 +701,133 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       unsubscribe();
     }
 
+    /** Normal request passes in progress (not sleeping), and requests asleep until a deferral is due. */
+    const passes = { active: 0, sleeping: 0 };
+    /** The earliest "not before" time of deferred work this run left waiting, if any. */
+    let waitingUntil: number | undefined;
+
+    /**
+     * Release the writer lease once only deferred work remains: no normal
+     * request pass is active and at least one request waits for a deferral
+     * (EXP-8 resolution 1). Returns whether the lease is now free of this run.
+     */
+    function releaseIfOnlyDeferred(): boolean {
+      if (passes.active > 0) {
+        return false;
+      }
+      try {
+        writer.release();
+        return true;
+      } catch (error: unknown) {
+        diagnostics.push(`Run ${context.runId} could not release its writer for a deferral: ${describe(error)}`);
+        return false;
+      }
+    }
+
+    /** Wait until `until`, holding nothing; any stop ends the wait. Resolves whether the time came. */
+    function sleepForDeferral(until: number, clock: IRunTimer): Promise<boolean> {
+      return new Promise<boolean>((resolve) => {
+        let cancel: () => void = () => undefined;
+        const remove = state.stopped.signal.onAbort(() => {
+          cancel();
+          resolve(false);
+        });
+        cancel = clock.schedule(until, () => {
+          remove();
+          resolve(true);
+        }, { keepAlive: true });
+      });
+    }
+
+    /** Offer one wait event. */
+    function waitEvent(phase: IWaitEvent['phase'], until: number, released: boolean): void {
+      state.report(Object.freeze({ kind: 'wait', runId: context.runId, phase, until, released }), `wait ${phase}`);
+    }
+
+    /**
+     * Run one normal request in passes, each under a fresh lease and its own
+     * request scope. A pass that met no deferral is final. Otherwise, in exit
+     * mode or under stop intent, the request returns with the deferred work
+     * pending and the run reports the time it waits until; in sleep mode it
+     * releases the lease once only deferred work remains, waits for the
+     * earliest time and runs another pass, in which the deferred work is
+     * admitted again under the same operation identities. Each pass admits
+     * its executions under its own request key (see {@link passKey}).
+     */
+    async function inPasses<P, R>(requestKey: string, request: IPasses<P, R>): Promise<R> {
+      const callerKey: unknown = requestKey;
+      if (typeof callerKey === 'string' && callerKey.includes(passSeparator)) {
+        throw new SupervisionError('invalid-request', `A normal request's key may not contain the reserved pass separator ${passSeparator}`);
+      }
+      let previous: R | undefined;
+      let settled: ReadonlySet<string> = new Set();
+      for (let number = 1; ; number += 1) {
+        const lease = await leaseForPass();
+        const requestScope: IRequestScope = { lease, deferrals: [], blocks: new Map(), settled };
+        passes.active += 1;
+        let result: P;
+        try {
+          result = await scope.run({ run: state, attempt: undefined, lane: undefined, request: requestScope }, () => request.pass(lease, passKey(requestKey, number)));
+        } finally {
+          passes.active -= 1;
+          // Another request may be asleep for a deferral: once no pass is active, only deferred work remains.
+          if (passes.sleeping > 0) {
+            releaseIfOnlyDeferred();
+          }
+        }
+        const reported = request.report(result, requestScope, previous);
+        if (requestScope.deferrals.length === 0 || request.final(reported)) {
+          return reported;
+        }
+        previous = reported;
+        settled = new Set([...settled, ...request.settled(reported)]);
+        const until = Math.min(...requestScope.deferrals);
+        if (deferral === 'exit' || timer === undefined || state.stopped.signal.aborted) {
+          waitingUntil = Math.min(waitingUntil ?? until, until);
+          waitEvent(deferral === 'exit' || timer === undefined ? 'exiting' : 'stopped', until, releaseIfOnlyDeferred());
+          return reported;
+        }
+        passes.sleeping += 1;
+        let came: boolean;
+        let released: boolean;
+        try {
+          released = releaseIfOnlyDeferred();
+          waitEvent('sleeping', until, released);
+          came = await sleepForDeferral(until, timer);
+        } finally {
+          passes.sleeping -= 1;
+        }
+        if (!came) {
+          waitingUntil = Math.min(waitingUntil ?? until, until);
+          waitEvent('stopped', until, released);
+          return reported;
+        }
+        waitEvent('resumed', until, false);
+      }
+    }
+
+    /**
+     * The writer lease for one pass; the only place passes obtain it. Every
+     * pass, the first or one waking after a deferral's wait, takes it as every
+     * normal request does: through the run's wait for the writer lease under
+     * its `writerWait` policy (RUN-002 owner decision). While another process
+     * holds the lease the pass waits, taking it over through fenced takeover
+     * once it expires; with an operator deadline it fails with
+     * `WriterBusyError` there; with none (the default) it waits until the lease
+     * is granted or a stop ends the wait with `stopped`.
+     */
+    function leaseForPass(): Promise<IRunLease> {
+      return writerLease();
+    }
+
+    /** The run's operation engine, or the refusal of an operator action on a run without one. */
+    function operationsOf(action: string): IOperationEngine {
+      if (engine === undefined) {
+        throw new SupervisionError('invalid-request', `${action} needs operation ports and a timer, which this run was not given`);
+      }
+      return engine;
+    }
+
     /** Offer a post-work ordinary event; a failure there is a diagnostic. */
     function afterOrdinary(label: string, phase: IOrdinaryPhase): void {
       try {
@@ -601,36 +843,55 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         return state.open;
       },
       resolve(step: IBindingDescriptor, request: IRequestOptions): Promise<IResolutionOutcome> {
-        return within(async () => {
-          const lease = await writerLease();
-          const outcome = await resolution.resolve({ step, requestKey: request.requestKey, lease });
-          diagnostics.push(...outcome.diagnostics);
-          return outcome;
-        }, 'resolve');
+        return within(() => inPasses(request.requestKey, {
+          pass: async (lease, requestKey) => {
+            const outcome = await resolution.resolve({ step, requestKey, lease });
+            diagnostics.push(...outcome.diagnostics);
+            return outcome;
+          },
+          report: (outcome) => outcome,
+          // A failed step rejects the request instead of reporting, so nothing settles that a later pass could re-execute.
+          settled: () => [],
+          final: () => false,
+        }), 'resolve');
       },
       resolveMembers(target: IMembersTarget, request: IRequestOptions): Promise<IMembersReport> {
-        return within(async () => {
-          const lease = await writerLease();
-          const resolved = await resolution.resolveMembers({ template: target.template, step: target.step, requestKey: request.requestKey, lease });
-          diagnostics.push(...resolved.diagnostics);
-          return membersReport(target.step, resolved);
-        }, 'resolveMembers');
+        return within(() => inPasses(request.requestKey, {
+          pass: async (lease, requestKey) => {
+            const resolved = await resolution.resolveMembers({ template: target.template, step: target.step, requestKey, lease });
+            diagnostics.push(...resolved.diagnostics);
+            return resolved;
+          },
+          report: (resolved, requestScope, previous) => membersReport(target.step, resolved, requestScope, previous?.members),
+          settled: (reported) => settledSteps(reported.members),
+          final: () => false,
+        }), 'resolveMembers');
       },
       resolveFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IFoldReport> {
-        return within(async () => {
-          const lease = await writerLease();
-          const resolved = await resolution.resolveFold({ step, requestKey: request.requestKey, lease });
-          diagnostics.push(...resolved.diagnostics);
-          return foldReport(resolved);
-        }, 'resolveFold');
+        return within(() => inPasses(request.requestKey, {
+          pass: async (lease, requestKey) => {
+            const resolved = await resolution.resolveFold({ step, requestKey, lease });
+            diagnostics.push(...resolved.diagnostics);
+            return resolved;
+          },
+          report: (resolved, requestScope, previous) => foldReport(resolved, requestScope, previous?.members),
+          settled: (reported) => settledSteps(reported.members),
+          // A strict fold that has failed cannot complete by waiting: the deferred work stays for a later run.
+          final: (reported) => reported.outcome.status === 'failed',
+        }), 'resolveFold');
       },
       resolveOutcomeFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IOutcomeFoldReport> {
-        return within(async () => {
-          const lease = await writerLease();
-          const resolved = await resolution.resolveOutcomeFold({ step, requestKey: request.requestKey, lease });
-          diagnostics.push(...resolved.diagnostics);
-          return outcomeFoldReport(resolved);
-        }, 'resolveOutcomeFold');
+        return within(() => inPasses(request.requestKey, {
+          pass: async (lease, requestKey) => {
+            const resolved = await resolution.resolveOutcomeFold({ step, requestKey, lease });
+            diagnostics.push(...resolved.diagnostics);
+            return resolved;
+          },
+          report: (resolved, requestScope, previous) => outcomeFoldReport(resolved, requestScope, previous?.members),
+          settled: (reported) => settledSteps(reported.members),
+          // A population that cannot be established is not repaired by waiting.
+          final: (reported) => reported.outcome.status === 'failed',
+        }), 'resolveOutcomeFold');
       },
       check(step: IBindingDescriptor): Promise<ICheckOutcome> {
         return within(() => resolution.check({ step }), 'check');
@@ -670,6 +931,13 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
           throw refusal;
         }
       },
+      inspectOperations(query?: { readonly status?: IOperationStatus }): Promise<readonly IOperationView[]> {
+        return within(() => operationsOf('Inspecting operations').inspect(query?.status), 'inspectOperations');
+      },
+      settleOperation(settlement: IOperationSettlement): Promise<IOperationView> {
+        // An operator's settlement is recorded under the writer lease, obtained as any normal request obtains it.
+        return within(async () => operationsOf('Settling an operation').settle(settlement, await writerLease()), 'settleOperation');
+      },
     });
 
     let value: Awaited<T>;
@@ -690,6 +958,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       diagnostics: Object.freeze([...diagnostics]),
       stop: closingStop,
       interruptions: Object.freeze([...state.interruptions]),
+      waitingUntil,
     });
   }
 

@@ -300,9 +300,12 @@ export function acceptanceRecord(content: {
 /**
  * Build a stored attempt-ending record. `stopped` records that run
  * cancellation interrupted the attempt or discarded its output before the
- * publication commit (RUN-014/015); the other endings keep their M3 meaning.
+ * publication commit (RUN-014/015); `unsettled` that the body met an external
+ * operation deferred until a later time or with an unknown outcome, so the
+ * attempt ended without a result while its step stays pending (RUN-011/012);
+ * the other endings keep their M3 meaning.
  */
-export function endingRecord(content: { readonly ending: 'retained' | 'failed' | 'child-refused' | 'observer-failure' | 'stopped'; readonly detail: string; readonly reference?: ICompletedResultReference }): IVersionedRecord {
+export function endingRecord(content: { readonly ending: 'retained' | 'failed' | 'child-refused' | 'observer-failure' | 'stopped' | 'unsettled'; readonly detail: string; readonly reference?: ICompletedResultReference }): IVersionedRecord {
   return {
     format: endingFormat,
     formatVersion,

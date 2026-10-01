@@ -1,17 +1,18 @@
 /**
  * Node's implementation of the portable Machine host contracts. Durable SQLite
- * storage, the wall clock and the timer are separate factories so assembly
+ * storage, the wall clock, the timer and the random identifier source are separate factories so assembly
  * injects them only into the consumers that need them, leaving
  * {@link createNodeMachine} and its existing consumers unchanged.
  * {@link canonicalNodeLocation} names a store file canonically, so assembly
  * can recognize two handles over one file without reading the host itself.
  * @packageDocumentation
  */
-import type { IClockCapability, IMachine, ISqliteCapability, ITimerCapability } from '@microdelta/machine';
+import type { IClockCapability, IMachine, IRandomIdentifierCapability, ISqliteCapability, ITimerCapability } from '@microdelta/machine';
 
 import { _createNodeClockImplementation } from './node/clock.js';
 import { _canonicalNodeLocationImplementation } from './node/location.js';
 import { _createNodeMachineImplementation } from './node/index.js';
+import { _createNodeRandomImplementation } from './node/random.js';
 import { _createNodeSqliteImplementation } from './node/sqlite.js';
 import { _createNodeTimerImplementation } from './node/timer.js';
 
@@ -62,4 +63,13 @@ export function createNodeTimer(): ITimerCapability {
  */
 export function canonicalNodeLocation(location: string): string {
   return _canonicalNodeLocationImplementation(location);
+}
+
+/**
+ * Create Node's random identifier source: 128 bits from Node's
+ * cryptographically secure generator as 32 lowercase hexadecimal characters.
+ * @alpha
+ */
+export function createNodeRandom(): IRandomIdentifierCapability {
+  return _createNodeRandomImplementation();
 }

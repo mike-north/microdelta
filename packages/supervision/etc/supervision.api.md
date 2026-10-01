@@ -4,6 +4,7 @@
 
 ```ts
 
+import type { IAdmissionRequest } from '@microdelta/resolution';
 import type { IBindingDescriptor } from '@microdelta/definition';
 import type { ICheckOutcome } from '@microdelta/resolution';
 import type { ICompleteOutcomeFoldCoverage } from '@microdelta/resolution';
@@ -23,6 +24,12 @@ import type { IResolveRequest } from '@microdelta/resolution';
 import type { ResolutionError } from '@microdelta/resolution';
 
 // @alpha
+export const blocksCollection = "microdelta.supervision.blocks";
+
+// @alpha
+export const blocksFormat = "microdelta.supervision.blocks";
+
+// @alpha
 export function createStopController(options?: IStopControllerOptions): IStopController;
 
 // @alpha
@@ -33,6 +40,12 @@ export interface IAbortSignal {
     readonly aborted: boolean;
     onAbort(listener: () => void): () => void;
 }
+
+// @alpha
+export type IAttemptUsage = 'acknowledged' | 'unrecorded' | 'none';
+
+// @alpha
+export type IDeferralMode = 'sleep' | 'exit';
 
 // @alpha
 export type IDiscoveryReport = Extract<IDiscoveryOutcome, {
@@ -51,6 +64,37 @@ export interface IFoldReport {
     readonly members: readonly IMemberOutcome[];
     readonly outcome: IStrictFoldOutcome;
     readonly over: IBindingDescriptor;
+}
+
+// @alpha
+export interface IJournalEntry {
+    readonly fence: number;
+    readonly key: string;
+    readonly record: IJournalRecordValue;
+    readonly revision: number;
+}
+
+// @alpha
+export interface IJournalLocation {
+    readonly analysis: string;
+    readonly collection: string;
+    readonly environment: string;
+    readonly key: string;
+}
+
+// @alpha
+export interface IJournalRecordValue {
+    readonly content: unknown;
+    readonly format: string;
+    readonly formatVersion: number;
+}
+
+// @alpha
+export interface IJournalWriteRequest {
+    readonly collection: string;
+    readonly expectedRevision: number;
+    readonly key: string;
+    readonly record: IJournalRecordValue;
 }
 
 // @alpha
@@ -74,6 +118,7 @@ export type IMemberOutcome = {
     readonly gate: IGateEvidence | undefined;
     readonly refused: IBindingDescriptor;
     readonly reason: string;
+    readonly blocked?: IOperationBlock;
 } | {
     readonly status: 'failed';
     readonly key: string;
@@ -94,6 +139,186 @@ export interface IMembersReport {
 export interface IMembersTarget {
     readonly step: string;
     readonly template: string;
+}
+
+// @alpha
+export interface IOperationAccounting {
+    acknowledgeUsage(report: {
+        readonly environment: string;
+        readonly operation: string;
+        readonly requestAttempt: string;
+        readonly report: string;
+        readonly quantities: readonly IOperationQuantity[];
+    }): {
+        readonly kind: 'acknowledged' | 'duplicate' | 'conflict';
+    };
+    recordUsageIntent(intent: {
+        readonly environment: string;
+        readonly operation: string;
+        readonly requestAttempt: string;
+        readonly attribution: IOperationAttribution;
+    }): 'recorded' | 'duplicate';
+}
+
+// @alpha
+export interface IOperationAttribution {
+    readonly member: string | null;
+    readonly run: string;
+    readonly stepAttempt: string | null;
+}
+
+// @alpha
+export type IOperationBlock = {
+    readonly kind: 'deferred';
+    readonly operation: string;
+    readonly notBefore: number;
+} | {
+    readonly kind: 'unknown-outcome';
+    readonly operation: string;
+    readonly reason: 'not-repeat-safe' | 'policy-exhausted' | 'unrecorded';
+};
+
+// @alpha
+export interface IOperationEvent {
+    readonly at: number;
+    readonly kind: 'operation';
+    readonly member: string | undefined;
+    readonly name: string;
+    readonly notBefore: number | undefined;
+    readonly operation: string;
+    readonly phase: IOperationPhase;
+    readonly reason: IOperationReason | undefined;
+    readonly remote: IOperationRemoteState | undefined;
+    readonly requestAttempt: string | undefined;
+    readonly runId: string;
+    readonly status: IOperationStatus | IRequestAttemptStatus | undefined;
+    readonly stepAttempt: string | undefined;
+    readonly usage: readonly IOperationQuantity[] | undefined;
+}
+
+// @alpha
+export interface IOperationJournalPort {
+    commit(lease: {
+        readonly holder: string;
+        readonly fence: number;
+        readonly expiresAt: number;
+    }, request: {
+        readonly analysis: string;
+        readonly environment: string;
+        readonly writes: readonly IJournalWriteRequest[];
+    }): readonly IJournalEntry[];
+    list(query: {
+        readonly analysis: string;
+        readonly environment: string;
+        readonly collection: string;
+    }): readonly IJournalEntry[];
+    read(address: IJournalLocation): IJournalEntry | undefined;
+}
+
+// @alpha
+export type IOperationPhase = 'request-started' | 'request-settled' | 'usage-acknowledged' | 'usage-unrecorded' | 'retry-scheduled' | 'retry-started' | 'retry-exhausted' | 'blocked' | 'recovered' | 'resolved' | 'abandoned';
+
+// @alpha
+export interface IOperationQuantity {
+    readonly amount: number;
+    readonly unit: string;
+}
+
+// @alpha
+export type IOperationReason = 'rate-limited' | 'transient' | 'permanent' | 'lost-response' | 'not-repeat-safe' | 'policy-exhausted' | 'not-before' | 'stopped' | 'lease-lost' | 'recovered-after-crash' | 'unrecorded' | 'conflict' | 'operator';
+
+// @alpha
+export type IOperationRemoteState = 'cancelled' | 'running' | 'unknown';
+
+// @alpha
+export interface IOperationRequest<T> {
+    readonly binding: string;
+    cancel?(): Promise<'cancelled' | 'running'>;
+    readonly name: string;
+    perform(send: IOperationSend): Promise<IOperationResponse<T>>;
+    readonly providerIdempotency?: boolean;
+    readonly retry?: IOperationRetryPolicy;
+    readonly safeToRepeat?: boolean;
+}
+
+// @alpha
+export type IOperationResponse<T> = {
+    readonly kind: 'succeeded';
+    readonly value: T;
+    readonly usage?: IOperationUsage;
+} | {
+    readonly kind: 'failed';
+    readonly transient: boolean;
+    readonly error?: unknown;
+    readonly usage?: IOperationUsage;
+} | {
+    readonly kind: 'rate-limited';
+    readonly retryAt?: number;
+    readonly usage?: IOperationUsage;
+} | {
+    readonly kind: 'unknown';
+    readonly usage?: IOperationUsage;
+};
+
+// @alpha
+export interface IOperationRetryPolicy {
+    readonly backoffMilliseconds?: number;
+    readonly maxAttempts?: number;
+    readonly rateLimitRetries?: number;
+}
+
+// @alpha
+export interface IOperationSend {
+    readonly idempotencyKey: string | undefined;
+    readonly operation: string;
+    readonly requestAttempt: string;
+    readonly signal: IAbortSignal;
+}
+
+// @alpha
+export type IOperationSettlement = {
+    readonly action: 'resolve';
+    readonly operation: string;
+    readonly operator: string;
+    readonly outcome: 'succeeded' | 'failed';
+    readonly usage?: IOperationUsage;
+} | {
+    readonly action: 'abandon';
+    readonly operation: string;
+    readonly operator: string;
+};
+
+// @alpha
+export interface IOperationSettlementRecord {
+    readonly action: 'resolve' | 'abandon';
+    readonly at: number;
+    readonly operator: string;
+    readonly outcome: 'succeeded' | 'failed' | undefined;
+    readonly report: string | undefined;
+}
+
+// @alpha
+export type IOperationStatus = 'pending' | 'succeeded' | 'failed' | 'deferred' | 'unknown' | 'cancelled' | 'resolved' | 'abandoned';
+
+// @alpha
+export type IOperationSubject = IAdmissionRequest['subject'];
+
+// @alpha
+export interface IOperationUsage {
+    readonly quantities: readonly IOperationQuantity[];
+    readonly report: string;
+}
+
+// @alpha
+export interface IOperationView {
+    readonly attempts: readonly IRequestAttemptView[];
+    readonly member: string | undefined;
+    readonly name: string;
+    readonly notBefore: number | undefined;
+    readonly operation: string;
+    readonly settlement: IOperationSettlementRecord | undefined;
+    readonly status: IOperationStatus;
+    readonly subject: IOperationSubject;
 }
 
 // @alpha
@@ -131,6 +356,19 @@ export type IOutcomeFoldRunOutcome = {
 export type IRemoteState = 'cancelled' | 'running' | 'unknown';
 
 // @alpha
+export type IRequestAttemptStatus = 'pending' | 'succeeded' | 'failed' | 'rate-limited' | 'unknown' | 'cancelled' | 'not-sent';
+
+// @alpha
+export interface IRequestAttemptView {
+    readonly remote: IOperationRemoteState | undefined;
+    readonly requestAttempt: string;
+    readonly run: string;
+    readonly status: IRequestAttemptStatus;
+    readonly stepAttempt: string;
+    readonly usage: IAttemptUsage | undefined;
+}
+
+// @alpha
 export interface IRequestOptions {
     readonly requestKey: string;
 }
@@ -147,6 +385,9 @@ export interface IRun {
     assertDeclaredCall(operation: IRunOperationName): void;
     check(step: IBindingDescriptor): Promise<ICheckOutcome>;
     readonly context: IRunContext;
+    inspectOperations(query?: {
+        readonly status?: IOperationStatus;
+    }): Promise<readonly IOperationView[]>;
     readonly open: boolean;
     ordinary<T>(label: string, work: () => T | Promise<T>): Promise<Awaited<T>>;
     recover(step: IBindingDescriptor, request: IRequestOptions): Promise<IRecoveryResult>;
@@ -154,6 +395,7 @@ export interface IRun {
     resolveFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IFoldReport>;
     resolveMembers(target: IMembersTarget, request: IRequestOptions): Promise<IMembersReport>;
     resolveOutcomeFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IOutcomeFoldReport>;
+    settleOperation(settlement: IOperationSettlement): Promise<IOperationView>;
 }
 
 // @alpha
@@ -189,10 +431,11 @@ export type IRunEvent = {
     readonly label: string;
     readonly phase: 'remote-state';
     readonly remote: IRemoteState;
-};
+} | IOperationEvent | IWaitEvent;
 
 // @alpha
 export interface IRunExecution {
+    operation<T>(request: IOperationRequest<T>): Promise<T>;
     readonly runId: string;
     send<T>(request: ISendRequest<T>): Promise<T>;
     readonly signal: IAbortSignal;
@@ -210,14 +453,23 @@ export interface IRunObserver {
 }
 
 // @alpha
-export type IRunOperationName = 'check' | 'ordinary' | 'read' | 'recover' | 'resolve' | 'resolveFold' | 'resolveMembers' | 'resolveOutcomeFold';
+export type IRunOperationName = 'check' | 'inspectOperations' | 'ordinary' | 'read' | 'recover' | 'resolve' | 'resolveFold' | 'resolveMembers' | 'resolveOutcomeFold' | 'settleOperation';
+
+// @alpha
+export interface IRunOperationPorts {
+    readonly accounting: IOperationAccounting;
+    readonly journal: IOperationJournalPort;
+    readonly random: IRunRandom;
+}
 
 // @alpha
 export interface IRunOptions {
     readonly admission?: IExecutionAdmission;
     readonly analysis: string;
+    readonly deferral?: IDeferralMode;
     readonly environment: string;
     readonly observers?: readonly IRunObserver[];
+    readonly operations?: IRunOperationPorts;
     readonly permits?: number;
     readonly resolution: (ports: IResolutionPorts) => IResolution;
     readonly runId?: string;
@@ -228,12 +480,18 @@ export interface IRunOptions {
 }
 
 // @alpha
+export interface IRunRandom {
+    randomIdentifier(): string;
+}
+
+// @alpha
 export interface IRunResult<T> {
     readonly context: IRunContext;
     readonly diagnostics: readonly string[];
     readonly interruptions: readonly ISendInterruption[];
     readonly stop: IStopState;
     readonly value: T;
+    readonly waitingUntil: number | undefined;
 }
 
 // @alpha
@@ -344,12 +602,21 @@ export interface ISupervision {
 }
 
 // @alpha
-export type ISupervisionErrorCode = 'outside-run' | 'run-closed' | 'composition-phase' | 'observer-failure' | 'writer-busy' | 'invalid-request' | 'stopped' | 'undeclared-call';
+export type ISupervisionErrorCode = 'outside-run' | 'run-closed' | 'composition-phase' | 'observer-failure' | 'writer-busy' | 'invalid-request' | 'stopped' | 'operation-failed' | 'operation-deferred' | 'operation-unknown' | 'operation-unrecorded' | 'operation-resolved' | 'integrity' | 'undeclared-call';
 
 // @alpha
 export interface ISupervisionOptions {
     readonly context: IRunScopeCapability;
     readonly timer?: IRunTimer;
+}
+
+// @alpha
+export interface IWaitEvent {
+    readonly kind: 'wait';
+    readonly phase: 'sleeping' | 'exiting' | 'resumed' | 'stopped';
+    readonly released: boolean;
+    readonly runId: string;
+    readonly until: number;
 }
 
 // @alpha
@@ -378,6 +645,20 @@ export interface IWriterWaitOptions {
     readonly deadline?: number;
     readonly pollMilliseconds?: number;
 }
+
+// @alpha
+export const operationFormat = "microdelta.supervision.operation";
+
+// @alpha
+export const operationJournalDeclaration: {
+    readonly formats: readonly {
+        readonly format: string;
+        readonly versions: readonly number[];
+    }[];
+};
+
+// @alpha
+export const operationsCollection = "microdelta.supervision.operations";
 
 // @alpha
 export const ordinaryLifecycle: readonly IOrdinaryPhase[];

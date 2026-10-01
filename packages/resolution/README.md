@@ -43,7 +43,13 @@ Definition's `declarations()`. Callbacks receive:
 `createResolution(options).resolve({ step, requestKey, lease })`:
 
 1. **Candidates**: History results for the step's scoped subject and
-   compatibility version, latest publication first.
+   compatibility version, latest publication first: those published in the
+   run's environment and those a recorded promotion admits into it. A
+   promoted candidate keeps its original provenance, so its recorded
+   dependencies (for example a trial run's children or members) are read as
+   historical evidence of the same analysis only; every current dependency
+   is resolved, and executed if needed, in the run's own environment, and
+   the acceptance is recorded there (RUN-017).
 2. **Own evidence**: each candidate's actually called implementation, consumed
    inputs and called helpers are compared with current facts. A source's reads
    of its previous result are history and are not compared.
@@ -97,8 +103,15 @@ Definition's `declarations()`. Callbacks receive:
    forbids committing now, in the same synchronous turn as the commit. An
    interrupted execution, or output a hard stop discards before its commit,
    ends the attempt `interrupted` with a `stopped` ending and reports a
-   `refused` outcome with disposition `cancelled`. Without the port, work runs
-   unsupervised and every commit may proceed.
+   `refused` outcome with disposition `cancelled`. An `unsettled` execution
+   (its body met an external operation deferred until a later time, or with
+   an unknown outcome) ends the attempt `interrupted` with an `unsettled`
+   ending and reports a `refused` outcome with disposition `denied`, so the
+   step stays pending and a strict consumer waits. Each admitted body's
+   execution names its claimed attempt (scoped subject and History attempt
+   identity), by which Supervision addresses and correlates its external
+   operations. Without the port, work runs unsupervised and every commit may
+   proceed.
 
 The members of one members request, strict fold or outcome fold resolve concurrently
 within Run Supervision's bounded active window: Resolution presents each

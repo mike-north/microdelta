@@ -218,7 +218,8 @@ describe('observer positions (A-19, REUSE-009)', () => {
       expect(committed.error).toBeUndefined();
       expect(committed.outcome).toMatchObject({ kind: 'published' });
       published = committed.outcome === undefined ? '' : locatorOf(committed.outcome);
-      expect(committed.diagnostics).toEqual([expect.stringContaining('observer failure at publish')]);
+      // The diagnostic names the phase; the observer's own error text never enters it (RUN-013).
+      expect(committed.diagnostics).toEqual([expect.stringContaining('Lifecycle observer failed at publish')]);
       expect(world.summaries['person:ada']).toBe(1);
     } finally {
       session.close();

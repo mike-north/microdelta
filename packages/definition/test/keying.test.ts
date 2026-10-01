@@ -176,6 +176,26 @@ describe('keying rejections (COL-1)', () => {
     });
   });
 
+  test('COL-1, RUN-013: a custom key that throws rejects the snapshot with a diagnostic that never repeats the thrown text', () => {
+    const collection = source<IContributors>({ subject: 'c:secret', collection: { identity: 'key' }, run: () => ({ members: [], status: 'complete' }) });
+    const composition = compose({
+      scope: keyedScope,
+      steps: [{ slot: 'roster', declaration: collection }],
+      templates: [template({
+        slot: 'by-secret',
+        collection,
+        key: () => {
+          throw new Error('key lookup failed AUTHOR-SECRET-7e57');
+        },
+        steps: (member) => ({ p: member.source<string>({ subject: member.subject('secret'), run: () => 'p' }) }),
+      })],
+    });
+    const diagnostic = rejected(composition.keyMembers('by-secret', { members: [ada], status: 'complete' }));
+    expect(diagnostic).toMatchObject({ reason: 'key-function-failed', collection: 'roster', customKey: true });
+    expect(diagnostic.message).toContain('custom key threw');
+    expect(diagnostic.message).not.toContain('AUTHOR-SECRET-7e57');
+  });
+
   test('COL-1: a duplicate key rejects the whole snapshot, naming the collection, the key and the custom-key option', () => {
     const { composition } = buildKeyed();
     const result = composition.keyMembers('contributor', { members: [ada, ben, { ...ada, login: 'ada-2' }], status: 'complete' });

@@ -196,7 +196,9 @@ describe('tracked gates (acceptance 2)', () => {
     expect(report.members['person:ben']).toMatchObject({ status: 'failed', code: 'gate-failure' });
     expect(report.members['person:ben']?.message).toMatch(fault === 'throws' ? /threw/u : new RegExp(`returned ${fault}`, 'u'));
     if (fault === 'throws') {
+      // The author's error is the failure's cause; the framework message never repeats its text (RUN-013).
       expect(report.members['person:ben']?.cause).toBe('Error: gate lookup failed for ben');
+      expect(report.members['person:ben']?.message).not.toContain('gate lookup failed');
     }
     expect(report.members['person:ada']).toMatchObject({ status: 'succeeded' });
     expect(report.members['person:cy']).toMatchObject({ status: 'succeeded' });

@@ -368,7 +368,7 @@ function resetRuns(): void {
 }
 
 /** Expect a rejection with a ResolutionError of `code`. */
-async function failureOf(promise: Promise<unknown>, code: ResolutionError['code']): Promise<string> {
+async function failureOf(promise: Promise<unknown>, code: ResolutionError['code']): Promise<{ readonly message: string; readonly cause: string }> {
   let caught: unknown;
   try {
     await promise;
@@ -377,7 +377,8 @@ async function failureOf(promise: Promise<unknown>, code: ResolutionError['code'
   }
   expect(caught).toBeInstanceOf(ResolutionError);
   expect(caught instanceof ResolutionError ? caught.code : undefined).toBe(code);
-  return caught instanceof Error ? caught.message : '';
+  const cause: unknown = caught instanceof Error ? caught.cause : undefined;
+  return { message: caught instanceof Error ? caught.message : '', cause: cause instanceof Error ? cause.message : '' };
 }
 
 describe('supplied step argument lists are observed', () => {
@@ -485,7 +486,7 @@ describe('forwarded paths', () => {
       expect(checked.misses.map((item) => item.reason)).toEqual(['changed']);
       expect(checked.misses[0]?.detail).toMatch(/call 0 argument 0 forwards input data at nested\.a, which no longer has that shape/u);
       // Executing the parent cannot make the call either: the path does not resolve now.
-      expect(await failureOf(resolve('deep'), 'execution-failure')).toMatch(/no longer has that shape/u);
+      expect((await failureOf(resolve('deep'), 'execution-failure')).cause).toMatch(/no longer has that shape/u);
     });
     expect(runs.read).toBe(0);
   });
@@ -495,9 +496,11 @@ describe('unsettled calls at publication', () => {
   test('a body that throws while a call is in flight reports its own failure once that call settles, even when the call fails too', async () => {
     resetRuns();
     await session(freshLocation(), {}, async ({ history, resolve }) => {
-      const message = await failureOf(resolve('throwing'), 'execution-failure');
-      expect(message).toMatch(/body failure/u);
-      expect(message).not.toMatch(/child failure/u);
+      const { message, cause } = await failureOf(resolve('throwing'), 'execution-failure');
+      // The body's own error is the cause; the framework message never repeats author text (RUN-013).
+      expect(cause).toMatch(/body failure/u);
+      expect(cause).not.toMatch(/child failure/u);
+      expect(message).not.toMatch(/body failure|child failure/u);
       expect(history.findCandidates({ analysis: scope, environment: 'env:arguments', subject: 'throwing', version: 1 })).toEqual([]);
     });
     // The in-flight call ran to its own end before the request reported.
@@ -508,7 +511,7 @@ describe('unsettled calls at publication', () => {
     resetRuns();
     const location = freshLocation();
     await session(location, { dangling }, async ({ history, resolve }) => {
-      const message = await failureOf(resolve('dangling'), 'execution-failure');
+      const { message } = await failureOf(resolve('dangling'), 'execution-failure');
       expect(message).toMatch(/settled/u);
       expect(history.findCandidates({ analysis: scope, environment: 'env:arguments', subject: 'dangling', version: 1 })).toEqual([]);
     });

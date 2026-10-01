@@ -148,7 +148,7 @@ describe('planned kills through independent worker processes', () => {
     expect(message).toMatch(/requested SIGKILL after commit of publish #2/u);
     expect(message).toMatch(/status 3, signal null/u);
     expect(message).toMatch(/fault trace: none/u);
-    expect(message).toMatch(/worker error: \w+ \(code observer-failure\): .*acceptance observer failure at execute/u);
+    expect(message).toMatch(/worker error: \w+ \(code observer-failure\): Lifecycle observer failed at execute for .*person:ada/u);
   });
 
   test('without a planned fault, a failing author body is an ordinary status-3 result with its error line', () => {

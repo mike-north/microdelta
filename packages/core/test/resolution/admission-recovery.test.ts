@@ -284,7 +284,7 @@ describe('lifecycle observers', () => {
     await withSession(location, async (session) => {
       const outcome = await session.resolve(session.contributors.steps['person:ada'].activity);
       expect(outcome.kind).toBe('published');
-      expect(outcome.diagnostics).toEqual([expect.stringContaining('observer failure at publish')]);
+      expect(outcome.diagnostics).toEqual([expect.stringContaining('Lifecycle observer failed at publish')]);
       expect(session.history.readCurrent({ analysis: session.contributors.composition.scope, environment: 'env:fixture', subject: 'activity:acme/widget:2026-Q1:person:ada' })?.locator).toBe(referenceOf(outcome));
     }, {}, { observer: { throwAt: 'publish' } });
   });
@@ -382,7 +382,8 @@ describe('lifecycle observers', () => {
       }
       expect(caught).toBeInstanceOf(ResolutionError);
       expect((caught as ResolutionError).code).toBe('execution-failure');
-      expect((caught as ResolutionError).message).toMatch(/fixture summary failure/u);
+      // The body's own error stays the cause, unreplaced by the observer's.
+      expect((caught as ResolutionError).cause instanceof Error ? ((caught as ResolutionError).cause as Error).message : '').toMatch(/fixture summary failure/u);
       expect(phases(session, 'summary').at(-1)).toBe('abandon');
       expect(session.resolution.recover({ step: session.contributors.steps['person:ada'].summary, requestKey }).kind).toBe('unsuccessful');
     }, {}, { observer: { throwAt: 'abandon' } });

@@ -9,7 +9,10 @@
  * contents; usage units in events are validated identifiers.
  *
  * The planted value appears in every provider response, every provider error
- * message and every request binding (see `provider.ts` and `fixture.ts`).
+ * message and every request binding (see `provider.ts` and `fixture.ts`), and
+ * in the error an author's body throws under the `author-throws` plan. A
+ * framework failure names the step and the failure kind only; the author's
+ * error stays available to the caller as the failure's `cause`.
  *
  * The conformance test is type-level evidence in a non-published location:
  * History's operation journal port and Accounting's durable adapter satisfy
@@ -29,7 +32,7 @@ import type { IOperationAccounting, IOperationJournalPort, IOperationResponse } 
 
 import { createWorld, installWorld } from './fixture.js';
 import type { IWorld } from './fixture.js';
-import { fakeTimer, openSession, tempStores, until } from './harness.js';
+import { fakeTimer, openSession, statuses, tempStores, until } from './harness.js';
 import type { IFakeTimer, IOperationStores } from './harness.js';
 import { planted } from './provider.js';
 import { driveUntilSettled, members, received } from './support.js';
@@ -83,6 +86,29 @@ describe('event privacy (RUN-013)', () => {
       expect(JSON.stringify(reported)).not.toContain(marker);
       expect((await session.start({}, (run) => run.inspectOperations()).done).value.length).toBe(5);
       expect(JSON.stringify((await session.start({}, (run) => run.inspectOperations()).done).value)).not.toContain(marker);
+    } finally {
+      session.close();
+    }
+  });
+
+  test('an author error carrying the planted value reaches the caller only as the failure\'s cause: never its message, an event or a diagnostic', async () => {
+    world.plans['pr-1'] = 'author-throws';
+    const session = openSession(stores, timer);
+    try {
+      const started = members(session);
+      const result = await started.done;
+      const failed = result.value.members.find((member) => member.key === 'pr-1');
+      if (failed?.status !== 'failed') {
+        throw new Error(`expected pr-1 to fail, observed ${String(failed?.status)}`);
+      }
+      expect(failed.error.code).toBe('execution-failure');
+      // The framework message names the failing step; the author's own error is its cause, unchanged.
+      expect(failed.error.message).toContain('assess');
+      expect(failed.error.message).not.toContain(marker);
+      expect(failed.error.cause instanceof Error ? failed.error.cause.message : undefined).toBe(`author assessment of pr-1 rejected ${planted}`);
+      expect(JSON.stringify(started.events)).not.toContain(marker);
+      expect(JSON.stringify(result.diagnostics)).not.toContain(marker);
+      expect(statuses(result.value.members)).toEqual({ 'pr-1': 'failed', 'pr-2': 'succeeded', 'pr-3': 'succeeded', 'pr-4': 'succeeded', 'pr-5': 'succeeded' });
     } finally {
       session.close();
     }

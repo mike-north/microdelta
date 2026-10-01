@@ -31,7 +31,7 @@ import { sourceOutcome } from '../../src/index.js';
 import type { IAuthoring, IAuthoringFamily, IComposition, ISourceOutcome, IStepDescriptor, ITrackedView } from '../../src/index.js';
 import { gates } from '../stop/support.js';
 import type { IGates } from '../stop/support.js';
-import { fakeProvider } from './provider.js';
+import { fakeProvider, planted } from './provider.js';
 import type { IAssessment, IFakeProvider } from './provider.js';
 
 /** The analysis scope of the fixture composition. */
@@ -63,9 +63,12 @@ export interface IRoster {
  * - `detached`: return at once, leaving an `assess` call that starts only
  *   after the `<key>:late` gate opens (author code that kept the controls);
  * - `twin`: start two `assess` calls at the same address in the same turn
- *   and note both outcomes.
+ *   and note both outcomes;
+ * - `author-throws`: call `assess`, then throw the author's own error, whose
+ *   message carries the planted value (author text that no framework message,
+ *   event or diagnostic may repeat).
  */
-export type IPlan = 'single' | 'catch-retry' | 'two-ops' | 'concurrent' | 'detached' | 'twin';
+export type IPlan = 'single' | 'catch-retry' | 'two-ops' | 'concurrent' | 'detached' | 'twin' | 'author-throws';
 
 /** Per-member operation declarations a test chooses. */
 export interface IOperationOptions {
@@ -226,6 +229,10 @@ async function assess(key: string): Promise<IAssessment> {
         world.log.push(`caught-detached:${key}:${codeOf(error)}`);
       });
       return { key, verdict: 'detached' };
+    }
+    case 'author-throws': {
+      await operation('assess', key);
+      throw new Error(`author assessment of ${key} rejected ${planted}`);
     }
     default: {
       const exhaustive: never = plan;

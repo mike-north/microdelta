@@ -18,7 +18,7 @@
 import { describe, expect, test } from '@jest/globals';
 import type { IResolution, IResolutionOutcome } from '@microdelta/resolution';
 
-import { SupervisionError, createSupervision, operationsCollection } from '../src/index.js';
+import { SupervisionError, createStopController, createSupervision, operationsCollection } from '../src/index.js';
 import type {
   IJournalEntry,
   IJournalLocation,
@@ -31,6 +31,8 @@ import type {
   IRunEvent,
   IRunOptions,
   IRunRandom,
+  IStopController,
+  IWaitEvent,
 } from '../src/index.js';
 import { T0, admissionFor, codeOf, fakeTimer, grantingWriter, nodeScopes, stepOf } from './support.js';
 
@@ -311,6 +313,107 @@ describe('usage acknowledgment (ACC-005, ACC-007)', () => {
     expect(phases(outcome.events)).toContain('usage-unrecorded:conflict');
     expect(outcome.diagnostics.filter((line) => line.startsWith('usage-conflict:'))).toHaveLength(1);
     expect(accounting.reports).toEqual(['provider:r-1']);
+  });
+});
+
+describe('sleep-mode deferral waits (RUN-011, RUN-014)', () => {
+  /** The short deferral an Accounting intent that is not durable schedules: one second after the first pass. */
+  const T = T0 + 1_000;
+
+  /** One sleep-mode run whose only operation defers once (its Accounting intent fails), with the waits it offered. */
+  interface ISleepingRun {
+    readonly timer: ReturnType<typeof fakeTimer>;
+    readonly accounting: IMemoryAccounting;
+    readonly sent: { count: number };
+    readonly waits: IWaitEvent[];
+    readonly done: Promise<{ readonly waitingUntil: number | undefined }>;
+  }
+
+  /** Start the run; `onWait` sees every wait event synchronously, as an observer does. */
+  function sleepingRun(onWait: (event: IWaitEvent, run: ISleepingRun) => void, stop: IStopController = createStopController()): ISleepingRun {
+    const journal = memoryJournal();
+    const accounting = memoryAccounting();
+    accounting.failIntents = true;
+    const timer = fakeTimer();
+    const supervision = createSupervision({ context: nodeScopes, timer });
+    const sent = { count: 0 };
+    const double = executing(async () => {
+      await supervision.execution().operation(operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent)).catch(() => undefined);
+    });
+    const waits: IWaitEvent[] = [];
+    const started: { run?: ISleepingRun } = {};
+    const done = supervision.run({
+      analysis: 'analysis:test',
+      environment: 'env:test',
+      runId: 'run:test',
+      deferral: 'sleep',
+      stop,
+      resolution: double.factory,
+      writer: grantingWriter,
+      operations: { journal, accounting, random: countingRandom() },
+      observers: [{
+        observe: (event) => {
+          if (event.kind === 'wait' && started.run !== undefined) {
+            waits.push(event);
+            onWait(event, started.run);
+          }
+        },
+      }],
+    }, (run) => run.resolve(stepOf('assess', 'pr-1'), { requestKey: 'request:1' }));
+    started.run = { timer, accounting, sent, waits, done };
+    return started.run;
+  }
+
+  /** Timers still able to fire and keep a host process alive: armed with keep-alive and neither fired nor cancelled. */
+  function liveKeepAlive(timer: ReturnType<typeof fakeTimer>): readonly number[] {
+    return timer.scheduled.filter((entry) => entry.keepAlive && !entry.cancelled && !entry.fired).map((entry) => entry.at);
+  }
+
+  test('the resumed event reports that the run released its lease for the wait, as the sleeping event did', async () => {
+    const run = sleepingRun((event, self) => {
+      if (event.phase === 'sleeping') {
+        self.accounting.failIntents = false;
+        // The sleep arms its timer in this same turn; wake it in the next.
+        queueMicrotask(() => {
+          self.timer.advance(1_000);
+        });
+      }
+    });
+    await run.done;
+    expect(run.sent.count).toBe(1);
+    expect(run.waits.map((event) => [event.phase, event.until, event.released])).toEqual([['sleeping', T, true], ['resumed', T, true]]);
+  });
+
+  test('a hard stop requested while the run offers its sleeping event ends the wait without arming the sleep timer', async () => {
+    const stop = createStopController();
+    const run = sleepingRun((event) => {
+      if (event.phase === 'sleeping') {
+        stop.request({ level: 'hard' });
+      }
+    }, stop);
+    const result = await run.done;
+    expect(result.waitingUntil).toBe(T);
+    expect(run.waits.map((event) => [event.phase, event.released])).toEqual([['sleeping', true], ['stopped', true]]);
+    // Nothing remains that could keep a host process alive until T.
+    expect(liveKeepAlive(run.timer)).toEqual([]);
+    expect(run.sent.count).toBe(0);
+  });
+
+  test('a stop requested during the sleep cancels the armed sleep timer', async () => {
+    const stop = createStopController();
+    const run = sleepingRun((event) => {
+      if (event.phase === 'sleeping') {
+        // After the sleep has armed its timer.
+        queueMicrotask(() => {
+          stop.request({ level: 'soft' });
+        });
+      }
+    }, stop);
+    const result = await run.done;
+    expect(result.waitingUntil).toBe(T);
+    expect(run.waits.map((event) => event.phase)).toEqual(['sleeping', 'stopped']);
+    expect(run.timer.scheduled.filter((entry) => entry.at === T).map((entry) => entry.cancelled)).toEqual([true]);
+    expect(liveKeepAlive(run.timer)).toEqual([]);
   });
 });
 

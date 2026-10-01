@@ -1,9 +1,11 @@
 /**
- * Diagnostics for values thrown by author callbacks that Definition invokes
- * (custom keys, slot subject functions) or by libraries it calls. Anything can
- * be thrown, including values with no string form or with hostile accessors,
- * so describing a thrown value must never run author code or throw itself:
- * the caller's own typed rejection must always be what escapes.
+ * Diagnostics for values thrown by libraries Definition calls (Value's
+ * decoding). Anything can be thrown, including values with no string form or
+ * with hostile accessors, so describing a thrown value must never run author
+ * code or throw itself: the caller's own typed rejection must always be what
+ * escapes. What an author callback throws (a custom key, a slot subject
+ * function) is never described: a diagnostic names fields and keys, not their
+ * contents (RUN-013), and a rejection keeps the thrown value as its cause.
  */
 
 /**

@@ -15,15 +15,24 @@
  *
  * `hardStop` requests a hard stop as soon as the provider receives the
  * target's request. The target is pr-1 unless the script names another member.
+ * `hardStopOn: 'sleeping'` instead requests it synchronously while the run
+ * offers its `sleeping` wait event, as an observer reacting to it would.
+ *
+ * Supervision's clock is a controlled clock at `now` unless `clock: 'node'`
+ * selects Node's real timer, whose keep-alive timers hold the process open as
+ * they would in production: a stage that must show the process is not kept
+ * alive by a pending wait uses it.
  */
 import { writeSync } from 'node:fs';
 
+import { createNodeTimer } from '@microdelta/machine-node';
 import { createStopController } from '@microdelta/supervision';
 import type { IDeferralMode, IOperationAccounting, IRunEvent } from '@microdelta/supervision';
 
 import { createWorld, installWorld } from './fixture.js';
-import type { IOperationOptions } from './fixture.js';
+import type { IOperationOptions, IPlan } from './fixture.js';
 import { fakeTimer, openSession } from './harness.js';
+import type { IFakeTimer } from './harness.js';
 import type { IScriptEntry } from './provider.js';
 
 /** A complete worker invocation. */
@@ -42,8 +51,14 @@ export interface IWorkerScript {
   readonly action: 'members' | 'inspect';
   readonly kill?: 'before-send' | 'after-send' | 'after-usage';
   readonly hardStop?: boolean;
+  /** Request a hard stop synchronously when the run offers this wait phase. */
+  readonly hardStopOn?: 'sleeping';
   /** The member whose request the kill or hard stop targets; pr-1 when absent. */
   readonly target?: string;
+  /** Supervision's clock: the controlled clock at `now` (the default), or Node's real timer. */
+  readonly clock?: 'controlled' | 'node';
+  /** Body plans by member key; `single` when absent. */
+  readonly plans?: Readonly<Record<string, IPlan>>;
 }
 
 /** What one worker reports. */
@@ -52,6 +67,8 @@ export interface IWorkerReport {
   readonly blocked?: Readonly<Record<string, unknown>>;
   readonly waitingUntil?: number | null;
   readonly diagnostics?: readonly string[];
+  /** Each failed member's typed failure, as a consumer prints it: its code and framework message. */
+  readonly failures?: Readonly<Record<string, { readonly code: string; readonly message: string }>>;
   readonly events: readonly IRunEvent[];
   readonly operations: readonly unknown[];
   readonly usage: unknown;
@@ -67,12 +84,29 @@ if (!isScript(parsed)) {
   throw new Error('malformed worker script');
 }
 const script = parsed;
-const timer = fakeTimer(script.now);
+
+/** Node's real timer in the controlled timer's shape; nothing in a worker lists or advances it. */
+function nodeTimer(): IFakeTimer {
+  const real = createNodeTimer();
+  return {
+    currentEpochMilliseconds: () => real.currentEpochMilliseconds(),
+    schedule: (epochMilliseconds, callback, options) => real.schedule(epochMilliseconds, callback, options),
+    pending: () => {
+      throw new Error('a real timer does not list its pending callbacks');
+    },
+    advanceTo: () => {
+      throw new Error('a real timer cannot be advanced');
+    },
+  };
+}
+
+const timer = script.clock === 'node' ? nodeTimer() : fakeTimer(script.now);
 const world = installWorld(createWorld(() => timer.currentEpochMilliseconds(), undefined, script.ledger));
 for (const entry of script.scripts ?? []) {
   world.provider.script(entry.name, entry.key, entry.entries);
 }
 Object.assign(world.options, script.options ?? {});
+Object.assign(world.plans, script.plans ?? {});
 world.cancel = script.cancel;
 const stop = createStopController();
 const target = script.target ?? 'pr-1';
@@ -134,7 +168,12 @@ const session = openSession({ history: script.history, accounting: script.accoun
 const environment = script.environment ?? 'env:production';
 let report: IWorkerReport;
 if (script.action === 'members') {
-  const started = session.start({ runId: script.runId, environment, deferral: script.deferral ?? 'exit', stop, permits: 1, window: 1 }, (run) => run.resolveMembers({ template: 'pr', step: 'assess' }, { requestKey: `${script.runId}:${String(script.now)}:members` }));
+  const observe = (event: IRunEvent): void => {
+    if (script.hardStopOn !== undefined && event.kind === 'wait' && event.phase === script.hardStopOn) {
+      stop.request({ level: 'hard' });
+    }
+  };
+  const started = session.start({ runId: script.runId, environment, deferral: script.deferral ?? 'exit', stop, permits: 1, window: 1, observe }, (run) => run.resolveMembers({ template: 'pr', step: 'assess' }, { requestKey: `${script.runId}:${String(script.now)}:members` }));
   const result = await started.done;
   const operations = (await session.start({ runId: `${script.runId}:inspect`, environment }, (run) => run.inspectOperations()).done).value;
   report = {
@@ -142,6 +181,7 @@ if (script.action === 'members') {
     blocked: Object.fromEntries(result.value.members.flatMap((member) => member.status === 'pending' && member.blocked !== undefined ? [[member.key, member.blocked]] : [])),
     waitingUntil: result.waitingUntil ?? null,
     diagnostics: result.diagnostics,
+    failures: Object.fromEntries(result.value.members.flatMap((member) => member.status === 'failed' ? [[member.key, { code: member.error.code, message: member.error.message }]] : [])),
     events: started.events,
     operations,
     usage: session.usage(environment),

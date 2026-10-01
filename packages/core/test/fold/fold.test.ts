@@ -183,7 +183,7 @@ describe('readiness order (acceptance 1)', () => {
     const location = freshLocation();
     world.admissionFaults = ['person:ben'];
     const report = await runFold(location);
-    expect(report.fold).toEqual({ status: 'error', code: 'admission-failure', message: expect.stringMatching(/admission service unavailable for person:ben/u), cause: 'Error: admission service unavailable for person:ben' });
+    expect(report.fold).toEqual({ status: 'error', code: 'admission-failure', message: expect.stringMatching(/^Admission failed for .*person:ben/u), cause: 'Error: admission service unavailable for person:ben' });
     expect(logged(report, 'report')).toEqual([]);
     expect(report.admissions.filter((entry) => entry.startsWith('fold:'))).toEqual([]);
     expect(foldCandidates(location)).toEqual([]);

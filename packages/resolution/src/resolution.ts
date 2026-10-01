@@ -517,8 +517,17 @@ function correspondenceMiss(candidate: ICompletedResultReference, recorded: IBin
   return miss(candidate, 'correspondence', `provenance names ${stepKey(recorded)}, not the current ${stepKey(current)}`);
 }
 
-/** A readable diagnostic from any thrown value. */
-function describe(error: unknown): string {
+/**
+ * The text of a failure the framework itself raised (History, or Definition
+ * validating a caller's descriptor), for a message, a diagnostic or a stored
+ * ending. Never applied to a value that author or caller code threw or
+ * produced (bodies, source checks, finality hooks, gates, admission,
+ * lifecycle observers) or to a failure detaching an author's returned data:
+ * those failures name the step and the failure kind only, and keep the
+ * thrown value as the failure's `cause` (RUN-013: diagnostics name fields
+ * and keys, not their contents).
+ */
+function frameworkDetail(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
@@ -870,7 +879,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     try {
       resolution = composition.resolve(step);
     } catch (error: unknown) {
-      throw new ResolutionError('invalid-request', `Malformed step descriptor: ${describe(error)}`, error);
+      throw new ResolutionError('invalid-request', `Malformed step descriptor: ${frameworkDetail(error)}`, error);
     }
     if (resolution.status !== 'bound' || resolution.target.role !== 'step') {
       throw new ResolutionError('unbound-step', `Step ${stepKey(resolution.descriptor)} has no unique current declaration (${resolution.status})`);
@@ -946,9 +955,9 @@ export function createResolution<TInputs extends object, THelpers extends object
       observer.observe(event);
     } catch (error: unknown) {
       if (preExecution.has(phase)) {
-        throw new ResolutionError('observer-failure', `Lifecycle observer failed at ${phase}: ${describe(error)}`, error);
+        throw new ResolutionError('observer-failure', `Lifecycle observer failed at ${phase} for ${stepKey(step)}`, error);
       }
-      evidence.diagnostics.push(`Lifecycle observer failed at ${phase} for ${stepKey(step)} after commit: ${describe(error)}`);
+      evidence.diagnostics.push(`Lifecycle observer failed at ${phase} for ${stepKey(step)} after commit`);
     }
   }
 
@@ -1093,7 +1102,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     try {
       decision = await admission.admit(Object.freeze({ step, kind, subject, reason }));
     } catch (error: unknown) {
-      throw new ResolutionError('admission-failure', `Admission failed for ${stepKey(step)}: ${describe(error)}`, error);
+      throw new ResolutionError('admission-failure', `Admission failed for ${stepKey(step)}`, error);
     }
     const decided: unknown = typeof decision === 'object' && decision !== null ? Reflect.get(decision, 'kind') : undefined;
     if (decided === 'admitted') {
@@ -1122,7 +1131,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     try {
       history.abandonAttempt(leaseOf(request), { attemptId, outcome, evidence: endingRecord(ending) });
     } catch (error: unknown) {
-      evidence.diagnostics.push(`Attempt ${String(attemptId)} of ${stepKey(step)} could not be ended: ${describe(error)}`);
+      evidence.diagnostics.push(`Attempt ${String(attemptId)} of ${stepKey(step)} could not be ended: ${frameworkDetail(error)}`);
       return false;
     }
     if (ending.ending !== 'retained') {
@@ -1207,7 +1216,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     try {
       emit(request, evidence, step, 'claim');
     } catch (error: unknown) {
-      abandon(request, evidence, step, attemptId, 'failed', { ending: 'observer-failure', detail: describe(error) });
+      abandon(request, evidence, step, attemptId, 'failed', { ending: 'observer-failure', detail: 'a lifecycle observer threw at claim' });
       throw error;
     }
     return attemptId;
@@ -1261,7 +1270,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     try {
       history.stageAttempt(lease, { attemptId, payload: content.payload, provenance: provenanceRecord(content.provenance), dependencies: content.dependencies });
     } catch (error: unknown) {
-      abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(error) });
+      abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: frameworkDetail(error) });
       if (error instanceof TypeError) {
         throw new ResolutionError('unsupported-result', `Step ${stepKey(step)} produced unsupported result data: ${error.message}`, error);
       }
@@ -1335,7 +1344,7 @@ export function createResolution<TInputs extends object, THelpers extends object
           return done({ kind: 'refused', refused: step, reason: evaluated.reason, disposition: evaluated.kind === 'interrupted' ? 'cancelled' : 'denied' });
         }
         if (evaluated.kind === 'threw') {
-          throw new ResolutionError('policy-failure', `Current finality of ${stepKey(step)} failed: ${describe(evaluated.error)}`, evaluated.error);
+          throw new ResolutionError('policy-failure', `Current finality of ${stepKey(step)} threw`, evaluated.error);
         }
         const decided = evaluated.value;
         if (typeof decided.value !== 'boolean') {
@@ -1383,11 +1392,11 @@ export function createResolution<TInputs extends object, THelpers extends object
       }
       if (executed.kind === 'threw') {
         const error = executed.error;
-        abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(error) });
+        abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'the source check threw' });
         if (error instanceof ResolutionError) {
           throw error;
         }
-        throw new ResolutionError('execution-failure', `Source check of ${stepKey(step)} failed: ${describe(error)}`, error);
+        throw new ResolutionError('execution-failure', `Source check of ${stepKey(step)} threw`, error);
       }
       const ran = executed.value;
       const { minted } = ran.value;
@@ -1410,7 +1419,7 @@ export function createResolution<TInputs extends object, THelpers extends object
         try {
           result = accept(request, evidence, step, 'check', eligible.reference, { basis: 'check', step, observations: ran.observations }, []);
         } catch (error: unknown) {
-          abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(error) });
+          abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: frameworkDetail(error) });
           throw error;
         }
         // The admitted claim produced no new result: end it with the retention as its evidence.
@@ -1420,8 +1429,8 @@ export function createResolution<TInputs extends object, THelpers extends object
         return done(result);
       }
       if (ran.value.detachError !== undefined) {
-        abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(ran.value.detachError) });
-        throw new ResolutionError('unsupported-result', `Source ${stepKey(step)} returned unsupported fresh data: ${describe(ran.value.detachError)}`, ran.value.detachError);
+        abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'the source check returned unsupported fresh data' });
+        throw new ResolutionError('unsupported-result', `Source ${stepKey(step)} returned unsupported fresh data`, ran.value.detachError);
       }
       return done(publish(request, evidence, step, attemptId, {
         payload: ran.value.data,
@@ -2020,16 +2029,16 @@ export function createResolution<TInputs extends object, THelpers extends object
     }
     if (executed.kind === 'threw') {
       const error = executed.error;
-      abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(error) });
+      abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'the supplied step threw' });
       if (error instanceof ResolutionError) {
         throw error;
       }
-      throw new ResolutionError('execution-failure', `Supplied step ${describeSlot(step)} for ${subject.subject} failed: ${describe(error)}`, error);
+      throw new ResolutionError('execution-failure', `Supplied step ${describeSlot(step)} for ${subject.subject} threw`, error);
     }
     const ran = executed.value;
     if (ran.value.detachError !== undefined) {
-      abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(ran.value.detachError) });
-      throw new ResolutionError('unsupported-result', `Supplied step ${describeSlot(step)} returned unsupported data: ${describe(ran.value.detachError)}`, ran.value.detachError);
+      abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'the supplied step returned unsupported data' });
+      throw new ResolutionError('unsupported-result', `Supplied step ${describeSlot(step)} returned unsupported data`, ran.value.detachError);
     }
     return done(publish(request, evidence, step, attemptId, {
       payload: ran.value.data,
@@ -2151,11 +2160,11 @@ export function createResolution<TInputs extends object, THelpers extends object
         return done({ kind: 'refused', refused: refusal.step, reason: refusal.reason, disposition: refusal.disposition });
       }
       const cause = failed?.error ?? error;
-      abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(cause) });
+      abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'the body failed' });
       if (cause instanceof ResolutionError && cause.code !== 'execution-failure') {
         throw cause;
       }
-      throw new ResolutionError('execution-failure', `Body of ${stepKey(step)} failed: ${describe(cause)}`, cause);
+      throw new ResolutionError('execution-failure', `Body of ${stepKey(step)} failed`, cause);
     }
     const ran = executed.value;
     const unsettled = frame.unsettledAtReturn ?? 0;
@@ -2174,12 +2183,12 @@ export function createResolution<TInputs extends object, THelpers extends object
     if (frame.failed !== undefined) {
       // A body that swallowed a failed child cannot publish a result missing that child's current evidence.
       const cause = frame.failed.error;
-      abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(cause) });
-      throw cause instanceof ResolutionError ? cause : new ResolutionError('execution-failure', `A child of ${stepKey(step)} failed: ${describe(cause)}`, cause);
+      abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'a declared call failed' });
+      throw cause instanceof ResolutionError ? cause : new ResolutionError('execution-failure', `A child of ${stepKey(step)} failed`, cause);
     }
     if (ran.value.detachError !== undefined) {
-      abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(ran.value.detachError) });
-      throw new ResolutionError('unsupported-result', `Body of ${stepKey(step)} returned unsupported data: ${describe(ran.value.detachError)}`, ran.value.detachError);
+      abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'the body returned unsupported data' });
+      throw new ResolutionError('unsupported-result', `Body of ${stepKey(step)} returned unsupported data`, ran.value.detachError);
     }
     if (frame.calls.size > 0) {
       // Nested calls carry version-2 witnesses: record them in call order. Every
@@ -2480,7 +2489,7 @@ export function createResolution<TInputs extends object, THelpers extends object
         return {
           status: 'failed',
           error: outcome.reason === 'threw'
-            ? new ResolutionError('gate-failure', `The gate of template ${template} for member ${key} threw: ${describe(outcome.error)}`, outcome.error)
+            ? new ResolutionError('gate-failure', `The gate of template ${template} for member ${key} threw`, outcome.error)
             : new ResolutionError('gate-failure', `The gate of template ${template} for member ${key} returned ${outcome.received}, not a boolean; only an explicit false skips an instance`),
         };
       default: {
@@ -3110,16 +3119,16 @@ export function createResolution<TInputs extends object, THelpers extends object
     }
     if (executed.kind === 'threw') {
       const error = executed.error;
-      abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(error) });
+      abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'the body threw' });
       if (error instanceof ResolutionError) {
         throw error;
       }
-      throw new ResolutionError('execution-failure', `Body of ${name} ${stepKey(step)} failed: ${describe(error)}`, error);
+      throw new ResolutionError('execution-failure', `Body of ${name} ${stepKey(step)} threw`, error);
     }
     const ran = executed.value;
     if (ran.value.detachError !== undefined) {
-      abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(ran.value.detachError) });
-      throw new ResolutionError('unsupported-result', `Body of ${name} ${stepKey(step)} returned unsupported data: ${describe(ran.value.detachError)}`, ran.value.detachError);
+      abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'the body returned unsupported data' });
+      throw new ResolutionError('unsupported-result', `Body of ${name} ${stepKey(step)} returned unsupported data`, ran.value.detachError);
     }
     return done(publish(request, evidence, step, attemptId, {
       payload: ran.value.data,

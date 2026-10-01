@@ -33,7 +33,7 @@ const suites = Object.freeze(['source-policy.test.js', 'summary-validation.test.
 const controls = [
   { name: 'source candidates skip their own implementation and input validation', file: 'resolution.js', anchor: "if (comparison.kind === 'equal') {", replacement: 'if (true) {' },
   { name: 'a false finality answer retains', file: 'resolution.js', anchor: 'if (decided.value) {', replacement: 'if (true) {' },
-  { name: 'a throwing finality hook becomes acceptance', file: 'resolution.js', anchor: "throw new ResolutionError('policy-failure', `Current finality of ${stepKey(step)} failed: ${describe(error)}`, error);", replacement: 'decided = { value: true, observations: [] };' },
+  { name: 'a throwing finality hook becomes acceptance', file: 'resolution.js', anchor: "throw new ResolutionError('policy-failure', `Current finality of ${stepKey(step)} threw`, evaluated.error);", replacement: 'decided = { value: true, observations: [] };' },
   { name: 'a non-boolean finality answer is accepted', file: 'resolution.js', anchor: "if (typeof decided.value !== 'boolean') {", replacement: 'if (false) {' },
   { name: 'retention is not tied to its own eligible carrier', file: 'resolution.js', anchor: 'if (eligible === undefined || held === undefined || held.token !== token || held.reference.locator !== eligible.reference.locator) {', replacement: 'if (eligible === undefined) {' },
   { name: 'look-alike envelopes are treated as controls', file: 'outcome.js', anchor: 'minted.get(value) : undefined;', replacement: '(minted.get(value) ?? value) : undefined;' },
@@ -58,7 +58,7 @@ const controls = [
   { name: 'supported provenance need not carry its own implementation evidence', file: 'evidence.js', anchor: 'if (!observations.some(isOwnImplementation)) {', replacement: 'if (false) {' },
   { name: 'supported source provenance may carry child edges', file: 'evidence.js', anchor: "if (kind === 'source' && children.length > 0) {", replacement: 'if (false) {' },
   { name: 'an unsuccessful attempt ending is not announced as abandon', file: 'resolution.js', anchor: "if (ending.ending !== 'retained') {", replacement: 'if (false) {' },
-  { name: 'an ending History refused is still announced', file: 'resolution.js', anchor: 'could not be ended: ${describe(error)}`);', replacement: "could not be ended: ${describe(error)}`); emit(request, evidence, step, 'abandon');" },
+  { name: 'an ending History refused is still announced', file: 'resolution.js', anchor: 'could not be ended: ${frameworkDetail(error)}`);', replacement: "could not be ended: ${frameworkDetail(error)}`); emit(request, evidence, step, 'abandon');" },
   { name: 'a post-commit observer failure fails the call', file: 'resolution.js', anchor: 'if (preExecution.has(phase)) {', replacement: 'if (true) {' },
 ];
 

@@ -19,7 +19,11 @@
  *   after T under the same operation identity, with new request attempt,
  *   step attempt and run identities;
  * - a hard stop's remote state is durable for the next process;
- * - no process writes a planted value to stdout or stderr.
+ * - a hard stop requested as the run starts its deferral sleep leaves nothing
+ *   that keeps the process alive: on Node's real timer it exits long before
+ *   the deferral's time (A-13, RUN-014);
+ * - no process writes a planted value to stdout or stderr, including one an
+ *   author put in its own error.
  *
  * This proves the single-host process-termination scope only, not power loss.
  *
@@ -214,6 +218,21 @@ describe('durable remote state after a hard stop (RUN-014)', () => {
   });
 });
 
+describe('a hard stop at the start of a deferral sleep (A-13, RUN-014)', () => {
+  test('a hard stop requested while the run offers its sleeping event lets the process exit long before the deferral time, on Node\'s real timer', () => {
+    const retryMilliseconds = 20_000;
+    const before = Date.now();
+    const report = clean({ now: before, runId: 'run:sleep-stop', action: 'members', deferral: 'sleep', clock: 'node', hardStopOn: 'sleeping', scripts: [{ name: 'assess', key: 'pr-1', entries: ['rate-limit:20000'] }] });
+    const elapsed = Date.now() - before;
+    expect(report.events.flatMap((event) => event.kind === 'wait' ? [`${event.phase}:${String(event.released)}`] : [])).toEqual(['sleeping:true', 'stopped:true']);
+    expect(report.statuses).toEqual({ 'pr-1': 'pending', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
+    // The deferral stays durable for a later process: the run reports the time it waits until.
+    expect(report.waitingUntil).toBeGreaterThanOrEqual(before + retryMilliseconds);
+    // Nothing kept the process alive until that time; a process start takes well under half of it.
+    expect(elapsed).toBeLessThan(retryMilliseconds / 2);
+  }, 60_000);
+});
+
 describe('privacy of process output (RUN-013)', () => {
   test('no stage of a mixed workload writes the planted value to stdout or stderr', () => {
     outputs.length = 0;
@@ -229,6 +248,18 @@ describe('privacy of process output (RUN-013)', () => {
     clean({ now: T0 + hour, runId: 'run:E', environment: 'env:trial', action: 'inspect' });
     expect(outputs.join('').length).toBeGreaterThan(0);
     expect(planted).toContain('c0ffee');
+    for (const output of outputs) {
+      expect(output).not.toContain('c0ffee');
+    }
+  });
+
+  test('an author error carrying the planted value fails its member with a typed failure whose message, and the process output, never repeat it', () => {
+    outputs.length = 0;
+    const report = clean({ now: T0, runId: 'run:author', action: 'members', plans: { 'pr-1': 'author-throws' } });
+    expect(report.statuses).toEqual({ 'pr-1': 'failed', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
+    // The framework message names the step and the failure kind.
+    expect(report.failures?.['pr-1']).toEqual({ code: 'execution-failure', message: expect.stringContaining('assess') });
+    expect(outputs.join('').length).toBeGreaterThan(0);
     for (const output of outputs) {
       expect(output).not.toContain('c0ffee');
     }

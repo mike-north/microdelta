@@ -407,7 +407,8 @@ export function slotSubject(scope: string, subject: ISubjectCallback, arguments_
   try {
     computed = Reflect.apply(subject, undefined, [derived]);
   } catch (error: unknown) {
-    return reject('invalid-subject', `The slot subject function failed: ${describe(error)}`);
+    // The author's error is the cause; the message never repeats its text (RUN-013).
+    return reject('invalid-subject', 'The slot subject function threw.', error);
   }
   if (typeof computed !== 'string' || computed.length === 0) {
     return reject('invalid-subject', 'A slot subject function must return a complete nonempty subject string.');
@@ -424,7 +425,11 @@ function decodeDerived(encoded: string, position: number): unknown {
   }
 }
 
-/** A readable diagnostic from any thrown value, computed without running author code or throwing. */
+/**
+ * A readable diagnostic from a library failure (Value's decoding), computed
+ * without running author code or throwing. Never applied to what an author
+ * callback threw: that is a rejection's cause, not its message (RUN-013).
+ */
 function describe(error: unknown): string {
   return thrownDetail(error);
 }

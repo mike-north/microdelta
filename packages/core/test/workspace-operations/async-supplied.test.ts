@@ -47,6 +47,15 @@ interface IHelpers {
   readonly doubleLater: (value: number) => Promise<IDoubled>;
 }
 
+/** The innermost cause of a failure: the value author code threw, beneath every framework failure wrapping it. */
+function rootCause(error: unknown): unknown {
+  let current = error;
+  while (current instanceof ResolutionError && current.cause !== undefined) {
+    current = current.cause;
+  }
+  return current;
+}
+
 /** What the helper does in this test, and how often its body ran. */
 const world = { fail: false, calls: 0 };
 
@@ -136,8 +145,10 @@ describe('asynchronous supplied steps (CMP-7, EXP-8 resolution 3)', () => {
     }
     expect(failure).toBeInstanceOf(ResolutionError);
     expect(failure instanceof ResolutionError ? failure.code : undefined).toBe('execution-failure');
-    // The rejection is reported as the cause; the message names it and no result exists to reuse.
-    expect(failure instanceof Error ? failure.message : '').toContain('the doubling service refused the request');
+    // The rejection is reported as the cause, never repeated in the message (RUN-013), and no result exists to reuse.
+    const thrown = rootCause(failure);
+    expect(thrown instanceof Error ? thrown.message : '').toBe('the doubling service refused the request');
+    expect(failure instanceof Error ? failure.message : '').not.toContain('the doubling service refused the request');
     world.fail = false;
     expect(await resolveTotal(compose())).toEqual({ kind: 'published', data: { total: 42 } });
     expect(world.calls).toBe(2);

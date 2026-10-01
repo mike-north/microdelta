@@ -29,6 +29,13 @@ import type { ITrackedView } from '@microdelta/tracking';
 /** The analysis scope of the fixture composition. */
 export const analysis = 'contribution-report:acme/widget';
 
+/**
+ * A value planted in every error the fixture's author callbacks throw (and
+ * the session's admission and observer doubles): author text that no
+ * framework message, event, diagnostic or stored record may repeat (RUN-013).
+ */
+export const authorSecret = 'AUTHOR-SECRET-7e57';
+
 /** The two explicitly selected contributor keys. */
 export type IMemberKey = 'person:ada' | 'person:ben';
 
@@ -242,7 +249,7 @@ function checkActivity(previous: IPreviousResult<IActivity> | undefined, config:
     case 'return-raw-data':
       return forged<ISourceOutcome<IActivity>>(copy(world.remote[key]));
     case 'throw':
-      throw new Error('fixture source unavailable');
+      throw new Error(`fixture source unavailable ${authorSecret}`);
     default: {
       const exhaustive: never = policy;
       return exhaustive;
@@ -258,7 +265,7 @@ function acceptActivity(previous: IPreviousResult<IActivity>, config: ITrackedVi
   }
   const policy = world.finality[key];
   if (policy === 'throw') {
-    throw new Error('fixture finality policy unavailable');
+    throw new Error(`fixture finality policy unavailable ${authorSecret}`);
   }
   return policy === 'non-boolean' ? 'yes' : policy === 'final';
 }
@@ -272,7 +279,7 @@ function summarize(activity: IResultView<IActivity>, format: ITrackedView<IForma
   world.summaries[key] += 1;
   if (world.summaryThrows[key]) {
     world.beforeSummaryThrows?.();
-    throw new Error('fixture summary failure');
+    throw new Error(`fixture summary failure ${authorSecret}`);
   }
   let merged = 0;
   const authored = activity.pullRequests.length;

@@ -26,7 +26,7 @@ import { createTrackingObserver } from '@microdelta/tracking';
 
 import { controlledClock, observedSqlite, openHistory } from '../durable-history/support.js';
 import type { IObservedSqlite } from '../durable-history/support.js';
-import { bindingSlots, composeContributors } from './fixture.js';
+import { authorSecret, bindingSlots, composeContributors } from './fixture.js';
 import type { IContributors, IMemberKey, IVariation } from './fixture.js';
 
 /** History's environment for every session. */
@@ -113,7 +113,7 @@ export function openSession(location: string, variation: IVariation = {}, plans:
       admit(request: IAdmissionRequest): IAdmissionDecision {
         admissions.push(request);
         if (plans.admission?.fail === true) {
-          throw new Error('admission service unavailable');
+          throw new Error(`admission service unavailable ${authorSecret}`);
         }
         const denied = plans.admission?.deny?.some((rule) => rule.memberKey === request.step.memberKey && rule.slot === request.step.slot) === true;
         return denied ? { kind: 'denied', reason: 'fixture budget exhausted' } : { kind: 'admitted' };
@@ -123,7 +123,7 @@ export function openSession(location: string, variation: IVariation = {}, plans:
       observe(event: ILifecycleEvent): void {
         events.push(event);
         if (plans.observer?.throwAt === event.phase) {
-          throw new Error(`observer failure at ${event.phase}`);
+          throw new Error(`observer failure at ${event.phase} ${authorSecret}`);
         }
       },
     },

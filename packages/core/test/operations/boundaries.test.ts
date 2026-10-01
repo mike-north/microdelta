@@ -118,6 +118,8 @@ describe('the writer lease while a request sleeps (EXP-8 resolution 1)', () => {
       const result = await started.done;
       expect(statuses(result.value[0].members)).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
       expect(result.value[1].kind).toBe('published');
+      // The wait began holding the lease and the run released it during the wait: the resumed event reports that release.
+      expect(started.events.flatMap((event) => event.kind === 'wait' ? [`${event.phase}:${String(event.released)}`] : [])).toEqual(['sleeping:false', 'resumed:true']);
     } finally {
       session.close();
     }

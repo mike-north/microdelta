@@ -26,7 +26,7 @@ import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
 import type { IWriterLease } from '@microdelta/history';
 
 import { adaExpected } from './expected.js';
-import { baseWorld, outcomeOf, referenceOf, scenario, subjectOf } from './harness.js';
+import { baseWorld, environment, outcomeOf, referenceOf, scenario, subjectOf } from './harness.js';
 import type { IProcessRun, IScenario } from './harness.js';
 import { outlastStoredLease } from './lease-expiry.js';
 
@@ -220,7 +220,7 @@ describe('publication-kill-boundaries (A-09) through a real summary invocation',
     expect(committed).toBeDefined();
     expect(committed).not.toBe(referenceOf(cold, 'person:ada'));
     expect(state.old).toEqual({ name: 'Ada', authored: 3, merged: 2, reviews: 5, sentence: adaExpected.sentence });
-    const acceptancesBefore = s.inspect((history) => history.readAcceptances({ kind: 'completed-result', locator: committed ?? '' }).length);
+    const acceptancesBefore = s.inspect((history) => history.readAcceptances({ kind: 'completed-result', locator: committed ?? '' }, environment).length);
 
     // The killed process's writer row is still recorded; recovery must not touch it.
     const writerBefore = storedLease();
@@ -232,7 +232,7 @@ describe('publication-kill-boundaries (A-09) through a real summary invocation',
     expect(recovered.admissions).toEqual([]);
     expectNoWriterActivity(recovered);
     expect(storedLease()).toEqual(writerBefore);
-    expect(s.inspect((history) => history.readAcceptances({ kind: 'completed-result', locator: committed ?? '' }).length)).toBe(acceptancesBefore);
+    expect(s.inspect((history) => history.readAcceptances({ kind: 'completed-result', locator: committed ?? '' }, environment).length)).toBe(acceptancesBefore);
     s.inspect((history) => {
       expect(history.reader.readSubtree({ kind: 'completed-result', locator: committed ?? '' }, [])).toEqual(adaMerged);
     });

@@ -14,6 +14,8 @@
  * - `observer-failure`: an observer threw before ordinary work began, so that call did not proceed (REUSE-009).
  * - `writer-unavailable`: the run's writer port could not provide storage's single-writer lease for a storage-mutating request.
  * - `invalid-request`: a run or request was malformed, for example an empty environment or ordinary-work label.
+ * - `stopped`: stop intent refused or aborted a send, a permit wait or a wait for a time (RUN-014). The
+ *   step attempt it belonged to can no longer publish; its body may let this propagate.
  * @alpha
  */
 export type ISupervisionErrorCode =
@@ -22,7 +24,8 @@ export type ISupervisionErrorCode =
   | 'composition-phase'
   | 'observer-failure'
   | 'writer-unavailable'
-  | 'invalid-request';
+  | 'invalid-request'
+  | 'stopped';
 
 /**
  * A failed supervision request. An underlying failure, when there is one, is

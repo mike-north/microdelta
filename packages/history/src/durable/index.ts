@@ -1,9 +1,17 @@
 /**
  * History's durable SQLite authority: the single consistency owner for
  * attempts, the single logical writer, atomic publication, current pointers,
- * immutable completed results and separate acceptance records (PUB-001–004,
- * RES-002–007, ARC-007). It owns every SQL statement and lifecycle decision
- * over injected Machine capabilities; Node access stays in the host adapter.
+ * immutable completed results, separate acceptance records, recorded
+ * promotions and Run Supervision's operation journal (PUB-001–004,
+ * RES-002–007, ARC-007, RUN-011/012/017). It owns every SQL statement and
+ * lifecycle decision over injected Machine capabilities; Node access stays in
+ * the host adapter.
+ *
+ * Every record lives in one environment namespace of one analysis. A result
+ * is admissible in the environment that published it and, only through a
+ * recorded promotion, in another environment of the same analysis: there it
+ * may be a candidate, a dependency or an acceptance target, while keeping its
+ * own exact reference, and nothing else crosses environments.
  *
  * Transition and recovery outcomes (each row is one IMMEDIATE transaction):
  *
@@ -14,9 +22,12 @@
  * | stage | `staged` content and dependencies | attempt stays `allocated` | candidate evidence only, never a result |
  * | publish | result, index, provenance, `completed`, current pointer | attempt stays `staged` | complete result; recover by key |
  * | abandon | `failed`/`interrupted` with evidence | attempt unchanged | attempt ended without result |
- * | accept | acceptance record naming an existing result | no change | record retained; result untouched |
+ * | accept | acceptance record in the accepting environment naming an existing result | no change | record retained; result untouched |
+ * | promote | promotion record naming exact results for a target environment | no change, identity never issued | results admitted there; nothing else changes |
+ * | journal commit | one immutable revision per write (see `journal.ts`) | no revision, no sequence issued | every revision durable |
  *
- * It decides no reuse eligibility or freshness and interprets no provenance.
+ * It decides no reuse eligibility or freshness and interprets no provenance,
+ * promotion evidence or journal record.
  * This is single-file process-termination scope, not a concurrency, power-loss
  * or distributed-time guarantee.
  * @packageDocumentation
@@ -36,11 +47,15 @@ import type {
   IDurableHistory,
   IDurableHistoryOptions,
   IHistoryScope,
+  IJournalDeclaration,
+  IOperationJournal,
+  IPromotionQuery,
+  IPromotionRecord,
+  IPromotionRequest,
   IRecoveryOutcome,
   IResultVerification,
   IScopedSubject,
   IStageRequest,
-  IVersionedRecord,
   IVersionedSubject,
   IWriterAcquisition,
   IWriterAcquisitionRequest,
@@ -54,6 +69,8 @@ import {
   StaleWriterError,
 } from './errors.js';
 import { parseReference, referenceFor } from './locator.js';
+import { createJournalStore } from './journal.js';
+import { historyScope, integer, loadRecord, requireName, requireNonnegative, requirePositive, safeSum, storeRecord, text } from './records.js';
 import { initializeSchema } from './schema.js';
 import { buildIndex, createSelectedIndex, indexVersion } from './selected-index.js';
 
@@ -63,52 +80,12 @@ const sql = String.raw;
 /** The only payload encoding History stores for completed results. */
 const payloadEncoding = 'MDS1';
 
-/** One versioned record in its stored canonical form. */
-interface IStoredRecord {
-  readonly format: string;
-  readonly formatVersion: number;
-  readonly content: string;
-}
-
 /** The durable writer row. */
 interface IWriterRow {
   readonly lastFence: number;
   readonly holder: string | null;
   readonly expiresAt: number;
   readonly timeHighWater: number;
-}
-
-/** Require a non-empty string argument. */
-function requireName(value: unknown, name: string): string {
-  if (typeof value !== 'string' || value.length === 0) {
-    throw new TypeError(`${name} must be a non-empty string`);
-  }
-  return value;
-}
-
-/** Require a positive safe-integer argument. */
-function requirePositive(value: unknown, name: string): number {
-  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value <= 0) {
-    throw new TypeError(`${name} must be a positive safe integer`);
-  }
-  return value;
-}
-
-/** Require a nonnegative safe-integer argument. */
-function requireNonnegative(value: unknown, name: string): number {
-  if (typeof value !== 'number' || !Number.isSafeInteger(value) || value < 0) {
-    throw new TypeError(`${name} must be a nonnegative safe integer`);
-  }
-  return value;
-}
-
-/** Add two safe integers or fail rather than round. */
-function safeSum(left: number, right: number, name: string): number {
-  const sum = left + right;
-  if (!Number.isSafeInteger(sum)) {
-    throw new RangeError(`${name} exceeds the safe integer range`);
-  }
-  return sum;
 }
 
 /** Copy and validate a scoped subject argument. */
@@ -129,47 +106,6 @@ function attemptRequest(value: IAttemptRequest): IAttemptRequest {
 /** Validate a presented lease's shape; authority is checked against storage separately. */
 function leaseArgument(lease: IWriterLease): IWriterLease {
   return { holder: requireName(lease.holder, 'lease holder'), fence: requirePositive(lease.fence, 'lease fence'), expiresAt: requireNonnegative(lease.expiresAt, 'lease expiry') };
-}
-
-/** Validate and canonicalize an owner-defined versioned record. */
-function storeRecord(record: IVersionedRecord, name: string): IStoredRecord {
-  return {
-    format: requireName(record.format, `${name} format`),
-    formatVersion: requirePositive(record.formatVersion, `${name} format version`),
-    content: encodeSnapshot(record.content),
-  };
-}
-
-/** Decode a stored versioned record into frozen data, or fail as corruption. */
-function loadRecord(format: unknown, formatVersion: unknown, content: unknown, name: string): IVersionedRecord {
-  if (typeof format !== 'string' || format.length === 0 || typeof formatVersion !== 'number' || !Number.isSafeInteger(formatVersion) || formatVersion <= 0 || typeof content !== 'string') {
-    throw new HistoryIntegrityError(`Stored ${name} has a malformed version tag`);
-  }
-  let decoded: unknown;
-  try {
-    decoded = decodeSnapshot(content);
-  } catch (error: unknown) {
-    throw new HistoryIntegrityError(`Stored ${name} is not canonical MDS1: ${error instanceof Error ? error.message : String(error)}`);
-  }
-  return Object.freeze({ format, formatVersion, content: decoded });
-}
-
-/** Narrow a stored cell to text. */
-function text(row: ISqliteRow, column: string): string {
-  const value = row[column];
-  if (typeof value !== 'string') {
-    throw new HistoryIntegrityError(`Stored History column ${column} is not text`);
-  }
-  return value;
-}
-
-/** Narrow a stored cell to a safe integer. */
-function integer(row: ISqliteRow, column: string): number {
-  const value = row[column];
-  if (typeof value !== 'number' || !Number.isSafeInteger(value)) {
-    throw new HistoryIntegrityError(`Stored History column ${column} is not an integer`);
-  }
-  return value;
 }
 
 /** Narrow a stored attempt state. */
@@ -202,10 +138,11 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
     writer: connection.prepare(sql`/* writer */ SELECT last_fence, holder, expires_at, time_high_water FROM history_writer WHERE singleton = 1`),
     observeTime: connection.prepare(sql`/* writer */ UPDATE history_writer SET time_high_water = ? WHERE singleton = 1`),
     setHolder: connection.prepare(sql`/* writer */ UPDATE history_writer SET last_fence = ?, holder = ?, expires_at = ? WHERE singleton = 1`),
-    sequences: connection.prepare(sql`/* sequence */ SELECT last_attempt, last_publication, last_acceptance FROM history_sequences WHERE singleton = 1`),
+    sequences: connection.prepare(sql`/* sequence */ SELECT last_attempt, last_publication, last_acceptance, last_promotion FROM history_sequences WHERE singleton = 1`),
     setAttemptSequence: connection.prepare(sql`/* allocate */ UPDATE history_sequences SET last_attempt = ? WHERE singleton = 1`),
     setPublicationSequence: connection.prepare(sql`/* publish */ UPDATE history_sequences SET last_publication = ? WHERE singleton = 1`),
     setAcceptanceSequence: connection.prepare(sql`/* accept */ UPDATE history_sequences SET last_acceptance = ? WHERE singleton = 1`),
+    setPromotionSequence: connection.prepare(sql`/* promote */ UPDATE history_sequences SET last_promotion = ? WHERE singleton = 1`),
     attemptByKey: connection.prepare(sql`/* attempt */ SELECT * FROM history_attempts WHERE analysis = ? AND environment = ? AND subject = ? AND attempt_key = ?`),
     attemptById: connection.prepare(sql`/* attempt */ SELECT * FROM history_attempts WHERE attempt_id = ?`),
     insertAttempt: connection.prepare(sql`/* allocate */ INSERT INTO history_attempts
@@ -230,19 +167,37 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
       FROM history_results r LEFT JOIN history_attempts a ON a.attempt_id = r.result_id WHERE r.result_id = ?`),
     envelope: connection.prepare(sql`/* envelope */ SELECT result_id, analysis, environment, subject, version, publication, encoding, index_version,
       provenance_format, provenance_version, provenance FROM history_results WHERE result_id = ?`),
+    // Results admissible in the subject's environment: published there, or named by a promotion into it.
     candidates: connection.prepare(sql`/* candidates */ SELECT result_id, analysis, environment, subject, version, publication, encoding, index_version,
-      provenance_format, provenance_version, provenance FROM history_results
-      WHERE analysis = ? AND environment = ? AND subject = ? AND version = ? ORDER BY publication DESC`),
+      provenance_format, provenance_version, provenance FROM history_results r
+      WHERE r.analysis = ? AND r.subject = ? AND r.version = ?
+        AND (r.environment = ? OR EXISTS (SELECT 1 FROM history_promotion_results pr JOIN history_promotions p ON p.promotion_id = pr.promotion_id
+          WHERE pr.result_id = r.result_id AND p.analysis = r.analysis AND p.environment = ?))
+      ORDER BY publication DESC`),
     dependencies: connection.prepare(sql`/* envelope */ SELECT d.position, d.dependency_id, r.result_id AS present, r.analysis, r.environment
       FROM history_dependencies d LEFT JOIN history_results r ON r.result_id = d.dependency_id WHERE d.attempt_id = ? ORDER BY d.position`),
     current: connection.prepare(sql`/* current */ SELECT c.result_id, r.result_id AS present
       FROM history_current c LEFT JOIN history_results r ON r.result_id = c.result_id AND r.analysis = c.analysis AND r.environment = c.environment AND r.subject = c.subject
       WHERE c.analysis = ? AND c.environment = ? AND c.subject = ?`),
-    insertAcceptance: connection.prepare(sql`/* accept */ INSERT INTO history_acceptances (acceptance_id, result_id, fence, evidence_format, evidence_version, evidence) VALUES (?, ?, ?, ?, ?, ?)`),
+    insertAcceptance: connection.prepare(sql`/* accept */ INSERT INTO history_acceptances (acceptance_id, result_id, environment, fence, evidence_format, evidence_version, evidence)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`),
     insertAcceptanceDependency: connection.prepare(sql`/* accept */ INSERT INTO history_acceptance_dependencies (acceptance_id, position, dependency_id) VALUES (?, ?, ?)`),
-    acceptances: connection.prepare(sql`/* acceptance */ SELECT acceptance_id, fence, evidence_format, evidence_version, evidence FROM history_acceptances WHERE result_id = ? ORDER BY acceptance_id`),
+    acceptances: connection.prepare(sql`/* acceptance */ SELECT acceptance_id, environment, fence, evidence_format, evidence_version, evidence FROM history_acceptances
+      WHERE result_id = ? AND environment = ? ORDER BY acceptance_id`),
     acceptanceDependencies: connection.prepare(sql`/* acceptance */ SELECT d.position, d.dependency_id, r.result_id AS present, r.analysis, r.environment
       FROM history_acceptance_dependencies d LEFT JOIN history_results r ON r.result_id = d.dependency_id WHERE d.acceptance_id = ? ORDER BY d.position`),
+    promoted: connection.prepare(sql`/* promotion */ SELECT 1 AS present FROM history_promotion_results pr JOIN history_promotions p ON p.promotion_id = pr.promotion_id
+      WHERE pr.result_id = ? AND p.analysis = ? AND p.environment = ? LIMIT 1`),
+    insertPromotion: connection.prepare(sql`/* promote */ INSERT INTO history_promotions (promotion_id, analysis, environment, fence, evidence_format, evidence_version, evidence)
+      VALUES (?, ?, ?, ?, ?, ?, ?)`),
+    insertPromotionResult: connection.prepare(sql`/* promote */ INSERT INTO history_promotion_results (promotion_id, position, result_id) VALUES (?, ?, ?)`),
+    promotion: connection.prepare(sql`/* promotion */ SELECT * FROM history_promotions WHERE promotion_id = ?`),
+    promotions: connection.prepare(sql`/* promotion */ SELECT * FROM history_promotions WHERE analysis = ? AND environment = ? ORDER BY promotion_id`),
+    promotionsNaming: connection.prepare(sql`/* promotion */ SELECT p.* FROM history_promotions p
+      WHERE p.analysis = ? AND p.environment = ? AND EXISTS (SELECT 1 FROM history_promotion_results pr WHERE pr.promotion_id = p.promotion_id AND pr.result_id = ?)
+      ORDER BY p.promotion_id`),
+    promotionResults: connection.prepare(sql`/* promotion */ SELECT pr.position, pr.result_id, r.result_id AS present, r.analysis, r.environment
+      FROM history_promotion_results pr LEFT JOIN history_results r ON r.result_id = pr.result_id WHERE pr.promotion_id = ? ORDER BY pr.position`),
   };
 
   /**
@@ -280,6 +235,46 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
   /** Issue the exact reference for a stored result row. */
   function referenceOf(resultId: number, scope: IHistoryScope): ICompletedResultReference {
     return referenceFor({ logicalStore, analysis: scope.analysis, environment: scope.environment, resultId });
+  }
+
+  /** Whether a recorded promotion names a result for the environment `scope` (RUN-017). */
+  function isPromotedInto(resultId: number, scope: IHistoryScope): boolean {
+    return statements.promoted.get(resultId, scope.analysis, scope.environment) !== undefined;
+  }
+
+  /**
+   * Resolve an exact reference that must be admissible in `scope`: published
+   * in that environment, or of the same analysis and named by a promotion into
+   * it. Anything else is an integrity failure, never a miss; the returned
+   * scope is the result's own publishing scope.
+   */
+  function resolveAdmissible(reference: ICompletedResultReference, scope: IHistoryScope): { readonly resultId: number; readonly scope: IHistoryScope } {
+    const resolved = resolveResult(reference);
+    const published = resolved.scope;
+    if (published.analysis !== scope.analysis || (published.environment !== scope.environment && !isPromotedInto(resolved.resultId, scope))) {
+      throw new HistoryIntegrityError(
+        `Completed result ${reference.locator} is not admissible in environment ${scope.environment} of analysis ${scope.analysis}: it was not published there and no promotion names it there`,
+      );
+    }
+    return resolved;
+  }
+
+  /**
+   * The namespace an acceptance is recorded or read in, always named by the
+   * caller: the result's publishing environment, or another environment of
+   * the same analysis that a promotion admits the result into.
+   */
+  function acceptanceScope(reference: ICompletedResultReference, resultId: number, published: IHistoryScope, environment: string): IHistoryScope {
+    if (environment === published.environment) {
+      return published;
+    }
+    const scope = { analysis: published.analysis, environment };
+    if (!isPromotedInto(resultId, scope)) {
+      throw new HistoryIntegrityError(
+        `Completed result ${reference.locator} is not admissible in environment ${environment} of analysis ${published.analysis}: it was not published there and no promotion names it there`,
+      );
+    }
+    return scope;
   }
 
   /** Read the singleton writer row. */
@@ -340,6 +335,9 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
     return outcome.value;
   }
 
+  /** Run Supervision's journal ports share this connection and writer check. */
+  const journals = createJournalStore(connection, asHolder);
+
   /** Read one attempt row by identity inside the caller's transaction. */
   function requireAttemptRow(attemptId: number): ISqliteRow {
     const row = statements.attemptById.get(attemptId);
@@ -372,8 +370,25 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
   }
 
   /**
+   * A stored dependency published outside the dependent's environment is
+   * valid only when it is of the same analysis and a promotion admits it into
+   * the dependent's environment. Its reference keeps its own publishing scope
+   * and must resolve exactly like any other.
+   */
+  function promotedDependency(dependencyId: number, row: ISqliteRow, scope: IHistoryScope): ICompletedResultReference {
+    const published = { analysis: text(row, 'analysis'), environment: text(row, 'environment') };
+    if (published.analysis !== scope.analysis || !isPromotedInto(dependencyId, scope)) {
+      throw new HistoryIntegrityError(`Stored dependency on result ${String(dependencyId)} is outside the dependent's scope`);
+    }
+    const exact = referenceOf(dependencyId, published);
+    resolveResult(exact, published);
+    return exact;
+  }
+
+  /**
    * Read an attempt's or acceptance's dependency rows and verify each still
-   * names a stored result in the same scope, in contiguous recorded order.
+   * names a stored result admissible in the dependent's scope (published
+   * there or promoted into it), in contiguous recorded order.
    */
   function dependenciesOf(rows: readonly ISqliteRow[], scope: IHistoryScope): readonly ICompletedResultReference[] {
     return Object.freeze(rows.map((row, position) => {
@@ -385,7 +400,7 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
         throw new HistoryIntegrityError(`Stored dependency on result ${String(dependencyId)} is dangling`);
       }
       if (row.analysis !== scope.analysis || row.environment !== scope.environment) {
-        throw new HistoryIntegrityError(`Stored dependency on result ${String(dependencyId)} is outside the dependent's scope`);
+        return promotedDependency(dependencyId, row, scope);
       }
       // A returned dependency must satisfy the same exact contract as any reference: completed, in scope, supported.
       const reference = referenceOf(dependencyId, scope);
@@ -414,9 +429,9 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
     });
   }
 
-  /** Resolve each dependency reference to a stored result in `scope`, inside the caller's transaction. */
+  /** Resolve each dependency reference to a stored result admissible in `scope`, inside the caller's transaction. */
   function dependencyIds(references: readonly ICompletedResultReference[], scope: IHistoryScope): readonly number[] {
-    return references.map((reference) => resolveResult(reference, scope).resultId);
+    return references.map((reference) => resolveAdmissible(reference, scope).resultId);
   }
 
   /**
@@ -465,12 +480,16 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
     }
   }
 
-  /** Read and convert one acceptance record's dependencies. */
+  /** Read and convert one acceptance record, recorded in `scope`, with its dependencies. */
   function acceptanceOf(row: ISqliteRow, reference: ICompletedResultReference, scope: IHistoryScope): IAcceptanceRecord {
     const acceptanceId = integer(row, 'acceptance_id');
+    if (text(row, 'environment') !== scope.environment) {
+      throw new HistoryIntegrityError(`Stored acceptance ${String(acceptanceId)} belongs to another environment`);
+    }
     return Object.freeze({
       acceptanceId,
       reference,
+      environment: scope.environment,
       fence: integer(row, 'fence'),
       evidence: loadRecord(row.evidence_format, row.evidence_version, row.evidence, 'acceptance evidence'),
       dependencies: dependenciesOf(statements.acceptanceDependencies.all(acceptanceId), scope),
@@ -478,12 +497,50 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
   }
 
   /** Read the store-wide sequence row. */
-  function readSequences(): { readonly lastAttempt: number; readonly lastPublication: number; readonly lastAcceptance: number } {
+  function readSequences(): { readonly lastAttempt: number; readonly lastPublication: number; readonly lastAcceptance: number; readonly lastPromotion: number } {
     const row = statements.sequences.get();
     if (row === undefined) {
       throw new HistoryIntegrityError('History sequence row is missing');
     }
-    return { lastAttempt: integer(row, 'last_attempt'), lastPublication: integer(row, 'last_publication'), lastAcceptance: integer(row, 'last_acceptance') };
+    return {
+      lastAttempt: integer(row, 'last_attempt'),
+      lastPublication: integer(row, 'last_publication'),
+      lastAcceptance: integer(row, 'last_acceptance'),
+      lastPromotion: integer(row, 'last_promotion'),
+    };
+  }
+
+  /**
+   * Convert one stored promotion row to its frozen record. Every named result
+   * must still resolve exactly, belong to the promotion's analysis and have
+   * been published outside its target environment.
+   */
+  function promotionOf(row: ISqliteRow): IPromotionRecord {
+    const promotionId = integer(row, 'promotion_id');
+    const target = Object.freeze({ analysis: text(row, 'analysis'), environment: text(row, 'environment') });
+    const references = statements.promotionResults.all(promotionId).map((named, position) => {
+      const resultId = integer(named, 'result_id');
+      if (integer(named, 'position') !== position || named.present === null) {
+        throw new HistoryIntegrityError(`Stored promotion ${String(promotionId)} names a missing result or is out of order`);
+      }
+      const published = { analysis: text(named, 'analysis'), environment: text(named, 'environment') };
+      if (published.analysis !== target.analysis || published.environment === target.environment) {
+        throw new HistoryIntegrityError(`Stored promotion ${String(promotionId)} names result ${String(resultId)} outside its analysis or from its own target`);
+      }
+      const exact = referenceOf(resultId, published);
+      resolveResult(exact, published);
+      return exact;
+    });
+    if (references.length === 0) {
+      throw new HistoryIntegrityError(`Stored promotion ${String(promotionId)} names no result`);
+    }
+    return Object.freeze({
+      promotionId,
+      target,
+      fence: integer(row, 'fence'),
+      evidence: loadRecord(row.evidence_format, row.evidence_version, row.evidence, 'promotion evidence'),
+      references: Object.freeze(references),
+    });
   }
 
   const history: IDurableHistory = {
@@ -639,7 +696,7 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
 
     findCandidates(presented: IVersionedSubject): readonly ICompletedEnvelope[] {
       const subject = versionedSubject(presented);
-      return Object.freeze(statements.candidates.all(subject.analysis, subject.environment, subject.subject, subject.version).map(envelopeOf));
+      return Object.freeze(statements.candidates.all(subject.analysis, subject.subject, subject.version, subject.environment, subject.environment).map(envelopeOf));
     },
 
     readCurrent(presented: IScopedSubject): ICompletedResultReference | undefined {
@@ -674,27 +731,82 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
     recordAcceptance(lease: IWriterLease, request: IAcceptanceRequest): IAcceptanceRecord {
       const evidence = storeRecord(request.evidence, 'acceptance evidence');
       const references = [...request.dependencies];
+      const environment = requireName(request.environment, 'acceptance environment');
       return asHolder(lease, () => {
-        const { resultId, scope } = resolveResult(request.reference);
+        const { resultId, scope: published } = resolveResult(request.reference);
+        // The acceptance and its dependencies belong to the named accepting environment's namespace.
+        const scope = acceptanceScope(request.reference, resultId, published, environment);
         const dependencies = dependencyIds(references, scope);
         const acceptanceId = safeSum(readSequences().lastAcceptance, 1, 'acceptance identity');
         statements.setAcceptanceSequence.run(acceptanceId);
-        statements.insertAcceptance.run(acceptanceId, resultId, lease.fence, evidence.format, evidence.formatVersion, evidence.content);
+        statements.insertAcceptance.run(acceptanceId, resultId, scope.environment, lease.fence, evidence.format, evidence.formatVersion, evidence.content);
         dependencies.forEach((dependencyId, position) => {
           statements.insertAcceptanceDependency.run(acceptanceId, position, dependencyId);
         });
-        const row = statements.acceptances.all(resultId).find((candidate) => candidate.acceptance_id === acceptanceId);
+        const row = statements.acceptances.all(resultId, scope.environment).find((candidate) => candidate.acceptance_id === acceptanceId);
         if (row === undefined) {
           throw new HistoryIntegrityError('Recorded acceptance is not readable');
         }
-        return acceptanceOf(row, referenceOf(resultId, scope), scope);
+        return acceptanceOf(row, referenceOf(resultId, published), scope);
       });
     },
 
-    readAcceptances(reference: ICompletedResultReference): readonly IAcceptanceRecord[] {
-      const { resultId, scope } = resolveResult(reference);
-      const exact = referenceOf(resultId, scope);
-      return Object.freeze(statements.acceptances.all(resultId).map((row) => acceptanceOf(row, exact, scope)));
+    readAcceptances(reference: ICompletedResultReference, presentedEnvironment: string): readonly IAcceptanceRecord[] {
+      const environment = requireName(presentedEnvironment, 'acceptance environment');
+      const { resultId, scope: published } = resolveResult(reference);
+      const scope = acceptanceScope(reference, resultId, published, environment);
+      const exact = referenceOf(resultId, published);
+      return Object.freeze(statements.acceptances.all(resultId, scope.environment).map((row) => acceptanceOf(row, exact, scope)));
+    },
+
+    promoteResults(lease: IWriterLease, request: IPromotionRequest): IPromotionRecord {
+      const target = historyScope(request.target);
+      const evidence = storeRecord(request.evidence, 'promotion evidence');
+      const presented: unknown = request.references;
+      if (!Array.isArray(presented) || presented.length === 0) {
+        throw new TypeError('A promotion needs at least one completed-result reference');
+      }
+      const references = [...request.references];
+      return asHolder(lease, () => {
+        const resultIds = references.map((reference) => {
+          const { resultId, scope: published } = resolveResult(reference);
+          // A reference that cannot be promoted into the target is one integrity class, like any wrong-scope reference.
+          if (published.analysis !== target.analysis) {
+            throw new HistoryIntegrityError(`Completed result ${reference.locator} belongs to another analysis; promotion never crosses analyses`);
+          }
+          if (published.environment === target.environment) {
+            throw new HistoryIntegrityError(`Completed result ${reference.locator} was published in ${target.environment}; only results of other environments can be promoted into it`);
+          }
+          return resultId;
+        });
+        if (new Set(resultIds).size !== resultIds.length) {
+          throw new TypeError('A promotion names each completed result at most once');
+        }
+        const promotionId = safeSum(readSequences().lastPromotion, 1, 'promotion identity');
+        statements.setPromotionSequence.run(promotionId);
+        statements.insertPromotion.run(promotionId, target.analysis, target.environment, lease.fence, evidence.format, evidence.formatVersion, evidence.content);
+        resultIds.forEach((resultId, position) => {
+          statements.insertPromotionResult.run(promotionId, position, resultId);
+        });
+        const row = statements.promotion.get(promotionId);
+        if (row === undefined) {
+          throw new HistoryIntegrityError('Recorded promotion is not readable');
+        }
+        return promotionOf(row);
+      });
+    },
+
+    readPromotions(query: IPromotionQuery): readonly IPromotionRecord[] {
+      const target = historyScope(query.target);
+      if (query.reference === undefined) {
+        return Object.freeze(statements.promotions.all(target.analysis, target.environment).map(promotionOf));
+      }
+      const { resultId } = resolveResult(query.reference);
+      return Object.freeze(statements.promotionsNaming.all(target.analysis, target.environment, resultId).map(promotionOf));
+    },
+
+    openJournal(declaration: IJournalDeclaration): IOperationJournal {
+      return journals.open(declaration);
     },
 
     close(): void {

@@ -8,9 +8,18 @@
  * guesses a migration from unknown, incomplete or foreign storage.
  *
  * Immutability of completed history is enforced in storage by triggers:
- * results, their generated index, dependencies, acceptance records and the
- * identity row cannot be updated or deleted, and attempts, current pointers
- * and writer/sequence rows cannot be deleted. No reclamation exists (RES-006).
+ * results, their generated index, dependencies, acceptance records, promotion
+ * records, journal revisions and the identity row cannot be updated or
+ * deleted, and attempts, current pointers and writer/sequence rows cannot be
+ * deleted. No reclamation exists (RES-006).
+ *
+ * Version 2 namespaces acceptance records by the environment that recorded
+ * them and adds recorded promotions and Run Supervision's operation journal
+ * (RUN-011/012/017). Version 1 files, written before those records existed,
+ * are rejected by their recorded version like any other unsupported version:
+ * the repository's storage policy is to reject incompatible formats
+ * explicitly and never migrate stored data by guessing (execution.md PUB-004,
+ * experiments.md EXP-2 gate), and no migration is authorized.
  * @packageDocumentation
  */
 import type { ISqliteConnection, ISqliteRow } from '@microdelta/machine';
@@ -24,7 +33,7 @@ const sql = String.raw;
 export const schemaName = 'microdelta.history.durable';
 
 /** The only schema version this implementation reads or writes. */
-export const schemaVersion = 1;
+export const schemaVersion = 2;
 
 /** Tables whose rows may never be updated or deleted once written. */
 const immutableTables = [
@@ -36,6 +45,9 @@ const immutableTables = [
   'history_addresses',
   'history_acceptances',
   'history_acceptance_dependencies',
+  'history_promotions',
+  'history_promotion_results',
+  'history_journal',
 ] as const;
 
 /** Tables whose rows may change state but are never deleted. */
@@ -67,7 +79,9 @@ const schemaObjects: readonly string[] = [
     singleton INTEGER PRIMARY KEY CHECK (singleton = 1),
     last_attempt INTEGER NOT NULL CHECK (last_attempt >= 0),
     last_publication INTEGER NOT NULL CHECK (last_publication >= 0),
-    last_acceptance INTEGER NOT NULL CHECK (last_acceptance >= 0)
+    last_acceptance INTEGER NOT NULL CHECK (last_acceptance >= 0),
+    last_promotion INTEGER NOT NULL CHECK (last_promotion >= 0),
+    last_journal INTEGER NOT NULL CHECK (last_journal >= 0)
   ) STRICT`,
   // Durable attempts with their stable key, intent digest, staged candidate
   // content and failure evidence. Staged content is never a completed result.
@@ -179,21 +193,61 @@ const schemaObjects: readonly string[] = [
     FOREIGN KEY (result_id, analysis, environment, subject)
       REFERENCES history_results (result_id, analysis, environment, subject)
   ) STRICT`,
-  // Current acceptance evidence, separate from the result's provenance.
+  // Current acceptance evidence, separate from the result's provenance, in
+  // the namespace of the environment whose verification recorded it.
   sql`CREATE TABLE history_acceptances (
     acceptance_id INTEGER PRIMARY KEY CHECK (acceptance_id > 0),
     result_id INTEGER NOT NULL REFERENCES history_results (result_id),
+    environment TEXT NOT NULL CHECK (length(environment) > 0),
     fence INTEGER NOT NULL CHECK (fence > 0),
     evidence_format TEXT NOT NULL,
     evidence_version INTEGER NOT NULL,
     evidence TEXT NOT NULL
   ) STRICT`,
-  sql`CREATE INDEX history_acceptances_by_result ON history_acceptances (result_id, acceptance_id)`,
+  sql`CREATE INDEX history_acceptances_by_result ON history_acceptances (result_id, environment, acceptance_id)`,
   sql`CREATE TABLE history_acceptance_dependencies (
     acceptance_id INTEGER NOT NULL REFERENCES history_acceptances (acceptance_id),
     position INTEGER NOT NULL CHECK (position >= 0),
     dependency_id INTEGER NOT NULL REFERENCES history_results (result_id),
     PRIMARY KEY (acceptance_id, position)
+  ) STRICT`,
+  // Recorded promotions (RUN-017): each admits exact results of other
+  // environments into its target environment, with the promoter's evidence.
+  sql`CREATE TABLE history_promotions (
+    promotion_id INTEGER PRIMARY KEY CHECK (promotion_id > 0),
+    analysis TEXT NOT NULL CHECK (length(analysis) > 0),
+    environment TEXT NOT NULL CHECK (length(environment) > 0),
+    fence INTEGER NOT NULL CHECK (fence > 0),
+    evidence_format TEXT NOT NULL,
+    evidence_version INTEGER NOT NULL,
+    evidence TEXT NOT NULL
+  ) STRICT`,
+  sql`CREATE INDEX history_promotions_by_target ON history_promotions (analysis, environment, promotion_id)`,
+  sql`CREATE TABLE history_promotion_results (
+    promotion_id INTEGER NOT NULL REFERENCES history_promotions (promotion_id),
+    position INTEGER NOT NULL CHECK (position >= 0),
+    result_id INTEGER NOT NULL REFERENCES history_results (result_id),
+    PRIMARY KEY (promotion_id, position),
+    UNIQUE (promotion_id, result_id)
+  ) STRICT`,
+  sql`CREATE INDEX history_promotion_results_by_result ON history_promotion_results (result_id, promotion_id)`,
+  // Run Supervision's operation journal: immutable revisions of opaque owner
+  // records per environment namespace, owner-named collection and key. The
+  // current record is an address's highest revision; the sequence orders
+  // commits. The format and version are each revision's tag, never part of
+  // the record's identity, so two formats can never hold parallel records.
+  sql`CREATE TABLE history_journal (
+    analysis TEXT NOT NULL CHECK (length(analysis) > 0),
+    environment TEXT NOT NULL CHECK (length(environment) > 0),
+    collection TEXT NOT NULL CHECK (length(collection) > 0),
+    journal_key TEXT NOT NULL CHECK (length(journal_key) > 0),
+    revision INTEGER NOT NULL CHECK (revision > 0),
+    sequence INTEGER NOT NULL UNIQUE CHECK (sequence > 0),
+    fence INTEGER NOT NULL CHECK (fence > 0),
+    format TEXT NOT NULL CHECK (length(format) > 0),
+    format_version INTEGER NOT NULL CHECK (format_version > 0),
+    content TEXT NOT NULL,
+    PRIMARY KEY (analysis, environment, collection, journal_key, revision)
   ) STRICT`,
   ...immutableTables.flatMap((table) => [
     sql`CREATE TRIGGER ${table}_immutable_update BEFORE UPDATE ON ${table}
@@ -256,15 +310,41 @@ export function initializeSchema(connection: ISqliteConnection, logicalStore: st
     connection.prepare(sql`/* schema */ INSERT INTO history_identity (singleton, schema_name, schema_version, logical_store) VALUES (1, ?, ?, ?)`)
       .run(schemaName, schemaVersion, logicalStore);
     connection.prepare(sql`/* schema */ INSERT INTO history_writer (singleton, last_fence, holder, expires_at, time_high_water) VALUES (1, 0, NULL, 0, 0)`).run();
-    connection.prepare(sql`/* schema */ INSERT INTO history_sequences (singleton, last_attempt, last_publication, last_acceptance) VALUES (1, 0, 0, 0)`).run();
+    connection.prepare(sql`/* schema */ INSERT INTO history_sequences (singleton, last_attempt, last_publication, last_acceptance, last_promotion, last_journal)
+      VALUES (1, 0, 0, 0, 0, 0)`).run();
     return undefined;
   });
   validateSchema(connection, logicalStore);
 }
 
+/**
+ * Reject a file that records this schema under another version before
+ * comparing objects, so an earlier or later History layout is diagnosed by its
+ * version rather than as an incomplete schema. A file whose identity cannot be
+ * read this way is left to the exact object comparison.
+ */
+function rejectOtherVersion(connection: ISqliteConnection, present: ReadonlyMap<string, string | null>): void {
+  if (!present.has('history_identity')) {
+    return;
+  }
+  let identities: readonly ISqliteRow[];
+  try {
+    identities = connection.prepare(sql`/* schema */ SELECT schema_name, schema_version FROM history_identity`).all();
+  } catch {
+    return;
+  }
+  const identity = identities[0];
+  if (identities.length === 1 && identity?.schema_name === schemaName && identity.schema_version !== schemaVersion) {
+    throw new HistorySchemaError(
+      `Unsupported History schema ${schemaName} version ${String(identity.schema_version)}; this implementation reads only version ${String(schemaVersion)} and never migrates stored data by guessing`,
+    );
+  }
+}
+
 /** Reject any database that is not exactly this schema for this logical store. */
 function validateSchema(connection: ISqliteConnection, logicalStore: string): void {
   const present = presentObjects(connection);
+  rejectOtherVersion(connection, present);
   const missing = [...expectedObjects.keys()].filter((name) => !present.has(name));
   const unexpected = [...present.keys()].filter((name) => !expectedObjects.has(name));
   if (missing.length > 0 || unexpected.length > 0) {

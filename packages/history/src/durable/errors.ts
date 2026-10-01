@@ -1,7 +1,8 @@
 /**
  * Distinct failure classes of the durable History authority. Diagnostics must
  * distinguish stale ownership, conflicting execution identity, invalid
- * lifecycle transitions, unsupported storage and integrity failures rather
+ * lifecycle transitions, unsupported storage, journal compare-and-set
+ * conflicts, undeclared journal record versions and integrity failures rather
  * than report a generic miss (execution.md, required validation fixtures).
  * None of these classes extends `TypeError`, so a reader never mistakes a
  * storage failure for Value's rejection of a selection's shape.
@@ -88,5 +89,37 @@ export class HistoryClockError extends Error {
   public constructor(message: string) {
     super(message);
     this.name = 'HistoryClockError';
+  }
+}
+
+/**
+ * A journal commit's compare-and-set expectation does not hold: the presented
+ * expected revision is not the key's current revision (a new-key expectation
+ * met an existing key, or an update met a later or absent revision). The
+ * whole commit was rolled back unchanged; the caller must re-read before
+ * deciding again.
+ * @alpha
+ */
+export class JournalConflictError extends Error {
+  /** Create a compare-and-set rejection with a diagnostic message. */
+  public constructor(message: string) {
+    super(message);
+    this.name = 'JournalConflictError';
+  }
+}
+
+/**
+ * A journal record's format or format version is not one the journal port
+ * declared. On a write the record is refused; on a read or list the stored
+ * record is refused rather than returned; a commit over a current revision of
+ * an undeclared version is refused rather than overwriting it. History never
+ * interprets or converts the content of another format version.
+ * @alpha
+ */
+export class JournalVersionError extends Error {
+  /** Create an undeclared-version refusal with a diagnostic message. */
+  public constructor(message: string) {
+    super(message);
+    this.name = 'JournalVersionError';
   }
 }

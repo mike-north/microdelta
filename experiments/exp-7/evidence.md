@@ -65,3 +65,16 @@ After integration with accepted CML fixture-build wiring, `npm run check`,
 tooling cases, 24 EXP-1 cases, 28 EXP-2 cases, five SQLite capability cases,
 13 publication cases, package suites, and tsd. These Node gates do not run TLC;
 the model configurations remain explicit optional checks.
+
+## Later model changes
+
+On 2026-09-30 `Publication.tla` gained production History's abandonment and
+acceptance transitions. Its single `OmitPublishFence` switch became a `Fault`
+constant with one known-bad configuration per guard, and the sibling
+`WriterLease.tla` was added. The counts above describe the 2026-09-26 model
+only. Rerun under the same pinned toolchain before any change, that model's
+two configurations reproduced exactly: the known-bad run gave 47,256
+generated, 13,732 distinct, depth 8 at `PublicationUsedCurrentAuthority`, and
+the corrected run 29,599,222 generated, 2,624,759 distinct, depth 24. The
+current models' results are in the
+[M5 concurrency validation record](../../docs/validation/m5-concurrency-2026-09-30.md).

@@ -137,7 +137,8 @@ describe('schema, logical store and exact scope', () => {
 
     const raw = openRaw(location);
     const identity = raw.prepare('SELECT schema_name, schema_version, logical_store FROM history_identity').get();
-    expect(identity).toEqual({ schema_name: 'microdelta.history.durable', schema_version: 1, logical_store: logicalStore });
+    // Version 2 adds environment-scoped acceptances, recorded promotions and the operation journal.
+    expect(identity).toEqual({ schema_name: 'microdelta.history.durable', schema_version: 2, logical_store: logicalStore });
     const tables = raw.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").all().map((row) => row.name);
     // No legacy Store rows and no EXP-3 or EXP-nested candidate tables: every table is History-owned.
     expect(tables.every((name) => typeof name === 'string' && name.startsWith('history_'))).toBe(true);
@@ -153,10 +154,23 @@ describe('schema, logical store and exact scope', () => {
     openHistory({ location: other }).close();
     expect(() => openHistory({ location: other, store: 'store:another' })).toThrow(HistorySchemaError);
 
-    const versioned = freshLocation();
-    openHistory({ location: versioned }).close();
-    tamper(versioned, 'UPDATE history_identity SET schema_version = 2');
-    expect(() => openHistory({ location: versioned })).toThrow(HistorySchemaError);
+    // The earlier version 1 layout and an unknown later version are both rejected by name; neither is migrated.
+    for (const version of [1, 3]) {
+      const versioned = freshLocation();
+      openHistory({ location: versioned }).close();
+      tamper(versioned, `UPDATE history_identity SET schema_version = ${String(version)}`);
+      expect(() => openHistory({ location: versioned })).toThrow(new HistorySchemaError(`Unsupported History schema microdelta.history.durable version ${String(version)}; this implementation reads only version 2 and never migrates stored data by guessing`));
+      const unchanged = openRaw(versioned);
+      expect(unchanged.prepare('SELECT schema_version FROM history_identity').get()).toEqual({ schema_version: version });
+      unchanged.close();
+    }
+    // A file whose objects also predate version 2 is still rejected by its recorded version, not as merely incomplete.
+    const older = freshLocation();
+    openHistory({ location: older }).close();
+    const layout = openRaw(older);
+    layout.exec('DROP TABLE history_journal; DROP TRIGGER history_identity_immutable_update; UPDATE history_identity SET schema_version = 1');
+    layout.close();
+    expect(() => openHistory({ location: older })).toThrow(new HistorySchemaError('Unsupported History schema microdelta.history.durable version 1; this implementation reads only version 2 and never migrates stored data by guessing'));
 
     const incomplete = freshLocation();
     openHistory({ location: incomplete }).close();
@@ -366,6 +380,7 @@ describe('candidates, rollback and separate acceptance', () => {
       reference: v1New,
       evidence: { format: 'test.acceptance', formatVersion: 1, content: { check: 'rollback to version 1' } },
       dependencies: [currentChild],
+      environment: scope.environment,
     });
     expect(acceptance).toMatchObject({ reference: v1New, fence: lease.fence, dependencies: [currentChild], evidence: { content: { check: 'rollback to version 1' } } });
     expect(history.readCurrent({ ...scope, subject: summarySubject })).toEqual(v2);
@@ -373,11 +388,11 @@ describe('candidates, rollback and separate acceptance', () => {
     const rawAfter = openRaw(location);
     expect(rawAfter.prepare('SELECT provenance FROM history_results WHERE result_id = 2').get()).toEqual(storedBefore);
     rawAfter.close();
-    expect(history.readAcceptances(v1New)).toEqual([acceptance]);
-    expect(history.readAcceptances(v1Old)).toEqual([]);
-    const second = history.recordAcceptance(lease, { reference: v1New, evidence: { format: 'test.acceptance', formatVersion: 1, content: { check: 'again' } }, dependencies: [] });
+    expect(history.readAcceptances(v1New, scope.environment)).toEqual([acceptance]);
+    expect(history.readAcceptances(v1Old, scope.environment)).toEqual([]);
+    const second = history.recordAcceptance(lease, { reference: v1New, evidence: { format: 'test.acceptance', formatVersion: 1, content: { check: 'again' } }, dependencies: [], environment: scope.environment });
     expect(second.acceptanceId).toBeGreaterThan(acceptance.acceptanceId);
-    expect(history.readAcceptances(v1New)).toEqual([acceptance, second]);
+    expect(history.readAcceptances(v1New, scope.environment)).toEqual([acceptance, second]);
   });
 
   test('stored results and acceptances are immutable in storage', () => {
@@ -385,7 +400,7 @@ describe('candidates, rollback and separate acceptance', () => {
     const history = openHistory({ location });
     const lease = acquire(history);
     const reference = publish(history, lease, adaActivity(), { key: 'immutable' });
-    history.recordAcceptance(lease, { reference, evidence: { format: 'test.acceptance', formatVersion: 1, content: {} }, dependencies: [] });
+    history.recordAcceptance(lease, { reference, evidence: { format: 'test.acceptance', formatVersion: 1, content: {} }, dependencies: [], environment: scope.environment });
     const raw = openRaw(location);
     for (const statement of [
       "UPDATE history_results SET payload = 'x'",

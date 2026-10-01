@@ -328,6 +328,7 @@ export type IWriterAttempt = {
     readonly kind: 'contended';
     readonly holder: string | undefined;
     readonly expiresAt: number | undefined;
+    readonly heldByThisRun: boolean;
     readonly detail: string;
 };
 
@@ -360,6 +361,7 @@ export class WriterBusyError extends SupervisionError {
     readonly contended: boolean;
     readonly deadline: number;
     readonly expiresAt: number | undefined;
+    readonly heldByThisRun: boolean;
     readonly holder: string | undefined;
 }
 

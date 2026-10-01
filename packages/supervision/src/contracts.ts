@@ -106,8 +106,10 @@ export type IRunLease = IResolveRequest['lease'];
  * - `contended`: storage could not decide within its own bounded busy wait
  *   (SQLite stayed locked by another connection). Nothing changed. `holder`
  *   and `expiresAt` are the writer recorded at that moment when it could be
- *   read without the lock, and are undefined otherwise; `detail` is storage's
- *   diagnostic, which carries no stored values.
+ *   read without the lock, and are undefined otherwise; `heldByThisRun` says
+ *   that recorded writer is the very lease this run holds (its renewal was
+ *   busy, so the run keeps it); `detail` is storage's diagnostic, which
+ *   carries no stored values.
  * @alpha
  */
 export type IWriterAttempt =
@@ -129,6 +131,8 @@ export type IWriterAttempt =
       readonly holder: string | undefined;
       /** The recorded holder's expiry, when it could be read. */
       readonly expiresAt: number | undefined;
+      /** Whether the recorded writer is the lease this run holds, whose renewal was busy. */
+      readonly heldByThisRun: boolean;
       /** Storage's diagnostic of the contention. */
       readonly detail: string;
     };

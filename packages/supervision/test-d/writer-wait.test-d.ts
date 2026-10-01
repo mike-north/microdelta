@@ -52,6 +52,10 @@ expectType<string | undefined>(busy.holder);
 expectType<number | undefined>(busy.expiresAt);
 expectType<number>(busy.deadline);
 expectType<boolean>(busy.contended);
+expectType<boolean>(busy.heldByThisRun);
+// A contended try must say whether the recorded writer is the run's own lease.
+expectNotAssignable<IWriterAttempt>({ kind: 'contended', holder: undefined, expiresAt: undefined, detail: 'busy' });
+expectAssignable<IWriterAttempt>({ kind: 'contended', holder: undefined, expiresAt: undefined, detail: 'busy', heldByThisRun: false });
 expectType<WriterBusyError>(new WriterBusyError({ kind: 'held', holder: 'run:other', expiresAt: 2 }, 1));
 expectError(new WriterBusyError({ kind: 'acquired', lease }, 1));
 expectError(new WriterBusyError({ kind: 'held', holder: 'run:other', expiresAt: 2 }));

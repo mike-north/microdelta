@@ -79,6 +79,11 @@ export class WriterBusyError extends SupervisionError {
   public readonly deadline: number;
   /** Whether the final observation was storage contention rather than an observed unexpired holder. */
   public readonly contended: boolean;
+  /**
+   * Whether the recorded holder is this very run: its own renewal stayed busy
+   * until the deadline, so it may still hold a valid lease it could not extend.
+   */
+  public readonly heldByThisRun: boolean;
 
   /**
    * @param observation - The request's final observation, at or after the deadline.
@@ -91,6 +96,7 @@ export class WriterBusyError extends SupervisionError {
     this.expiresAt = observation.expiresAt;
     this.deadline = deadline;
     this.contended = observation.kind === 'contended';
+    this.heldByThisRun = observation.kind === 'contended' && observation.heldByThisRun;
   }
 }
 
@@ -99,6 +105,9 @@ function writerBusyMessage(observation: IWriterBusyObservation, deadline: number
   const passed = `the operator deadline ${String(deadline)} passed`;
   if (observation.kind === 'held') {
     return `Storage's writer lease is held by ${observation.holder} until ${String(observation.expiresAt)}; ${passed}`;
+  }
+  if (observation.heldByThisRun) {
+    return `Storage stayed too busy to renew this run's writer lease (${observation.detail}); this run is the recorded holder ${String(observation.holder)} until ${String(observation.expiresAt)}, contended; ${passed}`;
   }
   const recorded = observation.holder === undefined
     ? 'no recorded holder could be read'

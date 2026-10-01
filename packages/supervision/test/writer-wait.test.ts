@@ -26,7 +26,8 @@ import type { IBindingDescriptor } from '@microdelta/definition';
 import type { ICheckOutcome, IRecoveryResult, IResolution, IResolutionOutcome, IResolveRequest } from '@microdelta/resolution';
 
 import { SupervisionError, WriterBusyError, createStopController, createSupervision } from '../src/index.js';
-import type { IRun, IRunLease, IRunOptions, IRunWriter, ISupervision, IWriterAttempt } from '../src/index.js';
+import type { IAbortSignal, IRun, IRunLease, IRunOptions, IRunWriter, ISupervision, IWriterAttempt } from '../src/index.js';
+import { awaitWriter, writerWaitPolicy } from '../src/writer.js';
 import { T0, codeOf, fakeTimer, hour, nodeScopes, settle, stepOf } from './support.js';
 import type { IFakeTimer } from './support.js';
 
@@ -350,7 +351,7 @@ describe('the operator deadline and writer-busy (RUN-002 owner decision)', () =>
   test('storage contention is retried like a held lease and ends at the deadline as typed writer-busy naming the recorded holder', async () => {
     const timer = fakeTimer();
     const detail = 'SQLite store stayed busy for 500 ms: database is locked';
-    const port = scriptedWriter(timer, () => Object.freeze({ kind: 'contended', holder: otherHolder, expiresAt: T0 + 400, detail }));
+    const port = scriptedWriter(timer, () => Object.freeze({ kind: 'contended', holder: otherHolder, expiresAt: T0 + 400, detail, heldByThisRun: false }));
     const { request, run } = startRequest(supervisionWith(timer), optionsOver(port.writer, leaseRecorder(), { writerWait: { deadline: T0 + 1_000, pollMilliseconds: 500 } }));
     await advance(timer, 1_000, 500);
     await run;
@@ -364,7 +365,7 @@ describe('the operator deadline and writer-busy (RUN-002 owner decision)', () =>
 
   test('contention with no readable holder reports contention without inventing a holder', async () => {
     const timer = fakeTimer();
-    const port = scriptedWriter(timer, () => Object.freeze({ kind: 'contended', holder: undefined, expiresAt: undefined, detail: 'busy' }));
+    const port = scriptedWriter(timer, () => Object.freeze({ kind: 'contended', holder: undefined, expiresAt: undefined, detail: 'busy', heldByThisRun: false }));
     const { request, run } = startRequest(supervisionWith(timer), optionsOver(port.writer, leaseRecorder(), { writerWait: { deadline: T0 } }));
     await run;
     const busy = busyOf(request.current());
@@ -373,12 +374,111 @@ describe('the operator deadline and writer-busy (RUN-002 owner decision)', () =>
 
   test('a contended attempt followed by a held one reports the held holder at the deadline', async () => {
     const timer = fakeTimer();
-    const port = scriptedWriter(timer, (now) => (now < T0 + 500 ? Object.freeze({ kind: 'contended', holder: undefined, expiresAt: undefined, detail: 'busy' }) : heldUntil(T0 + hour)));
+    const port = scriptedWriter(timer, (now) => (now < T0 + 500 ? Object.freeze({ kind: 'contended', holder: undefined, expiresAt: undefined, detail: 'busy', heldByThisRun: false }) : heldUntil(T0 + hour)));
     const { request, run } = startRequest(supervisionWith(timer), optionsOver(port.writer, leaseRecorder(), { writerWait: { deadline: T0 + 500, pollMilliseconds: 500 } }));
     await advance(timer, 500);
     await run;
     const busy = busyOf(request.current());
     expect([busy.contended, busy.holder]).toEqual([false, otherHolder]);
+  });
+});
+
+describe('writer-busy when the run itself is the recorded holder', () => {
+  test('a busy renewal of the run\'s own lease at the deadline says the run is the recorded holder, contended', async () => {
+    const timer = fakeTimer();
+    const own = 'microdelta-run:run:test';
+    const port = scriptedWriter(timer, () => Object.freeze({ kind: 'contended', holder: own, expiresAt: T0 + 400, detail: 'SQLite store stayed busy for 500 ms', heldByThisRun: true }));
+    const { request, run } = startRequest(supervisionWith(timer), optionsOver(port.writer, leaseRecorder(), { writerWait: { deadline: T0 } }));
+    await run;
+    const busy = busyOf(request.current());
+    expect([busy.contended, busy.heldByThisRun, busy.holder]).toEqual([true, true, own]);
+    expect(busy.message).toContain('this run is the recorded holder');
+    expect(busy.message).toContain('contended');
+  });
+
+  test('another process\'s lease is never described as the run\'s own', async () => {
+    const timer = fakeTimer();
+    const port = scriptedWriter(timer, () => heldUntil(T0 + hour));
+    const { request, run } = startRequest(supervisionWith(timer), optionsOver(port.writer, leaseRecorder(), { writerWait: { deadline: T0 } }));
+    await run;
+    const busy = busyOf(request.current());
+    expect(busy.heldByThisRun).toBe(false);
+    expect(busy.message).not.toContain('this run is the recorded holder');
+  });
+});
+
+/** A stop signal double that counts the abort listeners currently registered and the most ever registered at once. */
+function countingStop(): { readonly signal: IAbortSignal; active(): number; peak(): number; abort(): void } {
+  let aborted = false;
+  let peak = 0;
+  const listeners = new Set<{ readonly listener: () => void }>();
+  return {
+    signal: {
+      get aborted(): boolean {
+        return aborted;
+      },
+      onAbort(listener: () => void): () => void {
+        if (aborted) {
+          listener();
+          return () => undefined;
+        }
+        const entry = { listener };
+        listeners.add(entry);
+        peak = Math.max(peak, listeners.size);
+        return () => {
+          listeners.delete(entry);
+        };
+      },
+    },
+    active: () => listeners.size,
+    peak: () => peak,
+    abort(): void {
+      aborted = true;
+      for (const entry of [...listeners]) {
+        listeners.delete(entry);
+        entry.listener();
+      }
+    },
+  };
+}
+
+describe('a wait retains no abort listener or wake-up once it settles', () => {
+  test('each sleep registers one listener and removes it on waking; a granted wait leaves none', async () => {
+    const timer = fakeTimer();
+    const stop = countingStop();
+    const port = scriptedWriter(timer, heldThenExpires(T0 + 3_000));
+    const pending = track(awaitWriter({ writer: port.writer, policy: writerWaitPolicy({ pollMilliseconds: 1_000 }), timer, stop: stop.signal, runId: 'run:test' }));
+    await settle();
+    expect(stop.active()).toBe(1);
+    await advance(timer, 2_000, 1_000);
+    expect(stop.active()).toBe(1);
+    await advance(timer, 1_000);
+    expect(pending.current().value).toEqual(leaseOf(2, T0 + 3_000));
+    expect([stop.active(), stop.peak()]).toEqual([0, 1]);
+    expect(timer.scheduled.every((entry) => entry.fired || entry.cancelled)).toBe(true);
+  });
+
+  test('a stop during a sleep removes the listener and cancels the wake-up', async () => {
+    const timer = fakeTimer();
+    const stop = countingStop();
+    const port = scriptedWriter(timer, () => heldUntil(T0 + hour));
+    const pending = track(awaitWriter({ writer: port.writer, policy: writerWaitPolicy(undefined), timer, stop: stop.signal, runId: 'run:test' }));
+    await settle();
+    stop.abort();
+    await settle();
+    expect(await codeOf(Promise.reject(pending.current().error))).toBe('stopped');
+    expect(stop.active()).toBe(0);
+    expect(timer.scheduled.map((entry) => entry.cancelled)).toEqual([true]);
+  });
+
+  test('a deadline reached after sleeps leaves no listener behind', async () => {
+    const timer = fakeTimer();
+    const stop = countingStop();
+    const port = scriptedWriter(timer, () => heldUntil(T0 + hour));
+    const pending = track(awaitWriter({ writer: port.writer, policy: writerWaitPolicy({ deadline: T0 + 2_000 }), timer, stop: stop.signal, runId: 'run:test' }));
+    await advance(timer, 2_000, 1_000);
+    expect(pending.current().error).toBeInstanceOf(WriterBusyError);
+    expect(stop.active()).toBe(0);
   });
 });
 

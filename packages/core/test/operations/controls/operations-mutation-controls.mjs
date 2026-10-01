@@ -203,6 +203,27 @@ const controls = [
     anchor: 'const randomRule = /^[0-9a-f]{32}$/u;', replacement: 'const randomRule = /^[0-9a-z]{16,64}$/u;',
   },
   {
+    name: 'a durable intent does not reset the intent backoff (L4)',
+    directory: supervision, file: 'operation-engine.js',
+    anchor: 'if (intent.unrecorded !== 0) {', replacement: 'if (false) {',
+  },
+  {
+    name: 'settling an operation tries the writer once instead of waiting (L6)',
+    directory: supervision, file: 'supervision.js',
+    anchor: "operationsOf('Settling an operation').settle(settlement, await writerLease())",
+    replacement: "operationsOf('Settling an operation').settle(settlement, (() => { const tried = writer.tryLease(); if (tried.kind !== 'acquired') { throw new SupervisionError('writer-busy', 'single try without waiting'); } return tried.lease; })())",
+  },
+  {
+    name: "a stop during a woken pass's lease wait rejects instead of returning the earlier report",
+    directory: supervision, file: 'supervision.js',
+    anchor: "if (previous === undefined || woken === undefined || !(error instanceof SupervisionError) || error.code !== 'stopped') {", replacement: 'if (true) {',
+  },
+  {
+    name: 'an attempt whose intent recorded nothing is reused with its stale attribution',
+    directory: supervision, file: 'operation-engine.js',
+    anchor: "const unsent = last?.status === 'not-sent' && last.intent === 'unconfirmed' ? last : undefined;", replacement: "const unsent = last?.status === 'not-sent' ? last : undefined;",
+  },
+  {
     name: "Resolution refuses a promoted candidate's trial provenance",
     directory: resolution, file: 'resolution.js',
     anchor: 'return historical.analysis === analysis;', replacement: 'return historical.analysis === analysis && historical.environment === environment;',

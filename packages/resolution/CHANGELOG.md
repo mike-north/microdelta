@@ -1,5 +1,80 @@
 # @microdelta/resolution
 
+## 0.3.0
+### Minor Changes
+
+- af7323b: Add external operations to Run Supervision, with retry and durable deferral, operator settlement and privacy-restricted events (project-private `@alpha` surfaces).
+  
+  - **Operation handle.** `execution().operation({ name, binding, perform, ... })`, called from an admitted step attempt's body, performs one logical external call. Before each send it commits the operation's intent through History's operation journal and records Accounting's usage intent; a usage report is acknowledged before the outcome is committed. Outcomes are succeeded, failed, deferred until a time, or unknown.
+  - **Ports.** A run receives `operations: { journal, accounting }`. Both ports are structural and owned by Supervision (`IOperationJournalPort`, opened with `operationJournalDeclaration`, and `IOperationAccounting`), so Supervision takes no dependency on History or Accounting.
+  - **Retry and deferral.** Rate and quota responses with a retry time are deferred durably and retried by default, at most 5 times unless the author overrides it. Other transient failures retry only under an author policy. A lost response is never replayed without a safety basis (`safeToRepeat`, or `providerIdempotency`) and a policy. A step attempt that meets a deferral or unknown outcome sends nothing more and stays pending.
+  - **Passes.** Members, strict-fold and outcome-fold requests run in passes. Once only deferred work remains, a run releases its writer lease and either sleeps and resumes in another pass (`deferral: 'sleep'`, the default) or returns with `waitingUntil` (`'exit'`). Admission in later runs honors the time and blocks unknown outcomes; pending members name the block.
+  - **Hard stop.** An aborted request's remote state is recorded durably in the journal.
+  - **Operator settlement.** `run.inspectOperations()` and `run.settleOperation({ action: 'resolve' | 'abandon', ... })` settle an unknown operation; operator usage is acknowledged under an operator-namespaced report identity. A resolution as succeeded keeps the address consumed: a later call there sends nothing and fails with `operation-resolved`. A resolution as failed, or an abandonment, frees the address.
+  - **Identities.** Operation identities, which are also provider idempotency keys, carry 128 random bits from the new Machine random identifier capability (`IRandomIdentifierCapability`, Node's `createNodeRandom()`), passed to Supervision with the operation ports (`operations: { journal, accounting, random }`). An intent that cannot be made durable sends nothing and leaves the step pending on a deferral that backs off exponentially (1 s, doubling, capped at 60 s).
+  - **Events.** New `operation` and `wait` run events carry identifiers, closed codes, times, usage with identifier units and remote state, never values. Exhaustive narrowing of `IRunEvent` must now handle them.
+  - **Resolution.** The cancellation port's `execute` receives the claimed attempt's subject and identity, and may report an `unsettled` execution, which ends the attempt interrupted and leaves the step pending. A promoted candidate's recorded dependencies are accepted as historical evidence of the same analysis.
+  - **Facade.** A workspace run passes `inspectOperations` and `settleOperation` through; without operation ports they fail with `invalid-request`.
+- 7293b47: Add outcome (tolerant) folds over a template step's members (project-private `@alpha` surfaces).
+  
+  - **Declaration.** `outcomeFold({ subject, over: { template, step }, run })` declares an outcome fold. It is a composition-level step of its own kind, never a child, member step or template step. The composition topology lists it in `outcomeFolds`, apart from strict `folds`.
+  - **Entries.** The body receives one entry per current member in canonical key order, with that member's settled status: `succeeded` with a view of its result, or `skipped`, `failed` or `cancelled` with no data. Reading data from a failed or cancelled entry throws `unsuccessful-member`. A pending member is never an entry.
+  - **Completeness.** `resolveOutcomeFold` settles every member first. While discovery is open or any member is pending, the outcome is `waiting` with the partial coverage settled so far. A waiting fold runs no body, admits no fold work and publishes nothing. A rejected or cancelled discovery makes it `failed`.
+  - **Repair.** Once the set has settled, the fold is validated or executed over its membership-and-status fact, which also records failed and cancelled members. Repairing a failed member makes the fold reconsider, and unaffected member results are reused.
+  - **Coverage.** Every member is listed under exactly one of `succeeded`, `skipped`, `failed`, `cancelled` or `pending`, with `openDiscovery` and `complete`. Coverage is derived by the framework and is never a claim of complete success. A member cancelled by a stop is settled but not successful for that run.
+  - **Separation.** Outcome folds record version-4 provenance, so a strict fold never accepts an outcome fold's result, nor the reverse. Strict folds are unchanged.
+  - **Report.** Supervision and the facade report `IOutcomeFoldReport` with `folded`, `waiting`, `failed`, `pending` or `cancelled`.
+  - **Nested run operations are refused.** Author code may keep the run and call one of its operations (`resolve`, `resolveMembers`, `resolveFold`, `resolveOutcomeFold`, `check`, `recover`, `ordinary`, or the facade's `read`) from inside member work or any step attempt, a fold's body included. That call now rejects at once with the new `undeclared-call` Supervision error, before any of its work is admitted, and the run records a diagnostic that names the operation and the calling step (CMP-9). What it resolves or reads would enter no evidence of the calling body. Previously such a call could wait for the run-wide window lane that its caller held, and deadlocked with a window of one lane. `IRun.assertDeclaredCall(operation)` checks the same rule: inside member or step work it records the diagnostic and throws the refusal, otherwise it returns. Its `operation` is one of the closed `IRunOperationName`s, and any other value throws `invalid-request` without recording anything. The facade's synchronous `read` uses it, and the facade's author-facing `IWorkspaceRun` omits it.
+- 00f672e: Add operator stop control, a bounded permit pool, the publication-commit rule and bounded nested waiting to supervised runs (project-private `@alpha` surfaces).
+  
+  - **Stop controller.** `createStopController()` holds operator stop intent, and a run receives it as `stop`. Levels only escalate.
+    - A soft stop admits no new work and refuses every retry, while admitted steps drain with no default deadline. The drain unit is the admitted step attempt: a child its still-executing body demands is admitted as a first attempt; its retries and waits stay refused, and work no executing admitted body demands is cancelled.
+    - An operator deadline on a soft stop escalates it to hard; its timer never keeps the host alive on its own.
+    - A hard stop interrupts admitted bodies at once, even ones that never settle. It aborts sends in flight, permit waits and waits for a time, and it forbids later commits.
+  - **No partial output.** A step whose send or wait was refused or aborted can no longer publish. An interrupted attempt ends `interrupted`, with a `stopped` ending, and reports a `refused` outcome with disposition `cancelled`.
+  - **Publication commit.** Each commit first asks Supervision whether a hard stop forbids it, in the same synchronous turn, so the commit is the linearization point. History's commit still re-reads the writer lease durably, so a drain that outlives its lease cannot publish.
+  - **Permits and window.** A run's `permits` (default 1) bound sends in flight; a permit guards only a real send, never waiting. Its `window` (default 8, independent of permits) bounds how many fan-out members actively resolve at once. Resolution runs each member through the cancellation port's `member()`; members start first in, first out, and report in canonical key order. A member waiting for a time lends its lane and, on waking, reclaims one ahead of members that have not started, so it never stalls its siblings. Each send's `perform` receives its own abort signal, detached from the run once the send settles. Resolution without Supervision resolves members one at a time.
+  - **Execution controls.** `currentExecution()` returns the live run's controls, attributed to the admitted step running there:
+    - its stop state and abort signal;
+    - `send({ label, retry?, perform, cancel? })`, which records the remote state (`cancelled`, `running` or `unknown`) of an aborted send;
+    - `sleepUntil(time)`, which any stop ends at once.
+  
+    The controls fail with `run-closed` after the run closes.
+  - **Run report.** Observers see `stop` and `send` events, which carry identifiers, levels and states only. A run result reports its closing stop state and every aborted send's remote state.
+  - **Bounded nested waiting.** A nested memo still waits for the calls it started before ending its attempt, but run cancellation now bounds that wait. A never-settling child ends interrupted under a hard stop, and a body that threw while children hung reports its own error.
+  - **Timer capability.** Machine adds the portable `ITimerCapability`: the wall clock plus one-shot callbacks at a wall-clock time. The Node adapter adds `createNodeTimer()`, which re-arms rather than firing early and splits waits beyond Node's timer range.
+
+### Patch Changes
+
+- cd05189: Fixes for defects found by the M5 acceptance suite (project-private `@alpha` surfaces).
+  
+  - **Stop at the start of a deferral sleep.** A hard stop that is already in force when a run begins its deferral sleep no longer arms the sleep's keep-alive timer. For example, a stop requested by an observer reacting to the `sleeping` event. The process can now exit at once instead of staying alive until the deferral's time.
+  - **`resumed` wait events.** `released` reports whether the run released its writer lease for that wait, including a release made while the request slept. It is no longer always `false`.
+  - **A lost writer lease mid-pass.** History may refuse a write because the lease no longer authorizes it. This covers claims, publications, acceptances and attempt endings. The refused write records nothing, and it no longer escapes as History's raw `StaleWriterError`. The step that needed it is denied with reason `lease-lost`. So a soft-stop drain that outlived its lease ends with typed member outcomes, even when it meets results its successor published (EXP-8 ruling R). Every other History failure keeps its own typed outcome and is never reported as `lease-lost`. Integrity damage met while staging or publishing a result now reports `integrity`, as it already did for claims and acceptances.
+  - **Author error text.** Framework failure messages and diagnostics name the step or position and the failure kind only. They never repeat what author or caller code threw. This covers bodies, source checks, finality hooks, gates, custom keys, slot subject functions, admission, lifecycle and run observers, and abort listeners. The thrown value stays available as the failure's `cause`. `DefinitionError` accepts an optional `cause`, and a throwing slot subject function's rejection carries it.
+- c0eaf43: Add an operation journal, environment namespaces and recorded promotion to History's durable authority (project-private `@alpha` surfaces).
+  
+  - **Operation journal.** `openJournal(declaration)` returns a journal port for Run Supervision's operation and deferral records. History stores them as opaque versioned records, each addressed by analysis, environment, an owner-named collection and key.
+    - A commit is atomic and uses compare-and-set on revisions. It runs under the current writer's holder, fence and unexpired lease, in the same transaction.
+    - Earlier revisions are kept and are immutable.
+    - A record's format and version are only its version tag, never part of its identity. A write under another format compare-and-sets against the address's current revision; it never creates a parallel record.
+    - A port declares the record formats and versions it understands. A record of any other format or version is refused on write, read, list and overwrite, with `JournalVersionError`. A stale expected revision is refused with `JournalConflictError`.
+  - **Environment namespaces.** Acceptance records now name the environment whose verification recorded them. `recordAcceptance` requires an explicit `environment`, and so does `readAcceptances`. Resolution passes its own run environment.
+    - Attempts, current heads, candidates, acceptances and journal records of one environment never satisfy a lookup in another.
+  - **Recorded promotion.** `promoteResults({ target, references, evidence })` records a fenced promotion with the promoter's evidence. It admits named exact results into another environment of the same analysis, where they become candidates, dependencies and acceptance targets. `readPromotions({ target })` returns promotion records.
+    - A reference that cannot be promoted into the target is refused with `HistoryIntegrityError`: unknown, of another analysis, or already published in the target.
+    - A promotion moves no current head. It never rewrites the promoted results, their provenance or their original environment's acceptances.
+  - **Storage.** The durable SQLite schema is now version 2. A file at any other version, including a version 1 file written by an earlier release, is rejected by its recorded version with `HistorySchemaError`. Stored data is not migrated.
+- Updated dependencies [cd05189]
+- Updated dependencies [3eaa7ed]
+- Updated dependencies [c0eaf43]
+- Updated dependencies [7293b47]
+- Updated dependencies [a6addaa]
+  - @microdelta/definition@0.3.0
+  - @microdelta/history@0.2.0
+  - @microdelta/tracking@0.2.1
+  - @microdelta/materialization@0.1.2
+
 ## 0.2.0
 ### Minor Changes
 

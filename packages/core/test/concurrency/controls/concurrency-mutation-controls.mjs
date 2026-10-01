@@ -13,23 +13,44 @@
  * and on SIGINT/SIGTERM/SIGHUP, and its final bytes are compared with the
  * original; rebuilding the package restores it after a SIGKILL.
  *
- * On-demand evidence command, not part of `npm test`: run `npm run build`,
- * `npm run test:unit --workspace microdelta` and
- * `npm run test:unit --workspace @microdelta/supervision` first (controls plant
- * into both test builds), then
+ * On-demand evidence command, not part of `npm test`: run `npm run build` and
+ * `npm run test:unit --workspace microdelta` first (the runner compiles
+ * Supervision's test build itself, since controls plant into both), then
  * `node packages/core/test/concurrency/controls/concurrency-mutation-controls.mjs`.
  * Controls must run serially.
+ *
+ * `--check-anchors` verifies that every anchor matches exactly once in the
+ * current builds and exits without running any suite; `npm test` runs it for
+ * every runner (anchor-check.test.mjs) so drift fails early.
  */
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
+import { anchorCheckRequested, reportAnchorCheck } from '../../durable-history/controls/anchor-check.mjs';
 import { judgeRun } from '../../durable-history/controls/control-outcome.mjs';
+import { ensureSupervisionTestBuild } from '../../durable-history/controls/prerequisites.mjs';
 import { controls, groupOf, groups, plant, repositoryRoot, targetOf, targets } from './controls.mjs';
+
+// The controls plant into Supervision's test build too, which only its own owner suite would otherwise produce.
+ensureSupervisionTestBuild(repositoryRoot);
 
 /** The original emitted bytes of every target, by repository-relative path. */
 const originals = new Map(targets.map((path) => [path, readFileSync(join(repositoryRoot, path), 'utf8')]));
+
+// Drift guard: `--check-anchors` plants every control into the current builds in memory and runs no suite.
+if (anchorCheckRequested()) {
+  const problems = controls.flatMap((control) => {
+    try {
+      plant(originals.get(targetOf(control)) ?? '', control);
+      return [];
+    } catch (error) {
+      return [`ANCHOR: ${error instanceof Error ? error.message : String(error)}`];
+    }
+  });
+  process.exit(reportAnchorCheck(problems, controls.length));
+}
 
 /** Restore every target to its original bytes. */
 function restore() {

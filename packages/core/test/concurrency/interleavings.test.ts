@@ -549,7 +549,7 @@ function expectOnlyHighWaterMoved(before: IDurableState, after: IDurableState): 
   expect(after.timeHighWater).toBeGreaterThanOrEqual(before.timeHighWater);
 }
 
-describe('waiting for the writer lease across processes (L1–L7)', () => {
+describe('waiting for the writer lease across processes (L1–L8)', () => {
   test('L1: a waiter polls at its interval and at the holder’s expiry while the holder works and renews, changes nothing but the clock high-water, and takes over only after expiry with the next fence', async () => {
     const location = freshStore();
     const [a, w] = await Promise.all([worker('A', location), worker('W', location)]);

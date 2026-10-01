@@ -698,8 +698,12 @@ are unchanged. The fix round's evidence is in its own section below.
   before acquiring, and every other error propagates. A raw driver error never
   reaches Supervision.
 - **Nested runs are refused.** A workspace run started from inside an open run
-  of the same workspace would wait forever for the lease its caller holds, so
-  it is refused at once with `invalid-request`.
+  over the same store file would wait forever for the lease its caller holds,
+  so it is refused at once with `invalid-request`. This holds whichever
+  workspace object opened the file and however its location was spelled. The
+  facade keys its process-wide registry of live runs by the file's canonical
+  location, which the Node adapter's `canonicalNodeLocation` supplies, because
+  host file access belongs to the Node adapter.
 - **`WriterLease.tla`.** The renew and release effects leave the fence
   unchanged. A new `Busy` action is a waiter giving up: durably it is exactly a
   `held` observation, and it records the holder it names. The deadline is
@@ -722,7 +726,7 @@ are unchanged. The fix round's evidence is in its own section below.
 | operator deadline, typed writer-busy | `awaitWriter` deadline branch; `WriterBusyError` | `Busy` | Supervision deadline tests (passed, now, boundary ±1 ms); L3; L4 (deadline 1 100 is granted, 1 099 is busy); facade `writer-wait.test.ts`; C3 | aligned; the deadline arithmetic itself is not modeled |
 | `SQLITE_BUSY` exhaustion | History `acquireWriter` and `renewWriter` (`contended`); port mapping; `WriterBusyError.contended` | none (SQLite locks are not modeled) | `writer-port.test.ts` H1–H5 and P1–P7; Supervision contention tests; L7 (another process holds `BEGIN IMMEDIATE`); facade in-process contention test | aligned in code and tests; outside the model |
 | a busy renewal keeps the lease | `renewWriter` returns `contended`; the port keeps `held` | none | H2, P2 (next try renews the same fence); Supervision "the run is the recorded holder" message test | aligned; outside the model |
-| nested same-workspace run | `openWorkspace().run` refuses it through the run context | none | facade `writer-wait.test.ts` (refused within 1 s; from ordinary work; another workspace allowed; after close allowed) | aligned; outside the model |
+| nested run over the same store | the facade's process-wide registry of live runs, keyed by run context with each run's canonical store location (`canonicalNodeLocation`) and enclosing run | none | facade `writer-wait.test.ts`: refused within 1 s from the same workspace, from ordinary work, from a second workspace object over the same file, through a symbolic-link spelling, and through a run over another store in between; another store and a run after close are allowed. machine-node `node-location.test.ts` | aligned; outside the model |
 | stop during a wait | `sleepUntil`, stop check | none | Supervision soft and hard stop tests; L6 (soft, hard); facade hard-stop test | aligned; not modeled |
 | renew and release leave the fence | `extendHolder`, `clearHolder` statements | `Effect` for renew and release | F1 (a connection-local trigger records every `last_fence` assignment: only grants), T* stale renew, `DH:` renew and release tests | aligned |
 | `WaiterPreservesAuthorityState` (now `held` and `busy`) | the `held` branch; giving up writes nothing more | `Held`, `Busy` | L1, L2, L3 compare authority rows before and after each waiter step, with only the high-water allowed to rise; W1, W4 | aligned. The plan's wording ("only the time high-water may rise") settles the earlier ambiguity |
@@ -946,6 +950,25 @@ discriminating tests and four nits. Each item was written test first.
   publication can still throw a bare `SqliteBusyError`, because those
   operations have no contention outcome. None did in these runs.
 
+### Second fix round (verification of `b9e938b`)
+
+- **Every normal request waits.** Mutation F1, an outcome-fold request that
+  tries once and fails busy without waiting, survived every suite. Supervision's
+  wait test now runs over `resolve`, `resolveMembers`, `resolveFold` and
+  `resolveOutcomeFold`, and the four cases pass. F1 is a committed control in
+  the supervision group, and the `resolveOutcomeFold` case rejects it.
+- **Nested runs across workspace objects.** Three new facade cases were written
+  first, and against the per-workspace check each was still waiting after 2 s:
+  - a second workspace object over the same file;
+  - the same file spelled through a symbolic link;
+  - a run over another store between the two runs over the same store.
+
+  The facade now keeps one process-wide registry keyed by canonical file
+  location. The new cases are refused within 1 s, and the earlier cases (same
+  workspace, ordinary work, another store, after close) still behave as
+  before. machine-node's `canonicalNodeLocation` has its own tests: two
+  spellings of one file, distinct files, and a missing file refused.
+
 ### Observations
 
 - **Waiting is not fair.** In a first C3 run, workers took a new tenure
@@ -979,7 +1002,9 @@ discriminating tests and four nits. Each item was written test first.
   rather than spinning.
 - **No observer event reports waiting.** The structured event schema belongs to
   #119.
-- **Only same-workspace nesting is refused.** A run of a *second* workspace
-  opened over the same store file, started inside a run of the first, is a
-  different holder to History and still waits, without a deadline until a
-  stop.
+- **Nested runs are recognized only within one process.** A run nested inside
+  an open run over the same store file is refused whichever workspace object
+  opened the file, however its location was spelled (the facade compares
+  canonical file locations from the Node adapter), and through runs over other
+  stores in between. Separate processes are not nested; there the waiter
+  simply waits.

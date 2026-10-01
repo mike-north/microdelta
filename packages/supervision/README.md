@@ -28,8 +28,8 @@ supervised run and returns `{ context, value, diagnostics }`:
   `composition-phase` while a composition is being constructed. The run id is
   volatile metadata, never reuse evidence.
 - **Lifetime.** The run stays live until its body *and* every operation
-  started through it (`resolve`, `resolveMembers`, `resolveFold`, `check`,
-  `recover`, `ordinary`) have settled, including operations started while it waits and
+  started through it (`resolve`, `resolveMembers`, `resolveFold`,
+  `resolveOutcomeFold`, `check`, `recover`, `ordinary`) have settled, including operations started while it waits and
   ones the body stopped awaiting early (a `Promise.all` whose sibling failed). The body's own value
   or failure is what the run reports. `run.open` reports this state. The run
   closes in the same turn that observes no started work, so every operation is
@@ -74,6 +74,20 @@ supervised run and returns `{ context, value, diagnostics }`:
 
   A failed or waiting fold never ran its body, admitted fold work or
   published.
+- **Outcome fold outcomes.** `resolveOutcomeFold(step, { requestKey })` is a
+  normal request for one outcome (tolerant) fold. It reports discovery and
+  every member as a members report does, then the fold's typed outcome:
+  - `folded`: reused or published over every member's settled status, with
+    complete coverage `{ succeeded, skipped, failed, cancelled, pending: [],
+    openDiscovery: false, complete: true }`. It is not complete success: its
+    coverage may list failed or cancelled members.
+  - `waiting`: discovery is open or a member is pending, with the partial
+    coverage settled so far.
+  - `failed`: discovery was rejected or cancelled.
+  - `pending` or `cancelled`: the set settled, but admission denied or
+    cancelled the fold's own work; it carries the coverage it would have
+    folded. A soft-stop cancelled member is settled for that run and never a
+    success.
 - **Observers.** Observers are captured at start and see frozen events at the
   fixed positions `stepLifecycle` and `ordinaryLifecycle`. They cannot veto or
   replace work. A throw before work stops only that call; a throw after a
@@ -122,8 +136,20 @@ execution contract describes them (EXP-8 mechanisms 1 and 2, ruling R).
   lends its lane and, on waking, reclaims one ahead of members that have not
   started, so it never stalls its siblings. The window bounds members holding
   a lane, not every branch of a member's body; permits still bound its sends.
-  The lane pool is run-wide, so member work must never start a nested
-  fan-out under it.
+  The lane pool is run-wide, and only the run body's operations draw from it.
+  Every run operation (`resolve`, `resolveMembers`, `resolveFold`,
+  `resolveOutcomeFold`, `check`, `recover`, `ordinary`), called from inside
+  member work or any step attempt (a fold's body included) by author code
+  that kept the run, rejects at once with `undeclared-call` (CMP-9) and a run
+  diagnostic naming the operation and the calling step. What it resolves or
+  reads would enter no evidence of the calling body, and the refusal means a
+  lane holder never waits for the window (RUN-002's nested rule).
+  `assertDeclaredCall(operation)` checks the same rule without running
+  anything: inside member or step work it records the diagnostic and throws
+  the refusal, otherwise it returns. Its `operation` is a closed
+  `IRunOperationName`; any other value throws `invalid-request` and records
+  nothing. The facade's synchronous exact `read` calls it first, and the
+  facade's author-facing run omits it.
 - **Execution controls.** `supervision.execution()` gives author code and
   adapters the live run's controls by scoped lookup:
   - `send({ label, retry?, perform, cancel? })` holds one permit per send. A

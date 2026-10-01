@@ -25,6 +25,7 @@ import { collectionOption, type ICollectionIdentity, type ICollectionOptions } f
 import { DefinitionError } from './errors.js';
 import type { IApply, IBindingFamily } from './family.js';
 import type { IAnyFoldDeclaration, IFoldRecord } from './fold.js';
+import type { IAnyOutcomeFoldDeclaration, IOutcomeFoldRecord } from './outcome-fold.js';
 import type {
   IChildResult,
   IDeclaredCallHandle,
@@ -203,10 +204,15 @@ export interface IMemoDeclaration<TFamily extends IBindingFamily, TChildren exte
 }
 
 /**
- * Any step declaration of one family: a source, a memo or a strict fold.
+ * Any step declaration of one family: a source, a memo, a strict fold or an
+ * outcome fold.
  * @alpha
  */
-export type IStepDeclaration<TFamily extends IBindingFamily> = IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily> | IAnyFoldDeclaration<TFamily>;
+export type IStepDeclaration<TFamily extends IBindingFamily> =
+  | IAnySourceDeclaration<TFamily>
+  | IAnyMemoDeclaration<TFamily>
+  | IAnyFoldDeclaration<TFamily>
+  | IAnyOutcomeFoldDeclaration<TFamily>;
 
 /**
  * Author options for a retained source. `TExtra` is the context its callbacks
@@ -349,8 +355,8 @@ export interface IMemoRecord<TFamily extends IBindingFamily> {
   ): IMemoRecord<TFamily>;
 }
 
-/** Any record a builder instance keeps: a step's, a strict fold's, or a supplied step implementation's. */
-export type IStepRecord<TFamily extends IBindingFamily> = ISourceRecord<TFamily> | IMemoRecord<TFamily> | IFoldRecord<TFamily> | ISuppliedStepRecord<TFamily>;
+/** Any record a builder instance keeps: a step's, a strict or outcome fold's, or a supplied step implementation's. */
+export type IStepRecord<TFamily extends IBindingFamily> = ISourceRecord<TFamily> | IMemoRecord<TFamily> | IFoldRecord<TFamily> | IOutcomeFoldRecord<TFamily> | ISuppliedStepRecord<TFamily>;
 
 /** One builder instance's records, keyed by the declarations it minted. */
 export type IDeclarationRecords<TFamily extends IBindingFamily> = WeakMap<object, IStepRecord<TFamily>>;
@@ -397,7 +403,7 @@ export function declareSourceWith<TFamily extends IBindingFamily, TResult, TExtr
     reject('illegal-edge', 'Sources declare no child edges in M3.');
   }
   if (read.has('over')) {
-    reject('illegal-edge', 'Only a strict fold names the template step it consumes.');
+    reject('illegal-edge', 'Only a strict or outcome fold names the template step it consumes.');
   }
   checkCallback(read, 'run', true);
   checkCallback(read, 'finality', false);
@@ -485,7 +491,7 @@ export function declareMemoWith<TFamily extends IBindingFamily, TChildren extend
     reject('invalid-collection', 'Only a source declares a keyed collection.');
   }
   if (read.has('over')) {
-    reject('illegal-edge', 'Only a strict fold names the template step it consumes.');
+    reject('illegal-edge', 'Only a strict or outcome fold names the template step it consumes.');
   }
   checkCallback(read, 'run', true);
   const subject = subjectOption(read);
@@ -513,8 +519,8 @@ export function declareMemoWith<TFamily extends IBindingFamily, TChildren extend
     if (childRecord.kind === 'supplied-step') {
       reject('illegal-edge', `Child ${slot} is a supplied step; name its step slot instead, and bind the step at composition.`);
     }
-    if (childRecord.kind === 'fold') {
-      reject('illegal-edge', `Child ${slot} is a strict fold, which is never called as a child.`);
+    if (childRecord.kind === 'fold' || childRecord.kind === 'outcome-fold') {
+      reject('illegal-edge', `Child ${slot} is a ${childRecord.kind === 'fold' ? 'strict' : 'outcome'} fold, which is never called as a child.`);
     }
     entries.push([slot, { kind: 'sibling', declaration: childRecord.declaration }]);
   }

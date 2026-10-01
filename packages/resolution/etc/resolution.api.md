@@ -87,6 +87,13 @@ export interface ICheckRequest {
 }
 
 // @alpha
+export type ICompleteOutcomeFoldCoverage = IOutcomeFoldCoverage & {
+    readonly pending: readonly [];
+    readonly openDiscovery: false;
+    readonly complete: true;
+};
+
+// @alpha
 export type IDiscoveryOutcome = {
     readonly kind: 'keyed';
     readonly collection: IBindingDescriptor;
@@ -178,6 +185,11 @@ export interface IGateEvidence {
 }
 
 // @alpha
+export type IIncompleteOutcomeFoldCoverage = IOutcomeFoldCoverage & {
+    readonly complete: false;
+};
+
+// @alpha
 export interface ILifecycleEvent {
     readonly phase: ILifecyclePhase;
     readonly reference?: ICompletedResultReference;
@@ -232,6 +244,52 @@ export interface IOutcomeEvidence {
 }
 
 // @alpha
+export interface IOutcomeFoldCoverage {
+    readonly cancelled: readonly string[];
+    readonly complete: boolean;
+    readonly failed: readonly string[];
+    readonly openDiscovery: boolean;
+    readonly pending: readonly string[];
+    readonly skipped: readonly string[];
+    readonly succeeded: readonly string[];
+}
+
+// @alpha
+export type IOutcomeFoldOutcome = IOutcomeEvidence & ({
+    readonly kind: 'reused';
+    readonly basis: 'validated';
+    readonly reference: ICompletedResultReference;
+    readonly acceptance: IAcceptanceRecord;
+    readonly coverage: ICompleteOutcomeFoldCoverage;
+} | {
+    readonly kind: 'published';
+    readonly reference: ICompletedResultReference;
+    readonly attemptId: number;
+    readonly coverage: ICompleteOutcomeFoldCoverage;
+} | {
+    readonly kind: 'refused';
+    readonly refused: IBindingDescriptor;
+    readonly reason: string;
+    readonly disposition: IRefusalDisposition;
+    readonly coverage: ICompleteOutcomeFoldCoverage;
+} | {
+    readonly kind: 'waiting';
+    readonly coverage: IIncompleteOutcomeFoldCoverage;
+} | {
+    readonly kind: 'failed';
+    readonly diagnostic: string;
+});
+
+// @alpha
+export interface IOutcomeFoldResolution {
+    readonly diagnostics: readonly string[];
+    readonly discovery: IDiscoveryOutcome;
+    readonly members: readonly IMemberResolution[];
+    readonly outcome: IOutcomeFoldOutcome;
+    readonly over: IBindingDescriptor;
+}
+
+// @alpha
 export interface IPreviousResult<T> {
     readonly data: IResultView<T>;
 }
@@ -267,6 +325,7 @@ export interface IResolution {
     resolve(request: IResolveRequest): Promise<IResolutionOutcome>;
     resolveFold(request: IFoldRequest): Promise<IFoldResolution>;
     resolveMembers(request: IMembersRequest): Promise<IMembersResolution>;
+    resolveOutcomeFold(request: IFoldRequest): Promise<IOutcomeFoldResolution>;
 }
 
 // @alpha
@@ -397,7 +456,7 @@ export interface IStepBindings<TInputs extends object, THelpers extends object> 
 }
 
 // @alpha
-export type IStepKind = 'source' | 'memo' | 'supplied' | 'fold';
+export type IStepKind = 'source' | 'memo' | 'supplied' | 'fold' | 'outcome-fold';
 
 // @alpha
 export type ISupervisedExecution<T> = {

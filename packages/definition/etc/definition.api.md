@@ -45,6 +45,17 @@ export interface IAnyMemoDeclaration<TFamily extends IBindingFamily> extends IDe
 }
 
 // @alpha
+export interface IAnyOutcomeFoldDeclaration<TFamily extends IBindingFamily> extends IDeclarationBrand<TFamily> {
+    // (undocumented)
+    readonly kind: 'outcome-fold';
+    readonly label: string | undefined;
+    readonly over: IFoldOver<IAnyTemplateDeclaration<TFamily>, string>;
+    readonly run: (context: never) => unknown;
+    readonly subject: string;
+    readonly version: number;
+}
+
+// @alpha
 export interface IAnySourceDeclaration<TFamily extends IBindingFamily> extends IDeclarationBrand<TFamily> {
     readonly collection: ICollectionIdentity | undefined;
     readonly finality: ((context: never) => unknown) | undefined;
@@ -170,6 +181,13 @@ export type ICalls<TFamily extends IBindingFamily, TChildren extends IChildDecla
 };
 
 // @alpha
+export interface ICancelledEntry {
+    readonly key: string;
+    // (undocumented)
+    readonly status: 'cancelled';
+}
+
+// @alpha
 export type IChildDeclaration<TFamily extends IBindingFamily> = IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily> | IAnyStepSlot<TFamily>;
 
 // @alpha
@@ -246,6 +264,7 @@ export interface IDeclarations<TFamily extends IBindingFamily> {
     gateOf(composition: IComposition<TFamily>, instance: IBindingDescriptor): IGateInvocation<TFamily> | undefined;
     memo<TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult = unknown>(options: IMemoOptions<TFamily, TChildren, TResult>): IMemoDeclaration<TFamily, TChildren, TResult>;
     openInvocation(composition: IComposition<TFamily>, parent: IBindingDescriptor, port: IInvocationPort<TFamily>): IInvocation<TFamily>;
+    outcomeFold<TTemplate extends IAnyTemplateDeclaration<TFamily>, TStep extends keyof IStepsOf<TTemplate> & string, TResult>(options: IOutcomeFoldOptions<TFamily, TTemplate, TStep, TResult>): IOutcomeFoldDeclaration<TFamily, IResultOf<TFamily, IStepsOf<TTemplate>[TStep]>, TResult>;
     source<TResult>(options: ISourceOptions<TFamily, TResult>): ISourceDeclaration<TFamily, TResult>;
     stepSlot<TParameters extends readonly unknown[] = readonly [], TResult = unknown>(options: IStepSlotOptions): IStepSlot<TFamily, TParameters, TResult>;
     suppliedStep<TParameters extends readonly unknown[] = readonly [], TResult = unknown>(options: ISuppliedStepOptions<TFamily, TParameters, TResult>): ISuppliedStepDeclaration<TFamily, TParameters, TResult>;
@@ -281,7 +300,7 @@ export interface IDeclaredEdge {
 export type IDeclaredInvocationRequest<TFamily extends IBindingFamily, TResult> = ISourceCallRequest<TFamily, TResult> | IMemoCallRequest<TFamily> | ISuppliedCallRequest<TFamily>;
 
 // @alpha
-export type IDefinitionErrorCode = 'invalid-subject' | 'invalid-version' | 'invalid-callback' | 'illegal-edge' | 'forged-declaration' | 'invalid-descriptor' | 'invalid-input' | 'conflicting-subject' | 'unresolved-parent' | 'composition-phase' | 'scope-closed' | 'scope-inactive' | 'unsupported-arguments' | 'invalid-argument' | 'missing-slot' | 'ambiguous-slot' | 'invalid-result' | 'forged-composition' | 'invalid-bindings' | 'invalid-previous' | 'frozen' | 'invalid-template' | 'invalid-collection' | 'invalid-members' | 'skipped-member';
+export type IDefinitionErrorCode = 'invalid-subject' | 'invalid-version' | 'invalid-callback' | 'illegal-edge' | 'forged-declaration' | 'invalid-descriptor' | 'invalid-input' | 'conflicting-subject' | 'unresolved-parent' | 'composition-phase' | 'scope-closed' | 'scope-inactive' | 'unsupported-arguments' | 'invalid-argument' | 'missing-slot' | 'ambiguous-slot' | 'invalid-result' | 'forged-composition' | 'invalid-bindings' | 'invalid-previous' | 'frozen' | 'invalid-template' | 'invalid-collection' | 'invalid-members' | 'skipped-member' | 'unsuccessful-member';
 
 // @alpha
 export type IDerivedArguments<TParameters extends readonly unknown[]> = {
@@ -307,6 +326,13 @@ export interface IDirectChildWitness {
 export interface IEmptyArguments {
     // (undocumented)
     readonly form: 'empty';
+}
+
+// @alpha
+export interface IFailedEntry {
+    readonly key: string;
+    // (undocumented)
+    readonly status: 'failed';
 }
 
 // @alpha
@@ -468,7 +494,7 @@ export interface IInputTarget {
 }
 
 // @alpha
-export type IInvocation<TFamily extends IBindingFamily> = IMemoInvocation<TFamily> | ISourceInvocation<TFamily> | ISuppliedInvocation<TFamily> | IFoldInvocation<TFamily>;
+export type IInvocation<TFamily extends IBindingFamily> = IMemoInvocation<TFamily> | ISourceInvocation<TFamily> | ISuppliedInvocation<TFamily> | IFoldInvocation<TFamily> | IOutcomeFoldInvocation<TFamily>;
 
 // @alpha
 export type IInvocationArguments = IEmptyArguments | readonly [IArgumentRecipe, ...IArgumentRecipe[]];
@@ -610,6 +636,42 @@ export interface INestedInvocationWitness {
 }
 
 // @alpha
+export type IOutcomeEntry<T> = ISucceededEntry<T> | ISkippedEntry | IFailedEntry | ICancelledEntry;
+
+// @alpha
+export interface IOutcomeFoldDeclaration<TFamily extends IBindingFamily, TMemberResult, TResult> extends IAnyOutcomeFoldDeclaration<TFamily> {
+    // (undocumented)
+    readonly run: (context: IOutcomeFoldRunContext<TFamily, TMemberResult>) => TResult;
+}
+
+// @alpha
+export interface IOutcomeFoldInvocation<TFamily extends IBindingFamily> extends IInvocationScope {
+    apply<TOutcome>(bindings: TFamily['memo'], members: IOutcomeFoldMemberSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>): TOutcome;
+    // (undocumented)
+    readonly kind: 'outcome-fold';
+    readonly over: IBindingDescriptor;
+}
+
+// @alpha
+export interface IOutcomeFoldMemberSupplier<TFamily extends IBindingFamily> {
+    outcomes<TMemberResult>(fold: IOutcomeFoldDeclaration<TFamily, TMemberResult, unknown>): readonly IOutcomeEntry<IApply<TFamily['views'], TMemberResult>>[];
+}
+
+// @alpha
+export interface IOutcomeFoldOptions<TFamily extends IBindingFamily, TTemplate extends IAnyTemplateDeclaration<TFamily>, TStep extends keyof IStepsOf<TTemplate> & string, TResult> {
+    readonly label?: string;
+    readonly over: IFoldOver<TTemplate, TStep>;
+    readonly run: (context: IOutcomeFoldRunContext<TFamily, IResultOf<TFamily, IStepsOf<TTemplate>[TStep]>>) => TResult;
+    readonly subject: string;
+    readonly version?: number;
+}
+
+// @alpha
+export type IOutcomeFoldRunContext<TFamily extends IBindingFamily, TMemberResult> = TFamily['memo'] & {
+    readonly members: readonly IOutcomeEntry<IApply<TFamily['views'], TMemberResult>>[];
+};
+
+// @alpha
 export type IPathInput = readonly (string | number)[];
 
 // @alpha
@@ -698,7 +760,7 @@ export type ISourceRunContext<TFamily extends IBindingFamily, TResult> = TFamily
 };
 
 // @alpha
-export type IStepDeclaration<TFamily extends IBindingFamily> = IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily> | IAnyFoldDeclaration<TFamily>;
+export type IStepDeclaration<TFamily extends IBindingFamily> = IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily> | IAnyFoldDeclaration<TFamily> | IAnyOutcomeFoldDeclaration<TFamily>;
 
 // @alpha
 export interface IStepRegistration<TFamily extends IBindingFamily> {
@@ -873,6 +935,7 @@ export interface ITopology {
     readonly folds: readonly IFoldTopology[];
     readonly helpers: readonly string[];
     readonly inputs: readonly string[];
+    readonly outcomeFolds: readonly IFoldTopology[];
     readonly slots: readonly string[];
     readonly steps: readonly IBindingDescriptor[];
     readonly templates: readonly ITemplateTopology[];

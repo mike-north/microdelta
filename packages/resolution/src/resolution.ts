@@ -77,11 +77,32 @@
  * edit that flips no outcome reruns nothing. A successful fold carries
  * framework coverage derived from that fact, never from its body. Nothing is
  * retracted when a member is skipped or deleted.
+ *
+ * An outcome (tolerant) fold (RUN-010) settles its consumed template step the
+ * same way, but no member status fails it: each member settles as succeeded
+ * (its accepted result), skipped, failed (a member-attributable typed
+ * failure) or cancelled (work withdrawn from this run through admission),
+ * while denied work leaves the member pending. While discovery is open (or
+ * its work was denied) or any member is pending, the outcome fold waits with
+ * the partial coverage settled so far: it never claims a complete set, runs
+ * no body, admits no fold work and publishes nothing. A rejected or cancelled
+ * discovery fails it, since no population can be established in this pass.
+ * Once every member of a closed population has settled, it is validated or
+ * executed exactly as a strict fold is, over a membership-and-status fact
+ * that also records failed and cancelled members: repairing a failed member
+ * changes that fact, so the fold reconsiders, while unaffected members are
+ * reused. Its provenance is a version of its own, so neither fold contract
+ * ever accepts the other's result. Neither kind of fold is ever a child, and
+ * every fold or members request presents its members to Run Supervision's
+ * window; Supervision refuses a run operation called from inside member work
+ * as an undeclared call (CMP-9), so no fan-out nests under that window
+ * (RUN-002's nested rule).
  */
 import { DefinitionError, derivedArguments, gateOutcome } from '@microdelta/definition';
 import type {
   IAnyFoldDeclaration,
   IAnyMemoDeclaration,
+  IAnyOutcomeFoldDeclaration,
   IAnySourceDeclaration,
   IAnySuppliedStepDeclaration,
   IApply,
@@ -108,10 +129,15 @@ import type {
   IMemberSupplier,
   IMemoInvocation,
   INestedInvocationWitness,
+  IOutcomeEntry,
+  IOutcomeFoldDeclaration,
+  IOutcomeFoldInvocation,
+  IOutcomeFoldMemberSupplier,
   IPreviousSupplier,
   IScopedSubject,
   ISourceDeclaration,
   ISourceInvocation,
+  IStepDeclaration,
   ISuppliedInvocation,
   ISuppliedStepDeclaration,
   ITemplateTopology,
@@ -138,6 +164,7 @@ import type {
   ICandidateMiss,
   ICheckOutcome,
   ICheckRequest,
+  ICompleteOutcomeFoldCoverage,
   IDiscoveryOutcome,
   IExecutionSupervision,
   IFoldCoverage,
@@ -145,11 +172,14 @@ import type {
   IFoldRequest,
   IFoldResolution,
   IGateEvidence,
+  IIncompleteOutcomeFoldCoverage,
   ILifecycleEvent,
   ILifecyclePhase,
   IMemberResolution,
   IMembersRequest,
   IMembersResolution,
+  IOutcomeFoldOutcome,
+  IOutcomeFoldResolution,
   IRecoverRequest,
   IRecoveryResult,
   IRefusalDisposition,
@@ -175,7 +205,17 @@ import {
 import type { IArgumentValue, ICurrentSlots } from './current.js';
 import { ResolutionError } from './errors.js';
 import { acceptanceRecord, bindingPaths, endingRecord, plainDescriptor, provenanceRecord, readProvenance } from './evidence.js';
-import type { ICallEvidence, IChildEvidence, IDirectProvenance, IFoldProvenance, IMembershipEntry, INestedProvenance, IProvenance } from './evidence.js';
+import type {
+  ICallEvidence,
+  IChildEvidence,
+  IDirectProvenance,
+  IFoldProvenance,
+  IMembershipEntry,
+  INestedProvenance,
+  IOutcomeFoldProvenance,
+  IOutcomeMembershipEntry,
+  IProvenance,
+} from './evidence.js';
 import type { IResolutionFamily } from './family.js';
 import { attemptKey, intentDigest, suppliedIntentDigest } from './intent.js';
 import { mintedOutcome, sourceOutcome } from './outcome.js';
@@ -284,6 +324,19 @@ type IFoldReadiness =
     }
   | { readonly status: 'waiting'; readonly pending: readonly string[]; readonly openDiscovery: boolean }
   | { readonly status: 'ready'; readonly membership: readonly IMembershipEntry[] };
+
+/**
+ * Whether an outcome fold's set has settled in one request (RUN-010):
+ * `failed` when no population can be established in this pass, `waiting`
+ * with the partial coverage settled so far, or `ready` with the current
+ * membership-and-status fact over every settled status (in canonical key
+ * order), from which the body's entries are built and which the fold's
+ * evidence records and validates, and its complete coverage.
+ */
+type IOutcomeReadiness =
+  | { readonly status: 'failed'; readonly diagnostic: string }
+  | { readonly status: 'waiting'; readonly coverage: IIncompleteOutcomeFoldCoverage }
+  | { readonly status: 'ready'; readonly membership: readonly IOutcomeMembershipEntry[]; readonly coverage: ICompleteOutcomeFoldCoverage };
 
 /** One top-level request's context. */
 interface IRequestContext {
@@ -540,11 +593,12 @@ function memberOutputMiss(candidate: ICompletedResultReference, comparison: Excl
 }
 
 /**
- * How a strict fold's recorded membership-and-status fact differs from the
- * current one, or undefined when they are equal. Both are in canonical key
- * order, so equal keys and statuses mean an equal fact.
+ * How a fold's recorded membership-and-status fact differs from the current
+ * one, or undefined when they are equal. Both are in canonical key order, so
+ * equal keys and statuses mean an equal fact. A strict fold's fact holds only
+ * included and skipped members; an outcome fold's also failed and cancelled.
  */
-function membershipChange(recorded: readonly IMembershipEntry[], current: readonly IMembershipEntry[]): string | undefined {
+function membershipChange(recorded: readonly IOutcomeMembershipEntry[], current: readonly IOutcomeMembershipEntry[]): string | undefined {
   const before = new Map(recorded.map((entry) => [entry.key, entry.status]));
   const now = new Map(current.map((entry) => [entry.key, entry.status]));
   const changes: string[] = [];
@@ -573,6 +627,22 @@ function coverageOf(membership: readonly IMembershipEntry[]): IFoldCoverage {
   });
 }
 
+/** The member keys of each status, in the canonical key order of the settled members. */
+function statusLists(membership: readonly IOutcomeMembershipEntry[]): Pick<ICompleteOutcomeFoldCoverage, 'succeeded' | 'skipped' | 'failed' | 'cancelled'> {
+  const keysOf = (status: IOutcomeMembershipEntry['status']): readonly string[] => Object.freeze(membership.flatMap((entry) => entry.status === status ? [entry.key] : []));
+  return { succeeded: keysOf('included'), skipped: keysOf('skipped'), failed: keysOf('failed'), cancelled: keysOf('cancelled') };
+}
+
+/** The framework's coverage of an outcome fold whose closed population has completely settled. */
+function completeCoverage(membership: readonly IOutcomeMembershipEntry[]): ICompleteOutcomeFoldCoverage {
+  return Object.freeze({ ...statusLists(membership), pending: Object.freeze([] as const), openDiscovery: false, complete: true });
+}
+
+/** The framework's partial coverage of an outcome fold whose set has not settled. */
+function incompleteCoverage(membership: readonly IOutcomeMembershipEntry[], pending: readonly string[], openDiscovery: boolean): IIncompleteOutcomeFoldCoverage {
+  return Object.freeze({ ...statusLists(membership), pending: Object.freeze([...pending]), openDiscovery, complete: false });
+}
+
 /** A readable structured address of an observation, for diagnostics only. */
 function describeAddress(observation: ITrackingObservation): string {
   const path = observation.address.map((segment) => segment.kind === 'property' ? segment.key : `[${String(segment.index)}]`).join('.');
@@ -589,6 +659,8 @@ function describeKind(kind: IProvenance['kind']): string {
       return 'supplied step';
     case 'fold':
       return 'strict fold';
+    case 'outcome-fold':
+      return 'outcome fold';
     default: {
       const exhaustive: never = kind;
       return exhaustive;
@@ -755,7 +827,7 @@ export function createResolution<TInputs extends object, THelpers extends object
   });
 
   /** The scoped subject and compatibility group of a declaration. */
-  function versioned(declaration: IAnySourceDeclaration<IFamily> | IAnyMemoDeclaration<IFamily> | IAnyFoldDeclaration<IFamily>): IVersionedSubject {
+  function versioned(declaration: IStepDeclaration<IFamily>): IVersionedSubject {
     return Object.freeze({ analysis, environment, subject: declaration.subject, version: declaration.version });
   }
 
@@ -770,12 +842,13 @@ export function createResolution<TInputs extends object, THelpers extends object
   /**
    * Reconnect a requested step to its unique current declaration of any
    * kind: an explicit member or composition-level step, a template instance
-   * (its template step descriptor plus a member key), or a strict fold.
+   * (its template step descriptor plus a member key), or a strict or outcome
+   * fold.
    * Definition reads the caller's descriptor through own data properties
    * only, so a malformed or accessor-bearing descriptor is an invalid request
    * and no accessor runs.
    */
-  function anyStepTarget(step: IBindingDescriptor): { readonly step: IBindingDescriptor; readonly declaration: IAnySourceDeclaration<IFamily> | IAnyMemoDeclaration<IFamily> | IAnyFoldDeclaration<IFamily> } {
+  function anyStepTarget(step: IBindingDescriptor): { readonly step: IBindingDescriptor; readonly declaration: IStepDeclaration<IFamily> } {
     let resolution: ReturnType<typeof composition.resolve>;
     try {
       resolution = composition.resolve(step);
@@ -790,16 +863,19 @@ export function createResolution<TInputs extends object, THelpers extends object
 
   /**
    * Reconnect a requested step to its unique current source or memo
-   * declaration, as {@link anyStepTarget} does. A strict fold is refused with
-   * `invalid-request` before any evidence, candidate lookup or admission: its
-   * readiness, waiting and coverage are resolved only by `resolveFold`, whose
-   * outcome can express them.
+   * declaration, as {@link anyStepTarget} does. A strict or outcome fold is
+   * refused with `invalid-request` before any evidence, candidate lookup or
+   * admission: its readiness, waiting and coverage are resolved only by
+   * `resolveFold` or `resolveOutcomeFold`, whose outcomes can express them.
    */
   function stepTarget(step: IBindingDescriptor): { readonly step: IBindingDescriptor; readonly declaration: IAnySourceDeclaration<IFamily> | IAnyMemoDeclaration<IFamily> } {
     const target = anyStepTarget(step);
     const declaration = target.declaration;
     if (declaration.kind === 'fold') {
       throw new ResolutionError('invalid-request', `Step ${stepKey(target.step)} is a strict fold; resolve it with resolveFold, whose waiting, failed and coverage outcomes a step outcome cannot express`);
+    }
+    if (declaration.kind === 'outcome-fold') {
+      throw new ResolutionError('invalid-request', `Step ${stepKey(target.step)} is an outcome fold; resolve it with resolveOutcomeFold, whose waiting and coverage outcomes a step outcome cannot express`);
     }
     return { step: target.step, declaration };
   }
@@ -1057,7 +1133,7 @@ export function createResolution<TInputs extends object, THelpers extends object
    * served, resumed or re-executed by a normal request; the separate recovery
    * operation reports what happened.
    */
-  function freshIdentity(request: IRequestContext, step: IBindingDescriptor, declaration: IAnySourceDeclaration<IFamily> | IAnyMemoDeclaration<IFamily> | IAnyFoldDeclaration<IFamily>): IExecutionIdentity {
+  function freshIdentity(request: IRequestContext, step: IBindingDescriptor, declaration: IStepDeclaration<IFamily>): IExecutionIdentity {
     const requestKey = requestKeyOfRequest(request);
     return unusedIdentity(requestKey, step, {
       ...versioned(declaration),
@@ -2559,9 +2635,11 @@ export function createResolution<TInputs extends object, THelpers extends object
      * Invariant: the window's lane pool is run-wide, so a member's work must
      * never reach another `settleMembers` (a nested fan-out) under the same
      * pool; a member holding a lane while its own fan-out waits for lanes can
-     * deadlock the window (RUN-002's nested rule). It holds today because a
-     * strict fold cannot be a declared child and every run operation starts
-     * from the run's root frame, never from inside a member.
+     * deadlock the window (RUN-002's nested rule). Resolution never nests one:
+     * neither a strict nor an outcome fold can be a declared child. Author
+     * code that kept the run cannot nest one either: Supervision refuses a
+     * run operation called from inside member work or a step attempt as an
+     * undeclared call (CMP-9).
      */
     const member = async (key: string, position: number): Promise<void> => {
       if (runFailure.first !== undefined) {
@@ -2687,6 +2765,119 @@ export function createResolution<TInputs extends object, THelpers extends object
     return { status: 'ready', membership };
   }
 
+  /** The current composition's outcome fold at a fold step descriptor, with the template step it consumes. */
+  function outcomeFoldTopology(step: IBindingDescriptor): IFoldTopology {
+    const fold = composition.topology.outcomeFolds.find((entry) => stepKey(entry.fold) === stepKey(step));
+    if (fold === undefined) {
+      throw new ResolutionError('unbound-step', `Outcome fold ${step.slot} consumes no template step of the current composition`);
+    }
+    return fold;
+  }
+
+  /**
+   * Decide whether an outcome fold's set has settled, from how discovery and
+   * every current member settled in this pass (RUN-010). Unlike a strict
+   * fold's readiness, no member status fails it. In order:
+   *
+   * 1. No population can be established in this pass, so it fails:
+   *    discovery was rejected by keying, or its work was cancelled.
+   * 2. Otherwise it waits, with the partial coverage settled so far, while
+   *    discovery is open (or its work was denied) or any member is pending:
+   *    denied work, like a pending retry, is not a settled status.
+   * 3. Otherwise it is ready over the current membership-and-status fact:
+   *    every member in canonical key order, included with its accepted
+   *    result, or skipped, failed or cancelled with none.
+   */
+  function outcomeReadiness(fold: IFoldTopology, population: IPopulation, settled: readonly ISettledMember[]): IOutcomeReadiness {
+    const name = `Outcome fold ${fold.fold.slot}`;
+    switch (population.status) {
+      case 'rejected':
+        return { status: 'failed', diagnostic: `${name} cannot establish its population: discovery of ${population.collection.slot} was rejected: ${population.diagnostic.message}` };
+      case 'stopped': {
+        const result = population.result;
+        if (result.kind === 'uncertain') {
+          throw new ResolutionError('invalid-request', 'A normal request cannot end uncertain');
+        }
+        return result.disposition === 'cancelled'
+          ? { status: 'failed', diagnostic: `${name} cannot establish its population: discovery work of ${population.collection.slot} was cancelled: ${result.reason}` }
+          : { status: 'waiting', coverage: incompleteCoverage([], [], true) };
+      }
+      case 'keyed':
+        break;
+      default: {
+        const exhaustive: never = population;
+        return exhaustive;
+      }
+    }
+    const membership: IOutcomeMembershipEntry[] = [];
+    const pending: string[] = [];
+    for (const { key, resolved } of settled) {
+      if (resolved instanceof ResolutionError) {
+        membership.push(Object.freeze({ key, status: 'failed' }));
+        continue;
+      }
+      const result = resolved.result;
+      switch (result.kind) {
+        case 'reused':
+        case 'published':
+          membership.push(Object.freeze({ key, status: 'included', reference: result.reference }));
+          break;
+        case 'skipped':
+          membership.push(Object.freeze({ key, status: 'skipped' }));
+          break;
+        case 'refused':
+          // A cancellation settles the member for this run; a denial leaves it pending.
+          if (result.disposition === 'cancelled') {
+            membership.push(Object.freeze({ key, status: 'cancelled' }));
+          } else {
+            pending.push(key);
+          }
+          break;
+        case 'uncertain':
+        case 'execution-required':
+          throw new ResolutionError('invalid-request', `A normal request cannot end ${result.kind}`);
+        default: {
+          const exhaustive: never = result;
+          return exhaustive;
+        }
+      }
+    }
+    const openDiscovery = population.completion === 'open';
+    if (openDiscovery || pending.length > 0) {
+      return { status: 'waiting', coverage: incompleteCoverage(membership, pending, openDiscovery) };
+    }
+    return { status: 'ready', membership, coverage: completeCoverage(membership) };
+  }
+
+  /** Open the unique current invocation of an outcome fold step. */
+  function openOutcomeFold(step: IBindingDescriptor): IOutcomeFoldInvocation<IFamily> {
+    const invocation = options.declarations.openInvocation(composition, step, port);
+    if (invocation.kind !== 'outcome-fold') {
+      invocation.close();
+      throw new ResolutionError('unbound-step', `Step ${stepKey(step)} is not an outcome fold`);
+    }
+    return invocation;
+  }
+
+  /**
+   * The explicit keyed entries a ready outcome fold's body receives, built
+   * from its membership-and-status fact in canonical key order: an included
+   * member as `succeeded` with a lazy view of its exact accepted result at
+   * its `entry` binding, so every fact the body reads is the fold's own
+   * evidence for that member; every other member with its settled status and
+   * no data at all. Definition validates, orders and freezes them.
+   */
+  function outcomeMembers(membership: readonly IOutcomeMembershipEntry[]): IOutcomeFoldMemberSupplier<IFamily> {
+    return Object.freeze({
+      outcomes: <TMemberResult>(fold: IOutcomeFoldDeclaration<IFamily, TMemberResult, unknown>): readonly IOutcomeEntry<IApply<IFamily['views'], TMemberResult>>[] => {
+        void fold;
+        return trusted<readonly IOutcomeEntry<IApply<IFamily['views'], TMemberResult>>[]>(membership.map((entry) => entry.status === 'included'
+          ? Object.freeze({ key: entry.key, status: 'succeeded' as const, data: materialization.materializeView<object>(entry.reference, { path: bindingPaths.entry(entry.key) }) })
+          : Object.freeze({ key: entry.key, status: entry.status })));
+      },
+    });
+  }
+
   /** Open the unique current invocation of a strict fold step. */
   function openFold(step: IBindingDescriptor): IFoldInvocation<IFamily> {
     const invocation = options.declarations.openInvocation(composition, step, port);
@@ -2720,9 +2911,12 @@ export function createResolution<TInputs extends object, THelpers extends object
   type IFoldVerdict = ({ readonly verdict: 'eligible' } & IEligible) | { readonly verdict: 'miss'; readonly miss: ICandidateMiss };
 
   /**
-   * Validate one strict fold candidate against the current membership-and-
-   * status fact (CMP-8; the fold consumes each member's included-or-skipped
-   * outcome, never the gate's raw facts). First, the template step it recorded
+   * Validate one fold candidate against the current membership-and-status
+   * fact (CMP-8, RUN-010; a strict fold consumes each member's
+   * included-or-skipped outcome, an outcome fold every settled status, never
+   * the gate's raw facts). Its provenance must have been recorded by the same
+   * fold contract: a strict fold never accepts an outcome fold's result, nor
+   * the reverse. Then, the template step it recorded
    * consuming must be the one it consumes now: candidates are found by
    * subject, which the fold keeps when the consumed step or template is
    * renamed or the collection moves, and that is changed correspondence,
@@ -2734,17 +2928,24 @@ export function createResolution<TInputs extends object, THelpers extends object
    * member's entry, compared against the member's current accepted result.
    * The fold body never runs here.
    */
-  function evaluateFoldCandidate(request: IRequestContext, step: IBindingDescriptor, over: IBindingDescriptor, declaration: IAnyFoldDeclaration<IFamily>, candidate: ICompletedEnvelope, membership: readonly IMembershipEntry[]): IFoldVerdict {
+  function evaluateFoldCandidate(
+    request: IRequestContext,
+    step: IBindingDescriptor,
+    over: IBindingDescriptor,
+    declaration: IAnyFoldDeclaration<IFamily> | IAnyOutcomeFoldDeclaration<IFamily>,
+    candidate: ICompletedEnvelope,
+    membership: readonly IOutcomeMembershipEntry[],
+  ): IFoldVerdict {
     const missed = (reason: ICandidateMiss['reason'], detail: string): IFoldVerdict => ({ verdict: 'miss', miss: miss(candidate.reference, reason, detail) });
     const reading = integrity(() => readProvenance(candidate));
     if (reading.status === 'unsupported') {
       return missed('unsupported-evidence', reading.detail);
     }
     const provenance: IProvenance = reading.provenance;
-    if (provenance.kind !== 'fold') {
+    if (provenance.kind !== declaration.kind || (provenance.kind !== 'fold' && provenance.kind !== 'outcome-fold')) {
       return missed('unsupported-evidence', `provenance was recorded for a ${describeKind(provenance.kind)}`);
     }
-    const recorded: IFoldProvenance = provenance;
+    const recorded: IFoldProvenance | IOutcomeFoldProvenance = provenance;
     if (stepKey(recorded.over) !== stepKey(over)) {
       return missed('correspondence', `the fold consumed ${stepKey(recorded.over)}, not the current ${stepKey(over)}`);
     }
@@ -2757,7 +2958,8 @@ export function createResolution<TInputs extends object, THelpers extends object
     if (change !== undefined) {
       return missed('changed-membership', change);
     }
-    for (const entry of recorded.membership) {
+    const recordedMembership: readonly IOutcomeMembershipEntry[] = recorded.membership;
+    for (const entry of recordedMembership) {
       if (entry.status !== 'included') {
         continue;
       }
@@ -2788,14 +2990,41 @@ export function createResolution<TInputs extends object, THelpers extends object
   }
 
   /**
-   * Validate or execute a ready strict fold over its current membership-and-
-   * status fact: reuse the newest candidate that validates, recording an
-   * acceptance that names each included member's current result; otherwise
-   * present the fold's own work to admission and, when admitted, run its body
-   * with the explicit keyed entries and publish version-3 provenance whose
-   * exact dependencies are the included members' results.
+   * One ready fold's work under its own contract: a strict fold over its
+   * included-or-skipped membership fact, or an outcome fold over every
+   * settled status.
    */
-  async function resolveFoldStep(request: IRequestContext, step: IBindingDescriptor, over: IBindingDescriptor, declaration: IAnyFoldDeclaration<IFamily>, membership: readonly IMembershipEntry[]): Promise<IResolvedStep> {
+  type IFoldWork =
+    | { readonly kind: 'fold'; readonly declaration: IAnyFoldDeclaration<IFamily>; readonly membership: readonly IMembershipEntry[] }
+    | { readonly kind: 'outcome-fold'; readonly declaration: IAnyOutcomeFoldDeclaration<IFamily>; readonly membership: readonly IOutcomeMembershipEntry[] };
+
+  /**
+   * Open a ready fold's invocation and pair its body with the explicit keyed
+   * entries its contract delivers, without running anything. Opening runs no
+   * author code.
+   */
+  function openFoldBody(step: IBindingDescriptor, work: IFoldWork, bindings: IFamily['memo']): { readonly invocation: IInvocationScope; readonly run: () => Promise<IObservationCapture<IMemoReturn>> } {
+    if (work.kind === 'fold') {
+      const invocation = openFold(step);
+      return { invocation, run: () => active.run(invocation, () => invocation.apply(bindings, foldMembers(work.membership), invoker(detachComputation))) };
+    }
+    const invocation = openOutcomeFold(step);
+    return { invocation, run: () => active.run(invocation, () => invocation.apply(bindings, outcomeMembers(work.membership), invoker(detachComputation))) };
+  }
+
+  /**
+   * Validate or execute a ready fold over its current membership-and-status
+   * fact: reuse the newest candidate that validates, recording an acceptance
+   * that names each included member's current result; otherwise present the
+   * fold's own work to admission and, when admitted, run its body with the
+   * explicit keyed entries and publish provenance (version 3 for a strict
+   * fold, version 4 for an outcome fold) whose exact dependencies are the
+   * included members' results.
+   */
+  async function resolveFoldStep(request: IRequestContext, step: IBindingDescriptor, over: IBindingDescriptor, work: IFoldWork): Promise<IResolvedStep> {
+    const { declaration } = work;
+    const membership: readonly IOutcomeMembershipEntry[] = work.membership;
+    const name = work.kind === 'fold' ? 'strict fold' : 'outcome fold';
     const evidence = newEvidence(request);
     const done = (result: IStepResult): IResolvedStep => ({ step, result, evidence });
     emit(request, evidence, step, 'verify');
@@ -2810,27 +3039,27 @@ export function createResolution<TInputs extends object, THelpers extends object
     }
     const bindings = authorBindings(request);
     const identity = freshIdentity(request, step, declaration);
-    const refusal = await admit(request, evidence, step, 'fold', versioned(declaration), candidates.length > 0 ? 'invalid' : 'cold');
+    const refusal = await admit(request, evidence, step, work.kind, versioned(declaration), candidates.length > 0 ? 'invalid' : 'cold');
     if (refusal !== undefined) {
       return done({ kind: 'refused', refused: step, reason: refusal.reason, disposition: refusal.disposition });
     }
     // Opening the invocation runs no author code; doing it before the claim leaves no attempt behind if it fails.
-    const invocation = openFold(step);
+    const body = openFoldBody(step, work, bindings);
     let attemptId: number;
     try {
       attemptId = claim(request, evidence, step, identity);
     } catch (error: unknown) {
-      invocation.close();
+      body.invocation.close();
       throw error;
     }
     let executed: ISupervisedExecution<IObservationCapture<IMemoReturn>>;
     try {
       emit(request, evidence, step, 'execute');
-      executed = await supervision.execute(step, () => active.run(invocation, () => invocation.apply(bindings, foldMembers(membership), invoker(detachComputation))));
+      executed = await supervision.execute(step, body.run);
     } catch (error: unknown) {
       executed = { kind: 'threw', error };
     } finally {
-      invocation.close();
+      body.invocation.close();
     }
     if (executed.kind === 'interrupted') {
       return done(interrupt(request, evidence, step, attemptId, executed.reason));
@@ -2841,16 +3070,18 @@ export function createResolution<TInputs extends object, THelpers extends object
       if (error instanceof ResolutionError) {
         throw error;
       }
-      throw new ResolutionError('execution-failure', `Body of strict fold ${stepKey(step)} failed: ${describe(error)}`, error);
+      throw new ResolutionError('execution-failure', `Body of ${name} ${stepKey(step)} failed: ${describe(error)}`, error);
     }
     const ran = executed.value;
     if (ran.value.detachError !== undefined) {
       abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: describe(ran.value.detachError) });
-      throw new ResolutionError('unsupported-result', `Body of strict fold ${stepKey(step)} returned unsupported data: ${describe(ran.value.detachError)}`, ran.value.detachError);
+      throw new ResolutionError('unsupported-result', `Body of ${name} ${stepKey(step)} returned unsupported data: ${describe(ran.value.detachError)}`, ran.value.detachError);
     }
     return done(publish(request, evidence, step, attemptId, {
       payload: ran.value.data,
-      provenance: { version: 3, kind: 'fold', step, over, observations: ran.observations, membership },
+      provenance: work.kind === 'fold'
+        ? { version: 3, kind: 'fold', step, over, observations: ran.observations, membership: work.membership }
+        : { version: 4, kind: 'outcome-fold', step, over, observations: ran.observations, membership: work.membership },
       dependencies: uniqueReferences(membership.flatMap((entry) => entry.status === 'included' ? [entry.reference] : [])),
     }));
   }
@@ -2892,6 +3123,46 @@ export function createResolution<TInputs extends object, THelpers extends object
         return Object.freeze({ ...evidence, kind: 'published', reference: result.reference, attemptId: result.attemptId, coverage });
       case 'refused':
         return Object.freeze({ ...evidence, kind: 'refused', refused: result.refused, reason: result.reason, disposition: result.disposition });
+      case 'uncertain':
+      case 'execution-required':
+        throw new ResolutionError('invalid-request', `A normal request cannot end ${result.kind}`);
+      default: {
+        const exhaustive: never = result;
+        return exhaustive;
+      }
+    }
+  }
+
+  /**
+   * The public outcome of an outcome fold: a settled set's resolved step with
+   * the framework's complete coverage, or an unsettled set's wait (with the
+   * partial coverage so far) or a population that cannot be established,
+   * neither of which ran fold work and so has no misses or trace.
+   * Diagnostics are the whole request's so far.
+   */
+  function outcomeFoldOutcome(request: IRequestContext, step: IBindingDescriptor, readiness: IOutcomeReadiness, resolved: IResolvedStep | undefined): IOutcomeFoldOutcome {
+    if (readiness.status !== 'ready') {
+      const evidence = { step, misses: Object.freeze([]), trace: Object.freeze([]), diagnostics: Object.freeze([...request.diagnostics]) };
+      return readiness.status === 'failed'
+        ? Object.freeze({ ...evidence, kind: 'failed', diagnostic: readiness.diagnostic })
+        : Object.freeze({ ...evidence, kind: 'waiting', coverage: readiness.coverage });
+    }
+    if (resolved === undefined) {
+      throw new ResolutionError('invalid-request', `A settled outcome fold ${stepKey(step)} must be resolved`);
+    }
+    const evidence = { step, misses: Object.freeze([...resolved.evidence.misses]), trace: Object.freeze([...resolved.evidence.trace]), diagnostics: Object.freeze([...request.diagnostics]) };
+    const { coverage } = readiness;
+    const result = resolved.result;
+    switch (result.kind) {
+      case 'reused':
+        if (result.acceptance === undefined || result.basis !== 'validated') {
+          throw new ResolutionError('integrity', 'An outcome fold reuse must record a validated current acceptance');
+        }
+        return Object.freeze({ ...evidence, kind: 'reused', basis: result.basis, reference: result.reference, acceptance: result.acceptance, coverage });
+      case 'published':
+        return Object.freeze({ ...evidence, kind: 'published', reference: result.reference, attemptId: result.attemptId, coverage });
+      case 'refused':
+        return Object.freeze({ ...evidence, kind: 'refused', refused: result.refused, reason: result.reason, disposition: result.disposition, coverage });
       case 'uncertain':
       case 'execution-required':
         throw new ResolutionError('invalid-request', `A normal request cannot end ${result.kind}`);
@@ -2984,9 +3255,50 @@ export function createResolution<TInputs extends object, THelpers extends object
       }
       const { population, settled } = await settleMembers(context, template, fold.over);
       const readiness = foldReadiness(fold, population, settled);
-      const resolved = readiness.status === 'ready' ? await resolveFoldStep(context, target.step, fold.over, declaration, readiness.membership) : undefined;
+      const resolved = readiness.status === 'ready' ? await resolveFoldStep(context, target.step, fold.over, { kind: 'fold', declaration, membership: readiness.membership }) : undefined;
       // Converted after the fold settled, so every outcome reports the whole request's diagnostics.
       const outcome = foldOutcome(context, target.step, readiness, resolved);
+      return Object.freeze({
+        over: fold.over,
+        discovery: discoveryOutcome(population),
+        members: memberResolutions(context, template, settled),
+        outcome,
+        diagnostics: Object.freeze([...context.diagnostics]),
+      });
+    },
+
+    /**
+     * One normal request for an outcome (tolerant) fold (RUN-010). The
+     * consumed template step is settled for every current member exactly as a
+     * members request settles it, each member independently. A rejected or
+     * cancelled discovery fails it; otherwise open discovery (or denied
+     * discovery work) or a pending member leaves it waiting with the partial
+     * coverage settled so far, running no body, admitting no fold work and
+     * publishing nothing. Only once every member of a closed population has
+     * settled (succeeded, skipped, failed or cancelled) is it validated or
+     * executed, with complete coverage.
+     */
+    async resolveOutcomeFold(request: IFoldRequest): Promise<IOutcomeFoldResolution> {
+      const requestKey = requestKeyOf(request.requestKey);
+      const context = newRequest('normal', requestKey, request.lease);
+      leaseOf(context);
+      const target = anyStepTarget(request.step);
+      const declaration = target.declaration;
+      if (declaration.kind !== 'outcome-fold') {
+        throw new ResolutionError('invalid-request', `Step ${stepKey(target.step)} is a ${describeKind(declaration.kind)}, not an outcome fold`);
+      }
+      const fold = outcomeFoldTopology(target.step);
+      const template = composition.topology.templates.find((entry) => entry.slot === fold.over.template);
+      if (template === undefined) {
+        throw new ResolutionError('unbound-step', `Outcome fold ${target.step.slot} consumes template ${String(fold.over.template)}, which the current composition does not declare`);
+      }
+      const { population, settled } = await settleMembers(context, template, fold.over);
+      const readiness = outcomeReadiness(fold, population, settled);
+      const resolved = readiness.status === 'ready'
+        ? await resolveFoldStep(context, target.step, fold.over, { kind: 'outcome-fold', declaration, membership: readiness.membership })
+        : undefined;
+      // Converted after the fold settled, so every outcome reports the whole request's diagnostics.
+      const outcome = outcomeFoldOutcome(context, target.step, readiness, resolved);
       return Object.freeze({
         over: fold.over,
         discovery: discoveryOutcome(population),

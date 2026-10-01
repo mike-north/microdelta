@@ -50,7 +50,7 @@ function-identity or ordinal fallback. `resolveWitness(data)` reconnects a
 version-1 direct-child witness with the explicit empty-argument form and reports
 unknown versions or argument forms as unsupported.
 
-## Keyed fanout templates, gates and strict folds
+## Keyed fanout templates, gates, strict folds and outcome folds
 
 `template({ slot, collection, key?, gate?, steps })` declares a fanout template
 over a keyed collection source. Its `steps` factory runs exactly once, inside
@@ -106,6 +106,18 @@ whose `apply` validates Resolution's member outcomes and gives `run` one entry
 per member in canonical key order: `succeeded` with its view, or `skipped` with
 no data (reading `data` throws `skipped-member`). Definition never evaluates
 gates, runs discovery or decides fold readiness.
+
+`outcomeFold({ subject, over: { template, step }, run })` declares an outcome
+(tolerant) fold over the same kind of template step, with a different contract
+(RUN-010): its `run` receives every member's settled status rather than the
+complete success of a required population. Opening it yields an
+`outcome-fold` invocation whose entries are `succeeded` with its view, or
+`skipped`, `failed` or `cancelled` with no data (reading `data` throws
+`skipped-member` or `unsuccessful-member`). A pending or otherwise unsettled
+member is never an entry. The composition topology lists outcome folds in
+`outcomeFolds`, apart from strict `folds`. Like a strict fold, an outcome fold
+is a composition-level step only: never a child, a member step or a template
+step.
 
 ## Invocation bridge
 

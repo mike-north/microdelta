@@ -20,6 +20,9 @@ import type { IWriterAttempt } from './contracts.js';
  * - `stopped`: stop intent refused or aborted a send, a permit wait or a wait for a time (RUN-014). The
  *   step attempt it belonged to can no longer publish; its body may let this propagate. It also ends a
  *   normal request's wait for the writer lease, before that request has done anything.
+ * - `undeclared-call`: a run operation was called from inside a member's work or a step attempt
+ *   (author code that kept the run). What it resolves or reads would enter no evidence of the
+ *   calling body, so it is refused before any admission or lane (CMP-9, RUN-002).
  * @alpha
  */
 export type ISupervisionErrorCode =
@@ -29,7 +32,8 @@ export type ISupervisionErrorCode =
   | 'observer-failure'
   | 'writer-busy'
   | 'invalid-request'
-  | 'stopped';
+  | 'stopped'
+  | 'undeclared-call';
 
 /**
  * A failed supervision request. An underlying failure, when there is one, is

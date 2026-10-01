@@ -92,6 +92,12 @@ const controls = [
     replacement: "const settledRemotely = sent.remote === 'cancelled'; if (settledRemotely || !settledRemotely) { return { stored: current, outcome: { kind: 'error', error: new SupervisionError('stopped', 'aborted') } }; }",
   },
   {
+    name: 'a pending operation is judged in flight by run identifier, which repeats across processes',
+    directory: supervision, file: 'operation-engine.js',
+    anchor: "return stored.record.status === 'pending' && lease !== undefined && stored.fence !== lease.fence;",
+    replacement: "return stored.record.status === 'pending' && stored.record.attempts.at(-1)?.run !== context.runId;",
+  },
+  {
     name: 'a resumed pass executes again a step that settled in an earlier pass',
     directory: supervision, file: 'supervision.js',
     anchor: 'if (caller?.request?.settled.has(descriptorKey(request.step)) === true) {', replacement: 'if (false) {',

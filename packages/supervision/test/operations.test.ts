@@ -64,7 +64,7 @@ function memoryJournal(): IMemoryJournal {
         if (current !== write.expectedRevision) {
           throw new Error('journal conflict');
         }
-        const entry = { key: write.key, revision: current + 1, record: write.record };
+        const entry = { key: write.key, revision: current + 1, fence: 1, record: write.record };
         records.set(key, entry);
         return entry;
       });
@@ -72,7 +72,7 @@ function memoryJournal(): IMemoryJournal {
     read: (address) => records.get(id(address)),
     list: (query) => [...records.entries()].filter(([key]) => key.startsWith(JSON.stringify([query.environment, query.collection]).slice(0, -1))).map(([, entry]) => entry),
     put(collection, key, content, format = 'microdelta.supervision.blocks') {
-      records.set(id({ environment: 'env:test', collection, key }), { key, revision: 1, record: { format, formatVersion: 1, content } });
+      records.set(id({ environment: 'env:test', collection, key }), { key, revision: 1, fence: 1, record: { format, formatVersion: 1, content } });
     },
     operation: (key) => records.get(id({ environment: 'env:test', collection: operationsCollection, key }))?.record.content,
   };

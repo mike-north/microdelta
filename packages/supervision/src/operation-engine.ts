@@ -212,10 +212,15 @@ function classify<T>(sent: Extract<ITransmitted<IOperationResponse<T>>, { readon
   }
 }
 
-/** One operation record with the journal revision it was read or written at. */
+/**
+ * One operation record with the journal revision it was read or written at,
+ * and the writer fence that committed that revision (undefined for a record
+ * not yet committed).
+ */
 interface IStored {
   readonly record: IOperationRecord;
   readonly revision: number;
+  readonly fence: number | undefined;
 }
 
 /** What the engine needs of its run. */
@@ -257,7 +262,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
   /** The stored operation of one identity, if any. */
   function readOperation(operation: string): IStored | undefined {
     const entry = ports.journal.read({ ...namespace, collection: operationsCollection, key: operation });
-    return entry === undefined ? undefined : { record: decodeOperation(entry.record), revision: entry.revision };
+    return entry === undefined ? undefined : { record: decodeOperation(entry.record), revision: entry.revision, fence: entry.fence };
   }
 
   /** A subject's block index: the unsettled operations at its addresses, with its revision. */
@@ -284,7 +289,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       writes: changed ? [...writes, { collection: blocksCollection, key: subjectKey(subject), expectedRevision: blocks.revision, record: encodeBlocks(subject, entries) }] : writes,
     });
     const own = committed.find((entry) => entry.key === next.operation);
-    return { record: next, revision: own?.revision ?? expected + 1 };
+    return { record: next, revision: own?.revision ?? expected + 1, fence: own?.fence ?? lease.fence };
   }
 
   /** Offer one operation event, dropping usage units that are not identifiers (and diagnosing the drop by code). */
@@ -350,9 +355,15 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     }
   }
 
-  /** Whether a pending record was left in flight by another run. */
-  function leftByAnotherRun(record: IOperationRecord): boolean {
-    return record.status === 'pending' && record.attempts.at(-1)?.run !== context.runId;
+  /**
+   * Whether a pending record was left in flight by an earlier writer: a run
+   * that died, or that lost its lease, committed it under another fence. A
+   * pending record committed under the current lease's fence is genuinely in
+   * flight in this run. Fences, unlike run identifiers, never repeat across
+   * processes. Without a lease nothing can be decided, so it reads in flight.
+   */
+  function leftByEarlierWriter(stored: IStored, lease: IRunLease | undefined): boolean {
+    return stored.record.status === 'pending' && lease !== undefined && stored.fence !== lease.fence;
   }
 
   /** The block an unsettled record imposes now, or undefined when it may be resumed. */
@@ -435,7 +446,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     const stepAttempt = String(attempt.attemptId);
     let stored = locate(subject, request.name, request.binding);
     if (stored !== undefined && stored.record.status === 'pending') {
-      if (!leftByAnotherRun(stored.record)) {
+      if (!leftByEarlierWriter(stored, lease)) {
         throw new SupervisionError('invalid-request', `Operation ${stored.record.operation} is already in flight in this run`);
       }
       stored = recover(stored, lease);
@@ -472,7 +483,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
         attempts: [],
         settlement: undefined,
       };
-      current = { record, revision: 0 };
+      current = { record, revision: 0, fence: undefined };
     }
     for (;;) {
       if (retry) {
@@ -579,7 +590,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       return write(lease, next, current.revision);
     } catch {
       engine.diagnose(`lease-lost: operation ${next.operation} settlement could not be recorded; it stays pending and reads unknown`);
-      return { record: { ...current.record, status: 'pending' }, revision: current.revision };
+      return { record: { ...current.record, status: 'pending' }, revision: current.revision, fence: current.fence };
     }
   }
 
@@ -699,7 +710,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
           throw new SupervisionError('integrity', `The block index of ${request.subject.subject} names a missing operation`);
         }
         if (stored.record.status === 'pending') {
-          if (!leftByAnotherRun(stored.record)) {
+          if (!leftByEarlierWriter(stored, scope?.lease)) {
             return Object.freeze({ kind: 'denied', reason: `operation ${stored.record.operation} is in flight in this run` });
           }
           stored = recover(stored, scope?.lease);
@@ -741,7 +752,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       if (stored === undefined) {
         throw new SupervisionError('invalid-request', `There is no operation ${operation} in environment ${context.environment}`);
       }
-      if (leftByAnotherRun(stored.record)) {
+      if (leftByEarlierWriter(stored, lease)) {
         stored = recover(stored, lease);
       }
       if (stored.record.status !== 'unknown') {

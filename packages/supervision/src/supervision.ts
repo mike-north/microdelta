@@ -651,6 +651,10 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
           result = await scope.run({ run: state, attempt: undefined, lane: undefined, request: requestScope }, () => request.pass(lease, passKey(requestKey, number)));
         } finally {
           passes.active -= 1;
+          // Another request may be asleep for a deferral: once no pass is active, only deferred work remains.
+          if (passes.sleeping > 0) {
+            releaseIfOnlyDeferred();
+          }
         }
         const reported = request.report(result, requestScope, previous);
         if (requestScope.deferrals.length === 0 || request.final(reported)) {
@@ -666,15 +670,17 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         }
         passes.sleeping += 1;
         let came: boolean;
+        let released: boolean;
         try {
-          waitEvent('sleeping', until, releaseIfOnlyDeferred());
+          released = releaseIfOnlyDeferred();
+          waitEvent('sleeping', until, released);
           came = await sleepForDeferral(until, timer);
         } finally {
           passes.sleeping -= 1;
         }
         if (!came) {
           waitingUntil = Math.min(waitingUntil ?? until, until);
-          waitEvent('stopped', until, true);
+          waitEvent('stopped', until, released);
           return reported;
         }
         waitEvent('resumed', until, false);

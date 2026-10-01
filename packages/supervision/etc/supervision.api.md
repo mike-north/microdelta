@@ -65,6 +65,7 @@ export interface IFoldReport {
 
 // @alpha
 export interface IJournalEntry {
+    readonly fence: number;
     readonly key: string;
     readonly record: IJournalRecordValue;
     readonly revision: number;

@@ -134,7 +134,7 @@ const session = openSession({ history: script.history, accounting: script.accoun
 const environment = script.environment ?? 'env:production';
 let report: IWorkerReport;
 if (script.action === 'members') {
-  const started = session.start({ runId: script.runId, environment, deferral: script.deferral ?? 'exit', stop, permits: 1, window: 1 }, (run) => run.resolveMembers({ template: 'pr', step: 'assess' }, { requestKey: `${script.runId}:members` }));
+  const started = session.start({ runId: script.runId, environment, deferral: script.deferral ?? 'exit', stop, permits: 1, window: 1 }, (run) => run.resolveMembers({ template: 'pr', step: 'assess' }, { requestKey: `${script.runId}:${String(script.now)}:members` }));
   const result = await started.done;
   const operations = (await session.start({ runId: `${script.runId}:inspect`, environment }, (run) => run.inspectOperations()).done).value;
   report = {

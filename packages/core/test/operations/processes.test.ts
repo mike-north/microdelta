@@ -148,6 +148,14 @@ describe('process death around the send and the usage acknowledgment (ACC-005, A
     expect(ledger('applied')).toHaveLength(1);
   });
 
+  test('a process that reuses the dead run\'s identifier still records its in-flight operation unknown (regression: run identifiers repeat across processes, fences do not)', () => {
+    expect(stage({ now: T0, runId: 'run:same', action: 'members', kill: 'after-send' }).signal).toBe('SIGKILL');
+    const after = clean({ now: T0 + 10_000, runId: 'run:same', action: 'members' });
+    expect(trace(after)).toContain('assess@pr-1:recovered:unknown:recovered-after-crash');
+    expect(after.blocked?.['pr-1']).toEqual(expect.objectContaining({ kind: 'unknown-outcome', reason: 'not-repeat-safe' }));
+    expect(ledger('received')).toHaveLength(1);
+  });
+
   test('a repeat-safe operation is retried by the next process under the same identity (the author accepted two effects)', () => {
     const options = { 'pr-1': { safeToRepeat: true, retry: { maxAttempts: 2 } } };
     expect(stage({ now: T0, runId: 'run:A', action: 'members', kill: 'after-send', options }).signal).toBe('SIGKILL');

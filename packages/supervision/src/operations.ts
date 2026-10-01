@@ -350,6 +350,8 @@ export interface IJournalEntry {
   readonly key: string;
   /** The revision number, the expected revision of the next compare-and-set write. */
   readonly revision: number;
+  /** The writer fence under which this revision was committed. */
+  readonly fence: number;
   /** The record. */
   readonly record: IJournalRecordValue;
 }

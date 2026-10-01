@@ -123,19 +123,55 @@ describe('the writer lease while a request sleeps (EXP-8 resolution 1)', () => {
     }
   });
 
-  test('waking without a writer-wait deadline while another holder has the lease returns waiting, eligible since T, instead of failing', async () => {
+  test('a woken pass without a writer-wait deadline waits for the lease, sends nothing while another holder has it, and completes once it is released', async () => {
     world.provider.script('assess', 'pr-1', ['rate-limit:3600000']);
     const session = openSession(stores, timer);
     try {
       const started = members(session);
       await until(() => started.events.some((event) => event.kind === 'wait' && event.phase === 'sleeping'), 'the run sleeps');
       const probe = session.history.acquireWriter({ holder: 'probe', leaseMilliseconds: 10 * hour });
-      expect(probe.kind).toBe('acquired');
+      if (probe.kind !== 'acquired') {
+        throw new Error('the probe did not acquire the lease');
+      }
       timer.advanceTo(T0 + hour);
+      // No default deadline: the woken pass polls for the lease on the default one-second interval and does not return.
+      for (let poll = 1; poll <= 3; poll += 1) {
+        await until(() => timer.pending().includes(T0 + hour + poll * 1_000), `the woken pass polls (${String(poll)})`);
+        timer.advanceTo(T0 + hour + poll * 1_000);
+      }
+      let settled = false;
+      void started.done.then(() => {
+        settled = true;
+      }, () => {
+        settled = true;
+      });
+      await until(() => timer.pending().includes(T0 + hour + 4_000), 'the woken pass keeps waiting');
+      expect(settled).toBe(false);
+      expect(received('pr-1')).toHaveLength(1);
+      session.history.releaseWriter(probe.lease);
+      timer.advanceTo(T0 + hour + 4_000);
       const result = await started.done;
-      expect(result.waitingUntil).toBe(T0 + hour);
-      expect(statuses(result.value.members)).toEqual({ 'pr-1': 'pending', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
-      expect(started.events.filter((event) => event.kind === 'wait').map((event) => event.kind === 'wait' ? event.phase : '')).toEqual(['sleeping', 'resumed', 'writer-busy']);
+      expect(statuses(result.value.members)).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
+      expect(result.waitingUntil).toBeUndefined();
+      expect(started.events.filter((event) => event.kind === 'wait').map((event) => event.kind === 'wait' ? event.phase : '')).toEqual(['sleeping', 'resumed']);
+      expect(received('pr-1')).toHaveLength(2);
+    } finally {
+      session.close();
+    }
+  });
+
+  test('a soft stop during a woken pass\'s wait for the lease ends it with stopped, having sent nothing', async () => {
+    world.provider.script('assess', 'pr-1', ['rate-limit:3600000']);
+    const session = openSession(stores, timer);
+    try {
+      const stop = createStopController();
+      const started = members(session, { stop });
+      await until(() => started.events.some((event) => event.kind === 'wait' && event.phase === 'sleeping'), 'the run sleeps');
+      expect(session.history.acquireWriter({ holder: 'probe', leaseMilliseconds: 10 * hour }).kind).toBe('acquired');
+      timer.advanceTo(T0 + hour);
+      await until(() => timer.pending().includes(T0 + hour + 1_000), 'the woken pass waits for the lease');
+      stop.request({ level: 'soft' });
+      expect(await codeOf(started.done)).toBe('stopped');
       expect(received('pr-1')).toHaveLength(1);
     } finally {
       session.close();

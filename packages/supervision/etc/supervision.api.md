@@ -613,7 +613,7 @@ export interface ISupervisionOptions {
 // @alpha
 export interface IWaitEvent {
     readonly kind: 'wait';
-    readonly phase: 'sleeping' | 'exiting' | 'resumed' | 'stopped' | 'writer-busy';
+    readonly phase: 'sleeping' | 'exiting' | 'resumed' | 'stopped';
     readonly released: boolean;
     readonly runId: string;
     readonly until: number;

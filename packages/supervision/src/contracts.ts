@@ -746,12 +746,11 @@ export interface IRunResult<T> {
   readonly interruptions: readonly ISendInterruption[];
   /**
    * The earliest "not before" time of deferred work the run left waiting, when
-   * it returned without it: in exit mode, because a stop ended the wait, or
-   * because on waking, in a run without a `writerWait` deadline, another
-   * holder had the writer lease or storage was contended (`writer-busy`).
-   * In that last case the time has already passed: it reads "eligible since
-   * T", and a later run admits the work at once. Undefined when no deferred
-   * work was left waiting. A later run honors it.
+   * it returned without it: in exit mode, or because a stop ended the wait.
+   * Undefined when no deferred work was left waiting. A later run honors it.
+   * A pass waking from the wait takes the writer lease as any normal request
+   * does, so another holder makes it wait (under `writerWait`), never return
+   * waiting.
    */
   readonly waitingUntil: number | undefined;
 }

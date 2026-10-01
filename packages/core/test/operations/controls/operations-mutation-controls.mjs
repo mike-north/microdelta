@@ -153,14 +153,21 @@ const controls = [
     anchor: "const restored = current.revision !== before.revision && current.record.status === 'deferred' ? current.record.notBefore : undefined;", replacement: "throw new SupervisionError('operation-unrecorded', 'intent not durable');",
   },
   {
-    name: 'waking without a deadline while another holder has the lease rejects the request',
+    name: 'a woken pass with a deadline fails busy at once instead of waiting up to the deadline',
     directory: supervision, file: 'supervision.js',
-    anchor: "return attempt.kind === 'acquired' ? attempt.lease : undefined;", replacement: "if (attempt.kind !== 'acquired') { throw new SupervisionError('writer-busy', 'busy on waking'); } return attempt.lease;",
+    edits: [
+      { anchor: 'function leaseForPass() {\n            return writerLease();\n        }', replacement: "function leaseForPass(number) {\n            if (number > 1 && writerPolicy.deadline !== undefined) {\n                const attempt = writer.tryLease();\n                if (attempt.kind !== 'acquired') {\n                    throw new SupervisionError('writer-busy', 'woken pass gave up');\n                }\n                return Promise.resolve(attempt.lease);\n            }\n            return writerLease();\n        }" },
+      { anchor: 'const lease = await leaseForPass();', replacement: 'const lease = await leaseForPass(number);' },
+    ],
   },
   {
-    name: 'waking with a deadline returns waiting instead of waiting for the lease',
+    // The reversed interim rule: a woken pass without a deadline tried once and returned waiting.
+    name: 'a woken pass without a deadline returns waiting instead of waiting for the lease',
     directory: supervision, file: 'supervision.js',
-    anchor: 'if (number === 1 || writerPolicy.deadline !== undefined) {', replacement: 'if (number === 1) {',
+    edits: [
+      { anchor: 'function leaseForPass() {\n            return writerLease();\n        }', replacement: "function leaseForPass(number) {\n            if (number > 1 && writerPolicy.deadline === undefined) {\n                const attempt = writer.tryLease();\n                return Promise.resolve(attempt.kind === 'acquired' ? attempt.lease : undefined);\n            }\n            return writerLease();\n        }" },
+      { anchor: 'const lease = await leaseForPass();', replacement: "const lease = await leaseForPass(number);\n                if (lease === undefined) {\n                    return previous;\n                }" },
+    ],
   },
   {
     name: 'an ended attempt may still send an operation',

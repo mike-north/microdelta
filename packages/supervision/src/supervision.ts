@@ -760,20 +760,9 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         throw new SupervisionError('invalid-request', `A normal request's key may not contain the reserved pass separator ${passSeparator}`);
       }
       let previous: R | undefined;
-      let waited: number | undefined;
       let settled: ReadonlySet<string> = new Set();
       for (let number = 1; ; number += 1) {
-        const lease = await leaseForPass(number);
-        if (lease === undefined) {
-          // Woken while another holder has the writer lease and the run has no deadline: return waiting, as exit mode does.
-          const until = waited ?? timer?.currentEpochMilliseconds() ?? 0;
-          waitingUntil = Math.min(waitingUntil ?? until, until);
-          waitEvent('writer-busy', until, true);
-          if (previous === undefined) {
-            throw new SupervisionError('invalid-request', 'A first pass has no earlier report');
-          }
-          return previous;
-        }
+        const lease = await leaseForPass();
         const requestScope: IRequestScope = { lease, deferrals: [], blocks: new Map(), settled };
         passes.active += 1;
         let result: P;
@@ -793,7 +782,6 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         previous = reported;
         settled = new Set([...settled, ...request.settled(reported)]);
         const until = Math.min(...requestScope.deferrals);
-        waited = until;
         if (deferral === 'exit' || timer === undefined || state.stopped.signal.aborted) {
           waitingUntil = Math.min(waitingUntil ?? until, until);
           waitEvent(deferral === 'exit' || timer === undefined ? 'exiting' : 'stopped', until, releaseIfOnlyDeferred());
@@ -819,25 +807,17 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     }
 
     /**
-     * The writer lease for one pass; the only place passes obtain it.
-     *
-     * - A first pass takes it as every normal request does: through the run's
-     *   wait for the writer lease, under its `writerWait` policy.
-     * - A later pass, waking after a deferral's wait, does the same when the
-     *   run has a `writerWait` deadline: it waits for the lease up to that
-     *   deadline and fails with `WriterBusyError` there, as any request does.
-     * - Without a deadline, a waking pass makes one attempt. Another holder
-     *   (`held`) or storage contention (`contended`) returns undefined: the
-     *   request then returns waiting, as exit mode does, its time already
-     *   passed ("eligible since T"), rather than waiting indefinitely for a
-     *   lease another process may keep for a long time.
+     * The writer lease for one pass; the only place passes obtain it. Every
+     * pass, the first or one waking after a deferral's wait, takes it as every
+     * normal request does: through the run's wait for the writer lease under
+     * its `writerWait` policy (RUN-002 owner decision). While another process
+     * holds the lease the pass waits, taking it over through fenced takeover
+     * once it expires; with an operator deadline it fails with
+     * `WriterBusyError` there; with none (the default) it waits until the lease
+     * is granted or a stop ends the wait with `stopped`.
      */
-    async function leaseForPass(number: number): Promise<IRunLease | undefined> {
-      if (number === 1 || writerPolicy.deadline !== undefined) {
-        return writerLease();
-      }
-      const attempt = writer.tryLease();
-      return attempt.kind === 'acquired' ? attempt.lease : undefined;
+    function leaseForPass(): Promise<IRunLease> {
+      return writerLease();
     }
 
     /** The run's operation engine, or the refusal of an operator action on a run without one. */

@@ -255,16 +255,14 @@ accounting }`, which needs the Supervision's timer:
   processes or hosts; it is the provider idempotency key and every retry
   keeps it. One call at an address may be in progress in a run, and an
   attempt that ended sends nothing.
-- **Waking while the lease is held.** A request's first pass obtains the
-  writer lease through the run's writer wait, as every normal request does.
-  A pass that wakes after a deferral's wait does the same when the run has a
-  `writerWait` deadline: it waits for the lease up to that deadline and fails
-  with `WriterBusyError` there. Without a deadline it makes one attempt: if
-  another holder has the lease (`held`) or storage is contended
-  (`contended`), it returns waiting, as exit mode does (`wait` phase
-  `writer-busy`); its `waitingUntil` has then already passed and reads
-  "eligible since T", so a later run admits the work at once. An operator's
-  settlement obtains the lease through the run's writer wait.
+- **Waking while the lease is held.** Every pass, the first or one waking
+  after a deferral's wait, and every operator settlement, obtains the writer
+  lease through the run's writer wait, as every normal request does: while
+  another process holds it, the pass waits (taking it over through fenced
+  takeover once it expires), until an operator `writerWait` deadline, where
+  it fails with `WriterBusyError`. There is no default deadline, so without
+  one it waits until the lease is granted or a stop ends the wait with
+  `stopped`.
 - **Events.** `operation` events carry identifiers (operation, request
   attempt, step attempt, member, run), closed status and reason codes, times,
   usage figures with identifier units and the remote state; `wait` events

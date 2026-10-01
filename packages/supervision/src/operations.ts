@@ -568,9 +568,11 @@ export interface IOperationEvent {
  * released its writer lease, if it held one, and waits until `until`),
  * `exiting` (exit mode returns waiting until `until`), `resumed` (the wait
  * ended and the work is presented again), `stopped` (stop intent ended the
- * wait) or `writer-busy` (on waking another holder had the writer lease, so
+ * wait) or `writer-busy` (on waking, in a run without a `writerWait`
+ * deadline, another holder had the writer lease or storage was contended, so
  * the run returns waiting, as exit mode does; `until` has then already
- * passed and reads "eligible since `until`").
+ * passed and reads "eligible since `until`"). A run with a deadline instead
+ * waits for the lease up to it, as any normal request does.
  * @alpha
  */
 export interface IWaitEvent {

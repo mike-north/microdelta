@@ -10,7 +10,12 @@
  *
  * The enumerated families are listed in the validation record; each maps to
  * an action or invariant of `experiments/exp-7/WriterLease.tla` or
- * `Publication.tla`. This evidence covers one local SQLite file and process
+ * `Publication.tla`. The L family runs a real Run Supervision wait for the
+ * writer lease inside a worker, through the facade's writer port, on a timer
+ * that fires only when the test advances the controlled clock, so polls,
+ * takeover, the operator deadline and stops happen at chosen instants with no
+ * real sleeps. F1 observes, in this process, which writer statements assign
+ * the fence column. This evidence covers one local SQLite file and process
  * termination, not power loss, distributed clocks or multi-host coordination.
  *
  * @see ../../../../docs/spec/execution.md (PUB-002 through PUB-005)
@@ -20,9 +25,11 @@
  */
 import { afterEach, describe, expect, test } from '@jest/globals';
 
-import type { IWriterLease } from '@microdelta/history';
+import type { ISqliteCapability, IWriterLease } from '@microdelta/history';
+import { createNodeSqlite } from '@microdelta/machine-node';
 
-import { cleanup } from '../durable-history/support.js';
+import { cleanup, controlledClock, openHistory, openRaw } from '../durable-history/support.js';
+import type { ISqliteConnection } from '../durable-history/support.js';
 import {
   acceptanceFrom,
   attemptFrom,
@@ -40,9 +47,10 @@ import {
   startWorker,
   stopWorkers,
 } from './driver.js';
-import type { IWorkerHandle } from './driver.js';
+import type { IDurableState, IWorkerHandle } from './driver.js';
 import { attemptRequest, concurrencyStore, labelAddress, lastPartAddress, subject } from './fixture.js';
-import type { IHarnessCommand } from './protocol.js';
+import { parseWaitStatus } from './protocol.js';
+import type { IHarnessCommand, IWaitStatus } from './protocol.js';
 
 afterEach(async () => {
   await stopWorkers();
@@ -487,6 +495,277 @@ describe('lifecycle guards under the current holder', () => {
     await ok(b, { op: 'allocate', at: 1_153, key: 'a-staged' });
     expect(attemptFrom(await ok(b, { op: 'abandon', at: 1_154, key: 'a-staged' }))).toMatchObject({ state: 'interrupted', locator: null });
   }, scenarioTimeout);
+});
+
+/** One assignment of the writer row's fence column, as a connection-local trigger saw it. */
+interface IFenceWrite {
+  readonly from: number;
+  readonly to: number;
+}
+
+/**
+ * Node's real SQLite capability, plus a connection-local (TEMP) trigger on the
+ * connection History opens that records every statement assigning
+ * `history_writer.last_fence`, even to its unchanged value. The trigger lives
+ * only in that connection's temporary schema, so the store file and History's
+ * schema validation are untouched.
+ */
+function fenceWriteTracingSqlite(): { readonly capability: ISqliteCapability; fenceWrites(): readonly IFenceWrite[] } {
+  const real = createNodeSqlite();
+  let traced: ISqliteConnection | undefined;
+  return {
+    capability: {
+      openSqlite(location: string): ISqliteConnection {
+        const connection = real.openSqlite(location);
+        connection.exec('CREATE TEMP TABLE fence_writes (sequence INTEGER PRIMARY KEY, from_fence INTEGER NOT NULL, to_fence INTEGER NOT NULL)');
+        connection.exec('CREATE TEMP TRIGGER trace_fence_writes AFTER UPDATE OF last_fence ON main.history_writer BEGIN INSERT INTO fence_writes (from_fence, to_fence) VALUES (OLD.last_fence, NEW.last_fence); END');
+        traced = connection;
+        return connection;
+      },
+    },
+    fenceWrites(): readonly IFenceWrite[] {
+      if (traced === undefined) {
+        throw new Error('History has not opened the traced connection');
+      }
+      return traced.prepare('SELECT from_fence, to_fence FROM temp.fence_writes ORDER BY sequence').all()
+        .map((row) => ({ from: Number(row.from_fence), to: Number(row.to_fence) }));
+    },
+  };
+}
+
+/** Run a waiting-run command that must succeed and return the waiter's status. */
+async function waitStep(target: IWorkerHandle, command: IHarnessCommand): Promise<IWaitStatus> {
+  return parseWaitStatus(await ok(target, command));
+}
+
+/** The kinds and times of a waiter's tries, for compact comparison with the expected poll schedule. */
+function tries(status: IWaitStatus): readonly string[] {
+  return status.attempts.map((attempt) => `${String(attempt.at)}:${attempt.kind}`);
+}
+
+/** Assert that a waiter's step changed no authority or data, and that the high-water did not move back. */
+function expectOnlyHighWaterMoved(before: IDurableState, after: IDurableState): void {
+  expect(authorityOf(after)).toEqual(authorityOf(before));
+  expect(after.timeHighWater).toBeGreaterThanOrEqual(before.timeHighWater);
+}
+
+describe('waiting for the writer lease across processes (L1–L8)', () => {
+  test('L1: a waiter polls at its interval and at the holder’s expiry while the holder works and renews, changes nothing but the clock high-water, and takes over only after expiry with the next fence', async () => {
+    const location = freshStore();
+    const [a, w] = await Promise.all([worker('A', location), worker('W', location)]);
+    const lease = await acquire(a, 1_000, 'holder-a', 100);
+
+    let before = snapshot(location);
+    let status = await waitStep(w, { op: 'wait-start', at: 1_010, holder: 'waiter-w', leaseMilliseconds: 1_000, pollMilliseconds: 30, key: 'w-work' });
+    expect(status.attempts).toEqual([{ at: 1_010, kind: 'held', holder: 'holder-a', expiresAt: 1_100, fence: null }]);
+    expect(status.outcome).toEqual({ kind: 'pending' });
+    expectOnlyHighWaterMoved(before, snapshot(location));
+
+    before = snapshot(location);
+    status = await waitStep(w, { op: 'wait-advance', at: 1_040 });
+    expect(tries(status)).toEqual(['1010:held', '1040:held']);
+    expectOnlyHighWaterMoved(before, snapshot(location));
+
+    // The holder renews: the waiter sees the new expiry and keeps waiting.
+    expect(leaseFrom(await ok(a, { op: 'renew', at: 1_050, leaseMilliseconds: 100 })).expiresAt).toBe(1_150);
+    before = snapshot(location);
+    status = await waitStep(w, { op: 'wait-advance', at: 1_070 });
+    expect(status.attempts.at(-1)).toEqual({ at: 1_070, kind: 'held', holder: 'holder-a', expiresAt: 1_150, fence: null });
+    expectOnlyHighWaterMoved(before, snapshot(location));
+
+    // The holder keeps working under its lease while the waiter polls.
+    const own = await publishKey(a, 1_080, 'a-work', 'holder');
+    before = snapshot(location);
+    status = await waitStep(w, { op: 'wait-advance', at: 1_149 });
+    // Polls every 30 ms, and the next wake-up is the holder's expiry at 1 150, not 1 160.
+    expect(tries(status)).toEqual(['1010:held', '1040:held', '1070:held', '1100:held', '1130:held']);
+    expect(status.outcome).toEqual({ kind: 'pending' });
+    expectOnlyHighWaterMoved(before, snapshot(location));
+
+    status = await waitStep(w, { op: 'wait-advance', at: 1_150 });
+    expect(tries(status)).toEqual(['1010:held', '1040:held', '1070:held', '1100:held', '1130:held', '1150:acquired']);
+    expect(status.outcome).toMatchObject({ kind: 'acquired', holder: 'waiter-w', fence: lease.fence + 1, expiresAt: 2_150 });
+    // The waiter published under its own fresh fence.
+    const published = snapshot(location).results.at(-1);
+    expect(published?.publishedFence).toBe(lease.fence + 1);
+    // The superseded holder can no longer act.
+    expectRefused(await a.step({ op: 'allocate', at: 1_151, key: 'a-late' }), 'StaleWriterError', notCurrentHolder);
+
+    const finished = await waitStep(w, { op: 'wait-finish', at: 1_200 });
+    expect(finished.pendingWakes).toBe(0);
+    const after = snapshot(location);
+    expect(after.writer).toEqual({ holder: null, lastFence: lease.fence + 1, expiresAt: 1_200 });
+    // The waiter's result is current; the holder's earlier result stays retained.
+    expect(inspectionFrom(await ok(a, { op: 'inspect' })).current).toBe(status.outcome.kind === 'acquired' ? status.outcome.published : 'not acquired');
+    expect(readFrom(await ok(a, { op: 'read', locator: own })).label).toBe('holder');
+  }, scenarioTimeout);
+
+  test('L2: after the holder is SIGKILLed, a waiter is refused until the dead holder’s lease expires, wakes exactly at that expiry and takes over with the next fence', async () => {
+    const location = freshStore();
+    const [a, w] = await Promise.all([worker('A', location), worker('W', location)]);
+    const lease = await acquire(a, 1_000, 'holder-a', 100);
+    const seed = await publishKey(a, 1_001, 'a-seed', 'seed');
+    await expect(a.step({ op: 'die' })).rejects.toThrow('exited');
+    expect(await a.exit).toEqual({ code: null, signal: 'SIGKILL' });
+
+    const before = snapshot(location);
+    let status = await waitStep(w, { op: 'wait-start', at: 1_050, holder: 'waiter-w', leaseMilliseconds: 1_000, pollMilliseconds: 10_000, deadline: 60_000, key: 'w-work' });
+    expect(status.attempts).toEqual([{ at: 1_050, kind: 'held', holder: 'holder-a', expiresAt: 1_100, fence: null }]);
+    status = await waitStep(w, { op: 'wait-advance', at: 1_099 });
+    expect(tries(status)).toEqual(['1050:held']);
+    expectOnlyHighWaterMoved(before, snapshot(location));
+
+    status = await waitStep(w, { op: 'wait-advance', at: 1_100 });
+    expect(tries(status)).toEqual(['1050:held', '1100:acquired']);
+    expect(status.outcome).toMatchObject({ kind: 'acquired', holder: 'waiter-w', fence: lease.fence + 1, expiresAt: 2_100 });
+    expect(snapshot(location).results.map((result) => result.publishedFence)).toEqual([lease.fence, lease.fence + 1]);
+    expect(readFrom(await ok(w, { op: 'read', locator: seed }))).toEqual({ label: 'seed', lastPart: 'seed', verification: 'consistent' });
+    await waitStep(w, { op: 'wait-finish', at: 1_110 });
+  }, scenarioTimeout);
+
+  test('L3: at the operator deadline the waiter fails with the typed writer-busy error naming the holder, grants nothing, schedules nothing more and leaves the holder’s lease untouched', async () => {
+    const location = freshStore();
+    const [a, w] = await Promise.all([worker('A', location), worker('W', location)]);
+    const lease = await acquire(a, 1_000, 'holder-a', 100);
+    const before = snapshot(location);
+    await waitStep(w, { op: 'wait-start', at: 1_010, holder: 'waiter-w', leaseMilliseconds: 1_000, pollMilliseconds: 20, deadline: 1_060, key: 'w-work' });
+    let status = await waitStep(w, { op: 'wait-advance', at: 1_060 });
+    expect(tries(status)).toEqual(['1010:held', '1030:held', '1050:held', '1060:held']);
+    expect(status.outcome).toMatchObject({ kind: 'busy', error: 'WriterBusyError', holder: 'holder-a', expiresAt: 1_100, deadline: 1_060, contended: false });
+    expect(status.outcome.kind === 'busy' ? status.outcome.message : '').toContain('holder-a');
+    expect(status.pendingWakes).toBe(0);
+    const after = snapshot(location);
+    expectOnlyHighWaterMoved(before, after);
+    expect(after.timeHighWater).toBe(1_060);
+
+    // Nothing more happens after the deadline, even once the lease would be free.
+    status = await waitStep(w, { op: 'wait-advance', at: 5_000 });
+    expect(status.attempts).toHaveLength(4);
+    // The holder's authority was never disturbed.
+    expect(attemptFrom(await ok(a, { op: 'allocate', at: 1_070, key: 'a-after-deadline' })).allocatedFence).toBe(lease.fence);
+    await waitStep(w, { op: 'wait-finish', at: 1_080 });
+    expect(snapshot(location).writer).toEqual({ holder: 'holder-a', lastFence: lease.fence, expiresAt: 1_100 });
+  }, scenarioTimeout);
+
+  test.each([
+    { deadline: 1_100, expected: ['1010:held', '1100:acquired'], outcome: 'acquired' },
+    { deadline: 1_099, expected: ['1010:held', '1099:held'], outcome: 'busy' },
+  ])('L4: with the holder’s lease expiring at 1 100 and the deadline at $deadline, the final attempt at the deadline ends $outcome', async ({ deadline, expected, outcome }) => {
+    const location = freshStore();
+    const [a, w] = await Promise.all([worker('A', location), worker('W', location)]);
+    const lease = await acquire(a, 1_000, 'holder-a', 100);
+    await waitStep(w, { op: 'wait-start', at: 1_010, holder: 'waiter-w', leaseMilliseconds: 1_000, pollMilliseconds: 10_000, deadline, key: 'w-work' });
+    const status = await waitStep(w, { op: 'wait-advance', at: 2_000 });
+    expect(tries(status)).toEqual(expected);
+    if (outcome === 'acquired') {
+      expect(status.outcome).toMatchObject({ kind: 'acquired', fence: lease.fence + 1 });
+    } else {
+      expect(status.outcome).toMatchObject({ kind: 'busy', holder: 'holder-a', expiresAt: 1_100, deadline });
+      expect(snapshot(location).writer).toEqual({ holder: 'holder-a', lastFence: lease.fence, expiresAt: 1_100 });
+    }
+  }, scenarioTimeout);
+
+  test('L5: while another process holds the writer and this process waits for it, check, recovery, inspection and exact reads need no lease and change nothing', async () => {
+    const location = freshStore();
+    const [a, w] = await Promise.all([worker('A', location), worker('W', location)]);
+    await acquire(a, 1_000, 'holder-a', 100);
+    const seed = await publishKey(a, 1_001, 'a-seed', 'seed');
+    await waitStep(w, { op: 'wait-start', at: 1_010, holder: 'waiter-w', leaseMilliseconds: 1_000, pollMilliseconds: 10_000, key: 'w-work' });
+
+    const before = snapshot(location);
+    const checked = await ok(w, { op: 'wait-check' });
+    expect(checked).toMatchObject({ checked: 'execution-required', recovered: 'absent', checks: 2, outcome: { kind: 'pending' } });
+    // The run's check and recovery made no try for the lease.
+    expect(parseWaitStatus(checked).attempts).toHaveLength(1);
+    // History inspection from the waiting process, with its clock made to fail.
+    expect(inspectionFrom(await ok(w, { op: 'inspect' })).current).toBe(seed);
+    expect(recoveryFrom(await ok(w, { op: 'recover', key: 'a-seed' }))).toMatchObject({ kind: 'completed', locator: seed });
+    expect(readFrom(await ok(w, { op: 'read', locator: seed }))).toEqual({ label: 'seed', lastPart: 'seed', verification: 'consistent' });
+    // Every compared row, including the clock high-water, is unchanged.
+    expect(snapshot(location)).toEqual(before);
+
+    const status = await waitStep(w, { op: 'wait-advance', at: 1_100 });
+    expect(tries(status)).toEqual(['1010:held', '1100:acquired']);
+    await waitStep(w, { op: 'wait-finish', at: 1_101 });
+  }, scenarioTimeout);
+
+  test.each(['soft', 'hard'] as const)('L6: a %s stop ends a cross-process wait at once; no lease is granted and nothing more is tried', async (level) => {
+    const location = freshStore();
+    const [a, w] = await Promise.all([worker('A', location), worker('W', location)]);
+    const lease = await acquire(a, 1_000, 'holder-a', 100);
+    await waitStep(w, { op: 'wait-start', at: 1_010, holder: 'waiter-w', leaseMilliseconds: 1_000, pollMilliseconds: 20, key: 'w-work' });
+    await waitStep(w, { op: 'wait-advance', at: 1_030 });
+    let status = await waitStep(w, { op: 'wait-stop', level });
+    expect(status.outcome).toMatchObject({ kind: 'stopped' });
+    expect(status.pendingWakes).toBe(0);
+    status = await waitStep(w, { op: 'wait-advance', at: 5_000 });
+    expect(tries(status)).toEqual(['1010:held', '1030:held']);
+    await waitStep(w, { op: 'wait-finish', at: 5_001 });
+    expect(snapshot(location).writer).toEqual({ holder: 'holder-a', lastFence: lease.fence, expiresAt: 1_100 });
+  }, scenarioTimeout);
+
+  test('L8: when another process takes over between the waiter’s tries, writer-busy names the holder of the final try, not the one it first saw', async () => {
+    const location = freshStore();
+    const [a, b, w] = await Promise.all([worker('A', location), worker('B', location), worker('W', location)]);
+    await acquire(a, 1_000, 'holder-a', 100);
+    let status = await waitStep(w, { op: 'wait-start', at: 1_010, holder: 'waiter-w', leaseMilliseconds: 1_000, pollMilliseconds: 10_000, deadline: 1_150, key: 'w-work' });
+    expect(status.attempts).toEqual([{ at: 1_010, kind: 'held', holder: 'holder-a', expiresAt: 1_100, fence: null }]);
+    // B takes over at the expiry instant, before the waiter's own wake-up at 1 100 runs.
+    const successor = await acquire(b, 1_100, 'holder-b', 500);
+    status = await waitStep(w, { op: 'wait-advance', at: 1_150 });
+    expect(tries(status)).toEqual(['1010:held', '1100:held', '1150:held']);
+    expect(status.outcome).toMatchObject({ kind: 'busy', holder: 'holder-b', expiresAt: successor.expiresAt, deadline: 1_150, contended: false });
+    await waitStep(w, { op: 'wait-finish', at: 1_151 });
+  }, scenarioTimeout);
+
+  test('L7: SQLITE_BUSY exhaustion while another process holds SQLite’s write lock is a typed contended outcome, and at the deadline the typed writer-busy error naming the recorded holder, never a raw driver error', async () => {
+    const location = freshStore();
+    const [a, w] = await Promise.all([worker('A', location), worker('W', location)]);
+    const lease = await acquire(a, 1_000, 'holder-a', 100);
+    // This test process holds SQLite's write lock, so the waiter's acquisition exhausts its bounded busy wait.
+    const locker = openRaw(location);
+    locker.exec('BEGIN IMMEDIATE');
+    let status: IWaitStatus;
+    try {
+      status = await waitStep(w, { op: 'wait-start', at: 1_010, holder: 'waiter-w', leaseMilliseconds: 1_000, pollMilliseconds: 10_000, deadline: 1_010, key: 'w-work' });
+    } finally {
+      locker.exec('ROLLBACK');
+    }
+    expect(status.attempts).toEqual([{ at: 1_010, kind: 'contended', holder: 'holder-a', expiresAt: 1_100, fence: null }]);
+    expect(status.outcome).toMatchObject({ kind: 'busy', error: 'WriterBusyError', contended: true, holder: 'holder-a', expiresAt: 1_100, deadline: 1_010 });
+    if (status.outcome.kind === 'busy') {
+      expect(status.outcome.message).toMatch(/busy/u);
+    }
+    await waitStep(w, { op: 'wait-finish', at: 1_011 });
+    // The holder is untouched and keeps its authority.
+    expect(attemptFrom(await ok(a, { op: 'allocate', at: 1_020, key: 'a-after-contention' })).allocatedFence).toBe(lease.fence);
+  }, scenarioTimeout);
+});
+
+describe('renewal and release keep the durable fence (defense in depth, #110 finding)', () => {
+  test('F1: renew and release never assign the writer row’s last_fence; only a grant advances it', () => {
+    const location = freshStore();
+    const traced = fenceWriteTracingSqlite();
+    const clock = controlledClock(1_000);
+    const history = openHistory({ location, clock, sqlite: traced.capability, store: concurrencyStore });
+    const first = leaseFrom(history.acquireWriter({ holder: 'holder-a', leaseMilliseconds: 100 }));
+    expect(traced.fenceWrites()).toEqual([{ from: 0, to: first.fence }]);
+    clock.set(1_050);
+    const renewed = leaseFrom(history.renewWriter(first, 100));
+    expect(renewed).toEqual({ holder: 'holder-a', fence: first.fence, expiresAt: 1_150 });
+    clock.set(1_060);
+    history.releaseWriter(renewed);
+    // Neither renewal nor release assigned the fence column, even to its unchanged value.
+    expect(traced.fenceWrites()).toEqual([{ from: 0, to: first.fence }]);
+    expect(snapshot(location).writer).toEqual({ holder: null, lastFence: first.fence, expiresAt: 1_060 });
+    clock.set(1_070);
+    const second = leaseFrom(history.acquireWriter({ holder: 'holder-a', leaseMilliseconds: 100 }));
+    expect(second.fence).toBe(first.fence + 1);
+    clock.set(1_080);
+    history.releaseWriter(leaseFrom(history.renewWriter(second, 100)));
+    expect(traced.fenceWrites()).toEqual([{ from: 0, to: first.fence }, { from: first.fence, to: second.fence }]);
+    history.close();
+  });
 });
 
 describe('the enumeration itself', () => {

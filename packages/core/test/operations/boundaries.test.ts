@@ -123,7 +123,7 @@ describe('the writer lease while a request sleeps (EXP-8 resolution 1)', () => {
     }
   });
 
-  test('waking while another holder has the lease returns waiting until T instead of failing', async () => {
+  test('waking without a writer-wait deadline while another holder has the lease returns waiting, eligible since T, instead of failing', async () => {
     world.provider.script('assess', 'pr-1', ['rate-limit:3600000']);
     const session = openSession(stores, timer);
     try {
@@ -136,6 +136,50 @@ describe('the writer lease while a request sleeps (EXP-8 resolution 1)', () => {
       expect(result.waitingUntil).toBe(T0 + hour);
       expect(statuses(result.value.members)).toEqual({ 'pr-1': 'pending', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
       expect(started.events.filter((event) => event.kind === 'wait').map((event) => event.kind === 'wait' ? event.phase : '')).toEqual(['sleeping', 'resumed', 'writer-busy']);
+      expect(received('pr-1')).toHaveLength(1);
+    } finally {
+      session.close();
+    }
+  });
+});
+
+describe('waking with a writer-wait deadline', () => {
+  test('a woken request waits for the lease under the run\'s deadline, as any normal request does, and resumes once the holder lets go', async () => {
+    world.provider.script('assess', 'pr-1', ['rate-limit:3600000']);
+    const session = openSession(stores, timer);
+    try {
+      const started = members(session, { writerWait: { deadline: T0 + 2 * hour, pollMilliseconds: 60_000 } });
+      await until(() => started.events.some((event) => event.kind === 'wait' && event.phase === 'sleeping'), 'the run sleeps');
+      const probe = session.history.acquireWriter({ holder: 'probe', leaseMilliseconds: 10 * hour });
+      if (probe.kind !== 'acquired') {
+        throw new Error('the probe did not acquire the lease');
+      }
+      timer.advanceTo(T0 + hour);
+      // Woken: it polls for the lease rather than returning, and sends nothing while another holder has it.
+      await until(() => timer.pending().includes(T0 + hour + 60_000), 'the woken request polls for the lease');
+      expect(received('pr-1')).toHaveLength(1);
+      session.history.releaseWriter(probe.lease);
+      timer.advanceTo(T0 + hour + 60_000);
+      const result = await started.done;
+      expect(statuses(result.value.members)).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
+      expect(result.waitingUntil).toBeUndefined();
+      expect(started.events.filter((event) => event.kind === 'wait').map((event) => event.kind === 'wait' ? event.phase : '')).toEqual(['sleeping', 'resumed']);
+    } finally {
+      session.close();
+    }
+  });
+
+  test('a woken request whose deadline passes while another holder keeps the lease fails with writer-busy, as any normal request does', async () => {
+    world.provider.script('assess', 'pr-1', ['rate-limit:3600000']);
+    const session = openSession(stores, timer);
+    try {
+      const started = members(session, { writerWait: { deadline: T0 + hour + 30_000, pollMilliseconds: 60_000 } });
+      await until(() => started.events.some((event) => event.kind === 'wait' && event.phase === 'sleeping'), 'the run sleeps');
+      expect(session.history.acquireWriter({ holder: 'probe', leaseMilliseconds: 10 * hour }).kind).toBe('acquired');
+      timer.advanceTo(T0 + hour);
+      await until(() => timer.pending().includes(T0 + hour + 30_000), 'the woken request waits until its deadline');
+      timer.advanceTo(T0 + hour + 30_000);
+      expect(await codeOf(started.done)).toBe('writer-busy');
       expect(received('pr-1')).toHaveLength(1);
     } finally {
       session.close();

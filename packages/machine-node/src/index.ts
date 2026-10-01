@@ -3,11 +3,14 @@
  * storage, the wall clock, the timer and the random identifier source are separate factories so assembly
  * injects them only into the consumers that need them, leaving
  * {@link createNodeMachine} and its existing consumers unchanged.
+ * {@link canonicalNodeLocation} names a store file canonically, so assembly
+ * can recognize two handles over one file without reading the host itself.
  * @packageDocumentation
  */
 import type { IClockCapability, IMachine, IRandomIdentifierCapability, ISqliteCapability, ITimerCapability } from '@microdelta/machine';
 
 import { _createNodeClockImplementation } from './node/clock.js';
+import { _canonicalNodeLocationImplementation } from './node/location.js';
 import { _createNodeMachineImplementation } from './node/index.js';
 import { _createNodeRandomImplementation } from './node/random.js';
 import { _createNodeSqliteImplementation } from './node/sqlite.js';
@@ -48,6 +51,18 @@ export function createNodeClock(): IClockCapability {
  */
 export function createNodeTimer(): ITimerCapability {
   return _createNodeTimerImplementation();
+}
+
+/**
+ * The canonical location of an existing local store file: its absolute real
+ * path, with symbolic links and redundant segments resolved, so two spellings
+ * of one file compare equal and distinct files do not. Assembly uses it to
+ * recognize two handles over one store. A location naming no existing file
+ * throws.
+ * @alpha
+ */
+export function canonicalNodeLocation(location: string): string {
+  return _canonicalNodeLocationImplementation(location);
 }
 
 /**

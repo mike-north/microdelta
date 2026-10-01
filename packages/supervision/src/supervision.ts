@@ -14,7 +14,10 @@
  *   outcome, value or failure, is what the run reports;
  * - storage's writer lease is taken only for normal requests and released
  *   exactly once at actual close, so a refused miss, a check or a recovery
- *   never strands it and started work never loses it;
+ *   never strands it and started work never loses it. A normal request that
+ *   finds another process holding it waits under the operator's policy (no
+ *   default deadline) and fails with a typed writer-busy error at the
+ *   deadline (see `writer.ts`); History alone decides any takeover;
  * - admission and observer positions are Supervision's ports into Resolution:
  *   the caller's policy decides admission, and observers are captured at
  *   start, see frozen events and can neither veto nor replace work;
@@ -91,6 +94,7 @@ import { createOperationEngine } from './operation-engine.js';
 import type { IOperationEngine } from './operation-engine.js';
 import type { IDeferralMode, IOperationSettlement, IOperationStatus, IOperationView, IWaitEvent } from './operations.js';
 import { createPermitPool } from './permits.js';
+import { awaitWriter, writerWaitPolicy } from './writer.js';
 
 /**
  * The default size of a run's permit pool: one send in flight at a time. It
@@ -440,6 +444,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     const observers = captureObservers(runOptions.observers);
     const policy = runOptions.admission ?? admitAll;
     const writer = runOptions.writer;
+    const writerPolicy = writerWaitPolicy(runOptions.writerWait);
     const diagnostics: string[] = [];
     /** The stop intent in force when the run closed; captured in the turn that closes it. */
     let closingStop: IStopState = controller.state;
@@ -607,6 +612,32 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         return decided.value;
       },
     });
+    /**
+     * The one wait for the writer lease in progress, shared by every normal
+     * request that starts while it lasts, so concurrent requests of one run
+     * poll storage once per interval and proceed with the same lease.
+     */
+    let writerWait: Promise<IRunLease> | undefined;
+    /**
+     * A valid writer lease for the next normal request: renewed or acquired
+     * at once when possible, otherwise waited for under the run's policy. Any
+     * stop ends a wait, as it ends a wait for a time: the request it precedes
+     * has not started, and stop intent forbids the new work it would bring.
+     */
+    const writerLease = (): Promise<IRunLease> => {
+      if (writerWait !== undefined) {
+        return writerWait;
+      }
+      const pending = awaitWriter({ writer, policy: writerPolicy, timer, stop: state.stopped.signal, runId: context.runId });
+      writerWait = pending;
+      const finished = (): void => {
+        if (writerWait === pending) {
+          writerWait = undefined;
+        }
+      };
+      pending.then(finished, finished);
+      return pending;
+    };
     /** Supervision's observer position for Resolution's lifecycle events. */
     const observer: ILifecycleObserver = Object.freeze({
       observe(event: ILifecycleEvent): void {
@@ -732,9 +763,9 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       let waited: number | undefined;
       let settled: ReadonlySet<string> = new Set();
       for (let number = 1; ; number += 1) {
-        const lease = leaseForPass(number);
+        const lease = await leaseForPass(number);
         if (lease === undefined) {
-          // Woken while another holder has the writer lease: return waiting, as exit mode does; a later run resumes.
+          // Woken while another holder has the writer lease and the run has no deadline: return waiting, as exit mode does.
           const until = waited ?? timer?.currentEpochMilliseconds() ?? 0;
           waitingUntil = Math.min(waitingUntil ?? until, until);
           waitEvent('writer-busy', until, true);
@@ -788,24 +819,25 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     }
 
     /**
-     * The writer lease for one pass. A first pass's failure to obtain it
-     * rejects the request, as before. A later pass, after a deferral's wait,
-     * that finds another holder returns undefined, so the request returns
-     * waiting instead of failing. This is the only place passes obtain the
-     * lease.
+     * The writer lease for one pass; the only place passes obtain it.
+     *
+     * - A first pass takes it as every normal request does: through the run's
+     *   wait for the writer lease, under its `writerWait` policy.
+     * - A later pass, waking after a deferral's wait, does the same when the
+     *   run has a `writerWait` deadline: it waits for the lease up to that
+     *   deadline and fails with `WriterBusyError` there, as any request does.
+     * - Without a deadline, a waking pass makes one attempt. Another holder
+     *   (`held`) or storage contention (`contended`) returns undefined: the
+     *   request then returns waiting, as exit mode does, its time already
+     *   passed ("eligible since T"), rather than waiting indefinitely for a
+     *   lease another process may keep for a long time.
      */
-    function leaseForPass(number: number): IRunLease | undefined {
-      if (number === 1) {
-        return writer.lease();
+    async function leaseForPass(number: number): Promise<IRunLease | undefined> {
+      if (number === 1 || writerPolicy.deadline !== undefined) {
+        return writerLease();
       }
-      try {
-        return writer.lease();
-      } catch (error: unknown) {
-        if (error instanceof SupervisionError && error.code === 'writer-unavailable') {
-          return undefined;
-        }
-        throw error;
-      }
+      const attempt = writer.tryLease();
+      return attempt.kind === 'acquired' ? attempt.lease : undefined;
     }
 
     /** The run's operation engine, or the refusal of an operator action on a run without one. */
@@ -923,8 +955,8 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         return within(() => operationsOf('Inspecting operations').inspect(query?.status), 'inspectOperations');
       },
       settleOperation(settlement: IOperationSettlement): Promise<IOperationView> {
-        // An operator's settlement is recorded under the writer lease, like any journal commit.
-        return within(() => operationsOf('Settling an operation').settle(settlement, writer.lease()), 'settleOperation');
+        // An operator's settlement is recorded under the writer lease, obtained as any normal request obtains it.
+        return within(async () => operationsOf('Settling an operation').settle(settlement, await writerLease()), 'settleOperation');
       },
     });
 

@@ -21,15 +21,16 @@ import { join } from 'node:path';
 
 import { openDurableAccounting } from '@microdelta/accounting';
 import type { IDurableAccounting, IDurableAccountingOptions, IUsageSummary } from '@microdelta/accounting';
-import { StaleWriterError, openDurableHistory } from '@microdelta/history';
-import type { IDurableHistory, IOperationJournal, IWriterLease } from '@microdelta/history';
+import { openDurableHistory } from '@microdelta/history';
+import type { IDurableHistory, IOperationJournal } from '@microdelta/history';
 import { createNodeMachine, createNodeRandom, createNodeSqlite } from '@microdelta/machine-node';
 import { createResolution } from '@microdelta/resolution';
 import type { IResolutionHistory } from '@microdelta/resolution';
-import { SupervisionError, createSupervision, operationJournalDeclaration } from '@microdelta/supervision';
-import type { IDeferralMode, IOperationAccounting, IRunRandom, IRun, IRunEvent, IRunResult, IRunTimer, IRunWriter, IStopController, ISupervision } from '@microdelta/supervision';
+import { createSupervision, operationJournalDeclaration } from '@microdelta/supervision';
+import type { IDeferralMode, IOperationAccounting, IRunRandom, IRun, IRunEvent, IRunResult, IRunTimer, IStopController, ISupervision, IWriterWaitOptions } from '@microdelta/supervision';
 import { createTrackingObserver } from '@microdelta/tracking';
 
+import { writerFor } from '../../src/writer.js';
 import { composeOperations, useSupervision } from './fixture.js';
 import type { IOperationsFixture } from './fixture.js';
 
@@ -120,6 +121,8 @@ export interface IOperationRunOptions {
   readonly stop?: IStopController;
   readonly permits?: number;
   readonly window?: number;
+  /** The run's policy for waiting on the writer lease. */
+  readonly writerWait?: IWriterWaitOptions;
   /** False to run without operation ports. */
   readonly operations?: boolean;
 }
@@ -154,49 +157,6 @@ export function freshKey(): { readonly requestKey: string } {
   return { requestKey: `ops-request:${String(counter)}` };
 }
 
-/**
- * History's single-writer lease as one run's writer port, as the facade
- * assembles it: acquired on the first normal request, renewed on each later
- * one, re-acquired with a new fence after a release or expiry, and released
- * once when the run closes.
- */
-export function writerFor(history: IDurableHistory, holder: string, leaseMilliseconds: number): IRunWriter {
-  let held: IWriterLease | undefined;
-  return {
-    lease(): IWriterLease {
-      if (held !== undefined) {
-        try {
-          held = history.renewWriter(held, leaseMilliseconds);
-          return held;
-        } catch (error: unknown) {
-          if (!(error instanceof StaleWriterError)) {
-            throw error;
-          }
-          held = undefined;
-        }
-      }
-      const acquisition = history.acquireWriter({ holder, leaseMilliseconds });
-      if (acquisition.kind !== 'acquired') {
-        throw new SupervisionError('writer-unavailable', `History's writer lease is held by ${acquisition.holder}`);
-      }
-      held = acquisition.lease;
-      return held;
-    },
-    release(): void {
-      if (held !== undefined) {
-        const lease = held;
-        held = undefined;
-        try {
-          history.releaseWriter(lease);
-        } catch (error: unknown) {
-          if (!(error instanceof StaleWriterError)) {
-            throw error;
-          }
-        }
-      }
-    },
-  };
-}
 
 /** Options of a session. */
 export interface ISessionOptions {
@@ -246,6 +206,7 @@ export function openSession(stores: Pick<IOperationStores, 'history' | 'accounti
         ...(runOptions.stop === undefined ? {} : { stop: runOptions.stop }),
         ...(runOptions.permits === undefined ? {} : { permits: runOptions.permits }),
         ...(runOptions.window === undefined ? {} : { window: runOptions.window }),
+        ...(runOptions.writerWait === undefined ? {} : { writerWait: runOptions.writerWait }),
         resolution: (ports) => createResolution({
           declarations: fixture.builders,
           composition: fixture.composition,

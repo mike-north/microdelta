@@ -380,8 +380,11 @@ restart. Durable deferral is not promised merely because results are durable.
   derived request key `<key>#pass:<n>` (a caller's normal request key may not
   contain `#pass:`), in which the deferred work resumes
   under the same operation identities and work that settled in an earlier
-  pass, such as a failed member, is not executed again. In exit mode it
-  returns and reports the time. A strict fold that has failed is returned
+  pass, such as a failed member, is not executed again. A woken pass obtains
+  the writer lease as any normal request does when the run has a writer-wait
+  deadline; without one, if another process holds the lease or storage is
+  contended, it returns waiting, eligible since T, rather than waiting
+  indefinitely. In exit mode it returns and reports the time. A strict fold that has failed is returned
   without waiting.
 - **Restarts.** Admission reads each step's unsettled operations before the
   caller's policy: before T it denies the work and the run waits or exits

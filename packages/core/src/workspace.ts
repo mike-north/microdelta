@@ -26,12 +26,13 @@ import type {
   IResolutionErrorCode as IResolutionErrorCodeOf,
   IResolutionOutcome as IResolutionOutcomeOf,
 } from '@microdelta/resolution';
-import { StaleWriterError, openDurableHistory } from '@microdelta/history';
-import type { ICompletedResultReference as IHistoryReference, IDurableHistory, IWriterLease } from '@microdelta/history';
-import { createNodeClock, createNodeSqlite, createNodeTimer } from '@microdelta/machine-node';
+import { openDurableHistory } from '@microdelta/history';
+import type { ICompletedResultReference as IHistoryReference } from '@microdelta/history';
+import { canonicalNodeLocation, createNodeClock, createNodeSqlite, createNodeTimer } from '@microdelta/machine-node';
 import { ResolutionError as ResolutionErrorClass, createResolution } from '@microdelta/resolution';
 import {
   SupervisionError as SupervisionErrorClass,
+  WriterBusyError as WriterBusyErrorClass,
   createStopController as createSupervisionStopController,
   createSupervision,
   ordinaryLifecycle as supervisionOrdinaryLifecycle,
@@ -41,7 +42,6 @@ import type {
   IAbortSignal as ISupervisionAbortSignal,
   IRemoteState as ISupervisionRemoteState,
   IRunExecution as ISupervisionRunExecution,
-  IRunWriter,
   ISendInterruption as ISupervisionSendInterruption,
   ISendPhase as ISupervisionSendPhase,
   ISendRequest as ISupervisionSendRequest,
@@ -50,6 +50,7 @@ import type {
   IStopLevel as ISupervisionStopLevel,
   IStopRequest as ISupervisionStopRequest,
   IStopState as ISupervisionStopState,
+  IWriterWaitOptions as ISupervisionWriterWaitOptions,
 } from '@microdelta/supervision';
 import { createTrackingObserver } from '@microdelta/tracking';
 import type {
@@ -73,6 +74,7 @@ import type {
 
 import type { IAuthoring, IComposition } from './authoring.js';
 import { machine } from './host.js';
+import { writerFor } from './writer.js';
 
 /** An exact reference to one completed result. @alpha */
 export type ICompletedResultReference = IHistoryReference;
@@ -238,6 +240,14 @@ export type ISendPhase = ISupervisionSendPhase;
 /** A send a hard stop aborted, with its recorded remote state. @alpha */
 export type ISendInterruption = ISupervisionSendInterruption;
 
+/**
+ * How a run's normal request waits when another process holds the store's
+ * writer lease: the operator's deadline (there is none by default) and the
+ * poll interval (one second by default).
+ * @alpha
+ */
+export type IWriterWaitOptions = ISupervisionWriterWaitOptions;
+
 /** The live run's execution controls: stop intent, abort signal, permit-guarded sends and stop-aware waits. @alpha */
 export type IRunExecution = ISupervisionRunExecution;
 
@@ -256,6 +266,17 @@ export type ResolutionError = ResolutionErrorClass;
 export const SupervisionError: typeof SupervisionErrorClass = SupervisionErrorClass;
 /** The instance type of the `SupervisionError` class. @alpha */
 export type SupervisionError = SupervisionErrorClass;
+
+/**
+ * The typed writer-busy outcome: a normal request waited for the store's
+ * writer lease until the operator's deadline passed. It names the holder its
+ * final attempt observed, with that holder's expiry, or reports that storage
+ * stayed too busy to decide (`contended`) with the writer recorded then.
+ * @alpha
+ */
+export const WriterBusyError: typeof WriterBusyErrorClass = WriterBusyErrorClass;
+/** The instance type of the `WriterBusyError` class. @alpha */
+export type WriterBusyError = WriterBusyErrorClass;
 
 /**
  * The fixed, framework-owned positions of one resolved step, in order.
@@ -320,6 +341,13 @@ export interface IWorkspaceRunOptions<TInputs extends object, THelpers extends o
    * `permits`; a member waiting for a time lends its lane. Defaults to 8.
    */
   readonly window?: number;
+  /**
+   * How a normal request waits while another run, in this or another
+   * process, holds the store's writer lease. Without a deadline it waits until
+   * it holds the lease or a stop ends the wait; at the deadline it fails with
+   * `WriterBusyError`. Check-only and recovery requests never wait.
+   */
+  readonly writerWait?: IWriterWaitOptions;
 }
 
 /**
@@ -348,8 +376,17 @@ export interface IWorkspace {
   /**
    * Run `body` as one supervised run over `options.composition`. One run at a
    * time holds the store's writer: while another run of this or any process
-   * holds it, this run's normal requests fail with `writer-unavailable`, while
-   * `check` and `recover` still work. The run stays live, with its context,
+   * holds it, this run's normal requests wait for it under
+   * `options.writerWait`, taking it over through History's fencing once the
+   * holder releases it or its lease expires, and fail with
+   * `WriterBusyError` naming the holder if the operator's deadline
+   * passes first. `check` and `recover` never wait. A run cannot start from
+   * inside an open run over the same store file, including that run's
+   * ordinary work and author code, whichever workspace object opened the file
+   * and however its location was spelled, and also when runs over other
+   * stores stand between them: it would wait for the lease its own caller
+   * holds, so it is refused at once with `invalid-request`. A run over another
+   * store, or one started after the outer run closed, is unaffected. The run stays live, with its context,
    * exact reads and writer, until the body and every operation started
    * through the run have settled, even when the body stopped awaiting them
    * early (for example a `Promise.all` whose sibling failed); the body's own
@@ -367,7 +404,7 @@ export interface IWorkspace {
 /** The default writer lease duration: long enough for one normal request, renewed on the next. */
 const defaultLeaseMilliseconds = 30_000;
 
-/** Node's timer, which arms stop deadlines and waits for a time. */
+/** Node's timer, which arms stop deadlines, waits for a time and paces waits for the writer lease. */
 const timer = createNodeTimer();
 
 /**
@@ -378,6 +415,55 @@ const timer = createNodeTimer();
  */
 const supervision = createSupervision({ context: machine, timer });
 
+/** Where one live workspace run stands: the store it writes and the run it was started inside, if any. */
+interface ILiveRun {
+  /** The canonical location of the store file the run's workspace opened. */
+  readonly store: string;
+  /** The live run whose asynchronous context started this one, of any workspace. */
+  readonly parent: IRunContext | undefined;
+}
+
+/**
+ * Every workspace run in this process whose body has started and that has
+ * not yet settled, across all workspace objects, since they share the one
+ * Supervision above. Runs are keyed by their context, the object
+ * `currentRun()` returns, and record their store and their enclosing run, so
+ * a nested run is recognized by its store however many workspace objects, and
+ * runs over other stores, stand between them. An entry is removed when its run
+ * settles; a closed run is never found anyway, because lookups inside it fail
+ * with `run-closed`, so removal only keeps this registry from growing with
+ * every run a process ever started.
+ */
+const liveRuns = new Map<IRunContext, ILiveRun>();
+
+/** The live run of the current asynchronous execution, of any workspace, or undefined outside one. */
+function currentLiveRun(): IRunContext | undefined {
+  try {
+    return supervision.current();
+  } catch (error: unknown) {
+    // Outside any live run, inside a closed one, or while composing: no run encloses the caller.
+    if (error instanceof SupervisionErrorClass) {
+      return undefined;
+    }
+    throw error;
+  }
+}
+
+/**
+ * The open run over `store` that encloses `context`, directly or through
+ * runs over other stores, if any. A run started there would wait for the
+ * writer lease its own caller holds, and with no default deadline it would
+ * wait forever.
+ */
+function enclosingRunOver(store: string, context: IRunContext | undefined): IRunContext | undefined {
+  for (let current = context; current !== undefined; current = liveRuns.get(current)?.parent) {
+    if (liveRuns.get(current)?.store === store) {
+      return current;
+    }
+  }
+  return undefined;
+}
+
 /** Deeply freeze decoded result data so a read can never be mutated into looking current. */
 function deepFreeze<T>(value: T): T {
   if (typeof value === 'object' && value !== null && !Object.isFrozen(value)) {
@@ -387,54 +473,6 @@ function deepFreeze<T>(value: T): T {
     }
   }
   return value;
-}
-
-/**
- * History's single-writer lease as one run's writer port: acquired on the
- * run's first normal request, renewed on each later one, released once when
- * the run closes. A lease that expired between requests is not renewable; it
- * is dropped and a fresh lease with a new fence is acquired, so History's
- * fencing (not this port) still rejects anything the stale lease might have
- * written. Another unexpired holder makes normal requests fail with
- * `writer-unavailable`; it never blocks check-only or recovery requests.
- */
-function writerFor(history: IDurableHistory, holder: string, leaseMilliseconds: number): IRunWriter {
-  let held: IWriterLease | undefined;
-  return Object.freeze({
-    lease(): IWriterLease {
-      if (held !== undefined) {
-        try {
-          held = history.renewWriter(held, leaseMilliseconds);
-          return held;
-        } catch (error: unknown) {
-          if (!(error instanceof StaleWriterError)) {
-            throw error;
-          }
-          held = undefined;
-        }
-      }
-      const acquisition = history.acquireWriter({ holder, leaseMilliseconds });
-      if (acquisition.kind !== 'acquired') {
-        throw new SupervisionErrorClass('writer-unavailable', `History's writer lease is held by ${acquisition.holder} until ${String(acquisition.expiresAt)}`);
-      }
-      held = acquisition.lease;
-      return held;
-    },
-    release(): void {
-      if (held !== undefined) {
-        const lease = held;
-        held = undefined;
-        try {
-          history.releaseWriter(lease);
-        } catch (error: unknown) {
-          // An expired lease is no longer held by anyone on this run's behalf; there is nothing to release.
-          if (!(error instanceof StaleWriterError)) {
-            throw error;
-          }
-        }
-      }
-    },
-  });
 }
 
 /**
@@ -455,6 +493,12 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
     location: options.location,
     logicalStore: options.logicalStore,
   });
+  /**
+   * The store's file identity, however the caller spelled its location:
+   * workspace objects over one file share one writer lease, so they share one
+   * key for nested-run refusal. The file exists once History has opened it.
+   */
+  const store = canonicalNodeLocation(options.location);
   let open = true;
   /** Process-local counter distinguishing this workspace's runs. */
   let runCounter = 0;
@@ -468,11 +512,21 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
       if (!open) {
         return Promise.reject(new SupervisionErrorClass('invalid-request', 'This workspace has been closed'));
       }
+      const parent = currentLiveRun();
+      const enclosing = enclosingRunOver(store, parent);
+      if (enclosing !== undefined) {
+        return Promise.reject(new SupervisionErrorClass(
+          'invalid-request',
+          `A workspace run cannot start inside an open run over the same store (${enclosing.runId}): it would wait for the writer lease that run holds`,
+        ));
+      }
       const { authoring, composition } = runOptions;
       runCounter += 1;
       // A volatile identity for this run, used for its writer holder and context; never reuse evidence.
       const runId = runOptions.runId ?? `run:${String(runCounter)}:${composition.scope}`;
-      return supervision.run({
+      /** This run's context once its body has started. */
+      let started: IRunContext | undefined;
+      const settled = supervision.run({
         analysis: composition.scope,
         environment: runOptions.environment,
         runId,
@@ -481,6 +535,7 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
         ...(runOptions.stop === undefined ? {} : { stop: runOptions.stop }),
         ...(runOptions.permits === undefined ? {} : { permits: runOptions.permits }),
         ...(runOptions.window === undefined ? {} : { window: runOptions.window }),
+        ...(runOptions.writerWait === undefined ? {} : { writerWait: runOptions.writerWait }),
         // The holder names this run for diagnostics; History's fence, not the name, orders writers.
         writer: writerFor(history, `microdelta-run:${runId}`, leaseMilliseconds),
         resolution: (ports) => createResolution({
@@ -496,6 +551,8 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
           execution: ports.execution,
         }),
       }, (live) => {
+        started = live.context;
+        liveRuns.set(live.context, Object.freeze({ store, parent }));
         const run: IWorkspaceRun = Object.freeze({
           context: live.context,
           get open(): boolean {
@@ -524,6 +581,15 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
         });
         return body(run);
       });
+      // Forgetting a settled run only bounds the registry's memory: a closed run
+      // can no longer enclose anything, since lookups inside it fail with run-closed.
+      const forget = (): void => {
+        if (started !== undefined) {
+          liveRuns.delete(started);
+        }
+      };
+      settled.then(forget, forget);
+      return settled;
     },
     close(): void {
       if (open) {

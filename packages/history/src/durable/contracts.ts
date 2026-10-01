@@ -97,9 +97,31 @@ export interface IWriterLease {
 }
 
 /**
+ * Storage contention on a lease operation: another connection, possibly in
+ * another process, held SQLite's write lock past the host's bounded busy wait,
+ * so History could not decide and changed nothing, not even the clock
+ * high-water. It is a fact about storage, never about ownership (PUB-005): it
+ * neither grants nor refuses, and whether to try again is the caller's policy.
+ * @alpha
+ */
+export interface IWriterContention {
+  /** History could not take SQLite's write lock in time. */
+  readonly kind: 'contended';
+  /**
+   * The writer recorded at that moment, read without the write lock: its
+   * holder, fence and expiry as stored, whether or not the lease has expired.
+   * Undefined when no holder is recorded, or when that read was itself busy;
+   * History never guesses a holder.
+   */
+  readonly writer: IWriterLease | undefined;
+  /** The host's diagnostic of the contention; it carries no stored values. */
+  readonly detail: string;
+}
+
+/**
  * The outcome of asking for the single logical writer. `held` reports an
  * observed unexpired holder, not a failed compare-and-swap (PUB-005), and
- * grants nothing.
+ * grants nothing; `contended` reports that storage was too busy to decide.
  * @alpha
  */
 export type IWriterAcquisition =
@@ -116,7 +138,24 @@ export type IWriterAcquisition =
       readonly holder: string;
       /** When that holder's lease expires, in History's clock domain. */
       readonly expiresAt: number;
-    };
+    }
+  | IWriterContention;
+
+/**
+ * The outcome of renewing a lease the caller holds: `renewed` with the later
+ * expiry, or `contended` when storage was too busy to decide, in which case
+ * the lease is exactly as it was and is neither renewed nor refused. A stale
+ * or expired lease is not an outcome but a refusal (`StaleWriterError`).
+ * @alpha
+ */
+export type IWriterRenewal =
+  | {
+      /** The lease was extended. */
+      readonly kind: 'renewed';
+      /** The same holder and fence with the new expiry. */
+      readonly lease: IWriterLease;
+    }
+  | IWriterContention;
 
 /** A request for the writer lease. @alpha */
 export interface IWriterAcquisitionRequest {
@@ -509,6 +548,15 @@ export interface IDurableHistoryOptions {
  * larger fence. A host reading that is not a nonnegative safe integer fails
  * the operation without any change. This is a local single-file policy, not a
  * distributed-time or liveness guarantee.
+ *
+ * Storage contention: every mutation, including acquisition, is one IMMEDIATE
+ * SQLite transaction. When another connection, possibly in another process,
+ * holds SQLite's write lock past the host's bounded busy wait, nothing
+ * changes. Acquisition and renewal, the lease operations a waiter repeats,
+ * report it as their `contended` outcome ({@link IWriterContention}), so
+ * contention is never mistaken for ownership or staleness (PUB-005). Any other
+ * operation fails with Machine's `SqliteBusyError`. Whether to try again is
+ * always the caller's policy, never History's.
  * @alpha
  */
 export interface IDurableHistory {
@@ -517,11 +565,20 @@ export interface IDurableHistory {
   /** Exact selected reads over completed results, answered from their generated index. */
   readonly reader: ICompletedResultReader & ICompletedNavigationReader;
 
-  /** Acquire the single logical writer, or report the observed unexpired holder. */
+  /**
+   * Acquire the single logical writer, or report the observed unexpired
+   * holder, or report storage contention with the recorded writer. Any other
+   * failure, such as damaged storage or an unusable clock, is thrown.
+   */
   acquireWriter(request: IWriterAcquisitionRequest): IWriterAcquisition;
-  /** Extend a still-valid lease; a stale or expired lease is rejected. */
-  renewWriter(lease: IWriterLease, leaseMilliseconds: number): IWriterLease;
-  /** End a still-valid lease without resetting the fence. */
+  /**
+   * Extend a still-valid lease, or report storage contention, which leaves the
+   * lease as it was. A stale or expired lease is rejected with
+   * `StaleWriterError`. Only the expiry changes: the durable fence is left as
+   * it is, never rewritten from the presented lease.
+   */
+  renewWriter(lease: IWriterLease, leaseMilliseconds: number): IWriterRenewal;
+  /** End a still-valid lease; the durable fence is left as it is, so the next grant still advances it. */
   releaseWriter(lease: IWriterLease): void;
   /** Inspect the recorded holder, if any, without granting authority. */
   currentWriter(): IWriterLease | undefined;

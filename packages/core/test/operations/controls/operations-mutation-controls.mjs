@@ -153,9 +153,14 @@ const controls = [
     anchor: "const restored = current.revision !== before.revision && current.record.status === 'deferred' ? current.record.notBefore : undefined;", replacement: "throw new SupervisionError('operation-unrecorded', 'intent not durable');",
   },
   {
-    name: 'waking while another holder has the lease rejects the request',
+    name: 'waking without a deadline while another holder has the lease rejects the request',
     directory: supervision, file: 'supervision.js',
-    anchor: "if (error instanceof SupervisionError && error.code === 'writer-unavailable') {", replacement: 'if (false) {',
+    anchor: "return attempt.kind === 'acquired' ? attempt.lease : undefined;", replacement: "if (attempt.kind !== 'acquired') { throw new SupervisionError('writer-busy', 'busy on waking'); } return attempt.lease;",
+  },
+  {
+    name: 'waking with a deadline returns waiting instead of waiting for the lease',
+    directory: supervision, file: 'supervision.js',
+    anchor: 'if (number === 1 || writerPolicy.deadline !== undefined) {', replacement: 'if (number === 1) {',
   },
   {
     name: 'an ended attempt may still send an operation',

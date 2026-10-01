@@ -476,6 +476,7 @@ export interface IRunOptions {
     readonly stop?: IStopController;
     readonly window?: number;
     readonly writer: IRunWriter;
+    readonly writerWait?: IWriterWaitOptions;
 }
 
 // @alpha
@@ -514,8 +515,8 @@ export interface IRunTimer {
 
 // @alpha
 export interface IRunWriter {
-    lease(): IRunLease;
     release(): void;
+    tryLease(): IWriterAttempt;
 }
 
 // @alpha
@@ -601,7 +602,7 @@ export interface ISupervision {
 }
 
 // @alpha
-export type ISupervisionErrorCode = 'outside-run' | 'run-closed' | 'composition-phase' | 'observer-failure' | 'writer-unavailable' | 'invalid-request' | 'stopped' | 'operation-failed' | 'operation-deferred' | 'operation-unknown' | 'operation-unrecorded' | 'operation-resolved' | 'integrity' | 'undeclared-call';
+export type ISupervisionErrorCode = 'outside-run' | 'run-closed' | 'composition-phase' | 'observer-failure' | 'writer-busy' | 'invalid-request' | 'stopped' | 'operation-failed' | 'operation-deferred' | 'operation-unknown' | 'operation-unrecorded' | 'operation-resolved' | 'integrity' | 'undeclared-call';
 
 // @alpha
 export interface ISupervisionOptions {
@@ -616,6 +617,33 @@ export interface IWaitEvent {
     readonly released: boolean;
     readonly runId: string;
     readonly until: number;
+}
+
+// @alpha
+export type IWriterAttempt = {
+    readonly kind: 'acquired';
+    readonly lease: IRunLease;
+} | {
+    readonly kind: 'held';
+    readonly holder: string;
+    readonly expiresAt: number;
+} | {
+    readonly kind: 'contended';
+    readonly holder: string | undefined;
+    readonly expiresAt: number | undefined;
+    readonly heldByThisRun: boolean;
+    readonly detail: string;
+};
+
+// @alpha
+export type IWriterBusyObservation = Exclude<IWriterAttempt, {
+    readonly kind: 'acquired';
+}>;
+
+// @alpha
+export interface IWriterWaitOptions {
+    readonly deadline?: number;
+    readonly pollMilliseconds?: number;
 }
 
 // @alpha
@@ -642,6 +670,16 @@ export const stepLifecycle: IStepLifecycle;
 export class SupervisionError extends Error {
     constructor(code: ISupervisionErrorCode, message: string, cause?: unknown);
     readonly code: ISupervisionErrorCode;
+}
+
+// @alpha
+export class WriterBusyError extends SupervisionError {
+    constructor(observation: IWriterBusyObservation, deadline: number);
+    readonly contended: boolean;
+    readonly deadline: number;
+    readonly expiresAt: number | undefined;
+    readonly heldByThisRun: boolean;
+    readonly holder: string | undefined;
 }
 
 ```

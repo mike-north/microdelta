@@ -6,7 +6,7 @@
  * processes load those builds through the built facade. A control that no
  * acceptance test rejects, or whose anchor does not match exactly once,
  * fails the run. Each Jest run is judged fail-closed by the facade's shared
- * `control-outcome.mjs` against exactly the eight acceptance suites. Every
+ * `control-outcome.mjs` against exactly the nine acceptance suites. Every
  * planted file is restored after its control, on error, and on
  * SIGINT/SIGTERM/SIGHUP, and final bytes are compared with the originals.
  *
@@ -34,7 +34,7 @@ const targets = Object.freeze({
 });
 
 /** The acceptance suite files every run must execute. */
-const suites = Object.freeze(['admission-observers.test.js', 'changes.test.js', 'crash-recovery.test.js', 'integrity-io.test.js', 'lease-expiry.test.js', 'planned-fault.test.js', 'restart.test.js', 'source-policy.test.js']);
+const suites = Object.freeze(['admission-observers.test.js', 'changes.test.js', 'crash-recovery.test.js', 'integrity-io.test.js', 'lease-expiry.test.js', 'planned-fault.test.js', 'restart.test.js', 'source-policy.test.js', 'stop-publication.test.js']);
 
 const controls = [
   { name: 'a source candidate skips its own implementation and input validation', target: 'resolution', anchor: "if (comparison.kind === 'equal') {", replacement: 'if (true) {' },
@@ -49,7 +49,7 @@ const controls = [
   { name: 'an incomplete attempt is reported as absent', target: 'history', anchor: "case 'staged':\n                return Object.freeze({ kind: 'incomplete', attempt });", replacement: "case 'staged':\n                return Object.freeze({ kind: 'absent' });" },
   { name: 'fingerprint validation also materializes the source result payload', target: 'index', anchor: 'resolveFingerprint(reference, request) {\n            const resultId = resolve(reference);', replacement: 'resolveFingerprint(reference, request) {\n            const resultId = resolve(reference);\n            statements.payload.get(resultId);' },
   { name: 'a selected scalar read also loads the whole root payload', target: 'index', anchor: 'const row = statements.scalarPayload.get(resultId, metadata.nodeId);', replacement: 'statements.payload.get(resultId); const row = statements.scalarPayload.get(resultId, metadata.nodeId);' },
-  { name: 'recovery takes the writer lease', target: 'supervision', anchor: 'return within(() => resolution.recover({ step, requestKey: request.requestKey }));', replacement: 'return within(() => { writer.lease(); return resolution.recover({ step, requestKey: request.requestKey }); });' },
+  { name: 'recovery takes the writer lease', target: 'supervision', anchor: "return within(() => resolution.recover({ step, requestKey: request.requestKey }), 'recover');", replacement: "return within(() => { writer.tryLease(); return resolution.recover({ step, requestKey: request.requestKey }); }, 'recover');" },
 ];
 
 /** Original bytes of every target. */

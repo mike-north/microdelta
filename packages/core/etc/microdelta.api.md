@@ -97,6 +97,7 @@ import type { ISuppliedStepRegistration as ISuppliedStepRegistration_2 } from '@
 import type { ITrackedHelpers as ITrackedHelpers_2 } from '@microdelta/resolution';
 import type { ITrackedView as ITrackedView_2 } from '@microdelta/tracking';
 import type { IUntrackedRead as IUntrackedRead_2 } from '@microdelta/resolution';
+import type { IWriterWaitOptions as IWriterWaitOptions_2 } from '@microdelta/supervision';
 import { MemoryStoreOptions } from '@microdelta/history';
 import { MissingRowError } from '@microdelta/history';
 import { Outcome } from '@microdelta/history';
@@ -110,6 +111,7 @@ import { Subject } from '@microdelta/history';
 import { SubjectPatch } from '@microdelta/history';
 import { SubjectRow } from '@microdelta/history';
 import { SupervisionError as SupervisionError_2 } from '@microdelta/supervision';
+import { WriterBusyError as WriterBusyError_2 } from '@microdelta/supervision';
 
 // @alpha
 export function authoring<TInputs extends object, THelpers extends object>(): IAuthoring<TInputs, THelpers>;
@@ -422,7 +424,11 @@ export interface IWorkspaceRunOptions<TInputs extends object, THelpers extends o
     readonly runId?: string;
     readonly stop?: IStopController;
     readonly window?: number;
+    readonly writerWait?: IWriterWaitOptions;
 }
+
+// @alpha
+export type IWriterWaitOptions = IWriterWaitOptions_2;
 
 export { MemoryStoreOptions }
 
@@ -469,6 +475,12 @@ export const SupervisionError: typeof SupervisionError_2;
 
 // @alpha
 export type SupervisionError = SupervisionError_2;
+
+// @alpha
+export const WriterBusyError: typeof WriterBusyError_2;
+
+// @alpha
+export type WriterBusyError = WriterBusyError_2;
 
 // (No @packageDocumentation comment for this package)
 

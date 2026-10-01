@@ -4,6 +4,9 @@
 
 ```ts
 
+// @alpha
+export function canonicalNodeLocation(location: string): string;
+
 // Warning: (ae-forgotten-export) The symbol "IClockCapability" needs to be exported by the entry point index.d.ts
 //
 // @alpha

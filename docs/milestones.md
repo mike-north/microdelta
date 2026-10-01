@@ -180,8 +180,9 @@ deferral, accounting, identity, retry and privacy mechanisms. The
 writer and publication models against the production protocol (PUB-004) and maps
 them to code and named tests. The [acceptance record](validation/m5-acceptance-2026-10-01.md)
 maps each exit criterion to independent-process tests (#122). M5 keeps one fenced
-writer per store. Multi-writer parallelism, fairness and scale remain M7
-measurement topics, and result-carrying operator resolution and the CLI are M6.
+writer per store. Multi-writer parallelism and scale remain M7 measurement
+topics; lease-wait fairness and eventual grant are unproven. Result-carrying operator
+resolution and the CLI are M6.
 
 ## M6 — Usable CLI and inspection checkpoint
 

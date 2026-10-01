@@ -33,27 +33,74 @@
  * timer is injected.
  */
 import type { IBindingDescriptor } from '@microdelta/definition';
-import type { IExecutionSupervision, ISupervisedExecution } from '@microdelta/resolution';
+import type { IExecutionAttempt, IExecutionSupervision, ISupervisedExecution } from '@microdelta/resolution';
 
-import type { IRemoteState, IRunContext, IRunEvent, IRunExecution, ISendInterruption, ISendPhase, ISendRequest } from './contracts.js';
+import type { IRemoteState, IRunContext, IRunEvent, IRunExecution, IRunLease, ISendInterruption, ISendPhase, ISendRequest } from './contracts.js';
 import { createAbortSource } from './control.js';
 import type { IAbortSignal, IAbortSource, IRunTimer, IStopController, IStopState } from './control.js';
 import { SupervisionError } from './errors.js';
+import type { IOperationBlock, IOperationRequest, IOperationSubject } from './operations.js';
 import type { IPermit, IPermitPool } from './permits.js';
 
 /**
- * One admitted step's execution inside a run: which step it is, the first
- * reason stop intent refused or aborted something it did, and whether its
- * execution has ended. A tainted attempt can never publish, whatever its body
- * later returns. While an untainted attempt is still executing it is
- * *draining* under a soft stop: the children its body demands are part of its
- * drain unit and are admitted as first attempts.
+ * The unsettled external-operation signal a step attempt met: a deferral
+ * until a time, or an unknown outcome. Once set, the attempt is *pending*:
+ * every later operation or send it makes rethrows the signal without sending
+ * (EXP-8's taint guard), and its execution ends `unsettled`, so its step
+ * stays pending and nothing it returns is published.
+ */
+export type IPendingSignal = IOperationBlock;
+
+/**
+ * One admitted step's execution inside a run: which step it is, the claimed
+ * attempt it executes (its subject and History identity, when Resolution
+ * claimed one), the member it works for, the first reason stop intent refused
+ * or aborted something it did, the unsettled operation it met, and whether
+ * its execution has ended. A tainted or pending attempt can never publish,
+ * whatever its body later returns. While an untainted attempt is still
+ * executing it is *draining* under a soft stop: the children its body demands
+ * are part of its drain unit and are admitted as first attempts.
  */
 export interface IAttemptFrame {
   readonly step: IBindingDescriptor;
+  /** The claimed attempt's subject and compatibility group; the owner of its external operations. */
+  readonly subject: IOperationSubject | undefined;
+  /** History's identity of the claimed attempt, the step attempt identity in correlation. */
+  readonly attemptId: number | undefined;
+  /** The designated member key the work belongs to: its own, or its calling attempt's. */
+  readonly member: string | undefined;
   taint: string | undefined;
+  /** The unsettled operation the attempt met, if any. */
+  pending: IPendingSignal | undefined;
+  /** How many operations this attempt has minted, for their identities. */
+  minted: number;
   /** True once its execution returned, threw or was interrupted; a call made later belongs to no draining body. */
   ended: boolean;
+}
+
+/**
+ * One pass of a normal request: the writer lease it runs under, which its
+ * external operations' journal commits also use (so a pass that lost its
+ * lease can commit nothing, EXP-8 ruling R), the deferral times it met, and
+ * the operation blocks of the steps it left pending, by step.
+ */
+export interface IRequestScope {
+  readonly lease: IRunLease;
+  /**
+   * Steps, by {@link descriptorKey}, that settled in an earlier pass of the
+   * same request (for example failed members). A later pass resumes only
+   * deferred work, so admission denies these rather than executing them again.
+   */
+  readonly settled: ReadonlySet<string>;
+  /** "Not before" times of deferred work the pass met: the run's wait ends at the earliest. */
+  readonly deferrals: number[];
+  /** The block that kept each step pending, by {@link descriptorKey}. */
+  readonly blocks: Map<string, IOperationBlock>;
+}
+
+/** An unambiguous key of a step descriptor. */
+export function descriptorKey(step: IBindingDescriptor): string {
+  return JSON.stringify([step.scope, step.role, step.slot, step.template ?? null, step.collection ?? null, step.memberKey ?? null]);
 }
 
 /**
@@ -81,7 +128,58 @@ export interface IMemberLane {
  * demands (EXP-8: the drain unit is the admitted step attempt).
  */
 export function isDraining(attempt: IAttemptFrame | undefined): boolean {
-  return attempt !== undefined && attempt.taint === undefined && !attempt.ended;
+  return attempt !== undefined && attempt.taint === undefined && attempt.pending === undefined && !attempt.ended;
+}
+
+/**
+ * How one transmission (a permit-guarded send) ended:
+ *
+ * - `returned` / `threw`: `perform` settled on its own;
+ * - `refused`: stop intent refused it before anything was sent (the attempt
+ *   is tainted);
+ * - `aborted`: a hard stop abandoned it in flight, with the remote state
+ *   recorded (the attempt is tainted);
+ * - `unrecorded`: the hook that runs just before `perform` failed, so nothing
+ *   was sent.
+ */
+export type ITransmitted<T> =
+  | { readonly kind: 'returned'; readonly value: T }
+  | { readonly kind: 'threw'; readonly error: unknown }
+  | { readonly kind: 'refused'; readonly reason: string }
+  | { readonly kind: 'aborted'; readonly remote: IRemoteState; readonly reason: string }
+  | { readonly kind: 'unrecorded'; readonly error: unknown };
+
+/** A send request's fields, read and validated once. */
+export interface ISendFields<T> {
+  readonly label: string;
+  readonly retry: boolean;
+  readonly perform: (signal: IAbortSignal) => Promise<T>;
+  readonly cancel: (() => Promise<'cancelled' | 'running'>) | undefined;
+}
+
+/**
+ * What the run's external operations use of the execution controls: a
+ * transmission with a hook that runs after the permit is held and stop
+ * intent rechecked, synchronously just before `perform` (where the intent is
+ * committed), and a stop-aware wait that holds no permit and lends the
+ * member's lane.
+ */
+export interface IOperationTransport {
+  transmit<T>(fields: ISendFields<T>, beforePerform: () => void): Promise<ITransmitted<T>>;
+  sleepUntil(epochMilliseconds: number): Promise<void>;
+}
+
+/** A run's external operations, as the execution controls reach them. */
+export interface IRunOperations {
+  /** Perform one external operation for the attempt of `frame`. */
+  call<T>(frame: IRunFrame, transport: IOperationTransport, request: IOperationRequest<T>): Promise<T>;
+}
+
+/** The error an attempt's pending signal is rethrown as, without sending. */
+export function pendingError(signal: IPendingSignal): SupervisionError {
+  return signal.kind === 'deferred'
+    ? new SupervisionError('operation-deferred', `Operation ${signal.operation} is deferred until ${String(signal.notBefore)}; nothing is sent before then`)
+    : new SupervisionError('operation-unknown', `Operation ${signal.operation} has an unknown outcome (${signal.reason}); it is not replayed`);
 }
 
 /**
@@ -100,6 +198,8 @@ export interface ISupervisedRun {
   /** The lanes of the bounded active window of member fan-out. */
   readonly lanes: IPermitPool;
   readonly timer: IRunTimer | undefined;
+  /** The run's external operations, when assembly supplied their ports. */
+  readonly operations: IRunOperations | undefined;
   /** Every send a hard stop aborted, with its remote state, in order. */
   readonly interruptions: ISendInterruption[];
   /** Offer an event to observers; a failure becomes a diagnostic. */
@@ -123,6 +223,8 @@ export interface IRunFrame {
   readonly run: ISupervisedRun;
   readonly attempt: IAttemptFrame | undefined;
   readonly lane: IMemberLane | undefined;
+  /** The normal request pass the work belongs to, if any. */
+  readonly request: IRequestScope | undefined;
 }
 
 /** How a promise raced against a signal settled. */
@@ -181,23 +283,43 @@ export interface IFrameAccess {
  */
 export function supervisedExecution(run: ISupervisedRun, frames: IFrameAccess): IExecutionSupervision {
   return Object.freeze({
-    async execute<T>(step: IBindingDescriptor, work: () => Promise<T>): Promise<ISupervisedExecution<T>> {
+    async execute<T>(step: IBindingDescriptor, work: () => Promise<T>, claimed?: IExecutionAttempt): Promise<ISupervisedExecution<T>> {
       if (!run.open) {
         return { kind: 'interrupted', reason: `run ${run.context.runId} has closed` };
       }
       if (run.hard.signal.aborted) {
         return { kind: 'interrupted', reason: 'a hard stop interrupted the step before it started' };
       }
-      const attempt: IAttemptFrame = { step, taint: undefined, ended: false };
-      const lane = frames.current()?.lane;
+      const parent = frames.current();
+      const attempt: IAttemptFrame = {
+        step,
+        subject: claimed?.subject,
+        attemptId: claimed?.attemptId,
+        member: step.memberKey ?? parent?.attempt?.member,
+        taint: undefined,
+        pending: undefined,
+        minted: 0,
+        ended: false,
+      };
+      const lane = parent?.lane;
+      /** How the body ended once it settled: stop taint first, then an unsettled operation, then its own outcome. */
+      const ending = (settled: ISupervisedExecution<T>): ISupervisedExecution<T> => {
+        if (attempt.taint !== undefined) {
+          return { kind: 'interrupted', reason: attempt.taint };
+        }
+        if (attempt.pending !== undefined) {
+          return { kind: 'unsettled', reason: pendingError(attempt.pending).message };
+        }
+        return settled;
+      };
       try {
-        const raced = await raceAbort(started(() => frames.enter({ run, attempt, lane }, work)), run.hard.signal);
+        const raced = await raceAbort(started(() => frames.enter({ run, attempt, lane, request: parent?.request }, work)), run.hard.signal);
         if (raced.aborted) {
           return { kind: 'interrupted', reason: 'a hard stop interrupted the step' };
         }
-        return attempt.taint === undefined ? { kind: 'returned', value: raced.value } : { kind: 'interrupted', reason: attempt.taint };
+        return ending({ kind: 'returned', value: raced.value });
       } catch (error: unknown) {
-        return attempt.taint === undefined ? { kind: 'threw', error } : { kind: 'interrupted', reason: attempt.taint };
+        return ending({ kind: 'threw', error });
       } finally {
         // Whatever the detached author code does later, this body is no longer draining.
         attempt.ended = true;
@@ -214,9 +336,10 @@ export function supervisedExecution(run: ISupervisedRun, frames: IFrameAccess): 
       // waiting for lanes its own fan-out needs can deadlock the window. Today
       // members cannot trigger fan-out (folds are not children, and run
       // operations start from the run's root frame, not a member's).
+      const request = frames.current()?.request;
       const lane: IMemberLane = { permit: await run.lanes.acquire(run.hard.signal), waits: 0, closed: false };
       try {
-        return await frames.enter({ run, attempt: undefined, lane }, work);
+        return await frames.enter({ run, attempt: undefined, lane, request }, work);
       } finally {
         lane.closed = true;
         lane.permit?.release();
@@ -272,14 +395,6 @@ function taint(attempt: IAttemptFrame | undefined, reason: string): void {
   }
 }
 
-/** A send request's fields, read and validated once. */
-interface ISendFields<T> {
-  readonly label: string;
-  readonly retry: boolean;
-  readonly perform: (signal: IAbortSignal) => Promise<T>;
-  readonly cancel: (() => Promise<'cancelled' | 'running'>) | undefined;
-}
-
 /** Read and validate a send request. */
 function sendFields<T>(request: ISendRequest<T>): ISendFields<T> {
   const label: unknown = typeof request === 'object' && request !== null ? request.label : undefined;
@@ -328,11 +443,11 @@ export function runControls(frame: IRunFrame): IRunExecution {
     return undefined;
   };
 
-  /** Refuse a send: record it, taint the attempt and fail with `stopped`. */
-  const refuse = (label: string, reason: string): never => {
+  /** Refuse a send: record it and taint the attempt. */
+  const refuse = (label: string, reason: string): ITransmitted<never> => {
     sendEvent(label, 'refused');
     taint(attempt, reason);
-    throw new SupervisionError('stopped', `Send ${label} was refused: ${reason}`);
+    return { kind: 'refused', reason };
   };
 
   /** Ask the provider about aborted remote work, where it can say. */
@@ -349,7 +464,14 @@ export function runControls(frame: IRunFrame): IRunExecution {
     }
   };
 
-  async function send<T>(fields: ISendFields<T>): Promise<T> {
+  /**
+   * One permit-guarded transmission. `beforePerform` runs once the permit is
+   * held and stop intent rechecked, in the same synchronous turn as
+   * `perform`, so nothing can intervene between them: an external operation
+   * commits its intent there (intent before send). If it throws, nothing is
+   * sent and the permit is handed back.
+   */
+  async function transmit<T>(fields: ISendFields<T>, beforePerform: () => void): Promise<ITransmitted<T>> {
     const { label, retry, perform, cancel } = fields;
     const before = sendRefusal(retry);
     if (before !== undefined) {
@@ -362,6 +484,12 @@ export function runControls(frame: IRunFrame): IRunExecution {
       // A permit granted after the stop is handed straight back.
       permit?.release();
       return refuse(label, after ?? 'a hard stop ended the wait for a permit');
+    }
+    try {
+      beforePerform();
+    } catch (error: unknown) {
+      permit.release();
+      return { kind: 'unrecorded', error };
     }
     sendEvent(label, 'begin');
     // The send's own signal: it aborts when the run's hard signal does, and is
@@ -380,14 +508,14 @@ export function runControls(frame: IRunFrame): IRunExecution {
     } catch (error: unknown) {
       permit.release();
       sendEvent(label, 'fail');
-      throw error;
+      return { kind: 'threw', error };
     } finally {
       detach();
     }
     permit.release();
     if (!raced.aborted) {
       sendEvent(label, 'end');
-      return raced.value;
+      return { kind: 'returned', value: raced.value };
     }
     sendEvent(label, 'aborted');
     const remote = await remoteStateOf(label, cancel);
@@ -395,7 +523,32 @@ export function runControls(frame: IRunFrame): IRunExecution {
     run.interruptions.push(Object.freeze({ label, remote }));
     const reason = 'a hard stop aborted a send in flight';
     taint(attempt, reason);
-    throw new SupervisionError('stopped', `Send ${label} was aborted: ${reason}`);
+    return { kind: 'aborted', remote, reason };
+  }
+
+  /** One send for author code: a pending attempt rethrows its signal, and a refusal or abort fails with `stopped`. */
+  async function send<T>(fields: ISendFields<T>): Promise<T> {
+    if (attempt?.pending !== undefined) {
+      throw pendingError(attempt.pending);
+    }
+    const sent = await transmit(fields, () => undefined);
+    switch (sent.kind) {
+      case 'returned':
+        return sent.value;
+      case 'threw':
+        throw sent.error;
+      case 'refused':
+        throw new SupervisionError('stopped', `Send ${fields.label} was refused: ${sent.reason}`);
+      case 'aborted':
+        throw new SupervisionError('stopped', `Send ${fields.label} was aborted: ${sent.reason}`);
+      case 'unrecorded':
+        // No hook runs for a plain send; this is unreachable.
+        throw sent.error;
+      default: {
+        const exhaustive: never = sent;
+        return exhaustive;
+      }
+    }
   }
 
   async function sleep(epochMilliseconds: number, timer: IRunTimer): Promise<void> {
@@ -460,6 +613,18 @@ export function runControls(frame: IRunFrame): IRunExecution {
         return Promise.reject(new SupervisionError('invalid-request', 'This Supervision has no timer to wait with'));
       }
       return run.track(() => sleep(epochMilliseconds, timer));
+    },
+    operation<T>(request: IOperationRequest<T>): Promise<T> {
+      const operations = run.operations;
+      const timer = run.timer;
+      if (operations === undefined || timer === undefined) {
+        return Promise.reject(new SupervisionError('invalid-request', 'This run has no operation ports or timer, so it offers no external operations'));
+      }
+      const transport: IOperationTransport = Object.freeze({
+        transmit,
+        sleepUntil: (epochMilliseconds: number) => sleep(epochMilliseconds, timer),
+      });
+      return run.track(() => operations.call(frame, transport, request));
     },
   });
 }

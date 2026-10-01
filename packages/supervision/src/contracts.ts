@@ -34,6 +34,17 @@ import type {
 } from '@microdelta/resolution';
 
 import type { IAbortSignal, IRunTimer, IStopController, IStopLevel, IStopState } from './control.js';
+import type {
+  IDeferralMode,
+  IOperationBlock,
+  IOperationEvent,
+  IOperationRequest,
+  IOperationSettlement,
+  IOperationStatus,
+  IOperationView,
+  IRunOperationPorts,
+  IWaitEvent,
+} from './operations.js';
 
 /**
  * One asynchronous scope slot: a value attached to the current asynchronous
@@ -168,9 +179,11 @@ export type ISendPhase = 'refused' | 'begin' | 'end' | 'fail' | 'aborted' | 'can
 
 /**
  * One event offered to run observers: a framework lifecycle event of a
- * resolved step, a phase of ordinary work, a change of stop intent, or a
- * position of a send. Events are frozen, name the run they belong to, and
- * carry identifiers, levels and states only, never values (RUN-013).
+ * resolved step, a phase of ordinary work, a change of stop intent, a
+ * position of a send, a position of an external operation, or the run's
+ * waiting for deferred work. Events are frozen, name the run they belong to,
+ * and carry identifiers, levels, statuses, times and usage figures only,
+ * never values (RUN-013).
  * @alpha
  */
 export type IRunEvent =
@@ -178,7 +191,9 @@ export type IRunEvent =
   | { readonly kind: 'ordinary'; readonly runId: string; readonly label: string; readonly phase: IOrdinaryPhase }
   | { readonly kind: 'stop'; readonly runId: string; readonly level: Exclude<IStopLevel, 'none'>; readonly cause: IStopState['cause'] }
   | { readonly kind: 'send'; readonly runId: string; readonly label: string; readonly phase: Exclude<ISendPhase, 'remote-state'> }
-  | { readonly kind: 'send'; readonly runId: string; readonly label: string; readonly phase: 'remote-state'; readonly remote: IRemoteState };
+  | { readonly kind: 'send'; readonly runId: string; readonly label: string; readonly phase: 'remote-state'; readonly remote: IRemoteState }
+  | IOperationEvent
+  | IWaitEvent;
 
 /**
  * An observer of a run. Observers cover memoized and nonmemoized work alike,
@@ -235,6 +250,19 @@ export interface IRunOptions {
    * 8 when absent.
    */
   readonly window?: number;
+  /**
+   * The ports the run's external operations persist through: History's
+   * operation journal over the run's store and Accounting's durable adapter.
+   * Without them the run offers no external operations, and its admission
+   * consults no operation records. They need the Supervision's timer.
+   */
+  readonly operations?: IRunOperationPorts;
+  /**
+   * How the run treats work deferred until a later time once only deferred
+   * work remains: `sleep` (the default) releases the writer lease, waits and
+   * resumes; `exit` returns, reporting the time it waits until.
+   */
+  readonly deferral?: IDeferralMode;
 }
 
 /**
@@ -299,6 +327,13 @@ export type IMemberOutcome =
       /** The step whose work was refused: the instance itself or one of its children. */
       readonly refused: IBindingDescriptor;
       readonly reason: string;
+      /**
+       * For a pending member, the unsettled external operation that holds its
+       * work back, when one does: deferred until a time, or an unknown
+       * outcome awaiting an operator (RUN-011, RUN-012). Such a member is
+       * never failed or cancelled by it.
+       */
+      readonly blocked?: IOperationBlock;
     }
   | {
       readonly status: 'failed';
@@ -454,6 +489,22 @@ export interface IRun {
   recover(step: IBindingDescriptor, request: IRequestOptions): Promise<IRecoveryResult>;
   /** Run ordinary nonmemoized work, observed but with no completed-result identity. */
   ordinary<T>(label: string, work: () => T | Promise<T>): Promise<Awaited<T>>;
+  /**
+   * The run environment's external operations, optionally only those of one
+   * status, in order of first record: what an operator inspects before
+   * settling one. Read-only: it needs no writer lease and changes nothing.
+   * Fails with `invalid-request` when the run has no operation ports.
+   */
+  inspectOperations(query?: { readonly status?: IOperationStatus }): Promise<readonly IOperationView[]>;
+  /**
+   * The operator's settlement of one unknown operation: resolve it with the
+   * outcome the operator learned (and any usage, acknowledged under the
+   * operator namespace before the settlement is recorded), or abandon it,
+   * leaving its usage unknown. Either is recorded durably under the writer
+   * lease and unblocks the operation's step. Fails with `invalid-request` for
+   * an operation that is missing or not unknown.
+   */
+  settleOperation(settlement: IOperationSettlement): Promise<IOperationView>;
 }
 
 /**
@@ -484,6 +535,12 @@ export interface IRunResult<T> {
   readonly stop: IStopState;
   /** Every send a hard stop aborted, in order, with its remote state. */
   readonly interruptions: readonly ISendInterruption[];
+  /**
+   * The earliest "not before" time of deferred work the run left waiting, when
+   * it returned without it: in exit mode, or because a stop ended the wait.
+   * Undefined when no deferred work was left waiting. A later run honors it.
+   */
+  readonly waitingUntil: number | undefined;
 }
 
 /**
@@ -575,6 +632,28 @@ export interface IRunExecution {
    * longer publish.
    */
   sleepUntil(epochMilliseconds: number): Promise<void>;
+  /**
+   * Perform one declared external operation from inside an admitted step
+   * attempt's body (RUN-011, RUN-012, RUN-013). Before each send its intent
+   * is committed through History's journal and Accounting's usage intent is
+   * recorded; each send holds one permit as {@link IRunExecution.send} does.
+   * It resolves the provider's value once the operation succeeds. Otherwise
+   * it rejects with a `SupervisionError`:
+   *
+   * - `operation-failed`: a permanent refusal, or an exhausted policy;
+   * - `operation-deferred`: a rate or quota limit deferred it until a time;
+   * - `operation-unknown`: its outcome is unknown and it may not be retried;
+   * - `operation-unrecorded`: its intent could not be made durable, so
+   *   nothing was sent;
+   * - `stopped`: stop intent refused or aborted it;
+   * - `invalid-request`: a malformed request, a call outside an admitted
+   *   step attempt, or a run without operation ports or a timer.
+   *
+   * A deferral or an unknown outcome taints the step attempt: every later
+   * operation or send it makes rethrows that signal without sending, and its
+   * work ends pending, never published.
+   */
+  operation<T>(request: IOperationRequest<T>): Promise<T>;
 }
 
 /**

@@ -463,6 +463,9 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
           check: live.check,
           recover: live.recover,
           ordinary: live.ordinary,
+          // The workspace supplies no operation ports yet, so these fail with `invalid-request`.
+          inspectOperations: live.inspectOperations,
+          settleOperation: live.settleOperation,
           read<TData>(reference: ICompletedResultReference): TData {
             // Reads belong to their own run, for exactly Supervision's lifetime of it.
             if (!live.open) {

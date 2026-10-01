@@ -923,6 +923,7 @@ describe('abort listeners are released once they can no longer run (regression: 
       permits: createPermitPool(1),
       lanes: createPermitPool(1),
       timer: undefined,
+      operations: undefined,
       interruptions: [],
       report: () => undefined,
       diagnose: () => undefined,
@@ -934,7 +935,7 @@ describe('abort listeners are released once they can no longer run (regression: 
 
   test('each send gets its own signal, detached once the send settles, so an adapter that never removes its listener retains nothing through the run', async () => {
     const { run, hard } = handBuiltRun();
-    const controls = runControls({ run, attempt: undefined, lane: undefined });
+    const controls = runControls({ run, attempt: undefined, lane: undefined, request: undefined });
     const baseline = hard.listenerCount;
     const seen: IAbortSignal[] = [];
     for (let index = 0; index < 10; index += 1) {
@@ -958,7 +959,7 @@ describe('abort listeners are released once they can no longer run (regression: 
 
   test('a send\'s own signal still aborts when a hard stop lands while it is in flight', async () => {
     const { run, hard } = handBuiltRun();
-    const controls = runControls({ run, attempt: undefined, lane: undefined });
+    const controls = runControls({ run, attempt: undefined, lane: undefined, request: undefined });
     const aborted: string[] = [];
     const sending = controls.send({
       label: 'in-flight',

@@ -16,6 +16,14 @@
  * - `invalid-request`: a run or request was malformed, for example an empty environment or ordinary-work label.
  * - `stopped`: stop intent refused or aborted a send, a permit wait or a wait for a time (RUN-014). The
  *   step attempt it belonged to can no longer publish; its body may let this propagate.
+ * - `operation-failed`: an external operation settled as failed: its provider refused it permanently, or its retry
+ *   policy is exhausted (RUN-011). The step attempt may still handle it.
+ * - `operation-deferred`: an external operation is deferred until a later time (RUN-011). Nothing was sent before that
+ *   time; the step attempt can no longer publish or send, and its work stays pending.
+ * - `operation-unknown`: an external operation's outcome is unknown and it may not be retried (RUN-012). Nothing was
+ *   replayed; the step attempt can no longer publish or send, and its work stays pending until an operator settles it.
+ * - `operation-unrecorded`: an external operation's intent could not be made durable, so nothing was sent (ACC-007).
+ * - `integrity`: a durable operation record Supervision wrote cannot be read back.
  * @alpha
  */
 export type ISupervisionErrorCode =
@@ -25,7 +33,12 @@ export type ISupervisionErrorCode =
   | 'observer-failure'
   | 'writer-unavailable'
   | 'invalid-request'
-  | 'stopped';
+  | 'stopped'
+  | 'operation-failed'
+  | 'operation-deferred'
+  | 'operation-unknown'
+  | 'operation-unrecorded'
+  | 'integrity';
 
 /**
  * A failed supervision request. An underlying failure, when there is one, is

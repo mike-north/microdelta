@@ -11,8 +11,10 @@
  *
  * Supervision composes Resolution through its ports; it never decides reuse,
  * touches History, imports a host or threads a context argument through
- * author helpers. External-operation identity, retry and deferral policy
- * build on its sends and waits and are not decided here.
+ * author helpers. External operations (RUN-011/012/013) persist through
+ * structural ports that History's operation journal and Accounting's durable
+ * adapter satisfy: intent before send, retry and durable deferral, no blind
+ * replay, operator settlement and privacy-restricted events.
  * @packageDocumentation
  */
 export {
@@ -56,4 +58,40 @@ export type {
   ISupervisionOptions,
 } from './contracts.js';
 export { ordinaryLifecycle, stepLifecycle, type IStepLifecycle } from './lifecycle.js';
+export {
+  blocksCollection,
+  blocksFormat,
+  operationFormat,
+  operationJournalDeclaration,
+  operationsCollection,
+  type IAttemptUsage,
+  type IDeferralMode,
+  type IJournalEntry,
+  type IJournalLocation,
+  type IJournalRecordValue,
+  type IJournalWriteRequest,
+  type IOperationAccounting,
+  type IOperationAttribution,
+  type IOperationBlock,
+  type IOperationEvent,
+  type IOperationJournalPort,
+  type IOperationPhase,
+  type IOperationQuantity,
+  type IOperationReason,
+  type IOperationRemoteState,
+  type IOperationRequest,
+  type IOperationResponse,
+  type IOperationRetryPolicy,
+  type IOperationSend,
+  type IOperationSettlement,
+  type IOperationSettlementRecord,
+  type IOperationStatus,
+  type IOperationSubject,
+  type IOperationUsage,
+  type IOperationView,
+  type IRequestAttemptStatus,
+  type IRequestAttemptView,
+  type IRunOperationPorts,
+  type IWaitEvent,
+} from './operations.js';
 export { createSupervision } from './supervision.js';

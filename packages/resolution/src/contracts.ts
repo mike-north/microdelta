@@ -123,12 +123,33 @@ export interface IExecutionAdmission {
  *   output, if it ever produces one, is discarded: the attempt ends
  *   interrupted and nothing is published (RUN-014/015). The author code may
  *   still be running; Resolution never uses what it later returns.
+ * - `unsettled`: the code met an external operation whose outcome is not
+ *   settled: deferred until a later time, or unknown until it may be retried
+ *   or an operator resolves it (RUN-011/012). Its output is discarded as for
+ *   an interruption, but the step's work is not withdrawn: it stays pending
+ *   (a denial), never failed or cancelled, so a strict consumer waits.
  * @alpha
  */
 export type ISupervisedExecution<T> =
   | { readonly kind: 'returned'; readonly value: T }
   | { readonly kind: 'threw'; readonly error: unknown }
-  | { readonly kind: 'interrupted'; readonly reason: string };
+  | { readonly kind: 'interrupted'; readonly reason: string }
+  | { readonly kind: 'unsettled'; readonly reason: string };
+
+/**
+ * The admitted attempt an execution belongs to: the scoped subject and
+ * compatibility group of the work, and History's never-reused attempt
+ * identity. Run Supervision addresses an attempt's external operations by the
+ * subject (stable across runs) and correlates them with the attempt identity
+ * (RUN-012/013). Policy-hook executions, which claim no attempt, carry none.
+ * @alpha
+ */
+export interface IExecutionAttempt {
+  /** The scoped subject and compatibility group the attempt executes. */
+  readonly subject: IVersionedSubject;
+  /** History's never-reused identity of the claimed attempt. */
+  readonly attemptId: number;
+}
 
 /**
  * Run Supervision's cancellation port. Resolution runs every admitted body
@@ -141,9 +162,11 @@ export type ISupervisedExecution<T> =
 export interface IExecutionSupervision {
   /**
    * Run author work for `step` under the run's supervision and report how it
-   * ended. It never rejects: a thrown or rejected body is `threw`.
+   * ended. It never rejects: a thrown or rejected body is `threw`. `attempt`
+   * names the claimed attempt an admitted body executes; it is absent for a
+   * current-policy hook, which claims none.
    */
-  execute<T>(step: IBindingDescriptor, work: () => Promise<T>): Promise<ISupervisedExecution<T>>;
+  execute<T>(step: IBindingDescriptor, work: () => Promise<T>, attempt?: IExecutionAttempt): Promise<ISupervisedExecution<T>>;
   /**
    * Resolve one fan-out member (of a members request or a strict fold's
    * member phase) inside the run's bounded active window (RUN-002): wait,

@@ -112,8 +112,14 @@ export interface IExecutionAdmission {
 }
 
 // @alpha
+export interface IExecutionAttempt {
+    readonly attemptId: number;
+    readonly subject: IVersionedSubject;
+}
+
+// @alpha
 export interface IExecutionSupervision {
-    execute<T>(step: IBindingDescriptor, work: () => Promise<T>): Promise<ISupervisedExecution<T>>;
+    execute<T>(step: IBindingDescriptor, work: () => Promise<T>, attempt?: IExecutionAttempt): Promise<ISupervisedExecution<T>>;
     member<T>(work: () => Promise<T>): Promise<T>;
     publicationRefusal(): string | undefined;
 }
@@ -408,6 +414,9 @@ export type ISupervisedExecution<T> = {
     readonly error: unknown;
 } | {
     readonly kind: 'interrupted';
+    readonly reason: string;
+} | {
+    readonly kind: 'unsettled';
     readonly reason: string;
 };
 

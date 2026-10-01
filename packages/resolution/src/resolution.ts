@@ -755,6 +755,23 @@ export function createResolution<TInputs extends object, THelpers extends object
   });
 
   /** The scoped subject and compatibility group of a declaration. */
+  /**
+   * Whether a candidate's recorded dependency is historical evidence of this
+   * analysis. It is read only for exact integrity, never accepted or reused:
+   * validation resolves the current dependency afresh in this run's
+   * environment under its own eligibility and admission, and compares only
+   * the facts the candidate consumed. A candidate admitted here by a recorded
+   * promotion keeps its original provenance, so its dependencies may name its
+   * publishing environment (a trial), and a candidate published here may
+   * depend on a result a promotion admitted here. History verified at staging
+   * that every recorded dependency was admissible in the candidate's
+   * environment, so the environment is not rechecked; another analysis is
+   * integrity damage (RUN-017, RES-007).
+   */
+  function historicalInScope(historical: ICompletedEnvelope): boolean {
+    return historical.analysis === analysis;
+  }
+
   function versioned(declaration: IAnySourceDeclaration<IFamily> | IAnyMemoDeclaration<IFamily> | IAnyFoldDeclaration<IFamily>): IVersionedSubject {
     return Object.freeze({ analysis, environment, subject: declaration.subject, version: declaration.version });
   }
@@ -1132,6 +1149,18 @@ export function createResolution<TInputs extends object, THelpers extends object
   }
 
   /**
+   * End an admitted attempt whose body met an unsettled external operation
+   * (deferred until a later time, or with an unknown outcome): the attempt
+   * ends interrupted with an `unsettled` ending, and the step reports a
+   * denial of its own work, so it stays pending and a strict consumer waits.
+   * It is never a failure, a cancellation or a partial result (RUN-011/012/015).
+   */
+  function withhold(request: IRequestContext, evidence: IStepEvidence, step: IBindingDescriptor, attemptId: number, reason: string): IStepResult {
+    abandon(request, evidence, step, attemptId, 'interrupted', { ending: 'unsettled', detail: reason });
+    return { kind: 'refused', refused: step, reason, disposition: 'denied' };
+  }
+
+  /**
    * Stage and publish new content in History's one publication commit. Run
    * cancellation is consulted first, in the same synchronous turn as the
    * commit, so the commit is the linearization point: a hard stop effective
@@ -1225,8 +1254,9 @@ export function createResolution<TInputs extends object, THelpers extends object
         // A check-only request starts no work, so its policy evaluation is not supervised.
         const run = (): ReturnType<typeof callSource<unknown>> => callSource(request, invocation, 'finality', carrier, (value) => value);
         const evaluated = await (request.mode === 'check' ? executeUnsupervised(step, run) : supervision.execute(step, run));
-        if (evaluated.kind === 'interrupted') {
-          return done({ kind: 'refused', refused: step, reason: evaluated.reason, disposition: 'cancelled' });
+        if (evaluated.kind === 'interrupted' || evaluated.kind === 'unsettled') {
+          // A policy hook claims no attempt; an unsettled operation there leaves the step pending.
+          return done({ kind: 'refused', refused: step, reason: evaluated.reason, disposition: evaluated.kind === 'interrupted' ? 'cancelled' : 'denied' });
         }
         if (evaluated.kind === 'threw') {
           throw new ResolutionError('policy-failure', `Current finality of ${stepKey(step)} failed: ${describe(evaluated.error)}`, evaluated.error);
@@ -1265,12 +1295,15 @@ export function createResolution<TInputs extends object, THelpers extends object
           } catch (error: unknown) {
             return { minted, data: undefined, detachError: error };
           }
-        }));
+        }), { subject: versioned(declaration), attemptId });
       } catch (error: unknown) {
         executed = { kind: 'threw', error };
       }
       if (executed.kind === 'interrupted') {
         return done(interrupt(request, evidence, step, attemptId, executed.reason));
+      }
+      if (executed.kind === 'unsettled') {
+        return done(withhold(request, evidence, step, attemptId, executed.reason));
       }
       if (executed.kind === 'threw') {
         const error = executed.error;
@@ -1383,7 +1416,7 @@ export function createResolution<TInputs extends object, THelpers extends object
         throw new ResolutionError('integrity', `Recorded child ${child.slot} of ${candidate.reference.locator} is not among its exact dependencies`);
       }
       const historical = integrity(() => history.readEnvelope(child.reference));
-      if (historical.analysis !== analysis || historical.environment !== environment) {
+      if (!historicalInScope(historical)) {
         throw new ResolutionError('integrity', `Recorded child ${child.slot} of ${candidate.reference.locator} is outside this History scope`);
       }
       // The historical child is read only for exact integrity. Correspondence is
@@ -1458,7 +1491,7 @@ export function createResolution<TInputs extends object, THelpers extends object
         throw new ResolutionError('integrity', `Recorded ${label} of ${candidate.reference.locator} is not among its exact dependencies`);
       }
       const historical = integrity(() => history.readEnvelope(call.reference));
-      if (historical.analysis !== analysis || historical.environment !== environment) {
+      if (!historicalInScope(historical)) {
         throw new ResolutionError('integrity', `Recorded ${label} of ${candidate.reference.locator} is outside this History scope`);
       }
       const rebuilt = rebuildArguments(request, step, call.index, witness.arguments, outputs, true);
@@ -1897,7 +1930,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     let executed: ISupervisedExecution<IObservationCapture<IMemoReturn>>;
     try {
       emit(request, evidence, step, 'execute');
-      executed = await supervision.execute(step, () => active.run(invocation, () => invocation.apply(bindings, supplier, invoker(detachComputation, arm))));
+      executed = await supervision.execute(step, () => active.run(invocation, () => invocation.apply(bindings, supplier, invoker(detachComputation, arm))), { subject, attemptId });
     } catch (error: unknown) {
       executed = { kind: 'threw', error };
     } finally {
@@ -1905,6 +1938,9 @@ export function createResolution<TInputs extends object, THelpers extends object
     }
     if (executed.kind === 'interrupted') {
       return done(interrupt(request, evidence, step, attemptId, executed.reason));
+    }
+    if (executed.kind === 'unsettled') {
+      return done(withhold(request, evidence, step, attemptId, executed.reason));
     }
     if (executed.kind === 'threw') {
       const error = executed.error;
@@ -2006,7 +2042,7 @@ export function createResolution<TInputs extends object, THelpers extends object
         // Taken inside the capture, as the body's value is: which started calls it left unsettled.
         frame.unsettledAtReturn = frame.inflight.size;
         return detachComputation(value);
-      }), memberBindingOf(request, step))));
+      }), memberBindingOf(request, step))), { subject: versioned(declaration), attemptId });
     } catch (error: unknown) {
       executed = { kind: 'threw', error };
     } finally {
@@ -2017,6 +2053,11 @@ export function createResolution<TInputs extends object, THelpers extends object
       // Calls the body started end under the same run cancellation before this attempt does (see IMemoFrame.inflight).
       await Promise.allSettled([...frame.inflight]);
       return done(interrupt(request, evidence, step, attemptId, executed.reason));
+    }
+    if (executed.kind === 'unsettled') {
+      // Calls the body started still settle under their own lifecycle before this attempt ends.
+      await Promise.allSettled([...frame.inflight]);
+      return done(withhold(request, evidence, step, attemptId, executed.reason));
     }
     if (executed.kind === 'threw') {
       const error = executed.error;
@@ -2765,7 +2806,7 @@ export function createResolution<TInputs extends object, THelpers extends object
         throw new ResolutionError('integrity', `Recorded member ${entry.key} of ${candidate.reference.locator} is not among its exact dependencies`);
       }
       const historical = integrity(() => history.readEnvelope(entry.reference));
-      if (historical.analysis !== analysis || historical.environment !== environment) {
+      if (!historicalInScope(historical)) {
         throw new ResolutionError('integrity', `Recorded member ${entry.key} of ${candidate.reference.locator} is outside this History scope`);
       }
     }
@@ -2826,7 +2867,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     let executed: ISupervisedExecution<IObservationCapture<IMemoReturn>>;
     try {
       emit(request, evidence, step, 'execute');
-      executed = await supervision.execute(step, () => active.run(invocation, () => invocation.apply(bindings, foldMembers(membership), invoker(detachComputation))));
+      executed = await supervision.execute(step, () => active.run(invocation, () => invocation.apply(bindings, foldMembers(membership), invoker(detachComputation))), { subject: versioned(declaration), attemptId });
     } catch (error: unknown) {
       executed = { kind: 'threw', error };
     } finally {
@@ -2834,6 +2875,9 @@ export function createResolution<TInputs extends object, THelpers extends object
     }
     if (executed.kind === 'interrupted') {
       return done(interrupt(request, evidence, step, attemptId, executed.reason));
+    }
+    if (executed.kind === 'unsettled') {
+      return done(withhold(request, evidence, step, attemptId, executed.reason));
     }
     if (executed.kind === 'threw') {
       const error = executed.error;

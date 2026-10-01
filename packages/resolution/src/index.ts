@@ -35,6 +35,7 @@ export type {
   ICheckRequest,
   IDiscoveryOutcome,
   IExecutionAdmission,
+  IExecutionAttempt,
   IExecutionSupervision,
   IFoldCoverage,
   IFoldOutcome,

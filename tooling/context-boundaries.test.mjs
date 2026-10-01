@@ -255,14 +255,20 @@ test('Value production source compiles without ambient host declarations', async
  * The executable example is an external consumer of the facade: it may import
  * only `microdelta` (and Node built-ins), never a scoped owner package or
  * source path, even though its compiler resolves their alpha declarations.
+ * The one exception is the Accounting port a facade caller injects: Resource
+ * Accounting's durable adapter and the Node SQLite capability it opens with.
  */
-test('the executable example may import only the microdelta facade and Node built-ins', async () => {
+test('the executable example may import only the microdelta facade, Node built-ins and the Accounting port it injects', async () => {
   const eslint = new ESLint({ cwd: root, overrideConfigFile: checkerConfig });
   const filePath = path.join(root, 'examples/contribution-report/src/probe.ts');
   for (const [source, allowed] of [
     ["import { openWorkspace } from 'microdelta';", true],
     ["import { readFileSync } from 'node:fs';", true],
+    ["import { openDurableAccounting } from '@microdelta/accounting';", true],
+    ["import { createNodeSqlite } from '@microdelta/machine-node';", true],
     ["import { openDurableHistory } from '@microdelta/history';", false],
+    ["import { createSupervision } from '@microdelta/supervision';", false],
+    ["import { createNodeMachine } from '@microdelta/machine';", false],
     ["import type { IResolution } from '@microdelta/resolution';", false],
     ["export { createSupervision } from '@microdelta/supervision';", false],
     ["import { createResolution } from '../../../packages/resolution/src/index.js';", false],

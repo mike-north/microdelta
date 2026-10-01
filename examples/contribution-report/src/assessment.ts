@@ -9,19 +9,31 @@
  * - Rubric B scores exactly as A; only its explanation text differs.
  * - Rubric C scores as A, except that a merged PR labelled `bug` scores 3.
  *
+ * - Rubric P is the paid-like assessor: each assessment is one declared
+ *   external operation sent to the example's fake provider
+ *   (`provider.ts`), which scores as rubric A does. The framework persists
+ *   the operation's identity before the send, counts its usage once, and
+ *   owns retry, deferral, stop and the outcome of a lost response; the
+ *   assessment step isolates the paid call, so a completed assessment is
+ *   reused rather than paid for again.
+ *
  * The summary consumes an assessment's `score` and never its explanation, so
  * switching A to B reruns assessments only, while C changes the score of any
  * merged bug fix and reruns exactly the summaries that consumed one.
  */
+import { createHash } from 'node:crypto';
+
+import { currentExecution } from 'microdelta';
 import type { IResultView } from 'microdelta';
 
 import type { IPullRequest } from './activity.js';
+import type { IPaidAssessment, IPaidAssessor } from './provider.js';
 
 /** Which assessor implementation the composition supplies. */
-export type IRubric = 'A' | 'B' | 'C';
+export type IRubric = 'A' | 'B' | 'C' | 'P';
 
 /** Every rubric, in display order. */
-export const rubrics: readonly IRubric[] = ['A', 'B', 'C'];
+export const rubrics: readonly IRubric[] = ['A', 'B', 'C', 'P'];
 
 /** One PR's assessment. The summary reads only `score`. */
 export interface IAssessment {
@@ -62,4 +74,39 @@ export function assessRubricC(number: number, pullRequest: IResultView<IPullRequ
   }
   const score = bugFix ? 3 : pullRequest.merged ? 2 : 1;
   return { score, explanation: `PR ${String(number)} ${bugFix ? 'is a merged bug fix' : pullRequest.merged ? 'was merged' : 'is not merged'}, so rubric C scores it ${String(score)}.` };
+}
+
+/**
+ * The paid-like provider this process sends assessments to. It is external
+ * service state, like the fixture file: selected once per process by the
+ * command line, never an analysis input.
+ */
+let paidProvider: IPaidAssessor | undefined;
+
+/** Select the paid-like provider for the rest of this process. */
+export function usePaidAssessor(provider: IPaidAssessor): void {
+  paidProvider = provider;
+}
+
+/**
+ * Rubric P: one paid-like assessment of a PR, made as a declared external
+ * operation through the live run's execution controls. Its binding is a
+ * digest of the request it sends (the PR number and merged flag), never the
+ * request itself, so a changed request is a new operation while a retry of
+ * the same request keeps its identity. The operation is not declared safe to
+ * repeat: a lost response stays unknown until an operator settles it.
+ */
+export async function assessRubricP(number: number, pullRequest: IResultView<IPullRequest>): Promise<IAssessment> {
+  const provider = paidProvider;
+  if (provider === undefined) {
+    throw new Error('no paid-like assessor is selected for this process');
+  }
+  const merged = pullRequest.merged;
+  const binding = `sha256:${createHash('sha256').update(JSON.stringify({ number, merged })).digest('hex')}`;
+  const assessed: IPaidAssessment = await currentExecution().operation<IPaidAssessment>({
+    name: 'assess',
+    binding,
+    perform: (send) => provider.assess(number, merged, send),
+  });
+  return { score: assessed.score, explanation: assessed.explanation };
 }

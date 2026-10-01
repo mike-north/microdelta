@@ -14,7 +14,7 @@
 import { currentRun } from 'microdelta';
 import type { ICollectionResult, ICollectionStatus, IPreviousResult, ISourceOutcome, ISourceOutcomes, ITrackedView } from 'microdelta';
 
-import { authoredInWindow, currentUpstreamListing, fixtureEnvironment, readFixture, readFixtureFor, submittedInWindow } from './fixture.js';
+import { authoredInWindow, currentUpstreamListing, environments, isEnvironment, readFixture, readFixtureFor, submittedInWindow } from './fixture.js';
 import type { IConfig } from './fixture.js';
 
 /** One discovered contributor record. */
@@ -52,8 +52,8 @@ export function selectContributors(config: Pick<IConfig, 'repository' | 'window'
  */
 export function discover(outcome: ISourceOutcomes, config: ITrackedView<IConfig>): ISourceOutcome<IContributors> {
   const { environment } = currentRun();
-  if (environment !== fixtureEnvironment) {
-    throw new Error(`the fixture adapter serves the ${fixtureEnvironment} environment, not ${environment}`);
+  if (!isEnvironment(environment)) {
+    throw new Error(`the fixture adapter serves the ${environments.join(', ')} environments, not ${environment}`);
   }
   const window = { start: config.window.start, end: config.window.end };
   return outcome.fresh(selectContributors({ repository: config.repository, window }, currentUpstreamListing()));

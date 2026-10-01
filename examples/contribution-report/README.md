@@ -29,7 +29,7 @@ node examples/contribution-report/dist/main.js check --store .test-build/example
 
 | Flag | Meaning | Default |
 | --- | --- | --- |
-| `--rubric A\|B\|C` | The assessor implementation supplied to the `assessor` slot | `A` |
+| `--rubric A\|B\|C\|P` | The assessor implementation supplied to the `assessor` slot; `P` is the paid-like assessor (below) | `A` |
 | `--minimum-authored N` | The gate threshold input (a nonnegative integer) | `1` |
 | `--key key\|id` | Designated identity `key`, or the custom key `id` | `key` |
 | `--open-discovery` | The fixture upstream reports its contributor listing as still open | closed |
@@ -170,9 +170,58 @@ changing a consumed merged status or the number of PRs or reviews reevaluates
 it. Discovery order is not identity: members are keyed, and reordering the
 listing changes no member.
 
+## Operating the analysis: the paid-like assessor
+
+`--rubric P` supplies the **paid-like assessor**: each PR's assessment is one
+declared external operation (`currentExecution().operation`) sent to the
+example's fake provider (`src/provider.ts`). It never costs money. It answers
+after a deterministic latency, scores as rubric A does (so the report text is
+the same), and reports 100 tokens of usage per answered assessment and 1
+request per refusal. Each assessment is its own supplied step, so a completed
+assessment is reused rather than paid for again.
+
+The provider keeps its state in `DIR/provider`: `ledger.jsonl` records every
+request received, applied and aborted, and an optional `script.json` scripts
+each PR's successive responses, across processes:
+
+```json
+{ "responses": { "201": ["rate-limit:1500"], "103": ["stall"], "301": ["refuse", "ok"] } }
+```
+
+Responses are `ok`, `slow:<ms>`, `rate-limit:<ms>` (refused with a retry time
+`<ms>` after receipt), `refuse` (permanent), `lost` (performed, response lost)
+and `stall` (never answered until aborted). Unscripted requests answer `ok`.
+
+Every command opens Resource Accounting's durable adapter over
+`DIR/accounting.sqlite` and injects it into the workspace
+(`openWorkspace({ ..., accounting })`). The facade itself never depends on the
+Accounting package, which is not yet published; the example imports it, and
+the Node SQLite capability it opens with, as the facade's caller.
+
+| Command or flag | Meaning |
+| --- | --- |
+| `--environment fixture\|trial\|production` | The run's environment (`run`, `status`, `check`, `operations`, `settle`); environments are namespaces of the one store |
+| `--deferral sleep\|exit` | `run`/`status`: once only deferred work remains, sleep and resume (default), or exit and report `Deferred work waits until T` |
+| `--permits N`, `--window N` | `run`/`status`: sends in flight at once (default 1), members resolving at once (default 8) |
+| `--lease-ms N` | `run`/`status`: the writer lease duration (default 30 s) |
+| `--writer-deadline-ms N` | `run`/`status`: fail with `writer-busy` if the writer lease is still held N ms after start; without it a second process waits |
+| SIGINT, then SIGINT again | `run`/`status`: a soft stop (admit nothing new; admitted steps drain), then a hard stop (abort in-flight sends; publish nothing partial) |
+| `status` | The outcome (tolerant) status report: every contributor's settled status, failures included, with coverage; it waits while a member is unsettled |
+| `operations` | The environment's external operations, usage summary and promotions; needs no writer lease |
+| `settle --operation ID --abandon` or `--resolve succeeded\|failed` | The operator's settlement of an unknown operation |
+| `promote --from trial --to production` | Promote every result the source environment's current report rests on; executes nothing |
+
+Usage is counted once per report. An attempt whose response was lost, or whose
+process died before its report, is **unknown**, never zero, and is never
+replayed until an operator settles it. A rate limit with a retry time defers
+only that assessment; its siblings finish, and no run sends it before the time.
+Trial results satisfy production only through a recorded promotion, after
+which production reuses them and pays nothing. `npm run test:examples` drives
+each of these through separate processes (`test/paid.test.mjs`).
+
 ## Limits
 
-No paid provider, language model or live GitHub API is called. The example
-exercises the durable path within ordinary process restarts. Process-kill
-points, lost-acknowledgment acceptance and dated evidence are separate proofs.
-Retry, quota waits and cancellation breadth are later work.
+No paid provider, language model or live GitHub API is called: the paid-like
+assessor is a local fake. The example's process tests prove the single-host
+process-termination scope only, not power loss. Independent-process acceptance
+and dated evidence are separate proofs.

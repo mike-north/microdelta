@@ -2,7 +2,18 @@
   "extends": "../../../tsconfig.base.json",
   "compilerOptions": {
     "noEmit": true,
-    "rootDirs": ["..", "../dist"]
+    "rootDirs": ["..", "../dist"],
+    "paths": {
+      "@microdelta/accounting": ["../../accounting/dist/api/accounting.alpha.d.ts"],
+      "@microdelta/definition": ["../../definition/dist/api/definition.alpha.d.ts"],
+      "@microdelta/history": ["../../history/dist/api/history.alpha.d.ts"],
+      "@microdelta/machine-node": ["../../machine-node/dist/api/machine-node.alpha.d.ts"],
+      "@microdelta/materialization": ["../../materialization/dist/api/materialization.alpha.d.ts"],
+      "@microdelta/resolution": ["../../resolution/dist/api/resolution.alpha.d.ts"],
+      "@microdelta/supervision": ["../../supervision/dist/api/supervision.alpha.d.ts"],
+      "@microdelta/tracking": ["../../tracking/dist/api/tracking.alpha.d.ts"],
+      "@microdelta/value": ["../../value/dist/api/value.alpha.d.ts"]
+    }
   },
   "include": ["*.ts"]
 }

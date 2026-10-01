@@ -459,6 +459,11 @@ operation identity. Otherwise the operator decides.
     sends nothing and fails with a typed `operation-resolved` code that
     carries no value. The author may catch it; uncaught, the step attempt
     fails, naming the code. Mutations are never retried blindly (A-12).
+    The address stays consumed until the operator abandons the operation,
+    which frees it and explicitly authorizes a possible second effect
+    ([#121](https://github.com/mike-north/microdelta/issues/121)). A second
+    resolution is refused, and so is abandoning an operation resolved as
+    failed, whose address is already free.
   - **Resolved as failed** asserts that nothing happened, and frees the
     address for a new operation.
   - **Abandoned.** The address is free: abandoning is the operator's explicit

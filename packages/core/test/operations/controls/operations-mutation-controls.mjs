@@ -234,6 +234,11 @@ const controls = [
     anchor: "const unconfirmed = intentMayHaveLanded(error) ? 'unconfirmed' : unsent?.intent;", replacement: "const unconfirmed = intentMayHaveLanded(error) ? 'unconfirmed' : undefined;",
   },
   {
+    name: 'abandoning an operation resolved as succeeded overwrites the earlier resolution (audit trail lost)',
+    directory: supervision, file: 'operation-engine.js',
+    anchor: 'resolution: consumed ? stored.record.settlement : stored.record.resolution,', replacement: 'resolution: undefined,',
+  },
+  {
     name: 'a legacy not-sent attempt without the mark is read as having recorded nothing (P3)',
     directory: supervision, file: 'records.js',
     anchor: "? (field(attempt, 'status') === 'not-sent' ? 'unconfirmed' : undefined)", replacement: '? undefined',

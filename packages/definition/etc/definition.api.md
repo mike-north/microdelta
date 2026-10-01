@@ -822,13 +822,13 @@ export interface ISuppliedInvocation<TFamily extends IBindingFamily> extends IIn
 
 // @alpha
 export interface ISuppliedStepDeclaration<TFamily extends IBindingFamily, TParameters extends readonly unknown[], TResult> extends IAnySuppliedStepDeclaration<TFamily> {
-    readonly run: (context: ISuppliedStepRunContext<TFamily, TParameters>) => TResult;
+    readonly run: (context: ISuppliedStepRunContext<TFamily, TParameters>) => TResult | Promise<TResult>;
 }
 
 // @alpha
 export interface ISuppliedStepOptions<TFamily extends IBindingFamily, TParameters extends readonly unknown[], TResult> {
     readonly label?: string;
-    readonly run: (context: ISuppliedStepRunContext<TFamily, TParameters>) => TResult;
+    readonly run: (context: ISuppliedStepRunContext<TFamily, TParameters>) => TResult | Promise<TResult>;
     readonly version?: number;
 }
 

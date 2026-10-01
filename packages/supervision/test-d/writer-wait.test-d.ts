@@ -11,13 +11,14 @@
 import { expectAssignable, expectError, expectNotAssignable, expectType } from 'tsd';
 
 import { SupervisionError, WriterBusyError } from '../dist/src/index.js';
-import type { IRunLease, IRunOptions, IRunWriter, ISupervisionErrorCode, IWriterAttempt, IWriterBusyObservation, IWriterWaitOptions } from '../dist/src/index.js';
+import type { IPromotionRecord, IPromotionRequest, IRun, IRunLease, IRunOperationName, IRunPromotionPort, IRunOptions, IRunWriter, ISupervisionErrorCode, IWriterAttempt, IWriterBusyObservation, IWriterWaitOptions } from '../dist/src/index.js';
 
 declare const lease: IRunLease;
 declare const attempt: IWriterAttempt;
 declare const busy: WriterBusyError;
 declare const writer: IRunWriter;
 declare const options: IRunOptions;
+declare const run: IRun;
 
 // The port's one try returns an outcome; it is not a lease getter.
 expectType<IWriterAttempt>(writer.tryLease());
@@ -61,3 +62,14 @@ expectAssignable<IWriterAttempt>({ kind: 'contended', holder: undefined, expires
 expectType<WriterBusyError>(new WriterBusyError({ kind: 'held', holder: 'run:other', expiresAt: 2 }, 1));
 expectError(new WriterBusyError({ kind: 'acquired', lease }, 1));
 expectError(new WriterBusyError({ kind: 'held', holder: 'run:other', expiresAt: 2 }));
+
+// A promotion is a named run operation over the structural promotion port; reading promotions is one too.
+declare const promotionRequest: IPromotionRequest;
+expectType<Promise<IPromotionRecord>>(run.promote(promotionRequest));
+expectType<Promise<readonly IPromotionRecord[]>>(run.promotions());
+expectAssignable<IRunOperationName>('promote');
+expectAssignable<IRunOperationName>('promotions');
+expectNotAssignable<IRunOperationName>('withWriterLease');
+expectError(run.withWriterLease);
+expectError(run.promote({ references: [], evidence: { format: 'f', formatVersion: 1, content: null } }));
+expectType<IRunPromotionPort | undefined>(options.promotion);

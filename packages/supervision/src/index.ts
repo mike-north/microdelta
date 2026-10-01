@@ -16,7 +16,9 @@
  * author helpers. External operations (RUN-011/012/013) persist through
  * structural ports that History's operation journal and Accounting's durable
  * adapter satisfy: intent before send, retry and durable deferral, no blind
- * replay, operator settlement and privacy-restricted events.
+ * replay, operator settlement and privacy-restricted events. Promotions
+ * between environments are recorded under the writer lease through a
+ * structural promotion port that History's durable store satisfies.
  * @packageDocumentation
  */
 export {
@@ -102,4 +104,13 @@ export {
   type IRunRandom,
   type IWaitEvent,
 } from './operations.js';
+export type {
+  IPromotionEvent,
+  IPromotionEvidence,
+  IPromotionRecord,
+  IPromotionRequest,
+  IPromotionScope,
+  IRunPromotionPort,
+  IRunResultReference,
+} from './promotion.js';
 export { createSupervision } from './supervision.js';

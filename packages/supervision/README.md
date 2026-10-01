@@ -248,7 +248,10 @@ accounting }`, which needs the Supervision's timer:
   is acknowledged under `operator:<report>`; an abandoned operation keeps its
   usage unknown. Either unblocks the step. A resolution as `succeeded` keeps
   the address consumed: a later call there mints and sends nothing and fails
-  with `operation-resolved` (no value; the author may catch it). A resolution
+  with `operation-resolved` (no value; the author may catch it), until the
+  operator abandons that resolved operation, which frees the address and
+  authorizes a possible second effect; a second resolution, or abandoning an
+  operation resolved as `failed`, is refused. The operation view then keeps both: the abandonment as its `settlement`, and the superseded resolution (with its usage report) as its `resolution`. A resolution
   as `failed`, or an abandonment (the operator's explicit authorization of a
   possible second effect), frees the address for a new operation. A
   resolution carrying a result is M6 work. Both actions are run operations,

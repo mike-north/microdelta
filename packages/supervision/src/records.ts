@@ -74,6 +74,12 @@ export interface IOperationRecord {
   readonly notBefore: number | undefined;
   readonly attempts: readonly IAttemptRecord[];
   readonly settlement: IOperationSettlementRecord | undefined;
+  /**
+   * The resolution as succeeded that an abandonment superseded, kept so the
+   * record still shows that an operator asserted the effect happened (and its
+   * usage report) before authorizing a possible second effect.
+   */
+  readonly resolution: IOperationSettlementRecord | undefined;
 }
 
 /** One unsettled operation at a subject's address, as the block index lists it. */
@@ -156,14 +162,34 @@ export function encodeOperation(record: IOperationRecord): IJournalRecordValue {
         usage: attempt.usage ?? null,
         intent: attempt.intent ?? null,
       })),
-      settlement: record.settlement === undefined ? null : {
-        action: record.settlement.action,
-        outcome: record.settlement.outcome ?? null,
-        operator: record.settlement.operator,
-        at: record.settlement.at,
-        report: record.settlement.report ?? null,
-      },
+      settlement: record.settlement === undefined ? null : encodeSettlement(record.settlement),
+      resolution: record.resolution === undefined ? null : encodeSettlement(record.resolution),
     },
+  };
+}
+
+/** Encode one operator settlement record. */
+function encodeSettlement(settlement: IOperationSettlementRecord): Record<string, unknown> {
+  return {
+    action: settlement.action,
+    outcome: settlement.outcome ?? null,
+    operator: settlement.operator,
+    at: settlement.at,
+    report: settlement.report ?? null,
+  };
+}
+
+/** Decode one stored operator settlement record. */
+function decodeSettlement(settlement: unknown, what: string): IOperationSettlementRecord {
+  if (typeof settlement !== 'object' || settlement === null || Array.isArray(settlement)) {
+    return damaged(what);
+  }
+  return {
+    action: oneOf(settlement, 'action', ['resolve', 'abandon'], what),
+    outcome: optionalOneOf(settlement, 'outcome', ['succeeded', 'failed'], what),
+    operator: text(settlement, 'operator', what),
+    at: whole(settlement, 'at', what),
+    report: optionalText(settlement, 'report', what),
   };
 }
 
@@ -243,6 +269,7 @@ export function decodeOperation(record: IJournalRecordValue): IOperationRecord {
   const content = requireFormat(record, operationFormat, what);
   const attempts: unknown = field(content, 'attempts');
   const settlement: unknown = field(content, 'settlement');
+  const resolution: unknown = field(content, 'resolution');
   if (!Array.isArray(attempts)) {
     return damaged(what);
   }
@@ -272,13 +299,9 @@ export function decodeOperation(record: IJournalRecordValue): IOperationRecord {
         ? (field(attempt, 'status') === 'not-sent' ? 'unconfirmed' : undefined)
         : optionalOneOf(attempt, 'intent', ['unconfirmed'], what),
     })),
-    settlement: settlement === null ? undefined : {
-      action: oneOf(settlement, 'action', ['resolve', 'abandon'], what),
-      outcome: optionalOneOf(settlement, 'outcome', ['succeeded', 'failed'], what),
-      operator: text(settlement, 'operator', what),
-      at: whole(settlement, 'at', what),
-      report: optionalText(settlement, 'report', what),
-    },
+    settlement: settlement === null ? undefined : decodeSettlement(settlement, what),
+    // Absent in records written before the field existed: no abandonment could then supersede a resolution, so none is kept.
+    resolution: resolution === undefined || resolution === null ? undefined : decodeSettlement(resolution, what),
   };
 }
 
@@ -315,5 +338,6 @@ export function viewOf(record: IOperationRecord, scope: { readonly analysis: str
       usage: attempt.usage,
     }))),
     settlement: record.settlement === undefined ? undefined : Object.freeze({ ...record.settlement }),
+    resolution: record.resolution === undefined ? undefined : Object.freeze({ ...record.resolution }),
   });
 }

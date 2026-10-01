@@ -18,7 +18,7 @@
 import { currentRun } from 'microdelta';
 import type { IPreviousResult, ISourceOutcome, ISourceOutcomes, ITrackedView } from 'microdelta';
 
-import { authoredInWindow, fixtureEnvironment, readFixture, readFixtureFor, submittedInWindow } from './fixture.js';
+import { authoredInWindow, environments, isEnvironment, readFixture, readFixtureFor, submittedInWindow } from './fixture.js';
 import type { IConfig } from './fixture.js';
 
 /** One authored pull request as a member's activity holds it. */
@@ -64,8 +64,8 @@ export function selectActivity(key: string, config: Pick<IConfig, 'repository' |
  */
 export function checkActivity(outcome: ISourceOutcomes, config: ITrackedView<IConfig>, key: string): ISourceOutcome<IActivity> {
   const { environment } = currentRun();
-  if (environment !== fixtureEnvironment) {
-    throw new Error(`the fixture adapter serves the ${fixtureEnvironment} environment, not ${environment}`);
+  if (!isEnvironment(environment)) {
+    throw new Error(`the fixture adapter serves the ${environments.join(', ')} environments, not ${environment}`);
   }
   return outcome.fresh(selectActivity(key, { repository: config.repository, window: { start: config.window.start, end: config.window.end } }));
 }

@@ -36,7 +36,9 @@
  *    there mints and sends nothing and fails with `operation-resolved`, which
  *    carries no value. Resolving as failed (no effect) or abandoning frees the
  *    address; abandoning is the operator's explicit authorization of a
- *    possible second effect. A resolution carrying a result is M6 work.
+ *    possible second effect, and an operation resolved as succeeded may
+ *    still be abandoned later to free its address. A resolution carrying a
+ *    result is M6 work.
  *
  * Every commit uses the lease of the normal request pass the attempt belongs
  * to, so a pass that lost its lease commits nothing (ruling R): its operation
@@ -571,6 +573,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
         notBefore: undefined,
         attempts: [],
         settlement: undefined,
+        resolution: undefined,
         unrecorded: 0,
       };
       current = { record, revision: 0, fence: undefined };
@@ -881,8 +884,11 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       if (leftByEarlierWriter(stored, lease)) {
         stored = recover(stored, lease);
       }
-      if (stored.record.status !== 'unknown') {
-        throw new SupervisionError('invalid-request', `Operation ${operation} is ${stored.record.status}; only an unknown operation can be settled`);
+      // An unknown operation can be resolved or abandoned. An address resolved as succeeded stays consumed until the
+      // operator abandons it, the explicit authorization of a possible second effect (supervisor ruling on #121).
+      const consumed = holdsAddress(stored.record) && stored.record.status === 'resolved';
+      if (stored.record.status !== 'unknown' && !(action === 'abandon' && consumed)) {
+        throw new SupervisionError('invalid-request', `Operation ${operation} is ${stored.record.status}; only an unknown operation can be settled, or abandoned once resolved as succeeded`);
       }
       const last = stored.record.attempts.at(-1);
       let report: string | undefined;
@@ -906,6 +912,8 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
         ...stored.record,
         status: action === 'resolve' ? 'resolved' : 'abandoned',
         settlement: { action, outcome: action === 'resolve' && (outcome === 'succeeded' || outcome === 'failed') ? outcome : undefined, operator, at: now(), report },
+        // Abandoning a resolved operation keeps the resolution it supersedes: the audit trail of the asserted effect.
+        resolution: consumed ? stored.record.settlement : stored.record.resolution,
       };
       write(lease, settled, stored.revision);
       emit(action === 'resolve' ? 'resolved' : 'abandoned', settled, { requestAttempt: last?.requestAttempt, status: settled.status, reason: 'operator' });

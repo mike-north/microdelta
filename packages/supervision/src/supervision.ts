@@ -14,7 +14,10 @@
  *   outcome, value or failure, is what the run reports;
  * - storage's writer lease is taken only for normal requests and released
  *   exactly once at actual close, so a refused miss, a check or a recovery
- *   never strands it and started work never loses it;
+ *   never strands it and started work never loses it. A normal request that
+ *   finds another process holding it waits under the operator's policy (no
+ *   default deadline) and fails with a typed writer-busy error at the
+ *   deadline (see `writer.ts`); History alone decides any takeover;
  * - admission and observer positions are Supervision's ports into Resolution:
  *   the caller's policy decides admission, and observers are captured at
  *   start, see frozen events and can neither veto nor replace work;
@@ -59,6 +62,7 @@ import type {
   IRunContext,
   IRunEvent,
   IRunExecution,
+  IRunLease,
   IRunOptions,
   IRunResult,
   IRunScope,
@@ -72,6 +76,7 @@ import { SupervisionError } from './errors.js';
 import { isDraining, raceAbort, runControls, supervisedExecution } from './execution.js';
 import type { IAttemptFrame, IFrameAccess, IRunFrame, ISupervisedRun } from './execution.js';
 import { createPermitPool } from './permits.js';
+import { awaitWriter, writerWaitPolicy } from './writer.js';
 
 /**
  * The default size of a run's permit pool: one send in flight at a time. It
@@ -309,6 +314,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     const observers = captureObservers(runOptions.observers);
     const policy = runOptions.admission ?? admitAll;
     const writer = runOptions.writer;
+    const writerPolicy = writerWaitPolicy(runOptions.writerWait);
     const diagnostics: string[] = [];
     /** The stop intent in force when the run closed; captured in the turn that closes it. */
     let closingStop: IStopState = controller.state;
@@ -447,6 +453,32 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         return decided.value;
       },
     });
+    /**
+     * The one wait for the writer lease in progress, shared by every normal
+     * request that starts while it lasts, so concurrent requests of one run
+     * poll storage once per interval and proceed with the same lease.
+     */
+    let writerWait: Promise<IRunLease> | undefined;
+    /**
+     * A valid writer lease for the next normal request: renewed or acquired
+     * at once when possible, otherwise waited for under the run's policy. Any
+     * stop ends a wait, as it ends a wait for a time: the request it precedes
+     * has not started, and stop intent forbids the new work it would bring.
+     */
+    const writerLease = (): Promise<IRunLease> => {
+      if (writerWait !== undefined) {
+        return writerWait;
+      }
+      const pending = awaitWriter({ writer, policy: writerPolicy, timer, stop: state.stopped.signal, runId: context.runId });
+      writerWait = pending;
+      const finished = (): void => {
+        if (writerWait === pending) {
+          writerWait = undefined;
+        }
+      };
+      pending.then(finished, finished);
+      return pending;
+    };
     /** Supervision's observer position for Resolution's lifecycle events. */
     const observer: ILifecycleObserver = Object.freeze({
       observe(event: ILifecycleEvent): void {
@@ -497,21 +529,24 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       },
       resolve(step: IBindingDescriptor, request: IRequestOptions): Promise<IResolutionOutcome> {
         return within(async () => {
-          const outcome = await resolution.resolve({ step, requestKey: request.requestKey, lease: writer.lease() });
+          const lease = await writerLease();
+          const outcome = await resolution.resolve({ step, requestKey: request.requestKey, lease });
           diagnostics.push(...outcome.diagnostics);
           return outcome;
         });
       },
       resolveMembers(target: IMembersTarget, request: IRequestOptions): Promise<IMembersReport> {
         return within(async () => {
-          const resolved = await resolution.resolveMembers({ template: target.template, step: target.step, requestKey: request.requestKey, lease: writer.lease() });
+          const lease = await writerLease();
+          const resolved = await resolution.resolveMembers({ template: target.template, step: target.step, requestKey: request.requestKey, lease });
           diagnostics.push(...resolved.diagnostics);
           return membersReport(target.step, resolved);
         });
       },
       resolveFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IFoldReport> {
         return within(async () => {
-          const resolved = await resolution.resolveFold({ step, requestKey: request.requestKey, lease: writer.lease() });
+          const lease = await writerLease();
+          const resolved = await resolution.resolveFold({ step, requestKey: request.requestKey, lease });
           diagnostics.push(...resolved.diagnostics);
           return foldReport(resolved);
         });

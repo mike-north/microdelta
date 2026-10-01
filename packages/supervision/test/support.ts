@@ -13,7 +13,7 @@ import type { IBindingDescriptor } from '@microdelta/definition';
 import type { IAdmissionRequest, IResolution, IResolutionOutcome } from '@microdelta/resolution';
 
 import { SupervisionError, createSupervision } from '../src/index.js';
-import type { IResolutionPorts, IRunEvent, IRunLease, IRunOptions, IRunScope, IRunScopeCapability, IRunTimer, ISupervision } from '../src/index.js';
+import type { IResolutionPorts, IRunEvent, IRunOptions, IRunScope, IRunScopeCapability, IRunTimer, ISupervision, IWriterAttempt } from '../src/index.js';
 
 /** Node's real asynchronous context, supplied structurally as a host would. */
 export const nodeScopes: IRunScopeCapability = {
@@ -144,7 +144,7 @@ export function portDouble(): IPortDouble {
 
 /** A writer port that always grants a lease. */
 export const grantingWriter: IRunOptions['writer'] = Object.freeze({
-  lease: (): IRunLease => Object.freeze({ holder: 'run:test', fence: 1, expiresAt: Number.MAX_SAFE_INTEGER }),
+  tryLease: (): IWriterAttempt => Object.freeze({ kind: 'acquired', lease: Object.freeze({ holder: 'run:test', fence: 1, expiresAt: Number.MAX_SAFE_INTEGER }) }),
   release: (): void => undefined,
 });
 

@@ -95,21 +95,95 @@ export interface IRunContext {
 export type IRunLease = IResolveRequest['lease'];
 
 /**
+ * What one non-blocking try for storage's single-writer lease observed. It
+ * reports facts, never a guess (PUB-005):
+ *
+ * - `acquired`: the run holds a currently valid lease, newly acquired (with a
+ *   fresh fence) or renewed;
+ * - `held`: storage observed another unexpired holder, named with its expiry
+ *   in storage's clock domain. It grants nothing; only History's fencing can
+ *   ever take the lease over, and only once it has expired;
+ * - `contended`: storage could not decide within its own bounded busy wait
+ *   (SQLite stayed locked by another connection). Nothing changed. `holder`
+ *   and `expiresAt` are the writer recorded at that moment when it could be
+ *   read without the lock, and are undefined otherwise; `detail` is storage's
+ *   diagnostic, which carries no stored values.
+ * @alpha
+ */
+export type IWriterAttempt =
+  | {
+      readonly kind: 'acquired';
+      /** The valid lease for the next normal request. */
+      readonly lease: IRunLease;
+    }
+  | {
+      readonly kind: 'held';
+      /** The observed unexpired holder. */
+      readonly holder: string;
+      /** When that holder's lease expires, in storage's clock domain (epoch milliseconds). */
+      readonly expiresAt: number;
+    }
+  | {
+      readonly kind: 'contended';
+      /** The recorded holder, when it could be read. */
+      readonly holder: string | undefined;
+      /** The recorded holder's expiry, when it could be read. */
+      readonly expiresAt: number | undefined;
+      /** Storage's diagnostic of the contention. */
+      readonly detail: string;
+    };
+
+/**
  * The run's access to storage's single-writer lease, supplied by assembly.
- * Supervision asks for the lease only for storage-mutating normal requests
- * and releases it exactly once when the run closes, so check-only and
- * recovery requests never need it and a refused miss never strands it.
+ * The port only *tries*: whether and how long to wait for another holder is
+ * Supervision's policy ({@link IWriterWaitOptions}), and fencing, expiry and
+ * takeover stay History's authority behind the port. Supervision asks for the
+ * lease only for storage-mutating normal requests and releases it exactly
+ * once when the run closes, so check-only and recovery requests never need it
+ * and a refused miss never strands it.
  * @alpha
  */
 export interface IRunWriter {
   /**
-   * The currently valid lease for the next normal request, acquiring or
-   * renewing it. Throws `SupervisionError('writer-unavailable')` when storage
-   * reports another unexpired holder.
+   * Try once, without waiting, to hold a valid lease for the next normal
+   * request: renew the run's lease while it is still current, otherwise
+   * acquire a free or expired one. Reports another holder or storage
+   * contention as an outcome; throws only for a failure that waiting cannot
+   * cure, such as damaged storage.
    */
-  lease(): IRunLease;
+  tryLease(): IWriterAttempt;
   /** Release the lease if this run holds one. */
   release(): void;
+}
+
+/**
+ * The operator's policy for a normal request that finds storage's writer
+ * lease held by another process (RUN-002 owner decision). The request waits,
+ * polling on Supervision's injected timer, until it holds the lease, until a
+ * stop ends the wait, or until the deadline passes, when it fails with
+ * `WriterBusyError` naming the holder. A waiter changes no authority or data:
+ * each poll is one acquisition attempt that History refuses while the holder
+ * is unexpired.
+ * @alpha
+ */
+export interface IWriterWaitOptions {
+  /**
+   * The wall-clock time (whole UTC epoch milliseconds) after which a waiting
+   * request gives up. There is **no default deadline**: without one a request
+   * waits until it holds the lease or a stop ends the wait. A deadline already
+   * reached still allows one attempt, so a free lease is taken; a negative or
+   * fractional value is an invalid request.
+   */
+  readonly deadline?: number;
+  /**
+   * Milliseconds between polls while the lease is held: a positive safe
+   * integer, one second when absent. A waiter also wakes exactly at the
+   * holder's recorded expiry (when that lies sooner), because an expired
+   * lease can be taken over at once, and at the deadline, for its final
+   * attempt. It never polls in a busy loop: every wake-up is scheduled
+   * strictly later than the attempt before it.
+   */
+  readonly pollMilliseconds?: number;
 }
 
 /**
@@ -209,6 +283,12 @@ export interface IRunOptions {
   readonly resolution: (ports: IResolutionPorts) => IResolution;
   /** Storage's single-writer lease for normal requests. */
   readonly writer: IRunWriter;
+  /**
+   * How a normal request waits when another process holds the writer lease:
+   * the operator's deadline (none by default) and poll interval. A wait needs
+   * Supervision's timer.
+   */
+  readonly writerWait?: IWriterWaitOptions;
   /** Admission policy for work validation could not avoid; admits everything when absent. */
   readonly admission?: IExecutionAdmission;
   /** Observers, captured when the run starts. */

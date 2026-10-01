@@ -655,8 +655,9 @@ the parts of the owner's decision that this record marked missing: the wait for
 the writer lease, the operator deadline and the typed writer-busy error. It
 also adds the defense in depth from the "Renew and release rewrite the fence
 column" observation above. The base was `0cbb2a4`, merged with `origin/main`
-at `7a329fd` (#126, #127) before the final runs. Toolchain and platform are
-unchanged.
+at `7a329fd` (#126, #127), and for the review fix round at `dfe047e` (#132,
+code-based busy classification) and `89a27d7` (#133). Toolchain and platform
+are unchanged. The fix round's evidence is in its own section below.
 
 ### What changed
 
@@ -676,17 +677,29 @@ unchanged.
 - **History keeps lease authority.** Takeover still happens only in
   `acquireWriter`, after expiry and with the next fence. Renewal now writes only
   the expiry, and release only clears the holder: `last_fence` is assigned by a
-  grant alone. History documents `SqliteBusyError` as its no-effect
-  storage-contention failure and re-exports it.
-- **The facade's writer port** (`packages/core/src/writer.ts`) maps each try to
-  one of three outcomes, without deciding anything itself:
-  - `acquired`;
-  - `held` (`acquireWriter`'s outcome);
-  - `contended`, for a `SqliteBusyError`. It carries the writer recorded at
-    that moment, read without the write lock, or no holder if that read is
-    busy too.
+  grant alone.
+- **History classifies contention** (PUB-005). When SQLite stays locked past
+  its bounded busy wait:
+  - `acquireWriter` returns `contended`, with the writer recorded at that
+    moment, read without the write lock (undefined if that read is busy too);
+  - `renewWriter` returns `IWriterRenewal`, either `renewed` or that same
+    `contended`, so a busy renewal leaves the lease exactly as it was.
 
-  A raw driver error never reaches Supervision.
+  Damaged storage and clock failures stay failures. Other operations still
+  fail with Machine's `SqliteBusyError`, which History no longer re-exports.
+- **The facade's writer port** (`packages/core/src/writer.ts`) maps History's
+  outcomes one to one and decides nothing:
+  - `renewed` and `acquired` become `acquired`;
+  - `held` passes through;
+  - `contended` passes through with `heldByThisRun`, which is true when the
+    recorded writer is exactly the lease the run holds.
+
+  A busy renewal keeps the lease, a stale one (`StaleWriterError`) is dropped
+  before acquiring, and every other error propagates. A raw driver error never
+  reaches Supervision.
+- **Nested runs are refused.** A workspace run started from inside an open run
+  of the same workspace would wait forever for the lease its caller holds, so
+  it is refused at once with `invalid-request`.
 - **`WriterLease.tla`.** The renew and release effects leave the fence
   unchanged. A new `Busy` action is a waiter giving up: durably it is exactly a
   `held` observation, and it records the holder it names. The deadline is
@@ -695,8 +708,10 @@ unchanged.
   - `WaiterPreservesAuthorityState` now also covers `busy`.
   - The new invariant `BusyNamesUnexpiredHolder` requires the named holder to be
     the observed one, and unexpired at that moment.
-  - Two faults are new: `takeover-before-expiry` (acquisition one tick early)
-    and `busy-without-holder`.
+  - Three faults are new: `takeover-before-expiry` (acquisition one tick
+    early), `busy-without-holder` and `busy-on-stale-observation` (giving up
+    whenever any holder is recorded, as a waiter reporting an earlier try
+    would).
 
 ### Mapping rows added or changed
 
@@ -705,11 +720,13 @@ unchanged.
 | lease wait: poll, wake at expiry, no spin | `awaitWriter`, `nextAttemptAt`; port `tryLease` | repeated `Held` | Supervision `writer-wait.test.ts` (interval, default 1 s, wake at expiry, no busy spin when expiry reads as past, shared wait); L1, L2, L5; C3 | aligned |
 | takeover after the holder dies | `acquireWriter` (unchanged); the waiter wakes at expiry | `Grant` after a prior holder | L2 (SIGKILL; `held` at 1 050, nothing at 1 099, granted at 1 100 with fence + 1); C3 | aligned |
 | operator deadline, typed writer-busy | `awaitWriter` deadline branch; `WriterBusyError` | `Busy` | Supervision deadline tests (passed, now, boundary ±1 ms); L3; L4 (deadline 1 100 is granted, 1 099 is busy); facade `writer-wait.test.ts`; C3 | aligned; the deadline arithmetic itself is not modeled |
-| `SQLITE_BUSY` exhaustion | port `contended`; `WriterBusyError.contended` | none (SQLite locks are not modeled) | Supervision contention tests; L7 (another process holds `BEGIN IMMEDIATE`) | aligned in code and tests; outside the model |
+| `SQLITE_BUSY` exhaustion | History `acquireWriter` and `renewWriter` (`contended`); port mapping; `WriterBusyError.contended` | none (SQLite locks are not modeled) | `writer-port.test.ts` H1–H5 and P1–P7; Supervision contention tests; L7 (another process holds `BEGIN IMMEDIATE`); facade in-process contention test | aligned in code and tests; outside the model |
+| a busy renewal keeps the lease | `renewWriter` returns `contended`; the port keeps `held` | none | H2, P2 (next try renews the same fence); Supervision "the run is the recorded holder" message test | aligned; outside the model |
+| nested same-workspace run | `openWorkspace().run` refuses it through the run context | none | facade `writer-wait.test.ts` (refused within 1 s; from ordinary work; another workspace allowed; after close allowed) | aligned; outside the model |
 | stop during a wait | `sleepUntil`, stop check | none | Supervision soft and hard stop tests; L6 (soft, hard); facade hard-stop test | aligned; not modeled |
 | renew and release leave the fence | `extendHolder`, `clearHolder` statements | `Effect` for renew and release | F1 (a connection-local trigger records every `last_fence` assignment: only grants), T* stale renew, `DH:` renew and release tests | aligned |
 | `WaiterPreservesAuthorityState` (now `held` and `busy`) | the `held` branch; giving up writes nothing more | `Held`, `Busy` | L1, L2, L3 compare authority rows before and after each waiter step, with only the high-water allowed to rise; W1, W4 | aligned. The plan's wording ("only the time high-water may rise") settles the earlier ambiguity |
-| `BusyNamesUnexpiredHolder` | `WriterBusyError` built from the final try | `Busy` | L3, L4 (1 099), L7 (contended, names the recorded holder), C3, Supervision tests | aligned for `held`; the contended outcome is outside the model |
+| `BusyNamesUnexpiredHolder` | `WriterBusyError` built from the final try | `Busy` | L3, L4 (1 099), L7 (contended, names the recorded holder), L8 (another process took over between tries: names the final holder), C3, Supervision tests | aligned for `held`; the contended outcome is outside the model |
 | `FenceNeverRegresses` | only a grant writes `last_fence` | `Grant` | F1, C1, T* | aligned, now by construction as well as by the guard |
 | liveness | not modeled | none | a waiter never spins; it wakes at expiry (L1, L2); the deadline (L3, L4) and stops (L6) bound every wait | insufficient: bounded waits are tested, but neither eventual grant nor fairness is proven (see the observations) |
 
@@ -733,6 +750,7 @@ shared machine and only indicative.
 | `WriterLeaseBad-waiter-advances-fence.cfg` | 12 | 28 | 28 | 3 | `WaiterPreservesAuthorityState` |
 | `WriterLeaseBad-ignore-high-water.cfg` | 12 | 224 | 208 | 3 | `EffectiveTimeNeverRegresses` |
 | `WriterLeaseBad-busy-without-holder.cfg` (new) | 12 | 36 | 32 | 3 | `BusyNamesUnexpiredHolder` |
+| `WriterLeaseBad-busy-on-stale-observation.cfg` (new, fix round) | 12 | 40 | 36 | 3 | `BusyNamesUnexpiredHolder` |
 | `WriterLeaseConsequence-takeover-without-fence.cfg` | 12 | 21 | 21 | 3 | `AtMostOneAuthority` |
 | `WriterLeaseConsequence-holder-ignores-expiry.cfg` | 0 | 13,744,887 | 220,939 | 11 | no storage-safety violation |
 | `WriterLeaseConsequence-holder-expiry-inclusive.cfg` | 0 | 13,754,959 | 221,631 | 11 | no storage-safety violation |
@@ -741,6 +759,13 @@ shared machine and only indicative.
 | `WriterLeaseConsequence-waiter-advances-fence.cfg` | 0 | 13,563,783 | 234,475 | 11 | no storage-safety violation |
 | `WriterLeaseConsequence-ignore-high-water.cfg` | 0 | 87,644,111 | 1,359,143 | 12 | no storage-safety violation |
 | `WriterLeaseConsequence-busy-without-holder.cfg` (new) | 0 | 4,430,847 | 72,259 | 10 | no storage-safety violation |
+| `WriterLeaseConsequence-busy-on-stale-observation.cfg` (new, fix round) | 0 | 12,924,287 | 204,955 | 11 | no storage-safety violation |
+
+The fix round added the `busy-on-stale-observation` fault. Its two
+configurations ran, and `WriterLease.cfg` and `WriterLeaseBad-busy-without-holder.cfg`
+were rerun on the changed model with identical counts (12,206,311 / 200,739 / 11,
+and 36 / 32 / 3). The other configurations do not reach the changed definition,
+because it only alters `Busy` under that fault.
 
 The new counterexamples are short:
 
@@ -748,6 +773,8 @@ The new counterexamples are short:
   waiter gives up and names no holder.
 - **takeover-before-expiry.** P1 is granted `w`/1, expiry 2. At reading 1, one
   tick before expiry, a second grant takes the lease with fence 2.
+- **busy-on-stale-observation.** P1 is granted `w`/1, expiry 2. At reading 2,
+  when the lease has already expired, a waiter gives up and names `w`.
 
 The **renew-ignores-fence** trace changed with the effect. P1 holds `w`/1. At
 reading 2, P2 is granted `w`/2. P1's stale renewal is still accepted, which
@@ -785,36 +812,41 @@ the guard itself is still what refuses the stale holder.
   - C3 first overwrote each event's `holder` with the worker's name. That
     disarmed the busy-without-holder control, which found the bug. It now
     keeps both fields.
-- **A Jest-only artifact.** In Jest, `SqliteBusyError` mapping in machine-node
-  depends on the `better-sqlite3` error class of whichever test file first
-  opened a database: the native addon's error constructor is process-wide and
-  is set once. An in-process facade contention test therefore saw a raw
-  `SqliteError` from the second test file on. That test was dropped. L7 runs
-  the same scenario in plain Node worker processes. Production loads one
-  module instance and is unaffected.
 
 ### Mutation controls
 
 Command: `node packages/core/test/concurrency/controls/concurrency-mutation-controls.mjs`,
-after the build and the facade test build. Controls now name a target build
-(History's or Supervision's). A control with no model counterpart must state
-why, and `controls.test.mjs` enforces that. Final run: exit 0, baseline
-126 tests and 0 failing, restored 126 and 0, `PASS: 14 controls`.
+after the build and the facade and Supervision test builds.
+- Each control names a target build: History's, Supervision's, or the facade
+  port's test build.
+- Each control names a run group. `concurrency` runs the interleaving,
+  contention and writer-port suites; `supervision` runs Supervision's
+  writer-wait owner suite, for a defect only an owner test can see.
+- A control with no model counterpart must state why, and `controls.test.mjs`
+  enforces that.
+
+Final run, after the fix round on the merged head: exit 0, `PASS: 18 controls`.
+The concurrency group's baseline was 139 tests, 0 failing; the supervision
+group's was 33, 0 failing. Both groups' restored builds passed in full.
 
 | Control (model fault) | Target | Failing tests | New tests among them |
 | --- | --- | --- | --- |
 | holder guard ignores the fence (`holder-ignores-fence`) | History | 72 | none (T and O families) |
-| holder guard ignores expiry (`holder-ignores-expiry`) | History | 10 | none |
+| holder guard ignores expiry (`holder-ignores-expiry`) | History | 10–11 | none |
 | expiry instant still live (`holder-expiry-inclusive`) | History | 1–2 (C2 is schedule-dependent) | none (W4) |
-| takeover reuses the fence (`takeover-without-fence`) | History | 115 | L1, L2, L4 (1 100), F1, C3 |
-| acquisition takes over an unexpired holder (`acquire-ignores-expiry`) | History | 14 | L1, L2, L3, L4 ×2, L5, L6 ×2, C3 |
+| takeover reuses the fence (`takeover-without-fence`) | History | 115–116 | L1, L2, L4 (1 100), F1, C3 |
+| acquisition takes over an unexpired holder (`acquire-ignores-expiry`) | History | 14–16 | L1, L2, L3, L4 ×2, L5, L6 ×2, L8, C3 |
 | takeover one millisecond before expiry (`takeover-before-expiry`, new) | History | 2 | W4, L4 (1 099) |
 | waiter advances the fence (`waiter-advances-fence`) | History | 12 | L1, L2, L3, L4 ×2, L6 ×2, C3 |
 | high-water ignored (`ignore-high-water`) | History | 97 | none |
 | renewal adopts the current fence (`renew-ignores-fence`) | History | 9 | none (T2–T4 stale renew) |
 | renewal and release write the presented fence back (no model counterpart, new) | History | 1 | F1 |
-| writer-busy reports no holder (`busy-without-holder`, new) | Supervision | 4 | L3, L4 (1 099), L7, C3 |
-| waiting ignores the operator deadline (no model counterpart, new) | Supervision | 4 | L3, L4 (1 099), L7, C3 |
+| writer-busy reports no holder (`busy-without-holder`, new) | Supervision | 4–5 | L3, L4 (1 099), L7, L8, C3 |
+| waiting ignores the operator deadline (no model counterpart, new) | Supervision | 4–5 | L3, L4 (1 099), L7, L8, C3 |
+| writer-busy built from an earlier try (`busy-on-stale-observation`, fix round) | Supervision | 1 | L8 |
+| every failure of acquisition becomes contention (no model counterpart: SQLite contention is not modeled; fix round) | History | 2 | H5, P4 |
+| the port treats a busy renewal as stale and swallows renewal failures (no model counterpart; fix round) | facade port | 2 | P2, P4 |
+| a wait keeps its abort listener after waking (no model counterpart: listeners are not modeled; fix round, supervision group) | Supervision test build | 2 | Supervision "each sleep registers one listener and removes it on waking…", "a deadline reached after sleeps leaves no listener behind" |
 | abandonment ends a completed attempt (`Publication` `abandon-completed`) | History | 1 | none (E1) |
 | acceptance rewinds current (`Publication` `accept-moves-current`) | History | 1 | none (A1) |
 
@@ -825,11 +857,32 @@ rejected by W4 and L4. Two controls have no model counterpart:
 
 - *renew writing the presented fence* cannot be told apart in the model while
   the holder guard holds;
-- deadlines are not modeled.
+- deadlines are not modeled;
+- the fix round's contention, port and listener controls concern SQLite
+  contention, the facade's translation and listener retention, none of which
+  the model represents.
 
 `history-mutation-controls.mjs` ran unchanged: `PASS: 25 controls`, with 41
 tests restored. `journal-mutation-controls.mjs`, which arrived with the merge
-of #127, also passed: `PASS: 11 controls`, with 17 tests restored. The acceptance runner first reported a `CONTROL RUN INVALID`
+of #127, also passed: `PASS: 11 controls`, with 17 tests restored. Both
+results held again on the fix round's head.
+
+`workspace-mutation-controls.mjs` was retargeted in the fix round. Its two
+writer controls now plant into the facade port's test build. Its Jest
+patterns now name exactly the suites it judges, including the facade's
+`writer-wait.test.ts`; previously, suites added to those directories made the
+baseline invalid. On the fix round's head:
+- the baseline is 96 tests, 0 failing;
+- "an expired writer lease is kept instead of re-acquired" is rejected by 1
+  test;
+- "releasing an expired lease is reported as a failure" is rejected by 1 test;
+- the restored build passes.
+
+The runner still ends `FAIL`, because nine of its anchors predate this work
+and no longer match: six Supervision run-lifetime anchors, the Supervision
+recovery anchor (which the merge of #133 changed) and two example anchors.
+The recovery anchor is fixed here in both this runner and the acceptance
+runner; the others are left for their own issue. The acceptance runner first reported a `CONTROL RUN INVALID`
 because #128 added `stop-publication.test.ts` without adding it to the
 runner's suite list. That list now names all nine acceptance suites, and one
 control that planted the removed `writer.lease()` call plants
@@ -840,6 +893,58 @@ Two Resolution controls now find their anchors twice on `main` ("a source
 candidate skips its own implementation and input validation" and "the
 recovery intent ignores the current declaration"), a pre-existing condition;
 Resolution is untouched here.
+
+### Fix round (review of `4a70f78`)
+
+The review found no blocking bug. It reversed one decision and asked for
+discriminating tests and four nits. Each item was written test first.
+
+- **Contention belongs to History (decision 5 reversed).** I first changed the
+  new port and History suite (`writer-port.test.ts`) and the types, then ran
+  it against a History that did not yet classify contention. The typecheck
+  had already failed on a `contended` acquisition. At runtime, 8 of 12 tests
+  failed: H1–H4, P1, P2, P5 and P6, each getting `SqliteBusyError` where a
+  `contended` outcome or an integrity failure was expected. After History
+  classified contention, 12 of 12 passed. Mutations M6 (every acquisition
+  failure becomes contention) and M9 (a busy renewal treated as stale, and
+  renewal failures swallowed) survived the earlier suites. They are now
+  controls, rejected by H5 and P4 and by P2 and P4.
+- **Two of my own expectations were wrong at first.** The fix is in the test
+  setup, not the requirement. A failing host clock throws its own error; only
+  an invalid reading is `HistoryClockError`, so the tests use a reading of -1.
+  The writer row is trigger-protected, so the damaged-storage tests drop and
+  restore that trigger around the deletion.
+- **Nested same-workspace runs.** Before the refusal existed, the new test's
+  inner run was still waiting for the outer run's lease after 2 s. The
+  ordinary-work variant completed instead of being refused. After the
+  refusal, all four nested-run cases pass and the refusal arrives within 1 s.
+  `recovery.test.ts` now starts its second run from outside the first run
+  rather than relying on a deadline to escape.
+- **Writer-busy from the final try.** L8 passed against the implementation,
+  as it should. It is the test that rejects the new
+  `busy-on-stale-observation` code control.
+- **Self-named holder.** The two Supervision tests failed to typecheck before
+  `heldByThisRun` existed, and pass now. The message says the run is the
+  recorded holder, contended.
+- **Listener cleanup.** The counting-double tests passed against the existing
+  code. The new supervision-group control shows they reject a leaked listener.
+- **In-process contention test.** It is restored in the facade suite and
+  passes with #132's code-based busy classification, so it no longer depends
+  on which test file loaded the driver first.
+- **C2 and typed contention ([#136](https://github.com/mike-north/microdelta/issues/136)).**
+  C2's contend loop calls `acquireWriter` and `renewWriter`, which now return
+  `contended` instead of throwing.
+  - The loop logs such a try as contention.
+  - C2 accepts contention only on those two operations, with no error class,
+    and with any named writer a real grantee.
+  - Any other refusal must still be `StaleWriterError`, so a raw driver error
+    still fails the test.
+
+  The concurrency suites then ran 10 times under parallel load: two Jest runs
+  at a time, plus six CPU-bound processes. All 10 runs passed, 139 of 139
+  tests each, with no C2 failure. The loop's allocation, staging and
+  publication can still throw a bare `SqliteBusyError`, because those
+  operations have no contention outcome. None did in these runs.
 
 ### Observations
 
@@ -874,3 +979,7 @@ Resolution is untouched here.
   rather than spinning.
 - **No observer event reports waiting.** The structured event schema belongs to
   #119.
+- **Only same-workspace nesting is refused.** A run of a *second* workspace
+  opened over the same store file, started inside a run of the first, is a
+  different holder to History and still waits, without a deadline until a
+  stop.

@@ -403,7 +403,7 @@ describe('the permit pool (RUN-002)', () => {
         codeOf(run.recover(step, request)),
         codeOf(run.ordinary('note', () => 'noted')),
         codeOf(() => {
-          run.refuseUndeclaredCall('read');
+          run.assertDeclaredCall('read');
         }),
       ]);
       // The member holds the run's only lane: a refusal must never wait for one.

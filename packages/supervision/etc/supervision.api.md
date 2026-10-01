@@ -144,12 +144,12 @@ export interface IResolutionPorts {
 
 // @alpha
 export interface IRun {
+    assertDeclaredCall(operation: string): void;
     check(step: IBindingDescriptor): Promise<ICheckOutcome>;
     readonly context: IRunContext;
     readonly open: boolean;
     ordinary<T>(label: string, work: () => T | Promise<T>): Promise<Awaited<T>>;
     recover(step: IBindingDescriptor, request: IRequestOptions): Promise<IRecoveryResult>;
-    refuseUndeclaredCall(operation: string): void;
     resolve(step: IBindingDescriptor, request: IRequestOptions): Promise<IResolutionOutcome>;
     resolveFold(step: IBindingDescriptor, request: IRequestOptions): Promise<IFoldReport>;
     resolveMembers(target: IMembersTarget, request: IRequestOptions): Promise<IMembersReport>;

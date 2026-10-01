@@ -619,7 +619,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
           return value;
         }, 'ordinary');
       },
-      refuseUndeclaredCall(operation: string): void {
+      assertDeclaredCall(operation: string): void {
         const refusal = undeclaredCall(operation);
         if (refusal !== undefined) {
           throw refusal;

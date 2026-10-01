@@ -507,10 +507,10 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
           check: live.check,
           recover: live.recover,
           ordinary: live.ordinary,
-          refuseUndeclaredCall: live.refuseUndeclaredCall,
+          assertDeclaredCall: live.assertDeclaredCall,
           read<TData>(reference: ICompletedResultReference): TData {
             // An exact read is a result read, so it obeys the run's undeclared-call rule (CMP-9).
-            live.refuseUndeclaredCall('read');
+            live.assertDeclaredCall('read');
             // Reads belong to their own run, for exactly Supervision's lifetime of it.
             if (!live.open) {
               throw new SupervisionErrorClass('run-closed', `Run ${live.context.runId} has closed and accepts no new work`);

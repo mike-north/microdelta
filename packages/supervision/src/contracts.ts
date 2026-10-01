@@ -545,14 +545,20 @@ export interface IRun {
   /** Run ordinary nonmemoized work, observed but with no completed-result identity. */
   ordinary<T>(label: string, work: () => T | Promise<T>): Promise<Awaited<T>>;
   /**
-   * Throw `SupervisionError('undeclared-call')`, recording the run diagnostic,
-   * when called from inside a member's work or a step attempt of this open
-   * run; otherwise do nothing. An assembly calls it first in every
-   * result-reading operation it adds to a run (for example an exact read), so
-   * those obey the same rule as the run's own operations (CMP-9).
+   * Assert that the current call is a declared one. Invoked from inside a
+   * member's work or a step attempt of this open run, it records the run
+   * diagnostic and throws the CMP-9 refusal, `SupervisionError('undeclared-call')`;
+   * otherwise it returns. The facade's synchronous exact `read` calls it
+   * first, so that result read obeys the same rule as the run's own
+   * operations.
+   *
+   * It is `@alpha` rather than `@internal` only because the facade is a
+   * separate package that consumes Supervision's generated alpha
+   * declarations, from which API Extractor trims `@internal` members; it is
+   * not meant for authors.
    * @param operation - The operation's name, for the diagnostic.
    */
-  refuseUndeclaredCall(operation: string): void;
+  assertDeclaredCall(operation: string): void;
 }
 
 /**

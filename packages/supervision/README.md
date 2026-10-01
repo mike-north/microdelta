@@ -143,9 +143,11 @@ execution contract describes them (EXP-8 mechanisms 1 and 2, ruling R).
   that kept the run, rejects at once with `undeclared-call` (CMP-9) and a run
   diagnostic naming the operation and the calling step. What it resolves or
   reads would enter no evidence of the calling body, and the refusal means a
-  lane holder never waits for the window (RUN-002's nested rule). An
-  assembly applies the same rule to result reads it adds to a run through
-  `refuseUndeclaredCall(operation)`.
+  lane holder never waits for the window (RUN-002's nested rule).
+  `assertDeclaredCall(operation)` checks the same rule without running
+  anything: inside member or step work it records the diagnostic and throws
+  the refusal, otherwise it returns. The facade's synchronous exact `read`
+  calls it first.
 - **Execution controls.** `supervision.execution()` gives author code and
   adapters the live run's controls by scoped lookup:
   - `send({ label, retry?, perform, cancel? })` holds one permit per send. A

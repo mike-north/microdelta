@@ -15,6 +15,10 @@
  * the `held` outcome. C3 drives real waiters: Run Supervision's wait for the
  * lease over the facade's writer port, on Node's real timer, with an operator
  * deadline, so every wait must end granted or as the typed writer-busy error.
+ * Whether a free-running waiter is granted only after waiting depends on host
+ * speed (issue #140), so C3 first forces that interleaving and a deadline
+ * outcome with process coordination, then lets the four processes contend
+ * freely.
  *
  * @see ../../../../docs/spec/execution.md (PUB-002, PUB-004, PUB-005)
  * @see ../../../../experiments/exp-7/WriterLease.tla
@@ -28,8 +32,8 @@ import { cleanup } from '../durable-history/support.js';
 import { expectRefused, freshStore, heldFrom, leaseFrom, locatorFrom, measureConcurrency, reopenForReading, snapshot, startWorker, stopWorkers } from './driver.js';
 import type { IConcurrencyMeasure, IDurableState, IWorkerHandle } from './driver.js';
 import { attemptRequest, concurrencyStore, subject } from './fixture.js';
-import { hostMonotonicMilliseconds, parseContentionLog, parseWaitContention } from './protocol.js';
-import type { IContentionEvent, IHarnessCommand, IHarnessReply } from './protocol.js';
+import { hostMonotonicMilliseconds, parseContentionLog, parseWaitContention, parseWaitStatus } from './protocol.js';
+import type { IContentionEvent, IHarnessCommand, IHarnessReply, IWaitContentionEvent, IWaitStatus } from './protocol.js';
 
 afterEach(async () => {
   await stopWorkers();
@@ -199,18 +203,152 @@ describe('free-running contention with the host clock (C2)', () => {
   }, 120_000);
 });
 
+/** How long the forced phase waits for one worker to reach a state before failing with diagnostics. */
+const forcedStepBoundMilliseconds = 10_000;
+
+/** The forced phase's polled steps: Q0's first try and grant, Q1's first try, Q2's deadline and Q1's grant. */
+const forcedPolledSteps = 5;
+
+/**
+ * The lease each forced-phase run requests. It is twice the sum of the forced
+ * phase's step bounds, so Q0's lease cannot expire before the parent releases
+ * it unless a step has already failed its bound; C3 also checks that Q1's grant
+ * came before Q0's recorded expiry, so the handover is a release, not an expiry.
+ */
+const forcedLeaseMilliseconds = 2 * forcedPolledSteps * forcedStepBoundMilliseconds;
+
+/**
+ * The lease each free-running tenure requests. Tenures release it when their
+ * run closes, so it only has to outlast a host stall inside one tenure; a lease
+ * that expired mid-tenure would correctly refuse the publication as stale,
+ * which C3 does not measure (expiry is covered by L1, L2, L4 and W4).
+ */
+const freeRunningLeaseMilliseconds = 10_000;
+
+/** Pause the parent briefly between status polls of a worker. */
+function pauseParent(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => {
+    setTimeout(resolve, milliseconds);
+  });
+}
+
+/** The status of a worker's waiting run, from a command that must succeed. */
+async function waitStatusOf(target: IWorkerHandle, command: IHarnessCommand): Promise<IWaitStatus> {
+  return parseWaitStatus(valueOf(target, await target.step(command)));
+}
+
+/**
+ * Poll a worker's waiting run until `reached` holds, within a fixed bound. A
+ * worker that never gets there fails the test with its full status, naming
+ * what was expected, so a missed interleaving is reported, never assumed.
+ */
+async function untilStatus(target: IWorkerHandle, expected: string, reached: (status: IWaitStatus) => boolean): Promise<IWaitStatus> {
+  const giveUpAt = hostMonotonicMilliseconds() + forcedStepBoundMilliseconds;
+  for (;;) {
+    const status = await waitStatusOf(target, { op: 'wait-status' });
+    if (reached(status)) {
+      return status;
+    }
+    if (hostMonotonicMilliseconds() >= giveUpAt) {
+      throw new Error(`${target.name} did not reach "${expected}" within ${String(forcedStepBoundMilliseconds)} ms: ${JSON.stringify(status)}`);
+    }
+    await pauseParent(2);
+  }
+}
+
+/** One forced-phase outcome, in the same shape as a free-running tenure. */
+type IForcedEvent = IWaitContentionEvent & { readonly worker: string };
+
+/**
+ * The forced phase of C3, coordinated by the parent so it never depends on
+ * host speed (issue #140). Q0 runs a wait that takes the free lease and holds
+ * it, under a lease longer than all the phase's step bounds together, until the parent lets it finish.
+ * Meanwhile Q1 waits with no deadline and Q2 waits with a short operator
+ * deadline. The parent requires Q1's first try to be refused, naming Q0, and
+ * Q2 to end as writer-busy naming Q0 after refused tries only. Only then does
+ * it end Q0's run, which releases the lease, and it requires Q1 to be granted
+ * the next fence on a later try. Every step is bounded and reports the
+ * worker's status when it is missed.
+ */
+async function forcedHandover(workers: readonly IWorkerHandle[]): Promise<readonly IForcedEvent[]> {
+  const [q0, q1, q2] = workers;
+  if (q0 === undefined || q1 === undefined || q2 === undefined) {
+    throw new Error('the forced phase needs three workers');
+  }
+  const start = (target: IWorkerHandle, extra: { readonly deadline?: number }): Promise<IWaitStatus> => waitStatusOf(target, {
+    op: 'wait-start',
+    at: 0,
+    holder: `waiter-${target.name}`,
+    leaseMilliseconds: forcedLeaseMilliseconds,
+    pollMilliseconds: 5,
+    key: `waiter-${target.name}:forced`,
+    ...extra,
+  });
+
+  // Q0 takes the free lease on its first try, publishes, and keeps its run open.
+  await start(q0, {});
+  const q0FirstTry = await untilStatus(q0, 'first try made', (status) => status.attempts.length > 0);
+  expect({ q0FirstTry: q0FirstTry.attempts[0] }).toMatchObject({ q0FirstTry: { kind: 'acquired', holder: 'waiter-Q0' } });
+  const holder = await untilStatus(q0, 'granted and published', (status) => status.outcome.kind === 'acquired');
+  expect(holder.attempts.map((attempt) => attempt.kind)).toEqual(['acquired']);
+  const q0ExpiresAt = holder.attempts[0]?.expiresAt ?? null;
+
+  // Q1 waits with no deadline; its first try must be refused, naming Q0.
+  await start(q1, {});
+  const q1FirstTry = await untilStatus(q1, 'first try made', (status) => status.attempts.length > 0);
+  expect({ q1FirstTry: q1FirstTry.attempts[0] }).toMatchObject({ q1FirstTry: { kind: 'held', holder: 'waiter-Q0' } });
+
+  // Q2's operator deadline passes while Q0 still holds: the typed writer-busy outcome naming Q0.
+  await start(q2, { deadline: Date.now() + 40 });
+  const deadlined = await untilStatus(q2, 'writer-busy at its deadline', (status) => status.outcome.kind !== 'pending');
+  expect(deadlined.outcome).toMatchObject({ kind: 'busy', error: 'WriterBusyError', holder: 'waiter-Q0', contended: false });
+  expect(deadlined.attempts.length).toBeGreaterThanOrEqual(1);
+  expect(deadlined.attempts.map((attempt) => [attempt.kind, attempt.holder])).toEqual(deadlined.attempts.map(() => ['held', 'waiter-Q0']));
+
+  // Q1 is still waiting; only now does Q0's run end, releasing the lease.
+  const stillWaiting = await waitStatusOf(q1, { op: 'wait-status' });
+  expect({ q1WhileQ0Holds: stillWaiting.outcome }).toEqual({ q1WhileQ0Holds: { kind: 'pending' } });
+  const released = await waitStatusOf(q0, { op: 'wait-finish', at: 0 });
+  const granted = await untilStatus(q1, 'granted after waiting', (status) => status.outcome.kind !== 'pending');
+  expect(granted.attempts.length).toBeGreaterThan(1);
+  const refusedTries = granted.attempts.slice(0, -1);
+  expect(refusedTries.map((attempt) => [attempt.kind, attempt.holder])).toEqual(refusedTries.map(() => ['held', 'waiter-Q0']));
+  const grantTry = granted.attempts.at(-1);
+  expect(grantTry).toMatchObject({ kind: 'acquired', holder: 'waiter-Q1' });
+  // The handover was Q0's release, not the expiry of Q0's lease.
+  expect(q0ExpiresAt).not.toBeNull();
+  expect({ q1GrantedAt: grantTry?.at, beforeQ0Expiry: (grantTry?.at ?? Number.POSITIVE_INFINITY) < (q0ExpiresAt ?? 0) }).toMatchObject({ beforeQ0Expiry: true });
+  const holderOutcome = released.outcome;
+  const waiterOutcome = granted.outcome;
+  if (holderOutcome.kind !== 'acquired' || waiterOutcome.kind !== 'acquired' || deadlined.outcome.kind !== 'busy') {
+    throw new Error(`forced phase outcomes: ${JSON.stringify([holderOutcome, waiterOutcome, deadlined.outcome])}`);
+  }
+  // The waiter's grant is a takeover through fencing: the next fence.
+  expect(waiterOutcome.fence).toBe(holderOutcome.fence + 1);
+  await waitStatusOf(q1, { op: 'wait-finish', at: 0 });
+  await waitStatusOf(q2, { op: 'wait-finish', at: 0 });
+
+  return [
+    { kind: 'granted', fence: holderOutcome.fence, tries: released.attempts.length, published: holderOutcome.published, worker: 'waiter-Q0' },
+    { kind: 'granted', fence: waiterOutcome.fence, tries: granted.attempts.length, published: waiterOutcome.published, worker: 'waiter-Q1' },
+    { kind: 'busy', holder: deadlined.outcome.holder, contended: deadlined.outcome.contended, tries: deadlined.attempts.length, worker: 'waiter-Q2' },
+  ];
+}
+
 describe('real waiters contending for the lease with operator deadlines (C3)', () => {
   test('four processes repeatedly wait for the writer through Run Supervision on Node’s real timer: every wait ends granted with a unique fence or as the typed writer-busy outcome naming a real holder, and nothing else', async () => {
     const location = freshStore();
     const names = ['Q0', 'Q1', 'Q2', 'Q3'];
     const holders = names.map((name) => `waiter-${name}`);
     const workers = await Promise.all(names.map((name) => startWorker(name, { location, store: concurrencyStore, clock: 'host' })));
-    // Each tenure waits at most 60 ms, polling every 5 ms, holds a granted lease for 25 ms and then rests 15 ms.
+    // First the coordinated handover: a grant after a refused try and a deadline outcome, whatever the host speed.
+    const forced = await forcedHandover(workers);
+    // Then free-running contention. Each tenure waits at most 60 ms, polling every 5 ms, holds a granted lease for 25 ms and then rests 15 ms.
     const replies = await together(workers, (target) => ({
       op: 'wait-contend',
       holder: `waiter-${target.name}`,
       durationMilliseconds: 1_500,
-      leaseMilliseconds: 1_000,
+      leaseMilliseconds: freeRunningLeaseMilliseconds,
       waitMilliseconds: 60,
       pollMilliseconds: 5,
       holdMilliseconds: 25,
@@ -219,8 +357,16 @@ describe('real waiters contending for the lease with operator deadlines (C3)', (
     const logs = workers.map((target, index) => ({ holder: `waiter-${target.name}`, log: parseWaitContention(valueOf(target, replies[index])) }));
     expect(measureConcurrency(replies).overlap).toBeGreaterThan(1_000);
     await Promise.all(workers.map((target) => target.close()));
+    // Host-independent floors for the free-running phase itself: every worker ran tenures, and at least one was granted.
+    const workersWithoutFreeRunningTenures = logs.filter(({ log }) => log.length === 0).map(({ holder }) => holder);
+    expect({ workersWithoutFreeRunningTenures }).toEqual({ workersWithoutFreeRunningTenures: [] });
+    const freeRunningGrants = logs.flatMap(({ log }) => log.filter((event) => event.kind === 'granted')).length;
+    expect({ freeRunningGrants, atLeastOne: freeRunningGrants >= 1 }).toMatchObject({ atLeastOne: true });
 
-    const events = logs.flatMap(({ holder, log }) => log.map((event) => ({ event, worker: holder })));
+    const events = [
+      ...forced.map(({ worker, ...event }) => ({ event, worker })),
+      ...logs.flatMap(({ holder, log }) => log.map((event) => ({ event, worker: holder }))),
+    ];
     // Every wait ended in exactly one of the two typed outcomes: no raw driver error, no other failure.
     expect(events.filter(({ event }) => event.kind === 'failed')).toEqual([]);
     const grants = events.flatMap(({ event, worker }) => (event.kind === 'granted' ? [{ ...event, worker }] : []));
@@ -245,7 +391,8 @@ describe('real waiters contending for the lease with operator deadlines (C3)', (
     expectFenceOrderedStorage(state);
     // Every grant published exactly once under its own fence, in fence order.
     expect(state.results.map((result) => result.publishedFence)).toEqual(fences);
-    // Contention really happened: some waiters took over after waiting, and some reached their deadline.
+    // The forced phase guarantees a grant after a refused try and a deadline outcome; these union assertions are
+    // regression guards and do not require the free-running phase to produce either.
     expect(grants.length).toBeGreaterThanOrEqual(2);
     expect(grants.some((grant) => grant.tries > 1)).toBe(true);
     expect(busy.length).toBeGreaterThan(0);

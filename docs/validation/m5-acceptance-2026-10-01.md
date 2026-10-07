@@ -490,7 +490,7 @@ suites or anchors. Their stale anchors were the condition #135 tracked, which
 #143 re-anchored; after the merge every runner's `--check-anchors` passes
 (above). Those runners were not rerun in full for this record.
 
-Main-branch results on the #146 merge commit `3df7c57`, recorded at acceptance (#123):
+Main-branch results on the #146 merge commit `3df7c57`, recorded for the #123 decision:
 
 | Evidence on the merge commit | Result |
 | --- | --- |

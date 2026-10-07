@@ -10,8 +10,8 @@ Node v24.14.0 on macOS (arm64) with SQLite through better-sqlite3 12.9.0 via
 Machine's Node adapter. Node 20, 22 and 24 run in the repository CI matrix.
 Dates are UTC. This record supports the supervisor's final M5 decision
 ([#123](https://github.com/mike-north/microdelta/issues/123)). It does not
-declare M5 accepted. Results that depend on the merge commit are marked "to
-be filled at acceptance".
+declare M5 accepted. Results that depend on the merge commit were filled
+in for the #123 decision (see "Main-branch results" below).
 
 ## What was proved, and how
 
@@ -490,14 +490,15 @@ suites or anchors. Their stale anchors were the condition #135 tracked, which
 #143 re-anchored; after the merge every runner's `--check-anchors` passes
 (above). Those runners were not rerun in full for this record.
 
-Main-branch results, to be filled at acceptance (#123):
+Main-branch results on the #146 merge commit `3df7c57`, recorded for the #123 decision:
 
 | Evidence on the merge commit | Result |
 | --- | --- |
-| CI: PR metadata, core (20), core (22), core (24) | TBD |
-| `m5-mutation-controls.mjs --check-anchors` | TBD |
-| `m5-mutation-controls.mjs` (full run) | TBD |
-| M5 acceptance suite, standalone | TBD |
+| CI: PR metadata, core (20), core (22), core (24) | `success` on the PR. [`Check` run 36891934977](https://github.com/mike-north/microdelta/actions/runs/36891934977) on `main`: `success` for core (20), (22) and (24) |
+| `m5-mutation-controls.mjs --check-anchors` | `ANCHORS OK: 33 controls` |
+| `m5-mutation-controls.mjs` (full run) | `PASS: 33 controls`; baseline and restored 53/53 |
+| M5 acceptance suite, standalone | 10/10 suites, 53/53 tests (38 s) |
+| `/clean_blt` from a fresh `npm ci` | exit 0 throughout; facade 819/819 (see the [M5 evidence record](m5-2026-10-01.md)) |
 
 ## Limits: what is and is not proven
 

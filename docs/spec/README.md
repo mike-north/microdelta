@@ -1,6 +1,6 @@
 # microdelta specification — start here
 
-**Status as of 2026-09-28: consolidated design baseline; M0.5 accepted;
+**Status as of 2026-10-07: consolidated design baseline; M0.5 accepted;
 M1 bounded experiment decisions are recorded; final acceptance follows the
 [M1 evidence record](../validation/m1-2026-09-26.md). M2 bounded tracking and
 package components are implemented; their [evidence record](../validation/m2-2026-09-27.md)
@@ -10,8 +10,15 @@ runtime acceptance (bounded: single writer, direct-child validation); the
 [M3 evidence record](../validation/m3-2026-09-28.md) maps them and the later
 [publication-kill harness repair](../validation/m3-crash-harness-2026-09-28.md)
 to the exit. [#50](https://github.com/mike-north/microdelta/issues/50) records the final
-milestone decision and documentation delivery result. General composition,
-concurrency and scale remain unimplemented.**
+milestone decision and documentation delivery result. M4's bounded keyed
+composition has verified acceptance, mapped in the [M4 evidence record](../validation/m4-2026-09-29.md)
+([#89](https://github.com/mike-north/microdelta/issues/89)). M5's bounded operational
+correctness is implemented and mapped in the [M5 evidence record](../validation/m5-2026-10-01.md),
+but it is not yet accepted: with the #140 delayed-grant gate disposed of, the
+[#123](https://github.com/mike-north/microdelta/issues/123) decision is pending. It covers one fenced
+writer per store with lease waiting, stop control, durable deferral, external
+operations, resource accounting, environments, outcome folds and private events.
+Multi-writer parallelism, the CLI and scale remain unimplemented.**
 This specification describes the full target; the current checkout implements
 only the capabilities listed below.
 

@@ -90,8 +90,9 @@ export const suites = groups.concurrency.suites;
 /** One planted defect: which model fault it reproduces and the edits that plant it. */
 export const controls = Object.freeze([
   // `rejectedBy` (optional) lists `{ test, message }`: a title fragment of a test that must be
-  // among a control's failures, and a fragment its failure message must contain, so the control
-  // is shown to fail for its intended reason, not merely to fail somewhere.
+  // among a control's failures, and the fragments one of its failure messages must all contain.
+  // The first fragment is the labelled assertion's key, so a generic fragment that any diff can
+  // show is pinned to the assertion that states the intended reason (see `rejectionHolds`).
   {
     name: 'the holder guard ignores the fence',
     model: 'WriterLease',
@@ -121,7 +122,7 @@ export const controls = Object.freeze([
     model: 'WriterLease',
     fault: 'acquire-ignores-expiry',
     // C3's forced handover must see the waiter's takeover of an unexpired holder (issue #140).
-    rejectedBy: [{ test: '(C3)', message: '"kind": "acquired"' }],
+    rejectedBy: [{ test: '(C3)', message: ['q1FirstTry', '"kind": "acquired"'] }],
     edits: [{ anchor: 'if (writer.holder !== null && writer.expiresAt > now) {', replacement: 'if (false) {' }],
   },
   {
@@ -235,7 +236,7 @@ export const controls = Object.freeze([
     model: null,
     unmodeled: 'Whether a waiter sleeps and tries again is Supervision policy outside the model, which lets a waiter give up at any held observation.',
     target: waitTarget,
-    rejectedBy: [{ test: '(C3)', message: '"kind": "busy"' }],
+    rejectedBy: [{ test: '(C3)', message: ['q1WhileQ0Holds', '"kind": "busy"'] }],
     edits: [{
       anchor: 'await sleepUntil(timer, nextAttemptAt(now, attempt, wait.policy), wait.stop, wait.runId);',
       replacement: 'throw new WriterBusyError(attempt, deadline ?? now);',
@@ -246,7 +247,7 @@ export const controls = Object.freeze([
     model: null,
     unmodeled: 'This plants a missed schedule into the C3 test itself, to prove C3 asserts its forced interleaving actually happened (issue #140).',
     target: contentionSuiteTarget,
-    rejectedBy: [{ test: '(C3)', message: '"kind": "acquired"' }],
+    rejectedBy: [{ test: '(C3)', message: ['q1FirstTry', '"kind": "acquired"'] }],
     edits: [{
       anchor: 'await start(q1, {});',
       replacement: "await waitStatusOf(q0, { op: 'wait-finish', at: 0 }); await start(q1, {});",
@@ -257,7 +258,7 @@ export const controls = Object.freeze([
     model: null,
     unmodeled: 'This plants a contention-free free-running phase into the worker, to prove C3 requires every process to contend rather than relying on its forced prefix (issue #140).',
     target: contentionWorkerTarget,
-    rejectedBy: [{ test: '(C3)', message: 'workersWithoutFreeRunningTenures' }],
+    rejectedBy: [{ test: '(C3)', message: ['workersWithoutFreeRunningTenures'] }],
     edits: [{
       anchor: 'const events = [];\n    const end = performance.now() + command.durationMilliseconds;',
       replacement: "const events = [];\n    if (command.holder !== 'waiter-Q0') { await holdFor(command.durationMilliseconds); return events; }\n    const end = performance.now() + command.durationMilliseconds;",
@@ -283,6 +284,22 @@ export const controls = Object.freeze([
     }],
   },
 ]);
+
+/**
+ * Whether a control's expected rejection holds: some failing test whose title
+ * contains `expected.test` has one failure message containing every fragment
+ * of `expected.message`. Matching all fragments on one message pins a generic
+ * fragment (such as an outcome kind, which any diff may show) to the labelled
+ * assertion that states the intended reason.
+ */
+export function rejectionHolds(expected, failed, failureMessages) {
+  return failed
+    .filter((title) => title.includes(expected.test))
+    .some((title) => {
+      const message = failureMessages.get(title) ?? '';
+      return expected.message.every((fragment) => message.includes(fragment));
+    });
+}
 
 /** Apply a control's edits to the original emitted text, or fail if an anchor is not unique. */
 export function plant(original, control) {

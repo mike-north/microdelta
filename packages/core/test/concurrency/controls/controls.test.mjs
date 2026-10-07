@@ -15,7 +15,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { test } from 'node:test';
 
-import { anchorSourceOf, controls, groupOf, groups, plant, repositoryRoot, targetOf, targets } from './controls.mjs';
+import { anchorSourceOf, controls, groupOf, groups, plant, rejectionHolds, repositoryRoot, targetOf, targets } from './controls.mjs';
 
 /** The emitted text that proves a control's anchors: its target, or that target's package build. */
 function emittedFor(control) {
@@ -44,17 +44,31 @@ test('every control anchor occurs exactly once in its emitted target and plantin
   }
 });
 
-test('every rejectedBy is a non-empty list of { test, message } fragments, never a bare string', () => {
+test('every rejectedBy is a non-empty list of { test, message } entries whose message is a non-empty list of fragments', () => {
   for (const control of controls.filter((entry) => entry.rejectedBy !== undefined)) {
     assert.ok(Array.isArray(control.rejectedBy) && control.rejectedBy.length > 0, `${control.name}: rejectedBy is a non-empty array`);
     for (const entry of control.rejectedBy) {
       assert.ok(typeof entry === 'object' && entry !== null && !Array.isArray(entry), `${control.name}: rejectedBy entry is an object`);
       assert.deepEqual(Object.keys(entry).sort(), ['message', 'test'], `${control.name}: rejectedBy entry has exactly test and message`);
-      for (const field of ['test', 'message']) {
-        assert.ok(typeof entry[field] === 'string' && entry[field].length > 0, `${control.name}: rejectedBy ${field} is a non-empty string`);
+      assert.ok(typeof entry.test === 'string' && entry.test.length > 0, `${control.name}: rejectedBy test is a non-empty string`);
+      assert.ok(Array.isArray(entry.message) && entry.message.length > 0, `${control.name}: rejectedBy message is a non-empty array, never a bare string`);
+      for (const fragment of entry.message) {
+        assert.ok(typeof fragment === 'string' && fragment.length > 0, `${control.name}: every message fragment is a non-empty string`);
       }
     }
   }
+});
+
+test('a rejection holds only when one failure message of a named test contains every fragment', () => {
+  const expected = { test: '(C3)', message: ['q1FirstTry', '"kind": "acquired"'] };
+  const title = 'real waiters contending (C3) four processes';
+  const judged = (message) => rejectionHolds(expected, [title], new Map([[title, message]]));
+  assert.equal(judged('Object {\n  "q1FirstTry": Object {\n-   "kind": "held",\n+   "kind": "acquired",'), true);
+  // The generic fragment alone, from another assertion's diff, is not the intended reason.
+  assert.equal(judged('Object {\n  "beforeQ0Expiry": false,\n  "kind": "acquired",'), false);
+  assert.equal(judged('q1FirstTry was fine; another check failed'), false);
+  // A failure of some other test does not count.
+  assert.equal(rejectionHolds(expected, ['L1: a waiter polls'], new Map([['L1: a waiter polls', 'q1FirstTry "kind": "acquired"']])), false);
 });
 
 test('every control names a known run group', () => {

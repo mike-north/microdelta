@@ -31,7 +31,7 @@ import { join } from 'node:path';
 import { anchorCheckRequested, reportAnchorCheck } from '../../durable-history/controls/anchor-check.mjs';
 import { judgeRun } from '../../durable-history/controls/control-outcome.mjs';
 import { ensureSupervisionTestBuild } from '../../durable-history/controls/prerequisites.mjs';
-import { controls, groupOf, groups, plant, repositoryRoot, targetOf, targets } from './controls.mjs';
+import { controls, groupOf, groups, plant, rejectionHolds, repositoryRoot, targetOf, targets } from './controls.mjs';
 
 // The controls plant into Supervision's test build too, which only its own owner suite would otherwise produce.
 ensureSupervisionTestBuild(repositoryRoot);
@@ -140,12 +140,12 @@ try {
       if (failed.length === 0) failures += 1;
       // A control that names its intended rejections must be rejected by each named test, for the named reason.
       for (const expected of control.rejectedBy ?? []) {
-        const matching = failed.filter((title) => title.includes(expected.test));
-        if (!matching.some((title) => (failureMessages.get(title) ?? '').includes(expected.message))) {
-          console.log(`NOT REJECTED BY ${expected.test} WITH ${expected.message}: ${control.name}`);
+        const fragments = expected.message.join(' + ');
+        if (!rejectionHolds(expected, failed, failureMessages)) {
+          console.log(`NOT REJECTED BY ${expected.test} WITH ${fragments}: ${control.name}`);
           failures += 1;
         } else {
-          console.log(`  rejected by ${expected.test} with ${expected.message}`);
+          console.log(`  rejected by ${expected.test} with ${fragments}`);
         }
       }
     } finally {

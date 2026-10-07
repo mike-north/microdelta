@@ -138,6 +138,13 @@ try {
       console.log(`\n## ${control.name} (${model}; ${path}; ${groupOf(control)} suites): ${String(failed.length)} failing`);
       for (const name of failed) console.log(`- ${name}`);
       if (failed.length === 0) failures += 1;
+      // A control that names its intended rejecting tests must be rejected by each of them.
+      for (const fragment of control.rejectedBy ?? []) {
+        if (!failed.some((title) => title.includes(fragment))) {
+          console.log(`NOT REJECTED BY ${fragment}: ${control.name}`);
+          failures += 1;
+        }
+      }
     } finally {
       restore();
     }

@@ -39,8 +39,15 @@ export const portTarget = 'packages/core/.test-build/src/writer.js';
 /** Run Supervision's run engine as its own owner tests load it, from its test build. */
 export const runTestTarget = 'packages/supervision/.test-build/src/supervision.js';
 
+/**
+ * The contention suite as Jest runs it, from the facade's test build. A
+ * control plants here only to prove that C3 checks its forced interleaving
+ * happened, rather than assuming it because processes were started.
+ */
+export const contentionSuiteTarget = 'packages/core/.test-build/test/concurrency/contention.test.js';
+
 /** Every emitted file some control plants into. */
-export const targets = Object.freeze([target, waitTarget, waitTestTarget, portTarget, runTestTarget]);
+export const targets = Object.freeze([target, waitTarget, waitTestTarget, portTarget, runTestTarget, contentionSuiteTarget]);
 
 /** The file one control plants into. */
 export function targetOf(control) {
@@ -79,6 +86,8 @@ export const suites = groups.concurrency.suites;
 
 /** One planted defect: which model fault it reproduces and the edits that plant it. */
 export const controls = Object.freeze([
+  // `rejectedBy` (optional) names title fragments of tests that must be among a control's
+  // failures, so it is shown to fail for its intended reason, not merely to fail somewhere.
   {
     name: 'the holder guard ignores the fence',
     model: 'WriterLease',
@@ -107,6 +116,8 @@ export const controls = Object.freeze([
     name: 'acquisition takes over an unexpired holder',
     model: 'WriterLease',
     fault: 'acquire-ignores-expiry',
+    // C3's forced handover must see the waiter's takeover of an unexpired holder (issue #140).
+    rejectedBy: ['(C3)'],
     edits: [{ anchor: 'if (writer.holder !== null && writer.expiresAt > now) {', replacement: 'if (false) {' }],
   },
   {
@@ -213,6 +224,28 @@ export const controls = Object.freeze([
     edits: [{
       anchor: 'function leaseForPass() {\n            return writerLease();\n        }',
       replacement: "function leaseForPass() {\n            const tried = writer.tryLease();\n            if (tried.kind !== 'acquired') {\n                throw new SupervisionError('writer-busy', 'single try without waiting');\n            }\n            return Promise.resolve(tried.lease);\n        }",
+    }],
+  },
+  {
+    name: 'waiting is bypassed: a held lease ends the wait as writer-busy at once',
+    model: null,
+    unmodeled: 'Whether a waiter sleeps and tries again is Supervision policy outside the model, which lets a waiter give up at any held observation.',
+    target: waitTarget,
+    rejectedBy: ['(C3)'],
+    edits: [{
+      anchor: 'await sleepUntil(timer, nextAttemptAt(now, attempt, wait.policy), wait.stop, wait.runId);',
+      replacement: 'throw new WriterBusyError(attempt, deadline ?? now);',
+    }],
+  },
+  {
+    name: 'C3 releases the forced holder before its waiter tries, so the delayed grant is never reached',
+    model: null,
+    unmodeled: 'This plants a missed schedule into the C3 test itself, to prove C3 asserts its forced interleaving actually happened (issue #140).',
+    target: contentionSuiteTarget,
+    rejectedBy: ['(C3)'],
+    edits: [{
+      anchor: 'const waiter = await start(q1, {});',
+      replacement: "await waitStatusOf(q0, { op: 'wait-finish', at: 0 }); const waiter = await start(q1, {});",
     }],
   },
   {

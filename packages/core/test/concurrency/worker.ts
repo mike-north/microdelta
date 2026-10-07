@@ -504,6 +504,8 @@ async function performWait(command: IWaitCommand): Promise<unknown> {
       const recovered = await live.recover(waiterStep, { requestKey: 'request:never-made' });
       return { ...waitStatus(), checked: checked.kind, recovered: recovered.kind };
     }
+    case 'wait-status':
+      return waitStatus();
     case 'wait-finish': {
       const wait = requireWait();
       controlled.set(command.at);

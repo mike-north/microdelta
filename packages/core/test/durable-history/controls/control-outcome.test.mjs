@@ -63,3 +63,18 @@ test('a caller-selected suite set is enforced exactly', () => {
   assert.throws(() => judgeRun({ exitStatus: 0, reportText: ran }), /unexpected suites/u);
   assert.throws(() => judgeRun({ exitStatus: 0, reportText: ran, suites: [...resolutionSuites, 'admission-recovery.test.js'] }), /unexpected suites/u);
 });
+
+test('a failing test is reported with its failure messages, so a control can be checked for its reason', () => {
+  const text = JSON.stringify({
+    numRuntimeErrorTestSuites: 0,
+    testResults: intendedSuites.map((suite, index) => ({
+      name: `/x/.test-build/test/durable-history/${suite}`,
+      status: index === 1 ? 'failed' : 'passed',
+      assertionResults: [{ fullName: `${suite} 0`, status: index === 1 ? 'failed' : 'passed', failureMessages: index === 1 ? ['Expected: "held"', 'Received: "acquired"'] : [] }],
+    })),
+  });
+  const judged = judgeRun({ exitStatus: 1, reportText: text });
+  assert.deepEqual(judged.failed, [`${intendedSuites[1]} 0`]);
+  assert.equal(judged.failureMessages.get(`${intendedSuites[1]} 0`), 'Expected: "held"\nReceived: "acquired"');
+  assert.equal(judged.failureMessages.has(`${intendedSuites[0]} 0`), false);
+});

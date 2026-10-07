@@ -16,8 +16,10 @@ export const intendedSuites = Object.freeze(['durable-history.test.js', 'crash-r
  * `reportText` is Jest's `--json` output file content, or undefined when none
  * was written; `expectedTitles` is the complete baseline title set, or
  * undefined for the baseline run itself; `suites` is the exact suite file set
- * the run must execute (History's by default). Returns the failing titles, or
- * throws with a diagnostic when the run is not trustworthy evidence.
+ * the run must execute (History's by default). Returns the failing titles, with
+ * each failing test's failure messages joined by newlines (so a control can be
+ * checked for its reason), or throws with a diagnostic when the run is not
+ * trustworthy evidence.
  */
 export function judgeRun({ exitStatus, reportText, expectedTitles, suites: requiredSuites = intendedSuites }) {
   if (exitStatus !== 0 && exitStatus !== 1) {
@@ -65,5 +67,8 @@ export function judgeRun({ exitStatus, reportText, expectedTitles, suites: requi
   if ((exitStatus === 0) !== (failed.length === 0)) {
     throw new Error(`Jest exit ${String(exitStatus)} disagrees with ${String(failed.length)} failing tests`);
   }
-  return { titles: new Set(titles), failed };
+  const failureMessages = new Map(assertions
+    .filter((assertion) => assertion.status === 'failed')
+    .map((assertion) => [assertion.fullName, Array.isArray(assertion.failureMessages) ? assertion.failureMessages.map(String).join('\n') : '']));
+  return { titles: new Set(titles), failed, failureMessages };
 }

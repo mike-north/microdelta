@@ -74,6 +74,8 @@ export type IHarnessCommand = (
  * - `wait-stop` requests a soft or hard stop of the waiting run.
  * - `wait-check` makes a check-only request through the same run while it
  *   waits; it must neither need nor wait for the lease.
+ * - `wait-status` reports the waiting run's state without moving any clock,
+ *   so the parent can follow a wait on the host clock as it progresses.
  * - `wait-finish` lets the run close at `at`, which releases any lease it holds.
  * - `wait-contend` repeats whole waits on the host clock and Node's real timer
  *   until the duration elapses: each tenure waits up to `waitMilliseconds`,
@@ -86,6 +88,7 @@ export type IWaitCommand =
   | { readonly op: 'wait-advance'; readonly at: number }
   | { readonly op: 'wait-stop'; readonly level: 'soft' | 'hard' }
   | { readonly op: 'wait-check' }
+  | { readonly op: 'wait-status' }
   | { readonly op: 'wait-finish'; readonly at: number }
   | {
       readonly op: 'wait-contend';
@@ -323,6 +326,7 @@ export function parseCommand(value: unknown): IHarnessCommand {
       return withBarrier({ op, level }, notBefore);
     }
     case 'wait-check':
+    case 'wait-status':
     case 'die':
       return withBarrier({ op }, notBefore);
     case 'wait-contend':

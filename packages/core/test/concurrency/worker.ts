@@ -435,7 +435,10 @@ async function advanceTo(at: number): Promise<void> {
 async function contendWaiting(command: Extract<IWaitCommand, { readonly op: 'wait-contend' }>): Promise<readonly IWaitContentionEvent[]> {
   const events: IWaitContentionEvent[] = [];
   const end = performance.now() + command.durationMilliseconds;
-  for (let tenure = 1; performance.now() < end; tenure += 1) {
+  // At least one tenure always runs, even if the process was suspended before its first check of the clock.
+  let tenure = 0;
+  do {
+    tenure += 1;
     const key = `${command.holder}:tenure:${String(tenure)}`;
     const counter = { tries: 0 };
     const port = writerFor(history, command.holder, command.leaseMilliseconds);
@@ -474,7 +477,7 @@ async function contendWaiting(command: Extract<IWaitCommand, { readonly op: 'wai
         : { kind: 'failed', error: outcome.kind === 'failed' ? outcome.error : outcome.kind, message: 'message' in outcome ? outcome.message : '', tries: counter.tries });
     }
     await holdFor(command.restMilliseconds);
-  }
+  } while (performance.now() < end);
   return events;
 }
 
@@ -504,6 +507,8 @@ async function performWait(command: IWaitCommand): Promise<unknown> {
       const recovered = await live.recover(waiterStep, { requestKey: 'request:never-made' });
       return { ...waitStatus(), checked: checked.kind, recovered: recovered.kind };
     }
+    case 'wait-status':
+      return waitStatus();
     case 'wait-finish': {
       const wait = requireWait();
       controlled.set(command.at);

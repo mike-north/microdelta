@@ -1,6 +1,6 @@
 {
   "name": "@microdelta/supervision",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Run Supervision: scoped run lifetime, execution admission and lifecycle observer positions",
   "license": "UNLICENSED",
   "repository": {
@@ -38,8 +38,8 @@
     "directory": "test-d"
   },
   "dependencies": {
-    "@microdelta/definition": "0.2.0",
-    "@microdelta/resolution": "0.2.0"
+    "@microdelta/definition": "0.3.0",
+    "@microdelta/resolution": "0.3.0"
   },
   "publishConfig": {
     "access": "public"

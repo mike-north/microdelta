@@ -1,5 +1,14 @@
 # @microdelta/tracking
 
+## 0.2.1
+### Patch Changes
+
+- Updated dependencies [af7323b]
+- Updated dependencies [dba23f0]
+- Updated dependencies [00f672e]
+  - @microdelta/machine@0.2.0
+  - @microdelta/value@0.1.1
+
 ## 0.2.0
 ### Minor Changes
 

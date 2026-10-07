@@ -10,8 +10,8 @@ Node v24.14.0 on macOS (arm64) with SQLite through better-sqlite3 12.9.0 via
 Machine's Node adapter. Node 20, 22 and 24 run in the repository CI matrix.
 Dates are UTC. This record supports the supervisor's final M5 decision
 ([#123](https://github.com/mike-north/microdelta/issues/123)). It does not
-declare M5 accepted. Results that depend on the merge commit are marked "to
-be filled at acceptance".
+declare M5 accepted. Results that depend on the merge commit were filled
+in for the #123 decision (see "Main-branch results" below).
 
 ## What was proved, and how
 

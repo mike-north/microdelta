@@ -8,10 +8,11 @@ Every M5 implementation issue is merged there: #110, #113, #115, #116, #117,
 #118, #119, #120, #121 and the follow-ups #131, #136 and #139. Local runs used
 Node v24.14.0 on macOS (arm64) with SQLite through better-sqlite3 12.9.0 via
 Machine's Node adapter. Node 20, 22 and 24 run in the repository CI matrix.
-Dates are UTC. This record supports the supervisor's final M5 decision
-([#123](https://github.com/mike-north/microdelta/issues/123)). It does not
-declare M5 accepted. Results that depend on the merge commit were filled
-in for the #123 decision (see "Main-branch results" below).
+Dates are UTC. This record supports root's final M5 decision
+([#123](https://github.com/mike-north/microdelta/issues/123)). This record does not
+itself declare M5 accepted; root's [acceptance decision of 2026-10-07](https://github.com/mike-north/microdelta/issues/123#issuecomment-6043397381)
+does. Results that depend on the merge commit were filled in for the #123
+decision (see "Main-branch results" below).
 
 ## What was proved, and how
 

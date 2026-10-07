@@ -19,10 +19,10 @@ in the [M4 evidence record](validation/m4-2026-09-29.md);
 milestone decision. M5's bounded operational correctness is **not yet accepted**.
 Its EXP-8 checkpoint, plan, component issues and independent-process acceptance
 suite are merged, and the [M5 evidence record](validation/m5-2026-10-01.md) maps
-them to the exit. The milestone decision on
-[#123](https://github.com/mike-north/microdelta/issues/123) is gated on deterministic
-delayed-writer-grant proof for C3
-([#140](https://github.com/mike-north/microdelta/issues/140)). No M5 or later runtime
+them to the exit. The deterministic
+delayed-writer-grant gate ([#140](https://github.com/mike-north/microdelta/issues/140),
+PR #150) is disposed of, and the milestone decision on
+[#123](https://github.com/mike-north/microdelta/issues/123) is pending with root. No M5 or later runtime
 milestone is complete.
 A milestone is a quality checkpoint, including experiments; it need not be a
 user-facing release.

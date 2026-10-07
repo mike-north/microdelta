@@ -1028,7 +1028,10 @@ In the heavy profile:
 - 5 runs failed exactly as CI did.
 - 19 runs failed earlier, on a second schedule dependence in the same loop. A stall of more than 1 s inside one tenure expired that tenure's own 1 s lease, so History correctly refused its publication as `StaleWriterError` (ruling R).
 
-The review's independent reproduction at `3df7c57` saw 10 of 32 runs miss the delayed grant, plus 2 runs that also missed `busy > 0`, the other free-running interleaving.
+The review independently reproduced the miss at `3df7c57` under two heavier profiles:
+
+- **12 parallel runs + 48 burners:** 4 of 24 runs failed. Two failed at `tries > 1`. The other two passed `tries > 1` and failed at `busy > 0`, the other free-running interleaving.
+- **16 parallel runs + 72 burners:** 10 of 32 runs failed, all at `tries > 1`.
 
 **Fix (test schedule only).** C3 now begins with a forced handover coordinated by the parent:
 1. Q0 takes the free lease and keeps its run open.
@@ -1044,9 +1047,10 @@ How each step is bounded and diagnosed:
 - **Free-running lease.** This is now a separately named 10 s constant. Tenures release at close, so it only has to outlast a stall within one tenure. C3 does not test expiry; L1, L2, L4 and W4 do.
 
 **What the free-running phase still has to show.** The forced events join the free-running events, so the union assertions hold whatever the host speed: unique gapless fences, holders that were really granted, publication in fence order, `tries > 1`, and at least one busy outcome. Those last two are now regression guards. **The free-running phase is no longer required to show a delayed grant or a deadline outcome; the forced phase guarantees both.** It does have its own host-independent floors:
-- every worker's free-running log is non-empty;
-- at least one free-running tenure is granted;
-- the four loops overlap by more than 1 s.
+- every worker's free-running log is non-empty, because every worker runs at least one tenure even if it was suspended before its first check of the clock;
+- at least one free-running tenure is granted.
+
+C3 also still requires the four loops to overlap by more than 1 s. That check depends on how closely the workers start, so it is not counted as a host-independent floor.
 
 **Correspondence corrections.** The mapping rows above that cite C3 must be read as follows:
 - **"lease wait: poll, wake at expiry, no spin"** and **"`BusyNamesUnexpiredHolder`".** For C3, these now rest on the forced phase: a polled wait that is granted after release with fence + 1, and a writer-busy outcome naming the observed holder.
@@ -1062,8 +1066,9 @@ So raising C3's leases removes no coverage.
 | 8 parallel runs + 18 CPU burners, background QoS | `14a0ff9` | 24 | 24 passed |
 | 8 parallel runs + 18 CPU burners, background QoS | `377230b` | 32 | 32 passed |
 | Node 20.20.2, 3 parallel runs + 6 CPU burners | `377230b` | 21 | 21 passed |
+| 16 parallel runs + 72 CPU burners, Node 24 | `776a702` | 32 | 32 passed |
 
-- **Review.** The review's run of `fde5612` passed 32 of 32.
+- **Review.** At `520fdef`, under 16 parallel runs + 72 burners, the review's runs passed 32 of 32; the same profile failed 10 of 32 at `3df7c57`. The review's run of `fde5612` also passed 32 of 32.
 - **Node 20.** I ran with better-sqlite3's Node 20 binary and restored the Node 24 binary afterwards. The concurrency directory passed 145 of 145.
 
 **Tests first.**
@@ -1081,13 +1086,17 @@ So raising C3's leases removes no coverage.
   - The self-tests pass.
 
 **Controls.**
-- **Reason checking.** The judge now returns each failing test's failure messages. A control's `rejectedBy` entries are `{ test, message }` pairs, and the runner requires a named test to fail with a message containing the fragment. `controls.test.mjs` requires every entry to be such an object.
+- **Reason checking.** The judge now returns each failing test's failure messages, and each `rejectedBy` entry is `{ test, message }`. `message` is a list of fragments, and a single failure message of a test named by `test` must contain every one of them (`rejectionHolds`).
+  - The first fragment is the labelled assertion key. C3 asserts on labelled objects, so Jest prints that key in the failure diff.
+  - An outcome kind such as `"kind": "acquired"` can appear as context in almost any C3 diff, so it counts only on the same message as its key.
+  - `controls.test.mjs` checks this shape. It also checks that a message containing only the generic fragment, without the key, is not a rejection.
+  - A first version checked single generic fragments. The review planted three wrong-cause controls, including a realistic handover through expiry, and that version judged each of them "rejected". Pinning fragments to their key prevents this.
 - **The four controls checked against C3's messages:**
-  - Waiting is bypassed: `"kind": "busy"` while Q0 holds.
-  - The forced interleaving is not reached (the forced holder is released before Q1 tries): `"kind": "acquired"` on Q1's first try.
-  - A lease invariant is violated (`acquire-ignores-expiry`): `"kind": "acquired"` on Q1's first try.
+  - Waiting is bypassed: `q1WhileQ0Holds` with `"kind": "busy"`.
+  - The forced interleaving is not reached (the forced holder is released before Q1 tries): `q1FirstTry` with `"kind": "acquired"`.
+  - A lease invariant is violated (`acquire-ignores-expiry`): `q1FirstTry` with `"kind": "acquired"`.
   - The free-running phase is contention-free (R2): `workersWithoutFreeRunningTenures`.
-- **Full run at `377230b`.** It exited 0 with `PASS: 22 controls`. Every group's baseline and restored builds passed in full: 139 concurrency tests and 48 Supervision tests. All four reason checks held.
+- **Full run at `776a702`.** It exited 0 with `PASS: 22 controls`. Every group's baseline and restored builds passed in full: 139 concurrency tests and 48 Supervision tests. All four pinned reason checks held, and `--check-anchors` reports `ANCHORS OK: 22 controls`.
 
 **Limits.**
 - The forced handover proves each interleaving at least once per run. How often free-running waiters see them still depends on the host.

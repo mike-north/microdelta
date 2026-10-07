@@ -46,8 +46,11 @@ export const runTestTarget = 'packages/supervision/.test-build/src/supervision.j
  */
 export const contentionSuiteTarget = 'packages/core/.test-build/test/concurrency/contention.test.js';
 
+/** The concurrency worker as the facade's tests start it, from the facade's test build. */
+export const contentionWorkerTarget = 'packages/core/.test-build/test/concurrency/worker.js';
+
 /** Every emitted file some control plants into. */
-export const targets = Object.freeze([target, waitTarget, waitTestTarget, portTarget, runTestTarget, contentionSuiteTarget]);
+export const targets = Object.freeze([target, waitTarget, waitTestTarget, portTarget, runTestTarget, contentionSuiteTarget, contentionWorkerTarget]);
 
 /** The file one control plants into. */
 export function targetOf(control) {
@@ -86,8 +89,9 @@ export const suites = groups.concurrency.suites;
 
 /** One planted defect: which model fault it reproduces and the edits that plant it. */
 export const controls = Object.freeze([
-  // `rejectedBy` (optional) names title fragments of tests that must be among a control's
-  // failures, so it is shown to fail for its intended reason, not merely to fail somewhere.
+  // `rejectedBy` (optional) lists `{ test, message }`: a title fragment of a test that must be
+  // among a control's failures, and a fragment its failure message must contain, so the control
+  // is shown to fail for its intended reason, not merely to fail somewhere.
   {
     name: 'the holder guard ignores the fence',
     model: 'WriterLease',
@@ -117,7 +121,7 @@ export const controls = Object.freeze([
     model: 'WriterLease',
     fault: 'acquire-ignores-expiry',
     // C3's forced handover must see the waiter's takeover of an unexpired holder (issue #140).
-    rejectedBy: ['(C3)'],
+    rejectedBy: [{ test: '(C3)', message: '"kind": "acquired"' }],
     edits: [{ anchor: 'if (writer.holder !== null && writer.expiresAt > now) {', replacement: 'if (false) {' }],
   },
   {
@@ -231,7 +235,7 @@ export const controls = Object.freeze([
     model: null,
     unmodeled: 'Whether a waiter sleeps and tries again is Supervision policy outside the model, which lets a waiter give up at any held observation.',
     target: waitTarget,
-    rejectedBy: ['(C3)'],
+    rejectedBy: [{ test: '(C3)', message: '"kind": "busy"' }],
     edits: [{
       anchor: 'await sleepUntil(timer, nextAttemptAt(now, attempt, wait.policy), wait.stop, wait.runId);',
       replacement: 'throw new WriterBusyError(attempt, deadline ?? now);',
@@ -242,10 +246,21 @@ export const controls = Object.freeze([
     model: null,
     unmodeled: 'This plants a missed schedule into the C3 test itself, to prove C3 asserts its forced interleaving actually happened (issue #140).',
     target: contentionSuiteTarget,
-    rejectedBy: ['(C3)'],
+    rejectedBy: [{ test: '(C3)', message: '"kind": "acquired"' }],
     edits: [{
-      anchor: 'const waiter = await start(q1, {});',
-      replacement: "await waitStatusOf(q0, { op: 'wait-finish', at: 0 }); const waiter = await start(q1, {});",
+      anchor: 'await start(q1, {});',
+      replacement: "await waitStatusOf(q0, { op: 'wait-finish', at: 0 }); await start(q1, {});",
+    }],
+  },
+  {
+    name: 'only one worker runs free-running tenures while the others sleep, so there is no contention',
+    model: null,
+    unmodeled: 'This plants a contention-free free-running phase into the worker, to prove C3 requires every process to contend rather than relying on its forced prefix (issue #140).',
+    target: contentionWorkerTarget,
+    rejectedBy: [{ test: '(C3)', message: 'workersWithoutFreeRunningTenures' }],
+    edits: [{
+      anchor: 'const events = [];\n    const end = performance.now() + command.durationMilliseconds;',
+      replacement: "const events = [];\n    if (command.holder !== 'waiter-Q0') { await holdFor(command.durationMilliseconds); return events; }\n    const end = performance.now() + command.durationMilliseconds;",
     }],
   },
   {

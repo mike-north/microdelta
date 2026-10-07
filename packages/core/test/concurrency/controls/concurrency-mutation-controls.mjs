@@ -133,16 +133,19 @@ try {
     }
     writeFileSync(join(repositoryRoot, path), planted);
     try {
-      const { failed } = await runSuites(groupOf(control), baselines.get(groupOf(control)));
+      const { failed, failureMessages } = await runSuites(groupOf(control), baselines.get(groupOf(control)));
       const model = control.model === null ? 'no model counterpart' : `${control.model} fault ${control.fault}`;
       console.log(`\n## ${control.name} (${model}; ${path}; ${groupOf(control)} suites): ${String(failed.length)} failing`);
       for (const name of failed) console.log(`- ${name}`);
       if (failed.length === 0) failures += 1;
-      // A control that names its intended rejecting tests must be rejected by each of them.
-      for (const fragment of control.rejectedBy ?? []) {
-        if (!failed.some((title) => title.includes(fragment))) {
-          console.log(`NOT REJECTED BY ${fragment}: ${control.name}`);
+      // A control that names its intended rejections must be rejected by each named test, for the named reason.
+      for (const expected of control.rejectedBy ?? []) {
+        const matching = failed.filter((title) => title.includes(expected.test));
+        if (!matching.some((title) => (failureMessages.get(title) ?? '').includes(expected.message))) {
+          console.log(`NOT REJECTED BY ${expected.test} WITH ${expected.message}: ${control.name}`);
           failures += 1;
+        } else {
+          console.log(`  rejected by ${expected.test} with ${expected.message}`);
         }
       }
     } finally {

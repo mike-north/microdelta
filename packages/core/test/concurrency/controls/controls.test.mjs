@@ -44,6 +44,19 @@ test('every control anchor occurs exactly once in its emitted target and plantin
   }
 });
 
+test('every rejectedBy is a non-empty list of { test, message } fragments, never a bare string', () => {
+  for (const control of controls.filter((entry) => entry.rejectedBy !== undefined)) {
+    assert.ok(Array.isArray(control.rejectedBy) && control.rejectedBy.length > 0, `${control.name}: rejectedBy is a non-empty array`);
+    for (const entry of control.rejectedBy) {
+      assert.ok(typeof entry === 'object' && entry !== null && !Array.isArray(entry), `${control.name}: rejectedBy entry is an object`);
+      assert.deepEqual(Object.keys(entry).sort(), ['message', 'test'], `${control.name}: rejectedBy entry has exactly test and message`);
+      for (const field of ['test', 'message']) {
+        assert.ok(typeof entry[field] === 'string' && entry[field].length > 0, `${control.name}: rejectedBy ${field} is a non-empty string`);
+      }
+    }
+  }
+});
+
 test('every control names a known run group', () => {
   for (const control of controls) {
     assert.ok(Object.hasOwn(groups, groupOf(control)), `${control.name}: known run group`);

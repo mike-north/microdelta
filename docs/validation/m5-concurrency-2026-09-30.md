@@ -1009,3 +1009,58 @@ discriminating tests and four nits. Each item was written test first.
   canonical file locations from the Node adapter), and through runs over other
   stores in between. Separate processes are not nested; there the waiter
   simply waits.
+
+## Addendum: C3's delayed grant made deterministic (2026-10-07, issue #140)
+
+**Observed.** On `main` at `7800756`, [check run 36815834725](https://github.com/mike-north/microdelta/actions/runs/36815834725) (Node 24) failed one C3 assertion: `grants.some((grant) => grant.tries > 1)` received `false`. Every assertion before it passed: no failed tenure, gapless unique fences, busy outcomes naming real holders, fence-ordered storage, and at least two grants. Nothing in the run points to a fencing or busy defect.
+
+**Cause: the test schedule.** C3's free-running loop has each waiter give up 60 ms after its first try. A waiter is granted only after waiting if the holder releases inside that window, and the window races host speed: the holder's transactions and 25 ms hold, and the waiters' 5 ms timers, all stretch as CPU and I/O slow down. On a slow or overloaded host, every waiter that sees the lease held can reach its deadline first. Grants then come only to waiters that see the lease free on their first try. Neither the implementation nor the instrumentation caused the miss.
+
+Local reproduction, at `3df7c57`, used a scratch copy of the emitted suite that prints each run's grant and busy distribution. The assertions are unchanged.
+
+| Load profile (macOS arm64, Node 24.14.0) | Runs | Grants per run | Grants after waiting | Result |
+| --- | --- | --- | --- | --- |
+| 3 parallel runs + 6 CPU burners | 21 | 45–47 | 40–45 | 21 passed |
+| same, at background QoS (`taskpolicy -b`, throttled CPU and I/O) | 21 | 25–37 | 14–28 | 21 passed |
+| 8 parallel runs + 18 CPU burners, background QoS | 24 | 3–4 | **0** | 24 failed |
+
+The share of delayed grants falls with host speed until it reaches zero. In the heavy profile:
+
+- 5 runs failed on exactly the CI assertion.
+- The other 19 failed earlier, for a second schedule dependence in the same loop: a stall of more than 1 s inside one tenure let the tenure's own 1 s lease expire before it published, and History correctly refused the publication as `StaleWriterError` (ruling R).
+
+**Fix (test schedule only).** C3 now begins with a forced handover coordinated by the parent:
+
+1. Q0 takes the free lease and keeps its run open.
+2. Q1 waits with no deadline. Its first try must be refused, naming Q0.
+3. Q2 waits with a 40 ms deadline. It must end as writer-busy naming Q0, after refused tries only.
+4. Only then does Q0's run end, which releases the lease.
+5. Q1 must be granted the next fence on a later try.
+
+Each step polls the worker through a new `wait-status` harness command, gives up after 10 s, and reports the worker's full status if the step is missed.
+
+The forced grant and busy outcome join the free-running events, so the existing assertions now cover them as well: unique gapless fences, holders that were really granted, publication in fence order, `tries > 1`, and at least one busy outcome. The free-running phase is otherwise unchanged, except its lease, which is now 10 s instead of 1 s. Tenures release at close, so the lease only has to outlast a stall inside one tenure. C3 does not test expiry; other suites do.
+
+**After the fix,** at `14a0ff9`:
+
+| Load profile | Runs | Result |
+| --- | --- | --- |
+| 3 parallel runs + 6 CPU burners | 21 | 21 passed |
+| 8 parallel runs + 18 CPU burners, background QoS | 24 | 24 passed |
+| Node 20.20.2 (better-sqlite3's Node 20 binary): 3 parallel runs + 6 CPU burners | 21 | 21 passed |
+
+On Node 20 the whole concurrency directory (interleavings, contention, writer port, driver, store open) passed 145 of 145. The Node 24 binary was restored afterwards.
+
+**Controls.** A control may now name tests that must be among its failures (`rejectedBy`), so it is shown to fail for its intended reason. Three controls name C3:
+
+- **Waiting is bypassed** (a held lease ends the wait as writer-busy at once). C3 fails because Q1 is busy instead of still waiting.
+- **The forced interleaving is never reached** (planted into the emitted C3 test: Q0 is released before Q1 tries). C3 fails because Q1's first try is `acquired`, not refused.
+- **A lease invariant is violated** (the existing `acquire-ignores-expiry`). C3 fails because Q1 takes over Q0's unexpired lease on its first try.
+
+The full concurrency control run at `14a0ff9` exited 0 with `PASS: 21 controls`. Each group's baseline and restored builds passed in full (concurrency 139 tests, Supervision 48), and every `rejectedBy` requirement held.
+
+**Limits.**
+
+- The forced handover proves the interleaving occurs at least once per run. How often free-running waiters are granted after waiting still depends on the host, and C3 no longer relies on it.
+- Fairness is still not claimed.
+- Local evidence is from macOS arm64. CI covers Linux on Node 20, 22 and 24.

@@ -13,9 +13,8 @@ to the exit. [#50](https://github.com/mike-north/microdelta/issues/50) records t
 milestone decision and documentation delivery result. M4's bounded keyed
 composition has verified acceptance, mapped in the [M4 evidence record](../validation/m4-2026-09-29.md)
 ([#89](https://github.com/mike-north/microdelta/issues/89)). M5's bounded operational
-correctness is implemented and mapped in the [M5 evidence record](../validation/m5-2026-10-01.md),
-but it is not yet accepted: with the #140 delayed-grant gate disposed of, the
-[#123](https://github.com/mike-north/microdelta/issues/123) decision is pending. It covers one fenced
+correctness has verified acceptance, mapped in the [M5 evidence record](../validation/m5-2026-10-01.md)
+([#123](https://github.com/mike-north/microdelta/issues/123), [accepted 2026-10-07](https://github.com/mike-north/microdelta/issues/123#issuecomment-6043397381)). It covers one fenced
 writer per store with lease waiting, stop control, durable deferral, external
 operations, resource accounting, environments, outcome folds and private events.
 Multi-writer parallelism, the CLI and scale remain unimplemented.**

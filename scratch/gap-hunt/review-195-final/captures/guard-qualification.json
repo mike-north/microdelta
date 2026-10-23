@@ -1,0 +1,10 @@
+{
+  "positive": {
+    "status": "PASS",
+    "productionFiles": 515
+  },
+  "dirtySentinelRejected": true,
+  "sourceRestored": true,
+  "subprocessTimeoutSeconds": 900,
+  "qualification": "guard-only; original22-command workload not rerun"
+}

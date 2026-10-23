@@ -37,6 +37,12 @@ against closed run/frame lifetimes. Reused in-process derivations replay their
 observations to consuming frames. Process-local tags/revision counters are useful
 for reactive composition but must never enter durable evidence. Persist semantic
 addresses/fingerprints, then reconstruct current bindings after restart.
+Standalone fresh captures must also leave a continuing caller free of one distinct
+retained host context per completed entry once its observer and result are
+unreachable. This is a bounded host-resource lifecycle expectation, not a tracked
+observation, durable identity, or universal heap/timing budget. It does not require
+an author-owned wrapper or disposal step; Tracking still closes frames and rejects
+work that inherited one after closure.
 
 **TRK-4 — Capture boundary.** Every external influence intended to affect reuse,
 including branch selection, must be tracked or covered by explicit source/freshness/

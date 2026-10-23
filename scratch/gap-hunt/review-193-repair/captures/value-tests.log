@@ -1,0 +1,26 @@
+
+> @microdelta/value@0.1.1 test
+> npm run test:unit && npm run test:types
+
+
+> @microdelta/value@0.1.1 test:unit
+> tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand
+
+watchman warning: Recrawled this watch 5 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '<checkout>' ; watchman watch-project '<checkout>'`
+
+(node:90694) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+Test Suites: 3 passed, 3 total
+Tests:       60 passed, 60 total
+Snapshots:   0 total
+Time:        0.274 s, estimated 1 s
+Ran all test suites.
+
+> @microdelta/value@0.1.1 test:types
+> tsd
+

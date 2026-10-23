@@ -1,0 +1,35 @@
+watchman warning: Recrawled this watch 5 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '<checkout>' ; watchman watch-project '<checkout>'`
+
+  console.log
+    {"sizes":[20,40],"encodeWork":[20,40],"publishWork":[1323,5043]}
+
+      at Object.<anonymous> (scratch/gap-hunt/review-193-repair/original.test.mjs:51:13)
+
+(node:97910) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL scratch/gap-hunt/review-193-repair/original.test.mjs
+  ● doubling a flat record array keeps publication validation work linear like matched encoding
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 2646
+    Received:    5043
+
+      53 |     expect(encodedLarge).toBeLessThanOrEqual(2 * encodedSmall);
+      54 |     // Proposed scale regression boundary: avoid rereading the entire root per field.
+    > 55 |     expect(publishedLarge).toBeLessThanOrEqual(2 * publishedSmall);
+         |                            ^
+      56 | });
+      57 |
+
+      at Object.<anonymous> (scratch/gap-hunt/review-193-repair/original.test.mjs:55:28)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        0.166 s, estimated 1 s
+Ran all test suites.

@@ -1,0 +1,233 @@
+{
+  "source": "4f9bc2a54648e9802b47ab3d286cffb8ad2bc06f",
+  "oldIndexSource": "7677ec4d61fd78efc63da28906175707e1391f12",
+  "frozen": "abb9bab1987d18644093fb67dadb17c3ea9f94ce",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "node": "v24.22.1",
+  "commands": [
+    {
+      "name": "install",
+      "command": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "build",
+      "command": [
+        "npm",
+        "run",
+        "build:packages"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "fixture-build",
+      "command": [
+        "npm",
+        "run",
+        "build:fixtures"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "core-test-build",
+      "command": [
+        "node",
+        "node_modules/typescript/bin/tsc",
+        "-p",
+        "packages/core/tsconfig.test.json"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "prepare-original",
+      "command": [
+        "node",
+        "scratch/gap-hunt/review-193-repair/prepare-original.mjs"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "original-current",
+      "command": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/review-193-repair/original.jest.config.mjs",
+        "--runInBand"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "official",
+      "command": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "packages/core/jest.config.mjs",
+        "--runInBand",
+        "--runTestsByPath",
+        "packages/core/.test-build/test/gap-hunt-scale/array-validation.test.js"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "value-check",
+      "command": [
+        "npm",
+        "run",
+        "check",
+        "--workspace",
+        "@microdelta/value"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "value-tests",
+      "command": [
+        "npm",
+        "test",
+        "--workspace",
+        "@microdelta/value"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "history-check",
+      "command": [
+        "npm",
+        "run",
+        "check",
+        "--workspace",
+        "@microdelta/history"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "history-tests",
+      "command": [
+        "npm",
+        "test",
+        "--workspace",
+        "@microdelta/history"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "durable",
+      "command": [
+        "node",
+        "--require",
+        "./scratch/gap-hunt/review-193-repair/file-fed-harness.cjs",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "packages/core/jest.config.mjs",
+        "--runInBand",
+        "--runTestsByPath",
+        "packages/core/.test-build/test/durable-history/durable-history.test.js",
+        "packages/core/.test-build/test/durable-history/crash-recovery.test.js"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "supplement",
+      "command": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/review-193-repair/supplement.jest.config.mjs",
+        "--runInBand"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "core-check",
+      "command": [
+        "npm",
+        "run",
+        "check",
+        "--workspace",
+        "microdelta"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "declaration-check",
+      "command": [
+        "npm",
+        "run",
+        "check:declarations"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "old-build",
+      "command": [
+        "npm",
+        "run",
+        "build:packages"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "original-old",
+      "command": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/review-193-repair/original.jest.config.mjs",
+        "--runInBand"
+      ],
+      "exit": 1,
+      "expected": 1
+    },
+    {
+      "name": "restored-build",
+      "command": [
+        "npm",
+        "run",
+        "build:packages"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "original-restored",
+      "command": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/review-193-repair/original.jest.config.mjs",
+        "--runInBand"
+      ],
+      "exit": 0,
+      "expected": 0
+    }
+  ]
+}

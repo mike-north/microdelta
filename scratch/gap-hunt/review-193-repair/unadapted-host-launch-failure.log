@@ -1,0 +1,224 @@
+(node:78145) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL packages/core/.test-build/test/durable-history/crash-recovery.test.js
+  ● process death at each publication boundary › a kill after acquisition leaves the lease until expiry, then a successor gets a larger fence
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "signal": null,
+    -   "status": 0,
+    +   "signal": "SIGKILL",
+    +   "status": null,
+        "stderr": "",
+      }
+
+      50 | /** Require that a worker finished normally with every step succeeding. */
+      51 | export function expectClean(run: IWorkerRun): readonly ITraceEntry[] {
+    > 52 |   expect({ status: run.status, signal: run.signal, stderr: run.stderr }).toEqual({ status: 0, signal: null, stderr: '' });
+         |                                                                          ^
+      53 |   expect(run.trace.filter((entry) => !entry.ok)).toEqual([]);
+      54 |   return run.trace;
+      55 | }
+
+      at expectClean (test/durable-history/processes.ts:52:74)
+      at seedPrevious (test/durable-history/crash-recovery.test.ts:35:17)
+      at Object.<anonymous> (test/durable-history/crash-recovery.test.ts:80:18)
+
+  ● process death at each publication boundary › a kill after the allocation commit consumes that attempt identity without a result
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "signal": null,
+    -   "status": 0,
+    +   "signal": "SIGKILL",
+    +   "status": null,
+        "stderr": "",
+      }
+
+      50 | /** Require that a worker finished normally with every step succeeding. */
+      51 | export function expectClean(run: IWorkerRun): readonly ITraceEntry[] {
+    > 52 |   expect({ status: run.status, signal: run.signal, stderr: run.stderr }).toEqual({ status: 0, signal: null, stderr: '' });
+         |                                                                          ^
+      53 |   expect(run.trace.filter((entry) => !entry.ok)).toEqual([]);
+      54 |   return run.trace;
+      55 | }
+
+      at expectClean (test/durable-history/processes.ts:52:74)
+      at seedPrevious (test/durable-history/crash-recovery.test.ts:35:17)
+      at Object.<anonymous> (test/durable-history/crash-recovery.test.ts:101:18)
+
+  ● process death at each publication boundary › a kill inside the allocation transaction leaves no attempt and issues no identity
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "signal": null,
+    -   "status": 0,
+    +   "signal": "SIGKILL",
+    +   "status": null,
+        "stderr": "",
+      }
+
+      50 | /** Require that a worker finished normally with every step succeeding. */
+      51 | export function expectClean(run: IWorkerRun): readonly ITraceEntry[] {
+    > 52 |   expect({ status: run.status, signal: run.signal, stderr: run.stderr }).toEqual({ status: 0, signal: null, stderr: '' });
+         |                                                                          ^
+      53 |   expect(run.trace.filter((entry) => !entry.ok)).toEqual([]);
+      54 |   return run.trace;
+      55 | }
+
+      at expectClean (test/durable-history/processes.ts:52:74)
+      at seedPrevious (test/durable-history/crash-recovery.test.ts:35:17)
+      at Object.<anonymous> (test/durable-history/crash-recovery.test.ts:126:5)
+
+  ● process death at each publication boundary › a kill after the staging commit leaves candidate evidence that is not a result
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "signal": null,
+    -   "status": 0,
+    +   "signal": "SIGKILL",
+    +   "status": null,
+        "stderr": "",
+      }
+
+      50 | /** Require that a worker finished normally with every step succeeding. */
+      51 | export function expectClean(run: IWorkerRun): readonly ITraceEntry[] {
+    > 52 |   expect({ status: run.status, signal: run.signal, stderr: run.stderr }).toEqual({ status: 0, signal: null, stderr: '' });
+         |                                                                          ^
+      53 |   expect(run.trace.filter((entry) => !entry.ok)).toEqual([]);
+      54 |   return run.trace;
+      55 | }
+
+      at expectClean (test/durable-history/processes.ts:52:74)
+      at seedPrevious (test/durable-history/crash-recovery.test.ts:35:17)
+      at Object.<anonymous> (test/durable-history/crash-recovery.test.ts:149:18)
+
+  ● process death at each publication boundary › a kill inside the staging transaction leaves the attempt allocated without content
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "signal": null,
+    -   "status": 0,
+    +   "signal": "SIGKILL",
+    +   "status": null,
+        "stderr": "",
+      }
+
+      50 | /** Require that a worker finished normally with every step succeeding. */
+      51 | export function expectClean(run: IWorkerRun): readonly ITraceEntry[] {
+    > 52 |   expect({ status: run.status, signal: run.signal, stderr: run.stderr }).toEqual({ status: 0, signal: null, stderr: '' });
+         |                                                                          ^
+      53 |   expect(run.trace.filter((entry) => !entry.ok)).toEqual([]);
+      54 |   return run.trace;
+      55 | }
+
+      at expectClean (test/durable-history/processes.ts:52:74)
+      at seedPrevious (test/durable-history/crash-recovery.test.ts:35:17)
+      at Object.<anonymous> (test/durable-history/crash-recovery.test.ts:166:18)
+
+  ● process death at each publication boundary › a kill just before the publication commit publishes nothing; a later holder publishes without rerunning the body
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "signal": null,
+    -   "status": 0,
+    +   "signal": "SIGKILL",
+    +   "status": null,
+        "stderr": "",
+      }
+
+      50 | /** Require that a worker finished normally with every step succeeding. */
+      51 | export function expectClean(run: IWorkerRun): readonly ITraceEntry[] {
+    > 52 |   expect({ status: run.status, signal: run.signal, stderr: run.stderr }).toEqual({ status: 0, signal: null, stderr: '' });
+         |                                                                          ^
+      53 |   expect(run.trace.filter((entry) => !entry.ok)).toEqual([]);
+      54 |   return run.trace;
+      55 | }
+
+      at expectClean (test/durable-history/processes.ts:52:74)
+      at seedPrevious (test/durable-history/crash-recovery.test.ts:35:17)
+      at Object.<anonymous> (test/durable-history/crash-recovery.test.ts:181:18)
+
+  ● process death at each publication boundary › a kill after the publication commit but before acknowledgment is recovered by its stable key without rerunning the body
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "signal": null,
+    -   "status": 0,
+    +   "signal": "SIGKILL",
+    +   "status": null,
+        "stderr": "",
+      }
+
+      50 | /** Require that a worker finished normally with every step succeeding. */
+      51 | export function expectClean(run: IWorkerRun): readonly ITraceEntry[] {
+    > 52 |   expect({ status: run.status, signal: run.signal, stderr: run.stderr }).toEqual({ status: 0, signal: null, stderr: '' });
+         |                                                                          ^
+      53 |   expect(run.trace.filter((entry) => !entry.ok)).toEqual([]);
+      54 |   return run.trace;
+      55 | }
+
+      at expectClean (test/durable-history/processes.ts:52:74)
+      at seedPrevious (test/durable-history/crash-recovery.test.ts:35:17)
+      at Object.<anonymous> (test/durable-history/crash-recovery.test.ts:214:18)
+
+  ● stale holders across processes › an expired holder cannot renew, allocate, stage, publish, abandon, accept or release after a successor acquires
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "signal": null,
+    -   "status": 0,
+    +   "signal": "SIGKILL",
+    +   "status": null,
+        "stderr": "",
+      }
+
+      50 | /** Require that a worker finished normally with every step succeeding. */
+      51 | export function expectClean(run: IWorkerRun): readonly ITraceEntry[] {
+    > 52 |   expect({ status: run.status, signal: run.signal, stderr: run.stderr }).toEqual({ status: 0, signal: null, stderr: '' });
+         |                                                                          ^
+      53 |   expect(run.trace.filter((entry) => !entry.ok)).toEqual([]);
+      54 |   return run.trace;
+      55 | }
+
+      at expectClean (test/durable-history/processes.ts:52:74)
+      at seedPrevious (test/durable-history/crash-recovery.test.ts:35:17)
+      at Object.<anonymous> (test/durable-history/crash-recovery.test.ts:254:18)
+
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       8 failed, 33 passed, 41 total
+Snapshots:   0 total
+Time:        1.287 s
+Ran all test suites within paths "packages/core/.test-build/test/durable-history/durable-history.test.js", "packages/core/.test-build/test/durable-history/crash-recovery.test.js".

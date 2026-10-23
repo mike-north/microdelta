@@ -1,0 +1,36 @@
+watchman warning: Recrawled this watch 19 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-durability' ; watchman watch-project '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-durability'`
+
+(node:59365) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL packages/core/.test-build/test/gap-hunt-durability-source-boundaries.test.js
+  ● widening the observation window revokes an excluded source finality decision and refreshes current data under its consumer
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+    -   "text": "current",
+    +   "text": "old",
+      }
+
+      57 |     const included = await start(10, 'widened');
+      58 |     expect(included.value.outcome.kind).toBe('published');
+    > 59 |     expect(included.value.value).toEqual({ text: 'current' });
+         |                                  ^
+      60 |     expect(included.value.outcome.reference).not.toEqual(cold.value.outcome.reference);
+      61 |     expect(reads).toBe(2);
+      62 |     expect(policies).toEqual([{ start: 30, accepted: true }, { start: 10, accepted: false }]);
+
+      at Object.<anonymous> (test/gap-hunt-durability-source-boundaries.test.ts:59:34)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 passed, 2 total
+Snapshots:   0 total
+Time:        0.167 s, estimated 1 s
+Ran all test suites within paths "packages/core/.test-build/test/gap-hunt-durability-source-boundaries.test.js".

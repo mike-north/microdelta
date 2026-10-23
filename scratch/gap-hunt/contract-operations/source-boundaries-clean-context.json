@@ -1,0 +1,11 @@
+{
+  "baseCommit": "fb4e0cff5bc0c7a33b65b05a2fb8a4c238a193e2",
+  "checkout": "/var/folders/st/lnv0_82j071b3c_hn5s_j2wc0000gn/T/microdelta-source-boundaries-clean-xc30yy3i/checkout",
+  "injectedFiles": [
+    "packages/core/test/gap-hunt-durability-source-boundaries.test.ts",
+    "scratch/gap-hunt/contract-operations/verify-source-boundaries.sh"
+  ],
+  "command": "bash scratch/gap-hunt/contract-operations/verify-source-boundaries.sh",
+  "outcomeExit": 0,
+  "bootstrap": "default npmci/buildpackages path; no prior node_modules/generated declarations"
+}

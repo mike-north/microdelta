@@ -1259,7 +1259,7 @@
       "requirement": "REUSE-003",
       "classification": "bounded-aligned-with-residual-evidence-gap",
       "meaning": "Fresh processes run current finality; changed implementation/input is not excused by a hook; consumed changes rerun affected work.",
-      "residual": "The named assertions prove the stated bounded outcome; other prose obligations are not automatically discharged.",
+      "residual": "Bounded authored source policies and scalar/record payloads; no generic alias special token, inferred terminal immutability or collection-exhaustion promise. Wrong authored stale-finality/immutable-alias policies rejected by unchanged assertions; no production fixes.",
       "executedAssertionIds": [
         319,
         320,
@@ -1275,7 +1275,16 @@
         376,
         377,
         378
-      ]
+      ],
+      "supplementalNamedAssertions": {
+        "suite": "packages/core/test/gap-hunt-durability-source-boundaries.test.ts",
+        "log": "scratch/gap-hunt/contract-operations/source-boundaries-clean.log",
+        "outcome": "2 passed",
+        "names": [
+          "widening the observation window revokes an excluded source finality decision and refreshes current data under its consumer",
+          "an immutable artifact retains its exact result while its mutable alias refreshes and redirects the consumer"
+        ]
+      }
     },
     {
       "requirement": "REUSE-004",

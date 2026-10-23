@@ -1,0 +1,15 @@
+{"node":"v24.22.1","platform":"darwin","arch":"arm64"}
+fb4e0cff5bc0c7a33b65b05a2fb8a4c238a193e2
+watchman warning: Recrawled this watch 19 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-durability' ; watchman watch-project '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-durability'`
+
+(node:59587) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       2 passed, 2 total
+Snapshots:   0 total
+Time:        0.163 s, estimated 1 s
+Ran all test suites within paths "packages/core/.test-build/test/gap-hunt-durability-source-boundaries.test.js".

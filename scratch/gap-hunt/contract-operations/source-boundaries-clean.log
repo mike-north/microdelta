@@ -1,0 +1,145 @@
+{"node":"v24.22.1","platform":"darwin","arch":"arm64"}
+fb4e0cff5bc0c7a33b65b05a2fb8a4c238a193e2
+npm warn deprecated prebuild-install@7.1.3: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.
+npm warn deprecated glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+
+added 614 packages in 2s
+
+> @microdelta/workspace@0.0.0 build:packages
+> npm run build --workspace @microdelta/machine && npm run build --workspace @microdelta/value && npm run build --workspace @microdelta/machine-node && npm run build --workspace @microdelta/definition && npm run build --workspace @microdelta/tracking && npm run build --workspace @microdelta/history && npm run build --workspace @microdelta/accounting && npm run build --workspace @microdelta/materialization && npm run build --workspace @microdelta/resolution && npm run build --workspace @microdelta/supervision && npm run build --workspace microdelta
+
+
+> @microdelta/machine@0.1.0 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+> @microdelta/value@0.1.0 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+> @microdelta/machine-node@0.1.0 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+> @microdelta/definition@0.2.0 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+> @microdelta/tracking@0.2.0 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+> @microdelta/history@0.1.0 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json && api-extractor run --config api-extractor-conformance.json && api-extractor run --config api-extractor-shared.json && node ../../tooling/history-declaration-shims.mjs
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+> @microdelta/accounting@0.0.0 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json && node ../../tooling/trim-declaration-imports.mjs dist/api/accounting.beta.d.ts dist/api/accounting.public.d.ts
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+> @microdelta/materialization@0.1.1 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json && node ../../tooling/trim-declaration-imports.mjs dist/api/materialization.beta.d.ts dist/api/materialization.public.d.ts
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+> @microdelta/resolution@0.2.0 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json && node ../../tooling/trim-declaration-imports.mjs dist/api/resolution.beta.d.ts dist/api/resolution.public.d.ts
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+> @microdelta/supervision@0.2.0 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json && node ../../tooling/trim-declaration-imports.mjs dist/api/supervision.beta.d.ts dist/api/supervision.public.d.ts
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+> microdelta@0.2.0 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json && api-extractor run --config api-extractor-conformance.json && node ../../tooling/trim-declaration-imports.mjs dist/api/microdelta.beta.d.ts dist/api/microdelta.public.d.ts
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+(node:62925) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       2 passed, 2 total
+Snapshots:   0 total
+Time:        0.135 s
+Ran all test suites within paths "packages/core/.test-build/test/gap-hunt-durability-source-boundaries.test.js".

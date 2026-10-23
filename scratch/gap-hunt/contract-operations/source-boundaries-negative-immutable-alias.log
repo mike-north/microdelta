@@ -1,0 +1,38 @@
+watchman warning: Recrawled this watch 19 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-durability' ; watchman watch-project '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-durability'`
+
+(node:59434) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL packages/core/.test-build/test/gap-hunt-durability-source-boundaries.test.js
+  ● an immutable artifact retains its exact result while its mutable alias refreshes and redirects the consumer
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+        "A": 1,
+        "B": 0,
+    -   "alias": 2,
+    +   "alias": 1,
+      }
+
+      110 |     const stable = await start('stable-alias');
+      111 |     expect(stable.value.outcome).toMatchObject({ kind: 'reused', reference: cold.value.outcome.reference });
+    > 112 |     expect(reads).toEqual({ alias: 2, A: 1, B: 0 });
+          |                   ^
+      113 |     target = 'B';
+      114 |     const redirected = await start('redirected');
+      115 |     expect(redirected.value.outcome.kind).toBe('published');
+
+      at Object.<anonymous> (test/gap-hunt-durability-source-boundaries.test.ts:112:19)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 passed, 2 total
+Snapshots:   0 total
+Time:        0.162 s, estimated 1 s
+Ran all test suites within paths "packages/core/.test-build/test/gap-hunt-durability-source-boundaries.test.js".

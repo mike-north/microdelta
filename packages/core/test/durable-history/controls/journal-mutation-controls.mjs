@@ -72,7 +72,7 @@ const controls = [
   },
   {
     name: 'candidate lookup ignores the environment namespace',
-    plants: [{ file: 'index.js', anchor: 'AND (r.environment = ? OR EXISTS', replacement: 'AND (r.environment = ? OR 1 OR EXISTS' }],
+    plants: [{ file: 'index.js', anchor: 'AND r.environment = s.environment AND r.subject = s.subject', replacement: 'AND r.environment = r.environment AND r.subject = s.subject' }],
   },
   {
     name: 'acceptance reads ignore the environment namespace',
@@ -87,7 +87,7 @@ const controls = [
   },
   {
     name: 'candidate lookup never admits promoted results',
-    plants: [{ file: 'index.js', anchor: 'AND p.analysis = r.analysis AND p.environment = ?))', replacement: 'AND p.analysis = r.analysis AND p.environment = ? AND 0))' }],
+    plants: [{ file: 'index.js', anchor: 'WHERE p.analysis = s.analysis AND p.environment = s.environment', replacement: 'WHERE p.analysis = s.analysis AND p.environment = s.environment AND 0' }],
   },
   {
     name: 'every result counts as promoted into every environment',

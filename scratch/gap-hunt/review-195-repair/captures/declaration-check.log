@@ -1,0 +1,4 @@
+
+> @microdelta/workspace@0.0.0 check:declarations
+> node tooling/check-producer-declarations.mjs && node tooling/history-declaration-shims.mjs --check
+

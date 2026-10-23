@@ -1,0 +1,25 @@
+{
+  "evidenceHead": "9267a44e1a203966e6ccd73db188e5826506326b",
+  "command": "node scratch/gap-hunt/contracts/reproduce.mjs intrinsic",
+  "exitCode": 1,
+  "expectedTestCounts": {
+    "failed": 9,
+    "passed": 2,
+    "total": 11
+  },
+  "node": "v24.22.1",
+  "npm": "11.12.1",
+  "freshWorktree": true,
+  "borrowedDependencies": false,
+  "gitStatusAfterRun": "",
+  "files": [
+    {
+      "file": "package-lock.json",
+      "sha256": "55dfeace3ed7af8246e32c3029b444251df4ca164119f76716e44122e33129e6"
+    },
+    {
+      "file": "packages/tracking/test/gap-hunt-contracts-intrinsic-presence.test.ts",
+      "sha256": "f049f9711f74e0a1d773212fbbecb16ab49837b0916285d6891c334dc94fb6a2"
+    }
+  ]
+}

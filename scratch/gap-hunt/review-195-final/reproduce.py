@@ -39,7 +39,7 @@ def preflight():
  tracked=subprocess.check_output(['git','diff','--name-only','HEAD'],text=True).splitlines()
  staged=subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines()
  assert not tracked and not staged, 'tracked checkout must start clean'
- production=subprocess.check_output(['git','ls-tree','-r','--name-only',SOURCE,'packages','tooling','package.json','package-lock.json','tsconfig.json'],text=True).splitlines()
+ production=subprocess.check_output(['git','ls-tree','-r','--name-only',SOURCE],text=True).splitlines()
  for name in production:
   assert Path(name).read_bytes()==subprocess.check_output(['git','show',SOURCE+':'+name]), 'production differs: '+name
  assert not Path('packages/core/test/gap-hunt-review195-final-original.test.ts').exists(), 'transient fixture must start absent'

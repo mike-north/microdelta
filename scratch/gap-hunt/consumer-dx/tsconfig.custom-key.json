@@ -1,0 +1,4 @@
+{
+  "extends": "./tsconfig.all.json",
+  "files": ["custom-key.ts"]
+}

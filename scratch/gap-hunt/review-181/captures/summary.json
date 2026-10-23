@@ -1,0 +1,39 @@
+{
+  "head": "4661e7df2eb6c46018c0cb1febb83e20d5dcbab0",
+  "reviewed_pin": "4661e7df2eb6c46018c0cb1febb83e20d5dcbab0",
+  "original_consumer_exit": 0,
+  "original_runtime_passed": 2,
+  "parent_ts2322_errors": 4,
+  "restored_compiler_exit": 0,
+  "focused_runtime_passed": 63,
+  "root_controls_passed": 2,
+  "verdict": "PASS for #169; #156 remains open",
+  "scope": "macOS Node24 bounded tests; no Linux/fullsuite/TrackG/provider execution",
+  "suite_breakdown": [
+    {
+      "path": "acceptance/source-policy.test.js",
+      "passed": 7
+    },
+    {
+      "path": "workspace/async-source.test.js",
+      "passed": 12
+    },
+    {
+      "path": "acceptance/admission-observers.test.js",
+      "passed": 6
+    },
+    {
+      "path": "resolution/source-policy.test.js",
+      "passed": 20
+    },
+    {
+      "path": "workspace/scope.test.js",
+      "passed": 9
+    },
+    {
+      "path": "workspace/admission-observers.test.js",
+      "passed": 9
+    }
+  ],
+  "numRuntimeErrorTestSuites": 0
+}

@@ -1,0 +1,15 @@
+watchman warning: Recrawled this watch 9 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-181' ; watchman watch-project '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-181'`
+
+(node:45766) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+Test Suites: 6 passed, 6 total
+Tests:       63 passed, 63 total
+Snapshots:   0 total
+Time:        6.674 s, estimated 7 s
+Ran all test suites within paths "packages/core/.test-build/test/workspace/async-source.test.js", "packages/core/.test-build/test/resolution/source-policy.test.js", "packages/core/.test-build/test/workspace/scope.test.js", "packages/core/.test-build/test/workspace/admission-observers.test.js", "packages/core/.test-build/test/acceptance/source-policy.test.js", "packages/core/.test-build/test/acceptance/admission-observers.test.js".
+Test results written to: scratch/gap-hunt/review-181/local-results/focused-runtime.json

@@ -1,0 +1,53 @@
+{
+  "pin": "faaa87426c565452d24cb128a1cfb4df3bc86405",
+  "files": [
+    {
+      "path": "scratch/gap-hunt/consumer-dx/async-source.ts",
+      "sha256": "1e49193a5e1da17ebe8a5f6baa91ba5f70846ddffd3dcdd17e466d1367937fcc"
+    },
+    {
+      "path": "scratch/gap-hunt/consumer-dx/async-source.test-d.ts",
+      "sha256": "9e91e9b414e837438db2110a574dcbc13d7571483715b3fcde700ef7623a71a0"
+    },
+    {
+      "path": "scratch/gap-hunt/consumer-dx/async-source-worker.mjs",
+      "sha256": "fddec3ae9f6db9b80aa6ca322a75dff376a349ca0d7c18c495ffaaaa4a1296c4"
+    },
+    {
+      "path": "scratch/gap-hunt/consumer-dx/async-source.test.mjs",
+      "sha256": "960b309bd5c2c8ddf23cc609729ec805ee6c498e4b287669f9ff47944c530f14"
+    },
+    {
+      "path": "scratch/gap-hunt/consumer-dx/async-source.jest.config.mjs",
+      "sha256": "8bbd1fe6852c62937c97490cf474515be34122e7b20dc1ca0d67b04865ab7609"
+    },
+    {
+      "path": "scratch/gap-hunt/consumer-dx/async-source.eslint.config.mjs",
+      "sha256": "f9fdaf5fb08a6744f10d0b33036d8a7a2be12e2d78166f0a0e1cc98670ccf14b"
+    },
+    {
+      "path": "scratch/gap-hunt/consumer-dx/repro-async-source.mjs",
+      "sha256": "a5e001cc6179c6cebf8de4a1a3a193dee0635f406b8f1174d4b3187c2b8d81af"
+    },
+    {
+      "path": "scratch/gap-hunt/consumer-dx/tsconfig.async-source.json",
+      "sha256": "a65bd33e7976dcb772f9b4f71837051bbb82b8fc99e033658c9fdcde57bd8d91"
+    },
+    {
+      "path": "scratch/gap-hunt/consumer-dx/tsconfig.all.json",
+      "sha256": "e0999d59a896a5e3869a5ed4ddb311e58a688ab35a518d223ab13f37788abd32"
+    },
+    {
+      "path": "scratch/gap-hunt/consumer-dx/eslint.config.mjs",
+      "sha256": "d3b6d581aed001795e26b7bc8ad30eb6ed307dca890597b21f4d77f2235e37e1"
+    },
+    {
+      "path": "scratch/gap-hunt/consumer-dx/package.json",
+      "sha256": "a3d9da2cf30be14c7032443dea9c9514118f45cdcaf0e518f9c60273e32aa776"
+    },
+    {
+      "path": "scratch/gap-hunt/contract-surface/repro-support.mjs",
+      "sha256": "549c4bafb35c8a766d69f06f129f226d8d0532c3277f8400e9f0de8e8fdd0f14"
+    }
+  ]
+}

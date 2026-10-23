@@ -1,0 +1,7 @@
+{
+  "parent": "f43c5872987573d9b98a19f41c324b4d9336894c",
+  "parent_errors": 4,
+  "parent_diagnostic": "TS2322",
+  "restored_compiler_exit": 0,
+  "all_tracked_bytes_restored": true
+}

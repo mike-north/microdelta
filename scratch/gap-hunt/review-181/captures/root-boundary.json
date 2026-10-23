@@ -1,0 +1,82 @@
+{
+  "passed": 2,
+  "issue156": "remains open: scalar root refused; wrapped object accepted",
+  "results": [
+    {
+      "mode": "scalar",
+      "report": {
+        "kind": "threw",
+        "message": "Step [\"async-source\",\"step\",\"value\",null] produced a result without a record or array root",
+        "calls": 1
+      }
+    },
+    {
+      "mode": "wrapped",
+      "report": {
+        "kind": "returned",
+        "calls": 1,
+        "result": {
+          "step": {
+            "scope": "async-source",
+            "role": "step",
+            "slot": "value"
+          },
+          "misses": [],
+          "trace": [
+            {
+              "step": {
+                "scope": "async-source",
+                "role": "step",
+                "slot": "value"
+              },
+              "phase": "verify"
+            },
+            {
+              "step": {
+                "scope": "async-source",
+                "role": "step",
+                "slot": "value"
+              },
+              "phase": "admit"
+            },
+            {
+              "step": {
+                "scope": "async-source",
+                "role": "step",
+                "slot": "value"
+              },
+              "phase": "claim"
+            },
+            {
+              "step": {
+                "scope": "async-source",
+                "role": "step",
+                "slot": "value"
+              },
+              "phase": "execute"
+            },
+            {
+              "step": {
+                "scope": "async-source",
+                "role": "step",
+                "slot": "value"
+              },
+              "phase": "publish",
+              "reference": {
+                "kind": "completed-result",
+                "locator": "mdh1|[\"async-source\",\"async-source\",\"fixture\",1]"
+              }
+            }
+          ],
+          "diagnostics": [],
+          "kind": "published",
+          "reference": {
+            "kind": "completed-result",
+            "locator": "mdh1|[\"async-source\",\"async-source\",\"fixture\",1]"
+          },
+          "attemptId": 1
+        }
+      }
+    }
+  ]
+}

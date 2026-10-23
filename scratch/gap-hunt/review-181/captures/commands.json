@@ -1,0 +1,79 @@
+[
+  {
+    "name": "original-replay",
+    "args": [
+      "node",
+      "scratch/gap-hunt/consumer-dx/repro-async-source.mjs"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "parent-control",
+    "args": [
+      "python3",
+      "scratch/gap-hunt/review-181/parent-control.py"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "core-tsd",
+    "args": [
+      "npm",
+      "run",
+      "test:types",
+      "--workspace",
+      "microdelta"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "core-types",
+    "args": [
+      "node",
+      "node_modules/typescript/bin/tsc",
+      "-p",
+      "packages/core/tsconfig.test.json"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "focused-lint",
+    "args": [
+      "node",
+      "node_modules/eslint/bin/eslint.js",
+      "packages/core/test-d/async-source.test-d.ts",
+      "packages/core/test/workspace/async-source.test.ts"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "focused-runtime",
+    "args": [
+      "node",
+      "--experimental-vm-modules",
+      "node_modules/jest/bin/jest.js",
+      "--config",
+      "packages/core/jest.config.mjs",
+      "--runInBand",
+      "--json",
+      "--outputFile",
+      "/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-181/scratch/gap-hunt/review-181/local-results/focused-runtime.json",
+      "--runTestsByPath",
+      "packages/core/.test-build/test/workspace/async-source.test.js",
+      "packages/core/.test-build/test/resolution/source-policy.test.js",
+      "packages/core/.test-build/test/workspace/scope.test.js",
+      "packages/core/.test-build/test/workspace/admission-observers.test.js",
+      "packages/core/.test-build/test/acceptance/source-policy.test.js",
+      "packages/core/.test-build/test/acceptance/admission-observers.test.js"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "root-boundary",
+    "args": [
+      "node",
+      "scratch/gap-hunt/review-181/root-boundary.mjs"
+    ],
+    "exit": 0
+  }
+]

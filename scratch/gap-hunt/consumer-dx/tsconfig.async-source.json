@@ -1,0 +1,4 @@
+{
+  "extends": "./tsconfig.all.json",
+  "files": ["async-source.ts"]
+}

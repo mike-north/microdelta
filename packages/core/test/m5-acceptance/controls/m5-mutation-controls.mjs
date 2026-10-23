@@ -350,8 +350,8 @@ const controls = [
     guard: 'environment',
     name: 'candidate lookup admits results of any environment without a promotion',
     target: 'history',
-    anchor: 'AND (r.environment = ? OR EXISTS',
-    replacement: 'AND (r.environment = ? OR 1 OR EXISTS',
+    anchor: 'AND r.environment = s.environment AND r.subject = s.subject',
+    replacement: 'AND r.environment = r.environment AND r.subject = s.subject',
     breaks: ['trial-production-isolation'],
   },
   {

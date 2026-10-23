@@ -14,6 +14,10 @@ import { test } from 'node:test';
 const root = fileURLToPath(new URL('../../../../../', import.meta.url));
 const runner = fileURLToPath(new URL('./resolution-mutation-controls.mjs', import.meta.url));
 const resolutionArtifact = join(root, 'packages/resolution/dist/src/resolution.js');
+/** Allow slow CI hosts to reach the controlled mutation point before treating setup as hung. */
+const setupTimeoutMilliseconds = 180_000;
+/** Bound process exit after SIGTERM so the runner's restoration cleanup cannot hang this suite. */
+const cleanupTimeoutMilliseconds = 30_000;
 
 /** Report directories share the same prefix, so identify the full package copy by its emitted artifact. */
 function isolatedCheckouts(directory) {
@@ -83,21 +87,21 @@ if (process.argv.some((argument) => argument.includes('/jest/bin/jest.js'))) {
       stdio: ['ignore', 'pipe', 'ignore'],
     });
     child.stdout.on('data', chunk => { stdout += chunk.toString(); });
-    await waitForFile(reached, child, 60_000);
+    await waitForFile(reached, child, setupTimeoutMilliseconds);
     const checkouts = isolatedCheckouts(temporary);
     assert.equal(checkouts.length, 1, 'runner must own one isolated checkout at the signal point');
     const copiedArtifact = join(temporary, checkouts[0], 'packages/resolution/dist/src/resolution.js');
     assert.notDeepEqual(readFileSync(copiedArtifact), original, 'the signal must arrive while a mutant is planted');
 
     child.kill('SIGTERM');
-    assert.deepEqual(await waitForExit(child, 10_000), { code: 130, signal: null });
+    assert.deepEqual(await waitForExit(child, cleanupTimeoutMilliseconds), { code: 130, signal: null });
     assert.match(stdout, /INTERRUPTED by SIGTERM; emitted files restored/u);
     assert.deepEqual(isolatedCheckouts(temporary), [], 'the interrupted runner must remove its isolated checkout');
     assert.deepEqual(readFileSync(resolutionArtifact), original, 'source build bytes must remain unchanged');
   } finally {
     if (child !== undefined && child.exitCode === null && child.signalCode === null) {
       child.kill('SIGKILL');
-      await waitForExit(child, 10_000).catch(() => undefined);
+      await waitForExit(child, cleanupTimeoutMilliseconds).catch(() => undefined);
     }
     rmSync(temporary, { recursive: true, force: true });
   }

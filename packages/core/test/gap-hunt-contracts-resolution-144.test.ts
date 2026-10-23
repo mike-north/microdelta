@@ -2,9 +2,9 @@
  * Five finite witnesses pin the current Resolution contract at issue #144's
  * fault sites. They inspect public outcomes or History records so the mutation
  * controls do not depend on private digest or evidence-reader helpers.
- * @see ../../../../docs/spec/tracking.md (TRK-2)
- * @see ../../../../docs/spec/composition.md (CMP-5, CMP-8)
- * @see ../../../../docs/spec/execution.md (RES-003, REUSE-008, PUB-004)
+ * @see ../../../docs/spec/tracking.md (TRK-2)
+ * @see ../../../docs/spec/composition.md (CMP-5, CMP-8)
+ * @see ../../../docs/spec/execution.md (RES-003, REUSE-008, PUB-004)
  */
 import { afterEach, describe, expect, test } from '@jest/globals';
 import { createNodeMachine } from '@microdelta/machine-node';

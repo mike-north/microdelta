@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 const cwd = fileURLToPath(new URL('../../../', import.meta.url));
 const suites = {
+  'arc008': { probe: 'arc008-surface.mjs' },
   'artifact-durable': { workspace: 'microdelta', test: 'gap-hunt-contracts-artifact-durable', types: false },
   'imported-closure': { workspace: '@microdelta/tracking', test: 'gap-hunt-contracts-imported-closure', types: false },
   'fold-observer': { workspace: 'microdelta', test: 'gap-hunt-contracts-fold-observer', types: false },

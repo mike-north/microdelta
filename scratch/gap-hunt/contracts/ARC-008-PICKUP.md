@@ -4,19 +4,29 @@ Implementer: Codex worker (gpt-6.1-sol), operating for Mike North.
 
 ## Problem and governing scope
 
+Severity: **Medium testability/validation gap**. Blocking dependencies: **none**. Coordinate the isolated Resolution fixture with existing #144 fault-control work; its five witnesses remain separate acceptance evidence.
+
 ARC-008 requires Resolution contract tests using fake current facts, source policies **and child resolvers**, before relying on assembly evidence. Current child recursion is captured privately inside `createResolution`; source/parent work callbacks and the #144 mutations do not substitute the child resolver itself. This is a missing required validation seam and isolated evidence, independently of whether those assembled tests expose every known runtime fault. See `ARC-008-LITERAL.md` for the complete owning paragraph, construction API, source routes and existing test inventory.
 
 The purpose is to test the parent's current-validity decision against controlled **child resolution outcomes** without executing the recursive child's candidate validation, source policy, admission or body internals. It is not a new domain context, public facade feature, persistence owner or general mocking framework. No new required public interface or constructor spelling is selected here.
 
 ## Honest minimal diagnostic
 
-On the built evidence checkout:
+From a clean evidence checkout:
+
+```sh
+node scratch/gap-hunt/contracts/reproduce.mjs arc008
+```
+
+The wrapper installs locked dependencies, builds generated declarations and packages, then runs the diagnostic. On a built checkout:
 
 ```sh
 node scratch/gap-hunt/contracts/arc008-surface.mjs
 ```
 
 This source/API diagnostic enumerates the exact `IResolutionOptions` members from source and generated alpha declarations, asserts their agreement, and records all lexical child-resolution call sites inside `createResolution`. `arc008-surface.json` preserves the result and hashes. History/Tracking/host/admission/observer/execution are real injection capabilities; recursive child-resolution functions remain lexical implementations. The existing engine's frozen returned `resolve` delegates internally, so a wrapper of the top-level method does not replace those child results.
+
+The baseline diagnostic exits **0** because it successfully records the current census. It is not a failing runtime input or a regression oracle for the eventual seam and may need updating after the implementer selects a representation. The proposed semantic tests below should first fail against that selected internal test boundary before its mechanism is implemented.
 
 This is **static evidence**, not a failing runtime request, proof that every conceivable test-tool transformation is impossible, or a failed compile against an invented option. The exhaustive inspected isolated owner test route is source-envelope construction in `packages/resolution/test/outcome.test.ts`; current parent-validity tests construct real recursive Resolution with real History/Tracking/Definition, as their support files explicitly document. No runtime input expresses the required substitution yet, so none is fabricated here.
 
@@ -36,3 +46,7 @@ This is **static evidence**, not a failing runtime request, proof that every con
 Reuse the parent-cutoff intent in `resolution/summary-validation.test.ts:208–226`: same selected score, child implementation replaced, new child reference, retained parent with zero bodies. Replace only its child-resolution collaboration with a scripted fake that yields the typed current result/reference. Then vary the consumed score and child refusal/failure independently. The test's expected outcomes come from CMP-5/6/7 and REUSE-005/006/007, with ARC-008 supplying the isolation requirement.
 
 This is a semantic starting point, not executable code against a nonexistent port. The implementer owns the representation. No product implementation or GitHub write is included.
+
+## Out of scope
+
+Public facade expansion, publication/release changes, provider execution, wholesale Resolution redesign, a new bounded context, transfer of invariant ownership, and replacing the existing #144 controls are outside this pickup. No blocking dependency is invented from their shared source files.

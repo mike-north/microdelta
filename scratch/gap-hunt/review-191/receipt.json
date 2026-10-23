@@ -1,0 +1,176 @@
+{
+  "source": "ee72391e330188dbd143d3889f4867da23a468d1",
+  "evidenceHead": "d2d0f2405c18f507c030a5aa3c13eaf8b7a90966",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "node": "v24.22.1",
+  "npm": "11.12.1",
+  "nodeModulesBefore": false,
+  "statusBefore": "",
+  "commands": [
+    {
+      "argv": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "exit": 0
+    },
+    {
+      "argv": [
+        "npm",
+        "run",
+        "build:packages"
+      ],
+      "exit": 0
+    },
+    {
+      "argv": [
+        "node_modules/.bin/tsc",
+        "-p",
+        "packages/core/tsconfig.test.json"
+      ],
+      "exit": 0
+    }
+  ],
+  "jest": {
+    "exit": 0,
+    "passed": 98,
+    "failed": 0,
+    "runtimeErrorSuites": 0,
+    "passedSuites": 2
+  },
+  "census": {
+    "tables": [
+      {
+        "table": "history_acceptance_dependencies",
+        "primaryKey": [
+          "acceptance_id",
+          "position"
+        ],
+        "independentKeys": [
+          "acceptance_id,position"
+        ],
+        "hiddenRowIdentity": "absent"
+      },
+      {
+        "table": "history_acceptances",
+        "primaryKey": [
+          "acceptance_id"
+        ],
+        "independentKeys": [
+          "acceptance_id"
+        ],
+        "hiddenRowIdentity": "guarded integer alias"
+      },
+      {
+        "table": "history_addresses",
+        "primaryKey": [
+          "result_id",
+          "address"
+        ],
+        "independentKeys": [
+          "result_id,address"
+        ],
+        "hiddenRowIdentity": "absent"
+      },
+      {
+        "table": "history_dependencies",
+        "primaryKey": [
+          "attempt_id",
+          "position"
+        ],
+        "independentKeys": [
+          "attempt_id,position"
+        ],
+        "hiddenRowIdentity": "absent"
+      },
+      {
+        "table": "history_edges",
+        "primaryKey": [
+          "result_id",
+          "parent_node",
+          "edge_kind",
+          "edge_key"
+        ],
+        "independentKeys": [
+          "result_id,parent_node,edge_kind,edge_key"
+        ],
+        "hiddenRowIdentity": "absent"
+      },
+      {
+        "table": "history_identity",
+        "primaryKey": [
+          "singleton"
+        ],
+        "independentKeys": [
+          "singleton"
+        ],
+        "hiddenRowIdentity": "guarded integer alias"
+      },
+      {
+        "table": "history_journal",
+        "primaryKey": [
+          "analysis",
+          "environment",
+          "collection",
+          "journal_key",
+          "revision"
+        ],
+        "independentKeys": [
+          "analysis,environment,collection,journal_key,revision",
+          "sequence"
+        ],
+        "hiddenRowIdentity": "absent"
+      },
+      {
+        "table": "history_nodes",
+        "primaryKey": [
+          "result_id",
+          "node_id"
+        ],
+        "independentKeys": [
+          "result_id,node_id"
+        ],
+        "hiddenRowIdentity": "absent"
+      },
+      {
+        "table": "history_promotion_results",
+        "primaryKey": [
+          "promotion_id",
+          "position"
+        ],
+        "independentKeys": [
+          "promotion_id,position",
+          "promotion_id,result_id"
+        ],
+        "hiddenRowIdentity": "absent"
+      },
+      {
+        "table": "history_promotions",
+        "primaryKey": [
+          "promotion_id"
+        ],
+        "independentKeys": [
+          "promotion_id"
+        ],
+        "hiddenRowIdentity": "guarded integer alias"
+      },
+      {
+        "table": "history_results",
+        "primaryKey": [
+          "result_id"
+        ],
+        "independentKeys": [
+          "result_id",
+          "publication"
+        ],
+        "hiddenRowIdentity": "guarded integer alias"
+      }
+    ],
+    "frozenV2Replacement": "succeeds",
+    "v3Replacement": "aborts with original row unchanged",
+    "recursiveTriggers": 0
+  },
+  "statusAfter": ""
+}

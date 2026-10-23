@@ -1,5 +1,5 @@
 ---
-'@microdelta/value': patch
+'@microdelta/value': minor
 '@microdelta/history': patch
 ---
 

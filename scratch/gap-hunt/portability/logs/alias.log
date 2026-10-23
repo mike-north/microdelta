@@ -1,0 +1,36 @@
+(node:71536) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL packages/core/.test-build/test/gap-hunt-portability-alias.test.js
+  ● hard file alias observes the same fenced writer
+
+    SqliteError: disk I/O error
+
+      277 |     },
+      278 |     get(...values: readonly ISqliteValue[]): ISqliteRow | undefined {
+    > 279 |       const cells: unknown = _typedBusy(() => statement.get(...prepareCall(values)));
+          |                                                         ^
+      280 |       return cells === undefined ? undefined : toRow(statement, cells);
+      281 |     },
+      282 |     all(...values: readonly ISqliteValue[]): readonly ISqliteRow[] {
+
+      at ../machine-node/src/node/sqlite.ts:279:57
+      at _typedBusy (../machine-node/src/node/sqlite.ts:110:12)
+      at Object.get (../machine-node/src/node/sqlite.ts:279:30)
+      at readWriter (../history/src/durable/index.ts:293:35)
+      at ../history/src/durable/index.ts:602:24
+      at sqliteTransaction.<anonymous> (../machine-node/src/node/sqlite.ts:221:26)
+      at sqliteTransaction (../../node_modules/better-sqlite3/lib/methods/transaction.js:65:24)
+      at ../machine-node/src/node/sqlite.ts:230:12
+      at ../machine-node/src/node/sqlite.ts:220:43
+      at _typedBusy (../machine-node/src/node/sqlite.ts:110:12)
+      at Object.transaction (../machine-node/src/node/sqlite.ts:220:16)
+      at ../history/src/durable/index.ts:601:49
+      at orContended (../history/src/durable/index.ts:348:14)
+      at Object.acquireWriter (../history/src/durable/index.ts:601:20)
+      at Object.<anonymous> (test/gap-hunt-portability-alias.test.ts:23:19)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 passed, 2 total
+Snapshots:   0 total
+Time:        0.133 s
+Ran all test suites within paths "packages/core/.test-build/test/gap-hunt-portability-alias.test.js".

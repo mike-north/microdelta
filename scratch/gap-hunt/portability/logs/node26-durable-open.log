@@ -1,0 +1,5 @@
+Error The module '<worktree>/scratch/gap-hunt/portability/pnpm10/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/build/Release/better_sqlite3.node'
+was compiled against a different Node.js version using
+NODE_MODULE_VERSION 137. This version of Node.js requires
+NODE_MODULE_VERSION 147. Please try re-compiling or re-installing
+the module (for instance, using `npm rebuild` or `npm install`).

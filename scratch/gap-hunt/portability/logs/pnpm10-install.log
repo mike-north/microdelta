@@ -1,0 +1,20 @@
+Progress: resolved 1, reused 0, downloaded 0, added 0
+Progress: resolved 10, reused 0, downloaded 9, added 0
+Progress: resolved 27, reused 1, downloaded 26, added 0
+ WARN  1 deprecated subdependencies found: prebuild-install@7.1.3
+Packages: +49
++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 49, reused 13, downloaded 36, added 40
+Progress: resolved 49, reused 13, downloaded 36, added 49, done
+
+dependencies:
++ microdelta 0.2.0
+
+╭ Warning ─────────────────────────────────────────────────────────────────────╮
+│                                                                              │
+│   Ignored build scripts: better-sqlite3@12.9.0.                              │
+│   Run "pnpm approve-builds" to pick which dependencies should be allowed     │
+│   to run scripts.                                                            │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Done in 3.5s using pnpm v10.34.7

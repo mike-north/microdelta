@@ -96,11 +96,14 @@ describe.each(['direct', 'template'] as const)('%s awaited source outcome', (tar
   test('fresh equal data publishes again, then explicit retain keeps the exact earlier reference', () => {
     const first = run(target, 'fresh', 1);
     expect(first).toMatchObject({ kind: 'returned', settled: { kind: 'published' }, calls: 1 });
+    expect(first.phases).toContain('publish');
     const equal = run(target, 'fresh', 1, reference(first));
     expect(equal).toMatchObject({ kind: 'returned', settled: { kind: 'published' }, historical: { value: 1 }, calls: 1 });
+    expect(equal.phases).toContain('publish');
     expect(reference(equal)).not.toEqual(reference(first));
     const retained = run(target, 'retain', 1, reference(first));
     expect(retained).toMatchObject({ kind: 'returned', settled: { kind: 'reused', reference: reference(equal) }, historical: { value: 1 }, calls: 1 });
+    expect(retained.phases).toContain('accept');
   });
 
   test('a consumed input read after await makes a changed previous result ineligible for retention', () => {

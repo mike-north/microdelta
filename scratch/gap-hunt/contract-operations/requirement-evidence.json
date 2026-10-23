@@ -251,7 +251,7 @@
       "requirement": "A-12",
       "classification": "bounded-aligned-with-residual-evidence-gap",
       "meaning": "Lost non-idempotent response is never blindly replayed; safe/provider-key retries keep operation identity; operator settle/abandon unblocks according to outcome.",
-      "residual": "Result-bearing successful settlement deferred M6; provider-expired deduplication safety is adapter policy, not universal exactly-once.",
+      "residual": "No automatic expiration/revocation of an earlier safety declaration or universal provider guarantee claimed; result-bearing settlement remains deferred M6.",
       "executedAssertionIds": [
         268,
         269,
@@ -281,7 +281,8 @@
         470,
         471,
         472
-      ]
+      ],
+      "crossOwnerSupplement": "Supervisor GAP-HUNT-STATUS links gap-hunt-contracts b2ad91b: finite-window fake-provider expiry, conservative adapter unknown/no resend after same-process session reopen. Not rerun by this worker."
     },
     {
       "requirement": "A-13",
@@ -1713,7 +1714,7 @@
       "requirement": "RUN-012",
       "classification": "bounded-aligned-with-residual-evidence-gap",
       "meaning": "Lost non-idempotent response is never blindly replayed; safe/provider-key retries keep operation identity; operator settle/abandon unblocks according to outcome.",
-      "residual": "Result-bearing successful settlement deferred M6; provider-expired deduplication safety is adapter policy, not universal exactly-once.",
+      "residual": "No automatic expiration/revocation of an earlier safety declaration or universal provider guarantee claimed; result-bearing settlement remains deferred M6.",
       "executedAssertionIds": [
         268,
         269,
@@ -1743,7 +1744,8 @@
         470,
         471,
         472
-      ]
+      ],
+      "crossOwnerSupplement": "Supervisor GAP-HUNT-STATUS links gap-hunt-contracts b2ad91b: finite-window fake-provider expiry, conservative adapter unknown/no resend after same-process session reopen. Not rerun by this worker."
     },
     {
       "requirement": "RUN-013",
@@ -1837,7 +1839,7 @@
       "requirement": "RUN-016",
       "classification": "bounded-aligned-with-residual-evidence-gap",
       "meaning": "Tracked gate excludes member work and preserves explicit required/skipped framework coverage.",
-      "residual": "Exact HR role mix, author filter reuse, and declared per-person source caps are application acceptance obligations, not proven by three-person fixtures.",
+      "residual": "Synthetic authored example uses real operation controls/corpus and summary memos/strict fold; no excluded provider calls, exact selected corpus, capped scope visible/not exhausted, normal ignores trial-only filters+cap. Example rolecounts are not generic normative selectors. Production HR/provider pagination and integration policies remain outside this fixture.",
       "executedAssertionIds": [
         315,
         316,
@@ -1847,7 +1849,13 @@
         327,
         328,
         329
-      ]
+      ],
+      "supplementalNamedAssertions": {
+        "suite": "packages/core/test/gap-hunt-durability-authored-trial.test.ts",
+        "log": "scratch/gap-hunt/contract-operations/authored-trial.log",
+        "outcome": "1 passed",
+        "name": "authored trial selection preserves full histories; explicit caps label restricted scope; normal mode ignores trial-only policy"
+      }
     },
     {
       "requirement": "RUN-017",

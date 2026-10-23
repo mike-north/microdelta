@@ -1,0 +1,31 @@
+watchman warning: Recrawled this watch 19 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-durability' ; watchman watch-project '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-durability'`
+
+(node:39891) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL packages/core/.test-build/test/gap-hunt-durability-authored-trial.test.js
+  ● authored trial selection preserves full histories; explicit caps label restricted scope; normal mode ignores trial-only policy
+
+    expect(received).toContainEqual(expected) // deep equality
+
+    Expected value: {"count": 0, "key": "design-1", "scope": "restricted", "sourceExhausted": false}
+    Received array: [{"count": 0, "key": "design-1", "scope": "full", "sourceExhausted": true}, {"count": 1, "key": "pm-1", "scope": "restricted", "sourceExhausted": false}, {"count": 1, "key": "pm-2", "scope": "full", "sourceExhausted": true}, {"count": 1, "key": "staff-1", "scope": "restricted", "sourceExhausted": false}, {"count": 1, "key": "staff-2", "scope": "restricted", "sourceExhausted": false}]
+
+       99 |     expect(receipts.map((receipt) => receipt.key).sort()).toEqual([...selected].sort());
+      100 |     expect(capped.value.required).toContainEqual({ key: 'pm-1', count: 1, scope: 'restricted', sourceExhausted: false });
+    > 101 |     expect(capped.value.required).toContainEqual({ key: 'design-1', count: 0, scope: 'restricted', sourceExhausted: false });
+          |                                   ^
+      102 |     expect(capped.value.required.every((entry) => entry.scope === 'restricted' && !entry.sourceExhausted)).toBe(true);
+      103 |     receipts.length = 0;
+      104 |     const normal = await start({ mode: 'normal', selected, trialPrCap: 1 }, 'normal');
+
+      at Object.<anonymous> (test/gap-hunt-durability-authored-trial.test.ts:101:35)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        0.229 s, estimated 1 s
+Ran all test suites within paths "packages/core/.test-build/test/gap-hunt-durability-authored-trial.test.js".

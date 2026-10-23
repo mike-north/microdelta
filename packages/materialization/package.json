@@ -1,6 +1,6 @@
 {
   "name": "@microdelta/materialization",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Selected immutable result views and explicit output materialization",
   "license": "UNLICENSED",
   "repository": {
@@ -38,9 +38,9 @@
     "directory": "test-d"
   },
   "dependencies": {
-    "@microdelta/history": "0.1.0",
-    "@microdelta/tracking": "0.2.0",
-    "@microdelta/value": "0.1.0"
+    "@microdelta/history": "0.2.0",
+    "@microdelta/tracking": "0.2.1",
+    "@microdelta/value": "0.1.1"
   },
   "publishConfig": {
     "access": "public"

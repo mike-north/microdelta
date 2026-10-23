@@ -1,6 +1,6 @@
 {
   "name": "@microdelta/tracking",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "Existing tracking context capability; implementation incomplete",
   "license": "UNLICENSED",
   "repository": {
@@ -38,8 +38,8 @@
     "directory": "test-d"
   },
   "dependencies": {
-    "@microdelta/machine": "0.1.0",
-    "@microdelta/value": "0.1.0",
+    "@microdelta/machine": "0.2.0",
+    "@microdelta/value": "0.1.1",
     "@preact/signals-core": "1.14.4"
   },
   "publishConfig": {

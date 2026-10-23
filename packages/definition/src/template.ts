@@ -122,11 +122,14 @@ export interface ITemplateMemoOptions<TFamily extends IBindingFamily, TChildren 
 export interface IMemberBuilder<TFamily extends IBindingFamily, TMember = unknown> {
   /** A member subject whose instances are `prefix:key`, computed from the key only. */
   subject(prefix: string): IMemberSubject;
-  /** Declare a member-scoped retained source whose callbacks receive the member binding. */
-  source<TResult>(options: ITemplateSourceOptions<TFamily, TResult, TMember>): ISourceDeclaration<TFamily, TResult, IMemberBinding<TFamily, TMember>>;
-  /** Declare a member-scoped memoized computation over sibling member steps, receiving the member binding. */
-  memo<TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult = unknown>(
+  /** Declare a member source with a container-root result and the member binding. */
+  source<TResult extends object>(options: ITemplateSourceOptions<TFamily, TResult, TMember>): ISourceDeclaration<TFamily, TResult, IMemberBinding<TFamily, TMember>>;
+  /** Declare a member memo whose awaited result has a container root. */
+  memo<TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult extends object = object>(
     options: ITemplateMemoOptions<TFamily, TChildren, TResult, TMember>,
+    // Check the entire settled union while retaining contextual callback inference.
+    // A Promise is an object but cannot carry a scalar past the result-root boundary.
+    ...root: [Awaited<TResult>] extends [object] ? [] : [unsupportedResultRoot: never]
   ): IMemoDeclaration<TFamily, TChildren, TResult, IMemberBinding<TFamily, TMember>>;
 }
 
@@ -461,7 +464,7 @@ export function declareTemplate<TFamily extends IBindingFamily, TCollection exte
       prefixes.set(subject, prefix);
       return subject;
     },
-    source<TResult>(
+    source<TResult extends object>(
       sourceOptions: ITemplateSourceOptions<TFamily, TResult, IMemberOf<TFamily, TCollection>>,
     ): ISourceDeclaration<TFamily, TResult, IMemberBinding<TFamily, IMemberOf<TFamily, TCollection>>> {
       assertOpen();
@@ -482,8 +485,9 @@ export function declareTemplate<TFamily extends IBindingFamily, TCollection exte
       adopt(declaration);
       return declaration;
     },
-    memo<TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult = unknown>(
+    memo<TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult extends object = object>(
       memoOptions: ITemplateMemoOptions<TFamily, TChildren, TResult, IMemberOf<TFamily, TCollection>>,
+      ..._root: [Awaited<TResult>] extends [object] ? [] : [unsupportedResultRoot: never]
     ): IMemoDeclaration<TFamily, TChildren, TResult, IMemberBinding<TFamily, IMemberOf<TFamily, TCollection>>> {
       assertOpen();
       const fields = readOptions(memoOptions);

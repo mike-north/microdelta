@@ -138,11 +138,11 @@ expectType<{ sentence: string }>(summaryResult);
 expectType<{ readonly authored: number }>(activityResult);
 
 // A template needs a keyed collection source; gates are synchronous booleans; member subjects are symbolic.
-expectError(template({ slot: 't', collection: plain, steps: (member) => ({ p: member.source<number>({ subject: member.subject('p'), run: () => ({ kind: 'retain' }) }) }) }));
-expectError(template({ slot: 't', collection: contributors, gate: () => 'yes', steps: (member) => ({ p: member.source<number>({ subject: member.subject('p'), run: () => ({ kind: 'retain' }) }) }) }));
-expectError(template({ slot: 't', collection: contributors, gate: async () => true, steps: (member) => ({ p: member.source<number>({ subject: member.subject('p'), run: () => ({ kind: 'retain' }) }) }) }));
-expectError(template({ slot: 't', collection: contributors, key: (member) => member.authored, steps: (member) => ({ p: member.source<number>({ subject: member.subject('p'), run: () => ({ kind: 'retain' }) }) }) }));
-expectError(template({ slot: 't', collection: contributors, steps: (member) => ({ p: member.source<number>({ subject: 'plain:subject', run: () => ({ kind: 'retain' }) }) }) }));
+expectError(template({ slot: 't', collection: plain, steps: (member) => ({ p: member.source<{ readonly value: number }>({ subject: member.subject('p'), run: () => ({ kind: 'retain' }) }) }) }));
+expectError(template({ slot: 't', collection: contributors, gate: () => 'yes', steps: (member) => ({ p: member.source<{ readonly value: number }>({ subject: member.subject('p'), run: () => ({ kind: 'retain' }) }) }) }));
+expectError(template({ slot: 't', collection: contributors, gate: async () => true, steps: (member) => ({ p: member.source<{ readonly value: number }>({ subject: member.subject('p'), run: () => ({ kind: 'retain' }) }) }) }));
+expectError(template({ slot: 't', collection: contributors, key: (member) => member.authored, steps: (member) => ({ p: member.source<{ readonly value: number }>({ subject: member.subject('p'), run: () => ({ kind: 'retain' }) }) }) }));
+expectError(template({ slot: 't', collection: contributors, steps: (member) => ({ p: member.source<{ readonly value: number }>({ subject: 'plain:subject', run: () => ({ kind: 'retain' }) }) }) }));
 expectNotAssignable<IMemberSubject>({ prefix: 'forged' });
 
 // Folds name a declared step and see explicit entries; data exists only on succeeded entries.
@@ -239,15 +239,15 @@ template({
   collection: contributors,
   steps: (member) => {
     const activity = member.source<{ readonly authored: number }>({ subject: member.subject('nested-activity'), run: () => ({ kind: 'retain' }) });
-    const profile = member.memo({ subject: member.subject('nested-profile'), children: { activity }, run: () => 'profile' });
+    const profile = member.memo({ subject: member.subject('nested-profile'), children: { activity }, run: () => ({ value: 'profile' }) });
     const summary = member.memo({
       subject: member.subject('nested-summary'),
       children: { activity, profile, assess: assessor },
       run: async ({ calls }) => {
         const { data: profileView } = await calls.profile();
-        expectType<IView<string>>(profileView);
+        expectType<IView<{ value: string }>>(profileView);
         const { data: assessment } = await calls.assess(1);
-        return assessment.score;
+        return { score: assessment.score };
       },
     });
     return { activity, profile, summary };

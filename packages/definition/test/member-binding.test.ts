@@ -44,21 +44,21 @@ function buildBound() {
           return { owner: bound.key ?? '' };
         },
       });
-      const summary = member.memo({
+      const summary = member.memo<Record<never, never>, { readonly value: number }>({
         subject: member.subject('summary:bound'),
         run: ({ member: bound }) => {
           seen.memo = bound;
-          return bound.authored;
+          return { value: bound.authored };
         },
       });
       return { activity, summary };
     },
   });
-  const ordinary = memo({ subject: 'ordinary:bound', run: () => 'ordinary' });
+  const ordinary = memo({ subject: 'ordinary:bound', run: () => ({ value: 'ordinary' }) });
   const composition = compose({
     scope: keyedScope,
     steps: [{ slot: 'contributors', declaration: contributors }, { slot: 'ordinary', declaration: ordinary }],
-    members: [{ key: 'person:ada', steps: [{ slot: 'explicit', declaration: memo({ subject: 'explicit:bound', run: () => 'explicit' }) }] }],
+    members: [{ key: 'person:ada', steps: [{ slot: 'explicit', declaration: memo({ subject: 'explicit:bound', run: () => ({ value: 'explicit' }) }) }] }],
     templates: [contributor],
   });
   composition.keyMembers('contributor', { members: [ada], status: 'complete' });
@@ -104,7 +104,7 @@ describe('member binding of template member steps (CMP-4)', () => {
     expect(sourceInvocation.apply({}, undefined, directInvoker(), supplying(view, asked))).toEqual({ owner: 'person:ada' });
     expect(sourceInvocation.applyFinality({}, previous, directInvoker(), supplying(view, asked))).toBe(true);
     const memoInvocation = asMemo(openInvocation(composition, summary, fakePort().port));
-    expect(memoInvocation.apply({}, directInvoker(), supplying(view, asked))).toBe(3);
+    expect(memoInvocation.apply({}, directInvoker(), supplying(view, asked))).toEqual({ value: 3 });
     expect(seen).toEqual({ run: view, finality: view, memo: view });
     expect(seen.run).toBe(view);
     // The supplier was asked for the template's own collection declaration and each instance descriptor.

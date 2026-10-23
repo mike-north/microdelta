@@ -204,10 +204,10 @@ describe('version-2 witnesses in call order (acceptance 5)', () => {
   test('M3 compatibility: parents whose children are all sources dispatch the version-1 witness, including composition-level parents', async () => {
     const fake = fakePort();
     let calls: { readonly discovery: () => Promise<IChildResult<unknown>> } | undefined;
-    const discovery = source({ subject: 'contributors:v1', run: () => 1 });
-    const parent = memo({ subject: 'report:v1', children: { discovery }, run: context => {
+    const discovery = source({ subject: 'contributors:v1', run: () => ({ value: 1 }) });
+    const parent = memo<{ readonly discovery: typeof discovery }, { readonly value: number }>({ subject: 'report:v1', children: { discovery }, run: context => {
       calls = context.calls;
-      return 1;
+      return { value: 1 };
     } });
     const composition = compose({ scope: nestedScope, steps: [{ slot: 'discovery', declaration: discovery }, { slot: 'report', declaration: parent }] });
     const opened = asMemo(openInvocation(composition, levelStep('report'), fake.port));
@@ -382,9 +382,9 @@ describe('argument-bearing handles (acceptance 4)', () => {
   test('CMP-9: a composition-level parent has no member binding to forward', async () => {
     const assessor = stepSlot<IAssessorParameters, IAssessment>({ slot: 'assessor' });
     let calls: { readonly assess: ICalls<ITestFamily, { readonly assess: typeof assessor }>['assess'] } | undefined;
-    const report = memo({ subject: 'report:slot', children: { assess: assessor }, run: context => {
+    const report = memo<{ readonly assess: typeof assessor }, { readonly value: number }>({ subject: 'report:slot', children: { assess: assessor }, run: context => {
       calls = context.calls;
-      return 1;
+      return { value: 1 };
     } });
     const composition = compose({
       scope: nestedScope,

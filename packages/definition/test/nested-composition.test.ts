@@ -117,8 +117,8 @@ describe('composition-level steps (acceptance 1)', () => {
   });
 
   test('EXP-1: a multiply occupied composition-level slot is ambiguous, distinct from missing, and cannot be opened', () => {
-    const first = source({ subject: 'contributors:first', run: () => 1 });
-    const second = source({ subject: 'contributors:second', run: () => 2 });
+    const first = source({ subject: 'contributors:first', run: () => ({ value: 1 }) });
+    const second = source({ subject: 'contributors:second', run: () => ({ value: 2 }) });
     const composition = compose({ scope: nestedScope, steps: [{ slot: 'discovery', declaration: first }, { slot: 'discovery', declaration: second }] });
     expect(composition.resolve(levelStep('discovery'))).toEqual({ status: 'ambiguous', descriptor: levelStep('discovery'), occupants: 2 });
     expectDefinitionError(() => openInvocation(composition, levelStep('discovery'), idlePort), 'unresolved-parent');
@@ -126,15 +126,15 @@ describe('composition-level steps (acceptance 1)', () => {
   });
 
   test('CMP-1: a composition may declare only composition-level steps', () => {
-    const discovery = source({ subject: 'contributors:only', run: () => 1 });
+    const discovery = source({ subject: 'contributors:only', run: () => ({ value: 1 }) });
     const composition = compose({ scope: nestedScope, steps: [{ slot: 'discovery', declaration: discovery }] });
     expect(composition.topology.steps).toEqual([levelStep('discovery')]);
     expect(openInvocation(composition, levelStep('discovery'), idlePort).kind).toBe('source');
   });
 
   test('RES-001: composition-level and member steps share one scoped subject namespace', () => {
-    const shared = source({ subject: 'activity:shared', run: () => 1 });
-    const impostor = source({ subject: 'activity:shared', run: () => 2 });
+    const shared = source({ subject: 'activity:shared', run: () => ({ value: 1 }) });
+    const impostor = source({ subject: 'activity:shared', run: () => ({ value: 2 }) });
     expectDefinitionError(() => compose({
       scope: nestedScope,
       steps: [{ slot: 'discovery', declaration: shared }],
@@ -143,15 +143,15 @@ describe('composition-level steps (acceptance 1)', () => {
   });
 
   test('CMP-7: a member memo cannot name a composition-level step, and a composition-level memo cannot name a member step', () => {
-    const discovery = source({ subject: 'contributors:x', run: () => 1 });
-    const summary = memo({ subject: 'summary:x', children: { discovery }, run: () => 1 });
+    const discovery = source({ subject: 'contributors:x', run: () => ({ value: 1 }) });
+    const summary = memo({ subject: 'summary:x', children: { discovery }, run: () => ({ value: 1 }) });
     expectDefinitionError(() => compose({
       scope: nestedScope,
       steps: [{ slot: 'discovery', declaration: discovery }],
       members: [{ key: 'person:ada', steps: [{ slot: 'summary', declaration: summary }] }],
     }), 'illegal-edge');
-    const activity = source({ subject: 'activity:x', run: () => 1 });
-    const report = memo({ subject: 'report:x', children: { activity }, run: () => 1 });
+    const activity = source({ subject: 'activity:x', run: () => ({ value: 1 }) });
+    const report = memo({ subject: 'report:x', children: { activity }, run: () => ({ value: 1 }) });
     expectDefinitionError(() => compose({
       scope: nestedScope,
       steps: [{ slot: 'report', declaration: report }],
@@ -160,14 +160,14 @@ describe('composition-level steps (acceptance 1)', () => {
   });
 
   test('CMP-9: composition-level step registrations are captured without running accessors, and later mutation is inert', () => {
-    const getter = jest.fn(() => source({ subject: 'contributors:getter', run: () => 1 }));
+    const getter = jest.fn(() => source({ subject: 'contributors:getter', run: () => ({ value: 1 }) }));
     const accessor = Object.defineProperty({ slot: 'discovery' }, 'declaration', { get: getter, enumerable: true });
     expectDefinitionError(() => Reflect.apply(compose, undefined, [{ scope: nestedScope, steps: [accessor] }]), 'forged-declaration');
     expect(getter).not.toHaveBeenCalled();
-    const discovery = source({ subject: 'contributors:y', run: () => 1 });
+    const discovery = source({ subject: 'contributors:y', run: () => ({ value: 1 }) });
     const steps = [{ slot: 'discovery', declaration: discovery }];
     const composition = compose({ scope: nestedScope, steps });
-    steps.push({ slot: 'late', declaration: source({ subject: 'late', run: () => 1 }) });
+    steps.push({ slot: 'late', declaration: source({ subject: 'late', run: () => ({ value: 1 }) }) });
     expect(composition.resolve(levelStep('late')).status).toBe('missing');
   });
 });
@@ -183,9 +183,9 @@ describe('memo children (acceptance 2)', () => {
   });
 
   test('CMP-7: a memo child with no declared sibling slot is an undeclared edge rejected with illegal-edge', () => {
-    const activity = source({ subject: 'activity:a', run: () => 1 });
-    const profile = memo({ subject: 'profile:a', children: { activity }, run: () => 1 });
-    const summary = memo({ subject: 'summary:a', children: { profile }, run: () => 1 });
+    const activity = source({ subject: 'activity:a', run: () => ({ value: 1 }) });
+    const profile = memo({ subject: 'profile:a', children: { activity }, run: () => ({ value: 1 }) });
+    const summary = memo({ subject: 'summary:a', children: { profile }, run: () => ({ value: 1 }) });
     expectDefinitionError(() => compose({
       scope: nestedScope,
       members: [{ key: 'person:ada', steps: [{ slot: 'activity', declaration: activity }, { slot: 'summary', declaration: summary }] }],
@@ -193,10 +193,10 @@ describe('memo children (acceptance 2)', () => {
   });
 
   test('CMP-7: a memo child slot occupied by a different memo declaration is rejected with illegal-edge', () => {
-    const activity = source({ subject: 'activity:a', run: () => 1 });
-    const pinned = memo({ subject: 'profile:a', children: { activity }, run: () => 1 });
-    const occupant = memo({ subject: 'profile:b', children: { activity }, run: () => 1 });
-    const summary = memo({ subject: 'summary:a', children: { profile: pinned }, run: () => 1 });
+    const activity = source({ subject: 'activity:a', run: () => ({ value: 1 }) });
+    const pinned = memo({ subject: 'profile:a', children: { activity }, run: () => ({ value: 1 }) });
+    const occupant = memo({ subject: 'profile:b', children: { activity }, run: () => ({ value: 1 }) });
+    const summary = memo({ subject: 'summary:a', children: { profile: pinned }, run: () => ({ value: 1 }) });
     expectDefinitionError(() => compose({
       scope: nestedScope,
       members: [{
@@ -207,9 +207,9 @@ describe('memo children (acceptance 2)', () => {
   });
 
   test('CMP-7: a memo child in an ambiguous sibling slot is rejected rather than chosen by order', () => {
-    const activity = source({ subject: 'activity:a', run: () => 1 });
-    const profile = memo({ subject: 'profile:a', children: { activity }, run: () => 1 });
-    const summary = memo({ subject: 'summary:a', children: { profile }, run: () => 1 });
+    const activity = source({ subject: 'activity:a', run: () => ({ value: 1 }) });
+    const profile = memo({ subject: 'profile:a', children: { activity }, run: () => ({ value: 1 }) });
+    const summary = memo({ subject: 'summary:a', children: { profile }, run: () => ({ value: 1 }) });
     expectDefinitionError(() => compose({
       scope: nestedScope,
       members: [{
@@ -225,9 +225,9 @@ describe('memo children (acceptance 2)', () => {
   });
 
   test('CMP-1: memo edges cannot form a cycle; a parent occupying its own child slot is rejected', () => {
-    const activity = source({ subject: 'activity:a', run: () => 1 });
-    const profile = memo({ subject: 'profile:a', children: { activity }, run: () => 1 });
-    const summary = memo({ subject: 'summary:a', children: { profile }, run: () => 1 });
+    const activity = source({ subject: 'activity:a', run: () => ({ value: 1 }) });
+    const profile = memo({ subject: 'profile:a', children: { activity }, run: () => ({ value: 1 }) });
+    const summary = memo({ subject: 'summary:a', children: { profile }, run: () => ({ value: 1 }) });
     expectDefinitionError(() => compose({
       scope: nestedScope,
       members: [{ key: 'person:ada', steps: [{ slot: 'activity', declaration: activity }, { slot: 'profile', declaration: summary }] }],
@@ -324,7 +324,7 @@ describe('supplied callable step slots (acceptance 3)', () => {
     expect(assessor).toMatchObject({ kind: 'step-slot', slot: 'assessor' });
     expectDefinitionError(() => Reflect.apply(supply, undefined, [{ slot: assessor, declaration: rubric('A'), subject: 'assessment:x' }]), 'invalid-subject');
     expectDefinitionError(() => Reflect.apply(supply, undefined, [{ slot: { kind: 'step-slot', slot: 'assessor' }, declaration: rubric('A'), subject: assessmentSubject }]), 'forged-declaration');
-    const summary = memo({ subject: 'summary:z', run: () => 1 });
+    const summary = memo({ subject: 'summary:z', run: () => ({ value: 1 }) });
     expectDefinitionError(() => Reflect.apply(supply, undefined, [{ slot: assessor, declaration: summary, subject: assessmentSubject }]), 'forged-declaration');
   });
 
@@ -369,7 +369,7 @@ describe('supplied callable step slots (acceptance 3)', () => {
 
   test('CMP-1: two calls naming one slot declare a single topology edge', () => {
     const assessor = stepSlot<IAssessorParameters, IAssessment>({ slot: 'assessor' });
-    const summary = memo({ subject: 'summary:twice', children: { first: assessor, second: assessor }, run: () => 1 });
+    const summary = memo({ subject: 'summary:twice', children: { first: assessor, second: assessor }, run: () => ({ value: 1 }) });
     const composition = compose({
       scope: nestedScope,
       members: [{ key: 'person:ada', steps: [{ slot: 'summary', declaration: summary }] }],
@@ -396,8 +396,8 @@ describe('supplied callable step slots (acceptance 3)', () => {
   });
 
   test('M3 compatibility: a composition without nested declarations keeps its steps, edges and empty slot list', () => {
-    const activity = source({ subject: 'activity:m3', run: () => 1 });
-    const summary = memo({ subject: 'summary:m3', children: { activity }, run: () => 1 });
+    const activity = source({ subject: 'activity:m3', run: () => ({ value: 1 }) });
+    const summary = memo({ subject: 'summary:m3', children: { activity }, run: () => ({ value: 1 }) });
     const steps: readonly { readonly slot: string; readonly declaration: IStepDeclaration<ITestFamily> }[] = [
       { slot: 'activity', declaration: activity },
       { slot: 'summary', declaration: summary },

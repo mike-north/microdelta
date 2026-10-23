@@ -31,6 +31,12 @@ composes the owners and adds no policy of its own:
   `suppliedStep` and `supply` (callable step slots bound at composition),
   the canonical `forward` argument origins, and `compose`. Step callbacks also
   receive the observed `untracked` read.
+- Completed source results and awaited memo results have a record or array
+  root in this alpha path. Wrap a scalar as a field, such as `{ value: 42 }`;
+  `undefined` is also supported as a present field value. Source callbacks
+  still return a trusted `sourceOutcome.fresh(recordOrArray)` or `retain()`
+  outcome, synchronously or through a promise. The runtime validates the
+  actual result shape for untyped callers.
 - `openWorkspace({ location, logicalStore })`: durable History over Node's
   SQLite and clock. `workspace.run(options, body)` is one Run Supervision run
   whose Resolution resolves against that store; the run offers the normal entry

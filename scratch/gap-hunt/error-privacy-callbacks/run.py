@@ -18,9 +18,9 @@ print('Evidence output: '+str(OUT),flush=True)
 def save(): (OUT/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
 def run(name,args):
     p=subprocess.run(args,cwd=ROOT,capture_output=True,text=True,timeout=900)
-    (OUT/(name+'.stdout.log')).write_text(p.stdout.replace(str(ROOT),'<checkout>'))
-    (OUT/(name+'.stderr.log')).write_text(p.stderr.replace(str(ROOT),'<checkout>'))
-    receipt['commands'].append({'name':name,'argv':args,'exit':p.returncode});save()
+    (OUT/(name+'.stdout.log')).write_text(p.stdout.replace(str(ROOT),'<checkout>').replace(str(OUT),'<evidence-output>'))
+    (OUT/(name+'.stderr.log')).write_text(p.stderr.replace(str(ROOT),'<checkout>').replace(str(OUT),'<evidence-output>'))
+    receipt['commands'].append({'name':name,'argv':[a.replace(str(OUT),'<evidence-output>') for a in args],'exit':p.returncode});save()
     print(name+': '+str(p.returncode),flush=True)
     return p
 for name,args in [('install',['npm','ci','--no-audit','--no-fund']),('build',['npm','run','build:packages']),('compile',['node_modules/.bin/tsc','-p',PREFIX+'tsconfig.json']),('lint',['node_modules/.bin/eslint','-c',PREFIX+'eslint.config.mjs',PREFIX+'callbacks.test.ts','--max-warnings','0'])]:

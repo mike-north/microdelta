@@ -1,0 +1,45 @@
+✔ experimental memo flags a mutable external capture in an actual author module (777.508333ms)
+✔ an imported alias of the real constructor keeps the same capture boundary (16.149334ms)
+✔ selected callback parameters pass, and a same-named local function has no constructor authority (28.913583ms)
+✔ alpha consumer resolves real generated Tracking, Materialization, Value, and producer declarations (186.873875ms)
+✔ typed capture fixture accepts branded influences and flags each documented negative (286.725042ms)
+✔ typed capture checking fails closed when parser services have no TypeScript program (1.820417ms)
+✔ shadowed Math methods do not inherit global builtin authority (18.23925ms)
+✔ immutable language globals are allowed while callback-local shadows remain captures (9.31775ms)
+✔ callback receiver access is diagnosed as outside the supported capture syntax (7.247042ms)
+✔ nested callback receivers remain unsupported without leaking into sibling callbacks (5.912958ms)
+✔ literal-computed canonical observer boundaries are diagnosed as unsupported syntax (4.099708ms)
+✔ canonical snapshot and Materialization observation receivers are allowed with branded inputs (13.7015ms)
+✔ Materialization lazy scalar views preserve Tracking brands while detached outputs do not (8.095917ms)
+✔ same-spelled fake Materialization methods do not grant receiver authority (10.435916ms)
+✔ Materialization receiver authority does not cover unrelated methods or unbranded arguments (11.282292ms)
+✔ Tracking source programs retain capture checks when the separate ITracking declaration is present (295.043625ms)
+✔ an unresolved Materialization receiver has no capability authority without its owner declaration (9.0395ms)
+✔ alpha consumer resolves the real generated Definition declaration (467.946208ms)
+✔ Definition capture fixture accepts the M3 authoring shape and flags each documented negative (17.112416ms)
+✔ Definition source and memo callbacks are capture boundaries for raw external influences (11.748458ms)
+✔ Definition callback parameters, tracked captures and canonical handles are accepted (14.931417ms)
+✔ unsupported Definition callback forms are diagnosed at the declaration boundary (13.434584ms)
+✔ receiver access inside a Definition callback is unsupported (9.224542ms)
+✔ same-spelled non-Definition APIs are not boundaries and forged handle brands are not capabilities (10.190666ms)
+✔ Definition receivers are not whitelisted as a family inside capture boundaries (9.434875ms)
+✔ type-only references inside a callback are not external influences, while value uses still are (7.948834ms)
+✔ supplied step run callbacks are capture boundaries (EXP-4 CX-2) (9.82225ms)
+✔ template member-builder run and finality callbacks are capture boundaries (13.505625ms)
+✔ template gate and custom key callbacks are capture boundaries (16.512791ms)
+✔ fold run callbacks are capture boundaries (12.808666ms)
+✔ unsupported callback forms at the new boundaries are diagnosed (10.925291ms)
+✔ Definition's canonical forward is a capability inside a callback; a look-alike is an external influence (10.804125ms)
+✔ Tracking's observed untracked read and its justification query are observer capabilities (5.480375ms)
+✔ only a receiver that resolves to Definition's canonical forward is a capability; a value annotated IForward is not (20.9ms)
+✔ forward is accepted only through an unreassigned const that traces to a canonical builder factory call (15.169125ms)
+✔ the facade's authoring() builders are canonical factories too (10.700708ms)
+✔ forward receivers that only claim the IDeclarations type are external influences (15.988458ms)
+ℹ tests 37
+ℹ suites 0
+ℹ pass 37
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2066.865667

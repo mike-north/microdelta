@@ -1,0 +1,108 @@
+[
+  {
+    "size": 100,
+    "window": 1,
+    "phase": "admission",
+    "sourceBodies": 1,
+    "topologyUnchanged": true,
+    "admissionCalls": 1,
+    "bodies": 0,
+    "queuedPromises": 99,
+    "permitPromiseInits": 100,
+    "pendingLaneWaits": 99,
+    "pendingLaneWaitsAfterStop": 0,
+    "reportMembers": 100,
+    "publishedMembers": 0,
+    "queuePromiseSites": [
+      "    at Object.acquire (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178/packages/supervision/dist/src/permits.js:43:20)"
+    ]
+  },
+  {
+    "size": 1000,
+    "window": 1,
+    "phase": "admission",
+    "sourceBodies": 1,
+    "topologyUnchanged": true,
+    "admissionCalls": 1,
+    "bodies": 0,
+    "queuedPromises": 999,
+    "permitPromiseInits": 1000,
+    "pendingLaneWaits": 999,
+    "pendingLaneWaitsAfterStop": 0,
+    "reportMembers": 1000,
+    "publishedMembers": 0,
+    "queuePromiseSites": [
+      "    at Object.acquire (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178/packages/supervision/dist/src/permits.js:43:20)"
+    ]
+  },
+  {
+    "size": 100,
+    "window": 8,
+    "phase": "admission",
+    "sourceBodies": 1,
+    "topologyUnchanged": true,
+    "admissionCalls": 8,
+    "bodies": 0,
+    "queuedPromises": 92,
+    "permitPromiseInits": 100,
+    "pendingLaneWaits": 92,
+    "pendingLaneWaitsAfterStop": 0,
+    "reportMembers": 100,
+    "publishedMembers": 0,
+    "queuePromiseSites": [
+      "    at Object.acquire (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178/packages/supervision/dist/src/permits.js:43:20)"
+    ]
+  },
+  {
+    "size": 1000,
+    "window": 8,
+    "phase": "admission",
+    "sourceBodies": 1,
+    "topologyUnchanged": true,
+    "admissionCalls": 8,
+    "bodies": 0,
+    "queuedPromises": 992,
+    "permitPromiseInits": 1000,
+    "pendingLaneWaits": 992,
+    "pendingLaneWaitsAfterStop": 0,
+    "reportMembers": 1000,
+    "publishedMembers": 0,
+    "queuePromiseSites": [
+      "    at Object.acquire (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178/packages/supervision/dist/src/permits.js:43:20)"
+    ]
+  },
+  {
+    "size": 8,
+    "window": 8,
+    "phase": "admission",
+    "sourceBodies": 1,
+    "topologyUnchanged": true,
+    "admissionCalls": 8,
+    "bodies": 0,
+    "queuedPromises": 0,
+    "permitPromiseInits": 8,
+    "pendingLaneWaits": 0,
+    "pendingLaneWaitsAfterStop": 0,
+    "reportMembers": 8,
+    "publishedMembers": 0,
+    "queuePromiseSites": []
+  },
+  {
+    "size": 100,
+    "window": 8,
+    "phase": "body",
+    "sourceBodies": 1,
+    "topologyUnchanged": true,
+    "admissionCalls": 8,
+    "bodies": 8,
+    "queuedPromises": 92,
+    "permitPromiseInits": 100,
+    "pendingLaneWaits": 92,
+    "pendingLaneWaitsAfterStop": 0,
+    "reportMembers": 100,
+    "publishedMembers": 0,
+    "queuePromiseSites": [
+      "    at Object.acquire (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178/packages/supervision/dist/src/permits.js:43:20)"
+    ]
+  }
+]

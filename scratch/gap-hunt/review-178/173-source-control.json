@@ -1,0 +1,32 @@
+{
+  "packages/resolution/src/resolution.ts": {
+    "base_equals_review_head": true,
+    "sha256": "0a8c2d2adf9aa5c52a453e8415475cbefbc0daf6233c99d6ae68813714c5c3f5",
+    "blob": "f6017e0105d24fdcff33d9ad6b617886d0746bf8"
+  },
+  "packages/supervision/src/permits.ts": {
+    "base_equals_review_head": true,
+    "sha256": "0c285c5771f8f9a1f5f43fe5dbc558faf218cb288b2e0df7c174deca9339b0ba",
+    "blob": "d92953cf04e09f95ced94f6f3e6aa4882d0cb830"
+  },
+  "packages/supervision/src/execution.ts": {
+    "base_equals_review_head": true,
+    "sha256": "def1978bc941e4e9b727065e53583007978669aa110dd673fd7c069243db00a3",
+    "blob": "c4a27b4a58bd23fd55b90ba74cde12a9d5e10ec9"
+  },
+  "packages/supervision/src/supervision.ts": {
+    "base_equals_review_head": true,
+    "sha256": "876fb1aa011c040e271b5cecc0a1494d28fa49740a9b3a18cbdafa1e821e3eb5",
+    "blob": "f1d1d05aa754e9c31eb855fb8d040b24ca2185e2"
+  },
+  "packages/resolution/src/contracts.ts": {
+    "base_equals_review_head": true,
+    "sha256": "2f5e0063efea77202ce59e2f677359ad34099d0b2da9d1a1cde130b427641789",
+    "blob": "fa64c7083976bcd6183497c0615f1b191b208aa7"
+  },
+  "packages/supervision/src/contracts.ts": {
+    "base_equals_review_head": true,
+    "sha256": "485a56bd0e748b8df508e6c634eb5b90f8ff3f84add0e0c552bf66d7b550242c",
+    "blob": "d6105b202495303e97e68bcf4e4899ca19d152da"
+  }
+}

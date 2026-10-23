@@ -1,0 +1,26 @@
+[
+  {
+    "file": "occurrence-worker.ts",
+    "sha256": "ce621cf625d551d02cc98dea6ea45597afef878edc2fc1cef69df120f4a27320"
+  },
+  {
+    "file": "tsconfig.occurrence.json",
+    "sha256": "4916ed1bd7dc959af58f2e20347ddb133effea4f8237d99d0c519c5867179950"
+  },
+  {
+    "file": "occurrence.eslint.config.mjs",
+    "sha256": "8bfa6354df287313d575f81a9a62b44c19fa86dbd447bc5c47c73eb93064ce8d"
+  },
+  {
+    "file": "occurrence.jest.config.mjs",
+    "sha256": "c45e49dc5eee037f021a811f9576a810151367591ae614781de98dd890c6e52f"
+  },
+  {
+    "file": "occurrence.test.mjs",
+    "sha256": "95662334938d6dec5f3f2f3f928896c4d524ab104b9c8dc2b92f95c27b3fe670"
+  },
+  {
+    "file": "repro-occurrence.py",
+    "sha256": "60f06b40ae4fecc854258da27ac0d67ff3529e0652f5a629efadfa44ea1e2d0b"
+  }
+]

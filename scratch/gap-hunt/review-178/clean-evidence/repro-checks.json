@@ -1,0 +1,68 @@
+[
+  {
+    "name": "install",
+    "argv": [
+      "npm",
+      "ci",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "exit_code": 0,
+    "seconds": 3.3559391498565674,
+    "log_sha256": "0c96d20a71003a6f36eedd391e87a94a35ebd2e664bf4265365ad33d85e01506"
+  },
+  {
+    "name": "packages",
+    "argv": [
+      "npm",
+      "run",
+      "build:packages"
+    ],
+    "exit_code": 0,
+    "seconds": 22.314239025115967,
+    "log_sha256": "d3b897366790a7b33fd8de10a759c7523a98aa5e97374328a6832891dcf850ff"
+  },
+  {
+    "name": "types",
+    "argv": [
+      "node",
+      "node_modules/typescript/bin/tsc",
+      "-p",
+      "scratch/gap-hunt/review-178/tsconfig.occurrence.json"
+    ],
+    "exit_code": 0,
+    "seconds": 0.7542538642883301,
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "name": "lint",
+    "argv": [
+      "node",
+      "node_modules/eslint/bin/eslint.js",
+      "--no-ignore",
+      "--config",
+      "scratch/gap-hunt/review-178/occurrence.eslint.config.mjs",
+      "scratch/gap-hunt/review-178/occurrence-worker.ts"
+    ],
+    "exit_code": 0,
+    "seconds": 1.0944509506225586,
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "name": "jest",
+    "argv": [
+      "node",
+      "--experimental-vm-modules",
+      "node_modules/jest/bin/jest.js",
+      "--config",
+      "scratch/gap-hunt/review-178/occurrence.jest.config.mjs",
+      "--runInBand",
+      "--json",
+      "--outputFile",
+      "/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-clean/scratch/gap-hunt/review-178/local-results/repro-jest-results.json"
+    ],
+    "exit_code": 1,
+    "seconds": 1.799245834350586,
+    "log_sha256": "346a2534278be7a71840608c66babb4b4178b7b00febd33c307d981e5fc53ddc"
+  }
+]

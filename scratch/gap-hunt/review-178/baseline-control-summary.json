@@ -1,0 +1,22 @@
+{
+  "scalar": {
+    "executions": 1,
+    "publications": 0,
+    "code": "unsupported-result"
+  },
+  "subtree_restart": {
+    "parent_executions": 0,
+    "parent_reference_retained": true,
+    "child_executions": 1,
+    "child_publications": 1,
+    "child_reference_changed": true,
+    "cold_child_reference": {
+      "kind": "completed-result",
+      "locator": "mdh1|[\"authoring-baseline\",\"authoring:baseline\",\"test\",2]"
+    },
+    "restart_child_reference": {
+      "kind": "completed-result",
+      "locator": "mdh1|[\"authoring-baseline\",\"authoring:baseline\",\"test\",3]"
+    }
+  }
+}

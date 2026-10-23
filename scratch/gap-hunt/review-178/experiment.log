@@ -1,0 +1,12 @@
+
+> @microdelta/workspace@0.0.0 test:exp-authoring
+> tsd --typings experiments/exp-authoring/src/protocol.ts --files experiments/exp-authoring/test-d/protocol.test-d.ts && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-authoring/jest.config.mjs --runInBand
+
+(node:7756) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+Test Suites: 3 passed, 3 total
+Tests:       16 passed, 16 total
+Snapshots:   0 total
+Time:        2.241 s
+Ran all test suites.

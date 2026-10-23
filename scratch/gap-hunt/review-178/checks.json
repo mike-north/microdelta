@@ -1,0 +1,214 @@
+[
+  {
+    "id": "extension-types",
+    "argv": [
+      "node",
+      "node_modules/typescript/bin/tsc",
+      "-p",
+      "scratch/gap-hunt/consumer-dx/tsconfig.current-output.json"
+    ],
+    "exit_code": 0,
+    "seconds": 0.6191320419311523,
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "id": "scalar-types",
+    "argv": [
+      "npm",
+      "run",
+      "test:types",
+      "-w",
+      "microdelta"
+    ],
+    "exit_code": 0,
+    "seconds": 1.6019980907440186,
+    "log_sha256": "2b2f02d642d24fed46c431e36e70aad845e4b153d65d0e1558c01dafa6302308"
+  },
+  {
+    "id": "156",
+    "argv": [
+      "npm",
+      "run",
+      "test:unit",
+      "-w",
+      "microdelta",
+      "--",
+      "--runTestsByPath",
+      ".test-build/test/gap-hunt-contracts-scalar-roots.test.js",
+      "--json",
+      "--outputFile",
+      "/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178/scratch/gap-hunt/review-178/156-results.json"
+    ],
+    "exit_code": 1,
+    "seconds": 3.385679244995117,
+    "log_sha256": "63e769bf23403f40274753688d522cfc9f0464a19cbf283b198d1203d4e0e72a",
+    "counts_failed_passed_skipped": [
+      10,
+      5,
+      0
+    ]
+  },
+  {
+    "id": "164-input",
+    "argv": [
+      "npm",
+      "run",
+      "test:unit",
+      "-w",
+      "microdelta",
+      "--",
+      "--runTestsByPath",
+      ".test-build/test/gap-hunt-contracts-output.test.js",
+      "--json",
+      "--outputFile",
+      "/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178/scratch/gap-hunt/review-178/164-input-results.json",
+      "--testNamePattern",
+      "scalar-only output|base \u2192 base"
+    ],
+    "exit_code": 1,
+    "seconds": 3.9554200172424316,
+    "log_sha256": "ec828c8a263b372c30c8d728d846d1d4f2540c88c77d281a69398b9d93716300",
+    "counts_failed_passed_skipped": [
+      1,
+      1,
+      7
+    ]
+  },
+  {
+    "id": "164-bindings",
+    "argv": [
+      "npm",
+      "run",
+      "test:unit",
+      "-w",
+      "microdelta",
+      "--",
+      "--runTestsByPath",
+      ".test-build/test/gap-hunt-dx-output-bindings.test.js",
+      "--json",
+      "--outputFile",
+      "/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178/scratch/gap-hunt/review-178/164-bindings-results.json"
+    ],
+    "exit_code": 1,
+    "seconds": 4.170433044433594,
+    "log_sha256": "ec9b1a5c1369a2b1e9785d9b4309457ecac9dfccec9bfafaaf77b339820c3fd0",
+    "counts_failed_passed_skipped": [
+      2,
+      2,
+      0
+    ]
+  },
+  {
+    "id": "experiment",
+    "argv": [
+      "npm",
+      "run",
+      "test:exp-authoring"
+    ],
+    "exit_code": 0,
+    "seconds": 3.801858901977539,
+    "log_sha256": "530e2f983e994afe748fd84559777b12f4d04f42fb2c20f534cf09dde7f96d4b"
+  },
+  {
+    "id": "portable",
+    "argv": [
+      "node",
+      "node_modules/typescript/bin/tsc",
+      "--noEmit",
+      "-p",
+      "experiments/exp-authoring/tsconfig.portable.json"
+    ],
+    "exit_code": 0,
+    "seconds": 0.38218021392822266,
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "id": "experiment-lint",
+    "argv": [
+      "node",
+      "node_modules/eslint/bin/eslint.js",
+      "experiments/exp-authoring"
+    ],
+    "exit_code": 0,
+    "seconds": 1.5295379161834717,
+    "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  {
+    "id": "captures",
+    "argv": [
+      "node",
+      "--test",
+      "tooling/tracked-captures.test.mjs",
+      "tooling/authoring-captures.test.mjs"
+    ],
+    "exit_code": 0,
+    "seconds": 2.228935956954956,
+    "log_sha256": "024a1611184784d2837c4cc1357eac1727b85fe5446cb2b664f04b295fb77c3e"
+  },
+  {
+    "id": "scalar-types-original",
+    "argv": [
+      "npm",
+      "run",
+      "test:types",
+      "-w",
+      "microdelta"
+    ],
+    "exit_code": 0,
+    "note": "Original9267a44e tsd fixture byte-restored; prior copy differed only by two documented lint-suppression comments. Semantic assertions identical.",
+    "log_sha256": "2b2f02d642d24fed46c431e36e70aad845e4b153d65d0e1558c01dafa6302308"
+  },
+  {
+    "id": "fanout-typecheck",
+    "exit_code": 0
+  },
+  {
+    "id": "fanout-lint",
+    "exit_code": 0
+  },
+  {
+    "id": "fanout-original",
+    "argv": [
+      "python3",
+      "scratch/gap-hunt/review-178/fanout.py"
+    ],
+    "exit_code": 0,
+    "asserted_expected_jest": [
+      1,
+      1,
+      0
+    ]
+  },
+  {
+    "id": "occurrence-typecheck",
+    "argv": [
+      "node",
+      "node_modules/typescript/bin/tsc",
+      "-p",
+      "scratch/gap-hunt/review-178/tsconfig.occurrence.json"
+    ],
+    "exit_code": 0
+  },
+  {
+    "id": "occurrence-lint",
+    "argv": [
+      "node",
+      "node_modules/eslint/bin/eslint.js",
+      "--no-ignore",
+      "--config",
+      "scratch/gap-hunt/review-178/occurrence.eslint.config.mjs",
+      "scratch/gap-hunt/review-178/occurrence-worker.ts"
+    ],
+    "exit_code": 0
+  },
+  {
+    "id": "occurrence-counterexample",
+    "argv": [
+      "python3",
+      "scratch/gap-hunt/review-178/occurrence-check.py"
+    ],
+    "exit_code": 1,
+    "positive_controls": 4,
+    "false_reuse_cases": 1
+  }
+]

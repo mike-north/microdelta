@@ -1,0 +1,330 @@
+[
+  {
+    "mode": "scalar",
+    "request": "first",
+    "receipt": {
+      "outcome": {
+        "kind": "rejected",
+        "code": "unsupported-result"
+      },
+      "events": [
+        {
+          "kind": "step",
+          "runId": "run:1380ae0ce41568c7f340c19285a4a187",
+          "event": {
+            "step": {
+              "scope": "authoring:baseline",
+              "role": "step",
+              "slot": "scalar"
+            },
+            "phase": "verify"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:1380ae0ce41568c7f340c19285a4a187",
+          "event": {
+            "step": {
+              "scope": "authoring:baseline",
+              "role": "step",
+              "slot": "scalar"
+            },
+            "phase": "admit"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:1380ae0ce41568c7f340c19285a4a187",
+          "event": {
+            "step": {
+              "scope": "authoring:baseline",
+              "role": "step",
+              "slot": "scalar"
+            },
+            "phase": "claim"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:1380ae0ce41568c7f340c19285a4a187",
+          "event": {
+            "step": {
+              "scope": "authoring:baseline",
+              "role": "step",
+              "slot": "scalar"
+            },
+            "phase": "execute"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:1380ae0ce41568c7f340c19285a4a187",
+          "event": {
+            "step": {
+              "scope": "authoring:baseline",
+              "role": "step",
+              "slot": "scalar"
+            },
+            "phase": "abandon"
+          }
+        }
+      ]
+    }
+  },
+  {
+    "mode": "subtree",
+    "request": "first",
+    "receipt": {
+      "outcome": {
+        "kind": "published",
+        "reference": {
+          "kind": "completed-result",
+          "locator": "mdh1|[\"authoring-baseline\",\"authoring:baseline\",\"test\",1]"
+        },
+        "data": {
+          "value": 5
+        }
+      },
+      "events": [
+        {
+          "kind": "step",
+          "runId": "run:9fc55a6cfacc120b19398de456781c81",
+          "event": {
+            "step": {
+              "scope": "authoring:baseline",
+              "role": "step",
+              "slot": "parent"
+            },
+            "phase": "verify"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:9fc55a6cfacc120b19398de456781c81",
+          "event": {
+            "step": {
+              "scope": "authoring:baseline",
+              "role": "step",
+              "slot": "parent"
+            },
+            "phase": "admit"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:9fc55a6cfacc120b19398de456781c81",
+          "event": {
+            "step": {
+              "scope": "authoring:baseline",
+              "role": "step",
+              "slot": "parent"
+            },
+            "phase": "claim"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:9fc55a6cfacc120b19398de456781c81",
+          "event": {
+            "step": {
+              "scope": "authoring:baseline",
+              "role": "step",
+              "slot": "parent"
+            },
+            "phase": "execute"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:9fc55a6cfacc120b19398de456781c81",
+          "event": {
+            "step": {
+              "scope": "authoring:baseline",
+              "role": "step",
+              "slot": "child"
+            },
+            "phase": "verify"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:9fc55a6cfacc120b19398de456781c81",
+          "event": {
+            "step": {
+              "scope": "authoring:baseline",
+              "role": "step",
+              "slot": "child"
+            },
+            "phase": "admit"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:9fc55a6cfacc120b19398de456781c81",
+          "event": {
+            "step": {
+              "scope": "authoring:baseline",
+              "role": "step",
+              "slot": "child"
+            },
+            "phase": "claim"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:9fc55a6cfacc120b19398de456781c81",
+          "event": {
+            "step": {
+              "scope": "authoring:baseline",
+              "role": "step",
+              "slot": "child"
+            },
+            "phase": "execute"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:9fc55a6cfacc120b19398de456781c81",
+          "event": {
+            "step": {
+              "scope": "authoring:baseline",
+              "role": "step",
+              "slot": "child"
+            },
+            "phase": "publish",
+            "reference": {
+              "kind": "completed-result",
+              "locator": "mdh1|[\"authoring-baseline\",\"authoring:baseline\",\"test\",2]"
+            }
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:9fc55a6cfacc120b19398de456781c81",
+          "event": {
+            "step": {
+              "scope": "authoring:baseline",
+              "role": "step",
+              "slot": "parent"
+            },
+            "phase": "publish",
+            "reference": {
+              "kind": "completed-result",
+              "locator": "mdh1|[\"authoring-baseline\",\"authoring:baseline\",\"test\",1]"
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "mode": "subtree",
+    "request": "second",
+    "receipt": {
+      "outcome": {
+        "kind": "reused",
+        "reference": {
+          "kind": "completed-result",
+          "locator": "mdh1|[\"authoring-baseline\",\"authoring:baseline\",\"test\",1]"
+        },
+        "data": {
+          "value": 5
+        }
+      },
+      "events": [
+        {
+          "kind": "step",
+          "runId": "run:cde95b52afebd068fd4c4ba1c35211c4",
+          "event": {
+            "step": {
+              "scope": "authoring:baseline",
+              "role": "step",
+              "slot": "parent"
+            },
+            "phase": "verify"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:cde95b52afebd068fd4c4ba1c35211c4",
+          "event": {
+            "step": {
+              "scope": "authoring:baseline",
+              "role": "step",
+              "slot": "child"
+            },
+            "phase": "verify"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:cde95b52afebd068fd4c4ba1c35211c4",
+          "event": {
+            "step": {
+              "scope": "authoring:baseline",
+              "role": "step",
+              "slot": "child"
+            },
+            "phase": "admit"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:cde95b52afebd068fd4c4ba1c35211c4",
+          "event": {
+            "step": {
+              "scope": "authoring:baseline",
+              "role": "step",
+              "slot": "child"
+            },
+            "phase": "claim"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:cde95b52afebd068fd4c4ba1c35211c4",
+          "event": {
+            "step": {
+              "scope": "authoring:baseline",
+              "role": "step",
+              "slot": "child"
+            },
+            "phase": "execute"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:cde95b52afebd068fd4c4ba1c35211c4",
+          "event": {
+            "step": {
+              "scope": "authoring:baseline",
+              "role": "step",
+              "slot": "child"
+            },
+            "phase": "publish",
+            "reference": {
+              "kind": "completed-result",
+              "locator": "mdh1|[\"authoring-baseline\",\"authoring:baseline\",\"test\",3]"
+            }
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:cde95b52afebd068fd4c4ba1c35211c4",
+          "event": {
+            "step": {
+              "scope": "authoring:baseline",
+              "role": "step",
+              "slot": "parent"
+            },
+            "phase": "accept",
+            "reference": {
+              "kind": "completed-result",
+              "locator": "mdh1|[\"authoring-baseline\",\"authoring:baseline\",\"test\",1]"
+            }
+          }
+        }
+      ]
+    }
+  }
+]

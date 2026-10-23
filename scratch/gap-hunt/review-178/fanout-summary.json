@@ -1,0 +1,28 @@
+{
+  "head": "577644f188a80bf7b081804fd63fe23ba263f88f",
+  "matrix_rows": 6,
+  "pending_waits": [
+    99,
+    999,
+    92,
+    992,
+    0,
+    92
+  ],
+  "jest_failed": 1,
+  "jest_passed": 1,
+  "runtime_errors": 0,
+  "expected_queue_growth": 900,
+  "all_post_stop_queued_waits": 0,
+  "argv": [
+    "node",
+    "--experimental-vm-modules",
+    "node_modules/jest/bin/jest.js",
+    "--config",
+    "scratch/gap-hunt/scale/fanout-admission.jest.config.mjs",
+    "--runInBand",
+    "--json",
+    "--outputFile",
+    "/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178/scratch/gap-hunt/review-178/fanout-results.json"
+  ]
+}

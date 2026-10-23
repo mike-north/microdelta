@@ -1,0 +1,578 @@
+[
+  {
+    "file": "jest-receipt-1.json",
+    "receipt": {
+      "mode": "cold",
+      "expected": 1,
+      "result": {
+        "kind": "published",
+        "data": 1,
+        "reference": {
+          "kind": "completed-result",
+          "locator": "mdh1|[\"occurrence-proof\",\"occurrence:proof\",\"test\",1]"
+        }
+      },
+      "events": [
+        {
+          "kind": "step",
+          "runId": "run:595fc02bd983901b3791a8f322dd21d3",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "a"
+            },
+            "phase": "verify"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:595fc02bd983901b3791a8f322dd21d3",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "a"
+            },
+            "phase": "admit"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:595fc02bd983901b3791a8f322dd21d3",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "a"
+            },
+            "phase": "claim"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:595fc02bd983901b3791a8f322dd21d3",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "a"
+            },
+            "phase": "execute"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:595fc02bd983901b3791a8f322dd21d3",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "a"
+            },
+            "phase": "publish",
+            "reference": {
+              "kind": "completed-result",
+              "locator": "mdh1|[\"occurrence-proof\",\"occurrence:proof\",\"test\",1]"
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "file": "jest-receipt-2.json",
+    "receipt": {
+      "mode": "cold",
+      "expected": 1,
+      "result": {
+        "kind": "published",
+        "data": 1,
+        "reference": {
+          "kind": "completed-result",
+          "locator": "mdh1|[\"occurrence-proof\",\"occurrence:proof\",\"test\",1]"
+        }
+      },
+      "events": [
+        {
+          "kind": "step",
+          "runId": "run:3430a08483e048afb9a257189c09058f",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "a"
+            },
+            "phase": "verify"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:3430a08483e048afb9a257189c09058f",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "a"
+            },
+            "phase": "admit"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:3430a08483e048afb9a257189c09058f",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "a"
+            },
+            "phase": "claim"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:3430a08483e048afb9a257189c09058f",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "a"
+            },
+            "phase": "execute"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:3430a08483e048afb9a257189c09058f",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "a"
+            },
+            "phase": "publish",
+            "reference": {
+              "kind": "completed-result",
+              "locator": "mdh1|[\"occurrence-proof\",\"occurrence:proof\",\"test\",1]"
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "file": "jest-receipt-3.json",
+    "receipt": {
+      "mode": "cold",
+      "expected": 1,
+      "result": {
+        "kind": "reused",
+        "data": 1,
+        "reference": {
+          "kind": "completed-result",
+          "locator": "mdh1|[\"occurrence-proof\",\"occurrence:proof\",\"test\",1]"
+        }
+      },
+      "events": [
+        {
+          "kind": "step",
+          "runId": "run:9c2ca2858f931d1ea1621e5159f9ddaa",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "a"
+            },
+            "phase": "verify"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:9c2ca2858f931d1ea1621e5159f9ddaa",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "a"
+            },
+            "phase": "accept",
+            "reference": {
+              "kind": "completed-result",
+              "locator": "mdh1|[\"occurrence-proof\",\"occurrence:proof\",\"test\",1]"
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "file": "jest-receipt-4.json",
+    "receipt": {
+      "mode": "cold",
+      "expected": 1,
+      "result": {
+        "kind": "published",
+        "data": 1,
+        "reference": {
+          "kind": "completed-result",
+          "locator": "mdh1|[\"occurrence-proof\",\"occurrence:proof\",\"test\",1]"
+        }
+      },
+      "events": [
+        {
+          "kind": "step",
+          "runId": "run:456ff41392d3e73a76c3d043c8996d89",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "a"
+            },
+            "phase": "verify"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:456ff41392d3e73a76c3d043c8996d89",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "a"
+            },
+            "phase": "admit"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:456ff41392d3e73a76c3d043c8996d89",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "a"
+            },
+            "phase": "claim"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:456ff41392d3e73a76c3d043c8996d89",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "a"
+            },
+            "phase": "execute"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:456ff41392d3e73a76c3d043c8996d89",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "a"
+            },
+            "phase": "publish",
+            "reference": {
+              "kind": "completed-result",
+              "locator": "mdh1|[\"occurrence-proof\",\"occurrence:proof\",\"test\",1]"
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "file": "jest-receipt-5.json",
+    "receipt": {
+      "mode": "fresh-subject",
+      "expected": 2,
+      "result": {
+        "kind": "published",
+        "data": 2,
+        "reference": {
+          "kind": "completed-result",
+          "locator": "mdh1|[\"occurrence-proof\",\"occurrence:proof\",\"test\",2]"
+        }
+      },
+      "events": [
+        {
+          "kind": "step",
+          "runId": "run:bcd940716ce3e839cd0861250c282c84",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "b"
+            },
+            "phase": "verify"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:bcd940716ce3e839cd0861250c282c84",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "b"
+            },
+            "phase": "admit"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:bcd940716ce3e839cd0861250c282c84",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "b"
+            },
+            "phase": "claim"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:bcd940716ce3e839cd0861250c282c84",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "b"
+            },
+            "phase": "execute"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:bcd940716ce3e839cd0861250c282c84",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "b"
+            },
+            "phase": "publish",
+            "reference": {
+              "kind": "completed-result",
+              "locator": "mdh1|[\"occurrence-proof\",\"occurrence:proof\",\"test\",2]"
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "file": "jest-receipt-6.json",
+    "receipt": {
+      "mode": "swap",
+      "expected": 2,
+      "result": {
+        "kind": "published",
+        "data": 2,
+        "reference": {
+          "kind": "completed-result",
+          "locator": "mdh1|[\"occurrence-proof\",\"occurrence:proof\",\"test\",1]"
+        }
+      },
+      "events": [
+        {
+          "kind": "step",
+          "runId": "run:cdfacf252b4a324c11121482afdb8b1e",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "b"
+            },
+            "phase": "verify"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:cdfacf252b4a324c11121482afdb8b1e",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "b"
+            },
+            "phase": "admit"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:cdfacf252b4a324c11121482afdb8b1e",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "b"
+            },
+            "phase": "claim"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:cdfacf252b4a324c11121482afdb8b1e",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "b"
+            },
+            "phase": "execute"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:cdfacf252b4a324c11121482afdb8b1e",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "b"
+            },
+            "phase": "publish",
+            "reference": {
+              "kind": "completed-result",
+              "locator": "mdh1|[\"occurrence-proof\",\"occurrence:proof\",\"test\",1]"
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "file": "jest-receipt-7.json",
+    "receipt": {
+      "mode": "cold",
+      "expected": 1,
+      "result": {
+        "kind": "published",
+        "data": 1,
+        "reference": {
+          "kind": "completed-result",
+          "locator": "mdh1|[\"occurrence-proof\",\"occurrence:proof\",\"test\",1]"
+        }
+      },
+      "events": [
+        {
+          "kind": "step",
+          "runId": "run:c1c77a543461b1b27af67d34cc2a97fb",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "a"
+            },
+            "phase": "verify"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:c1c77a543461b1b27af67d34cc2a97fb",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "a"
+            },
+            "phase": "admit"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:c1c77a543461b1b27af67d34cc2a97fb",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "a"
+            },
+            "phase": "claim"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:c1c77a543461b1b27af67d34cc2a97fb",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "a"
+            },
+            "phase": "execute"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:c1c77a543461b1b27af67d34cc2a97fb",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "a"
+            },
+            "phase": "publish",
+            "reference": {
+              "kind": "completed-result",
+              "locator": "mdh1|[\"occurrence-proof\",\"occurrence:proof\",\"test\",1]"
+            }
+          }
+        }
+      ]
+    }
+  },
+  {
+    "file": "jest-receipt-8.json",
+    "receipt": {
+      "mode": "swap",
+      "expected": 2,
+      "result": {
+        "kind": "reused",
+        "data": 1,
+        "reference": {
+          "kind": "completed-result",
+          "locator": "mdh1|[\"occurrence-proof\",\"occurrence:proof\",\"test\",1]"
+        }
+      },
+      "events": [
+        {
+          "kind": "step",
+          "runId": "run:56d689f0868f17a5ae837ad12566fe55",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "b"
+            },
+            "phase": "verify"
+          }
+        },
+        {
+          "kind": "step",
+          "runId": "run:56d689f0868f17a5ae837ad12566fe55",
+          "event": {
+            "step": {
+              "scope": "occurrence:proof",
+              "role": "step",
+              "slot": "b"
+            },
+            "phase": "accept",
+            "reference": {
+              "kind": "completed-result",
+              "locator": "mdh1|[\"occurrence-proof\",\"occurrence:proof\",\"test\",1]"
+            }
+          }
+        }
+      ]
+    }
+  }
+]

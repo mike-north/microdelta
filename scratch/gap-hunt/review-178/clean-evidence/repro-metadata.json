@@ -1,0 +1,9 @@
+{
+  "runtime_pin": "577644f188a80bf7b081804fd63fe23ba263f88f",
+  "checkout_head": "577644f188a80bf7b081804fd63fe23ba263f88f",
+  "node": "v24.22.1",
+  "npm": "11.12.1",
+  "failed": 1,
+  "passed": 4,
+  "runtime_errors": 0
+}

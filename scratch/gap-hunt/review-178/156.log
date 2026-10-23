@@ -1,0 +1,200 @@
+
+> microdelta@0.2.0 test:unit
+> tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand --runTestsByPath .test-build/test/gap-hunt-contracts-scalar-roots.test.js --json --outputFile /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178/scratch/gap-hunt/review-178/156-results.json
+
+(node:6531) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL .test-build/test/gap-hunt-contracts-scalar-roots.test.js
+  ● gap hunt typed scalar result boundary › memo accepts serialized dependency at its result root
+
+    expect(received).resolves.toBe()
+
+    Received promise rejected instead of resolved
+    Rejected to value: [ResolutionError: Step ["scalar-root-analysis","step","memo",null] produced a result without a record or array root]
+
+      44 |     .flatMap((atom) => [{ kind: 'memo' as const, atom }, { kind: 'source' as const, atom }]);
+      45 |   test.each(samples)('$kind accepts $atom at its result root', async ({ kind, atom }) => {
+    > 46 |     await expect(resolve(atom, kind)).resolves.toBe(atom);
+         |           ^
+      47 |   });
+      48 |
+      49 |   test.each(['serialized dependency', 1, true, null, undefined])('record-wrapped %s positive control', async (value) => {
+
+      at expect (../../node_modules/expect/build/index.js:2116:15)
+      at test/gap-hunt-contracts-scalar-roots.test.ts:46:11
+
+  ● gap hunt typed scalar result boundary › source accepts serialized dependency at its result root
+
+    expect(received).resolves.toBe()
+
+    Received promise rejected instead of resolved
+    Rejected to value: [ResolutionError: Step ["scalar-root-analysis","step","source",null] produced a result without a record or array root]
+
+      44 |     .flatMap((atom) => [{ kind: 'memo' as const, atom }, { kind: 'source' as const, atom }]);
+      45 |   test.each(samples)('$kind accepts $atom at its result root', async ({ kind, atom }) => {
+    > 46 |     await expect(resolve(atom, kind)).resolves.toBe(atom);
+         |           ^
+      47 |   });
+      48 |
+      49 |   test.each(['serialized dependency', 1, true, null, undefined])('record-wrapped %s positive control', async (value) => {
+
+      at expect (../../node_modules/expect/build/index.js:2116:15)
+      at test/gap-hunt-contracts-scalar-roots.test.ts:46:11
+
+  ● gap hunt typed scalar result boundary › memo accepts 1 at its result root
+
+    expect(received).resolves.toBe()
+
+    Received promise rejected instead of resolved
+    Rejected to value: [ResolutionError: Step ["scalar-root-analysis","step","memo",null] produced a result without a record or array root]
+
+      44 |     .flatMap((atom) => [{ kind: 'memo' as const, atom }, { kind: 'source' as const, atom }]);
+      45 |   test.each(samples)('$kind accepts $atom at its result root', async ({ kind, atom }) => {
+    > 46 |     await expect(resolve(atom, kind)).resolves.toBe(atom);
+         |           ^
+      47 |   });
+      48 |
+      49 |   test.each(['serialized dependency', 1, true, null, undefined])('record-wrapped %s positive control', async (value) => {
+
+      at expect (../../node_modules/expect/build/index.js:2116:15)
+      at test/gap-hunt-contracts-scalar-roots.test.ts:46:11
+
+  ● gap hunt typed scalar result boundary › source accepts 1 at its result root
+
+    expect(received).resolves.toBe()
+
+    Received promise rejected instead of resolved
+    Rejected to value: [ResolutionError: Step ["scalar-root-analysis","step","source",null] produced a result without a record or array root]
+
+      44 |     .flatMap((atom) => [{ kind: 'memo' as const, atom }, { kind: 'source' as const, atom }]);
+      45 |   test.each(samples)('$kind accepts $atom at its result root', async ({ kind, atom }) => {
+    > 46 |     await expect(resolve(atom, kind)).resolves.toBe(atom);
+         |           ^
+      47 |   });
+      48 |
+      49 |   test.each(['serialized dependency', 1, true, null, undefined])('record-wrapped %s positive control', async (value) => {
+
+      at expect (../../node_modules/expect/build/index.js:2116:15)
+      at test/gap-hunt-contracts-scalar-roots.test.ts:46:11
+
+  ● gap hunt typed scalar result boundary › memo accepts true at its result root
+
+    expect(received).resolves.toBe()
+
+    Received promise rejected instead of resolved
+    Rejected to value: [ResolutionError: Step ["scalar-root-analysis","step","memo",null] produced a result without a record or array root]
+
+      44 |     .flatMap((atom) => [{ kind: 'memo' as const, atom }, { kind: 'source' as const, atom }]);
+      45 |   test.each(samples)('$kind accepts $atom at its result root', async ({ kind, atom }) => {
+    > 46 |     await expect(resolve(atom, kind)).resolves.toBe(atom);
+         |           ^
+      47 |   });
+      48 |
+      49 |   test.each(['serialized dependency', 1, true, null, undefined])('record-wrapped %s positive control', async (value) => {
+
+      at expect (../../node_modules/expect/build/index.js:2116:15)
+      at test/gap-hunt-contracts-scalar-roots.test.ts:46:11
+
+  ● gap hunt typed scalar result boundary › source accepts true at its result root
+
+    expect(received).resolves.toBe()
+
+    Received promise rejected instead of resolved
+    Rejected to value: [ResolutionError: Step ["scalar-root-analysis","step","source",null] produced a result without a record or array root]
+
+      44 |     .flatMap((atom) => [{ kind: 'memo' as const, atom }, { kind: 'source' as const, atom }]);
+      45 |   test.each(samples)('$kind accepts $atom at its result root', async ({ kind, atom }) => {
+    > 46 |     await expect(resolve(atom, kind)).resolves.toBe(atom);
+         |           ^
+      47 |   });
+      48 |
+      49 |   test.each(['serialized dependency', 1, true, null, undefined])('record-wrapped %s positive control', async (value) => {
+
+      at expect (../../node_modules/expect/build/index.js:2116:15)
+      at test/gap-hunt-contracts-scalar-roots.test.ts:46:11
+
+  ● gap hunt typed scalar result boundary › memo accepts null at its result root
+
+    expect(received).resolves.toBe()
+
+    Received promise rejected instead of resolved
+    Rejected to value: [ResolutionError: Step ["scalar-root-analysis","step","memo",null] produced a result without a record or array root]
+
+      44 |     .flatMap((atom) => [{ kind: 'memo' as const, atom }, { kind: 'source' as const, atom }]);
+      45 |   test.each(samples)('$kind accepts $atom at its result root', async ({ kind, atom }) => {
+    > 46 |     await expect(resolve(atom, kind)).resolves.toBe(atom);
+         |           ^
+      47 |   });
+      48 |
+      49 |   test.each(['serialized dependency', 1, true, null, undefined])('record-wrapped %s positive control', async (value) => {
+
+      at expect (../../node_modules/expect/build/index.js:2116:15)
+      at test/gap-hunt-contracts-scalar-roots.test.ts:46:11
+
+  ● gap hunt typed scalar result boundary › source accepts null at its result root
+
+    expect(received).resolves.toBe()
+
+    Received promise rejected instead of resolved
+    Rejected to value: [ResolutionError: Step ["scalar-root-analysis","step","source",null] produced a result without a record or array root]
+
+      44 |     .flatMap((atom) => [{ kind: 'memo' as const, atom }, { kind: 'source' as const, atom }]);
+      45 |   test.each(samples)('$kind accepts $atom at its result root', async ({ kind, atom }) => {
+    > 46 |     await expect(resolve(atom, kind)).resolves.toBe(atom);
+         |           ^
+      47 |   });
+      48 |
+      49 |   test.each(['serialized dependency', 1, true, null, undefined])('record-wrapped %s positive control', async (value) => {
+
+      at expect (../../node_modules/expect/build/index.js:2116:15)
+      at test/gap-hunt-contracts-scalar-roots.test.ts:46:11
+
+  ● gap hunt typed scalar result boundary › memo accepts undefined at its result root
+
+    expect(received).resolves.toBe()
+
+    Received promise rejected instead of resolved
+    Rejected to value: [ResolutionError: Step ["scalar-root-analysis","step","memo",null] produced a result without a record or array root]
+
+      44 |     .flatMap((atom) => [{ kind: 'memo' as const, atom }, { kind: 'source' as const, atom }]);
+      45 |   test.each(samples)('$kind accepts $atom at its result root', async ({ kind, atom }) => {
+    > 46 |     await expect(resolve(atom, kind)).resolves.toBe(atom);
+         |           ^
+      47 |   });
+      48 |
+      49 |   test.each(['serialized dependency', 1, true, null, undefined])('record-wrapped %s positive control', async (value) => {
+
+      at expect (../../node_modules/expect/build/index.js:2116:15)
+      at test/gap-hunt-contracts-scalar-roots.test.ts:46:11
+
+  ● gap hunt typed scalar result boundary › source accepts undefined at its result root
+
+    expect(received).resolves.toBe()
+
+    Received promise rejected instead of resolved
+    Rejected to value: [ResolutionError: Step ["scalar-root-analysis","step","source",null] produced a result without a record or array root]
+
+      44 |     .flatMap((atom) => [{ kind: 'memo' as const, atom }, { kind: 'source' as const, atom }]);
+      45 |   test.each(samples)('$kind accepts $atom at its result root', async ({ kind, atom }) => {
+    > 46 |     await expect(resolve(atom, kind)).resolves.toBe(atom);
+         |           ^
+      47 |   });
+      48 |
+      49 |   test.each(['serialized dependency', 1, true, null, undefined])('record-wrapped %s positive control', async (value) => {
+
+      at expect (../../node_modules/expect/build/index.js:2116:15)
+      at test/gap-hunt-contracts-scalar-roots.test.ts:46:11
+
+Test Suites: 1 failed, 1 total
+Tests:       10 failed, 5 passed, 15 total
+Snapshots:   0 total
+Time:        0.193 s
+Ran all test suites within paths ".test-build/test/gap-hunt-contracts-scalar-roots.test.js".
+Test results written to: ../../scratch/gap-hunt/review-178/156-results.json
+npm error Lifecycle script `test:unit` failed with error:
+npm error code 1
+npm error path /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178/packages/core
+npm error workspace microdelta@0.2.0
+npm error location /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178/packages/core
+npm error command failed
+npm error command sh -c tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand --runTestsByPath .test-build/test/gap-hunt-contracts-scalar-roots.test.js --json --outputFile /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178/scratch/gap-hunt/review-178/156-results.json

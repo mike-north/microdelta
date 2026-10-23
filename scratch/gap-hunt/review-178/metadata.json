@@ -1,0 +1,14 @@
+{
+  "review_head": "577644f188a80bf7b081804fd63fe23ba263f88f",
+  "base": "f43c5872987573d9b98a19f41c324b4d9336894c",
+  "live_head_at_completion": "577644f188a80bf7b081804fd63fe23ba263f88f",
+  "node": "v24.22.1",
+  "npm": "11.12.1",
+  "runtime_package_diff": [],
+  "lock_sha256": "55dfeace3ed7af8246e32c3029b444251df4ca164119f76716e44122e33129e6",
+  "independent_install_exit": 0,
+  "independent_full_build_exit": 0,
+  "install_log_sha256": "0c96d20a71003a6f36eedd391e87a94a35ebd2e664bf4265365ad33d85e01506",
+  "build_log_sha256": "708dab0429fcd86e1aed84f21e8c20fc6d3b21bda2d598fc3f305aba69f3fff9",
+  "new_finding": "False reuse after supported subject/occurrence swap; stricttypes/lint0;4positivecontrols pass; normative diagnostic exits1"
+}

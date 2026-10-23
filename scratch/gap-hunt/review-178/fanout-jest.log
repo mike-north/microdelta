@@ -1,0 +1,25 @@
+(node:20495) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL scratch/gap-hunt/scale/fanout-admission.test.mjs
+  ● fixed active window does not allocate one pending lane wait per unadmitted member
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 8
+    Received:    900
+
+      28 |   // Compare scheduling allocations only; roster storage/indexing and final reports may scale.
+      29 |   expect([small.pendingLaneWaitsAfterStop, larger.pendingLaneWaitsAfterStop]).toEqual([0, 0]);
+    > 30 |   expect(larger.pendingLaneWaits - small.pendingLaneWaits).toBeLessThanOrEqual(8);
+         |                                                            ^
+      31 | });
+      32 |
+
+      at Object.<anonymous> (scratch/gap-hunt/scale/fanout-admission.test.mjs:30:60)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 passed, 2 total
+Snapshots:   0 total
+Time:        1.324 s
+Ran all test suites.
+Test results written to: scratch/gap-hunt/review-178/fanout-results.json

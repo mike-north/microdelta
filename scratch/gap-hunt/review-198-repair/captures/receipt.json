@@ -1,0 +1,318 @@
+{
+  "source": "094378f66dd4955a533f4878b2a820f68e233610",
+  "oldResolution": "a13a3fd88ffe5ed24334f60af84316b31d98971e",
+  "frozenCallbacks": "350805fbfa423b8bfdfaeba4fe7ea3b8f7a51b3c",
+  "frozenMemoMutation": "95679b0484bcda7d6e6a00d2cddc165041fe2baf",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "node": "v24.22.1",
+  "commands": [
+    {
+      "name": "install",
+      "argv": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "build",
+      "argv": [
+        "npm",
+        "run",
+        "build:packages"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "fixtures",
+      "argv": [
+        "npm",
+        "run",
+        "build:fixtures"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "core-test-build",
+      "argv": [
+        "node",
+        "node_modules/typescript/bin/tsc",
+        "-p",
+        "packages/core/tsconfig.test.json"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "consumer-compile",
+      "argv": [
+        "node",
+        "node_modules/typescript/bin/tsc",
+        "-p",
+        "scratch/gap-hunt/review-198-repair/tsconfig.json"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "consumer-lint",
+      "argv": [
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "-c",
+        "scratch/gap-hunt/review-198-repair/eslint.config.mjs",
+        "scratch/gap-hunt/review-198-repair/mutation.test.ts",
+        "scratch/gap-hunt/review-198-repair/frozen/callbacks.test.ts"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "resolution-check",
+      "argv": [
+        "npm",
+        "run",
+        "check",
+        "--workspace",
+        "@microdelta/resolution"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "core-check",
+      "argv": [
+        "npm",
+        "run",
+        "check",
+        "--workspace",
+        "microdelta"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "declarations",
+      "argv": [
+        "npm",
+        "run",
+        "check:declarations"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "callbacks-current",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/review-198-repair/callbacks.jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "<captures>/callbacks-current.json"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "official-current",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "packages/core/jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "<captures>/official-current.json",
+        "--runTestsByPath",
+        "packages/core/.test-build/test/gap-hunt-error-privacy-callbacks.test.js"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "memo",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "packages/core/jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "<captures>/memo.json",
+        "--runTestsByPath",
+        "packages/core/.test-build/test/gap-hunt-error-privacy.test.js"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "privacy",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "packages/core/jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "<captures>/privacy.json",
+        "--runTestsByPath",
+        "packages/core/.test-build/test/resolution/author-error-privacy.test.js"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "mutation-current",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/review-198-repair/mutation.jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "<captures>/mutation-current.json"
+      ],
+      "exit": 1,
+      "expected": 1
+    },
+    {
+      "name": "preservation",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "packages/core/jest.config.mjs",
+        "--runInBand",
+        "--runTestsByPath",
+        "packages/core/.test-build/test/resolution/source-policy.test.js",
+        "packages/core/.test-build/test/fold/fold.test.js",
+        "packages/core/.test-build/test/nested/validation.test.js",
+        "packages/core/.test-build/test/outcome-fold/outcome-fold.test.js"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "old-build",
+      "argv": [
+        "npm",
+        "run",
+        "build:packages"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "callbacks-old",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/review-198-repair/callbacks.jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "<captures>/callbacks-old.json"
+      ],
+      "exit": 1,
+      "expected": 1
+    },
+    {
+      "name": "official-old",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "packages/core/jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "<captures>/official-old.json",
+        "--runTestsByPath",
+        "packages/core/.test-build/test/gap-hunt-error-privacy-callbacks.test.js"
+      ],
+      "exit": 1,
+      "expected": 1
+    },
+    {
+      "name": "restored-build",
+      "argv": [
+        "npm",
+        "run",
+        "build:packages"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "callbacks-restored",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/review-198-repair/callbacks.jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "<captures>/callbacks-restored.json"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "official-restored",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "packages/core/jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "<captures>/official-restored.json",
+        "--runTestsByPath",
+        "packages/core/.test-build/test/gap-hunt-error-privacy-callbacks.test.js"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "mutation-restored",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/review-198-repair/mutation.jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "<captures>/mutation-restored.json"
+      ],
+      "exit": 1,
+      "expected": 1
+    }
+  ]
+}

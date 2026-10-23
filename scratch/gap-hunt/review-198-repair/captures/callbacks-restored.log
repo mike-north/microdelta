@@ -1,0 +1,48 @@
+  console.log
+    callback-observation {"route":"source","mode":"plain-error","outerCode":"execution-failure","outerMessage":"Source check of [\"callback-privacy\",\"step\",\"value\",null] threw","outerIsThrown":false,"causeIsThrown":true,"boundaryCauseIsThrown":true,"calls":1,"completedResult":false,"failedStepResults":{"count":0}}
+
+      at Object.<anonymous> (scratch/gap-hunt/review-198-repair/dist/frozen/callbacks.test.js:64:25)
+
+  console.log
+    callback-observation {"route":"source","mode":"author-resolution-error","outerCode":"execution-failure","outerMessage":"Source check of [\"callback-privacy\",\"step\",\"value\",null] threw","outerIsThrown":false,"causeIsThrown":true,"boundaryCauseIsThrown":true,"calls":1,"completedResult":false,"failedStepResults":{"count":0}}
+
+      at Object.<anonymous> (scratch/gap-hunt/review-198-repair/dist/frozen/callbacks.test.js:64:25)
+
+  console.log
+    callback-observation {"route":"supplied","mode":"plain-error","outerCode":"execution-failure","outerMessage":"Body of [\"callback-privacy\",\"step\",\"value\",null] failed","outerIsThrown":false,"causeIsThrown":false,"boundaryCauseIsThrown":true,"calls":1,"completedResult":false,"failedStepResults":{"count":0}}
+
+      at Object.<anonymous> (scratch/gap-hunt/review-198-repair/dist/frozen/callbacks.test.js:64:25)
+
+  console.log
+    callback-observation {"route":"supplied","mode":"author-resolution-error","outerCode":"execution-failure","outerMessage":"Body of [\"callback-privacy\",\"step\",\"value\",null] failed","outerIsThrown":false,"causeIsThrown":false,"boundaryCauseIsThrown":true,"calls":1,"completedResult":false,"failedStepResults":{"count":0}}
+
+      at Object.<anonymous> (scratch/gap-hunt/review-198-repair/dist/frozen/callbacks.test.js:64:25)
+
+  console.log
+    callback-observation {"route":"strict-fold","mode":"plain-error","outerCode":"execution-failure","outerMessage":"Body of strict fold [\"callback-privacy\",\"step\",\"value\",null] threw","outerIsThrown":false,"causeIsThrown":true,"boundaryCauseIsThrown":true,"calls":1,"completedResult":false,"failedStepResults":{"count":0}}
+
+      at Object.<anonymous> (scratch/gap-hunt/review-198-repair/dist/frozen/callbacks.test.js:64:25)
+
+  console.log
+    callback-observation {"route":"strict-fold","mode":"author-resolution-error","outerCode":"execution-failure","outerMessage":"Body of strict fold [\"callback-privacy\",\"step\",\"value\",null] threw","outerIsThrown":false,"causeIsThrown":true,"boundaryCauseIsThrown":true,"calls":1,"completedResult":false,"failedStepResults":{"count":0}}
+
+      at Object.<anonymous> (scratch/gap-hunt/review-198-repair/dist/frozen/callbacks.test.js:64:25)
+
+  console.log
+    callback-observation {"route":"outcome-fold","mode":"plain-error","outerCode":"execution-failure","outerMessage":"Body of outcome fold [\"callback-privacy\",\"step\",\"value\",null] threw","outerIsThrown":false,"causeIsThrown":true,"boundaryCauseIsThrown":true,"calls":1,"completedResult":false,"failedStepResults":{"count":0}}
+
+      at Object.<anonymous> (scratch/gap-hunt/review-198-repair/dist/frozen/callbacks.test.js:64:25)
+
+  console.log
+    callback-observation {"route":"outcome-fold","mode":"author-resolution-error","outerCode":"execution-failure","outerMessage":"Body of outcome fold [\"callback-privacy\",\"step\",\"value\",null] threw","outerIsThrown":false,"causeIsThrown":true,"boundaryCauseIsThrown":true,"calls":1,"completedResult":false,"failedStepResults":{"count":0}}
+
+      at Object.<anonymous> (scratch/gap-hunt/review-198-repair/dist/frozen/callbacks.test.js:64:25)
+
+(node:54876) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       8 passed, 8 total
+Snapshots:   0 total
+Time:        0.433 s, estimated 1 s
+Ran all test suites.
+Test results written to: <captures>/callbacks-restored.json

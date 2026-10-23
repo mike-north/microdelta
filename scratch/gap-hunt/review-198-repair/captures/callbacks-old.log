@@ -1,0 +1,117 @@
+  console.log
+    callback-observation {"route":"source","mode":"plain-error","outerCode":"execution-failure","outerMessage":"Source check of [\"callback-privacy\",\"step\",\"value\",null] threw","outerIsThrown":false,"causeIsThrown":true,"boundaryCauseIsThrown":true,"calls":1,"completedResult":false,"failedStepResults":{"count":0}}
+
+      at Object.<anonymous> (scratch/gap-hunt/review-198-repair/dist/frozen/callbacks.test.js:64:25)
+
+  console.log
+    callback-observation {"route":"source","mode":"author-resolution-error","outerCode":"unsupported-result","outerMessage":"SYNTHETIC-CALLBACK-DETAIL-4c81","outerIsThrown":true,"causeIsThrown":false,"boundaryCauseIsThrown":false,"calls":1,"completedResult":false,"failedStepResults":{"count":0}}
+
+      at Object.<anonymous> (scratch/gap-hunt/review-198-repair/dist/frozen/callbacks.test.js:64:25)
+
+  console.log
+    callback-observation {"route":"supplied","mode":"plain-error","outerCode":"execution-failure","outerMessage":"Body of [\"callback-privacy\",\"step\",\"value\",null] failed","outerIsThrown":false,"causeIsThrown":false,"boundaryCauseIsThrown":true,"calls":1,"completedResult":false,"failedStepResults":{"count":0}}
+
+      at Object.<anonymous> (scratch/gap-hunt/review-198-repair/dist/frozen/callbacks.test.js:64:25)
+
+  console.log
+    callback-observation {"route":"supplied","mode":"author-resolution-error","outerCode":"unsupported-result","outerMessage":"SYNTHETIC-CALLBACK-DETAIL-4c81","outerIsThrown":true,"causeIsThrown":false,"boundaryCauseIsThrown":false,"calls":1,"completedResult":false,"failedStepResults":{"count":0}}
+
+      at Object.<anonymous> (scratch/gap-hunt/review-198-repair/dist/frozen/callbacks.test.js:64:25)
+
+  console.log
+    callback-observation {"route":"strict-fold","mode":"plain-error","outerCode":"execution-failure","outerMessage":"Body of strict fold [\"callback-privacy\",\"step\",\"value\",null] threw","outerIsThrown":false,"causeIsThrown":true,"boundaryCauseIsThrown":true,"calls":1,"completedResult":false,"failedStepResults":{"count":0}}
+
+      at Object.<anonymous> (scratch/gap-hunt/review-198-repair/dist/frozen/callbacks.test.js:64:25)
+
+  console.log
+    callback-observation {"route":"strict-fold","mode":"author-resolution-error","outerCode":"unsupported-result","outerMessage":"SYNTHETIC-CALLBACK-DETAIL-4c81","outerIsThrown":true,"causeIsThrown":false,"boundaryCauseIsThrown":false,"calls":1,"completedResult":false,"failedStepResults":{"count":0}}
+
+      at Object.<anonymous> (scratch/gap-hunt/review-198-repair/dist/frozen/callbacks.test.js:64:25)
+
+  console.log
+    callback-observation {"route":"outcome-fold","mode":"plain-error","outerCode":"execution-failure","outerMessage":"Body of outcome fold [\"callback-privacy\",\"step\",\"value\",null] threw","outerIsThrown":false,"causeIsThrown":true,"boundaryCauseIsThrown":true,"calls":1,"completedResult":false,"failedStepResults":{"count":0}}
+
+      at Object.<anonymous> (scratch/gap-hunt/review-198-repair/dist/frozen/callbacks.test.js:64:25)
+
+  console.log
+    callback-observation {"route":"outcome-fold","mode":"author-resolution-error","outerCode":"unsupported-result","outerMessage":"SYNTHETIC-CALLBACK-DETAIL-4c81","outerIsThrown":true,"causeIsThrown":false,"boundaryCauseIsThrown":false,"calls":1,"completedResult":false,"failedStepResults":{"count":0}}
+
+      at Object.<anonymous> (scratch/gap-hunt/review-198-repair/dist/frozen/callbacks.test.js:64:25)
+
+(node:51776) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL scratch/gap-hunt/review-198-repair/dist/frozen/callbacks.test.js
+  ● source/author-resolution-error: outer framework failure keeps authored text in exact cause
+
+    expect(received).not.toContain(expected) // indexOf
+
+    Expected substring: not "SYNTHETIC-CALLBACK-DETAIL-4c81"
+    Received string:        "SYNTHETIC-CALLBACK-DETAIL-4c81"
+
+      70 |                     throw new Error('Expected typed framework failure');
+      71 |                 }
+    > 72 |                 expect(failure.message).not.toContain(marker);
+         |                                             ^
+      73 |                 expect(failure.code).toBe('execution-failure');
+      74 |                 expect(boundaryFailure instanceof ResolutionError ? boundaryFailure.cause : undefined).toBe(thrown);
+      75 |             }
+
+      at Object.<anonymous> (scratch/gap-hunt/review-198-repair/dist/frozen/callbacks.test.js:72:45)
+
+  ● supplied/author-resolution-error: outer framework failure keeps authored text in exact cause
+
+    expect(received).not.toContain(expected) // indexOf
+
+    Expected substring: not "SYNTHETIC-CALLBACK-DETAIL-4c81"
+    Received string:        "SYNTHETIC-CALLBACK-DETAIL-4c81"
+
+      70 |                     throw new Error('Expected typed framework failure');
+      71 |                 }
+    > 72 |                 expect(failure.message).not.toContain(marker);
+         |                                             ^
+      73 |                 expect(failure.code).toBe('execution-failure');
+      74 |                 expect(boundaryFailure instanceof ResolutionError ? boundaryFailure.cause : undefined).toBe(thrown);
+      75 |             }
+
+      at Object.<anonymous> (scratch/gap-hunt/review-198-repair/dist/frozen/callbacks.test.js:72:45)
+
+  ● strict-fold/author-resolution-error: outer framework failure keeps authored text in exact cause
+
+    expect(received).not.toContain(expected) // indexOf
+
+    Expected substring: not "SYNTHETIC-CALLBACK-DETAIL-4c81"
+    Received string:        "SYNTHETIC-CALLBACK-DETAIL-4c81"
+
+      70 |                     throw new Error('Expected typed framework failure');
+      71 |                 }
+    > 72 |                 expect(failure.message).not.toContain(marker);
+         |                                             ^
+      73 |                 expect(failure.code).toBe('execution-failure');
+      74 |                 expect(boundaryFailure instanceof ResolutionError ? boundaryFailure.cause : undefined).toBe(thrown);
+      75 |             }
+
+      at Object.<anonymous> (scratch/gap-hunt/review-198-repair/dist/frozen/callbacks.test.js:72:45)
+
+  ● outcome-fold/author-resolution-error: outer framework failure keeps authored text in exact cause
+
+    expect(received).not.toContain(expected) // indexOf
+
+    Expected substring: not "SYNTHETIC-CALLBACK-DETAIL-4c81"
+    Received string:        "SYNTHETIC-CALLBACK-DETAIL-4c81"
+
+      70 |                     throw new Error('Expected typed framework failure');
+      71 |                 }
+    > 72 |                 expect(failure.message).not.toContain(marker);
+         |                                             ^
+      73 |                 expect(failure.code).toBe('execution-failure');
+      74 |                 expect(boundaryFailure instanceof ResolutionError ? boundaryFailure.cause : undefined).toBe(thrown);
+      75 |             }
+
+      at Object.<anonymous> (scratch/gap-hunt/review-198-repair/dist/frozen/callbacks.test.js:72:45)
+
+Test Suites: 1 failed, 1 total
+Tests:       4 failed, 4 passed, 8 total
+Snapshots:   0 total
+Time:        0.245 s, estimated 1 s
+Ran all test suites.
+Test results written to: <captures>/callbacks-old.json

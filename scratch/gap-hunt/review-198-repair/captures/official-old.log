@@ -1,0 +1,212 @@
+(node:51798) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL packages/core/.test-build/test/gap-hunt-error-privacy-callbacks.test.js
+  ● source/unsupported-result: outer framework failure keeps authored text in exact cause
+
+    expect(received).not.toContain(expected) // indexOf
+
+    Expected substring: not "SYNTHETIC-CALLBACK-DETAIL-4c81"
+    Received string:        "SYNTHETIC-CALLBACK-DETAIL-4c81"
+
+      79 |         expect(failedStepResults).toEqual({ count: 0 });
+      80 |         if (!(failure instanceof ResolutionError)) { throw new Error('Expected typed framework failure'); }
+    > 81 |         expect(failure.message).not.toContain(marker);
+         |                                     ^
+      82 |         expect(failure.message).toContain('value');
+      83 |         expect(failure.code).toBe('execution-failure');
+      84 |         expect(boundaryFailure).not.toBe(thrown);
+
+      at Object.<anonymous> (test/gap-hunt-error-privacy-callbacks.test.ts:81:37)
+
+  ● source/policy-failure: outer framework failure keeps authored text in exact cause
+
+    expect(received).not.toContain(expected) // indexOf
+
+    Expected substring: not "SYNTHETIC-CALLBACK-DETAIL-4c81"
+    Received string:        "SYNTHETIC-CALLBACK-DETAIL-4c81"
+
+      79 |         expect(failedStepResults).toEqual({ count: 0 });
+      80 |         if (!(failure instanceof ResolutionError)) { throw new Error('Expected typed framework failure'); }
+    > 81 |         expect(failure.message).not.toContain(marker);
+         |                                     ^
+      82 |         expect(failure.message).toContain('value');
+      83 |         expect(failure.code).toBe('execution-failure');
+      84 |         expect(boundaryFailure).not.toBe(thrown);
+
+      at Object.<anonymous> (test/gap-hunt-error-privacy-callbacks.test.ts:81:37)
+
+  ● source/execution-failure: outer framework failure keeps authored text in exact cause
+
+    expect(received).not.toContain(expected) // indexOf
+
+    Expected substring: not "SYNTHETIC-CALLBACK-DETAIL-4c81"
+    Received string:        "SYNTHETIC-CALLBACK-DETAIL-4c81"
+
+      79 |         expect(failedStepResults).toEqual({ count: 0 });
+      80 |         if (!(failure instanceof ResolutionError)) { throw new Error('Expected typed framework failure'); }
+    > 81 |         expect(failure.message).not.toContain(marker);
+         |                                     ^
+      82 |         expect(failure.message).toContain('value');
+      83 |         expect(failure.code).toBe('execution-failure');
+      84 |         expect(boundaryFailure).not.toBe(thrown);
+
+      at Object.<anonymous> (test/gap-hunt-error-privacy-callbacks.test.ts:81:37)
+
+  ● supplied/unsupported-result: outer framework failure keeps authored text in exact cause
+
+    expect(received).not.toContain(expected) // indexOf
+
+    Expected substring: not "SYNTHETIC-CALLBACK-DETAIL-4c81"
+    Received string:        "SYNTHETIC-CALLBACK-DETAIL-4c81"
+
+      79 |         expect(failedStepResults).toEqual({ count: 0 });
+      80 |         if (!(failure instanceof ResolutionError)) { throw new Error('Expected typed framework failure'); }
+    > 81 |         expect(failure.message).not.toContain(marker);
+         |                                     ^
+      82 |         expect(failure.message).toContain('value');
+      83 |         expect(failure.code).toBe('execution-failure');
+      84 |         expect(boundaryFailure).not.toBe(thrown);
+
+      at Object.<anonymous> (test/gap-hunt-error-privacy-callbacks.test.ts:81:37)
+
+  ● supplied/policy-failure: outer framework failure keeps authored text in exact cause
+
+    expect(received).not.toContain(expected) // indexOf
+
+    Expected substring: not "SYNTHETIC-CALLBACK-DETAIL-4c81"
+    Received string:        "SYNTHETIC-CALLBACK-DETAIL-4c81"
+
+      79 |         expect(failedStepResults).toEqual({ count: 0 });
+      80 |         if (!(failure instanceof ResolutionError)) { throw new Error('Expected typed framework failure'); }
+    > 81 |         expect(failure.message).not.toContain(marker);
+         |                                     ^
+      82 |         expect(failure.message).toContain('value');
+      83 |         expect(failure.code).toBe('execution-failure');
+      84 |         expect(boundaryFailure).not.toBe(thrown);
+
+      at Object.<anonymous> (test/gap-hunt-error-privacy-callbacks.test.ts:81:37)
+
+  ● supplied/execution-failure: outer framework failure keeps authored text in exact cause
+
+    expect(received).not.toBe(expected) // Object.is equality
+
+    Expected: not [ResolutionError: SYNTHETIC-CALLBACK-DETAIL-4c81]
+
+      82 |         expect(failure.message).toContain('value');
+      83 |         expect(failure.code).toBe('execution-failure');
+    > 84 |         expect(boundaryFailure).not.toBe(thrown);
+         |                                     ^
+      85 |         expect(boundaryFailure instanceof ResolutionError ? boundaryFailure.code : undefined).toBe('execution-failure');
+      86 |         expect(boundaryFailure instanceof ResolutionError ? boundaryFailure.cause : undefined).toBe(thrown);
+      87 |       } finally { sqlite.close(); rmSync(directory, { recursive: true, force: true }); }
+
+      at Object.<anonymous> (test/gap-hunt-error-privacy-callbacks.test.ts:84:37)
+
+  ● strict-fold/unsupported-result: outer framework failure keeps authored text in exact cause
+
+    expect(received).not.toContain(expected) // indexOf
+
+    Expected substring: not "SYNTHETIC-CALLBACK-DETAIL-4c81"
+    Received string:        "SYNTHETIC-CALLBACK-DETAIL-4c81"
+
+      79 |         expect(failedStepResults).toEqual({ count: 0 });
+      80 |         if (!(failure instanceof ResolutionError)) { throw new Error('Expected typed framework failure'); }
+    > 81 |         expect(failure.message).not.toContain(marker);
+         |                                     ^
+      82 |         expect(failure.message).toContain('value');
+      83 |         expect(failure.code).toBe('execution-failure');
+      84 |         expect(boundaryFailure).not.toBe(thrown);
+
+      at Object.<anonymous> (test/gap-hunt-error-privacy-callbacks.test.ts:81:37)
+
+  ● strict-fold/policy-failure: outer framework failure keeps authored text in exact cause
+
+    expect(received).not.toContain(expected) // indexOf
+
+    Expected substring: not "SYNTHETIC-CALLBACK-DETAIL-4c81"
+    Received string:        "SYNTHETIC-CALLBACK-DETAIL-4c81"
+
+      79 |         expect(failedStepResults).toEqual({ count: 0 });
+      80 |         if (!(failure instanceof ResolutionError)) { throw new Error('Expected typed framework failure'); }
+    > 81 |         expect(failure.message).not.toContain(marker);
+         |                                     ^
+      82 |         expect(failure.message).toContain('value');
+      83 |         expect(failure.code).toBe('execution-failure');
+      84 |         expect(boundaryFailure).not.toBe(thrown);
+
+      at Object.<anonymous> (test/gap-hunt-error-privacy-callbacks.test.ts:81:37)
+
+  ● strict-fold/execution-failure: outer framework failure keeps authored text in exact cause
+
+    expect(received).not.toContain(expected) // indexOf
+
+    Expected substring: not "SYNTHETIC-CALLBACK-DETAIL-4c81"
+    Received string:        "SYNTHETIC-CALLBACK-DETAIL-4c81"
+
+      79 |         expect(failedStepResults).toEqual({ count: 0 });
+      80 |         if (!(failure instanceof ResolutionError)) { throw new Error('Expected typed framework failure'); }
+    > 81 |         expect(failure.message).not.toContain(marker);
+         |                                     ^
+      82 |         expect(failure.message).toContain('value');
+      83 |         expect(failure.code).toBe('execution-failure');
+      84 |         expect(boundaryFailure).not.toBe(thrown);
+
+      at Object.<anonymous> (test/gap-hunt-error-privacy-callbacks.test.ts:81:37)
+
+  ● outcome-fold/unsupported-result: outer framework failure keeps authored text in exact cause
+
+    expect(received).not.toContain(expected) // indexOf
+
+    Expected substring: not "SYNTHETIC-CALLBACK-DETAIL-4c81"
+    Received string:        "SYNTHETIC-CALLBACK-DETAIL-4c81"
+
+      79 |         expect(failedStepResults).toEqual({ count: 0 });
+      80 |         if (!(failure instanceof ResolutionError)) { throw new Error('Expected typed framework failure'); }
+    > 81 |         expect(failure.message).not.toContain(marker);
+         |                                     ^
+      82 |         expect(failure.message).toContain('value');
+      83 |         expect(failure.code).toBe('execution-failure');
+      84 |         expect(boundaryFailure).not.toBe(thrown);
+
+      at Object.<anonymous> (test/gap-hunt-error-privacy-callbacks.test.ts:81:37)
+
+  ● outcome-fold/policy-failure: outer framework failure keeps authored text in exact cause
+
+    expect(received).not.toContain(expected) // indexOf
+
+    Expected substring: not "SYNTHETIC-CALLBACK-DETAIL-4c81"
+    Received string:        "SYNTHETIC-CALLBACK-DETAIL-4c81"
+
+      79 |         expect(failedStepResults).toEqual({ count: 0 });
+      80 |         if (!(failure instanceof ResolutionError)) { throw new Error('Expected typed framework failure'); }
+    > 81 |         expect(failure.message).not.toContain(marker);
+         |                                     ^
+      82 |         expect(failure.message).toContain('value');
+      83 |         expect(failure.code).toBe('execution-failure');
+      84 |         expect(boundaryFailure).not.toBe(thrown);
+
+      at Object.<anonymous> (test/gap-hunt-error-privacy-callbacks.test.ts:81:37)
+
+  ● outcome-fold/execution-failure: outer framework failure keeps authored text in exact cause
+
+    expect(received).not.toContain(expected) // indexOf
+
+    Expected substring: not "SYNTHETIC-CALLBACK-DETAIL-4c81"
+    Received string:        "SYNTHETIC-CALLBACK-DETAIL-4c81"
+
+      79 |         expect(failedStepResults).toEqual({ count: 0 });
+      80 |         if (!(failure instanceof ResolutionError)) { throw new Error('Expected typed framework failure'); }
+    > 81 |         expect(failure.message).not.toContain(marker);
+         |                                     ^
+      82 |         expect(failure.message).toContain('value');
+      83 |         expect(failure.code).toBe('execution-failure');
+      84 |         expect(boundaryFailure).not.toBe(thrown);
+
+      at Object.<anonymous> (test/gap-hunt-error-privacy-callbacks.test.ts:81:37)
+
+Test Suites: 1 failed, 1 total
+Tests:       12 failed, 20 passed, 32 total
+Snapshots:   0 total
+Time:        0.468 s, estimated 1 s
+Ran all test suites within paths "packages/core/.test-build/test/gap-hunt-error-privacy-callbacks.test.js".
+Test results written to: <captures>/official-old.json

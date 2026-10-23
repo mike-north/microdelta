@@ -1,0 +1,8 @@
+(node:55319) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       32 passed, 32 total
+Snapshots:   0 total
+Time:        0.805 s, estimated 1 s
+Ran all test suites within paths "packages/core/.test-build/test/gap-hunt-error-privacy-callbacks.test.js".
+Test results written to: <captures>/official-restored.json

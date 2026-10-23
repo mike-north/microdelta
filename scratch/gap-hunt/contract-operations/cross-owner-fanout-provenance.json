@@ -1,0 +1,14 @@
+{
+  "evidenceCommit": "3a63e6c",
+  "independentlyExecutedByThisWorker": false,
+  "inspected": [
+    {
+      "source": "/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/scratch/gap-hunt/scale/fanout-admission.test.mjs",
+      "sha256": "4ec6195851947ef2a6eb732dd91b20a0dc99276c6341d0164292c106fdbfc607"
+    },
+    {
+      "source": "/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/scratch/gap-hunt/scale/logs/fanout-admission-matrix.log",
+      "sha256": "598154b0492b468d14932386ffffef3ed44502d97c326ec6a28ae07999fff660"
+    }
+  ]
+}

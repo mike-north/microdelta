@@ -42,10 +42,11 @@ const people: readonly IPerson[] = [
 ];
 const selected = ['staff-1', 'staff-2', 'design-1', 'pm-1', 'pm-2'];
 
-test('authored trial selection preserves full histories; explicit caps label restricted scope; normal mode ignores trial-only policy', async () => {
+test('authored trial widens with exact member reuse and isolated production; caps stay explicit and normal mode ignores trial-only policy', async () => {
   const directory = mkdtempSync(join(tmpdir(), 'microdelta-authored-trial-'));
   const accounting = openDurableAccounting({ sqlite: createNodeSqlite(), location: join(directory, 'accounting.sqlite'), logicalStore: 'authored-trial' });
   const workspace = openWorkspace({ location: join(directory, 'history.sqlite'), logicalStore: 'authored-trial', accounting });
+  const summaries: string[] = [];
   const receipts: { readonly key: string; readonly cap: number | null; readonly prs: readonly string[] }[] = [];
   const load = async (person: ITrackedView<IPerson>, cap: number | null): Promise<ICorpus> => currentExecution().operation<ICorpus>({
     name: 'history', binding: `fixture:${person.key}:${String(cap)}`,
@@ -67,9 +68,12 @@ test('authored trial selection preserves full histories; explicit caps label res
     return false;
   };
   const roster = (): ISourceOutcome<IRoster> => sourceOutcome.fresh<IRoster>({ members: people, status: 'complete' });
-  const summarize = (value: ITrackedView<ICorpus>): ISummary => ({ key: value.key, count: value.prs.length, scope: value.scope, sourceExhausted: value.sourceExhausted });
+  const summarize = (value: ITrackedView<ICorpus>): ISummary => {
+    summaries.push(value.key);
+    return { key: value.key, count: value.prs.length, scope: value.scope, sourceExhausted: value.sourceExhausted };
+  };
   const render = (entries: readonly IFoldEntry<ITrackedView<ISummary>>[]): IReport => ({ required: entries.flatMap((entry) => entry.status === 'succeeded' ? [{ key: entry.data.key, count: entry.data.count, scope: entry.data.scope, sourceExhausted: entry.data.sourceExhausted }] : []), excluded: entries.filter((entry) => entry.status === 'skipped').map((entry) => entry.key) });
-  const start = async (config: IConfig, key: string) => {
+  const start = async (config: IConfig, key: string, environment = 'same') => {
     const builders = authoring<IInputs, IHelpers>();
     const rosterStep = builders.source<IRoster>({ subject: 'people', collection: { identity: 'key' }, finality: () => true, run: ({ helpers }) => helpers.roster() });
     const steps = (member: IMemberBuilder<IInputs, IHelpers, IPerson>) => {
@@ -80,16 +84,31 @@ test('authored trial selection preserves full histories; explicit caps label res
     const person = builders.template({ slot: 'person', collection: rosterStep, gate: ({ member, inputs, helpers }) => helpers.include(inputs.config, member.key), steps });
     const report = builders.fold({ subject: 'organization-report', over: { template: person, step: 'summary' }, run: ({ members, helpers }) => helpers.render(members) });
     const composition = builders.compose({ scope: 'authored-trial', inputs: [{ slot: 'config', value: config }], helpers: [{ slot: 'include', helper: include }, { slot: 'roster', helper: roster }, { slot: 'load', helper: load }, { slot: 'summarize', helper: summarize }, { slot: 'render', helper: render }], steps: [{ slot: 'roster', declaration: rosterStep }, { slot: 'report', declaration: report }], templates: [person] });
-    return workspace.run({ authoring: builders, composition, environment: 'same' }, async (run) => {
+    return workspace.run({ authoring: builders, composition, environment }, async (run) => {
       const folded = await run.resolveFold({ scope: 'authored-trial', role: 'step', slot: 'report' }, { requestKey: key });
       if (folded.outcome.status !== 'succeeded') { throw new Error(`unexpected ${folded.outcome.status}`); }
-      return run.read<IReport>(folded.outcome.outcome.reference);
+      return { ...run.read<IReport>(folded.outcome.outcome.reference), reportReference: folded.outcome.outcome.reference.locator, summaryReferences: Object.fromEntries(folded.members.flatMap((member) => member.status === 'succeeded' ? [[member.key, member.outcome.reference.locator]] : [])) };
     });
   };
   try {
     expect(people.filter((person) => selected.includes(person.key)).map((person) => person.role).sort()).toEqual(['designer', 'pm', 'pm', 'staff', 'staff']);
+    // Widening changes aggregate membership, not still-valid member evidence.
+    const narrowSelection = ['staff-1', 'design-1', 'pm-1'];
+    const narrow = await start({ mode: 'trial', selected: narrowSelection, trialPrCap: null }, 'narrow-trial');
+    expect(receipts.map((receipt) => receipt.key).sort()).toEqual([...narrowSelection].sort());
+    expect(summaries.sort()).toEqual([...narrowSelection].sort());
+    expect(narrow.value.required.map((person) => person.key).sort()).toEqual([...narrowSelection].sort());
+    expect(narrow.value.excluded).toHaveLength(5);
+    receipts.length = 0;
+    summaries.length = 0;
     const full = await start({ mode: 'trial', selected, trialPrCap: null }, 'full-trial');
-    expect(receipts.map((receipt) => receipt.key).sort()).toEqual([...selected].sort());
+    expect(receipts.map((receipt) => receipt.key).sort()).toEqual(['pm-2', 'staff-2']);
+    expect(summaries.sort()).toEqual(['pm-2', 'staff-2']);
+    expect(full.value.reportReference).not.toBe(narrow.value.reportReference);
+    for (const key of narrowSelection) {
+      expect(narrow.value.summaryReferences[key]).toEqual(expect.any(String));
+      expect(full.value.summaryReferences[key]).toBe(narrow.value.summaryReferences[key]);
+    }
     expect(full.value.required).toHaveLength(5);
     for (const receipt of receipts) { expect(receipt.prs).toEqual(people.find((person) => person.key === receipt.key)?.prs); }
     for (const person of people.filter((person) => selected.includes(person.key))) {
@@ -111,5 +130,16 @@ test('authored trial selection preserves full histories; explicit caps label res
     }
     expect(receipts.every((receipt) => receipt.cap === null)).toBe(true);
     expect(receipts.map((receipt) => receipt.key)).toEqual(expect.arrayContaining(['design-2', 'pm-3', 'staff-3']));
+    // Same shapes and trial identities cannot supply a production environment.
+    receipts.length = 0;
+    summaries.length = 0;
+    const production = await start({ mode: 'normal', selected, trialPrCap: 1 }, 'production', 'production');
+    expect(receipts.map((receipt) => receipt.key).sort()).toEqual(people.map((person) => person.key).sort());
+    expect(summaries.sort()).toEqual(people.map((person) => person.key).sort());
+    expect(production.value.required).toEqual(normal.value.required);
+    expect(production.value.excluded).toEqual([]);
+    for (const key of selected) {
+      expect(production.value.summaryReferences[key]).not.toBe(full.value.summaryReferences[key]);
+    }
   } finally { workspace.close(); accounting.close(); rmSync(directory, { recursive: true, force: true }); }
 });

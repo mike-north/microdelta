@@ -1,10 +1,10 @@
-watchman warning: Recrawled this watch 5 times, most recently because:
+watchman warning: Recrawled this watch 9 times, most recently because:
 MustScanSubDirs UserDroppedTo resolve, please review the information on
 https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
 To clear this warning, run:
 `watchman watch-del '<checkout>' ; watchman watch-project '<checkout>'`
 
-(node:51291) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(node:65390) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
 (Use `node --trace-warnings ...` to show where the warning was created)
 FAIL scratch/gap-hunt/local-filter/dist/filter.test.js
   ● TEST-6: independent local filters update retained scalar views without rewriting their exact snapshot
@@ -32,6 +32,6 @@ FAIL scratch/gap-hunt/local-filter/dist/filter.test.js
 Test Suites: 1 failed, 1 total
 Tests:       1 failed, 1 total
 Snapshots:   0 total
-Time:        0.342 s, estimated 1 s
+Time:        0.304 s, estimated 1 s
 Ran all test suites.
 Test results written to: ../../../../../..<captures>/fault.json

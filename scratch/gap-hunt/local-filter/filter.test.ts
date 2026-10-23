@@ -40,7 +40,8 @@ test('TEST-6: independent local filters update retained scalar views without rew
       expect(result['empty']).toEqual([]);
       expect(result['evaluations']).toBe(3);
       expect(result['initialEvaluations']).toBe(1);
-      expect(result['independent']).toBe('Ada');
+      expect(result['independentBefore']).toBe('Ada');
+      expect(result['independent']).toBe(result['independentBefore']);
       expect(result['observationCounts']).toEqual([3, 4, 2]);
       expect(result['before']).toEqual(seed['envelope']);
       expect(result['after']).toEqual(seed['envelope']);

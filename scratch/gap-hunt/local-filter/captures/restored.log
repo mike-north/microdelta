@@ -1,4 +1,4 @@
-watchman warning: Recrawled this watch 5 times, most recently because:
+watchman warning: Recrawled this watch 9 times, most recently because:
 MustScanSubDirs UserDroppedTo resolve, please review the information on
 https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
 To clear this warning, run:
@@ -7,13 +7,13 @@ To clear this warning, run:
   console.log
     local-filter-observation {"independentProcesses":3,"viewProcesses":2,"evaluationsEach":3,"initial":["Ada"],"widened":["Ada","Ben"],"empty":[],"exactReferencePreserved":true,"envelopePreserved":true,"databaseBytesUnchanged":true,"unreadSelectedReads":0}
 
-      at Object.<anonymous> (dist/filter.test.js:51:17)
+      at Object.<anonymous> (dist/filter.test.js:52:17)
 
-(node:51372) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(node:65683) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
 (Use `node --trace-warnings ...` to show where the warning was created)
 Test Suites: 1 passed, 1 total
 Tests:       1 passed, 1 total
 Snapshots:   0 total
-Time:        0.288 s, estimated 1 s
+Time:        0.344 s, estimated 1 s
 Ran all test suites.
 Test results written to: ../../../../../..<captures>/restored.json

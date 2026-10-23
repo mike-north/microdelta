@@ -43,6 +43,9 @@ try {
     const observer = createTrackingObserver(machine);
     const materialization = createMaterialization({ tracking: observer, reader });
     const rows = materialization.materialize<IRows>(reference, { path: ['rows'] });
+    const other = createTrackingObserver(machine);
+    const independent = createMaterialization({ tracking: other, reader }).materialize<IRows>(reference, { path: ['independent'] });
+    const independentBefore = other.capture(() => independent.adaName).value;
     const local = createTracking(machine);
     const filter = local.cell(5);
     let evaluations = 0;
@@ -60,9 +63,7 @@ try {
     filter.set(10);
     const empty = captureFilter();
     // Another reader keeps its own view and captured facts while local state changes.
-    const other = createTrackingObserver(machine);
-    const independent = createMaterialization({ tracking: other, reader }).materialize<IRows>(reference, { path: ['independent'] });
     const independentCapture = other.capture(() => independent.adaName);
-    console.log(JSON.stringify({ pid: process.pid, reference, initial: initial.value, cached, widened: widened.value, empty: empty.value, evaluations, initialEvaluations, selected, observationCounts: [initial.observations.length, widened.observations.length, empty.observations.length], independent: independentCapture.value, before, after: history.readEnvelope(reference), root: history.reader.readSubtree(reference, []) }));
+    console.log(JSON.stringify({ pid: process.pid, reference, initial: initial.value, cached, widened: widened.value, empty: empty.value, evaluations, initialEvaluations, selected, observationCounts: [initial.observations.length, widened.observations.length, empty.observations.length], independentBefore, independent: independentCapture.value, before, after: history.readEnvelope(reference), root: history.reader.readSubtree(reference, []) }));
   }
 } finally { history.close(); }

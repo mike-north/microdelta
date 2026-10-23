@@ -1,0 +1,79 @@
+{
+  "files": [
+    {
+      "path": "ASSERTIONS.md",
+      "bytes": 1924,
+      "sha256": "6261fb67d4f92533f67ab66e9c84fdf76103185345e0ad706d58467991cdd3d1"
+    },
+    {
+      "path": "README.md",
+      "bytes": 4112,
+      "sha256": "29c20ecf8e5dfc20c57daeec4a7e56cd02a2137aa60f9e1a6e6fa731bf1a95ea"
+    },
+    {
+      "path": "eslint.config.mjs",
+      "bytes": 307,
+      "sha256": "4c8b9b86da9edae198d5407e2893d4d2f75b02b8e5ad38e2d4452c6cd2b6394a"
+    },
+    {
+      "path": "jest.config.mjs",
+      "bytes": 205,
+      "sha256": "407e501401c0965cd1cb9a5da1ad4a1929c9f1985c957e34e4cc256435ea9ea1"
+    },
+    {
+      "path": "replay.py",
+      "bytes": 2926,
+      "sha256": "f917b6da3691df549726006173fa83c99e9c516b3d8ac86fb6ed7a5c1ae1e655"
+    },
+    {
+      "path": "results/build.log",
+      "bytes": 4988,
+      "sha256": "9eb1f0e1ba62cd61262041daf444feb22fd48ec57cb809914e03f96c4504a62d"
+    },
+    {
+      "path": "results/install.log",
+      "bytes": 453,
+      "sha256": "988d0f63eb7d23ba069b9b718b3afa6d03fbe9401c8c00ac5351bbf022e16ee4"
+    },
+    {
+      "path": "results/lint.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "results/receipt.json",
+      "bytes": 4407,
+      "sha256": "6086f718f5ac839daced93a95253851d4e960e8989052372243ea56daa5a74b5"
+    },
+    {
+      "path": "results/runtime.log",
+      "bytes": 2060,
+      "sha256": "055b7461be893941226f731852f82275859e3582fd5d18bb0711df032c906eb5"
+    },
+    {
+      "path": "results/types.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "summary.json",
+      "bytes": 1685,
+      "sha256": "d4a59c2c910c1799da107927f67fe0742b7cc59b5ce25ebb6eb4618138f5f861"
+    },
+    {
+      "path": "tsconfig.json",
+      "bytes": 1310,
+      "sha256": "876ff9659a510fa8642eb8bca03c492fabea3a29b78e84aecc6b8d841d7dc6df"
+    },
+    {
+      "path": "validation.test.mjs",
+      "bytes": 4785,
+      "sha256": "5ee3e288b2874ab089386f7cf17374febf83d7573322d9ae1adea07f58023d42"
+    },
+    {
+      "path": "worker.ts",
+      "bytes": 3110,
+      "sha256": "6debe7018b2348e55bf1080b4ad989940b97dc799475d7057f1ff37e16b7860b"
+    }
+  ]
+}

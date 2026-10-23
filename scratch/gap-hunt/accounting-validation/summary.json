@@ -1,0 +1,55 @@
+{
+  "classification": "aligned; one finite supplemental ACC-002 outcome",
+  "product_source": "52e3786516a404e3433bef03807a027c8103786c",
+  "executed_recipe": "6d9383383a7757954ae95762f80d6f2df1c0cf5c",
+  "final_artifact_runtime_repeated": false,
+  "commands": 5,
+  "strict_generated_alpha_compile": true,
+  "type_aware_lint": true,
+  "jest_suites": 1,
+  "jest_tests": 1,
+  "independent_processes": 4,
+  "observed_units_by_process": [
+    100,
+    1,
+    1,
+    1
+  ],
+  "environment_totals": [
+    100,
+    101,
+    102,
+    103
+  ],
+  "retention_processes": 2,
+  "retained_exact_reference": true,
+  "entire_original_persisted_result_row_equal": true,
+  "original_provenance_unchanged": true,
+  "separate_acceptance_counts": [
+    0,
+    1,
+    2
+  ],
+  "actual_validation_operations_each": 1,
+  "distinct_validation_operation_and_request_attempt_identities": true,
+  "original_run_units_remain": 100,
+  "fresh_equal_control": {
+    "current_units": 1,
+    "distinct_reference": true,
+    "serialized_payload_equal": true,
+    "retention_assertion_rejects": true,
+    "product_mutation": false
+  },
+  "original_result_rows_sha256": "f6971d43fd0867a0cc1f42ae2dec6f9c509eee92531378ac75c8a79637057704",
+  "durable_records_sha256": "e9dce07cea7b2c292a094ddbe4d42bd04d9d2eb09ea65d40d8716f8d35a142cd",
+  "host": {
+    "node": "v24.22.1",
+    "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O"
+  },
+  "tracked_source_clean_after_execution": true,
+  "historical74_changed": false,
+  "no_product_fix": true,
+  "no_live_provider": true,
+  "linux_executed": false,
+  "scope": "One assembled source-validation retention outcome; no crash/retry/sharing/capacity or whole-spec conformance claim."
+}

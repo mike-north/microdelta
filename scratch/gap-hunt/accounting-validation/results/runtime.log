@@ -1,0 +1,18 @@
+watchman warning: Recrawled this watch 7 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '<checkout>' ; watchman watch-project '<checkout>'`
+
+  console.log
+    {"directory":"<synthetic-store>","phases":[{"phase":"cold","sourceChecks":1,"sends":1,"reference":{"kind":"completed-result","locator":"mdh1|[\"acc002\",\"accounting-validation\",\"synthetic\",1]"},"kind":"published","ownUsage":[{"unit":"units","amount":100}],"cumulativeUsage":[{"unit":"units","amount":100}]},{"phase":"retain-b","sourceChecks":1,"sends":1,"reference":{"kind":"completed-result","locator":"mdh1|[\"acc002\",\"accounting-validation\",\"synthetic\",1]"},"kind":"reused","ownUsage":[{"unit":"units","amount":1}],"cumulativeUsage":[{"unit":"units","amount":101}]},{"phase":"retain-c","sourceChecks":1,"sends":1,"reference":{"kind":"completed-result","locator":"mdh1|[\"acc002\",\"accounting-validation\",\"synthetic\",1]"},"kind":"reused","ownUsage":[{"unit":"units","amount":1}],"cumulativeUsage":[{"unit":"units","amount":102}]},{"phase":"fresh-negative","sourceChecks":1,"sends":1,"reference":{"kind":"completed-result","locator":"mdh1|[\"acc002\",\"accounting-validation\",\"synthetic\",4]"},"kind":"published","ownUsage":[{"unit":"units","amount":1}],"cumulativeUsage":[{"unit":"units","amount":103}]}],"originalResultRowsSha256":"f6971d43fd0867a0cc1f42ae2dec6f9c509eee92531378ac75c8a79637057704","separateAcceptances":[0,1,2],"resultRowsUnchangedAcrossRetention":true,"independentProcesses":4,"freshEqualRejectedByRetentionOracle":true}
+
+      at Object.<anonymous> (validation.test.mjs:72:11)
+
+(node:14045) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       1 passed, 1 total
+Snapshots:   0 total
+Time:        0.742 s, estimated 1 s
+Ran all test suites.

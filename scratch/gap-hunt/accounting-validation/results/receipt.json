@@ -1,0 +1,174 @@
+{
+  "source": "52e3786516a404e3433bef03807a027c8103786c",
+  "recipe_commit": "6d9383383a7757954ae95762f80d6f2df1c0cf5c",
+  "node": "v24.22.1",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "commands": [
+    {
+      "name": "install",
+      "argv": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "exit": 0,
+      "seconds": 7.171370458003366,
+      "log_sha256": "988d0f63eb7d23ba069b9b718b3afa6d03fbe9401c8c00ac5351bbf022e16ee4"
+    },
+    {
+      "name": "build",
+      "argv": [
+        "npm",
+        "run",
+        "build:packages"
+      ],
+      "exit": 0,
+      "seconds": 28.727830082993023,
+      "log_sha256": "9eb1f0e1ba62cd61262041daf444feb22fd48ec57cb809914e03f96c4504a62d"
+    },
+    {
+      "name": "types",
+      "argv": [
+        "node",
+        "node_modules/typescript/bin/tsc",
+        "-p",
+        "scratch/gap-hunt/accounting-validation/tsconfig.json"
+      ],
+      "exit": 0,
+      "seconds": 0.8591560829954688,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "lint",
+      "argv": [
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "scratch/gap-hunt/accounting-validation/eslint.config.mjs",
+        "scratch/gap-hunt/accounting-validation/worker.ts"
+      ],
+      "exit": 0,
+      "seconds": 2.860844749986427,
+      "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "runtime",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/accounting-validation/jest.config.mjs",
+        "--runInBand"
+      ],
+      "exit": 0,
+      "seconds": 1.3596732919977512,
+      "log_sha256": "055b7461be893941226f731852f82275859e3582fd5d18bb0711df032c906eb5"
+    }
+  ],
+  "observation": {
+    "directory": "<synthetic-store>",
+    "phases": [
+      {
+        "phase": "cold",
+        "sourceChecks": 1,
+        "sends": 1,
+        "reference": {
+          "kind": "completed-result",
+          "locator": "mdh1|[\"acc002\",\"accounting-validation\",\"synthetic\",1]"
+        },
+        "kind": "published",
+        "ownUsage": [
+          {
+            "unit": "units",
+            "amount": 100
+          }
+        ],
+        "cumulativeUsage": [
+          {
+            "unit": "units",
+            "amount": 100
+          }
+        ]
+      },
+      {
+        "phase": "retain-b",
+        "sourceChecks": 1,
+        "sends": 1,
+        "reference": {
+          "kind": "completed-result",
+          "locator": "mdh1|[\"acc002\",\"accounting-validation\",\"synthetic\",1]"
+        },
+        "kind": "reused",
+        "ownUsage": [
+          {
+            "unit": "units",
+            "amount": 1
+          }
+        ],
+        "cumulativeUsage": [
+          {
+            "unit": "units",
+            "amount": 101
+          }
+        ]
+      },
+      {
+        "phase": "retain-c",
+        "sourceChecks": 1,
+        "sends": 1,
+        "reference": {
+          "kind": "completed-result",
+          "locator": "mdh1|[\"acc002\",\"accounting-validation\",\"synthetic\",1]"
+        },
+        "kind": "reused",
+        "ownUsage": [
+          {
+            "unit": "units",
+            "amount": 1
+          }
+        ],
+        "cumulativeUsage": [
+          {
+            "unit": "units",
+            "amount": 102
+          }
+        ]
+      },
+      {
+        "phase": "fresh-negative",
+        "sourceChecks": 1,
+        "sends": 1,
+        "reference": {
+          "kind": "completed-result",
+          "locator": "mdh1|[\"acc002\",\"accounting-validation\",\"synthetic\",4]"
+        },
+        "kind": "published",
+        "ownUsage": [
+          {
+            "unit": "units",
+            "amount": 1
+          }
+        ],
+        "cumulativeUsage": [
+          {
+            "unit": "units",
+            "amount": 103
+          }
+        ]
+      }
+    ],
+    "originalResultRowsSha256": "f6971d43fd0867a0cc1f42ae2dec6f9c509eee92531378ac75c8a79637057704",
+    "separateAcceptances": [
+      0,
+      1,
+      2
+    ],
+    "resultRowsUnchangedAcrossRetention": true,
+    "independentProcesses": 4,
+    "freshEqualRejectedByRetentionOracle": true
+  },
+  "durable_records_sha256": "e9dce07cea7b2c292a094ddbe4d42bd04d9d2eb09ea65d40d8716f8d35a142cd",
+  "complete": true
+}

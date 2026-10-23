@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { test } from 'node:test';
 import * as v8 from 'node:v8';
+import { standaloneContextEnvironment } from './context-lifecycle-env.mjs';
 
 /** Heap object census is only available on hosts that expose Node's diagnostic. */
 const hasObjectCensus = typeof Reflect.get(v8, 'queryObjects') === 'function';
@@ -26,7 +27,7 @@ test('completed standalone captures do not retain one host context per entry', {
   const result = spawnSync(process.execPath, ['scratch/gap-hunt/scale/repro-context-component.mjs'], {
     cwd: process.cwd(),
     encoding: 'utf8',
-    env: { ...process.env, GAP_HUNT_REUSE_BUILD: '1' },
+    env: standaloneContextEnvironment(process.env),
   });
   assert.equal(result.error, undefined);
   assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);

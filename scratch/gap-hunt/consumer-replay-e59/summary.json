@@ -1,0 +1,509 @@
+{
+  "consumer_pin": "d172f5f7c0790914bfc7a0ffbf1398618dd72ad8",
+  "main_pin": "e59c64d0e1c607b5a4a8ae1fa124b1be5cdc2573",
+  "node": "v24.22.1",
+  "pnpm": "12.10.1",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "compatibility": {
+    "prepush_exit": 0,
+    "prepush_tests": 641,
+    "focused_exit": 0,
+    "focused_tests": 329,
+    "declaration_patch_applied": false,
+    "installed_graph_byte_verified_packages": 10
+  },
+  "rehearsal": {
+    "exit_code": 1,
+    "seconds": 652.9710011482239,
+    "timeout_bound_seconds": 900,
+    "final_report_exists": true,
+    "log_sha256": "6de888157f9c75faada6abca3c76da44030919a198ef4d06b7e136abc7a5cf32",
+    "completed_stage_measurements": [
+      {
+        "run": 1,
+        "stage": "collection.roster",
+        "milliseconds": 59.65754199999998,
+        "rssBytes": 210796544,
+        "heapUsedBytes": 70154384,
+        "counts": {
+          "people": 391
+        }
+      },
+      {
+        "run": 1,
+        "stage": "collection.discovery",
+        "milliseconds": 2406.836541,
+        "rssBytes": 405569536,
+        "heapUsedBytes": 160369704,
+        "counts": {
+          "pulls": 70304,
+          "audiences": 405
+        }
+      },
+      {
+        "run": 1,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 15807.223084,
+        "rssBytes": 683212800,
+        "heapUsedBytes": 274317744,
+        "counts": {
+          "completed": 10000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 1,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 13780.564333000002,
+        "rssBytes": 789348352,
+        "heapUsedBytes": 399688440,
+        "counts": {
+          "completed": 20000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 1,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 15655.025957999998,
+        "rssBytes": 848789504,
+        "heapUsedBytes": 410824240,
+        "counts": {
+          "completed": 30000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 1,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 14681.361334000001,
+        "rssBytes": 1015578624,
+        "heapUsedBytes": 405996040,
+        "counts": {
+          "completed": 40000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 1,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 13704.347416000004,
+        "rssBytes": 1116127232,
+        "heapUsedBytes": 889297968,
+        "counts": {
+          "completed": 50000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 1,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 17245.59454199999,
+        "rssBytes": 1139736576,
+        "heapUsedBytes": 690410280,
+        "counts": {
+          "completed": 60000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 1,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 35313.078458,
+        "rssBytes": 1279721472,
+        "heapUsedBytes": 504969304,
+        "counts": {
+          "completed": 70000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 1,
+        "stage": "collection.pulls",
+        "milliseconds": 126619.155375,
+        "rssBytes": 1279885312,
+        "heapUsedBytes": 546097576,
+        "counts": {
+          "pulls": 70304
+        }
+      },
+      {
+        "run": 1,
+        "stage": "collection.hubble",
+        "milliseconds": 11089.838042000003,
+        "rssBytes": 1353302016,
+        "heapUsedBytes": 1068476216,
+        "counts": {
+          "dailyTokens": 95471,
+          "dailyPresence": 159127
+        }
+      },
+      {
+        "run": 1,
+        "stage": "collection.assembly",
+        "milliseconds": 10587.563250000007,
+        "rssBytes": 1985445888,
+        "heapUsedBytes": 1408957040
+      },
+      {
+        "run": 1,
+        "stage": "collection.aggregate",
+        "milliseconds": 15245.555166999984,
+        "rssBytes": 2767503360,
+        "heapUsedBytes": 928229576
+      },
+      {
+        "run": 1,
+        "stage": "emitter.validate-serialize",
+        "milliseconds": 7462.67975000001,
+        "rssBytes": 2562375680,
+        "heapUsedBytes": 1215193304,
+        "counts": {
+          "files": 1676,
+          "totalPlaintextBytes": 337226059,
+          "largestPlaintextBytes": 2039192,
+          "audiences": 405
+        },
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 1,
+        "stage": "emitter.bundle",
+        "milliseconds": 9671.242957999988,
+        "rssBytes": 2737389568,
+        "heapUsedBytes": 1268449208,
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 1,
+        "stage": "emitter.write",
+        "milliseconds": 590.2201669999922,
+        "rssBytes": 2737602560,
+        "heapUsedBytes": 1240451768,
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 1,
+        "stage": "emitter.verify-staging",
+        "milliseconds": 93075.97341600002,
+        "rssBytes": 2413051904,
+        "heapUsedBytes": 1583543392,
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 1,
+        "stage": "emitter.replace-verify-installed",
+        "milliseconds": 100026.570084,
+        "rssBytes": 2031616000,
+        "heapUsedBytes": 2690422264,
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 1,
+        "stage": "collection.emit",
+        "milliseconds": 210831.004416,
+        "rssBytes": 2033467392,
+        "heapUsedBytes": 2690515344
+      },
+      {
+        "run": 2,
+        "stage": "collection.roster",
+        "milliseconds": 22.353250000043772,
+        "rssBytes": 1834123264,
+        "heapUsedBytes": 85653432,
+        "counts": {
+          "people": 391
+        }
+      },
+      {
+        "run": 2,
+        "stage": "collection.discovery",
+        "milliseconds": 951.6377079999656,
+        "rssBytes": 1842069504,
+        "heapUsedBytes": 181677472,
+        "counts": {
+          "pulls": 70304,
+          "audiences": 405
+        }
+      },
+      {
+        "run": 2,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 7497.991374999983,
+        "rssBytes": 1841659904,
+        "heapUsedBytes": 402387288,
+        "counts": {
+          "completed": 10000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 2,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 6754.354374999995,
+        "rssBytes": 1868709888,
+        "heapUsedBytes": 498992568,
+        "counts": {
+          "completed": 20000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 2,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 7735.131457999989,
+        "rssBytes": 1869299712,
+        "heapUsedBytes": 580897880,
+        "counts": {
+          "completed": 30000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 2,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 7613.074625000008,
+        "rssBytes": 1938358272,
+        "heapUsedBytes": 514211056,
+        "counts": {
+          "completed": 40000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 2,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 6884.482791999995,
+        "rssBytes": 1989951488,
+        "heapUsedBytes": 388190312,
+        "counts": {
+          "completed": 50000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 2,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 6676.956082999997,
+        "rssBytes": 1991213056,
+        "heapUsedBytes": 810075312,
+        "counts": {
+          "completed": 60000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 2,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 7938.597708000045,
+        "rssBytes": 1842151424,
+        "heapUsedBytes": 505845704,
+        "counts": {
+          "completed": 70000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 2,
+        "stage": "collection.pulls",
+        "milliseconds": 51511.807042,
+        "rssBytes": 1842151424,
+        "heapUsedBytes": 557788672,
+        "counts": {
+          "pulls": 70304
+        }
+      },
+      {
+        "run": 2,
+        "stage": "collection.hubble",
+        "milliseconds": 5209.449083000014,
+        "rssBytes": 1887993856,
+        "heapUsedBytes": 411845528,
+        "counts": {
+          "dailyTokens": 95471,
+          "dailyPresence": 159127
+        }
+      },
+      {
+        "run": 2,
+        "stage": "collection.assembly",
+        "milliseconds": 9278.664875000017,
+        "rssBytes": 2465873920,
+        "heapUsedBytes": 742990088
+      },
+      {
+        "run": 2,
+        "stage": "collection.aggregate",
+        "milliseconds": 3468.830332999991,
+        "rssBytes": 3624796160,
+        "heapUsedBytes": 2534086384
+      },
+      {
+        "run": 2,
+        "stage": "emitter.validate-serialize",
+        "milliseconds": 6890.758458000026,
+        "rssBytes": 3110977536,
+        "heapUsedBytes": 1324223000,
+        "counts": {
+          "files": 1676,
+          "totalPlaintextBytes": 337226059,
+          "largestPlaintextBytes": 2039192,
+          "audiences": 405
+        },
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 2,
+        "stage": "emitter.bundle",
+        "milliseconds": 9032.26233399997,
+        "rssBytes": 3012116480,
+        "heapUsedBytes": 1218243096,
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 2,
+        "stage": "emitter.write",
+        "milliseconds": 541.8141250000335,
+        "rssBytes": 2982608896,
+        "heapUsedBytes": 1188461640,
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 2,
+        "stage": "emitter.verify-staging",
+        "milliseconds": 90751.80262500001,
+        "rssBytes": 2420129792,
+        "heapUsedBytes": 1596745392,
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 2,
+        "stage": "emitter.replace-verify-installed",
+        "milliseconds": 93319.32216599991,
+        "rssBytes": 1707229184,
+        "heapUsedBytes": 1672920064,
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 2,
+        "stage": "collection.emit",
+        "milliseconds": 200655.44320900005,
+        "rssBytes": 1709342720,
+        "heapUsedBytes": 1677053072
+      }
+    ],
+    "final_report_sha256": "f933ea357f51697a5d23e507a23f354e6c7f92549c395c000b43d066c69398c9",
+    "reported_status": "failed",
+    "reported_failure": "Target already exists: cp returned EEXIST (<consumer>/out/synthetic-bundle already exists) <consumer>/out/synthetic-bundle",
+    "output_audit": {
+      "people": 391,
+      "authoredH1": 34917,
+      "authoredH2": 35287,
+      "submittedReviews": 90362,
+      "cappedPrs": 2,
+      "complete3000Prs": 2,
+      "unknownTenurePeople": 10,
+      "unavailableCalendars": 10,
+      "workingDayHalves": 782,
+      "comparisons": 2346,
+      "personCohortStats": 391,
+      "halfMixes": 782,
+      "globalDistributionTables": 1,
+      "scopedDistributionTables": 13,
+      "distributionRows": 93,
+      "tables": 838,
+      "representativeIcKeyringsChecked": 1,
+      "restrictedFilesDenied": 810,
+      "milliseconds": 2354.882083000033
+    },
+    "runs": [
+      {
+        "milliseconds": 377722.985875,
+        "providerCalls": 777223,
+        "fileCount": 2082,
+        "totalBytes": 18843216,
+        "largestBytes": 388592,
+        "bodiesExecuted": 71822,
+        "siteAssetsBudgetVerified": false,
+        "inventory_sha256": "859ed04c3845b7b48e117fd806108d38ba76ca3c9dc3a7579acee782021111bd"
+      },
+      {
+        "milliseconds": 272077.56475,
+        "providerCalls": 0,
+        "fileCount": 2082,
+        "totalBytes": 18843216,
+        "largestBytes": 388592,
+        "bodiesExecuted": 0,
+        "siteAssetsBudgetVerified": false,
+        "inventory_sha256": "859ed04c3845b7b48e117fd806108d38ba76ca3c9dc3a7579acee782021111bd"
+      }
+    ]
+  },
+  "adapters": {
+    "consumer_pin": "d172f5f7c0790914bfc7a0ffbf1398618dd72ad8",
+    "main_pin": "e59c64d0e1c607b5a4a8ae1fa124b1be5cdc2573",
+    "tracked_changes": [
+      "pnpm-lock.yaml",
+      "pnpm-workspace.yaml"
+    ],
+    "all_other_tracked_source_byte_exact": true,
+    "declaration_patch_applied": false,
+    "installed_definition_alpha_byte_exact_build": true,
+    "definition_alpha_sha256": "232b44bd166207f1f8ef61776872d9c55f19c0b20d7e7d7a792696b98256aed1",
+    "generator_adapter": "External scratch generator exact0.3guard; tracked0.2generator unchanged",
+    "pnpm_adapter": "verifyDepsBeforeRun:false, issuer graph byte verified",
+    "prior_setup_failures": "Expected unchanged tracked0.2postinstall guard; no other setup failure.",
+    "full_synthetic_timeout_seconds": 900
+  },
+  "qualification": "One frozen current-main synthetic run after PR188; no published baseline or capacity rerun. Phase durations are uncontrolled measurements, not causal timing evidence for PR188 or PR184. Provider counters refer to synthetic stub activity; no live or paid provider execution.",
+  "supplemental_saved_output_validation": {
+    "original_exit": 1,
+    "original_status": "failed; finalcopy EEXIST after bothpasses",
+    "saved_inventory_matches_independent_audit": true,
+    "data_bytes": 18843216,
+    "asset_bytes": 438035,
+    "total_bytes": 19281251,
+    "limit_bytes": 20971520,
+    "headroom_bytes": 1690269,
+    "combined_site_budget_pass": true,
+    "built_encrypted_bytes_match_saved_bundle": true,
+    "original_artifacts_and_existing_dist_unchanged": true,
+    "new_collection_or_provider_calls": false,
+    "qualification": "SUPPLEMENTAL SAVED-OUTPUT TERMINAL VALIDATION; original full command remains exit1 EEXIST; cold/warm inventory equality independently checked",
+    "receipt_sha256": "74907526c6037f8ce26e51663baadcd2485ae1894358e08891e06746acf3e082"
+  },
+  "runtime_identity_after_rehearsal": {
+    "frozen_runtime": "e59c64d0e1c607b5a4a8ae1fa124b1be5cdc2573",
+    "consumer": "d172f5f7c0790914bfc7a0ffbf1398618dd72ad8",
+    "packages": 10,
+    "dist_src_files": 280,
+    "javascript_files": 70,
+    "before_graph_sha256": "84aa9050d97d67596684c2bb786d3ae01150efda3a78533ab601176f23e4cc8b",
+    "before_canonical_runtime_sha256": "7e4b3ad25d24968748ff277a011f7df0793d042f01ee7affa4f9ddb412eb49e9",
+    "after_canonical_runtime_sha256": "7e4b3ad25d24968748ff277a011f7df0793d042f01ee7affa4f9ddb412eb49e9",
+    "before_after_equal": true,
+    "current_build_equal": true,
+    "manifest_names_versions_dependencies_equal": true,
+    "dependency_mutations_during_check": false,
+    "private_receipt_sha256": "816794475e478ea26fb15476ad94c9530571f6371ffd5782b6d37fc60c853303"
+  },
+  "merge_qualification": {
+    "reviewed_pr188": "b5f0a288ac43ae6c65228fe7fca7ef778362bab7",
+    "entire_tree_identical": true,
+    "tree": "9f4ffb220bad918bdddfadc7034517f060b946e7"
+  }
+}

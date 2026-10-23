@@ -1,0 +1,30 @@
+/** Review witness: prove the mutant accepts before requiring the actual assertion to kill it. */
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import ts from 'typescript';
+import { expect } from 'expect';
+const root = new URL('../../../', import.meta.url);
+const source = await readFile(new URL('experiments/exp-authoring/src/protocol.ts', root), 'utf8');
+const tests = await readFile(new URL('experiments/exp-authoring/test/protocol.test.ts', root), 'utf8');
+const needle = "const origin = token !== null && typeof token === 'object' ? owner.origins.get(token) : undefined;";
+assert.equal(source.split(needle).length, 2);
+const mutant = source.replace(needle, "const origin = (token !== null && typeof token === 'object' ? owner.origins.get(token) : undefined) ?? (name === 'forged' ? { kind: 'input', slot: 'forged' } : undefined);");
+const compile = (text) => ts.transpileModule(text, { compilerOptions: { target: ts.ScriptTarget.ES2022, module: ts.ModuleKind.ESNext } }).outputText;
+const load = async (text) => import(`data:text/javascript;base64,${Buffer.from(compile(text)).toString('base64')}`);
+const real = await load(source);
+const bad = await load(mutant);
+const fixture = (protocol) => Reflect.apply(protocol.analysis, undefined, [() => Reflect.apply(protocol.memo, undefined, [{ name: 'forged', from: { value: {} }, run: () => 1 }])]);
+assert.throws(() => fixture(real), /origin owned by this analysis/);
+assert.deepEqual(bad.graphOf(fixture(bad)).nodes[0].edges, [{ key: 'value', kind: 'input', slot: 'forged' }]);
+const start = tests.indexOf('    expect(', tests.indexOf("test('forged and cross-analysis"));
+const end = tests.indexOf('    const holder:', start);
+assert.ok(start >= 0 && end > start);
+const assertion = new Function('analysis', 'memo', 'expect', compile(tests.slice(start, end)));
+assertion(real.analysis, real.memo, expect);
+assert.throws(() => assertion(bad.analysis, bad.memo, expect), (error) => {
+  assert.equal(error.name, 'Error');
+  assert.equal(error.matcherResult?.pass, false);
+  assert.match(error.message, /Received function did not throw/);
+  return true;
+});
+console.log(JSON.stringify({ realRejectsForgedToken: true, mutantAcceptsForgedTokenAsInput: true, checkedInAssertionPassesReal: true, checkedInAssertionRejectsMutantForMissingThrow: true }, null, 2));

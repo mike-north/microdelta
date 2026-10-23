@@ -1,0 +1,13 @@
+{
+  "command": [
+    "npx",
+    "tsd",
+    "--typings",
+    "experiments/exp-authoring/src/protocol.ts",
+    "--files",
+    "experiments/exp-authoring/test-d/protocol.test-d.ts"
+  ],
+  "exit": 1,
+  "sourceRestoredSha256": "e4c4ef03558b6743622596a222218980b22f1f6e1bbdb88c62d75e75a1c3bab7",
+  "purpose": "old covariant phantom must fail current checked-in widening negative"
+}

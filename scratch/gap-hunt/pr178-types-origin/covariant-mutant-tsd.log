@@ -1,0 +1,6 @@
+
+  experiments/exp-authoring/test-d/protocol.test-d.ts:26:0
+  ✖  26:0  Argument of type IAnalysis<{ readonly title: string; }> is assignable to parameter of type IAnalysis<{ readonly title: unknown; }>.  
+
+  1 error
+

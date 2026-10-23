@@ -1,0 +1,40 @@
+{
+  "head": "efd50c63eb62b8865cd76587673f6d3d56c9732a",
+  "base": "577644f188a80bf7b081804fd63fe23ba263f88f",
+  "host": "v24.22.1",
+  "review": "bounded pass for invariant-input and forged-origin witness changes",
+  "official_tsd_exit": 0,
+  "supplemental_tsd_exit": 0,
+  "old_covariance_mutant_tsd_exit": 1,
+  "restored_tsd_exit": 0,
+  "origin_tooling_exit": 0,
+  "independent_origin_witness_exit": 0,
+  "protocol_jest": {
+    "numPassedTests": 6,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numRuntimeErrorTestSuites": 0
+  },
+  "tracked_source_restored": true,
+  "sha256": {
+    "experiments/exp-authoring/src/protocol.ts": "e4c4ef03558b6743622596a222218980b22f1f6e1bbdb88c62d75e75a1c3bab7",
+    "experiments/exp-authoring/test-d/protocol.test-d.ts": "d1e26a1ffa94a3872c08c03f8e17543b839ac637399ec16b13db8ee98954526f",
+    "experiments/exp-authoring/test/protocol.test.ts": "80124a9d9a3dca559e0fd70098e5df1eb5a938ad991753e80e375711ca4806a9",
+    "tooling/authoring-origins.test.mjs": "94f1dbac52b01941685094f14a352a344c04113935dde6cd2828eee590b24333"
+  },
+  "later_head_source_qualification": {
+    "head": "648b0aa89d1ea20b100c5e2b8591b3d25d55781b",
+    "compared_with": "efd50c63eb62b8865cd76587673f6d3d56c9732a",
+    "changed_paths": [
+      "experiments/exp-authoring/decision.md"
+    ],
+    "qualification": "Parent and contract reviewer verified wording-only decision delta; this reviewer checked changed paths. Reviewed runtime/type/test/tooling bytes unchanged.",
+    "rerun": false,
+    "parent_accepted_bounded_findings": true
+  },
+  "publication_privacy_check": {
+    "result": "pass",
+    "scope": "Only synthetic microdelta types/origin fixtures, reports and local tool receipts; no private consumer paths/data or credential patterns. Absolute test paths identify only this microdelta review worktree.",
+    "production_or_config_edits": false
+  }
+}

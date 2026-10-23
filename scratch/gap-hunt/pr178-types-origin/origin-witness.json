@@ -1,0 +1,6 @@
+{
+  "realRejectsForgedToken": true,
+  "mutantAcceptsForgedTokenAsInput": true,
+  "checkedInAssertionPassesReal": true,
+  "checkedInAssertionRejectsMutantForMissingThrow": true
+}

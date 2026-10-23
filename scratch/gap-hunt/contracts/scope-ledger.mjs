@@ -3,6 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 const prefix = 'scratch/gap-hunt/contracts/';
 const semantic = JSON.parse(await readFile(prefix + 'semantic-clauses.json', 'utf8'));
 const external = JSON.parse(await readFile(prefix + 'other-owner-evidence.json', 'utf8'));
+const surface = JSON.parse(await readFile(prefix + 'surface-owner-evidence.json', 'utf8'));
 const historicalBlocks = new Set(['docs/spec/tracking.md:152', 'docs/spec/tracking.md:164', 'docs/spec/tracking.md:181', 'docs/spec/tracking.md:188', 'docs/spec/tracking.md:206', 'docs/spec/tracking.md:217']);
 const metadataBlocks = new Set(['docs/spec/glossary.md:3', 'docs/spec/glossary.md:8']);
 const units = [];
@@ -33,6 +34,7 @@ for (const block of semantic.blocks) {
     }));
     units.push({ key: `${block.key}#${position + 1}`, sourceBlock: block.key, scope, reason, text,
       localBoundedAssertionIds: block.executedAssertionIds,
+      surfaceOwnerAnchors: requirements.filter(id => surface.requirements[id]).map(id => ({ requirement: id, ...surface.requirements[id] })),
       ownerAnchors,
       conformance: 'not-certified-by-whole-clause-association',
       residual: scope === 'delivered' ? 'Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage.' : 'Outside the delivered runtime denominator; scope reason must be retained.',
@@ -47,11 +49,13 @@ await writeFile(prefix + 'scope-evidence-ledger.json', JSON.stringify({
   denominator,
   deliveredEvidenceRouting: {
     withLocalBoundedAnchors: delivered.filter(unit => unit.localBoundedAssertionIds.length).length,
-    withOtherOwnerAnchors: delivered.filter(unit => unit.ownerAnchors.length).length,
-    withoutEitherAnchor: delivered.filter(unit => !unit.localBoundedAssertionIds.length && !unit.ownerAnchors.length).length,
+    withOtherOwnerAnchors: delivered.filter(unit => unit.ownerAnchors.some(owner => owner.actualTests.some(test => test.status === 'passed'))).length,
+    withoutEitherAnchor: delivered.filter(unit => !unit.localBoundedAssertionIds.length && !unit.ownerAnchors.some(owner => owner.actualTests.some(test => test.status === 'passed'))).length,
+    withSurfaceOwnerReferences: delivered.filter(unit => unit.surfaceOwnerAnchors.length).length,
     certifiedCompleteUnits: 0,
   },
+  surfaceSnapshot: { file: prefix + 'surface-owner-evidence.json', branch: surface.sourceBranch, commit: surface.sourceCommit },
   externalSnapshot: { file: prefix + 'other-owner-evidence.json', branch: external.sourceBranch, commit: external.sourceCommit },
   units,
 }, null, 2) + '\n');
-console.log(JSON.stringify({ denominator, deliveredWithoutEitherAnchor: delivered.filter(unit => !unit.localBoundedAssertionIds.length && !unit.ownerAnchors.length).map(unit => unit.key) }));
+console.log(JSON.stringify({ denominator, deliveredWithoutEitherAnchor: delivered.filter(unit => !unit.localBoundedAssertionIds.length && !unit.ownerAnchors.some(owner => owner.actualTests.some(test => test.status === 'passed'))).map(unit => unit.key) }));

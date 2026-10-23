@@ -12,7 +12,13 @@
     "withLocalBoundedAnchors": 258,
     "withOtherOwnerAnchors": 41,
     "withoutEitherAnchor": 3,
+    "withSurfaceOwnerReferences": 6,
     "certifiedCompleteUnits": 0
+  },
+  "surfaceSnapshot": {
+    "file": "scratch/gap-hunt/contracts/surface-owner-evidence.json",
+    "branch": "gap-hunt-dx",
+    "commit": "27271cb"
   },
   "externalSnapshot": {
     "file": "scratch/gap-hunt/contracts/other-owner-evidence.json",
@@ -27,6 +33,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "# Composition, binding, and higher-order work",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -38,6 +45,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "Status: normative boundaries.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -49,6 +57,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "EXP-1 selects bounded structural correspondence. [EXP-4](../../experiments/exp-4/decision.md) selects the bounded nested argument recipe, supplied callable step slots, keyed fanout templates, tracked gates and strict-fold skip treatment recorded below.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -60,6 +69,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "Arbitrary closure soundness remains excluded.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -71,6 +81,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "Owner: Definition & Binding, collaborating with Reuse Resolution.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -82,6 +93,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "## Two graphs",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -96,6 +108,7 @@
         "topology",
         "rejectGraph"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -110,6 +123,7 @@
         "topology",
         "rejectGraph"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -124,6 +138,7 @@
         "topology",
         "rejectGraph"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -138,6 +153,7 @@
         "topology",
         "rejectGraph"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -152,6 +168,7 @@
         "topology",
         "rejectGraph"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -166,6 +183,7 @@
         "branches",
         "gates"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -180,6 +198,7 @@
         "branches",
         "gates"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -194,6 +213,7 @@
         "branches",
         "gates"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -208,6 +228,7 @@
         "branches",
         "gates"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -221,6 +242,7 @@
       "localBoundedAssertionIds": [
         "supplied"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -234,6 +256,7 @@
       "localBoundedAssertionIds": [
         "supplied"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -247,6 +270,7 @@
       "localBoundedAssertionIds": [
         "supplied"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -260,6 +284,7 @@
       "localBoundedAssertionIds": [
         "supplied"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -273,6 +298,7 @@
       "localBoundedAssertionIds": [
         "supplied"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -288,6 +314,7 @@
         "slotMissing",
         "slotAmbiguous"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -303,6 +330,7 @@
         "slotMissing",
         "slotAmbiguous"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -318,6 +346,7 @@
         "slotMissing",
         "slotAmbiguous"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -333,6 +362,7 @@
         "slotMissing",
         "slotAmbiguous"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -348,6 +378,7 @@
         "slotMissing",
         "slotAmbiguous"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -362,6 +393,7 @@
         "topology",
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -376,6 +408,7 @@
         "topology",
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -390,6 +423,7 @@
         "topology",
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -404,6 +438,7 @@
         "topology",
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -419,6 +454,7 @@
         "memberBinding",
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -434,6 +470,7 @@
         "memberBinding",
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -449,6 +486,7 @@
         "memberBinding",
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -464,6 +502,7 @@
         "memberBinding",
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -479,6 +518,7 @@
         "memberBinding",
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -494,6 +534,7 @@
         "memberBinding",
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -509,6 +550,7 @@
         "memberBinding",
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -524,6 +566,7 @@
         "memberBinding",
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -535,6 +578,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "## Nested execution and validation",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -548,6 +592,7 @@
       "localBoundedAssertionIds": [
         "nested"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -561,6 +606,7 @@
       "localBoundedAssertionIds": [
         "nested"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -574,6 +620,7 @@
       "localBoundedAssertionIds": [
         "nested"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -588,6 +635,7 @@
         "supplied",
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -602,6 +650,7 @@
         "supplied",
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -616,6 +665,7 @@
         "supplied",
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -630,6 +680,7 @@
         "supplied",
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -645,6 +696,7 @@
         "slotMissing",
         "slotAmbiguous"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -660,6 +712,7 @@
         "slotMissing",
         "slotAmbiguous"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -675,6 +728,7 @@
         "slotMissing",
         "slotAmbiguous"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -690,6 +744,7 @@
         "slotMissing",
         "slotAmbiguous"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -705,6 +760,7 @@
         "slotMissing",
         "slotAmbiguous"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -718,6 +774,7 @@
       "localBoundedAssertionIds": [
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -731,6 +788,7 @@
       "localBoundedAssertionIds": [
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -744,6 +802,7 @@
       "localBoundedAssertionIds": [
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -758,6 +817,7 @@
         "nested",
         "currentArguments"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -772,6 +832,7 @@
         "nested",
         "currentArguments"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -786,6 +847,7 @@
         "nested",
         "currentArguments"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -800,6 +862,7 @@
         "nested",
         "currentArguments"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -814,6 +877,7 @@
         "nested",
         "currentArguments"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -828,6 +892,7 @@
         "justification",
         "currentArguments"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -839,6 +904,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "| Recipe | Recorded | Reconstruction |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -850,6 +916,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "| --- | --- | --- |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -864,6 +931,7 @@
         "justification",
         "currentArguments"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -878,6 +946,7 @@
         "justification",
         "currentArguments"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -891,6 +960,7 @@
       "localBoundedAssertionIds": [
         "argumentMiss"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -906,6 +976,7 @@
         "argumentMiss",
         "nested"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -921,6 +992,7 @@
         "argumentMiss",
         "nested"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -936,6 +1008,7 @@
         "argumentMiss",
         "nested"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -951,6 +1024,7 @@
         "argumentMiss",
         "nested"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -966,6 +1040,7 @@
         "argumentMiss",
         "nested"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -981,6 +1056,7 @@
         "argumentMiss",
         "nested"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -996,6 +1072,7 @@
         "argumentMiss",
         "nested"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1007,6 +1084,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "## Gates, skips, and enforcement",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -1023,6 +1101,7 @@
         "coverage",
         "empty"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1039,6 +1118,7 @@
         "coverage",
         "empty"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1055,6 +1135,7 @@
         "coverage",
         "empty"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1071,6 +1152,7 @@
         "coverage",
         "empty"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1087,6 +1169,7 @@
         "empty",
         "gates"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1103,6 +1186,7 @@
         "empty",
         "gates"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1119,6 +1203,7 @@
         "empty",
         "gates"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1135,6 +1220,7 @@
         "empty",
         "gates"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1151,6 +1237,7 @@
         "empty",
         "gates"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1167,6 +1254,7 @@
         "empty",
         "gates"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1183,6 +1271,7 @@
         "empty",
         "gates"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1199,6 +1288,7 @@
         "empty",
         "gates"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1215,6 +1305,7 @@
         "empty",
         "gates"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1231,6 +1322,7 @@
         "empty",
         "gates"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1247,6 +1339,7 @@
         "empty",
         "gates"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1263,6 +1356,7 @@
         "empty",
         "gates"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1279,6 +1373,7 @@
         "empty",
         "gates"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1295,6 +1390,7 @@
         "empty",
         "gates"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1311,6 +1407,7 @@
         "empty",
         "gates"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "RUN-010",
@@ -1369,6 +1466,7 @@
       "localBoundedAssertionIds": [
         "rejectGraph"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1382,6 +1480,7 @@
       "localBoundedAssertionIds": [
         "rejectGraph"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1395,6 +1494,7 @@
       "localBoundedAssertionIds": [
         "rejectGraph"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1406,6 +1506,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "## Worked cases",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -1417,6 +1518,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "| Case | Allowed outcome | Assertion |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -1428,6 +1530,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "| --- | --- | --- |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -1441,6 +1544,7 @@
       "localBoundedAssertionIds": [
         "supplied"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1454,6 +1558,7 @@
       "localBoundedAssertionIds": [
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1467,6 +1572,7 @@
       "localBoundedAssertionIds": [
         "gates"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1480,6 +1586,7 @@
       "localBoundedAssertionIds": [
         "rejectGraph"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1493,6 +1600,7 @@
       "localBoundedAssertionIds": [
         "nested"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1506,6 +1614,7 @@
       "localBoundedAssertionIds": [
         "argumentMiss"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1519,6 +1628,7 @@
       "localBoundedAssertionIds": [
         "topology"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1532,6 +1642,7 @@
       "localBoundedAssertionIds": [
         "rejectGraph"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1543,6 +1654,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "# microdelta ubiquitous language",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -1554,6 +1666,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "This is the shared vocabulary for discussing, specifying, implementing, and reviewing microdelta.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -1565,6 +1678,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "Use these meanings in issues, code comments, tests, and conversation.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -1576,6 +1690,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "Introduce a narrower term when a distinction matters: “the step changed” is less precise than “the step definition's implementation changed.”",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -1587,6 +1702,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "These definitions describe the target domain, not a list of shipped features.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -1598,6 +1714,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "The [implementation map](../package-map.md) records what exists today.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -1609,6 +1726,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "This file owns concise terminology; the linked contracts own behavioral requirements and acceptance criteria.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -1620,6 +1738,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "A vocabulary edit must preserve those contracts or identify the proposed contract change explicitly.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -1631,6 +1750,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "API spellings and storage representations remain separate choices.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -1642,6 +1762,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "## Analysis, declarations, and work",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -1653,6 +1774,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "| Term | Meaning and boundary | Owner and contract |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -1664,6 +1786,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "| --- | --- | --- |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -1675,6 +1798,40 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Analysis** | A declared computation and its logical namespace. It can be run repeatedly, including after complete process shutdown. It is larger than a particular execution attempt or memoized step. | Definition & Binding; [DOM-1/2](domain.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [
+        {
+          "requirement": "DOM-1",
+          "obligations": [
+            "Retained exact results survive process exit",
+            "Author-selected expensive work includes CPU/network/nondeterministic work"
+          ],
+          "reviewedEvidence": [
+            "logs/example-matrix.log:8/8 independent-process CLI tests",
+            "consumer-dx/logs/jest.log:3/3 process probes"
+          ],
+          "evidenceStatus": "aligned-bounded",
+          "remainingBoundary": "Hours-long leases and scale are separate;100k ongoing. Random/nondeterministic provider execution was not performed."
+        },
+        {
+          "requirement": "DOM-2",
+          "obligations": [
+            "Ordinary TS scoped authoring and implicit host context",
+            "Outside-live-scope lookup fails clearly",
+            "Ordinary nonmemoized work remains observable"
+          ],
+          "reviewedEvidence": [
+            "logs/workspace-operations.log:15/15",
+            "logs/owner-contracts.log:Supervision suite",
+            "packages/supervision/test/supervision.test.ts",
+            "packages/core/test/workspace/scope.test.ts",
+            "logs/workspace-resolution.log:independent current-worker refresh",
+            "packages/core/test/workspace/scope.test.ts:37,48,213,243",
+            "packages/core/test/workspace/admission-observers.test.ts:274"
+          ],
+          "evidenceStatus": "executed-bounded-pass",
+          "remainingBoundary": "Runtime evidence bounded by workspace/resolution fixtures; general hidden JS influence and paid-provider behavior are excluded."
+        }
+      ],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1686,6 +1843,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Environment** | The selected storage, services, credentials, and isolation scope in which work runs. A label alone does not establish isolation. | Run Supervision coordinates the scope; each context preserves its own state boundary; [RUN-017](operations.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "RUN-017",
@@ -1754,6 +1912,27 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Execution context** | The scoped access to a run's environment, services, cancellation, and resource-reporting facilities. It is not the observation collector; lookup outside a live run scope fails. | Run Supervision; [DOM-2](domain.md), [RUN-001](operations.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [
+        {
+          "requirement": "DOM-2",
+          "obligations": [
+            "Ordinary TS scoped authoring and implicit host context",
+            "Outside-live-scope lookup fails clearly",
+            "Ordinary nonmemoized work remains observable"
+          ],
+          "reviewedEvidence": [
+            "logs/workspace-operations.log:15/15",
+            "logs/owner-contracts.log:Supervision suite",
+            "packages/supervision/test/supervision.test.ts",
+            "packages/core/test/workspace/scope.test.ts",
+            "logs/workspace-resolution.log:independent current-worker refresh",
+            "packages/core/test/workspace/scope.test.ts:37,48,213,243",
+            "packages/core/test/workspace/admission-observers.test.ts:274"
+          ],
+          "evidenceStatus": "executed-bounded-pass",
+          "remainingBoundary": "Runtime evidence bounded by workspace/resolution fixtures; general hidden JS influence and paid-provider behavior are excluded."
+        }
+      ],
       "ownerAnchors": [
         {
           "requirement": "RUN-001",
@@ -1834,6 +2013,61 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Bounded context** | An ownership boundary for a coherent domain model and its invariants. microdelta has six peer bounded contexts; supporting components and Machine do not add another domain authority. This architectural meaning of “context” is distinct from an execution context. | [ARC-001/002/010](architecture.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [
+        {
+          "requirement": "ARC-001",
+          "obligations": [
+            "Six peer contexts own their listed invariant sets; supporting components are not extra contexts",
+            "Approved boundary public does not mean user-public tier"
+          ],
+          "reviewedEvidence": [
+            "logs/gates-tests.log:34/34 declaration/wiring/trim tests",
+            "logs/imports.log:check:imports pass",
+            "logs/declarations.log:check:declarations pass",
+            "logs/build-fixtures.log:build:fixtures pass",
+            "tooling/package-architecture.mjs six context entries",
+            "logs/additional-foundation.log:41/41context/quality/API-policy/formal-retirement negatives and positive controls"
+          ],
+          "evidenceStatus": "structural-and-partial-behavior",
+          "remainingBoundary": "Table ownership is reviewed against ports, not claimed mechanically proven in full."
+        },
+        {
+          "requirement": "ARC-002",
+          "obligations": [
+            "Value owns canonical addresses/fingerprints, not consumption/freshness",
+            "Numeric object aliases differ from array descriptor semantics; symbols reject explicitly",
+            "Materialization reads via ports, not private rows; no eligibility decision"
+          ],
+          "reviewedEvidence": [
+            "contracts worker semantic-value.log:50pass",
+            "logs/owner-contracts.log:Materialization34",
+            "logs/experiments.log:EXP2 28"
+          ],
+          "evidenceStatus": "aligned-bounded",
+          "remainingBoundary": "Tests cover chosen values/readers; Value universal-type-bag avoidance remains architectural review."
+        },
+        {
+          "requirement": "ARC-010",
+          "obligations": [
+            "Node builtins/globals only in Node Machine runtime; tooling/tests excepted",
+            "Injected capabilities define semantics/failures and Node conformance",
+            "Machine does not own persistence/domain policy; no speculative extra hosts"
+          ],
+          "reviewedEvidence": [
+            "logs/gates-tests.log:34/34 declaration/wiring/trim tests",
+            "logs/imports.log:check:imports pass",
+            "logs/declarations.log:check:declarations pass",
+            "logs/build-fixtures.log:build:fixtures pass",
+            "logs/owner-contracts.log:MachineNode suite",
+            "packages/machine-node/test/node-machine.test.ts",
+            "packages/history/test/machine.test.ts",
+            "logs/check-packages.log:all11package strict type and type-aware lint commands pass",
+            "logs/additional-foundation.log:41/41context/quality/API-policy/formal-retirement negatives and positive controls"
+          ],
+          "evidenceStatus": "aligned-bounded",
+          "remainingBoundary": "Current scaffold Node imports paragraph is historical baseline. No browser/Lambda/Worker implementation obligation."
+        }
+      ],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -1845,6 +2079,27 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Run** | One supervised execution lifetime in an environment. It may contain many invocations, attempts, and tracking frames. A run is not a retained result, and its completion does not erase history. | Run Supervision; [DOM-2](domain.md), [RUN-001/002](operations.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [
+        {
+          "requirement": "DOM-2",
+          "obligations": [
+            "Ordinary TS scoped authoring and implicit host context",
+            "Outside-live-scope lookup fails clearly",
+            "Ordinary nonmemoized work remains observable"
+          ],
+          "reviewedEvidence": [
+            "logs/workspace-operations.log:15/15",
+            "logs/owner-contracts.log:Supervision suite",
+            "packages/supervision/test/supervision.test.ts",
+            "packages/core/test/workspace/scope.test.ts",
+            "logs/workspace-resolution.log:independent current-worker refresh",
+            "packages/core/test/workspace/scope.test.ts:37,48,213,243",
+            "packages/core/test/workspace/admission-observers.test.ts:274"
+          ],
+          "evidenceStatus": "executed-bounded-pass",
+          "remainingBoundary": "Runtime evidence bounded by workspace/resolution fixtures; general hidden JS influence and paid-provider behavior are excluded."
+        }
+      ],
       "ownerAnchors": [
         {
           "requirement": "RUN-001",
@@ -2212,6 +2467,7 @@
         "topology",
         "rejectGraph"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -2225,6 +2481,7 @@
       "localBoundedAssertionIds": [
         "nested"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -2236,6 +2493,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Attempt** | Work undertaken to produce or accept a result. An execution attempt can fail, be interrupted, or finish without publishing a new completed result. An acceptance check retaining an old result records current-check evidence separately from that result's original provenance. | Result History & Publication records it; [RES-005](execution.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "RES-005",
@@ -2421,6 +2679,7 @@
         "supplied",
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -2434,6 +2693,7 @@
       "localBoundedAssertionIds": [
         "supplied"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -2448,6 +2708,7 @@
         "topology",
         "rejectGraph"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -2462,6 +2723,7 @@
         "branches",
         "gates"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -2476,6 +2738,7 @@
         "topology",
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -2492,6 +2755,7 @@
         "coverage",
         "empty"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -2508,6 +2772,7 @@
         "coverage",
         "empty"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "RUN-010",
@@ -2569,6 +2834,7 @@
         "coverage",
         "empty"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "RUN-005",
@@ -2693,6 +2959,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Outcome fold** (tolerant fold) | A memoized consumer of a keyed collection that folds every member's **settled status**: succeeded, skipped, failed or cancelled. Pending work is unsettled. While discovery is open or any member is unsettled it claims no complete set and runs no body: it waits, or fails when no population can be established in that pass. Once settled, its result never counts as complete success of the population. Repairing a failed member makes it reconsider; strict and outcome folds never share results. | Definition declares it; Reuse Resolution settles and verifies it; Run Supervision reports it; [RUN-010](operations.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "RUN-010",
@@ -2752,6 +3019,7 @@
         "nested",
         "currentArguments"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "REUSE-006",
@@ -3190,6 +3458,7 @@
       "localBoundedAssertionIds": [
         "supplied"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -3204,6 +3473,7 @@
         "topology",
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -3220,6 +3490,7 @@
         "coverage",
         "empty"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "RUN-010",
@@ -3276,6 +3547,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Soft stop / hard stop** | A soft stop admits no new work and drains admitted steps, with no default deadline. A hard stop aborts in-flight sends, waits and sleeps, marks the attempts interrupted, and records remote state as cancelled, still running or unknown. Neither ever publishes partial output. | Run Supervision; [RUN-014/015](operations.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "RUN-014",
@@ -3544,6 +3816,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **External operation** | One logical external call, such as a paid provider request. It is addressed by its step attempt's subject, a name and the author's request binding. Its stable identity is persisted before the first send and shared by every retry, so a lost response is **unknown** rather than silently replayed. Its outcome is succeeded, failed, deferred (not before a time) or unknown. | Run Supervision, persisted through History's operation journal; [RUN-012/013](operations.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "RUN-012",
@@ -3782,6 +4055,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Unsettled operation** | An external operation that is pending, deferred or unknown. It keeps its step's work pending, never failed or succeeded: a strict or outcome fold over that member waits. | Run Supervision; [RUN-010/011/012](operations.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "RUN-010",
@@ -4154,6 +4428,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Taint guard** | Once a step attempt meets a deferral or an unknown outcome, every later operation or send it makes rethrows that signal without sending, and nothing it returns is published. | Run Supervision; [RUN-012](operations.md), [EXP-8](../../experiments/exp-8/decision.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "RUN-012",
@@ -4342,6 +4617,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Operator settlement** | An operator's recorded resolve or abandon of an unknown operation. Resolving may acknowledge usage the operator learned under an operator-namespaced report identity; abandoning leaves the usage unknown. Either unblocks the step. Resolving as succeeded keeps the operation's address consumed, so the request is never sent again; resolving as failed, or abandoning (the operator's authorization of a possible second effect), frees it. | Run Supervision with Resource Accounting; [RUN-012](operations.md), [ACC-003](operations.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "ACC-003",
@@ -4766,6 +5042,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Durable deferral** | A persisted \"not before T\" for operation work waiting on a rate or quota limit, or for a transient retry's backoff. It holds no execution permit or window lane, releases the writer lease once only deferred work remains, and is honored by later runs. The run then sleeps and resumes in another pass, or exits reporting the time. | Run Supervision, persisted through History; [RUN-011](operations.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "RUN-011",
@@ -4918,6 +5195,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Request attempt** | One network try of an external operation. An operation can have several attempts, for example across retries; each one has its own identity, belongs to exactly one operation, and incurs its own usage. It is unrelated to a run's request key. | Run Supervision mints it; Resource Accounting attributes usage to it; [RUN-012/013](operations.md), [EXP-8](../../experiments/exp-8/decision.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "RUN-012",
@@ -5156,6 +5434,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Usage intent** | The durable record, made before a request attempt is sent, that usage is expected from it (\"intent before send\"). It names the operation, the attempt and its run, member and step attempt. Recording it neither opens nor owns the operation. Until a report for the attempt is acknowledged, its usage is unknown. | Resource Accounting; [ACC-007](operations.md), [EXP-8](../../experiments/exp-8/decision.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "ACC-007",
@@ -5440,6 +5719,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Usage report** / **report identity** | A provider's observation of consumption by one request attempt, as additive per-unit quantities. It is identified by (operation, report identity), so a redelivered report is counted once and the same report identity on two operations is two reports. The report identity must be stable across redelivery, derived from the provider's response rather than minted per delivery. A report is acknowledged only once it is durable. | Resource Accounting; [ACC-003/007](operations.md), [EXP-8](../../experiments/exp-8/decision.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "ACC-003",
@@ -5960,6 +6240,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Unknown usage** | Usage of a request attempt whose usage intent is recorded but which has no acknowledged report of its own. Another attempt's report never covers it. It is reported as unknown, never as zero. | Resource Accounting; [ACC-005](operations.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "ACC-005",
@@ -6208,6 +6489,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Estimate basis** | The stated, versioned assumptions an estimate rests on, such as assumed rates or cached-input treatment. An estimate keeps its basis and is reported beside observations, never summed into observed usage. | Resource Accounting; [ACC-006](operations.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "ACC-006",
@@ -6456,6 +6738,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Writer-busy** | The typed outcome for a normal request that waited for a store's writer lease until the operator deadline passed. It reports the request's final attempt, made at or after the deadline: the holder it observed and that holder's expiry, or storage contention (SQLite stayed locked) with the writer recorded then, when it could be read. There is no default deadline; a stop also ends the wait, but as a stop, not as writer-busy. Waiting changes no authority or data. | Run Supervision (waiting policy) over Result History's lease authority; [RUN-002](operations.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "RUN-002",
@@ -6752,6 +7035,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Lease lost** (`lease-lost`) | The typed ending of work whose run no longer holds the store's writer lease. The refused write records nothing; the step is denied, not failed, so its member stays pending, and a claimed attempt stays incomplete for the successor to recover. A drain that outlives its lease ends this way. | Run Supervision with Result History & Publication; [PUB-002](execution.md); EXP-8 ruling R ([decision](../../experiments/exp-8/decision.md)) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "PUB-002",
@@ -6934,6 +7218,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Request permit** / **active window** | Two separate run bounds. A request permit guards only an actual constrained request (a send). The active window bounds how many members hold a lane at once; a member in a timed wait lends its lane. | Run Supervision; [RUN-002](operations.md), [RUN-011](operations.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "RUN-002",
@@ -7370,6 +7655,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Recorded promotion** | The only way trial-environment work satisfies another environment of the same analysis: an explicit promotion of exact result references, durably recorded with the promoter's evidence. | Run Supervision through History; [RUN-017](operations.md) owner decision |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "RUN-017",
@@ -7440,6 +7726,7 @@
       "localBoundedAssertionIds": [
         "rejectGraph"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "RUN-002",
@@ -7736,6 +8023,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "## Tracking and consumed evidence",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -7747,6 +8035,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "| Term | Meaning and boundary | Owner and contract |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -7758,6 +8047,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "| --- | --- | --- |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -7775,6 +8065,7 @@
         "asyncFailure",
         "lateHelper"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -7788,6 +8079,7 @@
       "localBoundedAssertionIds": [
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -7803,6 +8095,7 @@
         "leaf",
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -7820,6 +8113,7 @@
         "member",
         "identity"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -7837,6 +8131,7 @@
         "member",
         "identity"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "REUSE-005",
@@ -8063,6 +8358,7 @@
       "localBoundedAssertionIds": [
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -8078,6 +8374,7 @@
         "wire",
         "edgeKeys"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -8097,6 +8394,7 @@
         "edgeNumbers",
         "edgeSparse"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -8114,6 +8412,7 @@
         "asyncFailure",
         "lateHelper"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -8131,6 +8430,7 @@
         "asyncFailure",
         "lateHelper"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -8148,6 +8448,7 @@
         "asyncFailure",
         "lateHelper"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -8159,6 +8460,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "### What a frame means in practice",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -8173,6 +8475,7 @@
         "leaf",
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -8187,6 +8490,7 @@
         "leaf",
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -8201,6 +8505,7 @@
         "leaf",
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -8215,6 +8520,7 @@
         "leaf",
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -8231,6 +8537,7 @@
         "asyncFailure",
         "lateHelper"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -8247,6 +8554,7 @@
         "asyncFailure",
         "lateHelper"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -8263,6 +8571,7 @@
         "asyncFailure",
         "lateHelper"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -8279,6 +8588,7 @@
         "asyncFailure",
         "lateHelper"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -8295,6 +8605,7 @@
         "asyncFailure",
         "lateHelper"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -8312,6 +8623,7 @@
         "asyncFailure",
         "lateHelper"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -8329,6 +8641,7 @@
         "asyncFailure",
         "lateHelper"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -8346,6 +8659,7 @@
         "asyncFailure",
         "lateHelper"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -8363,6 +8677,7 @@
         "asyncFailure",
         "lateHelper"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -8380,6 +8695,7 @@
         "asyncFailure",
         "lateHelper"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -8391,6 +8707,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "## Identity, collections, and materialization",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -8402,6 +8719,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "| Term | Meaning and boundary | Owner and contract |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -8413,6 +8731,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "| --- | --- | --- |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -8428,6 +8747,7 @@
         "identity",
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -8439,6 +8759,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Subject** | The complete opaque author-supplied identity of memoized work, unique within an analysis. It identifies a history of work, not one exact result. A display name or content hash is not a substitute. Nonmemoized work does not require a subject. | Reuse Resolution uses it; History scopes retained work by it; [RES-001](execution.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "RES-001",
@@ -8485,6 +8806,7 @@
       "localBoundedAssertionIds": [
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -8498,6 +8820,7 @@
       "localBoundedAssertionIds": [
         "projection"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -8512,6 +8835,23 @@
         "selectedOutput",
         "nestedLoading"
       ],
+      "surfaceOwnerAnchors": [
+        {
+          "requirement": "ARC-002",
+          "obligations": [
+            "Value owns canonical addresses/fingerprints, not consumption/freshness",
+            "Numeric object aliases differ from array descriptor semantics; symbols reject explicitly",
+            "Materialization reads via ports, not private rows; no eligibility decision"
+          ],
+          "reviewedEvidence": [
+            "contracts worker semantic-value.log:50pass",
+            "logs/owner-contracts.log:Materialization34",
+            "logs/experiments.log:EXP2 28"
+          ],
+          "evidenceStatus": "aligned-bounded",
+          "remainingBoundary": "Tests cover chosen values/readers; Value universal-type-bag avoidance remains architectural review."
+        }
+      ],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -8525,6 +8865,7 @@
       "localBoundedAssertionIds": [
         "frozen"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "RES-003",
@@ -8587,6 +8928,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "## Results and current validity",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -8598,6 +8940,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "| Term | Meaning and boundary | Owner and contract |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -8609,6 +8952,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "| --- | --- | --- |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -8620,6 +8964,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Result** | A completed immutable envelope containing author data and framework metadata, including identity and historical provenance. It is distinct from an attempt and from the reference that locates it. | Result History & Publication; [RES-003](execution.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "RES-003",
@@ -8682,6 +9027,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Reference** | A scoped pointer to one exact retained snapshot. It is not payload, a “latest” alias, or a request to refresh/recompute missing data. Superseding a result does not retarget its reference. | Result History & Publication; [RES-002/006](execution.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "RES-002",
@@ -8794,6 +9140,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Historical provenance** | The original observations and exact dependencies supporting a result's execution. Later current verification must not rewrite it. | Result History & Publication; [RES-003/007](execution.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "RES-003",
@@ -8906,6 +9253,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Acceptance evidence** | Evidence of why a retained result is acceptable under the current bindings and policies. It is recorded separately from the result's original provenance; a past acceptance is not permanent validity. | Reuse Resolution decides; History records; [RES-005/007](execution.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "RES-005",
@@ -9138,6 +9486,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Candidate** | A retained result being considered for reuse. Its existence is not proof of current compatibility, source acceptance, or unchanged consumed facts. | Reuse Resolution; [REUSE-001](execution.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "REUSE-001",
@@ -9242,6 +9591,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Memoization** | The author's explicit choice to retain and reuse work across runs when the required evidence remains acceptable. It adds durability and reuse policy; `tracked()` alone does not provide it. | Reuse Resolution with History; [DOM-4](domain.md), [REUSE-001](execution.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "REUSE-001",
@@ -9346,6 +9696,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Compatibility version** | A per-memo positive integer, default 1, controlling which history is eligible, including validated rollback. It is independent of automatic implementation evidence and local reactive revisions. | Reuse Resolution; [REUSE-008](execution.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "REUSE-008",
@@ -9570,6 +9921,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Finality** | The outcome of the current optional definition finality hook for an eligible result and applicable inputs. True permits retention without source refresh for this resolution; absence supplies no shortcut. It is not a permanently stored “final” state or a substitute for other current source-acceptance policy. | Reuse Resolution applies the author's current policy; [REUSE-002/003](execution.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "REUSE-002",
@@ -9766,6 +10118,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Retention** | An explicit outcome accepting the eligible previous result and preserving its exact reference. Returning fresh equal data instead creates a distinct result. | Reuse Resolution interprets the outcome; History preserves the snapshot; [RES-004/006](execution.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "RES-004",
@@ -9878,6 +10231,24 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Publication** | The consistency boundary that makes a completed result authoritative while preserving claim ownership, allocation, and immutable history. A partial write or finished sub-request is not completed publication. | Result History & Publication; [ARC-007](architecture.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [
+        {
+          "requirement": "ARC-007",
+          "obligations": [
+            "History alone owns claim/allocation/publication invariant",
+            "Exact immutable references; fresh equal distinct; retain exact old; acceptance separate",
+            "No pointer rewind or dangling references"
+          ],
+          "reviewedEvidence": [
+            "logs/owner-contracts.log:History suite",
+            "packages/history/test/completed-results.test.ts",
+            "logs/experiments.log:EXP3 publication16",
+            "../scale/logs/acceptance-test-failure.log"
+          ],
+          "evidenceStatus": "aligned-bounded-with-performance-gap",
+          "remainingBoundary": "Real backend crash breadth belongs durability worker; acknowledgement-history amplification is confirmed without violating immutable full inspection."
+        }
+      ],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -9889,6 +10260,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Request key** | A fresh opaque key the caller supplies and saves before starting one top-level normal request. One request may admit several distinct direct invocations. Resolution derives each History-scoped *attempt key* from the request key plus the complete structural invocation descriptor; History persists the allocation and its outcome. A request key is neither an attempt identity nor a cache key. A normal new request uses a fresh key; a previously allocated derived attempt key cannot be used with different intent or silently served as a current hit. | Caller supplies; Reuse Resolution derives attempt keys; History persists them; [explicit recovery request](../plans/m3-contribution-analysis.md#explicit-recovery-request), [PUB-004](execution.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "PUB-004",
@@ -10071,6 +10443,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Recovery** (of an admitted execution) | Takes a saved request key and the current declared invocation. It recomputes intent without author callbacks and reports the identified execution's exact durable outcome: committed success, absent, incomplete, or unsuccessful. Different intent rejects. It never automatically executes incomplete work and grants no current acceptance to a new request. The term covers only this named execution recovery; broader operational recovery is outside M3. | Run Supervision exposes the entry; Reuse Resolution recomputes intent; History reports the outcome; [explicit recovery request](../plans/m3-contribution-analysis.md#explicit-recovery-request), [PUB-004](execution.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "PUB-004",
@@ -10253,6 +10626,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| **Resource observation** | A reported quantity, unit, and attribution of actual work. It remains meaningful even if no successful result is published. Missing usage is unknown, not zero; observed usage is not necessarily a final bill. | Resource Accounting; [ACC-001/002/005](operations.md) |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [
         {
           "requirement": "ACC-001",
@@ -11009,6 +11383,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "### One example across the terms",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -11023,6 +11398,7 @@
         "nested",
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11037,6 +11413,7 @@
         "nested",
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11051,6 +11428,7 @@
         "nested",
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11065,6 +11443,7 @@
         "nested",
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11079,6 +11458,7 @@
         "nested",
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11094,6 +11474,7 @@
         "multiRebind",
         "nested"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11109,6 +11490,7 @@
         "multiRebind",
         "nested"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11124,6 +11506,7 @@
         "multiRebind",
         "nested"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11139,6 +11522,7 @@
         "multiRebind",
         "nested"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11150,6 +11534,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "# Tracking, values, and observations",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -11161,6 +11546,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "Status: normative semantics with the bounded EXP-2 encoding selection below.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -11172,6 +11558,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "The full tracked materialization surface remains implementation work.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -11183,6 +11570,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "Owners: Tracking & Observation and Value Semantics in [architecture](architecture.md).",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -11194,6 +11582,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "## Unified author surface",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -11209,6 +11598,7 @@
         "leaf",
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11224,6 +11614,7 @@
         "leaf",
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11239,6 +11630,7 @@
         "leaf",
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11254,6 +11646,7 @@
         "leaf",
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11269,6 +11662,7 @@
         "leaf",
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -11284,6 +11678,7 @@
         "leaf",
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11297,6 +11692,7 @@
       "localBoundedAssertionIds": [
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11310,6 +11706,7 @@
       "localBoundedAssertionIds": [
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11323,6 +11720,7 @@
       "localBoundedAssertionIds": [
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11336,6 +11734,7 @@
       "localBoundedAssertionIds": [
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11349,6 +11748,7 @@
       "localBoundedAssertionIds": [
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11362,6 +11762,7 @@
       "localBoundedAssertionIds": [
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11375,6 +11776,7 @@
       "localBoundedAssertionIds": [
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11388,6 +11790,7 @@
       "localBoundedAssertionIds": [
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -11401,6 +11804,7 @@
       "localBoundedAssertionIds": [
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -11414,6 +11818,7 @@
       "localBoundedAssertionIds": [
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11431,6 +11836,7 @@
         "asyncFailure",
         "lateHelper"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11448,6 +11854,7 @@
         "asyncFailure",
         "lateHelper"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11465,6 +11872,7 @@
         "asyncFailure",
         "lateHelper"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11482,6 +11890,7 @@
         "asyncFailure",
         "lateHelper"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11496,6 +11905,7 @@
         "captureLint",
         "importCapture"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11510,6 +11920,7 @@
         "captureLint",
         "importCapture"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11524,6 +11935,7 @@
         "captureLint",
         "importCapture"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11538,6 +11950,7 @@
         "captureLint",
         "importCapture"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11552,6 +11965,7 @@
         "captureLint",
         "importCapture"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11566,6 +11980,7 @@
         "captureLint",
         "importCapture"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11580,6 +11995,7 @@
         "captureLint",
         "importCapture"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11594,6 +12010,7 @@
         "captureLint",
         "importCapture"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11605,6 +12022,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "## Observation decision table",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -11622,6 +12040,7 @@
         "member",
         "identity"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11639,6 +12058,7 @@
         "member",
         "identity"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11650,6 +12070,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "| Operation | Consumed fact | Must not additionally consume | Counterexample/assertion |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -11661,6 +12082,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "| --- | --- | --- | --- |",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -11675,6 +12097,7 @@
         "leaf",
         "rebind"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11688,6 +12111,7 @@
       "localBoundedAssertionIds": [
         "optional"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11701,6 +12125,7 @@
       "localBoundedAssertionIds": [
         "optional"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11714,6 +12139,7 @@
       "localBoundedAssertionIds": [
         "presence"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11727,6 +12153,7 @@
       "localBoundedAssertionIds": [
         "presence"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11740,6 +12167,7 @@
       "localBoundedAssertionIds": [
         "member"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11754,6 +12182,7 @@
         "presence",
         "order"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11767,6 +12196,7 @@
       "localBoundedAssertionIds": [
         "lengthPosition"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11780,6 +12210,7 @@
       "localBoundedAssertionIds": [
         "lengthPosition"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11793,6 +12224,7 @@
       "localBoundedAssertionIds": [
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11806,6 +12238,7 @@
       "localBoundedAssertionIds": [
         "ranking"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11819,6 +12252,7 @@
       "localBoundedAssertionIds": [
         "identity"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11832,6 +12266,7 @@
       "localBoundedAssertionIds": [
         "leaf"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11845,6 +12280,7 @@
       "localBoundedAssertionIds": [
         "selectedOutput"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11858,6 +12294,7 @@
       "localBoundedAssertionIds": [
         "calls"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11875,6 +12312,7 @@
         "member",
         "identity"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11892,6 +12330,7 @@
         "member",
         "identity"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11906,6 +12345,7 @@
         "rebind",
         "multiRebind"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11920,6 +12360,7 @@
         "rebind",
         "multiRebind"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11934,6 +12375,7 @@
         "rebind",
         "multiRebind"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11948,6 +12390,7 @@
         "rebind",
         "multiRebind"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11962,6 +12405,7 @@
         "leaf",
         "identity"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -11976,6 +12420,7 @@
         "leaf",
         "identity"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -11990,6 +12435,7 @@
         "leaf",
         "identity"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12004,6 +12450,7 @@
         "leaf",
         "identity"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12018,6 +12465,7 @@
         "branches",
         "durableBranches"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12032,6 +12480,7 @@
         "branches",
         "durableBranches"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12046,6 +12495,7 @@
         "branches",
         "durableBranches"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12060,6 +12510,7 @@
         "branches",
         "durableBranches"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12071,6 +12522,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "## Structured addresses and fingerprints",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12086,6 +12538,7 @@
         "wire",
         "edgeKeys"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12101,6 +12554,7 @@
         "wire",
         "edgeKeys"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12116,6 +12570,7 @@
         "wire",
         "edgeKeys"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12131,6 +12586,7 @@
         "wire",
         "edgeKeys"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12146,6 +12602,7 @@
         "wire",
         "edgeKeys"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12165,6 +12622,7 @@
         "edgeNumbers",
         "edgeSparse"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12184,6 +12642,7 @@
         "edgeNumbers",
         "edgeSparse"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12203,6 +12662,7 @@
         "edgeNumbers",
         "edgeSparse"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12222,6 +12682,7 @@
         "edgeNumbers",
         "edgeSparse"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12241,6 +12702,7 @@
         "edgeNumbers",
         "edgeSparse"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12260,6 +12722,7 @@
         "edgeNumbers",
         "edgeSparse"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12279,6 +12742,7 @@
         "edgeNumbers",
         "edgeSparse"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12298,6 +12762,7 @@
         "edgeNumbers",
         "edgeSparse"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12317,6 +12782,7 @@
         "edgeNumbers",
         "edgeSparse"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12331,6 +12797,7 @@
         "transport",
         "wire"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12345,6 +12812,7 @@
         "transport",
         "wire"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12359,6 +12827,7 @@
         "transport",
         "wire"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12373,6 +12842,7 @@
         "transport",
         "wire"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12387,6 +12857,7 @@
         "transport",
         "wire"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12401,6 +12872,7 @@
         "edges",
         "transport"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12415,6 +12887,7 @@
         "edges",
         "transport"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12429,6 +12902,7 @@
         "edges",
         "transport"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12443,6 +12917,7 @@
         "edges",
         "transport"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12456,6 +12931,7 @@
       "localBoundedAssertionIds": [
         "negative"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12469,6 +12945,7 @@
       "localBoundedAssertionIds": [
         "negative"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12482,6 +12959,7 @@
       "localBoundedAssertionIds": [
         "negative"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12495,6 +12973,7 @@
       "localBoundedAssertionIds": [
         "negative"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12508,6 +12987,7 @@
       "localBoundedAssertionIds": [
         "negative"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12521,6 +13001,7 @@
       "localBoundedAssertionIds": [
         "negative"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12532,6 +13013,7 @@
       "reason": "Explicit experiment evidence/limitations or dormant Lean model; not an additional delivered runtime feature obligation.",
       "text": "**EXP-6 historical Lean evidence — dormant.** The [flat-record theorem and differential fixture](../../experiments/exp-6/README.md) are historical evidence, not a routine proof-maintenance obligation.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12543,6 +13025,7 @@
       "reason": "Explicit experiment evidence/limitations or dormant Lean model; not an additional delivered runtime feature obligation.",
       "text": "Do not rerun or expand Lean by default; resume it only for a concrete correctness question where proof would add material value beyond executable properties and implementation tests.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12554,6 +13037,7 @@
       "reason": "Explicit experiment evidence/limitations or dormant Lean model; not an additional delivered runtime feature obligation.",
       "text": "For unique-key, flat, null-prototype records of scalar atoms, equality of the modeled sorted normal forms implies equal value and own-presence reads at one Property key.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12565,6 +13049,7 @@
       "reason": "Explicit experiment evidence/limitations or dormant Lean model; not an additional delivered runtime feature obligation.",
       "text": "Lookup is defined independently of normalization.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12576,6 +13061,7 @@
       "reason": "Explicit experiment evidence/limitations or dormant Lean model; not an additional delivered runtime feature obligation.",
       "text": "Missing and present-undefined fields may have equal value reads while own presence differs; explicit key enumeration remains order-sensitive and outside this implication.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12587,6 +13073,7 @@
       "reason": "Explicit experiment evidence/limitations or dormant Lean model; not an additional delivered runtime feature obligation.",
       "text": "The model uses UTF-16 code-unit keys, Unicode-scalar text values, and opaque canonical numeric tokens.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12598,6 +13085,7 @@
       "reason": "Explicit experiment evidence/limitations or dormant Lean model; not an additional delivered runtime feature obligation.",
       "text": "Its translation rejects unsupported data and lone-surrogate text values; the broader EXP-2 domain is unchanged.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12609,6 +13097,7 @@
       "reason": "Explicit experiment evidence/limitations or dormant Lean model; not an additional delivered runtime feature obligation.",
       "text": "The checked proof uses the documented standard Lean assumptions with no new axiom or `sorry`.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12620,6 +13109,7 @@
       "reason": "Explicit experiment evidence/limitations or dormant Lean model; not an additional delivered runtime feature obligation.",
       "text": "Its finite generated comparisons provide sampled TypeScript evidence, not proof of the TypeScript implementation, canonical-byte completeness, hash collision freedom, or runtime reuse.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12631,6 +13121,7 @@
       "reason": "Explicit experiment evidence/limitations or dormant Lean model; not an additional delivered runtime feature obligation.",
       "text": "If deliberately resumed, review the bridge and rerun the artifact when its modeled meaning or toolchain changes.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12642,6 +13133,7 @@
       "reason": "Explicit experiment evidence/limitations or dormant Lean model; not an additional delivered runtime feature obligation.",
       "text": "Arrays, prototypes, nested paths, and materialization remain outside this theorem.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12653,6 +13145,7 @@
       "reason": "Explicit experiment evidence/limitations or dormant Lean model; not an additional delivered runtime feature obligation.",
       "text": "The setup and maintenance cost do not justify a required Lean dependency for unrelated CI.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12666,6 +13159,7 @@
       "localBoundedAssertionIds": [
         "frozen"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12679,6 +13173,7 @@
       "localBoundedAssertionIds": [
         "frozen"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12692,6 +13187,7 @@
       "localBoundedAssertionIds": [
         "frozen"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12705,6 +13201,7 @@
       "localBoundedAssertionIds": [
         "frozen"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12718,6 +13215,7 @@
       "localBoundedAssertionIds": [
         "scalarLoading"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12731,6 +13229,7 @@
       "localBoundedAssertionIds": [
         "scalarLoading"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12744,6 +13243,7 @@
       "localBoundedAssertionIds": [
         "scalarLoading"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12757,6 +13257,7 @@
       "localBoundedAssertionIds": [
         "scalarLoading"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12770,6 +13271,7 @@
       "localBoundedAssertionIds": [
         "prepare"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12783,6 +13285,7 @@
       "localBoundedAssertionIds": [
         "prepare"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12796,6 +13299,7 @@
       "localBoundedAssertionIds": [
         "prepare"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12809,6 +13313,7 @@
       "localBoundedAssertionIds": [
         "prepare"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12823,6 +13328,7 @@
         "nestedLoading",
         "selectedOutput"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12837,6 +13343,7 @@
         "nestedLoading",
         "selectedOutput"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12851,6 +13358,7 @@
         "nestedLoading",
         "selectedOutput"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12865,6 +13373,7 @@
         "nestedLoading",
         "selectedOutput"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12879,6 +13388,7 @@
         "nestedLoading",
         "selectedOutput"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -12893,6 +13403,7 @@
         "nestedLoading",
         "nestedMetadata"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12907,6 +13418,7 @@
         "nestedLoading",
         "nestedMetadata"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12921,6 +13433,7 @@
         "nestedLoading",
         "nestedMetadata"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12935,6 +13448,7 @@
         "nestedLoading",
         "nestedMetadata"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12949,6 +13463,7 @@
         "nestedLoading",
         "nestedMetadata"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12963,6 +13478,7 @@
         "nestedLoading",
         "nestedMetadata"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12974,6 +13490,7 @@
       "reason": "Explicit experiment evidence/limitations or dormant Lean model; not an additional delivered runtime feature obligation.",
       "text": "The candidate index is generated from canonical MDS1 data.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12985,6 +13502,7 @@
       "reason": "Explicit experiment evidence/limitations or dormant Lean model; not an additional delivered runtime feature obligation.",
       "text": "Durable History remains the owner of adopting and publishing that index with completed results; this gate does not implement attempts, allocation, current pointers, crash-safe publication, cache/eviction policy or keyed projection indexing.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -12996,6 +13514,7 @@
       "reason": "Explicit experiment evidence/limitations or dormant Lean model; not an additional delivered runtime feature obligation.",
       "text": "Async-only storage still cannot promise unexpected ordinary synchronous reads.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -13007,6 +13526,7 @@
       "reason": "Explicit experiment evidence/limitations or dormant Lean model; not an additional delivered runtime feature obligation.",
       "text": "The [protocol](../../experiments/exp-nested/protocol.md) records the owner ports, required index evidence, reproducible controls and limits.",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -13018,6 +13538,7 @@
       "reason": "Heading, table schema, status or vocabulary governance; not a runtime obligation.",
       "text": "## Collections",
       "localBoundedAssertionIds": [],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Outside the delivered runtime denominator; scope reason must be retained."
@@ -13031,6 +13552,7 @@
       "localBoundedAssertionIds": [
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -13044,6 +13566,7 @@
       "localBoundedAssertionIds": [
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -13057,6 +13580,7 @@
       "localBoundedAssertionIds": [
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -13070,6 +13594,7 @@
       "localBoundedAssertionIds": [
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -13083,6 +13608,7 @@
       "localBoundedAssertionIds": [
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -13096,6 +13622,7 @@
       "localBoundedAssertionIds": [
         "projection"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -13109,6 +13636,7 @@
       "localBoundedAssertionIds": [
         "projection"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -13122,6 +13650,7 @@
       "localBoundedAssertionIds": [
         "projection"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -13135,6 +13664,7 @@
       "localBoundedAssertionIds": [
         "projection"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -13148,6 +13678,7 @@
       "localBoundedAssertionIds": [
         "projection"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -13161,6 +13692,7 @@
       "localBoundedAssertionIds": [
         "projection"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -13174,6 +13706,7 @@
       "localBoundedAssertionIds": [
         "projection"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -13187,6 +13720,7 @@
       "localBoundedAssertionIds": [
         "projection"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -13201,6 +13735,7 @@
         "order",
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -13215,6 +13750,7 @@
         "order",
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -13229,6 +13765,7 @@
         "order",
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -13243,6 +13780,7 @@
         "order",
         "keyed"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -13257,6 +13795,7 @@
         "keyed",
         "gates"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -13271,6 +13810,7 @@
         "keyed",
         "gates"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."
@@ -13285,6 +13825,7 @@
         "keyed",
         "gates"
       ],
+      "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
       "conformance": "not-certified-by-whole-clause-association",
       "residual": "Only the exact proves statements of local assertions and linked owner meanings are established. Every other sub-obligation remains open; test presence is not whole-unit coverage."

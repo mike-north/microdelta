@@ -3,10 +3,10 @@
 Implementer: Codex worker (gpt-6.1-sol), operating for Mike North.
 
 `semantic-clauses.json` retains all 178 non-code paragraph/table blocks of
-`tracking.md`, `composition.md`, and `glossary.md`. Fifty-one named assertion anchors
+`tracking.md`, `composition.md`, and `glossary.md`. Fifty-two named assertion anchors
 record the concrete behavior they establish and the actual execution log. This is
-an exhaustive clause inventory, **not complete normative certification**: 99 blocks
-have bounded semantic assertion evidence, 46 remain explicitly uncovered by this
+an exhaustive clause inventory, **not complete normative certification**: 104 blocks
+have bounded semantic assertion evidence, 41 remain explicitly uncovered by this
 audit, and 33 are structural text. Every partial block explicitly leaves all
 unproved sub-obligations uncovered. An uncovered block is not itself a defect or
 proof that the repository lacks a relevant test. Literal requirement-ID references
@@ -75,7 +75,7 @@ An additional ordered-ranking operation assertion passes: selected score changes
 invalidate, while unselected avatar edits preserve the ranked-key consumer evidence.
 The focused precision matrix now has 13 passing assertions (`tracking-results.log`).
 
-The finite edge oracle contributes20 passing matrix rows (204 independent workers),
+The finite edge oracle contributes 20 passing matrix rows (204 independent workers),
 including special own-data keys, lone UTF16 keys, numeric atoms and sparse arrays.
 The actual imported-helper capture lint probe asserts four expected diagnostics.
 A distinct intrinsic-presence counterexample (9 red/2 green) is recorded separately
@@ -90,11 +90,13 @@ classes visibly. No whole unit is certified merely by sharing a paragraph or ID
 with a test. Each retains bounded evidence statements and open residuals.
 
 `other-owner-evidence.json` snapshots 32 named operational/history requirements
-and295 actual test statuses from the durability worker at bfb1cc3; failed tests
-are not promoted to passing evidence. Only Analysis, Bounded Context and Publication
-vocabulary rows still await the contract-surface worker's exact owner anchors.
+and 295 actual test statuses from the durability worker at bfb1cc3; failed tests
+are not promoted to passing evidence. The separately retained `surface-owner-evidence.json` links Analysis, Bounded
+Context and Publication vocabulary to exact owner-reviewed records at 27271cb.
+Those records preserve evidence paths and residuals; they are not represented as
+independently executed test IDs or whole-unit proof.
 
 The durable scalar branch test adds a passing five-process current-evidence
 assertion: flip the branch, edit the abandoned leaf without rerunning, change a
 newly active leaf and publish, then roll back to the original exact result.
-The operation suite remains6 intentionally red #155 cases and8 passing controls.
+The operation suite remains 6 intentionally red #155 cases and 8 passing controls.

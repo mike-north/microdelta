@@ -1,0 +1,103 @@
+{
+  "sourceBranch": "gap-hunt-dx",
+  "sourceCommit": "27271cb",
+  "sourceLedger": "scratch/gap-hunt/contract-surface/obligation-evidence.json",
+  "boundary": "Owner-reviewed bounded evidence references, not independently executed test records or whole-clause certification.",
+  "requirements": {
+    "DOM-1": {
+      "obligations": [
+        "Retained exact results survive process exit",
+        "Author-selected expensive work includes CPU/network/nondeterministic work"
+      ],
+      "reviewedEvidence": [
+        "logs/example-matrix.log:8/8 independent-process CLI tests",
+        "consumer-dx/logs/jest.log:3/3 process probes"
+      ],
+      "evidenceStatus": "aligned-bounded",
+      "remainingBoundary": "Hours-long leases and scale are separate;100k ongoing. Random/nondeterministic provider execution was not performed."
+    },
+    "DOM-2": {
+      "obligations": [
+        "Ordinary TS scoped authoring and implicit host context",
+        "Outside-live-scope lookup fails clearly",
+        "Ordinary nonmemoized work remains observable"
+      ],
+      "reviewedEvidence": [
+        "logs/workspace-operations.log:15/15",
+        "logs/owner-contracts.log:Supervision suite",
+        "packages/supervision/test/supervision.test.ts",
+        "packages/core/test/workspace/scope.test.ts",
+        "logs/workspace-resolution.log:independent current-worker refresh",
+        "packages/core/test/workspace/scope.test.ts:37,48,213,243",
+        "packages/core/test/workspace/admission-observers.test.ts:274"
+      ],
+      "evidenceStatus": "executed-bounded-pass",
+      "remainingBoundary": "Runtime evidence bounded by workspace/resolution fixtures; general hidden JS influence and paid-provider behavior are excluded."
+    },
+    "ARC-001": {
+      "obligations": [
+        "Six peer contexts own their listed invariant sets; supporting components are not extra contexts",
+        "Approved boundary public does not mean user-public tier"
+      ],
+      "reviewedEvidence": [
+        "logs/gates-tests.log:34/34 declaration/wiring/trim tests",
+        "logs/imports.log:check:imports pass",
+        "logs/declarations.log:check:declarations pass",
+        "logs/build-fixtures.log:build:fixtures pass",
+        "tooling/package-architecture.mjs six context entries",
+        "logs/additional-foundation.log:41/41context/quality/API-policy/formal-retirement negatives and positive controls"
+      ],
+      "evidenceStatus": "structural-and-partial-behavior",
+      "remainingBoundary": "Table ownership is reviewed against ports, not claimed mechanically proven in full."
+    },
+    "ARC-002": {
+      "obligations": [
+        "Value owns canonical addresses/fingerprints, not consumption/freshness",
+        "Numeric object aliases differ from array descriptor semantics; symbols reject explicitly",
+        "Materialization reads via ports, not private rows; no eligibility decision"
+      ],
+      "reviewedEvidence": [
+        "contracts worker semantic-value.log:50pass",
+        "logs/owner-contracts.log:Materialization34",
+        "logs/experiments.log:EXP2 28"
+      ],
+      "evidenceStatus": "aligned-bounded",
+      "remainingBoundary": "Tests cover chosen values/readers; Value universal-type-bag avoidance remains architectural review."
+    },
+    "ARC-007": {
+      "obligations": [
+        "History alone owns claim/allocation/publication invariant",
+        "Exact immutable references; fresh equal distinct; retain exact old; acceptance separate",
+        "No pointer rewind or dangling references"
+      ],
+      "reviewedEvidence": [
+        "logs/owner-contracts.log:History suite",
+        "packages/history/test/completed-results.test.ts",
+        "logs/experiments.log:EXP3 publication16",
+        "../scale/logs/acceptance-test-failure.log"
+      ],
+      "evidenceStatus": "aligned-bounded-with-performance-gap",
+      "remainingBoundary": "Real backend crash breadth belongs durability worker; acknowledgement-history amplification is confirmed without violating immutable full inspection."
+    },
+    "ARC-010": {
+      "obligations": [
+        "Node builtins/globals only in Node Machine runtime; tooling/tests excepted",
+        "Injected capabilities define semantics/failures and Node conformance",
+        "Machine does not own persistence/domain policy; no speculative extra hosts"
+      ],
+      "reviewedEvidence": [
+        "logs/gates-tests.log:34/34 declaration/wiring/trim tests",
+        "logs/imports.log:check:imports pass",
+        "logs/declarations.log:check:declarations pass",
+        "logs/build-fixtures.log:build:fixtures pass",
+        "logs/owner-contracts.log:MachineNode suite",
+        "packages/machine-node/test/node-machine.test.ts",
+        "packages/history/test/machine.test.ts",
+        "logs/check-packages.log:all11package strict type and type-aware lint commands pass",
+        "logs/additional-foundation.log:41/41context/quality/API-policy/formal-retirement negatives and positive controls"
+      ],
+      "evidenceStatus": "aligned-bounded",
+      "remainingBoundary": "Current scaffold Node imports paragraph is historical baseline. No browser/Lambda/Worker implementation obligation."
+    }
+  }
+}

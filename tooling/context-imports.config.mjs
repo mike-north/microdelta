@@ -24,6 +24,15 @@ export default [
     languageOptions: { parser: tseslint.parser },
     linterOptions: { noInlineConfig: true },
     rules: {
+      // Dynamic imports have no imported-name list, so they cannot use the
+      // example's narrow Accounting and Machine allowlists. Literal sources
+      // keep every dynamic dependency visible to this boundary check.
+      'no-restricted-syntax': ['error',
+        { selector: 'ImportExpression[source.type!="Literal"]', message: 'The example requires a literal dynamic import source so its package boundary can be checked.' },
+        { selector: 'ImportExpression[source.value=/^@microdelta\\//]', message: 'The example cannot dynamically import scoped owner packages; its static imports allow only specific named exports.' },
+        { selector: 'ImportExpression[source.value=/^microdelta\\//]', message: 'The example imports only the facade entry, not facade subpaths.' },
+        { selector: 'ImportExpression[source.value=/^(\\.\\.\\/){3,}/]', message: 'The example cannot dynamically import workspace source paths.' },
+      ],
       'no-restricted-imports': ['error', { paths: [
         { name: '@microdelta/accounting', allowImportNames: ['openDurableAccounting', 'IDurableAccounting'], message: 'The example imports only the Accounting adapter it injects into the facade.' },
         { name: '@microdelta/machine-node', allowImportNames: ['createNodeSqlite'], message: 'The example imports only the SQLite capability the Accounting adapter opens with.' },

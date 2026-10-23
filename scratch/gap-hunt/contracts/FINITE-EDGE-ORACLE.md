@@ -39,3 +39,6 @@ Each invocation independently installs/builds before running. See
 `edge-oracle-results.log`, `edge-lint.log`, and
 `transitive-capture-lint-results.log`. The separate candidate failure is documented
 in `INTRINSIC-PRESENCE.md` with exact spec clauses and its own invocation.
+
+Fixed reproduction revision: `9267a44e1a203966e6ccd73db188e5826506326b` on branch `gap-hunt-contracts`.
+The script and all required fixture modules are present in that commit.

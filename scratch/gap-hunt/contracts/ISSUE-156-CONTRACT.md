@@ -72,3 +72,6 @@ Expected current result: generated alpha type assertions pass (all ten bare scal
 source/memo declarations compile), followed by ten intentionally failing runtime
 assertions and five passing wrapped controls. `SCALAR-ROOTS.md` contains the exact
 stable runtime rejection and additional evidence. No external service is used.
+
+Fixed reproduction revision: `9267a44e1a203966e6ccd73db188e5826506326b` on branch `gap-hunt-contracts`.
+The script and all required fixture modules are present in that commit.

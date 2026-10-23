@@ -82,3 +82,6 @@ API, provider work or publication. No design-policy expansion is required.
 Reproduction expected today: nine red assertions, two green controls. The script
 returns that failure status. The parent supervisor independently reproduced the
 same result and confirmed the contract divergence; issue creation remains theirs.
+
+Fixed reproduction revision: `9267a44e1a203966e6ccd73db188e5826506326b` on branch `gap-hunt-contracts`.
+The script and all required fixture modules are present in that commit.

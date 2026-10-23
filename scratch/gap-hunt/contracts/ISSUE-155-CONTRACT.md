@@ -72,3 +72,6 @@ one passing scalar control. `packages/core/test/gap-hunt-contracts-guard-worker.
 is part of the same commit and supplies the independent-process reproduction.
 No paid provider or external service is involved. The broader operation oracle is
 `gap-hunt-contracts-operation-matrix.test.ts` (six red, seven green).
+
+Fixed reproduction revision: `9267a44e1a203966e6ccd73db188e5826506326b` on branch `gap-hunt-contracts`.
+The script and all required fixture modules are present in that commit.

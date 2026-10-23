@@ -1,0 +1,490 @@
+{
+  "consumer_pin": "d172f5f7c0790914bfc7a0ffbf1398618dd72ad8",
+  "main_pin": "b0ae5396f0852a7d2755fdf349a1f082d75f95c5",
+  "node": "v24.22.1",
+  "pnpm": "12.10.1",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "compatibility": {
+    "prepush_exit": 0,
+    "prepush_tests": 641,
+    "focused_exit": 0,
+    "focused_tests": 329,
+    "declaration_patch_applied": false,
+    "installed_graph_byte_verified_packages": 10
+  },
+  "rehearsal": {
+    "exit_code": 1,
+    "seconds": 680.7728550434113,
+    "timeout_bound_seconds": 900,
+    "final_report_exists": true,
+    "log_sha256": "6fb94504a86250c08ae28bc1d4d2a209d342510dc5448130e5303264d5510880",
+    "completed_stage_measurements": [
+      {
+        "run": 1,
+        "stage": "collection.roster",
+        "milliseconds": 53.948000000000036,
+        "rssBytes": 212205568,
+        "heapUsedBytes": 70232152,
+        "counts": {
+          "people": 391
+        }
+      },
+      {
+        "run": 1,
+        "stage": "collection.discovery",
+        "milliseconds": 2304.5495,
+        "rssBytes": 408043520,
+        "heapUsedBytes": 159905984,
+        "counts": {
+          "pulls": 70304,
+          "audiences": 405
+        }
+      },
+      {
+        "run": 1,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 13704.75475,
+        "rssBytes": 700350464,
+        "heapUsedBytes": 225980288,
+        "counts": {
+          "completed": 10000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 1,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 16060.743542,
+        "rssBytes": 802308096,
+        "heapUsedBytes": 378718120,
+        "counts": {
+          "completed": 20000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 1,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 13496.739749999997,
+        "rssBytes": 918732800,
+        "heapUsedBytes": 417198816,
+        "counts": {
+          "completed": 30000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 1,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 22876.943583000007,
+        "rssBytes": 1003388928,
+        "heapUsedBytes": 354890112,
+        "counts": {
+          "completed": 40000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 1,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 38144.316083,
+        "rssBytes": 983285760,
+        "heapUsedBytes": 310273568,
+        "counts": {
+          "completed": 50000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 1,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 22326.83233399999,
+        "rssBytes": 983859200,
+        "heapUsedBytes": 390335432,
+        "counts": {
+          "completed": 60000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 1,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 37113.926166000005,
+        "rssBytes": 980910080,
+        "heapUsedBytes": 370969968,
+        "counts": {
+          "completed": 70000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 1,
+        "stage": "collection.pulls",
+        "milliseconds": 164264.084917,
+        "rssBytes": 980910080,
+        "heapUsedBytes": 413101368,
+        "counts": {
+          "pulls": 70304
+        }
+      },
+      {
+        "run": 1,
+        "stage": "collection.hubble",
+        "milliseconds": 12154.13833300001,
+        "rssBytes": 1714765824,
+        "heapUsedBytes": 653989704,
+        "counts": {
+          "dailyTokens": 95471,
+          "dailyPresence": 159127
+        }
+      },
+      {
+        "run": 1,
+        "stage": "collection.assembly",
+        "milliseconds": 10382.036499999987,
+        "rssBytes": 1742487552,
+        "heapUsedBytes": 977977616
+      },
+      {
+        "run": 1,
+        "stage": "collection.aggregate",
+        "milliseconds": 13135.84275000001,
+        "rssBytes": 4058185728,
+        "heapUsedBytes": 1899545976
+      },
+      {
+        "run": 1,
+        "stage": "emitter.validate-serialize",
+        "milliseconds": 6851.4005419999885,
+        "rssBytes": 3166453760,
+        "heapUsedBytes": 1215163088,
+        "counts": {
+          "files": 1676,
+          "totalPlaintextBytes": 337226059,
+          "largestPlaintextBytes": 2039192,
+          "audiences": 405
+        },
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 1,
+        "stage": "emitter.bundle",
+        "milliseconds": 8966.35616700002,
+        "rssBytes": 2964357120,
+        "heapUsedBytes": 1269285216,
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 1,
+        "stage": "emitter.write",
+        "milliseconds": 536.7275829999999,
+        "rssBytes": 2964586496,
+        "heapUsedBytes": 1241278720,
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 1,
+        "stage": "emitter.verify-staging",
+        "milliseconds": 93196.60029200002,
+        "rssBytes": 2958311424,
+        "heapUsedBytes": 2474797944,
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 1,
+        "stage": "emitter.replace-verify-installed",
+        "milliseconds": 92496.909583,
+        "rssBytes": 3150544896,
+        "heapUsedBytes": 2634204664,
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 1,
+        "stage": "collection.emit",
+        "milliseconds": 202053.771625,
+        "rssBytes": 3151036416,
+        "heapUsedBytes": 2634297744
+      },
+      {
+        "run": 2,
+        "stage": "collection.roster",
+        "milliseconds": 18.510957999969833,
+        "rssBytes": 2120368128,
+        "heapUsedBytes": 80763224,
+        "counts": {
+          "people": 391
+        }
+      },
+      {
+        "run": 2,
+        "stage": "collection.discovery",
+        "milliseconds": 934.4472079999978,
+        "rssBytes": 2125774848,
+        "heapUsedBytes": 173636600,
+        "counts": {
+          "pulls": 70304,
+          "audiences": 405
+        }
+      },
+      {
+        "run": 2,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 6614.786750000028,
+        "rssBytes": 2124562432,
+        "heapUsedBytes": 379096880,
+        "counts": {
+          "completed": 10000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 2,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 6822.080000000016,
+        "rssBytes": 2125365248,
+        "heapUsedBytes": 500705952,
+        "counts": {
+          "completed": 20000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 2,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 7512.34241599997,
+        "rssBytes": 2125922304,
+        "heapUsedBytes": 546153288,
+        "counts": {
+          "completed": 30000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 2,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 9328.051584,
+        "rssBytes": 2114011136,
+        "heapUsedBytes": 461740776,
+        "counts": {
+          "completed": 40000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 2,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 9480.251875000016,
+        "rssBytes": 2054619136,
+        "heapUsedBytes": 321758280,
+        "counts": {
+          "completed": 50000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 2,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 8612.800832999987,
+        "rssBytes": 2026471424,
+        "heapUsedBytes": 777175336,
+        "counts": {
+          "completed": 60000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 2,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 8647.630458,
+        "rssBytes": 2025652224,
+        "heapUsedBytes": 433896776,
+        "counts": {
+          "completed": 70000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 2,
+        "stage": "collection.pulls",
+        "milliseconds": 57322.894666999986,
+        "rssBytes": 2025652224,
+        "heapUsedBytes": 485219776,
+        "counts": {
+          "pulls": 70304
+        }
+      },
+      {
+        "run": 2,
+        "stage": "collection.hubble",
+        "milliseconds": 5586.969542000035,
+        "rssBytes": 2056372224,
+        "heapUsedBytes": 1210931392,
+        "counts": {
+          "dailyTokens": 95471,
+          "dailyPresence": 159127
+        }
+      },
+      {
+        "run": 2,
+        "stage": "collection.assembly",
+        "milliseconds": 9175.82474999997,
+        "rssBytes": 2441330688,
+        "heapUsedBytes": 518041184
+      },
+      {
+        "run": 2,
+        "stage": "collection.aggregate",
+        "milliseconds": 3552.943750000035,
+        "rssBytes": 3260973056,
+        "heapUsedBytes": 1667810808
+      },
+      {
+        "run": 2,
+        "stage": "emitter.validate-serialize",
+        "milliseconds": 6758.394291999983,
+        "rssBytes": 2954805248,
+        "heapUsedBytes": 1170570008,
+        "counts": {
+          "files": 1676,
+          "totalPlaintextBytes": 337226059,
+          "largestPlaintextBytes": 2039192,
+          "audiences": 405
+        },
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 2,
+        "stage": "emitter.bundle",
+        "milliseconds": 8895.02883299999,
+        "rssBytes": 3006070784,
+        "heapUsedBytes": 1217440480,
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 2,
+        "stage": "emitter.write",
+        "milliseconds": 476.63608300004853,
+        "rssBytes": 3006251008,
+        "heapUsedBytes": 1187466408,
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 2,
+        "stage": "emitter.verify-staging",
+        "milliseconds": 88745.67233399994,
+        "rssBytes": 3110584320,
+        "heapUsedBytes": 1581659120,
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 2,
+        "stage": "emitter.replace-verify-installed",
+        "milliseconds": 89822.77916600008,
+        "rssBytes": 1869168640,
+        "heapUsedBytes": 1797243080,
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 2,
+        "stage": "collection.emit",
+        "milliseconds": 194820.18929100002,
+        "rssBytes": 1874411520,
+        "heapUsedBytes": 1801404936
+      }
+    ],
+    "final_report_sha256": "5be86258ec402884871d6591cd7052a9740b5e3c1710ba5e1dd539c1799e9993",
+    "reported_status": "failed",
+    "reported_failure": "Target already exists: cp returned EEXIST (<consumer>/out/synthetic-bundle already exists) <consumer>/out/synthetic-bundle",
+    "output_audit": {
+      "people": 391,
+      "authoredH1": 34917,
+      "authoredH2": 35287,
+      "submittedReviews": 90362,
+      "cappedPrs": 2,
+      "complete3000Prs": 2,
+      "unknownTenurePeople": 10,
+      "unavailableCalendars": 10,
+      "workingDayHalves": 782,
+      "comparisons": 2346,
+      "personCohortStats": 391,
+      "halfMixes": 782,
+      "globalDistributionTables": 1,
+      "scopedDistributionTables": 13,
+      "distributionRows": 93,
+      "tables": 838,
+      "representativeIcKeyringsChecked": 1,
+      "restrictedFilesDenied": 810,
+      "milliseconds": 2301.5640829999465
+    },
+    "runs": [
+      {
+        "milliseconds": 405197.486709,
+        "providerCalls": 777223,
+        "fileCount": 2082,
+        "totalBytes": 18843216,
+        "largestBytes": 388592,
+        "bodiesExecuted": 71822,
+        "siteAssetsBudgetVerified": false,
+        "inventory_sha256": "8c4781b02b39caeaf1aeb5287c241651db3c9d62b1b6541ec1911e3944eb7d7f"
+      },
+      {
+        "milliseconds": 272585.25429099996,
+        "providerCalls": 0,
+        "fileCount": 2082,
+        "totalBytes": 18843216,
+        "largestBytes": 388592,
+        "bodiesExecuted": 0,
+        "siteAssetsBudgetVerified": false,
+        "inventory_sha256": "8c4781b02b39caeaf1aeb5287c241651db3c9d62b1b6541ec1911e3944eb7d7f"
+      }
+    ],
+    "cold_warm_inventory_byte_identical": true
+  },
+  "adapters": {
+    "consumer_pin": "d172f5f7c0790914bfc7a0ffbf1398618dd72ad8",
+    "main_pin": "b0ae5396f0852a7d2755fdf349a1f082d75f95c5",
+    "tracked_changes": [
+      "pnpm-lock.yaml",
+      "pnpm-workspace.yaml"
+    ],
+    "all_other_tracked_source_byte_exact": true,
+    "declaration_patch_applied": false,
+    "installed_definition_alpha_byte_exact_build": true,
+    "definition_alpha_sha256": "232b44bd166207f1f8ef61776872d9c55f19c0b20d7e7d7a792696b98256aed1",
+    "generator_adapter": "External scratch generator exact0.3guard; tracked0.2generator unchanged",
+    "pnpm_adapter": "verifyDepsBeforeRun:false, issuer graph byte verified",
+    "prior_setup_failures": "expected tracked0.2postinstall guard; formatting shim failure corrected with explicitpnpm; initialprepush formatting receipt preserved",
+    "full_synthetic_timeout_seconds": 900
+  },
+  "qualification": "One current-main synthetic run, no published baseline or capacity rerun; phase durations are measurements under uncontrolled load, not causal PR184 timing evidence.",
+  "supplemental_saved_output_validation": {
+    "original_exit": 1,
+    "original_status": "failed; finalcopy EEXIST after bothpasses",
+    "saved_inventory_matches_independent_audit": true,
+    "data_bytes": 18843216,
+    "asset_bytes": 438035,
+    "total_bytes": 19281251,
+    "limit_bytes": 20971520,
+    "headroom_bytes": 1690269,
+    "combined_site_budget_pass": true,
+    "built_encrypted_bytes_match_saved_bundle": true,
+    "original_artifacts_and_existing_dist_unchanged": true,
+    "new_collection_or_provider_calls": false,
+    "qualification": "SUPPLEMENTAL SAVED-OUTPUT TERMINAL VALIDATION; original full command remains exit1 EEXIST; cold/warm inventory equality independently checked",
+    "receipt_sha256": "95888677ba8aee5f7319fdcd993df8c4d12a0ae2304ab965d1a7017e6c17218d"
+  }
+}

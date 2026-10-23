@@ -1,0 +1,21 @@
+# Current-main consumer replay after PR184
+
+Frozen runtime main: `b0ae5396f0852a7d2755fdf349a1f082d75f95c5` (PR184 merge). Private consumer source: `d172f5f7c0790914bfc7a0ffbf1398618dd72ad8`; live remote consumer branch remained unchanged. New isolated runtime and private consumer checkouts; no consumer commit/push, paid provider, published baseline, or capacity rerun.
+
+**Compatibility PASS; original full synthetic command PARTIAL / exit1.** The unchanged runner completed both cold/warm passes and its output audit, then failed at final handoff with the known consumer `mkdir` followed by `cp(errorOnExist:true,force:false)` EEXIST behavior. Its original report, log, empty final destination and receipt remain unchanged. This is not a successful full command or a production consumer fix.
+
+Fresh runtime lockfile install and package build completed before consumer installation. Consumer full prepush passed641 tests across46 files, plus lint/typecheck/build; focused pipeline suite passed329 across25 files. Installed issuer-resolved graph covers10 runtime packages, with every dist/src file byte-verified against the frozen build. Definition alpha declarations are byte-exact to the build, without the old issue169 patch. Only private lock/workspace wiring differs from consumer source.
+
+The existing tracked generator still insists on installed0.2.0 and rejects local0.3.0 during postinstall. An external scratch copy accepts exact0.3.0 to generate unchanged-form alpha paths; original generator remains byte-exact. Local verifyDepsBeforeRun:false keeps the directly verified installed graph fixed. Initial formatting failed because the bare pnpm shim was unavailable; that setup receipt is preserved separately, then the explicit proven pnpm binary formatted only the local workspace wiring and the complete prepush gate passed. No check relaxation or product adapter removal was introduced.
+
+## Measured outcome
+
+The one bounded command completed in680.773 seconds, below its unchanged900-second limit. Cold405.197s, warm272.585s. Cold pull traversal164.264s; warm57.323s. These are single uncontrolled measurements, not causal timing evidence for PR184 or a controlled baseline comparison. The earlier timeout remains historical evidence, unchanged.
+
+Final report records warm bodiesExecuted0 and providerCalls0. Both runs contain2082 bundle files (2081 encrypted payload/keyring entries plus plaintext manifest),18,843,216 data bytes. Independently compared complete path/length/SHA inventories: cold and warm are identical. Integrated output audit passes391 people,838 tables,90,362 submitted reviews,2346 comparisons and810 restricted-file denials. The summary includes the38 completed stage measurements and exact report/log hashes.
+
+A separate saved-output handoff copied those exact bytes to a new private destination and ran the unchanged site builder against byte-exact source in an isolated shadow checkout. It passed:438,035 current asset bytes plus18,843,216 data bytes =19,281,251 total,1,690,269 below the20MiB budget. Every built encrypted byte matches saved input; original artifacts, input bundle, tracked diff and existing site output remain unchanged. No collection/provider calls occurred in that supplement. This validates the separate existing site-build contract; it does not turn the original EEXIST result green or change its siteAssetsBudgetVerified:false fields.
+
+## Evidence boundary
+
+Private scratch retains executed replay.py, original install/setup/gate/rehearsal receipts and logs, issuer graph, preflight, original final report, saved inventories, supplemental continue.py and receipt. Public summary contains only synthetic counts/hashes/stage measurements and disclosed setup boundaries. Recorded host: macOS27.0.1arm64, Node24.22.1, pnpm12.10.1. No Linux, deployment, paid-provider or performance-causality claim.

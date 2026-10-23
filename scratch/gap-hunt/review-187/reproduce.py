@@ -66,6 +66,10 @@ def main():
   assert values['current-owner']['numPassedTests']==values['restored-owner']['numPassedTests']==6
   assert values['old-source-core']['numFailedTests']==11 and values['old-source-core']['numPassedTests']==3
   assert values['old-source-owner']['numFailedTests']==6
+  assert values['tracking-regression']['numPassedTests']==54
+  for name,passed_suites,failed_suites in [('current-core',3,0),('current-owner',1,0),('tracking-regression',2,0),('old-source-core',0,3),('old-source-owner',0,1),('restored-core',3,0),('restored-owner',1,0)]:
+   assert values[name]['numPassedTestSuites']==passed_suites and values[name]['numFailedTestSuites']==failed_suites
+   assert values[name]['numRuntimeErrorTestSuites']==0
   for name in ['current-core','current-owner','tracking-regression','restored-core','restored-owner']:
    assert values[name]['numFailedTests']==values[name]['numRuntimeErrorTestSuites']==0
   guard()

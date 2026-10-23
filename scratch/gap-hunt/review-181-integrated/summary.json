@@ -1,0 +1,17 @@
+{
+  "head": "8bcd8ef9a4bea25d78285004cce2d3624443b705",
+  "at": "2026-10-23T20:44:29.240921+00:00",
+  "command": "node scratch/gap-hunt/consumer-dx/repro-async-source.mjs",
+  "exit": 0,
+  "originalOverlayFiles": 12,
+  "byteHashesMatch": true,
+  "freshNpmCi": true,
+  "freshBuildPackages": true,
+  "originalAsyncTypeCases": 4,
+  "runtimeTestsPassed": 2,
+  "runtimeTestsFailed": 0,
+  "tsd": "pass",
+  "fixtureTypeAwareLint": "pass",
+  "trackedWorktreeDiff": "",
+  "scope": "macOS Node24.22.1; no full63suite, repeated mutations, Linux or fullrepo acceptance"
+}

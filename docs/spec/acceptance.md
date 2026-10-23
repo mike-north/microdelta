@@ -42,8 +42,17 @@ and rename display labels. Nothing depends on surviving closures/tags.
 | A-16 Explain/CLI isolation | Observe current, old, missing, uncertain downstream data | No admitted computation/claims/writes merely by viewing | M6 |
 | A-17 Materialization/scale | Large unread payload, several narrow consumers, early-stop loop | Instrumented loads/memory; fingerprint-only positive control | M2/M7 |
 | A-19 Admission/middleware | Budget refusal, cached hit, throwing observer, check-only miss | Hits served, misses refused before claims, committed success preserved | M3/M5 |
-| A-18 Context lifecycle | Concurrent scopes, thrown nested frame, detached callback after close | No cross-run leakage; late use fails clearly | M2/M5 |
-| A-20 Machine boundary | Direct Node built-in import/global in runtime outside Node Machine; new capability used by a context; unsupported/failing host operation | Source check rejects bypass but allows tests/tooling; Node implementation passes capability conformance and injected-context fixture; History/Accounting port ownership remains intact | M0.5 and each added capability |
+| A-18 Context lifecycle | Concurrent scopes, thrown nested frame, detached callback after close, repeated standalone fresh captures in a continuing caller | No cross-run leakage; late use fails clearly; completed captures do not retain a distinct host context per entry after observers/results become unreachable | M2/M5 and host lifecycle regression |
+| A-20 Machine boundary | Direct Node built-in import/global in runtime outside Node Machine; new capability used by a context; unsupported/failing host operation; repeated host-context entry | Source check rejects bypass but allows tests/tooling; Node implementation passes capability conformance and injected-context fixture, preserves caller context and exact callback result while bounding completed-entry retention; History/Accounting port ownership remains intact | M0.5 and each added capability |
+
+The A-18/A-20 heap-instance diagnostic is bounded to Node 24 and 26, where the
+same synthetic standalone capture workload distinguishes per-entry growth from
+an isolated-entry control. It retains the continuing caller, crosses task and GC
+boundaries, and confirms each census. Node 22.22.1 showed per-entry growth with
+both the ordinary and external-boundary controls; its host lifecycle result
+remains unresolved and this repair's bounded-lifetime proof does not cover it.
+Caller-context, isolation and late-use semantic tests still apply there. No
+universal platform instance count or elapsed-time limit is specified.
 
 Language-neutral [restart cases](artifacts/reuse-cases.json) define concrete
 inputs and expected semantic outcomes for A-02/A-04/A-05. They are fixture data,

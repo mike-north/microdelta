@@ -178,13 +178,23 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
       FROM history_results r LEFT JOIN history_attempts a ON a.attempt_id = r.result_id WHERE r.result_id = ?`),
     envelope: connection.prepare(sql`/* envelope */ SELECT result_id, analysis, environment, subject, version, publication, encoding, index_version,
       provenance_format, provenance_version, provenance FROM history_results WHERE result_id = ?`),
-    // Results admissible in the subject's environment: published there, or named by a promotion into it.
-    candidates: connection.prepare(sql`/* candidates */ SELECT result_id, analysis, environment, subject, version, publication, encoding, index_version,
-      provenance_format, provenance_version, provenance FROM history_results r
-      WHERE r.analysis = ? AND r.subject = ? AND r.version = ?
-        AND (r.environment = ? OR EXISTS (SELECT 1 FROM history_promotion_results pr JOIN history_promotions p ON p.promotion_id = pr.promotion_id
-          WHERE pr.result_id = r.result_id AND p.analysis = r.analysis AND p.environment = ?))
-      ORDER BY publication DESC`),
+    // The local arm seeks the complete subject index. The promotion arm must
+    // visit target promotions before their results: its CROSS JOIN order avoids
+    // an analysis-wide result scan when no promotion exists. UNION removes a
+    // result admitted twice while retaining every distinct eligible result.
+    candidates: connection.prepare(sql`/* candidates */ WITH requested(analysis, environment, subject, version) AS (VALUES (?, ?, ?, ?))
+      SELECT * FROM (
+        SELECT r.result_id, r.analysis, r.environment, r.subject, r.version, r.publication, r.encoding, r.index_version,
+          r.provenance_format, r.provenance_version, r.provenance FROM requested s JOIN history_results r
+          ON r.analysis = s.analysis AND r.environment = s.environment AND r.subject = s.subject AND r.version = s.version
+        UNION
+        SELECT r.result_id, r.analysis, r.environment, r.subject, r.version, r.publication, r.encoding, r.index_version,
+          r.provenance_format, r.provenance_version, r.provenance FROM requested s CROSS JOIN history_promotions p
+          CROSS JOIN history_promotion_results pr CROSS JOIN history_results r
+          WHERE p.analysis = s.analysis AND p.environment = s.environment
+            AND pr.promotion_id = p.promotion_id AND r.result_id = pr.result_id
+            AND r.analysis = s.analysis AND r.subject = s.subject AND r.version = s.version
+      ) ORDER BY publication DESC`),
     dependencies: connection.prepare(sql`/* envelope */ SELECT d.position, d.dependency_id, r.result_id AS present, r.analysis, r.environment
       FROM history_dependencies d LEFT JOIN history_results r ON r.result_id = d.dependency_id WHERE d.attempt_id = ? ORDER BY d.position`),
     current: connection.prepare(sql`/* current */ SELECT c.result_id, r.result_id AS present
@@ -750,7 +760,7 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
 
     findCandidates(presented: IVersionedSubject): readonly ICompletedEnvelope[] {
       const subject = versionedSubject(presented);
-      return Object.freeze(statements.candidates.all(subject.analysis, subject.subject, subject.version, subject.environment, subject.environment).map(envelopeOf));
+      return Object.freeze(statements.candidates.all(subject.analysis, subject.environment, subject.subject, subject.version).map(envelopeOf));
     },
 
     readCurrent(presented: IScopedSubject): ICompletedResultReference | undefined {

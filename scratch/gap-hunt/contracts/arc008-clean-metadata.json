@@ -1,0 +1,26 @@
+{
+  "evidenceHead": "8fb727a3949b2bbd4a0488b9cfe476044cff3026",
+  "node": "v24.22.1",
+  "npm": "11.12.1",
+  "command": "node scratch/gap-hunt/contracts/reproduce.mjs arc008",
+  "exitCode": 0,
+  "cleanWorktreeAfterRun": true,
+  "files": [
+    {
+      "file": "package-lock.json",
+      "sha256": "55dfeace3ed7af8246e32c3029b444251df4ca164119f76716e44122e33129e6"
+    },
+    {
+      "file": "packages/resolution/src/contracts.ts",
+      "sha256": "2f5e0063efea77202ce59e2f677359ad34099d0b2da9d1a1cde130b427641789"
+    },
+    {
+      "file": "packages/resolution/src/resolution.ts",
+      "sha256": "0a8c2d2adf9aa5c52a453e8415475cbefbc0daf6233c99d6ae68813714c5c3f5"
+    },
+    {
+      "file": "packages/resolution/dist/api/resolution.alpha.d.ts",
+      "sha256": "8d7a5ff4b2371d2b71ef9b04776ddecc34ace5dfc08cd9e20ec650df502e4251"
+    }
+  ]
+}

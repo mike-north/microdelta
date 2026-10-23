@@ -50,3 +50,9 @@ This is a semantic starting point, not executable code against a nonexistent por
 ## Out of scope
 
 Public facade expansion, publication/release changes, provider execution, wholesale Resolution redesign, a new bounded context, transfer of invariant ownership, and replacing the existing #144 controls are outside this pickup. No blocking dependency is invented from their shared source files.
+
+## Clean verification and current-source pin
+
+The one-command wrapper completed exit 0 in a disposable clean detached checkout at `8fb727a3949b2bbd4a0488b9cfe476044cff3026`, with Node 24.22.1 and npm 11.12.1. It installed the committed lockfile and completed the full build before the static diagnostic. Git status remained clean. `arc008-clean.log`, `arc008-clean-surface.json` and `arc008-clean-metadata.json` preserve the output and source/generated-declaration hashes. Exit 0 means the census ran successfully; it does not mean ARC-008 is satisfied.
+
+`arc008-merged-equality.json` verifies that both Resolution implementation and option contracts are byte-identical between production baseline `c5802daca4a0bb8ea91159854d84eddcfa5215b6` and merged main `f43c5872987573d9b98a19f41c324b4d9336894c`. The missing-seam source evidence therefore also applies to that merged main. There are no blocking dependencies; coordinate with #144 without replacing its distinct fault controls.

@@ -1,0 +1,7 @@
+# Synthetic consumer replay at f43c587
+
+Node24.22.1, pnpm12.10.1, macOS27 arm64. Synthetic391people/70,304PRs/90,362reviews; no real provider calls. Both baseline and main passed641tests and329focused pipeline tests with existing async declaration workaround. Native main declaration typecheck fails TS2322: Promise<ISourceOutcome<...>> is not assignable to ISourceOutcome<...>.
+
+Both full commands are PARTIAL/exit1: cold, audit and zero-provider warm replay completed; an unchanged consumer runner final-copy ERR_FS_CP_EEXIST prevented successful command completion. Main cold373.192s/warm405.972s vs baseline320.245s/216.655s; warm PR traversal210.848s vs31.519s. Single uncontrolled runs establish an observed signal, not cause. time -l maxRSS main5,619,073,024bytes vs baseline5,478,924,288bytes; stage RSS values are samples. Each configuration has byte-identical per-file ciphertext inventories cold→warm. Cross-configuration inventories differ; total18,843,216bytes and semantic audit counts match, without decrypted equality claim.
+
+Bounded100-call workspace diagnostic: published wrapper on ALS growth0, off+100; main wrapper on/off both0. Caller context and exact failure controls pass. Wrapper is redundant-for-tested-main-workspace-path only; no persisted adapter removal or standalone-tracking claim. Generated package graph verified10runtime-reachable packages against built main. Detailed consumer artifacts remain private/local. This directory contains synthetic metrics and package hashes only.

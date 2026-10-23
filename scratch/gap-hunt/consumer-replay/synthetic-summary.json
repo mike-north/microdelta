@@ -1,0 +1,171 @@
+{
+  "microdelta_sha": "f43c5872987573d9b98a19f41c324b4d9336894c",
+  "package_graph_sha256": "efe70864fc4aedf916678e40e15e45c0bf51536bad363329f460d7512ab506b6",
+  "cross_baseline_main_inventory_equal": false,
+  "baseline": {
+    "command_status": "PARTIAL",
+    "exit_code": 1,
+    "command_seconds": 539.529871225357,
+    "time_l_peak_rss_bytes": 5478924288,
+    "runs": [
+      {
+        "bodiesExecuted": 71822,
+        "providerCalls": 777223,
+        "milliseconds": 320244.73949999997,
+        "totalBytes": 18843216,
+        "fileCount": 2082,
+        "siteAssetsBudgetVerified": false
+      },
+      {
+        "bodiesExecuted": 0,
+        "providerCalls": 0,
+        "milliseconds": 216655.10395800002,
+        "totalBytes": 18843216,
+        "fileCount": 2082,
+        "siteAssetsBudgetVerified": false
+      }
+    ],
+    "warm_inventory_byte_identical": true,
+    "failure_code": "ERR_FS_CP_EEXIST",
+    "report_sha256": "f18746d897f64cfc9550b8f657de2b07b02aa043f08fc54f5f0f04a4a4937461",
+    "log_sha256": "7bc45cdfae434b7b4aa714ff4cd4981cfa76c255c83411550b03df6898160b78",
+    "context": {
+      "on": {
+        "mode": "on",
+        "before": 3,
+        "after": 3,
+        "confirmed": 3,
+        "growth": 0,
+        "confirmedGrowth": 0,
+        "bodies": 100,
+        "milliseconds": 93.12895799999998,
+        "rssBytes": 95256576,
+        "callerContextPreserved": true,
+        "exactFailurePreserved": true
+      },
+      "off": {
+        "mode": "off",
+        "before": 4,
+        "after": 104,
+        "confirmed": 104,
+        "growth": 100,
+        "confirmedGrowth": 100,
+        "bodies": 100,
+        "milliseconds": 99.131875,
+        "rssBytes": 95666176,
+        "callerContextPreserved": true,
+        "exactFailurePreserved": true
+      }
+    },
+    "warm_pull_stage_ms": 31518.697832999984
+  },
+  "main": {
+    "command_status": "PARTIAL",
+    "exit_code": 1,
+    "command_seconds": 781.6978299617767,
+    "time_l_peak_rss_bytes": 5619073024,
+    "runs": [
+      {
+        "bodiesExecuted": 71822,
+        "providerCalls": 777223,
+        "milliseconds": 373191.579166,
+        "totalBytes": 18843216,
+        "fileCount": 2082,
+        "siteAssetsBudgetVerified": false
+      },
+      {
+        "bodiesExecuted": 0,
+        "providerCalls": 0,
+        "milliseconds": 405971.73299999995,
+        "totalBytes": 18843216,
+        "fileCount": 2082,
+        "siteAssetsBudgetVerified": false
+      }
+    ],
+    "warm_inventory_byte_identical": true,
+    "failure_code": "ERR_FS_CP_EEXIST",
+    "report_sha256": "c974974542b192ff8c70df74ea8ed19192dd0953c4090d468dda6218009dd775",
+    "log_sha256": "14bd515cec0018c533dd3c240b894cba2833067cf80bae1fa0d7cb2e5ae308cb",
+    "context": {
+      "on": {
+        "mode": "on",
+        "before": 3,
+        "after": 3,
+        "confirmed": 3,
+        "growth": 0,
+        "confirmedGrowth": 0,
+        "bodies": 100,
+        "milliseconds": 108.45458300000001,
+        "rssBytes": 98140160,
+        "callerContextPreserved": true,
+        "exactFailurePreserved": true
+      },
+      "off": {
+        "mode": "off",
+        "before": 3,
+        "after": 3,
+        "confirmed": 3,
+        "growth": 0,
+        "confirmedGrowth": 0,
+        "bodies": 100,
+        "milliseconds": 174.70516600000002,
+        "rssBytes": 97026048,
+        "callerContextPreserved": true,
+        "exactFailurePreserved": true
+      }
+    },
+    "warm_pull_stage_ms": 210848.11883400002
+  },
+  "package_runtime_hashes": [
+    {
+      "name": "microdelta",
+      "version": "0.2.0",
+      "local_runtime_sha256": "cce2204c9c1cdce45f6b2383171a0b3c2eee9b2851313aabb1d88213b5df9074"
+    },
+    {
+      "name": "@microdelta/definition",
+      "version": "0.2.0",
+      "local_runtime_sha256": "ea81b42a03d93ad8f68822376bcda238064dce7dd0a9becd25b962f98bed81a9"
+    },
+    {
+      "name": "@microdelta/history",
+      "version": "0.1.0",
+      "local_runtime_sha256": "1359fee6c810daffa36e26388bcb29b52e87bb306a012fa4c346665207fc4fec"
+    },
+    {
+      "name": "@microdelta/machine-node",
+      "version": "0.1.0",
+      "local_runtime_sha256": "608b676a1370d9b2f085628b11a591d30930560854b78e15b8985800a1aea1e5"
+    },
+    {
+      "name": "@microdelta/materialization",
+      "version": "0.1.1",
+      "local_runtime_sha256": "d6e1402f7b0249107278ecbe49226f6cfdd0213ec459cfe2dd56e03bb017b71b"
+    },
+    {
+      "name": "@microdelta/resolution",
+      "version": "0.2.0",
+      "local_runtime_sha256": "b84de160952cd8d8a6aba6b1cc82eb177b984efd009e2f5bf02725a89cbf6d6f"
+    },
+    {
+      "name": "@microdelta/supervision",
+      "version": "0.2.0",
+      "local_runtime_sha256": "fb513e7cf1085d471d51932e0c55c903729b9d3231a18ba05b1f794ef4dadfdf"
+    },
+    {
+      "name": "@microdelta/tracking",
+      "version": "0.2.0",
+      "local_runtime_sha256": "243d3c34b3f7e993d4602b6f55563565ad3c5b5d51f653541cfb6384234d5cf6"
+    },
+    {
+      "name": "@microdelta/value",
+      "version": "0.1.0",
+      "local_runtime_sha256": "0ad57776023481cba0620001f6d9919e820d6818955f1e53d5a909fc0267159e"
+    },
+    {
+      "name": "@microdelta/machine",
+      "version": "0.1.0",
+      "local_runtime_sha256": "6a797a120b4eceb92610df856054727b4a25d342130eea75d9548403b9deefdf"
+    }
+  ]
+}

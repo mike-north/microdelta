@@ -36,3 +36,24 @@ node --experimental-vm-modules node_modules/jest/bin/jest.js --config scratch/ga
 ```
 
 The captured three-test result is `logs/jest.log`; `README.md` explains the generated-alpha setup. This replays the current authored snapshot controls. It is not an M7 acceptance command. Existing M5 operational evidence is separately captured in `../contract-surface/logs/workspace-operations.log` and `owner-contracts.log`; no integrated M7 passing result is claimed.
+
+## Numbered conditional acceptance criteria for the target issue
+
+1. Record the selected **controlled** adapter and workflow contract, owner boundaries and explicit exclusions before implementation pickup. The contract must distinguish current authored cumulative snapshots from any promised single-live-evaluation pagination. If no such live bridge is selected, document the remaining RUN-004/005 acceptance boundary rather than marking it delivered.
+2. Define fresh search traversal and cap-bisection rules for the selected adapter, including unsplittable capped ranges, duplicate/moved records and continuation tokens. Negative controls must prevent an unchanged cursor, repeated/empty continuing page or a cap/author limit from falsely establishing complete coverage. No page identity may replace stable PR identity.
+3. Define per-person closure evidence and empty-corpus semantics. If early member work during live pending discovery is selected, prove ready PR A can complete while page two is held, while the strict person summary cannot start or publish. After page-two failure, authorized fresh discovery must retain eligible A work; the failed/open population must never become a successful empty/full corpus.
+4. Define retryable/rate-limited adapter outcomes through the existing Supervision protocol. For a known retry time, no send may occur before it; exhausted/transient failures without a retry time must follow the selected bounded policy and remain truthful failures/waits. One person's wait must not falsely close another person's population or mix trial/production state.
+5. Define lost-response classification and recovery through existing operation identities. Unknown non-repeat-safe requests must not blindly resend, count as succeeded/failed settled members, or authorize a strict complete summary. Successful result-bearing operator settlement is a dependency on #152, not new scope here; until available, acceptance must state the supported abandon/other existing path and the unmet successful-settlement variant.
+6. Select representative cold/restart/changed-page/failure/wait/cancel/trial cases from TEST-4 with exact references, body/send counts, truthful coverage and usage/gap outcomes. Use the real runtime with deterministic adapters. If standalone CLI commands are required for the selected checkpoint, depend on #167; do not duplicate its contract or claim full M7 acceptance from library-only controls.
+7. Keep evidence boundaries explicit: the portable diagnostic below must reproduce the existing three snapshot controls from a clean checkout with strict generated-declaration compilation and type-aware lint. Those green controls do not satisfy criteria 2–6 by themselves. Any future implementation tests must derive from the accepted adapter/workflow outcomes and include the stated negative cases.
+8. Preserve M7's separate scale/memory qualification and provider-authorization boundary. This issue selects the consumer contract and controlled evidence; no paid/live-provider trial, new host, new persistence authority, generic paginator API, full M7 implementation or publication/release work is implicitly authorized.
+
+Dependencies: #152 for successful result-bearing settlement; #167 for standalone CLI acceptance; existing M4/M5 mechanisms and current strict compiler/lint/package boundaries. Related #165 preview work must be referenced only if the selected workflow requires its preview surface. Supervisory review should establish issue readiness after the contract decisions above; implementation is then split into contained issues if needed.
+
+## Portable one-command diagnostic
+
+```sh
+node scratch/gap-hunt/consumer-dx/repro-m7-controls.mjs
+```
+
+Default behavior is `npm ci`, generated package build, strict consumer compile, type-aware lint and the three isolated Jest controls. Requires Node 24.x. `GAP_HUNT_REUSE_BUILD=1` is an explicit development shortcut. The runner prints its limitation before executing: **authored cumulative snapshots only, not full M7 acceptance**.

@@ -34,3 +34,5 @@ The initial reflection-attempt.ts also returned an unsupported scalar root;
 the corrected pipeline returns a supported object root and explicitly serializes
 selected fields. Repeated open snapshots across separate runs do early member
 work; this is not native single-live-run streaming pagination.
+
+M7 diagnostic/control replay: `node scratch/gap-hunt/consumer-dx/repro-m7-controls.mjs` performs clean install/build by default, strict compile, type-aware lint and the existing three Jest controls. These controls cover authored cumulative snapshots, not full M7 acceptance. See [M7-WORKFLOW-PICKUP.md](M7-WORKFLOW-PICKUP.md).

@@ -138,7 +138,7 @@
       "../scale/FINDINGS.md deterministic regressions"
     ],
     "evidenceStatus": "partially-aligned-confirmed-scale-gaps",
-    "remainingBoundary": "Cache/eviction and speculative prefetch API not exposed in current bounded reader; no claimed general asynchronous getter.100k resource-limited run pending; publication and acceptance amplification confirmed."
+    "remainingBoundary": "Cache/eviction and speculative prefetch API not exposed in current bounded reader; no claimed general asynchronous getter.100k run timed out at 30 minutes with one attempt and zero completed results; publication and acceptance amplification confirmed."
   },
   "DOM-4": {
     "obligations": [

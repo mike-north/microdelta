@@ -1,0 +1,43 @@
+watchman warning: Recrawled this watch 1 time, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx' ; watchman watch-project '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx'`
+
+  console.log
+    {"count":100,"unrelated":false,"candidateRows":100,"milliseconds":26.701791999999955,"statements":215,"roles":{"candidates":1,"reference":104,"envelope":100,"node-metadata":3,"leaf-payload":1,"writer":1,"sequence":1,"accept":2,"acceptance":2},"rootPayloadCells":0,"scalarCells":1,"stagedCells":0}
+
+      at test/gap-hunt-dx-candidate-growth.test.ts:48:15
+
+  console.log
+    {"count":100,"unrelated":true,"candidateRows":1,"milliseconds":1.323415999999952,"statements":17,"roles":{"candidates":1,"reference":5,"envelope":1,"node-metadata":3,"leaf-payload":1,"writer":1,"sequence":1,"accept":2,"acceptance":2},"rootPayloadCells":0,"scalarCells":1,"stagedCells":0}
+
+      at test/gap-hunt-dx-candidate-growth.test.ts:48:15
+
+  console.log
+    {"count":500,"unrelated":false,"candidateRows":500,"milliseconds":115.44529200000011,"statements":1015,"roles":{"candidates":1,"reference":504,"envelope":500,"node-metadata":3,"leaf-payload":1,"writer":1,"sequence":1,"accept":2,"acceptance":2},"rootPayloadCells":0,"scalarCells":1,"stagedCells":0}
+
+      at test/gap-hunt-dx-candidate-growth.test.ts:48:15
+
+  console.log
+    {"count":500,"unrelated":true,"candidateRows":1,"milliseconds":1.297125000000051,"statements":17,"roles":{"candidates":1,"reference":5,"envelope":1,"node-metadata":3,"leaf-payload":1,"writer":1,"sequence":1,"accept":2,"acceptance":2},"rootPayloadCells":0,"scalarCells":1,"stagedCells":0}
+
+      at test/gap-hunt-dx-candidate-growth.test.ts:48:15
+
+  console.log
+    {"count":1000,"unrelated":false,"candidateRows":1000,"milliseconds":229.43304200000057,"statements":2015,"roles":{"candidates":1,"reference":1004,"envelope":1000,"node-metadata":3,"leaf-payload":1,"writer":1,"sequence":1,"accept":2,"acceptance":2},"rootPayloadCells":0,"scalarCells":1,"stagedCells":0}
+
+      at test/gap-hunt-dx-candidate-growth.test.ts:48:15
+
+  console.log
+    {"count":1000,"unrelated":true,"candidateRows":1,"milliseconds":2.0340419999993173,"statements":17,"roles":{"candidates":1,"reference":5,"envelope":1,"node-metadata":3,"leaf-payload":1,"writer":1,"sequence":1,"accept":2,"acceptance":2},"rootPayloadCells":0,"scalarCells":1,"stagedCells":0}
+
+      at test/gap-hunt-dx-candidate-growth.test.ts:48:15
+
+(node:83064) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       7 passed, 7 total
+Snapshots:   0 total
+Time:        5.659 s, estimated 6 s
+Ran all test suites within paths "packages/core/.test-build/test/gap-hunt-dx-candidate-growth.test.js".

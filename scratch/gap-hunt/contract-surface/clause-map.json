@@ -814,7 +814,7 @@
         "consumer-dx/logs/jest.log:3/3 process probes"
       ],
       "evidenceStatus": "aligned-bounded",
-      "remainingBoundary": "Hours-long leases and scale are separate;100k ongoing. Random/nondeterministic provider execution was not performed."
+      "remainingBoundary": "Hours-long leases and scale are separate;100k bounded attempt timed out at 30min with zero completed results; see scale/FINDINGS.md. Random/nondeterministic provider execution was not performed."
     },
     {
       "key": "docs/spec/domain.md:13",
@@ -836,10 +836,11 @@
         "packages/core/test/workspace/scope.test.ts",
         "logs/workspace-resolution.log:independent current-worker refresh",
         "packages/core/test/workspace/scope.test.ts:37,48,213,243",
-        "packages/core/test/workspace/admission-observers.test.ts:274"
+        "packages/core/test/workspace/admission-observers.test.ts:274",
+        "consumer-dx/logs/scope-tsd.log:generated alpha facade-only currentRun/currentExecution contracts pass"
       ],
       "evidenceStatus": "executed-bounded-pass",
-      "remainingBoundary": "Runtime evidence bounded by workspace/resolution fixtures; general hidden JS influence and paid-provider behavior are excluded."
+      "remainingBoundary": "Runtime evidence bounded by workspace/resolution fixtures; generated alpha lookup separates run identity/environment from execution controls. Storage/services are composition/helper supplied rather than a general IRunContext container; exact interface form is not settled by DOM-2. General hidden JS influence and paid-provider behavior are excluded."
     },
     {
       "key": "docs/spec/domain.md:21",
@@ -862,7 +863,7 @@
         "../scale/FINDINGS.md deterministic regressions"
       ],
       "evidenceStatus": "partially-aligned-confirmed-scale-gaps",
-      "remainingBoundary": "Cache/eviction and speculative prefetch API not exposed in current bounded reader; no claimed general asynchronous getter.100k resource-limited run pending; publication and acceptance amplification confirmed."
+      "remainingBoundary": "Cache/eviction and speculative prefetch API not exposed in current bounded reader; no claimed general asynchronous getter.100k run timed out at 30 minutes with one attempt and zero completed results; publication and acceptance amplification confirmed."
     },
     {
       "key": "docs/spec/domain.md:32",
@@ -885,7 +886,7 @@
         "../scale/FINDINGS.md deterministic regressions"
       ],
       "evidenceStatus": "partially-aligned-confirmed-scale-gaps",
-      "remainingBoundary": "Cache/eviction and speculative prefetch API not exposed in current bounded reader; no claimed general asynchronous getter.100k resource-limited run pending; publication and acceptance amplification confirmed."
+      "remainingBoundary": "Cache/eviction and speculative prefetch API not exposed in current bounded reader; no claimed general asynchronous getter.100k run timed out at 30 minutes with one attempt and zero completed results; publication and acceptance amplification confirmed."
     },
     {
       "key": "docs/spec/domain.md:34",
@@ -908,7 +909,7 @@
         "../scale/FINDINGS.md deterministic regressions"
       ],
       "evidenceStatus": "partially-aligned-confirmed-scale-gaps",
-      "remainingBoundary": "Cache/eviction and speculative prefetch API not exposed in current bounded reader; no claimed general asynchronous getter.100k resource-limited run pending; publication and acceptance amplification confirmed."
+      "remainingBoundary": "Cache/eviction and speculative prefetch API not exposed in current bounded reader; no claimed general asynchronous getter.100k run timed out at 30 minutes with one attempt and zero completed results; publication and acceptance amplification confirmed."
     },
     {
       "key": "docs/spec/domain.md:39",

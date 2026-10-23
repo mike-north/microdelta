@@ -41,7 +41,7 @@ This pass did not rerun all B/D fault and invalidation work owned by other worke
   explicitly rejected async preparation as a general answer. General async read,
   cache/eviction/prefetch design remains target scope. Current selected reads do
   not load unrelated fields; confirmed publication and acceptance amplification
-  remain tracked separately as #160/#159.100k completion is pending its bounded run.
+  remain tracked separately as #160/#159.The 100k run reached its 30-minute cap with one attempt and zero completed results; no completion or throughput claim follows (scale/FINDINGS.md).
 - **ARC-008:** controlled data/current facts, source check/finality policies and
   scripted admission/observer/execution ports are genuinely faked in existing
   tests. Broad suites still compose real History/Tracking/Definition. Separately
@@ -69,3 +69,5 @@ clean bootstrap (npmci+build:packages) completed through repro-154. Other issue
 runners were then verified against that same fresh build with the documented
 reuse-build option. No Linux execution is claimed: all new runs were Node24.22.1
 on Darwin arm64; the supplied runners are checkout-relative Node/npm commands.
+
+The assertion-level successor is [TRACK-A-CLOSURE.md](TRACK-A-CLOSURE.md), which separates current claims, concrete executed assertions, observed gaps, target scope and historical/process obligations. Shared Linux evidence covers baseline c5802da, not the new gap probes; no Linux parity claim is made for them.

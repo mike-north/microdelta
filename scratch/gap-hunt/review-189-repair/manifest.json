@@ -38,8 +38,8 @@
     },
     {
       "path": "scratch/gap-hunt/review-189-repair/REPORT.md",
-      "sha256": "a92df44e5387deb1c3cd32f8f09037ea300272153370312cafe09c6f2ad118c5",
-      "bytes": 5890
+      "sha256": "3bffd1a9900f847440ce0b307078d4b9a8bd453a492ae1ab7815990e396dd93f",
+      "bytes": 6530
     },
     {
       "path": "scratch/gap-hunt/review-189-repair/captures/anchors.log",
@@ -138,13 +138,23 @@
     },
     {
       "path": "scratch/gap-hunt/review-189-repair/reproduce.py",
-      "sha256": "e830f57bea937f4175c27eba51cad1b8a594cbd3edfe35dccf47a618fce0d11c",
-      "bytes": 4065
+      "sha256": "f8bd980d5d0465f05f6846aa45ad087964105f857cd135f7a0325934de8c53fa",
+      "bytes": 4119
     },
     {
       "path": "scratch/gap-hunt/review-189-repair/supplement.test.mjs",
       "sha256": "9b3ac178e96acab6db70855bc216f2ba7504ab28043efe38330e69520fb5b442",
       "bytes": 5254
+    },
+    {
+      "path": "scratch/gap-hunt/review-189-repair/outcome_guard.py",
+      "sha256": "a6d5a98d008e993777d5bd4278e13cd0f61d6bff58098bbe3557279f437773f0",
+      "bytes": 2181
+    },
+    {
+      "path": "scratch/gap-hunt/review-189-repair/captures/guard-validation.json",
+      "sha256": "7f684dbd5559498ebe39b59f06d6c3ef39220dd1facc37e6a70eb18a4c91200d",
+      "bytes": 197
     }
   ]
 }

@@ -89,3 +89,12 @@ An exploratory version of the new positive runtime control returned a bare
 number; the selected execution contract requires a record/array root, so it was
 corrected to `{ score }`. That harness failure is not a custom-key product gap.
 Captured checkout and Node executable paths are normalized to placeholders.
+
+The final evidence-only delta adds exact Jest summary guards: 3/3 original,
+7/7 supplement, 1-fail/2-pass old original, 7-fail old supplement, restored 3/3
+and 7/7, Definition 283 across 15 suites, restart 19, and 23 anchors. A missing
+summary, suite load error, or mismatched count cannot count as a semantic negative.
+The guard is validated against every captured outcome and synthetic missing,
+load-error, forged-count-with-load-error, and wrong-count logs. The full fresh
+execution at commit `367fb02` remains the runtime evidence; this final delta only
+strengthens its portable acceptance assertions and documents that qualification.

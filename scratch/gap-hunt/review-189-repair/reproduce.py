@@ -2,6 +2,7 @@
 """Finite PR189 replay. Source counterfactuals affect only this disposable evidence checkout."""
 import json,os,platform,subprocess,tempfile
 from pathlib import Path
+from outcome_guard import check
 ROOT=Path(__file__).resolve().parents[3]
 os.chdir(ROOT)
 OUT=Path(os.environ.get('MICRODELTA_EVIDENCE_OUTPUT',tempfile.mkdtemp(prefix='microdelta-review189-')));OUT.mkdir(parents=True,exist_ok=True)
@@ -18,6 +19,7 @@ def command(name,args,expected=0):
  rows.append(dict(name=name,command=args,exit=p.returncode,expected=expected))
  print(f'{name}: {p.returncode} (expected {expected})',flush=True)
  if p.returncode!=expected: raise RuntimeError(f'{name} unexpected exit; see captures')
+ check(name,p.stdout)
 def gitbytes(pin,path):return subprocess.check_output(['git','show',f'{pin}:{path}'])
 files=['consumer-dx/custom-key.ts','consumer-dx/tsconfig.custom-key.json','consumer-dx/tsconfig.all.json','consumer-dx/custom-key.jest.config.mjs','consumer-dx/custom-key.test.mjs','consumer-dx/repro-custom-key.mjs','contract-surface/repro-support.mjs']
 for f in files:

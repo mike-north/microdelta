@@ -1,0 +1,11 @@
+{
+  "checkedCaptureLogs": 9,
+  "expectedJestSummaries": 8,
+  "syntheticRejected": [
+    "missing",
+    "load-error",
+    "forged-count-with-load-error",
+    "wrong-count"
+  ],
+  "status": "PASS"
+}

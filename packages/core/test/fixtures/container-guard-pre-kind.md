@@ -19,6 +19,14 @@ gzip the complete SQLite file with deterministic mtime zero, base64 it, and upda
 the JSON checksum. The journal is synthetic fixture data, not an executed provider
 operation; it exercises preservation of opaque owner records.
 
-The upgrade test requires the new runtime to recompute the stale guard, then reuse
-the new evidence after another complete process exit. It also reads the original
+The genuine fixture retains its version 2 storage layout and checksum. The
+current runtime rejects that unsupported layout without changing its bytes,
+rows, or schema; no production migration is provided.
+
+A separate provenance-compatibility test constructs a version 3 store and copies
+all non-identity rows from this frozen fixture using test-only SQL. It compares
+every copied field with the original and verifies foreign keys before opening
+the new store. This constructed database is not presented as old-runtime output.
+The test requires the new runtime to recompute the stale guard, then reuse the
+new evidence after another complete process exit. It also reads the original
 exact result and the original journal revision unchanged.

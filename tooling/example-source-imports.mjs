@@ -1,4 +1,8 @@
-/** PKG-004/008 rule for keeping the executable consumer inside its own source tree. */
+/**
+ * PKG-004/008 rule for keeping the executable consumer inside its own source tree.
+ * ESM specifiers use Node's URL-based filesystem resolution; CommonJS edges keep
+ * filesystem path semantics so encoded text is never treated as a URL escape.
+ */
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -14,26 +18,36 @@ export const exampleSourceImports = {
   create(context) {
     const exampleRoot = path.resolve(context.cwd, 'examples/contribution-report');
 
-    /** Resolve path-like literals with the same URL rules used by ESM imports. */
-    function localTarget(specifier) {
-      if (specifier.startsWith('.')) {
-        return fileURLToPath(new URL(specifier, pathToFileURL(context.filename)));
-      }
-      if (specifier.startsWith('file:')) {
-        return fileURLToPath(new URL(specifier));
-      }
-      if (path.isAbsolute(specifier)) {
-        return path.resolve(specifier);
+    /** Resolve ESM filesystem literals using canonical URL parsing and decoding. */
+    function esmTarget(specifier) {
+      if (specifier.startsWith('.') || specifier.startsWith('/') || /^file:/iu.test(specifier)) {
+        try {
+          const importerUrl = pathToFileURL(context.filename);
+          const targetUrl = /^file:/iu.test(specifier) ? new URL(specifier) : new URL(specifier, importerUrl);
+          if (targetUrl.protocol === 'file:') {
+            return fileURLToPath(targetUrl);
+          }
+        } catch {
+          // Invalid or unsupported file URLs are not resolved filesystem edges.
+        }
       }
       return undefined;
     }
 
-    /** Relative paths are permitted only while their normalized target stays within the example. */
-    function check(node, specifier) {
+    /** Resolve CommonJS literals as filesystem paths, where percent escapes are ordinary characters. */
+    function requireTarget(specifier) {
+      if (specifier.startsWith('.') || path.isAbsolute(specifier)) {
+        return path.resolve(path.dirname(context.filename), specifier);
+      }
+      return undefined;
+    }
+
+    /** Check only filesystem-backed literals; bare package and non-file URLs belong to other rules. */
+    function check(node, specifier, resolution = 'esm') {
       if (typeof specifier !== 'string') {
         return;
       }
-      const target = localTarget(specifier);
+      const target = resolution === 'require' ? requireTarget(specifier) : esmTarget(specifier);
       if (target === undefined) {
         return;
       }
@@ -43,6 +57,14 @@ export const exampleSourceImports = {
         || path.isAbsolute(relativeTarget)) {
         context.report({ node, messageId: 'forbidden' });
       }
+    }
+
+    /*
+     * TypeScript's import-equals declaration uses the compiler's CommonJS
+     * resolution model; it does not inherit ESM URL parsing of percent escapes.
+     */
+    function checkRequire(node, specifier) {
+      check(node, specifier, 'require');
     }
 
     return {
@@ -60,7 +82,7 @@ export const exampleSourceImports = {
       },
       TSImportEqualsDeclaration(node) {
         if (node.moduleReference.type === 'TSExternalModuleReference') {
-          check(node, node.moduleReference.expression.value);
+          checkRequire(node, node.moduleReference.expression.value);
         }
       },
       CallExpression(node) {
@@ -75,7 +97,7 @@ export const exampleSourceImports = {
             }
             scope = scope.upper;
           }
-          check(node, node.arguments[0]?.value);
+          checkRequire(node, node.arguments[0]?.value);
         }
       },
     };

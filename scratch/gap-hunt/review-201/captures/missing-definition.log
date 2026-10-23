@@ -1,0 +1,42 @@
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(12,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IAnyTemplateDeclaration'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(14,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IBindingDescriptor'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(15,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'ICancelledEntry'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(18,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IChildResult'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(19,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'ICollectionResult'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(20,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'ICollectionStatus'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(23,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IComposition'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(24,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IDeclarations'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(25,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IDeclaredCallHandle'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(28,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IDerivedArguments'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(31,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IFailedEntry'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(33,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IFoldDeclaration'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(34,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IFoldEntry'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(37,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IForward'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(38,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IForwarded'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(41,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IKeyedMember'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(42,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IKeyedSnapshot'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(43,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IKeyingDiagnostic'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(44,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IKeyingFailure'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(47,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IMemberBinding'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(48,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IMemberBuilder'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(72,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IOutcomeEntry'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(74,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IOutcomeFoldDeclaration'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(78,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IPathInput'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(102,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'ISkippedEntry'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(103,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'ISlotSubject'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(106,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IStepSlot'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(113,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'ISucceededEntry'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(115,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'ISuppliedStepDeclaration'.
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(116,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'ISuppliedStepRegistration'.
+../microdelta/packages/resolution/dist/api/resolution.alpha.d.ts(19,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IBindingDescriptor'.
+../microdelta/packages/resolution/dist/api/resolution.alpha.d.ts(20,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IBindingFamily'.
+../microdelta/packages/resolution/dist/api/resolution.alpha.d.ts(21,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'ICollectionStatus'.
+../microdelta/packages/resolution/dist/api/resolution.alpha.d.ts(23,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IComposition'.
+../microdelta/packages/resolution/dist/api/resolution.alpha.d.ts(24,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IDeclarations'.
+../microdelta/packages/resolution/dist/api/resolution.alpha.d.ts(26,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IKeyingDiagnostic'.
+../microdelta/packages/resolution/dist/api/resolution.alpha.d.ts(27,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IPreviousCarrierFamily'.
+../microdelta/packages/resolution/dist/api/resolution.alpha.d.ts(33,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'ITypeFamily'.
+../microdelta/packages/resolution/dist/api/resolution.alpha.d.ts(867,37): error TS2536: Type '"input"' cannot be used to index type 'this'.
+../microdelta/packages/resolution/dist/api/resolution.alpha.d.ts(872,38): error TS2536: Type '"input"' cannot be used to index type 'this'.
+../microdelta/packages/resolution/dist/api/resolution.alpha.d.ts(877,32): error TS2536: Type '"input"' cannot be used to index type 'this'.
+../microdelta/packages/supervision/dist/api/supervision.alpha.d.ts(26,15): error TS2305: Module '"@microdelta/definition"' has no exported member 'IBindingDescriptor'.

@@ -1,0 +1,8 @@
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(118,15): error TS2305: Module '"@microdelta/tracking"' has no exported member 'ITrackedView'.
+../microdelta/packages/resolution/dist/api/resolution.alpha.d.ts(18,15): error TS2305: Module '"@microdelta/tracking"' has no exported member 'IAsyncContextCapability'.
+../microdelta/packages/resolution/dist/api/resolution.alpha.d.ts(28,15): error TS2305: Module '"@microdelta/tracking"' has no exported member 'ISha256Capability'.
+../microdelta/packages/resolution/dist/api/resolution.alpha.d.ts(29,15): error TS2305: Module '"@microdelta/tracking"' has no exported member 'ITracked'.
+../microdelta/packages/resolution/dist/api/resolution.alpha.d.ts(30,15): error TS2305: Module '"@microdelta/tracking"' has no exported member 'ITrackedView'.
+../microdelta/packages/resolution/dist/api/resolution.alpha.d.ts(31,15): error TS2305: Module '"@microdelta/tracking"' has no exported member 'ITrackingObservation'.
+../microdelta/packages/resolution/dist/api/resolution.alpha.d.ts(32,15): error TS2305: Module '"@microdelta/tracking"' has no exported member 'ITrackingObserver'.
+../microdelta/packages/resolution/dist/api/resolution.alpha.d.ts(34,15): error TS2305: Module '"@microdelta/tracking"' has no exported member 'IUntrackedKey'.

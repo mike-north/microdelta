@@ -1,0 +1,12 @@
+✔ facade-only alpha paths expose the actual transitive TS2305 boundary (206.057208ms)
+✔ the explicit alpha declaration closure compiles the import-only consumer (134.669083ms)
+✔ the sibling consumer loads the built facade through normal Node package resolution (22.607166ms)
+✔ a consumer beside the checkout compiles with relative alpha paths and loads the package export (348.926209ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 881.209875

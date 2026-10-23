@@ -1,0 +1,191 @@
+[
+  {
+    "label": "original154",
+    "argv": [
+      "node",
+      "scratch/gap-hunt/contract-surface/repro-154.mjs"
+    ],
+    "cwd": "/ARCHIVE/microdelta",
+    "exit": 0,
+    "expected": 0,
+    "seconds": 31.007
+  },
+  {
+    "label": "documented-root-compiler",
+    "argv": [
+      "node",
+      "/ARCHIVE/microdelta/node_modules/typescript/bin/tsc",
+      "-p",
+      "fixtures/declarations/consumer-alpha/tsconfig.alpha-six.json"
+    ],
+    "cwd": "/ARCHIVE/microdelta",
+    "exit": 0,
+    "expected": 0,
+    "seconds": 0.411
+  },
+  {
+    "label": "documented-root-tests",
+    "argv": [
+      "node",
+      "--test",
+      "fixtures/declarations/consumer-alpha/alpha-consumer.test.mjs"
+    ],
+    "cwd": "/ARCHIVE/microdelta",
+    "exit": 0,
+    "expected": 0,
+    "seconds": 1.141
+  },
+  {
+    "label": "documented-fixture-compiler",
+    "argv": [
+      "node",
+      "../../../node_modules/typescript/bin/tsc",
+      "-p",
+      "tsconfig.alpha-six.json"
+    ],
+    "cwd": "/ARCHIVE/microdelta/fixtures/declarations/consumer-alpha",
+    "exit": 0,
+    "expected": 0,
+    "seconds": 0.432
+  },
+  {
+    "label": "documented-fixture-tests",
+    "argv": [
+      "node",
+      "--test",
+      "alpha-consumer.test.mjs"
+    ],
+    "cwd": "/ARCHIVE/microdelta/fixtures/declarations/consumer-alpha",
+    "exit": 0,
+    "expected": 0,
+    "seconds": 1.052
+  },
+  {
+    "label": "documented-sibling-compiler",
+    "argv": [
+      "node",
+      "../microdelta/node_modules/typescript/bin/tsc",
+      "-p",
+      "tsconfig.json"
+    ],
+    "cwd": "/ARCHIVE/consumer",
+    "exit": 0,
+    "expected": 0,
+    "seconds": 0.613
+  },
+  {
+    "label": "documented-sibling-runtime",
+    "argv": [
+      "node",
+      "runtime-import.mjs"
+    ],
+    "cwd": "/ARCHIVE/consumer",
+    "exit": 0,
+    "expected": 0,
+    "seconds": 0.202
+  },
+  {
+    "label": "missing-definition",
+    "argv": [
+      "node",
+      "../microdelta/node_modules/typescript/bin/tsc",
+      "-p",
+      "missing-definition.json"
+    ],
+    "cwd": "/ARCHIVE/consumer",
+    "exit": 2,
+    "expected": 2,
+    "seconds": 0.607
+  },
+  {
+    "label": "missing-history",
+    "argv": [
+      "node",
+      "../microdelta/node_modules/typescript/bin/tsc",
+      "-p",
+      "missing-history.json"
+    ],
+    "cwd": "/ARCHIVE/consumer",
+    "exit": 2,
+    "expected": 2,
+    "seconds": 0.698
+  },
+  {
+    "label": "missing-resolution",
+    "argv": [
+      "node",
+      "../microdelta/node_modules/typescript/bin/tsc",
+      "-p",
+      "missing-resolution.json"
+    ],
+    "cwd": "/ARCHIVE/consumer",
+    "exit": 2,
+    "expected": 2,
+    "seconds": 0.587
+  },
+  {
+    "label": "missing-supervision",
+    "argv": [
+      "node",
+      "../microdelta/node_modules/typescript/bin/tsc",
+      "-p",
+      "missing-supervision.json"
+    ],
+    "cwd": "/ARCHIVE/consumer",
+    "exit": 2,
+    "expected": 2,
+    "seconds": 0.553
+  },
+  {
+    "label": "missing-tracking",
+    "argv": [
+      "node",
+      "../microdelta/node_modules/typescript/bin/tsc",
+      "-p",
+      "missing-tracking.json"
+    ],
+    "cwd": "/ARCHIVE/consumer",
+    "exit": 2,
+    "expected": 2,
+    "seconds": 0.588
+  },
+  {
+    "label": "public-consumer",
+    "argv": [
+      "node",
+      "../microdelta/node_modules/typescript/bin/tsc",
+      "-p",
+      "public.json"
+    ],
+    "cwd": "/ARCHIVE/consumer",
+    "exit": 2,
+    "expected": 2,
+    "seconds": 0.527
+  },
+  {
+    "label": "core-type-contracts",
+    "argv": [
+      "npm",
+      "run",
+      "test:types",
+      "--workspace",
+      "microdelta"
+    ],
+    "cwd": "/ARCHIVE/microdelta",
+    "exit": 0,
+    "expected": 0,
+    "seconds": 1.908
+  },
+  {
+    "label": "fixture-lint",
+    "argv": [
+      "node",
+      "node_modules/eslint/bin/eslint.js",
+      "fixtures/declarations/consumer-alpha/alpha-consumer.test.mjs"
+    ],
+    "cwd": "/ARCHIVE/microdelta",
+    "exit": 0,
+    "expected": 0,
+    "seconds": 1.41
+  }
+]

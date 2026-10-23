@@ -1,0 +1,6 @@
+{
+  "missing-command": "rejected",
+  "wrong-diagnostic": "rejected",
+  "wrong-test-count": "rejected",
+  "alpha-export": "rejected"
+}

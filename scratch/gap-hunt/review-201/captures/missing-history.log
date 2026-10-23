@@ -1,0 +1,6 @@
+../microdelta/packages/core/dist/api/microdelta.alpha.d.ts(21,15): error TS2305: Module '"@microdelta/history"' has no exported member 'ICompletedResultReference'.
+../microdelta/packages/resolution/dist/api/resolution.alpha.d.ts(17,15): error TS2305: Module '"@microdelta/history"' has no exported member 'IAcceptanceRecord'.
+../microdelta/packages/resolution/dist/api/resolution.alpha.d.ts(22,15): error TS2305: Module '"@microdelta/history"' has no exported member 'ICompletedResultReference'.
+../microdelta/packages/resolution/dist/api/resolution.alpha.d.ts(25,15): error TS2305: Module '"@microdelta/history"' has no exported member 'IDurableHistory'.
+../microdelta/packages/resolution/dist/api/resolution.alpha.d.ts(35,15): error TS2305: Module '"@microdelta/history"' has no exported member 'IVersionedSubject'.
+../microdelta/packages/resolution/dist/api/resolution.alpha.d.ts(36,15): error TS2305: Module '"@microdelta/history"' has no exported member 'IWriterLease'.

@@ -1,0 +1,38 @@
+[
+  {
+    "label": "original154",
+    "argv": [
+      "node",
+      "scratch/gap-hunt/contract-surface/repro-154.mjs"
+    ],
+    "cwd": "/RAW_TMP/microdelta-review201-bykacn9m/microdelta",
+    "exit": 0,
+    "expected": 0,
+    "seconds": 30.798
+  },
+  {
+    "label": "documented-root-compiler",
+    "argv": [
+      "node",
+      "/RAW_TMP/microdelta-review201-bykacn9m/microdelta/node_modules/typescript/bin/tsc",
+      "-p",
+      "fixtures/declarations/consumer-alpha/tsconfig.alpha-six.json"
+    ],
+    "cwd": "/RAW_TMP/microdelta-review201-bykacn9m/microdelta",
+    "exit": 0,
+    "expected": 0,
+    "seconds": 0.561
+  },
+  {
+    "label": "documented-root-tests",
+    "argv": [
+      "node",
+      "--test",
+      "fixtures/declarations/consumer-alpha/alpha-consumer.test.mjs"
+    ],
+    "cwd": "/RAW_TMP/microdelta-review201-bykacn9m/microdelta",
+    "exit": 0,
+    "expected": 0,
+    "seconds": 1.551
+  }
+]

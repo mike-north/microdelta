@@ -1,0 +1,166 @@
+[
+  {
+    "label": "original154",
+    "argv": [
+      "node",
+      "scratch/gap-hunt/contract-surface/repro-154.mjs"
+    ],
+    "cwd": "/RAW_TMP/microdelta-review201-tdbaofxu/microdelta",
+    "exit": 0,
+    "expected": 0,
+    "seconds": 29.275
+  },
+  {
+    "label": "documented-root-compiler",
+    "argv": [
+      "node",
+      "/RAW_TMP/microdelta-review201-tdbaofxu/microdelta/node_modules/typescript/bin/tsc",
+      "-p",
+      "fixtures/declarations/consumer-alpha/tsconfig.alpha-six.json"
+    ],
+    "cwd": "/RAW_TMP/microdelta-review201-tdbaofxu/microdelta",
+    "exit": 0,
+    "expected": 0,
+    "seconds": 0.533
+  },
+  {
+    "label": "documented-root-tests",
+    "argv": [
+      "node",
+      "--test",
+      "fixtures/declarations/consumer-alpha/alpha-consumer.test.mjs"
+    ],
+    "cwd": "/RAW_TMP/microdelta-review201-tdbaofxu/microdelta",
+    "exit": 0,
+    "expected": 0,
+    "seconds": 1.21
+  },
+  {
+    "label": "documented-fixture-compiler",
+    "argv": [
+      "node",
+      "../../../node_modules/typescript/bin/tsc",
+      "-p",
+      "tsconfig.alpha-six.json"
+    ],
+    "cwd": "/RAW_TMP/microdelta-review201-tdbaofxu/microdelta/fixtures/declarations/consumer-alpha",
+    "exit": 0,
+    "expected": 0,
+    "seconds": 0.423
+  },
+  {
+    "label": "documented-fixture-tests",
+    "argv": [
+      "node",
+      "--test",
+      "alpha-consumer.test.mjs"
+    ],
+    "cwd": "/RAW_TMP/microdelta-review201-tdbaofxu/microdelta/fixtures/declarations/consumer-alpha",
+    "exit": 0,
+    "expected": 0,
+    "seconds": 1.087
+  },
+  {
+    "label": "documented-sibling-compiler",
+    "argv": [
+      "node",
+      "../microdelta/node_modules/typescript/bin/tsc",
+      "-p",
+      "tsconfig.json"
+    ],
+    "cwd": "/RAW_TMP/microdelta-review201-tdbaofxu/consumer",
+    "exit": 0,
+    "expected": 0,
+    "seconds": 0.62
+  },
+  {
+    "label": "documented-sibling-runtime",
+    "argv": [
+      "node",
+      "runtime-import.mjs"
+    ],
+    "cwd": "/RAW_TMP/microdelta-review201-tdbaofxu/consumer",
+    "exit": 0,
+    "expected": 0,
+    "seconds": 0.252
+  },
+  {
+    "label": "missing-definition",
+    "argv": [
+      "node",
+      "../microdelta/node_modules/typescript/bin/tsc",
+      "-p",
+      "missing-definition.json"
+    ],
+    "cwd": "/RAW_TMP/microdelta-review201-tdbaofxu/consumer",
+    "exit": 2,
+    "expected": 2,
+    "seconds": 0.626
+  },
+  {
+    "label": "missing-history",
+    "argv": [
+      "node",
+      "../microdelta/node_modules/typescript/bin/tsc",
+      "-p",
+      "missing-history.json"
+    ],
+    "cwd": "/RAW_TMP/microdelta-review201-tdbaofxu/consumer",
+    "exit": 2,
+    "expected": 2,
+    "seconds": 0.598
+  },
+  {
+    "label": "missing-resolution",
+    "argv": [
+      "node",
+      "../microdelta/node_modules/typescript/bin/tsc",
+      "-p",
+      "missing-resolution.json"
+    ],
+    "cwd": "/RAW_TMP/microdelta-review201-tdbaofxu/consumer",
+    "exit": 2,
+    "expected": 2,
+    "seconds": 0.634
+  },
+  {
+    "label": "missing-supervision",
+    "argv": [
+      "node",
+      "../microdelta/node_modules/typescript/bin/tsc",
+      "-p",
+      "missing-supervision.json"
+    ],
+    "cwd": "/RAW_TMP/microdelta-review201-tdbaofxu/consumer",
+    "exit": 2,
+    "expected": 2,
+    "seconds": 0.674
+  },
+  {
+    "label": "missing-tracking",
+    "argv": [
+      "node",
+      "../microdelta/node_modules/typescript/bin/tsc",
+      "-p",
+      "missing-tracking.json"
+    ],
+    "cwd": "/RAW_TMP/microdelta-review201-tdbaofxu/consumer",
+    "exit": 2,
+    "expected": 2,
+    "seconds": 0.596
+  },
+  {
+    "label": "public-consumer",
+    "argv": [
+      "npm",
+      "run",
+      "test:public",
+      "--workspace",
+      "microdelta"
+    ],
+    "cwd": "/RAW_TMP/microdelta-review201-tdbaofxu/microdelta",
+    "exit": 1,
+    "expected": 0,
+    "seconds": 0.467
+  }
+]

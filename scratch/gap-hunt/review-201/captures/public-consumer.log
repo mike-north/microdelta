@@ -1,0 +1,1 @@
+alpha-import-only.ts(1,10): error TS2305: Module '"microdelta"' has no exported member 'authoring'.

@@ -1,0 +1,121 @@
+{
+  "packageExports": {
+    "@microdelta/accounting": {
+      "types": "./dist/api/accounting.public.d.ts",
+      "exports": {
+        ".": {
+          "types": "./dist/api/accounting.public.d.ts",
+          "import": "./dist/src/index.js"
+        }
+      }
+    },
+    "microdelta": {
+      "types": "./dist/api/microdelta.public.d.ts",
+      "exports": {
+        ".": {
+          "types": "./dist/api/microdelta.public.d.ts",
+          "import": "./dist/src/index.js"
+        },
+        "./conformance/store": {
+          "types": "./dist/api/microdelta.conformance.store.public.d.ts",
+          "import": "./dist/test/conformance/store/index.js"
+        }
+      }
+    },
+    "@microdelta/definition": {
+      "types": "./dist/api/definition.public.d.ts",
+      "exports": {
+        ".": {
+          "types": "./dist/api/definition.public.d.ts",
+          "import": "./dist/src/index.js"
+        }
+      }
+    },
+    "@microdelta/history": {
+      "types": "./dist/api/history.public.d.ts",
+      "exports": {
+        ".": {
+          "types": "./dist/api/history.public.d.ts",
+          "import": "./dist/src/index.js"
+        },
+        "./conformance/store": {
+          "types": "./dist/api/history.conformance.store.public.d.ts",
+          "import": "./dist/test/conformance/store/index.js"
+        }
+      }
+    },
+    "@microdelta/machine": {
+      "types": "./dist/api/machine.public.d.ts",
+      "exports": {
+        ".": {
+          "types": "./dist/api/machine.public.d.ts",
+          "import": "./dist/src/index.js"
+        }
+      }
+    },
+    "@microdelta/machine-node": {
+      "types": "./dist/api/machine-node.public.d.ts",
+      "exports": {
+        ".": {
+          "types": "./dist/api/machine-node.public.d.ts",
+          "import": "./dist/src/index.js"
+        }
+      }
+    },
+    "@microdelta/materialization": {
+      "types": "./dist/api/materialization.public.d.ts",
+      "exports": {
+        ".": {
+          "types": "./dist/api/materialization.public.d.ts",
+          "import": "./dist/src/index.js"
+        }
+      }
+    },
+    "@microdelta/resolution": {
+      "types": "./dist/api/resolution.public.d.ts",
+      "exports": {
+        ".": {
+          "types": "./dist/api/resolution.public.d.ts",
+          "import": "./dist/src/index.js"
+        }
+      }
+    },
+    "@microdelta/supervision": {
+      "types": "./dist/api/supervision.public.d.ts",
+      "exports": {
+        ".": {
+          "types": "./dist/api/supervision.public.d.ts",
+          "import": "./dist/src/index.js"
+        }
+      }
+    },
+    "@microdelta/tracking": {
+      "types": "./dist/api/tracking.public.d.ts",
+      "exports": {
+        ".": {
+          "types": "./dist/api/tracking.public.d.ts",
+          "import": "./dist/src/index.js"
+        }
+      }
+    },
+    "@microdelta/value": {
+      "types": "./dist/api/value.public.d.ts",
+      "exports": {
+        ".": {
+          "types": "./dist/api/value.public.d.ts",
+          "import": "./dist/src/index.js"
+        }
+      }
+    }
+  },
+  "siblingConfigContainsAbsolutePath": false,
+  "negativeMissingOwners": {
+    "@microdelta/definition": 42,
+    "@microdelta/history": 6,
+    "@microdelta/resolution": 42,
+    "@microdelta/supervision": 57,
+    "@microdelta/tracking": 8
+  },
+  "archiveSource": "f4211e3d925ed8aaedc313ac468d49a13149826c",
+  "originalDiagnosticOnly": true
+}

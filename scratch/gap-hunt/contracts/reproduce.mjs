@@ -3,6 +3,8 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 const cwd = fileURLToPath(new URL('../../../', import.meta.url));
 const suites = {
+  'imported-closure': { workspace: '@microdelta/tracking', test: 'gap-hunt-contracts-imported-closure', types: false },
+  'fold-observer': { workspace: 'microdelta', test: 'gap-hunt-contracts-fold-observer', types: false },
   'resolution-144': { workspace: 'microdelta', test: 'gap-hunt-contracts-resolution-144', types: false, controls: true },
   '155': { workspace: 'microdelta', test: 'gap-hunt-contracts-container-guard', types: false },
   '156': { workspace: 'microdelta', test: 'gap-hunt-contracts-scalar-roots', types: true },

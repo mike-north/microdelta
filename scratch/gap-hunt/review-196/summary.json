@@ -1,0 +1,59 @@
+{
+  "verdict": "PASS within finite bounded scheduling scope; raw original instrumentation failure preserved",
+  "source": "f7307e1542d6170505f31a3926bdc13917f603df",
+  "proofCommit": "f348f72465a7b74189fd51d69cffaa43c745df25",
+  "cleanInstall": true,
+  "cleanTrackedTreeAfterReplay": true,
+  "commands": 15,
+  "supervision": {
+    "suites": 5,
+    "tests": 197
+  },
+  "facade": {
+    "suites": 10,
+    "tests": 103,
+    "excludedRosterCases": 0
+  },
+  "repairedPendingWaits": [
+    1,
+    1,
+    8,
+    8,
+    0,
+    8
+  ],
+  "negativePendingWaits": [
+    99,
+    999,
+    92,
+    992,
+    0,
+    92
+  ],
+  "originalRaw": {
+    "passed": 1,
+    "failed": 1,
+    "reason": "resolved-acquire ancestry false positive"
+  },
+  "originalPrecise": {
+    "passed": 2,
+    "failed": 0
+  },
+  "originalPreciseEager": {
+    "passed": 1,
+    "failed": 1,
+    "growth": 900,
+    "allowance": 8
+  },
+  "restored": {
+    "packages/resolution/src/resolution.ts": true,
+    "scratch/gap-hunt/scale/fanout-admission.ts": true,
+    "scratch/gap-hunt/scale/fanout-admission.test.mjs": true
+  },
+  "runtimeLoadFailures": 0,
+  "liveDelta": {
+    "head": "4408ab236562e1f4fd4d7f15d353d04fe7a86eb7",
+    "onlyChange": "resolution test-d import ordering",
+    "restored": true
+  }
+}

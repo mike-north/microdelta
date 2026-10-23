@@ -1,0 +1,457 @@
+{
+  "source": "f7307e1542d6170505f31a3926bdc13917f603df",
+  "node": "v24.22.1",
+  "npm": "11.12.1",
+  "host": {
+    "system": "Darwin",
+    "release": "27.0.0",
+    "machine": "arm64"
+  },
+  "commands": [
+    {
+      "name": "install",
+      "argv": [
+        "npm",
+        "ci"
+      ],
+      "exit": 0,
+      "seconds": 4.27,
+      "logSha256": "8a51396b466764cf09f18df0890d406c230533db4dda58fca9f33f06f929bdab"
+    },
+    {
+      "name": "check",
+      "argv": [
+        "npm",
+        "run",
+        "check"
+      ],
+      "exit": 0,
+      "seconds": 92.171,
+      "logSha256": "6c0d72ae69c526348c962620bc62560c3e386b52fe93c4f2cb94eca89a1ebbda"
+    },
+    {
+      "name": "current",
+      "argv": [
+        "npm",
+        "run",
+        "test:fanout-dispatch"
+      ],
+      "exit": 0,
+      "seconds": 7.328,
+      "logSha256": "39d6d5ab00cdd0d61d411e67b5192d1f69708430b1360c0211fee1a68fdc6a75"
+    },
+    {
+      "name": "supervision",
+      "argv": [
+        "npm",
+        "run",
+        "test:unit",
+        "--workspace",
+        "@microdelta/supervision"
+      ],
+      "exit": 0,
+      "seconds": 2.534,
+      "logSha256": "7e03eea043d72db457445cb171daf02d997fc4895f44607e59adfce22f649892"
+    },
+    {
+      "name": "core-compile",
+      "argv": [
+        "node",
+        "node_modules/typescript/bin/tsc",
+        "-p",
+        "packages/core/tsconfig.test.json"
+      ],
+      "exit": 0,
+      "seconds": 2.607,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "name": "facade",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "packages/core/jest.config.mjs",
+        "--runInBand",
+        "--runTestsByPath",
+        "packages/core/.test-build/test/stop/stop.test.js",
+        "packages/core/.test-build/test/stop/drain.test.js",
+        "packages/core/.test-build/test/stop/lifecycle.test.js",
+        "packages/core/.test-build/test/stop/resolution-port.test.js",
+        "packages/core/.test-build/test/keyed/members.test.js",
+        "packages/core/.test-build/test/keyed/restart.test.js",
+        "packages/core/.test-build/test/resolution/keyed-refusal.test.js",
+        "packages/core/.test-build/test/workspace-operations/operations.test.js",
+        "packages/core/.test-build/test/workspace-operations/async-supplied.test.js",
+        "packages/core/.test-build/test/m5-acceptance/stop.test.js"
+      ],
+      "exit": 0,
+      "seconds": 14.219,
+      "logSha256": "e8af5448eda58469b8f9199d16e30b29cbae1bdee19c3a838555ed82f568b975"
+    },
+    {
+      "name": "frozen-original",
+      "argv": [
+        "npm",
+        "run",
+        "test:fanout-dispatch"
+      ],
+      "exit": 1,
+      "seconds": 11.108,
+      "logSha256": "d52ffd8d6243cee091ad36140d9bafb35a7349cc609aa328a1fc1d0d201697f7"
+    },
+    {
+      "name": "precise-original",
+      "argv": [
+        "npm",
+        "run",
+        "test:fanout-dispatch"
+      ],
+      "exit": 0,
+      "seconds": 12.444,
+      "logSha256": "371de255c23ef4711bb71cb05ca56876ebf75928c95259b0a4ad2a3691239aac"
+    },
+    {
+      "name": "negative-build",
+      "argv": [
+        "npm",
+        "run",
+        "build",
+        "--workspace",
+        "@microdelta/resolution"
+      ],
+      "exit": 0,
+      "seconds": 2.817,
+      "logSha256": "64c6d7780dfb2fe72f3ad15f94981b6d606055ce4af4210adac5a72e4f0d178b"
+    },
+    {
+      "name": "negative",
+      "argv": [
+        "npm",
+        "run",
+        "test:fanout-dispatch"
+      ],
+      "exit": 1,
+      "seconds": 8.602,
+      "logSha256": "a876831dfb89d7e4873c15b1893a2b242b2d21cde2f7c7529afe73f4f8a9a6c6"
+    },
+    {
+      "name": "negative-precise-original",
+      "argv": [
+        "npm",
+        "run",
+        "test:fanout-dispatch"
+      ],
+      "exit": 1,
+      "seconds": 7.257,
+      "logSha256": "1e3a67cd85176319c1150e023f9f270153228fce83d386486c5a00253b2266fa"
+    },
+    {
+      "name": "restoration-build",
+      "argv": [
+        "npm",
+        "run",
+        "build",
+        "--workspace",
+        "@microdelta/resolution"
+      ],
+      "exit": 0,
+      "seconds": 3.693,
+      "logSha256": "64c6d7780dfb2fe72f3ad15f94981b6d606055ce4af4210adac5a72e4f0d178b"
+    },
+    {
+      "name": "restored",
+      "argv": [
+        "npm",
+        "run",
+        "test:fanout-dispatch"
+      ],
+      "exit": 0,
+      "seconds": 9.305,
+      "logSha256": "4efb918ebb9dabcd03f483e57d926d1d461b848a192f582a12dd99164fdd4227"
+    },
+    {
+      "name": "live-delta-check",
+      "argv": [
+        "npm",
+        "run",
+        "check",
+        "--workspace",
+        "@microdelta/resolution"
+      ],
+      "exit": 0,
+      "seconds": 3.959,
+      "logSha256": "27fda7bc7bb71677bcfb46c299a2f900e7f9c147863aee2de9cef1f107e28946"
+    },
+    {
+      "name": "live-delta-types",
+      "argv": [
+        "npm",
+        "run",
+        "test:types",
+        "--workspace",
+        "@microdelta/resolution"
+      ],
+      "exit": 0,
+      "seconds": 2.523,
+      "logSha256": "00cc53e3bd69236cf4c0d988fb48cc254acbffda7ac47529180bb86a258d3180"
+    }
+  ],
+  "inputs": {
+    "packages/resolution/src/resolution.ts": "15801f619fd6984bfbaadaae886680a6b584dcfab4edf9fab8cbbe8bc84ac311",
+    "scratch/gap-hunt/scale/fanout-admission.ts": "53be5dd04d7f54c2fd8b2bbea1464ecb926211f64767ba2e8cfeae5c66e65f8b",
+    "scratch/gap-hunt/scale/fanout-admission.test.mjs": "3a6cb103f3ca97934be1d3be899e5f448087a931a38d1a2766014853d74bdaa9"
+  },
+  "matrix": [
+    {
+      "size": 100,
+      "window": 1,
+      "phase": "admission",
+      "sourceBodies": 1,
+      "topologyUnchanged": true,
+      "admissionCalls": 1,
+      "bodies": 0,
+      "queuedPromises": 1,
+      "permitPromiseInits": 2,
+      "pendingLaneWaits": 1,
+      "pendingLaneWaitsAfterStop": 0,
+      "reportMembers": 100,
+      "reportOrdered": true,
+      "publishedMembers": 0,
+      "bodiesAfterStop": 0,
+      "queuePromiseSites": [
+        "    at Object.acquire (file://<checkout>/packages/supervision/dist/src/permits.js:43:20)"
+      ]
+    },
+    {
+      "size": 1000,
+      "window": 1,
+      "phase": "admission",
+      "sourceBodies": 1,
+      "topologyUnchanged": true,
+      "admissionCalls": 1,
+      "bodies": 0,
+      "queuedPromises": 1,
+      "permitPromiseInits": 2,
+      "pendingLaneWaits": 1,
+      "pendingLaneWaitsAfterStop": 0,
+      "reportMembers": 1000,
+      "reportOrdered": true,
+      "publishedMembers": 0,
+      "bodiesAfterStop": 0,
+      "queuePromiseSites": [
+        "    at Object.acquire (file://<checkout>/packages/supervision/dist/src/permits.js:43:20)"
+      ]
+    },
+    {
+      "size": 100,
+      "window": 8,
+      "phase": "admission",
+      "sourceBodies": 1,
+      "topologyUnchanged": true,
+      "admissionCalls": 8,
+      "bodies": 0,
+      "queuedPromises": 8,
+      "permitPromiseInits": 16,
+      "pendingLaneWaits": 8,
+      "pendingLaneWaitsAfterStop": 0,
+      "reportMembers": 100,
+      "reportOrdered": true,
+      "publishedMembers": 0,
+      "bodiesAfterStop": 0,
+      "queuePromiseSites": [
+        "    at Object.acquire (file://<checkout>/packages/supervision/dist/src/permits.js:43:20)"
+      ]
+    },
+    {
+      "size": 1000,
+      "window": 8,
+      "phase": "admission",
+      "sourceBodies": 1,
+      "topologyUnchanged": true,
+      "admissionCalls": 8,
+      "bodies": 0,
+      "queuedPromises": 8,
+      "permitPromiseInits": 16,
+      "pendingLaneWaits": 8,
+      "pendingLaneWaitsAfterStop": 0,
+      "reportMembers": 1000,
+      "reportOrdered": true,
+      "publishedMembers": 0,
+      "bodiesAfterStop": 0,
+      "queuePromiseSites": [
+        "    at Object.acquire (file://<checkout>/packages/supervision/dist/src/permits.js:43:20)"
+      ]
+    },
+    {
+      "size": 8,
+      "window": 8,
+      "phase": "admission",
+      "sourceBodies": 1,
+      "topologyUnchanged": true,
+      "admissionCalls": 8,
+      "bodies": 0,
+      "queuedPromises": 0,
+      "permitPromiseInits": 8,
+      "pendingLaneWaits": 0,
+      "pendingLaneWaitsAfterStop": 0,
+      "reportMembers": 8,
+      "reportOrdered": true,
+      "publishedMembers": 0,
+      "bodiesAfterStop": 0,
+      "queuePromiseSites": []
+    },
+    {
+      "size": 100,
+      "window": 8,
+      "phase": "body",
+      "sourceBodies": 1,
+      "topologyUnchanged": true,
+      "admissionCalls": 8,
+      "bodies": 8,
+      "queuedPromises": 8,
+      "permitPromiseInits": 16,
+      "pendingLaneWaits": 8,
+      "pendingLaneWaitsAfterStop": 0,
+      "reportMembers": 100,
+      "reportOrdered": true,
+      "publishedMembers": 0,
+      "bodiesAfterStop": 8,
+      "queuePromiseSites": [
+        "    at Object.acquire (file://<checkout>/packages/supervision/dist/src/permits.js:43:20)"
+      ]
+    }
+  ],
+  "negativeMatrix": [
+    {
+      "size": 100,
+      "window": 1,
+      "phase": "admission",
+      "sourceBodies": 1,
+      "topologyUnchanged": true,
+      "admissionCalls": 1,
+      "bodies": 0,
+      "queuedPromises": 99,
+      "permitPromiseInits": 100,
+      "pendingLaneWaits": 99,
+      "pendingLaneWaitsAfterStop": 0,
+      "reportMembers": 100,
+      "reportOrdered": true,
+      "publishedMembers": 0,
+      "bodiesAfterStop": 0,
+      "queuePromiseSites": [
+        "    at Object.acquire (file://<checkout>/packages/supervision/dist/src/permits.js:43:20)"
+      ]
+    },
+    {
+      "size": 1000,
+      "window": 1,
+      "phase": "admission",
+      "sourceBodies": 1,
+      "topologyUnchanged": true,
+      "admissionCalls": 1,
+      "bodies": 0,
+      "queuedPromises": 999,
+      "permitPromiseInits": 1000,
+      "pendingLaneWaits": 999,
+      "pendingLaneWaitsAfterStop": 0,
+      "reportMembers": 1000,
+      "reportOrdered": true,
+      "publishedMembers": 0,
+      "bodiesAfterStop": 0,
+      "queuePromiseSites": [
+        "    at Object.acquire (file://<checkout>/packages/supervision/dist/src/permits.js:43:20)"
+      ]
+    },
+    {
+      "size": 100,
+      "window": 8,
+      "phase": "admission",
+      "sourceBodies": 1,
+      "topologyUnchanged": true,
+      "admissionCalls": 8,
+      "bodies": 0,
+      "queuedPromises": 92,
+      "permitPromiseInits": 100,
+      "pendingLaneWaits": 92,
+      "pendingLaneWaitsAfterStop": 0,
+      "reportMembers": 100,
+      "reportOrdered": true,
+      "publishedMembers": 0,
+      "bodiesAfterStop": 0,
+      "queuePromiseSites": [
+        "    at Object.acquire (file://<checkout>/packages/supervision/dist/src/permits.js:43:20)"
+      ]
+    },
+    {
+      "size": 1000,
+      "window": 8,
+      "phase": "admission",
+      "sourceBodies": 1,
+      "topologyUnchanged": true,
+      "admissionCalls": 8,
+      "bodies": 0,
+      "queuedPromises": 992,
+      "permitPromiseInits": 1000,
+      "pendingLaneWaits": 992,
+      "pendingLaneWaitsAfterStop": 0,
+      "reportMembers": 1000,
+      "reportOrdered": true,
+      "publishedMembers": 0,
+      "bodiesAfterStop": 0,
+      "queuePromiseSites": [
+        "    at Object.acquire (file://<checkout>/packages/supervision/dist/src/permits.js:43:20)"
+      ]
+    },
+    {
+      "size": 8,
+      "window": 8,
+      "phase": "admission",
+      "sourceBodies": 1,
+      "topologyUnchanged": true,
+      "admissionCalls": 8,
+      "bodies": 0,
+      "queuedPromises": 0,
+      "permitPromiseInits": 8,
+      "pendingLaneWaits": 0,
+      "pendingLaneWaitsAfterStop": 0,
+      "reportMembers": 8,
+      "reportOrdered": true,
+      "publishedMembers": 0,
+      "bodiesAfterStop": 0,
+      "queuePromiseSites": []
+    },
+    {
+      "size": 100,
+      "window": 8,
+      "phase": "body",
+      "sourceBodies": 1,
+      "topologyUnchanged": true,
+      "admissionCalls": 8,
+      "bodies": 8,
+      "queuedPromises": 92,
+      "permitPromiseInits": 100,
+      "pendingLaneWaits": 92,
+      "pendingLaneWaitsAfterStop": 0,
+      "reportMembers": 100,
+      "reportOrdered": true,
+      "publishedMembers": 0,
+      "bodiesAfterStop": 8,
+      "queuePromiseSites": [
+        "    at Object.acquire (file://<checkout>/packages/supervision/dist/src/permits.js:43:20)"
+      ]
+    }
+  ],
+  "restored": {
+    "packages/resolution/src/resolution.ts": true,
+    "scratch/gap-hunt/scale/fanout-admission.ts": true,
+    "scratch/gap-hunt/scale/fanout-admission.test.mjs": true
+  },
+  "liveDelta": {
+    "head": "4408ab236562e1f4fd4d7f15d353d04fe7a86eb7",
+    "onlyChange": "resolution test-d import ordering",
+    "restored": true
+  },
+  "complete": true
+}

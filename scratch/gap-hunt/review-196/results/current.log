@@ -1,0 +1,20 @@
+
+> @microdelta/workspace@0.0.0 test:fanout-dispatch
+> GAP_HUNT_REUSE_BUILD=1 node scratch/gap-hunt/scale/repro-fanout-admission.mjs
+
+$ <node> node_modules/typescript/bin/tsc -p scratch/gap-hunt/scale/tsconfig.fanout-admission.json
+$ <node> node_modules/eslint/bin/eslint.js --config scratch/gap-hunt/scale/fanout-admission.eslint.config.mjs scratch/gap-hunt/scale/fanout-admission.ts
+{"size":100,"window":1,"phase":"admission","sourceBodies":1,"topologyUnchanged":true,"admissionCalls":1,"bodies":0,"queuedPromises":1,"permitPromiseInits":2,"pendingLaneWaits":1,"pendingLaneWaitsAfterStop":0,"reportMembers":100,"reportOrdered":true,"publishedMembers":0,"bodiesAfterStop":0,"queuePromiseSites":["    at Object.acquire (file://<checkout>/packages/supervision/dist/src/permits.js:43:20)"]}
+{"size":1000,"window":1,"phase":"admission","sourceBodies":1,"topologyUnchanged":true,"admissionCalls":1,"bodies":0,"queuedPromises":1,"permitPromiseInits":2,"pendingLaneWaits":1,"pendingLaneWaitsAfterStop":0,"reportMembers":1000,"reportOrdered":true,"publishedMembers":0,"bodiesAfterStop":0,"queuePromiseSites":["    at Object.acquire (file://<checkout>/packages/supervision/dist/src/permits.js:43:20)"]}
+{"size":100,"window":8,"phase":"admission","sourceBodies":1,"topologyUnchanged":true,"admissionCalls":8,"bodies":0,"queuedPromises":8,"permitPromiseInits":16,"pendingLaneWaits":8,"pendingLaneWaitsAfterStop":0,"reportMembers":100,"reportOrdered":true,"publishedMembers":0,"bodiesAfterStop":0,"queuePromiseSites":["    at Object.acquire (file://<checkout>/packages/supervision/dist/src/permits.js:43:20)"]}
+{"size":1000,"window":8,"phase":"admission","sourceBodies":1,"topologyUnchanged":true,"admissionCalls":8,"bodies":0,"queuedPromises":8,"permitPromiseInits":16,"pendingLaneWaits":8,"pendingLaneWaitsAfterStop":0,"reportMembers":1000,"reportOrdered":true,"publishedMembers":0,"bodiesAfterStop":0,"queuePromiseSites":["    at Object.acquire (file://<checkout>/packages/supervision/dist/src/permits.js:43:20)"]}
+{"size":8,"window":8,"phase":"admission","sourceBodies":1,"topologyUnchanged":true,"admissionCalls":8,"bodies":0,"queuedPromises":0,"permitPromiseInits":8,"pendingLaneWaits":0,"pendingLaneWaitsAfterStop":0,"reportMembers":8,"reportOrdered":true,"publishedMembers":0,"bodiesAfterStop":0,"queuePromiseSites":[]}
+{"size":100,"window":8,"phase":"body","sourceBodies":1,"topologyUnchanged":true,"admissionCalls":8,"bodies":8,"queuedPromises":8,"permitPromiseInits":16,"pendingLaneWaits":8,"pendingLaneWaitsAfterStop":0,"reportMembers":100,"reportOrdered":true,"publishedMembers":0,"bodiesAfterStop":8,"queuePromiseSites":["    at Object.acquire (file://<checkout>/packages/supervision/dist/src/permits.js:43:20)"]}
+$ <node> --experimental-vm-modules node_modules/jest/bin/jest.js --config scratch/gap-hunt/scale/fanout-admission.jest.config.mjs --runInBand
+(node:94545) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       2 passed, 2 total
+Snapshots:   0 total
+Time:        1.592 s
+Ran all test suites.

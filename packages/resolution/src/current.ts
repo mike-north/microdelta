@@ -9,9 +9,10 @@
  * a capture frame. Tracking's own operation semantics therefore produce each
  * current fact, and selecting it can never record evidence into an author
  * capture that happens to be active in the same asynchronous context (for
- * example a parent body whose child is being validated). A recorded read whose
- * current path no longer navigates the same container shape is incompatible,
- * never equal.
+ * example a parent body whose child is being validated). Explicit output
+ * requests detach only their recorded current subtree through Tracking's
+ * supported MDS1 output operation. A recorded read whose current path no longer
+ * navigates the same container shape is incompatible, never equal.
  *
  * A supplied step's arguments are current facts of the same kind: the values
  * a nested call passes now (forwarded values rebuilt from current bindings,
@@ -118,17 +119,24 @@ export function argumentList(values: readonly IArgumentValue[]): unknown[] {
 
 /**
  * Select one current fact with Tracking's operation semantics by navigating
- * the validation observer's view of a current binding (the input record or a
- * call's argument list).
+ * the validation observer's view of a current binding. Explicit output uses the
+ * same exact path, then detaches that owned subtree as supported MDS1 data;
+ * scalar roots cannot masquerade as tracked subtree output.
  */
-function selectFrom(observer: ITrackingObserver, view: ITracked<object>, request: Extract<ICurrentFactRequest, { kind: 'selected' }>): ICurrentFactResolution {
-  const target = request.operation === 'own' || request.operation === 'membership' ? request.address.slice(0, -1) : request.address;
+function selectFrom(observer: ITrackingObserver, view: ITracked<object>, request: Extract<ICurrentFactRequest, { kind: 'selected' | 'materialized-output' }>): ICurrentFactResolution {
+  const target = request.kind === 'selected' && (request.operation === 'own' || request.operation === 'membership')
+    ? request.address.slice(0, -1) : request.address;
   let current: unknown = view;
   for (const segment of target) {
     if (!observer.materialization.owns(current) || (segment.kind === 'index') !== isArray(current)) {
       return { kind: 'incompatible' };
     }
     current = Reflect.get(current, segment.kind === 'property' ? segment.key : String(segment.index));
+  }
+  if (request.kind === 'materialized-output') {
+    return observer.materialization.owns(current)
+      ? { kind: 'available', fact: observer.snapshotOutput(current) }
+      : { kind: 'incompatible' };
   }
   const node = current;
   const fact = (): unknown => {
@@ -167,8 +175,9 @@ function selectFrom(observer: ITrackingObserver, view: ITracked<object>, request
  * The provider of a step's own current facts: its own actually called
  * implementation (`self`), the declared input record, declared helpers, for a
  * supplied step the arguments of the current call, and for a template
- * instance its member's current record. Other bindings,
- * including child outputs, are unavailable here; child output facts are
+ * instance its member's current record. Selected reads and explicit MDS1
+ * output share those current binding boundaries. Other bindings, including
+ * child outputs, are unavailable here; child output facts are
  * compared separately after the current child is established.
  */
 export function ownFactProvider(options: {
@@ -202,7 +211,7 @@ export function ownFactProvider(options: {
           : state.status === 'ambiguous' ? { kind: 'ambiguous' }
             : { kind: 'available', fact: state.value };
       }
-      if (root === 'inputs' && slot === undefined && request.kind === 'selected') {
+      if (root === 'inputs' && slot === undefined && rest.length === 0 && (request.kind === 'selected' || request.kind === 'materialized-output')) {
         const [first] = request.address;
         if (first !== undefined && first.kind === 'property') {
           const state = options.slots.inputs.get(first.key);
@@ -215,10 +224,10 @@ export function ownFactProvider(options: {
         }
         return selectFrom(options.validation, inputs(), request);
       }
-      if (root === 'argument' && slot === undefined && request.kind === 'selected' && options.arguments !== undefined) {
+      if (root === 'argument' && slot === undefined && rest.length === 0 && (request.kind === 'selected' || request.kind === 'materialized-output') && options.arguments !== undefined) {
         return selectFrom(options.validation, currentArguments(options.arguments), request);
       }
-      if (root === 'member' && slot === undefined && request.kind === 'selected' && options.member !== undefined) {
+      if (root === 'member' && slot === undefined && rest.length === 0 && (request.kind === 'selected' || request.kind === 'materialized-output') && options.member !== undefined) {
         memberView ??= options.validation.tracked(options.member, { path: bindingPaths.member });
         return selectFrom(options.validation, memberView, request);
       }

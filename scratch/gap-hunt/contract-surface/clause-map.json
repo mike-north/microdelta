@@ -1755,10 +1755,13 @@
         "contracts worker semantic-definition/value/tracking logs",
         "packages/core/test/resolution/support.ts:real SQLite assembly",
         "packages/core/test/stop/resolution-port.test.ts:142–166 realHistory plus scripted execution port",
-        "packages/core/test/nested/arguments.test.ts:317–340 realHistory/Tracking/Definition"
+        "packages/core/test/nested/arguments.test.ts:317–340 realHistory/Tracking/Definition",
+        "packages/core/test/resolution/fixture.ts:107–130,218–274 controlled data/check/finality doubles",
+        "packages/core/test/resolution/source-policy.test.ts:91,116,217,231 currentpolicy outcomes",
+        "ARC-008-REVIEW.md exact normative clause and scoped interpretation"
       ],
-      "evidenceStatus": "partial-proof-obligation-gap",
-      "remainingBoundary": "Resolution production behavior suites compose real History/Tracking/Definition, not fake current-fact/source-policy/child-resolver ports. Standalone Resolution suite covers source envelopes only. Missing isolated-port evidence is a test architecture gap, not a demonstrated wrong runtime outcome; chronological test-first order unverified. Some admission/execution services are scripted fakes in assembly tests; absence claim is specifically isolated current-fact/source-policy/child-resolver seams, not absence of all doubles."
+      "evidenceStatus": "partial-isolation-evidence-open-contract-interpretation",
+      "remainingBoundary": "Controlled world.remote/current inputs and source check/finality policies are genuine fakes; scripted admission/observer/execution ports are also tested. Broad behavior suites compose real History/Tracking/Definition. Separately isolated child resolution outcomes are not established; existing controlled callbacks may satisfy the intended bounded surrogate. This is an open proof/contract-interpretation boundary, not confirmed runtime divergence. See ARC-008-REVIEW.md. Historical test-first order unverified."
     },
     {
       "key": "docs/spec/architecture.md:136",
@@ -1778,10 +1781,13 @@
         "contracts worker semantic-definition/value/tracking logs",
         "packages/core/test/resolution/support.ts:real SQLite assembly",
         "packages/core/test/stop/resolution-port.test.ts:142–166 realHistory plus scripted execution port",
-        "packages/core/test/nested/arguments.test.ts:317–340 realHistory/Tracking/Definition"
+        "packages/core/test/nested/arguments.test.ts:317–340 realHistory/Tracking/Definition",
+        "packages/core/test/resolution/fixture.ts:107–130,218–274 controlled data/check/finality doubles",
+        "packages/core/test/resolution/source-policy.test.ts:91,116,217,231 currentpolicy outcomes",
+        "ARC-008-REVIEW.md exact normative clause and scoped interpretation"
       ],
-      "evidenceStatus": "partial-proof-obligation-gap",
-      "remainingBoundary": "Resolution production behavior suites compose real History/Tracking/Definition, not fake current-fact/source-policy/child-resolver ports. Standalone Resolution suite covers source envelopes only. Missing isolated-port evidence is a test architecture gap, not a demonstrated wrong runtime outcome; chronological test-first order unverified. Some admission/execution services are scripted fakes in assembly tests; absence claim is specifically isolated current-fact/source-policy/child-resolver seams, not absence of all doubles."
+      "evidenceStatus": "partial-isolation-evidence-open-contract-interpretation",
+      "remainingBoundary": "Controlled world.remote/current inputs and source check/finality policies are genuine fakes; scripted admission/observer/execution ports are also tested. Broad behavior suites compose real History/Tracking/Definition. Separately isolated child resolution outcomes are not established; existing controlled callbacks may satisfy the intended bounded surrogate. This is an open proof/contract-interpretation boundary, not confirmed runtime divergence. See ARC-008-REVIEW.md. Historical test-first order unverified."
     },
     {
       "key": "docs/spec/architecture.md:139",
@@ -1801,10 +1807,13 @@
         "contracts worker semantic-definition/value/tracking logs",
         "packages/core/test/resolution/support.ts:real SQLite assembly",
         "packages/core/test/stop/resolution-port.test.ts:142–166 realHistory plus scripted execution port",
-        "packages/core/test/nested/arguments.test.ts:317–340 realHistory/Tracking/Definition"
+        "packages/core/test/nested/arguments.test.ts:317–340 realHistory/Tracking/Definition",
+        "packages/core/test/resolution/fixture.ts:107–130,218–274 controlled data/check/finality doubles",
+        "packages/core/test/resolution/source-policy.test.ts:91,116,217,231 currentpolicy outcomes",
+        "ARC-008-REVIEW.md exact normative clause and scoped interpretation"
       ],
-      "evidenceStatus": "partial-proof-obligation-gap",
-      "remainingBoundary": "Resolution production behavior suites compose real History/Tracking/Definition, not fake current-fact/source-policy/child-resolver ports. Standalone Resolution suite covers source envelopes only. Missing isolated-port evidence is a test architecture gap, not a demonstrated wrong runtime outcome; chronological test-first order unverified. Some admission/execution services are scripted fakes in assembly tests; absence claim is specifically isolated current-fact/source-policy/child-resolver seams, not absence of all doubles."
+      "evidenceStatus": "partial-isolation-evidence-open-contract-interpretation",
+      "remainingBoundary": "Controlled world.remote/current inputs and source check/finality policies are genuine fakes; scripted admission/observer/execution ports are also tested. Broad behavior suites compose real History/Tracking/Definition. Separately isolated child resolution outcomes are not established; existing controlled callbacks may satisfy the intended bounded surrogate. This is an open proof/contract-interpretation boundary, not confirmed runtime divergence. See ARC-008-REVIEW.md. Historical test-first order unverified."
     },
     {
       "key": "docs/spec/architecture.md:149",
@@ -1824,10 +1833,13 @@
         "contracts worker semantic-definition/value/tracking logs",
         "packages/core/test/resolution/support.ts:real SQLite assembly",
         "packages/core/test/stop/resolution-port.test.ts:142–166 realHistory plus scripted execution port",
-        "packages/core/test/nested/arguments.test.ts:317–340 realHistory/Tracking/Definition"
+        "packages/core/test/nested/arguments.test.ts:317–340 realHistory/Tracking/Definition",
+        "packages/core/test/resolution/fixture.ts:107–130,218–274 controlled data/check/finality doubles",
+        "packages/core/test/resolution/source-policy.test.ts:91,116,217,231 currentpolicy outcomes",
+        "ARC-008-REVIEW.md exact normative clause and scoped interpretation"
       ],
-      "evidenceStatus": "partial-proof-obligation-gap",
-      "remainingBoundary": "Resolution production behavior suites compose real History/Tracking/Definition, not fake current-fact/source-policy/child-resolver ports. Standalone Resolution suite covers source envelopes only. Missing isolated-port evidence is a test architecture gap, not a demonstrated wrong runtime outcome; chronological test-first order unverified. Some admission/execution services are scripted fakes in assembly tests; absence claim is specifically isolated current-fact/source-policy/child-resolver seams, not absence of all doubles."
+      "evidenceStatus": "partial-isolation-evidence-open-contract-interpretation",
+      "remainingBoundary": "Controlled world.remote/current inputs and source check/finality policies are genuine fakes; scripted admission/observer/execution ports are also tested. Broad behavior suites compose real History/Tracking/Definition. Separately isolated child resolution outcomes are not established; existing controlled callbacks may satisfy the intended bounded surrogate. This is an open proof/contract-interpretation boundary, not confirmed runtime divergence. See ARC-008-REVIEW.md. Historical test-first order unverified."
     },
     {
       "key": "docs/spec/architecture.md:153",

@@ -42,13 +42,14 @@ This pass did not rerun all B/D fault and invalidation work owned by other worke
   cache/eviction/prefetch design remains target scope. Current selected reads do
   not load unrelated fields; confirmed publication and acceptance amplification
   remain tracked separately as #160/#159.100k completion is pending its bounded run.
-- **ARC-008:** required isolated Resolution tests with fake current-fact,
-  source-policy and child-resolver ports are not established. The package's own
-  runtime tests cover source envelopes; its broad behavior tests compose real
-  History/Tracking/Definition. Scripted admission/execution doubles in assembly
-  cover particular ports, and do not establish all three required isolated seams.
-  This is an evidence/test-architecture gap; no wrong runtime result follows from
-  absence of those tests. Other owner suites establish their named isolated seams.
+- **ARC-008:** controlled data/current facts, source check/finality policies and
+  scripted admission/observer/execution ports are genuinely faked in existing
+  tests. Broad suites still compose real History/Tracking/Definition. Separately
+  isolated child-resolution outcomes remain unproved; controlled callbacks may
+  be the intended bounded surrogate. ARC-008-REVIEW.md records the exact normative
+  requirement and this open interpretation. No runtime failure or new public port
+  requirement follows solely from the test architecture. A3-GLOSSARY-ANCHORS.md
+  supplies bounded Analysis/BoundedContext/Publication evidence for the shared map.
 - **SPEC-1/2/3/5, ARC-008/009, PKG-007/008, EXP-0:** historical tests-first ordering,
   semantic comment quality, human API review and adoption sequencing are process
   obligations. No runtime API can prove past sequencing or reviewer judgment.

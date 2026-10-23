@@ -1,10 +1,10 @@
 {
   "verdict": "PASS within finite bounded scheduling scope; raw original instrumentation failure preserved",
   "source": "f7307e1542d6170505f31a3926bdc13917f603df",
-  "proofCommit": "f348f72465a7b74189fd51d69cffaa43c745df25",
+  "proofCommit": "550cba91c5edaa254a85916946611b1208e368e8",
   "cleanInstall": true,
   "cleanTrackedTreeAfterReplay": true,
-  "commands": 15,
+  "commands": 16,
   "supervision": {
     "suites": 5,
     "tests": 197
@@ -57,11 +57,23 @@
     "restored": true
   },
   "guardAmendment": {
-    "fullProductRecipeExecuted": "f348f72465a7b74189fd51d69cffaa43c745df25",
-    "finalRunnerFullProductRepeated": false,
+    "fullProductRecipeExecuted": "550cba91c5edaa254a85916946611b1208e368e8",
+    "finalRunnerFullProductRepeated": true,
     "guardOnlyAcceptedJestSteps": 8,
     "syntheticRejections": 38,
-    "output": "printed temporary directory",
+    "output": "printed temporary directory outside checkout",
     "installAndCheck": "unconditional; inherited reuse environment removed"
+  },
+  "emittedRestoration": {
+    "rebuilt": true,
+    "baselineSha256": {
+      "packages/resolution/dist/src/resolution.js": "882f2d43d9128865602b54101a605425239369a4e4da068143eb877b2997d8ed",
+      "scratch/gap-hunt/scale/dist/fanout-admission.js": "28ea14b89783d2285d2930cf602e0cc5ddbdec2c34093877e08c40cfa9b1dcbc"
+    },
+    "restoredSha256": {
+      "packages/resolution/dist/src/resolution.js": "882f2d43d9128865602b54101a605425239369a4e4da068143eb877b2997d8ed",
+      "scratch/gap-hunt/scale/dist/fanout-admission.js": "28ea14b89783d2285d2930cf602e0cc5ddbdec2c34093877e08c40cfa9b1dcbc"
+    },
+    "equal": true
   }
 }

@@ -90,25 +90,37 @@ Resolution. Timed sleeping members may retain active execution evidence while
 lending lanes, as required by the existing lifetime contract.
 
 
-## Guard-only amendment after the captured execution
+## Final recipe execution and guard verification
 
-The full fresh install/build/product replay above executed the recipe at
-`f348f72465a7b74189fd51d69cffaa43c745df25`; capture commit
-`76ca301714f57a5240d60f1730cdc88c65b54561` added its logs. The final runner adds
-pure log guards and external output handling; **the final runner has not been
-claimed as a fresh full product execution**. Its guard-only path was executed:
+The complete final recipe at `550cba91c5edaa254a85916946611b1208e368e8` executed
+from a fresh checkout without node_modules. All 16 commands returned their exact
+expected exits. Captures in `results/` are from that final execution; the later
+publication commit adds only report/capture artifacts and is not a new runtime
+execution. The only later guard code change makes guard-only receipt metadata
+read this recorded recipe commit from summary.json instead of an earlier constant;
+it does not alter full replay behavior or judgment. The recipe printed a temporary output directory outside the checkout,
+and the tracked tree was clean at terminal completion before captures were copied
+into this evidence directory. Committed captures were not overwritten by replay.
+
+Source and fixture restoration run in `finally`, followed there by rebuilding
+Resolution and compiling the fixture. Both emitted files' SHA-256 hashes equal
+the initial fresh-owned build. If an intermediate command fails, finalization
+still runs; if restoration also fails, the initial exception remains primary and
+the restoration failure is recorded. Four synthetic exact-finalizer-AST controls
+exercise successful restoration and restoration failure with/without an initial
+error using filesystem/build doubles, without product runtime repetition.
 
 ```sh
 python3 scratch/gap-hunt/review-196/replay.py --guards-only
+python3 scratch/gap-hunt/review-196/check-finalizer.py
 ```
 
-It accepts all 15 hash-verified recorded commands, validates exact suite/test
-counts for all 8 Jest-bearing steps, rejects runtime/load diagnostics, and
-requires the exact named semantic failures and numbers for all expected reds.
-It rejects 38 synthetic cases: missing logs, load errors even with valid count
-summaries, wrong test counts, wrong suite counts, wrong failure names, and wrong
-semantic matchers. `guard-validation.json` records the guard-only execution and
-script hashes. This path writes to its printed temporary directory and checks
-that committed captures remain unchanged; it performs no product runtime replay.
-The output initialization is shared by guard-only and full replay. Future full
-replays now preserve this evidence tree's committed captures as well.
+The guard-only path accepts all 16 hash-verified recorded commands, validates
+exact suite/test counts for all 8 Jest-bearing steps, rejects runtime/load
+diagnostics, and requires exact named semantic failures and numeric observations
+for all expected reds. It rejects 38 synthetic cases: missing logs, load errors
+even with valid count summaries, wrong test counts, wrong suite counts, wrong
+failure names, and wrong semantic matchers. `guard-validation.json` records the
+execution and script hashes. This path writes to its printed temporary directory
+and verifies that committed captures remain unchanged. Install/check are also
+verified as unconditional by inspecting the runner AST.

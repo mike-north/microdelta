@@ -2,8 +2,18 @@
   "files": [
     {
       "path": "README.md",
-      "bytes": 6499,
-      "sha256": "cf04d77c57ab1a140238f60a1c8dc49257f51a0f8cea14c5ef4906348e00da1a"
+      "bytes": 7407,
+      "sha256": "d9c1715b406932066b4e3ac8a843ea0e28db9426ae8a8894b6146435aa48607c"
+    },
+    {
+      "path": "check-finalizer.py",
+      "bytes": 3065,
+      "sha256": "62c95ca4ce65a201c19e9ee58679a4ecc2fdabdb2631b8f01827e3dfb132d17f"
+    },
+    {
+      "path": "finalizer-validation.json",
+      "bytes": 1314,
+      "sha256": "3edb9ca9d8a262f8f264fe284ce6051e7115ceec36377c598e9f8db1d814131d"
     },
     {
       "path": "frozen/fanout-admission.test.mjs",
@@ -18,22 +28,22 @@
     {
       "path": "guard-validation.json",
       "bytes": 5702,
-      "sha256": "7fa1dbc41bb48bff4956f76dff29aac690a6303a13a2a0c729706a5199c5cb76"
+      "sha256": "a1d41a53fcdcaf0a37216cd16777584fdb37438b949b4d907c53ccc3caab81bc"
     },
     {
       "path": "guards.py",
-      "bytes": 6732,
-      "sha256": "36cc72ca0e28b3acfb7f480367bc99bee69fd141f28b5b3453cc6a06e2341bcc"
+      "bytes": 6939,
+      "sha256": "d68666d3a8ddc5d233bde9d7ba23f4c3db9939d2a42772d087a844455747df82"
     },
     {
       "path": "replay.py",
-      "bytes": 8321,
-      "sha256": "6e4e7895e5bf2fcee005b07f9afee57c1eb8c97139b810217799e0a5f27a47b2"
+      "bytes": 9571,
+      "sha256": "7c5e7f5f3ac63c913afd34b5c7fb24709eb2fc3704a691f77b0357200db5e928"
     },
     {
       "path": "results/check.log",
       "bytes": 17521,
-      "sha256": "6c0d72ae69c526348c962620bc62560c3e386b52fe93c4f2cb94eca89a1ebbda"
+      "sha256": "02ba5b36284b597b1d20af2dffe9d871ac84fd37e9a8bf645a5544e0fabf2474"
     },
     {
       "path": "results/core-compile.log",
@@ -43,17 +53,17 @@
     {
       "path": "results/current.log",
       "bytes": 3156,
-      "sha256": "39d6d5ab00cdd0d61d411e67b5192d1f69708430b1360c0211fee1a68fdc6a75"
+      "sha256": "207f2ee177c36aa010ab6ae6990f00c0a021165d5211ca196dc99bb164ecf125"
     },
     {
       "path": "results/facade.log",
       "bytes": 935,
-      "sha256": "e8af5448eda58469b8f9199d16e30b29cbae1bdee19c3a838555ed82f568b975"
+      "sha256": "2b15438863ad470d20f923a4e606c6b34f66cca86581e6c65be32f0d868e9b17"
     },
     {
       "path": "results/frozen-original.log",
       "bytes": 4409,
-      "sha256": "d52ffd8d6243cee091ad36140d9bafb35a7349cc609aa328a1fc1d0d201697f7"
+      "sha256": "6006265a06c2c48cd2536014def325e68bcc6ca16a893241cd013db387aa4fa3"
     },
     {
       "path": "results/install.log",
@@ -63,7 +73,7 @@
     {
       "path": "results/live-delta-check.log",
       "bytes": 456,
-      "sha256": "27fda7bc7bb71677bcfb46c299a2f900e7f9c147863aee2de9cef1f107e28946"
+      "sha256": "e282d495d229820e89dd9313ccc2c463071cfcaaee118d647dec552d01a4907e"
     },
     {
       "path": "results/live-delta-types.log",
@@ -77,23 +87,23 @@
     },
     {
       "path": "results/negative-precise-original.log",
-      "bytes": 3670,
-      "sha256": "1e3a67cd85176319c1150e023f9f270153228fce83d386486c5a00253b2266fa"
+      "bytes": 3685,
+      "sha256": "53dd0047595936ee2145006e71418551974acedefb0e70a92e29ac9f4a652ebe"
     },
     {
       "path": "results/negative.log",
       "bytes": 4798,
-      "sha256": "a876831dfb89d7e4873c15b1893a2b242b2d21cde2f7c7529afe73f4f8a9a6c6"
+      "sha256": "4c6795e7593a5efce2f5274c8a6234f70dbb35c1f927caacede1464631edfcb6"
     },
     {
       "path": "results/precise-original.log",
-      "bytes": 2909,
-      "sha256": "371de255c23ef4711bb71cb05ca56876ebf75928c95259b0a4ad2a3691239aac"
+      "bytes": 2925,
+      "sha256": "1d5c05afc3bc6319b1090a48291bc8a914e6f6795f145ca51f32de6a82f268cd"
     },
     {
       "path": "results/receipt.json",
-      "bytes": 12407,
-      "sha256": "8deb40dc5feb772d5e766353fb76f8a8b03e4aa4baf036d69f4cf53a572cc826"
+      "bytes": 13367,
+      "sha256": "507c61f83622ee91f0114a6e2f312ba5ae8432a33337f764ccc9e9e16ce9a0bd"
     },
     {
       "path": "results/restoration-build.log",
@@ -101,19 +111,24 @@
       "sha256": "64c6d7780dfb2fe72f3ad15f94981b6d606055ce4af4210adac5a72e4f0d178b"
     },
     {
+      "path": "results/restoration-fixture.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
       "path": "results/restored.log",
       "bytes": 3171,
-      "sha256": "4efb918ebb9dabcd03f483e57d926d1d461b848a192f582a12dd99164fdd4227"
+      "sha256": "efeacc9d2f902e8359aae28ac0ca1a2f752753c368c8405ba00fb13d5b304e7d"
     },
     {
       "path": "results/supervision.log",
-      "bytes": 481,
-      "sha256": "7e03eea043d72db457445cb171daf02d997fc4895f44607e59adfce22f649892"
+      "bytes": 482,
+      "sha256": "86eaa9bae23f243759b5b1169713c1a72af8fa8d67414707204177b549cb4d84"
     },
     {
       "path": "summary.json",
-      "bytes": 1596,
-      "sha256": "537d1b64434b82f969a65b353796514ac154ac5a91e36d6474b82c3fb1044374"
+      "bytes": 2232,
+      "sha256": "c3782b952032a808d2604c7d9b901de098d528c622b078d2b1478377d4a20eca"
     }
   ]
 }

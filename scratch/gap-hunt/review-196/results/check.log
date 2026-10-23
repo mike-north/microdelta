@@ -168,30 +168,18 @@ API Extractor completed successfully
 > @microdelta/workspace@0.0.0 build:examples
 > tsc -p examples/contribution-report/tsconfig.json
 
+[packages] 
+[packages] > @microdelta/workspace@0.0.0 check:packages
+[packages] > npm run check --workspaces
+[packages] 
 [workspace] 
 [workspace] > @microdelta/workspace@0.0.0 check:workspace
 [workspace] > concurrently --success all --names imports,experiments,examples,suppressions,declarations,fixtures,wiring,release "npm run check:imports" "npm run check:experiments" "npm run check:examples" "npm run check:suppressions" "npm run check:declarations" "npm run check:fixtures" "npm run check:wiring" "npm run check:release"
 [workspace] 
 [packages] 
-[packages] > @microdelta/workspace@0.0.0 check:packages
-[packages] > npm run check --workspaces
-[packages] 
-[packages] 
 [packages] > @microdelta/accounting@0.1.0 check
 [packages] > concurrently --success all --names types,lint "npm run check:types" "npm run check:lint"
 [packages] 
-[workspace] [examples] 
-[workspace] [examples] > @microdelta/workspace@0.0.0 check:examples
-[workspace] [examples] > tsc --noEmit -p examples/contribution-report/tsconfig.json && eslint examples
-[workspace] [examples] 
-[workspace] [experiments] 
-[workspace] [experiments] > @microdelta/workspace@0.0.0 check:experiments
-[workspace] [experiments] > tsc --noEmit -p tsconfig.json && tsc --noEmit -p experiments/exp-1/tsconfig.portable.json && tsc -p experiments/exp-2/tsconfig.portable.json && tsc --noEmit -p experiments/exp-3/tsconfig.portable.json && tsc --noEmit -p experiments/exp-nested/tsconfig.portable.json && tsc --noEmit -p experiments/exp-4/tsconfig.portable.json && tsc --noEmit -p experiments/exp-8/tsconfig.portable.json && tsc --noEmit -p experiments/exp-authoring/tsconfig.portable.json && eslint experiments --no-error-on-unmatched-pattern
-[workspace] [experiments] 
-[workspace] [suppressions] 
-[workspace] [suppressions] > @microdelta/workspace@0.0.0 check:suppressions
-[workspace] [suppressions] > node tooling/check-suppressions.mjs
-[workspace] [suppressions] 
 [workspace] [release] 
 [workspace] [release] > @microdelta/workspace@0.0.0 check:release
 [workspace] [release] > node tooling/release-workflow.mjs && node tooling/release-graph.mjs
@@ -200,6 +188,18 @@ API Extractor completed successfully
 [workspace] [declarations] > @microdelta/workspace@0.0.0 check:declarations
 [workspace] [declarations] > node tooling/check-producer-declarations.mjs && node tooling/history-declaration-shims.mjs --check
 [workspace] [declarations] 
+[workspace] [examples] 
+[workspace] [examples] > @microdelta/workspace@0.0.0 check:examples
+[workspace] [examples] > tsc --noEmit -p examples/contribution-report/tsconfig.json && eslint examples
+[workspace] [examples] 
+[workspace] [experiments] 
+[workspace] [experiments] > @microdelta/workspace@0.0.0 check:experiments
+[workspace] [experiments] > tsc --noEmit -p tsconfig.json && tsc --noEmit -p experiments/exp-1/tsconfig.portable.json && tsc -p experiments/exp-2/tsconfig.portable.json && tsc --noEmit -p experiments/exp-3/tsconfig.portable.json && tsc --noEmit -p experiments/exp-nested/tsconfig.portable.json && tsc --noEmit -p experiments/exp-4/tsconfig.portable.json && tsc --noEmit -p experiments/exp-8/tsconfig.portable.json && tsc --noEmit -p experiments/exp-authoring/tsconfig.portable.json && eslint experiments --no-error-on-unmatched-pattern
+[workspace] [experiments] 
+[workspace] [fixtures] 
+[workspace] [fixtures] > @microdelta/workspace@0.0.0 check:fixtures
+[workspace] [fixtures] > tsc --noEmit -p fixtures/declarations/producer/tsconfig.json && tsc --noEmit -p fixtures/declarations/capture-producer/tsconfig.json && tsc --noEmit -p fixtures/declarations/forged/tsconfig.json && tsc --noEmit -p fixtures/declarations/consumer-alpha/tsconfig.json && node tooling/check-capture-public-tier.mjs && eslint fixtures/declarations/producer/src fixtures/declarations/capture-producer/src fixtures/declarations/forged/src fixtures/declarations/consumer-alpha/src
+[workspace] [fixtures] 
 [workspace] [imports] 
 [workspace] [imports] > @microdelta/workspace@0.0.0 check:imports
 [workspace] [imports] > eslint -c tooling/context-imports.config.mjs packages experiments examples --quiet
@@ -208,14 +208,10 @@ API Extractor completed successfully
 [workspace] [wiring] > @microdelta/workspace@0.0.0 check:wiring
 [workspace] [wiring] > node tooling/foundation-wiring.mjs
 [workspace] [wiring] 
-[workspace] [fixtures] 
-[workspace] [fixtures] > @microdelta/workspace@0.0.0 check:fixtures
-[workspace] [fixtures] > tsc --noEmit -p fixtures/declarations/producer/tsconfig.json && tsc --noEmit -p fixtures/declarations/capture-producer/tsconfig.json && tsc --noEmit -p fixtures/declarations/forged/tsconfig.json && tsc --noEmit -p fixtures/declarations/consumer-alpha/tsconfig.json && node tooling/check-capture-public-tier.mjs && eslint fixtures/declarations/producer/src fixtures/declarations/capture-producer/src fixtures/declarations/forged/src fixtures/declarations/consumer-alpha/src
-[workspace] [fixtures] 
-[workspace] [release] release.yml audit passed.
-[workspace] [wiring] npm run check:wiring exited with code 0
-[workspace] [release] Release publish order: @microdelta/machine@0.2.0 -> @microdelta/machine-node@0.2.0 -> @microdelta/value@0.1.1 -> @microdelta/definition@0.3.0 -> @microdelta/history@0.2.0 -> @microdelta/tracking@0.2.1 -> @microdelta/materialization@0.1.2 -> @microdelta/resolution@0.3.0 -> @microdelta/supervision@0.3.0 -> microdelta@0.3.0
-[workspace] [release] npm run check:release exited with code 0
+[workspace] [suppressions] 
+[workspace] [suppressions] > @microdelta/workspace@0.0.0 check:suppressions
+[workspace] [suppressions] > node tooling/check-suppressions.mjs
+[workspace] [suppressions] 
 [packages] [types] 
 [packages] [types] > @microdelta/accounting@0.1.0 check:types
 [packages] [types] > tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.portable.json
@@ -224,23 +220,27 @@ API Extractor completed successfully
 [packages] [lint] > @microdelta/accounting@0.1.0 check:lint
 [packages] [lint] > eslint .
 [packages] [lint] 
+[workspace] [wiring] npm run check:wiring exited with code 0
+[workspace] [release] release.yml audit passed.
+[workspace] [release] Release publish order: @microdelta/machine@0.2.0 -> @microdelta/machine-node@0.2.0 -> @microdelta/value@0.1.1 -> @microdelta/definition@0.3.0 -> @microdelta/history@0.2.0 -> @microdelta/tracking@0.2.1 -> @microdelta/materialization@0.1.2 -> @microdelta/resolution@0.3.0 -> @microdelta/supervision@0.3.0 -> microdelta@0.3.0
+[workspace] [release] npm run check:release exited with code 0
 [workspace] [declarations] npm run check:declarations exited with code 0
 [packages] [types] npm run check:types exited with code 0
+[workspace] [examples] npm run check:examples exited with code 0
 [packages] [lint] npm run check:lint exited with code 0
 [packages] 
 [packages] > microdelta@0.3.0 check
 [packages] > concurrently --success all --names types,lint "npm run check:types" "npm run check:lint"
 [packages] 
 [workspace] [suppressions] npm run check:suppressions exited with code 0
-[workspace] [examples] npm run check:examples exited with code 0
-[packages] [types] 
-[packages] [types] > microdelta@0.3.0 check:types
-[packages] [types] > tsc --noEmit -p tsconfig.json
-[packages] [types] 
 [packages] [lint] 
 [packages] [lint] > microdelta@0.3.0 check:lint
 [packages] [lint] > eslint .
 [packages] [lint] 
+[packages] [types] 
+[packages] [types] > microdelta@0.3.0 check:types
+[packages] [types] > tsc --noEmit -p tsconfig.json
+[packages] [types] 
 [workspace] [imports] npm run check:imports exited with code 0
 [workspace] [fixtures] npm run check:fixtures exited with code 0
 [packages] [types] npm run check:types exited with code 0
@@ -251,14 +251,14 @@ API Extractor completed successfully
 [packages] > @microdelta/definition@0.3.0 check
 [packages] > concurrently --success all --names types,lint "npm run check:types" "npm run check:lint"
 [packages] 
-[packages] [types] 
-[packages] [types] > @microdelta/definition@0.3.0 check:types
-[packages] [types] > tsc --noEmit -p tsconfig.json
-[packages] [types] 
 [packages] [lint] 
 [packages] [lint] > @microdelta/definition@0.3.0 check:lint
 [packages] [lint] > eslint .
 [packages] [lint] 
+[packages] [types] 
+[packages] [types] > @microdelta/definition@0.3.0 check:types
+[packages] [types] > tsc --noEmit -p tsconfig.json
+[packages] [types] 
 [packages] [types] npm run check:types exited with code 0
 [packages] [lint] npm run check:lint exited with code 0
 [packages] 
@@ -279,28 +279,28 @@ API Extractor completed successfully
 [packages] > @microdelta/machine@0.2.0 check
 [packages] > concurrently --success all --names types,lint "npm run check:types" "npm run check:lint"
 [packages] 
-[packages] [lint] 
-[packages] [lint] > @microdelta/machine@0.2.0 check:lint
-[packages] [lint] > eslint .
-[packages] [lint] 
 [packages] [types] 
 [packages] [types] > @microdelta/machine@0.2.0 check:types
 [packages] [types] > tsc --noEmit -p tsconfig.json
 [packages] [types] 
+[packages] [lint] 
+[packages] [lint] > @microdelta/machine@0.2.0 check:lint
+[packages] [lint] > eslint .
+[packages] [lint] 
 [packages] [types] npm run check:types exited with code 0
 [packages] [lint] npm run check:lint exited with code 0
 [packages] 
 [packages] > @microdelta/machine-node@0.2.0 check
 [packages] > concurrently --success all --names types,lint "npm run check:types" "npm run check:lint"
 [packages] 
-[packages] [lint] 
-[packages] [lint] > @microdelta/machine-node@0.2.0 check:lint
-[packages] [lint] > eslint .
-[packages] [lint] 
 [packages] [types] 
 [packages] [types] > @microdelta/machine-node@0.2.0 check:types
 [packages] [types] > tsc --noEmit -p tsconfig.json
 [packages] [types] 
+[packages] [lint] 
+[packages] [lint] > @microdelta/machine-node@0.2.0 check:lint
+[packages] [lint] > eslint .
+[packages] [lint] 
 [packages] [types] npm run check:types exited with code 0
 [packages] [lint] npm run check:lint exited with code 0
 [packages] 
@@ -321,14 +321,14 @@ API Extractor completed successfully
 [packages] > @microdelta/resolution@0.3.0 check
 [packages] > concurrently --success all --names types,lint "npm run check:types" "npm run check:lint"
 [packages] 
-[packages] [types] 
-[packages] [types] > @microdelta/resolution@0.3.0 check:types
-[packages] [types] > tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.portable.json
-[packages] [types] 
 [packages] [lint] 
 [packages] [lint] > @microdelta/resolution@0.3.0 check:lint
 [packages] [lint] > eslint .
 [packages] [lint] 
+[packages] [types] 
+[packages] [types] > @microdelta/resolution@0.3.0 check:types
+[packages] [types] > tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.portable.json
+[packages] [types] 
 [packages] [types] npm run check:types exited with code 0
 [packages] [lint] npm run check:lint exited with code 0
 [packages] 
@@ -349,14 +349,14 @@ API Extractor completed successfully
 [packages] > @microdelta/tracking@0.2.1 check
 [packages] > concurrently --success all --names types,lint "npm run check:types" "npm run check:lint"
 [packages] 
-[packages] [types] 
-[packages] [types] > @microdelta/tracking@0.2.1 check:types
-[packages] [types] > tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.portable.json
-[packages] [types] 
 [packages] [lint] 
 [packages] [lint] > @microdelta/tracking@0.2.1 check:lint
 [packages] [lint] > eslint .
 [packages] [lint] 
+[packages] [types] 
+[packages] [types] > @microdelta/tracking@0.2.1 check:types
+[packages] [types] > tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.portable.json
+[packages] [types] 
 [packages] [types] npm run check:types exited with code 0
 [packages] [lint] npm run check:lint exited with code 0
 [packages] 

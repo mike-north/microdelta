@@ -1,0 +1,52 @@
+{
+  "scope": "exact finalizer AST with synthetic Python filesystem/build doubles; no product runtime",
+  "runnerSha256": "7c5e7f5f3ac63c913afd34b5c7fb24709eb2fc3704a691f77b0357200db5e928",
+  "cases": [
+    {
+      "primaryFailure": false,
+      "restorationFailure": false,
+      "sourceRestored": true,
+      "calls": [
+        "restoration-build",
+        "restoration-fixture"
+      ],
+      "observed": null,
+      "primaryIdentityPreserved": null,
+      "emittedRestored": true
+    },
+    {
+      "primaryFailure": false,
+      "restorationFailure": true,
+      "sourceRestored": true,
+      "calls": [
+        "restoration-build"
+      ],
+      "observed": "Restoration",
+      "primaryIdentityPreserved": null,
+      "emittedRestored": false
+    },
+    {
+      "primaryFailure": true,
+      "restorationFailure": false,
+      "sourceRestored": true,
+      "calls": [
+        "restoration-build",
+        "restoration-fixture"
+      ],
+      "observed": "Primary",
+      "primaryIdentityPreserved": true,
+      "emittedRestored": true
+    },
+    {
+      "primaryFailure": true,
+      "restorationFailure": true,
+      "sourceRestored": true,
+      "calls": [
+        "restoration-build"
+      ],
+      "observed": "Primary",
+      "primaryIdentityPreserved": true,
+      "emittedRestored": false
+    }
+  ]
+}

@@ -11,10 +11,10 @@ $ <node> node_modules/eslint/bin/eslint.js --config scratch/gap-hunt/scale/fanou
 {"size":8,"window":8,"phase":"admission","sourceBodies":1,"topologyUnchanged":true,"admissionCalls":8,"bodies":0,"queuedPromises":0,"permitPromiseInits":8,"pendingLaneWaits":0,"pendingLaneWaitsAfterStop":0,"reportMembers":8,"reportOrdered":true,"publishedMembers":0,"bodiesAfterStop":0,"queuePromiseSites":[]}
 {"size":100,"window":8,"phase":"body","sourceBodies":1,"topologyUnchanged":true,"admissionCalls":8,"bodies":8,"queuedPromises":8,"permitPromiseInits":16,"pendingLaneWaits":8,"pendingLaneWaitsAfterStop":0,"reportMembers":100,"reportOrdered":true,"publishedMembers":0,"bodiesAfterStop":8,"queuePromiseSites":["    at Object.acquire (file://<checkout>/packages/supervision/dist/src/permits.js:43:20)"]}
 $ <node> --experimental-vm-modules node_modules/jest/bin/jest.js --config scratch/gap-hunt/scale/fanout-admission.jest.config.mjs --runInBand
-(node:99085) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(node:32031) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
 (Use `node --trace-warnings ...` to show where the warning was created)
 Test Suites: 1 passed, 1 total
 Tests:       2 passed, 2 total
 Snapshots:   0 total
-Time:        1.804 s, estimated 3 s
+Time:        1.816 s, estimated 2 s
 Ran all test suites.

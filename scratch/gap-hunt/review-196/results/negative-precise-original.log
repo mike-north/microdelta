@@ -11,7 +11,7 @@ $ <node> node_modules/eslint/bin/eslint.js --config scratch/gap-hunt/scale/fanou
 {"size":8,"window":8,"phase":"admission","sourceBodies":1,"topologyUnchanged":true,"admissionCalls":8,"bodies":0,"queuedPromises":0,"permitPromiseInits":8,"pendingLaneWaits":0,"pendingLaneWaitsAfterStop":0,"reportMembers":8,"publishedMembers":0,"queuePromiseSites":[]}
 {"size":100,"window":8,"phase":"body","sourceBodies":1,"topologyUnchanged":true,"admissionCalls":8,"bodies":8,"queuedPromises":92,"permitPromiseInits":100,"pendingLaneWaits":92,"pendingLaneWaitsAfterStop":0,"reportMembers":100,"publishedMembers":0,"queuePromiseSites":["    at Object.acquire (file://<checkout>/packages/supervision/dist/src/permits.js:43:20)"]}
 $ <node> --experimental-vm-modules node_modules/jest/bin/jest.js --config scratch/gap-hunt/scale/fanout-admission.jest.config.mjs --runInBand
-(node:98574) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(node:31539) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
 (Use `node --trace-warnings ...` to show where the warning was created)
 FAIL scratch/gap-hunt/scale/fanout-admission.test.mjs
   ● fixed active window does not allocate one pending lane wait per unadmitted member
@@ -33,5 +33,5 @@ FAIL scratch/gap-hunt/scale/fanout-admission.test.mjs
 Test Suites: 1 failed, 1 total
 Tests:       1 failed, 1 passed, 2 total
 Snapshots:   0 total
-Time:        2.454 s
+Time:        1.447 s, estimated 2 s
 Ran all test suites.

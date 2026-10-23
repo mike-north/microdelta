@@ -2,11 +2,11 @@
 > @microdelta/supervision@0.3.0 test:unit
 > tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand
 
-(node:94713) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(node:27333) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
 (Use `node --trace-warnings ...` to show where the warning was created)
 
 Test Suites: 5 passed, 5 total
 Tests:       197 passed, 197 total
 Snapshots:   0 total
-Time:        0.54 s
+Time:        0.565 s
 Ran all test suites.

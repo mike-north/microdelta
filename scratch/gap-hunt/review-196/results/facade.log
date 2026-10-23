@@ -1,8 +1,8 @@
-(node:94826) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(node:27423) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
 (Use `node --trace-warnings ...` to show where the warning was created)
 
 Test Suites: 10 passed, 10 total
 Tests:       103 passed, 103 total
 Snapshots:   0 total
-Time:        13.077 s
+Time:        21.929 s
 Ran all test suites within paths "packages/core/.test-build/test/stop/stop.test.js", "packages/core/.test-build/test/stop/drain.test.js", "packages/core/.test-build/test/stop/lifecycle.test.js", "packages/core/.test-build/test/stop/resolution-port.test.js", "packages/core/.test-build/test/keyed/members.test.js", "packages/core/.test-build/test/keyed/restart.test.js", "packages/core/.test-build/test/resolution/keyed-refusal.test.js", "packages/core/.test-build/test/workspace-operations/operations.test.js", "packages/core/.test-build/test/workspace-operations/async-supplied.test.js", "packages/core/.test-build/test/m5-acceptance/stop.test.js".

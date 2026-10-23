@@ -113,7 +113,7 @@ def guard_only(here, out):
         rejects_case(name, 'wrong-semantic-matcher', text.replace('expect(received).', 'wrong(received).'))
     after = {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in (here / 'results').iterdir() if p.is_file()}
     require(before == after, 'guard-only changed committed captures')
-    result = {'capturedRecipe': 'f348f72465a7b74189fd51d69cffaa43c745df25',
+    result = {'capturedRecipe': json.loads((here / 'summary.json').read_text())['proofCommit'],
               'runtimeRepeated': False, 'capturedCommandsAccepted': len(receipt['commands']),
               'jestStepsAccepted': len(EXPECTED), 'syntheticRejects': rejects,
               'output': '<evidence-output>', 'committedCapturesModified': False}

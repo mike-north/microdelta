@@ -15,7 +15,7 @@
         "ci"
       ],
       "exit": 0,
-      "seconds": 4.27,
+      "seconds": 4.409,
       "logSha256": "8a51396b466764cf09f18df0890d406c230533db4dda58fca9f33f06f929bdab"
     },
     {
@@ -26,8 +26,8 @@
         "check"
       ],
       "exit": 0,
-      "seconds": 92.171,
-      "logSha256": "6c0d72ae69c526348c962620bc62560c3e386b52fe93c4f2cb94eca89a1ebbda"
+      "seconds": 80.351,
+      "logSha256": "02ba5b36284b597b1d20af2dffe9d871ac84fd37e9a8bf645a5544e0fabf2474"
     },
     {
       "name": "current",
@@ -37,8 +37,8 @@
         "test:fanout-dispatch"
       ],
       "exit": 0,
-      "seconds": 7.328,
-      "logSha256": "39d6d5ab00cdd0d61d411e67b5192d1f69708430b1360c0211fee1a68fdc6a75"
+      "seconds": 14.184,
+      "logSha256": "207f2ee177c36aa010ab6ae6990f00c0a021165d5211ca196dc99bb164ecf125"
     },
     {
       "name": "supervision",
@@ -50,8 +50,8 @@
         "@microdelta/supervision"
       ],
       "exit": 0,
-      "seconds": 2.534,
-      "logSha256": "7e03eea043d72db457445cb171daf02d997fc4895f44607e59adfce22f649892"
+      "seconds": 4.424,
+      "logSha256": "86eaa9bae23f243759b5b1169713c1a72af8fa8d67414707204177b549cb4d84"
     },
     {
       "name": "core-compile",
@@ -62,7 +62,7 @@
         "packages/core/tsconfig.test.json"
       ],
       "exit": 0,
-      "seconds": 2.607,
+      "seconds": 4.154,
       "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
@@ -87,8 +87,8 @@
         "packages/core/.test-build/test/m5-acceptance/stop.test.js"
       ],
       "exit": 0,
-      "seconds": 14.219,
-      "logSha256": "e8af5448eda58469b8f9199d16e30b29cbae1bdee19c3a838555ed82f568b975"
+      "seconds": 22.935,
+      "logSha256": "2b15438863ad470d20f923a4e606c6b34f66cca86581e6c65be32f0d868e9b17"
     },
     {
       "name": "frozen-original",
@@ -98,8 +98,8 @@
         "test:fanout-dispatch"
       ],
       "exit": 1,
-      "seconds": 11.108,
-      "logSha256": "d52ffd8d6243cee091ad36140d9bafb35a7349cc609aa328a1fc1d0d201697f7"
+      "seconds": 10.865,
+      "logSha256": "6006265a06c2c48cd2536014def325e68bcc6ca16a893241cd013db387aa4fa3"
     },
     {
       "name": "precise-original",
@@ -109,8 +109,8 @@
         "test:fanout-dispatch"
       ],
       "exit": 0,
-      "seconds": 12.444,
-      "logSha256": "371de255c23ef4711bb71cb05ca56876ebf75928c95259b0a4ad2a3691239aac"
+      "seconds": 6.882,
+      "logSha256": "1d5c05afc3bc6319b1090a48291bc8a914e6f6795f145ca51f32de6a82f268cd"
     },
     {
       "name": "negative-build",
@@ -122,7 +122,7 @@
         "@microdelta/resolution"
       ],
       "exit": 0,
-      "seconds": 2.817,
+      "seconds": 3.259,
       "logSha256": "64c6d7780dfb2fe72f3ad15f94981b6d606055ce4af4210adac5a72e4f0d178b"
     },
     {
@@ -133,8 +133,8 @@
         "test:fanout-dispatch"
       ],
       "exit": 1,
-      "seconds": 8.602,
-      "logSha256": "a876831dfb89d7e4873c15b1893a2b242b2d21cde2f7c7529afe73f4f8a9a6c6"
+      "seconds": 7.035,
+      "logSha256": "4c6795e7593a5efce2f5274c8a6234f70dbb35c1f927caacede1464631edfcb6"
     },
     {
       "name": "negative-precise-original",
@@ -144,8 +144,8 @@
         "test:fanout-dispatch"
       ],
       "exit": 1,
-      "seconds": 7.257,
-      "logSha256": "1e3a67cd85176319c1150e023f9f270153228fce83d386486c5a00253b2266fa"
+      "seconds": 5.867,
+      "logSha256": "53dd0047595936ee2145006e71418551974acedefb0e70a92e29ac9f4a652ebe"
     },
     {
       "name": "restoration-build",
@@ -157,8 +157,20 @@
         "@microdelta/resolution"
       ],
       "exit": 0,
-      "seconds": 3.693,
+      "seconds": 2.316,
       "logSha256": "64c6d7780dfb2fe72f3ad15f94981b6d606055ce4af4210adac5a72e4f0d178b"
+    },
+    {
+      "name": "restoration-fixture",
+      "argv": [
+        "node",
+        "node_modules/typescript/bin/tsc",
+        "-p",
+        "scratch/gap-hunt/scale/tsconfig.fanout-admission.json"
+      ],
+      "exit": 0,
+      "seconds": 0.833,
+      "logSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
     },
     {
       "name": "restored",
@@ -168,8 +180,8 @@
         "test:fanout-dispatch"
       ],
       "exit": 0,
-      "seconds": 9.305,
-      "logSha256": "4efb918ebb9dabcd03f483e57d926d1d461b848a192f582a12dd99164fdd4227"
+      "seconds": 7.003,
+      "logSha256": "efeacc9d2f902e8359aae28ac0ca1a2f752753c368c8405ba00fb13d5b304e7d"
     },
     {
       "name": "live-delta-check",
@@ -181,8 +193,8 @@
         "@microdelta/resolution"
       ],
       "exit": 0,
-      "seconds": 3.959,
-      "logSha256": "27fda7bc7bb71677bcfb46c299a2f900e7f9c147863aee2de9cef1f107e28946"
+      "seconds": 4.121,
+      "logSha256": "e282d495d229820e89dd9313ccc2c463071cfcaaee118d647dec552d01a4907e"
     },
     {
       "name": "live-delta-types",
@@ -194,7 +206,7 @@
         "@microdelta/resolution"
       ],
       "exit": 0,
-      "seconds": 2.523,
+      "seconds": 2.037,
       "logSha256": "00cc53e3bd69236cf4c0d988fb48cc254acbffda7ac47529180bb86a258d3180"
     }
   ],
@@ -447,6 +459,18 @@
     "packages/resolution/src/resolution.ts": true,
     "scratch/gap-hunt/scale/fanout-admission.ts": true,
     "scratch/gap-hunt/scale/fanout-admission.test.mjs": true
+  },
+  "emittedRestoration": {
+    "rebuilt": true,
+    "baselineSha256": {
+      "packages/resolution/dist/src/resolution.js": "882f2d43d9128865602b54101a605425239369a4e4da068143eb877b2997d8ed",
+      "scratch/gap-hunt/scale/dist/fanout-admission.js": "28ea14b89783d2285d2930cf602e0cc5ddbdec2c34093877e08c40cfa9b1dcbc"
+    },
+    "restoredSha256": {
+      "packages/resolution/dist/src/resolution.js": "882f2d43d9128865602b54101a605425239369a4e4da068143eb877b2997d8ed",
+      "scratch/gap-hunt/scale/dist/fanout-admission.js": "28ea14b89783d2285d2930cf602e0cc5ddbdec2c34093877e08c40cfa9b1dcbc"
+    },
+    "equal": true
   },
   "liveDelta": {
     "head": "4408ab236562e1f4fd4d7f15d353d04fe7a86eb7",

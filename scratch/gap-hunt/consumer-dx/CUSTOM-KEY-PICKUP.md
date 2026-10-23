@@ -2,13 +2,13 @@
 
 Proposed title: Allow an explicit custom-key strategy for member schemas without a designated string identity.
 
-This is a local candidate contract for supervisory review, not an issued or adopted API design. No production fixes included. Fixture baseline c5802da, portable probe commit3586b2d; Node24.22.1 Darwin arm64. Scope is the current project-private alpha declaration path.
+This is a local pickup contract for a scoped authoring gap under the settled explicit-custom-key alternative, not a filed issue or adopted API spelling. No production fixes included. Fixture baseline c5802da, portable probe commit3586b2d; Node24.22.1 Darwin arm64. Scope is the current project-private alpha declaration path.
 
 ## Governing intent and delivery boundary
 
 COL-1 (`docs/spec/tracking.md:227–232`) allows an explicit author custom-key function; “No-identity members need an explicit supported key strategy before keyed work proceeds.” CMP-4 (`docs/spec/composition.md:54–57`) requires keying before any gate/member work using designated identity **or** an explicit custom key. `docs/plans/m4-composition.md:143–150` repeats the alternative and pre-work validation. The key remains a nonempty string scoped to its collection; this candidate does not ask to admit numeric keys, ordinals or implicit fallback.
 
-The selected M4 and EXP-4 fixtures already have string designated identities (M4 plan79–82; EXP-4 decision23–32). Their custom-key variants replace one string field with another. Current tests `packages/core/test/keyed/restart.test.ts:249–270` establish correspondence under renumbered designated IDs, not authoring of no-string-identity schemas. Implementation comments call a custom key an override of designated identity. The broad active requirement and narrower delivered prerequisite therefore need an explicit supervisory decision; do not claim the existing M4 fixtures failed or that arbitrary collection types were promised.
+The selected M4 and EXP-4 fixtures already have string designated identities (M4 plan79–82; EXP-4 decision23–32). Their custom-key variants replace one string field with another. Current tests `packages/core/test/keyed/restart.test.ts:249–270` establish correspondence under renumbered designated IDs, not authoring of no-string-identity schemas. Implementation comments call a custom key an override of designated identity. The supervisor independently reproduced the gap and accepted the explicit-custom-key alternative as settled intent. The narrower fixtures do not require unused identity fields; do not claim those existing fixtures failed or that arbitrary collection types were promised.
 
 ## Minimal measured reproduction
 
@@ -40,4 +40,4 @@ Default runner installs locked dependencies, builds all package declarations, st
 
 Definition & Binding owns collection declaration, key strategy and symbolic template typing. Reuse Resolution consumes keyed snapshots/correspondence; the facade aliases the generated contracts. Change only the owning source/template contracts, generated declarations/API reports and focused tests/docs needed for this path. No new host capability, persistence format/schema, paid-provider behavior, release tier, package publication or general CLI is required. Runtime authority stays with existing owners.
 
-No prerequisite production fix is known. Coordinate generated facade aliases with producer builds; use a fresh isolated issue worktree if authorized. Parent must settle whether broad COL-1/CMP-4 authoring is delivered now or intentionally deferred before assigning implementation. If the restriction is deliberate, amend the active contract and document the current caller boundary instead of manufacturing an implementation promise. Do not require a new collection field/API spelling solely because this fixture used an omitted marker to expose the mismatch.
+No prerequisite production fix is known. Coordinate generated facade aliases with producer builds; use a fresh isolated issue worktree if authorized. The supervisor classified this as a scoped authoring gap; no new product policy decision is required. Do not require a new collection field/API spelling solely because this fixture used an omitted marker to expose the mismatch.

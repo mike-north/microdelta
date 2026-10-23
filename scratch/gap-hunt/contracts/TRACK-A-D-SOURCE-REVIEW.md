@@ -60,6 +60,8 @@ The five #144 faults were nevertheless independently expressible through existin
 
 No concrete required child outcome has been shown inexpressible. Retain the literal isolation qualification; do not add an API or missing-contract issue solely from the lack of a separately injectable recursive resolver. A future seam request needs a concrete invariant that existing ports/callbacks cannot discriminate.
 
+**Later normative clarification:** [ARC-008-LITERAL.md](ARC-008-LITERAL.md) supersedes the preceding recommendation as a validation-conformance judgment. ARC-008 explicitly requires tests using fake child resolvers and says assembly evidence does not replace isolated tests. The inspected construction API and recursive call routes provide no such substitute. That required validation seam is specified but missing even without a demonstrated masked runtime defect. The concrete #144 outcomes remain covered; no public API is proposed.
+
 ## Reproduction and remaining boundaries
 
 Installed checkout commands actually executed:

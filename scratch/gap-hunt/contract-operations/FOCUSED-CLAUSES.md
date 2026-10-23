@@ -41,3 +41,5 @@ node --experimental-vm-modules node_modules/jest/bin/jest.js --config packages/c
 requirement-evidence.json now replaces generic residuals for RUN001, RUN014, ACC008 and PUB002 with these concrete remaining boundaries and supplementary named assertions. Its original473-case index remains the original broad run, not a fabricated merged rerun. No GitHub issue edits or production fixes.
 
 Implementer: Codex worker (gpt-6.1-sol).
+
+Follow-up RETENTION-CANCELLATION.md refines items5/6: supported same-store lease-wait cancellation has a new named passing assertion; unconditional deletion refusal plus saved-reference retention has existing named passing controls. Future selective cleanup/shared-inflight ownership remain separate unresolved mechanisms. It also identifies preexisting independent-process W4 equality checks, avoiding a claim that endpoint equality was wholly untested.

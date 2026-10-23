@@ -62,3 +62,5 @@ Decision-required grouped drafts: [CLI](ISSUE-CLI.md), [previews](ISSUE-PREVIEWS
 ## Focused residual audit
 
 [FOCUSED-CLAUSES.md](FOCUSED-CLAUSES.md) records14 selected review items with8 bounded delivered sub-obligations,3 target capabilities,2 owner/interface questions and1 unproved broader prohibition. Fresh targeted execution passes55cases across6suites. This does not complete the344-block audit. Concrete residuals now replace generic owner prose for RUN001, RUN014, ACC008 and PUB002.
+
+[Retention/cancellation follow-up](RETENTION-CANCELLATION.md) records no durable cleanup API, unconditional deletion refusal,3existing retention controls and a new same-store/same-target stopped-waiter test that preserves active owner publication/exact reuse. General shared-inflight cancellation remains open beyond selected M5 lease waiting.

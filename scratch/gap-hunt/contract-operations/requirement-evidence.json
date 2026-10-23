@@ -749,7 +749,7 @@
       "requirement": "ACC-008",
       "classification": "bounded-aligned-with-residual-evidence-gap",
       "meaning": "Observer/gate distinction and explicit retry policy determine execution.",
-      "residual": "Paired runs assert read-only usage-display observer add/remove invariance including incomplete usage. Explicit admission refusal is covered separately. No cleanup/deletion authority or billing-completeness-to-retention path is exercised, so the unreported/zero-currency deletion prohibition remains unproved. Arbitrary observer side effects/failures are not covered by display invariance.",
+      "residual": "Current durable History has no cleanup/reclamation operation and unconditionally rejects deletion of retained history; named immutable-storage and superseded-reference controls pass. This establishes bounded current retention independent of currency. A future selective cleanup policy must separately establish retained-reference and paid/unknown-currency safety; none is selected or tested here. Optional read-only usage observer invariance passes; arbitrary observer side effects are excluded.",
       "executedAssertionIds": [
         132,
         133,
@@ -777,7 +777,10 @@
       ],
       "supplementaryNamedAssertions": [
         "gap-hunt-durability-observer.test.ts: adding/removing usage display preserves sends, outcomes and the unknown usage gap",
-        "workspace/admission-observers.test.ts: a refused cold miss leaves no claim, attempt, body or reference, and strands no writer"
+        "workspace/admission-observers.test.ts: a refused cold miss leaves no claim, attempt, body or reference, and strands no writer",
+        "durable-history/durable-history.test.ts: stored results and acceptances are immutable in storage",
+        "acceptance/integrity-io.test.ts: a superseded summary stays exactly readable beside its successor",
+        "accounting/node-conformance.test.ts: recorded facts cannot be updated, deleted or replaced in storage"
       ]
     },
     {
@@ -1745,7 +1748,7 @@
       "requirement": "RUN-014",
       "classification": "bounded-aligned-with-residual-evidence-gap",
       "meaning": "Soft drains admitted work with no default deadline; hard aborts/discards; committed boundary wins; unknown remote state is durable.",
-      "residual": "Existing lifecycle tests prove stopping one independent run/store does not stop another. They do not create two consumers sharing one logical work owner and then cancel only one waiter; that exact shared-consumer cancellation authority remains unproved and its propagation/ownership mechanism is open. CLI interrupt/exit contract also requires owner decision.",
+      "residual": "New same-store/same-target writer waiter stop test proves cancelling only the waiting run does not stop active owner work; owner publishes and later exact reuse executes no additional body. This is selected M5 serialized writer waiting, not a simultaneously shared-work cancellation mechanism. General per-consumer detach/cancellation authority remains open beyond supported run scope; CLI interrupt/exit also requires owner decision.",
       "executedAssertionIds": [
         353,
         354,
@@ -1769,7 +1772,9 @@
         452
       ],
       "supplementaryNamedAssertions": [
-        "stop/lifecycle.test.ts: concurrent runs in one process keep their own context and controls: stopping one never reaches the other"
+        "stop/lifecycle.test.ts: concurrent runs in one process keep their own context and controls: stopping one never reaches the other",
+        "gap-hunt-durability-waiter.test.ts: stopping another run demanding the same subject leaves its active owner live; the result later reuses",
+        "workspace/writer-wait.test.ts: a hard stop ends a waiting run at once with stopped and leaves the holder untouched"
       ]
     },
     {

@@ -6,5 +6,11 @@
   "dirtySourceRejected": true,
   "sourceRestored": true,
   "timeoutSeconds": 900,
-  "workloadNotRerun": true
+  "workloadNotRerun": true,
+  "sdkPortabilityQualification": {
+    "overrideOnlyIfInstalled": true,
+    "capturedHostSdkExists": true,
+    "capturedInstallEnvironmentUnchanged": true,
+    "workloadNotRepeated": true
+  }
 }

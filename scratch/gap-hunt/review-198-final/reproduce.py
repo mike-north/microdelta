@@ -59,7 +59,8 @@ def normalize(text):return text.replace(os.path.relpath(OUT,ROOT),'<captures>').
 def gitbytes(pin,path):return subprocess.check_output(['git','show',f'{pin}:{path}'])
 def command(name,args,expected=0):
  env=dict(os.environ);env.pop('GAP_HUNT_REUSE_BUILD',None)
- if name=='install' and platform.system()=='Darwin':env['SDKROOT']='/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk'
+ sdk=Path('/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk')
+ if name=='install' and platform.system()=='Darwin' and sdk.exists():env['SDKROOT']=str(sdk)
  result=subprocess.run(args,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True,timeout=900)
  log=normalize(result.stdout);(OUT/f'{name}.log').write_text(log)
  rows.append(dict(name=name,argv=[normalize(arg) for arg in args],exit=result.returncode,expected=expected));print(f'{name}: {result.returncode} (expected {expected})',flush=True)

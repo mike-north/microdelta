@@ -29,3 +29,13 @@ With that bounded transport change, **all4original journal/processes tests pass*
 Suggested direction: a small test-harness portability follow-up can send fixture scripts over files/stdin and preserve planned-kill trace assertions. This is not a production persistence bug. No issue filed here.
 
 Implementer: Codex worker (gpt-6.1-sol).
+
+## Publication follow-up
+
+The identical test-only file transport also runs `durable-history/crash-recovery.test.ts` with all original eight assertions unchanged:
+
+```sh
+node --require ./scratch/gap-hunt/contract-operations/file-fed-harness.cjs --experimental-vm-modules node_modules/jest/bin/jest.js --config packages/core/jest.config.mjs --runInBand --runTestsByPath packages/core/.test-build/test/durable-history/crash-recovery.test.js
+```
+
+All eight pass on macOS arm64 Node24.22.1 (`publication-file-fed.log`): post-acquisition expiry/fence takeover; post-allocation consumed ID; inside-allocation rollback; post-stage incomplete candidate; inside-stage no content; pre-publication commit rollback followed by staged republish without body; postcommit lost acknowledgment exact-key recovery without body; expired-holder refusal across renew/allocate/stage/publish/abandon/accept/release. Each planned kill retains the original trace-prefix evidence check. This closes the eight originally blocked component publication cases on this host; the archived argv failures remain launch anomalies, not product failures.

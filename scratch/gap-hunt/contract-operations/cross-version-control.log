@@ -1,0 +1,3 @@
+{"node":"v24.22.1","platform":"darwin","arch":"arm64","calls":1,"kind":"published","reference":{"kind":"completed-result","locator":"mdh1|[\"node-cross-version\",\"node-cross-version\",\"fixture\",1]"},"payload":{"title":"retained","list":[1,2,3],"nested":{"empty":null,"enabled":true,"text":"Unicode: café 🚀"}}}
+{"node":"v24.22.1","platform":"darwin","arch":"arm64","calls":0,"kind":"reused","reference":{"kind":"completed-result","locator":"mdh1|[\"node-cross-version\",\"node-cross-version\",\"fixture\",1]"},"payload":{"title":"retained","list":[1,2,3],"nested":{"empty":null,"enabled":true,"text":"Unicode: café 🚀"}}}
+PASS: Node24-only worker cold/restart control; no cross-version claim

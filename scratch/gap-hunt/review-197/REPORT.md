@@ -16,7 +16,7 @@ All five current witnesses pass. Canonical baseline/restored suites pass 78/78 a
 
 ## Fresh bounded execution
 
-A new detached checkout had no node_modules. Locked install, package and fixture builds, strict Core test compilation, changed-file type-aware lint, all34 anchors, five-witness Jest, cleanup regression and canonical mutation runner succeeded. Captured exact commands are in receipt.json; there was no redundant full repository test run. Runtime executed the exact PR source; this later evidence commit contains report-only additions and was not separately replayed.
+A new detached checkout had no node_modules. Locked install, package and fixture builds, strict Core test compilation, changed-file type-aware lint, all34 anchors, five-witness Jest, cleanup regression and canonical mutation runner succeeded. The initial nine canonical commands are in receipt.json; there was no redundant full repository test run. Runtime executed the exact PR source; this later evidence commit contains report-only additions and was not separately replayed.
 
 Cleanup regression passes under current handler. Replacing only the runner with exact immediate pre-fix `c2fc173a961f361b9a744c705609664477be1722` produces the named assertion that the interrupted runner must remove its isolated checkout. Restoring current runner makes cleanup and all five witnesses pass again; source bytes and all Resolution emitted artifact hashes remain unchanged through that valid counterfactual.
 
@@ -27,3 +27,29 @@ An earlier whole5e3 runner negative was invalid for this question: that version 
 Historical74 ledger remains immutable, with private overlay 72 mixed-pin passing, one insufficient, one missing. No denominator increase and no all-main rerun claim. The added gate witness strengthens TRK2-called-only; direct memo sharing supplements CMP5-hierarchical's request-local behavior without replacing its hierarchical-output oracle; supplied/fold missing-own witnesses strengthen REUSE008-tracking-generation-current and CMP8-infrastructure. Supplied invocation intent is separate protocol sensitivity evidence. CMP8-gate-kind stays insufficient (its full-target undefined/skip question differs); ARC008-fake-child-isolation stays missing/issue175. These five assembly witnesses do not supply the required fake child-resolution contract seam.
 
 This is synthetic macOS/Node24 evidence with real local SQLite. No Linux, paid provider, package publication, release automation, whole-spec completeness or deployment qualification. Supervisor owns acceptance and publication.
+
+## Reproduction commands and limits
+
+From this evidence checkout with Node24/native SQLite prerequisites, run:
+
+```sh
+python3 scratch/gap-hunt/review-197/canonical.py
+```
+
+This command performs the initial nine canonical/current checks (locked install, builds, compile/lint, anchors, witness, cleanup and canonical34 controls). It does not replay historical counterfactuals and cannot establish the old-three-suite gap by itself. The captured product execution occurred at b5bf827; these later support scripts make the command recipes concrete but were not executed as new runtime evidence.
+
+After canonical setup, the exact old-three selection adapter construction and invocation are retained in `original-three-adapter.py`:
+
+```sh
+python3 scratch/gap-hunt/review-197/original-three-adapter.py
+```
+
+The adapter expects its nested runner exit1 because all five plants survive the original three suites; the adapter exits0 only for that expected runner status. The retained log additionally records baseline/restored73 and each plant0fail.
+
+The valid cleanup negative uses the exact immediate pre-fix runner, restores it in finally, and reruns current cleanup:
+
+```sh
+python3 scratch/gap-hunt/review-197/cleanup-counterfactual.py
+```
+
+The excluded whole5e3 runner experiment is deliberately not a recommended replay recipe.

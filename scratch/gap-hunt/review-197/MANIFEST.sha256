@@ -1,4 +1,5 @@
-9c2fcb16c2cb2fbd7a974889028ff8f3e0a16a9e6051381f8b18d193ce34b11e  scratch/gap-hunt/review-197/REPORT.md
+c165f3784920bffa424373a78cd8014688eef2b3f45e384395b22521fef1efe3  scratch/gap-hunt/review-197/REPORT.md
+a7e54379565c69bb2a1a5cb3eaf00c6f7d1f3f20be11c57f145b8bed01e85633  scratch/gap-hunt/review-197/canonical.py
 f70d1d8e7833ad1f9c18ca5245de66d21c6c003840794de03e620f4a1cc758cb  scratch/gap-hunt/review-197/captures/anchors.log
 9eb1f0e1ba62cd61262041daf444feb22fd48ec57cb809914e03f96c4504a62d  scratch/gap-hunt/review-197/captures/build.log
 1308c670d1002a40b21ce1c9480908e6129ae18383acff544110e260c0adeba6  scratch/gap-hunt/review-197/captures/cleanup-old.log
@@ -16,5 +17,6 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855  scratch/gap-hu
 e227b270f103303358f9bfdd04ae2ee9ad5d12e878938a441d4d80aa98235e26  scratch/gap-hunt/review-197/captures/restoration.json
 f2819ca86d5a64163e7af4af5836031a9776dd39b9a97278458de9f52d472d04  scratch/gap-hunt/review-197/captures/witness-restored.log
 febce3b407079005fd725900f40de15f18d2faee7e2757ff3d5d85427c971e34  scratch/gap-hunt/review-197/captures/witness.log
+22da5e538f0013d0f4d13002e4f75b08ab5d08d12fe8c13898b4b121c0ee2e48  scratch/gap-hunt/review-197/cleanup-counterfactual.py
 e818876a80e873bb1b6607155103a526920850c4a7845c30c7243545268e5b7e  scratch/gap-hunt/review-197/original-three-adapter.py
 bb29ef8aaee4d73b21635bbdb92e63c6f556127412783b3ff1161525259ea730  scratch/gap-hunt/review-197/receipt.json

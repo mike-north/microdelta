@@ -75,8 +75,13 @@ promise that every downloaded manager will launch. The
 [implementation evidence](validation/pnpm-native-approval-2026-10-23.md)
 records the exact commands and outcomes.
 
-**Linux pnpm 10/12 execution remains unverified.** The owner-supplied Linux
-Node 24/26 native-install and full-suite successes used npm, so they do not
-establish pnpm approval behavior. Run the fixture on a fresh Linux Node 24
-environment before claiming Linux acceptance. This guide makes no Node 26,
-Linux pnpm, driver-engine or package-publication support change.
+Linux arm64 Node 24.14.0 in a disposable official `node:24-bookworm`
+container ran the unchanged fixture: pnpm 10.34.7 and 12.10.1 both passed
+their unapproved negatives, public memory smoke, targeted local rebuild and
+separate-process cold/restart exact-reference checks. The
+[Linux command, image identity and results](validation/pnpm-native-approval-2026-10-23.md#linux-arm64-node-24-control)
+bound that result to one Node/OS/architecture/container setup. The earlier
+owner-supplied Linux Node 24/26 native-install and full-suite runs used npm;
+they remain separate evidence. Neither establishes pnpm approval on other
+Linux architectures or Node 26, a universal native-driver support policy, or
+a package-publication change.

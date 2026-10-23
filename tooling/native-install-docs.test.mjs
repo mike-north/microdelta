@@ -37,8 +37,15 @@ test('the guide states the targeted approval workflow and negative controls', ()
     assert.ok(markdown.includes(marker), `guide must mention ${marker}`);
   }
   assert.match(markdown, /memory[\s\S]*project-private|project-private[\s\S]*memory/u);
-  assert.match(markdown, /Linux[\s\S]*unverified|unverified[\s\S]*Linux/u);
+  assert.match(markdown, /Linux arm64 Node 24\.14\.0[\s\S]*pnpm 10\.34\.7 and 12\.10\.1[\s\S]*passed/u);
   assert.match(markdown, /issues\/158/u);
+});
+
+test('Linux proof identifies its exact container and keeps the result bounded', () => {
+  const evidence = content('docs/validation/pnpm-native-approval-2026-10-23.md');
+  assert.match(evidence, /node:24-bookworm/u);
+  assert.match(evidence, /sha256:5a593d74b632d1c6f816457477b6819760e13624455d587eef0fa418c8d0777b/u);
+  assert.match(evidence, /Linux arm64[\s\S]*both pnpm versions exited 0/u);
 });
 
 test('the unchanged portable fixture remains available for platform-specific acceptance', () => {

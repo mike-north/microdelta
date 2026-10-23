@@ -3,7 +3,7 @@
 Implementer: Codex worker (gpt-6.1-sol), operating for Mike North.
 
 `semantic-clauses.json` retains all 178 non-code paragraph/table blocks of
-`tracking.md`, `composition.md`, and `glossary.md`. Fifty-four named assertion anchors
+`tracking.md`, `composition.md`, and `glossary.md`. Fifty-five named assertion anchors
 record the concrete behavior they establish and the actual execution log. This is
 an exhaustive clause inventory, **not complete normative certification**: 104 blocks
 have bounded semantic assertion evidence, 41 remain explicitly uncovered by this
@@ -126,3 +126,11 @@ the scalar-only control reuses. The durable output suite is 8 red/1 green. This 
 conservative unnecessary execution, not false reuse; supervisor classification is
 pending. Strict core compiler/type-aware lint pass, including documented type-only
 capture suppressions for the historical #156 scalar acceptance fixture.
+
+A focused TRK-5 guard assertion passes across eight independent processes: 0,
+empty string, false, null, undefined, NaN and negative zero each remain distinct
+consumed values despite identical falsey branch output. Rollback to zero reuses
+the original exact result. Only this new operation row was rerun (1pass/14skipped);
+the earlier six #155 red cases remain intentional. Core compiler and type-aware
+lint pass. This supplies concrete scalar guard-value coverage, not evidence that
+container truthiness was repaired.

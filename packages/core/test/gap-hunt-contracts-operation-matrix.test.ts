@@ -37,6 +37,25 @@ describe('gap hunt fresh-process consumer operation matrix', () => {
     } finally { rmSync(directory, { recursive: true, force: true }); }
   });
 
+  test('TRK-5 falsey guard values remain distinct consumption across restart despite equal branch output', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-falsey-'));
+    try {
+      const retained = join(directory, 'retained.sqlite');
+      const original = resolve(retained, 'flag-zero', 'falsey', 'zero');
+      let previous = original;
+      for (const variant of ['flag-empty', 'flag-false', 'flag-null', 'flag-undefined', 'flag-nan', 'flag-negative-zero']) {
+        const current = resolve(retained, variant, 'falsey', variant);
+        expect(current.value).toEqual({ value: 'falsey' });
+        expect(current.kind).toBe('published');
+        expect(current.reference).not.toEqual(previous.reference);
+        previous = current;
+      }
+      const restored = resolve(retained, 'flag-zero', 'falsey', 'rollback');
+      expect(restored.kind).toBe('reused');
+      expect(restored.reference).toEqual(original.reference);
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
   test('TRK-8 durable scalar branch replacement abandons old reads and detects newly active reads', () => {
     const directory = mkdtempSync(join(tmpdir(), 'microdelta-branches-'));
     try {

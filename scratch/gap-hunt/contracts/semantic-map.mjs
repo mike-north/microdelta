@@ -69,7 +69,9 @@ await assertion('importCapture', 'scratch/gap-hunt/contracts/transitive-capture-
 await assertion('ranking', 'packages/tracking/test/gap-hunt-contracts-invalidation.test.ts', 'TRK-5 ordered ranking changes with selected scores and ignores unselected member fields', 'Explicit ranked key sequence reads keys/scores only; changed selected score invalidates while changed unselected avatar fields compare equal.', 'tracking-results.log');
 await assertion('outputShape', 'packages/tracking/test/gap-hunt-contracts-output.test.ts', '$name', 'Eight current-shape rows establish selected output sensitivity to record order, missing/undefined, holes, inherited data and ownership, with equal-shape and equal-chain controls; unread sibling is outside the exact subtree request.', 'output-results.log');
 await assertion('concurrentReplay', 'packages/tracking/test/gap-hunt-contracts-async.test.ts', 'cached %s evidence replays into each concurrent consumer without leaking its peer leaves', 'Overlapping async frames replay one warmed success/failure derivation without reexecution, close one frame while its peer remains open, and retain exactly each frame own leaves plus shared evidence.', 'async-results.log');
+await assertion('falseyGuard', 'packages/core/test/gap-hunt-contracts-operation-matrix.test.ts', 'TRK-5 falsey guard values remain distinct consumption across restart despite equal branch output', 'Eight independent processes distinguish 0, empty string, false, null, undefined, NaN and negative zero as consumed guard facts despite identical falsey output, then roll back to original zero exact result.', 'falsey-guard-results.log');
 const blockEvidence = {
+ 'docs/spec/tracking.md:62': ['falseyGuard'],
  'docs/spec/tracking.md:70': ['ranking'],
  'docs/spec/glossary.md:75': ['leaf','calls'],
  'docs/spec/glossary.md:81': ['frames','restore','asyncFailure','lateHelper'],

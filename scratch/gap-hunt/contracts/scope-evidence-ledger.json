@@ -12136,7 +12136,7 @@
       "reason": "Current selected Tracking/Composition semantics or a glossary definition of delivered M5 capabilities; bounded assertion evidence does not discharge all prose.",
       "text": "| `if (obj.flag)` | Actual flag value | Merely its boolean coercion result | `0` to `''` changes value even though both are falsey |",
       "localBoundedAssertionIds": [
-        "optional"
+        "falseyGuard"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],

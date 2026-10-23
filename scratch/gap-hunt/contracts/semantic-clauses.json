@@ -233,7 +233,7 @@
     },
     "multiRebind": {
       "file": "packages/core/test/gap-hunt-contracts-operation-matrix.test.ts",
-      "line": 61,
+      "line": 80,
       "title": "TRK-6 historical path rebinds through two equal identities and detects both later leaf updates",
       "proves": "Five independent processes retain exact references across equal id replacement and publish on both subsequent current-leaf changes.",
       "executionLog": "scratch/gap-hunt/contracts/operation-matrix-results.log"
@@ -331,7 +331,7 @@
     },
     "durableBranches": {
       "file": "packages/core/test/gap-hunt-contracts-operation-matrix.test.ts",
-      "line": 40,
+      "line": 59,
       "title": "TRK-8 durable scalar branch replacement abandons old reads and detects newly active reads",
       "proves": "Five independent processes flip scalar-guard branch, reuse after abandoned leaf edit, publish after newly active leaf edit, and validate old exact result on rollback.",
       "executionLog": "scratch/gap-hunt/contracts/operation-matrix-results.log"
@@ -384,6 +384,13 @@
       "title": "cached %s evidence replays into each concurrent consumer without leaking its peer leaves",
       "proves": "Overlapping async frames replay one warmed success/failure derivation without reexecution, close one frame while its peer remains open, and retain exactly each frame own leaves plus shared evidence.",
       "executionLog": "scratch/gap-hunt/contracts/async-results.log"
+    },
+    "falseyGuard": {
+      "file": "packages/core/test/gap-hunt-contracts-operation-matrix.test.ts",
+      "line": 40,
+      "title": "TRK-5 falsey guard values remain distinct consumption across restart despite equal branch output",
+      "proves": "Eight independent processes distinguish 0, empty string, false, null, undefined, NaN and negative zero as consumed guard facts despite identical falsey output, then roll back to original zero exact result.",
+      "executionLog": "scratch/gap-hunt/contracts/falsey-guard-results.log"
     }
   },
   "blocks": [
@@ -2283,7 +2290,7 @@
       "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
-        "optional"
+        "falseyGuard"
       ],
       "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."

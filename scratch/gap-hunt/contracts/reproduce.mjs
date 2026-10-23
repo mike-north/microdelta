@@ -5,6 +5,7 @@ const cwd = fileURLToPath(new URL('../../../', import.meta.url));
 const suites = {
   '155': { workspace: 'microdelta', test: 'gap-hunt-contracts-container-guard', types: false },
   '156': { workspace: 'microdelta', test: 'gap-hunt-contracts-scalar-roots', types: true },
+  'falsey-guard': { workspace: 'microdelta', test: 'gap-hunt-contracts-operation-matrix', types: false, pattern: 'falsey guard values' },
   'operations': { workspace: 'microdelta', test: 'gap-hunt-contracts-operation-matrix', types: false },
   'edge': { workspace: 'microdelta', test: 'gap-hunt-contracts-edge-oracle', types: false },
   'durable-output-minimal': { workspace: 'microdelta', test: 'gap-hunt-contracts-output', types: false, pattern: 'scalar-only output|base → base' },

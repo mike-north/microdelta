@@ -1,0 +1,4 @@
+
+> @microdelta/workspace@0.0.0 build:examples
+> tsc -p examples/contribution-report/tsconfig.json
+

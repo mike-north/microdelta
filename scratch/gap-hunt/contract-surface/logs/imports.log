@@ -1,0 +1,4 @@
+
+> @microdelta/workspace@0.0.0 check:imports
+> eslint -c tooling/context-imports.config.mjs packages experiments examples --quiet
+

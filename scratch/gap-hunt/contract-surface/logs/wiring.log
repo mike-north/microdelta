@@ -1,0 +1,4 @@
+
+> @microdelta/workspace@0.0.0 check:wiring
+> node tooling/foundation-wiring.mjs
+

@@ -1,0 +1,16 @@
+✔ keyed-cold-and-restarted-report: cold, unchanged restart with zero member, assessment and report bodies, recover and check (517.4895ms)
+✔ nested-equal-output-cutoff then nested-changed-output: rubric B reruns assessments only; rubric C reruns Ben and the report (330.36825ms)
+✔ tracked-gate-instances: threshold 2 skips Cy and reruns only the report; threshold 1 again reuses the cold report (299.362333ms)
+✔ tracked-gate-instances: starting at threshold 2, threshold 1 runs only the newly required Cy and the report (257.524792ms)
+✔ recover after an interrupted strict report: a waiting fold executed no report, yet its members are recovered from the recovered discovery (203.545125ms)
+✔ strict-fold-open-discovery: open discovery leaves the report waiting; closing it again reuses the cold report (310.513458ms)
+✔ custom-key-correspondence: members keyed by upstream profile id correspond across a reordered restart (276.72875ms)
+✔ the example rejects an incomplete command line or an unknown option value with a usage message (532.355708ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2780.589625

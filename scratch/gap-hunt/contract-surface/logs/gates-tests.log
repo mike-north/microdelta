@@ -1,0 +1,42 @@
+✔ actual packages and fixture producers generate all release views and API reports (0.74975ms)
+✔ Store conformance subpaths use closed generated release tiers (2.938792ms)
+✔ external Store conformance consumers use the public package export (991.239792ms)
+✔ normal package consumers compose facade, History, and conformance types (3728.924417ms)
+✔ own untrimmed consumer sees internal exports but not unexported source (723.947791ms)
+✔ approved sibling uses only alpha declarations (732.179458ms)
+✔ normal external package resolution exposes public only (1524.713875ms)
+✔ separately selected beta package version exposes beta and public only (1128.497917ms)
+✔ legitimate runtime package imports resolve built JS without TS path rewriting (32.093333ms)
+✔ each actual package declaration view typechecks without hidden references (13509.646042ms)
+✔ each History release tier composes root and conformance callbacks (1521.761125ms)
+✔ History entry shims fail closed on wrong tier, missing canonical, and export drift (89.4495ms)
+✔ missing producer declarations and test-only source aliases fail explicitly (284.451125ms)
+✔ a missing Value alpha declaration fails for its declared package path (147.670917ms)
+✔ inherited paths and invented aliases cannot expose sibling source or untrimmed declarations (275.629833ms)
+✔ facade compiler maps each approved owner import, including both History entries, to its generated alpha declaration (0.988458ms)
+✔ generated Machine, Tracking, History, and Value declarations compile as portable consumers (363.944792ms)
+✔ types-empty consumers reject a deliberate Node declaration leak (335.338375ms)
+✔ real package configs reject wrong sibling tiers and forbidden context edges (306.335833ms)
+✔ a context may map only the alpha declaration closure of its approved producers (427.89375ms)
+✔ the executable example maps only installed generated alpha declarations (591.324166ms)
+✔ Materialization package aliases through workspace node_modules remain pinned to generated tiers (427.03ms)
+✔ unknown package compiler config fails closed (140.902292ms)
+✔ clean CI reaches build, declaration, import, lint, and consumer gates (4.8685ms)
+✔ the declaration checker accepts the generated alpha package path needed by external rollups (296.609834ms)
+✔ Value package build, checks, declaration views, and package order are required (4.46825ms)
+✔ the executable example is built, checked, linted and run by the aggregate gates (1.779958ms)
+✔ skipping an import, declaration, or API report checker is detected (6.629167ms)
+✔ the release workflow audit and first-party graph check are required checks (1.794166ms)
+✔ unprocessed public rollup reproduces the missing alpha dependency failure (1707.395708ms)
+✔ public consumer compiles while the generated alpha contract remains hidden (1132.586583ms)
+✔ alpha consumers retain canonical record and callable brand assignability in both directions (580.943209ms)
+✔ used named, default, namespace, unique-symbol, and value-query imports remain (165.346916ms)
+✔ side-effect and import-equals declarations fail closed without rewriting (293.870791ms)
+ℹ tests 34
+ℹ suites 0
+ℹ pass 34
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 27455.551709

@@ -391,6 +391,13 @@
       "title": "TRK-5 falsey guard values remain distinct consumption across restart despite equal branch output",
       "proves": "Eight independent processes distinguish 0, empty string, false, null, undefined, NaN and negative zero as consumed guard facts despite identical falsey output, then roll back to original zero exact result.",
       "executionLog": "scratch/gap-hunt/contracts/falsey-guard-results.log"
+    },
+    "multihopCurrent": {
+      "file": "packages/core/test/gap-hunt-contracts-multihop.test.ts",
+      "line": 49,
+      "title": "equal-output rebinding refreshes earlier-child forwarding and derived subjects without rewriting original provenance",
+      "proves": "Eight processes follow source-to-normalize-to-score earlier-child forwarded origins plus transformed derived subject through equal-output cutoff, later new names/score changes, unread edits and rollback; exact current acceptance dependencies change without rewriting original parent dependencies; two cold stores agree.",
+      "executionLog": "scratch/gap-hunt/contracts/multihop-results.log"
     }
   },
   "blocks": [
@@ -572,7 +579,8 @@
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "nested",
-        "currentArguments"
+        "currentArguments",
+        "multihopCurrent"
       ],
       "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
@@ -585,7 +593,8 @@
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "justification",
-        "currentArguments"
+        "currentArguments",
+        "multihopCurrent"
       ],
       "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
@@ -618,7 +627,8 @@
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "justification",
-        "currentArguments"
+        "currentArguments",
+        "multihopCurrent"
       ],
       "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
@@ -631,7 +641,8 @@
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "justification",
-        "currentArguments"
+        "currentArguments",
+        "multihopCurrent"
       ],
       "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
@@ -657,7 +668,8 @@
       "executedAssertionIds": [
         "currentArguments",
         "argumentMiss",
-        "nested"
+        "nested",
+        "multihopCurrent"
       ],
       "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
@@ -1154,7 +1166,8 @@
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "nested",
-        "currentArguments"
+        "currentArguments",
+        "multihopCurrent"
       ],
       "otherOwnerEvidence": {
         "branch": "gap-hunt-durability",

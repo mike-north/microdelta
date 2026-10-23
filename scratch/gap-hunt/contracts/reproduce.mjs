@@ -13,6 +13,7 @@ const suites = {
   'output': { workspace: '@microdelta/tracking', test: 'gap-hunt-contracts-output', types: false },
   'intrinsic': { workspace: '@microdelta/tracking', test: 'gap-hunt-contracts-intrinsic-presence', types: false },
   'async': { workspace: '@microdelta/tracking', test: 'gap-hunt-contracts-async', types: false },
+  'multihop': { workspace: 'microdelta', test: 'gap-hunt-contracts-multihop', types: false },
   'nested': { workspace: 'microdelta', test: 'gap-hunt-contracts-nested-current', types: false },
   'capture-lint': { probe: 'transitive-capture-lint-probe.mjs' },
 };

@@ -3,7 +3,7 @@
 Implementer: Codex worker (gpt-6.1-sol), operating for Mike North.
 
 `semantic-clauses.json` retains all 178 non-code paragraph/table blocks of
-`tracking.md`, `composition.md`, and `glossary.md`. Fifty-five named assertion anchors
+`tracking.md`, `composition.md`, and `glossary.md`. Fifty-six named assertion anchors
 record the concrete behavior they establish and the actual execution log. This is
 an exhaustive clause inventory, **not complete normative certification**: 104 blocks
 have bounded semantic assertion evidence, 41 remain explicitly uncovered by this
@@ -134,3 +134,12 @@ the original exact result. Only this new operation row was rerun (1pass/14skippe
 the earlier six #155 red cases remain intentional. Core compiler and type-aware
 lint pass. This supplies concrete scalar guard-value coverage, not evidence that
 container truthiness was repaired.
+
+The multi-hop current-argument scenario passes across eight independent processes
+and three stores. Earlier-child forwarded paths and a transformed derived subject
+follow current bindings through equal-output cutoff, later name/score changes,
+unread edits and rollback. Current acceptance dependencies update while original
+parent dependencies remain immutable; independent cold Eve/Grace stores agree.
+`MULTIHOP-CURRENT-ARGUMENTS.md` enumerates exact assertions and residual variations.
+No new false reuse or owner design question was found. The owner's Linux report
+covers43444bb only; these new assertions have local Node24.22.1 execution evidence.

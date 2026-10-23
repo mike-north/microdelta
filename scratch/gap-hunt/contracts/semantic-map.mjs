@@ -70,6 +70,7 @@ await assertion('ranking', 'packages/tracking/test/gap-hunt-contracts-invalidati
 await assertion('outputShape', 'packages/tracking/test/gap-hunt-contracts-output.test.ts', '$name', 'Eight current-shape rows establish selected output sensitivity to record order, missing/undefined, holes, inherited data and ownership, with equal-shape and equal-chain controls; unread sibling is outside the exact subtree request.', 'output-results.log');
 await assertion('concurrentReplay', 'packages/tracking/test/gap-hunt-contracts-async.test.ts', 'cached %s evidence replays into each concurrent consumer without leaking its peer leaves', 'Overlapping async frames replay one warmed success/failure derivation without reexecution, close one frame while its peer remains open, and retain exactly each frame own leaves plus shared evidence.', 'async-results.log');
 await assertion('falseyGuard', 'packages/core/test/gap-hunt-contracts-operation-matrix.test.ts', 'TRK-5 falsey guard values remain distinct consumption across restart despite equal branch output', 'Eight independent processes distinguish 0, empty string, false, null, undefined, NaN and negative zero as consumed guard facts despite identical falsey output, then roll back to original zero exact result.', 'falsey-guard-results.log');
+await assertion('multihopCurrent', 'packages/core/test/gap-hunt-contracts-multihop.test.ts', 'equal-output rebinding refreshes earlier-child forwarding and derived subjects without rewriting original provenance', 'Eight processes follow source-to-normalize-to-score earlier-child forwarded origins plus transformed derived subject through equal-output cutoff, later new names/score changes, unread edits and rollback; exact current acceptance dependencies change without rewriting original parent dependencies; two cold stores agree.', 'multihop-results.log');
 const blockEvidence = {
  'docs/spec/tracking.md:62': ['falseyGuard'],
  'docs/spec/tracking.md:70': ['ranking'],
@@ -82,11 +83,11 @@ const blockEvidence = {
  'docs/spec/composition.md:51': ['topology','memberBinding','keyed'],
  'docs/spec/composition.md:82': ['supplied','slotMissing','slotAmbiguous'],
  'docs/spec/composition.md:90': ['keyed'],
- 'docs/spec/composition.md:104': ['justification','currentArguments'],
- 'docs/spec/composition.md:110': ['justification','currentArguments'],
- 'docs/spec/composition.md:111': ['justification','currentArguments'],
+ 'docs/spec/composition.md:104': ['justification','currentArguments','multihopCurrent'],
+ 'docs/spec/composition.md:110': ['justification','currentArguments','multihopCurrent'],
+ 'docs/spec/composition.md:111': ['justification','currentArguments','multihopCurrent'],
  'docs/spec/composition.md:112': ['argumentMiss'],
- 'docs/spec/composition.md:114': ['currentArguments','argumentMiss','nested'],
+ 'docs/spec/composition.md:114': ['currentArguments','argumentMiss','nested','multihopCurrent'],
  'docs/spec/composition.md:137': ['fold','coverage','empty','gates'],
  'docs/spec/composition.md:175': ['supplied'],
  'docs/spec/composition.md:176': ['keyed'],
@@ -115,7 +116,7 @@ const ownerEvidence = {
  'COL-1':['keyed'], 'COL-2':['projection'], 'COL-3':['order','keyed'], 'COL-4':['keyed','gates'],
  'CMP-1':['topology','rejectGraph'], 'CMP-2':['branches','gates'], 'CMP-3':['supplied'],
  'CMP-4':['topology','keyed'], 'CMP-5':['nested'], 'CMP-6':['supplied','keyed'],
- 'CMP-7':['nested','currentArguments'], 'CMP-8':['gates','fold','coverage','empty'], 'CMP-9':['rejectGraph'],
+ 'CMP-7':['nested','currentArguments','multihopCurrent'], 'CMP-8':['gates','fold','coverage','empty'], 'CMP-9':['rejectGraph'],
 };
 // Explicitly map row semantics, rather than pretending owner references prove each row.
 const rowEvidence = [

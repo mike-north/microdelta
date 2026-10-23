@@ -815,7 +815,8 @@
       "text": "**CMP-7 — Arguments.** Forwarded current bindings can be resolved directly.",
       "localBoundedAssertionIds": [
         "nested",
-        "currentArguments"
+        "currentArguments",
+        "multihopCurrent"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -830,7 +831,8 @@
       "text": "A stored derived argument is usable only with sufficient supporting evidence that it still applies, including governing tracked inputs and implementation.",
       "localBoundedAssertionIds": [
         "nested",
-        "currentArguments"
+        "currentArguments",
+        "multihopCurrent"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -845,7 +847,8 @@
       "text": "If a current child invocation cannot be reconstructed without executing the skipped parent's body, report an ordinary parent miss and execute normally when admitted; children may still reuse.",
       "localBoundedAssertionIds": [
         "nested",
-        "currentArguments"
+        "currentArguments",
+        "multihopCurrent"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -860,7 +863,8 @@
       "text": "Never execute paid work merely to discover whether that same work was necessary and label it cache validation.",
       "localBoundedAssertionIds": [
         "nested",
-        "currentArguments"
+        "currentArguments",
+        "multihopCurrent"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -875,7 +879,8 @@
       "text": "Do not promise serialized closures.",
       "localBoundedAssertionIds": [
         "nested",
-        "currentArguments"
+        "currentArguments",
+        "multihopCurrent"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -890,7 +895,8 @@
       "text": "**EXP-4 argument recipe:** a nested call's durable evidence records its structural parent and child slots, its position in the parent's call order and one recipe per argument (the M3 empty form remains valid):",
       "localBoundedAssertionIds": [
         "justification",
-        "currentArguments"
+        "currentArguments",
+        "multihopCurrent"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -929,7 +935,8 @@
       "text": "| `forwarded` | Structural origin: an input path, the member binding, or an earlier child call's output path, and whether its path was justified | Used only when recorded as justified; resolved again from **current** bindings; a stored value is never substituted |",
       "localBoundedAssertionIds": [
         "justification",
-        "currentArguments"
+        "currentArguments",
+        "multihopCurrent"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -944,7 +951,8 @@
       "text": "| `derived` | Canonical supported value, and whether it was justified | Used only when recorded as justified and every earlier validation step passed |",
       "localBoundedAssertionIds": [
         "justification",
-        "currentArguments"
+        "currentArguments",
+        "multihopCurrent"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -974,7 +982,8 @@
       "localBoundedAssertionIds": [
         "currentArguments",
         "argumentMiss",
-        "nested"
+        "nested",
+        "multihopCurrent"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -990,7 +999,8 @@
       "localBoundedAssertionIds": [
         "currentArguments",
         "argumentMiss",
-        "nested"
+        "nested",
+        "multihopCurrent"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -1006,7 +1016,8 @@
       "localBoundedAssertionIds": [
         "currentArguments",
         "argumentMiss",
-        "nested"
+        "nested",
+        "multihopCurrent"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -1022,7 +1033,8 @@
       "localBoundedAssertionIds": [
         "currentArguments",
         "argumentMiss",
-        "nested"
+        "nested",
+        "multihopCurrent"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -1038,7 +1050,8 @@
       "localBoundedAssertionIds": [
         "currentArguments",
         "argumentMiss",
-        "nested"
+        "nested",
+        "multihopCurrent"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -1054,7 +1067,8 @@
       "localBoundedAssertionIds": [
         "currentArguments",
         "argumentMiss",
-        "nested"
+        "nested",
+        "multihopCurrent"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -1070,7 +1084,8 @@
       "localBoundedAssertionIds": [
         "currentArguments",
         "argumentMiss",
-        "nested"
+        "nested",
+        "multihopCurrent"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -3017,7 +3032,8 @@
       "text": "| **Argument recipe** | The durable description of how a nested call's argument is reconstructed: `forwarded` from a current binding, `derived` as a recorded value justified by the parent's validated prefix, or `unreconstructible` (always an honest parent miss). It is evidence for validation, not a serialized closure. | Definition & Binding records the call relationship; Reuse Resolution validates it; [CMP-7](composition.md), [REUSE-006/007](execution.md) |",
       "localBoundedAssertionIds": [
         "nested",
-        "currentArguments"
+        "currentArguments",
+        "multihopCurrent"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [

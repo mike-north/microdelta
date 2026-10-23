@@ -1,0 +1,15 @@
+// PROPOSED ONLY — unsupported design fixture, not compiled.
+import { analysis, memo } from 'microdelta';
+
+interface IPullRequest {
+  readonly id: string;
+  readonly title: string;
+  readonly labels: readonly string[];
+}
+
+export const assessment = analysis<{ readonly pr: IPullRequest }>((input) =>
+  memo({
+    name: 'assessment',
+    from: { pr: input.pr },
+    run: ({ pr }) => pr.title.length,
+  }));

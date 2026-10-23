@@ -2,7 +2,7 @@
 
 Implementer: Codex worker (gpt-6.1-sol), operating for Mike North.
 
-Status: confirmed conservative forced execution; supervisor classification pending.
+Status: confirmed conservative forced execution; supervisor requested independent reproduction before classification.
 No false value/reuse or lost history is claimed. No production change is included.
 
 A memo returning `{ value: inputs.config.selected }` correctly records MDS1
@@ -57,12 +57,29 @@ node scratch/gap-hunt/contracts/reproduce.mjs durable-output
 
 The script installs pinned dependencies and builds declarations before compiling
 and running the fixture. Current result: **8 red/1 green**. The component suite
-is `reproduce.mjs output` and passes8/8. The script's new durable-output mode has
-not itself been run through installation again; the exact underlying compile/Jest
-command was executed, and core strict compiler/type-aware lint both pass.
+is `reproduce.mjs output` and passes8/8. The minimal selector was exercised through a complete npm ci/build run and
+returned 1 red/1 green/7 skipped; its log is `portable-output-minimal-results.log`.
+The broader selector's exact compile/Jest command was also executed, and core
+strict compiler/type-aware lint both pass. This was the current worktree, not an
+independently created clean clone.
 
 `durable-output-results.log` records the red assertions;
 `durable-output-misses.log` records exact observations and miss reasons from three
 independent processes. The matrix uses eight warm/cold transitions plus a scalar
 control. Early expected failures prevent some rollback processes; do not claim all
 planned subprocesses or all assertions executed successfully.
+
+Minimal independent focus (identical supported input plus scalar-only control):
+
+```sh
+node scratch/gap-hunt/contracts/reproduce.mjs durable-output-minimal
+```
+
+The fixture is present at `2dfbd41` on `gap-hunt-contracts`; the minimal selector
+is added in the following commit. Expect one red output assertion, one green
+scalar control and seven skipped transition rows. Both bodies return newly made
+ordinary record roots. The difference is a returned tracked subtree versus a
+selected scalar field. No JavaScript reference-identity equality is required:
+MDS1 transport bytes are equal and the same stable declared subject is eligible
+for current verification. Exact-result reference equality is asserted only as
+evidence that historical reuse actually occurred.

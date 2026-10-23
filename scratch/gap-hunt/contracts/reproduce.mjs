@@ -7,6 +7,7 @@ const suites = {
   '156': { workspace: 'microdelta', test: 'gap-hunt-contracts-scalar-roots', types: true },
   'operations': { workspace: 'microdelta', test: 'gap-hunt-contracts-operation-matrix', types: false },
   'edge': { workspace: 'microdelta', test: 'gap-hunt-contracts-edge-oracle', types: false },
+  'durable-output-minimal': { workspace: 'microdelta', test: 'gap-hunt-contracts-output', types: false, pattern: 'scalar-only output|base → base' },
   'durable-output': { workspace: 'microdelta', test: 'gap-hunt-contracts-output', types: false },
   'output': { workspace: '@microdelta/tracking', test: 'gap-hunt-contracts-output', types: false },
   'intrinsic': { workspace: '@microdelta/tracking', test: 'gap-hunt-contracts-intrinsic-presence', types: false },
@@ -33,4 +34,4 @@ if (selected.types) {
   const status = run('npm', ['run', 'test:types', '--workspace', selected.workspace]);
   if (status !== 0) process.exit(status);
 }
-process.exit(run('npm', ['run', 'test:unit', '--workspace', selected.workspace, '--', '--runTestsByPath', `.test-build/test/${selected.test}.test.js`]));
+process.exit(run('npm', ['run', 'test:unit', '--workspace', selected.workspace, '--', '--runTestsByPath', `.test-build/test/${selected.test}.test.js`, ...('pattern' in selected ? ['--testNamePattern', selected.pattern] : [])]));

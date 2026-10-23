@@ -1,0 +1,42 @@
+{
+  "mode": "cold",
+  "expected": 1,
+  "result": {
+    "kind": "reused",
+    "data": 1,
+    "reference": {
+      "kind": "completed-result",
+      "locator": "mdh1|[\"occurrence-proof\",\"occurrence:proof\",\"test\",1]"
+    }
+  },
+  "events": [
+    {
+      "kind": "step",
+      "runId": "run:0f2762658f8ddef1432e09490c361452",
+      "event": {
+        "step": {
+          "scope": "occurrence:proof",
+          "role": "step",
+          "slot": "a"
+        },
+        "phase": "verify"
+      }
+    },
+    {
+      "kind": "step",
+      "runId": "run:0f2762658f8ddef1432e09490c361452",
+      "event": {
+        "step": {
+          "scope": "occurrence:proof",
+          "role": "step",
+          "slot": "a"
+        },
+        "phase": "accept",
+        "reference": {
+          "kind": "completed-result",
+          "locator": "mdh1|[\"occurrence-proof\",\"occurrence:proof\",\"test\",1]"
+        }
+      }
+    }
+  ]
+}

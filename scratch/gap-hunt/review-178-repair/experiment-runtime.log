@@ -1,0 +1,9 @@
+(node:46538) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+Test Suites: 3 passed, 3 total
+Tests:       18 passed, 18 total
+Snapshots:   0 total
+Time:        2.962 s
+Ran all test suites.
+Test results written to: scratch/gap-hunt/review-178-repair/experiment-runtime.json

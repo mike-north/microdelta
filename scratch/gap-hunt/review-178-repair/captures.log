@@ -1,0 +1,822 @@
+✔ experimental memo flags a mutable external capture in an actual author module (980.3465ms)
+✔ an imported alias of the real constructor keeps the same capture boundary (17.488958ms)
+✔ selected callback parameters pass, and a same-named local function has no constructor authority (31.009208ms)
+✖ alpha consumer resolves real generated Tracking, Materialization, Value, and producer declarations (248.092208ms)
+✖ typed capture fixture accepts branded influences and flags each documented negative (323.912958ms)
+✔ typed capture checking fails closed when parser services have no TypeScript program (1.988375ms)
+✔ shadowed Math methods do not inherit global builtin authority (16.951958ms)
+✔ immutable language globals are allowed while callback-local shadows remain captures (8.120667ms)
+✔ callback receiver access is diagnosed as outside the supported capture syntax (7.754916ms)
+✔ nested callback receivers remain unsupported without leaking into sibling callbacks (7.656ms)
+✔ literal-computed canonical observer boundaries are diagnosed as unsupported syntax (5.615791ms)
+✔ canonical snapshot and Materialization observation receivers are allowed with branded inputs (15.654042ms)
+✔ Materialization lazy scalar views preserve Tracking brands while detached outputs do not (8.13625ms)
+✔ same-spelled fake Materialization methods do not grant receiver authority (11.983791ms)
+✔ Materialization receiver authority does not cover unrelated methods or unbranded arguments (16.020041ms)
+✔ Tracking source programs retain capture checks when the separate ITracking declaration is present (277.949166ms)
+✔ an unresolved Materialization receiver has no capability authority without its owner declaration (10.417583ms)
+✖ alpha consumer resolves the real generated Definition declaration (481.101ms)
+✖ Definition capture fixture accepts the M3 authoring shape and flags each documented negative (21.704ms)
+✔ Definition source and memo callbacks are capture boundaries for raw external influences (25.922458ms)
+✔ Definition callback parameters, tracked captures and canonical handles are accepted (16.564834ms)
+✔ unsupported Definition callback forms are diagnosed at the declaration boundary (14.113875ms)
+✔ receiver access inside a Definition callback is unsupported (7.754375ms)
+✔ same-spelled non-Definition APIs are not boundaries and forged handle brands are not capabilities (11.146208ms)
+✔ Definition receivers are not whitelisted as a family inside capture boundaries (10.827542ms)
+✔ type-only references inside a callback are not external influences, while value uses still are (11.460333ms)
+✔ supplied step run callbacks are capture boundaries (EXP-4 CX-2) (11.692333ms)
+✔ template member-builder run and finality callbacks are capture boundaries (15.437625ms)
+✔ template gate and custom key callbacks are capture boundaries (16.098042ms)
+✔ fold run callbacks are capture boundaries (15.977084ms)
+✔ unsupported callback forms at the new boundaries are diagnosed (22.107083ms)
+✔ Definition's canonical forward is a capability inside a callback; a look-alike is an external influence (14.532375ms)
+✔ Tracking's observed untracked read and its justification query are observer capabilities (6.983709ms)
+✔ only a receiver that resolves to Definition's canonical forward is a capability; a value annotated IForward is not (15.39375ms)
+✔ forward is accepted only through an unreassigned const that traces to a canonical builder factory call (16.313125ms)
+✔ the facade's authoring() builders are canonical factories too (17.459625ms)
+✔ forward receivers that only claim the IDeclarations type are external influences (19.014584ms)
+ℹ tests 37
+ℹ suites 0
+ℹ pass 33
+ℹ fail 4
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2347.487167
+
+✖ failing tests:
+
+test at tooling/tracked-captures.test.mjs:17:1
+✖ alpha consumer resolves real generated Tracking, Materialization, Value, and producer declarations (248.092208ms)
+  AssertionError [ERR_ASSERTION]: /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es5.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2015.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2016.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2017.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2018.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2019.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2020.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2021.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2022.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2015.core.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2015.collection.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2015.generator.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2015.iterable.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2015.promise.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2015.proxy.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2015.reflect.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2015.symbol.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2015.symbol.wellknown.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2016.array.include.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2016.intl.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2017.arraybuffer.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2017.date.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2017.object.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2017.sharedmemory.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2017.string.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2017.intl.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2017.typedarrays.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2018.asyncgenerator.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2018.asynciterable.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2018.intl.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2018.promise.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2018.regexp.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2019.array.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2019.object.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2019.string.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2019.symbol.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2019.intl.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2020.bigint.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2020.date.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2020.promise.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2020.sharedmemory.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2020.string.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2020.symbol.wellknown.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2020.intl.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2020.number.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2021.promise.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2021.string.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2021.weakref.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2021.intl.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2022.array.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2022.error.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2022.intl.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2022.object.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2022.string.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.es2022.regexp.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.decorators.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/typescript/lib/lib.decorators.legacy.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/packages/definition/dist/api/definition.alpha.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/packages/tracking/dist/api/tracking.alpha.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/fixtures/declarations/consumer-alpha/src/definition-binding.fixture.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/fixtures/declarations/consumer-alpha/src/definition-captures.fixture.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/packages/history/dist/api/history.shared.alpha.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/packages/history/dist/api/history.alpha.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/packages/resolution/dist/api/resolution.alpha.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/packages/supervision/dist/api/supervision.alpha.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/packages/core/dist/api/microdelta.alpha.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/fixtures/declarations/consumer-alpha/src/keyed-authoring.fixture.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/packages/materialization/dist/api/materialization.alpha.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/fixtures/declarations/consumer-alpha/src/tracked-captures.fixture.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/packages/value/dist/api/value.alpha.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/fixtures/declarations/consumer-alpha/src/value-projection.fixture.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/fixtures/declarations/consumer-alpha/src/workspace-authoring.fixture.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/compatibility/disposable.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/compatibility/indexable.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/compatibility/iterators.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/compatibility/index.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/globals.typedarray.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/buffer.buffer.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/globals.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/web-globals/abortcontroller.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/web-globals/domexception.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/web-globals/events.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/buffer/index.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/header.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/readable.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/file.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/fetch.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/formdata.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/connector.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/client.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/errors.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/dispatcher.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/global-dispatcher.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/global-origin.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/pool-stats.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/pool.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/handlers.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/balanced-pool.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/agent.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/mock-interceptor.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/mock-agent.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/mock-client.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/mock-pool.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/mock-errors.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/proxy-agent.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/env-http-proxy-agent.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/retry-handler.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/retry-agent.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/api.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/interceptors.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/util.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/cookies.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/patch.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/websocket.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/eventsource.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/filereader.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/diagnostics-channel.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/content-type.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/cache.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/undici-types/index.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/web-globals/fetch.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/assert.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/assert/strict.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/async_hooks.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/buffer.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/child_process.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/cluster.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/console.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/constants.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/crypto.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/dgram.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/diagnostics_channel.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/dns.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/dns/promises.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/domain.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/events.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/fs.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/fs/promises.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/http.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/http2.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/https.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/inspector.generated.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/module.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/net.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/os.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/path.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/perf_hooks.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/process.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/punycode.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/querystring.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/readline.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/readline/promises.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/repl.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/sea.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/stream.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/stream/promises.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/stream/consumers.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/stream/web.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/string_decoder.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/test.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/timers.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/timers/promises.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/tls.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/trace_events.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/tty.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/url.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/util.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/v8.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/vm.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/wasi.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/worker_threads.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/zlib.d.ts
+  /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/node_modules/@types/node/index.d.ts
+      at TestContext.<anonymous> (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/tooling/tracked-captures.test.mjs:26:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at tooling/tracked-captures.test.mjs:30:1
+✖ typed capture fixture accepts branded influences and flags each documented negative (323.912958ms)
+  AssertionError [ERR_ASSERTION]: [
+    {
+      "ruleId": "@typescript-eslint/no-unsafe-assignment",
+      "severity": 2,
+      "message": "Unsafe assignment of an error typed value.",
+      "line": 10,
+      "column": 7,
+      "messageId": "anyAssignment",
+      "endLine": 14,
+      "endColumn": 25
+    },
+    {
+      "ruleId": "@typescript-eslint/no-unsafe-member-access",
+      "severity": 2,
+      "message": "Unsafe member access .input on a type that cannot be resolved.",
+      "line": 14,
+      "column": 20,
+      "messageId": "errorMemberExpression",
+      "endLine": 14,
+      "endColumn": 25
+    },
+    {
+      "ruleId": "@typescript-eslint/no-unsafe-assignment",
+      "severity": 2,
+      "message": "Unsafe assignment of an error typed value.",
+      "line": 16,
+      "column": 7,
+      "messageId": "anyAssignment",
+      "endLine": 16,
+      "endColumn": 89
+    },
+    {
+      "ruleId": "@typescript-eslint/no-unsafe-member-access",
+      "severity": 2,
+      "message": "Unsafe member access .isEnabled on a type that cannot be resolved.",
+      "line": 16,
+      "column": 80,
+      "messageId": "errorMemberExpression",
+      "endLine": 16,
+      "endColumn": 89
+    },
+    {
+      "ruleId": "@typescript-eslint/no-unsafe-assignment",
+      "severity": 2,
+      "message": "Unsafe assignment of an error typed value.",
+      "line": 29,
+      "column": 7,
+      "messageId": "anyAssignment",
+      "endLine": 29,
+      "endColumn": 42
+    },
+    {
+      "ruleId": "@typescript-eslint/no-unsafe-member-access",
+      "severity": 2,
+      "message": "Unsafe member access .input on a type that cannot be resolved.",
+      "line": 29,
+      "column": 37,
+      "messageId": "errorMemberExpression",
+      "endLine": 29,
+      "endColumn": 42
+    },
+    {
+      "ruleId": "@typescript-eslint/no-unsafe-assignment",
+      "severity": 2,
+      "message": "Unsafe assignment of an error typed value.",
+      "line": 30,
+      "column": 7,
+      "messageId": "anyAssignment",
+      "endLine": 30,
+      "endColumn": 49
+    },
+    {
+      "ruleId": "@typescript-eslint/no-unsafe-member-access",
+      "severity": 2,
+      "message": "Unsafe member access .isEnabled on a type that cannot be resolved.",
+      "line": 30,
+      "column": 40,
+      "messageId": "errorMemberExpression",
+      "endLine": 30,
+      "endColumn": 49
+    },
+    {
+      "ruleId": "@typescript-eslint/no-unsafe-return",
+      "severity": 2,
+      "message": "Unsafe return of a value of type error.",
+      "line": 45,
+      "column": 24,
+      "messageId": "unsafeReturn",
+      "endLine": 45,
+      "endColumn": 76
+    },
+    {
+      "ruleId": "microdelta/tracked-captures",
+      "severity": 2,
+      "message": "External influence 'importedInput' is not a tracked value or approved deterministic capability.",
+      "line": 45,
+      "column": 24,
+      "messageId": "capture",
+      "endLine": 45,
+      "endColumn": 37
+    },
+    {
+      "ruleId": "@typescript-eslint/no-unsafe-member-access",
+      "severity": 2,
+      "message": "Unsafe member access .enabled on a type that cannot be resolved.",
+      "line": 45,
+      "column": 38,
+      "messageId": "errorMemberExpression",
+      "endLine": 45,
+      "endColumn": 45
+    },
+    {
+      "ruleId": "microdelta/tracked-captures",
+      "severity": 2,
+      "message": "External influence 'importedInput' is not a tracked value or approved deterministic capability.",
+      "line": 45,
+      "column": 49,
+      "messageId": "capture",
+      "endLine": 45,
+      "endColumn": 62
+    },
+    {
+      "ruleId": "@typescript-eslint/no-unsafe-member-access",
+      "severity": 2,
+      "message": "Unsafe member access .rows on a type that cannot be resolved.",
+      "line": 45,
+      "column": 63,
+      "messageId": "errorMemberExpression",
+      "endLine": 45,
+      "endColumn": 67
+    },
+    {
+      "ruleId": "@typescript-eslint/no-unsafe-return",
+      "severity": 2,
+      "message": "Unsafe return of a value of type error.",
+      "line": 46,
+      "column": 24,
+      "messageId": "unsafeReturn",
+      "endLine": 46,
+      "endColumn": 63
+    },
+    {
+      "ruleId": "@typescript-eslint/no-unsafe-call",
+      "severity": 2,
+      "message": "Unsafe call of a type that could not be resolved.",
+      "line": 46,
+      "column": 24,
+      "messageId": "errorCall",
+      "endLine": 46,
+      "endColumn": 40
+    },
+    {
+      "ruleId": "microdelta/tracked-captures",
+      "severity": 2,
+      "message": "External influence 'importedCallable' is not a tracked value or approved deterministic capability.",
+      "line": 46,
+      "column": 24,
+      "messageId": "capture",
+      "endLine": 46,
+      "endColumn": 40
+    },
+    {
+      "ruleId": "microdelta/tracked-captures",
+      "severity": 2,
+      "message": "External influence 'importedInput' is not a tracked value or approved deterministic capability.",
+      "line": 46,
+      "column": 41,
+      "messageId": "capture",
+      "endLine": 46,
+      "endColumn": 54
+    },
+    {
+      "ruleId": "@typescript-eslint/no-unsafe-member-access",
+      "severity": 2,
+      "message": "Unsafe member access .enabled on a type that cannot be resolved.",
+      "line": 46,
+      "column": 55,
+      "messageId": "errorMemberExpression",
+      "endLine": 46,
+      "endColumn": 62
+    },
+    {
+      "ruleId": "@typescript-eslint/no-unsafe-return",
+      "severity": 2,
+      "message": "Unsafe return of a value of type error.",
+      "line": 60,
+      "column": 24,
+      "messageId": "unsafeReturn",
+      "endLine": 60,
+      "endColumn": 36
+    },
+    {
+      "ruleId": "@typescript-eslint/no-unsafe-member-access",
+      "severity": 2,
+      "message": "Unsafe member access .value on a type that cannot be resolved.",
+      "line": 60,
+      "column": 31,
+      "messageId": "errorMemberExpression",
+      "endLine": 60,
+      "endColumn": 36
+    },
+    {
+      "ruleId": "@typescript-eslint/no-unsafe-return",
+      "severity": 2,
+      "message": "Unsafe return of a value of type error.",
+      "line": 108,
+      "column": 24,
+      "messageId": "unsafeReturn",
+      "endLine": 108,
+      "endColumn": 51
+    },
+    {
+      "ruleId": "@typescript-eslint/no-unsafe-member-access",
+      "severity": 2,
+      "message": "Unsafe member access .input on a type that cannot be resolved.",
+      "line": 108,
+      "column": 38,
+      "messageId": "errorMemberExpression",
+      "endLine": 108,
+      "endColumn": 43
+    }
+  ]
+  + actual - expected
+  
+  + [
+  +   {
+  +     column: 7,
+  +     endColumn: 25,
+  +     endLine: 14,
+  +     line: 10,
+  +     message: 'Unsafe assignment of an error typed value.',
+  +     messageId: 'anyAssignment',
+  +     ruleId: '@typescript-eslint/no-unsafe-assignment',
+  +     severity: 2
+  +   },
+  +   {
+  +     column: 20,
+  +     endColumn: 25,
+  +     endLine: 14,
+  +     line: 14,
+  +     message: 'Unsafe member access .input on a type that cannot be resolved.',
+  +     messageId: 'errorMemberExpression',
+  +     ruleId: '@typescript-eslint/no-unsafe-member-access',
+  +     severity: 2
+  +   },
+  +   {
+  +     column: 7,
+  +     endColumn: 89,
+  +     endLine: 16,
+  +     line: 16,
+  +     message: 'Unsafe assignment of an error typed value.',
+  +     messageId: 'anyAssignment',
+  +     ruleId: '@typescript-eslint/no-unsafe-assignment',
+  +     severity: 2
+  +   },
+  +   {
+  +     column: 80,
+  +     endColumn: 89,
+  +     endLine: 16,
+  +     line: 16,
+  +     message: 'Unsafe member access .isEnabled on a type that cannot be resolved.',
+  +     messageId: 'errorMemberExpression',
+  +     ruleId: '@typescript-eslint/no-unsafe-member-access',
+  +     severity: 2
+  +   },
+  +   {
+  +     column: 7,
+  +     endColumn: 42,
+  +     endLine: 29,
+  +     line: 29,
+  +     message: 'Unsafe assignment of an error typed value.',
+  +     messageId: 'anyAssignment',
+  +     ruleId: '@typescript-eslint/no-unsafe-assignment',
+  +     severity: 2
+  +   },
+  +   {
+  +     column: 37,
+  +     endColumn: 42,
+  +     endLine: 29,
+  +     line: 29,
+  +     message: 'Unsafe member access .input on a type that cannot be resolved.',
+  +     messageId: 'errorMemberExpression',
+  +     ruleId: '@typescript-eslint/no-unsafe-member-access',
+  +     severity: 2
+  +   },
+  +   {
+  +     column: 7,
+  +     endColumn: 49,
+  +     endLine: 30,
+  +     line: 30,
+  +     message: 'Unsafe assignment of an error typed value.',
+  +     messageId: 'anyAssignment',
+  +     ruleId: '@typescript-eslint/no-unsafe-assignment',
+  +     severity: 2
+  +   },
+  +   {
+  +     column: 40,
+  +     endColumn: 49,
+  +     endLine: 30,
+  +     line: 30,
+  +     message: 'Unsafe member access .isEnabled on a type that cannot be resolved.',
+  +     messageId: 'errorMemberExpression',
+  +     ruleId: '@typescript-eslint/no-unsafe-member-access',
+  +     severity: 2
+  +   },
+  +   {
+  +     column: 24,
+  +     endColumn: 76,
+  +     endLine: 45,
+  +     line: 45,
+  +     message: 'Unsafe return of a value of type error.',
+  +     messageId: 'unsafeReturn',
+  +     ruleId: '@typescript-eslint/no-unsafe-return',
+  +     severity: 2
+  +   },
+  +   {
+  +     column: 24,
+  +     endColumn: 37,
+  +     endLine: 45,
+  +     line: 45,
+  +     message: "External influence 'importedInput' is not a tracked value or approved deterministic capability.",
+  +     messageId: 'capture',
+  +     ruleId: 'microdelta/tracked-captures',
+  +     severity: 2
+  +   },
+  +   {
+  +     column: 38,
+  +     endColumn: 45,
+  +     endLine: 45,
+  +     line: 45,
+  +     message: 'Unsafe member access .enabled on a type that cannot be resolved.',
+  +     messageId: 'errorMemberExpression',
+  +     ruleId: '@typescript-eslint/no-unsafe-member-access',
+  +     severity: 2
+  +   },
+  +   {
+  +     column: 49,
+  +     endColumn: 62,
+  +     endLine: 45,
+  +     line: 45,
+  +     message: "External influence 'importedInput' is not a tracked value or approved deterministic capability.",
+  +     messageId: 'capture',
+  +     ruleId: 'microdelta/tracked-captures',
+  +     severity: 2
+  +   },
+  +   {
+  +     column: 63,
+  +     endColumn: 67,
+  +     endLine: 45,
+  +     line: 45,
+  +     message: 'Unsafe member access .rows on a type that cannot be resolved.',
+  +     messageId: 'errorMemberExpression',
+  +     ruleId: '@typescript-eslint/no-unsafe-member-access',
+  +     severity: 2
+  +   },
+  +   {
+  +     column: 24,
+  +     endColumn: 63,
+  +     endLine: 46,
+  +     line: 46,
+  +     message: 'Unsafe return of a value of type error.',
+  +     messageId: 'unsafeReturn',
+  +     ruleId: '@typescript-eslint/no-unsafe-return',
+  +     severity: 2
+  +   },
+  +   {
+  +     column: 24,
+  +     endColumn: 40,
+  +     endLine: 46,
+  +     line: 46,
+  +     message: 'Unsafe call of a type that could not be resolved.',
+  +     messageId: 'errorCall',
+  +     ruleId: '@typescript-eslint/no-unsafe-call',
+  +     severity: 2
+  +   },
+  +   {
+  +     column: 24,
+  +     endColumn: 40,
+  +     endLine: 46,
+  +     line: 46,
+  +     message: "External influence 'importedCallable' is not a tracked value or approved deterministic capability.",
+  +     messageId: 'capture',
+  +     ruleId: 'microdelta/tracked-captures',
+  +     severity: 2
+  +   },
+  +   {
+  +     column: 41,
+  +     endColumn: 54,
+  +     endLine: 46,
+  +     line: 46,
+  +     message: "External influence 'importedInput' is not a tracked value or approved deterministic capability.",
+  +     messageId: 'capture',
+  +     ruleId: 'microdelta/tracked-captures',
+  +     severity: 2
+  +   },
+  +   {
+  +     column: 55,
+  +     endColumn: 62,
+  +     endLine: 46,
+  +     line: 46,
+  +     message: 'Unsafe member access .enabled on a type that cannot be resolved.',
+  +     messageId: 'errorMemberExpression',
+  +     ruleId: '@typescript-eslint/no-unsafe-member-access',
+  +     severity: 2
+  +   },
+  +   {
+  +     column: 24,
+  +     endColumn: 36,
+  +     endLine: 60,
+  +     line: 60,
+  +     message: 'Unsafe return of a value of type error.',
+  +     messageId: 'unsafeReturn',
+  +     ruleId: '@typescript-eslint/no-unsafe-return',
+  +     severity: 2
+  +   },
+  +   {
+  +     column: 31,
+  +     endColumn: 36,
+  +     endLine: 60,
+  +     line: 60,
+  +     message: 'Unsafe member access .value on a type that cannot be resolved.',
+  +     messageId: 'errorMemberExpression',
+  +     ruleId: '@typescript-eslint/no-unsafe-member-access',
+  +     severity: 2
+  +   },
+  +   {
+  +     column: 24,
+  +     endColumn: 51,
+  +     endLine: 108,
+  +     line: 108,
+  +     message: 'Unsafe return of a value of type error.',
+  +     messageId: 'unsafeReturn',
+  +     ruleId: '@typescript-eslint/no-unsafe-return',
+  +     severity: 2
+  +   },
+  +   {
+  +     column: 38,
+  +     endColumn: 43,
+  +     endLine: 108,
+  +     line: 108,
+  +     message: 'Unsafe member access .input on a type that cannot be resolved.',
+  +     messageId: 'errorMemberExpression',
+  +     ruleId: '@typescript-eslint/no-unsafe-member-access',
+  +     severity: 2
+  +   }
+  + ]
+  - []
+  
+      at TestContext.<anonymous> (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/tooling/tracked-captures.test.mjs:34:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ { ruleId: '@typescript-eslint/no-unsafe-assignment', severity: 2, message: 'Unsafe assignment of an error typed value.', line: 10, column: 7, messageId: 'anyAssignment', endLine: 14, endColumn: 25 }, { ruleId: '@typescript-eslint/no-unsafe-member-access', severity: 2, message: 'Unsafe member access .input on a type that cannot be resolved.', line: 14, column: 20, messageId: 'errorMemberExpression', endLine: 14, endColumn: 25 }, { ruleId: '@typescript-eslint/no-unsafe-assignment', severity: 2, message: 'Unsafe assignment of an error typed value.', line: 16, column: 7, messageId: 'anyAssignment', endLine: 16, endColumn: 89 }, { ruleId: '@typescript-eslint/no-unsafe-member-access', severity: 2, message: 'Unsafe member access .isEnabled on a type that cannot be resolved.', line: 16, column: 80, messageId: 'errorMemberExpression', endLine: 16, endColumn: 89 }, { ruleId: '@typescript-eslint/no-unsafe-assignment', severity: 2, message: 'Unsafe assignment of an error typed value.', line: 29, column: 7, messageId: 'anyAssignment', endLine: 29, endColumn: 42 }, { ruleId: '@typescript-eslint/no-unsafe-member-access', severity: 2, message: 'Unsafe member access .input on a type that cannot be resolved.', line: 29, column: 37, messageId: 'errorMemberExpression', endLine: 29, endColumn: 42 }, { ruleId: '@typescript-eslint/no-unsafe-assignment', severity: 2, message: 'Unsafe assignment of an error typed value.', line: 30, column: 7, messageId: 'anyAssignment', endLine: 30, endColumn: 49 }, { ruleId: '@typescript-eslint/no-unsafe-member-access', severity: 2, message: 'Unsafe member access .isEnabled on a type that cannot be resolved.', line: 30, column: 40, messageId: 'errorMemberExpression', endLine: 30, endColumn: 49 }, { ruleId: '@typescript-eslint/no-unsafe-return', severity: 2, message: 'Unsafe return of a value of type error.', line: 45, column: 24, messageId: 'unsafeReturn', endLine: 45, endColumn: 76 }, { ruleId: 'microdelta/tracked-captures', severity: 2, message: "External influence 'importedInput' is not a tracked value or approved deterministic capability.", line: 45, column: 24, messageId: 'capture', endLine: 45, endColumn: 37 }, { ruleId: '@typescript-eslint/no-unsafe-member-access', severity: 2, message: 'Unsafe member access .enabled on a type that cannot be resolved.', line: 45, column: 38, messageId: 'errorMemberExpression', endLine: 45, endColumn: 45 }, { ruleId: 'microdelta/tracked-captures', severity: 2, message: "External influence 'importedInput' is not a tracked value or approved deterministic capability.", line: 45, column: 49, messageId: 'capture', endLine: 45, endColumn: 62 }, { ruleId: '@typescript-eslint/no-unsafe-member-access', severity: 2, message: 'Unsafe member access .rows on a type that cannot be resolved.', line: 45, column: 63, messageId: 'errorMemberExpression', endLine: 45, endColumn: 67 }, { ruleId: '@typescript-eslint/no-unsafe-return', severity: 2, message: 'Unsafe return of a value of type error.', line: 46, column: 24, messageId: 'unsafeReturn', endLine: 46, endColumn: 63 }, { ruleId: '@typescript-eslint/no-unsafe-call', severity: 2, message: 'Unsafe call of a type that could not be resolved.', line: 46, column: 24, messageId: 'errorCall', endLine: 46, endColumn: 40 }, { ruleId: 'microdelta/tracked-captures', severity: 2, message: "External influence 'importedCallable' is not a tracked value or approved deterministic capability.", line: 46, column: 24, messageId: 'capture', endLine: 46, endColumn: 40 }, { ruleId: 'microdelta/tracked-captures', severity: 2, message: "External influence 'importedInput' is not a tracked value or approved deterministic capability.", line: 46, column: 41, messageId: 'capture', endLine: 46, endColumn: 54 }, { ruleId: '@typescript-eslint/no-unsafe-member-access', severity: 2, message: 'Unsafe member access .enabled on a type that cannot be resolved.', line: 46, column: 55, messageId: 'errorMemberExpression', endLine: 46, endColumn: 62 }, { ruleId: '@typescript-eslint/no-unsafe-return', severity: 2, message: 'Unsafe return of a value of type error.', line: 60, column: 24, messageId: 'unsafeReturn', endLine: 60, endColumn: 36 }, { ruleId: '@typescript-eslint/no-unsafe-member-access', severity: 2, message: 'Unsafe member access .value on a type that cannot be resolved.', line: 60, column: 31, messageId: 'errorMemberExpression', endLine: 60, endColumn: 36 }, { ruleId: '@typescript-eslint/no-unsafe-return', severity: 2, message: 'Unsafe return of a value of type error.', line: 108, column: 24, messageId: 'unsafeReturn', endLine: 108, endColumn: 51 }, { ruleId: '@typescript-eslint/no-unsafe-member-access', severity: 2, message: 'Unsafe member access .input on a type that cannot be resolved.', line: 108, column: 38, messageId: 'errorMemberExpression', endLine: 108, endColumn: 43 } ],
+    expected: [],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tooling/tracked-captures.test.mjs:260:1
+✖ alpha consumer resolves the real generated Definition declaration (481.101ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + [
+  +   "Cannot find module '../../forged/dist/api/forged.alpha.js' or its corresponding type declarations."
+  + ]
+  - []
+  
+      at TestContext.<anonymous> (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/tooling/tracked-captures.test.mjs:268:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [ "Cannot find module '../../forged/dist/api/forged.alpha.js' or its corresponding type declarations." ],
+    expected: [],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }
+
+test at tooling/tracked-captures.test.mjs:271:1
+✖ Definition capture fixture accepts the M3 authoring shape and flags each documented negative (21.704ms)
+  AssertionError [ERR_ASSERTION]: [
+    {
+      "ruleId": "@typescript-eslint/no-unsafe-call",
+      "severity": 2,
+      "message": "Unsafe call of a type that could not be resolved.",
+      "line": 92,
+      "column": 1,
+      "messageId": "errorCall",
+      "endLine": 92,
+      "endColumn": 11
+    },
+    {
+      "ruleId": "@typescript-eslint/no-unsafe-return",
+      "severity": 2,
+      "message": "Unsafe return of a value of type error.",
+      "line": 110,
+      "column": 20,
+      "messageId": "unsafeReturn",
+      "endLine": 110,
+      "endColumn": 47
+    },
+    {
+      "ruleId": "@typescript-eslint/no-unsafe-call",
+      "severity": 2,
+      "message": "Unsafe call of a type that could not be resolved.",
+      "line": 110,
+      "column": 27,
+      "messageId": "errorCall",
+      "endLine": 110,
+      "endColumn": 39
+    },
+    {
+      "ruleId": "@typescript-eslint/no-unsafe-member-access",
+      "severity": 2,
+      "message": "Unsafe member access .data on a type that cannot be resolved.",
+      "line": 110,
+      "column": 43,
+      "messageId": "errorMemberExpression",
+      "endLine": 110,
+      "endColumn": 47
+    }
+  ]
+  + actual - expected
+  
+  + [
+  +   {
+  +     column: 1,
+  +     endColumn: 11,
+  +     endLine: 92,
+  +     line: 92,
+  +     message: 'Unsafe call of a type that could not be resolved.',
+  +     messageId: 'errorCall',
+  +     ruleId: '@typescript-eslint/no-unsafe-call',
+  +     severity: 2
+  +   },
+  +   {
+  +     column: 20,
+  +     endColumn: 47,
+  +     endLine: 110,
+  +     line: 110,
+  +     message: 'Unsafe return of a value of type error.',
+  +     messageId: 'unsafeReturn',
+  +     ruleId: '@typescript-eslint/no-unsafe-return',
+  +     severity: 2
+  +   },
+  +   {
+  +     column: 27,
+  +     endColumn: 39,
+  +     endLine: 110,
+  +     line: 110,
+  +     message: 'Unsafe call of a type that could not be resolved.',
+  +     messageId: 'errorCall',
+  +     ruleId: '@typescript-eslint/no-unsafe-call',
+  +     severity: 2
+  +   },
+  +   {
+  +     column: 43,
+  +     endColumn: 47,
+  +     endLine: 110,
+  +     line: 110,
+  +     message: 'Unsafe member access .data on a type that cannot be resolved.',
+  +     messageId: 'errorMemberExpression',
+  +     ruleId: '@typescript-eslint/no-unsafe-member-access',
+  +     severity: 2
+  +   }
+  + ]
+  - []
+  
+      at TestContext.<anonymous> (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-178-repair/tooling/tracked-captures.test.mjs:275:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: [ { ruleId: '@typescript-eslint/no-unsafe-call', severity: 2, message: 'Unsafe call of a type that could not be resolved.', line: 92, column: 1, messageId: 'errorCall', endLine: 92, endColumn: 11 }, { ruleId: '@typescript-eslint/no-unsafe-return', severity: 2, message: 'Unsafe return of a value of type error.', line: 110, column: 20, messageId: 'unsafeReturn', endLine: 110, endColumn: 47 }, { ruleId: '@typescript-eslint/no-unsafe-call', severity: 2, message: 'Unsafe call of a type that could not be resolved.', line: 110, column: 27, messageId: 'errorCall', endLine: 110, endColumn: 39 }, { ruleId: '@typescript-eslint/no-unsafe-member-access', severity: 2, message: 'Unsafe member access .data on a type that cannot be resolved.', line: 110, column: 43, messageId: 'errorMemberExpression', endLine: 110, endColumn: 47 } ],
+    expected: [],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

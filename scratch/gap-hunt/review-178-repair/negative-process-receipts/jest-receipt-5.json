@@ -1,0 +1,78 @@
+{
+  "mode": "fresh-subject",
+  "expected": 2,
+  "result": {
+    "kind": "published",
+    "data": 2,
+    "reference": {
+      "kind": "completed-result",
+      "locator": "mdh1|[\"occurrence-proof\",\"occurrence:proof\",\"test\",2]"
+    }
+  },
+  "events": [
+    {
+      "kind": "step",
+      "runId": "run:499dd615ac067638e357d978f1b77f69",
+      "event": {
+        "step": {
+          "scope": "occurrence:proof",
+          "role": "step",
+          "slot": "b"
+        },
+        "phase": "verify"
+      }
+    },
+    {
+      "kind": "step",
+      "runId": "run:499dd615ac067638e357d978f1b77f69",
+      "event": {
+        "step": {
+          "scope": "occurrence:proof",
+          "role": "step",
+          "slot": "b"
+        },
+        "phase": "admit"
+      }
+    },
+    {
+      "kind": "step",
+      "runId": "run:499dd615ac067638e357d978f1b77f69",
+      "event": {
+        "step": {
+          "scope": "occurrence:proof",
+          "role": "step",
+          "slot": "b"
+        },
+        "phase": "claim"
+      }
+    },
+    {
+      "kind": "step",
+      "runId": "run:499dd615ac067638e357d978f1b77f69",
+      "event": {
+        "step": {
+          "scope": "occurrence:proof",
+          "role": "step",
+          "slot": "b"
+        },
+        "phase": "execute"
+      }
+    },
+    {
+      "kind": "step",
+      "runId": "run:499dd615ac067638e357d978f1b77f69",
+      "event": {
+        "step": {
+          "scope": "occurrence:proof",
+          "role": "step",
+          "slot": "b"
+        },
+        "phase": "publish",
+        "reference": {
+          "kind": "completed-result",
+          "locator": "mdh1|[\"occurrence-proof\",\"occurrence:proof\",\"test\",2]"
+        }
+      }
+    }
+  ]
+}

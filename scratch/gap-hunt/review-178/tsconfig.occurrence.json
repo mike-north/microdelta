@@ -1,0 +1,1 @@
+{"extends":"../../../experiments/exp-authoring/tsconfig.test.json","compilerOptions":{"rootDir":"../../..","outDir":"./occurrence-dist"},"include":[],"files":["./occurrence-worker.ts"]}

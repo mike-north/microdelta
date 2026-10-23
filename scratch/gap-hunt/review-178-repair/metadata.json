@@ -1,0 +1,48 @@
+{
+  "runtime_pin": "efd50c63eb62b8865cd76587673f6d3d56c9732a",
+  "original_evidence": "e33ad02939a7b217a7ec754f097b6391ad581b13",
+  "counts": {
+    "occurrence-positive": {
+      "numPassedTests": 5,
+      "numFailedTests": 0,
+      "numPendingTests": 0,
+      "numRuntimeErrorTestSuites": 0,
+      "success": true
+    },
+    "occurrence-negative": {
+      "numPassedTests": 4,
+      "numFailedTests": 1,
+      "numPendingTests": 0,
+      "numRuntimeErrorTestSuites": 0,
+      "success": false
+    },
+    "occurrence-restored": {
+      "numPassedTests": 5,
+      "numFailedTests": 0,
+      "numPendingTests": 0,
+      "numRuntimeErrorTestSuites": 0,
+      "success": true
+    },
+    "experiment-runtime": {
+      "numPassedTests": 18,
+      "numFailedTests": 0,
+      "numPendingTests": 0,
+      "numRuntimeErrorTestSuites": 0,
+      "success": true
+    }
+  },
+  "capture_after_build_fixtures": {
+    "passed": 37,
+    "failed": 0
+  },
+  "capture_before_build_fixtures": {
+    "passed": 33,
+    "failed": 4,
+    "classification": "missing generated declaration fixtures; not product regression"
+  },
+  "source_files_changed": [],
+  "node": "v24.22.1",
+  "npm": "11.12.1",
+  "source_qualified_latest_head": "648b0aa89d1ea20b100c5e2b8591b3d25d55781b",
+  "carry_forward_basis": "decision.md-only3line delta; no runtime/tests/tooling changes; not648execution"
+}

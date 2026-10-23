@@ -16,10 +16,10 @@ import type { ITrackedView } from '@microdelta/tracking';
 import { ResolutionError, sourceOutcome } from '../dist/src/index.js';
 import type {
   IAdmissionDecision,
-  IExecutionSupervision,
   ICallView,
   ICandidateMiss,
   ICheckOutcome,
+  IExecutionSupervision,
   IFoldCoverage,
   IFoldOutcome,
   IFoldResolution,

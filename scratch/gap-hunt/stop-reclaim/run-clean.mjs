@@ -31,7 +31,7 @@ function counts(path, passed, failed, skipped) {
   assert.equal(result.numRuntimeErrorTestSuites, 0);
   return result.testResults.flatMap((suite) => suite.assertionResults)
     .filter((test) => test.title.includes('queued priority lane reclaim'))
-    .map(({ title, status, failureMessages }) => ({ title, status, failureMessages }));
+    .map(({ title, status, failureDetails }) => ({ title, status, failureDetails }));
 }
 const head = command(home, 'head', 'git', ['rev-parse', 'HEAD']);
 const changed = command(home, 'committed-paths', 'git', ['diff', '--name-only', pin, head]).split('\n').filter(Boolean);
@@ -72,8 +72,11 @@ try {
     assert.equal(negatives.find((test) => test.title.includes('false'))?.status, 'passed');
     const failed = negatives.find((test) => test.title.includes('true'));
     assert.equal(failed?.status, 'failed');
-    assert.ok(failed.failureMessages.join('\n').includes('expect(resumed).toEqual([])'));
-    assert.ok(failed.failureMessages.join('\n').includes('"sleeper"'));
+    const mismatch = failed.failureDetails[0].matcherResult;
+    assert.equal(mismatch.name, 'toEqual');
+    assert.equal(mismatch.pass, false);
+    assert.deepEqual(mismatch.expected, []);
+    assert.deepEqual(mismatch.actual, ['sleeper']);
   } finally {
     writeFileSync(emitted, original);
     assert.deepEqual(readFileSync(emitted), original, 'emitted execution restored byte-for-byte');

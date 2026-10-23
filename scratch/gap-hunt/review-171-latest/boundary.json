@@ -1,0 +1,11 @@
+{
+  "oldHead": "c75ca18e060a04034f4868e50dadd65b237e9d38",
+  "reviewedHead": "5600ba5db3612d782dfdd12f6c00d8b0eea8f118",
+  "changedPaths": [
+    "packages/tracking/src/observer.ts"
+  ],
+  "check": "Exact old source with one specified JSDoc prose replacement equals new source byte-for-byte; all other tracked paths unchanged.",
+  "outcome": "PASS",
+  "runtimeChanged": false,
+  "testsRerun": false
+}

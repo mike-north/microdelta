@@ -749,7 +749,7 @@
       "requirement": "ACC-008",
       "classification": "bounded-aligned-with-residual-evidence-gap",
       "meaning": "Observer/gate distinction and explicit retry policy determine execution.",
-      "residual": "Current durable History has no cleanup/reclamation operation and unconditionally rejects deletion of retained history; named immutable-storage and superseded-reference controls pass. This establishes bounded current retention independent of currency. A future selective cleanup policy must separately establish retained-reference and paid/unknown-currency safety; none is selected or tested here. Optional read-only usage observer invariance passes; arbitrary observer side effects are excluded.",
+      "residual": "Current durable History has no cleanup/reclamation operation and unconditionally rejects deletion of retained history; named immutable-storage and superseded-reference controls pass. This establishes bounded current retention independent of currency. A future selective cleanup policy must separately establish retained-reference and paid/unknown-currency safety; none is selected or tested here. Optional read-only usage observer invariance passes both for ordinary success and controlled quota retry with an explicit author admission gate; arbitrary observer side effects are excluded.",
       "executedAssertionIds": [
         132,
         133,
@@ -777,6 +777,7 @@
       ],
       "supplementaryNamedAssertions": [
         "gap-hunt-durability-observer.test.ts: adding/removing usage display preserves sends, outcomes and the unknown usage gap",
+        "gap-hunt-durability-observer.test.ts: display preserves quota retry and explicit admission gate (deny third false/true)",
         "workspace/admission-observers.test.ts: a refused cold miss leaves no claim, attempt, body or reference, and strands no writer",
         "durable-history/durable-history.test.ts: stored results and acceptances are immutable in storage",
         "acceptance/integrity-io.test.ts: a superseded summary stays exactly readable beside its successor",
@@ -1488,7 +1489,7 @@
       "requirement": "RUN-001",
       "classification": "bounded-aligned-with-residual-evidence-gap",
       "meaning": "Concurrent run/env contexts isolate; thrown frames restore parents; escaped operations fail after closure; new run ID alone reuses.",
-      "residual": "Awaited generator yield/resume/return/error cleanup and concurrent lazy sibling isolation are asserted through actual ordinary work. Detached returned iterators remain an ownership-interface question; separate-process recovery reconstruction is not proved by these in-memory context tests.",
+      "residual": "Awaited generator yield/resume/return/error cleanup, awaited finally failures on normal and explicit-return termination, late-work refusal, and concurrent lazy sibling isolation are asserted through actual ordinary work. Detached returned iterators remain an ownership-interface question; separate-process recovery reconstruction is not proved by these in-memory context tests.",
       "executedAssertionIds": [
         250,
         251,
@@ -1503,7 +1504,7 @@
       ],
       "supplementaryNamedAssertions": [
         "gap-hunt-durability-lazy.test.ts: normal/return/throw iteration",
-        "gap-hunt-durability-lazy.test.ts: a failing lazy scope restores its parent while a concurrent sibling resumes and cleans up in its own environment"
+        "gap-hunt-durability-lazy.test.ts: body/cleanup-normal/cleanup-return failure restores its parent while a concurrent sibling resumes and cleans up in its own environment"
       ]
     },
     {

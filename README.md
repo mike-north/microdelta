@@ -104,8 +104,11 @@ is bounded to one fenced writer per store on single-host SQLite, including proce
 kill/restart tests; it does not establish distributed or power-loss guarantees,
 lease-wait fairness, or production readiness.
 
-There are known correctness issues, including
-[nullable-container guards that can incorrectly reuse stale results](https://github.com/mike-north/microdelta/issues/155).
+[Nullable-container guards](https://github.com/mike-north/microdelta/issues/155)
+retain bounded kind evidence across restarts. Upgrading invalidates earlier
+computation evidence and may recompute prior work; exact historical results and
+operation journals remain readable. See the
+[tracking evidence compatibility boundary](docs/spec/execution.md#reuse-001--reuse-is-a-current-contextual-decision).
 Do not treat the example or accepted checkpoints as a guarantee that arbitrary
 analyses are safe. General CLI inspection, full workflow/scale acceptance, and
 real-provider acceptance remain undelivered.

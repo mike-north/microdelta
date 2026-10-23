@@ -1,0 +1,16 @@
+{
+  "runtime_source": "52e3786516a404e3433bef03807a027c8103786c",
+  "consumer_source": "d172f5f7c0790914bfc7a0ffbf1398618dd72ad8",
+  "files": [
+    {
+      "path": "scratch/gap-hunt/consumer-replay-52e/README.md",
+      "bytes": 4427,
+      "sha256": "b329118e9d4b3840222bccdbfc3290026c0dae574b2ed2457f71e9911d6c955f"
+    },
+    {
+      "path": "scratch/gap-hunt/consumer-replay-52e/summary.json",
+      "bytes": 15519,
+      "sha256": "fc7478390a3f5256cd6ff1017dd93a000ebba7d5a2db3611438cd97ab8c456a3"
+    }
+  ]
+}

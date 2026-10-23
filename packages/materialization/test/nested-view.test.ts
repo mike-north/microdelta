@@ -170,8 +170,8 @@ describe('nested selected materialization', () => {
     const capture = tracking.capture(() => view.profile.name);
 
     expect(capture.value).toBe('Ada');
-    expect(consumed(capture.observations)).toEqual(['value.profile.name']);
-    expect(capture.observations[0]?.fingerprint).toBe(oracle(value, [{ kind: 'property', key: 'profile' }, { kind: 'property', key: 'name' }], 'value'));
+    expect(consumed(capture.observations)).toEqual(['container-kind.profile', 'value.profile.name']);
+    expect(capture.observations[1]?.fingerprint).toBe(oracle(value, [{ kind: 'property', key: 'profile' }, { kind: 'property', key: 'name' }], 'value'));
     expect(exact.requests.map((request) => `${request.port}${request.address}`)).toEqual([
       'readNode$', 'readNode.profile', 'readNode.profile.name',
     ]);
@@ -198,13 +198,18 @@ describe('nested selected materialization', () => {
 
     expect(capture.value).toEqual({ authored: 3, merged: 2, reviews: 2 });
     expect(consumed(capture.observations)).toEqual([
+      'container-kind.pullRequests',
       'length.pullRequests',
+      'container-kind.pullRequests[0]',
       'value.pullRequests[0].merged',
+      'container-kind.pullRequests[1]',
       'value.pullRequests[1].merged',
+      'container-kind.pullRequests[2]',
       'value.pullRequests[2].merged',
+      'container-kind.reviews',
       'length.reviews',
     ]);
-    expect(capture.observations[1]?.fingerprint).toBe(oracle(value, [
+    expect(capture.observations[3]?.fingerprint).toBe(oracle(value, [
       { kind: 'property', key: 'pullRequests' }, { kind: 'index', index: 0 }, { kind: 'property', key: 'merged' },
     ], 'value'));
     expect(exact.requests.some((request) => /labels|notes|profile/u.test(request.address))).toBe(false);
@@ -253,11 +258,11 @@ describe('nested selected materialization', () => {
     let current = referenceA;
     const provider = materialization.currentProvider(() => current, unavailableFallback);
     current = profileArray;
-    expect(tracking.compareCurrent(nameCapture, provider).kind).toBe('incompatible');
+    expect(tracking.compareCurrent(nameCapture, provider).kind).toBe('changed');
     current = nameRecord;
     expect(tracking.compareCurrent(nameCapture, provider).kind).toBe('changed');
     current = pullRequestsRecord;
-    expect(tracking.compareCurrent(lengthCapture, provider).kind).toBe('incompatible');
+    expect(tracking.compareCurrent(lengthCapture, provider).kind).toBe('changed');
   });
 
   test('an old exact reference never follows the current reference', () => {
@@ -352,7 +357,8 @@ describe('nested selected materialization', () => {
         try { return view.profile.name; } catch (error: unknown) { return error; }
       });
       expect(capture.value).toBeInstanceOf(TypeError);
-      expect(capture.observations).toHaveLength(0);
+      // Valid ancestor kind reads precede rejection; no malformed selected fact is retained.
+    expect(capture.observations.filter((item) => item.operation !== 'container-kind')).toHaveLength(0);
     }
     expect(getterCalls).toBe(0);
 
@@ -366,7 +372,7 @@ describe('nested selected materialization', () => {
       try { return 'name' in view.profile; } catch (error: unknown) { return error; }
     });
     expect(membership.value).toBeInstanceOf(TypeError);
-    expect(membership.observations).toHaveLength(0);
+    expect(membership.observations).toMatchObject([{ operation: 'container-kind' }]);
   });
 
   test('reader facts are consumed exactly as validated: inconsistent arrays are rejected before observation', () => {
@@ -404,7 +410,8 @@ describe('nested selected materialization', () => {
         try { return attempt(); } catch (error: unknown) { return error; }
       });
       expect(capture.value).toBeInstanceOf(TypeError);
-      expect(capture.observations).toHaveLength(0);
+      // Valid ancestor kind reads precede rejection; no malformed selected fact is retained.
+    expect(capture.observations.filter((item) => item.operation !== 'container-kind')).toHaveLength(0);
     }
     expect(iteratorCalls).toBe(0);
     expect(mapCalls).toBe(0);
@@ -472,8 +479,9 @@ describe('nested selected materialization', () => {
     expect(output.value).toEqual({ author: value.profile });
     expect(tracking.materialization.owns(output.value.author)).toBe(false);
     expect(Object.isFrozen(output.value.author)).toBe(true);
-    expect(output.observations).toHaveLength(1);
-    expect(output.observations[0]).toMatchObject({
+    expect(output.observations).toHaveLength(2);
+    expect(output.observations[0]?.operation).toBe('container-kind');
+    expect(output.observations[1]).toMatchObject({
       kind: 'materialized-output',
       address: [{ kind: 'property', key: 'profile' }],
       fingerprint: fingerprint(encodeSnapshot(value.profile), machine),
@@ -497,7 +505,8 @@ describe('nested selected materialization', () => {
         try { return bad.materialization.materializeOutput({ author: badView.profile }); } catch (error: unknown) { return error; }
       });
       expect(capture.value).toBeInstanceOf(TypeError);
-      expect(capture.observations).toHaveLength(0);
+      // Valid ancestor kind reads precede rejection; no malformed selected fact is retained.
+    expect(capture.observations.filter((item) => item.operation !== 'container-kind')).toHaveLength(0);
     }
   });
 
@@ -558,7 +567,7 @@ describe('asynchronous invocation transport', () => {
     });
 
     expect(capture.value).toBe('Ada');
-    expect(consumed(capture.observations)).toEqual(['value.profile.name']);
+    expect(consumed(capture.observations)).toEqual(['container-kind.profile', 'value.profile.name']);
     expect(exact.requests.some((request) => request.address === '.then')).toBe(false);
   });
 
@@ -575,7 +584,7 @@ describe('asynchronous invocation transport', () => {
     });
 
     // Negative control: Promise resolution reads `then` through the ordinary getter.
-    expect(consumed(capture.observations)).toEqual(['value.then', 'value.profile.name']);
+    expect(consumed(capture.observations)).toEqual(['value.then', 'container-kind.profile', 'value.profile.name']);
   });
 
   test('a legitimate author field named then remains ordinary data', () => {
@@ -587,7 +596,7 @@ describe('asynchronous invocation transport', () => {
     const capture = tracking.capture(() => `${view.then}:${view.nested.then}`);
 
     expect(capture.value).toBe('author data:42');
-    expect(consumed(capture.observations)).toEqual(['value.then', 'value.nested.then']);
+    expect(consumed(capture.observations)).toEqual(['value.then', 'container-kind.nested', 'value.nested.then']);
   });
 
   test('asynchronous-only storage cannot pose as a synchronous navigation reader', () => {
@@ -606,6 +615,7 @@ describe('asynchronous invocation transport', () => {
       try { return materialization.materializeView<IActivityView>(reference, binding); } catch (error: unknown) { return error; }
     });
     expect(capture.value).toBeInstanceOf(TypeError);
-    expect(capture.observations).toHaveLength(0);
+    // Valid ancestor kind reads precede rejection; no malformed selected fact is retained.
+    expect(capture.observations.filter((item) => item.operation !== 'container-kind')).toHaveLength(0);
   });
 });

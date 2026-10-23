@@ -61,6 +61,14 @@ import { ResolutionError } from './errors.js';
 
 /** The provenance format identity. */
 export const provenanceFormat = 'microdelta.resolution.provenance';
+/**
+ * The Tracking consumption rules under which new provenance is complete.
+ * Earlier generations could omit facts when traversing containers, including
+ * executions with no recorded data observations. They remain exact History
+ * records but cannot justify reuse under current semantics. This compatibility
+ * boundary belongs to Resolution, independently of History's schema versions.
+ */
+const trackingSemantics = 2;
 /** The acceptance format identity. */
 export const acceptanceFormat = 'microdelta.resolution.acceptance';
 /** The attempt-ending format identity. */
@@ -213,6 +221,7 @@ export function provenanceRecord(provenance: IProvenance): IVersionedRecord {
       format: provenanceFormat,
       formatVersion: provenance.version,
       content: {
+        trackingSemantics,
         kind: provenance.kind,
         step: plainDescriptor(provenance.step),
         over: plainDescriptor(provenance.over),
@@ -228,6 +237,7 @@ export function provenanceRecord(provenance: IProvenance): IVersionedRecord {
       format: provenanceFormat,
       formatVersion: nestedFormatVersion,
       content: {
+        trackingSemantics,
         kind: provenance.kind,
         step: plainDescriptor(provenance.step),
         observations: provenance.observations.map(plainObservation),
@@ -239,6 +249,7 @@ export function provenanceRecord(provenance: IProvenance): IVersionedRecord {
     format: provenanceFormat,
     formatVersion,
     content: {
+      trackingSemantics,
       kind: provenance.kind,
       step: plainDescriptor(provenance.step),
       observations: provenance.observations.map(plainObservation),
@@ -438,7 +449,7 @@ function address(value: unknown): readonly IAddressSegment[] {
 }
 
 /** The selected operations Tracking records. */
-const operations = new Set(['value', 'own', 'membership', 'length', 'keys']);
+const operations = new Set(['value', 'own', 'membership', 'length', 'keys', 'container-kind']);
 
 /** One Tracking selection, copied and checked. */
 function selection(value: unknown): ICurrentFactRequest {
@@ -450,7 +461,7 @@ function selection(value: unknown): ICurrentFactRequest {
       if (typeof operation !== 'string' || !operations.has(operation) || encodingVersion !== 'MDO1') {
         return malformed('selected request');
       }
-      return Object.freeze({ kind, operation: operation as 'value' | 'own' | 'membership' | 'length' | 'keys', address: address(field(value, 'address')), encodingVersion });
+      return Object.freeze({ kind, operation: operation as 'value' | 'own' | 'membership' | 'length' | 'keys' | 'container-kind', address: address(field(value, 'address')), encodingVersion });
     }
     case 'implementation':
       return encodingVersion === 'MDF1' ? Object.freeze({ kind, address: address(field(value, 'address')), encodingVersion }) : malformed('implementation request');
@@ -563,11 +574,17 @@ function nestedDescriptor(value: unknown, kind: 'memo' | 'supplied'): IBindingDe
 
 /**
  * Read a candidate's provenance. Another format or version is unsupported
- * evidence; a supported version with malformed content is an integrity failure.
+ * evidence. A missing or different Tracking generation is also unsupported:
+ * absence of recorded facts cannot establish that earlier capture was complete.
+ * Check compatibility before interpreting observations or any candidate policy,
+ * including finality. Current-generation malformed content is an integrity failure.
  */
 export function readProvenance(envelope: ICompletedEnvelope): IProvenanceReading {
   const record = envelope.provenance;
   if (record.format === provenanceFormat) {
+    if (field(record.content, 'trackingSemantics') !== trackingSemantics) {
+      return { status: 'unsupported', detail: 'provenance tracking semantics are not supported' };
+    }
     switch (record.formatVersion) {
       case formatVersion:
         return readDirect(record.content);

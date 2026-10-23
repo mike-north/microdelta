@@ -76,7 +76,7 @@ describe('selected facts from outside Tracking are consumed exactly as validated
     });
 
     expect(capture.value).toBeInstanceOf(TypeError);
-    expect(capture.observations).toHaveLength(0);
+    expect(capture.observations.filter((item) => item.operation !== 'container-kind')).toHaveLength(0);
     expect(keys.calls()).toBe(0);
   });
 
@@ -95,7 +95,7 @@ describe('selected facts from outside Tracking are consumed exactly as validated
         try { return attempt(); } catch (error: unknown) { return error; }
       });
       expect(capture.value).toBeInstanceOf(TypeError);
-      expect(capture.observations).toHaveLength(0);
+      expect(capture.observations.filter((item) => item.operation !== 'container-kind')).toHaveLength(0);
     }
     expect(answers).toHaveLength(2);
     expect(answers.every((answer) => answer.calls() === 0)).toBe(true);
@@ -114,7 +114,7 @@ describe('selected facts from outside Tracking are consumed exactly as validated
     });
 
     expect(capture.value).toBeInstanceOf(TypeError);
-    expect(capture.observations).toHaveLength(0);
+    expect(capture.observations.filter((item) => item.operation !== 'container-kind')).toHaveLength(0);
   });
 
   test('ordinary key and presence facts from a source are still returned and recorded as supplied', () => {
@@ -124,7 +124,7 @@ describe('selected facts from outside Tracking are consumed exactly as validated
     const capture = observer.capture(() => [observer.keys(view.profile), 'actual' in view.profile, observer.hasOwn(view.profile, 'name')]);
 
     expect(capture.value).toEqual([['actual', 'name'], true, true]);
-    expect(capture.observations.map((observation) => observation.operation)).toEqual(['keys', 'membership', 'own']);
+    expect(capture.observations.map((observation) => observation.operation)).toEqual(['container-kind', 'keys', 'membership', 'own']);
   });
 
   test('the materialization record bridge rejects a selected fact whose address map disagrees with its segments', () => {
@@ -142,7 +142,7 @@ describe('selected facts from outside Tracking are consumed exactly as validated
         try { observer.materialization.recordSelected(binding, fact); return 'recorded'; } catch (error: unknown) { return error; }
       });
       expect(capture.value).toBeInstanceOf(TypeError);
-      expect(capture.observations).toHaveLength(0);
+      expect(capture.observations.filter((item) => item.operation !== 'container-kind')).toHaveLength(0);
     }
     expect(address.calls()).toBe(0);
     expect(keys.calls()).toBe(0);
@@ -173,7 +173,7 @@ describe('selected facts from outside Tracking are consumed exactly as validated
     });
 
     expect(capture.value).toBeInstanceOf(TypeError);
-    expect(capture.observations).toHaveLength(0);
+    expect(capture.observations.filter((item) => item.operation !== 'container-kind')).toHaveLength(0);
     expect(keys.calls()).toBe(0);
     // An ordinary sequence is still recorded exactly as supplied.
     // eslint-disable-next-line microdelta/tracked-captures -- The control records an explicit untracked ordinary key sequence.

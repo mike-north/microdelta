@@ -134,6 +134,8 @@ function selectFrom(observer: ITrackingObserver, view: ITracked<object>, request
   const fact = (): unknown => {
     const current = node;
     switch (request.operation) {
+      case 'container-kind':
+        return observer.materialization.owns(current) ? isArray(current) ? 'array' : 'record' : 'scalar';
       case 'value':
         return observer.materialization.owns(current) ? incompatible : current;
       case 'length':

@@ -1,244 +1,152 @@
 # microdelta
 
-microdelta is a TypeScript project for analyses that should keep their results
-useful across complete process shutdowns. You choose which work may be retained;
-the intended runtime records what that work actually consumed, then checks those
-facts against current inputs and code before reusing an exact prior result.
-This can apply to local computation, network work, or a nondeterministic judgment.
+microdelta is a TypeScript library for keeping expensive analyses current across
+process restarts. You choose which steps to memoize. The runtime retains their
+results and records the inputs and called implementations they consumed, so later
+runs can validate that evidence before deciding what to reuse.
 
-For example, an assessment of pull request 42 may read its title and prompt
-configuration but never read its labels. A labels-only change need not require the
-assessment to run again. A changed title or assessor implementation may. An
-unrelated pull request has its own work and remains unaffected. The point is to
-avoid work that the author chose to retain when its meaningful inputs are still
-acceptable, not to require deterministic output or to cache every function.
+Consider a report that assesses hundreds of pull requests. An assessment reads a
+pull request's title and diff, but ignores its labels. A labels-only edit should
+not require another assessment. A changed title or assessor should. If an
+assessment runs again but produces the same score, a summary that consumed only
+that score can still keep its earlier result. The goal is to avoid repeating work
+whose relevant evidence remains acceptable, including work that is costly or
+nondeterministic.
 
-microdelta is in development. Its active specification describes the target;
-the current workspace implements owner contracts and bounded runtime pieces, not
-the complete authoring, persistence, or reuse lifecycle. Version `0.1.0` of
-the ten packages is published on npm (verified in the
-[first-release record](docs/validation/first-release-2026-09-28.md)), but it is
-an incomplete pre-1.0 release: there is not yet a supported durable-analysis API
-for an external consumer to rely on.
+**Experimental:** a bounded durable runtime, keyed composition, and operational
+controls are implemented in this repository. The authoring API remains
+**project-private alpha**, with breaking changes expected. The default public
+TypeScript entry exposes the compatibility History Store API, not the durable
+analysis API used below. Start with the checkout example to evaluate the runtime;
+this is not a supported external installation guide.
 
-## Target workflow
+## Try a durable analysis
 
-The complete-runtime example is conceptual; it does not name a current API:
+The checked-in [contribution report](examples/contribution-report/README.md)
+analyses a fixture repository, scores its pull requests, and combines contributors'
+summaries into a report. It uses local fixture data and deterministic TypeScript
+assessors: no GitHub credentials, network provider, or paid calls are required to
+run it.
 
-1. A source adapter obtains a current pull-request snapshot. The analysis declares
-   an assessment for that pull request and opts that assessment into result
-   retention. Source acceptance policy remains an explicit current decision.
-2. The assessment reads `title` and tracked prompt/model configuration, then
-   produces a result. Its provenance records the exact input/result references,
-   consumed values, and called implementation evidence that support that run.
-3. In a later process, microdelta reconnects the current definition and resolves
-   those recorded paths against current bindings. If only `labels` changed and
-   policy accepts the source, it can retain the prior assessment's exact result
-   reference. If the title, consumed configuration, or called implementation
-   changed, it must run the assessment again when admitted.
-4. A newly retrieved source snapshot can become current even when the assessment
-   reuses an older result. Revalidation records the new binding and acceptance;
-   it does not rewrite the original result's historical provenance. A source policy
-   can also reject reuse even when consumed values compare equal.
+Use **Node.js 24** and npm from a checkout of this repository. Installation needs
+network access for dependencies. The SQLite adapter uses the native
+`better-sqlite3` dependency; if a matching prebuilt binary is unavailable, a working
+native build toolchain is required. Do not assume every newer Node version is
+supported by that dependency.
 
-This example depends on several separate contracts. **Observation** says what an
-operation consumed: reading `pr.author.name` consumes the name at that path, not
-the author's ID or every pull-request field. Replacing the author while preserving
-the name can compare equal; a later name change under that replacement must be
-detected. Reading the ID explicitly makes it a dependency. **Implementation
-evidence** belongs to functions actually called; changing an uncalled helper is
-not evidence that the assessment changed. **Memoization policy** is an author
-choice separate from tracking: tracked functions execute when called and are not
-automatically memoized.
-
-**Composition** declares a fixed graph of steps and relationships. It may create
-dynamic instances for discovered pull requests or keyed members, but an execution
-result cannot add undeclared graph structure. A tracked predicate may determine
-whether a declared operation runs without changing that graph. These boundaries
-allow current values and observed branches to vary without making the workflow's
-topology an opaque consequence of arbitrary JavaScript.
-
-These are target behaviors, not claims that the current checkout persists or
-reuses assessment results. The [domain contract](docs/spec/domain.md),
-[tracking contract](docs/spec/tracking.md), [composition contract](docs/spec/composition.md),
-and [execution contract](docs/spec/execution.md) define their owners and cases.
-The [glossary](docs/spec/glossary.md) establishes shared terms; the
-[acceptance scenarios](docs/spec/acceptance.md) specify the required evidence.
-
-The current Value semantics cover `undefined`, `null`, booleans, strings,
-numbers, sparse arrays, and supported plain records with bounded prototype
-support. It rejects cycles/shared references, accessors, symbols, data functions,
-`Date`, `Map`, `Set`, and class instances instead of silently treating them as
-ordinary data. These are explicit support limits, not a promise that every value
-JavaScript can express can be retained. See the [supported-value contract](docs/spec/tracking.md#structured-addresses-and-fingerprints).
-
-## What runs in this checkout
-
-The [package map](docs/package-map.md) records the current implementation and its
-limits. The existing facade's public API is the compatibility History Store;
-it is not the durable-analysis workflow above. Tracking's project-private alpha
-observer can capture supported reads and called-function implementation evidence,
-then compare those facts through a caller-supplied current-fact provider. Value
-owns selected-fact encoding and comparison primitives. Tracking also provides an
-explicit operation that observes supplied output and returns a detached snapshot.
-Materialization composes that operation with selected reads from an injected exact
-result reader and canonical keyed projections. These components do not supply a
-durable binding registry, source freshness policy, reuse decision, or persisted
-result lifecycle. Process-local tags and derivations are also not cross-process
-evidence.
-
-The following probe runs against those built workspace entries. It demonstrates
-the current Tracking and Value alpha contracts only. It imports compiled JavaScript files
-inside the private workspace because Tracking and Value are project-private alpha
-contracts; their current names are absent from the default external TypeScript
-surface. The JavaScript files are not a supported package entry point.
-
-From a checkout with Node.js 20 or newer:
+From the repository root, choose a store directory that does not already contain
+a previous example run:
 
 ```sh
 npm ci
 npm run build
-node --input-type=module <<'NODE'
-import assert from 'node:assert/strict';
-import { createNodeMachine } from './packages/machine-node/dist/src/index.js';
-import { createTrackingObserver } from './packages/tracking/dist/src/index.js';
-import { observe } from './packages/value/dist/src/index.js';
-
-// Bind one captured source and one actually called assessor to current structural locations.
-const observer = createTrackingObserver(createNodeMachine());
-const sourceBinding = { path: ['pull-requests', '42'] };
-const assessorBinding = { path: ['assessors', 'summary'] };
-// This counter verifies ordinary calls; it is not an external influence of the assessment.
-let calls = 0;
-const assess = (pr) => {
-  calls += 1;
-  return `${pr.title}: ${pr.author.name}`;
-};
-const trackedPR = observer.tracked({
-  title: 'Add retry support',
-  labels: ['ready'],
-  author: { id: 'u-1', name: 'Ada' },
-}, sourceBinding);
-const trackedAssess = observer.tracked(assess, assessorBinding);
-const first = observer.capture(() => trackedAssess(trackedPR));
-assert.equal(first.value, 'Add retry support: Ada');
-assert.equal(first.observations.length, 3);
-
-let currentPR = {
-  title: 'Add retry support',
-  labels: ['ready', 'backend'],
-  author: { id: 'u-2', name: 'Ada' },
-};
-let currentAssess = assess;
-// A shared path prefix is not identity; current facts belong to one exact structural binding.
-const sameBinding = (candidate, expected) => candidate.path.length === expected.path.length
-  && candidate.path.every((segment, index) => segment === expected.path[index]);
-const provider = {
-  resolve(binding, selection) {
-    if (selection.kind === 'implementation' && sameBinding(binding, assessorBinding)) {
-      return { kind: 'available', fact: currentAssess };
-    }
-    if (selection.kind === 'selected' && sameBinding(binding, sourceBinding)) {
-      return { kind: 'available', fact: observe(currentPR, selection.address, selection.operation) };
-    }
-    return { kind: 'unavailable' };
-  },
-};
-const unreadChange = observer.compareCurrent(first, provider);
-assert.equal(unreadChange.kind, 'equal');
-
-const otherPR = observer.tracked({
-  title: 'Add retry support',
-  labels: ['ready', 'backend'],
-  author: { id: 'u-2', name: 'Ada' },
-}, { path: ['pull-requests', '43'] });
-const unknownSourceCapture = observer.capture(() => otherPR.title);
-const unknownSourceIdentity = observer.compareCurrent(unknownSourceCapture, provider);
-
-const unknownAssess = (pr) => `unrelated assessor: ${pr.title}`;
-const trackedUnknownAssess = observer.tracked(unknownAssess, { path: ['assessors', 'detail'] });
-const unknownAssessorCapture = observer.capture(() => trackedUnknownAssess(trackedPR));
-const unknownAssessorIdentity = observer.compareCurrent(unknownAssessorCapture, provider);
-assert.deepEqual(
-  [unknownSourceIdentity.kind, unknownAssessorIdentity.kind],
-  ['unavailable', 'unavailable'],
-  'bindings with a shared prefix but different final path segments are unknown',
-);
-
-currentPR = { ...currentPR, author: { id: 'u-2', name: 'Grace' } };
-const changedRead = observer.compareCurrent(first, provider);
-assert.equal(changedRead.kind, 'changed');
-
-currentPR = {
-  title: 'Add retry support',
-  labels: ['ready', 'backend'],
-  author: { id: 'u-2', name: 'Ada' },
-};
-currentAssess = (pr) => `${pr.title.toUpperCase()}: ${pr.author.name}`;
-const changedImplementation = observer.compareCurrent(first, provider);
-assert.equal(changedImplementation.kind, 'changed');
-
-trackedAssess(trackedPR);
-assert.equal(calls, 2);
-console.log(JSON.stringify({
-  result: first.value,
-  observations: first.observations.map(({ kind, address }) => ({ kind, address })),
-  unreadLabelAndAuthorIdChange: unreadChange.kind,
-  changedConsumedName: changedRead.kind,
-  changedCalledImplementation: changedImplementation.kind,
-  callsWithoutMemoization: calls,
-}, null, 2));
-NODE
+node examples/contribution-report/dist/main.js run --store .test-build/readme-demo --json
+node examples/contribution-report/dist/main.js run --store .test-build/readme-demo --json
+node examples/contribution-report/dist/main.js run --store .test-build/readme-demo --rubric C --json
 ```
 
-The printed JSON's `result` field is `Add retry support: Ada`; it records the assessor
-implementation, `title`, and `author.name`. Changing only labels and author ID
-compares `equal`; changing the consumed name or called implementation compares
-`changed`. Calling the tracked assessor twice increments its call count twice.
-The counter is test instrumentation for this snippet; production conclusions
-must not depend on an untracked closure value like this one.
-The provider is deliberately local and in-memory: this demonstrates observation
-semantics, not durable binding reconstruction, a source-policy decision, exact
-result-reference retention, or restart behavior. Function-source evidence also
-cannot prove arbitrary closure captures sound; the author remains responsible for
-tracking every external influence that should invalidate retained work.
+Each `node` command starts a fresh process and opens the same SQLite-backed store.
+These commands belong to the **example's CLI**; the general-purpose microdelta CLI
+and inspection checkpoint are still planned.
 
-## Project status and contribution
+The JSON includes the report, each member's outcome and exact result reference,
+body execution counts (`executions`), and source-policy checks (`finality`). The
+three commands show different behavior:
 
-The [specification entry point](docs/spec/README.md) is the active design
-authority. Read it first, then the owning contract and its acceptance scenarios.
-[Delivery milestones](docs/milestones.md) define the implementation order; the
-[repository issue queue](https://github.com/mike-north/microdelta/issues) tracks
-the work. M0.5 is accepted; the final [M1 acceptance outcome](https://github.com/mike-north/microdelta/issues/10#issuecomment-5853047962)
-is recorded in the issue evidence. M2 provides bounded tracking observations
-and value semantics; its [acceptance record](https://github.com/mike-north/microdelta/issues/32)
-records delivery and verification. Durable memoization remains in M3, which adds
-the small persisted analysis path with exact references and current source acceptance.
-M4 adds general composition and keyed collections. M5 covers operational
-correctness; M6 delivers the CLI and inspection surface; M7 assembles the full
-roster workflow and scale acceptance. Review the [milestones](docs/milestones.md)
-and [implementation map](docs/package-map.md) for current status rather than
-inferring completion from an experiment or alpha package.
+| Run | What executes | What the report shows |
+| --- | --- | --- |
+| First run | Discovery, three activity sources, six assessments, three summaries, and the report | Ada scores 5, Ben 3, Cy 2; all three contributors are covered |
+| Unchanged restart | Source-policy checks; no step bodies (`executions` is `{}`) | The summaries and report have `kind: "reused"` and retain their exact references |
+| Changed assessor (`--rubric C`) | All six assessments, Ben's summary, and the report | Ben's score becomes 4; Ada's and Cy's summaries retain their exact references |
 
-To build and check this private workspace:
+The final run changes how a merged bug fix is scored. Ada's and Cy's assessments
+also run again, but their scores stay equal. Their summaries consume scores rather
+than assessment explanation text, so those summaries can be retained. This is
+reuse across a complete process exit and a cutoff at unchanged consumed output,
+not merely an identical printed report.
+
+See the [example guide](examples/contribution-report/README.md) for its source,
+composition choices, recovery commands, cancellation, and spend-free operational
+scenarios. Its [existing tests](examples/contribution-report/test/example.test.mjs)
+check output, invocation counts, and exact references in separate processes.
+
+## How reuse works
+
+An author declares sources, memoized steps, and their composition. **Sources have
+an explicit acceptance policy**: a stored snapshot does not become current merely
+because it exists. In this example the policy checks a fixture revision; a real
+adapter must decide how to validate its own source.
+
+Tracked reads record the supported facts a step consumes. Reading a name does not
+implicitly consume every other field of its containing record. Called
+implementation evidence matters too. Tracking and memoization are separate:
+authoring a tracked helper does not automatically retain its result.
+
+On a later run, the runtime checks the recorded evidence against current bindings
+and source policy. Accepted reuse keeps an **exact reference** to the earlier
+result. Current acceptance is separate from that result's original provenance.
+When a child produces new output, downstream work can remain reusable if the facts
+it consumed are unchanged.
+
+Authors remain responsible for declaring and tracking relevant external
+influences. Arbitrary mutable closure state, hidden I/O, and every possible
+JavaScript operation are not automatically made safe by function-source tracking.
+The [facade guide](packages/core/README.md) describes the alpha authoring surface;
+the [tracking](docs/spec/tracking.md) and [execution](docs/spec/execution.md)
+contracts explain the model and its boundaries.
+
+## Current scope and limitations
+
+The repository's accepted runtime includes durable results and references, keyed
+fanout and folds, fenced writer coordination, retry and cancellation controls,
+environment isolation, and known-versus-unknown resource accounting. Its evidence
+is bounded to one fenced writer per store on single-host SQLite, including process
+kill/restart tests; it does not establish distributed or power-loss guarantees,
+lease-wait fairness, or production readiness.
+
+There are known correctness issues, including
+[nullable-container guards that can incorrectly reuse stale results](https://github.com/mike-north/microdelta/issues/155).
+Do not treat the example or accepted checkpoints as a guarantee that arbitrary
+analyses are safe. General CLI inspection, full workflow/scale acceptance, and
+real-provider acceptance remain undelivered.
+
+Supported structured data is deliberately constrained. Plain records and arrays
+are the current result-root shapes; unsupported values such as cyclic/shared
+references, accessors, `Date`, `Map`, `Set`, and class instances are rejected. See
+[supported values](docs/spec/tracking.md#structured-addresses-and-fingerprints)
+and the [implementation map](docs/package-map.md) for precise boundaries.
+
+Published packages and the checkout's private-alpha API are different surfaces.
+The [first-release record](docs/validation/first-release-2026-09-28.md) documents the
+historical `0.1.0` publication; it does not make the current alpha authoring API a
+supported public contract. Resource Accounting remains a private workspace
+package supplied through an injected port.
+
+## Explore and contribute
+
+- [Example and walkthrough](examples/contribution-report/README.md): run, change,
+  recover, and inspect the fixture analysis.
+- [Facade API guide](packages/core/README.md): public compatibility Store versus
+  private-alpha authoring and operations.
+- [Implementation map](docs/package-map.md): package responsibilities and delivered
+  capabilities.
+- [Specification](docs/spec/README.md) and [glossary](docs/spec/glossary.md): active
+  design authority and shared terms.
+- [Delivery milestones](docs/milestones.md) and
+  [issue queue](https://github.com/mike-north/microdelta/issues): accepted evidence
+  and remaining work.
+
+After installing dependencies, contributors run:
 
 ```sh
-npm ci
 npm run check
 npm test
 npm run build
 ```
 
-Runtime behavior uses Jest; package type contracts use tsd. The checks also cover
-strict TypeScript, type-aware lint, source-import boundaries, generated declaration
-consumers, and reviewed API reports. For implementation work, follow
-[delivery conventions](ENG_TEAM_INSTRUCTIONS.md): derive outcome assertions from
-the owning contract before changing software, observe the expected failure, and
-document durable intent in code. Contributors open scoped PRs for supervisory
-review; only the supervisor merges accepted work. Version `0.1.0`
-of the ten packages was released on 2026-09-28 (see the
-[first-release record](docs/validation/first-release-2026-09-28.md)); it is
-incomplete and not a supported durable-analysis API. `0.0.0` remains the
-namespace-bootstrap history. Merging the reviewed Version Packages PR is the
-release decision, and each release needs fresh owner authorization; see
-[releasing](docs/releasing.md).
+Runtime tests use Jest and type contracts use tsd. Checks enforce strict
+TypeScript, type-aware lint, package/declaration boundaries, and API reports.
+Follow [delivery conventions](ENG_TEAM_INSTRUCTIONS.md): use a scoped issue and
+isolated worktree, derive tests from intended behavior before changing software,
+and open a PR for supervisory review. Package publication remains a separate,
+human-controlled decision under the [release process](docs/releasing.md).

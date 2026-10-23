@@ -31,6 +31,58 @@ test('Node digest adapter conforms to independent SHA-256 vectors', () => {
 });
 
 describe('literal observation facts', () => {
+  test.each(['constructor', '__proto__', 'toString', 'hasOwnProperty'])(
+    '%s presence on an ordinary record selects a boolean, while its intrinsic value stays unsupported',
+    (key) => {
+      const address = [{ kind: 'property', key }] as const;
+      expect(observe({}, address, 'own')).toEqual({ operation: 'own', address, fact: false });
+      expect(observe({}, address, 'membership')).toEqual({ operation: 'membership', address, fact: true });
+      expect(encodeSelectedFact(observe({}, address, 'own'))).not.toBe(encodeSelectedFact(observe({}, address, 'membership')));
+      expect(() => observe({}, address, 'value')).toThrow(/intrinsic/u);
+    },
+  );
+
+  test('own-to-inherited and null-ending transitions retain literal presence semantics', () => {
+    const address = [{ kind: 'property', key: 'constructor' }] as const;
+    const own = { constructor: 'shadow', sibling: 1 };
+    const inherited = { sibling: 2 };
+    const nullEnding = recordFromEntries([['sibling', 3]], null);
+    expect(observe(own, address, 'own').fact).toBe(true);
+    expect(observe(own, address, 'membership').fact).toBe(true);
+    expect(observe(inherited, address, 'own').fact).toBe(false);
+    expect(observe(inherited, address, 'membership').fact).toBe(true);
+    expect(observe(nullEnding, address, 'own').fact).toBe(false);
+    expect(observe(nullEnding, address, 'membership').fact).toBe(false);
+    expect(observe(own, address, 'value').fact).toBe('shadow');
+  });
+
+  test('presence respects supported custom prototype data and rejects unsafe surfaces without invoking getters', () => {
+    const address = [{ kind: 'property', key: 'constructor' }] as const;
+    const custom = recordFromEntries([['constructor', 'custom data']], Object.prototype);
+    const child = recordFromEntries([], custom);
+    expect(observe(child, address, 'own').fact).toBe(false);
+    expect(observe(child, address, 'membership').fact).toBe(true);
+    expect(observe(child, address, 'value').fact).toBe('custom data');
+    const intrinsicThroughCustom = recordFromEntries([], recordFromEntries([['other', 1]], Object.prototype));
+    expect(observe(intrinsicThroughCustom, address, 'own').fact).toBe(false);
+    expect(observe(intrinsicThroughCustom, address, 'membership').fact).toBe(true);
+    expect(() => observe(intrinsicThroughCustom, address, 'value')).toThrow(/intrinsic/u);
+
+    let getterCalls = 0;
+    const accessor = Object.defineProperty({}, 'constructor', {
+      enumerable: true,
+      get(): string { getterCalls += 1; return 'unsafe'; },
+    });
+    const classInstance = new (class Example { readonly member = 'data'; })();
+    const native = new Date(0);
+    const third = recordFromEntries([], recordFromEntries([], recordFromEntries([], recordFromEntries([], null))));
+    for (const candidate of [accessor, classInstance, native, third]) {
+      expect(() => observe(candidate, address, 'own')).toThrow(TypeError);
+      expect(() => observe(candidate, address, 'membership')).toThrow(TypeError);
+    }
+    expect(getterCalls).toBe(0);
+  });
+
   test('a value read equates missing and present undefined, while own presence does not', () => {
     const missing = {};
     const present = { optional: undefined };

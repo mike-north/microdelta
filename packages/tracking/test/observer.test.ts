@@ -3,7 +3,7 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 
 import { describe, expect, test } from '@jest/globals';
 import type { IMachine } from '@microdelta/machine';
-import { encodeProjectionFact, observe, type ISelectedFact, type IValueProjectionFact } from '@microdelta/value';
+import { encodeProjectionFact, observe, recordFromEntries, type ISelectedFact, type IValueProjectionFact } from '@microdelta/value';
 import { createTrackingObserver } from '../src/index.js';
 import type { ICurrentFactRequest, ICurrentFactResolution, IObservationCapture, ITrackingBinding } from '../src/index.js';
 
@@ -348,6 +348,30 @@ describe('semantic tracking observer', () => {
 
     source.set('analysis/author', { b: 2 });
     expect(observer.compareCurrent(captured, source.provider).kind).toBe('changed');
+  });
+
+  test('intrinsic-name presence is captured as one fact and compared against current source facts', () => {
+    const source = createProvider();
+    const tracked = observer.tracked({}, binding);
+    const member = observer.capture(() => 'constructor' in tracked);
+    const own = observer.capture(() => observer.hasOwn(tracked, 'constructor'));
+    const address = [{ kind: 'property', key: 'constructor' }];
+    expect(member.value).toBe(true);
+    expect(own.value).toBe(false);
+    expect(member.observations).toHaveLength(1);
+    expect(own.observations).toHaveLength(1);
+    expect(member.observations[0]).toMatchObject({ operation: 'membership', address, selection: { operation: 'membership', address } });
+    expect(own.observations[0]).toMatchObject({ operation: 'own', address, selection: { operation: 'own', address } });
+
+    source.set('analysis/author', { sibling: 'changed' });
+    expect(observer.compareCurrent(member, source.provider).kind).toBe('equal');
+    expect(observer.compareCurrent(own, source.provider).kind).toBe('equal');
+    source.set('analysis/author', { constructor: 'shadow' });
+    expect(observer.compareCurrent(member, source.provider).kind).toBe('equal');
+    expect(observer.compareCurrent(own, source.provider).kind).toBe('changed');
+    source.set('analysis/author', recordFromEntries([], null));
+    expect(observer.compareCurrent(member, source.provider).kind).toBe('changed');
+    expect(observer.compareCurrent(own, source.provider).kind).toBe('equal');
   });
 
   test('explicit identity reads ignore unread names but change when the identity changes', () => {

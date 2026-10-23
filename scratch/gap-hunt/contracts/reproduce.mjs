@@ -6,6 +6,7 @@ const suites = {
   '155': { workspace: 'microdelta', test: 'gap-hunt-contracts-container-guard', types: false },
   '156': { workspace: 'microdelta', test: 'gap-hunt-contracts-scalar-roots', types: true },
   'falsey-guard': { workspace: 'microdelta', test: 'gap-hunt-contracts-operation-matrix', types: false, pattern: 'falsey guard values' },
+  'dedup-expiry': { workspace: 'microdelta', test: 'gap-hunt-contracts-dedup-expiry', types: false },
   'cost': { workspace: 'microdelta', test: 'gap-hunt-contracts-cost', types: true },
   'early-stop': { workspace: 'microdelta', test: 'gap-hunt-contracts-operation-matrix', types: false, pattern: 'COL-4 early termination' },
   'precedence': { workspace: 'microdelta', test: 'gap-hunt-contracts-precedence', types: false },

@@ -184,3 +184,13 @@ snapshot rewrites; and fresh process-local tags over one exact retained corpus.
 Core strict/type-aware lint and generated-alpha tsd pass. Narrow/reactive views
 compose owner-alpha APIs; a new facade convenience API is not presumed.
 150,000 subjects remains an unmeasured capacity target for this bounded suite.
+
+## RUN-012 expired provider deduplication
+
+`RUN-012-DEDUP-EXPIRY.md` records the selected boolean safety contract and its
+provider-specific boundary. Two new passing assertions show finite dedup expires
+at its exact boundary, and withholding automatic safety authorization preserves
+unknown/no resend after real durable session reopen beyond expiry, with unknown
+usage retained. Existing provider-idempotency positive control was rerun (1pass).
+Core strict/lint pass. This proves a conservative adapter negative, not automatic
+expiry tracking, true-declaration revocation, or new independent-process evidence.

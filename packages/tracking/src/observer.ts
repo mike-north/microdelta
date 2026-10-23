@@ -911,8 +911,8 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
    * {@link wrapContainer} operation for operation, but each read asks the
    * source for exactly one node or fact at its full address. Container nodes
    * contribute the same bounded kind evidence as local navigation, without
-   * requesting their payload or length. Reads first
-   * rejecting work inherited from a closed frame.
+   * requesting their payload or length. Reads reject work inherited from a
+   * closed frame before requesting retained content.
    */
   function wrapLazy(binding: IBindingRecord, root: ILazyRoot, node: ILazyProxyRecord['node']): object {
     const isArray = node.kind === 'array';

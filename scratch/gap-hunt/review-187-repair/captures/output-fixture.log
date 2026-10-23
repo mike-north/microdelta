@@ -1,0 +1,3 @@
+
+> @microdelta/workspace@0.0.0 check:output-fixture
+> tsc --noEmit -p scratch/gap-hunt/consumer-dx/tsconfig.output-bindings.json && eslint -c tooling/output-bindings-eslint.config.mjs scratch/gap-hunt/consumer-dx/output-bindings.ts

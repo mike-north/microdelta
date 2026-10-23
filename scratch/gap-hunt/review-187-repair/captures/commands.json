@@ -1,0 +1,65 @@
+[
+  {
+    "name": "install",
+    "argv": [
+      "npm",
+      "ci",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "default-build",
+    "argv": [
+      "npm",
+      "run",
+      "build"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "output-fixture",
+    "argv": [
+      "npm",
+      "run",
+      "check:output-fixture"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "original-minimal",
+    "argv": [
+      "node",
+      "scratch/gap-hunt/review-187-repair/original-reproduce.mjs",
+      "durable-output-minimal"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "compiler-config-tooling",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "tooling/output-bindings-config.test.mjs"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "generated-bindings",
+    "argv": [
+      "npm",
+      "run",
+      "test:unit",
+      "--workspace",
+      "microdelta",
+      "--",
+      "--runTestsByPath",
+      ".test-build/test/gap-hunt-dx-output-bindings.test.js",
+      "--json",
+      "--outputFile=../../scratch/gap-hunt/review-187-repair/local-results/generated-bindings.json"
+    ],
+    "exit": 0
+  }
+]

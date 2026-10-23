@@ -1,0 +1,12 @@
+
+> microdelta@0.3.0 test:unit
+> tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand --runTestsByPath .test-build/test/gap-hunt-dx-output-bindings.test.js --json --outputFile=../../scratch/gap-hunt/review-187-repair/local-results/generated-bindings.json
+
+(node:53683) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       4 passed, 4 total
+Snapshots:   0 total
+Time:        1.249 s
+Ran all test suites within paths ".test-build/test/gap-hunt-dx-output-bindings.test.js".
+Test results written to: ../../scratch/gap-hunt/review-187-repair/local-results/generated-bindings.json

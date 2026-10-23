@@ -1,0 +1,35 @@
+{
+  "reviewed_pin": "accad3a07a24b7b544b22003a6f8a283c624efc9",
+  "previous_reviewed_pin": "0af7f746aa82fc72e88d24c3945061b1a17c0511",
+  "historical_proof": "565f8384d8ca32681d45b8db262f2cf9571d04c7",
+  "actual_os": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "architecture": "arm64",
+  "node": "v24.22.1",
+  "npm": "11.12.1",
+  "head": "accad3a07a24b7b544b22003a6f8a283c624efc9",
+  "four_original_files_byte_exact": true,
+  "support_overlay_absent_before_after": true,
+  "default_build_exit": 0,
+  "output_fixture_strict_lint_exit": 0,
+  "original_minimal": {
+    "passed": 2,
+    "skipped": 7,
+    "total": 9
+  },
+  "generated_bindings": {
+    "passed": 4,
+    "failed": 0,
+    "runtime_errors": 0
+  },
+  "package_tree_byte_exact_previous": "e63d5246a17ed6ada3805fc3fabe44daa9dd25a4",
+  "prior_runtime_evidence": {
+    "core_passed": 14,
+    "owner_passed": 6,
+    "tracking_passed": 54,
+    "qualification": "Prior565/64b runs at0af under explicit support overlay; package tree/runtime source byte-identical, broad suites not re-executed here"
+  },
+  "historical_pristine_exit_preserved": 2,
+  "commands": 6,
+  "verdict": "PASS pristine compiler-config repair at exact head",
+  "scope": "Actual recorded host and Node24 only; no unexecuted-platform/full-suite claim beyond focused original2/generated4; historical pristineFAIL remains at originalpin"
+}

@@ -1,0 +1,66 @@
+{
+  "reviewed_pin": "0af7f746aa82fc72e88d24c3945061b1a17c0511",
+  "old_source_pin": "a0b539f7dbba17ece2fd82ab9b0b692e65316adf",
+  "actual_os": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "node": "v24.22.1",
+  "original_files": 4,
+  "source_sha256": "28291aad3d1a7a853df33a7b8c26dd922b7f42273673f66b136d968f374d6f07",
+  "old_source_sha256": "6cd921a04ad128dc8ed76ac7615317a442f8c0f4d02e1bc483eb1c391513de1e",
+  "source_restored_byte_exact": true,
+  "suites": {
+    "current-core": {
+      "numPassedTests": 14,
+      "numFailedTests": 0,
+      "numPassedTestSuites": 3,
+      "numFailedTestSuites": 0,
+      "numRuntimeErrorTestSuites": 0
+    },
+    "current-owner": {
+      "numPassedTests": 6,
+      "numFailedTests": 0,
+      "numPassedTestSuites": 1,
+      "numFailedTestSuites": 0,
+      "numRuntimeErrorTestSuites": 0
+    },
+    "tracking-regression": {
+      "numPassedTests": 54,
+      "numFailedTests": 0,
+      "numPassedTestSuites": 2,
+      "numFailedTestSuites": 0,
+      "numRuntimeErrorTestSuites": 0
+    },
+    "old-source-core": {
+      "numPassedTests": 3,
+      "numFailedTests": 11,
+      "numPassedTestSuites": 0,
+      "numFailedTestSuites": 3,
+      "numRuntimeErrorTestSuites": 0
+    },
+    "old-source-owner": {
+      "numPassedTests": 0,
+      "numFailedTests": 6,
+      "numPassedTestSuites": 0,
+      "numFailedTestSuites": 1,
+      "numRuntimeErrorTestSuites": 0
+    },
+    "restored-core": {
+      "numPassedTests": 14,
+      "numFailedTests": 0,
+      "numPassedTestSuites": 3,
+      "numFailedTestSuites": 0,
+      "numRuntimeErrorTestSuites": 0
+    },
+    "restored-owner": {
+      "numPassedTests": 6,
+      "numFailedTests": 0,
+      "numPassedTestSuites": 1,
+      "numFailedTestSuites": 0,
+      "numRuntimeErrorTestSuites": 0
+    }
+  },
+  "commands": 15,
+  "verdict": "PASS for bounded #164 explicit subtree revalidation",
+  "pristine_original_exit": 2,
+  "runtime_support_overlay": "Exact a97c11f tsconfig.all.json supplied only for runtime checks, then removed",
+  "scope": "Runtime PASS under explicit missing-config overlay; pristine build FAIL; Node24 actualOS only; no Linux/fullrepo/provider/publication qualification"
+}

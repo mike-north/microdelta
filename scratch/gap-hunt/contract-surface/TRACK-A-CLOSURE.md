@@ -56,7 +56,7 @@ Short source labels below denote owning test files: `source-policy` and `summary
 | DOM-4 identity/content/readiness/source acceptance/admission/cost separate | R source-policy116 fresh-equal distinct vs152 explicit retain exact; summary134 new source/unread preserves parent; admission88 hit before deny; F open 2→closed4 preserves first 2; W unknown/no port/env usage controls | Verified tested distinct axes; no inferred cost-based identity |
 | DOM-5 non-goals | No partial JSstack/closure serialization/purity/native class/distributed behavior claimed | Explicit exclusions, not missing current acceptance |
 | DOM-6 unread/consumed/title/implementation/selective reference behavior | R summary-validation 134 unread source edit,157 consumed edit onlyown summary,181 called formatter edit,196 uncalled helper edit,208 changed child impl+equal output cutoff,381 intermediate profile rebound; source-policy 91 current hook | Verified bounded worked behavior; unrelated member reference preserved explicitly |
-| DOM-2/ordinary authoring broad route | F custom key1red2green and generatedtype checks: source+custom key compiles, declaration rejects no-string-identity schema; optional phantom identity control succeeds actual member work | Gap under settled COL1/CMP4 alternative; CUSTOM-KEY-PICKUP.md. Scalar root #156 excluded from new audit |
+| DOM-2/ordinary authoring broad route | F custom key1red2green and generatedtype checks: source+custom key compiles, declaration rejects no-string-identity schema; optional phantom identity control succeeds actual member work | Gap #168 under settled COL1/CMP4 alternative; CUSTOM-KEY-PICKUP.md. Scalar root #156 excluded from new audit |
 
 ## Architecture: owned invariants and current seams
 
@@ -140,3 +140,5 @@ Scaffold migration 1–5, artifact provenance/archive handling and model claim l
 5. **Process only:** historic tests-first/adoption sequence/human API and comment review. Current mechanical checks and all new probe outcomes are executed; an unreviewed historical sequence cannot be completed by inventing a runtime test.
 
 No row is left “partial” merely for lacking a mathematical proof. Remaining items name an observable outcome, an explicit undelivered capability, or a specific process/seam evidence gap.
+
+Follow-up pickup links: #168 explicit custom keys; #169 async source declaration gap (direct/template fresh/retain); #170 unlabelled M7 controlled discovery workflow target. Async source compiler evidence and independent runtime controls are in consumer-dx/ASYNC-SOURCE-PICKUP.md; M7 diagnostic and conditional criteria are in consumer-dx/M7-WORKFLOW-PICKUP.md. Neither is a completed M7 acceptance claim.

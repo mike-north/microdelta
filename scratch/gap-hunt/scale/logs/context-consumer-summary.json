@@ -1,0 +1,487 @@
+{
+  "context-tracking-plain": {
+    "samples": 30,
+    "first5MedianMs": 8.995041,
+    "last5MedianMs": 90.95470799999998,
+    "firstALS": 202,
+    "finalALS": 6002,
+    "runs": 3000,
+    "bodies": 0,
+    "observed": 3000
+  },
+  "context-tracking-isolated": {
+    "samples": 30,
+    "first5MedianMs": 2.0495420000000024,
+    "last5MedianMs": 1.5418750000000045,
+    "firstALS": 2,
+    "finalALS": 2,
+    "runs": 3000,
+    "bodies": 0,
+    "observed": 3000
+  },
+  "context-tracking-node26-plain": {
+    "samples": 30,
+    "first5MedianMs": 8.177292000000008,
+    "last5MedianMs": 91.2852499999999,
+    "firstALS": 202,
+    "finalALS": 6002,
+    "runs": 3000,
+    "bodies": 0,
+    "observed": 3000
+  },
+  "context-tracking-node26-isolated": {
+    "samples": 30,
+    "first5MedianMs": 1.6413329999999888,
+    "last5MedianMs": 1.529916999999955,
+    "firstALS": 2,
+    "finalALS": 2,
+    "runs": 3000,
+    "bodies": 0,
+    "observed": 3000
+  },
+  "context-fresh-plain": {
+    "samples": 30,
+    "first5MedianMs": 109.69545800000003,
+    "last5MedianMs": 96.48308300000008,
+    "firstALS": 3,
+    "finalALS": 3,
+    "runs": 3000,
+    "bodies": 3000,
+    "observed": 0
+  },
+  "context-fresh-isolated": {
+    "samples": 30,
+    "first5MedianMs": 84.23979099999997,
+    "last5MedianMs": 99.47266600000012,
+    "firstALS": 3,
+    "finalALS": 3,
+    "runs": 3000,
+    "bodies": 3000,
+    "observed": 0
+  },
+  "context-installed-fresh-plain": {
+    "samples": 30,
+    "first5MedianMs": 106.46604100000002,
+    "last5MedianMs": 309.8402500000002,
+    "firstALS": 103,
+    "finalALS": 3003,
+    "runs": 3000,
+    "bodies": 3000,
+    "observed": 0
+  },
+  "context-installed-fresh-isolated": {
+    "samples": 30,
+    "first5MedianMs": 100.25675000000001,
+    "last5MedianMs": 78.86054199999853,
+    "firstALS": 3,
+    "finalALS": 3,
+    "runs": 3000,
+    "bodies": 3000,
+    "observed": 0
+  },
+  "context-installed-fresh-repeat": {
+    "samples": 30,
+    "first5MedianMs": 89.24387499999995,
+    "last5MedianMs": 268.8654999999999,
+    "firstALS": 103,
+    "finalALS": 3003,
+    "runs": 3000,
+    "bodies": 3000,
+    "observed": 0
+  },
+  "context-tracking-yield-first": {
+    "samples": 30,
+    "first5MedianMs": 1.6606250000000102,
+    "last5MedianMs": 1.5979999999999563,
+    "firstALS": 2,
+    "finalALS": 2,
+    "runs": 3000,
+    "bodies": 0,
+    "observed": 3000
+  },
+  "context-installed-yield-first": {
+    "samples": 30,
+    "first5MedianMs": 88.26554200000001,
+    "last5MedianMs": 88.78645800000004,
+    "firstALS": 3,
+    "finalALS": 3,
+    "runs": 3000,
+    "bodies": 3000,
+    "observed": 0
+  },
+  "context-unentered": {
+    "samples": 30,
+    "first5MedianMs": 0.2294170000000122,
+    "last5MedianMs": 0.21849999999994907,
+    "firstALS": 2,
+    "finalALS": 2,
+    "runs": 3000,
+    "bodies": 0,
+    "observed": 0
+  },
+  "context-als-plain": {
+    "samples": 30,
+    "first5MedianMs": 7.080624999999998,
+    "last5MedianMs": 108.06329199999982,
+    "firstALS": 202,
+    "finalALS": 6002,
+    "runs": 3000,
+    "bodies": 0,
+    "observed": 0
+  },
+  "context-tracking-hooks": {
+    "samples": 30,
+    "first5MedianMs": 9.401125000000008,
+    "last5MedianMs": 99.36370899999974,
+    "firstALS": 202,
+    "finalALS": 6002,
+    "runs": 3000,
+    "bodies": 0,
+    "observed": 3000
+  },
+  "context-tracking-hooks-isolated": {
+    "samples": 30,
+    "first5MedianMs": 2.0490840000000077,
+    "last5MedianMs": 2.2372910000000275,
+    "firstALS": 2,
+    "finalALS": 2,
+    "runs": 3000,
+    "bodies": 0,
+    "observed": 3000
+  },
+  "profiles": {
+    "context-tracking-plain": {
+      "samples": 1538,
+      "topSelfSamples": [
+        [
+          "AsyncContextFrame [node:internal/async_context_frame:43]",
+          835
+        ],
+        [
+          "queryObjects [node:internal/heap_utils:73]",
+          429
+        ],
+        [
+          "(garbage collector) [:0]",
+          189
+        ],
+        [
+          "(program) [:0]",
+          13
+        ],
+        [
+          "compileForInternalLoader [node:internal/bootstrap/realm:383]",
+          4
+        ],
+        [
+          " [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/scratch/gap-hunt/scale/dist/context-consumer.js:84]",
+          4
+        ],
+        [
+          "observeAt [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/value/dist/src/value.js:463]",
+          3
+        ],
+        [
+          "execute [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/scratch/gap-hunt/scale/dist/context-consumer.js:30]",
+          3
+        ],
+        [
+          "compileSourceTextModule [node:internal/modules/esm/utils:317]",
+          2
+        ],
+        [
+          "getPackageScopeConfig [node:internal/modules/package_json_reader:222]",
+          2
+        ],
+        [
+          "fingerprint [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/value/dist/src/value.js:876]",
+          2
+        ],
+        [
+          "decodeCanonical [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/value/dist/src/value.js:392]",
+          2
+        ],
+        [
+          "createTrackingObserver [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/tracking/dist/src/observer.js:312]",
+          2
+        ],
+        [
+          "(idle) [:0]",
+          2
+        ],
+        [
+          "open [:0]",
+          1
+        ]
+      ]
+    },
+    "context-tracking-isolated": {
+      "samples": 539,
+      "topSelfSamples": [
+        [
+          "queryObjects [node:internal/heap_utils:73]",
+          391
+        ],
+        [
+          "(garbage collector) [:0]",
+          86
+        ],
+        [
+          "compileForInternalLoader [node:internal/bootstrap/realm:383]",
+          6
+        ],
+        [
+          "compileSourceTextModule [node:internal/modules/esm/utils:317]",
+          6
+        ],
+        [
+          "(program) [:0]",
+          4
+        ],
+        [
+          "AsyncContextFrame [node:internal/async_context_frame:43]",
+          3
+        ],
+        [
+          "compileFunction [:0]",
+          2
+        ],
+        [
+          "recordFact [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/tracking/dist/src/observer.js:317]",
+          2
+        ],
+        [
+          "fingerprint [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/value/dist/src/value.js:876]",
+          2
+        ],
+        [
+          "Hash [node:internal/crypto/hash:112]",
+          2
+        ],
+        [
+          "decodeCanonical [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/value/dist/src/value.js:392]",
+          2
+        ],
+        [
+          "fromWire [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/value/dist/src/value.js:298]",
+          2
+        ],
+        [
+          "createTrackingObserver [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/tracking/dist/src/observer.js:312]",
+          2
+        ],
+        [
+          "wrappedFn [node:internal/errors:538]",
+          1
+        ],
+        [
+          "lstat [:0]",
+          1
+        ]
+      ]
+    },
+    "context-fresh-plain": {
+      "samples": 2753,
+      "topSelfSamples": [
+        [
+          "sqliteTransaction [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/node_modules/better-sqlite3/lib/methods/transaction.js:52]",
+          1014
+        ],
+        [
+          "queryObjects [node:internal/heap_utils:73]",
+          464
+        ],
+        [
+          "(garbage collector) [:0]",
+          237
+        ],
+        [
+          " [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/machine-node/dist/src/node/sqlite.js:254]",
+          138
+        ],
+        [
+          "toRow [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/machine-node/dist/src/node/sqlite.js:274]",
+          99
+        ],
+        [
+          " [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/machine-node/dist/src/node/sqlite.js:246]",
+          83
+        ],
+        [
+          " [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/machine-node/dist/src/node/sqlite.js:250]",
+          53
+        ],
+        [
+          "transaction [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/node_modules/better-sqlite3/lib/methods/transaction.js:5]",
+          38
+        ],
+        [
+          "encodeSnapshot [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/value/dist/src/value.js:282]",
+          23
+        ],
+        [
+          "decodeCanonical [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/value/dist/src/value.js:392]",
+          19
+        ],
+        [
+          "Hash [node:internal/crypto/hash:112]",
+          17
+        ],
+        [
+          "(program) [:0]",
+          16
+        ],
+        [
+          "recordFromEntries [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/value/dist/src/value.js:411]",
+          15
+        ],
+        [
+          "toWire [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/value/dist/src/value.js:213]",
+          14
+        ],
+        [
+          "AsyncContextFrame [node:internal/async_context_frame:43]",
+          14
+        ]
+      ]
+    },
+    "context-fresh-isolated": {
+      "samples": 3013,
+      "topSelfSamples": [
+        [
+          "sqliteTransaction [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/node_modules/better-sqlite3/lib/methods/transaction.js:52]",
+          1172
+        ],
+        [
+          "queryObjects [node:internal/heap_utils:73]",
+          484
+        ],
+        [
+          "(garbage collector) [:0]",
+          215
+        ],
+        [
+          " [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/machine-node/dist/src/node/sqlite.js:254]",
+          150
+        ],
+        [
+          "toRow [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/machine-node/dist/src/node/sqlite.js:274]",
+          129
+        ],
+        [
+          " [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/machine-node/dist/src/node/sqlite.js:246]",
+          109
+        ],
+        [
+          " [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/machine-node/dist/src/node/sqlite.js:250]",
+          52
+        ],
+        [
+          "transaction [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/node_modules/better-sqlite3/lib/methods/transaction.js:5]",
+          37
+        ],
+        [
+          "(program) [:0]",
+          28
+        ],
+        [
+          "encodeSnapshot [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/value/dist/src/value.js:282]",
+          24
+        ],
+        [
+          "toWire [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/value/dist/src/value.js:213]",
+          21
+        ],
+        [
+          "SupervisionError [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/supervision/dist/src/errors.js:14]",
+          15
+        ],
+        [
+          "toValue [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/machine-node/dist/src/node/sqlite.js:289]",
+          14
+        ],
+        [
+          "decodeCanonical [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/value/dist/src/value.js:392]",
+          13
+        ],
+        [
+          "recordFromEntries [file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/value/dist/src/value.js:411]",
+          13
+        ]
+      ]
+    },
+    "context-installed-fresh-plain": {
+      "samples": 4277,
+      "topSelfSamples": [
+        [
+          "AsyncContextFrame [node:internal/async_context_frame:43]",
+          1856
+        ],
+        [
+          "sqliteTransaction [file:///Users/mnorth/stripe/contribution-reports/.worktrees/integrate/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/lib/methods/transaction.js:52]",
+          825
+        ],
+        [
+          "queryObjects [node:internal/heap_utils:73]",
+          406
+        ],
+        [
+          "(garbage collector) [:0]",
+          375
+        ],
+        [
+          "run [file:///Users/mnorth/stripe/contribution-reports/.worktrees/integrate/node_modules/.pnpm/@microdelta+machine-node@0.1.0/node_modules/@microdelta/machine-node/dist/src/node/sqlite.js:155]",
+          79
+        ],
+        [
+          "toRow [file:///Users/mnorth/stripe/contribution-reports/.worktrees/integrate/node_modules/.pnpm/@microdelta+machine-node@0.1.0/node_modules/@microdelta/machine-node/dist/src/node/sqlite.js:184]",
+          77
+        ],
+        [
+          "get [file:///Users/mnorth/stripe/contribution-reports/.worktrees/integrate/node_modules/.pnpm/@microdelta+machine-node@0.1.0/node_modules/@microdelta/machine-node/dist/src/node/sqlite.js:159]",
+          45
+        ],
+        [
+          "(program) [:0]",
+          42
+        ],
+        [
+          "all [file:///Users/mnorth/stripe/contribution-reports/.worktrees/integrate/node_modules/.pnpm/@microdelta+machine-node@0.1.0/node_modules/@microdelta/machine-node/dist/src/node/sqlite.js:163]",
+          38
+        ],
+        [
+          "transaction [file:///Users/mnorth/stripe/contribution-reports/.worktrees/integrate/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/lib/methods/transaction.js:5]",
+          30
+        ],
+        [
+          "waitForWorker [node:internal/modules/esm/hooks:550]",
+          24
+        ],
+        [
+          "toWire [file:///Users/mnorth/stripe/contribution-reports/.worktrees/integrate/node_modules/.pnpm/@microdelta+value@0.1.0/node_modules/@microdelta/value/dist/src/value.js:213]",
+          23
+        ],
+        [
+          "makeSyncRequest [node:internal/modules/esm/hooks:632]",
+          20
+        ],
+        [
+          "recordFromEntries [file:///Users/mnorth/stripe/contribution-reports/.worktrees/integrate/node_modules/.pnpm/@microdelta+value@0.1.0/node_modules/@microdelta/value/dist/src/value.js:411]",
+          16
+        ],
+        [
+          "encodeSnapshot [file:///Users/mnorth/stripe/contribution-reports/.worktrees/integrate/node_modules/.pnpm/@microdelta+value@0.1.0/node_modules/@microdelta/value/dist/src/value.js:282]",
+          15
+        ]
+      ]
+    }
+  },
+  "freshProcesses": {
+    "processes": 30,
+    "runsPerProcess": 100,
+    "minALS": 202,
+    "maxALS": 202,
+    "first5MedianMs": 4.397666000000001,
+    "last5MedianMs": 4.346291000000001
+  }
+}

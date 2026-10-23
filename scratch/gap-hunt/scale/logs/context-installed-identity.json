@@ -1,0 +1,30 @@
+{
+  "consumerCheckout": "d172f5f",
+  "files": [
+    {
+      "package": "microdelta@0.2.0",
+      "path": "/Users/mnorth/stripe/contribution-reports/.worktrees/integrate/node_modules/.pnpm/microdelta@0.2.0/node_modules/microdelta/dist/src/workspace.js",
+      "sha256": "cbdc9ff72d773c686cd6b5a0fffb97b2b1c30f2639c900ebeed20ec0c662f550"
+    },
+    {
+      "package": "@microdelta+resolution@0.2.0",
+      "path": "/Users/mnorth/stripe/contribution-reports/.worktrees/integrate/node_modules/.pnpm/@microdelta+resolution@0.2.0/node_modules/@microdelta/resolution/dist/src/resolution.js",
+      "sha256": "74654bd842e04b2b390417aed71524604487cb63cf0c0bcfd547e7ae59328297"
+    },
+    {
+      "package": "@microdelta+supervision@0.2.0",
+      "path": "/Users/mnorth/stripe/contribution-reports/.worktrees/integrate/node_modules/.pnpm/@microdelta+supervision@0.2.0/node_modules/@microdelta/supervision/dist/src/supervision.js",
+      "sha256": "160a98179a700bb6d9163f613475324914c964aa8ecae8dfa37920c88cf06102"
+    },
+    {
+      "package": "@microdelta+tracking@0.2.0",
+      "path": "/Users/mnorth/stripe/contribution-reports/.worktrees/integrate/node_modules/.pnpm/@microdelta+tracking@0.2.0/node_modules/@microdelta/tracking/dist/src/observer.js",
+      "sha256": "a26b6cfbfa7a22b030c493fbdd745e11817f1210949d9b94385379e6ab5e569e"
+    },
+    {
+      "package": "@microdelta+machine-node@0.1.0",
+      "path": "/Users/mnorth/stripe/contribution-reports/.worktrees/integrate/node_modules/.pnpm/@microdelta+machine-node@0.1.0/node_modules/@microdelta/machine-node/dist/src/node/index.js",
+      "sha256": "0095d7e972223b64633cab0c665cee06be991201354ba0dbfcac2b472e2ef0b1"
+    }
+  ]
+}

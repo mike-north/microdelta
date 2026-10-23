@@ -25,9 +25,10 @@ single-file schema, distinct from the legacy Store, with:
 
 It stores Resolution's provenance and Supervision's journal records as
 versioned opaque records and never decides reuse eligibility, freshness or
-operation meaning. The durable schema is at version 2. Files at any other
-version, including version 1 files written before environment-scoped
-acceptances, promotions and the journal existed, are rejected by version; stored
-data is never migrated by guessing. See the
+operation meaning. The durable schema is at version 3, which rejects replacement
+of immutable records through primary keys, secondary unique keys and SQLite row
+identity aliases. Existing version 1 and version 2 durable files, and files at
+any other unsupported version, are explicitly rejected; no migration is
+provided. The separate legacy Store schema is unchanged. See the
 [package map](../../docs/package-map.md) and the
 [durable History evidence record](../../docs/validation/m3-durable-history-2026-09-27.md).

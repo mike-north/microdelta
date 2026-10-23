@@ -1,0 +1,18 @@
++ /tmp/md157.3VhNTl/manager-10.34.7/node_modules/.bin/pnpm --dir /tmp/md157.3VhNTl/pnpm-10.34.7 --store-dir /tmp/md157.3VhNTl/store-10.34.7 install
+Progress: resolved 1, reused 0, downloaded 0, added 0
+ WARN  1 deprecated subdependencies found: prebuild-install@7.1.3
+Packages: +49
++++++++++++++++++++++++++++++++++++++++++++++++++
+Progress: resolved 49, reused 0, downloaded 49, added 49, done
+
+dependencies:
++ microdelta 0.2.0
+
+╭ Warning ─────────────────────────────────────────────────────────────────────╮
+│                                                                              │
+│   Ignored build scripts: better-sqlite3@12.9.0.                              │
+│   Run "pnpm approve-builds" to pick which dependencies should be allowed     │
+│   to run scripts.                                                            │
+│                                                                              │
+╰──────────────────────────────────────────────────────────────────────────────╯
+Done in 909ms using pnpm v10.34.7

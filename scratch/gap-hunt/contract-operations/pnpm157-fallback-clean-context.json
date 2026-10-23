@@ -1,0 +1,114 @@
+{
+  "pin": "0683c2ed73934d10f9b5a1ad9e0dd9e3d1a88d4f",
+  "checkout": "/var/folders/st/lnv0_82j071b3c_hn5s_j2wc0000gn/T/gap-hunt-pnpm157-fallback-u8puwmwz/checkout",
+  "argv": [
+    "bash",
+    "-x",
+    "scratch/gap-hunt/contract-operations/verify-157.sh"
+  ],
+  "explicitEnvironment": {
+    "PNPM12_BIN": "/Users/mnorth/.nodenv/versions/24.14.0/bin/pnpm"
+  },
+  "node": "v24.22.1",
+  "npm": "11.12.1",
+  "platform": "Darwin arm64",
+  "cleanBefore": "",
+  "nodeModulesExistedBefore": false,
+  "startedAt": "2026-10-23T08:59:55.771789+00:00",
+  "shellTracing": true,
+  "exitCode": 0,
+  "cleanAfter": "",
+  "nodeModulesExistAfter": false,
+  "finishedAt": "2026-10-23T09:00:03.247906+00:00",
+  "disposableConsumerRoots": [
+    "/tmp/md157.3VhNTl"
+  ],
+  "capturedConsumerFiles": {
+    "/tmp/md157.3VhNTl/pnpm-10.34.7/manager.log": {
+      "file": "scratch/gap-hunt/contract-operations/pnpm157-fallback-consumer-logs/pnpm-10.34.7/manager.log",
+      "sha256": "b08c89e793863c1eb77d48bec9bb3c6b03b57467f5f11a25e7168f5ae8c88410",
+      "bytes": 26
+    },
+    "/tmp/md157.3VhNTl/pnpm-10.34.7/package.json": {
+      "file": "scratch/gap-hunt/contract-operations/pnpm157-fallback-consumer-logs/pnpm-10.34.7/package.json",
+      "sha256": "aaa9a6636bc2ab12ac0649d256c3e6adcd574c8f4713c737f6c9563395706aae",
+      "bytes": 107
+    },
+    "/tmp/md157.3VhNTl/pnpm-10.34.7/install.log": {
+      "file": "scratch/gap-hunt/contract-operations/pnpm157-fallback-consumer-logs/pnpm-10.34.7/install.log",
+      "sha256": "6c8a434dde968d3a0102d002c03162f433e2ba48d70d862f686695adaf8f5255",
+      "bytes": 1357
+    },
+    "/tmp/md157.3VhNTl/pnpm-10.34.7/pnpm-lock.yaml": {
+      "file": "scratch/gap-hunt/contract-operations/pnpm157-fallback-consumer-logs/pnpm-10.34.7/pnpm-lock.yaml",
+      "sha256": "641cc903cc76e03c1874c845486d2cae6c382b1e5bd8ecb806e71c1765fa19c6",
+      "bytes": 12501
+    },
+    "/tmp/md157.3VhNTl/pnpm-10.34.7/unapproved.log": {
+      "file": "scratch/gap-hunt/contract-operations/pnpm157-fallback-consumer-logs/pnpm-10.34.7/unapproved.log",
+      "sha256": "aedfd471987cc1b3ff0ceab4b9f69431dfd48b8d27857adc21891b4533399bad",
+      "bytes": 5477
+    },
+    "/tmp/md157.3VhNTl/pnpm-10.34.7/rebuild.log": {
+      "file": "scratch/gap-hunt/contract-operations/pnpm157-fallback-consumer-logs/pnpm-10.34.7/rebuild.log",
+      "sha256": "b3573051de8ef5322df5c6e9199147b408ed8a9ecf5ca910cfcea16ae0c01898",
+      "bytes": 550
+    },
+    "/tmp/md157.3VhNTl/pnpm-10.34.7/pnpm-workspace.yaml": {
+      "file": "scratch/gap-hunt/contract-operations/pnpm157-fallback-consumer-logs/pnpm-10.34.7/pnpm-workspace.yaml",
+      "sha256": "9e4c88cb0da3a70ef6ff797eef9e9df59fc2ad855f6f0fbc61bb158c3be3571e",
+      "bytes": 36
+    },
+    "/tmp/md157.3VhNTl/pnpm-10.34.7/cold.json": {
+      "file": "scratch/gap-hunt/contract-operations/pnpm157-fallback-consumer-logs/pnpm-10.34.7/cold.json",
+      "sha256": "a612dbece92477405e72806bc33b42dd14a26b6de19d3d0042db74222b4038d8",
+      "bytes": 761
+    },
+    "/tmp/md157.3VhNTl/pnpm-10.34.7/restart.json": {
+      "file": "scratch/gap-hunt/contract-operations/pnpm157-fallback-consumer-logs/pnpm-10.34.7/restart.json",
+      "sha256": "a231d607fa24bb9fdad1dc793487d003448f636c1e39fec4d9b68c9a8ebba660",
+      "bytes": 891
+    },
+    "/tmp/md157.3VhNTl/pnpm-12.10.1/package.json": {
+      "file": "scratch/gap-hunt/contract-operations/pnpm157-fallback-consumer-logs/pnpm-12.10.1/package.json",
+      "sha256": "aaa9a6636bc2ab12ac0649d256c3e6adcd574c8f4713c737f6c9563395706aae",
+      "bytes": 107
+    },
+    "/tmp/md157.3VhNTl/pnpm-12.10.1/install.log": {
+      "file": "scratch/gap-hunt/contract-operations/pnpm157-fallback-consumer-logs/pnpm-12.10.1/install.log",
+      "sha256": "1b16975e5abd221854fa405e709bca5a92d68f3d0eed6f65e65f2abf65a67d79",
+      "bytes": 791
+    },
+    "/tmp/md157.3VhNTl/pnpm-12.10.1/pnpm-lock.yaml": {
+      "file": "scratch/gap-hunt/contract-operations/pnpm157-fallback-consumer-logs/pnpm-12.10.1/pnpm-lock.yaml",
+      "sha256": "641cc903cc76e03c1874c845486d2cae6c382b1e5bd8ecb806e71c1765fa19c6",
+      "bytes": 12501
+    },
+    "/tmp/md157.3VhNTl/pnpm-12.10.1/unapproved.log": {
+      "file": "scratch/gap-hunt/contract-operations/pnpm157-fallback-consumer-logs/pnpm-12.10.1/unapproved.log",
+      "sha256": "b545b5c636a2c44bee99adbbe24a743a3fbe7e70f0b08eb82a268fae83d577af",
+      "bytes": 5477
+    },
+    "/tmp/md157.3VhNTl/pnpm-12.10.1/rebuild.log": {
+      "file": "scratch/gap-hunt/contract-operations/pnpm157-fallback-consumer-logs/pnpm-12.10.1/rebuild.log",
+      "sha256": "0bf4d94a6d2da646e787119062f2ad51fd3fd5766c4e2aac2982b2dbda87fc11",
+      "bytes": 657
+    },
+    "/tmp/md157.3VhNTl/pnpm-12.10.1/pnpm-workspace.yaml": {
+      "file": "scratch/gap-hunt/contract-operations/pnpm157-fallback-consumer-logs/pnpm-12.10.1/pnpm-workspace.yaml",
+      "sha256": "9e4c88cb0da3a70ef6ff797eef9e9df59fc2ad855f6f0fbc61bb158c3be3571e",
+      "bytes": 36
+    },
+    "/tmp/md157.3VhNTl/pnpm-12.10.1/cold.json": {
+      "file": "scratch/gap-hunt/contract-operations/pnpm157-fallback-consumer-logs/pnpm-12.10.1/cold.json",
+      "sha256": "a612dbece92477405e72806bc33b42dd14a26b6de19d3d0042db74222b4038d8",
+      "bytes": 761
+    },
+    "/tmp/md157.3VhNTl/pnpm-12.10.1/restart.json": {
+      "file": "scratch/gap-hunt/contract-operations/pnpm157-fallback-consumer-logs/pnpm-12.10.1/restart.json",
+      "sha256": "a231d607fa24bb9fdad1dc793487d003448f636c1e39fec4d9b68c9a8ebba660",
+      "bytes": 891
+    }
+  },
+  "nodeExecutable": "/Users/mnorth/.nodenv/versions/24.22.1/bin/node"
+}

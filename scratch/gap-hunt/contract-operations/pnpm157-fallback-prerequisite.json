@@ -1,0 +1,16 @@
+{
+  "path": "/Users/mnorth/.nodenv/versions/24.14.0/bin/pnpm",
+  "exists": true,
+  "node": "v24.22.1",
+  "checkedAt": "2026-10-23T08:59:24.919096+00:00",
+  "resolvedPath": "/Users/mnorth/.nodenv/versions/24.14.0/lib/node_modules/pnpm/pnpm",
+  "sha256": "4b3ac7049efff04a28508951243b2a6fa2d2974d1662934de4edc37435d4be31",
+  "argv": [
+    "/Users/mnorth/.nodenv/versions/24.14.0/bin/pnpm",
+    "--version"
+  ],
+  "exitCode": 0,
+  "stdout": "12.10.1\n",
+  "stderr": "",
+  "qualified": true
+}

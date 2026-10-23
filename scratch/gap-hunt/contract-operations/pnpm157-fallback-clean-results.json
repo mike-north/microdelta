@@ -1,0 +1,31 @@
+{
+  "exitCode": 0,
+  "controls": [
+    {
+      "pnpm": "10.34.7",
+      "coldCalls": 1,
+      "restartCalls": 0,
+      "exactReference": {
+        "kind": "completed-result",
+        "locator": "mdh1|[\"portability\",\"portability\",\"fixture\",1]"
+      },
+      "approvalNegative": true,
+      "nativeLifecycleCompleted": true
+    },
+    {
+      "pnpm": "12.10.1",
+      "coldCalls": 1,
+      "restartCalls": 0,
+      "exactReference": {
+        "kind": "completed-result",
+        "locator": "mdh1|[\"portability\",\"portability\",\"fixture\",1]"
+      },
+      "approvalNegative": true,
+      "nativeLifecycleCompleted": true
+    }
+  ],
+  "memorySmokeSuccesses": 2,
+  "pnpm12ExecutableSha256After": "4b3ac7049efff04a28508951243b2a6fa2d2974d1662934de4edc37435d4be31",
+  "fullOutputSha256": "07051d6074eb633ad0be913823e9d48dcf53c1f261d86c797f4b20ae68d3c9cc",
+  "temporaryRootsRemoved": true
+}

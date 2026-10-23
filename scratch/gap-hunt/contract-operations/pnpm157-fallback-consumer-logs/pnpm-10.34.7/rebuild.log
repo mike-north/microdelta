@@ -1,0 +1,5 @@
++ /tmp/md157.3VhNTl/manager-10.34.7/node_modules/.bin/pnpm --dir /tmp/md157.3VhNTl/pnpm-10.34.7 --store-dir /tmp/md157.3VhNTl/store-10.34.7 rebuild better-sqlite3
+.../node_modules/better-sqlite3 install$ prebuild-install || node-gyp rebuild --release
+.../node_modules/better-sqlite3 install: (node:69700) [DEP0176] DeprecationWarning: fs.R_OK is deprecated, use fs.constants.R_OK instead
+.../node_modules/better-sqlite3 install: (Use `node --trace-deprecation ...` to show where the warning was created)
+.../node_modules/better-sqlite3 install: Done

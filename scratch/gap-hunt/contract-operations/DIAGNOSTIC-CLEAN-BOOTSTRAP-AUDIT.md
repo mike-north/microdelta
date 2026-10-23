@@ -34,6 +34,8 @@ Successful control/absence diagnostics intentionally exit0. They are not future 
 
 ## #157: exact documented fallback versus outstanding default/Linux evidence
 
+Superseding follow-up: `PNPM157-CLEAN-FALLBACK.md` records a later qualified executable check and actual exact0683c2e clean explicit-PNPM12_BIN run, exit0 with full negative/positive controls and pre/post-clean provenance. Thus the historical-only fallback observations below describe the earlier audit boundary, not the final current evidence. Default fresh pnpm12 launch and Linux remain unverified.
+
 No #157 command was rerun. Historical `verify-157.log` first committed at10affd562b2642f714f671d0a03435d873693b5d records macOS negative/positive controls for published microdelta0.2.0: pnpm10.34.7 install0/unapproved durable1; pnpm12.10.1 install1/unapproved durable1; memory smoke succeeds; both approved cold runs execute1/publish and independent restart executes0/reuses the exact reference. `ISSUE-157-ADDENDUM.md` explicitly says this used PNPM12_BIN with an existing exact12.10.1 executable. The historical log lacks the complete environment invocation and pre/post-clean checkout record; do not invent them.
 
 The documented existing pnpm12 executable in `../portability/REPORT.md` is `/Users/mnorth/.nodenv/versions/24.14.0/bin/pnpm`, executed under active Node24.22.1. An equivalent fallback replay recipe, reconstructed from the recorded executable path and fallback mechanism rather than a preserved literal invocation, is:

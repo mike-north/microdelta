@@ -1,0 +1,82 @@
++ set -Eeuo pipefail
+++ uname -s
++ printf 'native-approval-runner platform=%s; Linux remains unverified unless this run is Linux\n' Darwin
+native-approval-runner platform=Darwin; Linux remains unverified unless this run is Linux
++ node -e 'if(!process.versions.node.startsWith("24."))throw new Error("Use Node24.x for this reproduction");console.log(`node=${process.version} platform=${process.platform} arch=${process.arch}`)'
+node=v24.22.1 platform=darwin arch=arm64
++ case "${1:-both}" in
++ versions=(10.34.7 12.10.1)
+++ mktemp -d /tmp/md157.XXXXXX
++ probe_root=/tmp/md157.3VhNTl
++ trap 'rm -rf "$probe_root"' EXIT
++ trap 'code=$?; for log in "$consumer"/*.log; do if [[ -f "$log" ]]; then printf "diagnostic %s\n" "${log##*/}"; cat "$log"; fi; done; exit "$code"' ERR
++ for version in "${versions[@]}"
++ consumer=/tmp/md157.3VhNTl/pnpm-10.34.7
++ mkdir -p /tmp/md157.3VhNTl/pnpm-10.34.7
++ cat
++ cat
++ cat
++ manager=/tmp/md157.3VhNTl/manager-10.34.7
++ manager_bin=
++ [[ 10.34.7 == 12.10.1 ]]
++ [[ -z '' ]]
++ npm install --prefix /tmp/md157.3VhNTl/manager-10.34.7 --no-audit --no-fund --ignore-scripts pnpm@10.34.7
++ manager_bin=/tmp/md157.3VhNTl/manager-10.34.7/node_modules/.bin/pnpm
+++ /tmp/md157.3VhNTl/manager-10.34.7/node_modules/.bin/pnpm --version
+ WARN  The "workspaces" field in package.json is not supported by pnpm. Create a "pnpm-workspace.yaml" file instead.
++ [[ 10.34.7 == 10\.34\.7 ]]
++ run_pnpm install
++ install_status=0
++ node /tmp/md157.3VhNTl/pnpm-10.34.7/durable.mjs
++ durable_status=1
++ printf 'pnpm=%s install=%s unapproved-durable=%s\n' 10.34.7 0 1
+pnpm=10.34.7 install=0 unapproved-durable=1
++ [[ 10.34.7 == 10.34.7 ]]
++ [[ 0 == 0 ]]
++ grep -q 'Ignored build scripts' /tmp/md157.3VhNTl/pnpm-10.34.7/install.log
++ [[ 1 != 0 ]]
++ grep -q 'Could not locate the bindings file' /tmp/md157.3VhNTl/pnpm-10.34.7/unapproved.log
++ node /tmp/md157.3VhNTl/pnpm-10.34.7/memory.mjs
+public-memory-ok
++ cat
++ run_pnpm rebuild better-sqlite3
++ node /tmp/md157.3VhNTl/pnpm-10.34.7/durable.mjs
++ node /tmp/md157.3VhNTl/pnpm-10.34.7/durable.mjs
++ cat
++ node /tmp/md157.3VhNTl/pnpm-10.34.7/assert.mjs
+{"coldCalls":1,"restartCalls":0,"exactReference":{"kind":"completed-result","locator":"mdh1|[\"portability\",\"portability\",\"fixture\",1]"}}
++ for version in "${versions[@]}"
++ consumer=/tmp/md157.3VhNTl/pnpm-12.10.1
++ mkdir -p /tmp/md157.3VhNTl/pnpm-12.10.1
++ cat
++ cat
++ cat
++ manager=/tmp/md157.3VhNTl/manager-12.10.1
++ manager_bin=
++ [[ 12.10.1 == 12.10.1 ]]
++ [[ -n /Users/mnorth/.nodenv/versions/24.14.0/bin/pnpm ]]
++ manager_bin=/Users/mnorth/.nodenv/versions/24.14.0/bin/pnpm
++ [[ -z /Users/mnorth/.nodenv/versions/24.14.0/bin/pnpm ]]
+++ /Users/mnorth/.nodenv/versions/24.14.0/bin/pnpm --version
++ [[ 12.10.1 == 12\.10\.1 ]]
++ run_pnpm install
++ install_status=1
++ node /tmp/md157.3VhNTl/pnpm-12.10.1/durable.mjs
++ durable_status=1
++ printf 'pnpm=%s install=%s unapproved-durable=%s\n' 12.10.1 1 1
+pnpm=12.10.1 install=1 unapproved-durable=1
++ [[ 12.10.1 == 10.34.7 ]]
++ [[ 1 != 0 ]]
++ grep -q ERR_PNPM_IGNORED_BUILDS /tmp/md157.3VhNTl/pnpm-12.10.1/install.log
++ [[ 1 != 0 ]]
++ grep -q 'Could not locate the bindings file' /tmp/md157.3VhNTl/pnpm-12.10.1/unapproved.log
++ node /tmp/md157.3VhNTl/pnpm-12.10.1/memory.mjs
+public-memory-ok
++ cat
++ run_pnpm rebuild better-sqlite3
++ node /tmp/md157.3VhNTl/pnpm-12.10.1/durable.mjs
++ node /tmp/md157.3VhNTl/pnpm-12.10.1/durable.mjs
++ cat
++ node /tmp/md157.3VhNTl/pnpm-12.10.1/assert.mjs
+{"coldCalls":1,"restartCalls":0,"exactReference":{"kind":"completed-result","locator":"mdh1|[\"portability\",\"portability\",\"fixture\",1]"}}
++ rm -rf /tmp/md157.3VhNTl

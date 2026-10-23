@@ -13,6 +13,10 @@ import {
 const prNumber = 34;
 const reviewedHead = 'a'.repeat(40);
 
+test('the protected Actions contract requires metadata and both remaining Node jobs', () => {
+  assert.deepEqual(REQUIRED_BRANCH_CHECKS, ['PR metadata', 'core (22)', 'core (24)']);
+});
+
 function scenario(overrides = {}) {
   const calls = [];
   const state = {
@@ -41,8 +45,7 @@ function scenario(overrides = {}) {
     },
     requiredChecks: [
       { name: 'PR metadata', bucket: 'pass' },
-      { name: 'core (20)', bucket: 'pending' },
-      { name: 'core (22)', bucket: 'pass' },
+      { name: 'core (22)', bucket: 'pending' },
       { name: 'core (24)', bucket: 'pass' },
       { name: REQUIRED_STATUS_CONTEXT, bucket: 'pending' },
     ],
@@ -128,11 +131,26 @@ for (const [name, overrides, requestOverrides = {}] of [
   ['unresolved review conversations', { pullRequest: { number: prNumber, state: 'OPEN', isDraft: false, baseRefName: 'main', headRefOid: reviewedHead, url: 'https://github.com/mike-north/microdelta/pull/34', unresolvedThreads: 1, autoMergeEnabled: false } }],
   ['missing review scope', {}, { scope: ' ' }],
   ['missing review evidence', {}, { evidence: '' }],
-  ['failed required core CI', { requiredChecks: [
+  ['failed required Node 22 CI', { requiredChecks: [
     { name: 'PR metadata', bucket: 'pass' },
-    { name: 'core (20)', bucket: 'fail' },
-    { name: 'core (22)', bucket: 'pass' },
+    { name: 'core (22)', bucket: 'fail' },
     { name: 'core (24)', bucket: 'pass' },
+    { name: REQUIRED_STATUS_CONTEXT, bucket: 'pending' },
+  ] }],
+  ['failed required Node 24 CI', { requiredChecks: [
+    { name: 'PR metadata', bucket: 'pass' },
+    { name: 'core (22)', bucket: 'pass' },
+    { name: 'core (24)', bucket: 'fail' },
+    { name: REQUIRED_STATUS_CONTEXT, bucket: 'pending' },
+  ] }],
+  ['missing required Node 22 CI', { requiredChecks: [
+    { name: 'PR metadata', bucket: 'pass' },
+    { name: 'core (24)', bucket: 'pass' },
+    { name: REQUIRED_STATUS_CONTEXT, bucket: 'pending' },
+  ] }],
+  ['missing required Node 24 CI', { requiredChecks: [
+    { name: 'PR metadata', bucket: 'pass' },
+    { name: 'core (22)', bucket: 'pass' },
     { name: REQUIRED_STATUS_CONTEXT, bucket: 'pending' },
   ] }],
   ['no completed Copilot review', { copilotReviews: [] }],
@@ -212,10 +230,18 @@ test('pending checks remain required and no administrator bypass is requested', 
   assert.deepEqual(Object.keys(arm).sort(), ['expectedHeadOid', 'pullRequestNumber']);
 });
 
+test('ordinary review waits for Node 24 when Node 22 already passed', async () => {
+  const { api, request } = scenario({ requiredChecks: [
+    { name: 'PR metadata', bucket: 'pass' },
+    { name: 'core (22)', bucket: 'pass' },
+    { name: 'core (24)', bucket: 'pending' },
+  ] });
+  assert.equal((await runSupervisorReview(request, api)).outcome, 'awaiting-required-checks');
+});
+
 test('already-passing CI is still eligible for the exact-head review flow', async () => {
   const { api, calls, request } = scenario({ requiredChecks: [
     { name: 'PR metadata', bucket: 'pass' },
-    { name: 'core (20)', bucket: 'pass' },
     { name: 'core (22)', bucket: 'pass' },
     { name: 'core (24)', bucket: 'pass' },
     { name: REQUIRED_STATUS_CONTEXT, bucket: 'pending' },
@@ -225,41 +251,39 @@ test('already-passing CI is still eligible for the exact-head review flow', asyn
   assert.ok(calls.some(([name]) => name === 'enableAutoMerge'));
 });
 
-for (const checks of [
-  [
-    { name: 'core (20)', bucket: 'pass' },
-    { name: 'core (20)', bucket: 'fail' },
-  ],
-  [
-    { name: 'core (20)', bucket: 'fail' },
-    { name: 'core (20)', bucket: 'pass' },
-  ],
-]) {
-  test('a failing duplicate required check blocks even when a passing duplicate is present', async () => {
-    const { api, calls, request } = scenario({ requiredChecks: [
-      { name: 'PR metadata', bucket: 'pass' },
-      ...checks,
-      { name: 'core (22)', bucket: 'pass' },
-      { name: 'core (24)', bucket: 'pass' },
-    ] });
-    await assert.rejects(runSupervisorReview(request, api), /non-passing/u);
-    assert.equal(calls.some(([name]) => ['createReviewRecord', 'setCommitStatus', 'enableAutoMerge'].includes(name)), false);
-  });
+for (const requiredNode of ['core (22)', 'core (24)']) {
+  const otherNode = requiredNode === 'core (22)' ? 'core (24)' : 'core (22)';
+  for (const checks of [
+    [{ name: requiredNode, bucket: 'pass' }, { name: requiredNode, bucket: 'fail' }],
+    [{ name: requiredNode, bucket: 'fail' }, { name: requiredNode, bucket: 'pass' }],
+  ]) {
+    test(`a failing duplicate ${requiredNode} blocks even when a passing duplicate is present`, async () => {
+      const { api, calls, request } = scenario({ requiredChecks: [
+        { name: 'PR metadata', bucket: 'pass' },
+        { name: otherNode, bucket: 'pass' },
+        ...checks,
+      ] });
+      await assert.rejects(runSupervisorReview(request, api), /non-passing/u);
+      assert.equal(calls.some(([name]) => ['createReviewRecord', 'setCommitStatus', 'enableAutoMerge'].includes(name)), false);
+    });
+  }
 }
 
-for (const duplicateChecks of [
-  [{ name: 'core (20)', bucket: 'pass' }, { name: 'core (20)', bucket: 'pending' }],
-  [{ name: 'core (20)', bucket: 'pending' }, { name: 'core (20)', bucket: 'pass' }],
-]) {
-  test('a pending duplicate required check remains classified as pending in either response order', async () => {
-    const { api, request } = scenario({ requiredChecks: [
-      { name: 'PR metadata', bucket: 'pass' },
-      ...duplicateChecks,
-      { name: 'core (22)', bucket: 'pass' },
-      { name: 'core (24)', bucket: 'pass' },
-    ] });
-    assert.equal((await runSupervisorReview(request, api)).outcome, 'awaiting-required-checks');
-  });
+for (const requiredNode of ['core (22)', 'core (24)']) {
+  const otherNode = requiredNode === 'core (22)' ? 'core (24)' : 'core (22)';
+  for (const duplicateChecks of [
+    [{ name: requiredNode, bucket: 'pass' }, { name: requiredNode, bucket: 'pending' }],
+    [{ name: requiredNode, bucket: 'pending' }, { name: requiredNode, bucket: 'pass' }],
+  ]) {
+    test(`a pending duplicate ${requiredNode} remains pending in either response order`, async () => {
+      const { api, request } = scenario({ requiredChecks: [
+        { name: 'PR metadata', bucket: 'pass' },
+        { name: otherNode, bucket: 'pass' },
+        ...duplicateChecks,
+      ] });
+      assert.equal((await runSupervisorReview(request, api)).outcome, 'awaiting-required-checks');
+    });
+  }
 }
 
 test('status adapter accepts GitHub individual-status responses without sha and reads the combined exact-commit status', async () => {
@@ -321,13 +345,13 @@ test('all GitHub adapter operations use the injected runner with their original 
     if (args[0] === 'api' && args[1] === 'repos/mike-north/microdelta/branches/main/protection') {
       return {
         required_pull_request_reviews: {},
-        required_status_checks: { strict: true, contexts: ['core (20)'], checks: [{ context: 'core (20)', app_id: 15368 }] },
+        required_status_checks: { strict: true, contexts: ['sample CI'], checks: [{ context: 'sample CI', app_id: 15368 }] },
         enforce_admins: { enabled: true },
         required_conversation_resolution: { enabled: true },
       };
     }
     if (args[0] === 'api' && args[1] === 'repos/mike-north/microdelta/rules/branches/main?per_page=100') return [];
-    if (args[0] === 'pr') return [{ name: 'core (20)', bucket: 'pass' }];
+    if (args[0] === 'pr') return [{ name: 'sample CI', bucket: 'pass' }];
     if (args[0] === 'api' && args[1] === 'repos/mike-north/microdelta/issues/34/comments') {
       return { html_url: `${pullRequestUrl}#issuecomment-123` };
     }
@@ -389,14 +413,14 @@ test('all GitHub adapter operations use the injected runner with their original 
     assert.deepEqual(await api.readRepository(), { nameWithOwner: 'mike-north/microdelta', defaultBranch: 'main' });
     assert.deepEqual(await api.readProtection('main'), {
       branch: 'main', requiresPullRequest: true, strict: true, enforceAdmins: true,
-      resolveConversations: true, requiredContexts: ['core (20)'], checkSources: { 'core (20)': 'github-actions' },
+      resolveConversations: true, requiredContexts: ['sample CI'], checkSources: { 'sample CI': 'github-actions' },
     });
     assert.deepEqual(await api.readPullRequest(prNumber), {
       number: prNumber, state: 'OPEN', isDraft: false, title: 'Fix runtime behavior', baseRefName: 'main', headRefName: 'fix-runtime',
       headRepositoryNameWithOwner: 'mike-north/microdelta', headRefOid: reviewedHead, url: pullRequestUrl, nodeId: 'PR_NODE', unresolvedThreads: 1,
       autoMergeEnabled: false, merged: false, isReleaseVersion: false,
     });
-    assert.deepEqual(await api.readRequiredChecks(prNumber), [{ name: 'core (20)', bucket: 'pass' }]);
+    assert.deepEqual(await api.readRequiredChecks(prNumber), [{ name: 'sample CI', bucket: 'pass' }]);
     assert.deepEqual(await api.readCopilotReviews(prNumber), {
       reviews: [
         { authorLogin: 'copilot-pull-request-reviewer[bot]', authorType: 'Bot', commitOid: reviewedHead, state: 'COMMENTED', submitted: true, submittedAt: '2026-09-27T00:00:00Z', errored: true },
@@ -630,9 +654,13 @@ for (const [name, fixtures, expected] of [
     rulesets: { 99: { enforcement: 'active', bypass_actors: [alwaysBypass] } },
   }, /does not apply to administrators/u],
   ['a missing required context', { rules: rulesetRules({ contexts: [
-    { context: 'PR metadata', integration_id: 15368 }, { context: 'core (20)', integration_id: 15368 },
+    { context: 'PR metadata', integration_id: 15368 },
     { context: 'core (22)', integration_id: 15368 }, { context: REQUIRED_STATUS_CONTEXT, integration_id: null },
   ] }) }, /missing required checks: core \(24\)/u],
+  ['a missing Node 22 context', { rules: rulesetRules({ contexts: [
+    { context: 'PR metadata', integration_id: 15368 },
+    { context: 'core (24)', integration_id: 15368 }, { context: REQUIRED_STATUS_CONTEXT, integration_id: null },
+  ] }) }, /missing required checks: core \(22\)/u],
   ['a missing Supervisor review context', { rules: rulesetRules({ contexts: REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: 15368 })) }) }, /missing required checks: Supervisor review/u],
   ['an Actions context without the Actions integration', { rules: rulesetRules({ contexts: [
     ...REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: context === 'core (22)' ? null : 15368 })),

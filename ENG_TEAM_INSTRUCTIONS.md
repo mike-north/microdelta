@@ -91,11 +91,11 @@ content or untouched placeholders. It is intentionally separate from `npm run
 check`: push-only baseline CI has no PR body. Its tests are included in `npm test`.
 Local validation and hooks do not replace the required PR workflow.
 
-The exact intended required contexts on `main` are **PR metadata**, **core (20)**,
-**core (22)**, **core (24)**, and the separately published **Supervisor review**
-commit status. The four Actions checks retain their GitHub Actions source
-restrictions; the supervisor status is an additional exact-head review gate. The
-three core jobs run `npm ci`, `npm run check`, `npm test`, and `npm run build`.
+The exact intended required contexts on `main` are **PR metadata**, **core (22)**,
+**core (24)**, and the separately published **Supervisor review** commit status.
+The three Actions checks retain their GitHub Actions source restrictions; the
+supervisor status is an additional exact-head review gate. Each of the two core
+jobs runs `npm ci`, `npm run check`, `npm test`, and `npm run build`.
 Require a pull request, passing required checks on an up-to-date base, resolved
 review conversations, and administrator enforcement without bypass entries.
 `main` is governed by repository ruleset 24154977 rather than legacy branch
@@ -128,3 +128,11 @@ completeness cannot prove the truth of evidence, semantic correctness, completed
 review, or independent agent identities sharing one GitHub account. No completed
 review claim is required by this checker, and it grants no merge authority.
 Implementers continue to stop at PR-open.
+
+When retiring a CI matrix job, first verify that both legacy protection and every
+active contributing ruleset no longer require its context while all retained
+contexts, source restrictions, strictness, PR/review rules and administrator
+enforcement remain in force. Remove only that obsolete requirement while the
+old job still runs, then read protection back before merging the workflow change.
+If the obsolete context remains required, stop: removing its job would leave a
+permanently missing check. Do not bypass protection to complete the transition.

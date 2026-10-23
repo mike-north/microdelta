@@ -1,0 +1,32 @@
+[
+  {
+    "origin": "9267a44e1a203966e6ccd73db188e5826506326b",
+    "file": "packages/tracking/test/gap-hunt-contracts-intrinsic-presence.test.ts",
+    "sha256": "f049f9711f74e0a1d773212fbbecb16ab49837b0916285d6891c334dc94fb6a2"
+  },
+  {
+    "origin": "4dc00d6af1c2405095792c7be893a1ad2cc382b3",
+    "file": "packages/core/test/gap-hunt-contracts-output.test.ts",
+    "sha256": "208779663235b2ff255ad49efaec3caf3989ba0755156d6cfbeb9983e68302ff"
+  },
+  {
+    "origin": "4dc00d6af1c2405095792c7be893a1ad2cc382b3",
+    "file": "packages/core/test/gap-hunt-contracts-output-worker.ts",
+    "sha256": "880f656baa5008baf9c4b685c4273924a5ac27ba58314e15b5bbeb4344692f8a"
+  },
+  {
+    "origin": "a97c11fae06ae3fd4e171ae7e486b4b46a8fccc1",
+    "file": "packages/core/test/gap-hunt-dx-output-bindings.test.ts",
+    "sha256": "135b084415b721d57f702133f9ac213503ea659c012e618d6525174cbe99f890"
+  },
+  {
+    "origin": "a97c11fae06ae3fd4e171ae7e486b4b46a8fccc1",
+    "file": "scratch/gap-hunt/consumer-dx/output-bindings.ts",
+    "sha256": "1b6c6d1dc77956d972b851d8c7cf32e28071287bf1151fbbffa363f73b70c951"
+  },
+  {
+    "origin": "a97c11fae06ae3fd4e171ae7e486b4b46a8fccc1",
+    "file": "scratch/gap-hunt/consumer-dx/tsconfig.all.json",
+    "sha256": "5af1001bb9834b6fbfbe8efd6c52a3504e482bab77ca35591d276403d384c2b4"
+  }
+]

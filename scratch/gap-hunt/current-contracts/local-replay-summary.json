@@ -1,0 +1,54 @@
+{
+  "runtime": "v24.22.1",
+  "productionBaseline": "f43c5872987573d9b98a19f41c324b4d9336894c",
+  "checks": [
+    {
+      "id": "extension-types",
+      "exitCode": 0
+    },
+    {
+      "id": "162",
+      "exitCode": 1
+    },
+    {
+      "id": "164-input",
+      "exitCode": 1
+    },
+    {
+      "id": "164-bindings",
+      "exitCode": 1
+    },
+    {
+      "id": "tracking-check",
+      "exitCode": 0
+    },
+    {
+      "id": "core-check",
+      "exitCode": 0
+    },
+    {
+      "id": "consumer-lint",
+      "exitCode": 0
+    }
+  ],
+  "expectedRedCounts": [
+    {
+      "id": "162",
+      "failed": 9,
+      "passed": 2,
+      "pending": 0
+    },
+    {
+      "id": "164-input",
+      "failed": 1,
+      "passed": 1,
+      "pending": 7
+    },
+    {
+      "id": "164-bindings",
+      "failed": 2,
+      "passed": 2,
+      "pending": 0
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+
+> microdelta@0.2.0 test:unit
+> tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand --runTestsByPath .test-build/test/gap-hunt-contracts-output.test.js --testNamePattern scalar-only output|base → base --json --outputFile /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-current-contracts/scratch/gap-hunt/current-contracts/164-input-results.json
+
+(node:14315) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL .test-build/test/gap-hunt-contracts-output.test.js
+  ● gap hunt TRK-8 durable pass-through output shape › base → base agrees with cold output and rollback retains the original exact result
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "reused"
+    Received: "published"
+
+      38 |       const actual = resolve(retained, after, 'two');
+      39 |       const cold = resolve(join(directory, 'cold.sqlite'), after, 'cold');
+    > 40 |       expect(actual.kind).toBe(expected);
+         |                           ^
+      41 |       expect(actual.wire).toBe(cold.wire);
+      42 |       if (expected === 'reused') { expect(actual.reference).toEqual(original.reference); }
+      43 |       const restored = resolve(retained, before, 'three');
+
+      at test/gap-hunt-contracts-output.test.ts:40:27
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 7 skipped, 1 passed, 9 total
+Snapshots:   0 total
+Time:        0.985 s
+Ran all test suites within paths ".test-build/test/gap-hunt-contracts-output.test.js".
+Test results written to: ../../scratch/gap-hunt/current-contracts/164-input-results.json
+npm error Lifecycle script `test:unit` failed with error:
+npm error code 1
+npm error path /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-current-contracts/packages/core
+npm error workspace microdelta@0.2.0
+npm error location /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-current-contracts/packages/core
+npm error command failed
+npm error command sh -c tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand --runTestsByPath .test-build/test/gap-hunt-contracts-output.test.js --testNamePattern 'scalar-only output|base → base' --json --outputFile /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-current-contracts/scratch/gap-hunt/current-contracts/164-input-results.json

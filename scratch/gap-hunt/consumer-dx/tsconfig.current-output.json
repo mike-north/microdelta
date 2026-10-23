@@ -1,0 +1,6 @@
+{
+  "extends": "./tsconfig.all.json",
+  "files": [
+    "output-bindings.ts"
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "productionBaseline": "f43c5872987573d9b98a19f41c324b4d9336894c",
+  "node": "v24.22.1",
+  "npm": "11.12.1",
+  "fixtureOriginBytesVerified": true,
+  "files": [
+    {
+      "file": "package-lock.json",
+      "sha256": "55dfeace3ed7af8246e32c3029b444251df4ca164119f76716e44122e33129e6"
+    },
+    {
+      "file": "packages/resolution/src/resolution.ts",
+      "sha256": "0a8c2d2adf9aa5c52a453e8415475cbefbc0daf6233c99d6ae68813714c5c3f5"
+    },
+    {
+      "file": "packages/resolution/src/contracts.ts",
+      "sha256": "2f5e0063efea77202ce59e2f677359ad34099d0b2da9d1a1cde130b427641789"
+    },
+    {
+      "file": "packages/tracking/src/index.ts",
+      "sha256": "e6edb4a6c319f8c4b11c5e36d3cb7ce8d16bdaa3fc20b2f987b1c4e32a14055d"
+    }
+  ]
+}

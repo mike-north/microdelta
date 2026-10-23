@@ -86,8 +86,8 @@ export interface ITemplateSourceOptions<TFamily extends IBindingFamily, TResult,
   readonly version?: number;
   /** Display metadata only; never identity or correspondence. */
   readonly label?: string;
-  /** The author's check/retrieval callback, with the member binding. */
-  readonly run: (context: ISourceRunContext<TFamily, TResult> & IMemberBinding<TFamily, TMember>) => IApply<TFamily['outcomes'], TResult>;
+  /** The member's check/retrieval callback; awaited work must still complete with the declared outcome. */
+  readonly run: (context: ISourceRunContext<TFamily, TResult> & IMemberBinding<TFamily, TMember>) => IApply<TFamily['outcomes'], TResult> | Promise<IApply<TFamily['outcomes'], TResult>>;
   /** The author's optional current finality hook, with the member binding. */
   readonly finality?: (context: IFinalityContext<TFamily, TResult> & IMemberBinding<TFamily, TMember>) => unknown;
 }

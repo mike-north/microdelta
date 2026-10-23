@@ -90,6 +90,11 @@ consumer imports only `microdelta`: for example `IMemberBuilder`,
 `IOperationView`, `IOperationEvent`, `IWaitEvent`, `IUsageSummary` and
 `IPromotionRecord`.
 
+Approved sibling workspace consumers must map the facade and any reached owner
+declarations to their generated alpha rollups. See the tested
+[private-alpha workspace consumer recipe](../../docs/private-alpha-workspace-consumers.md);
+the default public entry remains unchanged.
+
 The [contribution report example](../../examples/contribution-report/README.md)
 uses this path through the installed workspace's generated alpha declarations.
 The M3 independent-process acceptance harness in `test/acceptance` exercises

@@ -1,0 +1,18 @@
+{
+  "checkout": "7c935aa1cb3612376ae2d32af7145bf3e2018aca",
+  "productionBaseline": "c5802daca4a0bb8ea91159854d84eddcfa5215b6",
+  "node": "v24.22.1",
+  "npm": "11.12.1",
+  "command": "node scratch/gap-hunt/contracts/reproduce.mjs artifact-durable",
+  "exitCode": 0,
+  "gitStatus": "",
+  "sha256": {
+    "package-lock.json": "55dfeace3ed7af8246e32c3029b444251df4ca164119f76716e44122e33129e6",
+    "packages/core/dist/src/workspace.js": "c83c28687b3a50f40f2d8da7d4ed8c948856e8394ebf14eea9586de70bfb9d43",
+    "packages/resolution/dist/src/resolution.js": "89c6795e4e02c093bb49d337bc04ab9221642edcbfb8ecb8b0eaf0c9bbc9f3af",
+    "packages/tracking/dist/src/observer.js": "a26b6cfbfa7a22b030c493fbdd745e11817f1210949d9b94385379e6ab5e569e",
+    "packages/core/.test-build/test/gap-hunt-contracts-artifact-worker.js": "0cce388af6753368f7d49a48a7363ba9e4e6b7ed8d789577dc5c2130bca0be48",
+    "packages/core/.test-build/test/gap-hunt-contracts-artifact-leaf.js": "a25ba967f93a2e9c5c44296b0de24749022d62afc55d1d9c4258cde1dd9e3b35",
+    "packages/core/.test-build/test/gap-hunt-contracts-artifact-intermediary.js": "d6bf421ea01eb08aae462f7f17c5300662ae42cda8911c2781cc369680f0aeb6"
+  }
+}

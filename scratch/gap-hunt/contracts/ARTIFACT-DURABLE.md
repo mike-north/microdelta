@@ -40,3 +40,9 @@ npm run test:unit -w microdelta -- --runTestsByPath .test-build/test/gap-hunt-co
 ```
 
 Set `MICRODELTA_ARTIFACT_EVIDENCE` to an absolute writable path to retain actual locator/count/hash evidence. Temporary stores and copied emitted modules are removed in `finally`. No paid provider, publication or issue mutation is involved.
+
+## Fresh clean-checkout verification
+
+The one command above completed with exit 0 from a new detached worktree at `7c935aa1cb3612376ae2d32af7145bf3e2018aca`, starting without installed dependencies or generated build outputs. Node `24.22.1`, npm `11.12.1`: install, complete build (packages, declaration fixtures, examples), focused strict compile and 6/6 runtime cases all passed. The checkout stayed clean after execution. The disposable worktree was removed after evidence capture.
+
+`artifact-durable-clean.log` records the complete command output; `artifact-durable-clean-results.json` records all 18 process outcomes with actual references/counts and leaf hashes; `artifact-durable-clean-runtime.json` pins the checkout, production baseline, runtime versions, clean status, lockfile and emitted Core/Resolution/Tracking/fixture SHA-256 hashes. This verifies the command as a clean reproduction, independently from the earlier installed-checkout run.

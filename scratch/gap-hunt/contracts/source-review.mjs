@@ -39,7 +39,7 @@ const obligations = prior.obligations.map(row => {
   const correction = corrections[row.id];
   return { ...row, historicalStatus: row.status, status: correction?.status ?? (row.status === 'divergent' ? 'baseline-divergence-owner-tracked' : 'bounded-executed-evidence-carried'), reviewNote: correction?.note ?? 'Named evidence retained after source review; no claim that this is a universal proof or a merged-runtime rerun.', evidence: [...row.evidence, ...(correction?.evidence ?? []).map(id => ({ id, ...added[id] }))] };
 });
-const files = [...new Set(['docs/spec/tracking.md', 'docs/spec/composition.md', 'docs/spec/architecture.md', ...Object.values(added).flatMap(item => [item.file, item.executionLog]), base + 'imported-artifact-probe.mjs', base + 'imported-artifact-results.log', base + 'artifact-durable-results.json', base + 'completion-audit.json'])];
+const files = [...new Set(['docs/spec/tracking.md', 'docs/spec/composition.md', 'docs/spec/architecture.md', ...Object.values(added).flatMap(item => [item.file, item.executionLog]), ...['worker', 'leaf', 'intermediary'].map(name => `packages/core/test/gap-hunt-contracts-artifact-${name}.ts`), base + 'imported-artifact-probe.mjs', base + 'imported-artifact-results.log', base + 'artifact-durable-results.json', base + 'completion-audit.json'])];
 const hashes = {};
 for (const file of files) hashes[file] = createHash('sha256').update(await readFile(file)).digest('hex');
 await writeFile(base + 'source-review.json', JSON.stringify({

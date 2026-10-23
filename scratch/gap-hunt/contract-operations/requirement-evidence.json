@@ -1791,7 +1791,7 @@
       "requirement": "RUN-015",
       "classification": "bounded-aligned-with-residual-evidence-gap",
       "meaning": "Soft drains admitted work with no default deadline; hard aborts/discards; committed boundary wins; unknown remote state is durable.",
-      "residual": "Selected workspace contract renews only between requests: held request lease is unchanged after expiry, successor acquires, late output denied, attempt incomplete. Exact request-one-of-three cancellation remains unexecuted; no repeated-identical-progress API rejection is claimed.",
+      "residual": "Selected workspace renewal and three-request parent cancellation are directly asserted: first acknowledged100tokens retained, second aborted/unknown, third unsent, parent interrupted without completed output. Independently completed child reuse remains covered by existing publication suite. No repeated-identical-progress API rejection is claimed; this workspace selects request-boundary renewal.",
       "executedAssertionIds": [
         353,
         354,
@@ -1819,6 +1819,12 @@
         "log": "scratch/gap-hunt/contract-operations/hung-lease.log",
         "outcome": "1 passed",
         "name": "a hung request receives no timer renewal without a stop; a successor fences its late output"
+      },
+      "threeRequestCancellationAssertion": {
+        "suite": "packages/core/test/gap-hunt-durability-three-request-stop.test.ts",
+        "log": "scratch/gap-hunt/contract-operations/three-request-stop.log",
+        "outcome": "1 passed",
+        "name": "cancelling request two of a three-request parent retains report one, sends no third request and publishes no partial parent"
       }
     },
     {

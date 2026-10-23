@@ -98,6 +98,52 @@ describe('recorded promotion', () => {
     return { history, productionAda, trialAda, trialBo };
   }
 
+  test('candidate discovery enumerates eligible exact versions once, newest first, without changing durable state', () => {
+    const location = freshLocation();
+    const history = openHistory({ location });
+    const lease = acquire(history, 'candidate-query');
+    const prodOld = publish(history, lease, production, summary, { key: 'prod-old' });
+    const trialOld = publish(history, lease, trial, summary, { key: 'trial-old' });
+    const unrelated = publish(history, lease, trial, boSummary, { key: 'unrelated' });
+    const trialNew = publish(history, lease, trial, summary, { key: 'trial-new' });
+    const versionTwoAttempt = history.allocateAttempt(lease, attempt(production, summary, 'prod-v2', { version: 2 }));
+    history.stageAttempt(lease, { attemptId: versionTwoAttempt.attemptId, payload: { label: 'prod-v2' },
+      provenance: { format: 'test.resolution.provenance', formatVersion: 1, content: { label: 'prod-v2' } }, dependencies: [] });
+    const prodVersionTwo = history.publishAttempt(lease, versionTwoAttempt.attemptId);
+    const otherAnalysis = publish(history, lease, { analysis: 'analysis:other', environment: trial.environment }, summary, { key: 'other-analysis' });
+    const query = { ...production, subject: summary, version: 1 };
+    expect(history.findCandidates(query).map((candidate) => candidate.reference)).toEqual([prodOld]);
+    expect(() => history.promoteResults(lease, { target: production, references: [otherAnalysis], evidence: promotionEvidence('wrong analysis') })).toThrow(HistoryIntegrityError);
+    history.promoteResults(lease, { target: production, references: [trialOld, trialNew, unrelated], evidence: promotionEvidence('reviewed') });
+    // A second recorded promotion of the same exact result must not duplicate it in candidate discovery.
+    history.promoteResults(lease, { target: production, references: [trialNew], evidence: promotionEvidence('reviewed again') });
+    const before = [
+      rows(location, 'SELECT * FROM history_sequences'),
+      rows(location, 'SELECT * FROM history_attempts ORDER BY attempt_id'),
+      rows(location, 'SELECT * FROM history_results ORDER BY result_id'),
+      rows(location, 'SELECT * FROM history_current ORDER BY analysis, environment, subject'),
+      rows(location, 'SELECT * FROM history_acceptances ORDER BY acceptance_id'),
+      rows(location, 'SELECT * FROM history_promotions ORDER BY promotion_id'),
+      rows(location, 'SELECT * FROM history_promotion_results ORDER BY promotion_id, position'),
+      rows(location, 'SELECT * FROM history_journal ORDER BY sequence'),
+    ];
+    expect(history.findCandidates(query).map((candidate) => candidate.reference)).toEqual([trialNew, trialOld, prodOld]);
+    expect(history.findCandidates({ ...query, version: 2 }).map((candidate) => candidate.reference)).toEqual([prodVersionTwo]);
+    expect(history.findCandidates({ ...query, subject: boSummary }).map((candidate) => candidate.reference)).toEqual([unrelated]);
+    expect(history.findCandidates({ ...query, analysis: 'analysis:other' })).toEqual([]);
+    expect(history.readCurrent({ ...production, subject: summary })).toEqual(prodVersionTwo);
+    expect([
+      rows(location, 'SELECT * FROM history_sequences'),
+      rows(location, 'SELECT * FROM history_attempts ORDER BY attempt_id'),
+      rows(location, 'SELECT * FROM history_results ORDER BY result_id'),
+      rows(location, 'SELECT * FROM history_current ORDER BY analysis, environment, subject'),
+      rows(location, 'SELECT * FROM history_acceptances ORDER BY acceptance_id'),
+      rows(location, 'SELECT * FROM history_promotions ORDER BY promotion_id'),
+      rows(location, 'SELECT * FROM history_promotion_results ORDER BY promotion_id, position'),
+      rows(location, 'SELECT * FROM history_journal ORDER BY sequence'),
+    ]).toEqual(before);
+  });
+
   test('a promotion admits exactly the named trial results into production, with recorded provenance, and never moves or rewrites trial history', () => {
     const location = freshLocation();
     const { history, productionAda, trialAda, trialBo } = seeded(location);

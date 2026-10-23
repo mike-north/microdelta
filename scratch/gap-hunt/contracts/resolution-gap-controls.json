@@ -1,0 +1,311 @@
+{
+  "baseline": "b2ad91bf19ee68c420863278e2d5577f81c66463",
+  "mode": "full-matrix",
+  "controls": [
+    {
+      "id": "gate-tracking",
+      "judged": {
+        "count": 73,
+        "failed": []
+      },
+      "before": {
+        "count": 216,
+        "failed": [
+          "tracked-gate-instances raising the threshold skips Cy without changing topology or retracting its publication; lowering it reconnects Cy with zero bodies",
+          "tracked gates (acceptance 2) an explicit false skips the member: it carries gate evidence, no result, and no work is admitted for it",
+          "tracked gates (acceptance 2) each gate runs in its own frame: its reads are the member's gate evidence and never enter a step's provenance"
+        ]
+      },
+      "expanded": {
+        "count": 221,
+        "failed": [
+          "tracked-gate-instances raising the threshold skips Cy without changing topology or retracting its publication; lowering it reconnects Cy with zero bodies",
+          "tracked gates (acceptance 2) an explicit false skips the member: it carries gate evidence, no result, and no work is admitted for it",
+          "tracked gates (acceptance 2) each gate runs in its own frame: its reads are the member's gate evidence and never enter a step's provenance",
+          "gap hunt existing issue #144 Resolution fault sites a successful gate carries its own implementation observation in its separate gate evidence"
+        ]
+      }
+    },
+    {
+      "id": "direct-memo-sharing",
+      "judged": {
+        "count": 73,
+        "failed": []
+      },
+      "before": {
+        "count": 216,
+        "failed": []
+      },
+      "expanded": {
+        "count": 221,
+        "failed": [
+          "gap hunt existing issue #144 Resolution fault sites two concurrent calls of the same direct memo in one parent request execute once and share its result"
+        ]
+      }
+    },
+    {
+      "id": "supplied-intent",
+      "judged": {
+        "count": 73,
+        "failed": []
+      },
+      "before": {
+        "count": 216,
+        "failed": []
+      },
+      "expanded": {
+        "count": 221,
+        "failed": [
+          "gap hunt existing issue #144 Resolution fault sites supplied attempt intent is stable for equal invocations and changes with arguments or implementation"
+        ]
+      }
+    },
+    {
+      "id": "supplied-own-evidence",
+      "judged": {
+        "count": 73,
+        "failed": []
+      },
+      "before": {
+        "count": 216,
+        "failed": []
+      },
+      "expanded": {
+        "count": 221,
+        "failed": [
+          "gap hunt existing issue #144 Resolution fault sites a supplied candidate missing its required own implementation is integrity damage before acceptance"
+        ]
+      }
+    },
+    {
+      "id": "fold-own-evidence",
+      "judged": {
+        "count": 73,
+        "failed": []
+      },
+      "before": {
+        "count": 216,
+        "failed": []
+      },
+      "expanded": {
+        "count": 221,
+        "failed": [
+          "gap hunt existing issue #144 Resolution fault sites a fold candidate missing its required own implementation is integrity damage before acceptance"
+        ]
+      }
+    }
+  ],
+  "anchors": [
+    {
+      "id": "gate-tracking",
+      "file": "resolution.js",
+      "anchor": "const gateInvoker = (callback, context) => {\n        // eslint-disable-next-line microdelta/tracked-captures -- Framework invoker: the callback is the author's actual gate from Definition's record, tracked so its implementation is the gate's own evidence.\n        const authored = tracking.tracked(callback, { path: bindingPaths.self });",
+      "replacement": "const gateInvoker = (callback, context) => {\n        const authored = callback;"
+    },
+    {
+      "id": "direct-memo-sharing",
+      "file": "resolution.js",
+      "anchor": "const existing = request.memos.get(key);\n        if (existing !== undefined) {",
+      "replacement": "const existing = request.memos.get(key);\n        if (false) {"
+    },
+    {
+      "id": "supplied-intent",
+      "file": "intent.js",
+      "anchor": "options.arguments,\n        sourceText(options.run),\n        ...currentBindings(options.validation, options.slots),\n    ];\n    return `mdi1:${options.host.sha256(JSON.stringify(intent))}`;",
+      "replacement": "options.arguments,\n        sourceText(options.run),\n        ...currentBindings(options.validation, options.slots),\n    ];\n    return 'mdi1:constant';"
+    },
+    {
+      "id": "supplied-own-evidence",
+      "file": "evidence.js",
+      "anchor": "if (!observations.some(isOwnImplementation)) {\n        return malformed(`${kind} provenance lacks its own implementation observation`);\n    }\n    if (kind === 'supplied' && calls.length > 0)",
+      "replacement": "if (kind !== 'supplied' && !observations.some(isOwnImplementation)) {\n        return malformed(`${kind} provenance lacks its own implementation observation`);\n    }\n    if (kind === 'supplied' && calls.length > 0)"
+    },
+    {
+      "id": "fold-own-evidence",
+      "file": "evidence.js",
+      "anchor": "if (!observations.some(isOwnImplementation)) {\n        return malformed('fold provenance lacks its own implementation observation');\n    }",
+      "replacement": "if (false) {\n        return malformed('fold provenance lacks its own implementation observation');\n    }"
+    }
+  ],
+  "verifiedLoads": [
+    {
+      "label": "baseline",
+      "entry": "<isolated>/packages/resolution/dist/src/index.js",
+      "artifacts": {
+        "resolution.js": "89c6795e4e02c093bb49d337bc04ab9221642edcbfb8ecb8b0eaf0c9bbc9f3af",
+        "intent.js": "b1df6ecb70738b85785e007af0e7d396da5a4943368341638931f809c9cc2a39",
+        "evidence.js": "c27be302d1c734bcf9b1a10b001eff53911ea190d39849fa2b3558c9a924df11"
+      }
+    },
+    {
+      "label": "judged-baseline",
+      "entry": "<isolated>/packages/resolution/dist/src/index.js",
+      "artifacts": {
+        "resolution.js": "89c6795e4e02c093bb49d337bc04ab9221642edcbfb8ecb8b0eaf0c9bbc9f3af",
+        "intent.js": "b1df6ecb70738b85785e007af0e7d396da5a4943368341638931f809c9cc2a39",
+        "evidence.js": "c27be302d1c734bcf9b1a10b001eff53911ea190d39849fa2b3558c9a924df11"
+      }
+    },
+    {
+      "label": "before-baseline",
+      "entry": "<isolated>/packages/resolution/dist/src/index.js",
+      "artifacts": {
+        "resolution.js": "89c6795e4e02c093bb49d337bc04ab9221642edcbfb8ecb8b0eaf0c9bbc9f3af",
+        "intent.js": "b1df6ecb70738b85785e007af0e7d396da5a4943368341638931f809c9cc2a39",
+        "evidence.js": "c27be302d1c734bcf9b1a10b001eff53911ea190d39849fa2b3558c9a924df11"
+      }
+    },
+    {
+      "label": "gate-tracking-judged",
+      "entry": "<isolated>/packages/resolution/dist/src/index.js",
+      "artifacts": {
+        "resolution.js": "80b3729debaaea4ab2f3cd00bb9e1f3fccedaafadb91a1c4506ff52f7cfa6dc3",
+        "intent.js": "b1df6ecb70738b85785e007af0e7d396da5a4943368341638931f809c9cc2a39",
+        "evidence.js": "c27be302d1c734bcf9b1a10b001eff53911ea190d39849fa2b3558c9a924df11"
+      }
+    },
+    {
+      "label": "gate-tracking-before",
+      "entry": "<isolated>/packages/resolution/dist/src/index.js",
+      "artifacts": {
+        "resolution.js": "80b3729debaaea4ab2f3cd00bb9e1f3fccedaafadb91a1c4506ff52f7cfa6dc3",
+        "intent.js": "b1df6ecb70738b85785e007af0e7d396da5a4943368341638931f809c9cc2a39",
+        "evidence.js": "c27be302d1c734bcf9b1a10b001eff53911ea190d39849fa2b3558c9a924df11"
+      }
+    },
+    {
+      "label": "gate-tracking-expanded",
+      "entry": "<isolated>/packages/resolution/dist/src/index.js",
+      "artifacts": {
+        "resolution.js": "80b3729debaaea4ab2f3cd00bb9e1f3fccedaafadb91a1c4506ff52f7cfa6dc3",
+        "intent.js": "b1df6ecb70738b85785e007af0e7d396da5a4943368341638931f809c9cc2a39",
+        "evidence.js": "c27be302d1c734bcf9b1a10b001eff53911ea190d39849fa2b3558c9a924df11"
+      }
+    },
+    {
+      "label": "direct-memo-sharing-judged",
+      "entry": "<isolated>/packages/resolution/dist/src/index.js",
+      "artifacts": {
+        "resolution.js": "d99b0719ff94c4b5ce5c7df4ccaa341411c0332c2c7fbdad73db76e1729d92bc",
+        "intent.js": "b1df6ecb70738b85785e007af0e7d396da5a4943368341638931f809c9cc2a39",
+        "evidence.js": "c27be302d1c734bcf9b1a10b001eff53911ea190d39849fa2b3558c9a924df11"
+      }
+    },
+    {
+      "label": "direct-memo-sharing-before",
+      "entry": "<isolated>/packages/resolution/dist/src/index.js",
+      "artifacts": {
+        "resolution.js": "d99b0719ff94c4b5ce5c7df4ccaa341411c0332c2c7fbdad73db76e1729d92bc",
+        "intent.js": "b1df6ecb70738b85785e007af0e7d396da5a4943368341638931f809c9cc2a39",
+        "evidence.js": "c27be302d1c734bcf9b1a10b001eff53911ea190d39849fa2b3558c9a924df11"
+      }
+    },
+    {
+      "label": "direct-memo-sharing-expanded",
+      "entry": "<isolated>/packages/resolution/dist/src/index.js",
+      "artifacts": {
+        "resolution.js": "d99b0719ff94c4b5ce5c7df4ccaa341411c0332c2c7fbdad73db76e1729d92bc",
+        "intent.js": "b1df6ecb70738b85785e007af0e7d396da5a4943368341638931f809c9cc2a39",
+        "evidence.js": "c27be302d1c734bcf9b1a10b001eff53911ea190d39849fa2b3558c9a924df11"
+      }
+    },
+    {
+      "label": "supplied-intent-judged",
+      "entry": "<isolated>/packages/resolution/dist/src/index.js",
+      "artifacts": {
+        "resolution.js": "89c6795e4e02c093bb49d337bc04ab9221642edcbfb8ecb8b0eaf0c9bbc9f3af",
+        "intent.js": "04aa34d59e94ab44d4f6e1461e6fcb1877e8288a683d5263ea1ea166f25fdd6f",
+        "evidence.js": "c27be302d1c734bcf9b1a10b001eff53911ea190d39849fa2b3558c9a924df11"
+      }
+    },
+    {
+      "label": "supplied-intent-before",
+      "entry": "<isolated>/packages/resolution/dist/src/index.js",
+      "artifacts": {
+        "resolution.js": "89c6795e4e02c093bb49d337bc04ab9221642edcbfb8ecb8b0eaf0c9bbc9f3af",
+        "intent.js": "04aa34d59e94ab44d4f6e1461e6fcb1877e8288a683d5263ea1ea166f25fdd6f",
+        "evidence.js": "c27be302d1c734bcf9b1a10b001eff53911ea190d39849fa2b3558c9a924df11"
+      }
+    },
+    {
+      "label": "supplied-intent-expanded",
+      "entry": "<isolated>/packages/resolution/dist/src/index.js",
+      "artifacts": {
+        "resolution.js": "89c6795e4e02c093bb49d337bc04ab9221642edcbfb8ecb8b0eaf0c9bbc9f3af",
+        "intent.js": "04aa34d59e94ab44d4f6e1461e6fcb1877e8288a683d5263ea1ea166f25fdd6f",
+        "evidence.js": "c27be302d1c734bcf9b1a10b001eff53911ea190d39849fa2b3558c9a924df11"
+      }
+    },
+    {
+      "label": "supplied-own-evidence-judged",
+      "entry": "<isolated>/packages/resolution/dist/src/index.js",
+      "artifacts": {
+        "resolution.js": "89c6795e4e02c093bb49d337bc04ab9221642edcbfb8ecb8b0eaf0c9bbc9f3af",
+        "intent.js": "b1df6ecb70738b85785e007af0e7d396da5a4943368341638931f809c9cc2a39",
+        "evidence.js": "2cb3b52314f09b5b91b643d6769230542db55a2c38457cde5cac59f554998b13"
+      }
+    },
+    {
+      "label": "supplied-own-evidence-before",
+      "entry": "<isolated>/packages/resolution/dist/src/index.js",
+      "artifacts": {
+        "resolution.js": "89c6795e4e02c093bb49d337bc04ab9221642edcbfb8ecb8b0eaf0c9bbc9f3af",
+        "intent.js": "b1df6ecb70738b85785e007af0e7d396da5a4943368341638931f809c9cc2a39",
+        "evidence.js": "2cb3b52314f09b5b91b643d6769230542db55a2c38457cde5cac59f554998b13"
+      }
+    },
+    {
+      "label": "supplied-own-evidence-expanded",
+      "entry": "<isolated>/packages/resolution/dist/src/index.js",
+      "artifacts": {
+        "resolution.js": "89c6795e4e02c093bb49d337bc04ab9221642edcbfb8ecb8b0eaf0c9bbc9f3af",
+        "intent.js": "b1df6ecb70738b85785e007af0e7d396da5a4943368341638931f809c9cc2a39",
+        "evidence.js": "2cb3b52314f09b5b91b643d6769230542db55a2c38457cde5cac59f554998b13"
+      }
+    },
+    {
+      "label": "fold-own-evidence-judged",
+      "entry": "<isolated>/packages/resolution/dist/src/index.js",
+      "artifacts": {
+        "resolution.js": "89c6795e4e02c093bb49d337bc04ab9221642edcbfb8ecb8b0eaf0c9bbc9f3af",
+        "intent.js": "b1df6ecb70738b85785e007af0e7d396da5a4943368341638931f809c9cc2a39",
+        "evidence.js": "73450b4ab171652839570a2f22b84bb429dde8771e7092c486d81b91a666528e"
+      }
+    },
+    {
+      "label": "fold-own-evidence-before",
+      "entry": "<isolated>/packages/resolution/dist/src/index.js",
+      "artifacts": {
+        "resolution.js": "89c6795e4e02c093bb49d337bc04ab9221642edcbfb8ecb8b0eaf0c9bbc9f3af",
+        "intent.js": "b1df6ecb70738b85785e007af0e7d396da5a4943368341638931f809c9cc2a39",
+        "evidence.js": "73450b4ab171652839570a2f22b84bb429dde8771e7092c486d81b91a666528e"
+      }
+    },
+    {
+      "label": "fold-own-evidence-expanded",
+      "entry": "<isolated>/packages/resolution/dist/src/index.js",
+      "artifacts": {
+        "resolution.js": "89c6795e4e02c093bb49d337bc04ab9221642edcbfb8ecb8b0eaf0c9bbc9f3af",
+        "intent.js": "b1df6ecb70738b85785e007af0e7d396da5a4943368341638931f809c9cc2a39",
+        "evidence.js": "73450b4ab171652839570a2f22b84bb429dde8771e7092c486d81b91a666528e"
+      }
+    },
+    {
+      "label": "restored",
+      "entry": "<isolated>/packages/resolution/dist/src/index.js",
+      "artifacts": {
+        "resolution.js": "89c6795e4e02c093bb49d337bc04ab9221642edcbfb8ecb8b0eaf0c9bbc9f3af",
+        "intent.js": "b1df6ecb70738b85785e007af0e7d396da5a4943368341638931f809c9cc2a39",
+        "evidence.js": "c27be302d1c734bcf9b1a10b001eff53911ea190d39849fa2b3558c9a924df11"
+      }
+    }
+  ],
+  "executedBaseline": {
+    "count": 221,
+    "failed": []
+  },
+  "restored": {
+    "count": 221,
+    "failed": []
+  }
+}

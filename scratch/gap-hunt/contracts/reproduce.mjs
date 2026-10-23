@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 const cwd = fileURLToPath(new URL('../../../', import.meta.url));
 const suites = {
+  'resolution-144': { workspace: 'microdelta', test: 'gap-hunt-contracts-resolution-144', types: false },
   '155': { workspace: 'microdelta', test: 'gap-hunt-contracts-container-guard', types: false },
   '156': { workspace: 'microdelta', test: 'gap-hunt-contracts-scalar-roots', types: true },
   'falsey-guard': { workspace: 'microdelta', test: 'gap-hunt-contracts-operation-matrix', types: false, pattern: 'falsey guard values' },

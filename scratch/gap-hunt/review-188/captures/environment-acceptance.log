@@ -1,0 +1,13 @@
+watchman warning: Recrawled this watch 5 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '<checkout>' ; watchman watch-project '<checkout>'`
+
+(node:9037) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        0.17 s
+Ran all test suites within paths "packages/core/.test-build/test/journal/environments.test.js".

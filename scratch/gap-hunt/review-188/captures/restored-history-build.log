@@ -1,0 +1,22 @@
+
+> @microdelta/history@0.2.0 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json && api-extractor run --config api-extractor-conformance.json && api-extractor run --config api-extractor-shared.json && node ../../tooling/history-declaration-shims.mjs
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully

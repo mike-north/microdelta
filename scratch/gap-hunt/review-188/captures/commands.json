@@ -1,0 +1,201 @@
+[
+  {
+    "name": "original-default-runner",
+    "argv": [
+      "node",
+      "scratch/gap-hunt/review-188/repro-159.mjs"
+    ],
+    "expected": 0,
+    "exit": 0
+  },
+  {
+    "name": "default-build",
+    "argv": [
+      "npm",
+      "run",
+      "build"
+    ],
+    "expected": 0,
+    "exit": 0
+  },
+  {
+    "name": "expanded-compile",
+    "argv": [
+      "node",
+      "node_modules/typescript/bin/tsc",
+      "-p",
+      "packages/core/tsconfig.test.json"
+    ],
+    "expected": 0,
+    "exit": 0
+  },
+  {
+    "name": "expanded-current",
+    "argv": [
+      "node",
+      "--experimental-vm-modules",
+      "node_modules/jest/bin/jest.js",
+      "--config",
+      "packages/core/jest.config.mjs",
+      "--runInBand",
+      "--runTestsByPath",
+      "packages/core/.test-build/test/gap-hunt-scale/acceptance-readback.test.js",
+      "--json",
+      "--outputFile=scratch/gap-hunt/review-188/local-results/expanded-current.json"
+    ],
+    "expected": 0,
+    "exit": 0
+  },
+  {
+    "name": "strict-lint",
+    "argv": [
+      "node",
+      "node_modules/eslint/bin/eslint.js",
+      "packages/history/src/durable/index.ts",
+      "packages/core/test/gap-hunt-scale/acceptance-readback.test.ts"
+    ],
+    "expected": 0,
+    "exit": 0
+  },
+  {
+    "name": "history-types",
+    "argv": [
+      "npm",
+      "run",
+      "check:types",
+      "--workspace",
+      "@microdelta/history"
+    ],
+    "expected": 0,
+    "exit": 0
+  },
+  {
+    "name": "previous-history-build",
+    "argv": [
+      "npm",
+      "run",
+      "build",
+      "--workspace",
+      "@microdelta/history"
+    ],
+    "expected": 0,
+    "exit": 0
+  },
+  {
+    "name": "expanded-previous",
+    "argv": [
+      "node",
+      "--experimental-vm-modules",
+      "node_modules/jest/bin/jest.js",
+      "--config",
+      "packages/core/jest.config.mjs",
+      "--runInBand",
+      "--runTestsByPath",
+      "packages/core/.test-build/test/gap-hunt-scale/acceptance-readback.test.js",
+      "--json",
+      "--outputFile=scratch/gap-hunt/review-188/local-results/expanded-previous.json"
+    ],
+    "expected": 1,
+    "exit": 1
+  },
+  {
+    "name": "original-negative-compile",
+    "argv": [
+      "node",
+      "node_modules/typescript/bin/tsc",
+      "-p",
+      "packages/core/tsconfig.test.json"
+    ],
+    "expected": 0,
+    "exit": 0
+  },
+  {
+    "name": "original-previous",
+    "argv": [
+      "node",
+      "--experimental-vm-modules",
+      "node_modules/jest/bin/jest.js",
+      "--config",
+      "packages/core/jest.config.mjs",
+      "--runInBand",
+      "--runTestsByPath",
+      "packages/core/.test-build/test/gap-hunt-scale/acceptance-readback.test.js",
+      "--json",
+      "--outputFile=scratch/gap-hunt/review-188/local-results/original-previous.json"
+    ],
+    "expected": 1,
+    "exit": 1
+  },
+  {
+    "name": "restored-history-build",
+    "argv": [
+      "npm",
+      "run",
+      "build",
+      "--workspace",
+      "@microdelta/history"
+    ],
+    "expected": 0,
+    "exit": 0
+  },
+  {
+    "name": "restored-compile",
+    "argv": [
+      "node",
+      "node_modules/typescript/bin/tsc",
+      "-p",
+      "packages/core/tsconfig.test.json"
+    ],
+    "expected": 0,
+    "exit": 0
+  },
+  {
+    "name": "expanded-restored",
+    "argv": [
+      "node",
+      "--experimental-vm-modules",
+      "node_modules/jest/bin/jest.js",
+      "--config",
+      "packages/core/jest.config.mjs",
+      "--runInBand",
+      "--runTestsByPath",
+      "packages/core/.test-build/test/gap-hunt-scale/acceptance-readback.test.js",
+      "--json",
+      "--outputFile=scratch/gap-hunt/review-188/local-results/expanded-restored.json"
+    ],
+    "expected": 0,
+    "exit": 0
+  },
+  {
+    "name": "preserved-publication-acceptance",
+    "argv": [
+      "node",
+      "--experimental-vm-modules",
+      "node_modules/jest/bin/jest.js",
+      "--config",
+      "packages/core/jest.config.mjs",
+      "--runInBand",
+      "--runTestsByPath",
+      "packages/core/.test-build/test/durable-history/durable-history.test.js",
+      "--testNamePattern",
+      "a staged attempt is not a completed result|dependencies must be exact completed results|rollback acceptance never rewinds current|stored results and acceptances are immutable"
+    ],
+    "expected": 0,
+    "exit": 0
+  },
+  {
+    "name": "environment-acceptance",
+    "argv": [
+      "node",
+      "--experimental-vm-modules",
+      "node_modules/jest/bin/jest.js",
+      "--config",
+      "packages/core/jest.config.mjs",
+      "--runInBand",
+      "--runTestsByPath",
+      "packages/core/.test-build/test/journal/environments.test.js"
+    ],
+    "expected": 0,
+    "exit": 0
+  }
+]

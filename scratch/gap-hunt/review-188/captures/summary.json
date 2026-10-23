@@ -1,0 +1,44 @@
+{
+  "reviewed_pin": "4853f0e5ba2f1f56898bdb79584d7e4850c0f2ba",
+  "previous_source_pin": "2a640aca75d5728484a2cb06af88c77690616ba9",
+  "previous_commit": "0194b33d4f8cb7ccbf6f58100f833e0248f76230",
+  "original_fixture_pin": "abb9bab1987d18644093fb67dadb17c3ea9f94ce",
+  "actual_os": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "architecture": "arm64",
+  "node": "v24.22.1",
+  "npm": "11.12.1",
+  "head": "4853f0e5ba2f1f56898bdb79584d7e4850c0f2ba",
+  "original_current": {
+    "passed": 1,
+    "failed": 0
+  },
+  "expanded_current": {
+    "passed": 9,
+    "failed": 0,
+    "runtime_errors": 0
+  },
+  "expanded_previous": {
+    "passed": 4,
+    "failed": 5,
+    "runtime_errors": 0
+  },
+  "original_previous": {
+    "passed": 0,
+    "failed": 1,
+    "runtime_errors": 0
+  },
+  "expanded_restored": {
+    "passed": 9,
+    "failed": 0,
+    "runtime_errors": 0
+  },
+  "production_source_sha256": "5291fdaa77c964d06ace2ac93984daa8e0a8b95ac1e4a3ee9fb84d1c6d7307b7",
+  "previous_source_sha256": "dc6a15cdd70a57da65dd3683947ae5d367080d392529fb4089005abfa1375ba1",
+  "original_fixture_sha256": "e4cac6d5c90b4a03f75cf16a644a48ad082b98d0460785912287e17f3c7bed05",
+  "expanded_fixture_sha256": "93fa66d723c0c57f935b9e4559c0da2ea300e45ee3ce696524588032f741b4f1",
+  "source_and_test_restored_byte_exact": true,
+  "preserved_publication_acceptance_passed": 4,
+  "environment_acceptance_passed": 5,
+  "commands": 15,
+  "scope": "Actual recorded host/Node24; row materialization and exact acknowledgement correctness, no latency/M7/other-platform/full-suite claim"
+}

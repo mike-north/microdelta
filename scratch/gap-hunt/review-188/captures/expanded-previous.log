@@ -1,0 +1,110 @@
+watchman warning: Recrawled this watch 5 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '<checkout>' ; watchman watch-project '<checkout>'`
+
+(node:7813) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL packages/core/.test-build/test/gap-hunt-scale/acceptance-readback.test.js
+  ● acknowledging each new acceptance returns only that acceptance from SQL
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Array [
+        1,
+    -   1,
+    -   1,
+    +   2,
+    +   3,
+      ]
+
+      63 |   // Full inspection must still retain every immutable acceptance record.
+      64 |   expect(history.readAcceptances(reference, scope.environment)).toHaveLength(3);
+    > 65 |   expect(rowsPerAcknowledgement).toEqual([1, 1, 1]);
+         |                                  ^
+      66 | });
+      67 |
+      68 | /** Test-only readback faults never replace the real SQLite transaction or storage. */
+
+      at Object.<anonymous> (test/gap-hunt-scale/acceptance-readback.test.ts:65:34)
+
+  ● bounded acknowledgements preserve full histories across interleaved results and environments
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 1
+    Received: 2
+
+      200 |     const check = `check-${String(index)}`;
+      201 |     const { result, rows } = probe.measure(() => accept(history, lease, target.reference, target.environment, check, target.dependencies));
+    > 202 |     expect(rows).toBe(1);
+          |                  ^
+      203 |     expect(result).toMatchObject({ reference: target.reference, environment: target.environment, fence: lease.fence, dependencies: target.dependencies, evidence: { content: { check } } });
+      204 |     records.push(result);
+      205 |   }
+
+      at Object.<anonymous> (test/gap-hunt-scale/acceptance-readback.test.ts:202:18)
+
+  ● acknowledgement names the inserted ID even if a later row exists for the same result and environment
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 1
+    Received: 14
+
+      225 |   probe.setFault({ kind: 'later-decoy' });
+      226 |   const { result, rows } = probe.measure(() => accept(history, lease, reference, scope.environment, 'inserted'));
+    > 227 |   expect(rows).toBe(1);
+          |                ^
+      228 |   expect(result.acceptanceId).toBe(previous.acceptanceId + 1);
+      229 |   expect(result.evidence.content).toEqual({ check: 'inserted' });
+      230 |   const complete = history.readAcceptances(reference, scope.environment);
+
+      at Object.<anonymous> (test/gap-hunt-scale/acceptance-readback.test.ts:227:16)
+
+  ● wrong-result readback cannot acknowledge or commit a new acceptance
+
+    expect(received).toThrow(expected)
+
+    Expected constructor: HistoryIntegrityError
+
+    Received function did not throw
+
+      250 |     const sequenceBefore = raw.prepare('SELECT last_acceptance FROM history_sequences WHERE singleton = 1').get();
+      251 |     probe.setFault(kind === 'stale-evidence' ? { kind, prior } : { kind });
+    > 252 |     expect(() => probe.measure(() => accept(history, lease, reference, scope.environment, 'new'))).toThrow(HistoryIntegrityError);
+          |                                                                                                    ^
+      253 |     expect(history.readAcceptances(reference, scope.environment)).toEqual(before);
+      254 |     expect(raw.prepare('SELECT last_acceptance FROM history_sequences WHERE singleton = 1').get()).toEqual(sequenceBefore);
+      255 |   },
+
+      at test/gap-hunt-scale/acceptance-readback.test.ts:252:100
+
+  ● stale-evidence readback cannot acknowledge or commit a new acceptance
+
+    expect(received).toThrow(expected)
+
+    Expected constructor: HistoryIntegrityError
+
+    Received function did not throw
+
+      250 |     const sequenceBefore = raw.prepare('SELECT last_acceptance FROM history_sequences WHERE singleton = 1').get();
+      251 |     probe.setFault(kind === 'stale-evidence' ? { kind, prior } : { kind });
+    > 252 |     expect(() => probe.measure(() => accept(history, lease, reference, scope.environment, 'new'))).toThrow(HistoryIntegrityError);
+          |                                                                                                    ^
+      253 |     expect(history.readAcceptances(reference, scope.environment)).toEqual(before);
+      254 |     expect(raw.prepare('SELECT last_acceptance FROM history_sequences WHERE singleton = 1').get()).toEqual(sequenceBefore);
+      255 |   },
+
+      at test/gap-hunt-scale/acceptance-readback.test.ts:252:100
+
+Test Suites: 1 failed, 1 total
+Tests:       5 failed, 4 passed, 9 total
+Snapshots:   0 total
+Time:        0.207 s, estimated 1 s
+Ran all test suites within paths "packages/core/.test-build/test/gap-hunt-scale/acceptance-readback.test.js".
+Test results written to: scratch/gap-hunt/review-188/local-results/expanded-previous.json

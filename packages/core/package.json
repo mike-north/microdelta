@@ -1,6 +1,6 @@
 {
   "name": "microdelta",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Persisted incremental analysis; implementation in progress",
   "license": "UNLICENSED",
   "repository": {
@@ -42,30 +42,48 @@
     "directory": "test-d",
     "compilerOptions": {
       "paths": {
-        "@microdelta/accounting": ["../accounting/dist/api/accounting.alpha.d.ts"],
-        "@microdelta/definition": ["../definition/dist/api/definition.alpha.d.ts"],
-        "@microdelta/history": ["../history/dist/api/history.alpha.d.ts"],
-        "@microdelta/machine-node": ["../machine-node/dist/api/machine-node.alpha.d.ts"],
-        "@microdelta/materialization": ["../materialization/dist/api/materialization.alpha.d.ts"],
-        "@microdelta/resolution": ["../resolution/dist/api/resolution.alpha.d.ts"],
-        "@microdelta/supervision": ["../supervision/dist/api/supervision.alpha.d.ts"],
-        "@microdelta/tracking": ["../tracking/dist/api/tracking.alpha.d.ts"],
-        "@microdelta/value": ["../value/dist/api/value.alpha.d.ts"]
+        "@microdelta/accounting": [
+          "../accounting/dist/api/accounting.alpha.d.ts"
+        ],
+        "@microdelta/definition": [
+          "../definition/dist/api/definition.alpha.d.ts"
+        ],
+        "@microdelta/history": [
+          "../history/dist/api/history.alpha.d.ts"
+        ],
+        "@microdelta/machine-node": [
+          "../machine-node/dist/api/machine-node.alpha.d.ts"
+        ],
+        "@microdelta/materialization": [
+          "../materialization/dist/api/materialization.alpha.d.ts"
+        ],
+        "@microdelta/resolution": [
+          "../resolution/dist/api/resolution.alpha.d.ts"
+        ],
+        "@microdelta/supervision": [
+          "../supervision/dist/api/supervision.alpha.d.ts"
+        ],
+        "@microdelta/tracking": [
+          "../tracking/dist/api/tracking.alpha.d.ts"
+        ],
+        "@microdelta/value": [
+          "../value/dist/api/value.alpha.d.ts"
+        ]
       }
     }
   },
   "dependencies": {
-    "@microdelta/definition": "0.2.0",
-    "@microdelta/history": "0.1.0",
-    "@microdelta/machine-node": "0.1.0",
-    "@microdelta/materialization": "0.1.1",
-    "@microdelta/resolution": "0.2.0",
-    "@microdelta/supervision": "0.2.0",
-    "@microdelta/tracking": "0.2.0",
-    "@microdelta/value": "0.1.0"
+    "@microdelta/definition": "0.3.0",
+    "@microdelta/history": "0.2.0",
+    "@microdelta/machine-node": "0.2.0",
+    "@microdelta/materialization": "0.1.2",
+    "@microdelta/resolution": "0.3.0",
+    "@microdelta/supervision": "0.3.0",
+    "@microdelta/tracking": "0.2.1",
+    "@microdelta/value": "0.1.1"
   },
   "devDependencies": {
-    "@microdelta/accounting": "0.0.0"
+    "@microdelta/accounting": "0.1.0"
   },
   "publishConfig": {
     "access": "public"

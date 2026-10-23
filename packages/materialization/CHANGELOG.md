@@ -1,5 +1,15 @@
 # @microdelta/materialization
 
+## 0.1.2
+### Patch Changes
+
+- Updated dependencies [c0eaf43]
+- Updated dependencies [2be8066]
+- Updated dependencies [a6addaa]
+  - @microdelta/history@0.2.0
+  - @microdelta/tracking@0.2.1
+  - @microdelta/value@0.1.1
+
 ## 0.1.1
 ### Patch Changes
 

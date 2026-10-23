@@ -1,6 +1,6 @@
 {
   "name": "@microdelta/resolution",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Reuse Resolution: current candidate eligibility, source policy and direct-child validation",
   "license": "UNLICENSED",
   "repository": {
@@ -38,10 +38,10 @@
     "directory": "test-d"
   },
   "dependencies": {
-    "@microdelta/definition": "0.2.0",
-    "@microdelta/history": "0.1.0",
-    "@microdelta/materialization": "0.1.1",
-    "@microdelta/tracking": "0.2.0"
+    "@microdelta/definition": "0.3.0",
+    "@microdelta/history": "0.2.0",
+    "@microdelta/materialization": "0.1.2",
+    "@microdelta/tracking": "0.2.1"
   },
   "publishConfig": {
     "access": "public"

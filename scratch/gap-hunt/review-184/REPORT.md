@@ -28,8 +28,8 @@ Generated declarations are built before tests. Four unchanged checked-in suites 
 
 - journal/environments: candidate read-only row snapshots, exact subject/version/order/all candidates, older-version rollback with current pointer unchanged; duplicate/unrelated promotion filtering; cross-analysis promotion refusal; environment and exact-reference admission.
 - durable-history/durable-history: candidate rollback/current/acceptance separation and corrupt, malformed provenance/unsupported encoding integrity refusal through real History.
-- workspace-operations/operations: generated microdelta facade trial/production behavior and explicit promotion under writer authority.
-- m5-acceptance/environments: environment isolation and real trial-to-production behavior.
+- workspace-operations/operations: own-package facade source trial/production behavior and explicit promotion under writer authority.
+- m5-acceptance/environments: environment isolation and real trial-to-production behavior in separate workers importing the built `microdelta` public package and its generated declarations.
 
 Strict compiler and type-aware lint checks pass for History and microdelta, including test source. Source reviewer independently checked algebraic eligibility equivalence, argument binding, unique-publication ordering, envelope integrity path and unchanged schema/API. Those semantic source checks complement, rather than replace, this runtime evidence.
 

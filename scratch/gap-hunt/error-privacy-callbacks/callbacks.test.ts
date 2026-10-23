@@ -44,7 +44,7 @@ for (const route of routes) {
         } else {
           const listing = api.source<IListing>({ subject: 'listing', collection: { identity: 'key' }, run: ({ outcome }) => outcome.fresh<IListing>({ status: 'complete', members: [{ key: 'one', score: 1 }] }) });
           const template = api.template({ slot: 'member', collection: listing, steps: member => ({ score: member.memo({ subject: member.subject('score'), run: ({ member: bound }) => ({ score: bound.score }) }) }) });
-          const over = { template, step: 'score' };
+          const over = { template, step: 'score' } as const;
           const declaration = route === 'strict-fold'
             ? api.fold({ subject, over, run: ({ helpers }) => helpers.fail() })
             : api.outcomeFold({ subject, over, run: ({ helpers }) => helpers.fail() });

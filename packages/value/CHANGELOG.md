@@ -1,5 +1,14 @@
 # @microdelta/value
 
+## 0.1.1
+### Patch Changes
+
+- 2be8066: Retain bounded container-kind evidence so nullable tracked guards invalidate stale results across process restarts. Revalidate prior computation evidence once under the current tracking semantics while preserving exact historical results and journal records.
+- Updated dependencies [af7323b]
+- Updated dependencies [dba23f0]
+- Updated dependencies [00f672e]
+  - @microdelta/machine@0.2.0
+
 ## 0.1.0
 ### Minor Changes
 

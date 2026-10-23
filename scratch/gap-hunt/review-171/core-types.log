@@ -1,0 +1,4 @@
+
+> microdelta@0.2.0 check:types
+> tsc --noEmit -p tsconfig.json
+

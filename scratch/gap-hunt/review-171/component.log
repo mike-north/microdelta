@@ -1,0 +1,44 @@
+(node:58027) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL packages/tracking/.test-build/test/gap-hunt-contracts-container-guard.test.js
+  ● gap hunt tracked container guard precision › TRK-8 container presence guard detects replacement with null
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 0
+    Received length: 1
+    Received array:  [{"address": [{"key": "detail", "kind": "property"}], "binding": {"path": ["input"]}, "encoded": "MDO1|[\"container-kind\",[[\"property\",\"detail\"]],\"MDV1|[\\\"s\\\",\\\"record\\\"]\"]", "encodingVersion": "MDO1", "fingerprint": "910e7fae4be144bf312ee4f68b5b8e0c78766c90315596d626cea3d833070500", "kind": "fact", "operation": "container-kind", "selection": {"address": [{"key": "detail", "kind": "property"}], "encodingVersion": "MDO1", "kind": "selected", "operation": "container-kind"}}]
+
+      44 |         const changed = replacement === undefined ? {} : { detail: replacement };
+      45 |         expect(captured.value).toBe('present');
+    > 46 |         expect(captured.observations).toHaveLength(0);
+         |                                       ^
+      47 |         expect(observer.compareCurrent(captured, current(changed)).kind).toBe('changed');
+      48 |     });
+      49 | });
+
+      at .test-build/test/gap-hunt-contracts-container-guard.test.js:46:39
+
+  ● gap hunt tracked container guard precision › TRK-8 container presence guard detects replacement with undefined
+
+    expect(received).toHaveLength(expected)
+
+    Expected length: 0
+    Received length: 1
+    Received array:  [{"address": [{"key": "detail", "kind": "property"}], "binding": {"path": ["input"]}, "encoded": "MDO1|[\"container-kind\",[[\"property\",\"detail\"]],\"MDV1|[\\\"s\\\",\\\"record\\\"]\"]", "encodingVersion": "MDO1", "fingerprint": "910e7fae4be144bf312ee4f68b5b8e0c78766c90315596d626cea3d833070500", "kind": "fact", "operation": "container-kind", "selection": {"address": [{"key": "detail", "kind": "property"}], "encodingVersion": "MDO1", "kind": "selected", "operation": "container-kind"}}]
+
+      44 |         const changed = replacement === undefined ? {} : { detail: replacement };
+      45 |         expect(captured.value).toBe('present');
+    > 46 |         expect(captured.observations).toHaveLength(0);
+         |                                       ^
+      47 |         expect(observer.compareCurrent(captured, current(changed)).kind).toBe('changed');
+      48 |     });
+      49 | });
+
+      at .test-build/test/gap-hunt-contracts-container-guard.test.js:46:39
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 2 passed, 4 total
+Snapshots:   0 total
+Time:        0.088 s
+Ran all test suites within paths "packages/tracking/.test-build/test/gap-hunt-contracts-container-guard.test.js".

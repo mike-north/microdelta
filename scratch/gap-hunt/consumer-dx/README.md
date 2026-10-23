@@ -10,7 +10,7 @@ All paths/configs are checkout-relative. From repository root after npm ci:
 npm run build:packages
 node node_modules/typescript/bin/tsc -p scratch/gap-hunt/consumer-dx/tsconfig.all.json
 node --experimental-vm-modules node_modules/jest/bin/jest.js --config scratch/gap-hunt/consumer-dx/jest.config.mjs --runInBand
-node node_modules/tsd/dist/cli.js --cwd scratch/gap-hunt/consumer-dx --files contracts.test-d.ts
+node node_modules/tsd/dist/cli.js scratch/gap-hunt/consumer-dx --files contracts.test-d.ts
 node node_modules/eslint/bin/eslint.js --config scratch/gap-hunt/consumer-dx/eslint.config.mjs scratch/gap-hunt/consumer-dx/pipeline.ts scratch/gap-hunt/consumer-dx/reflection-probe.ts
 ```
 

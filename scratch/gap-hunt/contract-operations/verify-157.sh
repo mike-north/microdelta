@@ -3,7 +3,7 @@
 # into a disposable directory, never alters repository/global package settings.
 set -Eeuo pipefail
 printf 'native-approval-runner platform=%s; Linux remains unverified unless this run is Linux\n' "$(uname -s)"
-node -e 'if(process.version!=="v24.22.1")throw new Error("Use Node v24.22.1 for this pinned reproduction")'
+node -e 'if(!process.versions.node.startsWith("24."))throw new Error("Use Node24.x for this reproduction");console.log(`node=${process.version} platform=${process.platform} arch=${process.arch}`)'
 case "${1:-both}" in
   both) versions=(10.34.7 12.10.1) ;;
   10.34.7|12.10.1) versions=("$1") ;;

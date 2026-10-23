@@ -1,0 +1,31 @@
+// PROPOSED ONLY — imports assessment.ts from example 2.
+import { analysis, source, keyed, strictFold } from 'microdelta';
+import { assess } from './assessment.js';
+import type { IPullRequest, IScoring } from './assessment.js';
+
+export interface ICatalog {
+  readonly complete: boolean;
+  readonly pullRequests: readonly IPullRequest[];
+}
+interface IInputs { readonly snapshot: ICatalog; readonly scoring: IScoring }
+
+export const report = analysis<IInputs>((input) => {
+  const catalog = source({
+    name: 'catalog',
+    from: { snapshot: input.snapshot },
+    run: ({ snapshot }, outcome) => outcome.fresh(snapshot),
+  });
+  const scores = keyed({
+    from: catalog,
+    members: (catalog) => catalog.pullRequests,
+    complete: (catalog) => catalog.complete,
+    key: (pr) => pr.id,
+    name: 'assessments',
+    each: (pr) => assess('assessment', pr, input.scoring),
+  });
+  return strictFold({
+    name: 'report', subject: 'catalog-report',
+    over: scores,
+    run: (members) => ({ scores: members.map(({ key, data }) => ({ key, score: data })) }),
+  });
+});

@@ -33,6 +33,9 @@
       ],
       "@microdelta/value": [
         "packages/value/dist/api/value.alpha.d.ts"
+      ],
+      "microdelta": [
+        "packages/core/dist/api/microdelta.alpha.d.ts"
       ]
     }
   },

@@ -1,0 +1,33 @@
+# M7 target-contract completeness audit
+
+Audit date: 2026-10-23. Governing checkout: c5802daca4a0bb8ea91159854d84eddcfa5215b6 specification; live GitHub bodies captured in `m7-issue-snapshot/issue-{170,167,165}.json`. This is a target-contract audit, not a runtime regression claim or implementation readiness decision. No new runtime suite was run.
+
+## Finding
+
+#170 preserves the settled paginated readiness target: its final readiness paragraph explicitly says deferring the RUN-004/005 bridge cannot complete that outcome. Its selected mechanism and interface remain unresolved. However, criterion 6's instruction to select “representative” TEST-4 cases weakens the mandatory acceptance matrix, while criteria 2–5 concentrate on traversal and operations. Referencing TEST-3/4 in the introduction preserves broad intent but does not make the omitted outcomes reviewably mandatory. Add the narrow application-outcome matrix in `M7-TARGET-ISSUE-ADDITIONS.md`; do not open a duplicate runtime issue.
+
+## Traceability and disposition
+
+| Required outcome | Governing source | Filed coverage / disposition |
+| --- | --- | --- |
+| Quoted HR CSV, malformed/duplicate employee IDs rejected, explicit employee-ID selection, PR creation `[start,end)`, assessment schema, deterministic PR ordering, explicit roster refresh/acceptance | acceptance.md:74–81 | #170 describes HR selection/hydration but its numbered criteria omit these fixture policies. Specified application target; preserve all in the accepted workflow matrix. These deterministic fixture obligations do not require paid execution. They are not universal library parsing/schema rules. |
+| Person A complete while B discovery held; A eligible for evaluation or exact prior-result reuse; team requiring both waits | acceptance.md:54–59; operations.md:114–130 | #170 criterion 3 covers PR A inside one person's corpus; criterion 4 only forbids false closure during another person's wait. Neither explicitly proves independent completed-person readiness. Add the cross-person consumer boundary, without prescribing hierarchy in the framework. |
+| PR member ready before discovery closes; strict summary waits; page failure and rediscovery retain eligible member; no false closure | operations.md:132–172 | Explicit in #170 criteria 1–3 and final paragraph. Aligned as specified target. Conditional bridge wording must continue to disclose any deferred required outcome. No duplicate issue or guessed bridge test. |
+| Unread labels retain; consumed diff/review/prompt/model or tracked helper changes reevaluate; equal child assessment permits parent retention with distinct acceptance/provenance | acceptance.md:95–98 | Only broad TEST-4 reference and representative-case criterion 6. Explicit inputs and parent cutoff are mandatory integrated application variants, even if existing primitive controls prove narrower constituent behavior. Add matrix rows; do not invent model/prompt representation. |
+| Source fails and another waits; complete people finish; truthful partial coverage and no missing-as-empty success | acceptance.md:99–101 | Partial overlap with #170 criteria 3–5. Add complete-person independence and explicit partial-report coverage to full matrix. |
+| Trial widens; valid independent references reuse within allowed environment policy; changed aggregate membership; no accidental production satisfaction/storage contamination | acceptance.md:102–104; operations.md:616–620 | #170 mentions trial/production separation but not widening, exact member reuse and aggregate change. Add all outcomes. The superseding decision selects environments namespaced within one store and explicit recorded promotion; do not reopen older separate-store routing as undecided. |
+| No staff yields legitimate empty leadership input; single-point boxplot succeeds without proving useful variation; execution success is not trial adequacy | operations.md:623–633 | Absent from #170 numbered criteria and #165/#167. Specified application/reporting target with deterministic synthetic cases, not an automatic subset-selector requirement or paid trial. Add assertions against false adequacy claims; no requirement to execute leadership analysis on empty input. |
+| Cold, restart, changed pages, cancellation/crash and whole-step resume | acceptance.md:89–94,105–107 | Broadly named in #170 criterion 6, but “representative” may omit cases. Require every mandatory variant or explicit unmet status; exact references/counts and unknown usage remain observable assertions. |
+| Standalone inspection without work | acceptance.md:108–109; operations.md:635 onward | #167 owns the read-only checkpoint and depends on #165 preview and #166 resource delivery for its complete target. #170 should reference integrated evidence and unmet dependencies, not duplicate CLI/envelope design. |
+
+## What is executable now versus a target
+
+Finite assertions about already selected runtime primitives (stable identity, exact references, tracked dependencies, accepted equal data, environment separation, operational stop/unknown state) can be exercised with current deterministic controls. Existing evidence must retain its own scope. This audit does not claim those controls exercise a real HR parser, widening report, prompt/model inputs or independent complete-person readiness.
+
+The unexecuted ledger cases are concrete acceptance obligations, not speculative future requirements: HR parsing/duplicate IDs, completed-person independence, trial widening, explicit prompt/model changes and the two RUN-018 adequacy cases can all use synthetic input and no live model. Their full assembled-workflow evidence is still an M7 target. Where the workflow lacks the chosen publication/readiness bridge, write the accepted contract before implementation-derived failing tests. Do not misclassify missing M7 app fixtures as new regressions in accepted bounded M5.
+
+#165 provides preview envelopes, freshness/error distinction, observation without refresh, disposal and coalescing. It does not own HR parsing, population readiness, widening or trial adequacy. #167 provides standalone inspection of recorded outcomes and dependencies. It does not supply those application policies either. Their open design choices do not make TEST-3/4 or RUN-018 optional.
+
+## Evidence boundary
+
+Only governing specification text and the filed issue bodies were compared. No product code, GitHub issue, PR, root control file or release state changed. Existing runtime evidence was not rerun. The issue snapshots are review-time captures, not a promise that GitHub bodies remain unchanged. Untracked `experiments/nested/` was present before these edits and was left untouched.

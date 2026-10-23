@@ -39,3 +39,11 @@ Conditional implementation acceptance:
 3. Controlled-clock tests prove sustained-arrival periodic delivery, final trailing delivery and no delivery after the decided disposal boundary. Test aggregate replacement/removal without eagerly loading unrelated payloads.
 
 Out of scope: M7 scale optimization, automatic refresh/retry, UI toolkit, or changing exact-read meaning. Dependencies: public read-side/lifetime owner, coordinated with CLI M6; no assumption that current lifecycle event logging supplies value observation.
+
+Clean evidence-checkout single-command reproduction (Node24.22.1/npm, network registry access and native toolchain/prebuild prerequisites):
+
+```sh
+bash scratch/gap-hunt/contract-operations/verify-preview.sh
+```
+
+This runner installs the lockfile with npm ci, builds package declarations, passes valid controls, then exits1 with TARGET GAP only after asserting the complete reviewed owning surface. It does not call an imagined API. A future surface change intentionally requires renewed semantic review. Captured macOS execution is verify-preview.log; Linux remains unverified. No paid service or external provider is called. The resource-state runner never encodes balances as additive deltas.

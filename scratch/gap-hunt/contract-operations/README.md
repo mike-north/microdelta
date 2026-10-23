@@ -28,3 +28,5 @@ node scratch/gap-hunt/contract-operations/launch-probe.mjs
 See HARNESS-LIMIT.md for unchanged journal-assertion replay with file transport, LIFECYCLE.md for strict Jest/type/lint commands, and ISSUE-*.md for grouped target findings. The CLI wrapper records npm executable-discovery failure as data; preview/lazy probes assert supported positive controls and record missing/ambiguous target boundaries.
 
 #157/#158 local pickup addenda specify conservative documentation scope and self-contained `verify-157.sh` / `verify-158.mjs` commands. Linux runtime acceptance remains unverified; metadata checks do not establish native support. The three capability drafts require owner decisions before implementation pickup.
+
+Clean-checkout target runners: `bash scratch/gap-hunt/contract-operations/verify-cli.sh`, `verify-preview.sh`, and `verify-resource-state.sh` (use the same full directory prefix). Each installs/builds, passes valid controls and deliberately exits1 at the missing-target assertion. Captured macOS logs distinguish target gaps from control failures. State summation misuse is excluded from these runners.

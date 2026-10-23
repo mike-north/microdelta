@@ -39,3 +39,11 @@ Conditional implementation acceptance after those decisions:
 3. Test both interrupt paths and missing/corrupt/unsupported store errors against the decided contract. Existing library exact reads and writer-free recovery controls remain green.
 
 Out of scope: full provider workload, new host implementations, terminal-framework selection, billing, and automatic execution repair. Dependencies: selected read-side owner; preview/resource-state decisions where included in M6.
+
+Clean evidence-checkout single-command reproduction (Node24.22.1/npm, network registry access and native toolchain/prebuild prerequisites):
+
+```sh
+bash scratch/gap-hunt/contract-operations/verify-cli.sh
+```
+
+This runner installs the lockfile with npm ci, builds package declarations, passes valid controls, then exits1 with TARGET GAP only after asserting the complete reviewed owning surface. It does not call an imagined API. A future surface change intentionally requires renewed semantic review. Captured macOS execution is verify-cli.log; Linux remains unverified. No paid service or external provider is called. The resource-state runner never encodes balances as additive deltas.

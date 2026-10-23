@@ -41,3 +41,11 @@ Conditional implementation acceptance:
 3. Tests cover the decided duplicate/out-of-order/window-expiry rules and missing state. Do not turn the deliberately misencoded183 delta control into a product defect or alter delta arithmetic to make it90.
 
 Out of scope: generic aggregation framework, billing, credentials, scheduler policy or reopening #115. Dependencies: Accounting vocabulary/owner decision, #151 only where facade construction is required, CLI read-side integration if included in M6.
+
+Clean evidence-checkout single-command reproduction (Node24.22.1/npm, network registry access and native toolchain/prebuild prerequisites):
+
+```sh
+bash scratch/gap-hunt/contract-operations/verify-resource-state.sh
+```
+
+This runner installs the lockfile with npm ci, builds package declarations, passes valid controls, then exits1 with TARGET GAP only after asserting the complete reviewed owning surface. It does not call an imagined API. A future surface change intentionally requires renewed semantic review. Captured macOS execution is verify-resource-state.log; Linux remains unverified. No paid service or external provider is called. The resource-state runner never encodes balances as additive deltas.

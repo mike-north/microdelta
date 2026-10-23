@@ -1,0 +1,50 @@
+[
+  {
+    "pin": "0683c2ed73934d10f9b5a1ad9e0dd9e3d1a88d4f",
+    "command": "bash scratch/gap-hunt/contract-operations/verify-preview.sh",
+    "checkout": "/var/folders/st/lnv0_82j071b3c_hn5s_j2wc0000gn/T/gap-hunt-clean-preview-k1tu0yg5/checkout",
+    "startedAt": "2026-10-23T08:54:45.299810+00:00",
+    "cleanBefore": "",
+    "nodeModulesExistedBefore": false,
+    "node": "v24.22.1",
+    "npm": "11.12.1",
+    "reusedBuildOverride": null,
+    "platform": "Darwin arm64",
+    "exitCode": 0,
+    "cleanAfter": "",
+    "nodeModulesExistAfter": true,
+    "finishedAt": "2026-10-23T08:55:11.332872+00:00"
+  },
+  {
+    "pin": "0683c2ed73934d10f9b5a1ad9e0dd9e3d1a88d4f",
+    "command": "bash scratch/gap-hunt/contract-operations/verify-resource-state.sh",
+    "checkout": "/var/folders/st/lnv0_82j071b3c_hn5s_j2wc0000gn/T/gap-hunt-clean-resource-state-4uzd16wf/checkout",
+    "startedAt": "2026-10-23T08:55:13.932483+00:00",
+    "cleanBefore": "",
+    "nodeModulesExistedBefore": false,
+    "node": "v24.22.1",
+    "npm": "11.12.1",
+    "reusedBuildOverride": null,
+    "platform": "Darwin arm64",
+    "exitCode": 0,
+    "cleanAfter": "",
+    "nodeModulesExistAfter": true,
+    "finishedAt": "2026-10-23T08:55:38.512130+00:00"
+  },
+  {
+    "pin": "0683c2ed73934d10f9b5a1ad9e0dd9e3d1a88d4f",
+    "command": "bash scratch/gap-hunt/contract-operations/verify-cli.sh",
+    "checkout": "/var/folders/st/lnv0_82j071b3c_hn5s_j2wc0000gn/T/gap-hunt-clean-cli-c715vm5q/checkout",
+    "startedAt": "2026-10-23T08:55:42.814757+00:00",
+    "cleanBefore": "",
+    "nodeModulesExistedBefore": false,
+    "node": "v24.22.1",
+    "npm": "11.12.1",
+    "reusedBuildOverride": null,
+    "platform": "Darwin arm64",
+    "exitCode": 0,
+    "cleanAfter": "",
+    "nodeModulesExistAfter": true,
+    "finishedAt": "2026-10-23T08:56:09.427498+00:00"
+  }
+]

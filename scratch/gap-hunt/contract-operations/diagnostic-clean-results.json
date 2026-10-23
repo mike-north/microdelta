@@ -1,0 +1,128 @@
+[
+  {
+    "name": "preview",
+    "exitCode": 0,
+    "cleanBefore": "",
+    "cleanAfter": "",
+    "installedPackages": 614,
+    "apiExtractorSuccessMessages": 14,
+    "control": "CONTROL: complete run/observer surface matches reviewed exact-read and restricted lifecycle-event capabilities.",
+    "assertedPayload": {
+      "cold": {
+        "kind": "published",
+        "reference": {
+          "kind": "completed-result",
+          "locator": "mdh1|[\"preview-consumer\",\"preview-consumer\",\"trial\",1]"
+        }
+      },
+      "refreshError": {
+        "name": "ResolutionError",
+        "code": "execution-failure",
+        "message": "Source check of [\"preview-consumer\",\"step\",\"histogram\",null] threw"
+      },
+      "exactReadControl": {
+        "runOperations": [
+          "check",
+          "context",
+          "inspectOperations",
+          "open",
+          "ordinary",
+          "promote",
+          "promotions",
+          "read",
+          "recover",
+          "resolve",
+          "resolveFold",
+          "resolveMembers",
+          "resolveOutcomeFold",
+          "settleOperation",
+          "usage"
+        ],
+        "value": {
+          "buckets": {
+            "accepted": 3
+          },
+          "total": 3
+        },
+        "fetches": 2
+      },
+      "targetBoundary": "No supported latest-preview envelope or throttled value/status observation entry exists in the available run type. Exact reads are safe but caller must supply old reference and combine refresh error/status itself."
+    },
+    "log": "scratch/gap-hunt/contract-operations/diagnostic-clean-preview.log",
+    "sha256": "0f993fe92704c1cda1a908ab8c89fe6559dceb86a077e7c6029e3b5d2bf5877f"
+  },
+  {
+    "name": "resource-state",
+    "exitCode": 0,
+    "cleanBefore": "",
+    "cleanAfter": "",
+    "installedPackages": 614,
+    "apiExtractorSuccessMessages": 14,
+    "control": "CONTROL: complete Accounting surface matches reviewed additive consumption port; no state/pool/window/reset record or query.",
+    "assertedPayload": {
+      "additivePositiveControl": {
+        "requestDeltas": [
+          2,
+          3
+        ],
+        "observedRequests": 5
+      },
+      "unknown": [],
+      "status": "complete"
+    },
+    "log": "scratch/gap-hunt/contract-operations/diagnostic-clean-resource-state.log",
+    "sha256": "4ac8329fccb55eda21caf83a343ea33c3b498e2544698b95c30dd523dd195618"
+  },
+  {
+    "name": "cli",
+    "exitCode": 0,
+    "cleanBefore": "",
+    "cleanAfter": "",
+    "installedPackages": 614,
+    "apiExtractorSuccessMessages": 14,
+    "control": "CONTROL: npm executable discovery fails; all manifests lack bin; workspace read access still requires run.",
+    "assertedPayload": {
+      "cold": {
+        "kind": "published",
+        "reference": {
+          "kind": "completed-result",
+          "locator": "mdh1|[\"preview-consumer\",\"preview-consumer\",\"trial\",1]"
+        }
+      },
+      "refreshError": {
+        "name": "ResolutionError",
+        "code": "execution-failure",
+        "message": "Source check of [\"preview-consumer\",\"step\",\"histogram\",null] threw"
+      },
+      "exactReadControl": {
+        "runOperations": [
+          "check",
+          "context",
+          "inspectOperations",
+          "open",
+          "ordinary",
+          "promote",
+          "promotions",
+          "read",
+          "recover",
+          "resolve",
+          "resolveFold",
+          "resolveMembers",
+          "resolveOutcomeFold",
+          "settleOperation",
+          "usage"
+        ],
+        "value": {
+          "buckets": {
+            "accepted": 3
+          },
+          "total": 3
+        },
+        "fetches": 2
+      },
+      "targetBoundary": "No supported latest-preview envelope or throttled value/status observation entry exists in the available run type. Exact reads are safe but caller must supply old reference and combine refresh error/status itself."
+    },
+    "log": "scratch/gap-hunt/contract-operations/diagnostic-clean-cli.log",
+    "sha256": "a682434ee84e0905c029fca22d8770eadd28560ff5f68e445650d09712e26c42"
+  }
+]

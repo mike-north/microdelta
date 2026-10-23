@@ -1,0 +1,49 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "baseUrl": "../../..",
+    "paths": {
+      "microdelta": [
+        "packages/core/dist/api/microdelta.alpha.d.ts"
+      ],
+      "@microdelta/accounting": [
+        "packages/accounting/dist/api/accounting.alpha.d.ts"
+      ],
+      "@microdelta/value": [
+        "packages/value/dist/api/value.alpha.d.ts"
+      ],
+      "@microdelta/machine-node": [
+        "packages/machine-node/dist/api/machine-node.alpha.d.ts"
+      ],
+      "@microdelta/materialization": [
+        "packages/materialization/dist/api/materialization.alpha.d.ts"
+      ],
+      "@microdelta/resolution": [
+        "packages/resolution/dist/api/resolution.alpha.d.ts"
+      ],
+      "@microdelta/definition": [
+        "packages/definition/dist/api/definition.alpha.d.ts"
+      ],
+      "@microdelta/machine": [
+        "packages/machine/dist/api/machine.alpha.d.ts"
+      ],
+      "@microdelta/history": [
+        "packages/history/dist/api/history.alpha.d.ts"
+      ],
+      "@microdelta/supervision": [
+        "packages/supervision/dist/api/supervision.alpha.d.ts"
+      ],
+      "@microdelta/tracking": [
+        "packages/tracking/dist/api/tracking.alpha.d.ts"
+      ]
+    },
+    "outDir": "dist"
+  },
+  "files": [
+    "fold-1000-1.ts",
+    "fold-1-10.ts",
+    "fold-1-50.ts",
+    "fold-1-100.ts"
+  ]
+}

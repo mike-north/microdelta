@@ -16,7 +16,7 @@ try {
       const fresh = freshApi.source<{ readonly value: number }>({ subject: `constant:${batch}:${iteration}`, run: ({ outcome }) => outcome.fresh({ value: 42 }), finality: () => true });
       const freshComposition = freshApi.compose({ scope: 'contexts', steps: [{ slot: 'source', declaration: fresh }] });
       const work = (): Promise<unknown> => workspace.run({ authoring: freshSource ? freshApi : api, composition: freshSource ? freshComposition : composition, environment: 'synthetic' }, async (run) => {
-        await run.resolve({ scope: 'contexts', role: 'step', slot: 'source' }, { requestKey: 'same' });
+        await run.resolve({ scope: 'contexts', role: 'step', slot: 'source' }, { requestKey: `request:${batch}:${iteration}` });
         for (let tick = 0; tick < 100; tick += 1) await Promise.resolve();
       });
       if (isolated) {
@@ -24,7 +24,8 @@ try {
         try { await resource.runInAsyncScope(work); } finally { resource.emitDestroy(); }
       } else { await work(); }
     }
+    const elapsed = performance.now() - start;
     global.gc?.();
-    console.log(JSON.stringify({ probe: 'context', isolated, freshSource, batch, runs: (batch + 1) * 100, milliseconds: performance.now() - start, heap: process.memoryUsage().heapUsed, rss: process.memoryUsage().rss }));
+    console.log(JSON.stringify({ probe: 'context', isolated, freshSource, batch, runs: (batch + 1) * 100, milliseconds: elapsed, heap: process.memoryUsage().heapUsed, rss: process.memoryUsage().rss }));
   }
 } finally { workspace.close(); }

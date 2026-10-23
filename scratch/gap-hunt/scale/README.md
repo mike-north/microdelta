@@ -3,7 +3,7 @@
 Baseline c5802daca4a0bb8ea91159854d84eddcfa5215b6. Node24.22.1, macOS arm64.
 No provider calls. All records are invented. No absolute latency SLA is asserted.
 
-Implementer: Mike North, assisted by Codex.
+Implementer: Codex worker (gpt-6.1-sol), operating for Mike North.
 Agent assistance: gpt-6.1-sol authored and ran these bounded probes; supervisor reviews findings.
 
 From repository root:
@@ -49,3 +49,26 @@ No performance threshold assertions are added to CI. Strict TypeScript compiles
 all probes; a separate scratch type-aware ESLint configuration was run successfully.
 Jest/tsd consumer assertions are in the sibling private scratch exercise and are
 not a replacement for runtime performance measurement.
+
+Wide/deep strict folds (one chain per member, static declared topology):
+
+```sh
+node scratch/gap-hunt/scale/generate-folds.mjs
+node node_modules/typescript/bin/tsc -p scratch/gap-hunt/scale/tsconfig.folds.json
+node scratch/gap-hunt/scale/fold-runner.mjs
+```
+
+The generator covers width1000/depth1 and width1/depth10/50/100. Fold runner
+limits each to60s and preserves diagnostics. Generated TS contains no type casts.
+
+Store-layout original command was `node scratch/gap-hunt/scale/store-layout.mjs`
+against original unsuffixed stores; only its compact output is retained. Replay
+against new benchmark outputs by passing the actual20k payload file and reused
+context history file as two arguments. It copies the payload file before VACUUM.
+`node --expose-gc .../context.js --fresh-source` is the exact memory command.
+
+Corrected `*-unique-*` logs supersede the earlier context samples: every normal
+resolve request now has a fresh request key, and elapsed time is captured before
+explicit GC. `benchmark-matched-node24.jsonl` additionally measures encoding the
+same record-array shape that publication uses. Earlier snapshots are historical
+measurements with the limitations recorded in FINDINGS.md.

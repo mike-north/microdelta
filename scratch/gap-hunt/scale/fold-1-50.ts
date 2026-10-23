@@ -1,0 +1,73 @@
+import { performance } from 'node:perf_hooks';
+import { authoring, openWorkspace } from 'microdelta';
+interface IMember { readonly key: string; readonly score: number }
+interface IListing { readonly members: readonly IMember[]; readonly status: 'complete' }
+const api = authoring<Record<string, never>, Record<string, never>>();
+const listing = api.source<IListing>({ subject: 'listing', collection: { identity: 'key' }, run: ({ outcome }) => outcome.fresh<IListing>({ members: Array.from({ length: 1 }, (_, score) => ({ key: 'member:' + score, score })), status: 'complete' }) });
+const template = api.template({ slot: 'member', collection: listing, steps: member => {
+const s0 = member.memo({ subject: member.subject('node0'), run: ({ member: item }) => ({ depth: item.score }) });
+const s1 = member.memo({ subject: member.subject('node1'), children: { s0 }, run: async ({ calls }) => ({ depth: (await calls.s0()).data.depth + 1 }) });
+const s2 = member.memo({ subject: member.subject('node2'), children: { s1 }, run: async ({ calls }) => ({ depth: (await calls.s1()).data.depth + 1 }) });
+const s3 = member.memo({ subject: member.subject('node3'), children: { s2 }, run: async ({ calls }) => ({ depth: (await calls.s2()).data.depth + 1 }) });
+const s4 = member.memo({ subject: member.subject('node4'), children: { s3 }, run: async ({ calls }) => ({ depth: (await calls.s3()).data.depth + 1 }) });
+const s5 = member.memo({ subject: member.subject('node5'), children: { s4 }, run: async ({ calls }) => ({ depth: (await calls.s4()).data.depth + 1 }) });
+const s6 = member.memo({ subject: member.subject('node6'), children: { s5 }, run: async ({ calls }) => ({ depth: (await calls.s5()).data.depth + 1 }) });
+const s7 = member.memo({ subject: member.subject('node7'), children: { s6 }, run: async ({ calls }) => ({ depth: (await calls.s6()).data.depth + 1 }) });
+const s8 = member.memo({ subject: member.subject('node8'), children: { s7 }, run: async ({ calls }) => ({ depth: (await calls.s7()).data.depth + 1 }) });
+const s9 = member.memo({ subject: member.subject('node9'), children: { s8 }, run: async ({ calls }) => ({ depth: (await calls.s8()).data.depth + 1 }) });
+const s10 = member.memo({ subject: member.subject('node10'), children: { s9 }, run: async ({ calls }) => ({ depth: (await calls.s9()).data.depth + 1 }) });
+const s11 = member.memo({ subject: member.subject('node11'), children: { s10 }, run: async ({ calls }) => ({ depth: (await calls.s10()).data.depth + 1 }) });
+const s12 = member.memo({ subject: member.subject('node12'), children: { s11 }, run: async ({ calls }) => ({ depth: (await calls.s11()).data.depth + 1 }) });
+const s13 = member.memo({ subject: member.subject('node13'), children: { s12 }, run: async ({ calls }) => ({ depth: (await calls.s12()).data.depth + 1 }) });
+const s14 = member.memo({ subject: member.subject('node14'), children: { s13 }, run: async ({ calls }) => ({ depth: (await calls.s13()).data.depth + 1 }) });
+const s15 = member.memo({ subject: member.subject('node15'), children: { s14 }, run: async ({ calls }) => ({ depth: (await calls.s14()).data.depth + 1 }) });
+const s16 = member.memo({ subject: member.subject('node16'), children: { s15 }, run: async ({ calls }) => ({ depth: (await calls.s15()).data.depth + 1 }) });
+const s17 = member.memo({ subject: member.subject('node17'), children: { s16 }, run: async ({ calls }) => ({ depth: (await calls.s16()).data.depth + 1 }) });
+const s18 = member.memo({ subject: member.subject('node18'), children: { s17 }, run: async ({ calls }) => ({ depth: (await calls.s17()).data.depth + 1 }) });
+const s19 = member.memo({ subject: member.subject('node19'), children: { s18 }, run: async ({ calls }) => ({ depth: (await calls.s18()).data.depth + 1 }) });
+const s20 = member.memo({ subject: member.subject('node20'), children: { s19 }, run: async ({ calls }) => ({ depth: (await calls.s19()).data.depth + 1 }) });
+const s21 = member.memo({ subject: member.subject('node21'), children: { s20 }, run: async ({ calls }) => ({ depth: (await calls.s20()).data.depth + 1 }) });
+const s22 = member.memo({ subject: member.subject('node22'), children: { s21 }, run: async ({ calls }) => ({ depth: (await calls.s21()).data.depth + 1 }) });
+const s23 = member.memo({ subject: member.subject('node23'), children: { s22 }, run: async ({ calls }) => ({ depth: (await calls.s22()).data.depth + 1 }) });
+const s24 = member.memo({ subject: member.subject('node24'), children: { s23 }, run: async ({ calls }) => ({ depth: (await calls.s23()).data.depth + 1 }) });
+const s25 = member.memo({ subject: member.subject('node25'), children: { s24 }, run: async ({ calls }) => ({ depth: (await calls.s24()).data.depth + 1 }) });
+const s26 = member.memo({ subject: member.subject('node26'), children: { s25 }, run: async ({ calls }) => ({ depth: (await calls.s25()).data.depth + 1 }) });
+const s27 = member.memo({ subject: member.subject('node27'), children: { s26 }, run: async ({ calls }) => ({ depth: (await calls.s26()).data.depth + 1 }) });
+const s28 = member.memo({ subject: member.subject('node28'), children: { s27 }, run: async ({ calls }) => ({ depth: (await calls.s27()).data.depth + 1 }) });
+const s29 = member.memo({ subject: member.subject('node29'), children: { s28 }, run: async ({ calls }) => ({ depth: (await calls.s28()).data.depth + 1 }) });
+const s30 = member.memo({ subject: member.subject('node30'), children: { s29 }, run: async ({ calls }) => ({ depth: (await calls.s29()).data.depth + 1 }) });
+const s31 = member.memo({ subject: member.subject('node31'), children: { s30 }, run: async ({ calls }) => ({ depth: (await calls.s30()).data.depth + 1 }) });
+const s32 = member.memo({ subject: member.subject('node32'), children: { s31 }, run: async ({ calls }) => ({ depth: (await calls.s31()).data.depth + 1 }) });
+const s33 = member.memo({ subject: member.subject('node33'), children: { s32 }, run: async ({ calls }) => ({ depth: (await calls.s32()).data.depth + 1 }) });
+const s34 = member.memo({ subject: member.subject('node34'), children: { s33 }, run: async ({ calls }) => ({ depth: (await calls.s33()).data.depth + 1 }) });
+const s35 = member.memo({ subject: member.subject('node35'), children: { s34 }, run: async ({ calls }) => ({ depth: (await calls.s34()).data.depth + 1 }) });
+const s36 = member.memo({ subject: member.subject('node36'), children: { s35 }, run: async ({ calls }) => ({ depth: (await calls.s35()).data.depth + 1 }) });
+const s37 = member.memo({ subject: member.subject('node37'), children: { s36 }, run: async ({ calls }) => ({ depth: (await calls.s36()).data.depth + 1 }) });
+const s38 = member.memo({ subject: member.subject('node38'), children: { s37 }, run: async ({ calls }) => ({ depth: (await calls.s37()).data.depth + 1 }) });
+const s39 = member.memo({ subject: member.subject('node39'), children: { s38 }, run: async ({ calls }) => ({ depth: (await calls.s38()).data.depth + 1 }) });
+const s40 = member.memo({ subject: member.subject('node40'), children: { s39 }, run: async ({ calls }) => ({ depth: (await calls.s39()).data.depth + 1 }) });
+const s41 = member.memo({ subject: member.subject('node41'), children: { s40 }, run: async ({ calls }) => ({ depth: (await calls.s40()).data.depth + 1 }) });
+const s42 = member.memo({ subject: member.subject('node42'), children: { s41 }, run: async ({ calls }) => ({ depth: (await calls.s41()).data.depth + 1 }) });
+const s43 = member.memo({ subject: member.subject('node43'), children: { s42 }, run: async ({ calls }) => ({ depth: (await calls.s42()).data.depth + 1 }) });
+const s44 = member.memo({ subject: member.subject('node44'), children: { s43 }, run: async ({ calls }) => ({ depth: (await calls.s43()).data.depth + 1 }) });
+const s45 = member.memo({ subject: member.subject('node45'), children: { s44 }, run: async ({ calls }) => ({ depth: (await calls.s44()).data.depth + 1 }) });
+const s46 = member.memo({ subject: member.subject('node46'), children: { s45 }, run: async ({ calls }) => ({ depth: (await calls.s45()).data.depth + 1 }) });
+const s47 = member.memo({ subject: member.subject('node47'), children: { s46 }, run: async ({ calls }) => ({ depth: (await calls.s46()).data.depth + 1 }) });
+const s48 = member.memo({ subject: member.subject('node48'), children: { s47 }, run: async ({ calls }) => ({ depth: (await calls.s47()).data.depth + 1 }) });
+const s49 = member.memo({ subject: member.subject('node49'), children: { s48 }, run: async ({ calls }) => ({ depth: (await calls.s48()).data.depth + 1 }) });
+const s50 = member.memo({ subject: member.subject('node50'), children: { s49 }, run: async ({ calls }) => ({ depth: (await calls.s49()).data.depth + 1 }) });
+return { s0, s1, s2, s3, s4, s5, s6, s7, s8, s9, s10, s11, s12, s13, s14, s15, s16, s17, s18, s19, s20, s21, s22, s23, s24, s25, s26, s27, s28, s29, s30, s31, s32, s33, s34, s35, s36, s37, s38, s39, s40, s41, s42, s43, s44, s45, s46, s47, s48, s49, s50 };
+} });
+const fold = api.fold({ subject: 'fold', over: { template, step: 's50' }, run: ({ members }) => {
+let total = 0;
+for (const entry of members) if (entry.status === 'succeeded') total += entry.data.depth;
+return { total };
+} });
+const composition = api.compose({ scope: 'fold', steps: [{ slot: 'listing', declaration: listing }, { slot: 'fold', declaration: fold }], templates: [template] });
+const workspace = openWorkspace({ location: 'scratch/gap-hunt/scale/fold-1-50-' + process.pid + '.sqlite', logicalStore: 'fold', leaseMilliseconds: 600000 });
+const start = performance.now();
+try {
+const result = await workspace.run({ authoring: api, composition, environment: 'synthetic' }, async run => { const report = await run.resolveFold({ scope: 'fold', role: 'step', slot: 'fold' }, { requestKey: 'request:' + process.pid }); const total = report.outcome.status === 'succeeded' ? run.read<{ readonly total: number }>(report.outcome.outcome.reference).total : undefined; return { report, total }; });
+if (result.value.total !== 1 * (1 - 1) / 2 + 1 * 50) throw new Error('Fold total did not match independent expected value');
+console.log(JSON.stringify({ width: 1, depth: 50, milliseconds: performance.now() - start, outcome: result.value.report.outcome.status, total: result.value.total, heap: process.memoryUsage().heapUsed }));
+} finally { workspace.close(); }

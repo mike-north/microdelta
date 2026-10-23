@@ -14,6 +14,9 @@ interface IInputs { readonly size: number }
 interface IRecord { readonly key: string; readonly title: string; readonly body: string }
 for (const size of [1000, 2000, 4000]) {
   const data = Array.from({ length: size }, (_, index) => ({ key: `pr:${index}`, title: `Title ${index}`, body: 'x'.repeat(512) }));
+  const encodeStart = performance.now();
+  const matchedEncoding = encodeSnapshot(data);
+  console.log(JSON.stringify({ probe: 'encode-record-array', size, bytes: matchedEncoding.length, milliseconds: performance.now() - encodeStart }));
   const api = authoring<IInputs, Record<string, never>>();
   const source = api.source<readonly IRecord[]>({ subject: 'payload', run: ({ inputs, outcome }) => outcome.fresh<readonly IRecord[]>(Array.from({ length: inputs.size }, (_, index) => ({ key: `pr:${index}`, title: `Title ${index}`, body: 'x'.repeat(512) }))) });
   const start = performance.now();
@@ -22,5 +25,5 @@ for (const size of [1000, 2000, 4000]) {
   const workspace = openWorkspace({ location: file, logicalStore: `scale-${size}`, leaseMilliseconds: 600000 });
   await workspace.run({ authoring: api, composition, environment: 'synthetic' }, (run) => run.resolve({ scope: 'scale', role: 'step', slot: 'payload' }, { requestKey: 'publish' }));
   workspace.close();
-  console.log(JSON.stringify({ probe: 'publish', size, payloadBytes: JSON.stringify(data).length, fileBytes: statSync(file).size, milliseconds: performance.now() - start }));
+  console.log(JSON.stringify({ probe: 'publish', size, file, payloadBytes: JSON.stringify(data).length, fileBytes: statSync(file).size, milliseconds: performance.now() - start }));
 }

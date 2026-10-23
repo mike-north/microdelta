@@ -22,5 +22,5 @@ for (const size of [20000]) {
   const workspace = openWorkspace({ location: file, logicalStore: `scale-${size}`, leaseMilliseconds: 600000 });
   await workspace.run({ authoring: api, composition, environment: 'synthetic' }, (run) => run.resolve({ scope: 'scale', role: 'step', slot: 'payload' }, { requestKey: 'publish' }));
   workspace.close();
-  console.log(JSON.stringify({ probe: 'publish', size, payloadBytes: JSON.stringify(data).length, fileBytes: statSync(file).size, milliseconds: performance.now() - start }));
+  console.log(JSON.stringify({ probe: 'publish', size, file, payloadBytes: JSON.stringify(data).length, fileBytes: statSync(file).size, milliseconds: performance.now() - start }));
 }

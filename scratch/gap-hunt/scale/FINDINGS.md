@@ -34,3 +34,27 @@ Fresh-source2k-run heap after explicit GC stayed8.23MB at100runs to8.68MB at2000
 For20krecord one-result store:80001nodes,80000edges,80001addresses,15083pages,2956freepages. VACUUM on an isolated copy reduces61,779,968B ->49,025,024B (~12.75MB freed),382.6ms. Compaction still~4.36x JSON size, with valid index overhead. Store retains history intentionally; absence of automatic VACUUM is not asserted as a contract failure. store-layout probe reads local raw artifacts and was excluded from minimal replay because its paths identify this run.
 
 Consumer's actual AsyncResource workaround was read in contribution-reports/.worktrees/integrate/packages/pipeline/src/runtime/index.ts: withStepContext creates one AsyncResource before execute, runInAsyncScope(work).finally(emitDestroy), and wraps both source and memo. Our isolated-workspace control does not cover fresh authoring/composition inside the boundary; original consumer hypothesis remains unconfirmed by this pass.
+
+## Corrected measurements after supervisory review
+
+The earlier repeated-use samples reused requestKey `same`, contrary to the normal
+request contract, and GC was mistakenly included in reported elapsed time despite
+the replay README wording. They remain historical output only. `context.ts` now
+uses request:<batch>:<iteration> and captures elapsed before explicit GC.
+Corrected fresh-store results: same-source69->394ms per100requests over2000runs;
+AsyncResource74->406ms; fresh-subject+GC72->63ms, heap8.30->8.69MB. These preserve
+the history-growth finding with the proper request contract. See `context-unique-*`.
+
+Matched record-array encoding control (same records/body size as publication)
+1k/2k/4k:2.10/2.52/4.00ms; publication361/1251/4979ms. These corrected output
+samples are `benchmark-matched-node24.jsonl`. Numeric-array encoding remains a
+separate simpler control and is not presented as matched work. No fixed SLA claim.
+
+Wide/deep strict-fold assertions pass: width1000/depth1 total500500 (1717ms);
+width1/depth10 total10 (19.6ms),depth50 total50 (63.0ms),depth100 total100
+(124.9ms). Each reads the completed fold result and compares against independent
+arithmetic width*(width-1)/2+width*depth. No gap found within these bounded cases.
+The initial fixture wrongly aliased child slot prior rather than its declared
+sibling slot and was rejected illegal-edge as required; preserved initial logs
+are consumer fixture errors, not framework failures. Static chains compile under
+strict TS; all generated fold probes pass type-aware lint.

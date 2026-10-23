@@ -7,8 +7,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 4112,
-      "sha256": "29c20ecf8e5dfc20c57daeec4a7e56cd02a2137aa60f9e1a6e6fa731bf1a95ea"
+      "bytes": 4110,
+      "sha256": "ba5fbd3dbc6ca26a3e0ac77236b1410d941c1fc78b801eb72b14611422c2aa7b"
     },
     {
       "path": "eslint.config.mjs",

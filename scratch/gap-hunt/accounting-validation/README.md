@@ -10,7 +10,7 @@ Run from the repository root with Node24, npm, Python3 and normal native SQLite 
 python3 scratch/gap-hunt/accounting-validation/replay.py
 ```
 
-The default replay owns npm ci and package generation, strictly compiles the fixture against generated alpha declarations, applies the repository's type-aware lint rules, then runs one Jest scenario containing four independent processes. It prints an external temporary output directory; source, logs, receipts and real synthetic stores remain independently inspectable. It clears inherited build-reuse, Node override and provider token variables. No checked-in receipt is overwritten.
+The default replay owns npm ci and package generation, strictly compiles the fixture against generated alpha declarations, applies the repository's type-aware lint rules, then runs one Jest scenario containing four independent processes. It prints an external temporary output directory; source, logs, receipts and real synthetic stores remain independently inspectable. It clears inherited build-reuse, Node override and GitHub token variables. No checked-in receipt is overwritten.
 
 ## Outcome and distinctions
 

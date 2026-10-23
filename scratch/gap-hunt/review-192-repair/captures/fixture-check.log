@@ -1,0 +1,4 @@
+
+> @microdelta/workspace@0.0.0 check:fixtures
+> tsc --noEmit -p fixtures/declarations/producer/tsconfig.json && tsc --noEmit -p fixtures/declarations/capture-producer/tsconfig.json && tsc --noEmit -p fixtures/declarations/forged/tsconfig.json && tsc --noEmit -p fixtures/declarations/consumer-alpha/tsconfig.json && node tooling/check-capture-public-tier.mjs && eslint fixtures/declarations/producer/src fixtures/declarations/capture-producer/src fixtures/declarations/forged/src fixtures/declarations/consumer-alpha/src
+

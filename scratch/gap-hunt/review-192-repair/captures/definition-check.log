@@ -1,0 +1,14 @@
+
+> @microdelta/definition@0.3.0 check
+> concurrently --success all --names types,lint "npm run check:types" "npm run check:lint"
+
+[types] 
+[types] > @microdelta/definition@0.3.0 check:types
+[types] > tsc --noEmit -p tsconfig.json
+[types] 
+[lint] 
+[lint] > @microdelta/definition@0.3.0 check:lint
+[lint] > eslint .
+[lint] 
+[types] npm run check:types exited with code 0
+[lint] npm run check:lint exited with code 0

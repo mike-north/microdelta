@@ -1,0 +1,33 @@
+
+  packages/core/test-d/result-roots.test-d.ts:28:0
+  ✖  28:0  Expected an error, but found none.  
+  ✖  29:0  Expected an error, but found none.  
+  ✖  30:0  Expected an error, but found none.  
+  ✖  31:0  Expected an error, but found none.  
+  ✖  32:0  Expected an error, but found none.  
+  ✖  33:0  Expected an error, but found none.  
+  ✖  34:0  Expected an error, but found none.  
+  ✖  35:0  Expected an error, but found none.  
+  ✖  36:0  Expected an error, but found none.  
+  ✖  37:0  Expected an error, but found none.  
+  ✖  38:0  Expected an error, but found none.  
+  ✖  41:0  Expected an error, but found none.  
+  ✖  42:0  Expected an error, but found none.  
+  ✖  43:0  Expected an error, but found none.  
+  ✖  44:0  Expected an error, but found none.  
+  ✖  45:0  Expected an error, but found none.  
+  ✖  46:0  Expected an error, but found none.  
+  ✖  47:0  Expected an error, but found none.  
+  ✖  48:0  Expected an error, but found none.  
+  ✖  49:0  Expected an error, but found none.  
+  ✖  50:0  Expected an error, but found none.  
+  ✖  51:0  Expected an error, but found none.  
+  ✖  52:0  Expected an error, but found none.  
+  ✖  55:0  Expected an error, but found none.  
+  ✖  56:0  Expected an error, but found none.  
+  ✖  57:0  Expected an error, but found none.  
+  ✖  64:2  Expected an error, but found none.  
+  ✖  65:2  Expected an error, but found none.  
+
+  28 errors
+

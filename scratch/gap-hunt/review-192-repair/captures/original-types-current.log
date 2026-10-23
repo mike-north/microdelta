@@ -1,0 +1,17 @@
+
+  scratch/gap-hunt/review-192-repair/original-positive.test-d.ts:9:47
+  ✖   9:47  Type IAtom does not satisfy the constraint object.
+  Type undefined is not assignable to type object.                                                                                                                                                                                                                                                                                                                                                                                                                                                
+  ✖   9:72  Type IAtom does not satisfy the constraint object.
+  Type undefined is not assignable to type object.                                                                                                                                                                                                                                                                                                                                                                                                                                                
+  ✖  10:53  Type IAtom does not satisfy the constraint object.
+  Type undefined is not assignable to type object.                                                                                                                                                                                                                                                                                                                                                                                                                                                
+  ✖  10:62  Argument of type IMemoDeclaration<IAuthoringFamily<IEmpty, IEmpty>, IEmpty, IAtom, unknown> is not assignable to parameter of type IMemoDeclaration<IAuthoringFamily<IEmpty, IEmpty>, IChildDeclarations<IAuthoringFamily<IEmpty, IEmpty>>, object, unknown> with exactOptionalPropertyTypes: true. Consider adding undefined to the types of the target's properties.
+  The types returned by run(...) are incompatible between these types.
+    Type IAtom is not assignable to type object.
+      Type undefined is not assignable to type object.  
+  ✖  10:84  Type IAtom does not satisfy the constraint object.
+  Type undefined is not assignable to type object.                                                                                                                                                                                                                                                                                                                                                                                                                                                
+
+  5 errors
+

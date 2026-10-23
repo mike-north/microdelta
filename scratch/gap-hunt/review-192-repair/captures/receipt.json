@@ -1,0 +1,270 @@
+{
+  "source": "10a69df858944b5141c9ef1a9c80d72a6d3dea4c",
+  "oldDefinitionSource": "7677ec4d61fd78efc63da28906175707e1391f12",
+  "frozen": "9267a44e1a203966e6ccd73db188e5826506326b",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "node": "v24.22.1",
+  "npm": "11.12.1",
+  "commands": [
+    {
+      "name": "install",
+      "command": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "build",
+      "command": [
+        "npm",
+        "run",
+        "build:packages"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "fixture-build",
+      "command": [
+        "npm",
+        "run",
+        "build:fixtures"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "prepare-original",
+      "command": [
+        "node",
+        "scratch/gap-hunt/review-192-repair/prepare-original.mjs"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "original-runtime",
+      "command": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/review-192-repair/original.jest.config.mjs",
+        "--runInBand"
+      ],
+      "exit": 1,
+      "expected": 1
+    },
+    {
+      "name": "original-types-current",
+      "command": [
+        "node",
+        "node_modules/tsd/dist/cli.js",
+        "--typings",
+        "packages/core/dist/api/microdelta.alpha.d.ts",
+        "--files",
+        "scratch/gap-hunt/review-192-repair/original-positive.test-d.ts"
+      ],
+      "exit": 1,
+      "expected": 1
+    },
+    {
+      "name": "selected-types",
+      "command": [
+        "node",
+        "node_modules/tsd/dist/cli.js",
+        "--typings",
+        "packages/core/dist/api/microdelta.alpha.d.ts",
+        "--files",
+        "packages/core/test-d/result-roots.test-d.ts"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "core-types",
+      "command": [
+        "npm",
+        "run",
+        "test:types",
+        "--workspace",
+        "microdelta"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "definition-check",
+      "command": [
+        "npm",
+        "run",
+        "check",
+        "--workspace",
+        "@microdelta/definition"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "definition-tests",
+      "command": [
+        "npm",
+        "run",
+        "test",
+        "--workspace",
+        "@microdelta/definition"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "core-check",
+      "command": [
+        "npm",
+        "run",
+        "check",
+        "--workspace",
+        "microdelta"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "core-test-build",
+      "command": [
+        "node",
+        "node_modules/typescript/bin/tsc",
+        "-p",
+        "packages/core/tsconfig.test.json"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "selected-runtime",
+      "command": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "packages/core/jest.config.mjs",
+        "--runInBand",
+        "--runTestsByPath",
+        "packages/core/.test-build/test/workspace/result-root-types.test.js",
+        "packages/core/.test-build/test/workspace/async-source.test.js",
+        "packages/core/.test-build/test/keyed/members.test.js"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "supplement",
+      "command": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/review-192-repair/supplement.jest.config.mjs",
+        "--runInBand"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "declaration-check",
+      "command": [
+        "npm",
+        "run",
+        "check:declarations"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "fixture-check",
+      "command": [
+        "npm",
+        "run",
+        "check:fixtures"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "old-build",
+      "command": [
+        "npm",
+        "run",
+        "build:packages"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "old-selected-types",
+      "command": [
+        "node",
+        "node_modules/tsd/dist/cli.js",
+        "--typings",
+        "packages/core/dist/api/microdelta.alpha.d.ts",
+        "--files",
+        "packages/core/test-d/result-roots.test-d.ts"
+      ],
+      "exit": 1,
+      "expected": 1
+    },
+    {
+      "name": "old-original-types",
+      "command": [
+        "node",
+        "node_modules/tsd/dist/cli.js",
+        "--typings",
+        "packages/core/dist/api/microdelta.alpha.d.ts",
+        "--files",
+        "scratch/gap-hunt/review-192-repair/original-positive.test-d.ts"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "restored-build",
+      "command": [
+        "npm",
+        "run",
+        "build:packages"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "restored-selected-types",
+      "command": [
+        "node",
+        "node_modules/tsd/dist/cli.js",
+        "--typings",
+        "packages/core/dist/api/microdelta.alpha.d.ts",
+        "--files",
+        "packages/core/test-d/result-roots.test-d.ts"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "restored-supplement",
+      "command": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/review-192-repair/supplement.jest.config.mjs",
+        "--runInBand"
+      ],
+      "exit": 0,
+      "expected": 0
+    }
+  ]
+}

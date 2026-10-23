@@ -30,7 +30,7 @@ After npm ci and build:packages:
 node node_modules/typescript/bin/tsc -p scratch/gap-hunt/consumer-dx/tsconfig.all.json
 node node_modules/tsd/dist/cli.js scratch/gap-hunt/consumer-dx --files authoring-matrix.test-d.ts
 node --test scratch/gap-hunt/consumer-dx/authoring-matrix.test.mjs
-node --test scratch/gap-hunt/consumer-dx/custom-key.test.mjs
+node --experimental-vm-modules node_modules/jest/bin/jest.js --config scratch/gap-hunt/consumer-dx/custom-key.jest.config.mjs --runInBand
 node node_modules/eslint/bin/eslint.js scratch/gap-hunt/consumer-dx/authoring-matrix.ts scratch/gap-hunt/consumer-dx/custom-key.ts
 ```
 

@@ -6,4 +6,4 @@ if (Number(process.versions.node.split('.')[0]) !== 24) {
 bootstrap();
 command(process.execPath, ['node_modules/typescript/bin/tsc', '-p', 'scratch/gap-hunt/consumer-dx/tsconfig.custom-key.json']);
 command(process.execPath, ['node_modules/eslint/bin/eslint.js', 'scratch/gap-hunt/consumer-dx/custom-key.ts']);
-command(process.execPath, ['--test', 'scratch/gap-hunt/consumer-dx/custom-key.test.mjs']);
+command(process.execPath, ['--experimental-vm-modules', 'node_modules/jest/bin/jest.js', '--config', 'scratch/gap-hunt/consumer-dx/custom-key.jest.config.mjs', '--runInBand']);

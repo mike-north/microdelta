@@ -5,7 +5,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import test from 'node:test';
+import { test } from '@jest/globals';
 const worker = fileURLToPath(new URL('./dist/custom-key.js', import.meta.url));
 function run(mode, location = 'unused.sqlite') {
   const child = spawnSync(process.execPath, [worker, mode, location], { encoding: 'utf8' });

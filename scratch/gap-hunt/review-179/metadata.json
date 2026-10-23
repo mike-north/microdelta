@@ -1,0 +1,17 @@
+{
+  "head": "04f9754843fb8eddbc7b8e15b34a3e35d91c1c9a",
+  "parent": "f43c5872987573d9b98a19f41c324b4d9336894c",
+  "boundary_tests": 11,
+  "qualified_probes": 21,
+  "current_matrix": {
+    "passed": 6,
+    "failed": 2
+  },
+  "parent_matrix": {
+    "passed": 5,
+    "failed": 3
+  },
+  "config_restored_sha256": "f3b2c41b875a072503ea136934cbc3d2a03bec2a0d0294a22789ccc5c0633455",
+  "node": "v24.22.1",
+  "verdict": "PARTIAL"
+}

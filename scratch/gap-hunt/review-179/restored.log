@@ -1,0 +1,76 @@
+TAP version 13
+# Subtest: implemented contexts and facade follow their directed package edges
+ok 1 - implemented contexts and facade follow their directed package edges
+  ---
+  duration_ms: 310.836584
+  type: 'test'
+  ...
+# Subtest: absent context roles use the same allowed-edge policy
+ok 2 - absent context roles use the same allowed-edge policy
+  ---
+  duration_ms: 2.440167
+  type: 'test'
+  ...
+# Subtest: Value Semantics consumes only the portable Machine hashing capability
+ok 3 - Value Semantics consumes only the portable Machine hashing capability
+  ---
+  duration_ms: 1.897292
+  type: 'test'
+  ...
+# Subtest: source, deep, re-export, facade, and unknown-path bypasses fail closed
+ok 4 - source, deep, re-export, facade, and unknown-path bypasses fail closed
+  ---
+  duration_ms: 4.974916
+  type: 'test'
+  ...
+# Subtest: Node builtins and host globals are confined to the Node implementation
+ok 5 - Node builtins and host globals are confined to the Node implementation
+  ---
+  duration_ms: 10.024167
+  type: 'test'
+  ...
+# Subtest: Node boundary permits shadowed names, ECMAScript globals, tests, tooling, and Node adapter
+ok 6 - Node boundary permits shadowed names, ECMAScript globals, tests, tooling, and Node adapter
+  ---
+  duration_ms: 6.405917
+  type: 'test'
+  ...
+# Subtest: the native SQLite driver is confined to the Node Machine implementation
+ok 7 - the native SQLite driver is confined to the Node Machine implementation
+  ---
+  duration_ms: 31.32525
+  type: 'test'
+  ...
+# Subtest: portable experiment source rejects Node access while its explicit test harness may use it
+ok 8 - portable experiment source rejects Node access while its explicit test harness may use it
+  ---
+  duration_ms: 12.381
+  type: 'test'
+  ...
+# Subtest: Tracking and History production builds exclude ambient Node declarations
+ok 9 - Tracking and History production builds exclude ambient Node declarations
+  ---
+  duration_ms: 378.432208
+  type: 'test'
+  ...
+# Subtest: Value production source compiles without ambient host declarations
+ok 10 - Value production source compiles without ambient host declarations
+  ---
+  duration_ms: 1.528625
+  type: 'test'
+  ...
+# Subtest: the executable example may import only the microdelta facade, Node built-ins and, by name, the Accounting port it injects
+ok 11 - the executable example may import only the microdelta facade, Node built-ins and, by name, the Accounting port it injects
+  ---
+  duration_ms: 21.966417
+  type: 'test'
+  ...
+1..11
+# tests 11
+# suites 0
+# pass 11
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 940.168541

@@ -1,0 +1,8 @@
+{
+  "head": "04f9754843fb8eddbc7b8e15b34a3e35d91c1c9a",
+  "control": "parent example config with exact new-head tests",
+  "expected_failed": 1,
+  "expected_passed": 10,
+  "restored_config_sha256": "f3b2c41b875a072503ea136934cbc3d2a03bec2a0d0294a22789ccc5c0633455",
+  "new_source_unchanged": true
+}

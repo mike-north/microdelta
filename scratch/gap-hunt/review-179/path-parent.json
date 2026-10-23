@@ -1,0 +1,136 @@
+{
+  "source_pin": "f43c5872987573d9b98a19f41c324b4d9336894c",
+  "cases": 8,
+  "passed": 5,
+  "failed": 3,
+  "rows": [
+    {
+      "owner": "examples/contribution-report",
+      "filePath": "examples/contribution-report/src/probe.ts",
+      "syntax": "static",
+      "specifier": "../../../packages/history/src/index.js",
+      "source": "import {openDurableHistory} from '../../../packages/history/src/index.js';",
+      "resolved_literal_target": "packages/history/src/index.js",
+      "required": "diagnostic: forbidden History source bypass",
+      "errors": [
+        {
+          "ruleId": "no-restricted-imports",
+          "messageId": "patternWithCustomMessage",
+          "message": "'../../../packages/history/src/index.js' import is restricted from being used by a pattern. The example must not reach into workspace source.",
+          "line": 1,
+          "column": 1
+        }
+      ],
+      "passes_boundary": true
+    },
+    {
+      "owner": "examples/contribution-report",
+      "filePath": "examples/contribution-report/src/probe.ts",
+      "syntax": "dynamic",
+      "specifier": "../../../packages/history/src/index.js",
+      "source": "void import('../../../packages/history/src/index.js');",
+      "resolved_literal_target": "packages/history/src/index.js",
+      "required": "diagnostic: forbidden History source bypass",
+      "errors": [],
+      "passes_boundary": false
+    },
+    {
+      "owner": "examples/contribution-report",
+      "filePath": "examples/contribution-report/src/probe.ts",
+      "syntax": "static",
+      "specifier": "./../../../packages/history/src/index.js",
+      "source": "import {openDurableHistory} from './../../../packages/history/src/index.js';",
+      "resolved_literal_target": "packages/history/src/index.js",
+      "required": "diagnostic: forbidden History source bypass",
+      "errors": [],
+      "passes_boundary": false
+    },
+    {
+      "owner": "examples/contribution-report",
+      "filePath": "examples/contribution-report/src/probe.ts",
+      "syntax": "dynamic",
+      "specifier": "./../../../packages/history/src/index.js",
+      "source": "void import('./../../../packages/history/src/index.js');",
+      "resolved_literal_target": "packages/history/src/index.js",
+      "required": "diagnostic: forbidden History source bypass",
+      "errors": [],
+      "passes_boundary": false
+    },
+    {
+      "owner": "packages/accounting",
+      "filePath": "packages/accounting/src/probe.ts",
+      "syntax": "static",
+      "specifier": "../../../packages/history/src/index.js",
+      "source": "import {openDurableHistory} from '../../../packages/history/src/index.js';",
+      "resolved_literal_target": "packages/history/src/index.js",
+      "required": "diagnostic: forbidden History source bypass",
+      "errors": [
+        {
+          "ruleId": "microdelta/context-imports",
+          "messageId": "forbidden",
+          "message": "PKG-004: accounting cannot use sibling source via a relative path; use an approved declared package surface and edge.",
+          "line": 1,
+          "column": 1
+        }
+      ],
+      "passes_boundary": true
+    },
+    {
+      "owner": "packages/accounting",
+      "filePath": "packages/accounting/src/probe.ts",
+      "syntax": "dynamic",
+      "specifier": "../../../packages/history/src/index.js",
+      "source": "void import('../../../packages/history/src/index.js');",
+      "resolved_literal_target": "packages/history/src/index.js",
+      "required": "diagnostic: forbidden History source bypass",
+      "errors": [
+        {
+          "ruleId": "microdelta/context-imports",
+          "messageId": "forbidden",
+          "message": "PKG-004: accounting cannot use sibling source via a relative path; use an approved declared package surface and edge.",
+          "line": 1,
+          "column": 6
+        }
+      ],
+      "passes_boundary": true
+    },
+    {
+      "owner": "packages/accounting",
+      "filePath": "packages/accounting/src/probe.ts",
+      "syntax": "static",
+      "specifier": "./../../../packages/history/src/index.js",
+      "source": "import {openDurableHistory} from './../../../packages/history/src/index.js';",
+      "resolved_literal_target": "packages/history/src/index.js",
+      "required": "diagnostic: forbidden History source bypass",
+      "errors": [
+        {
+          "ruleId": "microdelta/context-imports",
+          "messageId": "forbidden",
+          "message": "PKG-004: accounting cannot use sibling source via a relative path; use an approved declared package surface and edge.",
+          "line": 1,
+          "column": 1
+        }
+      ],
+      "passes_boundary": true
+    },
+    {
+      "owner": "packages/accounting",
+      "filePath": "packages/accounting/src/probe.ts",
+      "syntax": "dynamic",
+      "specifier": "./../../../packages/history/src/index.js",
+      "source": "void import('./../../../packages/history/src/index.js');",
+      "resolved_literal_target": "packages/history/src/index.js",
+      "required": "diagnostic: forbidden History source bypass",
+      "errors": [
+        {
+          "ruleId": "microdelta/context-imports",
+          "messageId": "forbidden",
+          "message": "PKG-004: accounting cannot use sibling source via a relative path; use an approved declared package surface and edge.",
+          "line": 1,
+          "column": 6
+        }
+      ],
+      "passes_boundary": true
+    }
+  ]
+}

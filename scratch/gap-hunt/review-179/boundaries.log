@@ -1,0 +1,19 @@
+✔ implemented contexts and facade follow their directed package edges (387.473666ms)
+✔ absent context roles use the same allowed-edge policy (3.048584ms)
+✔ Value Semantics consumes only the portable Machine hashing capability (1.997ms)
+✔ source, deep, re-export, facade, and unknown-path bypasses fail closed (5.394292ms)
+✔ Node builtins and host globals are confined to the Node implementation (12.343292ms)
+✔ Node boundary permits shadowed names, ECMAScript globals, tests, tooling, and Node adapter (6.502625ms)
+✔ the native SQLite driver is confined to the Node Machine implementation (32.810875ms)
+✔ portable experiment source rejects Node access while its explicit test harness may use it (11.937333ms)
+✔ Tracking and History production builds exclude ambient Node declarations (403.576375ms)
+✔ Value production source compiles without ambient host declarations (0.569083ms)
+✔ the executable example may import only the microdelta facade, Node built-ins and, by name, the Accounting port it injects (21.429875ms)
+ℹ tests 11
+ℹ suites 0
+ℹ pass 11
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 1321.547291

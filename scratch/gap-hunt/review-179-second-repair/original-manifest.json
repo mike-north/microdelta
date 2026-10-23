@@ -1,0 +1,15 @@
+{
+  "pin": "907b945d558b7e058c9b0dffeb60295ec240a1b3",
+  "files": [
+    {
+      "path": "residual-matrix.mjs",
+      "originalPath": "scratch/gap-hunt/review-179-repair/residual-matrix.mjs",
+      "sha256": "bdb3edbd1f764bcdeea9052cbe471c7b2577fc9bce63168dddfe19ff2c405912"
+    },
+    {
+      "path": "shadowed-require.mjs",
+      "originalPath": "scratch/gap-hunt/review-179-repair/shadowed-require.mjs",
+      "sha256": "bbc735341595fcda6c9390138684b3f217901baa887eb42ee5641bd8f7f416fd"
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "head": "88f9b35830bf3f35368e8685155e0d7284dad383",
+  "reviewed_pin": "88f9b35830bf3f35368e8685155e0d7284dad383",
+  "original_witness_pin": "907b945d558b7e058c9b0dffeb60295ec240a1b3",
+  "original_files_byte_exact": true,
+  "residual": {
+    "passed": 4,
+    "failed": 0
+  },
+  "shadowed_require_errors": 0,
+  "official_rule_tests_passed": 14,
+  "official_import_check": "pass",
+  "old_rule_residual": {
+    "passed": 3,
+    "failed": 1
+  },
+  "old_rule_shadowed_require_errors": 1,
+  "rule_restored_byte_exact": true,
+  "rule_sha256": "3ba8499a648c246f92adb9cd663a220f17c0027458bde78835395dcc64ff6b7c",
+  "previous_rule_sha256": "d2a07eb2ae2b2cea34fb356274d6fd545eaea8a5fba1b1b1c39b423a39079257",
+  "verdict": "PASS for the two reported residuals at the reviewed source",
+  "scope": "Node24 macOS tooling/source-check and ESM resolution only; no fullCI, Linux, moduleexecution, release or universalcheckercoverage"
+}

@@ -1,0 +1,102 @@
+[
+  {
+    "name": "install",
+    "args": [
+      "npm",
+      "ci",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "current-residual",
+    "args": [
+      "node",
+      "--experimental-import-meta-resolve",
+      "scratch/gap-hunt/review-179-second-repair/residual-matrix.mjs"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "current-shadow",
+    "args": [
+      "node",
+      "scratch/gap-hunt/review-179-second-repair/shadowed-require.mjs"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "official-rule-tests",
+    "args": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "tooling/context-boundaries.test.mjs",
+      "tooling/example-source-imports.test.mjs"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "official-import-check",
+    "args": [
+      "npm",
+      "run",
+      "check:imports"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "previous-rule-residual",
+    "args": [
+      "node",
+      "--experimental-import-meta-resolve",
+      "scratch/gap-hunt/review-179-second-repair/residual-matrix.mjs"
+    ],
+    "exit": 1,
+    "expected": 1
+  },
+  {
+    "name": "previous-rule-shadow",
+    "args": [
+      "node",
+      "scratch/gap-hunt/review-179-second-repair/shadowed-require.mjs"
+    ],
+    "exit": 1,
+    "expected": 1
+  },
+  {
+    "name": "restored-residual",
+    "args": [
+      "node",
+      "--experimental-import-meta-resolve",
+      "scratch/gap-hunt/review-179-second-repair/residual-matrix.mjs"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "restored-shadow",
+    "args": [
+      "node",
+      "scratch/gap-hunt/review-179-second-repair/shadowed-require.mjs"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "restored-import-check",
+    "args": [
+      "npm",
+      "run",
+      "check:imports"
+    ],
+    "exit": 0,
+    "expected": 0
+  }
+]

@@ -1,0 +1,56 @@
+{
+  "source_pin": "88f9b35830bf3f35368e8685155e0d7284dad383",
+  "cases": 4,
+  "passed": 4,
+  "failed": 0,
+  "rows": [
+    {
+      "importer": "examples/contribution-report/src/probe.ts",
+      "source": "void import('../../../packages/history/src/index.js');",
+      "specifier": "../../../packages/history/src/index.js",
+      "expected_allowed": false,
+      "node_resolved_target": "packages/history/src/index.js",
+      "errors": [
+        {
+          "ruleId": "microdelta/example-source-imports",
+          "messageId": "forbidden",
+          "message": "PKG-004: the example cannot import workspace source outside its own package."
+        }
+      ],
+      "passes_boundary": true
+    },
+    {
+      "importer": "examples/contribution-report/src/probe.ts",
+      "source": "void import('./%2e%2e/%2e%2e/%2e%2e/packages/history/src/index.js');",
+      "specifier": "./%2e%2e/%2e%2e/%2e%2e/packages/history/src/index.js",
+      "expected_allowed": false,
+      "node_resolved_target": "packages/history/src/index.js",
+      "errors": [
+        {
+          "ruleId": "microdelta/example-source-imports",
+          "messageId": "forbidden",
+          "message": "PKG-004: the example cannot import workspace source outside its own package."
+        }
+      ],
+      "passes_boundary": true
+    },
+    {
+      "importer": "examples/contribution-report/src/probe.ts",
+      "source": "void import('./local.js');",
+      "specifier": "./local.js",
+      "expected_allowed": true,
+      "node_resolved_target": "examples/contribution-report/src/local.js",
+      "errors": [],
+      "passes_boundary": true
+    },
+    {
+      "importer": "examples/contribution-report/src/probe.ts",
+      "source": "void import('./%2e/local.js');",
+      "specifier": "./%2e/local.js",
+      "expected_allowed": true,
+      "node_resolved_target": "examples/contribution-report/src/local.js",
+      "errors": [],
+      "passes_boundary": true
+    }
+  ]
+}

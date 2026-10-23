@@ -13,7 +13,7 @@ const listing = api.source<IListing>({ subject: 'listing', collection: { identit
 const template = api.template({ slot: 'member', collection: listing, steps: member => ({ score: member.memo({ subject: member.subject('score'), run: ({ member: input }) => ({ score: input.score }) }) }) });
 const composition = api.compose({ scope: 'collections', inputs: [{ slot: 'size', value: size }], steps: [{ slot: 'listing', declaration: listing }], templates: [template] });
 const path = `scratch/gap-hunt/scale/collection-${size}-${process.pid}.sqlite`;
-const workspace = openWorkspace({ location: path, logicalStore: 'collection', leaseMilliseconds: 600000 });
+const workspace = openWorkspace({ location: path, logicalStore: 'collection', leaseMilliseconds: 3600000 });
 console.log(JSON.stringify({ phase: 'start', size, path, heap: process.memoryUsage().heapUsed }));
 const start = performance.now();
 try {

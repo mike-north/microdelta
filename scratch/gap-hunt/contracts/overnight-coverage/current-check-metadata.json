@@ -1,0 +1,57 @@
+{
+  "sourceHead": "f43c5872987573d9b98a19f41c324b4d9336894c",
+  "node": "v24.22.1",
+  "npm": "11.12.1",
+  "independentInstallBuild": true,
+  "gitStatusAfterRun": "",
+  "files": [
+    {
+      "file": "package-lock.json",
+      "sha256": "55dfeace3ed7af8246e32c3029b444251df4ca164119f76716e44122e33129e6"
+    },
+    {
+      "file": "docs/spec/tracking.md",
+      "sha256": "55e9f41ebd9a1a1af38878f42a7e22c4a50a080e91c89f7fb1ad5579e4a98675"
+    },
+    {
+      "file": "docs/spec/execution.md",
+      "sha256": "88eebb1eb736354e69c29a341c3b952d0a57ba11a6e9e911968202e8d8c84d09"
+    },
+    {
+      "file": "docs/spec/architecture.md",
+      "sha256": "4cc76095b97ec09b27e803d3231526c0f418726b5e3d0ed9ee941503c374b4cf"
+    },
+    {
+      "file": "packages/resolution/src/evidence.ts",
+      "sha256": "008103e8824e8767dccf741934270970a9fa1706ef55407dbdd1aefd44ed1659"
+    },
+    {
+      "file": "packages/resolution/src/current.ts",
+      "sha256": "6cd921a04ad128dc8ed76ac7615317a442f8c0f4d02e1bc483eb1c391513de1e"
+    },
+    {
+      "file": "packages/resolution/test/evidence.test.ts",
+      "sha256": "f322b5ad59b143253853e3499be257e8edef28b923dc424dd1ddcaca7bb12502"
+    },
+    {
+      "file": "packages/core/test/container-guard.test.ts",
+      "sha256": "dad742e5e0b0bed6675a77b41657b2c2f7fde47fd899c2747e9370e27515e8da"
+    },
+    {
+      "file": "packages/core/test/container-guard-worker.ts",
+      "sha256": "2645624c1b819fa3205850109a3a3b8e1fa6b13876061ebbc08f974261a607ff"
+    },
+    {
+      "file": "packages/core/test/fixtures/container-guard-pre-kind.json",
+      "sha256": "db9f16557c17aeea877546555258153ebdf39a8a0c41856d0547bdba99523125"
+    },
+    {
+      "file": "packages/tracking/test/observer.test.ts",
+      "sha256": "7a78955005cf356be67c1044f73c275be23314358eee58a8157e2737cbd38e49"
+    },
+    {
+      "file": "packages/tracking/src/observer.ts",
+      "sha256": "aceaf9d33720f32c9a69649d6b6b1a6e06eabeb94be86ed1cf6d4654ee4a469a"
+    }
+  ]
+}

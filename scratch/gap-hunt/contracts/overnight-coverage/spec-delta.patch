@@ -1,0 +1,24 @@
+diff --git a/docs/spec/execution.md b/docs/spec/execution.md
+index ff772ee..78e6e9f 100644
+--- a/docs/spec/execution.md
++++ b/docs/spec/execution.md
+@@ -150,0 +151,10 @@ independently of whether a snapshot is reusable for current execution.
++**Tracking evidence compatibility.** New Resolution provenance records identify
++`trackingSemantics: 2` for every source, memo, supplied step, and fold shape.
++Earlier or unknown generations cannot establish complete container-guard evidence
++and are unsupported reuse candidates before current-fact comparison or finality.
++Their exact historical results and operation journals remain readable; History's
++schema does not change. The first current resolution may recompute earlier work,
++including computational children whose prior payload came from a paid operation,
++subject to the normal execution and operation permissions. No inference from an
++empty or apparently scalar-only old observation set may bypass this boundary.
++
+diff --git a/docs/spec/tracking.md b/docs/spec/tracking.md
+index d2e8bea..219e6f5 100644
+--- a/docs/spec/tracking.md
++++ b/docs/spec/tracking.md
+@@ -62,0 +63 @@ The table is normative; examples name JavaScript semantics, not final API spelli
++| Navigate to a record or array | Bounded container kind (record, array, or scalar on replay) | Members, length, identity, or whole payload | Record→null/missing invalidates; equal-kind replacement preserves unread-member precision |
+@@ -72 +73 @@ The table is normative; examples name JavaScript semantics, not final API spelli
+-| Pass object to another function | Nothing beyond what callee/materialization consumes | Automatic deep traversal | Callee reads one leaf: unread siblings remain irrelevant |
++| Pass object to another function | Bounded navigation kind, plus what callee/materialization consumes | Automatic deep traversal | Callee reads one leaf: unread siblings remain irrelevant |

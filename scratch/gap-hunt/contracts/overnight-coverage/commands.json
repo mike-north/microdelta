@@ -1,0 +1,76 @@
+[
+  {
+    "id": "install",
+    "command": [
+      "npm",
+      "ci",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "exitCode": 0
+  },
+  {
+    "id": "build",
+    "command": [
+      "npm",
+      "run",
+      "build"
+    ],
+    "exitCode": 0
+  },
+  {
+    "id": "provenance",
+    "command": [
+      "npm",
+      "run",
+      "test:unit",
+      "-w",
+      "@microdelta/resolution",
+      "--",
+      "--runTestsByPath",
+      ".test-build/test/evidence.test.js",
+      "--json",
+      "--outputFile",
+      "/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-contracts/scratch/gap-hunt/contracts/overnight-coverage/provenance-results.json"
+    ],
+    "exitCode": 0
+  },
+  {
+    "id": "migration",
+    "command": [
+      "npm",
+      "run",
+      "test:unit",
+      "-w",
+      "microdelta",
+      "--",
+      "--runTestsByPath",
+      ".test-build/test/container-guard.test.js",
+      "--testNamePattern",
+      "pre-kind runtime history",
+      "--json",
+      "--outputFile",
+      "/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-contracts/scratch/gap-hunt/contracts/overnight-coverage/migration-results.json"
+    ],
+    "exitCode": 0
+  },
+  {
+    "id": "pass-through",
+    "command": [
+      "npm",
+      "run",
+      "test:unit",
+      "-w",
+      "@microdelta/tracking",
+      "--",
+      "--runTestsByPath",
+      ".test-build/test/observer.test.js",
+      "--testNamePattern",
+      "tracked containers navigate without whole-tree reads; pass-through is observed only by the callee",
+      "--json",
+      "--outputFile",
+      "/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-contracts/scratch/gap-hunt/contracts/overnight-coverage/pass-through-results.json"
+    ],
+    "exitCode": 0
+  }
+]

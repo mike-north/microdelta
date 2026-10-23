@@ -1,0 +1,16 @@
+{
+  "unit": "finite semantic outcome in the explicitly bounded audit cohort",
+  "total": 74,
+  "counts": {
+    "executed_passing": 66,
+    "divergent_filed": 6,
+    "missing_surface_target": 1,
+    "insufficient_proof_unexamined": 1
+  },
+  "freshCurrentChecks": {
+    "passed": 38,
+    "failed": 0,
+    "skipped": 83,
+    "runtimeErrorSuites": 0
+  }
+}

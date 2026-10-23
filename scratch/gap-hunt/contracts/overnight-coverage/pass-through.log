@@ -1,0 +1,12 @@
+
+> @microdelta/tracking@0.2.0 test:unit
+> tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --runInBand --runTestsByPath .test-build/test/observer.test.js --testNamePattern tracked containers navigate without whole-tree reads; pass-through is observed only by the callee --json --outputFile /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-contracts/scratch/gap-hunt/contracts/overnight-coverage/pass-through-results.json
+
+(node:31040) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       46 skipped, 1 passed, 47 total
+Snapshots:   0 total
+Time:        0.077 s
+Ran all test suites within paths ".test-build/test/observer.test.js".
+Test results written to: ../../../../../Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-contracts/scratch/gap-hunt/contracts/overnight-coverage/pass-through-results.json

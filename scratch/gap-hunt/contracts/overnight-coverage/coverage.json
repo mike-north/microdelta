@@ -1,0 +1,2186 @@
+{
+  "unit": "One explicitly enumerated finite semantic outcome;74=71 preserved Tracking/Composition ledger outcomes +3 separately named current-delta or previously omitted obligations. Units overlap broader acceptance scenarios; this is NOT whole-spec coverage.",
+  "specPin": "f43c5872987573d9b98a19f41c324b4d9336894c",
+  "historicalProductionBaseline": "c5802daca4a0bb8ea91159854d84eddcfa5215b6",
+  "evidenceBranchHeadBeforeAudit": "5e94b23156ad9e4974cef3845035b69fb6ded12e",
+  "counts": {
+    "executed_passing": 66,
+    "divergent_filed": 6,
+    "insufficient_proof_unexamined": 1,
+    "missing_surface_target": 1
+  },
+  "total": 74,
+  "wholeSpecCoveragePercent": null,
+  "unexaminedOutsideCohort": "Not normalized into this denominator; no zero-unexamined claim for entire spec.",
+  "passingMeaning": "Named outcome has passing executed evidence at its recorded pin; mostly carried baseline evidence. Does not certify all rows at current main.",
+  "nonAdditiveInventories": {
+    "DX": {
+      "unit": "paragraph/table-row source inventory",
+      "count": 245,
+      "head": "5a6170bc6afdcd33efd53ec97713861ca34afeb2"
+    },
+    "contractsRoutes": {
+      "unit": "validated source-title-log routes, not outcomes",
+      "count": 173
+    },
+    "glossary": {
+      "unit": "shared definitions, not extra runtime obligations",
+      "count": 67
+    },
+    "operational": {
+      "unit": "mixed clause/sub-obligation rows; retained as separate owner matrix",
+      "head": "ee66046cf1ea8e6694ab0fe81ff272c15da0cbd2"
+    }
+  },
+  "specDeltas": [
+    {
+      "file": "docs/spec/execution.md",
+      "sha256": "88eebb1eb736354e69c29a341c3b952d0a57ba11a6e9e911968202e8d8c84d09"
+    },
+    {
+      "file": "docs/spec/tracking.md",
+      "sha256": "55e9f41ebd9a1a1af38878f42a7e22c4a50a080e91c89f7fb1ad5579e4a98675"
+    }
+  ],
+  "inputHashes": [
+    {
+      "path": "scratch/gap-hunt/contracts/source-review.json",
+      "sha256": "df1ee0b9f1ec4c8487f38cddce4fee383b475e3bd0f3af4d21351bd5cc01a337"
+    },
+    {
+      "path": "scratch/gap-hunt/contracts/TRACK-A-D-SOURCE-REVIEW.md",
+      "sha256": "f0aede67da2035ef84cfe36260c4174f1e0fc023dcd9ef08a485c9a64fc767e0"
+    },
+    {
+      "path": "scratch/gap-hunt/contracts/FINITE-ROUTE-RECHECK.md",
+      "sha256": "ee336d820d1157aae5d4063c2728989cdf81b87738a8f01b9394b8417be2497d"
+    },
+    {
+      "path": "scratch/gap-hunt/contracts/ARTIFACT-DURABLE.md",
+      "sha256": "909057e1e5be6b165b607c93b435cfa8ac92e640b083871cb9615bfb7c8a566a"
+    },
+    {
+      "path": "scratch/gap-hunt/contracts/ARC-008-PICKUP.md",
+      "sha256": "90dd83c074d1b57cdad6a97280ad305748e30788acd92f70a930ae474d1052f0"
+    },
+    {
+      "path": "../control/OBJECTIVE-AUDIT.md",
+      "sha256": "43500a4a4f3976a6b44ebc56e0ed37a54fabd5dc987d7f5fa50cb5049e47a539"
+    },
+    {
+      "path": "../gap-hunt-current-contracts/scratch/gap-hunt/current-contracts/CURRENT-162-164.md",
+      "sha256": "917b4fb5e782219a48f56c93389721ed65ffba067bb2cfc1661d7bd4dd5ab975"
+    },
+    {
+      "path": "../gap-hunt-dx/scratch/gap-hunt/contract-surface/TRACK-A-CLOSURE.md",
+      "sha256": "6edf3305db54f62796a39a544348382b4224d42e8137230f666b2c44dbfa5d65"
+    },
+    {
+      "path": "../gap-hunt-durability/scratch/gap-hunt/contract-operations/COMPLETION-MATRIX.md",
+      "sha256": "bd02913a3b781033ec8cd44dbc49258246a9c31a81a55efa63b5fb003fb98602"
+    },
+    {
+      "path": "../gap-hunt-review-171/scratch/gap-hunt/review-171/REPORT.md",
+      "sha256": "78fb3e771db50c7d2ad1ef94f787f5d52806d4387875ebd5a81453cdd29c950b"
+    },
+    {
+      "path": "../gap-hunt-review-171/scratch/gap-hunt/review-171/CURRENT-HEAD.md",
+      "sha256": "d4904b04a28491abb867534df77d77c4e2a4c598c6efa15955ba7573b731900b"
+    },
+    {
+      "path": "../gap-hunt-review-171-latest/scratch/gap-hunt/review-171-latest/REPORT.md",
+      "sha256": "ccb463c7083f47bda3d47343c38a7c50a2a6a5db5d7e879a0d2d167623a6c028"
+    }
+  ],
+  "outcomes": [
+    {
+      "id": "TRK1-object-function",
+      "spec": "docs/spec/tracking.md:8-13",
+      "requiredOutcome": "One branded object/function surface yields scalar fields normally and invokes actual callables.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "leaf",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 52,
+          "title": "tracked containers navigate without whole-tree reads; pass-through is observed only by the callee",
+          "proves": "One selected leaf produces exactly one property path; passing a container adds no sibling or identity evidence.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "calls",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 557,
+          "title": "called functions record implementation evidence; uncalled functions do not and calls are not memoized",
+          "proves": "Uncalled wrapper has zero evidence, two calls execute twice, actual implementation replacement compares changed.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "types",
+          "file": "packages/tracking/test-d/observer.test-d.ts",
+          "line": 123,
+          "title": "expectError(observer.tracked(2",
+          "executionLog": "scratch/gap-hunt/contracts/a-completion-tracking-types.log"
+        }
+      ]
+    },
+    {
+      "id": "TRK1-primitive-class",
+      "spec": "docs/spec/tracking.md:8-13",
+      "requiredOutcome": "Bare primitives reject at runtime/types; deferred class values reject visibly.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "primitive",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 1149,
+          "title": "primitive and class inputs fail at runtime",
+          "proves": "Unsupported primitive and class wrapper inputs throw.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "types",
+          "file": "packages/tracking/test-d/observer.test-d.ts",
+          "line": 123,
+          "title": "expectError(observer.tracked(2",
+          "executionLog": "scratch/gap-hunt/contracts/a-completion-tracking-types.log"
+        }
+      ]
+    },
+    {
+      "id": "TRK1-imported",
+      "spec": "docs/spec/tracking.md:8-13",
+      "requiredOutcome": "Imported tracked declarations are used without consumers manually rewrapping them.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "calls",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 557,
+          "title": "called functions record implementation evidence; uncalled functions do not and calls are not memoized",
+          "proves": "Uncalled wrapper has zero evidence, two calls execute twice, actual implementation replacement compares changed.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "importedArtifact",
+          "file": "scratch/gap-hunt/contracts/imported-artifact-probe.mjs",
+          "line": 58,
+          "title": "assert.equal(actual.kind, variant.expected, variant.name)",
+          "executionLog": "scratch/gap-hunt/contracts/imported-artifact-results.log"
+        },
+        {
+          "id": "importedDeclaration",
+          "file": "packages/tracking/test/gap-hunt-contracts-imported-closure.test.ts",
+          "line": 6,
+          "title": "an imported tracked declaration needs no rewrap and unchanged helper text still invalidates for changed tracked closure facts",
+          "executionLog": "scratch/gap-hunt/contracts/imported-closure-results.log",
+          "proves": "A genuinely already-tracked module export is called directly; repeated derivation is cached; tracked closure factor replacement changes 6 to 9; implementation evidence remains equal. Fresh current-fact comparison ignores unread metadata. Local-cell replacement is not claimed to avoid recomputation."
+        }
+      ]
+    },
+    {
+      "id": "TRK2-called-only",
+      "spec": "docs/spec/tracking.md:15-27",
+      "requiredOutcome": "Actual called emitted implementation and consumed facts are evidence; uncalled helper is absent; wrapping never memoizes output.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "calls",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 557,
+          "title": "called functions record implementation evidence; uncalled functions do not and calls are not memoized",
+          "proves": "Uncalled wrapper has zero evidence, two calls execute twice, actual implementation replacement compares changed.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "supplied",
+          "file": "packages/core/test/m4-acceptance/nested.test.ts",
+          "line": 88,
+          "title": "binding rubric B is a child implementation change with equal scores (parents retained); binding rubric C changes Ada",
+          "proves": "Supplied callable replacement is child implementation change; equal selected scores preserve parents and changed scores rerun only affected parents.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        },
+        {
+          "id": "calledHelperBodies",
+          "file": "packages/core/test/resolution/summary-validation.test.ts",
+          "line": 181,
+          "title": "a changed called formatter re-executes both summaries even with unchanged statistics",
+          "executionLog": "scratch/gap-hunt/contracts/resolution-gap-controls.log",
+          "proves": "Durable summaries run twice after consumed helper code changes despite equal output."
+        },
+        {
+          "id": "uncalledHelperBodies",
+          "file": "packages/core/test/resolution/summary-validation.test.ts",
+          "line": 196,
+          "title": "a changed uncalled helper alone retains both summaries",
+          "executionLog": "scratch/gap-hunt/contracts/resolution-gap-controls.log",
+          "proves": "Durable summaries retain references with zero bodies when only uncalled helper changes."
+        }
+      ]
+    },
+    {
+      "id": "TRK2-artifact-policy",
+      "spec": "docs/spec/tracking.md:20-27",
+      "requiredOutcome": "Emitted text is the declared bounded artifact policy, conservative under name/format/comment changes and separate from closure soundness.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "calls",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 557,
+          "title": "called functions record implementation evidence; uncalled functions do not and calls are not memoized",
+          "proves": "Uncalled wrapper has zero evidence, two calls execute twice, actual implementation replacement compares changed.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "importedArtifact",
+          "file": "scratch/gap-hunt/contracts/imported-artifact-probe.mjs",
+          "line": 58,
+          "title": "assert.equal(actual.kind, variant.expected, variant.name)",
+          "executionLog": "scratch/gap-hunt/contracts/imported-artifact-results.log"
+        },
+        {
+          "id": "durableArtifacts",
+          "file": "packages/core/test/gap-hunt-contracts-artifact-durable.test.ts",
+          "line": 41,
+          "title": "Track D durable emitted imported implementation variants",
+          "executionLog": "scratch/gap-hunt/contracts/artifact-durable-results.log",
+          "proves": "Six cases each use cold/changed/repeated fresh processes over the same store. Declared transitive imported body/name/emitted-comment/emitted-format changes each execute one body with a different exact reference; unchanged modules and version metadata alone execute zero bodies and retain the exact baseline reference. Every repeated variant reuses with zero bodies. Actual references/counts and leaf hashes are in artifact-durable-results.json."
+        }
+      ]
+    },
+    {
+      "id": "TRK3-lifetime",
+      "spec": "docs/spec/tracking.md:34-38",
+      "requiredOutcome": "Nested/concurrent async frames isolate facts, restore context and reject late reads/calls after success/failure.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "frames",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 1102,
+          "title": "async capture isolates concurrent frames and rejects detached reads after closure",
+          "proves": "Concurrent frames own disjoint evidence and detached late reads throw.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "restore",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 1119,
+          "title": "async tracked calls preserve post-await reads and nested failure restores the parent capture",
+          "proves": "Awaited reads remain captured; failing nested scope restores parent.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "asyncFailure",
+          "file": "packages/tracking/test/gap-hunt-contracts-async.test.ts",
+          "line": 23,
+          "title": "caught tracked async helper failure keeps post-await consumed facts in its consuming frame",
+          "proves": "Caught async helper exception retains exactly before/after leaf evidence plus implementation, without unread sibling evidence.",
+          "executionLog": "scratch/gap-hunt/contracts/async-results.log"
+        },
+        {
+          "id": "lateHelper",
+          "file": "packages/tracking/test/gap-hunt-contracts-async.test.ts",
+          "line": 50,
+          "title": "a detached helper callback after capture %s rejects before its body runs",
+          "proves": "After either success or failure, detached tracked helper invocation throws closed-frame before author body; a fresh frame still calls normally.",
+          "executionLog": "scratch/gap-hunt/contracts/async-results.log"
+        }
+      ]
+    },
+    {
+      "id": "TRK3-cache-replay",
+      "spec": "docs/spec/tracking.md:34-38",
+      "requiredOutcome": "Cached success and failure replay semantic observations to consumers without evaluating their bodies again.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "derive",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 739,
+          "title": "cached derivations replay successful and failed semantic observations, including nested derivations",
+          "proves": "Cached success/failure replays consumed semantic observations.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "concurrentReplay",
+          "file": "packages/tracking/test/gap-hunt-contracts-async.test.ts",
+          "line": 89,
+          "title": "cached %s evidence replays into each concurrent consumer without leaking its peer leaves",
+          "proves": "Overlapping async frames replay one warmed success/failure derivation without reexecution, close one frame while its peer remains open, and retain exactly each frame own leaves plus shared evidence.",
+          "executionLog": "scratch/gap-hunt/contracts/async-results.log"
+        }
+      ]
+    },
+    {
+      "id": "TRK3-durable-correspondence",
+      "spec": "docs/spec/tracking.md:36-38",
+      "requiredOutcome": "Fresh-process bindings and fingerprints establish reuse without restoring process-local tags/revisions.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "wire",
+          "file": "packages/value/test/value.test.ts",
+          "line": 353,
+          "title": "digest input includes operation, address, fact, and format version",
+          "proves": "Digest input contains structured operation/address/fact/version.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-value.log"
+        },
+        {
+          "id": "multiRebind",
+          "file": "packages/core/test/gap-hunt-contracts-operation-matrix.test.ts",
+          "line": 80,
+          "title": "TRK-6 historical path rebinds through two equal identities and detects both later leaf updates",
+          "proves": "Five independent processes retain exact references across equal id replacement and publish on both subsequent current-leaf changes.",
+          "executionLog": "scratch/gap-hunt/contracts/operation-matrix-results.log"
+        },
+        {
+          "id": "multihopCurrent",
+          "file": "packages/core/test/gap-hunt-contracts-multihop.test.ts",
+          "line": 49,
+          "title": "equal-output rebinding refreshes earlier-child forwarding and derived subjects without rewriting original provenance",
+          "proves": "Eight processes follow source-to-normalize-to-score earlier-child forwarded origins plus transformed derived subject through equal-output cutoff, later new names/score changes, unread edits and rollback; exact current acceptance dependencies change without rewriting original parent dependencies; two cold stores agree.",
+          "executionLog": "scratch/gap-hunt/contracts/multihop-results.log"
+        },
+        {
+          "id": "localTagSerialization",
+          "file": "packages/tracking/test/track.test.ts",
+          "line": 40,
+          "title": "TK-1: tags are distinct frozen opaque tokens with no signal state",
+          "executionLog": "scratch/gap-hunt/contracts/local-tag-boundary-results.log",
+          "proves": "Opaque frozen local tags expose no value/revision/subscribers, reject direct/nested JSON serialization, structuredClone and v8 serialization. This is an explicit negative boundary, beyond successful fresh-process semantic reuse."
+        },
+        {
+          "id": "localTagOwner",
+          "file": "packages/tracking/test/track.test.ts",
+          "line": 26,
+          "title": "TK-2/A-20: each injected tracker owns isolated tags and capture context",
+          "executionLog": "scratch/gap-hunt/contracts/local-tag-boundary-results.log",
+          "proves": "Two trackers own distinct tags/capture frames, and the second tracker rejects consuming the first tracker tag."
+        }
+      ]
+    },
+    {
+      "id": "TRK4-supported-lint",
+      "spec": "docs/spec/tracking.md:41-50",
+      "requiredOutcome": "Typed lint detects documented untracked captured influences including extracted scalars while allowing branded configuration and locals.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "captureLint",
+          "file": "tooling/tracked-captures.test.mjs",
+          "line": 30,
+          "title": "typed capture fixture accepts branded influences and flags each documented negative",
+          "proves": "Real typed generated-declaration consumer accepts branded inputs and reports extracted scalar, external flag/helper/config, forged brands and unsupported callback syntax.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-capture-lint.log"
+        },
+        {
+          "id": "importCapture",
+          "file": "scratch/gap-hunt/contracts/transitive-capture-lint-probe.mjs",
+          "line": 9,
+          "title": "assert.equal(diagnostics.length, 4)",
+          "proves": "Actual type-aware lint emits three imported ordinary-helper external-capture diagnostics and one documented unsupported imported-callback diagnostic; no silent bypass in four tested routes.",
+          "executionLog": "scratch/gap-hunt/contracts/transitive-capture-lint-results.log"
+        }
+      ]
+    },
+    {
+      "id": "TRK4-ordinary-guard",
+      "spec": "docs/spec/tracking.md:41-50",
+      "requiredOutcome": "Tracked branch selection is represented sufficiently to revalidate retained ordinary computations.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Baseline155 divergence superseded by171: separately named semantic supplement2/2, durable facade5/5, operation13/13 atba497cb; runtime preserved through reviewed latest5600ba5 and mergedf43c587. Raw old zero-observation diagnostics remain red.",
+      "originalRoutes": [
+        {
+          "id": "falseyGuard",
+          "file": "packages/core/test/gap-hunt-contracts-operation-matrix.test.ts",
+          "line": 40,
+          "title": "TRK-5 falsey guard values remain distinct consumption across restart despite equal branch output",
+          "proves": "Eight independent processes distinguish 0, empty string, false, null, undefined, NaN and negative zero as consumed guard facts despite identical falsey output, then roll back to original zero exact result.",
+          "executionLog": "scratch/gap-hunt/contracts/falsey-guard-results.log"
+        },
+        {
+          "id": "guardRed",
+          "file": "packages/core/test/gap-hunt-contracts-container-guard.test.ts",
+          "line": 38,
+          "title": "test.each",
+          "executionLog": "scratch/gap-hunt/contracts/portable-155-results.log"
+        }
+      ]
+    },
+    {
+      "id": "TRK5-leaf",
+      "spec": "docs/spec/tracking.md:60",
+      "requiredOutcome": "Current selected leaf value excludes identity and unread fields.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "leaf",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 52,
+          "title": "tracked containers navigate without whole-tree reads; pass-through is observed only by the callee",
+          "proves": "One selected leaf produces exactly one property path; passing a container adds no sibling or identity evidence.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "rebind",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 493,
+          "title": "rebinding an intermediate object keeps equal consumed values and compares later changes at the new path",
+          "proves": "A replacement author with equal name compares equal; its later changed name compares changed; original encoded observation remains Ada.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        }
+      ]
+    },
+    {
+      "id": "TRK5-optional",
+      "spec": "docs/spec/tracking.md:61",
+      "requiredOutcome": "Missing and present undefined compare equal for a value read.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "optional",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 507,
+          "title": "compares absent and present undefined as the same value read, preserving falsey values literally",
+          "proves": "Missing/present undefined fingerprint equal; 0/empty string fingerprints differ.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "edgeSparse",
+          "file": "packages/core/test/gap-hunt-contracts-edge-oracle.test.ts",
+          "line": 50,
+          "title": "sparse hole and present undefined have distinct indexed membership facts",
+          "proves": "Sparse holes and present undefined differ under indexed membership through restart, later fill and rollback; separate positional-value row equates them.",
+          "executionLog": "scratch/gap-hunt/contracts/edge-oracle-results.log"
+        }
+      ]
+    },
+    {
+      "id": "TRK5-guard",
+      "spec": "docs/spec/tracking.md:62",
+      "requiredOutcome": "Guard consumes actual scalar value, distinguishing equal-coercion falsey values.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "falseyGuard",
+          "file": "packages/core/test/gap-hunt-contracts-operation-matrix.test.ts",
+          "line": 40,
+          "title": "TRK-5 falsey guard values remain distinct consumption across restart despite equal branch output",
+          "proves": "Eight independent processes distinguish 0, empty string, false, null, undefined, NaN and negative zero as consumed guard facts despite identical falsey output, then roll back to original zero exact result.",
+          "executionLog": "scratch/gap-hunt/contracts/falsey-guard-results.log"
+        }
+      ]
+    },
+    {
+      "id": "TRK5-own",
+      "spec": "docs/spec/tracking.md:63",
+      "requiredOutcome": "Own checks consume ownership only, including absent own intrinsic names on ordinary records.",
+      "classification": "divergent_filed",
+      "issue": 162,
+      "executionBoundary": "Original gap is owner-filed;162/164 have independent merged-main replay.168 remains pinned original generated-alpha proof; no fresh replay inferred.",
+      "originalRoutes": [
+        {
+          "id": "presence",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 548,
+          "title": "explicit keys, own-property checks, and inherited membership keep their operation meanings",
+          "proves": "Explicit keys, own-property and inherited membership produce distinct operations and expected values.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "intrinsicRed",
+          "file": "packages/tracking/test/gap-hunt-contracts-intrinsic-presence.test.ts",
+          "line": 14,
+          "title": "test.each",
+          "executionLog": "scratch/gap-hunt/contracts/portable-intrinsic-results.log"
+        }
+      ]
+    },
+    {
+      "id": "TRK5-membership",
+      "spec": "docs/spec/tracking.md:64",
+      "requiredOutcome": "Membership consumes lookup presence only, including intrinsic names along allowed Object.prototype.",
+      "classification": "divergent_filed",
+      "issue": 162,
+      "executionBoundary": "Original gap is owner-filed;162/164 have independent merged-main replay.168 remains pinned original generated-alpha proof; no fresh replay inferred.",
+      "originalRoutes": [
+        {
+          "id": "presence",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 548,
+          "title": "explicit keys, own-property checks, and inherited membership keep their operation meanings",
+          "proves": "Explicit keys, own-property and inherited membership produce distinct operations and expected values.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "member",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 340,
+          "title": "membership evidence ignores unrelated additions and changes when the selected member is removed",
+          "proves": "Selected membership equal after unrelated addition; changed after selected deletion.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "intrinsicRed",
+          "file": "packages/tracking/test/gap-hunt-contracts-intrinsic-presence.test.ts",
+          "line": 14,
+          "title": "test.each",
+          "executionLog": "scratch/gap-hunt/contracts/portable-intrinsic-results.log"
+        }
+      ]
+    },
+    {
+      "id": "TRK5-one-key",
+      "spec": "docs/spec/tracking.md:65",
+      "requiredOutcome": "One member membership ignores unrelated additions and detects deletion of that key.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "member",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 340,
+          "title": "membership evidence ignores unrelated additions and changes when the selected member is removed",
+          "proves": "Selected membership equal after unrelated addition; changed after selected deletion.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        }
+      ]
+    },
+    {
+      "id": "TRK5-keys",
+      "spec": "docs/spec/tracking.md:66",
+      "requiredOutcome": "Explicit key enumeration captures keys/order but no payload.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "presence",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 548,
+          "title": "explicit keys, own-property checks, and inherited membership keep their operation meanings",
+          "proves": "Explicit keys, own-property and inherited membership produce distinct operations and expected values.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "order",
+          "file": "packages/value/test/value.test.ts",
+          "line": 203,
+          "title": "unordered dictionary content ignores insertion order; ordered enumeration records it",
+          "proves": "Unordered value comparison ignores key insertion order while explicit keys preserves it.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-value.log"
+        }
+      ]
+    },
+    {
+      "id": "TRK5-length",
+      "spec": "docs/spec/tracking.md:67",
+      "requiredOutcome": "Length reads change only with length, not same-length values.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "lengthPosition",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 533,
+          "title": "array length and positional reads remain separate; native reflection rejects the non-enumerable length case",
+          "proves": "Length operation and positional Index address differ; unsupported native reflection rejects visibly.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "lengthPositionTransitions",
+          "file": "packages/tracking/test/gap-hunt-contracts-invalidation.test.ts",
+          "line": 46,
+          "title": "gap hunt TRK-5 invalidation matrix",
+          "executionLog": "scratch/gap-hunt/contracts/tracking-results.log",
+          "proves": "Executed rows: same length element replacement equal; append changes length; insert before consumed position changed; edit after consumed position equal; unread field edit equal; missing/present undefined value equal but own/membership changed. These are comparison outcomes, not durable body counts."
+        }
+      ]
+    },
+    {
+      "id": "TRK5-position",
+      "spec": "docs/spec/tracking.md:68",
+      "requiredOutcome": "Positional reads observe selected index/path; insertion before it changes the observed value.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "lengthPosition",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 533,
+          "title": "array length and positional reads remain separate; native reflection rejects the non-enumerable length case",
+          "proves": "Length operation and positional Index address differ; unsupported native reflection rejects visibly.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "lengthPositionTransitions",
+          "file": "packages/tracking/test/gap-hunt-contracts-invalidation.test.ts",
+          "line": 46,
+          "title": "gap hunt TRK-5 invalidation matrix",
+          "executionLog": "scratch/gap-hunt/contracts/tracking-results.log",
+          "proves": "Executed rows: same length element replacement equal; append changes length; insert before consumed position changed; edit after consumed position equal; unread field edit equal; missing/present undefined value equal but own/membership changed. These are comparison outcomes, not durable body counts."
+        }
+      ]
+    },
+    {
+      "id": "TRK5-keyed-field",
+      "spec": "docs/spec/tracking.md:69",
+      "requiredOutcome": "Stable member fields are independent of listing traversal positions.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "keyed",
+          "file": "packages/core/test/m4-acceptance/keyed.test.ts",
+          "line": 84,
+          "title": "an inserted contributor runs once and reruns the report; a deleted one is no longer required and never retracted; a reorder alone runs no member or report body",
+          "proves": "Insertion admits only new member and aggregate; deletion does not retract; reorder produces zero member/aggregate bodies.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        }
+      ]
+    },
+    {
+      "id": "TRK5-ranking",
+      "spec": "docs/spec/tracking.md:70",
+      "requiredOutcome": "Ranked key sequence responds to consumed scores while unread avatars remain irrelevant.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "ranking",
+          "file": "packages/tracking/test/gap-hunt-contracts-invalidation.test.ts",
+          "line": 98,
+          "title": "TRK-5 ordered ranking changes with selected scores and ignores unselected member fields",
+          "proves": "Explicit ranked key sequence reads keys/scores only; changed selected score invalidates while changed unselected avatar fields compare equal.",
+          "executionLog": "scratch/gap-hunt/contracts/tracking-results.log"
+        }
+      ]
+    },
+    {
+      "id": "TRK5-identity",
+      "spec": "docs/spec/tracking.md:71",
+      "requiredOutcome": "Explicit identity values add dependencies; unread names/whole content do not.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "identity",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 352,
+          "title": "explicit identity reads ignore unread names but change when the identity changes",
+          "proves": "Explicit id changes invalidate; unread name changes do not.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        }
+      ]
+    },
+    {
+      "id": "TRK5-pass-through",
+      "spec": "docs/spec/tracking.md:72",
+      "requiredOutcome": "Passing/navigation adds bounded container kind plus callee/materialization consumption; no deep traversal, sibling value or identity evidence.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Updated current expected outcome is navigation kind plus callee-consumed facts, excluding automatic traversal; exact current named test run recorded overnight.",
+      "originalRoutes": [
+        {
+          "id": "leaf",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 52,
+          "title": "tracked containers navigate without whole-tree reads; pass-through is observed only by the callee",
+          "proves": "One selected leaf produces exactly one property path; passing a container adds no sibling or identity evidence.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        }
+      ]
+    },
+    {
+      "id": "TRK5-output",
+      "spec": "docs/spec/tracking.md:73",
+      "requiredOutcome": "Explicit output consumes exactly the selected supported data shape.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "selectedOutput",
+          "file": "packages/tracking/test/output-observation.test.ts",
+          "line": 17,
+          "title": "pass-through stays neutral until snapshotOutput explicitly detaches the selected subtree",
+          "proves": "Explicit selected output detaches only requested subtree and records materialization evidence.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "outputShape",
+          "file": "packages/tracking/test/gap-hunt-contracts-output.test.ts",
+          "line": 35,
+          "title": "$name",
+          "proves": "Eight current-shape rows establish selected output sensitivity to record order, missing/undefined, holes, inherited data and ownership, with equal-shape and equal-chain controls; unread sibling is outside the exact subtree request.",
+          "executionLog": "scratch/gap-hunt/contracts/output-results.log"
+        }
+      ]
+    },
+    {
+      "id": "TRK5-call",
+      "spec": "docs/spec/tracking.md:74",
+      "requiredOutcome": "Invoking a tracked function records implementation plus reads, not uncalled helper text.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "calls",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 557,
+          "title": "called functions record implementation evidence; uncalled functions do not and calls are not memoized",
+          "proves": "Uncalled wrapper has zero evidence, two calls execute twice, actual implementation replacement compares changed.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        }
+      ]
+    },
+    {
+      "id": "TRK5-domain",
+      "spec": "docs/spec/tracking.md:76-78",
+      "requiredOutcome": "Unsupported value/prototype cases reject visibly rather than silently replacing inherited semantics with own-only lookup.",
+      "classification": "divergent_filed",
+      "issue": 162,
+      "executionBoundary": "Original gap is owner-filed;162/164 have independent merged-main replay.168 remains pinned original generated-alpha proof; no fresh replay inferred.",
+      "originalRoutes": [
+        {
+          "id": "negative",
+          "file": "packages/value/test/value.test.ts",
+          "line": 318,
+          "title": "unsupported native, callable, symbol, accessor, hidden, cyclic, and shared data fail explicitly",
+          "proves": "Unsupported data classes explicitly reject.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-value.log"
+        },
+        {
+          "id": "prototypeBound",
+          "file": "packages/value/test/value.test.ts",
+          "line": 274,
+          "title": "bounded custom prototype depth preserves",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-value.log"
+        },
+        {
+          "id": "intrinsicRed",
+          "file": "packages/tracking/test/gap-hunt-contracts-intrinsic-presence.test.ts",
+          "line": 14,
+          "title": "test.each",
+          "executionLog": "scratch/gap-hunt/contracts/portable-intrinsic-results.log"
+        }
+      ]
+    },
+    {
+      "id": "TRK6-current-provenance",
+      "spec": "docs/spec/tracking.md:80-85",
+      "requiredOutcome": "Equal leaf rebinding can retain results; later changes under current binding invalidate; original provenance remains unchanged.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "multiRebind",
+          "file": "packages/core/test/gap-hunt-contracts-operation-matrix.test.ts",
+          "line": 80,
+          "title": "TRK-6 historical path rebinds through two equal identities and detects both later leaf updates",
+          "proves": "Five independent processes retain exact references across equal id replacement and publish on both subsequent current-leaf changes.",
+          "executionLog": "scratch/gap-hunt/contracts/operation-matrix-results.log"
+        },
+        {
+          "id": "multihopCurrent",
+          "file": "packages/core/test/gap-hunt-contracts-multihop.test.ts",
+          "line": 49,
+          "title": "equal-output rebinding refreshes earlier-child forwarding and derived subjects without rewriting original provenance",
+          "proves": "Eight processes follow source-to-normalize-to-score earlier-child forwarded origins plus transformed derived subject through equal-output cutoff, later new names/score changes, unread edits and rollback; exact current acceptance dependencies change without rewriting original parent dependencies; two cold stores agree.",
+          "executionLog": "scratch/gap-hunt/contracts/multihop-results.log"
+        }
+      ]
+    },
+    {
+      "id": "TRK7-explicit",
+      "spec": "docs/spec/tracking.md:87-92",
+      "requiredOutcome": "Traversal does not consume identity; explicit identity does and does not implicitly enforce output key uniqueness.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "leaf",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 52,
+          "title": "tracked containers navigate without whole-tree reads; pass-through is observed only by the callee",
+          "proves": "One selected leaf produces exactly one property path; passing a container adds no sibling or identity evidence.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "identity",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 352,
+          "title": "explicit identity reads ignore unread names but change when the identity changes",
+          "proves": "Explicit id changes invalidate; unread name changes do not.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "keyed",
+          "file": "packages/core/test/m4-acceptance/keyed.test.ts",
+          "line": 84,
+          "title": "an inserted contributor runs once and reruns the report; a deleted one is no longer required and never retracted; a reorder alone runs no member or report body",
+          "proves": "Insertion admits only new member and aggregate; deletion does not retract; reorder produces zero member/aggregate bodies.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        }
+      ]
+    },
+    {
+      "id": "TRK8-branches",
+      "spec": "docs/spec/tracking.md:94-98",
+      "requiredOutcome": "A changed scalar guard executes a fresh branch and abandons obsolete reads.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "branches",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 1052,
+          "title": "local replacement invalidates tags and replaces the semantic branch observations",
+          "proves": "Local scalar guard replacement reevaluates derivation and abandons prior branch evidence.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "durableBranches",
+          "file": "packages/core/test/gap-hunt-contracts-operation-matrix.test.ts",
+          "line": 59,
+          "title": "TRK-8 durable scalar branch replacement abandons old reads and detects newly active reads",
+          "proves": "Five independent processes flip scalar-guard branch, reuse after abandoned leaf edit, publish after newly active leaf edit, and validate old exact result on rollback.",
+          "executionLog": "scratch/gap-hunt/contracts/operation-matrix-results.log"
+        }
+      ]
+    },
+    {
+      "id": "TRK8-returned-input",
+      "spec": "docs/spec/tracking.md:94-98",
+      "requiredOutcome": "Returned tracked subtrees remain dependency-bearing and revalidate under identical current input after restart.",
+      "classification": "divergent_filed",
+      "issue": 164,
+      "executionBoundary": "Original gap is owner-filed;162/164 have independent merged-main replay.168 remains pinned original generated-alpha proof; no fresh replay inferred.",
+      "originalRoutes": [
+        {
+          "id": "selectedOutput",
+          "file": "packages/tracking/test/output-observation.test.ts",
+          "line": 17,
+          "title": "pass-through stays neutral until snapshotOutput explicitly detaches the selected subtree",
+          "proves": "Explicit selected output detaches only requested subtree and records materialization evidence.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "outputShape",
+          "file": "packages/tracking/test/gap-hunt-contracts-output.test.ts",
+          "line": 35,
+          "title": "$name",
+          "proves": "Eight current-shape rows establish selected output sensitivity to record order, missing/undefined, holes, inherited data and ownership, with equal-shape and equal-chain controls; unread sibling is outside the exact subtree request.",
+          "executionLog": "scratch/gap-hunt/contracts/output-results.log"
+        },
+        {
+          "id": "outputRed",
+          "file": "packages/core/test/gap-hunt-contracts-output.test.ts",
+          "line": 30,
+          "title": "['base', 'base', 'reused']",
+          "executionLog": "scratch/gap-hunt/contracts/portable-output-minimal-results.log"
+        }
+      ]
+    },
+    {
+      "id": "VAL1-paths",
+      "spec": "docs/spec/tracking.md:102-108",
+      "requiredOutcome": "Property/index/structured key segments remain unambiguous, including dots, numeric strings and surrogate keys.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "address",
+          "file": "packages/value/test/value.test.ts",
+          "line": 182,
+          "title": "an object numeric key and an array index have different structured addresses",
+          "proves": "Numeric property/index structured evidence stays distinct.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-value.log"
+        },
+        {
+          "id": "edgeKeys",
+          "file": "packages/core/test/gap-hunt-contracts-edge-oracle.test.ts",
+          "line": 36,
+          "title": "literal special key %s: unread/equal-inherited/changed/current rollback",
+          "proves": "Eight tricky key spellings including lone UTF16 surrogate remain distinct under declared current bindings across unread edits, custom inherited equality, changed values and rollback, matching cold stores.",
+          "executionLog": "scratch/gap-hunt/contracts/edge-oracle-results.log"
+        },
+        {
+          "id": "wire",
+          "file": "packages/value/test/value.test.ts",
+          "line": 353,
+          "title": "digest input includes operation, address, fact, and format version",
+          "proves": "Digest input contains structured operation/address/fact/version.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-value.log"
+        }
+      ]
+    },
+    {
+      "id": "VAL2-canonical",
+      "spec": "docs/spec/tracking.md:110-115",
+      "requiredOutcome": "Versioned SHA256 input distinguishes operation/address/fact and supported non-JSON scalar values across processes.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "wire",
+          "file": "packages/value/test/value.test.ts",
+          "line": 353,
+          "title": "digest input includes operation, address, fact, and format version",
+          "proves": "Digest input contains structured operation/address/fact/version.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-value.log"
+        },
+        {
+          "id": "edges",
+          "file": "packages/value/test/value.test.ts",
+          "line": 255,
+          "title": "round trips supported edge values with stable fingerprints",
+          "proves": "Supported scalar/sparse value roundtrip and digest consistency for enumerated fixtures.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-value.log"
+        },
+        {
+          "id": "crossprocess",
+          "file": "packages/value/test/value.test.ts",
+          "line": 294,
+          "title": "an independent Node process preserves canonical bytes and snapshot lookup meaning",
+          "proves": "Independent process equality bytes and snapshot lookup agree.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-value.log"
+        },
+        {
+          "id": "edgeNumbers",
+          "file": "packages/core/test/gap-hunt-contracts-edge-oracle.test.ts",
+          "line": 53,
+          "title": "canonical number atoms distinguish zero signs, NaN and infinities across restart and rollback",
+          "proves": "Zero, negative zero, NaN and both infinities produce correct current conditional values and exact publish/reuse expectations through fresh-process warm/cold histories.",
+          "executionLog": "scratch/gap-hunt/contracts/edge-oracle-results.log"
+        }
+      ]
+    },
+    {
+      "id": "VAL2-domain-rejections",
+      "spec": "docs/spec/tracking.md:117-123",
+      "requiredOutcome": "Unsupported cycles/shared refs/accessors/native/class/functions/symbol data reject explicitly.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "negative",
+          "file": "packages/value/test/value.test.ts",
+          "line": 318,
+          "title": "unsupported native, callable, symbol, accessor, hidden, cyclic, and shared data fail explicitly",
+          "proves": "Unsupported data classes explicitly reject.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-value.log"
+        },
+        {
+          "id": "primitive",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 1149,
+          "title": "primitive and class inputs fail at runtime",
+          "proves": "Unsupported primitive and class wrapper inputs throw.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        }
+      ]
+    },
+    {
+      "id": "VAL2-transport",
+      "spec": "docs/spec/tracking.md:125-133",
+      "requiredOutcome": "Unordered content equality is separate from order-preserving snapshot transport; malformed/duplicate/noncanonical records fail closed.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "transport",
+          "file": "packages/value/test/value.test.ts",
+          "line": 210,
+          "title": "snapshot transport preserves later explicit enumeration while equality stays unordered",
+          "proves": "Snapshot transport retains key order independently of normalized equality.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-value.log"
+        },
+        {
+          "id": "order",
+          "file": "packages/value/test/value.test.ts",
+          "line": 203,
+          "title": "unordered dictionary content ignores insertion order; ordered enumeration records it",
+          "proves": "Unordered value comparison ignores key insertion order while explicit keys preserves it.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-value.log"
+        },
+        {
+          "id": "malformedWire",
+          "file": "packages/value/test/value.test.ts",
+          "line": 343,
+          "title": "duplicate keys and malformed canonical records fail",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-value.log"
+        }
+      ]
+    },
+    {
+      "id": "VAL2-supported-domain",
+      "spec": "docs/spec/tracking.md:135-141",
+      "requiredOutcome": "Scalar atoms, sparse arrays, UTF16, records and bounded plain prototype chains retain meaning after immutable decode.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "edges",
+          "file": "packages/value/test/value.test.ts",
+          "line": 255,
+          "title": "round trips supported edge values with stable fingerprints",
+          "proves": "Supported scalar/sparse value roundtrip and digest consistency for enumerated fixtures.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-value.log"
+        },
+        {
+          "id": "edgeSparse",
+          "file": "packages/core/test/gap-hunt-contracts-edge-oracle.test.ts",
+          "line": 50,
+          "title": "sparse hole and present undefined have distinct indexed membership facts",
+          "proves": "Sparse holes and present undefined differ under indexed membership through restart, later fill and rollback; separate positional-value row equates them.",
+          "executionLog": "scratch/gap-hunt/contracts/edge-oracle-results.log"
+        },
+        {
+          "id": "prototypeBound",
+          "file": "packages/value/test/value.test.ts",
+          "line": 274,
+          "title": "bounded custom prototype depth preserves",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-value.log"
+        },
+        {
+          "id": "frozen",
+          "file": "packages/value/test/value.test.ts",
+          "line": 374,
+          "title": "decoded snapshots cannot mutate retained record or array content",
+          "proves": "Decoded stored data rejects mutation.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-value.log"
+        }
+      ]
+    },
+    {
+      "id": "VAL2-intrinsic-value-negative",
+      "spec": "docs/spec/tracking.md:135-149",
+      "requiredOutcome": "Unsupported selected intrinsic values, hidden/accessor/callable/symbol/native data reject; presence is a distinct operation.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "negative",
+          "file": "packages/value/test/value.test.ts",
+          "line": 318,
+          "title": "unsupported native, callable, symbol, accessor, hidden, cyclic, and shared data fail explicitly",
+          "proves": "Unsupported data classes explicitly reject.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-value.log"
+        },
+        {
+          "id": "intrinsicRed",
+          "file": "packages/tracking/test/gap-hunt-contracts-intrinsic-presence.test.ts",
+          "line": 14,
+          "title": "test.each",
+          "executionLog": "scratch/gap-hunt/contracts/portable-intrinsic-results.log"
+        }
+      ]
+    },
+    {
+      "id": "VAL3-immutable",
+      "spec": "docs/spec/tracking.md:175-179",
+      "requiredOutcome": "Inspection and materialization return immutable detached snapshots and cannot modify retained history.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "frozen",
+          "file": "packages/value/test/value.test.ts",
+          "line": 374,
+          "title": "decoded snapshots cannot mutate retained record or array content",
+          "proves": "Decoded stored data rejects mutation.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-value.log"
+        },
+        {
+          "id": "outputShape",
+          "file": "packages/tracking/test/gap-hunt-contracts-output.test.ts",
+          "line": 35,
+          "title": "$name",
+          "proves": "Eight current-shape rows establish selected output sensitivity to record order, missing/undefined, holes, inherited data and ownership, with equal-shape and equal-chain controls; unread sibling is outside the exact subtree request.",
+          "executionLog": "scratch/gap-hunt/contracts/output-results.log"
+        },
+        {
+          "id": "multihopCurrent",
+          "file": "packages/core/test/gap-hunt-contracts-multihop.test.ts",
+          "line": 49,
+          "title": "equal-output rebinding refreshes earlier-child forwarding and derived subjects without rewriting original provenance",
+          "proves": "Eight processes follow source-to-normalize-to-score earlier-child forwarded origins plus transformed derived subject through equal-output cutoff, later new names/score changes, unread edits and rollback; exact current acceptance dependencies change without rewriting original parent dependencies; two cold stores agree.",
+          "executionLog": "scratch/gap-hunt/contracts/multihop-results.log"
+        }
+      ]
+    },
+    {
+      "id": "M3-nested-navigation",
+      "spec": "docs/spec/tracking.md:196-204",
+      "requiredOutcome": "Record/array roots expose tagged leaf/container navigation without implicit subtree facts; owning Tracking/materialization ports preserve semantics.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "nestedLoading",
+          "file": "experiments/exp-nested/test/nested-sqlite.test.ts",
+          "line": 146,
+          "title": "view creation, navigation and selected leaves read no root, sibling or unrelated subtree payload",
+          "proves": "Separate-process SQLite nested fixture limits returned payload cells to selected leaf; not disk-page IO or scale evidence.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-expnested.log"
+        },
+        {
+          "id": "leaf",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 52,
+          "title": "tracked containers navigate without whole-tree reads; pass-through is observed only by the callee",
+          "proves": "One selected leaf produces exactly one property path; passing a container adds no sibling or identity evidence.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "lengthPosition",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 533,
+          "title": "array length and positional reads remain separate; native reflection rejects the non-enumerable length case",
+          "proves": "Length operation and positional Index address differ; unsupported native reflection rejects visibly.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        }
+      ]
+    },
+    {
+      "id": "M3-nested-IO",
+      "spec": "docs/spec/tracking.md:206-215",
+      "requiredOutcome": "SQL result cells for navigation/selected leaves exclude unrelated payload; fingerprint comparison avoids payload; explicit subtree output records MDS1.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "nestedLoading",
+          "file": "experiments/exp-nested/test/nested-sqlite.test.ts",
+          "line": 146,
+          "title": "view creation, navigation and selected leaves read no root, sibling or unrelated subtree payload",
+          "proves": "Separate-process SQLite nested fixture limits returned payload cells to selected leaf; not disk-page IO or scale evidence.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-expnested.log"
+        },
+        {
+          "id": "nestedMetadata",
+          "file": "experiments/exp-nested/test/nested-sqlite.test.ts",
+          "line": 177,
+          "title": "metadata comparison in a fresh process performs zero payload fallback",
+          "proves": "Fresh-process nested SQLite fingerprint comparison requests zero payload fallback.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-expnested.log"
+        },
+        {
+          "id": "selectedOutput",
+          "file": "packages/tracking/test/output-observation.test.ts",
+          "line": 17,
+          "title": "pass-through stays neutral until snapshotOutput explicitly detaches the selected subtree",
+          "proves": "Explicit selected output detaches only requested subtree and records materialization evidence.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        }
+      ]
+    },
+    {
+      "id": "M3-async-carrier",
+      "spec": "docs/spec/tracking.md:212-215",
+      "requiredOutcome": "Async transport does not create phantom then observations or reserve an author then field.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "arrayThen",
+          "file": "packages/tracking/test/lazy-view.test.ts",
+          "line": 120,
+          "title": "every supported operation records the same evidence as an in-memory tracked wrapper",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        }
+      ]
+    },
+    {
+      "id": "COL1-designated",
+      "spec": "docs/spec/tracking.md:228-234",
+      "requiredOutcome": "Default designated key scopes each member to its collection; duplicates/missing keys fail before any member work and naming diagnostics.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "keyed",
+          "file": "packages/core/test/m4-acceptance/keyed.test.ts",
+          "line": 84,
+          "title": "an inserted contributor runs once and reruns the report; a deleted one is no longer required and never retracted; a reorder alone runs no member or report body",
+          "proves": "Insertion admits only new member and aggregate; deletion does not retract; reorder produces zero member/aggregate bodies.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        },
+        {
+          "id": "templateAddress",
+          "file": "packages/definition/test/template.test.ts",
+          "line": 234,
+          "title": "a member instance descriptor is exactly",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-definition.log"
+        }
+      ]
+    },
+    {
+      "id": "COL1-custom-alternative",
+      "spec": "docs/spec/tracking.md:228-234",
+      "requiredOutcome": "Explicit string custom-key strategy is an alternative for records without a designated identity field.",
+      "classification": "divergent_filed",
+      "issue": 168,
+      "executionBoundary": "Original gap is owner-filed;162/164 have independent merged-main replay.168 remains pinned original generated-alpha proof; no fresh replay inferred.",
+      "originalRoutes": []
+    },
+    {
+      "id": "COL2-exhaustive",
+      "spec": "docs/spec/tracking.md:236-249",
+      "requiredOutcome": "Uniform exhaustive projection retains one digest dependency with relevant binding/address/coverage and canonical keys.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "projection",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 834,
+          "title": "retains only projection descriptor and digest while keeping visited coverage explicit",
+          "proves": "Exhaustive one-digest evidence does not retain selected payload; visited coverage stays explicit; insertion changes comparison.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "wire",
+          "file": "packages/value/test/value.test.ts",
+          "line": 353,
+          "title": "digest input includes operation, address, fact, and format version",
+          "proves": "Digest input contains structured operation/address/fact/version.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-value.log"
+        }
+      ]
+    },
+    {
+      "id": "COL2-early",
+      "spec": "docs/spec/tracking.md:236-249",
+      "requiredOutcome": "Early-stop reads retain actual visited coverage and guards; unread later data stays irrelevant until traversal extends.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "projection",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 834,
+          "title": "retains only projection descriptor and digest while keeping visited coverage explicit",
+          "proves": "Exhaustive one-digest evidence does not retain selected payload; visited coverage stays explicit; insertion changes comparison.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "earlyStop",
+          "file": "packages/core/test/gap-hunt-contracts-operation-matrix.test.ts",
+          "line": 40,
+          "title": "COL-4 early termination ignores unvisited fields",
+          "executionLog": "scratch/gap-hunt/contracts/early-stop-results.log"
+        }
+      ]
+    },
+    {
+      "id": "COL3-order",
+      "spec": "docs/spec/tracking.md:251-256",
+      "requiredOutcome": "Unordered dictionaries ignore insertion order; intentional ordering is explicit and separate from member payload/identity.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "order",
+          "file": "packages/value/test/value.test.ts",
+          "line": 203,
+          "title": "unordered dictionary content ignores insertion order; ordered enumeration records it",
+          "proves": "Unordered value comparison ignores key insertion order while explicit keys preserves it.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-value.log"
+        },
+        {
+          "id": "transport",
+          "file": "packages/value/test/value.test.ts",
+          "line": 210,
+          "title": "snapshot transport preserves later explicit enumeration while equality stays unordered",
+          "proves": "Snapshot transport retains key order independently of normalized equality.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-value.log"
+        },
+        {
+          "id": "ranking",
+          "file": "packages/tracking/test/gap-hunt-contracts-invalidation.test.ts",
+          "line": 98,
+          "title": "TRK-5 ordered ranking changes with selected scores and ignores unselected member fields",
+          "proves": "Explicit ranked key sequence reads keys/scores only; changed selected score invalidates while changed unselected avatar fields compare equal.",
+          "executionLog": "scratch/gap-hunt/contracts/tracking-results.log"
+        },
+        {
+          "id": "keyed",
+          "file": "packages/core/test/m4-acceptance/keyed.test.ts",
+          "line": 84,
+          "title": "an inserted contributor runs once and reruns the report; a deleted one is no longer required and never retracted; a reorder alone runs no member or report body",
+          "proves": "Insertion admits only new member and aggregate; deletion does not retract; reorder produces zero member/aggregate bodies.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        }
+      ]
+    },
+    {
+      "id": "COL4-matrix",
+      "spec": "docs/spec/tracking.md:258-262",
+      "requiredOutcome": "Insertion/deletion/reorder/unread fields/projection changes/duplicates/early termination/changed guards select affected work.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "keyed",
+          "file": "packages/core/test/m4-acceptance/keyed.test.ts",
+          "line": 84,
+          "title": "an inserted contributor runs once and reruns the report; a deleted one is no longer required and never retracted; a reorder alone runs no member or report body",
+          "proves": "Insertion admits only new member and aggregate; deletion does not retract; reorder produces zero member/aggregate bodies.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        },
+        {
+          "id": "projection",
+          "file": "packages/tracking/test/observer.test.ts",
+          "line": 834,
+          "title": "retains only projection descriptor and digest while keeping visited coverage explicit",
+          "proves": "Exhaustive one-digest evidence does not retain selected payload; visited coverage stays explicit; insertion changes comparison.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+        },
+        {
+          "id": "earlyStop",
+          "file": "packages/core/test/gap-hunt-contracts-operation-matrix.test.ts",
+          "line": 40,
+          "title": "COL-4 early termination ignores unvisited fields",
+          "executionLog": "scratch/gap-hunt/contracts/early-stop-results.log"
+        },
+        {
+          "id": "gates",
+          "file": "packages/core/test/m4-acceptance/topology.test.ts",
+          "line": 73,
+          "title": "with a report that does not read the threshold, a gate flip reaches the fold only through membership, and a flip-free edit runs nothing at all",
+          "proves": "Gate flip changes required membership; flip-free threshold produces zero bodies/admissions; old references remain.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        },
+        {
+          "id": "ranking",
+          "file": "packages/tracking/test/gap-hunt-contracts-invalidation.test.ts",
+          "line": 98,
+          "title": "TRK-5 ordered ranking changes with selected scores and ignores unselected member fields",
+          "proves": "Explicit ranked key sequence reads keys/scores only; changed selected score invalidates while changed unselected avatar fields compare equal.",
+          "executionLog": "scratch/gap-hunt/contracts/tracking-results.log"
+        }
+      ]
+    },
+    {
+      "id": "CMP1-freeze",
+      "spec": "docs/spec/composition.md:10-15",
+      "requiredOutcome": "Composition config may choose graph once; runtime data cannot create/reconnect/reorder it, and author mutations cannot change copied structure.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "topology",
+          "file": "packages/core/test/m4-acceptance/topology.test.ts",
+          "line": 29,
+          "title": "the step factory runs once per process, and mutating every author array, record and input after composing changes nothing in a later process",
+          "proves": "Factory executes once; postcompose mutation preserves topology, retained references, and zero bodies after restart.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        },
+        {
+          "id": "rejectGraph",
+          "file": "packages/core/test/m4-acceptance/topology.test.ts",
+          "line": 44,
+          "title": "an operation created from a result is rejected before any work is admitted for it; nothing is published for it or for the summaries that tried it",
+          "proves": "Runtime created declaration rejects before admission/publication.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        },
+        {
+          "id": "frozenBuilder",
+          "file": "packages/definition/test/template.test.ts",
+          "line": 150,
+          "title": "every member builder call after the factory returns",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-definition.log"
+        }
+      ]
+    },
+    {
+      "id": "CMP2-dynamic-observations",
+      "spec": "docs/spec/composition.md:17-22",
+      "requiredOutcome": "Conditional read evidence can change independently of fixed abstract topology.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "durableBranches",
+          "file": "packages/core/test/gap-hunt-contracts-operation-matrix.test.ts",
+          "line": 59,
+          "title": "TRK-8 durable scalar branch replacement abandons old reads and detects newly active reads",
+          "proves": "Five independent processes flip scalar-guard branch, reuse after abandoned leaf edit, publish after newly active leaf edit, and validate old exact result on rollback.",
+          "executionLog": "scratch/gap-hunt/contracts/operation-matrix-results.log"
+        },
+        {
+          "id": "gates",
+          "file": "packages/core/test/m4-acceptance/topology.test.ts",
+          "line": 73,
+          "title": "with a report that does not read the threshold, a gate flip reaches the fold only through membership, and a flip-free edit runs nothing at all",
+          "proves": "Gate flip changes required membership; flip-free threshold produces zero bodies/admissions; old references remain.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        }
+      ]
+    },
+    {
+      "id": "CMP3-supplied",
+      "spec": "docs/spec/composition.md:24-31",
+      "requiredOutcome": "Reusable higher-order groups bind supplied callable slots before execution, reconciling current implementation without manual field dependencies.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "supplied",
+          "file": "packages/core/test/m4-acceptance/nested.test.ts",
+          "line": 88,
+          "title": "binding rubric B is a child implementation change with equal scores (parents retained); binding rubric C changes Ada",
+          "proves": "Supplied callable replacement is child implementation change; equal selected scores preserve parents and changed scores rerun only affected parents.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        },
+        {
+          "id": "slotMissing",
+          "file": "packages/definition/test/nested-composition.test.ts",
+          "line": 264,
+          "title": "EXP-4: opening a parent whose declared slot is unsupplied rejects with missing-slot before any callback runs",
+          "proves": "Missing declared supplied slot rejects before author callback.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-definition.log"
+        },
+        {
+          "id": "slotAmbiguous",
+          "file": "packages/definition/test/nested-composition.test.ts",
+          "line": 273,
+          "title": "EXP-4: a slot supplied twice rejects with ambiguous-slot, distinct from missing, before any callback runs",
+          "proves": "Multiply supplied slot produces ambiguous-slot before author callback.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-definition.log"
+        }
+      ]
+    },
+    {
+      "id": "CMP3-unique-slot",
+      "spec": "docs/spec/composition.md:33-41",
+      "requiredOutcome": "Missing/ambiguous supplied slots are distinct pre-body misses; implementation changes stay child evidence and equal closure text is not closure soundness.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "slotMissing",
+          "file": "packages/definition/test/nested-composition.test.ts",
+          "line": 264,
+          "title": "EXP-4: opening a parent whose declared slot is unsupplied rejects with missing-slot before any callback runs",
+          "proves": "Missing declared supplied slot rejects before author callback.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-definition.log"
+        },
+        {
+          "id": "slotAmbiguous",
+          "file": "packages/definition/test/nested-composition.test.ts",
+          "line": 273,
+          "title": "EXP-4: a slot supplied twice rejects with ambiguous-slot, distinct from missing, before any callback runs",
+          "proves": "Multiply supplied slot produces ambiguous-slot before author callback.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-definition.log"
+        },
+        {
+          "id": "supplied",
+          "file": "packages/core/test/m4-acceptance/nested.test.ts",
+          "line": 88,
+          "title": "binding rubric B is a child implementation change with equal scores (parents retained); binding rubric C changes Ada",
+          "proves": "Supplied callable replacement is child implementation change; equal selected scores preserve parents and changed scores rerun only affected parents.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        },
+        {
+          "id": "argumentMiss",
+          "file": "packages/core/test/m4-acceptance/nested.test.ts",
+          "line": 141,
+          "title": "an argument derived after an observed untracked read",
+          "proves": "Unjustified and unreconstructible parent variants produce distinct honest misses, one normal parent execution, retained eligible children and report; no validation-only replay.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        }
+      ]
+    },
+    {
+      "id": "CMP4-symbolic-template",
+      "spec": "docs/spec/composition.md:44-49",
+      "requiredOutcome": "Template factory executes once with symbolic input, then known operations instantiate by current keys.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "topology",
+          "file": "packages/core/test/m4-acceptance/topology.test.ts",
+          "line": 29,
+          "title": "the step factory runs once per process, and mutating every author array, record and input after composing changes nothing in a later process",
+          "proves": "Factory executes once; postcompose mutation preserves topology, retained references, and zero bodies after restart.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        },
+        {
+          "id": "templateAddress",
+          "file": "packages/definition/test/template.test.ts",
+          "line": 234,
+          "title": "a member instance descriptor is exactly",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-definition.log"
+        }
+      ]
+    },
+    {
+      "id": "CMP4-precedence",
+      "spec": "docs/spec/composition.md:48-49",
+      "requiredOutcome": "Parent awaits declared prerequisites without globally serializing unrelated sibling calls.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "precedence",
+          "file": "packages/core/test/gap-hunt-contracts-precedence.test.ts",
+          "line": 11,
+          "title": "an independent declared child releases its waiting sibling",
+          "executionLog": "scratch/gap-hunt/contracts/precedence-results.log"
+        }
+      ]
+    },
+    {
+      "id": "CMP4-frozen-builders",
+      "spec": "docs/spec/composition.md:51-53",
+      "requiredOutcome": "Returned declarations and every later builder operation are frozen/rejected.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "topology",
+          "file": "packages/core/test/m4-acceptance/topology.test.ts",
+          "line": 29,
+          "title": "the step factory runs once per process, and mutating every author array, record and input after composing changes nothing in a later process",
+          "proves": "Factory executes once; postcompose mutation preserves topology, retained references, and zero bodies after restart.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        },
+        {
+          "id": "frozenBuilder",
+          "file": "packages/definition/test/template.test.ts",
+          "line": 150,
+          "title": "every member builder call after the factory returns",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-definition.log"
+        }
+      ]
+    },
+    {
+      "id": "CMP4-identity-address",
+      "spec": "docs/spec/composition.md:53-59",
+      "requiredOutcome": "Instance correspondence includes template/collection/member key; discovery validates keys before gate/body and does not remap renamed/moved templates.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "templateAddress",
+          "file": "packages/definition/test/template.test.ts",
+          "line": 234,
+          "title": "a member instance descriptor is exactly",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-definition.log"
+        },
+        {
+          "id": "templateMove",
+          "file": "packages/definition/test/template.test.ts",
+          "line": 293,
+          "title": "a renamed template slot is a miss",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-definition.log"
+        },
+        {
+          "id": "keyed",
+          "file": "packages/core/test/m4-acceptance/keyed.test.ts",
+          "line": 84,
+          "title": "an inserted contributor runs once and reruns the report; a deleted one is no longer required and never retracted; a reorder alone runs no member or report body",
+          "proves": "Insertion admits only new member and aggregate; deletion does not retract; reorder produces zero member/aggregate bodies.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        }
+      ]
+    },
+    {
+      "id": "CMP4-custom-key",
+      "spec": "docs/spec/composition.md:55-59",
+      "requiredOutcome": "Key discovery honors a supplied custom-key alternative for no-designated-identity members.",
+      "classification": "divergent_filed",
+      "issue": 168,
+      "executionBoundary": "Original gap is owner-filed;162/164 have independent merged-main replay.168 remains pinned original generated-alpha proof; no fresh replay inferred.",
+      "originalRoutes": []
+    },
+    {
+      "id": "CMP4-member-binding",
+      "spec": "docs/spec/composition.md:60-65",
+      "requiredOutcome": "Template source run/finality and memo run use current tracked member; explicit members have no member binding and cannot forward.member.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "memberBinding",
+          "file": "packages/definition/test/member-binding.test.ts",
+          "line": 97,
+          "title": "instance source run and finality, and member memo run, receive the supplier",
+          "proves": "Instance run/finality/memo receive current supplied member view; component port assertion only.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-definition.log"
+        },
+        {
+          "id": "memberOwn",
+          "file": "packages/core/test/keyed/members.test.ts",
+          "line": 291,
+          "title": "a member source reads its member",
+          "executionLog": "scratch/gap-hunt/contracts/a-completion-core.log"
+        },
+        {
+          "id": "memberAbsent",
+          "file": "packages/definition/test/member-binding.test.ts",
+          "line": 124,
+          "title": "composition-level steps and explicit M3 members have no member binding",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-definition.log"
+        },
+        {
+          "id": "memberForward",
+          "file": "packages/definition/test/nested-invocation.test.ts",
+          "line": 246,
+          "title": "CMP-9: member origins require a template instance",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-definition.log"
+        }
+      ]
+    },
+    {
+      "id": "CMP5-hierarchical",
+      "spec": "docs/spec/composition.md:69-73",
+      "requiredOutcome": "Nested consumed output evidence propagates without flattening transitive inputs into parent validity.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "nested",
+          "file": "packages/core/test/m4-acceptance/nested.test.ts",
+          "line": 37,
+          "title": "a rubric wording change reruns every assessment once; summaries and the report keep their exact references with zero bodies",
+          "proves": "Changed tracked child input with equal selected output reruns children while outer references/bodies remain retained/zero.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        },
+        {
+          "id": "multihopCurrent",
+          "file": "packages/core/test/gap-hunt-contracts-multihop.test.ts",
+          "line": 49,
+          "title": "equal-output rebinding refreshes earlier-child forwarding and derived subjects without rewriting original provenance",
+          "proves": "Eight processes follow source-to-normalize-to-score earlier-child forwarded origins plus transformed derived subject through equal-output cutoff, later new names/score changes, unread edits and rollback; exact current acceptance dependencies change without rewriting original parent dependencies; two cold stores agree.",
+          "executionLog": "scratch/gap-hunt/contracts/multihop-results.log"
+        }
+      ]
+    },
+    {
+      "id": "CMP6-structural",
+      "spec": "docs/spec/composition.md:75-94",
+      "requiredOutcome": "Current unique structural descriptors replace object/name/text/ordinal guesses; missing/ambiguous slots miss distinctly and reverse registration preserves result ownership.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "slotMissing",
+          "file": "packages/definition/test/nested-composition.test.ts",
+          "line": 264,
+          "title": "EXP-4: opening a parent whose declared slot is unsupplied rejects with missing-slot before any callback runs",
+          "proves": "Missing declared supplied slot rejects before author callback.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-definition.log"
+        },
+        {
+          "id": "slotAmbiguous",
+          "file": "packages/definition/test/nested-composition.test.ts",
+          "line": 273,
+          "title": "EXP-4: a slot supplied twice rejects with ambiguous-slot, distinct from missing, before any callback runs",
+          "proves": "Multiply supplied slot produces ambiguous-slot before author callback.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-definition.log"
+        },
+        {
+          "id": "supplied",
+          "file": "packages/core/test/m4-acceptance/nested.test.ts",
+          "line": 88,
+          "title": "binding rubric B is a child implementation change with equal scores (parents retained); binding rubric C changes Ada",
+          "proves": "Supplied callable replacement is child implementation change; equal selected scores preserve parents and changed scores rerun only affected parents.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        },
+        {
+          "id": "topology",
+          "file": "packages/core/test/m4-acceptance/topology.test.ts",
+          "line": 29,
+          "title": "the step factory runs once per process, and mutating every author array, record and input after composing changes nothing in a later process",
+          "proves": "Factory executes once; postcompose mutation preserves topology, retained references, and zero bodies after restart.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        },
+        {
+          "id": "keyed",
+          "file": "packages/core/test/m4-acceptance/keyed.test.ts",
+          "line": 84,
+          "title": "an inserted contributor runs once and reruns the report; a deleted one is no longer required and never retracted; a reorder alone runs no member or report body",
+          "proves": "Insertion admits only new member and aggregate; deletion does not retract; reorder produces zero member/aggregate bodies.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        }
+      ]
+    },
+    {
+      "id": "CMP7-forwarded",
+      "spec": "docs/spec/composition.md:96-112",
+      "requiredOutcome": "Justified forwarded origins resolve current input/member/earlier-output paths; stored values never replace current bindings.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "currentArguments",
+          "file": "packages/core/test/gap-hunt-contracts-nested-current.test.ts",
+          "line": 10,
+          "title": "renumbered derived subjects and changed forwarded fields agree with cold computation across successive restarts",
+          "proves": "Renumbered PR derived subject executes only new child; changed current forwarded PR field executes only affected child/parent; both match cold current stores; rollback reuses.",
+          "executionLog": "scratch/gap-hunt/contracts/nested-current-results.log"
+        },
+        {
+          "id": "multihopCurrent",
+          "file": "packages/core/test/gap-hunt-contracts-multihop.test.ts",
+          "line": 49,
+          "title": "equal-output rebinding refreshes earlier-child forwarding and derived subjects without rewriting original provenance",
+          "proves": "Eight processes follow source-to-normalize-to-score earlier-child forwarded origins plus transformed derived subject through equal-output cutoff, later new names/score changes, unread edits and rollback; exact current acceptance dependencies change without rewriting original parent dependencies; two cold stores agree.",
+          "executionLog": "scratch/gap-hunt/contracts/multihop-results.log"
+        },
+        {
+          "id": "memberForward",
+          "file": "packages/definition/test/nested-invocation.test.ts",
+          "line": 246,
+          "title": "CMP-9: member origins require a template instance",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-definition.log"
+        }
+      ]
+    },
+    {
+      "id": "CMP7-derived",
+      "spec": "docs/spec/composition.md:96-127",
+      "requiredOutcome": "Derived values are justified by current parent implementation/facts and earlier validated consumed call outputs in order.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "justification",
+          "file": "packages/definition/test/nested-witness.test.ts",
+          "line": 153,
+          "title": "CMP-7: justification is read back for forwarded and derived recipes alike, never inferred",
+          "proves": "Forwarded and derived justification flags survive witness parsing rather than inferred validity.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-definition.log"
+        },
+        {
+          "id": "currentArguments",
+          "file": "packages/core/test/gap-hunt-contracts-nested-current.test.ts",
+          "line": 10,
+          "title": "renumbered derived subjects and changed forwarded fields agree with cold computation across successive restarts",
+          "proves": "Renumbered PR derived subject executes only new child; changed current forwarded PR field executes only affected child/parent; both match cold current stores; rollback reuses.",
+          "executionLog": "scratch/gap-hunt/contracts/nested-current-results.log"
+        },
+        {
+          "id": "multihopCurrent",
+          "file": "packages/core/test/gap-hunt-contracts-multihop.test.ts",
+          "line": 49,
+          "title": "equal-output rebinding refreshes earlier-child forwarding and derived subjects without rewriting original provenance",
+          "proves": "Eight processes follow source-to-normalize-to-score earlier-child forwarded origins plus transformed derived subject through equal-output cutoff, later new names/score changes, unread edits and rollback; exact current acceptance dependencies change without rewriting original parent dependencies; two cold stores agree.",
+          "executionLog": "scratch/gap-hunt/contracts/multihop-results.log"
+        }
+      ]
+    },
+    {
+      "id": "CMP7-honest-miss",
+      "spec": "docs/spec/composition.md:99-112",
+      "requiredOutcome": "Unreconstructible/unjustified arguments honestly miss parent before admitted normal body; valid children may reuse; validation never secretly replays expensive parent.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "argumentMiss",
+          "file": "packages/core/test/m4-acceptance/nested.test.ts",
+          "line": 141,
+          "title": "an argument derived after an observed untracked read",
+          "proves": "Unjustified and unreconstructible parent variants produce distinct honest misses, one normal parent execution, retained eligible children and report; no validation-only replay.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        },
+        {
+          "id": "forwardedUnjustified",
+          "file": "packages/core/test/nested/arguments.test.ts",
+          "line": 452,
+          "title": "a forwarded path chosen after an observed untracked read is unjustified: the parent reruns and reads the current choice",
+          "executionLog": "scratch/gap-hunt/contracts/resolution-gap-controls.log",
+          "proves": "Forwarded unjustified is a distinct executed variant, not inferred from derived unjustified. Included in verified 221-test baseline and restored matrix."
+        },
+        {
+          "id": "forwardedUnavailable",
+          "file": "packages/core/test/nested/arguments.test.ts",
+          "line": 476,
+          "title": "a forwarded origin whose current shape no longer answers the recorded path is changed evidence",
+          "executionLog": "scratch/gap-hunt/contracts/resolution-gap-controls.log",
+          "proves": "An unavailable current forwarded path is not replaced by its saved value."
+        },
+        {
+          "id": "unreconstructible",
+          "file": "packages/core/test/nested/validation.test.ts",
+          "line": 442,
+          "title": "an unreconstructible argument is an immediate miss before its child is invoked; the parent reruns and children reuse",
+          "executionLog": "scratch/gap-hunt/contracts/resolution-gap-controls.log",
+          "proves": "Unreconstructible function argument honestly misses before child invocation."
+        }
+      ]
+    },
+    {
+      "id": "CMP8-gate-kind",
+      "spec": "docs/spec/composition.md:131-139",
+      "requiredOutcome": "Only explicit false skips; nonboolean/failed gate is a member failure; success undefined/skipped do not collapse.",
+      "classification": "insufficient_proof_unexamined",
+      "issue": 156,
+      "executionBoundary": "Gate negatives and skip are executed; bare undefined success is not established under selected record/array root contract. Full-target reconciliation belongs156.",
+      "originalRoutes": [
+        {
+          "id": "keyedGate",
+          "file": "packages/core/test/keyed/members.test.ts",
+          "line": 193,
+          "title": "a gate that %s fails only that member",
+          "executionLog": "scratch/gap-hunt/contracts/a-completion-core.log"
+        },
+        {
+          "id": "foldSkipped",
+          "file": "packages/core/test/fold/fold.test.ts",
+          "line": 230,
+          "title": "reading a skipped entry",
+          "executionLog": "scratch/gap-hunt/contracts/a-completion-core.log"
+        },
+        {
+          "id": "promiseGate",
+          "file": "packages/core/test/keyed/members.test.ts",
+          "line": 221,
+          "title": "a gate that returns a %s fails only that member: it returned a promise, not a boolean",
+          "executionLog": "scratch/gap-hunt/contracts/resolution-gap-controls.log",
+          "proves": "Both promise and thenable rows execute, beyond scalar/nonboolean/throw gate negatives."
+        }
+      ]
+    },
+    {
+      "id": "CMP8-entries",
+      "spec": "docs/spec/composition.md:140-142",
+      "requiredOutcome": "Strict fold receives one canonical keyed entry per member, succeeded data or skipped no-data.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "foldEntries",
+          "file": "packages/core/test/fold/fold.test.ts",
+          "line": 220,
+          "title": "the body receives one entry per current member",
+          "executionLog": "scratch/gap-hunt/contracts/a-completion-core.log"
+        },
+        {
+          "id": "foldSkipped",
+          "file": "packages/core/test/fold/fold.test.ts",
+          "line": 230,
+          "title": "reading a skipped entry",
+          "executionLog": "scratch/gap-hunt/contracts/a-completion-core.log"
+        }
+      ]
+    },
+    {
+      "id": "CMP8-readiness",
+      "spec": "docs/spec/composition.md:142-148",
+      "requiredOutcome": "Failed/cancelled required member fails immediately with pending/open state; otherwise open/pending waits; no fold body/publication until ready; closed-empty succeeds.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "fold",
+          "file": "packages/core/test/m4-acceptance/fold.test.ts",
+          "line": 31,
+          "title": "A-11: with Cy failing, Ben pending and discovery open, Ada publishes and the report fails naming each state; the repair runs only the unfinished members and the report",
+          "proves": "Strict fold reports failure/pending/open-discovery and does not run report until repair.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        },
+        {
+          "id": "empty",
+          "file": "packages/core/test/m4-acceptance/fold.test.ts",
+          "line": 121,
+          "title": "a closed zero-member listing is a complete report, distinct from an open empty listing and from discovery that did not settle; neither rewinds it",
+          "proves": "Closed empty succeeds; open/unsettled waits without replacing earlier publication.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        }
+      ]
+    },
+    {
+      "id": "CMP8-coverage",
+      "spec": "docs/spec/composition.md:147-151",
+      "requiredOutcome": "Framework coverage survives author omission and remains available on cold/reused outcomes.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "coverage",
+          "file": "packages/core/test/m4-acceptance/fold.test.ts",
+          "line": 98,
+          "title": "a report body that drops exclusions still carries framework coverage naming required and skipped keys and closure, cold and reused",
+          "proves": "Framework coverage survives author omission, cold and reused.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        }
+      ]
+    },
+    {
+      "id": "CMP8-facts",
+      "spec": "docs/spec/composition.md:151-155",
+      "requiredOutcome": "Verification consumes included/skipped outcome and read member facts, excluding gate raw observations; flip-free threshold runs nothing.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "foldGateFacts",
+          "file": "packages/core/test/fold/fold.test.ts",
+          "line": 289,
+          "title": "provenance records the membership-and-status fact",
+          "executionLog": "scratch/gap-hunt/contracts/a-completion-core.log"
+        },
+        {
+          "id": "gates",
+          "file": "packages/core/test/m4-acceptance/topology.test.ts",
+          "line": 73,
+          "title": "with a report that does not read the threshold, a gate flip reaches the fold only through membership, and a flip-free edit runs nothing at all",
+          "proves": "Gate flip changes required membership; flip-free threshold produces zero bodies/admissions; old references remain.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        }
+      ]
+    },
+    {
+      "id": "CMP8-correspondence",
+      "spec": "docs/spec/composition.md:155-157",
+      "requiredOutcome": "Renamed consumed step/template or moved collection is an honest miss instead of guessed remapping.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "templateMove",
+          "file": "packages/definition/test/template.test.ts",
+          "line": 293,
+          "title": "a renamed template slot is a miss",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-definition.log"
+        },
+        {
+          "id": "foldCorrespondence",
+          "file": "packages/core/test/fold/restart.test.ts",
+          "line": 253,
+          "title": "%s in a later process is a correspondence miss for the fold",
+          "executionLog": "scratch/gap-hunt/contracts/a-completion-core.log"
+        }
+      ]
+    },
+    {
+      "id": "CMP8-cancel-priority",
+      "spec": "docs/spec/composition.md:157-158",
+      "requiredOutcome": "Cancelled child dominates denied child regardless of order.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "cancelDominates",
+          "file": "packages/core/test/keyed/members.test.ts",
+          "line": 236,
+          "title": "a cancelled child dominates a denied one",
+          "executionLog": "scratch/gap-hunt/contracts/a-completion-core.log"
+        }
+      ]
+    },
+    {
+      "id": "CMP8-infrastructure",
+      "spec": "docs/spec/composition.md:158-160",
+      "requiredOutcome": "Admission/observer/integrity infrastructure errors fail whole request rather than becoming terminal member failures.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "foldInfra",
+          "file": "packages/core/test/fold/fold.test.ts",
+          "line": 182,
+          "title": "a run-level failure while members settle",
+          "executionLog": "scratch/gap-hunt/contracts/a-completion-core.log"
+        },
+        {
+          "id": "foldObserver",
+          "file": "packages/core/test/gap-hunt-contracts-fold-observer.test.ts",
+          "line": 10,
+          "title": "a pre-execution member observer failure rejects the whole strict-fold request and publishes no fold",
+          "executionLog": "scratch/gap-hunt/contracts/fold-observer-results.log",
+          "proves": "Observer exception at member verify rejects with observer-failure; fold body and publication remain absent. Post-commit observer diagnostics are a separate settled contract."
+        },
+        {
+          "id": "foldIntegrity",
+          "file": "packages/core/test/fold/fold.test.ts",
+          "line": 456,
+          "title": "malformed version-3 fold evidence is integrity damage, never a miss: %s",
+          "executionLog": "scratch/gap-hunt/contracts/resolution-gap-controls.log",
+          "proves": "Malformed version-3 fold evidence returns request integrity error; #144 additionally tests missing own implementation."
+        }
+      ]
+    },
+    {
+      "id": "CMP8-no-retraction",
+      "spec": "docs/spec/composition.md:160-163",
+      "requiredOutcome": "Skip/deletion does not retract earlier history/latest pointer or prove member is currently required.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "keyed",
+          "file": "packages/core/test/m4-acceptance/keyed.test.ts",
+          "line": 84,
+          "title": "an inserted contributor runs once and reruns the report; a deleted one is no longer required and never retracted; a reorder alone runs no member or report body",
+          "proves": "Insertion admits only new member and aggregate; deletion does not retract; reorder produces zero member/aggregate bodies.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        },
+        {
+          "id": "gates",
+          "file": "packages/core/test/m4-acceptance/topology.test.ts",
+          "line": 73,
+          "title": "with a report that does not read the threshold, a gate flip reaches the fold only through membership, and a flip-free edit runs nothing at all",
+          "proves": "Gate flip changes required membership; flip-free threshold produces zero bodies/admissions; old references remain.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        },
+        {
+          "id": "empty",
+          "file": "packages/core/test/m4-acceptance/fold.test.ts",
+          "line": 121,
+          "title": "a closed zero-member listing is a complete report, distinct from an open empty listing and from discovery that did not settle; neither rewinds it",
+          "proves": "Closed empty succeeds; open/unsettled waits without replacing earlier publication.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        }
+      ]
+    },
+    {
+      "id": "CMP9-enforcement",
+      "spec": "docs/spec/composition.md:165-170",
+      "requiredOutcome": "Construction result resolution, undeclared calls, target substitution and post-freeze mutation reject before affected admission.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Passing executed outcome evidence carried from pinned baseline c5802da; not rerun or recertified wholesale at merged main.",
+      "originalRoutes": [
+        {
+          "id": "rejectGraph",
+          "file": "packages/core/test/m4-acceptance/topology.test.ts",
+          "line": 44,
+          "title": "an operation created from a result is rejected before any work is admitted for it; nothing is published for it or for the summaries that tried it",
+          "proves": "Runtime created declaration rejects before admission/publication.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+        },
+        {
+          "id": "frozenBuilder",
+          "file": "packages/definition/test/template.test.ts",
+          "line": 150,
+          "title": "every member builder call after the factory returns",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-definition.log"
+        },
+        {
+          "id": "slotMissing",
+          "file": "packages/definition/test/nested-composition.test.ts",
+          "line": 264,
+          "title": "EXP-4: opening a parent whose declared slot is unsupplied rejects with missing-slot before any callback runs",
+          "proves": "Missing declared supplied slot rejects before author callback.",
+          "executionLog": "scratch/gap-hunt/contracts/semantic-definition.log"
+        }
+      ]
+    },
+    {
+      "id": "TRK5-navigation-kind-current",
+      "spec": "docs/spec/tracking.md:63",
+      "requiredOutcome": "Record/array navigation observes bounded kind; null/missing transition invalidates while equal-kind replacement preserves unread-member precision.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Prior171 review semantic supplement, facade, operation matrix and nested12/12 exact reviewed heads; not a newly executed full observation matrix."
+    },
+    {
+      "id": "REUSE008-tracking-generation-current",
+      "spec": "docs/spec/execution.md:151-160",
+      "requiredOutcome": "All source/memo/supplied/fold provenance uses trackingSemantics2; missing/old/unknown generations miss before interpretation; malformed current records reject; old exact history and journal remain readable; current restart reuses.",
+      "classification": "executed_passing",
+      "issue": null,
+      "executionBoundary": "Current main f43c587 provenance36/36 and oldSQLite migration1/1 with37 unrelated cases skipped; strict test compilation via npm test:unit and independent full build."
+    },
+    {
+      "id": "ARC008-fake-child-isolation",
+      "spec": "docs/spec/architecture.md:134-151",
+      "requiredOutcome": "Isolated Resolution contract tests use fake current facts, source policies and child resolvers; assembly evidence does not replace isolated invariant tests.",
+      "classification": "missing_surface_target",
+      "issue": 175,
+      "executionBoundary": "Literal specified-but-missing validation seam; static census exit0 is not conformance.175 supersedes prior outcome-only rationale; no masked runtime defect prerequisite."
+    }
+  ],
+  "passingEvidenceCohorts": {
+    "carried_historical_baseline": 62,
+    "prior_exact_head_171_review": 2,
+    "fresh_current_main_overnight": 2
+  },
+  "trackG": {
+    "consumerSourcePin": "d172f5f7c0790914bfc7a0ffbf1398618dd72ad8",
+    "microdeltaPin": "f43c5872987573d9b98a19f41c324b4d9336894c",
+    "evidenceStatus": "worker report pending; no requirements or success inferred from source pin alone"
+  }
+}

@@ -34,6 +34,19 @@ if len(sys.argv)>1 and sys.argv[1]=='--check-logs':
   except (AssertionError,KeyError):rejected.append(label)
   else:raise AssertionError('Unsafe evidence accepted:'+label)
  print(json.dumps(dict(status='PASS',exactJestLogs=10,syntheticRejected=rejected),indent=2));sys.exit(0)
+# Reject unrelated edits before creating output or entering any cleanup path.
+def preflight():
+ tracked=subprocess.check_output(['git','diff','--name-only','HEAD'],text=True).splitlines()
+ staged=subprocess.check_output(['git','diff','--cached','--name-only'],text=True).splitlines()
+ assert not tracked and not staged, 'tracked checkout must start clean'
+ production=subprocess.check_output(['git','ls-tree','-r','--name-only',SOURCE,'packages','tooling','package.json','package-lock.json','tsconfig.json'],text=True).splitlines()
+ for name in production:
+  assert Path(name).read_bytes()==subprocess.check_output(['git','show',SOURCE+':'+name]), 'production differs: '+name
+ assert not Path('packages/core/test/gap-hunt-review195-final-original.test.ts').exists(), 'transient fixture must start absent'
+ return len(production)
+if len(sys.argv)>1 and sys.argv[1]=='--preflight':
+ print(json.dumps(dict(status='PASS',productionFiles=preflight())));sys.exit(0)
+preflight()
 OUT=Path(os.environ.get('MICRODELTA_EVIDENCE_OUTPUT',tempfile.mkdtemp(prefix='microdelta-review195-final-')));OUT.mkdir(parents=True,exist_ok=True);print('Evidence output: '+str(OUT),flush=True)
 NODE=subprocess.check_output(['node','-p','process.execPath'],text=True).strip();rows=[];native={}
 def norm(s):return s.replace(str(OUT),'<captures>').replace(str(ROOT),'<checkout>').replace(NODE,'<node>')
@@ -44,7 +57,7 @@ def command(name,args,expected=0):
   sdk=Path('/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk')
   if platform.system()=='Darwin' and sdk.exists():env['SDKROOT']=str(sdk)
   native.update(SDKROOT=env.get('SDKROOT'),node=subprocess.check_output(['node','-v'],text=True).strip())
- r=subprocess.run(args,env=env,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT);log=norm(r.stdout);(OUT/(name+'.log')).write_text(log);rows.append(dict(name=name,argv=[norm(a) for a in args],exit=r.returncode,expected=expected));print(name,r.returncode,'expected',expected,flush=True);assert r.returncode==expected,name
+ r=subprocess.run(args,env=env,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=900);log=norm(r.stdout);(OUT/(name+'.log')).write_text(log);rows.append(dict(name=name,argv=[norm(a) for a in args],exit=r.returncode,expected=expected));print(name,r.returncode,'expected',expected,flush=True);assert r.returncode==expected,name
  if name in EXPECTED:
   f=OUT/(name+'.json');f.write_text(norm(f.read_text()));guard(name,log,json.loads(f.read_text()))
 def jest(name,path,expected=0,config='packages/core/jest.config.mjs'):

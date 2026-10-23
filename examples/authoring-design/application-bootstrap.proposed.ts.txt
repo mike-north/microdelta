@@ -1,0 +1,44 @@
+// PROPOSED ONLY — simple entry bootstrap
+import { randomUUID } from 'node:crypto';
+import { openWorkspace } from 'microdelta';
+import { assessment } from './assessment.js';
+
+const workspace = openWorkspace({ location: './analysis.sqlite', logicalStore: 'demo' });
+try {
+  const result = await workspace.run({
+    analysis: 'single-pr', environment: 'local', requestKey: randomUUID(),
+    entry: assessment,
+    inputs: { pr: { id: '42', title: process.argv[2] ?? 'Fix login', labels: ['bug'] } },
+  });
+  if (result.status !== 'succeeded') {
+    throw new Error(`Analysis incomplete: ${result.status}`);
+  }
+  console.log(result.data);
+} finally {
+  workspace.close();
+}
+
+// Source example: read/validate this current snapshot first; then run
+// entry: report, inputs: { snapshot, scoring: { minimumLength: 8 } }.
+import { readFile } from 'node:fs/promises';
+import type { ICatalog } from './catalog-analysis.js';
+
+/** Rejects unsupported fixture content at the application boundary. */
+function isCatalog(value: unknown): value is ICatalog {
+  if (typeof value !== 'object' || value === null ||
+      !('complete' in value) || typeof value.complete !== 'boolean' ||
+      !('pullRequests' in value) || !Array.isArray(value.pullRequests)) {
+    return false;
+  }
+  return value.pullRequests.every((pr: unknown) =>
+    typeof pr === 'object' && pr !== null &&
+    'id' in pr && typeof pr.id === 'string' &&
+    'title' in pr && typeof pr.title === 'string' &&
+    'labels' in pr && Array.isArray(pr.labels) &&
+    pr.labels.every((label: unknown) => typeof label === 'string'));
+}
+const parsed: unknown = JSON.parse(await readFile('./catalog.json', 'utf8'));
+if (!isCatalog(parsed)) {
+  throw new Error('Invalid catalog');
+}
+const snapshot = parsed;

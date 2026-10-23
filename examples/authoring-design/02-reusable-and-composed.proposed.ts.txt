@@ -1,0 +1,36 @@
+// PROPOSED ONLY — two explicitly named module sections.
+// assessment.ts
+import { memo } from 'microdelta';
+import type { IBinding } from 'microdelta';
+
+export interface IPullRequest {
+  readonly id: string;
+  readonly title: string;
+  readonly labels: readonly string[];
+}
+export interface IScoring { readonly minimumLength: number }
+
+/** Retains the assessment of the identified PR under supplied scoring inputs. */
+export function assess(occurrence: string, pr: IBinding<IPullRequest>, scoring: IBinding<IScoring>) {
+  return memo({
+    name: occurrence, subject: ({ pr }) => `assessment:${pr.id}`,
+    from: { pr, scoring },
+    run: ({ pr, scoring }) => pr.title.length >= scoring.minimumLength ? 1 : 0,
+  });
+}
+
+// report.ts
+import { analysis, memo } from 'microdelta';
+import { assess } from './assessment.js';
+import type { IPullRequest, IScoring } from './assessment.js';
+
+interface IInputs { readonly pr: IPullRequest; readonly scoring: IScoring }
+
+export const report = analysis<IInputs>((input) => {
+  const score = assess('assessment', input.pr, input.scoring);
+  return memo({
+    name: 'report',
+    from: { score },
+    run: ({ score }) => ({ score }),
+  });
+});

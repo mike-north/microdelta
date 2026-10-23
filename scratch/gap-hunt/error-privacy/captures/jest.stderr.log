@@ -1,0 +1,36 @@
+  console.log
+    author-error-observation {"mode":"plain-error","outerCode":"execution-failure","outerMessage":"Body of [\"opaque-author\",\"step\",\"value\",null] failed","causeIsThrown":true,"outerIsThrown":false,"completedResult":false}
+
+      at Object.<anonymous> (test/gap-hunt-error-privacy.test.ts:103:15)
+
+  console.log
+    author-error-observation {"mode":"author-resolution-error","outerCode":"unsupported-result","outerMessage":"SYNTHETIC-OPAQUE-DETAIL-9d72","causeIsThrown":false,"outerIsThrown":true,"completedResult":false}
+
+      at Object.<anonymous> (test/gap-hunt-error-privacy.test.ts:103:15)
+
+(node:2679) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL packages/core/.test-build/test/gap-hunt-error-privacy.test.js
+  ● author-resolution-error: author text stays in cause rather than the framework failure message
+
+    expect(received).not.toContain(expected) // indexOf
+
+    Expected substring: not "SYNTHETIC-OPAQUE-DETAIL-9d72"
+    Received string:        "SYNTHETIC-OPAQUE-DETAIL-9d72"
+
+      102 |       if (!(failure instanceof ResolutionError)) { throw new Error('Expected typed framework failure'); }
+      103 |       console.log('author-error-observation', JSON.stringify({ mode, outerCode: failure.code, outerMessage: failure.message, causeIsThrown: failure.cause === thrown, outerIsThrown: failure === thrown, completedResult }));
+    > 104 |       expect(failure.message).not.toContain(marker);
+          |                                   ^
+      105 |       expect(failure.code).toBe('execution-failure');
+      106 |       expect(failure.cause).toBe(thrown);
+      107 |     } finally { workspace.close(); rmSync(directory, { recursive: true, force: true }); }
+
+      at Object.<anonymous> (test/gap-hunt-error-privacy.test.ts:104:35)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 8 passed, 9 total
+Snapshots:   0 total
+Time:        0.301 s
+Ran all test suites within paths "packages/core/.test-build/test/gap-hunt-error-privacy.test.js".
+Test results written to: scratch/gap-hunt/error-privacy/local-results/jest.json

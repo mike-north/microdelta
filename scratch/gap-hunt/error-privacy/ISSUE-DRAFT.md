@@ -1,17 +1,49 @@
-# Preserve the author-error privacy boundary for author-created ResolutionError instances
+## Problem and governing contract
 
-RUN-013 and ResolutionError's exported contract require author/caller thrown text to reach callers only as cause. On main `2a640aca75d5728484a2cb06af88c77690616ba9`, a bound helper throwing `new ResolutionError('unsupported-result', syntheticMarker)` escapes the memo body as the identical outer framework error, exposing its message. Ordinary Error is safely wrapped. This is a distinct recurrence after #147, whose ordinary Error regression passes.
+**Medium correctness/privacy gap:** an author-created `ResolutionError` with a non-`execution-failure` code escapes the memo body's failure wrapper. Its author-selected text becomes the outer framework message, and the original object is not preserved as that wrapper's cause.
 
-Owning area: Resolution runtime error provenance, consumed through Core's alpha facade. No prerequisite design decision is needed: safe messages and genuine child error propagation are both existing contracts. Do not introduce new host support, provider integrations, or change genuine child classifications.
+[RUN-013](https://github.com/mike-north/microdelta/blob/2a640aca75d5728484a2cb06af88c77690616ba9/docs/spec/operations.md#run-013--retry-history-is-part-of-supervision) says framework failure messages identify the step/position and failure kind only: “What author or caller code throws ... never enters them.” The exported ResolutionError contract repeats that boundary. It makes no exception for author-created instances of an exported error class.
 
-Acceptance criteria:
+This is a distinct recurrence after closed #147, which repaired ordinary author Error interpolation. Its ordinary-Error control still passes. Owning area: Resolution's memo failure boundary, consumed through Core's alpha authoring/workspace facade. Genuine declared-child runtime failures must keep their existing classification.
 
-1. A memo body/helper throwing an author-created exported ResolutionError with non-execution-failure code yields a safe execution-failure outer message and preserves exact thrown identity as cause; synthetic marker absent from outer message.
-2. Ordinary author Error retains the same safe wrapping and cause identity. Cover both Error variants as red-before-green regression tests.
-3. A genuine declared child runtime unsupported-result still reaches the parent with its existing classification and safe framework message; the fix must distinguish runtime provenance from public class identity.
-4. Preserve failed-provider response versus unknown rejected-perform semantics, successful sibling progress, no implicit retry, opaque error cause identity where returned, and no conversion/getter evaluation. Existing six bounded controls remain green.
-5. Strict compile and type-aware lint pass with no casts/check relaxations; run repository-required affected/full checks and record exact-head evidence in the PR.
+## Failing reproduction and exact observation
 
-Reproduction: `python3 scratch/gap-hunt/error-privacy/run.py` on the accompanying evidence commit from a clean Node 24 checkout. Expected current evidence: eight pass, one exact intended message assertion fails, zero runtime-error suites. The runner exits zero when it verifies that expected reproduction. After implementation, promote the fixture into ordinary regression coverage with all nine passing rather than preserving the expected-red runner as a CI gate.
+Branch `gap-hunt-error-privacy`, executed runner commit `702a15f56f69884f449dd6cfbd31c9b7420f06ec`. From a clean checkout with Node24/npm and native SQLite prerequisites:
 
-Observed failure is bounded to the author-path outer framework message. Author-path events/store leakage and all callback paths are unclaimed. Evidence report and receipt accompany the fixture. Implement in one isolated worktree, use Refs #<assigned issue>, and stop at PR-open for supervisory review.
+```sh
+python3 scratch/gap-hunt/error-privacy/run.py
+```
+
+The command installs/builds, compiles strictly, runs type-aware lint and checks the exact expected negative oracle. Its exit0 means the reproduction succeeded, **not** that the product assertions are green. Test: `packages/core/test/gap-hunt-error-privacy.test.ts`.
+
+A bound author helper throws `new ResolutionError('unsupported-result', 'SYNTHETIC-OPAQUE-DETAIL-9d72')`. Before the assertion, the actual facade result records:
+
+- outer code: `unsupported-result`, expected safe author-failure classification;
+- outer message: exactly the synthetic marker, expected a safe message naming the step;
+- outer error is the thrown object: true; outer cause is the thrown object: false;
+- no completed result is returned.
+
+The message assertion fails. The later expected code/cause assertions do not execute; their observed values above are recorded separately before that failure. The run has8 passing tests,1 intended failure,0 runtime-error suites. Strict compile and lint pass. A fresh independent checkout ran the complete default command with clean tracked source before/after.
+
+The confirmed discrepancy is the outer framework message/cause boundary. No author-path event or store leakage, sandbox escape, or failure of every callback path is claimed. Six separate opaque provider-error cases do pass their event/diagnostic/store checks.
+
+## Numbered acceptance criteria
+
+1. An author memo body/helper throwing a constructed exported ResolutionError with a non-execution-failure code receives a safe `execution-failure` outer message naming the step, with the exact thrown object preserved as cause. Author-selected text must not become the outer framework message. Cover the reproduced code and another non-execution-failure code; class identity alone is not evidence that the runtime originated a failure.
+2. Preserve ordinary author Error and author-created execution-failure wrapping/cause identity. Observe the new non-execution-failure case fail before implementation while the ordinary-Error control remains green; after implementation all these cases pass as ordinary assertions.
+3. A real declared child returning unsupported data still propagates the existing runtime `unsupported-result` classification and safe message. A parent that swallows a failed child must still not publish an incomplete successful result. Do not fix the author case by discarding genuine child failure semantics.
+4. Preserve the six bounded provider controls: explicit failed response versus unknown rejected-perform semantics, independent sibling progress, exactly one provider invocation, opaque cause identity on the returned failure path, and no conversion/getter evaluation or synthetic detail in event/diagnostic/store views.
+5. The original nine-case fixture becomes all-green regression coverage. Retain strict TypeScript, type-aware lint, declaration boundaries and the repository's required checks. Record the test-first result and exact commands/current-head outcome in the PR; do not keep the expected-red evidence runner as a passing product CI gate.
+
+## Scope, exclusions and dependencies
+
+Scope: the memo-body author failure boundary, its provenance distinction from genuine runtime child failures, and focused regression tests. Suggested direction: preserve that provenance distinction instead of trusting the public error class or message contents. The issue does not prescribe a representation.
+
+Out of scope: a new error API, redacting deliberate caller access to `cause`, changing genuine child classifications, new hosts/provider integrations, hostile-JavaScript sandboxing, scalar result support, paid-provider calls, package publication or releases. Other callback paths are unexamined by this reproduction; do not claim them fixed without evidence.
+
+Blocking dependencies: none. Coordinate with concurrent Resolution work, but current open reuse/key/type work does not cover this failure. The privacy policy is settled; this issue needs no owner design decision. Preserve the initial runner-parser failure separately from the product evidence.
+
+## Attribution
+
+Implementer: gpt-6.1-sol gap-hunt worker for Mike North authored the synthetic fixture; no product fix is included.
+Agent assistance: a second gpt-6.1-sol worker independently reviewed the contract and artifact. The supervising Codex agent corrected the evidence runner, ran the exact fresh reproduction, inspected the source and preserved controls, checked live duplicates, and filed the issue. No human implementation or review is claimed.

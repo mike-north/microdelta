@@ -1,0 +1,96 @@
+{
+  "source": "2a640aca75d5728484a2cb06af88c77690616ba9",
+  "head": "702a15f56f69884f449dd6cfbd31c9b7420f06ec",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "architecture": "arm64",
+  "node": "v24.22.1",
+  "npm": "11.12.1",
+  "clean_before": true,
+  "node_modules_absent_before": true,
+  "test_sha256": "affeb8a6c25bbdf8a84d2d5a193d25f9cc2f9df74a43333c4d82ba78d71d5366",
+  "commands": [
+    {
+      "name": "install",
+      "argv": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "exit": 0,
+      "seconds": 3.697321457992075
+    },
+    {
+      "name": "build",
+      "argv": [
+        "npm",
+        "run",
+        "build:packages"
+      ],
+      "exit": 0,
+      "seconds": 24.3699764579942
+    },
+    {
+      "name": "compile",
+      "argv": [
+        "node_modules/.bin/tsc",
+        "-p",
+        "packages/core/tsconfig.test.json"
+      ],
+      "exit": 0,
+      "seconds": 2.4400054160214495
+    },
+    {
+      "name": "lint",
+      "argv": [
+        "node_modules/.bin/eslint",
+        "packages/core/test/gap-hunt-error-privacy.test.ts"
+      ],
+      "exit": 0,
+      "seconds": 2.048654166981578
+    },
+    {
+      "name": "jest",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "packages/core/jest.config.mjs",
+        "--runInBand",
+        "--runTestsByPath",
+        "packages/core/.test-build/test/gap-hunt-error-privacy.test.js",
+        "--json",
+        "--outputFile",
+        "scratch/gap-hunt/error-privacy/local-results/jest.json"
+      ],
+      "exit": 1,
+      "seconds": 1.0278844580170698
+    }
+  ],
+  "jestExit": 1,
+  "passed": 8,
+  "failed": [
+    "author-resolution-error: author text stays in cause rather than the framework failure message"
+  ],
+  "runtimeErrorSuites": 0,
+  "observations": [
+    {
+      "mode": "plain-error",
+      "outerCode": "execution-failure",
+      "outerMessage": "Body of [\"opaque-author\",\"step\",\"value\",null] failed",
+      "causeIsThrown": true,
+      "outerIsThrown": false,
+      "completedResult": false
+    },
+    {
+      "mode": "author-resolution-error",
+      "outerCode": "unsupported-result",
+      "outerMessage": "SYNTHETIC-OPAQUE-DETAIL-9d72",
+      "causeIsThrown": false,
+      "outerIsThrown": true,
+      "completedResult": false
+    }
+  ],
+  "clean_after": true
+}

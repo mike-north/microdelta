@@ -35,3 +35,11 @@ Earlier harness development used NaN as the invalid child output; Value admits N
 Parent checked live issue/PR state: closed #147 fixed ordinary author Error interpolation; this public error-class bypass is a distinct recurrence of the same privacy contract. Historical #119/#122 acceptance does not supply this discriminator. Open PRs #188/#187/#185/#184/#179 do not cover it. Parent owns publication and readiness decisions.
 
 The first clean runner at41521ed reached the8-pass/1-fail Jest result but failed its observation parser because Jest sent console records to stderr. That runner failure is historical evidence, not a product failure. The corrected evidence runner parses both output streams and asserts the observed codes, message and identities directly. Production and fixture bytes are unchanged.
+
+## Final clean execution
+
+Corrected runner commit `702a15f56f69884f449dd6cfbd31c9b7420f06ec` ran from an independent detached checkout with no node_modules, tracked-clean before and after. Node24.22.1/npm11.12.1 on macOS27.0.1 arm64. Install, package build, strict compilation and typed lint exit0; Jest exits1 for exactly the named author-resolution-error assertion, with8 passes and0 runtime-error suites. Captures preserve command output, structured observations and Jest results. Later artifact changes only add these captures and clarify the report/issue draft; the executed runner, fixture and production remain byte-identical.
+
+Main subsequently merged PR179 as7677ec4. Its four tooling-file changes leave the entire packages tree and compiler/build inputs unchanged; the observed runtime remains current at that main. This is source qualification, not another runtime execution.
+
+Agent assistance: a gpt-6.1-sol worker wrote the fixture and first evidence runner; another independently reviewed the contract and artifact. The supervising Codex agent corrected runner output parsing, executed the fresh command and checked the exact result. No human implementation or review is claimed.

@@ -2,7 +2,13 @@
 > microdelta@0.2.0 test:unit
 > tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand --runTestsByPath .test-build/test/gap-hunt-contracts-operation-matrix.test.js
 
-(node:13465) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+watchman warning: Recrawled this watch 3 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-contracts' ; watchman watch-project '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-contracts'`
+
+(node:88287) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
 (Use `node --trace-warnings ...` to show where the warning was created)
 FAIL .test-build/test/gap-hunt-contracts-operation-matrix.test.js
   ● gap hunt fresh-process consumer operation matrix › type agrees with cold current value for record → missing
@@ -138,9 +144,9 @@ FAIL .test-build/test/gap-hunt-contracts-operation-matrix.test.js
       at test/gap-hunt-contracts-operation-matrix.test.ts:36:28
 
 Test Suites: 1 failed, 1 total
-Tests:       6 failed, 7 passed, 13 total
+Tests:       6 failed, 8 passed, 14 total
 Snapshots:   0 total
-Time:        3.775 s
+Time:        4.548 s
 Ran all test suites within paths ".test-build/test/gap-hunt-contracts-operation-matrix.test.js".
 npm error Lifecycle script `test:unit` failed with error:
 npm error code 1

@@ -22,6 +22,9 @@ function configOf(variant: string): IConfig {
     case 'new-author-equal': return { detail: { name: 'Ada' }, author: { id: 'b', name: 'Ada', unread: 2 } };
     case 'new-author-change': return { detail: { name: 'Ada' }, author: { id: 'b', name: 'Grace', unread: 3 } };
     case 'third-author-equal': return { detail: { name: 'Ada' }, author: { id: 'c', name: 'Grace', unread: 4 } };
+    case 'branch-other': return { detail: { name: 'Ada' }, author: { id: 'b', name: 'Ben', unread: 2 } };
+    case 'branch-abandoned': return { detail: { name: 'Ada' }, author: { id: 'b', name: 'Changed', unread: 2 } };
+    case 'branch-active': return { detail: { name: 'Ada' }, author: { id: 'b', name: 'Changed', unread: 3 } };
     case 'third-author-change': return { detail: { name: 'Ada' }, author: { id: 'c', name: 'Katherine', unread: 5 } };
     default: throw new Error('Unknown snapshot');
   }
@@ -38,8 +41,9 @@ async function main(): Promise<void> {
   const nullish = builders.memo({ subject: 'nullish', run: ({ inputs }) => ({ value: (inputs.config.detail ?? 'fallback') === 'fallback' }) });
   const optional = builders.memo({ subject: 'optional', run: ({ inputs }) => ({ value: inputs.config.nested?.child?.name ?? 'fallback' }) });
   const leaf = builders.memo({ subject: 'leaf', run: ({ inputs }) => ({ value: inputs.config.author.name }) });
+  const branch = builders.memo({ subject: 'branch', run: ({ inputs }) => ({ value: inputs.config.author.id === 'a' ? inputs.config.author.name : inputs.config.author.unread }) });
   const composition = builders.compose({ scope: 'operation-analysis', inputs: [{ slot: 'config', value: configOf(variant) }], helpers: [], steps: [
-    { slot: 'type', declaration: type }, { slot: 'array', declaration: array }, { slot: 'nullish', declaration: nullish }, { slot: 'optional', declaration: optional }, { slot: 'leaf', declaration: leaf },
+    { slot: 'type', declaration: type }, { slot: 'array', declaration: array }, { slot: 'nullish', declaration: nullish }, { slot: 'optional', declaration: optional }, { slot: 'leaf', declaration: leaf }, { slot: 'branch', declaration: branch },
   ] });
   const workspace = openWorkspace({ location, logicalStore: 'operation-store' });
   try {

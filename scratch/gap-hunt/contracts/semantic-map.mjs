@@ -61,6 +61,7 @@ await assertion('prepare', 'experiments/exp-2/materialization.test.ts', 'explici
 await assertion('scalarLoading', 'experiments/exp-2/materialization.test.ts', 'fingerprint-only verification makes zero payload reads; positive control really reads', 'Experimental scalar fingerprint check performs zero payload reads, with read-positive control.', 'semantic-exp2.log');
 await assertion('nestedLoading', 'experiments/exp-nested/test/nested-sqlite.test.ts', 'view creation, navigation and selected leaves read no root, sibling or unrelated subtree payload', 'Separate-process SQLite nested fixture limits returned payload cells to selected leaf; not disk-page IO or scale evidence.', 'semantic-expnested.log');
 await assertion('nestedMetadata', 'experiments/exp-nested/test/nested-sqlite.test.ts', 'metadata comparison in a fresh process performs zero payload fallback', 'Fresh-process nested SQLite fingerprint comparison requests zero payload fallback.', 'semantic-expnested.log');
+await assertion('durableBranches', 'packages/core/test/gap-hunt-contracts-operation-matrix.test.ts', 'TRK-8 durable scalar branch replacement abandons old reads and detects newly active reads', 'Five independent processes flip scalar-guard branch, reuse after abandoned leaf edit, publish after newly active leaf edit, and validate old exact result on rollback.', 'operation-matrix-results.log');
 await assertion('edgeKeys', 'packages/core/test/gap-hunt-contracts-edge-oracle.test.ts', 'literal special key %s: unread/equal-inherited/changed/current rollback', 'Eight tricky key spellings including lone UTF16 surrogate remain distinct under declared current bindings across unread edits, custom inherited equality, changed values and rollback, matching cold stores.', 'edge-oracle-results.log');
 await assertion('edgeNumbers', 'packages/core/test/gap-hunt-contracts-edge-oracle.test.ts', 'canonical number atoms distinguish zero signs, NaN and infinities across restart and rollback', 'Zero, negative zero, NaN and both infinities produce correct current conditional values and exact publish/reuse expectations through fresh-process warm/cold histories.', 'edge-oracle-results.log');
 await assertion('edgeSparse', 'packages/core/test/gap-hunt-contracts-edge-oracle.test.ts', 'sparse hole and present undefined have distinct indexed membership facts', 'Sparse holes and present undefined differ under indexed membership through restart, later fill and rollback; separate positional-value row equates them.', 'edge-oracle-results.log');
@@ -68,6 +69,11 @@ await assertion('importCapture', 'scratch/gap-hunt/contracts/transitive-capture-
 await assertion('ranking', 'packages/tracking/test/gap-hunt-contracts-invalidation.test.ts', 'TRK-5 ordered ranking changes with selected scores and ignores unselected member fields', 'Explicit ranked key sequence reads keys/scores only; changed selected score invalidates while changed unselected avatar fields compare equal.', 'tracking-results.log');
 const blockEvidence = {
  'docs/spec/tracking.md:70': ['ranking'],
+ 'docs/spec/glossary.md:75': ['leaf','calls'],
+ 'docs/spec/glossary.md:81': ['frames','restore','asyncFailure','lateHelper'],
+ 'docs/spec/glossary.md:104': ['selectedOutput','nestedLoading'],
+ 'docs/spec/glossary.md:127': ['nested','calls'],
+ 'docs/spec/glossary.md:133': ['rebind','multiRebind','nested'],
  'docs/spec/composition.md:34': ['supplied','slotMissing','slotAmbiguous'],
  'docs/spec/composition.md:51': ['topology','memberBinding','keyed'],
  'docs/spec/composition.md:82': ['supplied','slotMissing','slotAmbiguous'],
@@ -100,7 +106,7 @@ const blockEvidence = {
 const ownerEvidence = {
  'TRK-1': ['primitive','leaf','calls'], 'TRK-2':['calls'], 'TRK-3':['frames','restore','derive','asyncFailure','lateHelper'],
  'TRK-4':['captureLint','importCapture'], 'TRK-5':['leaf','optional','presence','member','identity'], 'TRK-6':['rebind','multiRebind'],
- 'TRK-7':['leaf','identity'], 'TRK-8':['branches'], 'VAL-1':['address','wire','edgeKeys'],
+ 'TRK-7':['leaf','identity'], 'TRK-8':['branches','durableBranches'], 'VAL-1':['address','wire','edgeKeys'],
  'VAL-2':['edges','negative','crossprocess','transport','wire','edgeNumbers','edgeSparse'], 'VAL-3':['frozen'],
  'COL-1':['keyed'], 'COL-2':['projection'], 'COL-3':['order','keyed'], 'COL-4':['keyed','gates'],
  'CMP-1':['topology','rejectGraph'], 'CMP-2':['branches','gates'], 'CMP-3':['supplied'],

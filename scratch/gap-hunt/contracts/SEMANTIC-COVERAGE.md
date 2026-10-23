@@ -81,3 +81,20 @@ The actual imported-helper capture lint probe asserts four expected diagnostics.
 A distinct intrinsic-presence counterexample (9 red/2 green) is recorded separately
 with exact TRK-5 and Value-domain citations; supervisor classification confirmed
 operation-specific presence overrejection, not another #155 instance.
+
+The updated `scope-evidence-ledger.json` separates sentence/table-row units before
+coverage discussion: 294 delivered, 1 deferred target, 2 proposal, 32 historical,
+and 46 structural units. These are denominator/routing counts, **not pass rates**.
+The class-support deferral is separated from the delivered requirement to reject
+classes visibly. No whole unit is certified merely by sharing a paragraph or ID
+with a test. Each retains bounded evidence statements and open residuals.
+
+`other-owner-evidence.json` snapshots 32 named operational/history requirements
+and295 actual test statuses from the durability worker at bfb1cc3; failed tests
+are not promoted to passing evidence. Only Analysis, Bounded Context and Publication
+vocabulary rows still await the contract-surface worker's exact owner anchors.
+
+The durable scalar branch test adds a passing five-process current-evidence
+assertion: flip the branch, edit the abandoned leaf without rerunning, change a
+newly active leaf and publish, then roll back to the original exact result.
+The operation suite remains6 intentionally red #155 cases and8 passing controls.

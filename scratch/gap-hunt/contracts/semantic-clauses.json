@@ -233,7 +233,7 @@
     },
     "multiRebind": {
       "file": "packages/core/test/gap-hunt-contracts-operation-matrix.test.ts",
-      "line": 40,
+      "line": 61,
       "title": "TRK-6 historical path rebinds through two equal identities and detects both later leaf updates",
       "proves": "Five independent processes retain exact references across equal id replacement and publish on both subsequent current-leaf changes.",
       "executionLog": "scratch/gap-hunt/contracts/operation-matrix-results.log"
@@ -328,6 +328,13 @@
       "title": "metadata comparison in a fresh process performs zero payload fallback",
       "proves": "Fresh-process nested SQLite fingerprint comparison requests zero payload fallback.",
       "executionLog": "scratch/gap-hunt/contracts/semantic-expnested.log"
+    },
+    "durableBranches": {
+      "file": "packages/core/test/gap-hunt-contracts-operation-matrix.test.ts",
+      "line": 40,
+      "title": "TRK-8 durable scalar branch replacement abandons old reads and detects newly active reads",
+      "proves": "Five independent processes flip scalar-guard branch, reuse after abandoned leaf edit, publish after newly active leaf edit, and validate old exact result on rollback.",
+      "executionLog": "scratch/gap-hunt/contracts/operation-matrix-results.log"
     },
     "edgeKeys": {
       "file": "packages/core/test/gap-hunt-contracts-edge-oracle.test.ts",
@@ -1658,20 +1665,28 @@
       "owner": null,
       "clause": "Suppose an assessment reads `settings.strict`, then `pr.author.name`, and calls\na tracked `formatName` helper. One capture frame collects the guard's actual\nvalue, the selected name, the called helper's implementation, and any tracked\nfacts the helper consumes. Merely passing `pr` to the helper does not consume\nall PR fields. An unread `pr.labels` field contributes no observation.",
       "obligationKind": "definition-owned-by-linked-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "leaf",
+        "calls"
+      ],
       "otherOwnerEvidence": null,
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/glossary.md:81",
       "owner": null,
       "clause": "If the computation awaits work, its frame continues to collect its own reads.\nA concurrent assessment has a separate frame. An explicitly nested capture scope\ncollects independently and restores the surrounding scope when it finishes;\ncomposition must propagate the observations the surrounding computation consumes.\nOnce a frame closes, a detached callback cannot append observations to it or\nsilently claim that its late reads were captured. Success and failure both end\nthe frame's lifetime.",
       "obligationKind": "definition-owned-by-linked-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "frames",
+        "restore",
+        "asyncFailure",
+        "lateHelper"
+      ],
       "otherOwnerEvidence": null,
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/glossary.md:89",
@@ -1778,10 +1793,13 @@
       "owner": null,
       "clause": "| **Materialization** | Making selected stored data available as immutable value views or output data, while recording what access consumes. Loading is distinct from accepting freshness or granting permission to execute. | Materialization supporting component; [ARC-002](architecture.md), [DOM-3](domain.md) |",
       "obligationKind": "definition-owned-by-linked-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "selectedOutput",
+        "nestedLoading"
+      ],
       "otherOwnerEvidence": null,
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/glossary.md:105",
@@ -2048,20 +2066,27 @@
       "owner": null,
       "clause": "“Assess PR” is a **step definition**. Calling its current **binding** for PR 42\nis an **invocation**. Resolution may reuse an eligible **result** without a new\nbody execution. If new work is needed, its **attempt** can use **frames** to\ncapture the title and prompt configuration it consumes. Successful publication\nproduces an immutable result addressed by an exact **reference**.",
       "obligationKind": "definition-owned-by-linked-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "nested",
+        "calls"
+      ],
       "otherOwnerEvidence": null,
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/glossary.md:133",
       "owner": null,
       "clause": "Later, a label-only change can leave the consumed title unchanged. Current\n**acceptance evidence** explains why the earlier result remains usable, while its\n**historical provenance** still describes the original execution. A changed\ntracked prompt can require another execution. Neither the step's display name\nnor a process-local tag decides that correspondence.",
       "obligationKind": "definition-owned-by-linked-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "rebind",
+        "multiRebind",
+        "nested"
+      ],
       "otherOwnerEvidence": null,
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/tracking.md:1",
@@ -2437,7 +2462,8 @@
       "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
-        "branches"
+        "branches",
+        "durableBranches"
       ],
       "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."

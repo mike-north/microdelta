@@ -37,6 +37,27 @@ describe('gap hunt fresh-process consumer operation matrix', () => {
     } finally { rmSync(directory, { recursive: true, force: true }); }
   });
 
+  test('TRK-8 durable scalar branch replacement abandons old reads and detects newly active reads', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-branches-'));
+    try {
+      const retained = join(directory, 'retained.sqlite');
+      const first = resolve(retained, 'record', 'branch', 'one');
+      expect(first.value).toEqual({ value: 'Ada' });
+      const flipped = resolve(retained, 'branch-other', 'branch', 'two');
+      expect(flipped.kind).toBe('published');
+      expect(flipped.value).toEqual({ value: 2 });
+      const abandoned = resolve(retained, 'branch-abandoned', 'branch', 'three');
+      expect(abandoned.kind).toBe('reused');
+      expect(abandoned.reference).toEqual(flipped.reference);
+      const active = resolve(retained, 'branch-active', 'branch', 'four');
+      expect(active.kind).toBe('published');
+      expect(active.value).toEqual({ value: 3 });
+      const restored = resolve(retained, 'record', 'branch', 'five');
+      expect(restored.kind).toBe('reused');
+      expect(restored.reference).toEqual(first.reference);
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
   test('TRK-6 historical path rebinds through two equal identities and detects both later leaf updates', () => {
     const directory = mkdtempSync(join(tmpdir(), 'microdelta-rebinding-'));
     try {

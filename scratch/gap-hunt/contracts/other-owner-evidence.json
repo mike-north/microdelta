@@ -1,0 +1,3047 @@
+{
+  "sourceBranch": "gap-hunt-durability",
+  "sourceCommit": "bfb1cc3",
+  "sourceLedger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+  "sourceExecutionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+  "boundary": "Snapshot of named glossary-owner mappings and actual test IDs/status. Suite-granular bounded outcomes only; unproved sub-obligations remain open. Failed statuses are never promoted to pass.",
+  "requirements": [
+    {
+      "requirement": "ACC-001",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Different units remain distinct; report deduplication and attribution rollups avoid doubles; missing attempt reports remain unknown; estimates retain basis and stay out of observed totals.",
+      "residual": "Current contract supports additive delta reports only; cumulative reports/corrections/resource state are not established.",
+      "executedAssertionIds": [
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        335,
+        336,
+        337,
+        338,
+        339,
+        340,
+        341
+      ]
+    },
+    {
+      "requirement": "ACC-002",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Durably acknowledged usage survives process death exactly once independently of result publication; failed/ambiguous writes issue no false acknowledgment.",
+      "residual": "The named assertions prove the stated bounded outcome; other prose obligations are not automatically discharged.",
+      "executedAssertionIds": [
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        309,
+        310,
+        311,
+        312,
+        313,
+        314,
+        335,
+        336,
+        337,
+        338,
+        339,
+        340,
+        341
+      ]
+    },
+    {
+      "requirement": "ACC-003",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Different units remain distinct; report deduplication and attribution rollups avoid doubles; missing attempt reports remain unknown; estimates retain basis and stay out of observed totals.",
+      "residual": "Current contract supports additive delta reports only; cumulative reports/corrections/resource state are not established.",
+      "executedAssertionIds": [
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        335,
+        336,
+        337,
+        338,
+        339,
+        340,
+        341
+      ]
+    },
+    {
+      "requirement": "ACC-005",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Different units remain distinct; report deduplication and attribution rollups avoid doubles; missing attempt reports remain unknown; estimates retain basis and stay out of observed totals.",
+      "residual": "Current contract supports additive delta reports only; cumulative reports/corrections/resource state are not established.",
+      "executedAssertionIds": [
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        335,
+        336,
+        337,
+        338,
+        339,
+        340,
+        341
+      ]
+    },
+    {
+      "requirement": "ACC-006",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Different units remain distinct; report deduplication and attribution rollups avoid doubles; missing attempt reports remain unknown; estimates retain basis and stay out of observed totals.",
+      "residual": "Current contract supports additive delta reports only; cumulative reports/corrections/resource state are not established.",
+      "executedAssertionIds": [
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        335,
+        336,
+        337,
+        338,
+        339,
+        340,
+        341
+      ]
+    },
+    {
+      "requirement": "ACC-007",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Durably acknowledged usage survives process death exactly once independently of result publication; failed/ambiguous writes issue no false acknowledgment.",
+      "residual": "The named assertions prove the stated bounded outcome; other prose obligations are not automatically discharged.",
+      "executedAssertionIds": [
+        56,
+        57,
+        58,
+        59,
+        60,
+        61,
+        62,
+        63,
+        64,
+        65,
+        66,
+        67,
+        68,
+        69,
+        70,
+        71,
+        72,
+        73,
+        74,
+        75,
+        76,
+        77,
+        78,
+        79,
+        80,
+        81,
+        82,
+        83,
+        84,
+        85,
+        86,
+        309,
+        310,
+        311,
+        312,
+        313,
+        314,
+        335,
+        336,
+        337,
+        338,
+        339,
+        340,
+        341
+      ]
+    },
+    {
+      "requirement": "PUB-002",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Reached kill boundaries preserve complete old/new state; stale holders cannot publish or affect successor; lost acknowledgment returns committed exact result.",
+      "residual": "The named assertions prove the stated bounded outcome; other prose obligations are not automatically discharged.",
+      "executedAssertionIds": [
+        349,
+        350,
+        351,
+        352,
+        411,
+        412,
+        413,
+        414,
+        415,
+        416,
+        417,
+        418,
+        419,
+        420,
+        421,
+        422,
+        423,
+        424,
+        425,
+        426,
+        427,
+        428,
+        429,
+        430,
+        431,
+        432,
+        433
+      ]
+    },
+    {
+      "requirement": "PUB-004",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Reached kill boundaries preserve complete old/new state; stale holders cannot publish or affect successor; lost acknowledgment returns committed exact result.",
+      "residual": "The named assertions prove the stated bounded outcome; other prose obligations are not automatically discharged.",
+      "executedAssertionIds": [
+        349,
+        350,
+        351,
+        352,
+        411,
+        412,
+        413,
+        414,
+        415,
+        416,
+        417,
+        418,
+        419,
+        420,
+        421,
+        422,
+        423,
+        424,
+        425,
+        426,
+        427,
+        428,
+        429,
+        430,
+        431,
+        432,
+        433
+      ]
+    },
+    {
+      "requirement": "RES-001",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Renamed display labels and reversed registration retain exact member references.",
+      "residual": "Opaque-subject collisions across every scope/string variant are not all asserted here.",
+      "executedAssertionIds": [
+        400,
+        401,
+        402,
+        403
+      ]
+    },
+    {
+      "requirement": "RES-002",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Superseded exact references resolve original data; wrong/missing/store/scope references fail; author mutation cannot alter stored payload.",
+      "residual": "The named assertions prove the stated bounded outcome; other prose obligations are not automatically discharged.",
+      "executedAssertionIds": [
+        342,
+        343,
+        344,
+        345,
+        346,
+        347,
+        348
+      ]
+    },
+    {
+      "requirement": "RES-003",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Superseded exact references resolve original data; wrong/missing/store/scope references fail; author mutation cannot alter stored payload.",
+      "residual": "The named assertions prove the stated bounded outcome; other prose obligations are not automatically discharged.",
+      "executedAssertionIds": [
+        342,
+        343,
+        344,
+        345,
+        346,
+        347,
+        348
+      ]
+    },
+    {
+      "requirement": "RES-004",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Explicit retention keeps reference; fresh equal fetch creates distinct exact readable references.",
+      "residual": "The named assertions prove the stated bounded outcome; other prose obligations are not automatically discharged.",
+      "executedAssertionIds": [
+        372,
+        373,
+        374,
+        375,
+        376,
+        377,
+        378
+      ]
+    },
+    {
+      "requirement": "RES-005",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Failed/refused attempts and recoverable committed results are distinct; observer failure preserves committed success.",
+      "residual": "Existing test explicitly discloses check-retention recovery reports unsuccessful; parent owns deduplication of this known gap.",
+      "executedAssertionIds": [
+        87,
+        88,
+        89,
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        97,
+        98,
+        99,
+        100,
+        101,
+        102,
+        103,
+        104,
+        105,
+        106,
+        107,
+        108,
+        109,
+        110,
+        111,
+        112,
+        113
+      ]
+    },
+    {
+      "requirement": "RES-006",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Superseded exact references resolve original data; wrong/missing/store/scope references fail; author mutation cannot alter stored payload.",
+      "residual": "The named assertions prove the stated bounded outcome; other prose obligations are not automatically discharged.",
+      "executedAssertionIds": [
+        342,
+        343,
+        344,
+        345,
+        346,
+        347,
+        348
+      ]
+    },
+    {
+      "requirement": "RES-007",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Path rebinding follows the new child while old historical provenance remains readable.",
+      "residual": "The named assertions prove the stated bounded outcome; other prose obligations are not automatically discharged.",
+      "executedAssertionIds": [
+        319,
+        320,
+        321,
+        322,
+        323,
+        324,
+        325
+      ]
+    },
+    {
+      "requirement": "REUSE-001",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Fresh processes run current finality; changed implementation/input is not excused by a hook; consumed changes rerun affected work.",
+      "residual": "The named assertions prove the stated bounded outcome; other prose obligations are not automatically discharged.",
+      "executedAssertionIds": [
+        319,
+        320,
+        321,
+        322,
+        323,
+        324,
+        325,
+        372,
+        373,
+        374,
+        375,
+        376,
+        377,
+        378
+      ]
+    },
+    {
+      "requirement": "REUSE-002",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Fresh processes run current finality; changed implementation/input is not excused by a hook; consumed changes rerun affected work.",
+      "residual": "The named assertions prove the stated bounded outcome; other prose obligations are not automatically discharged.",
+      "executedAssertionIds": [
+        319,
+        320,
+        321,
+        322,
+        323,
+        324,
+        325,
+        372,
+        373,
+        374,
+        375,
+        376,
+        377,
+        378
+      ]
+    },
+    {
+      "requirement": "REUSE-003",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Fresh processes run current finality; changed implementation/input is not excused by a hook; consumed changes rerun affected work.",
+      "residual": "The named assertions prove the stated bounded outcome; other prose obligations are not automatically discharged.",
+      "executedAssertionIds": [
+        319,
+        320,
+        321,
+        322,
+        323,
+        324,
+        325,
+        372,
+        373,
+        374,
+        375,
+        376,
+        377,
+        378
+      ]
+    },
+    {
+      "requirement": "REUSE-005",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Changed child/helper code participates; equal consumed child output cuts off parent reruns; version rollback retains old exact references without rewinding heads.",
+      "residual": "The named assertions prove the stated bounded outcome; other prose obligations are not automatically discharged.",
+      "executedAssertionIds": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        259,
+        260,
+        261,
+        262,
+        263,
+        264,
+        265,
+        266
+      ]
+    },
+    {
+      "requirement": "REUSE-006",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Missing/ambiguous/unjustified derived correspondence causes an honest outer miss, with valid children reusable.",
+      "residual": "Current bounded supplied/direct-child paths only; arbitrary closure reconstruction is not promised/proved.",
+      "executedAssertionIds": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        259,
+        260,
+        261,
+        262,
+        263,
+        264,
+        265,
+        266
+      ]
+    },
+    {
+      "requirement": "REUSE-007",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Missing/ambiguous/unjustified derived correspondence causes an honest outer miss, with valid children reusable.",
+      "residual": "Current bounded supplied/direct-child paths only; arbitrary closure reconstruction is not promised/proved.",
+      "executedAssertionIds": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        259,
+        260,
+        261,
+        262,
+        263,
+        264,
+        265,
+        266
+      ]
+    },
+    {
+      "requirement": "REUSE-008",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Changed child/helper code participates; equal consumed child output cuts off parent reruns; version rollback retains old exact references without rewinding heads.",
+      "residual": "The named assertions prove the stated bounded outcome; other prose obligations are not automatically discharged.",
+      "executedAssertionIds": [
+        30,
+        31,
+        32,
+        33,
+        34,
+        35,
+        36,
+        37,
+        38,
+        39,
+        40,
+        41,
+        42,
+        43,
+        44,
+        45,
+        46,
+        47,
+        48,
+        49,
+        50,
+        51,
+        52,
+        53,
+        54,
+        55,
+        259,
+        260,
+        261,
+        262,
+        263,
+        264,
+        265,
+        266
+      ]
+    },
+    {
+      "requirement": "RUN-001",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Concurrent run/env contexts isolate; thrown frames restore parents; escaped operations fail after closure; new run ID alone reuses.",
+      "residual": "Lazy iterator return/error matrix is not separately established by these workspace tests.",
+      "executedAssertionIds": [
+        250,
+        251,
+        252,
+        253,
+        254,
+        255,
+        256,
+        257,
+        258,
+        387
+      ]
+    },
+    {
+      "requirement": "RUN-002",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Deadline reports holder; takeover fences; request permits guard sends; waiting lends capacity; independent members continue.",
+      "residual": "No 150k scale claim; multi-process write parallelism is deferred M7.",
+      "executedAssertionIds": [
+        149,
+        150,
+        151,
+        152,
+        153,
+        154,
+        155,
+        156,
+        157,
+        158,
+        159,
+        160,
+        161,
+        162,
+        163,
+        164,
+        165,
+        166,
+        167,
+        213,
+        214,
+        215,
+        216,
+        217,
+        218,
+        219,
+        220,
+        221,
+        222,
+        223,
+        224,
+        225,
+        411,
+        412,
+        413,
+        414,
+        415,
+        416,
+        417,
+        418,
+        419,
+        420,
+        421,
+        422,
+        423,
+        424
+      ]
+    },
+    {
+      "requirement": "RUN-005",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Open snapshot listing permits ready members but holds strict fold; closed empty is distinct; rediscovery/reorder retains keyed work.",
+      "residual": "DX verified cumulative open snapshots in successive workspace.run calls: first two members execute before closure, later four-member snapshot retains first two exact results. Single-callback live streaming remains target work; no confirmed early-work defect.",
+      "executedAssertionIds": [
+        226,
+        227,
+        228,
+        229,
+        230,
+        231,
+        315,
+        316,
+        317,
+        318
+      ]
+    },
+    {
+      "requirement": "RUN-010",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Independent successful siblings persist; strict fold waits/fails honestly; outcome fold reports coverage, waits until settled and reconsiders repair.",
+      "residual": "The named assertions prove the stated bounded outcome; other prose obligations are not automatically discharged.",
+      "executedAssertionIds": [
+        315,
+        316,
+        317,
+        318,
+        364,
+        460
+      ]
+    },
+    {
+      "requirement": "RUN-011",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Sleep/exit durable not-before deferrals release writer and permits, resume same logical operation, and preserve earlier settled siblings.",
+      "residual": "The named assertions prove the stated bounded outcome; other prose obligations are not automatically discharged.",
+      "executedAssertionIds": [
+        132,
+        133,
+        134,
+        135,
+        136,
+        137,
+        138,
+        139,
+        140,
+        141,
+        142,
+        143,
+        144,
+        145,
+        146,
+        147,
+        148,
+        434,
+        435,
+        436,
+        437,
+        438
+      ]
+    },
+    {
+      "requirement": "RUN-012",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Lost non-idempotent response is never blindly replayed; safe/provider-key retries keep operation identity; operator settle/abandon unblocks according to outcome.",
+      "residual": "Result-bearing successful settlement deferred M6; provider-expired deduplication safety is adapter policy, not universal exactly-once.",
+      "executedAssertionIds": [
+        268,
+        269,
+        270,
+        271,
+        272,
+        273,
+        274,
+        275,
+        276,
+        453,
+        454,
+        455,
+        456,
+        457,
+        458,
+        459,
+        461,
+        462,
+        463,
+        464,
+        465,
+        466,
+        467,
+        468,
+        469,
+        470,
+        471,
+        472
+      ]
+    },
+    {
+      "requirement": "RUN-013",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Operation/request/step/member/run correlation is visible without planted provider/author values or payloads.",
+      "residual": "The named assertions prove the stated bounded outcome; other prose obligations are not automatically discharged.",
+      "executedAssertionIds": [
+        298,
+        299,
+        300,
+        301,
+        302,
+        367,
+        368
+      ]
+    },
+    {
+      "requirement": "RUN-014",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Soft drains admitted work with no default deadline; hard aborts/discards; committed boundary wins; unknown remote state is durable.",
+      "residual": "CLI first/second interrupt wiring absent with the CLI; shared-consumer cancellation ownership beyond bounded runtime not fully established.",
+      "executedAssertionIds": [
+        353,
+        354,
+        355,
+        356,
+        357,
+        358,
+        439,
+        440,
+        441,
+        442,
+        443,
+        444,
+        445,
+        446,
+        447,
+        448,
+        449,
+        450,
+        451,
+        452
+      ]
+    },
+    {
+      "requirement": "RUN-015",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Soft drains admitted work with no default deadline; hard aborts/discards; committed boundary wins; unknown remote state is durable.",
+      "residual": "CLI first/second interrupt wiring absent with the CLI; shared-consumer cancellation ownership beyond bounded runtime not fully established.",
+      "executedAssertionIds": [
+        353,
+        354,
+        355,
+        356,
+        357,
+        358,
+        439,
+        440,
+        441,
+        442,
+        443,
+        444,
+        445,
+        446,
+        447,
+        448,
+        449,
+        450,
+        451,
+        452
+      ]
+    },
+    {
+      "requirement": "RUN-017",
+      "classification": "bounded-aligned-with-residual-evidence-gap",
+      "meaning": "Trial/production namespaces isolate; only recorded promotion admits trial results; concurrent contexts do not route globally.",
+      "residual": "External output destinations and cleanup remain unverified/target work.",
+      "executedAssertionIds": [
+        208,
+        209,
+        210,
+        211,
+        212,
+        385,
+        386,
+        387
+      ]
+    }
+  ],
+  "tests": [
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "cold run executes each source and summary once with exact statistics and sentences",
+      "fullName": "cold and restarted report cold run executes each source and summary once with exact statistics and sentences",
+      "status": "passed",
+      "id": 30
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "unchanged restart runs current finality, zero summary bodies and zero checks, and retains exact references",
+      "fullName": "cold and restarted report unchanged restart runs current finality, zero summary bodies and zero checks, and retains exact references",
+      "status": "passed",
+      "id": 31
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "reversed member registration after restart preserves each member's own references",
+      "fullName": "cold and restarted report reversed member registration after restart preserves each member's own references",
+      "status": "passed",
+      "id": 32
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "a fresh source changing only unread fields publishes a new child but retains the summary",
+      "fullName": "read and unread facts, called and uncalled helpers a fresh source changing only unread fields publishes a new child but retains the summary",
+      "status": "passed",
+      "id": 33
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "a consumed field change re-executes only its own summary; the other member retains its exact result",
+      "fullName": "read and unread facts, called and uncalled helpers a consumed field change re-executes only its own summary; the other member retains its exact result",
+      "status": "passed",
+      "id": 34
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "a changed called formatter re-executes both summaries even with unchanged statistics",
+      "fullName": "read and unread facts, called and uncalled helpers a changed called formatter re-executes both summaries even with unchanged statistics",
+      "status": "passed",
+      "id": 35
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "a changed uncalled helper alone retains both summaries",
+      "fullName": "read and unread facts, called and uncalled helpers a changed uncalled helper alone retains both summaries",
+      "status": "passed",
+      "id": 36
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "a changed child implementation is validated beneath the unchanged summary and cut off at equal consumed output",
+      "fullName": "read and unread facts, called and uncalled helpers a changed child implementation is validated beneath the unchanged summary and cut off at equal consumed output",
+      "status": "passed",
+      "id": 37
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "summary provenance records its own implementation, helpers, witness and consumed child facts, not the child's internals",
+      "fullName": "read and unread facts, called and uncalled helpers summary provenance records its own implementation, helpers, witness and consumed child facts, not the child's internals",
+      "status": "passed",
+      "id": 38
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "a body that swallows a failed child call cannot publish: the child failure fails the summary",
+      "fullName": "child failures inside a body a body that swallows a failed child call cannot publish: the child failure fails the summary",
+      "status": "passed",
+      "id": 39
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "delivering a child records no Promise-assimilation read; an unread then field change retains the summary",
+      "fullName": "async child delivery delivering a child records no Promise-assimilation read; an unread then field change retains the summary",
+      "status": "passed",
+      "id": 40
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "a deliberate author read of a then data field is ordinary evidence",
+      "fullName": "async child delivery a deliberate author read of a then data field is ordinary evidence",
+      "status": "passed",
+      "id": 41
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "an array-root child is delivered cold and validated after restart",
+      "fullName": "async child delivery an array-root child is delivered cold and validated after restart",
+      "status": "passed",
+      "id": 42
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "version 2 then unchanged version 1 rollback reuses the old exact results without rewinding the current pointer",
+      "fullName": "compatibility versions and current path rebinding version 2 then unchanged version 1 rollback reuses the old exact results without rewinding the current pointer",
+      "status": "passed",
+      "id": 43
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "version 1 rollback with changed consumed evidence misses and executes",
+      "fullName": "compatibility versions and current path rebinding version 1 rollback with changed consumed evidence misses and executes",
+      "status": "passed",
+      "id": 44
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "an equal-name replacement profile retains the summary; a later name change invalidates; original provenance stays intact",
+      "fullName": "compatibility versions and current path rebinding an equal-name replacement profile retains the summary; a later name change invalidates; original provenance stays intact",
+      "status": "passed",
+      "id": 45
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "an unknown witness version is an honest miss, never guessed; older valid candidates remain usable",
+      "fullName": "correspondence, witnesses and historical integrity an unknown witness version is an honest miss, never guessed; older valid candidates remain usable",
+      "status": "passed",
+      "id": 46
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "an unsupported argument form is an honest miss, never guessed; older valid candidates remain usable",
+      "fullName": "correspondence, witnesses and historical integrity an unsupported argument form is an honest miss, never guessed; older valid candidates remain usable",
+      "status": "passed",
+      "id": 47
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "a malformed witness is an honest miss, never guessed; older valid candidates remain usable",
+      "fullName": "correspondence, witnesses and historical integrity a malformed witness is an honest miss, never guessed; older valid candidates remain usable",
+      "status": "passed",
+      "id": 48
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "a witness whose child slot has no current declaration is an honest correspondence miss",
+      "fullName": "correspondence, witnesses and historical integrity a witness whose child slot has no current declaration is an honest correspondence miss",
+      "status": "passed",
+      "id": 49
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "a different subject now occupying the child slot is resolved as the current child; equal consumed facts retain the summary",
+      "fullName": "correspondence, witnesses and historical integrity a different subject now occupying the child slot is resolved as the current child; equal consumed facts retain the summary",
+      "status": "passed",
+      "id": 50
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "a different subject in the child slot with a changed consumed fact misses and executes",
+      "fullName": "correspondence, witnesses and historical integrity a different subject in the child slot with a changed consumed fact misses and executes",
+      "status": "passed",
+      "id": 51
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "a supported memo record without its own implementation evidence is an integrity failure before any work",
+      "fullName": "correspondence, witnesses and historical integrity a supported memo record without its own implementation evidence is an integrity failure before any work",
+      "status": "passed",
+      "id": 52
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "a recorded child naming a missing result outside the exact dependencies is an integrity failure: no body, no attempt, no retargeting",
+      "fullName": "correspondence, witnesses and historical integrity a recorded child naming a missing result outside the exact dependencies is an integrity failure: no body, no attempt, no retargeting",
+      "status": "passed",
+      "id": 53
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "a recorded child naming a result in another environment outside the exact dependencies is an integrity failure: no body, no attempt, no retargeting",
+      "fullName": "correspondence, witnesses and historical integrity a recorded child naming a result in another environment outside the exact dependencies is an integrity failure: no body, no attempt, no retargeting",
+      "status": "passed",
+      "id": 54
+    },
+    {
+      "path": "packages/core/test/resolution/summary-validation.test.ts",
+      "name": "a recorded child naming another member's result outside the exact dependencies is an integrity failure: no body, no attempt, no retargeting",
+      "fullName": "correspondence, witnesses and historical integrity a recorded child naming another member's result outside the exact dependencies is an integrity failure: no body, no attempt, no retargeting",
+      "status": "passed",
+      "id": 55
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "a redelivered report is a duplicate and is counted once",
+      "fullName": "keyed, idempotent usage acknowledgment (ACC-003, ACC-007) a redelivered report is a duplicate and is counted once",
+      "status": "passed",
+      "id": 56
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "the same report identity on two operations counts twice",
+      "fullName": "keyed, idempotent usage acknowledgment (ACC-003, ACC-007) the same report identity on two operations counts twice",
+      "status": "passed",
+      "id": 57
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "distinct reports of one operation each count, including across its retried requests",
+      "fullName": "keyed, idempotent usage acknowledgment (ACC-003, ACC-007) distinct reports of one operation each count, including across its retried requests",
+      "status": "passed",
+      "id": 58
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "a conflicting redelivery keeps the first report and is not counted",
+      "fullName": "keyed, idempotent usage acknowledgment (ACC-003, ACC-007) a conflicting redelivery keeps the first report and is not counted",
+      "status": "passed",
+      "id": 59
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "unknown usage is pinned per request attempt: a reported sibling attempt does not cover another",
+      "fullName": "keyed, idempotent usage acknowledgment (ACC-003, ACC-007) unknown usage is pinned per request attempt: a reported sibling attempt does not cover another",
+      "status": "passed",
+      "id": 60
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "an explicit report of no consumption makes a request attempt known without inventing a quantity",
+      "fullName": "keyed, idempotent usage acknowledgment (ACC-003, ACC-007) an explicit report of no consumption makes a request attempt known without inventing a quantity",
+      "status": "passed",
+      "id": 61
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "redelivered quantities in a different order are the same report",
+      "fullName": "keyed, idempotent usage acknowledgment (ACC-003, ACC-007) redelivered quantities in a different order are the same report",
+      "status": "passed",
+      "id": 62
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "a report naming an operation with no intent is refused as unknown-operation and nothing is recorded",
+      "fullName": "attribution (ACC-002) a report naming an operation with no intent is refused as unknown-operation and nothing is recorded",
+      "status": "passed",
+      "id": 63
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "a report naming a request attempt with no intent is refused as unknown-request-attempt and nothing is recorded",
+      "fullName": "attribution (ACC-002) a report naming a request attempt with no intent is refused as unknown-request-attempt and nothing is recorded",
+      "status": "passed",
+      "id": 64
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "a report naming another operation's request attempt is refused as request-attempt-of-another-operation and nothing is recorded",
+      "fullName": "attribution (ACC-002) a report naming another operation's request attempt is refused as request-attempt-of-another-operation and nothing is recorded",
+      "status": "passed",
+      "id": 65
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "a report naming an operation recorded only in another environment is refused as unknown-operation and nothing is recorded",
+      "fullName": "attribution (ACC-002) a report naming an operation recorded only in another environment is refused as unknown-operation and nothing is recorded",
+      "status": "passed",
+      "id": 66
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "a recorded request attempt without a report reads unknown in every summary that includes it",
+      "fullName": "unknown usage is never zero (ACC-005) a recorded request attempt without a report reads unknown in every summary that includes it",
+      "status": "passed",
+      "id": 67
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "a later acknowledgment resolves the gap exactly once",
+      "fullName": "unknown usage is never zero (ACC-005) a later acknowledgment resolves the gap exactly once",
+      "status": "passed",
+      "id": 68
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "a redelivered identical intent is a duplicate",
+      "fullName": "intents (ACC-007 intent before send) a redelivered identical intent is a duplicate",
+      "status": "passed",
+      "id": 69
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "a request identity cannot stand for another operation or attribution",
+      "fullName": "intents (ACC-007 intent before send) a request identity cannot stand for another operation or attribution",
+      "status": "passed",
+      "id": 70
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "an estimate keeps its basis and never enters observed totals",
+      "fullName": "estimates stay separate (ACC-006) an estimate keeps its basis and never enters observed totals",
+      "status": "passed",
+      "id": 71
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "an estimate alone does not make unknown usage known",
+      "fullName": "estimates stay separate (ACC-006) an estimate alone does not make unknown usage known",
+      "status": "passed",
+      "id": 72
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "estimates are keyed: duplicates are not repeated and conflicts keep the first",
+      "fullName": "estimates stay separate (ACC-006) estimates are keyed: duplicates are not repeated and conflicts keep the first",
+      "status": "passed",
+      "id": 73
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "estimate filters follow attribution; an operation filter excludes estimates",
+      "fullName": "estimates stay separate (ACC-006) estimate filters follow attribution; an operation filter excludes estimates",
+      "status": "passed",
+      "id": 74
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "identical identities in two environments are independent facts",
+      "fullName": "environment scoping (RUN-017) identical identities in two environments are independent facts",
+      "status": "passed",
+      "id": 75
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "a stale History writer's late usage report is still recorded",
+      "fullName": "write authority (M5 plan: accounting writes need no writer fence) a stale History writer's late usage report is still recorded",
+      "status": "passed",
+      "id": 76
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "a failed write issues no acknowledgment, and redelivery records the report once",
+      "fullName": "commit boundaries (ACC-007) a failed write issues no acknowledgment, and redelivery records the report once",
+      "status": "passed",
+      "id": 77
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "an unconfirmed commit that did not land is unknown durability, and redelivery records it once",
+      "fullName": "commit boundaries (ACC-007) an unconfirmed commit that did not land is unknown durability, and redelivery records it once",
+      "status": "passed",
+      "id": 78
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "an unconfirmed commit is reported as unknown durability, and redelivery finds the landed report",
+      "fullName": "commit boundaries (ACC-007) an unconfirmed commit is reported as unknown durability, and redelivery finds the landed report",
+      "status": "passed",
+      "id": 79
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "an intent whose commit is unconfirmed is not acknowledged, and redelivery confirms it",
+      "fullName": "commit boundaries (ACC-007) an intent whose commit is unconfirmed is not acknowledged, and redelivery confirms it",
+      "status": "passed",
+      "id": 80
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "a durability-unknown failure carries the structural mark consumers without an Accounting edge read",
+      "fullName": "commit boundaries (ACC-007) a durability-unknown failure carries the structural mark consumers without an Accounting edge read",
+      "status": "passed",
+      "id": 81
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "a store reopens with its facts, and a different logical store is refused",
+      "fullName": "schema ownership and immutability a store reopens with its facts, and a different logical store is refused",
+      "status": "passed",
+      "id": 82
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "foreign, altered or incomplete storage is refused before any work",
+      "fullName": "schema ownership and immutability foreign, altered or incomplete storage is refused before any work",
+      "status": "passed",
+      "id": 83
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "recorded facts cannot be updated, deleted or replaced in storage",
+      "fullName": "schema ownership and immutability recorded facts cannot be updated, deleted or replaced in storage",
+      "status": "passed",
+      "id": 84
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "a closed store refuses further use",
+      "fullName": "schema ownership and immutability a closed store refuses further use",
+      "status": "passed",
+      "id": 85
+    },
+    {
+      "path": "packages/core/test/accounting/node-conformance.test.ts",
+      "name": "returned facts are frozen",
+      "fullName": "schema ownership and immutability returned facts are frozen",
+      "status": "passed",
+      "id": 86
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "valid hits never reach admission",
+      "fullName": "admission after reuse and before claims valid hits never reach admission",
+      "status": "passed",
+      "id": 87
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "a denied summary miss is refused with no claim, attempt or body; its child work was admitted independently",
+      "fullName": "admission after reuse and before claims a denied summary miss is refused with no claim, attempt or body; its child work was admitted independently",
+      "status": "passed",
+      "id": 88
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "denied source work needed for validation refuses the summary without any attempt",
+      "fullName": "admission after reuse and before claims denied source work needed for validation refuses the summary without any attempt",
+      "status": "passed",
+      "id": 89
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "a child refused during an admitted body refuses the summary and ends its attempt without a result",
+      "fullName": "admission after reuse and before claims a child refused during an admitted body refuses the summary and ends its attempt without a result",
+      "status": "passed",
+      "id": 90
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "a throwing admission port fails only the affected call, before any attempt",
+      "fullName": "admission after reuse and before claims a throwing admission port fails only the affected call, before any attempt",
+      "status": "passed",
+      "id": 91
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "an unchanged report is reusable with no admission, attempts, bodies or acceptance writes",
+      "fullName": "check-only evaluation an unchanged report is reusable with no admission, attempts, bodies or acceptance writes",
+      "status": "passed",
+      "id": 92
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "needed source work stops at that boundary with downstream uncertainty and no source check",
+      "fullName": "check-only evaluation needed source work stops at that boundary with downstream uncertainty and no source check",
+      "status": "passed",
+      "id": 93
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "a summary whose own evidence changed requires execution, without replaying its body as validation",
+      "fullName": "check-only evaluation a summary whose own evidence changed requires execution, without replaying its body as validation",
+      "status": "passed",
+      "id": 94
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "recovery returns the exact committed success without hooks, bodies or new acceptance; a new request still runs current policy",
+      "fullName": "explicit recovery by saved request key recovery returns the exact committed success without hooks, bodies or new acceptance; a new request still runs current policy",
+      "status": "passed",
+      "id": 95
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "recovery with a different current intent is rejected rather than served",
+      "fullName": "explicit recovery by saved request key recovery with a different current intent is rejected rather than served",
+      "status": "passed",
+      "id": 96
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "reusing an allocated request key for a different execution is a conflict, not a silent hit",
+      "fullName": "explicit recovery by saved request key reusing an allocated request key for a different execution is a conflict, not a silent hit",
+      "status": "passed",
+      "id": 97
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "a normal retry with an already committed key is rejected before admission, never served as new work",
+      "fullName": "explicit recovery by saved request key a normal retry with an already committed key is rejected before admission, never served as new work",
+      "status": "passed",
+      "id": 98
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "documents the disclosed History gap: a check retention ends its attempt without a result, so recovery reports unsuccessful",
+      "fullName": "explicit recovery by saved request key documents the disclosed History gap: a check retention ends its attempt without a result, so recovery reports unsuccessful",
+      "status": "passed",
+      "id": 99
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "absent and unsuccessful executions are reported explicitly and never executed by recovery",
+      "fullName": "explicit recovery by saved request key absent and unsuccessful executions are reported explicitly and never executed by recovery",
+      "status": "passed",
+      "id": 100
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "an empty request key is rejected before any work",
+      "fullName": "explicit recovery by saved request key an empty request key is rejected before any work",
+      "status": "passed",
+      "id": 101
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "an observer failure after publication commits is a diagnostic beside the committed success",
+      "fullName": "lifecycle observers an observer failure after publication commits is a diagnostic beside the committed success",
+      "status": "passed",
+      "id": 102
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "a child acceptance observer failure beneath an executing parent is reported on the top-level outcome",
+      "fullName": "lifecycle observers a child acceptance observer failure beneath an executing parent is reported on the top-level outcome",
+      "status": "passed",
+      "id": 103
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "child and parent publication observer failures beneath an executing parent are each reported once",
+      "fullName": "lifecycle observers child and parent publication observer failures beneath an executing parent are each reported once",
+      "status": "passed",
+      "id": 104
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "child and parent acceptance observer failures beneath a cached parent are each reported once",
+      "fullName": "lifecycle observers child and parent acceptance observer failures beneath a cached parent are each reported once",
+      "status": "passed",
+      "id": 105
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "a child publication observer failure beneath a cached parent is reported once, even when the executing body shares the child",
+      "fullName": "lifecycle observers a child publication observer failure beneath a cached parent is reported once, even when the executing body shares the child",
+      "status": "passed",
+      "id": 106
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "an admitted execution that fails is observed ending with abandon after its durable ending; the failure stays the outcome",
+      "fullName": "lifecycle observers an admitted execution that fails is observed ending with abandon after its durable ending; the failure stays the outcome",
+      "status": "passed",
+      "id": 107
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "an observer failing at abandon cannot replace the original failure",
+      "fullName": "lifecycle observers an observer failing at abandon cannot replace the original failure",
+      "status": "passed",
+      "id": 108
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "a child refused during an admitted body ends the summary attempt with abandon; the outcome stays refused",
+      "fullName": "lifecycle observers a child refused during an admitted body ends the summary attempt with abandon; the outcome stays refused",
+      "status": "passed",
+      "id": 109
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "an explicit check retention ends its claim with release, never abandon",
+      "fullName": "lifecycle observers an explicit check retention ends its claim with release, never abandon",
+      "status": "passed",
+      "id": 110
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "an attempt History could not end is not reported as abandoned",
+      "fullName": "lifecycle observers an attempt History could not end is not reported as abandoned",
+      "status": "passed",
+      "id": 111
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "an observer failure before execution stops only that call, with no attempt or body",
+      "fullName": "lifecycle observers an observer failure before execution stops only that call, with no attempt or body",
+      "status": "passed",
+      "id": 112
+    },
+    {
+      "path": "packages/core/test/resolution/admission-recovery.test.ts",
+      "name": "an unbound step is rejected before any work",
+      "fullName": "lifecycle observers an unbound step is rejected before any work",
+      "status": "passed",
+      "id": 113
+    },
+    {
+      "path": "packages/core/test/operations/operations.test.ts",
+      "name": "the operation record and usage intent are durable before the provider receives the request, and usage is counted once",
+      "fullName": "intent before send and usage exactly once (ACC-003, ACC-005, ACC-007) the operation record and usage intent are durable before the provider receives the request, and usage is counted once",
+      "status": "passed",
+      "id": 132
+    },
+    {
+      "path": "packages/core/test/operations/operations.test.ts",
+      "name": "a later run reuses the succeeded members without another send or another usage report",
+      "fullName": "intent before send and usage exactly once (ACC-003, ACC-005, ACC-007) a later run reuses the succeeded members without another send or another usage report",
+      "status": "passed",
+      "id": 133
+    },
+    {
+      "path": "packages/core/test/operations/operations.test.ts",
+      "name": "a response without a usage report leaves that request attempt unknown, never zero",
+      "fullName": "intent before send and usage exactly once (ACC-003, ACC-005, ACC-007) a response without a usage report leaves that request attempt unknown, never zero",
+      "status": "passed",
+      "id": 134
+    },
+    {
+      "path": "packages/core/test/operations/operations.test.ts",
+      "name": "a transient failure is final without an author policy",
+      "fullName": "the retry policy (RUN-011, EXP-8 resolution 6) a transient failure is final without an author policy",
+      "status": "passed",
+      "id": 135
+    },
+    {
+      "path": "packages/core/test/operations/operations.test.ts",
+      "name": "under an author policy a transient failure retries after a backoff that holds no permit and no lane, under the same operation identity",
+      "fullName": "the retry policy (RUN-011, EXP-8 resolution 6) under an author policy a transient failure retries after a backoff that holds no permit and no lane, under the same operation identity",
+      "status": "passed",
+      "id": 136
+    },
+    {
+      "path": "packages/core/test/operations/operations.test.ts",
+      "name": "a transient retry stops when the author policy is exhausted",
+      "fullName": "the retry policy (RUN-011, EXP-8 resolution 6) a transient retry stops when the author policy is exhausted",
+      "status": "passed",
+      "id": 137
+    },
+    {
+      "path": "packages/core/test/operations/operations.test.ts",
+      "name": "a rate limit with a retry time is retried by default, at most 5 times",
+      "fullName": "the retry policy (RUN-011, EXP-8 resolution 6) a rate limit with a retry time is retried by default, at most 5 times",
+      "status": "passed",
+      "id": 138
+    },
+    {
+      "path": "packages/core/test/operations/operations.test.ts",
+      "name": "the author may override the rate-limit retry cap",
+      "fullName": "the retry policy (RUN-011, EXP-8 resolution 6) the author may override the rate-limit retry cap",
+      "status": "passed",
+      "id": 139
+    },
+    {
+      "path": "packages/core/test/operations/operations.test.ts",
+      "name": "exit mode: a quota response defers only that member, siblings finish holding no permit or lane, and the run reports waiting until T",
+      "fullName": "the durable \"not before T\" deferral (RUN-011, EXP-8 mechanism 3) exit mode: a quota response defers only that member, siblings finish holding no permit or lane, and the run reports waiting until T",
+      "status": "passed",
+      "id": 140
+    },
+    {
+      "path": "packages/core/test/operations/operations.test.ts",
+      "name": "a later run before T admits nothing and sends nothing; after T it retries under the same operation identity",
+      "fullName": "the durable \"not before T\" deferral (RUN-011, EXP-8 mechanism 3) a later run before T admits nothing and sends nothing; after T it retries under the same operation identity",
+      "status": "passed",
+      "id": 141
+    },
+    {
+      "path": "packages/core/test/operations/operations.test.ts",
+      "name": "sleep mode releases the writer lease once only deferred work remains, lets another holder take it, and resumes at T under the same identity",
+      "fullName": "the durable \"not before T\" deferral (RUN-011, EXP-8 mechanism 3) sleep mode releases the writer lease once only deferred work remains, lets another holder take it, and resumes at T under the same identity",
+      "status": "passed",
+      "id": 142
+    },
+    {
+      "path": "packages/core/test/operations/operations.test.ts",
+      "name": "a resumed pass re-presents only the deferred work: a member that failed in the first pass keeps its failure and is not sent again",
+      "fullName": "the durable \"not before T\" deferral (RUN-011, EXP-8 mechanism 3) a resumed pass re-presents only the deferred work: a member that failed in the first pass keeps its failure and is not sent again",
+      "status": "passed",
+      "id": 143
+    },
+    {
+      "path": "packages/core/test/operations/operations.test.ts",
+      "name": "a stop during the sleep ends the wait at once, keeps the deferral durable and reports waiting until T",
+      "fullName": "the durable \"not before T\" deferral (RUN-011, EXP-8 mechanism 3) a stop during the sleep ends the wait at once, keeps the deferral durable and reports waiting until T",
+      "status": "passed",
+      "id": 144
+    },
+    {
+      "path": "packages/core/test/operations/operations.test.ts",
+      "name": "a run that restarts in sleep mode before T sleeps until T and then retries, sending nothing early",
+      "fullName": "the durable \"not before T\" deferral (RUN-011, EXP-8 mechanism 3) a run that restarts in sleep mode before T sleeps until T and then retries, sending nothing early",
+      "status": "passed",
+      "id": 145
+    },
+    {
+      "path": "packages/core/test/operations/operations.test.ts",
+      "name": "a name that is not an identifier, an empty binding or a call outside an admitted step is refused before anything is recorded",
+      "fullName": "declaring an operation a name that is not an identifier, an empty binding or a call outside an admitted step is refused before anything is recorded",
+      "status": "passed",
+      "id": 146
+    },
+    {
+      "path": "packages/core/test/operations/operations.test.ts",
+      "name": "a run without operation ports refuses an operation as an invalid request and sends nothing",
+      "fullName": "declaring an operation a run without operation ports refuses an operation as an invalid request and sends nothing",
+      "status": "passed",
+      "id": 147
+    },
+    {
+      "path": "packages/core/test/operations/operations.test.ts",
+      "name": "the subject of a member assessment is the operation owner an operator sees",
+      "fullName": "declaring an operation the subject of a member assessment is the operation owner an operator sees",
+      "status": "passed",
+      "id": 148
+    },
+    {
+      "path": "packages/core/test/stop/stop.test.ts",
+      "name": "members run concurrently up to the permit bound, and every member completes",
+      "fullName": "the permit pool (RUN-002) members run concurrently up to the permit bound, and every member completes",
+      "status": "passed",
+      "id": 149
+    },
+    {
+      "path": "packages/core/test/stop/stop.test.ts",
+      "name": "a permit guards only the send: with a wider window every member starts, and only the permitted sends are in flight",
+      "fullName": "the permit pool (RUN-002) a permit guards only the send: with a wider window every member starts, and only the permitted sends are in flight",
+      "status": "passed",
+      "id": 150
+    },
+    {
+      "path": "packages/core/test/stop/stop.test.ts",
+      "name": "a nested group completes with a single permit: a parent waiting for its children holds none",
+      "fullName": "the permit pool (RUN-002) a nested group completes with a single permit: a parent waiting for its children holds none",
+      "status": "passed",
+      "id": 151
+    },
+    {
+      "path": "packages/core/test/stop/stop.test.ts",
+      "name": "a member waiting for a time holds no permit: a sibling sends and publishes meanwhile",
+      "fullName": "the permit pool (RUN-002) a member waiting for a time holds no permit: a sibling sends and publishes meanwhile",
+      "status": "passed",
+      "id": 152
+    },
+    {
+      "path": "packages/core/test/stop/stop.test.ts",
+      "name": "under the default options a member waiting for a time lets a sibling start and complete meanwhile",
+      "fullName": "the bounded active window: a wait holds neither a permit nor a lane (RUN-002, RUN-011) under the default options a member waiting for a time lets a sibling start and complete meanwhile",
+      "status": "passed",
+      "id": 153
+    },
+    {
+      "path": "packages/core/test/stop/stop.test.ts",
+      "name": "a woken member resumes only once a lane is free, so the window is never exceeded",
+      "fullName": "the bounded active window: a wait holds neither a permit nor a lane (RUN-002, RUN-011) a woken member resumes only once a lane is free, so the window is never exceeded",
+      "status": "passed",
+      "id": 154
+    },
+    {
+      "path": "packages/core/test/stop/stop.test.ts",
+      "name": "an in-flight step drains and publishes; a queued member is never admitted or sent",
+      "fullName": "soft stop: no admission or retry, and admitted steps drain (RUN-014) an in-flight step drains and publishes; a queued member is never admitted or sent",
+      "status": "passed",
+      "id": 155
+    },
+    {
+      "path": "packages/core/test/stop/stop.test.ts",
+      "name": "a new request after a soft stop is refused before any work",
+      "fullName": "soft stop: no admission or retry, and admitted steps drain (RUN-014) a new request after a soft stop is refused before any work",
+      "status": "passed",
+      "id": 156
+    },
+    {
+      "path": "packages/core/test/stop/stop.test.ts",
+      "name": "a retry after a soft stop is refused without sending, and the step publishes nothing",
+      "fullName": "soft stop: no admission or retry, and admitted steps drain (RUN-014) a retry after a soft stop is refused without sending, and the step publishes nothing",
+      "status": "passed",
+      "id": 157
+    },
+    {
+      "path": "packages/core/test/stop/stop.test.ts",
+      "name": "the drain has no default deadline: the admitted step keeps running until it completes",
+      "fullName": "soft stop: no admission or retry, and admitted steps drain (RUN-014) the drain has no default deadline: the admitted step keeps running until it completes",
+      "status": "passed",
+      "id": 158
+    },
+    {
+      "path": "packages/core/test/stop/stop.test.ts",
+      "name": "an operator deadline escalates an unfinished drain to a hard stop that aborts the send",
+      "fullName": "deadline and hard stop (RUN-014, RUN-015) an operator deadline escalates an unfinished drain to a hard stop that aborts the send",
+      "status": "passed",
+      "id": 159
+    },
+    {
+      "path": "packages/core/test/stop/stop.test.ts",
+      "name": "a hard stop aborts a body mid-send and records the remote state (provider answers cancelled)",
+      "fullName": "deadline and hard stop (RUN-014, RUN-015) a hard stop aborts a body mid-send and records the remote state (provider answers cancelled)",
+      "status": "passed",
+      "id": 160
+    },
+    {
+      "path": "packages/core/test/stop/stop.test.ts",
+      "name": "a hard stop aborts a body mid-send and records the remote state (provider answers running)",
+      "fullName": "deadline and hard stop (RUN-014, RUN-015) a hard stop aborts a body mid-send and records the remote state (provider answers running)",
+      "status": "passed",
+      "id": 161
+    },
+    {
+      "path": "packages/core/test/stop/stop.test.ts",
+      "name": "a hard stop aborts a body mid-send and records the remote state (provider answers undefined)",
+      "fullName": "deadline and hard stop (RUN-014, RUN-015) a hard stop aborts a body mid-send and records the remote state (provider answers undefined)",
+      "status": "passed",
+      "id": 162
+    },
+    {
+      "path": "packages/core/test/stop/stop.test.ts",
+      "name": "a hard stop reaches a member waiting for a permit: it never sends",
+      "fullName": "deadline and hard stop (RUN-014, RUN-015) a hard stop reaches a member waiting for a permit: it never sends",
+      "status": "passed",
+      "id": 163
+    },
+    {
+      "path": "packages/core/test/stop/stop.test.ts",
+      "name": "a hard stop ends a wait for a time at once",
+      "fullName": "deadline and hard stop (RUN-014, RUN-015) a hard stop ends a wait for a time at once",
+      "status": "passed",
+      "id": 164
+    },
+    {
+      "path": "packages/core/test/stop/stop.test.ts",
+      "name": "output a body returns after a hard stop is discarded, never published (CX-2)",
+      "fullName": "deadline and hard stop (RUN-014, RUN-015) output a body returns after a hard stop is discarded, never published (CX-2)",
+      "status": "passed",
+      "id": 165
+    },
+    {
+      "path": "packages/core/test/stop/stop.test.ts",
+      "name": "a successor takes the lease over: the late completion publishes nothing and the request is denied lease-lost",
+      "fullName": "a drain that outlives the writer lease cannot publish (ruling R) a successor takes the lease over: the late completion publishes nothing and the request is denied lease-lost",
+      "status": "passed",
+      "id": 166
+    },
+    {
+      "path": "packages/core/test/stop/stop.test.ts",
+      "name": "the lease simply expires: the late completion publishes nothing and the request is denied lease-lost",
+      "fullName": "a drain that outlives the writer lease cannot publish (ruling R) the lease simply expires: the late completion publishes nothing and the request is denied lease-lost",
+      "status": "passed",
+      "id": 167
+    },
+    {
+      "path": "packages/core/test/journal/environments.test.ts",
+      "name": "a trial run\u2019s attempts, heads, candidates, acceptances and journal records never satisfy a production lookup",
+      "fullName": "environment namespaces a trial run\u2019s attempts, heads, candidates, acceptances and journal records never satisfy a production lookup",
+      "status": "passed",
+      "id": 208
+    },
+    {
+      "path": "packages/core/test/journal/environments.test.ts",
+      "name": "a promotion admits exactly the named trial results into production, with recorded provenance, and never moves or rewrites trial history",
+      "fullName": "recorded promotion a promotion admits exactly the named trial results into production, with recorded provenance, and never moves or rewrites trial history",
+      "status": "passed",
+      "id": 209
+    },
+    {
+      "path": "packages/core/test/journal/environments.test.ts",
+      "name": "a trial result promoted into production and accepted there appears only in production\u2019s acceptances, never in trial\u2019s",
+      "fullName": "recorded promotion a trial result promoted into production and accepted there appears only in production\u2019s acceptances, never in trial\u2019s",
+      "status": "passed",
+      "id": 210
+    },
+    {
+      "path": "packages/core/test/journal/environments.test.ts",
+      "name": "a promotion into one environment admits nothing into any other environment",
+      "fullName": "recorded promotion a promotion into one environment admits nothing into any other environment",
+      "status": "passed",
+      "id": 211
+    },
+    {
+      "path": "packages/core/test/journal/environments.test.ts",
+      "name": "promotion requires the current writer and distinct exact results of other environments of the same analysis; a refused promotion records nothing",
+      "fullName": "recorded promotion promotion requires the current writer and distinct exact results of other environments of the same analysis; a refused promotion records nothing",
+      "status": "passed",
+      "id": 212
+    },
+    {
+      "path": "packages/core/test/workspace/writer-wait.test.ts",
+      "name": "a second run waits while the first holds the writer, then publishes under the next fence once the first run closes",
+      "fullName": "waiting for the writer lease through the workspace (RUN-002 owner decision) a second run waits while the first holds the writer, then publishes under the next fence once the first run closes",
+      "status": "passed",
+      "id": 213
+    },
+    {
+      "path": "packages/core/test/workspace/writer-wait.test.ts",
+      "name": "at the operator deadline a waiting run fails with the exported WriterBusyError naming the holder and its expiry",
+      "fullName": "waiting for the writer lease through the workspace (RUN-002 owner decision) at the operator deadline a waiting run fails with the exported WriterBusyError naming the holder and its expiry",
+      "status": "passed",
+      "id": 214
+    },
+    {
+      "path": "packages/core/test/workspace/writer-wait.test.ts",
+      "name": "a hard stop ends a waiting run at once with stopped and leaves the holder untouched",
+      "fullName": "waiting for the writer lease through the workspace (RUN-002 owner decision) a hard stop ends a waiting run at once with stopped and leaves the holder untouched",
+      "status": "passed",
+      "id": 215
+    },
+    {
+      "path": "packages/core/test/workspace/writer-wait.test.ts",
+      "name": "SQLITE_BUSY exhaustion while waiting surfaces as the typed writer-busy outcome, marked contended and naming the recorded holder",
+      "fullName": "waiting for the writer lease through the workspace (RUN-002 owner decision) SQLITE_BUSY exhaustion while waiting surfaces as the typed writer-busy outcome, marked contended and naming the recorded holder",
+      "status": "passed",
+      "id": 216
+    },
+    {
+      "path": "packages/core/test/workspace/writer-wait.test.ts",
+      "name": "a zero poll interval is refused as an invalid request before any work",
+      "fullName": "waiting for the writer lease through the workspace (RUN-002 owner decision) a zero poll interval is refused as an invalid request before any work",
+      "status": "passed",
+      "id": 217
+    },
+    {
+      "path": "packages/core/test/workspace/writer-wait.test.ts",
+      "name": "a negative deadline is refused as an invalid request before any work",
+      "fullName": "waiting for the writer lease through the workspace (RUN-002 owner decision) a negative deadline is refused as an invalid request before any work",
+      "status": "passed",
+      "id": 218
+    },
+    {
+      "path": "packages/core/test/workspace/writer-wait.test.ts",
+      "name": "is refused for a second workspace object opened over the same store file",
+      "fullName": "a run started from inside an open run over the same store is refused for a second workspace object opened over the same store file",
+      "status": "passed",
+      "id": 219
+    },
+    {
+      "path": "packages/core/test/workspace/writer-wait.test.ts",
+      "name": "is refused when the second workspace names the same file by another spelling, through a symbolic link",
+      "fullName": "a run started from inside an open run over the same store is refused when the second workspace names the same file by another spelling, through a symbolic link",
+      "status": "passed",
+      "id": 220
+    },
+    {
+      "path": "packages/core/test/workspace/writer-wait.test.ts",
+      "name": "is refused when a run over another store sits between it and the enclosing run over the same store",
+      "fullName": "a run started from inside an open run over the same store is refused when a run over another store sits between it and the enclosing run over the same store",
+      "status": "passed",
+      "id": 221
+    },
+    {
+      "path": "packages/core/test/workspace/writer-wait.test.ts",
+      "name": "is refused promptly with invalid-request instead of waiting forever for the lease its caller holds",
+      "fullName": "a run started from inside an open run of the same workspace is refused promptly with invalid-request instead of waiting forever for the lease its caller holds",
+      "status": "passed",
+      "id": 222
+    },
+    {
+      "path": "packages/core/test/workspace/writer-wait.test.ts",
+      "name": "is refused from ordinary work and nested helpers too, and the outer run still completes normally",
+      "fullName": "a run started from inside an open run of the same workspace is refused from ordinary work and nested helpers too, and the outer run still completes normally",
+      "status": "passed",
+      "id": 223
+    },
+    {
+      "path": "packages/core/test/workspace/writer-wait.test.ts",
+      "name": "is allowed for another workspace over another store, which holds its own lease",
+      "fullName": "a run started from inside an open run of the same workspace is allowed for another workspace over another store, which holds its own lease",
+      "status": "passed",
+      "id": 224
+    },
+    {
+      "path": "packages/core/test/workspace/writer-wait.test.ts",
+      "name": "is allowed once the outer run has closed, from code that outlived it",
+      "fullName": "a run started from inside an open run of the same workspace is allowed once the outer run has closed, from code that outlived it",
+      "status": "passed",
+      "id": 225
+    },
+    {
+      "path": "packages/core/test/m4-acceptance/keyed.test.ts",
+      "name": "a cold process discovers Ada, Ben and Cy and runs every body once; an unchanged restart in reversed registration runs zero member, assessment and report bodies and keeps every exact reference",
+      "fullName": "keyed-cold-and-restarted-report a cold process discovers Ada, Ben and Cy and runs every body once; an unchanged restart in reversed registration runs zero member, assessment and report bodies and keeps every exact reference",
+      "status": "passed",
+      "id": 226
+    },
+    {
+      "path": "packages/core/test/m4-acceptance/keyed.test.ts",
+      "name": "an inserted contributor runs once and reruns the report; a deleted one is no longer required and never retracted; a reorder alone runs no member or report body",
+      "fullName": "discovery-insert-delete-reorder an inserted contributor runs once and reruns the report; a deleted one is no longer required and never retracted; a reorder alone runs no member or report body",
+      "status": "passed",
+      "id": 227
+    },
+    {
+      "path": "packages/core/test/m4-acceptance/keyed.test.ts",
+      "name": "a refreshed member source hook with equal data rechecks activities only; a new PR for Ada reruns her activity, summary and the report, assessing only the new PR across the shifted forwarded indices",
+      "fullName": "discovery-insert-delete-reorder a refreshed member source hook with equal data rechecks activities only; a new PR for Ada reruns her activity, summary and the report, assessing only the new PR across the shifted forwarded indices",
+      "status": "passed",
+      "id": 228
+    },
+    {
+      "path": "packages/core/test/m4-acceptance/keyed.test.ts",
+      "name": "a duplicate designated key rejects discovery with a diagnostic naming the collection and key and pointing to the custom key; no member work is admitted, and a corrected listing reconnects every member",
+      "fullName": "duplicate-and-missing-identity a duplicate designated key rejects discovery with a diagnostic naming the collection and key and pointing to the custom key; no member work is admitted, and a corrected listing reconnects every member",
+      "status": "passed",
+      "id": 229
+    },
+    {
+      "path": "packages/core/test/m4-acceptance/keyed.test.ts",
+      "name": "a record without designated identity rejects discovery with a diagnostic naming the collection and key and pointing to the custom key; no member work is admitted, and a corrected listing reconnects every member",
+      "fullName": "duplicate-and-missing-identity a record without designated identity rejects discovery with a diagnostic naming the collection and key and pointing to the custom key; no member work is admitted, and a corrected listing reconnects every member",
+      "status": "passed",
+      "id": 230
+    },
+    {
+      "path": "packages/core/test/m4-acceptance/keyed.test.ts",
+      "name": "members keyed by upstream profile id reconnect after a reordered, reverse-registered restart in which every designated key was renamed",
+      "fullName": "custom-key-correspondence members keyed by upstream profile id reconnect after a reordered, reverse-registered restart in which every designated key was renamed",
+      "status": "passed",
+      "id": 231
+    },
+    {
+      "path": "packages/core/test/workspace/scope.test.ts",
+      "name": "author helpers reached through a memo body see the run context across awaits",
+      "fullName": "scoped run context (RUN-001, DOM-2) author helpers reached through a memo body see the run context across awaits",
+      "status": "passed",
+      "id": 250
+    },
+    {
+      "path": "packages/core/test/workspace/scope.test.ts",
+      "name": "lookup outside any run fails, and a callback that escaped a closed run fails too",
+      "fullName": "scoped run context (RUN-001, DOM-2) lookup outside any run fails, and a callback that escaped a closed run fails too",
+      "status": "passed",
+      "id": 251
+    },
+    {
+      "path": "packages/core/test/workspace/scope.test.ts",
+      "name": "an exact read through a run that has closed fails instead of reading",
+      "fullName": "scoped run context (RUN-001, DOM-2) an exact read through a run that has closed fails instead of reading",
+      "status": "passed",
+      "id": 252
+    },
+    {
+      "path": "packages/core/test/workspace/scope.test.ts",
+      "name": "a run whose awaited Promise.all rejects early stays live, with context, reads and writer, until its started work settles",
+      "fullName": "scoped run context (RUN-001, DOM-2) a run whose awaited Promise.all rejects early stays live, with context, reads and writer, until its started work settles",
+      "status": "passed",
+      "id": 253
+    },
+    {
+      "path": "packages/core/test/workspace/scope.test.ts",
+      "name": "ordinary work queued in any microtask around the run's closure is rejected before starting or fully participates",
+      "fullName": "scoped run context (RUN-001, DOM-2) ordinary work queued in any microtask around the run's closure is rejected before starting or fully participates",
+      "status": "passed",
+      "id": 254
+    },
+    {
+      "path": "packages/core/test/workspace/scope.test.ts",
+      "name": "a composition constructed inside a live run cannot look up the run context",
+      "fullName": "scoped run context (RUN-001, DOM-2) a composition constructed inside a live run cannot look up the run context",
+      "status": "passed",
+      "id": 255
+    },
+    {
+      "path": "packages/core/test/workspace/scope.test.ts",
+      "name": "two concurrent runs over separate workspaces keep their own environments across awaits",
+      "fullName": "scoped run context (RUN-001, DOM-2) two concurrent runs over separate workspaces keep their own environments across awaits",
+      "status": "passed",
+      "id": 256
+    },
+    {
+      "path": "packages/core/test/workspace/scope.test.ts",
+      "name": "the selected environment scopes history: a run in another environment cannot reuse its results",
+      "fullName": "scoped run context (RUN-001, DOM-2) the selected environment scopes history: a run in another environment cannot reuse its results",
+      "status": "passed",
+      "id": 257
+    },
+    {
+      "path": "packages/core/test/workspace/scope.test.ts",
+      "name": "a new run identifier alone leaves eligible results reusable",
+      "fullName": "scoped run context (RUN-001, DOM-2) a new run identifier alone leaves eligible results reusable",
+      "status": "passed",
+      "id": 258
+    },
+    {
+      "path": "packages/core/test/m4-acceptance/nested.test.ts",
+      "name": "a rubric wording change reruns every assessment once; summaries and the report keep their exact references with zero bodies",
+      "fullName": "nested-equal-output-cutoff a rubric wording change reruns every assessment once; summaries and the report keep their exact references with zero bodies",
+      "status": "passed",
+      "id": 259
+    },
+    {
+      "path": "packages/core/test/m4-acceptance/nested.test.ts",
+      "name": "a changed merged-bug score reruns only PR 201's assessment, Ben's summary and the report; Ada and Cy keep their exact references",
+      "fullName": "nested-changed-output a changed merged-bug score reruns only PR 201's assessment, Ben's summary and the report; Ada and Cy keep their exact references",
+      "status": "passed",
+      "id": 260
+    },
+    {
+      "path": "packages/core/test/m4-acceptance/nested.test.ts",
+      "name": "binding rubric B is a child implementation change with equal scores (parents retained); binding rubric C changes Ada's and Ben's consumed scores (only they and the report rerun)",
+      "fullName": "supplied-assessor-swap binding rubric B is a child implementation change with equal scores (parents retained); binding rubric C changes Ada's and Ben's consumed scores (only they and the report rerun)",
+      "status": "passed",
+      "id": 261
+    },
+    {
+      "path": "packages/core/test/m4-acceptance/nested.test.ts",
+      "name": "a missing assessor slot on restart is a distinct honest miss and a typed member failure: no summary body, no child work and no admission at all",
+      "fullName": "binding-and-argument-misses a missing assessor slot on restart is a distinct honest miss and a typed member failure: no summary body, no child work and no admission at all",
+      "status": "passed",
+      "id": 262
+    },
+    {
+      "path": "packages/core/test/m4-acceptance/nested.test.ts",
+      "name": "an ambiguous assessor slot on restart is a distinct honest miss and a typed member failure: no summary body, no child work and no admission at all",
+      "fullName": "binding-and-argument-misses an ambiguous assessor slot on restart is a distinct honest miss and a typed member failure: no summary body, no child work and no admission at all",
+      "status": "passed",
+      "id": 263
+    },
+    {
+      "path": "packages/core/test/m4-acceptance/nested.test.ts",
+      "name": "an unreconstructible argument makes each parent an honest miss that runs its body once, while its activity and assessments reuse and the report keeps its exact reference",
+      "fullName": "binding-and-argument-misses an unreconstructible argument makes each parent an honest miss that runs its body once, while its activity and assessments reuse and the report keeps its exact reference",
+      "status": "passed",
+      "id": 264
+    },
+    {
+      "path": "packages/core/test/m4-acceptance/nested.test.ts",
+      "name": "an argument derived after an observed untracked read makes each parent an honest miss that runs its body once, while its activity and assessments reuse and the report keeps its exact reference",
+      "fullName": "binding-and-argument-misses an argument derived after an observed untracked read makes each parent an honest miss that runs its body once, while its activity and assessments reuse and the report keeps its exact reference",
+      "status": "passed",
+      "id": 265
+    },
+    {
+      "path": "packages/core/test/m4-acceptance/nested.test.ts",
+      "name": "with no change at all, the standard summary is retained: the misses above are caused by their variants, not by restart",
+      "fullName": "binding-and-argument-misses with no change at all, the standard summary is retained: the misses above are caused by their variants, not by restart",
+      "status": "passed",
+      "id": 266
+    },
+    {
+      "path": "packages/core/test/operations/replay.test.ts",
+      "name": "is unknown, is sent once, and is not replayed by this pass or a later one",
+      "fullName": "a lost response without a safety basis (RUN-012) is unknown, is sent once, and is not replayed by this pass or a later one",
+      "status": "passed",
+      "id": 268
+    },
+    {
+      "path": "packages/core/test/operations/replay.test.ts",
+      "name": "keeps its member pending and a strict fold over it waiting, never failed or succeeded (owner ruling on #119)",
+      "fullName": "a lost response without a safety basis (RUN-012) keeps its member pending and a strict fold over it waiting, never failed or succeeded (owner ruling on #119)",
+      "status": "passed",
+      "id": 269
+    },
+    {
+      "path": "packages/core/test/operations/replay.test.ts",
+      "name": "a body that catches the unknown outcome and calls again sends it once (CX-6)",
+      "fullName": "a lost response without a safety basis (RUN-012) a body that catches the unknown outcome and calls again sends it once (CX-6)",
+      "status": "passed",
+      "id": 270
+    },
+    {
+      "path": "packages/core/test/operations/replay.test.ts",
+      "name": "a tainted attempt sends no further operation of any name",
+      "fullName": "a lost response without a safety basis (RUN-012) a tainted attempt sends no further operation of any name",
+      "status": "passed",
+      "id": 271
+    },
+    {
+      "path": "packages/core/test/operations/replay.test.ts",
+      "name": "a body that catches a deferral and calls again sends nothing before T and keeps the deferral (CX-7)",
+      "fullName": "a lost response without a safety basis (RUN-012) a body that catches a deferral and calls again sends nothing before T and keeps the deferral (CX-7)",
+      "status": "passed",
+      "id": 272
+    },
+    {
+      "path": "packages/core/test/operations/replay.test.ts",
+      "name": "safe to repeat with a policy: the retry reuses the operation identity, and the author accepted both effects",
+      "fullName": "retrying an unknown outcome needs a safety basis and a policy (EXP-8 resolution 4) safe to repeat with a policy: the retry reuses the operation identity, and the author accepted both effects",
+      "status": "passed",
+      "id": 273
+    },
+    {
+      "path": "packages/core/test/operations/replay.test.ts",
+      "name": "provider idempotency keys: the retry carries the same key and the provider applies the effect once",
+      "fullName": "retrying an unknown outcome needs a safety basis and a policy (EXP-8 resolution 4) provider idempotency keys: the retry carries the same key and the provider applies the effect once",
+      "status": "passed",
+      "id": 274
+    },
+    {
+      "path": "packages/core/test/operations/replay.test.ts",
+      "name": "safe to repeat without a policy allowing another attempt still blocks, as policy exhausted",
+      "fullName": "retrying an unknown outcome needs a safety basis and a policy (EXP-8 resolution 4) safe to repeat without a policy allowing another attempt still blocks, as policy exhausted",
+      "status": "passed",
+      "id": 275
+    },
+    {
+      "path": "packages/core/test/operations/replay.test.ts",
+      "name": "a repeat-safe operation whose policy ran out blocks later runs before their bodies run",
+      "fullName": "retrying an unknown outcome needs a safety basis and a policy (EXP-8 resolution 4) a repeat-safe operation whose policy ran out blocks later runs before their bodies run",
+      "status": "passed",
+      "id": 276
+    },
+    {
+      "path": "packages/core/test/operations/privacy.test.ts",
+      "name": "no planted value reaches any event, diagnostic or member report across every outcome",
+      "fullName": "event privacy (RUN-013) no planted value reaches any event, diagnostic or member report across every outcome",
+      "status": "passed",
+      "id": 298
+    },
+    {
+      "path": "packages/core/test/operations/privacy.test.ts",
+      "name": "an author error carrying the planted value reaches the caller only as the failure's cause: never its message, an event or a diagnostic",
+      "fullName": "event privacy (RUN-013) an author error carrying the planted value reaches the caller only as the failure's cause: never its message, an event or a diagnostic",
+      "status": "passed",
+      "id": 299
+    },
+    {
+      "path": "packages/core/test/operations/privacy.test.ts",
+      "name": "a declared child that fails with an author error fails its parent typed; neither its message, an event nor a stored record repeats the error",
+      "fullName": "event privacy (RUN-013) a declared child that fails with an author error fails its parent typed; neither its message, an event nor a stored record repeats the error",
+      "status": "passed",
+      "id": 300
+    },
+    {
+      "path": "packages/core/test/operations/privacy.test.ts",
+      "name": "a usage unit that is not an identifier is dropped from the event and diagnosed by code, while Accounting keeps it",
+      "fullName": "event privacy (RUN-013) a usage unit that is not an identifier is dropped from the event and diagnosed by code, while Accounting keeps it",
+      "status": "passed",
+      "id": 301
+    },
+    {
+      "path": "packages/core/test/operations/privacy.test.ts",
+      "name": "History's operation journal and Accounting's durable adapter are assignable to Supervision's structural ports",
+      "fullName": "Supervision owns the ports History and Accounting satisfy History's operation journal and Accounting's durable adapter are assignable to Supervision's structural ports",
+      "status": "passed",
+      "id": 302
+    },
+    {
+      "path": "packages/core/test/accounting/crash-recovery.test.ts",
+      "name": "kill after the intent: the provider received nothing, yet usage is unknown, never zero",
+      "fullName": "separate-process kills around a paid call kill after the intent: the provider received nothing, yet usage is unknown, never zero",
+      "status": "passed",
+      "id": 309
+    },
+    {
+      "path": "packages/core/test/accounting/crash-recovery.test.ts",
+      "name": "kill after the provider applied the call: usage is unknown until the late report is delivered once",
+      "fullName": "separate-process kills around a paid call kill after the provider applied the call: usage is unknown until the late report is delivered once",
+      "status": "passed",
+      "id": 310
+    },
+    {
+      "path": "packages/core/test/accounting/crash-recovery.test.ts",
+      "name": "kill after the acknowledgment: the durable report survives and a redelivery is a duplicate",
+      "fullName": "separate-process kills around a paid call kill after the acknowledgment: the durable report survives and a redelivery is a duplicate",
+      "status": "passed",
+      "id": 311
+    },
+    {
+      "path": "packages/core/test/accounting/crash-recovery.test.ts",
+      "name": "the commit landed but the process died before acknowledging: usage is retained exactly once",
+      "fullName": "a lost acknowledgment (ambiguous commit) the commit landed but the process died before acknowledging: usage is retained exactly once",
+      "status": "passed",
+      "id": 312
+    },
+    {
+      "path": "packages/core/test/accounting/crash-recovery.test.ts",
+      "name": "the commit did not land: usage stays unknown until redelivery records it once",
+      "fullName": "a lost acknowledgment (ambiguous commit) the commit did not land: usage stays unknown until redelivery records it once",
+      "status": "passed",
+      "id": 313
+    },
+    {
+      "path": "packages/core/test/accounting/crash-recovery.test.ts",
+      "name": "an intent whose commit did not land leaves no expected usage; one that landed is a duplicate",
+      "fullName": "a lost acknowledgment (ambiguous commit) an intent whose commit did not land leaves no expected usage; one that landed is a duplicate",
+      "status": "passed",
+      "id": 314
+    },
+    {
+      "path": "packages/core/test/m4-acceptance/fold.test.ts",
+      "name": "A-11: with Cy failing, Ben pending and discovery open, Ada publishes and the report fails naming each state; the repair runs only the unfinished members and the report",
+      "fullName": "strict-fold-readiness A-11: with Cy failing, Ben pending and discovery open, Ada publishes and the report fails naming each state; the repair runs only the unfinished members and the report",
+      "status": "passed",
+      "id": 315
+    },
+    {
+      "path": "packages/core/test/m4-acceptance/fold.test.ts",
+      "name": "with nothing failed, a pending member leaves the report waiting, then open discovery alone does; closing discovery runs only the report",
+      "fullName": "strict-fold-readiness with nothing failed, a pending member leaves the report waiting, then open discovery alone does; closing discovery runs only the report",
+      "status": "passed",
+      "id": 316
+    },
+    {
+      "path": "packages/core/test/m4-acceptance/fold.test.ts",
+      "name": "a report body that drops exclusions still carries framework coverage naming required and skipped keys and closure, cold and reused",
+      "fullName": "strict-fold-coverage a report body that drops exclusions still carries framework coverage naming required and skipped keys and closure, cold and reused",
+      "status": "passed",
+      "id": 317
+    },
+    {
+      "path": "packages/core/test/m4-acceptance/fold.test.ts",
+      "name": "a closed zero-member listing is a complete report, distinct from an open empty listing and from discovery that did not settle; neither rewinds it",
+      "fullName": "closed-empty-population a closed zero-member listing is a complete report, distinct from an open empty listing and from discovery that did not settle; neither rewinds it",
+      "status": "passed",
+      "id": 318
+    },
+    {
+      "path": "packages/core/test/acceptance/changes.test.ts",
+      "name": "changing only unread labels and avatar publishes a fresh source but keeps the exact summary",
+      "fullName": "read-unread-and-called-helper (A-02) changing only unread labels and avatar publishes a fresh source but keeps the exact summary",
+      "status": "passed",
+      "id": 319
+    },
+    {
+      "path": "packages/core/test/acceptance/changes.test.ts",
+      "name": "Ada's consumed merged-status change reevaluates only Ada while Ben keeps his exact result",
+      "fullName": "read-unread-and-called-helper (A-02) Ada's consumed merged-status change reevaluates only Ada while Ben keeps his exact result",
+      "status": "passed",
+      "id": 320
+    },
+    {
+      "path": "packages/core/test/acceptance/changes.test.ts",
+      "name": "Ada's consumed review change reevaluates only Ada while Ben keeps his exact result",
+      "fullName": "read-unread-and-called-helper (A-02) Ada's consumed review change reevaluates only Ada while Ben keeps his exact result",
+      "status": "passed",
+      "id": 321
+    },
+    {
+      "path": "packages/core/test/acceptance/changes.test.ts",
+      "name": "a changed called formatter reevaluates both summaries even though the sentences are unchanged",
+      "fullName": "read-unread-and-called-helper (A-02) a changed called formatter reevaluates both summaries even though the sentences are unchanged",
+      "status": "passed",
+      "id": 322
+    },
+    {
+      "path": "packages/core/test/acceptance/changes.test.ts",
+      "name": "a changed uncalled helper adds no dependency: both exact summaries are kept",
+      "fullName": "read-unread-and-called-helper (A-02) a changed uncalled helper adds no dependency: both exact summaries are kept",
+      "status": "passed",
+      "id": 323
+    },
+    {
+      "path": "packages/core/test/acceptance/changes.test.ts",
+      "name": "version 1 to 2 misses, rollback to 1 retains the old exact result without rewinding the latest pointer, and changed-input rollback misses",
+      "fullName": "compatibility-rollback (A-02, REUSE-008) version 1 to 2 misses, rollback to 1 retains the old exact result without rewinding the latest pointer, and changed-input rollback misses",
+      "status": "passed",
+      "id": 324
+    },
+    {
+      "path": "packages/core/test/acceptance/changes.test.ts",
+      "name": "a replaced profile with an equal name keeps the summary, a later name change invalidates it, and original provenance still resolves the old profile",
+      "fullName": "equal-name-profile-rebinding (A-04) a replaced profile with an equal name keeps the summary, a later name change invalidates it, and original provenance still resolves the old profile",
+      "status": "passed",
+      "id": 325
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/usage.test.ts",
+      "name": "a SIGKILL before-send of pr-2: known usage survives once, unknown usage stays unknown, and the in-flight operation is never replayed",
+      "fullName": "usage-exactly-once (A-14, ACC-003, ACC-005, ACC-007) a SIGKILL before-send of pr-2: known usage survives once, unknown usage stays unknown, and the in-flight operation is never replayed",
+      "status": "passed",
+      "id": 335
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/usage.test.ts",
+      "name": "a SIGKILL after-send of pr-2: known usage survives once, unknown usage stays unknown, and the in-flight operation is never replayed",
+      "fullName": "usage-exactly-once (A-14, ACC-003, ACC-005, ACC-007) a SIGKILL after-send of pr-2: known usage survives once, unknown usage stays unknown, and the in-flight operation is never replayed",
+      "status": "passed",
+      "id": 336
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/usage.test.ts",
+      "name": "a SIGKILL after-usage of pr-2: known usage survives once, unknown usage stays unknown, and the in-flight operation is never replayed",
+      "fullName": "usage-exactly-once (A-14, ACC-003, ACC-005, ACC-007) a SIGKILL after-usage of pr-2: known usage survives once, unknown usage stays unknown, and the in-flight operation is never replayed",
+      "status": "passed",
+      "id": 337
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/usage.test.ts",
+      "name": "a lost acknowledgment whose commit landed is counted exactly once, and the committed outcome stands",
+      "fullName": "usage-exactly-once (A-14, ACC-003, ACC-005, ACC-007) a lost acknowledgment whose commit landed is counted exactly once, and the committed outcome stands",
+      "status": "passed",
+      "id": 338
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/usage.test.ts",
+      "name": "an acknowledgment that recorded nothing leaves that attempt unknown, never zero",
+      "fullName": "usage-exactly-once (A-14, ACC-003, ACC-005, ACC-007) an acknowledgment that recorded nothing leaves that attempt unknown, never zero",
+      "status": "passed",
+      "id": 339
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/usage.test.ts",
+      "name": "a report redelivered after a crash is counted once; the retry that only redelivered it has unknown usage of its own",
+      "fullName": "usage-exactly-once (A-14, ACC-003, ACC-005, ACC-007) a report redelivered after a crash is counted once; the retry that only redelivered it has unknown usage of its own",
+      "status": "passed",
+      "id": 340
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/usage.test.ts",
+      "name": "the same report identity on two operations is two reports, counted twice",
+      "fullName": "usage-exactly-once (A-14, ACC-003, ACC-005, ACC-007) the same report identity on two operations is two reports, counted twice",
+      "status": "passed",
+      "id": 341
+    },
+    {
+      "path": "packages/core/test/acceptance/integrity-io.test.ts",
+      "name": "a superseded summary stays exactly readable beside its successor",
+      "fullName": "exact-reference-integrity (A-10) a superseded summary stays exactly readable beside its successor",
+      "status": "passed",
+      "id": 342
+    },
+    {
+      "path": "packages/core/test/acceptance/integrity-io.test.ts",
+      "name": "a missing reference, a reference from another store and a wrong-scope reference fail without retargeting or recomputation",
+      "fullName": "exact-reference-integrity (A-10) a missing reference, a reference from another store and a wrong-scope reference fail without retargeting or recomputation",
+      "status": "passed",
+      "id": 343
+    },
+    {
+      "path": "packages/core/test/acceptance/integrity-io.test.ts",
+      "name": "an author mutating the eligible previous result changes no stored data",
+      "fullName": "exact-reference-integrity (A-10) an author mutating the eligible previous result changes no stored data",
+      "status": "passed",
+      "id": 344
+    },
+    {
+      "path": "packages/core/test/acceptance/integrity-io.test.ts",
+      "name": "cold summary bodies read only the consumed scalar leaves of their source results, never a root payload",
+      "fullName": "selected-node-io (A-17 within M3) cold summary bodies read only the consumed scalar leaves of their source results, never a root payload",
+      "status": "passed",
+      "id": 345
+    },
+    {
+      "path": "packages/core/test/acceptance/integrity-io.test.ts",
+      "name": "fingerprint-only validation: with accepting hooks that never read the previous result, restart validation reads zero payload",
+      "fullName": "selected-node-io (A-17 within M3) fingerprint-only validation: with accepting hooks that never read the previous result, restart validation reads zero payload",
+      "status": "passed",
+      "id": 346
+    },
+    {
+      "path": "packages/core/test/acceptance/integrity-io.test.ts",
+      "name": "eligible restart validation is metadata-only: no source payload beyond the finality hooks' own selected reads",
+      "fullName": "selected-node-io (A-17 within M3) eligible restart validation is metadata-only: no source payload beyond the finality hooks' own selected reads",
+      "status": "passed",
+      "id": 347
+    },
+    {
+      "path": "packages/core/test/acceptance/integrity-io.test.ts",
+      "name": "a consumed change reads only the re-executed summary's consumed leaves; the unaffected member validates by metadata",
+      "fullName": "selected-node-io (A-17 within M3) a consumed change reads only the re-executed summary's consumed leaves; the unaffected member validates by metadata",
+      "status": "passed",
+      "id": 348
+    },
+    {
+      "path": "packages/core/test/acceptance/stop-publication.test.ts",
+      "name": "killed immediately before the commit: the old complete state stands, the attempt is incomplete, and a new process executes it afresh",
+      "fullName": "publication-commit-race (A-09, A-13): a soft-stop drain killed on either side of its commit killed immediately before the commit: the old complete state stands, the attempt is incomplete, and a new process executes it afresh",
+      "status": "passed",
+      "id": 349
+    },
+    {
+      "path": "packages/core/test/acceptance/stop-publication.test.ts",
+      "name": "killed immediately after the commit: the committed success is recovered exactly and reused, never re-executed",
+      "fullName": "publication-commit-race (A-09, A-13): a soft-stop drain killed on either side of its commit killed immediately after the commit: the committed success is recovered exactly and reused, never re-executed",
+      "status": "passed",
+      "id": 350
+    },
+    {
+      "path": "packages/core/test/acceptance/stop-publication.test.ts",
+      "name": "a throwing observer at the commit and a failing presenter never re-execute the committed success",
+      "fullName": "publication-commit-race (A-19): observer and presenter failures after the commit a throwing observer at the commit and a failing presenter never re-execute the committed success",
+      "status": "passed",
+      "id": 351
+    },
+    {
+      "path": "packages/core/test/acceptance/stop-publication.test.ts",
+      "name": "discards the step: nothing is published, the attempt is unsuccessful, and a later process executes it afresh",
+      "fullName": "publication-commit-race (A-13): a hard stop before the commit discards the step: nothing is published, the attempt is unsuccessful, and a later process executes it afresh",
+      "status": "passed",
+      "id": 352
+    },
+    {
+      "path": "packages/core/test/stop/drain.test.ts",
+      "name": "a parent that demands a new child after a soft stop obtains it and publishes",
+      "fullName": "a draining parent obtains the children its body demands a parent that demands a new child after a soft stop obtains it and publishes",
+      "status": "passed",
+      "id": 353
+    },
+    {
+      "path": "packages/core/test/stop/drain.test.ts",
+      "name": "a child admitted during the drain may still not retry: its retry is refused, and neither it nor its parent publishes",
+      "fullName": "a draining parent obtains the children its body demands a child admitted during the drain may still not retry: its retry is refused, and neither it nor its parent publishes",
+      "status": "passed",
+      "id": 354
+    },
+    {
+      "path": "packages/core/test/stop/drain.test.ts",
+      "name": "a fan-out member that has not started when a soft stop lands is cancelled before any claim",
+      "fullName": "work no executing admitted body demands is new work a fan-out member that has not started when a soft stop lands is cancelled before any claim",
+      "status": "passed",
+      "id": 355
+    },
+    {
+      "path": "packages/core/test/stop/drain.test.ts",
+      "name": "a member already admitted when a soft stop lands drains: it waits for the permit, sends its first attempt and publishes",
+      "fullName": "work no executing admitted body demands is new work a member already admitted when a soft stop lands drains: it waits for the permit, sends its first attempt and publishes",
+      "status": "passed",
+      "id": 356
+    },
+    {
+      "path": "packages/core/test/stop/drain.test.ts",
+      "name": "deadline: a child obtained during the drain is aborted mid-send; its completed sibling stays reusable and nothing partial publishes",
+      "fullName": "an operator deadline or a hard stop bounds the drain subtree deadline: a child obtained during the drain is aborted mid-send; its completed sibling stays reusable and nothing partial publishes",
+      "status": "passed",
+      "id": 357
+    },
+    {
+      "path": "packages/core/test/stop/drain.test.ts",
+      "name": "hard: a child obtained during the drain is aborted mid-send; its completed sibling stays reusable and nothing partial publishes",
+      "fullName": "an operator deadline or a hard stop bounds the drain subtree hard: a child obtained during the drain is aborted mid-send; its completed sibling stays reusable and nothing partial publishes",
+      "status": "passed",
+      "id": 358
+    },
+    {
+      "path": "packages/core/test/outcome-fold/restart.test.ts",
+      "name": "A-11 across processes: waits while unsettled, folds the failure once settled, reconsiders on repair, then reuses",
+      "fullName": "outcome-fold-coverage A-11 across processes: waits while unsettled, folds the failure once settled, reconsiders on repair, then reuses",
+      "status": "passed",
+      "id": 364
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/privacy.test.ts",
+      "name": "no planted value, title, answer text or binding digest reaches any event, diagnostic, stdout or stderr",
+      "fullName": "event-privacy (RUN-013) no planted value, title, answer text or binding digest reaches any event, diagnostic, stdout or stderr",
+      "status": "passed",
+      "id": 367
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/privacy.test.ts",
+      "name": "no framework failure message repeats an author error's text, from a member body, a fold body or a source check (#147)",
+      "fullName": "event-privacy (RUN-013) no framework failure message repeats an author error's text, from a member body, a fold body or a source check (#147)",
+      "status": "passed",
+      "id": 368
+    },
+    {
+      "path": "packages/core/test/acceptance/source-policy.test.ts",
+      "name": "an accepting current hook runs once per member in every new process and retains the exact source without a check",
+      "fullName": "current-finality-under-cached-summary (A-03) an accepting current hook runs once per member in every new process and retains the exact source without a check",
+      "status": "passed",
+      "id": 372
+    },
+    {
+      "path": "packages/core/test/acceptance/source-policy.test.ts",
+      "name": "a false current answer enters the check, whose fresh equal data is a distinct source while the summary is kept",
+      "fullName": "current-finality-under-cached-summary (A-03) a false current answer enters the check, whose fresh equal data is a distinct source while the summary is kept",
+      "status": "passed",
+      "id": 373
+    },
+    {
+      "path": "packages/core/test/acceptance/source-policy.test.ts",
+      "name": "an absent finality hook enters the current check in every new process",
+      "fullName": "current-finality-under-cached-summary (A-03) an absent finality hook enters the current check in every new process",
+      "status": "passed",
+      "id": 374
+    },
+    {
+      "path": "packages/core/test/acceptance/source-policy.test.ts",
+      "name": "a changed current finality hook is what runs; the earlier accepting decision cannot mask it",
+      "fullName": "current-finality-under-cached-summary (A-03) a changed current finality hook is what runs; the earlier accepting decision cannot mask it",
+      "status": "passed",
+      "id": 375
+    },
+    {
+      "path": "packages/core/test/acceptance/source-policy.test.ts",
+      "name": "a changed source implementation is not excused by an accepting hook: finality is skipped and admitted source work runs",
+      "fullName": "current-finality-under-cached-summary (A-03) a changed source implementation is not excused by an accepting hook: finality is skipped and admitted source work runs",
+      "status": "passed",
+      "id": 376
+    },
+    {
+      "path": "packages/core/test/acceptance/source-policy.test.ts",
+      "name": "an explicit retention keeps the exact source reference and ends the claim without publishing",
+      "fullName": "retain-versus-fresh-equal (A-03/A-10) an explicit retention keeps the exact source reference and ends the claim without publishing",
+      "status": "passed",
+      "id": 377
+    },
+    {
+      "path": "packages/core/test/acceptance/source-policy.test.ts",
+      "name": "fresh equal data twice yields two distinct exact source references, each readable, while the summary is kept",
+      "fullName": "retain-versus-fresh-equal (A-03/A-10) fresh equal data twice yields two distinct exact source references, each readable, while the summary is kept",
+      "status": "passed",
+      "id": 378
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/environments.test.ts",
+      "name": "a trial never satisfies production by accident; after a recorded promotion production reuses every promoted result and pays nothing",
+      "fullName": "trial-production-isolation (RUN-016, RUN-017) a trial never satisfies production by accident; after a recorded promotion production reuses every promoted result and pays nothing",
+      "status": "passed",
+      "id": 385
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/environments.test.ts",
+      "name": "without a promotion production executes and pays for its own work, and the trial's results and usage stay untouched",
+      "fullName": "trial-production-isolation (RUN-016, RUN-017) without a promotion production executes and pays for its own work, and the trial's results and usage stay untouched",
+      "status": "passed",
+      "id": 386
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/lifecycle.test.ts",
+      "name": "concurrent scopes, a thrown nested frame and a late detached callback: no cross-run leakage, and late use fails clearly",
+      "fullName": "lifecycle-isolation (A-18, RUN-001) concurrent scopes, a thrown nested frame and a late detached callback: no cross-run leakage, and late use fails clearly",
+      "status": "passed",
+      "id": 387
+    },
+    {
+      "path": "packages/core/test/acceptance/restart.test.ts",
+      "name": "a cold process publishes both sources and summaries once and assembles the ordered report once",
+      "fullName": "cold-and-restarted-report (TEST-1/2) a cold process publishes both sources and summaries once and assembles the ordered report once",
+      "status": "passed",
+      "id": 400
+    },
+    {
+      "path": "packages/core/test/acceptance/restart.test.ts",
+      "name": "an unchanged restart runs current finality, no summary bodies or checks, keeps exact references and assembles once",
+      "fullName": "cold-and-restarted-report (TEST-1/2) an unchanged restart runs current finality, no summary bodies or checks, keeps exact references and assembles once",
+      "status": "passed",
+      "id": 401
+    },
+    {
+      "path": "packages/core/test/acceptance/restart.test.ts",
+      "name": "reversed registration and invocation order keep each member's own exact results and evidence",
+      "fullName": "cold-and-restarted-report (TEST-1/2) reversed registration and invocation order keep each member's own exact results and evidence",
+      "status": "passed",
+      "id": 402
+    },
+    {
+      "path": "packages/core/test/acceptance/restart.test.ts",
+      "name": "renamed display labels after restart do not change correspondence or reuse",
+      "fullName": "cold-and-restarted-report (TEST-1/2) renamed display labels after restart do not change correspondence or reuse",
+      "status": "passed",
+      "id": 403
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/writer.test.ts",
+      "name": "a second process waits for the lease instead of failing; at an operator deadline it fails writer-busy naming the holder; waiting changes nothing",
+      "fullName": "writer-wait-and-takeover (A-09, RUN-002) a second process waits for the lease instead of failing; at an operator deadline it fails writer-busy naming the holder; waiting changes nothing",
+      "status": "passed",
+      "id": 411
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/writer.test.ts",
+      "name": "after the holder is killed, a waiter takes over only at its expiry, with the next fence, and records the in-flight operation unknown without replaying it",
+      "fullName": "writer-wait-and-takeover (A-09, RUN-002) after the holder is killed, a waiter takes over only at its expiry, with the next fence, and records the in-flight operation unknown without replaying it",
+      "status": "passed",
+      "id": 412
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/writer.test.ts",
+      "name": "late publish with successor none: the stale holder cannot act for another holder",
+      "fullName": "stale-holder-interleavings (A-09, A-10, PUB-004) late publish with successor none: the stale holder cannot act for another holder",
+      "status": "passed",
+      "id": 413
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/writer.test.ts",
+      "name": "late publish with successor holding: the stale holder cannot act for another holder",
+      "fullName": "stale-holder-interleavings (A-09, A-10, PUB-004) late publish with successor holding: the stale holder cannot act for another holder",
+      "status": "passed",
+      "id": 414
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/writer.test.ts",
+      "name": "late publish with successor finished: the stale holder cannot act for another holder",
+      "fullName": "stale-holder-interleavings (A-09, A-10, PUB-004) late publish with successor finished: the stale holder cannot act for another holder",
+      "status": "passed",
+      "id": 415
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/writer.test.ts",
+      "name": "late renew with successor none: the stale holder cannot act for another holder",
+      "fullName": "stale-holder-interleavings (A-09, A-10, PUB-004) late renew with successor none: the stale holder cannot act for another holder",
+      "status": "passed",
+      "id": 416
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/writer.test.ts",
+      "name": "late renew with successor holding: the stale holder cannot act for another holder",
+      "fullName": "stale-holder-interleavings (A-09, A-10, PUB-004) late renew with successor holding: the stale holder cannot act for another holder",
+      "status": "passed",
+      "id": 417
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/writer.test.ts",
+      "name": "late renew with successor finished: the stale holder cannot act for another holder",
+      "fullName": "stale-holder-interleavings (A-09, A-10, PUB-004) late renew with successor finished: the stale holder cannot act for another holder",
+      "status": "passed",
+      "id": 418
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/writer.test.ts",
+      "name": "late release with successor none: the stale holder cannot act for another holder",
+      "fullName": "stale-holder-interleavings (A-09, A-10, PUB-004) late release with successor none: the stale holder cannot act for another holder",
+      "status": "passed",
+      "id": 419
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/writer.test.ts",
+      "name": "late release with successor holding: the stale holder cannot act for another holder",
+      "fullName": "stale-holder-interleavings (A-09, A-10, PUB-004) late release with successor holding: the stale holder cannot act for another holder",
+      "status": "passed",
+      "id": 420
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/writer.test.ts",
+      "name": "late release with successor finished: the stale holder cannot act for another holder",
+      "fullName": "stale-holder-interleavings (A-09, A-10, PUB-004) late release with successor finished: the stale holder cannot act for another holder",
+      "status": "passed",
+      "id": 421
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/writer.test.ts",
+      "name": "a request still holding the run's expired lease cannot publish after the run's next request took the lease again under the same holder name",
+      "fullName": "stale-holder-interleavings (A-09, PUB-004): one run, two tenures a request still holding the run's expired lease cannot publish after the run's next request took the lease again under the same holder name",
+      "status": "passed",
+      "id": 422
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/writer.test.ts",
+      "name": "a soft-stop drain that outlives its lease while a successor holds it: the late completion is refused, the successor is untouched, and its usage is preserved",
+      "fullName": "drain-outlives-lease (A-09, EXP-8 ruling R) a soft-stop drain that outlives its lease while a successor holds it: the late completion is refused, the successor is untouched, and its usage is preserved",
+      "status": "passed",
+      "id": 423
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/writer.test.ts",
+      "name": "the drained run ends its pass lease-lost with typed outcomes, not a raw StaleWriterError (#147, ruling R)",
+      "fullName": "drain-outlives-lease (A-09, EXP-8 ruling R) the drained run ends its pass lease-lost with typed outcomes, not a raw StaleWriterError (#147, ruling R)",
+      "status": "passed",
+      "id": 424
+    },
+    {
+      "path": "packages/core/test/acceptance/crash-recovery.test.ts",
+      "name": "killed before the writer acquisition commits: nothing changed, no holder, the saved key identifies nothing",
+      "fullName": "publication-kill-boundaries (A-09) through a real summary invocation killed before the writer acquisition commits: nothing changed, no holder, the saved key identifies nothing",
+      "status": "passed",
+      "id": 425
+    },
+    {
+      "path": "packages/core/test/acceptance/crash-recovery.test.ts",
+      "name": "killed before the summary allocation commits: the source result is committed, the summary attempt never existed",
+      "fullName": "publication-kill-boundaries (A-09) through a real summary invocation killed before the summary allocation commits: the source result is committed, the summary attempt never existed",
+      "status": "passed",
+      "id": 426
+    },
+    {
+      "path": "packages/core/test/acceptance/crash-recovery.test.ts",
+      "name": "killed after the summary allocation commits: no partial result, old history intact, the attempt is honestly incomplete and never auto-executes",
+      "fullName": "publication-kill-boundaries (A-09) through a real summary invocation killed after the summary allocation commits: no partial result, old history intact, the attempt is honestly incomplete and never auto-executes",
+      "status": "passed",
+      "id": 427
+    },
+    {
+      "path": "packages/core/test/acceptance/crash-recovery.test.ts",
+      "name": "killed before the summary staging commits: no partial result, old history intact, the attempt is honestly incomplete and never auto-executes",
+      "fullName": "publication-kill-boundaries (A-09) through a real summary invocation killed before the summary staging commits: no partial result, old history intact, the attempt is honestly incomplete and never auto-executes",
+      "status": "passed",
+      "id": 428
+    },
+    {
+      "path": "packages/core/test/acceptance/crash-recovery.test.ts",
+      "name": "killed after the summary staging commits: no partial result, old history intact, the attempt is honestly incomplete and never auto-executes",
+      "fullName": "publication-kill-boundaries (A-09) through a real summary invocation killed after the summary staging commits: no partial result, old history intact, the attempt is honestly incomplete and never auto-executes",
+      "status": "passed",
+      "id": 429
+    },
+    {
+      "path": "packages/core/test/acceptance/crash-recovery.test.ts",
+      "name": "killed immediately before the summary publication commits: no partial result, old history intact, the attempt is honestly incomplete and never auto-executes",
+      "fullName": "publication-kill-boundaries (A-09) through a real summary invocation killed immediately before the summary publication commits: no partial result, old history intact, the attempt is honestly incomplete and never auto-executes",
+      "status": "passed",
+      "id": 430
+    },
+    {
+      "path": "packages/core/test/acceptance/crash-recovery.test.ts",
+      "name": "an unsuccessful summary attempt is reported as such by recovery and is never re-executed automatically",
+      "fullName": "publication-kill-boundaries (A-09) through a real summary invocation an unsuccessful summary attempt is reported as such by recovery and is never re-executed automatically",
+      "status": "passed",
+      "id": 431
+    },
+    {
+      "path": "packages/core/test/acceptance/crash-recovery.test.ts",
+      "name": "after the killed holder's lease has certainly expired, lost-acknowledgment recovery still performs no writer activity",
+      "fullName": "publication-kill-boundaries (A-09) through a real summary invocation after the killed holder's lease has certainly expired, lost-acknowledgment recovery still performs no writer activity",
+      "status": "passed",
+      "id": 432
+    },
+    {
+      "path": "packages/core/test/acceptance/crash-recovery.test.ts",
+      "name": "killed after the summary publication commits (lost acknowledgment): recovery returns the exact committed result with no author work or acceptance, wrong intent is rejected, and a fresh request applies current policy",
+      "fullName": "publication-kill-boundaries (A-09) through a real summary invocation killed after the summary publication commits (lost acknowledgment): recovery returns the exact committed result with no author work or acceptance, wrong intent is rejected, and a fresh request applies current policy",
+      "status": "passed",
+      "id": 433
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/deferral.test.ts",
+      "name": "exit mode reports \"waiting until T\"; a process before T admits nothing; a process 3 hours later retries under the same operation identity",
+      "fullName": "durable-quota-deferral (A-11, A-12, RUN-011) exit mode reports \"waiting until T\"; a process before T admits nothing; a process 3 hours later retries under the same operation identity",
+      "status": "passed",
+      "id": 434
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/deferral.test.ts",
+      "name": "sleep mode releases the writer lease while it waits, lets a sibling finish meanwhile, and resumes under the same identity at T",
+      "fullName": "durable-quota-deferral (A-11, A-12, RUN-011) sleep mode releases the writer lease while it waits, lets a sibling finish meanwhile, and resumes under the same identity at T",
+      "status": "passed",
+      "id": 435
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/deferral.test.ts",
+      "name": "a transient failure's backoff is a timed wait holding neither the one permit nor the one lane: its siblings are sent meanwhile",
+      "fullName": "durable-quota-deferral (A-11, A-12, RUN-011) a transient failure's backoff is a timed wait holding neither the one permit nor the one lane: its siblings are sent meanwhile",
+      "status": "passed",
+      "id": 436
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/deferral.test.ts",
+      "name": "exhaustion: a rate limit beyond the default cap of five deferred retries, and a transient failure beyond the author's attempts, fail only their own members",
+      "fullName": "durable-quota-deferral (A-11, A-12, RUN-011) exhaustion: a rate limit beyond the default cap of five deferred retries, and a transient failure beyond the author's attempts, fail only their own members",
+      "status": "passed",
+      "id": 437
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/deferral.test.ts",
+      "name": "the resumed wait event reports that the run released its lease for that wait (#147)",
+      "fullName": "durable-quota-deferral (A-11, A-12, RUN-011) the resumed wait event reports that the run released its lease for that wait (#147)",
+      "status": "passed",
+      "id": 438
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/publication.test.ts",
+      "name": "a throwing observer at the commit and a failing presenter never re-execute or re-pay committed success",
+      "fullName": "publication-commit-race (A-19, A-09) a throwing observer at the commit and a failing presenter never re-execute or re-pay committed success",
+      "status": "passed",
+      "id": 439
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/publication.test.ts",
+      "name": "killed after the paid answer but before the step publishes: the resumed step re-executes and pays again under a new operation (CX-3), each report counted once",
+      "fullName": "publication-commit-race (A-09, CX-3): process death on either side of a paid step's publication killed after the paid answer but before the step publishes: the resumed step re-executes and pays again under a new operation (CX-3), each report counted once",
+      "status": "passed",
+      "id": 440
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/publication.test.ts",
+      "name": "the same kill with the paid call isolated in a memoized child step: the child published, so the resumed parent reuses it and pays once",
+      "fullName": "publication-commit-race (A-09, CX-3): process death on either side of a paid step's publication the same kill with the paid call isolated in a memoized child step: the child published, so the resumed parent reuses it and pays once",
+      "status": "passed",
+      "id": 441
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/publication.test.ts",
+      "name": "killed after the step published: the next process reuses it, and the provider was called once",
+      "fullName": "publication-commit-race (A-09, CX-3): process death on either side of a paid step's publication killed after the step published: the next process reuses it, and the provider was called once",
+      "status": "passed",
+      "id": 442
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/stop.test.ts",
+      "name": "a soft stop admits nothing new: the in-flight step drains and publishes, and the queued members end cancelled without a send",
+      "fullName": "soft-then-hard-stop (A-13, RUN-014) a soft stop admits nothing new: the in-flight step drains and publishes, and the queued members end cancelled without a send",
+      "status": "passed",
+      "id": 443
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/stop.test.ts",
+      "name": "a transient failure retried after its backoff is refused after a soft stop without sending, and the step publishes nothing",
+      "fullName": "soft-then-hard-stop (A-13, RUN-014) a transient failure retried after its backoff is refused after a soft stop without sending, and the step publishes nothing",
+      "status": "passed",
+      "id": 444
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/stop.test.ts",
+      "name": "a lost response retried at once under a safety basis is refused after a soft stop without sending, and the step publishes nothing",
+      "fullName": "soft-then-hard-stop (A-13, RUN-014) a lost response retried at once under a safety basis is refused after a soft stop without sending, and the step publishes nothing",
+      "status": "passed",
+      "id": 445
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/stop.test.ts",
+      "name": "a hard stop escalates the drain: the in-flight send is aborted, its remote state recorded durably, and nothing partial is published",
+      "fullName": "soft-then-hard-stop (A-13, RUN-014) a hard stop escalates the drain: the in-flight send is aborted, its remote state recorded durably, and nothing partial is published",
+      "status": "passed",
+      "id": 446
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/stop.test.ts",
+      "name": "a hard stop reaches a member waiting for the one permit: it never sends, and a member waiting for a lane never starts",
+      "fullName": "soft-then-hard-stop (A-13, RUN-014) a hard stop reaches a member waiting for the one permit: it never sends, and a member waiting for a lane never starts",
+      "status": "passed",
+      "id": 447
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/stop.test.ts",
+      "name": "a hard stop ends a deferral sleep at once: the run returns waiting until T, the deferred member stays pending, and the process exits long before T",
+      "fullName": "soft-then-hard-stop (A-13, RUN-014) a hard stop ends a deferral sleep at once: the run returns waiting until T, the deferred member stays pending, and the process exits long before T",
+      "status": "passed",
+      "id": 448
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/stop.test.ts",
+      "name": "a hard stop requested as the run starts to sleep lets the process exit before T (#147)",
+      "fullName": "soft-then-hard-stop (A-13, RUN-014) a hard stop requested as the run starts to sleep lets the process exit before T (#147)",
+      "status": "passed",
+      "id": 449
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/stop.test.ts",
+      "name": "provider cancellation undefined: a hard stop records the remote state unknown, and the operation is unknown for later processes",
+      "fullName": "soft-then-hard-stop (A-13, RUN-014) provider cancellation undefined: a hard stop records the remote state unknown, and the operation is unknown for later processes",
+      "status": "passed",
+      "id": 450
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/stop.test.ts",
+      "name": "provider cancellation running: a hard stop records the remote state running, and the operation is unknown for later processes",
+      "fullName": "soft-then-hard-stop (A-13, RUN-014) provider cancellation running: a hard stop records the remote state running, and the operation is unknown for later processes",
+      "status": "passed",
+      "id": 451
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/stop.test.ts",
+      "name": "provider cancellation cancelled: a hard stop records the remote state cancelled, and the operation is cancelled for later processes",
+      "fullName": "soft-then-hard-stop (A-13, RUN-014) provider cancellation cancelled: a hard stop records the remote state cancelled, and the operation is cancelled for later processes",
+      "status": "passed",
+      "id": 452
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/replay.test.ts",
+      "name": "a lost response to a non-idempotent call is sent once: the author's catch-and-retry sends nothing, and no later process replays it",
+      "fullName": "no-blind-replay (A-12, RUN-012) a lost response to a non-idempotent call is sent once: the author's catch-and-retry sends nothing, and no later process replays it",
+      "status": "passed",
+      "id": 453
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/replay.test.ts",
+      "name": "after a lost response the step attempt is tainted: a different fallback operation the author makes instead sends nothing",
+      "fullName": "no-blind-replay (A-12, RUN-012) after a lost response the step attempt is tainted: a different fallback operation the author makes instead sends nothing",
+      "status": "passed",
+      "id": 454
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/replay.test.ts",
+      "name": "declared safe to repeat, the lost response is retried under the same operation identity, and the author accepts a second effect",
+      "fullName": "no-blind-replay (A-12, RUN-012) declared safe to repeat, the lost response is retried under the same operation identity, and the author accepts a second effect",
+      "status": "passed",
+      "id": 455
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/replay.test.ts",
+      "name": "with provider idempotency keys the retry reuses the operation identity as its key, and the provider applies the effect once",
+      "fullName": "no-blind-replay (A-12, RUN-012) with provider idempotency keys the retry reuses the operation identity as its key, and the provider applies the effect once",
+      "status": "passed",
+      "id": 456
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/replay.test.ts",
+      "name": "resolving an unknown operation as failed is recorded with its provenance and frees the member, which a later process sends as a new operation",
+      "fullName": "operator-resolves-unknown (A-12, RUN-012) resolving an unknown operation as failed is recorded with its provenance and frees the member, which a later process sends as a new operation",
+      "status": "passed",
+      "id": 457
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/replay.test.ts",
+      "name": "resolving as succeeded acknowledges the operator's usage once and keeps the address consumed until the operator abandons it",
+      "fullName": "operator-resolves-unknown (A-12, RUN-012) resolving as succeeded acknowledges the operator's usage once and keeps the address consumed until the operator abandons it",
+      "status": "passed",
+      "id": 458
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/replay.test.ts",
+      "name": "abandoning an unknown operation leaves its usage unknown and lets a later process send the member afresh",
+      "fullName": "operator-resolves-unknown (A-12, RUN-012) abandoning an unknown operation leaves its usage unknown and lets a later process send the member afresh",
+      "status": "passed",
+      "id": 459
+    },
+    {
+      "path": "packages/core/test/m5-acceptance/outcome-fold.test.ts",
+      "name": "settled statuses with coverage, never completeness while a member is unsettled, and reconsideration after repair",
+      "fullName": "outcome-fold-coverage (A-11, RUN-010) settled statuses with coverage, never completeness while a member is unsettled, and reconsideration after repair",
+      "status": "passed",
+      "id": 460
+    },
+    {
+      "path": "packages/core/test/operations/operator.test.ts",
+      "name": "resolving as succeeded with learned usage records it under the operator namespace, is recorded, and consumes the address: the member is never sent again",
+      "fullName": "operator settlement of an unknown operation (EXP-8 resolution 5) resolving as succeeded with learned usage records it under the operator namespace, is recorded, and consumes the address: the member is never sent again",
+      "status": "passed",
+      "id": 461
+    },
+    {
+      "path": "packages/core/test/operations/operator.test.ts",
+      "name": "with provider idempotency keys too, a resolved-succeeded address is never sent again (regression B1)",
+      "fullName": "operator settlement of an unknown operation (EXP-8 resolution 5) with provider idempotency keys too, a resolved-succeeded address is never sent again (regression B1)",
+      "status": "passed",
+      "id": 462
+    },
+    {
+      "path": "packages/core/test/operations/operator.test.ts",
+      "name": "a body may catch the resolved code, and an uncaught one names it without any value",
+      "fullName": "operator settlement of an unknown operation (EXP-8 resolution 5) a body may catch the resolved code, and an uncaught one names it without any value",
+      "status": "passed",
+      "id": 463
+    },
+    {
+      "path": "packages/core/test/operations/operator.test.ts",
+      "name": "an address resolved as succeeded stays consumed until the operator abandons the operation, which authorizes a possible second effect (supervisor ruling on #121)",
+      "fullName": "operator settlement of an unknown operation (EXP-8 resolution 5) an address resolved as succeeded stays consumed until the operator abandons the operation, which authorizes a possible second effect (supervisor ruling on #121)",
+      "status": "passed",
+      "id": 464
+    },
+    {
+      "path": "packages/core/test/operations/operator.test.ts",
+      "name": "an operation resolved as failed has a free address already, so it cannot be abandoned",
+      "fullName": "operator settlement of an unknown operation (EXP-8 resolution 5) an operation resolved as failed has a free address already, so it cannot be abandoned",
+      "status": "passed",
+      "id": 465
+    },
+    {
+      "path": "packages/core/test/operations/operator.test.ts",
+      "name": "resolving as failed asserts no effect and frees the address: the next execution makes a new operation",
+      "fullName": "operator settlement of an unknown operation (EXP-8 resolution 5) resolving as failed asserts no effect and frees the address: the next execution makes a new operation",
+      "status": "passed",
+      "id": 466
+    },
+    {
+      "path": "packages/core/test/operations/operator.test.ts",
+      "name": "abandoning keeps the usage unknown, is recorded, and unblocks the member",
+      "fullName": "operator settlement of an unknown operation (EXP-8 resolution 5) abandoning keeps the usage unknown, is recorded, and unblocks the member",
+      "status": "passed",
+      "id": 467
+    },
+    {
+      "path": "packages/core/test/operations/operator.test.ts",
+      "name": "only an unknown operation can be settled, and a missing one is refused",
+      "fullName": "operator settlement of an unknown operation (EXP-8 resolution 5) only an unknown operation can be settled, and a missing one is refused",
+      "status": "passed",
+      "id": 468
+    },
+    {
+      "path": "packages/core/test/operations/operator.test.ts",
+      "name": "an operator identity that is not an identifier is refused, and the unknown operation stays unsettled",
+      "fullName": "operator settlement of an unknown operation (EXP-8 resolution 5) an operator identity that is not an identifier is refused, and the unknown operation stays unsettled",
+      "status": "passed",
+      "id": 469
+    },
+    {
+      "path": "packages/core/test/operations/operator.test.ts",
+      "name": "without provider cancellation the attempt reads unknown after a restart, and the member stays blocked",
+      "fullName": "durable remote state after a hard stop (RUN-014, supervisor ruling on #119) without provider cancellation the attempt reads unknown after a restart, and the member stays blocked",
+      "status": "passed",
+      "id": 470
+    },
+    {
+      "path": "packages/core/test/operations/operator.test.ts",
+      "name": "a provider that says the work continues is recorded running, and the outcome stays unknown",
+      "fullName": "durable remote state after a hard stop (RUN-014, supervisor ruling on #119) a provider that says the work continues is recorded running, and the outcome stays unknown",
+      "status": "passed",
+      "id": 471
+    },
+    {
+      "path": "packages/core/test/operations/operator.test.ts",
+      "name": "a provider-confirmed cancellation settles the operation, so a later run sends a new one",
+      "fullName": "durable remote state after a hard stop (RUN-014, supervisor ruling on #119) a provider-confirmed cancellation settles the operation, so a later run sends a new one",
+      "status": "passed",
+      "id": 472
+    }
+  ]
+}

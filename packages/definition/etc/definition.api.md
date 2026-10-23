@@ -731,8 +731,7 @@ export interface ISourceCallRequest<TFamily extends IBindingFamily, TResult> {
 export interface ISourceDeclaration<TFamily extends IBindingFamily, TResult, TExtra = unknown> extends IAnySourceDeclaration<TFamily> {
     // (undocumented)
     readonly finality: ((context: IFinalityContext<TFamily, TResult> & TExtra) => unknown) | undefined;
-    // (undocumented)
-    readonly run: (context: ISourceRunContext<TFamily, TResult> & TExtra) => IApply<TFamily['outcomes'], TResult>;
+    readonly run: (context: ISourceRunContext<TFamily, TResult> & TExtra) => IApply<TFamily['outcomes'], TResult> | Promise<IApply<TFamily['outcomes'], TResult>>;
 }
 
 // @alpha
@@ -749,7 +748,7 @@ export interface ISourceOptions<TFamily extends IBindingFamily, TResult, TExtra 
     readonly collection?: ICollectionOptions<TResult>;
     readonly finality?: (context: IFinalityContext<TFamily, TResult> & TExtra) => unknown;
     readonly label?: string;
-    readonly run: (context: ISourceRunContext<TFamily, TResult> & TExtra) => IApply<TFamily['outcomes'], TResult>;
+    readonly run: (context: ISourceRunContext<TFamily, TResult> & TExtra) => IApply<TFamily['outcomes'], TResult> | Promise<IApply<TFamily['outcomes'], TResult>>;
     readonly subject: string;
     readonly version?: number;
 }
@@ -906,7 +905,7 @@ export interface ITemplateOptions<TFamily extends IBindingFamily, TCollection ex
 export interface ITemplateSourceOptions<TFamily extends IBindingFamily, TResult, TMember = unknown> {
     readonly finality?: (context: IFinalityContext<TFamily, TResult> & IMemberBinding<TFamily, TMember>) => unknown;
     readonly label?: string;
-    readonly run: (context: ISourceRunContext<TFamily, TResult> & IMemberBinding<TFamily, TMember>) => IApply<TFamily['outcomes'], TResult>;
+    readonly run: (context: ISourceRunContext<TFamily, TResult> & IMemberBinding<TFamily, TMember>) => IApply<TFamily['outcomes'], TResult> | Promise<IApply<TFamily['outcomes'], TResult>>;
     readonly subject: IMemberSubject;
     readonly version?: number;
 }

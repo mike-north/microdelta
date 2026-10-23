@@ -304,3 +304,34 @@ test('the executable example may import only the microdelta facade, Node built-i
     assert.equal(errors.length === 0, allowed, `${source}: ${JSON.stringify(result.messages)}`);
   }
 });
+
+test('the executable example rejects equivalent workspace source paths regardless of dot prefixes', async () => {
+  const rejected = [];
+  const importers = ['examples/contribution-report', 'packages/accounting'];
+  const specifiers = [
+    '../../../packages/history/src/index.js',
+    './../../../packages/history/src/index.js',
+    '././../../../packages/history/src/../src/index.js',
+  ];
+  for (const owner of importers) {
+    const filePath = path.join(root, owner, 'src', 'probe.ts');
+    for (const specifier of specifiers) {
+      assert.equal(
+        path.resolve(path.dirname(filePath), specifier),
+        path.join(root, 'packages/history/src/index.js'),
+        `${owner}: ${specifier} must resolve to the forbidden History source fixture`,
+      );
+      for (const source of [
+        `import { openDurableHistory } from '${specifier}';`,
+        `void import('${specifier}');`,
+        `type IHistoryModule = import('${specifier}');`,
+      ]) {
+        const messages = await diagnostics(owner, source);
+        if (!messages.some(message => message.severity === 2)) {
+          rejected.push({ owner, source });
+        }
+      }
+    }
+  }
+  assert.deepEqual(rejected, [], 'Equivalent relative spellings must have the same forbidden-source verdict');
+});

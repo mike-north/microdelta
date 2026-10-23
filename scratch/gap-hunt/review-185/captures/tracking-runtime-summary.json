@@ -1,0 +1,459 @@
+{
+  "counts": {
+    "numPassedTests": 112,
+    "numFailedTests": 0,
+    "numPassedTestSuites": 7,
+    "numFailedTestSuites": 0,
+    "numRuntimeErrorTestSuites": 0
+  },
+  "tests": [
+    {
+      "name": "semantic tracking observer tracked containers navigate without whole-tree reads; pass-through is observed only by the callee",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer returning a tracked input preserves the same wrapper and does not imply materialization",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer materialization reads reject unowned and foreign-observer values",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer detached materialization record capabilities retain selected facts, projections, and collection order",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer materialization record capabilities leave inputs untouched when no capture frame is active",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer detached materialization record capabilities reject closed inherited frames before inspecting content",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer synchronous capture rejects promises and ordinary thenable results",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer async wrapper pass-through preserves Promise assimilation reads as actual observations",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer async capture passes tracked functions through without invoking or observing them",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer rejects non-configurable own then lookup without changing ordinary function calls",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer copies registration bindings and retained facts so later source mutation cannot retarget evidence",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer rejects binding accessors and sparse correspondence paths instead of executing or guessing them",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer compares selected facts through current bindings while preserving original evidence",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer membership evidence ignores unrelated additions and changes when the selected member is removed",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer explicit identity reads ignore unread names but change when the identity changes",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer matches selected addresses by segment meaning rather than object member order",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer classifies unsupported selected provider payloads as incompatible",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer classifies malformed selected envelopes and addresses as incompatible",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer compares an exact compatible fingerprint request without asking for payload and rejects mismatched metadata descriptors",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer rejects accessor-backed current fact envelopes without invoking provider getters",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer rebinding an intermediate object keeps equal consumed values and compares later changes at the new path",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer compares absent and present undefined as the same value read, preserving falsey values literally",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer retains distinct consumed facts when wrappers share one structural address",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer array length and positional reads remain separate; native reflection rejects the non-enumerable length case",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer explicit keys, own-property checks, and inherited membership keep their operation meanings",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer called functions record implementation evidence; uncalled functions do not and calls are not memoized",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer uninspectable current implementation replacements are unavailable without executing them",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer current implementation comparison preserves host digest failures",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer classifies unsupported materialized output as incompatible",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer classifies unsupported collection order as incompatible",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer materialized output and collection order digest failures remain host errors",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer selected fact digest failures remain host errors",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer function-source fingerprints preserve distinct unpaired UTF-16 surrogate code units",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer rejects callable forms without source evidence and unsupported function metadata or construction",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer inspectable function text containing native-code wording remains supported",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer cached derivations replay successful and failed semantic observations, including nested derivations",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer cached derivations replay materialized output, projection, and order facts on both success and failure",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer retains only projection descriptor and digest while keeping visited coverage explicit",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer classifies a valid projection with a different selected address or traversal as incompatible before hashing",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer projection descriptors compare semantically while matching changed content still hashes",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer projection descriptor comparison accepts Value-normalized null-prototype records",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer visited projection selection preserves ordered keys, membership, and completion semantics",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer local replacement invalidates tags and replaces the semantic branch observations",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer closed inherited frames reject first and dirty derived evaluation before callbacks run",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer async capture isolates concurrent frames and rejects detached reads after closure",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer async tracked calls preserve post-await reads and nested failure restores the parent capture",
+      "status": "passed"
+    },
+    {
+      "name": "semantic tracking observer primitive and class inputs fail at runtime",
+      "status": "passed"
+    },
+    {
+      "name": "lazy tracked views over a node source a nested leaf read requests only its path and records exactly one consumed leaf",
+      "status": "passed"
+    },
+    {
+      "name": "lazy tracked views over a node source every supported operation records the same evidence as an in-memory tracked wrapper",
+      "status": "passed"
+    },
+    {
+      "name": "lazy tracked views over a node source array length is recorded only when a consumer reads it, and loops record only visited fields",
+      "status": "passed"
+    },
+    {
+      "name": "lazy tracked views over a node source explicit output detaches a lazy subtree, records its MDS1 snapshot and loads it only then",
+      "status": "passed"
+    },
+    {
+      "name": "lazy tracked views over a node source lazy views are observer-owned, immutable and reject native reflection",
+      "status": "passed"
+    },
+    {
+      "name": "lazy tracked views over a node source a view inherited by work that outlives its capture frame fails before any source request",
+      "status": "passed"
+    },
+    {
+      "name": "lazy tracked views over a node source reads outside any capture return values without recording evidence",
+      "status": "passed"
+    },
+    {
+      "name": "lazy tracked views over a node source source answers for a different address, kind or operation are rejected before recording",
+      "status": "passed"
+    },
+    {
+      "name": "track TK-2/A-20: each injected tracker owns isolated tags and capture context",
+      "status": "passed"
+    },
+    {
+      "name": "track TK-1: tags are distinct frozen opaque tokens with no signal state",
+      "status": "passed"
+    },
+    {
+      "name": "track TK-3: consuming a tag entangles on read and deduplicates repeated reads",
+      "status": "passed"
+    },
+    {
+      "name": "track TK-3: only a dirty consumed tag invalidates the previous snapshot",
+      "status": "passed"
+    },
+    {
+      "name": "track TK-3: revision order is global when a previously quiet dependency changes",
+      "status": "passed"
+    },
+    {
+      "name": "track TK-3: snapshot, validation, and dirty do not record dependencies",
+      "status": "passed"
+    },
+    {
+      "name": "track TK-3: snapshot and validation accept single-pass iterables",
+      "status": "passed"
+    },
+    {
+      "name": "track TK-2: nested synchronous frames collect independently and restore the parent",
+      "status": "passed"
+    },
+    {
+      "name": "track TK-2: a synchronous throw preserves the error and restores the parent",
+      "status": "passed"
+    },
+    {
+      "name": "track TK-2: asynchronous frames include reads after await and support empty bodies",
+      "status": "passed"
+    },
+    {
+      "name": "track TK-2: interleaved asynchronous executions have disjoint post-await read sets",
+      "status": "passed"
+    },
+    {
+      "name": "track TK-2: nested asynchronous failure restores its parent across await",
+      "status": "passed"
+    },
+    {
+      "name": "track TK-2: completed frame results cannot acquire reads from detached work",
+      "status": "passed"
+    },
+    {
+      "name": "track TK-3: cells expose values and derive only on reads after a consumed set",
+      "status": "passed"
+    },
+    {
+      "name": "track TK-3: explicit equal-value sets invalidate and multiple sets remain lazy",
+      "status": "passed"
+    },
+    {
+      "name": "track TK-3: branches consume only the selected branch and replace old dependencies",
+      "status": "passed"
+    },
+    {
+      "name": "track TK-3: cached and nested derivations replay concrete tags into each caller frame",
+      "status": "passed"
+    },
+    {
+      "name": "track TK-3: cached branch derivations replay only their current concrete tags",
+      "status": "passed"
+    },
+    {
+      "name": "track TK-3: validation-only and dependency-free derivations compute once",
+      "status": "passed"
+    },
+    {
+      "name": "track TK-2: an isolated nested frame cannot add hidden derivation dependencies",
+      "status": "passed"
+    },
+    {
+      "name": "track TK-2: the synchronous start of a nested async frame is also isolated",
+      "status": "passed"
+    },
+    {
+      "name": "track TK-3: adopted-library reads cannot add dependencies absent from the facade frame",
+      "status": "passed"
+    },
+    {
+      "name": "track TK-3: a failing derivation restores the parent and can recover after its input changes",
+      "status": "passed"
+    },
+    {
+      "name": "track TK-3: cold and cached caught failures replay dependencies and outer derivations recover",
+      "status": "passed"
+    },
+    {
+      "name": "explicit tracked-output observation pass-through stays neutral until snapshotOutput explicitly detaches the selected subtree",
+      "status": "passed"
+    },
+    {
+      "name": "explicit tracked-output observation ordinary local containers are copied without an external dependency and supported shape is preserved",
+      "status": "passed"
+    },
+    {
+      "name": "explicit tracked-output observation rejects cycles, repeated references, and accessors without invoking getters or recording fabricated output facts",
+      "status": "passed"
+    },
+    {
+      "name": "explicit tracked-output observation supports output of a previously selected scalar without enumerating unread siblings",
+      "status": "passed"
+    },
+    {
+      "name": "explicit tracked-output observation keeps keyed content and used member order as separate observation facts",
+      "status": "passed"
+    },
+    {
+      "name": "explicit tracked-output observation rejects the materialization bridge on unowned values",
+      "status": "passed"
+    },
+    {
+      "name": "observed untracked reads an untracked read returns the scalar and records only an untracked-read observation naming binding and address",
+      "status": "passed"
+    },
+    {
+      "name": "observed untracked reads array positions and an array length can be read untracked",
+      "status": "passed"
+    },
+    {
+      "name": "observed untracked reads the same untracked read twice is recorded once; a tracked read of the same member stays a separate fact",
+      "status": "passed"
+    },
+    {
+      "name": "observed untracked reads untrackedReadObserved reports reads made so far in the active capture only",
+      "status": "passed"
+    },
+    {
+      "name": "observed untracked reads a nested capture does not taint its caller, and its own reads stay its own",
+      "status": "passed"
+    },
+    {
+      "name": "observed untracked reads a replayed derivation carries its untracked read into the consuming capture",
+      "status": "passed"
+    },
+    {
+      "name": "observed untracked reads outside any capture an untracked read returns the value and records nothing",
+      "status": "passed"
+    },
+    {
+      "name": "observed untracked reads comparison skips untracked-read observations: they carry no fact to compare and never ask the provider",
+      "status": "passed"
+    },
+    {
+      "name": "observed untracked reads lazy views support untracked scalar reads that request exactly one node",
+      "status": "passed"
+    },
+    {
+      "name": "observed untracked reads a nested container member is rejected rather than detached untracked, and records nothing",
+      "status": "passed"
+    },
+    {
+      "name": "observed untracked reads values the observer does not own are rejected",
+      "status": "passed"
+    },
+    {
+      "name": "observed untracked reads a capture that has closed rejects later untracked reads and justification questions from its context",
+      "status": "passed"
+    },
+    {
+      "name": "untracked prompt value changes preserve comparison, but losing its container does not",
+      "status": "passed"
+    },
+    {
+      "name": "selected facts from outside Tracking are consumed exactly as validated a key enumeration whose iterator invents a key is rejected before observation",
+      "status": "passed"
+    },
+    {
+      "name": "selected facts from outside Tracking are consumed exactly as validated a presence fact whose address map invents another address is rejected before observation",
+      "status": "passed"
+    },
+    {
+      "name": "selected facts from outside Tracking are consumed exactly as validated a key sequence with a substituted array prototype is rejected before observation",
+      "status": "passed"
+    },
+    {
+      "name": "selected facts from outside Tracking are consumed exactly as validated ordinary key and presence facts from a source are still returned and recorded as supplied",
+      "status": "passed"
+    },
+    {
+      "name": "selected facts from outside Tracking are consumed exactly as validated the materialization record bridge rejects a selected fact whose address map disagrees with its segments",
+      "status": "passed"
+    },
+    {
+      "name": "selected facts from outside Tracking are consumed exactly as validated a current provider fact whose address map disagrees with its segments is incompatible, not changed",
+      "status": "passed"
+    },
+    {
+      "name": "selected facts from outside Tracking are consumed exactly as validated a collection order whose iterator invents a key is rejected before it is recorded",
+      "status": "passed"
+    },
+    {
+      "name": "selected facts from outside Tracking are consumed exactly as validated a current projection whose descriptor address map disagrees with its segments is incompatible, not changed",
+      "status": "passed"
+    },
+    {
+      "name": "gap hunt tracked container guard precision TRK-5 explicit own presence positive control records container deletion",
+      "status": "passed"
+    },
+    {
+      "name": "gap hunt tracked container guard precision TRK-5 explicit null comparison on a tracked container records replacement",
+      "status": "passed"
+    },
+    {
+      "name": "gap hunt tracked container guard precision TRK-8 container presence guard detects replacement with null",
+      "status": "passed"
+    },
+    {
+      "name": "gap hunt tracked container guard precision TRK-8 container presence guard detects replacement with undefined",
+      "status": "passed"
+    },
+    {
+      "name": "TRK-5 terminal container navigation observes only its bounded kind",
+      "status": "passed"
+    },
+    {
+      "name": "TRK-8 changing to an absent container drops the abandoned leaf",
+      "status": "passed"
+    }
+  ]
+}

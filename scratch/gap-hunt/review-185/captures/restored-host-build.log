@@ -1,0 +1,10 @@
+
+> @microdelta/machine-node@0.2.0 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json
+
+
+api-extractor 7.59.2  - https://api-extractor.com/
+
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully

@@ -1,0 +1,315 @@
+[
+  {
+    "name": "original-node24-clean",
+    "argv": [
+      "<home>/.nodenv/shims/node",
+      "scratch/gap-hunt/scale/repro-context-component.mjs"
+    ],
+    "environment": {},
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "original-node26",
+    "argv": [
+      "<home>/.nodenv/versions/26.12.0/bin/node",
+      "scratch/gap-hunt/scale/repro-context-component.mjs"
+    ],
+    "environment": {
+      "GAP_HUNT_REUSE_BUILD": "1"
+    },
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "current-node24-census",
+    "argv": [
+      "<home>/.nodenv/shims/node",
+      "--expose-gc",
+      "scratch/gap-hunt/scale/dist/context-consumer.js",
+      "component"
+    ],
+    "environment": {
+      "CONTEXT_RUNS": "300",
+      "CONTEXT_BATCH": "100",
+      "CONTEXT_CONFIRM": "1"
+    },
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "current-node26-census",
+    "argv": [
+      "<home>/.nodenv/versions/26.12.0/bin/node",
+      "--expose-gc",
+      "scratch/gap-hunt/scale/dist/context-consumer.js",
+      "component"
+    ],
+    "environment": {
+      "CONTEXT_RUNS": "300",
+      "CONTEXT_BATCH": "100",
+      "CONTEXT_CONFIRM": "1"
+    },
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "current-workspace-node24",
+    "argv": [
+      "<home>/.nodenv/shims/node",
+      "--expose-gc",
+      "scratch/gap-hunt/scale/dist/context-consumer.js",
+      "fresh"
+    ],
+    "environment": {
+      "CONTEXT_RUNS": "3000",
+      "CONTEXT_BATCH": "100",
+      "CONTEXT_CONFIRM": "1",
+      "CONTEXT_STORE": "<checkout>/scratch/gap-hunt/review-185/local-results/workspace.sqlite"
+    },
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "external-node24-control",
+    "argv": [
+      "<home>/.nodenv/shims/node",
+      "scratch/gap-hunt/scale/repro-context-component.mjs"
+    ],
+    "environment": {
+      "GAP_HUNT_REUSE_BUILD": "1",
+      "CONTEXT_COMPONENT_ISOLATED": "1"
+    },
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "external-node26-control",
+    "argv": [
+      "<home>/.nodenv/versions/26.12.0/bin/node",
+      "scratch/gap-hunt/scale/repro-context-component.mjs"
+    ],
+    "environment": {
+      "GAP_HUNT_REUSE_BUILD": "1",
+      "CONTEXT_COMPONENT_ISOLATED": "1"
+    },
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "machine-runtime",
+    "argv": [
+      "npm",
+      "run",
+      "test:unit",
+      "--workspace",
+      "@microdelta/machine-node",
+      "--",
+      "--json",
+      "--outputFile=../../scratch/gap-hunt/review-185/local-results/machine-runtime.json"
+    ],
+    "environment": {},
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "tracking-runtime",
+    "argv": [
+      "npm",
+      "run",
+      "test:unit",
+      "--workspace",
+      "@microdelta/tracking",
+      "--",
+      "--json",
+      "--outputFile=../../scratch/gap-hunt/review-185/local-results/tracking-runtime.json"
+    ],
+    "environment": {},
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "strict",
+    "argv": [
+      "npm",
+      "run",
+      "check",
+      "--workspace",
+      "@microdelta/machine",
+      "--workspace",
+      "@microdelta/machine-node",
+      "--workspace",
+      "@microdelta/tracking"
+    ],
+    "environment": {},
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "type-contracts",
+    "argv": [
+      "npm",
+      "run",
+      "test:types",
+      "--workspace",
+      "@microdelta/machine",
+      "--workspace",
+      "@microdelta/machine-node",
+      "--workspace",
+      "@microdelta/tracking"
+    ],
+    "environment": {},
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "official-gate",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "tooling/context-lifecycle.test.mjs"
+    ],
+    "environment": {},
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "old-host-build",
+    "argv": [
+      "npm",
+      "run",
+      "build",
+      "--workspace",
+      "@microdelta/machine-node"
+    ],
+    "environment": {},
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "old-node24-negative",
+    "argv": [
+      "<home>/.nodenv/shims/node",
+      "scratch/gap-hunt/scale/repro-context-component.mjs"
+    ],
+    "environment": {
+      "GAP_HUNT_REUSE_BUILD": "1"
+    },
+    "exit": 1,
+    "expected": 1
+  },
+  {
+    "name": "old-node26-negative",
+    "argv": [
+      "<home>/.nodenv/versions/26.12.0/bin/node",
+      "scratch/gap-hunt/scale/repro-context-component.mjs"
+    ],
+    "environment": {
+      "GAP_HUNT_REUSE_BUILD": "1"
+    },
+    "exit": 1,
+    "expected": 1
+  },
+  {
+    "name": "old-node24-external-control",
+    "argv": [
+      "<home>/.nodenv/shims/node",
+      "scratch/gap-hunt/scale/repro-context-component.mjs"
+    ],
+    "environment": {
+      "GAP_HUNT_REUSE_BUILD": "1",
+      "CONTEXT_COMPONENT_ISOLATED": "1"
+    },
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "old-node26-external-control",
+    "argv": [
+      "<home>/.nodenv/versions/26.12.0/bin/node",
+      "scratch/gap-hunt/scale/repro-context-component.mjs"
+    ],
+    "environment": {
+      "GAP_HUNT_REUSE_BUILD": "1",
+      "CONTEXT_COMPONENT_ISOLATED": "1"
+    },
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "old-official-gate-negative",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "tooling/context-lifecycle.test.mjs"
+    ],
+    "environment": {},
+    "exit": 1,
+    "expected": 1
+  },
+  {
+    "name": "old-official-gate-inherited-isolation",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "tooling/context-lifecycle.test.mjs"
+    ],
+    "environment": {
+      "CONTEXT_COMPONENT_ISOLATED": "1"
+    },
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "restored-host-build",
+    "argv": [
+      "npm",
+      "run",
+      "build",
+      "--workspace",
+      "@microdelta/machine-node"
+    ],
+    "environment": {},
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "restored-node24",
+    "argv": [
+      "<home>/.nodenv/shims/node",
+      "scratch/gap-hunt/scale/repro-context-component.mjs"
+    ],
+    "environment": {
+      "GAP_HUNT_REUSE_BUILD": "1"
+    },
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "restored-node26",
+    "argv": [
+      "<home>/.nodenv/versions/26.12.0/bin/node",
+      "scratch/gap-hunt/scale/repro-context-component.mjs"
+    ],
+    "environment": {
+      "GAP_HUNT_REUSE_BUILD": "1"
+    },
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "restored-official-gate",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "tooling/context-lifecycle.test.mjs"
+    ],
+    "environment": {},
+    "exit": 0,
+    "expected": 0
+  }
+]

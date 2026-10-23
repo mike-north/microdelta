@@ -1,0 +1,21 @@
+
+> @microdelta/machine-node@0.2.0 test:unit
+> tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand --json --outputFile=../../scratch/gap-hunt/review-185/local-results/machine-runtime.json
+
+watchman warning: Recrawled this watch 5 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '<checkout>' ; watchman watch-project '<checkout>'`
+
+(node:26474) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+first open, 2 processes x 10 trials: 20 opened, 0 typed busy, 0 other
+first open, 4 processes x 10 trials: 40 opened, 0 typed busy, 0 other
+
+Test Suites: 8 passed, 8 total
+Tests:       85 passed, 85 total
+Snapshots:   0 total
+Time:        17.515 s, estimated 18 s
+Ran all test suites.
+Test results written to: ../../scratch/gap-hunt/review-185/local-results/machine-runtime.json

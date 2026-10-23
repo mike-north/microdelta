@@ -1,0 +1,351 @@
+{
+  "counts": {
+    "numPassedTests": 85,
+    "numFailedTests": 0,
+    "numPassedTestSuites": 8,
+    "numFailedTestSuites": 0,
+    "numRuntimeErrorTestSuites": 0
+  },
+  "tests": [
+    {
+      "name": "Node SQLite capability: concurrent first open of a new store 2 processes opening a new store together each open with WAL or fail with a typed SqliteBusyError, across 10 trials",
+      "status": "passed"
+    },
+    {
+      "name": "Node SQLite capability: concurrent first open of a new store 4 processes opening a new store together each open with WAL or fail with a typed SqliteBusyError, across 10 trials",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance durability and configuration a committed transaction survives close and a fresh open of the same file",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance durability and configuration an opened file reads back WAL, FULL synchronous commits, foreign keys and a 500 ms busy timeout",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance durability and configuration foreign keys reject a dangling reference",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance durability and configuration transactions begin IMMEDIATE, so a read-only transaction already excludes another writer",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance busy exhaustion a statement that cannot get the write lock within the busy wait fails with SqliteBusyError",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance busy exhaustion a transaction that cannot begin IMMEDIATE within the busy wait fails with SqliteBusyError without running its callback",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance busy exhaustion an error thrown by a transaction callback that is not contention is never reported as busy",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance open failures rejects an in-memory database because it cannot provide the selected persistent WAL store",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance open failures rejects an empty path because it cannot provide the selected persistent WAL store",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance open failures rejects a directory path",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance open failures rejects a missing parent directory without creating the file",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance open failures rejects an existing file that is not a SQLite database at open time",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance bound values and row transport statements bind values separately from SQL text and report changed rows",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance bound values and row transport rows carry text, safe integers, reals, null and detached plain Uint8Array blobs",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance bound values and row transport column names such as __proto__ and constructor stay own data fields without changing the row prototype",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance bound values and row transport a non-finite real produced by SQLite fails instead of crossing the boundary; finite reals still pass",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance bound values and row transport an integer beyond the safe range fails instead of being rounded",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance bound values and row transport rejects NaN as a bound value without writing",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance bound values and row transport rejects positive infinity as a bound value without writing",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance bound values and row transport rejects a boolean as a bound value without writing",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance bound values and row transport rejects a bigint as a bound value without writing",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance bound values and row transport rejects undefined as a bound value without writing",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance bound values and row transport rejects an object as a bound value without writing",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance synchronous transactions a callback result is returned and its writes commit",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance synchronous transactions a throwing callback rolls back every write and rethrows the identical value",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance synchronous transactions a nested transaction is rejected without running its callback; propagation rolls back the outer writes",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance synchronous transactions an async callback is rejected and rolled back; its awaited continuation cannot write through the connection or its statements",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance synchronous transactions inherited work cannot close the connection after its transaction ended; independent use continues",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance synchronous transactions a native Promise is refused and rolled back even when its own then is shadowed, without reading that then",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance synchronous transactions a foreign thenable result is rejected and rolled back without calling its then",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance synchronous transactions a returned object or function whose then cannot be inspected is refused with TypeError, not the inspection error",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance synchronous transactions work scheduled by a committed callback cannot write after the transaction ended",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance close ownership close is idempotent and every later connection or statement use fails",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance close ownership closing one connection leaves another connection to the same file usable",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance close ownership close inside a transaction callback is rejected, the transaction rolls back and the connection stays usable",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine SQLite capability conformance close ownership a delayed statement call after close fails and does not reach the file",
+      "status": "passed"
+    },
+    {
+      "name": "Node SQLite process boundary rejected async callbacks are contained under --unhandled-rejections=strict",
+      "status": "passed"
+    },
+    {
+      "name": "Node SQLite open under contention an open that cannot switch the file to WAL within the busy wait fails with SqliteBusyError, then succeeds once the lock is released",
+      "status": "passed"
+    },
+    {
+      "name": "Node timer capability conformance its clock is the wall clock in whole epoch milliseconds",
+      "status": "passed"
+    },
+    {
+      "name": "Node timer capability conformance a callback runs once when the clock reaches the requested time, and not before",
+      "status": "passed"
+    },
+    {
+      "name": "Node timer capability conformance a time already reached fires asynchronously, never inside schedule",
+      "status": "passed"
+    },
+    {
+      "name": "Node timer capability conformance cancelling prevents the call; cancelling twice or after the call does nothing",
+      "status": "passed"
+    },
+    {
+      "name": "Node timer capability conformance a clock moved backwards before the wake-up re-arms instead of firing early",
+      "status": "passed"
+    },
+    {
+      "name": "Node timer capability conformance a wait longer than the host timer range is split and fires on time",
+      "status": "passed"
+    },
+    {
+      "name": "Node timer capability conformance a thirty-day wait fires at thirty days, not at Node's overflow fallback of one millisecond",
+      "status": "passed"
+    },
+    {
+      "name": "Node timer capability conformance a requested time of NaN is refused",
+      "status": "passed"
+    },
+    {
+      "name": "Node timer capability conformance a requested time of infinity is refused",
+      "status": "passed"
+    },
+    {
+      "name": "Node timer capability conformance a requested time of a fractional millisecond is refused",
+      "status": "passed"
+    },
+    {
+      "name": "Node timer capability conformance a requested time of an unsafe integer is refused",
+      "status": "passed"
+    },
+    {
+      "name": "Node timer keep-alive (real child processes) a timer without keep-alive never holds the process open by itself",
+      "status": "passed"
+    },
+    {
+      "name": "Node timer keep-alive (real child processes) a timer with the default keep-alive holds the process open until it fires",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine conformance A-20: SHA-256 capability matches independent UTF-8 conformance vectors",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine conformance A-20: async context propagates through awaits and restores nested context",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine conformance A-20: concurrently interleaved callbacks retain separate context values",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine conformance A-20: run preserves synchronous returns, thrown values, and rejected promises",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine conformance A-20: a caller context survives awaited success and rejection without replacing the returned promise",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine conformance A-20: work inherited from a closed frame retains its context after the entry returns",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine conformance A-20: snapshots preserve structural values and graph identity while detaching copies",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine conformance A-20: unsupported functions, symbols, and raw shared memory fail",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine conformance A-20: enumerable getters are evaluated by the V8 snapshot codec",
+      "status": "passed"
+    },
+    {
+      "name": "Node Machine conformance A-20: custom prototypes, nonenumerable fields, and symbol keys are not preserved",
+      "status": "passed"
+    },
+    {
+      "name": "canonical Node store locations two spellings of one file, through a symbolic link and a redundant segment, canonicalize to one location",
+      "status": "passed"
+    },
+    {
+      "name": "canonical Node store locations distinct files canonicalize to distinct locations",
+      "status": "passed"
+    },
+    {
+      "name": "canonical Node store locations a location naming no existing file is refused, not guessed",
+      "status": "passed"
+    },
+    {
+      "name": "Node clock capability conformance a reading is a safe integer of UTC epoch milliseconds bracketed by independent host readings",
+      "status": "passed"
+    },
+    {
+      "name": "Node clock capability conformance host observations moving backwards are reported unchanged rather than corrected",
+      "status": "passed"
+    },
+    {
+      "name": "Node clock capability conformance a host reading of NaN is refused instead of returned",
+      "status": "passed"
+    },
+    {
+      "name": "Node clock capability conformance a host reading of infinity is refused instead of returned",
+      "status": "passed"
+    },
+    {
+      "name": "Node clock capability conformance a host reading of a fractional millisecond is refused instead of returned",
+      "status": "passed"
+    },
+    {
+      "name": "Node clock capability conformance a host reading of an unsafe integer is refused instead of returned",
+      "status": "passed"
+    },
+    {
+      "name": "Node clock capability conformance a host reading of a negative unsafe integer is refused instead of returned",
+      "status": "passed"
+    },
+    {
+      "name": "Node random identifier capability conformance an identifier is exactly 32 lowercase hexadecimal characters",
+      "status": "passed"
+    },
+    {
+      "name": "Node random identifier capability conformance identifiers do not repeat, within one source or across independent sources",
+      "status": "passed"
+    },
+    {
+      "name": "Node random identifier capability conformance every hexadecimal digit position varies, so no fixed prefix or counter stands in for randomness",
+      "status": "passed"
+    },
+    {
+      "name": "SQLite busy classification a foreign-class driver error with code SQLITE_BUSY is busy (issue 131: instanceof missed it)",
+      "status": "passed"
+    },
+    {
+      "name": "SQLite busy classification a foreign-class driver error with code SQLITE_BUSY_RECOVERY is busy (issue 131: instanceof missed it)",
+      "status": "passed"
+    },
+    {
+      "name": "SQLite busy classification a foreign-class driver error with code SQLITE_BUSY_SNAPSHOT is busy (issue 131: instanceof missed it)",
+      "status": "passed"
+    },
+    {
+      "name": "SQLite busy classification a foreign-class driver error with code SQLITE_BUSY_TIMEOUT is busy (issue 131: instanceof missed it)",
+      "status": "passed"
+    },
+    {
+      "name": "SQLite busy classification a foreign-class SQLITE_BUSY surfaces as SqliteBusyError with the driver error as cause (issue 131)",
+      "status": "passed"
+    },
+    {
+      "name": "SQLite busy classification a driver error with a different code is not busy even if its message says locked",
+      "status": "passed"
+    },
+    {
+      "name": "SQLite busy classification a BUSY code on an error that is not named SqliteError is not busy",
+      "status": "passed"
+    },
+    {
+      "name": "SQLite busy classification a non-driver error, with or without a busy-looking message, is not busy",
+      "status": "passed"
+    },
+    {
+      "name": "SQLite busy classification a non-busy failure passes through typedBusy unchanged",
+      "status": "passed"
+    }
+  ]
+}

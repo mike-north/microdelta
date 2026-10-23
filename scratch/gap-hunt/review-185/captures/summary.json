@@ -1,0 +1,107 @@
+{
+  "head": "aad9b93f23fb38b1cf1387e2f865c5490fc2b434",
+  "reviewed_pin": "aad9b93f23fb38b1cf1387e2f865c5490fc2b434",
+  "original_fixture_pin": "04ff7ee680f48e6436abb92153601cec7ec1a828",
+  "original_fixture_count": 9,
+  "current": {
+    "node24": {
+      "node": "v24.22.1",
+      "samples": 3,
+      "liveALS": [
+        2,
+        2,
+        2
+      ],
+      "completed": 300,
+      "bodies": 0,
+      "observed": 300
+    },
+    "node26": {
+      "node": "v26.12.0",
+      "samples": 3,
+      "liveALS": [
+        2,
+        2,
+        2
+      ],
+      "completed": 300,
+      "bodies": 0,
+      "observed": 300
+    },
+    "workspace_node24": {
+      "node": "v24.22.1",
+      "samples": 30,
+      "liveALS": [
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3,
+        3
+      ],
+      "completed": 3000,
+      "bodies": 3000,
+      "observed": 0
+    }
+  },
+  "machine_runtime": {
+    "numPassedTests": 85,
+    "numFailedTests": 0,
+    "numPassedTestSuites": 8,
+    "numRuntimeErrorTestSuites": 0
+  },
+  "tracking_runtime": {
+    "numPassedTests": 112,
+    "numFailedTests": 0,
+    "numPassedTestSuites": 7,
+    "numRuntimeErrorTestSuites": 0
+  },
+  "negative": {
+    "old_host_pin": "471c1d47ef3dc0700e36d8da2adca7e02534570b",
+    "node24": {
+      "passed": 1,
+      "failed": 1,
+      "growth": 200
+    },
+    "node26": {
+      "passed": 1,
+      "failed": 1,
+      "growth": 200
+    },
+    "external_controls_passed": true
+  },
+  "official_gate_old_host": {
+    "default_exit": 1,
+    "inherited_isolation_exit": 0,
+    "scope": "focused gate only; not a whole-CI bypass"
+  },
+  "source_restored_byte_exact": true,
+  "source_sha256": "ef4093bd9085e1546397e20828bbb2ac6398e94b17cd8a41e843f806ade6eaee",
+  "old_source_sha256": "9eeb7c2988116433c9109cdf4043e3893427961729e64eb99b02dbefcfc97356",
+  "verdict": "Runtime PASS; regression gate PARTIAL because inherited isolation enables the external workaround",
+  "scope": "Node24/26 standalone context and Node24 workspace/owner suites on macOS; no Node22/Linux/published-package-update or universal-memory claim"
+}

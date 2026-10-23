@@ -1,0 +1,11 @@
+
+> @microdelta/machine@0.2.0 test:types
+> tsd
+
+
+> @microdelta/machine-node@0.2.0 test:types
+> tsd
+
+
+> @microdelta/tracking@0.2.1 test:types
+> tsd

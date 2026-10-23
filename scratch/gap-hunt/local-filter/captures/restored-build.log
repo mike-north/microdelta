@@ -1,0 +1,10 @@
+
+> @microdelta/tracking@0.2.1 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully

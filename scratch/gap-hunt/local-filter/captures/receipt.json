@@ -1,0 +1,126 @@
+{
+  "source": "52e3786516a404e3433bef03807a027c8103786c",
+  "commands": [
+    {
+      "name": "install",
+      "argv": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "build",
+      "argv": [
+        "npm",
+        "run",
+        "build:packages"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "compile",
+      "argv": [
+        "node",
+        "node_modules/typescript/bin/tsc",
+        "-p",
+        "scratch/gap-hunt/local-filter/tsconfig.json"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "lint",
+      "argv": [
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "-c",
+        "scratch/gap-hunt/local-filter/eslint.config.mjs",
+        "scratch/gap-hunt/local-filter/worker.ts",
+        "scratch/gap-hunt/local-filter/filter.test.ts"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "current",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/local-filter/jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "<captures>/current.json"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "fault-build",
+      "argv": [
+        "npm",
+        "run",
+        "build",
+        "--workspace",
+        "@microdelta/tracking"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "fault",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/local-filter/jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "<captures>/fault.json"
+      ],
+      "exit": 1,
+      "expected": 1
+    },
+    {
+      "name": "restored-build",
+      "argv": [
+        "npm",
+        "run",
+        "build",
+        "--workspace",
+        "@microdelta/tracking"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "restored",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/local-filter/jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "<captures>/restored.json"
+      ],
+      "exit": 0,
+      "expected": 0
+    }
+  ],
+  "restoredSource": true,
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "node": "v24.22.1",
+  "runner_sha256": "6503407a8dcb341f24ea3ef0709badfb4620d24dcc4921122c8bc5dab22361fe"
+}

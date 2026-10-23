@@ -1,0 +1,151 @@
+
+> microdelta@0.2.0 test:unit
+> tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand --runTestsByPath .test-build/test/gap-hunt-contracts-operation-matrix.test.js
+
+(node:13465) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL .test-build/test/gap-hunt-contracts-operation-matrix.test.js
+  ● gap hunt fresh-process consumer operation matrix › type agrees with cold current value for record → missing
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+    -   "value": "undefined",
+    +   "value": "object",
+      }
+
+      34 |       const actual = resolve(retained, after, operation, 'second');
+      35 |       const oracle = resolve(join(directory, 'cold.sqlite'), after, operation, 'cold');
+    > 36 |       expect(actual.value).toEqual(oracle.value);
+         |                            ^
+      37 |     } finally { rmSync(directory, { recursive: true, force: true }); }
+      38 |   });
+      39 |
+
+      at test/gap-hunt-contracts-operation-matrix.test.ts:36:28
+
+  ● gap hunt fresh-process consumer operation matrix › array agrees with cold current value for record → array
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+    -   "value": true,
+    +   "value": false,
+      }
+
+      34 |       const actual = resolve(retained, after, operation, 'second');
+      35 |       const oracle = resolve(join(directory, 'cold.sqlite'), after, operation, 'cold');
+    > 36 |       expect(actual.value).toEqual(oracle.value);
+         |                            ^
+      37 |     } finally { rmSync(directory, { recursive: true, force: true }); }
+      38 |   });
+      39 |
+
+      at test/gap-hunt-contracts-operation-matrix.test.ts:36:28
+
+  ● gap hunt fresh-process consumer operation matrix › array agrees with cold current value for array → record
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+    -   "value": false,
+    +   "value": true,
+      }
+
+      34 |       const actual = resolve(retained, after, operation, 'second');
+      35 |       const oracle = resolve(join(directory, 'cold.sqlite'), after, operation, 'cold');
+    > 36 |       expect(actual.value).toEqual(oracle.value);
+         |                            ^
+      37 |     } finally { rmSync(directory, { recursive: true, force: true }); }
+      38 |   });
+      39 |
+
+      at test/gap-hunt-contracts-operation-matrix.test.ts:36:28
+
+  ● gap hunt fresh-process consumer operation matrix › array agrees with cold current value for array → null
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+    -   "value": false,
+    +   "value": true,
+      }
+
+      34 |       const actual = resolve(retained, after, operation, 'second');
+      35 |       const oracle = resolve(join(directory, 'cold.sqlite'), after, operation, 'cold');
+    > 36 |       expect(actual.value).toEqual(oracle.value);
+         |                            ^
+      37 |     } finally { rmSync(directory, { recursive: true, force: true }); }
+      38 |   });
+      39 |
+
+      at test/gap-hunt-contracts-operation-matrix.test.ts:36:28
+
+  ● gap hunt fresh-process consumer operation matrix › nullish agrees with cold current value for record → null
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+    -   "value": true,
+    +   "value": false,
+      }
+
+      34 |       const actual = resolve(retained, after, operation, 'second');
+      35 |       const oracle = resolve(join(directory, 'cold.sqlite'), after, operation, 'cold');
+    > 36 |       expect(actual.value).toEqual(oracle.value);
+         |                            ^
+      37 |     } finally { rmSync(directory, { recursive: true, force: true }); }
+      38 |   });
+      39 |
+
+      at test/gap-hunt-contracts-operation-matrix.test.ts:36:28
+
+  ● gap hunt fresh-process consumer operation matrix › nullish agrees with cold current value for record → missing
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+    -   "value": true,
+    +   "value": false,
+      }
+
+      34 |       const actual = resolve(retained, after, operation, 'second');
+      35 |       const oracle = resolve(join(directory, 'cold.sqlite'), after, operation, 'cold');
+    > 36 |       expect(actual.value).toEqual(oracle.value);
+         |                            ^
+      37 |     } finally { rmSync(directory, { recursive: true, force: true }); }
+      38 |   });
+      39 |
+
+      at test/gap-hunt-contracts-operation-matrix.test.ts:36:28
+
+Test Suites: 1 failed, 1 total
+Tests:       6 failed, 7 passed, 13 total
+Snapshots:   0 total
+Time:        3.775 s
+Ran all test suites within paths ".test-build/test/gap-hunt-contracts-operation-matrix.test.js".
+npm error Lifecycle script `test:unit` failed with error:
+npm error code 1
+npm error path /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-contracts/packages/core
+npm error workspace microdelta@0.2.0
+npm error location /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-contracts/packages/core
+npm error command failed
+npm error command sh -c tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand --runTestsByPath .test-build/test/gap-hunt-contracts-operation-matrix.test.js

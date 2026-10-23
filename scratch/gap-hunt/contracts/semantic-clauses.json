@@ -216,6 +216,34 @@
       "title": "a closed zero-member listing is a complete report, distinct from an open empty listing and from discovery that did not settle; neither rewinds it",
       "proves": "Closed empty succeeds; open/unsettled waits without replacing earlier publication.",
       "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+    },
+    "asyncFailure": {
+      "file": "packages/tracking/test/gap-hunt-contracts-async.test.ts",
+      "line": 23,
+      "title": "caught tracked async helper failure keeps post-await consumed facts in its consuming frame",
+      "proves": "Caught async helper exception retains exactly before/after leaf evidence plus implementation, without unread sibling evidence.",
+      "executionLog": "scratch/gap-hunt/contracts/async-results.log"
+    },
+    "lateHelper": {
+      "file": "packages/tracking/test/gap-hunt-contracts-async.test.ts",
+      "line": 50,
+      "title": "a detached helper callback after capture %s rejects before its body runs",
+      "proves": "After either success or failure, detached tracked helper invocation throws closed-frame before author body; a fresh frame still calls normally.",
+      "executionLog": "scratch/gap-hunt/contracts/async-results.log"
+    },
+    "multiRebind": {
+      "file": "packages/core/test/gap-hunt-contracts-operation-matrix.test.ts",
+      "line": 40,
+      "title": "TRK-6 historical path rebinds through two equal identities and detects both later leaf updates",
+      "proves": "Five independent processes retain exact references across equal id replacement and publish on both subsequent current-leaf changes.",
+      "executionLog": "scratch/gap-hunt/contracts/operation-matrix-results.log"
+    },
+    "currentArguments": {
+      "file": "packages/core/test/gap-hunt-contracts-nested-current.test.ts",
+      "line": 10,
+      "title": "renumbered derived subjects and changed forwarded fields agree with cold computation across successive restarts",
+      "proves": "Renumbered PR derived subject executes only new child; changed current forwarded PR field executes only affected child/parent; both match cold current stores; rollback reuses.",
+      "executionLog": "scratch/gap-hunt/contracts/nested-current-results.log"
     }
   },
   "blocks": [
@@ -223,6 +251,7 @@
       "key": "docs/spec/composition.md:1",
       "owner": null,
       "clause": "# Composition, binding, and higher-order work",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -231,6 +260,7 @@
       "key": "docs/spec/composition.md:3",
       "owner": null,
       "clause": "Status: normative boundaries. EXP-1 selects bounded structural correspondence.\n[EXP-4](../../experiments/exp-4/decision.md) selects the bounded nested argument\nrecipe, supplied callable step slots, keyed fanout templates, tracked gates and\nstrict-fold skip treatment recorded below. Arbitrary closure soundness remains\nexcluded.\nOwner: Definition & Binding, collaborating with Reuse Resolution.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -239,6 +269,7 @@
       "key": "docs/spec/composition.md:10",
       "owner": null,
       "clause": "## Two graphs",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -247,6 +278,7 @@
       "key": "docs/spec/composition.md:12",
       "owner": "CMP-1",
       "clause": "**CMP-1 — Freeze the abstract graph.** After composition, abstract operations and\npossible edges are fixed. Composition may use configuration and supplied step\ndefinitions to choose a graph before execution. Runtime results may supply data,\ninstantiate a fixed fanout template, or gate already-declared work. They must not\ncreate, replace, reconnect, or reorder abstract operations. Freeze framework-owned\ncopies so later mutation of an author's array cannot change topology.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "topology",
@@ -258,6 +290,7 @@
       "key": "docs/spec/composition.md:19",
       "owner": "CMP-2",
       "clause": "**CMP-2 — Observations remain dynamic.** A fixed graph does not prescribe all data\nfields read. Actual conditional observations are discovered during execution and\ncan change on a later run. A tracked selector can change branches safely; an\nuntracked external selector cannot be expected to invalidate a cached result.\nKeep the declared step graph distinct from the expanded result graph and current\nexecution's observed dependency evidence.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "branches",
@@ -269,6 +302,7 @@
       "key": "docs/spec/composition.md:26",
       "owner": "CMP-3",
       "clause": "**CMP-3 — Higher-order composition.** Steps/composites may receive step definitions\nand composition factories may return reusable groups, including staged factories.\nTheir abstract graph must be fully bound before runtime data is resolved.\nStructurally declared callable slots are the selected bounded mechanism for\nreconnecting a supplied implementation, such as `assessor`, across restarts.\nThis does not require a globally public step ID or manually declared field\ndependencies. EXP-1 establishes direct current-slot correspondence.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "supplied"
@@ -279,6 +313,7 @@
       "key": "docs/spec/composition.md:34",
       "owner": "EXP-4",
       "clause": "**EXP-4 supplied-callable selection:** a supplied step is bound at composition to\na structural callable slot. A step that declares the slot is admitted only when the\nslot resolves to exactly one current implementation; missing and multiply supplied\nslots are distinct misses before the body runs. The parent's evidence names the\nslot descriptor only. The supplied step's implementation evidence belongs to the\nchild's own provenance, so exchanging implementation A for B is a child\nimplementation change, not a parent-graph change or a guessed remap. Two\nclosures with equal emitted text but different captured values are\nindistinguishable to this evidence (preserved counterexample CX-2); captured\nconfiguration must be a tracked input.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -287,6 +322,7 @@
       "key": "docs/spec/composition.md:45",
       "owner": "CMP-4",
       "clause": "**CMP-4 — Fanout template.** Build the declared member template once with a symbolic\nmember input, then instantiate it for actual member keys. Do not rerun a topology\nfactory for every runtime member. Member cardinality may be unknown at composition;\npossible operations and connections must not be. Preserve explicit precedence,\nwithout imposing arbitrary global serial execution on unrelated branches.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "topology",
@@ -298,6 +334,7 @@
       "key": "docs/spec/composition.md:51",
       "owner": "EXP-4",
       "clause": "**EXP-4 template selection:** the factory runs once against a symbolic member; its\nreturned declarations are copied and frozen, and every builder rejects later calls.\nA member instance is addressed by the template's step descriptor (which includes\nits collection binding) plus the member key. Discovery keys every member before\nany gate or body runs, using designated identity or an explicit custom-key\nfunction (COL-1). A missing or duplicate key rejects the collection with a\ndiagnostic naming the collection, the key and the custom-key option; no member\nwork is admitted. Renaming a template slot or moving it to another collection is\nchanged correspondence: prior instances are not remapped. Each member step callback\n(source `run` and `finality`, member memo `run`) receives a **member binding**: a\ntracked view of its member's current keyed record, the same view its gate reads.\nIts reads are that step's own observations and are validated against the current\nkeyed snapshot. Explicit (non-template) members have no member binding, and\n`forward.member` origins are accepted only from template instances.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -306,6 +343,7 @@
       "key": "docs/spec/composition.md:66",
       "owner": "EXP-4",
       "clause": "## Nested execution and validation",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -314,6 +352,7 @@
       "key": "docs/spec/composition.md:68",
       "owner": "CMP-5",
       "clause": "**CMP-5 — Ordinary nesting.** Invoking declared child bindings inside a memoized\nbody is permitted. Captured dependency evidence propagates automatically and\nhierarchically. Do not flatten every transitive child input into the parent's\nimmediate validity test: a changed child input can yield equal consumed output,\nallowing the parent result to survive.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "nested"
@@ -324,6 +363,7 @@
       "key": "docs/spec/composition.md:74",
       "owner": "CMP-6",
       "clause": "**CMP-6 — Reconnect current work.** Persist enough evidence to associate a historical\nnested call with the current declared callable relationship and arguments, its\nprior result and consumed output projection. An old exact result reference alone\ncannot identify the current implementation. Neither source text, display name,\nexecution ordinal, nor process-local object identity is a valid substitute for\nproven current correspondence. Changed graph shape without correspondence yields\nan honest miss, not a guessed remapping.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "supplied",
@@ -335,6 +375,7 @@
       "key": "docs/spec/composition.md:82",
       "owner": "EXP-1",
       "clause": "**EXP-1 mechanism selection:** a fresh registry binds the declared composition\nscope, input/callable/step role, slot, and member key where applicable to current\ndeclarations. Each consumed historical slot must resolve to exactly one current\ndeclaration. Missing and multiply occupied slots produce distinct miss diagnostics.\nA process-local reverse map may discover the slot actually consumed, but only\nstructural descriptors and observed facts enter retained evidence. API spelling\nand descriptor wire encoding remain separate implementation choices.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -343,6 +384,7 @@
       "key": "docs/spec/composition.md:90",
       "owner": "EXP-1",
       "clause": "For example, registering member `b` before `a` after restart must reconnect each\nmember's own observations and exact retained reference; it cannot exchange their\nresults. The [EXP-1 restart fixture](../../experiments/exp-1/decision.md) proves this\nfor direct supplied callables and flat scalar inputs in separate processes. It\ndoes not establish arbitrary nested argument reconstruction or closure persistence.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -351,9 +393,11 @@
       "key": "docs/spec/composition.md:96",
       "owner": "CMP-7",
       "clause": "**CMP-7 — Arguments.** Forwarded current bindings can be resolved directly. A stored\nderived argument is usable only with sufficient supporting evidence that it still\napplies, including governing tracked inputs and implementation. If a current child\ninvocation cannot be reconstructed without executing the skipped parent's body,\nreport an ordinary parent miss and execute normally when admitted; children may\nstill reuse. Never execute paid work merely to discover whether that same work was\nnecessary and label it cache validation. Do not promise serialized closures.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
-        "nested"
+        "nested",
+        "currentArguments"
       ],
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
@@ -361,6 +405,7 @@
       "key": "docs/spec/composition.md:104",
       "owner": "EXP-4",
       "clause": "**EXP-4 argument recipe:** a nested call's durable evidence records its structural\nparent and child slots, its position in the parent's call order and one recipe per\nargument (the M3 empty form remains valid):",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -369,6 +414,7 @@
       "key": "docs/spec/composition.md:108",
       "owner": "EXP-4",
       "clause": "| Recipe | Recorded | Reconstruction |",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -377,6 +423,7 @@
       "key": "docs/spec/composition.md:109",
       "owner": "EXP-4",
       "clause": "| --- | --- | --- |",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -385,6 +432,7 @@
       "key": "docs/spec/composition.md:110",
       "owner": "EXP-4",
       "clause": "| `forwarded` | Structural origin: an input path, the member binding, or an earlier child call's output path, and whether its path was justified | Used only when recorded as justified; resolved again from **current** bindings; a stored value is never substituted |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -393,6 +441,7 @@
       "key": "docs/spec/composition.md:111",
       "owner": "EXP-4",
       "clause": "| `derived` | Canonical supported value, and whether it was justified | Used only when recorded as justified and every earlier validation step passed |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -401,6 +450,7 @@
       "key": "docs/spec/composition.md:112",
       "owner": "EXP-4",
       "clause": "| `unreconstructible` | Its reason (for example a function value) | Always an honest parent miss; the child cannot observe it |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -409,6 +459,7 @@
       "key": "docs/spec/composition.md:114",
       "owner": "EXP-4",
       "clause": "Validation checks the parent's own implementation, consumed bindings and facts\nfirst, then each call in recorded order. For call *k* it resolves the recipe,\nobtains the current child result (validated or executed under normal admission)\nand compares only the parent's consumed output facts from that call. Under the\ntracked-influence contract, an unchanged parent prefix replays to the same derived\nvalue, so a changed basis is reported as changed evidence or changed child output\nbefore call *k*. The distinct unjustified-argument miss is reachable when the\nparent made an **observed** untracked read before deriving the argument. The same\nholds for a forwarded path: a path chosen after an observed untracked read is\nrecorded unjustified. Child\nhistory identity is the child descriptor plus its derived argument values;\nforwarded values are identified by origin and observed by the child through\n`argument` binding paths. Untracked influence the runtime cannot observe remains\noutside this justification (preserved counterexample CX-1).",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -417,6 +468,7 @@
       "key": "docs/spec/composition.md:129",
       "owner": "EXP-4",
       "clause": "## Gates, skips, and enforcement",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -425,6 +477,7 @@
       "key": "docs/spec/composition.md:131",
       "owner": "CMP-8",
       "clause": "**CMP-8 — Tracked runtime gates.** A runtime predicate may select whether a declared\noperation instance runs, without removing it from the abstract graph. Its relevant\ninputs are tracked. Distinguish skipped/no-value from success returning undefined,\nfailure, cancellation and pending work. No silent partial corpus is allowed for a\nstrict consumer.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "gates",
@@ -438,6 +491,7 @@
       "key": "docs/spec/composition.md:137",
       "owner": "EXP-4",
       "clause": "**EXP-4 strict-fold selection:** a gate yields an explicit `skipped` instance only\nfor an explicit `false`; a non-boolean result or a failed read fails the instance.\nThe gate declares the **required population**. A strict fold receives one explicit\nkeyed entry per current member, `succeeded` with its result view or `skipped`\nwith no data, in canonical key order. It runs only when discovery is closed and\nevery required member has an accepted result. Any failed or cancelled required\nmember fails the fold immediately, naming those keys and still reporting pending\nkeys and open discovery; otherwise open discovery or a pending member leaves it\nwaiting. Neither case runs the body or publishes. A closed empty population is a\nsuccessful complete fold; an open one waits. By supervisor decision on the\nEXP-4 evidence, the strict fold's outcome also carries framework-level coverage\n(required keys, skipped keys, discovery closure), so consumers need not trust the\nbody to report exclusions. Its verification consumes\neach member's included-or-skipped outcome and the result facts it read, not the\ngate's raw observations; those remain the instance's own evidence. A threshold\nchange that flips no outcome therefore reruns nothing unless the fold body itself\nreads the threshold. The fold's evidence also records the template step it\nconsumes: renaming that step or its template slot, or moving the template to\nanother collection, is changed correspondence and a miss, never a remap. When a\nmember has both a denied and a cancelled child, cancellation determines its\noutcome. Run-level infrastructure failures (the admission port, observers,\nintegrity) fail the whole request rather than being attributed to one member, so\nan outage is never mistaken for a terminal member failure. A skip or deletion never\nretracts an earlier publication: the instance's retained history and latest\npointer are unchanged, and that pointer is not evidence that the member is still\nrequired. Tolerant or outcome folds are separate (RUN-010) and outside EXP-4.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -446,6 +500,7 @@
       "key": "docs/spec/composition.md:164",
       "owner": "CMP-9",
       "clause": "**CMP-9 — Enforceable boundary.** Reject framework result resolution during graph\nconstruction and undeclared calls/target substitution/post-freeze mutation before\nadmitting affected work. Distinct types/capabilities and runtime validation support\nthis boundary; they do not sandbox arbitrary JavaScript I/O, closure mutation,\ntruthiness, time or randomness. Type/lint checks guide correct capture, while the\nauthor's tracked-influence contract remains explicit.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "rejectGraph"
@@ -456,6 +511,7 @@
       "key": "docs/spec/composition.md:171",
       "owner": "CMP-9",
       "clause": "## Worked cases",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [
         "rejectGraph"
@@ -466,6 +522,7 @@
       "key": "docs/spec/composition.md:173",
       "owner": "CMP-9",
       "clause": "| Case | Allowed outcome | Assertion |",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -474,6 +531,7 @@
       "key": "docs/spec/composition.md:174",
       "owner": "CMP-9",
       "clause": "| --- | --- | --- |",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -482,6 +540,7 @@
       "key": "docs/spec/composition.md:175",
       "owner": "CMP-9",
       "clause": "| Composition config supplies either scorer A or B | Bind selected scorer before freeze | Definition has a current supplied callable before any source work |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -490,6 +549,7 @@
       "key": "docs/spec/composition.md:176",
       "owner": "CMP-9",
       "clause": "| One PR is added to discovery | Instantiate existing retrieval/assessment template once for its key | Unchanged PR assessments retain references |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -498,6 +558,7 @@
       "key": "docs/spec/composition.md:177",
       "owner": "CMP-9",
       "clause": "| Tracked gate changes false→true | Previously skipped instance may run | Same abstract nodes/edges, changed predicate evidence |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -506,6 +567,7 @@
       "key": "docs/spec/composition.md:178",
       "owner": "CMP-9",
       "clause": "| Result contains a function used to add an operation | Reject graph mutation/undeclared binding | No new abstract node or paid call admitted |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -514,6 +576,7 @@
       "key": "docs/spec/composition.md:179",
       "owner": "CMP-9",
       "clause": "| Child prompt changes, child emits same selected score | Revalidate/execute child as required, retain outer result | Outer body invocation count stays zero on second run |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -522,6 +585,7 @@
       "key": "docs/spec/composition.md:180",
       "owner": "CMP-9",
       "clause": "| Saved child arguments lack current justification | Parent miss | No validation-only replay; normal admission gate applies |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -530,6 +594,7 @@
       "key": "docs/spec/composition.md:181",
       "owner": "CMP-9",
       "clause": "| Author mutates builder array after freeze | Frozen graph remains unchanged | Stored graph owns its structure |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -538,6 +603,7 @@
       "key": "docs/spec/composition.md:183",
       "owner": "CMP-9",
       "clause": "See [execution](execution.md) for eligibility/source acceptance and\n[acceptance](acceptance.md) for restart and invocation-count fixtures.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "rejectGraph"
@@ -548,6 +614,7 @@
       "key": "docs/spec/glossary.md:1",
       "owner": null,
       "clause": "# microdelta ubiquitous language",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -556,6 +623,7 @@
       "key": "docs/spec/glossary.md:3",
       "owner": null,
       "clause": "This is the shared vocabulary for discussing, specifying, implementing, and\nreviewing microdelta. Use these meanings in issues, code comments, tests, and\nconversation. Introduce a narrower term when a distinction matters: “the step\nchanged” is less precise than “the step definition's implementation changed.”",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -564,6 +632,7 @@
       "key": "docs/spec/glossary.md:8",
       "owner": null,
       "clause": "These definitions describe the target domain, not a list of shipped features.\nThe [implementation map](../package-map.md) records what exists today. This file\nowns concise terminology; the linked contracts own behavioral requirements and\nacceptance criteria. A vocabulary edit must preserve those contracts or identify\nthe proposed contract change explicitly. API spellings and storage representations\nremain separate choices.",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -572,6 +641,7 @@
       "key": "docs/spec/glossary.md:15",
       "owner": null,
       "clause": "## Analysis, declarations, and work",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -580,6 +650,7 @@
       "key": "docs/spec/glossary.md:17",
       "owner": null,
       "clause": "| Term | Meaning and boundary | Owner and contract |",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -588,6 +659,7 @@
       "key": "docs/spec/glossary.md:18",
       "owner": null,
       "clause": "| --- | --- | --- |",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -596,6 +668,7 @@
       "key": "docs/spec/glossary.md:19",
       "owner": null,
       "clause": "| **Analysis** | A declared computation and its logical namespace. It can be run repeatedly, including after complete process shutdown. It is larger than a particular execution attempt or memoized step. | Definition & Binding; [DOM-1/2](domain.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -604,6 +677,7 @@
       "key": "docs/spec/glossary.md:20",
       "owner": null,
       "clause": "| **Environment** | The selected storage, services, credentials, and isolation scope in which work runs. A label alone does not establish isolation. | Run Supervision coordinates the scope; each context preserves its own state boundary; [RUN-017](operations.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -612,6 +686,7 @@
       "key": "docs/spec/glossary.md:21",
       "owner": null,
       "clause": "| **Execution context** | The scoped access to a run's environment, services, cancellation, and resource-reporting facilities. It is not the observation collector; lookup outside a live run scope fails. | Run Supervision; [DOM-2](domain.md), [RUN-001](operations.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -620,6 +695,7 @@
       "key": "docs/spec/glossary.md:22",
       "owner": null,
       "clause": "| **Bounded context** | An ownership boundary for a coherent domain model and its invariants. microdelta has six peer bounded contexts; supporting components and Machine do not add another domain authority. This architectural meaning of “context” is distinct from an execution context. | [ARC-001/002/010](architecture.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -628,6 +704,7 @@
       "key": "docs/spec/glossary.md:23",
       "owner": null,
       "clause": "| **Run** | One supervised execution lifetime in an environment. It may contain many invocations, attempts, and tracking frames. A run is not a retained result, and its completion does not erase history. | Run Supervision; [DOM-2](domain.md), [RUN-001/002](operations.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -636,6 +713,7 @@
       "key": "docs/spec/glossary.md:24",
       "owner": null,
       "clause": "| **Step definition** | A declared operation with its implementation and applicable policy. It describes work that may be invoked; it is not one invocation or one saved output. Use **step** as shorthand only when this meaning is clear. | Definition & Binding; [CMP-1/3](composition.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "topology",
@@ -647,6 +725,7 @@
       "key": "docs/spec/glossary.md:25",
       "owner": null,
       "clause": "| **Invocation** | A particular call of a bound step with its applicable inputs or arguments. It may be satisfied through reuse; a call does not by itself imply that the body executes. | Definition & Binding supplies the call relationship; Reuse Resolution resolves it; [CMP-5/6](composition.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "nested"
@@ -657,6 +736,7 @@
       "key": "docs/spec/glossary.md:26",
       "owner": null,
       "clause": "| **Attempt** | Work undertaken to produce or accept a result. An execution attempt can fail, be interrupted, or finish without publishing a new completed result. An acceptance check retaining an old result records current-check evidence separately from that result's original provenance. | Result History & Publication records it; [RES-005](execution.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -665,6 +745,7 @@
       "key": "docs/spec/glossary.md:27",
       "owner": null,
       "clause": "| **Binding** | The current relationship connecting a declared operation, input, or callable slot to what it denotes now. A structural descriptor identifies the declared relationship; its current target is resolved through that relationship. A function's text, display label, or surviving object identity cannot substitute for current correspondence. | Definition & Binding; [CMP-6/7](composition.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "supplied",
@@ -676,6 +757,7 @@
       "key": "docs/spec/glossary.md:28",
       "owner": null,
       "clause": "| **Callable slot** | A declared place in a composition where a supplied function or step belongs, such as an `assessor` input. Its structural relationship helps reconnect the current callable after restart. It is not a function fingerprint. | Definition & Binding; [CMP-3/6](composition.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "supplied"
@@ -686,6 +768,7 @@
       "key": "docs/spec/glossary.md:29",
       "owner": null,
       "clause": "| **Step graph** | The fixed abstract operations and possible relationships established by composition. Runtime data can select or instantiate declared work, but cannot invent or reconnect abstract operations. | Definition & Binding; [CMP-1](composition.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "topology",
@@ -697,6 +780,7 @@
       "key": "docs/spec/glossary.md:30",
       "owner": null,
       "clause": "| **Result graph** | The invocations/results and actual observed relationships that arise at runtime. Its cardinality and observed reads may vary while the step graph stays fixed. It is not a serialized graph of live proxies. | Relationships span Definition, Tracking, and History; [ARC-005](architecture.md), [CMP-2](composition.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "branches",
@@ -708,6 +792,7 @@
       "key": "docs/spec/glossary.md:31",
       "owner": null,
       "clause": "| **Fanout template** | A declared member computation built once using a symbolic member input, then instantiated for actual member keys. Member count may vary without rebuilding the abstract topology for each member. | Definition & Binding; [CMP-4](composition.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "topology",
@@ -719,6 +804,7 @@
       "key": "docs/spec/glossary.md:32",
       "owner": null,
       "clause": "| **Gate** | A tracked runtime predicate that selects whether an already-declared operation instance runs. A skipped operation is distinct from success returning `undefined`. | Definition & Binding defines the relationship; Run Supervision governs execution; [CMP-8](composition.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "gates",
@@ -732,6 +818,7 @@
       "key": "docs/spec/glossary.md:33",
       "owner": null,
       "clause": "| **Required population** | The members of a keyed collection whose gate selects them for a strict consumer. A gated-out member is explicitly **skipped**: outside the required population, carrying no data, and distinct from pending, failed, cancelled or successful-empty outcomes. | Definition & Binding declares the gate; Reuse Resolution and Run Supervision apply it; [CMP-8](composition.md), [RUN-010](operations.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "gates",
@@ -745,6 +832,7 @@
       "key": "docs/spec/glossary.md:34",
       "owner": null,
       "clause": "| **Strict fold** | A memoized consumer of a keyed collection that completes only when discovery is closed and every required member has an accepted result. A failed or cancelled required member fails it; open discovery or a pending member leaves it waiting. Neither case runs its body or publishes. It is distinct from a tolerant (outcome) fold. | Reuse Resolution with Run Supervision; [CMP-8](composition.md), [RUN-005/010](operations.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "gates",
@@ -758,6 +846,7 @@
       "key": "docs/spec/glossary.md:35",
       "owner": null,
       "clause": "| **Outcome fold** (tolerant fold) | A memoized consumer of a keyed collection that folds every member's **settled status**: succeeded, skipped, failed or cancelled. Pending work is unsettled. While discovery is open or any member is unsettled it claims no complete set and runs no body: it waits, or fails when no population can be established in that pass. Once settled, its result never counts as complete success of the population. Repairing a failed member makes it reconsider; strict and outcome folds never share results. | Definition declares it; Reuse Resolution settles and verifies it; Run Supervision reports it; [RUN-010](operations.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -766,9 +855,11 @@
       "key": "docs/spec/glossary.md:36",
       "owner": null,
       "clause": "| **Argument recipe** | The durable description of how a nested call's argument is reconstructed: `forwarded` from a current binding, `derived` as a recorded value justified by the parent's validated prefix, or `unreconstructible` (always an honest parent miss). It is evidence for validation, not a serialized closure. | Definition & Binding records the call relationship; Reuse Resolution validates it; [CMP-7](composition.md), [REUSE-006/007](execution.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
-        "nested"
+        "nested",
+        "currentArguments"
       ],
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
@@ -776,6 +867,7 @@
       "key": "docs/spec/glossary.md:37",
       "owner": null,
       "clause": "| **Supplied step** | A step implementation bound at composition to a callable slot, such as an `assessor`. Calls through the slot may carry arguments and use the slot's subject function over their derived values. Exchanging the bound implementation is a child implementation change, never a parent-graph change. | Definition & Binding; [CMP-3](composition.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "supplied"
@@ -786,6 +878,7 @@
       "key": "docs/spec/glossary.md:38",
       "owner": null,
       "clause": "| **Member binding** | The tracked view of a template member's current keyed record, given to that member's gate and step callbacks. Reads are the step's own observations and are validated against the current keyed snapshot. Explicit members have none. | Definition & Binding supplies it; Tracking and Reuse Resolution observe and validate it; [CMP-4](composition.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "topology",
@@ -797,6 +890,7 @@
       "key": "docs/spec/glossary.md:39",
       "owner": null,
       "clause": "| **Coverage** | The framework-derived statement of which members a fold covered. A successful strict fold's coverage names the required and skipped keys and closed discovery. An outcome fold's names every member under exactly one settled or pending status, whether discovery is open, and whether the set is complete. Neither depends on what the fold body reports. | Reuse Resolution; [CMP-8](composition.md), [RUN-010](operations.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "gates",
@@ -810,6 +904,7 @@
       "key": "docs/spec/glossary.md:40",
       "owner": null,
       "clause": "| **Soft stop / hard stop** | A soft stop admits no new work and drains admitted steps, with no default deadline. A hard stop aborts in-flight sends, waits and sleeps, marks the attempts interrupted, and records remote state as cancelled, still running or unknown. Neither ever publishes partial output. | Run Supervision; [RUN-014/015](operations.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -818,6 +913,7 @@
       "key": "docs/spec/glossary.md:41",
       "owner": null,
       "clause": "| **External operation** | One logical external call, such as a paid provider request. It is addressed by its step attempt's subject, a name and the author's request binding. Its stable identity is persisted before the first send and shared by every retry, so a lost response is **unknown** rather than silently replayed. Its outcome is succeeded, failed, deferred (not before a time) or unknown. | Run Supervision, persisted through History's operation journal; [RUN-012/013](operations.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -826,6 +922,7 @@
       "key": "docs/spec/glossary.md:42",
       "owner": null,
       "clause": "| **Unsettled operation** | An external operation that is pending, deferred or unknown. It keeps its step's work pending, never failed or succeeded: a strict or outcome fold over that member waits. | Run Supervision; [RUN-010/011/012](operations.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -834,6 +931,7 @@
       "key": "docs/spec/glossary.md:43",
       "owner": null,
       "clause": "| **Taint guard** | Once a step attempt meets a deferral or an unknown outcome, every later operation or send it makes rethrows that signal without sending, and nothing it returns is published. | Run Supervision; [RUN-012](operations.md), [EXP-8](../../experiments/exp-8/decision.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -842,6 +940,7 @@
       "key": "docs/spec/glossary.md:44",
       "owner": null,
       "clause": "| **Operator settlement** | An operator's recorded resolve or abandon of an unknown operation. Resolving may acknowledge usage the operator learned under an operator-namespaced report identity; abandoning leaves the usage unknown. Either unblocks the step. Resolving as succeeded keeps the operation's address consumed, so the request is never sent again; resolving as failed, or abandoning (the operator's authorization of a possible second effect), frees it. | Run Supervision with Resource Accounting; [RUN-012](operations.md), [ACC-003](operations.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -850,6 +949,7 @@
       "key": "docs/spec/glossary.md:45",
       "owner": null,
       "clause": "| **Durable deferral** | A persisted \"not before T\" for operation work waiting on a rate or quota limit, or for a transient retry's backoff. It holds no execution permit or window lane, releases the writer lease once only deferred work remains, and is honored by later runs. The run then sleeps and resumes in another pass, or exits reporting the time. | Run Supervision, persisted through History; [RUN-011](operations.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -858,6 +958,7 @@
       "key": "docs/spec/glossary.md:46",
       "owner": null,
       "clause": "| **Request attempt** | One network try of an external operation. An operation can have several attempts, for example across retries; each one has its own identity, belongs to exactly one operation, and incurs its own usage. It is unrelated to a run's request key. | Run Supervision mints it; Resource Accounting attributes usage to it; [RUN-012/013](operations.md), [EXP-8](../../experiments/exp-8/decision.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -866,6 +967,7 @@
       "key": "docs/spec/glossary.md:47",
       "owner": null,
       "clause": "| **Usage intent** | The durable record, made before a request attempt is sent, that usage is expected from it (\"intent before send\"). It names the operation, the attempt and its run, member and step attempt. Recording it neither opens nor owns the operation. Until a report for the attempt is acknowledged, its usage is unknown. | Resource Accounting; [ACC-007](operations.md), [EXP-8](../../experiments/exp-8/decision.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -874,6 +976,7 @@
       "key": "docs/spec/glossary.md:48",
       "owner": null,
       "clause": "| **Usage report** / **report identity** | A provider's observation of consumption by one request attempt, as additive per-unit quantities. It is identified by (operation, report identity), so a redelivered report is counted once and the same report identity on two operations is two reports. The report identity must be stable across redelivery, derived from the provider's response rather than minted per delivery. A report is acknowledged only once it is durable. | Resource Accounting; [ACC-003/007](operations.md), [EXP-8](../../experiments/exp-8/decision.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -882,6 +985,7 @@
       "key": "docs/spec/glossary.md:49",
       "owner": null,
       "clause": "| **Unknown usage** | Usage of a request attempt whose usage intent is recorded but which has no acknowledged report of its own. Another attempt's report never covers it. It is reported as unknown, never as zero. | Resource Accounting; [ACC-005](operations.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -890,6 +994,7 @@
       "key": "docs/spec/glossary.md:50",
       "owner": null,
       "clause": "| **Estimate basis** | The stated, versioned assumptions an estimate rests on, such as assumed rates or cached-input treatment. An estimate keeps its basis and is reported beside observations, never summed into observed usage. | Resource Accounting; [ACC-006](operations.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -898,6 +1003,7 @@
       "key": "docs/spec/glossary.md:51",
       "owner": null,
       "clause": "| **Writer-busy** | The typed outcome for a normal request that waited for a store's writer lease until the operator deadline passed. It reports the request's final attempt, made at or after the deadline: the holder it observed and that holder's expiry, or storage contention (SQLite stayed locked) with the writer recorded then, when it could be read. There is no default deadline; a stop also ends the wait, but as a stop, not as writer-busy. Waiting changes no authority or data. | Run Supervision (waiting policy) over Result History's lease authority; [RUN-002](operations.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -906,6 +1012,7 @@
       "key": "docs/spec/glossary.md:52",
       "owner": null,
       "clause": "| **Lease lost** (`lease-lost`) | The typed ending of work whose run no longer holds the store's writer lease. The refused write records nothing; the step is denied, not failed, so its member stays pending, and a claimed attempt stays incomplete for the successor to recover. A drain that outlives its lease ends this way. | Run Supervision with Result History & Publication; [PUB-002](execution.md); EXP-8 ruling R ([decision](../../experiments/exp-8/decision.md)) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -914,6 +1021,7 @@
       "key": "docs/spec/glossary.md:53",
       "owner": null,
       "clause": "| **Request permit** / **active window** | Two separate run bounds. A request permit guards only an actual constrained request (a send). The active window bounds how many members hold a lane at once; a member in a timed wait lends its lane. | Run Supervision; [RUN-002](operations.md), [RUN-011](operations.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -922,6 +1030,7 @@
       "key": "docs/spec/glossary.md:54",
       "owner": null,
       "clause": "| **Recorded promotion** | The only way trial-environment work satisfies another environment of the same analysis: an explicit promotion of exact result references, durably recorded with the promoter's evidence. | Run Supervision through History; [RUN-017](operations.md) owner decision |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -930,6 +1039,7 @@
       "key": "docs/spec/glossary.md:55",
       "owner": null,
       "clause": "| **Undeclared call** | A run operation, such as resolving members, a fold, a check or a promotion, that author code invokes from inside member or step work through a run it kept. Its results would bypass the calling body's evidence, so it is refused before any work is admitted. | Run Supervision; [CMP-9](composition.md), [RUN-002](operations.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "rejectGraph"
@@ -940,6 +1050,7 @@
       "key": "docs/spec/glossary.md:57",
       "owner": null,
       "clause": "## Tracking and consumed evidence",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -948,6 +1059,7 @@
       "key": "docs/spec/glossary.md:59",
       "owner": null,
       "clause": "| Term | Meaning and boundary | Owner and contract |",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -956,6 +1068,7 @@
       "key": "docs/spec/glossary.md:60",
       "owner": null,
       "clause": "| --- | --- | --- |",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -964,11 +1077,14 @@
       "key": "docs/spec/glossary.md:61",
       "owner": null,
       "clause": "| **Tracking frame**, or **frame** | One bounded scope for collecting the dependency observations made by a computation. It remains active across the asynchronous work it owns, closes when that capture ends, and rejects late use. Frames can nest and run concurrently without mixing observations. A frame is not a run, step definition, JavaScript stack frame, or durable record. | Tracking & Observation; [TRK-3](tracking.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "frames",
         "restore",
-        "derive"
+        "derive",
+        "asyncFailure",
+        "lateHelper"
       ],
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
@@ -976,6 +1092,7 @@
       "key": "docs/spec/glossary.md:62",
       "owner": null,
       "clause": "| **Capture** | The act of collecting observations within a frame. Capturing does not itself memoize the body, publish a result, or establish source freshness. | Tracking & Observation; [TRK-2/3](tracking.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "calls"
@@ -986,6 +1103,7 @@
       "key": "docs/spec/glossary.md:63",
       "owner": null,
       "clause": "| **Tracked value** | A supported object or function wrapped so its consumed operations can be observed. Scalar-valued fields still yield ordinary scalars; a function is called normally. Wrapping a function does not memoize its output. | Tracking & Observation; [TRK-1/2](tracking.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "primitive",
@@ -998,6 +1116,7 @@
       "key": "docs/spec/glossary.md:64",
       "owner": null,
       "clause": "| **Observation** | Evidence of a semantic fact actually consumed: for example a field value, own-property presence, lookup-chain membership, key order, or called implementation. It is narrower than everything reachable from the input. | Tracking & Observation; [TRK-5](tracking.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "leaf",
@@ -1012,6 +1131,7 @@
       "key": "docs/spec/glossary.md:65",
       "owner": null,
       "clause": "| **Dependency** | A relationship created by consuming a fact from an input, callable, or result. State the consumed fact when precision matters. Nested result dependencies preserve the selected-output boundary; they are not automatically flattened into all transitive source reads. | Tracking captures consumption; Reuse Resolution applies it; [TRK-5](tracking.md), [REUSE-005](execution.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "leaf",
@@ -1026,6 +1146,7 @@
       "key": "docs/spec/glossary.md:66",
       "owner": null,
       "clause": "| **Implementation fingerprint** | Automatically observed evidence about the actual called function's implementation. The selected bounded mechanism uses the actual called function's emitted `Function.prototype.toString()` text, after current structural correspondence is established. It is neither a definition's identity, a restart locator, nor proof that all closure influences were tracked. | Tracking & Observation; [TRK-2](tracking.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "calls"
@@ -1036,6 +1157,7 @@
       "key": "docs/spec/glossary.md:67",
       "owner": null,
       "clause": "| **Structured address** | An ordered path of meaningful segments plus the relevant operation. Property `\"0\"`, array index `0`, and a collection member key are distinct concepts. Dots in a property name do not create extra segments. | Value Semantics supplies representation; Tracking supplies consumed-operation meaning; [VAL-1](tracking.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "address",
@@ -1047,6 +1169,7 @@
       "key": "docs/spec/glossary.md:68",
       "owner": null,
       "clause": "| **Content fingerprint** | A digest of versioned canonical evidence for a supported value or selected fact. It compares content under the specified semantics; it does not identify a subject, prove freshness, or authorize reuse. SHA-256 collision resistance is an assumption. | Value Semantics; [VAL-2](tracking.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "edges",
@@ -1061,11 +1184,14 @@
       "key": "docs/spec/glossary.md:69",
       "owner": null,
       "clause": "| **Tag** | An opaque process-local token used for reactive dependency composition. A tag and its revision have no durable meaning and must not enter retained semantic evidence. | Tracking & Observation; [TRK-3](tracking.md), [ARC-004](architecture.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "frames",
         "restore",
-        "derive"
+        "derive",
+        "asyncFailure",
+        "lateHelper"
       ],
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
@@ -1073,11 +1199,14 @@
       "key": "docs/spec/glossary.md:70",
       "owner": null,
       "clause": "| **Revision** | A process-local change marker used with tags to determine whether a local derivation may need reevaluation. It is distinct from a compatibility version or durable snapshot identifier. | Tracking & Observation; [TRK-3](tracking.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "frames",
         "restore",
-        "derive"
+        "derive",
+        "asyncFailure",
+        "lateHelper"
       ],
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
@@ -1085,11 +1214,14 @@
       "key": "docs/spec/glossary.md:71",
       "owner": null,
       "clause": "| **Derivation** | A process-local cached calculation whose tracked dependencies govern invalidation. Serving its cached value replays its observations to consuming frames. This local cache does not establish restart-safe memoization. | Tracking & Observation; [TRK-3](tracking.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "frames",
         "restore",
-        "derive"
+        "derive",
+        "asyncFailure",
+        "lateHelper"
       ],
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
@@ -1097,6 +1229,7 @@
       "key": "docs/spec/glossary.md:73",
       "owner": null,
       "clause": "### What a frame means in practice",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -1105,6 +1238,7 @@
       "key": "docs/spec/glossary.md:75",
       "owner": null,
       "clause": "Suppose an assessment reads `settings.strict`, then `pr.author.name`, and calls\na tracked `formatName` helper. One capture frame collects the guard's actual\nvalue, the selected name, the called helper's implementation, and any tracked\nfacts the helper consumes. Merely passing `pr` to the helper does not consume\nall PR fields. An unread `pr.labels` field contributes no observation.",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1113,6 +1247,7 @@
       "key": "docs/spec/glossary.md:81",
       "owner": null,
       "clause": "If the computation awaits work, its frame continues to collect its own reads.\nA concurrent assessment has a separate frame. An explicitly nested capture scope\ncollects independently and restores the surrounding scope when it finishes;\ncomposition must propagate the observations the surrounding computation consumes.\nOnce a frame closes, a detached callback cannot append observations to it or\nsilently claim that its late reads were captured. Success and failure both end\nthe frame's lifetime.",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1121,11 +1256,14 @@
       "key": "docs/spec/glossary.md:89",
       "owner": null,
       "clause": "On a later execution, a fresh frame records the newly taken branch. It does not\naccumulate abandoned branch reads from the old frame. A cached in-process\nderivation must replay its observations when another frame consumes it. Durable\nreuse later relies on semantic evidence and current bindings, never on reopening\nan old frame or reviving its tags. These are [TRK-3/8](tracking.md) obligations;\nthe paragraph does not prescribe a public capture API.",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "frames",
         "restore",
-        "derive"
+        "derive",
+        "asyncFailure",
+        "lateHelper"
       ],
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
@@ -1133,6 +1271,7 @@
       "key": "docs/spec/glossary.md:96",
       "owner": null,
       "clause": "## Identity, collections, and materialization",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -1141,6 +1280,7 @@
       "key": "docs/spec/glossary.md:98",
       "owner": null,
       "clause": "| Term | Meaning and boundary | Owner and contract |",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -1149,6 +1289,7 @@
       "key": "docs/spec/glossary.md:99",
       "owner": null,
       "clause": "| --- | --- | --- |",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -1157,6 +1298,7 @@
       "key": "docs/spec/glossary.md:100",
       "owner": null,
       "clause": "| **Identity** | Which logical entity or member something represents. Identity is independent of content equality. Traversing an identity-bearing object does not automatically consume its identity field. | Explicit consumption belongs to Tracking; member relationships to Definition; [TRK-7](tracking.md), [COL-1](tracking.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "leaf",
@@ -1169,6 +1311,7 @@
       "key": "docs/spec/glossary.md:101",
       "owner": null,
       "clause": "| **Subject** | The complete opaque author-supplied identity of memoized work, unique within an analysis. It identifies a history of work, not one exact result. A display name or content hash is not a substitute. Nonmemoized work does not require a subject. | Reuse Resolution uses it; History scopes retained work by it; [RES-001](execution.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1177,6 +1320,7 @@
       "key": "docs/spec/glossary.md:102",
       "owner": null,
       "clause": "| **Member key** | The stable identity of a member within its collection binding, using the designated identity or an explicit supported custom-key strategy. A traversal ordinal is not an implicit identity. Duplicate keys fail. | Definition & Binding, with observed collection facts in Tracking; [COL-1](tracking.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "keyed"
@@ -1187,6 +1331,7 @@
       "key": "docs/spec/glossary.md:103",
       "owner": null,
       "clause": "| **Collection projection** | The selected facts consumed across members, together with relevant membership, order, and coverage semantics. An exhaustive uniform projection can be one logical dependency; an early-stop traversal must preserve actual coverage and remain incomplete. | Tracking & Observation; [COL-2/3](tracking.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "projection"
@@ -1197,6 +1342,7 @@
       "key": "docs/spec/glossary.md:104",
       "owner": null,
       "clause": "| **Materialization** | Making selected stored data available as immutable value views or output data, while recording what access consumes. Loading is distinct from accepting freshness or granting permission to execute. | Materialization supporting component; [ARC-002](architecture.md), [DOM-3](domain.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1205,6 +1351,7 @@
       "key": "docs/spec/glossary.md:105",
       "owner": null,
       "clause": "| **Snapshot** | A detached immutable representation of data at a particular point. A value snapshot alone is not necessarily a published completed result with framework identity and provenance. | Value Semantics defines representation; History owns completed result snapshots; [VAL-3](tracking.md), [RES-003](execution.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "frozen"
@@ -1215,6 +1362,7 @@
       "key": "docs/spec/glossary.md:107",
       "owner": null,
       "clause": "## Results and current validity",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -1223,6 +1371,7 @@
       "key": "docs/spec/glossary.md:109",
       "owner": null,
       "clause": "| Term | Meaning and boundary | Owner and contract |",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -1231,6 +1380,7 @@
       "key": "docs/spec/glossary.md:110",
       "owner": null,
       "clause": "| --- | --- | --- |",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -1239,6 +1389,7 @@
       "key": "docs/spec/glossary.md:111",
       "owner": null,
       "clause": "| **Result** | A completed immutable envelope containing author data and framework metadata, including identity and historical provenance. It is distinct from an attempt and from the reference that locates it. | Result History & Publication; [RES-003](execution.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1247,6 +1398,7 @@
       "key": "docs/spec/glossary.md:112",
       "owner": null,
       "clause": "| **Reference** | A scoped pointer to one exact retained snapshot. It is not payload, a “latest” alias, or a request to refresh/recompute missing data. Superseding a result does not retarget its reference. | Result History & Publication; [RES-002/006](execution.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1255,6 +1407,7 @@
       "key": "docs/spec/glossary.md:113",
       "owner": null,
       "clause": "| **Historical provenance** | The original observations and exact dependencies supporting a result's execution. Later current verification must not rewrite it. | Result History & Publication; [RES-003/007](execution.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1263,6 +1416,7 @@
       "key": "docs/spec/glossary.md:114",
       "owner": null,
       "clause": "| **Acceptance evidence** | Evidence of why a retained result is acceptable under the current bindings and policies. It is recorded separately from the result's original provenance; a past acceptance is not permanent validity. | Reuse Resolution decides; History records; [RES-005/007](execution.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1271,6 +1425,7 @@
       "key": "docs/spec/glossary.md:115",
       "owner": null,
       "clause": "| **Candidate** | A retained result being considered for reuse. Its existence is not proof of current compatibility, source acceptance, or unchanged consumed facts. | Reuse Resolution; [REUSE-001](execution.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1279,6 +1434,7 @@
       "key": "docs/spec/glossary.md:116",
       "owner": null,
       "clause": "| **Memoization** | The author's explicit choice to retain and reuse work across runs when the required evidence remains acceptable. It adds durability and reuse policy; `tracked()` alone does not provide it. | Reuse Resolution with History; [DOM-4](domain.md), [REUSE-001](execution.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1287,6 +1443,7 @@
       "key": "docs/spec/glossary.md:117",
       "owner": null,
       "clause": "| **Compatibility version** | A per-memo positive integer, default 1, controlling which history is eligible, including validated rollback. It is independent of automatic implementation evidence and local reactive revisions. | Reuse Resolution; [REUSE-008](execution.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1295,6 +1452,7 @@
       "key": "docs/spec/glossary.md:118",
       "owner": null,
       "clause": "| **Finality** | The outcome of the current optional definition finality hook for an eligible result and applicable inputs. True permits retention without source refresh for this resolution; absence supplies no shortcut. It is not a permanently stored “final” state or a substitute for other current source-acceptance policy. | Reuse Resolution applies the author's current policy; [REUSE-002/003](execution.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1303,6 +1461,7 @@
       "key": "docs/spec/glossary.md:119",
       "owner": null,
       "clause": "| **Retention** | An explicit outcome accepting the eligible previous result and preserving its exact reference. Returning fresh equal data instead creates a distinct result. | Reuse Resolution interprets the outcome; History preserves the snapshot; [RES-004/006](execution.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1311,6 +1470,7 @@
       "key": "docs/spec/glossary.md:120",
       "owner": null,
       "clause": "| **Publication** | The consistency boundary that makes a completed result authoritative while preserving claim ownership, allocation, and immutable history. A partial write or finished sub-request is not completed publication. | Result History & Publication; [ARC-007](architecture.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1319,6 +1479,7 @@
       "key": "docs/spec/glossary.md:121",
       "owner": null,
       "clause": "| **Request key** | A fresh opaque key the caller supplies and saves before starting one top-level normal request. One request may admit several distinct direct invocations. Resolution derives each History-scoped *attempt key* from the request key plus the complete structural invocation descriptor; History persists the allocation and its outcome. A request key is neither an attempt identity nor a cache key. A normal new request uses a fresh key; a previously allocated derived attempt key cannot be used with different intent or silently served as a current hit. | Caller supplies; Reuse Resolution derives attempt keys; History persists them; [explicit recovery request](../plans/m3-contribution-analysis.md#explicit-recovery-request), [PUB-004](execution.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1327,6 +1488,7 @@
       "key": "docs/spec/glossary.md:122",
       "owner": null,
       "clause": "| **Recovery** (of an admitted execution) | Takes a saved request key and the current declared invocation. It recomputes intent without author callbacks and reports the identified execution's exact durable outcome: committed success, absent, incomplete, or unsuccessful. Different intent rejects. It never automatically executes incomplete work and grants no current acceptance to a new request. The term covers only this named execution recovery; broader operational recovery is outside M3. | Run Supervision exposes the entry; Reuse Resolution recomputes intent; History reports the outcome; [explicit recovery request](../plans/m3-contribution-analysis.md#explicit-recovery-request), [PUB-004](execution.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1335,6 +1497,7 @@
       "key": "docs/spec/glossary.md:123",
       "owner": null,
       "clause": "| **Resource observation** | A reported quantity, unit, and attribution of actual work. It remains meaningful even if no successful result is published. Missing usage is unknown, not zero; observed usage is not necessarily a final bill. | Resource Accounting; [ACC-001/002/005](operations.md) |",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1343,6 +1506,7 @@
       "key": "docs/spec/glossary.md:125",
       "owner": null,
       "clause": "### One example across the terms",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -1351,6 +1515,7 @@
       "key": "docs/spec/glossary.md:127",
       "owner": null,
       "clause": "“Assess PR” is a **step definition**. Calling its current **binding** for PR 42\nis an **invocation**. Resolution may reuse an eligible **result** without a new\nbody execution. If new work is needed, its **attempt** can use **frames** to\ncapture the title and prompt configuration it consumes. Successful publication\nproduces an immutable result addressed by an exact **reference**.",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1359,6 +1524,7 @@
       "key": "docs/spec/glossary.md:133",
       "owner": null,
       "clause": "Later, a label-only change can leave the consumed title unchanged. Current\n**acceptance evidence** explains why the earlier result remains usable, while its\n**historical provenance** still describes the original execution. A changed\ntracked prompt can require another execution. Neither the step's display name\nnor a process-local tag decides that correspondence.",
+      "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1367,6 +1533,7 @@
       "key": "docs/spec/tracking.md:1",
       "owner": null,
       "clause": "# Tracking, values, and observations",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -1375,6 +1542,7 @@
       "key": "docs/spec/tracking.md:3",
       "owner": null,
       "clause": "Status: normative semantics with the bounded EXP-2 encoding selection below.\nThe full tracked materialization surface remains implementation work.\nOwners: Tracking & Observation and Value Semantics in [architecture](architecture.md).",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1383,6 +1551,7 @@
       "key": "docs/spec/tracking.md:7",
       "owner": null,
       "clause": "## Unified author surface",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -1391,6 +1560,7 @@
       "key": "docs/spec/tracking.md:9",
       "owner": "TRK-1",
       "clause": "**TRK-1 — One wrapper.** `tracked()` wraps supported objects and functions with one\nnominal brand. Object fields yield ordinary scalar values when scalar-valued;\nfunction values are invoked normally. Bare primitive wrapper inputs must fail at\nboth type and runtime boundaries; a boxed boolean cannot emulate native truthiness.\nImporting a tracked declaration must not require rewrapping or passing it manually\nthrough every consumer. Classes are deferred, not silently supported as plain data.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "primitive",
@@ -1403,6 +1573,7 @@
       "key": "docs/spec/tracking.md:16",
       "owner": "TRK-2",
       "clause": "**TRK-2 — Function evidence.** Calling a tracked function observes its implementation\nfingerprint and the tracked values/functions it consumes. Tracking a function does\nnot, by itself, memoize its output. Automatic implementation change detection is\nselected; routine manual version bumps are not the only way code changes propagate.\nEXP-1 selects the actual called function's emitted\n`Function.prototype.toString()` text as a bounded implementation-evidence input,\ncompared only after current structural correspondence is established. A runtime\nmust declare its build-artifact policy; compiler, bundler, or minifier changes may\nconservatively invalidate this evidence. The text is neither semantic identity\nnor proof that captured influences were included. Pair it with actual tracked\nreads/calls; an uncalled helper contributes no implementation observation.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "calls"
@@ -1413,6 +1584,7 @@
       "key": "docs/spec/tracking.md:28",
       "owner": "TRK-2",
       "clause": "The [EXP-1 counterexample](../../experiments/exp-1/decision.md) rejects source-text\nequality as arbitrary closure soundness: an untracked captured scalar can change\nwhile the text remains equal. Its synchronous fixture rejects asynchronous and\nthenable calls and accessors without claiming the production async tracking\ncontract is implemented. TRK-3 and TRK-4 remain obligations of that implementation.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "calls"
@@ -1423,11 +1595,14 @@
       "key": "docs/spec/tracking.md:34",
       "owner": "TRK-3",
       "clause": "**TRK-3 — Scoped collection.** Async and concurrent tracking frames must isolate\nobservations, restore surrounding context on success/failure, and reject late work\nagainst closed run/frame lifetimes. Reused in-process derivations replay their\nobservations to consuming frames. Process-local tags/revision counters are useful\nfor reactive composition but must never enter durable evidence. Persist semantic\naddresses/fingerprints, then reconstruct current bindings after restart.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "frames",
         "restore",
-        "derive"
+        "derive",
+        "asyncFailure",
+        "lateHelper"
       ],
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
@@ -1435,6 +1610,7 @@
       "key": "docs/spec/tracking.md:41",
       "owner": "TRK-4",
       "clause": "**TRK-4 — Capture boundary.** Every external influence intended to affect reuse,\nincluding branch selection, must be tracked or covered by explicit source/freshness/\ncompatibility policy. A typed lint rule should use existing scope and TypeScript\nservices plus the shared brand to flag untracked external captures. Locals and\nparameters need not all be branded. Extracting a scalar from tracked configuration\nbefore the active computation and capturing it can lose tracking and merits a\nfixture. Builtin exemptions are an experiment detail. No semantic-changing autofix\nor claim of sound detection for arbitrary JavaScript. Deliberately memoized random\nor LLM output remains valid; this rule concerns influences expected to invalidate it.\nThe supported syntax and checker limitations are documented in the\n[tracked-capture lint guide](../tooling/tracked-captures.md).",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1443,6 +1619,7 @@
       "key": "docs/spec/tracking.md:53",
       "owner": "TRK-4",
       "clause": "## Observation decision table",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -1451,6 +1628,7 @@
       "key": "docs/spec/tracking.md:55",
       "owner": "TRK-5",
       "clause": "**TRK-5 — Literal semantics.** Observe the operation performed, not inferred intent.\nThe table is normative; examples name JavaScript semantics, not final API spellings.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "leaf",
@@ -1465,6 +1643,7 @@
       "key": "docs/spec/tracking.md:58",
       "owner": "TRK-5",
       "clause": "| Operation | Consumed fact | Must not additionally consume | Counterexample/assertion |",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -1473,6 +1652,7 @@
       "key": "docs/spec/tracking.md:59",
       "owner": "TRK-5",
       "clause": "| --- | --- | --- | --- |",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -1481,6 +1661,7 @@
       "key": "docs/spec/tracking.md:60",
       "owner": "TRK-5",
       "clause": "| `pr.author.name` | Value at the current bound path | Author ID, unread author fields, whole PR | Replace author, preserve name: equal observation |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "leaf",
@@ -1492,6 +1673,7 @@
       "key": "docs/spec/tracking.md:61",
       "owner": "TRK-5",
       "clause": "| `obj.optional` / comparison to `undefined` | Returned value | Property existence as separate fact | Missing and present-undefined compare equal for this read |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "optional"
@@ -1502,6 +1684,7 @@
       "key": "docs/spec/tracking.md:62",
       "owner": "TRK-5",
       "clause": "| `if (obj.flag)` | Actual flag value | Merely its boolean coercion result | `0` to `''` changes value even though both are falsey |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "optional"
@@ -1512,6 +1695,7 @@
       "key": "docs/spec/tracking.md:63",
       "owner": "TRK-5",
       "clause": "| Own-property check | Whether this object owns that key | Inherited existence or sibling keys | Own absent to inherited present remains own-absent |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "presence"
@@ -1522,6 +1706,7 @@
       "key": "docs/spec/tracking.md:64",
       "owner": "TRK-5",
       "clause": "| Inherited membership check (`in`) | Presence along the supported lookup chain | Value at that key or all other keys | Present-undefined still present; own→inherited can stay present |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "presence"
@@ -1532,6 +1717,7 @@
       "key": "docs/spec/tracking.md:65",
       "owner": "TRK-5",
       "clause": "| Single keyed-member presence | Membership of that one key | Unrelated keys, values or cardinality | Adding another member preserves this observation |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "member"
@@ -1542,6 +1728,7 @@
       "key": "docs/spec/tracking.md:66",
       "owner": "TRK-5",
       "clause": "| Key enumeration | Enumerated keys and relevant order semantics | Every member payload | Key addition invalidates enumeration, field edit need not |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "presence",
@@ -1553,6 +1740,7 @@
       "key": "docs/spec/tracking.md:67",
       "owner": "TRK-5",
       "clause": "| Array `length` | Length field | All elements | Same-length value edit preserves length-only observation |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1561,6 +1749,7 @@
       "key": "docs/spec/tracking.md:68",
       "owner": "TRK-5",
       "clause": "| Positional array read | Value at the observed index/path | Entity identity of every element | Inserting before the position may change it |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1569,6 +1758,7 @@
       "key": "docs/spec/tracking.md:69",
       "owner": "TRK-5",
       "clause": "| Keyed member field | Projection under stable member key | Traversal position | Reorder alone preserves per-member assessment |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "keyed"
@@ -1579,6 +1769,7 @@
       "key": "docs/spec/tracking.md:70",
       "owner": "TRK-5",
       "clause": "| Ordered ranking/list | Selected ordered sequence | Unselected member fields | Rank change invalidates ranking consumers |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1587,6 +1778,7 @@
       "key": "docs/spec/tracking.md:71",
       "owner": "TRK-5",
       "clause": "| Explicit identity read | Designated logical identity value | Whole entity content | Equal names with different IDs invalidate identity consumer |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "identity"
@@ -1597,6 +1789,7 @@
       "key": "docs/spec/tracking.md:72",
       "owner": "TRK-5",
       "clause": "| Pass object to another function | Nothing beyond what callee/materialization consumes | Automatic deep traversal | Callee reads one leaf: unread siblings remain irrelevant |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "leaf"
@@ -1607,6 +1800,7 @@
       "key": "docs/spec/tracking.md:73",
       "owner": "TRK-5",
       "clause": "| Materialize/return data as result | Actual selected output values/references | All reachable but unreturned data | Pass-through output cannot escape dependency tracking |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1615,6 +1809,7 @@
       "key": "docs/spec/tracking.md:74",
       "owner": "TRK-5",
       "clause": "| Invoke tracked function | Implementation evidence plus observed internal reads | Uncalled functions' code | Uncalled helper edit does not invalidate caller |",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "calls"
@@ -1625,6 +1820,7 @@
       "key": "docs/spec/tracking.md:76",
       "owner": "TRK-5",
       "clause": "Own/inherited distinctions are required semantics where supported. EXP-2 must\nspecify the supported prototype/value domain or reject unsupported cases clearly;\nit must not silently reinterpret `in` as an own-only check.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "leaf",
@@ -1639,9 +1835,11 @@
       "key": "docs/spec/tracking.md:80",
       "owner": "TRK-6",
       "clause": "**TRK-6 — Current paths and historical provenance.** Revalidate a consumed path\nagainst the current input binding, even when an intermediate object's identity\nchanges. Equal consumed value can preserve the result. Record current acceptance\nagainst the new binding while retaining the old result's original provenance.\nA later change under the new author must be detected; retaining only the old author\nlink as current evidence is incorrect.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
-        "rebind"
+        "rebind",
+        "multiRebind"
       ],
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
@@ -1649,6 +1847,7 @@
       "key": "docs/spec/tracking.md:87",
       "owner": "TRK-7",
       "clause": "**TRK-7 — Identity consumption.** Merely traversing an identity-bearing object does\nnot read its identity. `dependOn(author.id)` adds no information beyond evaluation\nof `author.id`; a proposed `dependOnIdentity(author)` convenience performs an\nexplicit designated-identity read. Several identities may be consumed without\ndefining the output's identity. Reading identities does not enforce output-key\nuniqueness. The exact identity-bearing brand/helper API remains experimental.",
+      "obligationKind": "normative-with-proposed-unavailable-surface",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "leaf",
@@ -1660,6 +1859,7 @@
       "key": "docs/spec/tracking.md:94",
       "owner": "TRK-8",
       "clause": "**TRK-8 — Branches and output.** A changed tracked guard invalidates the prior\nexecution when required, then a fresh frame records the newly taken branch. Do not\naccumulate abandoned branch reads into current evidence. Returning tracked input\nas output must account for the data/reference actually materialized. These are\nordinary consumption cases, not extra author dependency declarations.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "branches"
@@ -1670,6 +1870,7 @@
       "key": "docs/spec/tracking.md:100",
       "owner": "TRK-8",
       "clause": "## Structured addresses and fingerprints",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [
         "branches"
@@ -1680,6 +1881,7 @@
       "key": "docs/spec/tracking.md:102",
       "owner": "VAL-1",
       "clause": "**VAL-1 — Paths carry structure.** A durable path uses structured segments and an\noperation kind, not a dotted string. A dictionary property named `\"0\"`, an array\nindex `0`, and a keyed member identity are distinguishable concepts. Determine\nproperty-vs-index from container/operation: JavaScript does not preserve whether\nsource syntax used `[0]` or `['0']`. Property names containing dots or brackets\nmust not alias multiple segments. The bounded EXP-2 selection below encodes\noperation and ordered structured segments independently from the selected fact.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "address",
@@ -1691,6 +1893,7 @@
       "key": "docs/spec/tracking.md:110",
       "owner": "VAL-2",
       "clause": "**VAL-2 — Canonical supported values.** SHA-256 is the selected content fingerprint.\nDurable writes must identify the selected encoding version. Equal supported\nvalues under a specified observation must encode consistently across processes;\nsemantically different observations must not collapse through JSON omissions or\ncoercions. Encode operation, structured address, selected value and relevant\nstructure unambiguously. Hash collision resistance is an assumption, not proof of\nmathematical equality. Diagnostics/timestamps are not value equality evidence.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "edges",
@@ -1705,6 +1908,7 @@
       "key": "docs/spec/tracking.md:118",
       "owner": "VAL-2",
       "clause": "The first experiment must decide or reject, with fixtures: missing vs undefined;\nnull; booleans; strings; numbers including NaN/infinities/negative zero; sparse\narrays/holes; dictionary key order; cycles/shared references; inherited properties;\ngetters; bigint; symbol keys; functions as implementation dependencies versus data;\nDate/Map/Set/class instances. This is a bounded support decision, not a requirement\nto support all of them. Framework branding symbols are distinct from user symbol\nkeys; ignoring unsupported user data silently is forbidden.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "edges",
@@ -1719,6 +1923,7 @@
       "key": "docs/spec/tracking.md:126",
       "owner": "EXP-2",
       "clause": "**EXP-2 encoding selection:** separate normalized equality from snapshot transport.\nThe bounded candidate uses `MDV1` tagged equality input, `MDS1` order-preserving\nsnapshot transport, and `MDO1` operation/address/selected-fact evidence. An equality\ndecoder produces a normal form, not a snapshot suitable for later order-sensitive\nreads. For example, records inserted as `b,a` and `a,b` have equal unordered value\nevidence; transporting the first snapshot must still let an explicit `keys` read\nobserve `b,a`. Unknown versions, malformed nodes, duplicate keys, and lossy or\nnoncanonical records fail closed rather than migrate by guessing.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1727,6 +1932,7 @@
       "key": "docs/spec/tracking.md:135",
       "owner": "EXP-2",
       "clause": "The selected candidate domain contains undefined, null, booleans, UTF-16 strings,\nfinite numbers, canonical NaN, infinities, distinct negative zero, sparse arrays\nwith explicit holes/length, and string-keyed plain records. It supports at most\ntwo custom plain-data prototype levels ending in null or Object.prototype;\nselected intrinsic prototype member values are rejected. Arrays use the standard\nArray prototype and indexed data slots. Snapshot decoding freezes the decoded\ndata while preserving supported lookup and enumeration meaning.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1735,6 +1941,7 @@
       "key": "docs/spec/tracking.md:143",
       "owner": "EXP-2",
       "clause": "Cycles/shared references, accessors, nonenumerable data, bigint, user symbols,\ndata functions, Date/Map/Set, and class instances are rejected explicitly. Function\nimplementation evidence is a separate observation, not serializable data-function\nsupport. No framework-brand exemption is inferred from this fixture. The\n[EXP-2 matrix and assertions](../../experiments/exp-2/README.md) define each tested\nedge and the wire grammar. Extending that domain requires explicit semantics and\nnegative/roundtrip assertions before implementation. These fixture encodings do\nnot establish a deployed persistence format or authorize implicit migration.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1743,6 +1950,7 @@
       "key": "docs/spec/tracking.md:152",
       "owner": "EXP-6",
       "clause": "**EXP-6 historical Lean evidence — dormant.** The\n[flat-record theorem and differential fixture](../../experiments/exp-6/README.md)\nare historical evidence, not a routine proof-maintenance obligation. Do not\nrerun or expand Lean by default; resume it only for a concrete correctness\nquestion where proof would add material value beyond executable properties and\nimplementation tests. For unique-key, flat, null-prototype records of\nscalar atoms, equality of the modeled sorted normal forms implies equal value\nand own-presence reads at one Property key. Lookup is defined independently of\nnormalization. Missing and present-undefined fields may have equal value reads\nwhile own presence differs; explicit key enumeration remains order-sensitive\nand outside this implication.",
+      "obligationKind": "historical-evidence-dormant",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1751,6 +1959,7 @@
       "key": "docs/spec/tracking.md:164",
       "owner": "EXP-6",
       "clause": "The model uses UTF-16 code-unit keys, Unicode-scalar text values, and opaque\ncanonical numeric tokens. Its translation rejects unsupported data and\nlone-surrogate text values; the broader EXP-2 domain is unchanged. The checked\nproof uses the documented standard Lean assumptions with no new axiom or\n`sorry`. Its finite generated comparisons provide sampled TypeScript evidence,\nnot proof of the TypeScript implementation, canonical-byte completeness, hash\ncollision freedom, or runtime reuse. If deliberately resumed, review the bridge\nand rerun the artifact when its modeled meaning or toolchain changes. Arrays, prototypes, nested paths,\nand materialization remain outside this theorem. The setup and maintenance cost\ndo not justify a required Lean dependency for unrelated CI.",
+      "obligationKind": "historical-evidence-dormant",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1759,6 +1968,7 @@
       "key": "docs/spec/tracking.md:175",
       "owner": "VAL-3",
       "clause": "**VAL-3 — Immutability and retention.** Stored values are immutable snapshots.\nInput inspection and materialization must not mutate stored history. In-memory\nchanges are new observed facts; they cannot mutate a retained result in place.\nStrong ownership of all loaded payloads is not required: a field may be evicted and\nloaded again without losing its durable identity or observation semantics.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "frozen"
@@ -1769,6 +1979,7 @@
       "key": "docs/spec/tracking.md:181",
       "owner": "EXP-2",
       "clause": "**EXP-2 access decision:** an indexed synchronous source can supply an unexpected\nselected scalar without a payload-wide read. The tested view covers top-level\nscalars only and rejects nested values, presence/enumeration, and prototype\noperations; it is not the complete TRK-5 facade. Its observations are immutable\ncopies. Fingerprint-only verification reads no payload, with an instrumented\nscalar-read positive control proving the backing reader is observable.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1777,6 +1988,7 @@
       "key": "docs/spec/tracking.md:188",
       "owner": "EXP-2",
       "clause": "Explicit asynchronous preparation supports ordinary scalar reads of prepared\nfields. It is rejected as a general solution to unexpected ordinary getter reads\nfrom an async-only source: an unprepared field must fail visibly, never fabricate\na scalar or claim the read was observed. DOM-3 and TRK-5 are unchanged. Within\nEXP-2, nested lazy materialization, production cache/eviction policy, and scale\nbehavior remained unproven; its selected-loading evidence is bounded to the\noperations above.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1785,6 +1997,7 @@
       "key": "docs/spec/tracking.md:196",
       "owner": "EXP-2",
       "clause": "**M3 nested selected-read decision:** the [nested-read gate](../../experiments/exp-nested/protocol.md)\nestablishes a bounded synchronous navigation capability over exact retained\nrecord and array roots. Value returns a tagged scalar fact or container shape; a\ncontainer shape is transport metadata, never a fabricated selected fact.\nTracking records the existing TRK-5 leaf, length, presence, key-order and\nexplicit-output observations. Navigating through a container alone records no\nwhole-object dependency. Materialization composes the optional History\nnavigation capability with the owning Tracking observer; scalar-only readers\nretain their existing contract.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1793,6 +2006,7 @@
       "key": "docs/spec/tracking.md:206",
       "owner": "EXP-2",
       "clause": "The gate uses file-backed SQLite in separate publisher, reader and comparison\nprocesses. Instrumented SQL results demonstrate that navigation and selected\nleaves return no root or unrelated subtree payload, while fingerprint comparison\nreturns no payload cells. Independent MDO1 oracles and in-memory observer parity\ncover the declared fixture and supported Value edge cases. These are SQL\nresult-cell guarantees within that tested scope, not measurements of disk-page\nI/O or scale. An explicit output request may load its selected subtree and\nrecords MDS1 output evidence. Async invocation transports a view inside an\nordinary result carrier so transport does not create a phantom `then`\nobservation or reserve an author data field.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1801,6 +2015,7 @@
       "key": "docs/spec/tracking.md:217",
       "owner": "EXP-2",
       "clause": "The candidate index is generated from canonical MDS1 data. Durable History\nremains the owner of adopting and publishing that index with completed results;\nthis gate does not implement attempts, allocation, current pointers, crash-safe\npublication, cache/eviction policy or keyed projection indexing. Async-only\nstorage still cannot promise unexpected ordinary synchronous reads. The\n[protocol](../../experiments/exp-nested/protocol.md) records the owner ports,\nrequired index evidence, reproducible controls and limits.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
@@ -1809,6 +2024,7 @@
       "key": "docs/spec/tracking.md:225",
       "owner": "EXP-2",
       "clause": "## Collections",
+      "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
       "uncoveredBehavior": null
@@ -1817,6 +2033,7 @@
       "key": "docs/spec/tracking.md:227",
       "owner": "COL-1",
       "clause": "**COL-1 — Member identity.** Use designated member identity as the default key;\nallow an explicit author custom-key function. Keys are scoped to their collection\nbinding. Duplicate keys fail with a diagnostic identifying the collection/key and\npointing to the custom-key option. A traversal ordinal or array index must not\nsilently substitute for logical identity in keyed fanout. No-identity members need\nan explicit supported key strategy before keyed work proceeds.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "keyed"
@@ -1827,6 +2044,7 @@
       "key": "docs/spec/tracking.md:234",
       "owner": "COL-2",
       "clause": "**COL-2 — Projection grain.** A uniform exhaustive read such as every member's\n`name` is representable as one logical collection dependency describing current\ncollection binding, projection, traversal semantics, relevant structure and\nfingerprint. This does not promise constant-size evidence for arbitrary conditional\nor early-stop loops. Preserve guards and actual coverage; do not pretend unread\nmembers were consumed. Exact storage addresses and collection projections are\nseparate concepts.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "projection"
@@ -1837,6 +2055,7 @@
       "key": "docs/spec/tracking.md:242",
       "owner": "COL-2",
       "clause": "EXP-2 selects a versioned projection fact containing collection binding, selected\nfield, completion status, and keyed selected values in canonical key order. An\nexhaustive uniform projection retains one logical digest dependency, while its\nconstruction still takes O(n) selected reads and temporary data. An early-stop\nprojection keeps O(k) visited-key coverage and remains incomplete. A digest alone\ndoes not establish arbitrary guarded-loop reuse; guards and coverage remain\nTracking and Composition obligations.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "projection"
@@ -1847,6 +2066,7 @@
       "key": "docs/spec/tracking.md:250",
       "owner": "COL-3",
       "clause": "**COL-3 — Order.** Arrays/explicit ordered results preserve relevant order. Dictionary\nkey insertion/serialization order is not semantic data or member identity; an\nunordered dictionary projection must not invalidate just because that order changes. A calculation that intentionally uses\norder must observe an ordered value; sorting/ranking can produce one independently\nof keyed per-member results. Membership, member fields, presence and order must not\nbe collapsed into a whole-payload fingerprint.",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "order",
@@ -1858,6 +2078,7 @@
       "key": "docs/spec/tracking.md:257",
       "owner": "COL-4",
       "clause": "**COL-4 — Test obligations.** Test insertion/deletion/reordering, changed unread\nfields, changed projection, duplicates, custom keys, early termination and changed\nguards. Confirm exactly the affected memoized members execute, while aggregate\nconsumers respond to the collection facts they actually consumed. These assertions\nspan [composition](composition.md) and [acceptance](acceptance.md).",
+      "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "keyed",

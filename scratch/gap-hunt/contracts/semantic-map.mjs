@@ -45,15 +45,19 @@ await assertion('supplied', nested, 'binding rubric B is a child implementation 
 await assertion('fold', fold, 'A-11: with Cy failing, Ben pending and discovery open, Ada publishes and the report fails naming each state; the repair runs only the unfinished members and the report', 'Strict fold reports failure/pending/open-discovery and does not run report until repair.', 'semantic-composition.log');
 await assertion('coverage', fold, 'a report body that drops exclusions still carries framework coverage naming required and skipped keys and closure, cold and reused', 'Framework coverage survives author omission, cold and reused.', 'semantic-composition.log');
 await assertion('empty', fold, 'a closed zero-member listing is a complete report, distinct from an open empty listing and from discovery that did not settle; neither rewinds it', 'Closed empty succeeds; open/unsettled waits without replacing earlier publication.', 'semantic-composition.log');
+await assertion('asyncFailure', 'packages/tracking/test/gap-hunt-contracts-async.test.ts', 'caught tracked async helper failure keeps post-await consumed facts in its consuming frame', 'Caught async helper exception retains exactly before/after leaf evidence plus implementation, without unread sibling evidence.', 'async-results.log');
+await assertion('lateHelper', 'packages/tracking/test/gap-hunt-contracts-async.test.ts', 'a detached helper callback after capture %s rejects before its body runs', 'After either success or failure, detached tracked helper invocation throws closed-frame before author body; a fresh frame still calls normally.', 'async-results.log');
+await assertion('multiRebind', 'packages/core/test/gap-hunt-contracts-operation-matrix.test.ts', 'TRK-6 historical path rebinds through two equal identities and detects both later leaf updates', 'Five independent processes retain exact references across equal id replacement and publish on both subsequent current-leaf changes.', 'operation-matrix-results.log');
+await assertion('currentArguments', 'packages/core/test/gap-hunt-contracts-nested-current.test.ts', 'renumbered derived subjects and changed forwarded fields agree with cold computation across successive restarts', 'Renumbered PR derived subject executes only new child; changed current forwarded PR field executes only affected child/parent; both match cold current stores; rollback reuses.', 'nested-current-results.log');
 const ownerEvidence = {
- 'TRK-1': ['primitive','leaf','calls'], 'TRK-2':['calls'], 'TRK-3':['frames','restore','derive'],
- 'TRK-4':[], 'TRK-5':['leaf','optional','presence','member','identity'], 'TRK-6':['rebind'],
+ 'TRK-1': ['primitive','leaf','calls'], 'TRK-2':['calls'], 'TRK-3':['frames','restore','derive','asyncFailure','lateHelper'],
+ 'TRK-4':[], 'TRK-5':['leaf','optional','presence','member','identity'], 'TRK-6':['rebind','multiRebind'],
  'TRK-7':['leaf','identity'], 'TRK-8':['branches'], 'VAL-1':['address','wire'],
  'VAL-2':['edges','negative','crossprocess','transport','wire'], 'VAL-3':['frozen'],
  'COL-1':['keyed'], 'COL-2':['projection'], 'COL-3':['order','keyed'], 'COL-4':['keyed','gates'],
  'CMP-1':['topology','rejectGraph'], 'CMP-2':['branches','gates'], 'CMP-3':['supplied'],
  'CMP-4':['topology','keyed'], 'CMP-5':['nested'], 'CMP-6':['supplied','keyed'],
- 'CMP-7':['nested'], 'CMP-8':['gates','fold','coverage','empty'], 'CMP-9':['rejectGraph'],
+ 'CMP-7':['nested','currentArguments'], 'CMP-8':['gates','fold','coverage','empty'], 'CMP-9':['rejectGraph'],
 };
 // Explicitly map row semantics, rather than pretending owner references prove each row.
 const rowEvidence = [
@@ -73,6 +77,7 @@ const blocks = inventory.blocks.filter(b => documents.has(b.key.split(':')[0])).
  const nonbehavior = b.text.startsWith('#') || /^\| (Term|Operation|Recipe|Case|---)/u.test(b.text);
  return {
   key: b.key, owner: b.owner, clause: b.text,
+  obligationKind: nonbehavior ? 'structural' : b.text.includes('EXP-6') || /historical Lean|checked proof|model uses UTF-16/u.test(b.text) ? 'historical-evidence-dormant' : /proposed .*convenience|exact identity-bearing brand\/helper API remains experimental/u.test(b.text) ? 'normative-with-proposed-unavailable-surface' : b.key.startsWith('docs/spec/glossary.md:') ? 'definition-owned-by-linked-contract' : 'normative-or-bounded-selected-contract',
   status: nonbehavior ? 'structural-text-no-runtime-claim' : evidence.length ? 'bounded-assertions-with-explicit-uncovered-remainder' : 'explicit-uncovered',
   executedAssertionIds: evidence,
   uncoveredBehavior: nonbehavior ? null : evidence.length

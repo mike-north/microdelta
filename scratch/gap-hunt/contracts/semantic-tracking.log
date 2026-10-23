@@ -1,0 +1,12 @@
+
+> @microdelta/tracking@0.2.0 test:unit
+> tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --runInBand --runTestsByPath .test-build/test/observer.test.js .test-build/test/lazy-view.test.js .test-build/test/output-observation.test.js .test-build/test/gap-hunt-contracts-invalidation.test.js
+
+(node:94962) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+Test Suites: 4 passed, 4 total
+Tests:       73 passed, 73 total
+Snapshots:   0 total
+Time:        0.246 s, estimated 1 s
+Ran all test suites within paths ".test-build/test/observer.test.js", ".test-build/test/lazy-view.test.js", ".test-build/test/output-observation.test.js", ".test-build/test/gap-hunt-contracts-invalidation.test.js".

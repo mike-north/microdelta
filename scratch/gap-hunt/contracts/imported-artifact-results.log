@@ -1,0 +1,6 @@
+{"name":"unchanged fresh modules","kind":"equal","value":6,"expected":"equal","status":"pass"}
+{"name":"transitive tracked imported body changes","kind":"changed","value":9,"expected":"changed","status":"pass"}
+{"name":"dependency version metadata alone","kind":"equal","value":6,"expected":"equal","status":"pass"}
+{"name":"emitted function rename","kind":"changed","value":6,"expected":"changed","status":"pass"}
+{"name":"emitted formatting","kind":"changed","value":6,"expected":"changed","status":"pass"}
+{"name":"emitted comment","kind":"changed","value":6,"expected":"changed","status":"pass"}

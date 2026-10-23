@@ -16,7 +16,7 @@ Clean evidence-checkout Linux acceptance command (repository root):
 bash scratch/gap-hunt/contract-operations/verify-157.sh
 ```
 
-The portable runner is self-contained, pins Node24.22.1, pnpm versions and published microdelta0.2.0, creates/removes disposable external consumers/stores, and never edits global trust settings. Prerequisites: fresh Linux user/container without inherited pnpm approvals, Node24.22.1/npm, Bash, network/npm registry access, and Python3/make/g++ if native prebuild fallback is needed. The caller supplies Linux for Linux acceptance; the same runner can execute on macOS and does not create a container. Optional argument selects10.34.7 or12.10.1.
+The portable runner is self-contained, accepts Node24.x, pnpm versions and published microdelta0.2.0, creates/removes disposable external consumers/stores, and never edits global trust settings. Prerequisites: fresh Linux user/container without inherited pnpm approvals, Node24.x/npm, Bash, network/npm registry access, and Python3/make/g++ if native prebuild fallback is needed. The caller supplies Linux for Linux acceptance; the same runner can execute on macOS and does not create a container. Optional argument selects10.34.7 or12.10.1.
 
 Verification boundary: Linux execution is still required. See verify-157.log for the fresh macOS runner result; do not infer Linux support from it. Underlying macOS install/approval/cold/restart evidence is in `scratch/gap-hunt/portability/REPORT.md` at447d798. Evidence scripts are on the worker branch and must be carried into a clean evidence checkout before invocation; they are not claimed to exist on main.
 
@@ -29,3 +29,5 @@ These checks diagnose the immutable published0.2.0 release. Any implementation d
 Fresh macOS fallback result: both manager versions passed unapproved negative controls, public memory smoke and approved cold1/published then independent restart0/reused exact reference. `verify-157.log` captures the result. This run used `PNPM12_BIN` pointing to the existing exact12.10.1 executable; it does not validate default fresh pnpm12 launch.
 
 Owner Linux parity update: owner-linux-parity.md reports npm install/build/main test success on24.13.0 and26.12.1. Those npm runs do not exercise pnpm10/12 approvals, so the Linux pnpm acceptance boundary here is unchanged.
+
+Runner portability note: the guard accepts Node 24.x and prints the actual Node/platform/architecture. Captured macOS runtime logs were tested on Node 24.22.1 before this guard-only change; the revised runners are syntax-checked, and their new Linux invocation remains unexecuted. This does not establish a runtime support policy.

@@ -10,13 +10,13 @@ The synthetic histogram control publishes once, fails the next authorized refres
 
 ## Pinned reproduction
 
-From a clean checkout of `e475049c3f858c270791581fb77f925e761363ce`, with Node 24.22.1/npm, registry access and the native prebuild/toolchain prerequisites:
+From a clean checkout of `0683c2ed73934d10f9b5a1ad9e0dd9e3d1a88d4f`, with Node 24.x/npm, registry access and the native prebuild/toolchain prerequisites:
 
 ```sh
 bash scratch/gap-hunt/contract-operations/verify-preview.sh
 ```
 
-The runner performs `npm ci`, builds package declarations and runs valid controls. Successful diagnostic completion exits 0: it confirms the reviewed baseline surface and is **not** a behavioral regression test that becomes green after implementation. Write behavioral tests first once the owner selects the contract. [Runner and captured macOS log](https://github.com/mike-north/microdelta/tree/e475049c3f858c270791581fb77f925e761363ce/scratch/gap-hunt/contract-operations) are pinned to that revision. This runner has not been verified on Linux; the separate owner Linux parity report covers earlier commits and different commands. No paid provider is called.
+The runner performs `npm ci`, builds package declarations and runs valid controls. Successful diagnostic completion exits 0: it confirms the reviewed baseline surface and is **not** a behavioral regression test that becomes green after implementation. Write behavioral tests first once the owner selects the contract. [Runner and captured macOS log](https://github.com/mike-north/microdelta/tree/0683c2ed73934d10f9b5a1ad9e0dd9e3d1a88d4f/scratch/gap-hunt/contract-operations) are pinned to that revision. This runner has not been verified on Linux; the separate owner Linux parity report covers earlier commits and different commands. No paid provider is called.
 
 ## Owner decisions
 
@@ -36,3 +36,5 @@ Scope: the observation boundary with Materialization and its read-side integrati
 
 Implementer: Codex worker (gpt-6.1-sol), operating for Mike North, authored the evidence fixtures and this issue draft; no target implementation is claimed.
 Agent assistance: Worker ran synthetic controls and declaration diagnostics. Supervisory filing and design decisions remain separate; no human implementation/review is claimed.
+
+Runner portability note: the guard accepts Node 24.x and prints the actual Node/platform/architecture. Captured macOS runtime logs were tested on Node 24.22.1 before this guard-only change; the revised runners are syntax-checked, and their new Linux invocation remains unexecuted. This does not establish a runtime support policy.

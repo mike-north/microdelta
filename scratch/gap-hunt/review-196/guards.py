@@ -80,10 +80,12 @@ def guard_only(here, out):
     receipt = json.loads((here / 'results/receipt.json').read_text())
     expected_order = ['install', 'check', 'current', 'supervision', 'core-compile', 'facade',
                       'frozen-original', 'precise-original', 'negative-build', 'negative',
-                      'negative-precise-original', 'restoration-build', 'restored',
+                      'negative-precise-original', 'restoration-build', 'restoration-fixture', 'restored',
                       'live-delta-check', 'live-delta-types']
     require([c['name'] for c in receipt['commands']] == expected_order, 'command catalog')
-    require([c['exit'] for c in receipt['commands']] == [0,0,0,0,0,0,1,0,0,1,1,0,0,0,0], 'expected exits')
+    require([c['exit'] for c in receipt['commands']] == [0,0,0,0,0,0,1,0,0,1,1,0,0,0,0,0], 'expected exits')
+    require(receipt['emittedRestoration']['equal'], 'emitted restoration equality')
+    require(all(receipt['restored'].values()), 'source restoration equality')
     logs = {}
     for row in receipt['commands']:
         path = here / 'results' / (row['name'] + '.log')

@@ -43,9 +43,13 @@ fixture=ROOT/'scratch/gap-hunt/scale/fanout-admission.ts'
 tests=ROOT/'scratch/gap-hunt/scale/fanout-admission.test.mjs'
 originals={p:p.read_bytes() for p in (source,fixture,tests)}
 receipt['inputs']={str(p.relative_to(ROOT)):digest(b) for p,b in originals.items()}
+build_ready=False
+emitted_baseline={}
+emitted=[ROOT/'packages/resolution/dist/src/resolution.js',ROOT/'scratch/gap-hunt/scale/dist/fanout-admission.js']
 try:
     run('install',['npm','ci'])
     run('check',['npm','run','check'])
+    build_ready=True
     current=run('current',['npm','run','test:fanout-dispatch'])
     matrix=[json.loads(line) for line in current.splitlines() if line.startswith('{"size"')]
     assert len(matrix)==6
@@ -57,6 +61,7 @@ try:
         assert row['bodies']==(row['window'] if row['phase']=='body' else 0)
         assert row['bodiesAfterStop']==row['bodies']
     receipt['matrix']=matrix
+    emitted_baseline={str(p.relative_to(ROOT)):digest(p.read_bytes()) for p in emitted}
     run('supervision',['npm','run','test:unit','--workspace','@microdelta/supervision'])
     run('core-compile',['node','node_modules/typescript/bin/tsc','-p','packages/core/tsconfig.test.json'])
     core=['node','--experimental-vm-modules','node_modules/jest/bin/jest.js','--config','packages/core/jest.config.mjs','--runInBand','--runTestsByPath']
@@ -89,10 +94,24 @@ try:
     tests.write_bytes((HERE/'frozen/fanout-admission.test.mjs').read_bytes())
     run('negative-precise-original',['npm','run','test:fanout-dispatch'],1,lambda s:'1 failed, 1 passed, 2 total' in s and 'Received:    900' in s)
 finally:
+    primary_error=sys.exc_info()[1]
     for p,b in originals.items(): p.write_bytes(b)
     receipt['restored']={str(p.relative_to(ROOT)):p.read_bytes()==b for p,b in originals.items()}
-    (OUT/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
-run('restoration-build',['npm','run','build','--workspace','@microdelta/resolution'])
+    try:
+        if build_ready:
+            run('restoration-build',['npm','run','build','--workspace','@microdelta/resolution'])
+            run('restoration-fixture',['node','node_modules/typescript/bin/tsc','-p','scratch/gap-hunt/scale/tsconfig.fanout-admission.json'])
+            restored_emitted={str(p.relative_to(ROOT)):digest(p.read_bytes()) for p in emitted}
+            if emitted_baseline and restored_emitted!=emitted_baseline:
+                raise RuntimeError('Emitted runtime or probe did not restore byte-for-byte')
+            receipt['emittedRestoration']={'rebuilt':True,'baselineSha256':emitted_baseline,'restoredSha256':restored_emitted,'equal':restored_emitted==emitted_baseline}
+    except BaseException as restoration_error:
+        receipt['emittedRestoration']={'rebuilt':False,'error':normalized(str(restoration_error))}
+        if primary_error is None:
+            raise
+        print('Restoration also failed; preserving original failure: '+normalized(str(restoration_error)),flush=True)
+    finally:
+        (OUT/'receipt.json').write_text(json.dumps(receipt,indent=2)+'\n')
 run('restored',['npm','run','test:fanout-dispatch'])
 # Live-head delta is an import-only ordering change; validate its exact file.
 delta=ROOT/'packages/resolution/test-d/resolution.test-d.ts'

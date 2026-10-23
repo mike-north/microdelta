@@ -203,6 +203,10 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
     insertAcceptance: connection.prepare(sql`/* accept */ INSERT INTO history_acceptances (acceptance_id, result_id, environment, fence, evidence_format, evidence_version, evidence)
       VALUES (?, ?, ?, ?, ?, ?, ?)`),
     insertAcceptanceDependency: connection.prepare(sql`/* accept */ INSERT INTO history_acceptance_dependencies (acceptance_id, position, dependency_id) VALUES (?, ?, ?)`),
+    // An insertion is acknowledged by its exact identity within the intended result and environment, never by a history scan or newest-row guess.
+    acceptanceById: connection.prepare(sql`/* acceptance */ SELECT acceptance_id, result_id, environment, fence, evidence_format, evidence_version, evidence FROM history_acceptances
+      WHERE acceptance_id = ? AND result_id = ? AND environment = ?`),
+    // Explicit historical inspection remains complete and ordered, independently of the acknowledgement hot path.
     acceptances: connection.prepare(sql`/* acceptance */ SELECT acceptance_id, environment, fence, evidence_format, evidence_version, evidence FROM history_acceptances
       WHERE result_id = ? AND environment = ? ORDER BY acceptance_id`),
     acceptanceDependencies: connection.prepare(sql`/* acceptance */ SELECT d.position, d.dependency_id, r.result_id AS present, r.analysis, r.environment
@@ -803,9 +807,17 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
         dependencies.forEach((dependencyId, position) => {
           statements.insertAcceptanceDependency.run(acceptanceId, position, dependencyId);
         });
-        const row = statements.acceptances.all(resultId, scope.environment).find((candidate) => candidate.acceptance_id === acceptanceId);
+        const row = statements.acceptanceById.get(acceptanceId, resultId, scope.environment);
         if (row === undefined) {
           throw new HistoryIntegrityError('Recorded acceptance is not readable');
+        }
+        // The returned row must attest to this transaction's inserted identity, scope, fence, and evidence;
+        // a stale or mis-scoped row is not a successful acceptance even if the backend returned one row.
+        if (integer(row, 'acceptance_id') !== acceptanceId || integer(row, 'result_id') !== resultId
+          || text(row, 'environment') !== scope.environment || integer(row, 'fence') !== lease.fence
+          || text(row, 'evidence_format') !== evidence.format || integer(row, 'evidence_version') !== evidence.formatVersion
+          || text(row, 'evidence') !== evidence.content) {
+          throw new HistoryIntegrityError('Recorded acceptance readback does not match the inserted record');
         }
         return acceptanceOf(row, referenceOf(resultId, published), scope);
       });

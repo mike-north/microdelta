@@ -1,0 +1,9 @@
+{
+  "source": "6f772e019571c7326949fc0ec86494de946240a9",
+  "integrationBase": "0b3cf4b01ef4e0d17211b98fc435385b2b4d2681",
+  "priorCallbackSource": "094378f66dd4955a533f4878b2a820f68e233610",
+  "callbackPatchId": "6b5a6e974196378a8e1d77e5b841e43b7c603c4b",
+  "callbackPatchUnchanged": true,
+  "callbackTestAndChangesetByteIdentical": true,
+  "memoErrorSourceByteIdenticalTo195": true
+}

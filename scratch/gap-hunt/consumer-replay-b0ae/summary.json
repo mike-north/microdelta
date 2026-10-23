@@ -486,5 +486,20 @@
     "new_collection_or_provider_calls": false,
     "qualification": "SUPPLEMENTAL SAVED-OUTPUT TERMINAL VALIDATION; original full command remains exit1 EEXIST; cold/warm inventory equality independently checked",
     "receipt_sha256": "95888677ba8aee5f7319fdcd993df8c4d12a0ae2304ab965d1a7017e6c17218d"
+  },
+  "runtime_identity_after_rehearsal": {
+    "frozen_runtime": "b0ae5396f0852a7d2755fdf349a1f082d75f95c5",
+    "consumer": "d172f5f7c0790914bfc7a0ffbf1398618dd72ad8",
+    "packages": 10,
+    "dist_src_files": 280,
+    "before_graph_sha256": "4218e6fa36a89e460a73a902bb7f7b1da3e227de3b6f411ee9b3d2e2293b26ea",
+    "before_canonical_runtime_sha256": "84dabc77cdb7ba72be235e5d331c30163ad22c63e2b096ef0adf18d1c846d5a9",
+    "after_canonical_runtime_sha256": "84dabc77cdb7ba72be235e5d331c30163ad22c63e2b096ef0adf18d1c846d5a9",
+    "before_after_equal": true,
+    "current_build_equal": true,
+    "manifest_names_versions_dependencies_equal": true,
+    "dependency_mutations_during_check": false,
+    "javascript_files": 70,
+    "private_receipt_sha256": "672385a3b3d2bb4fe4e432444da33a71ac3af2e4afaf2e175d3fd9c086432716"
   }
 }

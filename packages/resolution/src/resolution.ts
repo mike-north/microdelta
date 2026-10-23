@@ -1080,7 +1080,7 @@ export function createResolution<TInputs extends object, THelpers extends object
    * explicit output detachment records what the step consumed from its output.
    * Source checks, supplied steps and fold bodies opt into a private failure
    * wrapper for the exact callback call. Memo bodies deliberately do not:
-   * their frame records failed declared children for #190's classification.
+   * their frame records failed declared children to preserve runtime failure classification.
    * Source finality also does not: its policy boundary owns that failure.
    * `begin` and `finish` remain outside the catch so invocation setup and
    * framework output validation retain their own failure classification.

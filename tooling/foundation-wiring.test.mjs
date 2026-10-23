@@ -30,6 +30,26 @@ test('clean CI reaches build, declaration, import, lint, and consumer gates', as
   assert.deepEqual(missingFoundationGates({ workspace, packages, workflow, extractors: await extractors(), eslintConfig }), []);
 });
 
+test('the Check job tests exactly Node 22 and 24 while retaining each clean gate', async () => {
+  const workflow = await readFile(path.join(root, '.github/workflows/check.yml'), 'utf8');
+  const matrix = /^\s*node:\s*\[([^\]]+)\]\s*$/mu.exec(workflow)?.[1];
+  assert.deepEqual(matrix?.split(',').map(version => version.trim()), ['22', '24']);
+  for (const command of ['npm ci', 'npm run check', 'npm test', 'npm run build']) {
+    assert.match(workflow, new RegExp(`^\\s+- run: ${command.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}$`, 'mu'));
+  }
+});
+
+test('the foundation checker rejects a missing or extra Node test version', async () => {
+  const workflow = await readFile(path.join(root, '.github/workflows/check.yml'), 'utf8');
+  const workspace = await readJson('package.json');
+  const inputs = { workspace, packages: {}, extractors: {}, eslintConfig: '', workflow };
+  for (const versionList of ['[22]', '[24]', '[20, 22, 24]']) {
+    const changed = workflow.replace(/^([ \t]*node:)\s*\[[^\]]+\]$/mu, `$1 ${versionList}`);
+    assert.notEqual(changed, workflow);
+    assert.match(missingFoundationGates({ ...inputs, workflow: changed }).join('\n'), /CI Node matrix must be exactly 22, 24/u);
+  }
+});
+
 test('the declaration checker accepts the generated alpha package path needed by external rollups', () => {
   for (const filename of [
     'fixtures/declarations/capture-producer/tsconfig.json',

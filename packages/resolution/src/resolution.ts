@@ -2182,8 +2182,16 @@ export function createResolution<TInputs extends object, THelpers extends object
     const frame: IMemoFrame = { request, step, children: new Map(), calls: new Map(), inflight: new Set(), unsettledAtReturn: undefined, refused: undefined, failed: undefined };
     frames.set(invocation, frame);
     let executed: ISupervisedExecution<IObservationCapture<IMemoReturn>>;
+    let executeLifecycleFailed = false;
     try {
-      emit(request, evidence, step, 'execute');
+      try {
+        emit(request, evidence, step, 'execute');
+      } catch (error: unknown) {
+        // This failure came from Resolution's lifecycle boundary before the
+        // author body ran; its classification belongs to the runtime.
+        executeLifecycleFailed = true;
+        throw error;
+      }
       executed = await supervision.execute(step, () => active.run(invocation, () => invocation.apply(bindings, invoker((value): IMemoReturn => {
         // Taken inside the capture, as the body's value is: which started calls it left unsettled.
         frame.unsettledAtReturn = frame.inflight.size;
@@ -2222,8 +2230,12 @@ export function createResolution<TInputs extends object, THelpers extends object
       }
       const cause = failed?.error ?? error;
       abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'the body failed' });
-      if (cause instanceof ResolutionError && cause.code !== 'execution-failure') {
-        throw cause;
+      // A failed declared call or the exact pre-body lifecycle boundary has
+      // runtime provenance. The public ResolutionError constructor gives an
+      // author body no such authority, whatever code its error selects.
+      const runtimeFailure = failed?.error ?? (executeLifecycleFailed ? error : undefined);
+      if (runtimeFailure instanceof ResolutionError && runtimeFailure.code !== 'execution-failure') {
+        throw runtimeFailure;
       }
       throw new ResolutionError('execution-failure', `Body of ${stepKey(step)} failed`, cause);
     }

@@ -1,0 +1,157 @@
+watchman warning: Recrawled this watch 1 time, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '<worktree>' ; watchman watch-project '<worktree>'`
+
+(node:95270) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL packages/core/.test-build/test/journal/processes.test.js
+  ● process death around the journal commit › a kill just after the journal commit leaves the intent durable; a new process reads it and only a successor fence can advance it by compare-and-set
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: null
+
+      103 |       commitIntent(1, { ...intent, state: 'unknown' }),
+      104 |     ]);
+    > 105 |     expect(successor.status).toBe(0);
+          |                              ^
+      106 |     expect(successor.trace.map((entry) => [entry.op, entry.ok, entry.error])).toEqual([
+      107 |       ['time', true, undefined],
+      108 |       ['acquire', true, undefined],
+
+      at Object.<anonymous> (test/journal/processes.test.ts:105:30)
+
+  ● fencing and namespacing across processes › a stale holder process can neither commit journal records nor promote after a successor acquires
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "signal": null,
+    -   "status": 0,
+    +   "signal": "SIGKILL",
+    +   "status": null,
+        "stderr": "",
+      }
+
+      50 | /** Require that a worker finished normally with every step succeeding. */
+      51 | export function expectClean(run: IWorkerRun): readonly ITraceEntry[] {
+    > 52 |   expect({ status: run.status, signal: run.signal, stderr: run.stderr }).toEqual({ status: 0, signal: null, stderr: '' });
+         |                                                                          ^
+      53 |   expect(run.trace.filter((entry) => !entry.ok)).toEqual([]);
+      54 |   return run.trace;
+      55 | }
+
+      at expectClean (test/durable-history/processes.ts:52:74)
+      at Object.<anonymous> (test/journal/processes.test.ts:120:19)
+
+  ● fencing and namespacing across processes › trial results and journal records stay out of production in every later process until a promotion, which then admits the named result
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "signal": null,
+    -   "status": 0,
+    +   "signal": "SIGKILL",
+    +   "status": null,
+        "stderr": "",
+      }
+
+      50 | /** Require that a worker finished normally with every step succeeding. */
+      51 | export function expectClean(run: IWorkerRun): readonly ITraceEntry[] {
+    > 52 |   expect({ status: run.status, signal: run.signal, stderr: run.stderr }).toEqual({ status: 0, signal: null, stderr: '' });
+         |                                                                          ^
+      53 |   expect(run.trace.filter((entry) => !entry.ok)).toEqual([]);
+      54 |   return run.trace;
+      55 | }
+
+      at expectClean (test/durable-history/processes.ts:52:74)
+      at Object.<anonymous> (test/journal/processes.test.ts:152:22)
+
+
+Summary of all failing tests
+FAIL .test-build/test/journal/processes.test.js
+  ● process death around the journal commit › a kill just after the journal commit leaves the intent durable; a new process reads it and only a successor fence can advance it by compare-and-set
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: null
+
+      103 |       commitIntent(1, { ...intent, state: 'unknown' }),
+      104 |     ]);
+    > 105 |     expect(successor.status).toBe(0);
+          |                              ^
+      106 |     expect(successor.trace.map((entry) => [entry.op, entry.ok, entry.error])).toEqual([
+      107 |       ['time', true, undefined],
+      108 |       ['acquire', true, undefined],
+
+      at Object.<anonymous> (test/journal/processes.test.ts:105:30)
+
+  ● fencing and namespacing across processes › a stale holder process can neither commit journal records nor promote after a successor acquires
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "signal": null,
+    -   "status": 0,
+    +   "signal": "SIGKILL",
+    +   "status": null,
+        "stderr": "",
+      }
+
+      50 | /** Require that a worker finished normally with every step succeeding. */
+      51 | export function expectClean(run: IWorkerRun): readonly ITraceEntry[] {
+    > 52 |   expect({ status: run.status, signal: run.signal, stderr: run.stderr }).toEqual({ status: 0, signal: null, stderr: '' });
+         |                                                                          ^
+      53 |   expect(run.trace.filter((entry) => !entry.ok)).toEqual([]);
+      54 |   return run.trace;
+      55 | }
+
+      at expectClean (test/durable-history/processes.ts:52:74)
+      at Object.<anonymous> (test/journal/processes.test.ts:120:19)
+
+  ● fencing and namespacing across processes › trial results and journal records stay out of production in every later process until a promotion, which then admits the named result
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "signal": null,
+    -   "status": 0,
+    +   "signal": "SIGKILL",
+    +   "status": null,
+        "stderr": "",
+      }
+
+      50 | /** Require that a worker finished normally with every step succeeding. */
+      51 | export function expectClean(run: IWorkerRun): readonly ITraceEntry[] {
+    > 52 |   expect({ status: run.status, signal: run.signal, stderr: run.stderr }).toEqual({ status: 0, signal: null, stderr: '' });
+         |                                                                          ^
+      53 |   expect(run.trace.filter((entry) => !entry.ok)).toEqual([]);
+      54 |   return run.trace;
+      55 | }
+
+      at expectClean (test/durable-history/processes.ts:52:74)
+      at Object.<anonymous> (test/journal/processes.test.ts:152:22)
+
+
+Test Suites: 1 failed, 54 passed, 55 total
+Tests:       3 failed, 470 passed, 473 total
+Snapshots:   0 total
+Time:        106.392 s
+Ran all test suites within paths "packages/core/.test-build/test/acceptance/admission-observers.test.js", "packages/core/.test-build/test/acceptance/changes.test.js", "packages/core/.test-build/test/acceptance/crash-recovery.test.js", "packages/core/.test-build/test/acceptance/integrity-io.test.js", "packages/core/.test-build/test/acceptance/lease-expiry.test.js", "packages/core/.test-build/test/acceptance/planned-fault.test.js", "packages/core/.test-build/test/acceptance/restart.test.js", "packages/core/.test-build/test/acceptance/source-policy.test.js", "packages/core/.test-build/test/acceptance/stop-publication.test.js", "packages/core/.test-build/test/accounting/concurrent-read.test.js", "packages/core/.test-build/test/accounting/crash-recovery.test.js", "packages/core/.test-build/test/accounting/node-conformance.test.js", "packages/core/.test-build/test/journal/environments.test.js", "packages/core/.test-build/test/journal/journal.test.js", "packages/core/.test-build/test/journal/processes.test.js", "packages/core/.test-build/test/m4-acceptance/fold.test.js", "packages/core/.test-build/test/m4-acceptance/keyed.test.js", "packages/core/.test-build/test/m4-acceptance/nested.test.js", "packages/core/.test-build/test/m4-acceptance/topology.test.js", "packages/core/.test-build/test/m5-acceptance/deferral.test.js", "packages/core/.test-build/test/m5-acceptance/environments.test.js", "packages/core/.test-build/test/m5-acceptance/lifecycle.test.js", "packages/core/.test-build/test/m5-acceptance/outcome-fold.test.js", "packages/core/.test-build/test/m5-acceptance/privacy.test.js", "packages/core/.test-build/test/m5-acceptance/publication.test.js", "packages/core/.test-build/test/m5-acceptance/replay.test.js", "packages/core/.test-build/test/m5-acceptance/stop.test.js", "packages/core/.test-build/test/m5-acceptance/usage.test.js", "packages/core/.test-build/test/m5-acceptance/writer.test.js", "packages/core/.test-build/test/operations/boundaries.test.js", "packages/core/.test-build/test/operations/environments.test.js", "packages/core/.test-build/test/operations/operations.test.js", "packages/core/.test-build/test/operations/operator.test.js", "packages/core/.test-build/test/operations/outcome-fold.test.js", "packages/core/.test-build/test/operations/privacy.test.js", "packages/core/.test-build/test/operations/processes.test.js", "packages/core/.test-build/test/operations/replay.test.js", "packages/core/.test-build/test/outcome-fold/nested-run-operations.test.js", "packages/core/.test-build/test/outcome-fold/outcome-fold.test.js", "packages/core/.test-build/test/outcome-fold/restart.test.js", "packages/core/.test-build/test/resolution/admission-recovery.test.js", "packages/core/.test-build/test/resolution/author-error-privacy.test.js", "packages/core/.test-build/test/resolution/keyed-refusal.test.js", "packages/core/.test-build/test/resolution/lease-lost.test.js", "packages/core/.test-build/test/resolution/source-policy.test.js", "packages/core/.test-build/test/resolution/summary-validation.test.js", "packages/core/.test-build/test/stop/drain.test.js", "packages/core/.test-build/test/stop/lifecycle.test.js", "packages/core/.test-build/test/stop/resolution-port.test.js", "packages/core/.test-build/test/stop/stop.test.js", "packages/core/.test-build/test/workspace/admission-observers.test.js", "packages/core/.test-build/test/workspace/contribution-run.test.js", "packages/core/.test-build/test/workspace/recovery.test.js", "packages/core/.test-build/test/workspace/scope.test.js", "packages/core/.test-build/test/workspace/writer-wait.test.js".
+Test results written to: scratch/gap-hunt/contract-operations/jest-results.json

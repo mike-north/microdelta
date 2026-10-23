@@ -1,0 +1,2413 @@
+{
+  "scope": "344 source blocks preserved; owner mapping is inherited from upstream inventory and may span tables. No owner-level match automatically discharges a block.",
+  "blocks": [
+    {
+      "key": "docs/spec/acceptance.md:1",
+      "owner": null,
+      "text": "# Acceptance scenarios and evidence",
+      "disposition": "non-normative-or-unowned-review",
+      "requirementReview": null
+    },
+    {
+      "key": "docs/spec/acceptance.md:3",
+      "owner": null,
+      "text": "Status: specification of required evidence, not a report of passing tests.\nRequirement owners: [domain](domain.md), [architecture](architecture.md), [tracking](tracking.md),\n[composition](composition.md), [execution](execution.md),\n[operations](operations.md), [package boundaries](package-boundaries.md).",
+      "disposition": "non-normative-or-unowned-review",
+      "requirementReview": null
+    },
+    {
+      "key": "docs/spec/acceptance.md:8",
+      "owner": null,
+      "text": "## Evidence rules",
+      "disposition": "non-normative-or-unowned-review",
+      "requirementReview": null
+    },
+    {
+      "key": "docs/spec/acceptance.md:10",
+      "owner": "TEST-1",
+      "text": "**TEST-1 \u2014 Outcome-first tests.** Tests precede software and derive expectations from\ncontract IDs, independent fixtures and observable outcomes. Do not mirror internal\nimplementation branches or count tests as proof of a feature. Record the initial\nfailure and passing command for experiments/implementation. Documentation checks\nvalidate artifact structure and traceability separately.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "TEST-1"
+    },
+    {
+      "key": "docs/spec/acceptance.md:16",
+      "owner": "TEST-2",
+      "text": "**TEST-2 \u2014 Separate-process durability.** Process A writes; it exits completely;\nprocess B recreates declarations, configuration and input objects against the same\ndurable store. Assert body invocation counts, exact result references, source-hook\ncalls and current verification evidence. Clearing a map or recreating a runtime\ninside one process is not a substitute. Reorder declaration/member registration\nand rename display labels. Nothing depends on surviving closures/tags.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "TEST-2"
+    },
+    {
+      "key": "docs/spec/acceptance.md:23",
+      "owner": "TEST-2",
+      "text": "## Required contract suites",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "TEST-2"
+    },
+    {
+      "key": "docs/spec/acceptance.md:25",
+      "owner": "TEST-2",
+      "text": "| Suite | Input/counterexample | Required evidence | Gate |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "TEST-2"
+    },
+    {
+      "key": "docs/spec/acceptance.md:26",
+      "owner": "TEST-2",
+      "text": "| --- | --- | --- | --- |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "TEST-2"
+    },
+    {
+      "key": "docs/spec/acceptance.md:27",
+      "owner": "A-01",
+      "text": "| A-01 Observation semantics | Every TRK-5 row, changed guards, pass-through output | Exact changed/unchanged facts; no deep-read inflation | M1/M2 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "A-01"
+    },
+    {
+      "key": "docs/spec/acceptance.md:28",
+      "owner": "A-02",
+      "text": "| A-02 Durable baseline | Unchanged, unread field, consumed field, helper code, explicit version, member reorder | Fresh-process invocation counts and references | M3 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "A-02"
+    },
+    {
+      "key": "docs/spec/acceptance.md:29",
+      "owner": "A-03",
+      "text": "| A-03 Current source policy | Cold, final, false/absent hook, validated reuse, fresh equal fetch, hook change | Current hooks through cached consumer; no stored finality shortcut | M3 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "A-03"
+    },
+    {
+      "key": "docs/spec/acceptance.md:30",
+      "owner": "A-04",
+      "text": "| A-04 Current path rebinding | Author changes ID with same name; then new author's name changes | First assessment retained, second invalidated, old provenance intact | M2/M3 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "A-04"
+    },
+    {
+      "key": "docs/spec/acceptance.md:31",
+      "owner": "A-05",
+      "text": "| A-05 Nested cutoff | Child input/code/source changes, equal vs changed selected output | Child current validation; outer retained only on equal projection | M4 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "A-05"
+    },
+    {
+      "key": "docs/spec/acceptance.md:32",
+      "owner": "A-06",
+      "text": "| A-06 Binding failure | Missing slot, ambiguous correspondence, unjustified derived argument | Honest miss/diagnostic, no paid validation replay | M1/M4 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "A-06"
+    },
+    {
+      "key": "docs/spec/acceptance.md:33",
+      "owner": "A-07",
+      "text": "| A-07 Keyed collections | Insert/delete/reorder, duplicates/custom key, presence/enumeration/order | Stable member reuse, relevant aggregate invalidation | M4 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "A-07"
+    },
+    {
+      "key": "docs/spec/acceptance.md:34",
+      "owner": "A-08",
+      "text": "| A-08 Fixed topology | One template, tracked gate, result-created node, mutated builder array | Runtime instances change; undeclared topology rejected before work | M4 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "A-08"
+    },
+    {
+      "key": "docs/spec/acceptance.md:35",
+      "owner": "A-09",
+      "text": "| A-09 Publication and fencing | Kill every commit boundary; stale publish/renew/release | Old history intact, no partial current value, authorized publisher only | M3/M5 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "A-09"
+    },
+    {
+      "key": "docs/spec/acceptance.md:36",
+      "owner": "A-10",
+      "text": "| A-10 Reference integrity | Supersession, fresh equal output, explicit retain, missing target, scoped stores | Exact retained pointers; no silent recompute/retarget/delete | M3/M5 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "A-10"
+    },
+    {
+      "key": "docs/spec/acceptance.md:37",
+      "owner": "A-11",
+      "text": "| A-11 Failure/readiness | One failed member, one pending, one successful, open discovery | Independent siblings continue; strict fold waits/fails honestly; outcome fold reports settled statuses with coverage, never complete while unsettled, and reconsiders after repair | M4/M5 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "A-11"
+    },
+    {
+      "key": "docs/spec/acceptance.md:38",
+      "owner": "A-12",
+      "text": "| A-12 Retry/idempotency | Rate wait, exhaustion, lost response to mutation | Correlated attempts, correct key reuse, no unsafe blind replay | M5 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "A-12"
+    },
+    {
+      "key": "docs/spec/acceptance.md:39",
+      "owner": "A-13",
+      "text": "| A-13 Cancellation | Soft then hard stop, provider unsupported, commit race | No unwanted future admissions, no partial success, honest remote state | M5/M6 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "A-13"
+    },
+    {
+      "key": "docs/spec/acceptance.md:40",
+      "owner": "A-14",
+      "text": "| A-14 Accounting | Duplicate/lost acknowledgment, crash, unreported usage | Durable known observations exactly once; unknown not zero | M5 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "A-14"
+    },
+    {
+      "key": "docs/spec/acceptance.md:41",
+      "owner": "A-15",
+      "text": "| A-15 Declaration boundaries | Own, sibling, public, beta, hidden-type leak, source bypass | API Extractor rollups plus real compiler positive/negative fixtures; missing declarations and forbidden source imports fail for the expected reason | M0.5 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "A-15"
+    },
+    {
+      "key": "docs/spec/acceptance.md:42",
+      "owner": "A-16",
+      "text": "| A-16 Explain/CLI isolation | Observe current, old, missing, uncertain downstream data | No admitted computation/claims/writes merely by viewing | M6 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "A-16"
+    },
+    {
+      "key": "docs/spec/acceptance.md:43",
+      "owner": "A-17",
+      "text": "| A-17 Materialization/scale | Large unread payload, several narrow consumers, early-stop loop | Instrumented loads/memory; fingerprint-only positive control | M2/M7 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "A-17"
+    },
+    {
+      "key": "docs/spec/acceptance.md:44",
+      "owner": "A-19",
+      "text": "| A-19 Admission/middleware | Budget refusal, cached hit, throwing observer, check-only miss | Hits served, misses refused before claims, committed success preserved | M3/M5 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "A-19"
+    },
+    {
+      "key": "docs/spec/acceptance.md:45",
+      "owner": "A-18",
+      "text": "| A-18 Context lifecycle | Concurrent scopes, thrown nested frame, detached callback after close | No cross-run leakage; late use fails clearly | M2/M5 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "A-18"
+    },
+    {
+      "key": "docs/spec/acceptance.md:46",
+      "owner": "A-20",
+      "text": "| A-20 Machine boundary | Direct Node built-in import/global in runtime outside Node Machine; new capability used by a context; unsupported/failing host operation | Source check rejects bypass but allows tests/tooling; Node implementation passes capability conformance and injected-context fixture; History/Accounting port ownership remains intact | M0.5 and each added capability |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "A-20"
+    },
+    {
+      "key": "docs/spec/acceptance.md:48",
+      "owner": "A-20",
+      "text": "Language-neutral [restart cases](artifacts/reuse-cases.json) define concrete\ninputs and expected semantic outcomes for A-02/A-04/A-05. They are fixture data,\nnot executable tests or a selected stored record shape.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "A-20"
+    },
+    {
+      "key": "docs/spec/acceptance.md:52",
+      "owner": "A-20",
+      "text": "## Weekly roster workflow",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "A-20"
+    },
+    {
+      "key": "docs/spec/acceptance.md:54",
+      "owner": "TEST-3",
+      "text": "**TEST-3 \u2014 Product acceptance.** The end-to-end scenario starts with an organization,\nfetches an HR roster, selects an author-defined trial population or full population,\ndiscovers each person's PR references using fresh pagination, hydrates evidence,\nassesses each PR and builds one person summary from the person's complete corpus.\nMembership closes independently per person; one waiting person cannot block an\nunrelated person's completed summary. Observation can show progress throughout.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "TEST-3"
+    },
+    {
+      "key": "docs/spec/acceptance.md:74",
+      "owner": "TEST-3",
+      "text": "**Application fixture policies (not universal framework rules):** CSV parsing\nsupports quoted fields; malformed/duplicate employee IDs are errors. Use explicit\nemployee IDs for trial selection and PR creation time in `[start, end)`. Validate\nmodel output against the chosen assessment schema. Use a deterministic sort by PR\nidentity before person summary. A closed, successful zero-PR corpus can yield a\nno-contributions result without model work. Failed/open discovery cannot. The HR\nsource must have an explicit refresh/acceptance policy; do not infer finality from\nan old roster. Provider validator coverage is an adapter obligation.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "TEST-3"
+    },
+    {
+      "key": "docs/spec/acceptance.md:83",
+      "owner": "TEST-3",
+      "text": "The exact memo constructor, previous-result handle, collection/fold signatures\nand selection hooks are not frozen by this conceptual sequence. Old executable\nroster callback examples remain historical API exploration, not the new runtime.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "TEST-3"
+    },
+    {
+      "key": "docs/spec/acceptance.md:87",
+      "owner": "TEST-4",
+      "text": "**TEST-4 \u2014 Mandatory run variants.**",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "TEST-4"
+    },
+    {
+      "key": "docs/spec/acceptance.md:89",
+      "owner": "TEST-4",
+      "text": "1. Cold run: selected members reach all required stages; excluded members perform\n   no expensive work. The selected scope is visible in output.\n2. Fresh process, unchanged data: current source hooks run as required; eligible\n   expensive results retain exact references.\n3. Changed page boundaries/new PR: restart discovery from its current source;\n   keyed old PR work survives cursor/ordinal changes; relevant person corpus changes.\n4. Only unread labels change: assessment retained. Consumed diff/review/prompt/model\n   or tracked helper implementation changes: affected work reevaluates.\n5. Child refresh emits equal assessment: parent summary retained if that is all it\n   consumed; provenance and current acceptance remain distinguishable.\n6. One source fails, another waits for quota: complete people finish; strict\n   summaries never treat missing evidence as an empty successful corpus. Explicit\n   outcome-based partial reports label coverage and failures.\n7. Trial widens: still-valid independent member work can reuse only within the\n   allowed environment/store policy; aggregate membership changes. Trial results\n   cannot satisfy a production scope by accident or contaminate its storage.\n8. Cancel or crash: completed results remain readable; incomplete bodies yield no\n   reusable partial result; unknown usage stays unknown. Resume through whole-step\n   reevaluation/reuse rather than a claimed restored JavaScript continuation.\n9. Inspect during/after execution: CLI status and explanation reveal outcomes,\n   references, waits, history and resource observations without starting work.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "TEST-4"
+    },
+    {
+      "key": "docs/spec/acceptance.md:111",
+      "owner": "TEST-4",
+      "text": "## Large-data and alternate-cost acceptance",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "TEST-4"
+    },
+    {
+      "key": "docs/spec/acceptance.md:113",
+      "owner": "TEST-5",
+      "text": "**TEST-5 \u2014 Scale measurement.** Retain a 150,000-subject synthetic workload as a\nmeasurement target, not a latency promise. Measure peak memory, selected payload\nloads, fingerprint CPU/I/O, storage contention and in-flight work. Ten consumers\nreading different narrow fields must not require ten full corpus materializations.\nTest an enrichment chain with only three changed member projections and assert\nonly those memoized members execute. Measure before adopting distributed workers,\nwork stealing, or adaptive storage/concurrency managers.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "TEST-5"
+    },
+    {
+      "key": "docs/spec/acceptance.md:121",
+      "owner": "TEST-6",
+      "text": "**TEST-6 \u2014 Cost neutrality and reactive consumers.** Include a CPU-expensive memoized\nstep, cheap leaves with an expensive aggregate, and a mutable in-process filter over\nretained results. The filter can update local derived views without rewriting\nstored snapshots. New processes use fresh reactive tags over the same retained\nresults. Storage-backed cached outputs reenter observation normally.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "TEST-6"
+    },
+    {
+      "key": "docs/spec/acceptance.md:127",
+      "owner": "TEST-6",
+      "text": "## Checking the specification itself",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "TEST-6"
+    },
+    {
+      "key": "docs/spec/acceptance.md:129",
+      "owner": "TEST-7",
+      "text": "**TEST-7 \u2014 Consolidation gate.** Check every relative link, unique defining\nrequirement ID, machine-readable artifact syntax, decision-table coverage, and\nsupersession mapping. Review at least the identity/name, automatic implementation\ntracking, no-stored-finality, exact-reference, alpha-sibling, fixed-topology and\nno-paid-replay invariants across documents. No active document should direct an\nagent to follow an archived API/schema. Leave baseline fixtures explicitly labeled.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "TEST-7"
+    },
+    {
+      "key": "docs/spec/acceptance.md:136",
+      "owner": "TEST-7",
+      "text": "Closing this gate means the specification is ready to guide M0.5, not that M0.5 has\npassed. Log its evidence in [consolidation validation](validation.md).",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "TEST-7"
+    },
+    {
+      "key": "docs/spec/acceptance.md:139",
+      "owner": "TEST-8",
+      "text": "**TEST-8 \u2014 Foundation gate.** From a clean checkout, run the named typecheck,\ntype-aware lint, test, declaration-generation/API Extractor, import-boundary,\nand build commands in the same order used by CI. Record exact commands, versions,\nand outcomes. Negative fixtures must prove that each check detects its intended\nviolation: a type error, type-aware lint failure, wrong release tag, absent\nproducer declaration, forbidden sibling source import, and direct Node access\noutside the Node Machine implementation. Positive fixtures prove the own\nuntrimmed, sibling alpha, public default, and beta opt-in consumers work through\ntheir intended resolution paths. Run Machine capability conformance tests on\nthe Node implementation for every capability present. If a capability has a\nfailure/unsupported mode, verify that outcome explicitly. Record any known\nbaseline violation as a failure; do not label the gate complete until repaired.\nThis evidence precedes runtime experiments and remains independent of the\nretired EXP-5 CML result (see PKG-006).",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "TEST-8"
+    },
+    {
+      "key": "docs/spec/execution.md:1",
+      "owner": null,
+      "text": "# Results, reuse, and publication",
+      "disposition": "non-normative-or-unowned-review",
+      "requirementReview": null
+    },
+    {
+      "key": "docs/spec/execution.md:3",
+      "owner": null,
+      "text": "microdelta preserves completed work while deciding whether that work is acceptable\nunder the current analysis. An immutable historical result, its acceptance now,\nand the attempt that performs new work are distinct facts. This separation lets\nan analysis reuse expensive results without treating old policy decisions as\npermanent or rewriting what originally happened.",
+      "disposition": "non-normative-or-unowned-review",
+      "requirementReview": null
+    },
+    {
+      "key": "docs/spec/execution.md:9",
+      "owner": null,
+      "text": "**Status:** normative target contract, except passages labeled **Proposal** or\n**Experiment**. This document does not claim that the current implementation\nsatisfies these requirements. Requirement identifiers are stable. Public API\nspellings, storage records, and publication mechanics remain implementation\nchoices unless explicitly fixed here.",
+      "disposition": "non-normative-or-unowned-review",
+      "requirementReview": null
+    },
+    {
+      "key": "docs/spec/execution.md:15",
+      "owner": null,
+      "text": "## Scope and ownership",
+      "disposition": "non-normative-or-unowned-review",
+      "requirementReview": null
+    },
+    {
+      "key": "docs/spec/execution.md:17",
+      "owner": null,
+      "text": "[Architecture](architecture.md) defines the context dependency graph. **Reuse\nResolution** owns current eligibility, source-policy acceptance, nested\nvalidation, and the decision to reuse or execute. **Result History & Publication**\nowns immutable completed results, attempt history, claims, allocation, and the\nauthoritative publication boundary. One consistency authority owns claim,\nallocation, and publication even if it has several internal modules. Storage\nbackends implement this authority's ports; they do not establish a competing\nlifecycle.",
+      "disposition": "non-normative-or-unowned-review",
+      "requirementReview": null
+    },
+    {
+      "key": "docs/spec/execution.md:26",
+      "owner": null,
+      "text": "Definition & Binding supplies current callable and argument correspondence.\n[Tracking & Observation](tracking.md) supplies semantic observations and compares\nthe facts presented to it; it does not decide freshness or acquire claims.\nMaterialization loads selected stored data and bridges observations; loading an\nexact reference does not itself authorize new computation. Resource Accounting\nrecords work independently of whether a completed result is published.",
+      "disposition": "non-normative-or-unowned-review",
+      "requirementReview": null
+    },
+    {
+      "key": "docs/spec/execution.md:33",
+      "owner": null,
+      "text": "[Experiments](experiments.md) defines the bounded work needed to select the\nremaining mechanisms. [Acceptance](acceptance.md) supplies delivery gates and\nevidence. Tests must be derived from these contracts before implementations are\nwritten; the cases below are test obligations, not reports of passing tests.",
+      "disposition": "non-normative-or-unowned-review",
+      "requirementReview": null
+    },
+    {
+      "key": "docs/spec/execution.md:38",
+      "owner": null,
+      "text": "## Result and reference requirements",
+      "disposition": "non-normative-or-unowned-review",
+      "requirementReview": null
+    },
+    {
+      "key": "docs/spec/execution.md:40",
+      "owner": "RES-001",
+      "text": "### RES-001 \u2014 A subject is the author's complete opaque identity",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RES-001"
+    },
+    {
+      "key": "docs/spec/execution.md:42",
+      "owner": "RES-001",
+      "text": "Every memoized subject has a complete author-provided opaque string, unique in\nits analysis scope. microdelta must not derive it from a display name, append hidden\ndisplay-name namespaces, or reinterpret its components. Display-name edits must\nnot alter reuse identity. Display names have no uniqueness requirement. A public\nstable step ID remains unjustified unless a concrete need cannot be met by current\nreferences/bindings. Nonmemoized work does not require an author subject;\nframework snapshot identifiers are separate from subjects.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RES-001"
+    },
+    {
+      "key": "docs/spec/execution.md:50",
+      "owner": "RES-001",
+      "text": "For example, the author may choose `pr:https://example.test/repo/pull/42` as the\ncomplete subject. Renaming its displayed step from \u201cRetrieve PR\u201d to \u201cRead PR\u201d\nmust leave that identity unchanged. Two analyses may use the same subject text\nwithout becoming the same scoped subject. A subject identifies a history of work;\nit is not a reference to one exact completed result. The author must distinguish\nPR evidence from a PR assessment in the complete subjects rather than return the\nsame URL for both and depend on a hidden step-name prefix. Subject strings compare\nby exact string equality. Composition records common member lineage for grouping;\none reused subject may participate in several branches without an exclusive parent.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RES-001"
+    },
+    {
+      "key": "docs/spec/execution.md:60",
+      "owner": "RES-002",
+      "text": "### RES-002 \u2014 A reference locates; a result contains data",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RES-002"
+    },
+    {
+      "key": "docs/spec/execution.md:62",
+      "owner": "RES-002",
+      "text": "A reference is a pointer or locator, never the result payload. The reference\nmodel uses a kind discriminator and the locator information needed for that\nkind; common resolution dispatches by kind. A completed-result reference must\nidentify one immutable snapshot and carry enough logical analysis/environment\nstore scope to resolve it without guessing the current environment.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RES-002"
+    },
+    {
+      "key": "docs/spec/execution.md:68",
+      "owner": "RES-002",
+      "text": "The scope can be explicit or encoded in an opaque identifier; that encoding is\nnot selected. A reference need not contain a filesystem path or credentials.\nAuthorization and access to the addressed store remain necessary. A reference\nto snapshot A must resolve A even after snapshot B becomes current. It must not\nsilently resolve the current pointer, refresh a source, or recompute missing A.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RES-002"
+    },
+    {
+      "key": "docs/spec/execution.md:74",
+      "owner": "RES-003",
+      "text": "### RES-003 \u2014 Completed results are immutable envelopes",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RES-003"
+    },
+    {
+      "key": "docs/spec/execution.md:76",
+      "owner": "RES-003",
+      "text": "A completed result separates author data from framework metadata, including\nits identity and historical provenance. Once published, the snapshot and its\nmeaning must not change. Giving author logic access to a previous result must\nnot let mutation alter its stored payload. Inspection and resolution must\npreserve this isolation.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RES-003"
+    },
+    {
+      "key": "docs/spec/execution.md:82",
+      "owner": "RES-003",
+      "text": "Provenance records the observations and exact dependencies supporting that\nexecution. A new verification may follow a different current dependency with an\nequal consumed value; it must not rewrite the original result's provenance.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RES-003"
+    },
+    {
+      "key": "docs/spec/execution.md:86",
+      "owner": "RES-004",
+      "text": "### RES-004 \u2014 Fresh equal output and explicit retention are different",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RES-004"
+    },
+    {
+      "key": "docs/spec/execution.md:88",
+      "owner": "RES-004",
+      "text": "Successful execution that produces fresh data creates a distinct completed\nresult, even when its content equals an earlier result. An explicit retention\noutcome accepts the eligible previous completed result and keeps its exact\nreference. Neither object identity nor payload equality may be interpreted as\nthat control outcome. The outcome must be distinguishable from every supported\nauthor payload and identify the prior result being retained unambiguously.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RES-004"
+    },
+    {
+      "key": "docs/spec/execution.md:95",
+      "owner": "RES-004",
+      "text": "A cold miss, an incomplete attempt, or a failed validation cannot become a\nsuccessful retention. A fresh equal-valued fetch may still permit downstream\nreuse through comparison of consumed output. Its execution and resource usage\nremain observable as new work.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RES-004"
+    },
+    {
+      "key": "docs/spec/execution.md:100",
+      "owner": "RES-005",
+      "text": "### RES-005 \u2014 Attempts and acceptance records are separate from results",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RES-005"
+    },
+    {
+      "key": "docs/spec/execution.md:102",
+      "owner": "RES-005",
+      "text": "An execution attempt may fail, be interrupted, or finish without publishing a\nnew completed result. Preserve its available provenance, error/outcome evidence,\nand acknowledged resource observations without fabricating a successful result\nreference. An acceptance check that retains an existing result records the\ncurrent check separately from the old payload's provenance.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RES-005"
+    },
+    {
+      "key": "docs/spec/execution.md:108",
+      "owner": "RES-005",
+      "text": "A local policy decision using cached data and a conditional network check can\nboth retain the same snapshot; their current work differs. Failed validation\nmust not advance successful-acceptance evidence. Exact record names and their\nstorage layout are not prescribed.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RES-005"
+    },
+    {
+      "key": "docs/spec/execution.md:113",
+      "owner": "RES-006",
+      "text": "### RES-006 \u2014 Retained references remain valid",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RES-006"
+    },
+    {
+      "key": "docs/spec/execution.md:115",
+      "owner": "RES-006",
+      "text": "No deletion may break a valid retained reference, including references in result\ndependencies, provenance, or history. Superseding a result is not permission to\ndelete it. Expensive or paid data is not implicitly disposable because it is no\nlonger current. An external saved reference requires an explicit lifetime\ncontract; absent such a contract, retain its target.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RES-006"
+    },
+    {
+      "key": "docs/spec/execution.md:121",
+      "owner": "RES-006",
+      "text": "Dangling references violate the contract. Do not hide them by recomputing the\nresult or substituting a newer one. A future reclamation policy must demonstrate\nreferential integrity and the applicable retention contract before deleting\nanything; no generic caller predicate overrides these requirements. Resource\nquantity and paid-status classification are not defined by this document.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RES-006"
+    },
+    {
+      "key": "docs/spec/execution.md:127",
+      "owner": "RES-007",
+      "text": "### RES-007 \u2014 Current acceptance does not replace historical truth",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RES-007"
+    },
+    {
+      "key": "docs/spec/execution.md:129",
+      "owner": "RES-007",
+      "text": "Persist current verification/acceptance evidence separately from immutable\nhistorical provenance. Reuse can update evidence about the current binding or\ndependency path without changing the retained result's exact reference.\nExecution timestamps, diagnostics, and revision labels are not automatically\nsemantic compatibility inputs.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RES-007"
+    },
+    {
+      "key": "docs/spec/execution.md:135",
+      "owner": "RES-007",
+      "text": "For example, a result originally read `pr.author.name` through author A. The\ncurrent PR points to author B with the same name. If that is the only consumed\nfact, the result can remain accepted while current verification follows B.\nHistory must still show the original observation through A. Reading identity\nas well would create a different validation obligation.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RES-007"
+    },
+    {
+      "key": "docs/spec/execution.md:141",
+      "owner": "RES-007",
+      "text": "## Reuse requirements",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RES-007"
+    },
+    {
+      "key": "docs/spec/execution.md:143",
+      "owner": "REUSE-001",
+      "text": "### REUSE-001 \u2014 Reuse is a current contextual decision",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-001"
+    },
+    {
+      "key": "docs/spec/execution.md:145",
+      "owner": "REUSE-001",
+      "text": "Resolution must establish the candidate's eligibility under the current scoped\nsubject, applicable definition and compatibility controls, current bindings,\nobserved inputs, and source acceptance policy. An old reference alone proves\nneither present eligibility nor freshness. Exact historical reads remain valid\nindependently of whether a snapshot is reusable for current execution.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-001"
+    },
+    {
+      "key": "docs/spec/execution.md:151",
+      "owner": "REUSE-001",
+      "text": "Memoized work may intentionally retain a nondeterministic observation, such as\nan LLM output. The contract does not require all author calculations to be pure\nor deterministic. Influences intended to invalidate reuse must enter through\ntracked data/functions or explicit source, freshness, or compatibility policy.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-001"
+    },
+    {
+      "key": "docs/spec/execution.md:156",
+      "owner": "REUSE-002",
+      "text": "### REUSE-002 \u2014 Current finality hooks are authoritative",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-002"
+    },
+    {
+      "key": "docs/spec/execution.md:158",
+      "owner": "REUSE-002",
+      "text": "Whenever resolution requires a finality decision for an eligible cached result,\nevaluate the current optional definition hook against that result and current\napplicable analysis inputs. This includes resolution beneath an outer cached\nconsumer. A previous true answer must not bypass the current hook after restart\nor a later resolution.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-002"
+    },
+    {
+      "key": "docs/spec/execution.md:164",
+      "owner": "REUSE-002",
+      "text": "True permits retaining that result without source refresh for this resolution.\nFalse follows normal verification/retrieval policy and does not itself require\na full fetch. An absent hook supplies no finality shortcut. Without an eligible\ncompleted result there is no result to retain.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-002"
+    },
+    {
+      "key": "docs/spec/execution.md:169",
+      "owner": "REUSE-002",
+      "text": "**M3 direct-source phase selection:** establish scoped subject/version and unique\ncurrent binding, then validate the candidate's own actually called implementation\nand consumed input evidence before invoking finality. Only a still-eligible\ncandidate receives the current hook; cold or incompatible candidates have no\neligible previous result and do not invoke it. Thus changed retrieval implementation\ncannot be excused by an accepting hook. False or absent finality proceeds to normal\nsource policy, whose explicit retention can address only the eligible previous\nreference. This order also applies when resolving a source beneath a cached\nconsumer. A single top-level resolution may reuse its in-memory verification\noutcome for the same direct invocation to avoid repeating hook evaluation within\nthat resolution. Durable acceptance records remain separate historical evidence;\nneither form grants permission to skip current policy on a later resolution.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-002"
+    },
+    {
+      "key": "docs/spec/execution.md:182",
+      "owner": "REUSE-002",
+      "text": "The [M3 plan](../plans/m3-contribution-analysis.md) records the bounded authoring\npath and required hook/body-count assertions.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-002"
+    },
+    {
+      "key": "docs/spec/execution.md:185",
+      "owner": "REUSE-002",
+      "text": "Do not store a finality flag, state, callback answer, or equivalent assertion\nused to skip the current hook. Ordinary diagnostic records may describe a past\ndecision; they are not authority for the next one. Hook naming and sync/async\nshape remain implementation choices.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-002"
+    },
+    {
+      "key": "docs/spec/execution.md:190",
+      "owner": "REUSE-003",
+      "text": "### REUSE-003 \u2014 Source acceptance does not finalize downstream work",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-003"
+    },
+    {
+      "key": "docs/spec/execution.md:192",
+      "owner": "REUSE-003",
+      "text": "Finality expresses the author's policy for the relevant result and inputs. It\ncan follow intrinsic immutability, a deliberate terminal-state snapshot policy,\nor stability relative to analysis inputs. microdelta must not infer that all fields\nof a terminal entity are immutable or that a fixed time window proves collection\ndiscovery complete.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-003"
+    },
+    {
+      "key": "docs/spec/execution.md:198",
+      "owner": "REUSE-003",
+      "text": "A merged PR accepted by the current hook can avoid retrieval while a changed\nprompt reruns its assessment. Widening an analysis window can revoke an earlier\nexclusion. An immutable artifact does not make its mutable alias immutable.\nEach case must honor separate consumed inputs and current policy.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-003"
+    },
+    {
+      "key": "docs/spec/execution.md:203",
+      "owner": "REUSE-004",
+      "text": "### REUSE-004 \u2014 Source checks can explicitly retain after doing work",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-004"
+    },
+    {
+      "key": "docs/spec/execution.md:205",
+      "owner": "REUSE-004",
+      "text": "If normal retrieval/check logic runs, it receives absence or the last eligible\ncompleted representation and may explicitly retain that representation after\nits policy accepts it. Record the work actually done. Neither a validation\nfailure nor an unchanged comparison automatically authorizes retention; the\nsource policy must supply that acceptance.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-004"
+    },
+    {
+      "key": "docs/spec/execution.md:211",
+      "owner": "REUSE-004",
+      "text": "For example, a conditional request that confirms unchanged data can retain\nsnapshot A with a new acceptance record and one observed request. A current\nfinality hook can retain A with zero source requests. A fresh fetch returning\nequal data creates snapshot B. These are three different histories.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-004"
+    },
+    {
+      "key": "docs/spec/execution.md:216",
+      "owner": "REUSE-005",
+      "text": "### REUSE-005 \u2014 Nested validation preserves the consumed-output boundary",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-005"
+    },
+    {
+      "key": "docs/spec/execution.md:218",
+      "owner": "REUSE-005",
+      "text": "Observed nested dependencies propagate implicitly and hierarchically. Authors\nmust not repeat child field lists at each parent. Validate the current child\ninvocation as needed, then compare the output facts the parent consumed. A new\nchild snapshot identifier alone must not invalidate a parent that consumed only\nunchanged content. Explicit consumption of identity remains an observation in\nits own right.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-005"
+    },
+    {
+      "key": "docs/spec/execution.md:225",
+      "owner": "REUSE-005",
+      "text": "For example, child B produces a new snapshot with unchanged `headline` but changed\n`details`. Parent A read only `headline`; A may retain its old result after B is\ncurrently accepted. Flattening B's changed implementation or every internal\nread directly into A's invalidation set would defeat this cutoff. The child's\nown validity and the parent's observed output equality are separate decisions.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-005"
+    },
+    {
+      "key": "docs/spec/execution.md:231",
+      "owner": "REUSE-006",
+      "text": "### REUSE-006 \u2014 Restart validation uses current bindings and justified arguments",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-006"
+    },
+    {
+      "key": "docs/spec/execution.md:233",
+      "owner": "REUSE-006",
+      "text": "Durable nested-invocation evidence must support correspondence to the current\ndeclared callable binding, the current or justified retained arguments, the\nprior exact child result, and the output observations needed for comparison.\nDefinition & Binding supplies the current correspondence. A saved result\nreference, old process-local function object, display name, or execution ordinal\ndoes not establish it.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-006"
+    },
+    {
+      "key": "docs/spec/execution.md:240",
+      "owner": "REUSE-006",
+      "text": "Arguments can come from current bound references or retained values whose\nvalidity is established under their governing inputs and implementation\nevidence. A derived argument is not inherently invalid merely because it was\ncomputed inside the previous parent execution. However, do not assume arbitrary\nclosures can be serialized or reconstruct an argument from its subject alone.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-006"
+    },
+    {
+      "key": "docs/spec/execution.md:246",
+      "owner": "EXP-1",
+      "text": "**EXP-1 selection:** use the current structural registry described in CMP-6 for\ndirect input, callable, and step-slot correspondence. Only a unique current\ndeclaration can satisfy a historical consumed slot; names, source text, hashes,\nand call order are not fallback locators. The separate-process fixture establishes\nthis bounded case. No globally registered public step ID is required.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "EXP-1"
+    },
+    {
+      "key": "docs/spec/execution.md:252",
+      "owner": "EXP-4",
+      "text": "**EXP-4 selection:** the nested invocation record and argument recipe in\n[CMP-7](composition.md) carry derived-argument evidence. A derived value is\njustified by the parent's own recorded evidence plus the consumed outputs of\nearlier child calls, validated in recorded call order; forwarded arguments\nresolve from current bindings; unreconstructible arguments are recorded as such.\nDurable wire encoding remains an implementation choice.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "EXP-4"
+    },
+    {
+      "key": "docs/spec/execution.md:259",
+      "owner": "REUSE-007",
+      "text": "### REUSE-007 \u2014 Unproven reconstruction yields an honest outer miss",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-007"
+    },
+    {
+      "key": "docs/spec/execution.md:261",
+      "owner": "REUSE-007",
+      "text": "If current nested callable or argument correspondence cannot be established,\nthe outer candidate must not be reported valid. Mark it as a miss and execute\nits body through the normal execution path if work is requested. Its nested\ncalls can still independently reuse valid results. Do not replay an expensive\nparent body and describe that execution as cache validation.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-007"
+    },
+    {
+      "key": "docs/spec/execution.md:267",
+      "owner": "REUSE-007",
+      "text": "A wholly valid outer candidate skips its body. A missing binding or unproven\nderived argument cannot be silently matched to a similarly named operation.\nDiagnostics must distinguish insufficient validation evidence from observed\nchanged content; both can require normal execution, for different reasons.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-007"
+    },
+    {
+      "key": "docs/spec/execution.md:272",
+      "owner": "REUSE-007",
+      "text": "EXP-4 exercises the distinct diagnostics: missing and ambiguous callable\nbindings, an unreconstructible argument and an unjustified argument (after an\nobserved untracked read) are separate from changed evidence and changed child\noutput. In each case the parent executes normally while its children reuse\nstill-valid results.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-007"
+    },
+    {
+      "key": "docs/spec/execution.md:278",
+      "owner": "REUSE-008",
+      "text": "### REUSE-008 \u2014 Track implementations automatically and preserve explicit control",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-008"
+    },
+    {
+      "key": "docs/spec/execution.md:280",
+      "owner": "REUSE-008",
+      "text": "Calling a tracked function observes its implementation fingerprint and the\ntracked reads/calls it performs. Relevant implementation changes participate\nautomatically in validation. This supersedes the earlier advisory-only source\ncomparison proposal. An implementation fingerprint is evidence, not a subject\nidentity, callable locator, or proof of semantic equivalence.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-008"
+    },
+    {
+      "key": "docs/spec/execution.md:286",
+      "owner": "REUSE-008",
+      "text": "The author also retains an explicit compatibility control that can force\nrecomputation despite unchanged subject and observed inputs. Earlier histories\nremain preserved. The version is per memoized step, a positive integer defaulting\nto 1. It is a compatibility group, not semantic versioning. Changing it makes\nother-version results ineligible; returning from version 2 to version 1 permits\nreuse of retained version-1 results only after normal current validation.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-008"
+    },
+    {
+      "key": "docs/spec/execution.md:293",
+      "owner": "REUSE-008",
+      "text": "Automatic implementation and input evidence still participate: rolling back the\nnumber alone must not conceal incompatible current code or inputs. EXP-1 selects\na history lookup by complete scoped subject and compatibility group followed by\nordinary current implementation/input validation. A rollback hit returns the old\nexact reference; accepting it does not itself rewind the current publication\npointer or delete newer history. The JavaScript representation rejects values\noutside positive safe integers, avoiding rounded group identities.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-008"
+    },
+    {
+      "key": "docs/spec/execution.md:301",
+      "owner": "REUSE-008",
+      "text": "The [EXP-1 evidence](../../experiments/exp-1/decision.md) covers version 2 followed\nby unchanged and changed-input version-1 rollback, alongside automatic evidence.\nIts fixture records are not a selected production schema, and the history lookup\ndoes not bypass source acceptance or other current eligibility obligations.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-008"
+    },
+    {
+      "key": "docs/spec/execution.md:306",
+      "owner": "REUSE-009",
+      "text": "### REUSE-009 \u2014 Execution admission and protected lifecycle",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-009"
+    },
+    {
+      "key": "docs/spec/execution.md:308",
+      "owner": "REUSE-009",
+      "text": "A budget/execution gate applies after successful verification has had the chance\nto reuse a candidate, and before new work is claimed. Refusal is a typed outcome\nwith no completed result or stranded claim; free valid hits remain available.\nObservers cover both memoized and nonmemoized calls without authorizing work.\nThe framework owns an inspectable, non-removable lifecycle sequence around\nverification, admission, claim, execution, publication and release. Author\nmiddleware cannot interpose inside or bypass its consistency boundary.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-009"
+    },
+    {
+      "key": "docs/spec/execution.md:316",
+      "owner": "REUSE-009",
+      "text": "A failing observer must not corrupt storage or make committed success appear\nuncommitted and trigger paid reexecution. A pre-execution middleware failure is\ncontained to its call and is reported. Exact hook/stack API shape is implementation\nwork; observer capability does not imply an unrestricted execution wrapper.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-009"
+    },
+    {
+      "key": "docs/spec/execution.md:321",
+      "owner": "REUSE-009",
+      "text": "Explicit check-only evaluation must not claim or execute a memoized miss. If\ncurrent source work or unavailable output is needed, report that boundary and\ndownstream uncertainty rather than predict exact future results or costs. Any\npermitted nonmemoized evaluation is separately authorized execution; read-only\nCLI inspection does not invoke it. Test budget refusal after reuse, immutable\nframework lifecycle positions, throwing middleware and a new-subject plan stop.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-009"
+    },
+    {
+      "key": "docs/spec/execution.md:328",
+      "owner": "REUSE-009",
+      "text": "## Resolution transition table",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-009"
+    },
+    {
+      "key": "docs/spec/execution.md:330",
+      "owner": "REUSE-009",
+      "text": "This table is authoritative for semantic outcomes. It does not specify a\ndatabase protocol, enum names, or a total ordering of independent work.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-009"
+    },
+    {
+      "key": "docs/spec/execution.md:333",
+      "owner": "REUSE-009",
+      "text": "| Starting facts / event | Required next behavior | Result and history effect |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-009"
+    },
+    {
+      "key": "docs/spec/execution.md:334",
+      "owner": "REUSE-009",
+      "text": "| --- | --- | --- |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-009"
+    },
+    {
+      "key": "docs/spec/execution.md:335",
+      "owner": "REUSE-009",
+      "text": "| No eligible completed candidate | Execute normally when requested | Retention is unavailable; preserve the attempt |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-009"
+    },
+    {
+      "key": "docs/spec/execution.md:336",
+      "owner": "REUSE-009",
+      "text": "| Eligible candidate; current finality hook returns true | Accept without source refresh for this resolution | Keep exact result; separate current acceptance |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-009"
+    },
+    {
+      "key": "docs/spec/execution.md:337",
+      "owner": "REUSE-009",
+      "text": "| Eligible candidate; hook false or absent | Apply ordinary verification/retrieval policy | No automatic fetch or automatic retention follows solely from false/absence |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-009"
+    },
+    {
+      "key": "docs/spec/execution.md:338",
+      "owner": "REUSE-009",
+      "text": "| Retrieval/check explicitly accepts prior result | Retain the exact accepted candidate | Record current work; preserve original provenance |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-009"
+    },
+    {
+      "key": "docs/spec/execution.md:339",
+      "owner": "REUSE-009",
+      "text": "| Retrieval/check fails | Surface failure under the execution contract | No invented completed result or successful acceptance |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-009"
+    },
+    {
+      "key": "docs/spec/execution.md:340",
+      "owner": "REUSE-009",
+      "text": "| Execution successfully returns fresh payload equal to old payload | Publish a distinct result through the publication authority | Old result remains; downstream content cutoff remains possible |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-009"
+    },
+    {
+      "key": "docs/spec/execution.md:341",
+      "owner": "REUSE-009",
+      "text": "| Child currently accepted; all output facts consumed by parent equal | Continue parent validation | Parent can retain exact result if all its obligations pass |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-009"
+    },
+    {
+      "key": "docs/spec/execution.md:342",
+      "owner": "REUSE-009",
+      "text": "| Consumed child fact changes | Parent candidate misses | Normal parent execution captures its current observations |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-009"
+    },
+    {
+      "key": "docs/spec/execution.md:343",
+      "owner": "REUSE-009",
+      "text": "| Current child binding/arguments cannot be justified | Parent candidate misses with reason | No expensive validation replay; normal execution can reuse children |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-009"
+    },
+    {
+      "key": "docs/spec/execution.md:344",
+      "owner": "REUSE-009",
+      "text": "| Current path targets a new entity with equal consumed scalar | Compare consumed facts under tracking rules | Retain if valid; update current evidence, preserve historical provenance |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-009"
+    },
+    {
+      "key": "docs/spec/execution.md:345",
+      "owner": "REUSE-009",
+      "text": "| Tracked implementation or explicit compatibility control requires recomputation | Candidate is ineligible/invalid under the selected compatibility rule | Execute when requested; preserve old history |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-009"
+    },
+    {
+      "key": "docs/spec/execution.md:346",
+      "owner": "REUSE-009",
+      "text": "| Exact historical reference is read after supersession | Resolve its original snapshot | No freshness check, current-pointer substitution, or implicit recomputation |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-009"
+    },
+    {
+      "key": "docs/spec/execution.md:348",
+      "owner": "REUSE-009",
+      "text": "## Publication and recovery requirements",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "REUSE-009"
+    },
+    {
+      "key": "docs/spec/execution.md:350",
+      "owner": "PUB-001",
+      "text": "### PUB-001 \u2014 One authority decides publication",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-001"
+    },
+    {
+      "key": "docs/spec/execution.md:352",
+      "owner": "PUB-001",
+      "text": "Claim acquisition, attempt allocation, and publication belong to one consistency\nowner. It must define the authoritative point at which a completed result becomes\nvisible as published/current. Readers must never observe a current pointer to\nan incomplete or missing completed result. Storage operations must implement\nthis contract together, rather than composing independently valid row mutations\nwithout a lifecycle guarantee.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-001"
+    },
+    {
+      "key": "docs/spec/execution.md:359",
+      "owner": "PUB-002",
+      "text": "### PUB-002 \u2014 Every ownership-sensitive mutation is fenced",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-002"
+    },
+    {
+      "key": "docs/spec/execution.md:361",
+      "owner": "PUB-002",
+      "text": "Renewal, publication, and release must check the current ownership precondition.\nAfter holder A expires and B acquires, A must not publish over B, renew B's claim,\nor release it. A stale holder's eventual work may supply history under the chosen\nprotocol, but cannot authorize a current-pointer change. Fencing applies across\nprocesses and restarts, not only an in-memory lock.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-002"
+    },
+    {
+      "key": "docs/spec/execution.md:367",
+      "owner": "PUB-003",
+      "text": "### PUB-003 \u2014 Allocation never reuses an issued attempt identity",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-003"
+    },
+    {
+      "key": "docs/spec/execution.md:369",
+      "owner": "PUB-003",
+      "text": "Allocation must be durable and safe under concurrency. An abandoned attempt,\nfailed attempt, restart, or permitted future reclamation must not make its\nidentifier available again. If the protocol exposes per-subject generation\nnumbers, their allocation must be monotonic and must not derive solely from the\ncurrent completed generation or a scan that forgets deleted history. The final\nidentifier representation is not prescribed.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-003"
+    },
+    {
+      "key": "docs/spec/execution.md:376",
+      "owner": "PUB-004",
+      "text": "### PUB-004 \u2014 Intermediate crash states have explicit recovery outcomes",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-004"
+    },
+    {
+      "key": "docs/spec/execution.md:378",
+      "owner": "PUB-004",
+      "text": "The selected publication protocol must enumerate each persistent intermediate\nstate and its recovery, including death after acquisition, during allocation or\npayload persistence, and around publication/current-pointer advancement.\nRecovery must preserve reference integrity and retained attempt evidence without\nclaiming an incomplete payload is completed. Define ambiguous publication\nacknowledgment handling so retry/recovery does not invent conflicting outcomes.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-004"
+    },
+    {
+      "key": "docs/spec/execution.md:385",
+      "owner": "EXP-3",
+      "text": "**EXP-3 protocol selection:** the initial durable backend is a single local\nSQLite file with an enforced single active logical writer. History owns the\nwriter lease, monotonically increasing fence, durable generation allocation,\nattempt state, and publication transaction. SQLite write serialization alone is\nnot permission for multiple logical writers. Every holder mutation checks the\ncurrent holder, fence, and unexpired lease within its transaction.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "EXP-3"
+    },
+    {
+      "key": "docs/spec/execution.md:392",
+      "owner": "EXP-3",
+      "text": "Allocation advances its counter and inserts the attempt in a commit before\npayload staging. Staged bytes remain attempt evidence, never a completed result.\nOne publication commit retains the immutable payload, fingerprint and provenance,\nmoves the current pointer, and marks the attempt completed. Exact historical\nreads resolve their original snapshot rather than the current pointer. A stable\nattempt key lets recovery discover committed success before repeating the body\nafter lost acknowledgment or a post-commit observer exception. It does not\nguarantee exactly-once external work for an uncommitted attempt.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "EXP-3"
+    },
+    {
+      "key": "docs/spec/execution.md:401",
+      "owner": "EXP-3",
+      "text": "The [EXP-3 protocol and process-kill tests](../../experiments/exp-3/protocol.md)\nexercise acquisition, allocation, staging, pre-commit termination, and post-commit\nlost acknowledgment with WAL, full synchronous commits, foreign keys, and a\nbounded busy wait. The fixture pins better-sqlite3 12.9.0. Unknown schema versions\nand missing required tables reject rather than infer a migration. Production\nrecord layout and permanent Machine capability APIs remain implementation work;\nthey must preserve these authority and atomicity boundaries.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "EXP-3"
+    },
+    {
+      "key": "docs/spec/execution.md:409",
+      "owner": "EXP-3",
+      "text": "This selection is bounded process-termination/reopen evidence. It does not prove\npower-loss, device/filesystem failure, network filesystem, distributed clock, or\nmulti-host durability. The logical-time fixture and stale-holder tests are not\na complete concurrent-worker proof. EXP-7 evaluates the selected transition\nmodel; M5 still requires implementation concurrency evidence before any such\nclaim. A model or transaction test does not qualify other storage backends.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "EXP-3"
+    },
+    {
+      "key": "docs/spec/execution.md:416",
+      "owner": "EXP-7",
+      "text": "**EXP-7 historical evidence and selective review policy:** retain the finite TLA+\npublication model as bounded historical protocol-review evidence. Its checked instance contains one subject, two\ncontenders, three stable attempt keys, generations through 3, fences through 2,\nand logical time through 2. It includes current-authority publication, retained\ncomplete references, lease rejection, monotonic allocation, crash/restart,\nrebound attempts, bounded pre-commit retry, and lost acknowledgment. The\nknown-bad configuration removes holder/fence equality while retaining a live\nlease; its stale-writer counterexample must fail the independent authority\ninvariant. The corrected configuration must exhaust the same finite bounds.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "EXP-7"
+    },
+    {
+      "key": "docs/spec/execution.md:426",
+      "owner": "EXP-7",
+      "text": "The [model and original implementation mapping](../../experiments/exp-7/README.md)\nare supporting evidence for PUB-001 through PUB-004, not proof of TypeScript or SQL.\nPayload/fingerprint/provenance content is abstracted to a staged phase;\npublication and rollback are atomic model steps. Time is globally monotonic in\nthe model, while the prototype receives caller-supplied operation times. Model\nacknowledgments and high-water witnesses are ghost observations, not additional\npersistence requirements. There is no liveness/fairness or unbounded-concurrency\nclaim. Real process termination, exact references, and reopened fence allocation\nremain independently tested in EXP-3.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "EXP-7"
+    },
+    {
+      "key": "docs/spec/execution.md:436",
+      "owner": "EXP-7",
+      "text": "Use state modeling selectively when a concrete correctness question benefits\nfrom exploring interleavings or state combinations. A review must state the\nmodeled state, transitions and invariants, finite bounds, abstraction assumptions,\nand a meaningful faulty control. Independently compare each model invariant and\ncounterexample with both the actual implementation code and named test assertions.\nClassify each correspondence as aligned, divergent, missing, insufficient, or\nambiguous. Turn actionable gaps into tests-first implementation work and run\nthose tests in ordinary CI; record model-only assumptions and unproven properties.\nTLC need not run in CI. Finite safety checking proves neither unbounded behavior,\nliveness, nor SQLite correctness, and model review cannot waive M5 implementation\nconcurrency tests. Recheck model correspondence and both configurations when a\ndeliberately retained model is used to assess changed protocol transitions.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "EXP-7"
+    },
+    {
+      "key": "docs/spec/execution.md:449",
+      "owner": "PUB-005",
+      "text": "### PUB-005 \u2014 Contention and waiting report facts accurately",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-005"
+    },
+    {
+      "key": "docs/spec/execution.md:451",
+      "owner": "PUB-005",
+      "text": "An acquisition result meaning \u201cheld\u201d must correspond to an observed applicable\nclaim, not merely a failed compare-and-swap. Distinguish contention/retry from\nownership facts. A waiter does not gain the holder's execution permission or\nrenewal authority. After publication or claim termination, the waiting caller\nmust resolve against its own current arguments and policy; another caller's\ncompletion is not blanket proof of reuse eligibility.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-005"
+    },
+    {
+      "key": "docs/spec/execution.md:458",
+      "owner": "PUB-005",
+      "text": "Exclusive claim protection is the default for memoized work. Two converging\ncallers must wait/reverify rather than deliberately pay twice. An explicitly\nchosen duplicate-execution opt-out is a deferred extension; before it can be\nused it must define allocation, retained attempts, fencing and publication\nordering without weakening these invariants. Lease expiry can still leave a\nstale remote request running; fencing prevents stale publication, not an\nunconditional exactly-once provider execution guarantee.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-005"
+    },
+    {
+      "key": "docs/spec/execution.md:466",
+      "owner": "PUB-006",
+      "text": "### PUB-006 \u2014 Acknowledged resource reporting survives failed publication",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-006"
+    },
+    {
+      "key": "docs/spec/execution.md:468",
+      "owner": "PUB-006",
+      "text": "Execution accounting is independent of successful completion. The persistence\ncontract must identify when a resource report is durably acknowledged and retain\nthat report after process death, failed execution, or rejected publication.\nDo not claim durability for an in-memory accumulator or an unacknowledged\nfire-and-forget write. Missing final observations remain unknown rather than\nbeing inferred as zero or a successful bill. Resource Accounting owns reporting,\ndeduplication, attribution, and gaps; publication must preserve that separation.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-006"
+    },
+    {
+      "key": "docs/spec/execution.md:476",
+      "owner": "PUB-006",
+      "text": "## Required validation fixtures",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-006"
+    },
+    {
+      "key": "docs/spec/execution.md:478",
+      "owner": "PUB-006",
+      "text": "These fixtures supplement the cross-cutting gates in [acceptance](acceptance.md).\nRun durable cases through separate processes and the actual selected backend;\nclosing and reopening an in-memory facade cannot establish restart correctness.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-006"
+    },
+    {
+      "key": "docs/spec/execution.md:482",
+      "owner": "PUB-006",
+      "text": "| Fixture | Assertions | Requirements |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-006"
+    },
+    {
+      "key": "docs/spec/execution.md:483",
+      "owner": "PUB-006",
+      "text": "| --- | --- | --- |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-006"
+    },
+    {
+      "key": "docs/spec/execution.md:484",
+      "owner": "PUB-006",
+      "text": "| Same subject, new display label; same subject text in another analysis | Display rename preserves history lookup; analysis scopes stay distinct | RES-001, RES-002 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-006"
+    },
+    {
+      "key": "docs/spec/execution.md:485",
+      "owner": "PUB-006",
+      "text": "| Publish A then B; read saved A; mutate author-visible previous data | A still resolves exactly; mutation cannot alter storage | RES-002, RES-003, RES-006 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-006"
+    },
+    {
+      "key": "docs/spec/execution.md:486",
+      "owner": "PUB-006",
+      "text": "| Local retain, conditional-check retain, fresh equal fetch | First two preserve A; third creates B; current work differs; cold retain fails | RES-004, RES-005, REUSE-004 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-006"
+    },
+    {
+      "key": "docs/spec/execution.md:487",
+      "owner": "PUB-006",
+      "text": "| Finality hook corrected or input window widened after restart | Current hook runs and can revoke prior acceptance without metadata reset | REUSE-002, REUSE-003 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-006"
+    },
+    {
+      "key": "docs/spec/execution.md:488",
+      "owner": "PUB-006",
+      "text": "| Restart, child implementation changes, new child output projection equal | Current child is revalidated/executed; parent body does not run if all its obligations pass | REUSE-005, REUSE-006, REUSE-008 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-006"
+    },
+    {
+      "key": "docs/spec/execution.md:489",
+      "owner": "PUB-006",
+      "text": "| Restart with reconstructible derived arguments, then with unproven arguments | Proven case validates normally; unproven case honestly misses before normal execution | REUSE-006, REUSE-007 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-006"
+    },
+    {
+      "key": "docs/spec/execution.md:490",
+      "owner": "PUB-006",
+      "text": "| Author A replaced by B with equal name | Value-only consumer may retain; identity consumer invalidates; old provenance stays intact | RES-007, REUSE-005 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-006"
+    },
+    {
+      "key": "docs/spec/execution.md:491",
+      "owner": "PUB-006",
+      "text": "| Same inputs, changed tracked implementation; explicit compatibility change | Each selected control can affect reuse; old histories remain; interaction is recorded | REUSE-008 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-006"
+    },
+    {
+      "key": "docs/spec/execution.md:492",
+      "owner": "PUB-006",
+      "text": "| Two holders with expiry/reacquisition and late A completion | A cannot renew, release, or publish over B; current pointer remains valid | PUB-001, PUB-002 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-006"
+    },
+    {
+      "key": "docs/spec/execution.md:493",
+      "owner": "PUB-006",
+      "text": "| Process death at each selected protocol boundary | Recovery has one documented outcome per state; no partial completed result | PUB-001, PUB-003, PUB-004 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-006"
+    },
+    {
+      "key": "docs/spec/execution.md:494",
+      "owner": "PUB-006",
+      "text": "| Abandonment, restart, and concurrent allocation | Issued attempt identities never repeat; generation numbers, if used, remain monotonic | PUB-003 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-006"
+    },
+    {
+      "key": "docs/spec/execution.md:495",
+      "owner": "PUB-006",
+      "text": "| Contended acquire and waiter with different arguments | No fictitious held outcome; waiter re-verifies its own request | PUB-005 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-006"
+    },
+    {
+      "key": "docs/spec/execution.md:496",
+      "owner": "PUB-006",
+      "text": "| Acknowledged resource report followed by process death | Report survives independently of publication; missing reports stay unknown | PUB-006 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-006"
+    },
+    {
+      "key": "docs/spec/execution.md:498",
+      "owner": "PUB-006",
+      "text": "Diagnostics must identify the scoped subject/candidate and distinguish changed\nobservations, incompatible evidence, missing current correspondence, policy\nacceptance/failure, stale ownership, and storage-integrity failure. Exact error\ncodes and user-facing formatting belong to implementation design. Avoid treating\nall of these as an unexplained generic cache miss.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-006"
+    },
+    {
+      "key": "docs/spec/execution.md:504",
+      "owner": "PUB-006",
+      "text": "## Supersession and bounded remaining work",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-006"
+    },
+    {
+      "key": "docs/spec/execution.md:506",
+      "owner": "PUB-006",
+      "text": "This contract replaces the earlier generation-ID-only nested comparison,\ndisplay-name-derived subject identity, persisted-finality proposals, and\nadvisory-only implementation comparison. Historical Store row shapes are not\nconstraints on the selected lifecycle. Earlier process-local tests do not prove\nthese durable guarantees.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-006"
+    },
+    {
+      "key": "docs/spec/execution.md:512",
+      "owner": "PUB-006",
+      "text": "The remaining execution experiments are current-binding/argument reconstruction,\ncompatibility interaction, and the concrete publication/fencing/recovery\nprotocol. Their deliverables must include counterexamples, selected mechanisms,\ntests, and explicit limits. Reference encodings and public method names may be\nchosen during implementation without reopening the settled semantic behavior.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "PUB-006"
+    },
+    {
+      "key": "docs/spec/operations.md:1",
+      "owner": null,
+      "text": "# Run supervision, CLI, and resource accounting",
+      "disposition": "non-normative-or-unowned-review",
+      "requirementReview": null
+    },
+    {
+      "key": "docs/spec/operations.md:3",
+      "owner": null,
+      "text": "**Status:** normative behavioral contract, consolidated 2026-09-26. This document\nspecifies required outcomes, not implemented capabilities. Mechanisms explicitly\nmarked **Open** are not selected by implication. Requirement identifiers are\nstable; wording and validation fixtures can improve without renumbering them.",
+      "disposition": "non-normative-or-unowned-review",
+      "requirementReview": null
+    },
+    {
+      "key": "docs/spec/operations.md:8",
+      "owner": null,
+      "text": "Long-running analyses must remain understandable while their data is incomplete,\ntheir providers are waiting, and some members have failed. Operators must be able\nto inspect progress, try a deliberately small workload, and stop unwanted work\nwithout confusing observation with permission to spend or partial work with a\ncompleted result.",
+      "disposition": "non-normative-or-unowned-review",
+      "requirementReview": null
+    },
+    {
+      "key": "docs/spec/operations.md:14",
+      "owner": null,
+      "text": "## Scope and ownership",
+      "disposition": "non-normative-or-unowned-review",
+      "requirementReview": null
+    },
+    {
+      "key": "docs/spec/operations.md:16",
+      "owner": null,
+      "text": "[Architecture](architecture.md) defines the six bounded contexts. This document\ngoverns **Run Supervision**, **Resource Accounting**, and the CLI's observation\nboundary. It consumes the public contracts of Definition & Binding, Reuse\nResolution, Tracking & Observation, and Result History & Publication. It does\nnot create a seventh execution authority.",
+      "disposition": "non-normative-or-unowned-review",
+      "requirementReview": null
+    },
+    {
+      "key": "docs/spec/operations.md:22",
+      "owner": null,
+      "text": "Run Supervision owns run lifetime, environment, population/discovery completion,\nadmission, retry/cancellation coordination, and progress. Reuse Resolution decides\ncurrent acceptance. Result History & Publication remains the single owner of\nclaims and publication consistency. Resource Accounting owns reported quantities\nand their attribution, independent of whether a completed result is published.\nProvider adapters translate provider-specific evidence and operations; the CLI\npresents evidence and conveys explicit operator requests.",
+      "disposition": "non-normative-or-unowned-review",
+      "requirementReview": null
+    },
+    {
+      "key": "docs/spec/operations.md:30",
+      "owner": null,
+      "text": "[Execution](execution.md) governs exact result references, attempts, acceptance,\nsource policy, and publication. [Acceptance](acceptance.md) supplies cross-context\nscenarios. [Experiments](experiments.md) separates bounded design investigations\nfrom implementation claims. An unresolved mechanism below is work for the\nowning context; it does not reopen settled product requirements.",
+      "disposition": "non-normative-or-unowned-review",
+      "requirementReview": null
+    },
+    {
+      "key": "docs/spec/operations.md:36",
+      "owner": null,
+      "text": "In this document, an **evaluation** seeks an accepted result for a particular\nscope and current applicable inputs. A **run** supervises participating work.\nA **member** is an occurrence in a collection; it is not synonymous with a network\nrequest or a completed memoized result. An **attempt** can consume resources and\nfail without producing a completed result. These distinctions do not prescribe\npublic class names or a new serialized enum.",
+      "disposition": "non-normative-or-unowned-review",
+      "requirementReview": null
+    },
+    {
+      "key": "docs/spec/operations.md:43",
+      "owner": null,
+      "text": "## Run context and execution boundaries",
+      "disposition": "non-normative-or-unowned-review",
+      "requirementReview": null
+    },
+    {
+      "key": "docs/spec/operations.md:45",
+      "owner": "RUN-001",
+      "text": "### RUN-001 \u2014 Scoped context and lifetime",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-001"
+    },
+    {
+      "key": "docs/spec/operations.md:47",
+      "owner": "RUN-001",
+      "text": "The primary authoring path MUST provide scoped analysis-context access without\nrequiring an extra context argument through ordinary step/helper calls. Nested\nasynchronous executions MUST inherit the selected environment while retaining\ntheir own execution attribution. Concurrent runs MUST remain isolated.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-001"
+    },
+    {
+      "key": "docs/spec/operations.md:52",
+      "owner": "RUN-001",
+      "text": "Environment selection MUST remain stable for the invocation. Volatile metadata\nsuch as a run identifier or cancellation signal MUST NOT invalidate results\nmerely because a new context object exists. Output-affecting configuration MUST\nparticipate in the applicable tracking/compatibility contract. Scoped access\nalone is not a recorded data dependency.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-001"
+    },
+    {
+      "key": "docs/spec/operations.md:58",
+      "owner": "RUN-001",
+      "text": "An execution's lifetime includes its actual lazy asynchronous work, not just\ncreation of an iterator. Closed execution scopes MUST NOT accept newly attributed\nwork through escaped callbacks or retained context operations. Errors and cleanup\nMUST preserve the parent and sibling scopes. An in-memory scope is not, by itself,\na durable recovery mechanism.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-001"
+    },
+    {
+      "key": "docs/spec/operations.md:64",
+      "owner": "RUN-001",
+      "text": "**Validation:** interleave two runs across awaits; resume a generator across\nyields; terminate it by return and by error; verify environment and attribution\nthrough cleanup. After closure, reject attempts to record new work against the\nclosed execution. A new run identifier alone leaves eligible results reusable.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-001"
+    },
+    {
+      "key": "docs/spec/operations.md:69",
+      "owner": "RUN-001",
+      "text": "**Open:** exact context API and extension types; reconstruction protocol across\nprocesses. Recovery must recover the intended environment or fail clearly,\nrather than silently choose the currently active environment.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-001"
+    },
+    {
+      "key": "docs/spec/operations.md:73",
+      "owner": "RUN-002",
+      "text": "### RUN-002 \u2014 Declared work and bounded active execution",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-002"
+    },
+    {
+      "key": "docs/spec/operations.md:75",
+      "owner": "RUN-002",
+      "text": "Supervision MUST operate on the declared step graph and its runtime result\ninstances. Discovering another member or retrying a request does not introduce\na new abstract step or edge. Readiness, source validation, and runtime gates\noperate within that declared structure under the execution contract.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-002"
+    },
+    {
+      "key": "docs/spec/operations.md:80",
+      "owner": "RUN-002",
+      "text": "Fan-out MUST support a bounded active window. Request permits MUST guard the\nactual constrained requests, not entire member subtrees. Waiting for another\nowner's result or for a scheduled retry MUST NOT consume a request permit. Nested\nfan-out MUST avoid a permit arrangement in which parents hold all capacity while\nwaiting for children that require it. Work must not assume that one member's\nsubtree finishes before another starts.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-002"
+    },
+    {
+      "key": "docs/spec/operations.md:87",
+      "owner": "RUN-002",
+      "text": "**Validation:** a large synthetic population keeps active work within the chosen\nbound; a nested group completes with a small permit pool; a converging waiter\nholds no request permit. Growing discovered cardinality does not mutate the\ndeclared graph.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-002"
+    },
+    {
+      "key": "docs/spec/operations.md:92",
+      "owner": "RUN-002",
+      "text": "**Open:** pool implementation, process/thread distribution, defaults, and measured\nlocality policy. These requirements do not select a general scheduler, queue\nservice, or worker deployment.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-002"
+    },
+    {
+      "key": "docs/spec/operations.md:96",
+      "owner": "RUN-002",
+      "text": "**Owner decision (2026-09-30).** One fenced writer per store. Members run\nconcurrently inside one process under a bounded permit pool, and a permit guards\nonly real execution. Another process that needs to write waits for the writer\nlease, taking over an expired lease only through fencing, until an\noperator-supplied deadline. There is no default deadline. At the deadline it\nfails with a typed writer-busy outcome that names the current holder. Read-only\ncheck and inspection never need the lease. Multi-process write parallelism is\ndeferred until measurement justifies it (M7).",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-002"
+    },
+    {
+      "key": "docs/spec/operations.md:105",
+      "owner": "RUN-002",
+      "text": "**M5 selection ([#120](https://github.com/mike-north/microdelta/issues/120)).** The\nrun-wide active window serves only fan-out started by the run's own operations. A\nrun operation that author code starts from inside member or step work, through a\nrun it kept, is an undeclared call. It is refused under [CMP-9](composition.md)\nbefore any of its work is admitted, so a nested fan-out never waits for a lane its\ncaller holds.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-002"
+    },
+    {
+      "key": "docs/spec/operations.md:112",
+      "owner": "RUN-002",
+      "text": "## Readiness, discovery, and previews",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-002"
+    },
+    {
+      "key": "docs/spec/operations.md:114",
+      "owner": "RUN-003",
+      "text": "### RUN-003 \u2014 Readiness is scoped to the consuming calculation",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-003"
+    },
+    {
+      "key": "docs/spec/operations.md:116",
+      "owner": "RUN-003",
+      "text": "A calculation requiring complete inputs MUST wait for its own required discovery\nto close and its required evidence to be accepted for the intended evaluation.\nIt MUST NOT wait for unrelated work elsewhere in the run. The application may\ncompose person, team, and organization scopes; the framework MUST NOT hardcode\nthat hierarchy or impose an organization-wide barrier.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-003"
+    },
+    {
+      "key": "docs/spec/operations.md:122",
+      "owner": "RUN-003",
+      "text": "Eligibility for normal evaluation is not a requirement to execute a body. Once\ninputs are ready, ordinary reuse resolution may retain an eligible prior result.\nReadiness does not require fetching every field again or eagerly loading the\nentire corpus into memory.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-003"
+    },
+    {
+      "key": "docs/spec/operations.md:127",
+      "owner": "RUN-003",
+      "text": "**Example and validation:** hold person B's pagination open while person A's\nrequired evidence completes. A's analysis becomes eligible. A team calculation\nrequiring both remains waiting. For A, unchanged accepted inputs serve the prior\nanalysis without executing its body.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-003"
+    },
+    {
+      "key": "docs/spec/operations.md:132",
+      "owner": "RUN-004",
+      "text": "### RUN-004 \u2014 Discovery closure is evidence, not an elapsed-time heuristic",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-004"
+    },
+    {
+      "key": "docs/spec/operations.md:134",
+      "owner": "RUN-004",
+      "text": "A complete collection MUST distinguish closed discovery from unfinished discovery.\nA quiet interval, an empty page with a continuation, all currently discovered\npromises resolving, or available historical rows MUST NOT establish closure.\nA source failure or author-imposed limit MUST NOT masquerade as successful\nexhaustion of a broader source query.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-004"
+    },
+    {
+      "key": "docs/spec/operations.md:140",
+      "owner": "RUN-004",
+      "text": "Intermediate arrivals while building a required corpus fulfill that pending\ndependency. They MUST NOT each authorize another paid analysis of the purportedly\ncomplete corpus. Previously retained corpus data may be previewed, but its\nexistence does not prove completion or current acceptance for this evaluation.\nA successfully closed empty collection is distinct from an unavailable or\nunfinished collection.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-004"
+    },
+    {
+      "key": "docs/spec/operations.md:147",
+      "owner": "RUN-004",
+      "text": "**Validation:** resolve all members of page one while holding a later page; the\nstrict corpus consumer remains unstarted. An empty final page can close a source\nonly under its actual continuation contract. A closed zero-member population is\nrecognized as complete without being confused with missing data.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-004"
+    },
+    {
+      "key": "docs/spec/operations.md:152",
+      "owner": "RUN-004",
+      "text": "**Open:** source-specific consistency and closure evidence; how genuinely newer\ninputs affect an already-running calculation. Neither a fixed historical period\nnor a local enumeration identifier proves a remote snapshot is stable.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-004"
+    },
+    {
+      "key": "docs/spec/operations.md:156",
+      "owner": "RUN-005",
+      "text": "### RUN-005 \u2014 Member readiness and collection readiness are independent",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-005"
+    },
+    {
+      "key": "docs/spec/operations.md:158",
+      "owner": "RUN-005",
+      "text": "A member calculation MUST be permitted when that member's required evidence is\nready, even if discovery of other members remains open. A collection fold requiring\nthe full set MUST wait for the corresponding closure and member outcomes.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-005"
+    },
+    {
+      "key": "docs/spec/operations.md:162",
+      "owner": "RUN-005",
+      "text": "For the roster workload, discovery is a separate non-memoized paginated step.\nCompleted per-PR retrieval and assessment results can remain reusable across\nrediscovery. Cached pages MUST NOT be assumed valid solely from unchanged cursor\ntext or query parameters. Any future page reuse requires a source-specific\nvalidity contract; arbitrary JavaScript continuation recovery is not implied.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-005"
+    },
+    {
+      "key": "docs/spec/operations.md:168",
+      "owner": "RUN-005",
+      "text": "**Validation:** PR A's complete evidence starts its assessment while page two is\npending. The person's strict summary remains waiting. Page two then fails; the\nnext authorized evaluation rediscovering the population can reuse A's eligible\ncompleted result. Moving records between pages neither proves completeness nor\nforces unaffected per-PR computations to execute again.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-005"
+    },
+    {
+      "key": "docs/spec/operations.md:174",
+      "owner": "RUN-006",
+      "text": "### RUN-006 \u2014 Preview access does not authorize recomputation",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-006"
+    },
+    {
+      "key": "docs/spec/operations.md:176",
+      "owner": "RUN-006",
+      "text": "Observation MUST be separate from verified evaluation. Reading a preview MUST\nNOT dispatch a memoized body, initiate source refresh, or schedule retries merely\nto make the display current. A supported provisional calculation may consume\navailable previews, but it MUST NOT recursively authorize memoized work.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-006"
+    },
+    {
+      "key": "docs/spec/operations.md:181",
+      "owner": "RUN-006",
+      "text": "The working authoring convention is that ordinary non-memoized calculations may\nrecompute provisional displays, while memoized calculations expose prior previews\nand wait for their ready inputs through normal evaluation. This convention is\nnot a measurement of cost or a guarantee that arbitrary user code is pure.\nMissing-input handling MUST be explicit. A provisional result MUST NOT satisfy a\nverified read solely because it contains a usable-looking value.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-006"
+    },
+    {
+      "key": "docs/spec/operations.md:188",
+      "owner": "RUN-006",
+      "text": "**Validation:** repeatedly inspect or refresh a histogram while source data is\npending. Memoized source and analysis invocation counts remain unchanged. A\nprovisional sum can update from explicitly available inputs without admitting\nupstream paid calls. Absent values do not silently become zero.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-006"
+    },
+    {
+      "key": "docs/spec/operations.md:193",
+      "owner": "RUN-006",
+      "text": "**Open:** override syntax and supported provisional-calculation API. Read-only\ninspection in CLI-001 does not run arbitrary user-defined preview bodies.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-006"
+    },
+    {
+      "key": "docs/spec/operations.md:196",
+      "owner": "RUN-007",
+      "text": "### RUN-007 \u2014 Preview envelopes preserve availability, freshness, and errors",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-007"
+    },
+    {
+      "key": "docs/spec/operations.md:198",
+      "owner": "RUN-007",
+      "text": "Previews MUST expose the latest available value through a library envelope that\nkeeps framework status separate from author data and requires explicit unwrapping.\nUnavailable, available-but-unverified/stale, and accepted data MUST be\ndistinguishable. Legitimate empty values, zero, or a successful `undefined` MUST\nNOT stand in for unavailable data or failure.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-007"
+    },
+    {
+      "key": "docs/spec/operations.md:204",
+      "owner": "RUN-007",
+      "text": "If a refresh fails, a previous value MUST remain available with its stale status\nand the refresh error. If no value exists, expose unavailability and the error.\nA verified read MUST report the failure instead of silently returning the stale\npreview as success. A failed attempt does not become a completed result envelope.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-007"
+    },
+    {
+      "key": "docs/spec/operations.md:209",
+      "owner": "RUN-007",
+      "text": "**Validation:** refresh with and without a prior value; assert visible error and\nstatus in both cases. Change freshness while preserving equal author data and\nensure observers can see the status change. A verified consumer never receives\nthe stale fallback as an accepted result.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-007"
+    },
+    {
+      "key": "docs/spec/operations.md:214",
+      "owner": "RUN-007",
+      "text": "**Open:** discriminants, error retention across later coalesced updates, and\nobserver attachment/disposal lifetime. Disposing an observer must not silently\nselect an otherwise unspecified execution-cancellation policy.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-007"
+    },
+    {
+      "key": "docs/spec/operations.md:218",
+      "owner": "RUN-008",
+      "text": "### RUN-008 \u2014 Throttled observation remains live and bounded",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-008"
+    },
+    {
+      "key": "docs/spec/operations.md:220",
+      "owner": "RUN-008",
+      "text": "Preview delivery MUST support optional throttling: continued arrivals permit\nperiodic latest-state delivery without requiring a quiet interval, and the final\ncoalesced state MUST be delivered after activity settles. Throttling MUST NOT\nrenew a claim, establish readiness, or authorize expensive work.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-008"
+    },
+    {
+      "key": "docs/spec/operations.md:225",
+      "owner": "RUN-008",
+      "text": "Updating an existing member's contribution MUST replace its prior contribution\nin a preview aggregate rather than count two result snapshots as two members.\nSettled aggregates MUST reflect established removals. Observation of selected\nfields MUST NOT require materializing every member's unrelated large payload.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-008"
+    },
+    {
+      "key": "docs/spec/operations.md:230",
+      "owner": "RUN-008",
+      "text": "**Validation:** use a controlled clock to sustain arrivals across several throttle\nintervals, then stop. Observe periodic delivery and the final state; inspect\nactual payload reads and refresh work. Refresh one PR into another histogram\nbucket and verify it contributes once.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-008"
+    },
+    {
+      "key": "docs/spec/operations.md:235",
+      "owner": "RUN-008",
+      "text": "**Open:** interval defaults, leading/trailing details, treatment of retained old\nmembers during an unfinished refresh, and storage-specific aggregate optimization.\nNo general SQL query engine or incremental aggregate engine is selected.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-008"
+    },
+    {
+      "key": "docs/spec/operations.md:239",
+      "owner": "RUN-008",
+      "text": "## Failure, retry, and cancellation",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-008"
+    },
+    {
+      "key": "docs/spec/operations.md:241",
+      "owner": "RUN-009",
+      "text": "### RUN-009 \u2014 Independent siblings continue after isolated failure",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-009"
+    },
+    {
+      "key": "docs/spec/operations.md:243",
+      "owner": "RUN-009",
+      "text": "An isolated member failure MUST NOT, by default, abort independent siblings,\nerase their completed results, or force wholesale paid re-execution. Failed\nmembers, their errors, and their downstream impact MUST remain observable.\nConsumers requiring a failed member's accepted result MUST remain blocked or\nreport failure explicitly. Failure is an expected operating condition at scale.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-009"
+    },
+    {
+      "key": "docs/spec/operations.md:249",
+      "owner": "RUN-009",
+      "text": "This continuation rule MUST NOT be interpreted as permission to keep publishing\nwhen shared storage correctness or ownership cannot be established. A group\nfailure does not roll back independently committed member results or external\nresource consumption.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-009"
+    },
+    {
+      "key": "docs/spec/operations.md:254",
+      "owner": "RUN-009",
+      "text": "**Validation:** fail one PR assessment while independent assessments complete;\ntheir results remain reusable. The failed member's strict consumer does not\nsilently omit it. A storage-ownership failure is distinguishable from an isolated\nprovider failure and cannot fabricate successful publication.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-009"
+    },
+    {
+      "key": "docs/spec/operations.md:259",
+      "owner": "RUN-010",
+      "text": "### RUN-010 \u2014 Strict and outcome folds have different contracts",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-010"
+    },
+    {
+      "key": "docs/spec/operations.md:261",
+      "owner": "RUN-010",
+      "text": "A strict complete-success fold MUST require closed discovery and accepted results\nfor every required member. Failure, refusal, cancellation, or unfinished work\nMUST NOT silently disappear from its required population.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-010"
+    },
+    {
+      "key": "docs/spec/operations.md:265",
+      "owner": "RUN-010",
+      "text": "Authors MUST also be able to fold all settled outcomes, including failure\nstatistics, or explicitly select successful results. That selection MUST remain\ndistinguishable from complete success of the original population. Coverage,\nmembership, and consumed outcome status MUST participate in verification so that\nrepairing a failed member can update affected aggregates. Unchanged independent\nmember results remain reusable.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-010"
+    },
+    {
+      "key": "docs/spec/operations.md:272",
+      "owner": "RUN-010",
+      "text": "A pending retry is not a terminal failure. An outcome fold MUST NOT claim its\nset is complete while required discovery or relevant attempts remain unsettled.\nSemantic completeness does not require a separate durable dependency row for\neach member; representation follows the tracking contract.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-010"
+    },
+    {
+      "key": "docs/spec/operations.md:277",
+      "owner": "RUN-010",
+      "text": "**Validation:** one failed member prevents a strict fold; an explicitly tolerant\nfold reports the failure. Repair it, then verify the tolerant/success-only fold\nreconsiders its input and unaffected member bodies stay unexecuted.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-010"
+    },
+    {
+      "key": "docs/spec/operations.md:281",
+      "owner": "RUN-010",
+      "text": "**Open:** operator repair within an active run. Do not conflate skipped,\npending, cancelled, failed, and successful-empty outcomes.\n[EXP-4](../../experiments/exp-4/decision.md) selects the strict fold's treatment\nof a gated-out member ([CMP-8](composition.md)): the gate declares the required\npopulation, and a skipped member is an explicit data-free entry outside it. The\nM5 selection below settles the outcome-fold API and its treatment of skips.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-010"
+    },
+    {
+      "key": "docs/spec/operations.md:288",
+      "owner": "RUN-010",
+      "text": "**Owner decision (2026-09-30).** Outcome (tolerant) folds are in M5 scope. They\nreceive every member's settled status with coverage. They never claim completeness\nwhile discovery or required attempts are unsettled, and repairing a failed member\nmakes them reconsider their input.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-010"
+    },
+    {
+      "key": "docs/spec/operations.md:293",
+      "owner": "RUN-010",
+      "text": "**M5 selection ([#120](https://github.com/mike-north/microdelta/issues/120)).**\n- **Declaration.** An outcome fold is its own composition-level step kind, never\n  a child, member step or template step. It names the consumed template step as a\n  strict fold does.\n- **Settled statuses.** Each member settles in the pass as succeeded (an accepted\n  result), skipped (its gate), failed (a member-attributable typed failure) or\n  cancelled (work withdrawn from this run: refused by admission as cancelled, or\n  interrupted by a stop). Denied work leaves a member pending, which is\n  unsettled. An operation whose outcome is unknown (RUN-012) is unsettled too;\n  [#119](https://github.com/mike-north/microdelta/issues/119) introduces that\n  status.\n- **Completeness.** While discovery is open or a member is unsettled, the fold\n  waits with partial coverage. It runs no body, admits no fold work and publishes\n  nothing. A rejected or cancelled discovery fails it, because no population can\n  be established in that pass.\n- **Entries.** Once every member of a closed population has settled, the body\n  receives one entry per member with its status. Only a succeeded entry carries\n  data. A gated-out member is an explicit skipped entry, which settles the open\n  question about tolerant treatment of skips.\n- **Verification.** The fold's evidence is its membership-and-status fact plus\n  the member facts its body read. Repairing a failed member changes that fact, so\n  the fold reconsiders, while unaffected member results are reused.\n- **Coverage.** Framework coverage names every member under exactly one status,\n  whether discovery is open, and whether the set is complete. It is never a claim\n  of complete success. A cancelled member is settled-not-successful for that run\n  only; a later run attempts it again.\n- **Separation.** Strict and outcome folds record distinct provenance versions and\n  step kinds, so neither contract ever accepts the other's result.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-010"
+    },
+    {
+      "key": "docs/spec/operations.md:322",
+      "owner": "RUN-011",
+      "text": "### RUN-011 \u2014 Retry support includes unattended quota waits",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-011"
+    },
+    {
+      "key": "docs/spec/operations.md:324",
+      "owner": "RUN-011",
+      "text": "The system MUST support retries for recognized recoverable failures and rate\nlimits, including policies that resume after waits lasting hours. The operator\nmust not need to restart or repair every recognized quota deferral manually.\nApplicable retry policy determines eligibility, limits, and resumption; retries\nare not implicit behavior of storage, observation, or accounting.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-011"
+    },
+    {
+      "key": "docs/spec/operations.md:330",
+      "owner": "RUN-011",
+      "text": "Deferred work MUST show why it is waiting and any known next eligible time.\nIndependent work outside the affected resource scope can continue. A run with\nno currently admissible work may be honestly idle awaiting a reset. Unknown\nreset times, permanent failures, and exhausted policy MUST NOT become fabricated\nprogress or an unconditional promise of eventual success.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-011"
+    },
+    {
+      "key": "docs/spec/operations.md:336",
+      "owner": "RUN-011",
+      "text": "Retry policy MUST distinguish another request attempt within a body from a new\ndurable step attempt. It MUST NOT indiscriminately replay earlier successful paid\nwork in an enclosing body. Waiting MUST NOT retain request permits or invent\nchanging progress values to keep a claim alive. The claim/deferral protocol must\npreserve publication ownership and prevent unintended duplicate execution.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-011"
+    },
+    {
+      "key": "docs/spec/operations.md:342",
+      "owner": "RUN-011",
+      "text": "**Validation:** a controlled provider reports a future reset; no premature or\nbusy-loop requests occur; unrelated work proceeds; permitted work resumes when\neligible. Trace both request and step attempt boundaries. Test cancellation\nduring the wait and claim ownership through the selected deferral protocol.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-011"
+    },
+    {
+      "key": "docs/spec/operations.md:347",
+      "owner": "RUN-011",
+      "text": "**Open:** policies/defaults, coordinated cooldown representation, claim transitions\nduring long deferral, deadlines, and durable deferred-work recovery after process\nrestart. Durable deferral is not promised merely because results are durable.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-011"
+    },
+    {
+      "key": "docs/spec/operations.md:351",
+      "owner": "RUN-011",
+      "text": "**Owner decision (2026-09-30).**\n- **Retries by default.** Rate-limit and quota responses that carry a retry time\n  are retried by default.\n- **Deferral.** The retry goes through a **durable deferral** that records \"not\n  before T\". The deferral releases the writer lease and holds no execution permit.\n- **Waiting mode.** By default the process sleeps and resumes. A run may instead\n  exit and report \"waiting until T\".\n- **Restarts.** Later runs admit the deferred work no earlier than T and reuse\n  completed work.\n- **Other failures.** Other transient failures retry only under an author-declared\n  policy with limits and backoff.\n- **Mutations** never retry blindly.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-011"
+    },
+    {
+      "key": "docs/spec/operations.md:364",
+      "owner": "RUN-011",
+      "text": "[EXP-8](experiments.md) selects the concrete deferral record and resume mechanics.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-011"
+    },
+    {
+      "key": "docs/spec/operations.md:366",
+      "owner": "RUN-011",
+      "text": "**Selected mechanism (M5, #119).**\n- **Policy.** A rate or quota response with a retry time defers its operation\n  durably (\"not before T\") and is retried by default, at most 5 times unless\n  the author's policy sets another cap; the next refusal fails it as\n  exhausted. A transient failure (including a rate limit without a retry time)\n  retries only within the author's `maxAttempts`, after a backoff that is\n  itself a short durable deferral holding no permit and lending its member's\n  window lane. A permanent refusal is final.\n- **Pending, not failed.** A deferral ends the step attempt without a result;\n  the step stays pending (never failed or cancelled) and its member reports\n  the deferral and its time.\n- **Passes.** A normal request runs in passes. Once only deferred work\n  remains, the run releases the writer lease. In sleep mode it waits for the\n  earliest time (any stop ends the wait) and runs another pass, under the\n  derived request key `<key>#pass:<n>` (a caller's normal request key may not\n  contain `#pass:`), in which the deferred work resumes\n  under the same operation identities and work that settled in an earlier\n  pass, such as a failed member, is not executed again. A woken pass obtains\n  the writer lease as any normal request does (RUN-002 owner decision): it\n  waits while another process holds it, until an operator deadline, with no\n  default deadline. In exit mode it returns and reports the time. A strict fold that has failed is returned\n  without waiting.\n- **Restarts.** Admission reads each step's unsettled operations before the\n  caller's policy: before T it denies the work and the run waits or exits\n  until T; after T it admits it, and the operation is retried under its\n  identity. A stop refuses resumed deferrals.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-011"
+    },
+    {
+      "key": "docs/spec/operations.md:393",
+      "owner": "RUN-012",
+      "text": "### RUN-012 \u2014 External idempotency belongs to the logical operation",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-012"
+    },
+    {
+      "key": "docs/spec/operations.md:395",
+      "owner": "RUN-012",
+      "text": "Supported retry facilities MUST accommodate provider idempotency for ambiguous\nexternal mutations. An uncertain response is not evidence that no side effect\noccurred. Retrying the same intended operation requires the corresponding stable\noperation identity and equivalent request binding under that provider's contract;\na deliberately new operation must remain distinct.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-012"
+    },
+    {
+      "key": "docs/spec/operations.md:401",
+      "owner": "RUN-012",
+      "text": "One step can perform several external operations, and several network attempts\ncan belong to one operation. A result subject, a fresh attempt identifier, or an\naccidental call index MUST NOT silently substitute for that distinction. Recovery\nmust not claim safe replay when it cannot reconstruct the required operation\nidentity/binding. A provider without suitable idempotency support requires an\nexplicit policy for ambiguous writes, not an automatic safety guarantee.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-012"
+    },
+    {
+      "key": "docs/spec/operations.md:408",
+      "owner": "RUN-012",
+      "text": "**Validation:** a fake provider commits then loses its response. Repeat the same\nlogical operation and verify one mutation. Exercise multiple operations per step,\nchanged parameters, a deliberately new operation, expired provider deduplication,\nand unsupported idempotency. Ambiguity remains visible. If restart-safe replay is\npromised, interrupt before/after send and prove the original binding is recovered.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-012"
+    },
+    {
+      "key": "docs/spec/operations.md:414",
+      "owner": "RUN-012",
+      "text": "**Open:** addressing/API, persistence-before-send protocol, and provider-specific\nrecovery policy. General reconciliation and universal exactly-once remote\nexecution are outside this requirement.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-012"
+    },
+    {
+      "key": "docs/spec/operations.md:418",
+      "owner": "RUN-012",
+      "text": "**Owner decision (2026-09-30).** A stable operation identity is persisted before\nevery external call. When the provider offers no idempotency and a response is\nlost, the outcome is **unknown** and there is no automatic replay. The author may\ndeclare an operation safe to repeat, which permits a retry under the same\noperation identity. Otherwise the operator decides.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-012"
+    },
+    {
+      "key": "docs/spec/operations.md:424",
+      "owner": "RUN-012",
+      "text": "**Selected mechanism (M5, #119).**\n- **Addressing.** An operation is addressed by its step attempt's subject, an\n  identifier name and an author-supplied binding digest. An unsettled\n  operation at an address (pending, deferred or unknown) keeps its identity\n  for every retry; a settled address or a changed binding is a new operation.\n- **Intent before send.** After the permit is held and stop intent rechecked,\n  one fenced commit through History's operation journal records the operation\n  as pending with the new request attempt, then Accounting records the usage\n  intent; only then is the request sent. A failure of either write sends\n  nothing and leaves the step pending on a deferral, never failed: the work is\n  retried after it, backing off exponentially per operation (1 s, doubling,\n  capped at 60 s). When the intent may have landed (its commit was not\n  confirmed), the retry reuses the unsent request attempt with its original\n  attribution, so the intent is restated idempotently and receives the send's\n  usage; when it certainly recorded nothing (a busy store), the retry is a\n  fresh request attempt with the current attribution. An operation identity carries 128 random bits from\n  the host, so it never repeats across stores, processes or hosts; it is also\n  the provider idempotency key and is kept by every retry. Only one call at an\n  address may be in progress in a run, and an attempt that ended sends\n  nothing.\n- **Unknown outcomes.** A lost response, or one the adapter cannot classify,\n  is unknown. It is retried only with a safety basis (the author's\n  safe-to-repeat declaration, or provider idempotency keys, which carry the\n  operation identity) and a policy allowing another attempt. Otherwise the\n  step attempt is tainted: every later call it makes rethrows the signal\n  without sending, its step stays pending, and later runs are denied\n  admission until an operator resolves or abandons the operation. An\n  operation that a dead run, or a run that lost its lease, left in flight is\n  recorded unknown by the next writer.\n- **Operator settlement.** Resolving records the asserted outcome and\n  acknowledges usage the operator learned through Accounting under an\n  operator-namespaced report identity; abandoning leaves the usage unknown.\n  Both are fenced journal commits, and both unblock the step.\n  - **Resolved as succeeded.** The effect happened, so the address stays\n    consumed: a later call at the same subject, name and binding mints and\n    sends nothing and fails with a typed `operation-resolved` code that\n    carries no value. The author may catch it; uncaught, the step attempt\n    fails, naming the code. Mutations are never retried blindly (A-12).\n    The address stays consumed until the operator abandons the operation,\n    which frees it and explicitly authorizes a possible second effect\n    ([#121](https://github.com/mike-north/microdelta/issues/121)). A second\n    resolution is refused, and so is abandoning an operation resolved as\n    failed, whose address is already free.\n  - **Resolved as failed** asserts that nothing happened, and frees the\n    address for a new operation.\n  - **Abandoned.** The address is free: abandoning is the operator's explicit\n    authorization of a possible second effect.\n  - A resolution that supplies the operation's result is deferred to M6.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-012"
+    },
+    {
+      "key": "docs/spec/operations.md:473",
+      "owner": "RUN-013",
+      "text": "### RUN-013 \u2014 Retry history is part of supervision",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-013"
+    },
+    {
+      "key": "docs/spec/operations.md:475",
+      "owner": "RUN-013",
+      "text": "Observations MUST correlate the logical external operation, its request attempts,\nthe enclosing step attempt, member, and run where applicable. Distinguish failure,\nretry scheduled, waiting for eligibility, retry started, success, policy exhausted,\ncancellation, and unresolved remote outcome. A scheduled retry MUST NOT be counted\nas another completed request or settled member.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-013"
+    },
+    {
+      "key": "docs/spec/operations.md:481",
+      "owner": "RUN-013",
+      "text": "**Validation:** a transient failure followed by success, a long quota wait,\nexhaustion with continuing siblings, and an idempotent recovery all preserve\ncorrelation and ordering. Attaching a trace consumer does not initiate a retry.\nACC-002 and ACC-003 prevent duplicated resource totals across these views.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-013"
+    },
+    {
+      "key": "docs/spec/operations.md:486",
+      "owner": "RUN-013",
+      "text": "**Owner decision (2026-09-30).** Every retry is correlated with its operation,\nattempt, member and run identities. Inspectable events carry identifiers,\nstatuses, timings, usage figures and exact result references only. They never\ncarry input, output or argument values, or provider request or response bodies.\nDiagnostics name fields and keys, not their contents.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-013"
+    },
+    {
+      "key": "docs/spec/operations.md:492",
+      "owner": "RUN-013",
+      "text": "**Selected mechanism (M5, #119).** Operation events carry the operation, request\nattempt, step attempt (History's never-reused attempt identity), member and run\nidentities, a closed phase, status and reason code, the time, usage quantities\nwhose units are identifiers (others are dropped from the event and diagnosed by\ncode; Accounting keeps them), and the remote state. Wait events carry the\nearliest deferral time and whether the lease was released. Neither has a field\nfor a binding, argument, value, provider body or error message, and operation\nnames and operator identities must be identifiers. Framework failure messages\nand diagnostics name the step or position and the failure kind only. What author\nor caller code throws (bodies, checks, hooks, gates, custom keys, subject\nfunctions, admission, observers, abort listeners) never enters them. Where a\nfailure is returned to the caller, that error is kept as its `cause`.\nAdmission-denial reasons are strings the caller's admission policy chooses, not\nauthor error text, and are repeated as given.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-013"
+    },
+    {
+      "key": "docs/spec/operations.md:507",
+      "owner": "RUN-014",
+      "text": "### RUN-014 \u2014 Cancellation conveys escalating intent honestly",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-014"
+    },
+    {
+      "key": "docs/spec/operations.md:509",
+      "owner": "RUN-014",
+      "text": "Cancellation support MUST let an operator request that avoidable work stop even\nwhen the current unfinished step will yield no reusable result. Participating\nbodies/adapters must be able to receive cooperative stop intent; capable adapters\nmay request provider cancellation. The system MUST distinguish requested stop,\nlocal stopping, provider cancellation requested, confirmed remote cancellation,\nand unknown remote outcome.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-014"
+    },
+    {
+      "key": "docs/spec/operations.md:516",
+      "owner": "RUN-014",
+      "text": "Once a scope's selected stop policy prohibits further admission, participating\nrequests and scheduled retries MUST NOT revive that work. Cancelling one waiter\nMUST NOT silently cancel work still required by another consumer. Arbitrary\nsynchronous JavaScript and remote services are not made forcibly cancellable by\na local signal.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-014"
+    },
+    {
+      "key": "docs/spec/operations.md:522",
+      "owner": "RUN-014",
+      "text": "The CLI MUST convey first-interrupt soft-stop intent and second-interrupt stronger\nshutdown intent. This does **not** select whether soft stop drains current requests\nor complete steps, a cleanup deadline, or a universal remote billing cutoff.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-014"
+    },
+    {
+      "key": "docs/spec/operations.md:526",
+      "owner": "RUN-014",
+      "text": "**Validation:** stop during an active request, while waiting for a quota reset,\nand as a result finishes. Distinguish local cancellation from provider-confirmed\ncancellation; preserve completed results and received resource observations.\nExercise shared consumers without silently transferring cancellation authority.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-014"
+    },
+    {
+      "key": "docs/spec/operations.md:531",
+      "owner": "RUN-014",
+      "text": "**Open:** active-work policy, exact propagation scopes, shared-work ownership,\ndeadlines, publication/cancellation race rule, and final exit behavior. These must\nbe specified and tested before end-to-end cancellation is declared complete.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-014"
+    },
+    {
+      "key": "docs/spec/operations.md:535",
+      "owner": "RUN-014",
+      "text": "**Owner decision (2026-09-30).** A soft stop admits no new work and drains\nin-flight work, with **no default deadline**. An operator deadline or a hard stop\nescalates it. A hard stop aborts author bodies and marks their attempts\ninterrupted. Remote state is recorded as cancelled, still running or unknown,\nnever omitted. [EXP-8](experiments.md) selects the drain unit, the escalation\nmechanics and the publication/cancellation race rule.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-014"
+    },
+    {
+      "key": "docs/spec/operations.md:542",
+      "owner": "RUN-014",
+      "text": "**Selected mechanism (M5, #119).** The remote state of an external operation's\naborted request attempt is committed through the operation journal by operation\nand request attempt, so later runs and the operator see it after a restart. A\nprovider-confirmed cancellation settles the operation; `running` or `unknown`\nleaves it unknown and its step blocked until an operator settles it.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-014"
+    },
+    {
+      "key": "docs/spec/operations.md:548",
+      "owner": "RUN-015",
+      "text": "### RUN-015 \u2014 Partial work is not a completed result",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-015"
+    },
+    {
+      "key": "docs/spec/operations.md:550",
+      "owner": "RUN-015",
+      "text": "Completing one request inside a multi-request body MUST NOT create an implicit\nreusable result for that body. Failure or cancellation preserves attempt evidence\nand received resource observations; it does not manufacture a completed output.\nOnly independently managed completed child results receive their own normal\nreuse guarantees. No arbitrary request checkpoint or suspended-JavaScript resume\ncapability is implied.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-015"
+    },
+    {
+      "key": "docs/spec/operations.md:557",
+      "owner": "RUN-015",
+      "text": "The run MUST use Result History & Publication's ownership protocol for success,\nabandonment, release, and expiry. Progress reporting must describe actual work;\ntimer-driven synthetic renewal is forbidden. Normal caught failure must release\nownership promptly through that protocol, rather than waiting for a lease timeout.\nCrash expiry remains a recovery backstop, not proof of remote cancellation.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-015"
+    },
+    {
+      "key": "docs/spec/operations.md:563",
+      "owner": "RUN-015",
+      "text": "**Validation:** cancel after request one of three. Preserve its observed usage\nand any separately completed child result, but expose no completed parent result.\nRepeated identical lease-extension progress is rejected; a hung body cannot keep\nownership indefinitely through a timer. Stale-holder publication tests belong\nalso to the execution contract.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-015"
+    },
+    {
+      "key": "docs/spec/operations.md:569",
+      "owner": "RUN-015",
+      "text": "## Trials and environment protection",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-015"
+    },
+    {
+      "key": "docs/spec/operations.md:571",
+      "owner": "RUN-016",
+      "text": "### RUN-016 \u2014 Trial scope is authored and executes the real pipeline",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-016"
+    },
+    {
+      "key": "docs/spec/operations.md:573",
+      "owner": "RUN-016",
+      "text": "Trial mode MUST support reusable author-defined filters, selections, and limits\nin the program. It MUST admit only the selected workload to excluded members'\nexpensive stages. Limiting concurrency alone does not implement trial scope.\nSelected members traverse the real pipeline, including downstream aggregation;\ntrial execution may incur actual provider charges.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-016"
+    },
+    {
+      "key": "docs/spec/operations.md:579",
+      "owner": "RUN-016",
+      "text": "Selecting people MUST NOT silently truncate each selected person's required\nhistory. Any additional limit changes the declared scope and must be visible.\nIntentional exclusion, failure, missing data, and complete empty data MUST remain\ndistinguishable. A result complete for one team MUST NOT satisfy a request for\ncomplete organization coverage merely because its value has the expected shape.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-016"
+    },
+    {
+      "key": "docs/spec/operations.md:585",
+      "owner": "RUN-016",
+      "text": "**Validation:** author selects two staff engineers, one designer, and two product\nmanagers. No excluded person's provider work starts; selected people retain their\nfull declared corpus. An explicit PR cap is labeled as restricted scope, never\nas source exhaustion. Normal mode does not apply trial-only filters.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-016"
+    },
+    {
+      "key": "docs/spec/operations.md:590",
+      "owner": "RUN-017",
+      "text": "### RUN-017 \u2014 Environment protection covers more than result labels",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-017"
+    },
+    {
+      "key": "docs/spec/operations.md:592",
+      "owner": "RUN-017",
+      "text": "Trial iteration and cleanup MUST protect full-analysis data. The effective\nenvironment boundary must cover results, mutable heads, claims, acceptance and\naccounting records, and cleanup authority as applicable. Concurrent environments\nMUST NOT be routed through a mutable process-global selection. Environment labels\nalone do not establish isolation, and isolated local storage does not establish\nisolation of external side effects.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-017"
+    },
+    {
+      "key": "docs/spec/operations.md:599",
+      "owner": "RUN-017",
+      "text": "Within the same compatible environment, repeated trials and widening scope MUST\nreuse eligible completed member work while affected aggregates reconsider their\nmembership. Crossing from trial into production MUST NOT imply automatic cache\nsharing or promotion. Cleanup must also preserve the retained-reference and\npaid-result guarantees in the execution contract; absent observed spend is not\nproof that deleting a result is permitted.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-017"
+    },
+    {
+      "key": "docs/spec/operations.md:606",
+      "owner": "RUN-017",
+      "text": "**Validation:** run trial and production concurrently; inspect store/claim routing\nand cleanup. Clearing trial data cannot delete production results or break\nretained references. Widen trial membership and reuse unaffected eligible member\nresults. Separate external-output destinations are exercised where the application\nperforms writes.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-017"
+    },
+    {
+      "key": "docs/spec/operations.md:612",
+      "owner": "RUN-017",
+      "text": "**Open:** separate storage remains the recommended default, but exact backend or\nnamespace routing, external destinations, and deliberate import/promotion rules\nare unresolved. This does not select a promotion feature.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-017"
+    },
+    {
+      "key": "docs/spec/operations.md:616",
+      "owner": "RUN-017",
+      "text": "**Owner decision (2026-09-30), superseding the separate-storage recommendation\nabove.** Environments are **namespaced within one store**. Results, current heads,\nclaims, acceptances, accounting and cleanup are all isolated per environment.\nTrial work satisfies production only through an explicit, recorded promotion. The\nenvironment is selected per run, never process-wide. External destinations remain\nopen.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-017"
+    },
+    {
+      "key": "docs/spec/operations.md:623",
+      "owner": "RUN-018",
+      "text": "### RUN-018 \u2014 Trial adequacy is distinct from execution success",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-018"
+    },
+    {
+      "key": "docs/spec/operations.md:625",
+      "owner": "RUN-018",
+      "text": "The system MUST NOT claim semantic trial coverage or representativeness merely\nbecause every stage ran or every input was nonempty. The author defines meaningful\ntrial selection. Optional future coverage assistance must preserve unknowns and\nmust not silently expand paid work to satisfy inferred goals.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-018"
+    },
+    {
+      "key": "docs/spec/operations.md:630",
+      "owner": "RUN-018",
+      "text": "**Validation:** a trial with no staff engineers legitimately produces an empty\nleadership input; it can succeed without exercising leadership analysis. A\nsingle-point box plot is execution-successful without proving useful variation.\nAutomatic economical subset selection is not a prerequisite for trial mode.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-018"
+    },
+    {
+      "key": "docs/spec/operations.md:635",
+      "owner": "RUN-018",
+      "text": "## CLI and read-side delivery",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "RUN-018"
+    },
+    {
+      "key": "docs/spec/operations.md:637",
+      "owner": "CLI-001",
+      "text": "### CLI-001 \u2014 Read-only inspection is an explicit delivery checkpoint",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "CLI-001"
+    },
+    {
+      "key": "docs/spec/operations.md:639",
+      "owner": "CLI-001",
+      "text": "A usable read-only CLI MUST be delivered and validated as its own named checkpoint,\nnot buried inside the final provider-backed demonstration. It MUST inspect retained\nresults/attempts, dependency and acceptance evidence, errors, and observed resource\nusage using public read-side contracts. It MUST show when evidence is absent or\nhas not been validated for the current evaluation.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "CLI-001"
+    },
+    {
+      "key": "docs/spec/operations.md:645",
+      "owner": "CLI-001",
+      "text": "Inspection MUST NOT execute analysis bodies, invoke current source policy hooks,\nrefresh providers, acquire/renew/release claims, publish acceptance, sweep, reclaim,\nor retry work. Read-only inspection is not a request for current verification.\nA requested validation/run is a separate operation that follows execution policy.\nFramework-controlled inspection must enforce this distinction; it is not a sandbox\nfor arbitrary side effects in user JavaScript.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "CLI-001"
+    },
+    {
+      "key": "docs/spec/operations.md:652",
+      "owner": "CLI-001",
+      "text": "**Checkpoint evidence:** inspect a seeded history and a failed attempt with both\nthe body/source dispatch ports and all mutation ports instrumented to reject calls.\nExplain the recorded reason and resource evidence with zero execution or mutation.\nInspect a candidate whose current validity is unknown and report that uncertainty.\nThe checkpoint does not require a live paid provider or a terminal toolkit choice.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "CLI-001"
+    },
+    {
+      "key": "docs/spec/operations.md:658",
+      "owner": "CLI-002",
+      "text": "### CLI-002 \u2014 Plans distinguish declared structure from known runtime work",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "CLI-002"
+    },
+    {
+      "key": "docs/spec/operations.md:660",
+      "owner": "CLI-002",
+      "text": "Plan inspection MUST expose declared stages/relationships, selected scope and\nfilters, fan-out boundaries, and known versus unknown cardinality. It MUST\ndistinguish a recorded candidate from a currently validated reuse decision, and\nconditional downstream work from execution known to be necessary. Showing a plan\ndoes not itself authorize paid execution.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "CLI-002"
+    },
+    {
+      "key": "docs/spec/operations.md:666",
+      "owner": "CLI-002",
+      "text": "Exact simulation of every future result, branch, cardinality, and cost is not\npromised. The primary workflow pairs a plan with a deliberately scoped real run.\nAny additional planning-time discovery or validation requires an explicit policy\nand must not be hidden inside CLI-001's read-only inspection.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "CLI-002"
+    },
+    {
+      "key": "docs/spec/operations.md:671",
+      "owner": "CLI-002",
+      "text": "**Validation:** inspect the same declared analysis before and after discovery;\nshow unknown counts honestly. A stored result alone never produces an unconditional\ncurrent-cache-hit claim. A selected-team plan does not present full-organization\ncoverage. Optional cost extrapolation carries its assumptions under ACC-006.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "CLI-002"
+    },
+    {
+      "key": "docs/spec/operations.md:676",
+      "owner": "CLI-003",
+      "text": "### CLI-003 \u2014 Progress and cache explanations retain meaningful distinctions",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "CLI-003"
+    },
+    {
+      "key": "docs/spec/operations.md:678",
+      "owner": "CLI-003",
+      "text": "The CLI MUST distinguish candidate verification, accepted reuse, new execution,\nwaiting on another owner, waiting for required inputs/discovery, scheduled retry,\nfailure, refusal, cancellation, and work not yet started. These are semantic\ndistinctions, not prescribed enum names. A waiter is not another executing body;\nverification is not already a cache hit.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "CLI-003"
+    },
+    {
+      "key": "docs/spec/operations.md:684",
+      "owner": "CLI-003",
+      "text": "Fan-out presentation MUST make nested groups, member failures, coverage, and\nblocked dependent work understandable without requiring one terminal line per\nmember. Before discovery closes, report discovered and settled counts with an\nunknown total rather than a fabricated completion percentage. Settled means an\nappropriate terminal outcome, not necessarily success.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "CLI-003"
+    },
+    {
+      "key": "docs/spec/operations.md:690",
+      "owner": "CLI-003",
+      "text": "An explanation MUST identify available evidence for reuse or execution, including\nrelevant input differences and unchanged-output cutoff. It MUST NOT claim an\nunobserved reason. Fresh equal-valued output, explicit retention of a prior result,\nand acceptance with no source request remain distinguishable activities.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "CLI-003"
+    },
+    {
+      "key": "docs/spec/operations.md:695",
+      "owner": "CLI-003",
+      "text": "**Validation:** seeded states show each distinction; two converging consumers\nreport one actual execution. With 100 discovered and 80 settled but discovery\nopen, the display does not claim 80% of the final population is complete. A changed\nchild with unchanged consumed output explains retained downstream work.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "CLI-003"
+    },
+    {
+      "key": "docs/spec/operations.md:700",
+      "owner": "CLI-004",
+      "text": "### CLI-004 \u2014 Inspection supports intervention without concealing errors",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "CLI-004"
+    },
+    {
+      "key": "docs/spec/operations.md:702",
+      "owner": "CLI-004",
+      "text": "The CLI MUST let the operator inspect progressing values, visible errors and\ncoverage, retry reasons/eligibility, and observed usage sufficiently to decide\nwhether to stop, adjust the analysis, and start a later run. Prior values MUST\nnot hide failed refreshes. Stop requests use RUN-014; attaching a display or\nresource sink must not change execution or retry policy.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "CLI-004"
+    },
+    {
+      "key": "docs/spec/operations.md:708",
+      "owner": "CLI-004",
+      "text": "**Validation:** a run with successful, failed, waiting, and stale-preview members\nremains inspectable; its resource gaps remain visible. First and second interrupts\nproduce distinct stop intents without claiming unsupported remote termination.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "CLI-004"
+    },
+    {
+      "key": "docs/spec/operations.md:712",
+      "owner": "CLI-004",
+      "text": "**Open:** commands, interactive controls beyond the selected escalation intent,\nTTY/non-TTY formats, diagnostic/result stream layout, final report format, and\nexit-code policy. The CLI must report mixed outcomes honestly regardless of those\npresentation choices. A full GUI/React viewer is not a prerequisite for this CLI.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "CLI-004"
+    },
+    {
+      "key": "docs/spec/operations.md:717",
+      "owner": "CLI-004",
+      "text": "## Resource accounting",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "CLI-004"
+    },
+    {
+      "key": "docs/spec/operations.md:719",
+      "owner": "ACC-001",
+      "text": "### ACC-001 \u2014 Record supported observations without hardcoding money",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-001"
+    },
+    {
+      "key": "docs/spec/operations.md:721",
+      "owner": "ACC-001",
+      "text": "Accounting MUST accept resource quantities supported by observations, including\nbut not limited to tokens, requests, provider quota units, and currency. Authors\nand adapters may supply observations during execution; reporting MUST NOT depend\non a successful result return. Units and applicable resource scope must remain\nidentifiable so that unrelated quantities are not silently combined.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-001"
+    },
+    {
+      "key": "docs/spec/operations.md:727",
+      "owner": "ACC-001",
+      "text": "Provider-specific conversions are not universal equivalences: retrieved GraphQL\nnodes are not automatically charged quota units, and tokens are not automatically\ndollars. The exact quantity schema, numeric representation, and registration/API\nremain open; generic accounting is not contingent on an LLM workflow package.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-001"
+    },
+    {
+      "key": "docs/spec/operations.md:732",
+      "owner": "ACC-001",
+      "text": "**Validation:** aggregate several supported resource kinds without a monetary\nfield; preserve separate units, currencies, and independently limited pools.\nNo provider pricing lookup is necessary to report observed token counts.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-001"
+    },
+    {
+      "key": "docs/spec/operations.md:736",
+      "owner": "ACC-002",
+      "text": "### ACC-002 \u2014 Attribution is independent of result publication",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-002"
+    },
+    {
+      "key": "docs/spec/operations.md:738",
+      "owner": "ACC-002",
+      "text": "Received observations MUST remain attributable to the actual work that produced\nthem, including failed, cancelled, and retried attempts. Roll-ups through steps,\nmembers, and runs MUST NOT count historical consumption attached to reused results\nas new consumption. Sharing one execution across converging consumers MUST NOT\nmultiply its reported usage.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-002"
+    },
+    {
+      "key": "docs/spec/operations.md:744",
+      "owner": "ACC-002",
+      "text": "Acceptance of an old result after a source check can incur new observed usage;\nit does not rewrite the old payload's execution provenance. A fresh result equal\nin content to a prior result still has its own actual work and observations.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-002"
+    },
+    {
+      "key": "docs/spec/operations.md:748",
+      "owner": "ACC-002",
+      "text": "**Validation:** retain a prior result after a validation request reporting one\nunit; this run reports one unit, not the old execution's historical usage. Two\nwaiters share one reported execution charge. A failure after reporting 100 units\nkeeps those observations available subject to the persistence contract in ACC-007.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-002"
+    },
+    {
+      "key": "docs/spec/operations.md:753",
+      "owner": "ACC-003",
+      "text": "### ACC-003 \u2014 Summation must not duplicate reports or hierarchy",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-003"
+    },
+    {
+      "key": "docs/spec/operations.md:755",
+      "owner": "ACC-003",
+      "text": "Accounting MUST distinguish additive deltas from cumulative snapshots and parent\nroll-ups from their constituent observations. Repeated presentation or processing\nof the same report MUST NOT inflate totals. The selected reporting protocol must\ndefine deduplication/replacement semantics before promising retriable durable\nreporting. Idempotency of a remote operation does not establish whether its\nrequests were billed, or establish accounting-report identity.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-003"
+    },
+    {
+      "key": "docs/spec/operations.md:762",
+      "owner": "ACC-003",
+      "text": "**Validation:** replay one report, observe cumulative updates of 10 then 15, and\ndisplay both parent and child views. The resulting totals reflect the reporting\nsemantics rather than 25 or double the child total. Independent attempts with\ndistinct actual reported consumption still count separately.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-003"
+    },
+    {
+      "key": "docs/spec/operations.md:767",
+      "owner": "ACC-003",
+      "text": "**Open:** observation identifiers, correction/replacement rules, ordering, and\nconcurrent report protocol. No arbitrary user-defined aggregation engine is\nrequired to distinguish deltas, snapshots, and derived totals.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-003"
+    },
+    {
+      "key": "docs/spec/operations.md:771",
+      "owner": "ACC-003",
+      "text": "**Owner decision (2026-09-30).** Each reported usage observation is identified\nby (operation identity, report identity). Duplicate delivery of the same report is\nidempotent and is never summed twice. Correction and ordering rules follow\n[EXP-8](experiments.md).",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-003"
+    },
+    {
+      "key": "docs/spec/operations.md:776",
+      "owner": "ACC-003",
+      "text": "**Selected mechanism (M5, #119).** Run Supervision namespaces report identities\nby their source: a provider's report is acknowledged as `provider:<report>` and\nusage an operator learns while resolving an unknown operation as\n`operator:<report>`, so the two can never collide.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-003"
+    },
+    {
+      "key": "docs/spec/operations.md:781",
+      "owner": "ACC-004",
+      "text": "### ACC-004 \u2014 Resource state is not additive consumption",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-004"
+    },
+    {
+      "key": "docs/spec/operations.md:783",
+      "owner": "ACC-004",
+      "text": "Remaining quota, reset time, and similar current resource-state observations MUST\nremain distinct from consumption increments. Combining observations across quota\npools or windows MUST NOT invent a shared remaining balance. Reporting a reset\ntime does not itself schedule a retry; Run Supervision applies the chosen policy.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-004"
+    },
+    {
+      "key": "docs/spec/operations.md:788",
+      "owner": "ACC-004",
+      "text": "**Validation:** two responses reporting remaining quota are shown as state\nobservations, not summed as consumed or remaining units. Separate provider/account\npools remain separate without exposing raw credentials as identifiers.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-004"
+    },
+    {
+      "key": "docs/spec/operations.md:792",
+      "owner": "ACC-005",
+      "text": "### ACC-005 \u2014 Unknown usage is not zero and observed totals are not a bill",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-005"
+    },
+    {
+      "key": "docs/spec/operations.md:794",
+      "owner": "ACC-005",
+      "text": "No observation contributes no numeric increment; it does not prove zero actual\nconsumption. Known missing/partial reporting MUST remain visible. Monetary totals\nderived from received charge observations MUST be described as observed/reported\nspend rather than a guaranteed final bill. The same limitation applies to other\nresource quantities.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-005"
+    },
+    {
+      "key": "docs/spec/operations.md:800",
+      "owner": "ACC-005",
+      "text": "Accounting MUST NOT fabricate usage for a lost response or require external\nbilling reconciliation to fill a gap. It must preserve observations received from\nfailed work without promising that every failed or cancelled request supplies\none. Received evidence and acknowledged durable evidence differ under ACC-007.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-005"
+    },
+    {
+      "key": "docs/spec/operations.md:805",
+      "owner": "ACC-005",
+      "text": "**Validation:** one request reports 100 units and a second fails without usage\ndata. Report 100 observed units and the known gap, not an exact total, a guessed\ncharge, or a blocked run waiting for a billing integration.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-005"
+    },
+    {
+      "key": "docs/spec/operations.md:809",
+      "owner": "ACC-006",
+      "text": "### ACC-006 \u2014 Estimates retain their basis and remain separate from observations",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-006"
+    },
+    {
+      "key": "docs/spec/operations.md:811",
+      "owner": "ACC-006",
+      "text": "Estimated future work, historical recorded consumption, this run's observed\nconsumption, and monetary conversions MUST be distinguishable. A conversion with\nincomplete billing inputs MUST be labeled as an estimate with its assumptions;\nestimated currency MUST NOT enter an observed-currency total as though reported\nby the provider. Missing cached-input usage is unknown, not zero.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-006"
+    },
+    {
+      "key": "docs/spec/operations.md:817",
+      "owner": "ACC-006",
+      "text": "Reporting tokens without money is valid. An assumed uncached rate is not a\nguaranteed upper bound unless the applicable rates and other charges justify\nthat assertion. Provider prompt caching and microdelta result reuse are different\nmechanisms and MUST remain distinguishable in explanations.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-006"
+    },
+    {
+      "key": "docs/spec/operations.md:822",
+      "owner": "ACC-006",
+      "text": "**Example and validation:** a response reports 100,000 input and 1,000 output\ntokens, with no cached-input breakdown. Preserve those observed token counts.\nLeave currency unavailable or show an explicitly assumed estimate; do not mark\nthe estimate as observed spend. A trial extrapolation must not claim the selected\nteam is representative of the whole organization without supporting evidence.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-006"
+    },
+    {
+      "key": "docs/spec/operations.md:828",
+      "owner": "ACC-007",
+      "text": "### ACC-007 \u2014 Acknowledgment must state its durability guarantee",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-007"
+    },
+    {
+      "key": "docs/spec/operations.md:830",
+      "owner": "ACC-007",
+      "text": "The reporting contract MUST distinguish accepting/enqueuing an observation from\nacknowledging that it is durable. A synchronous enqueue MUST NOT imply survival\nof immediate process death. If the API acknowledges durable recording, subsequent\nrecovery MUST include that observation exactly according to its deduplication\ncontract, independently of successful result publication.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-007"
+    },
+    {
+      "key": "docs/spec/operations.md:836",
+      "owner": "ACC-007",
+      "text": "**Validation:** for any durable acknowledgment, terminate immediately afterward\nand recover the observation once; fail persistence and ensure no durable\nacknowledgment is issued. For an enqueue-only boundary, expose its weaker guarantee\nand do not make a crash-durability claim from a normal-shutdown test.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-007"
+    },
+    {
+      "key": "docs/spec/operations.md:841",
+      "owner": "ACC-007",
+      "text": "**Open:** reporting signature, journal/persistence mechanism, failure/backpressure\nbehavior, and which acknowledgment guarantee is the default. These must be settled\nbefore the corresponding reporting API and operational milestone can be claimed\ncomplete. This rule does not itself select synchronous blocking or await syntax.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-007"
+    },
+    {
+      "key": "docs/spec/operations.md:846",
+      "owner": "ACC-007",
+      "text": "**Owner decision (2026-09-30).** **Intent before send.** An \"operation started\"\nrecord is made durable before each paid call. Usage is recorded afterwards as an\nidempotent acknowledgment keyed by operation and report identity. A crash between\nthe two leaves that operation's usage **unknown**, never zero (ACC-005). The\ndefault acknowledgment guarantee is durable persistence, before the report is\nacknowledged to the caller. [EXP-8](experiments.md) selects the concrete record\nshapes.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-007"
+    },
+    {
+      "key": "docs/spec/operations.md:854",
+      "owner": "ACC-008",
+      "text": "### ACC-008 \u2014 Accounting supplies evidence, not execution policy",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-008"
+    },
+    {
+      "key": "docs/spec/operations.md:856",
+      "owner": "ACC-008",
+      "text": "Recording or displaying usage MUST NOT grant retry permission, enforce a budget\nby implication, or schedule work. An author-selected gate may use accounting\nevidence through the execution contract. Provider/model selection, schema repair,\nand conversation orchestration remain optional adapter/helper concerns; generic\nsupervision and accounting MUST work without them.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-008"
+    },
+    {
+      "key": "docs/spec/operations.md:862",
+      "owner": "ACC-008",
+      "text": "Accounting also MUST NOT decide that unreported/zero currency makes a retained\nresult safe to delete. Retention and reference integrity remain governed by\nResult History & Publication. Exact monetary completeness is not a prerequisite\nfor preserving result history or for useful resource reporting.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-008"
+    },
+    {
+      "key": "docs/spec/operations.md:867",
+      "owner": "ACC-008",
+      "text": "**Validation:** add/remove an observer and keep execution decisions unchanged;\nan explicitly installed gate alone supplies any refusal policy. Unknown usage\ndoes not become deletion permission or an invented free-execution category.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-008"
+    },
+    {
+      "key": "docs/spec/operations.md:871",
+      "owner": "ACC-008",
+      "text": "## Remaining mechanisms and validation discipline",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-008"
+    },
+    {
+      "key": "docs/spec/operations.md:873",
+      "owner": "ACC-008",
+      "text": "The following work remains bounded by already-required behavior. It must not be\nsilently filled by old exploratory signatures or expanded into new products.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-008"
+    },
+    {
+      "key": "docs/spec/operations.md:876",
+      "owner": "ACC-008",
+      "text": "| Mechanism to resolve | Owning boundary | Requirements it must preserve |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-008"
+    },
+    {
+      "key": "docs/spec/operations.md:877",
+      "owner": "ACC-008",
+      "text": "| --- | --- | --- |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-008"
+    },
+    {
+      "key": "docs/spec/operations.md:878",
+      "owner": "ACC-008",
+      "text": "| Scoped lifetime across lazy iteration and recovery | Run Supervision with Definition & Binding | RUN-001, RUN-002 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-008"
+    },
+    {
+      "key": "docs/spec/operations.md:879",
+      "owner": "ACC-008",
+      "text": "| Source-specific discovery closure and subsequent updates | Run Supervision and source adapters, accepted through Reuse Resolution | RUN-003\u2013RUN-005 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-008"
+    },
+    {
+      "key": "docs/spec/operations.md:880",
+      "owner": "ACC-008",
+      "text": "| Preview types, coalescing/error lifetime, aggregate loading | Observation boundary with Materialization | RUN-006\u2013RUN-008, CLI-004 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-008"
+    },
+    {
+      "key": "docs/spec/operations.md:881",
+      "owner": "ACC-008",
+      "text": "| Retry/long-deferral ownership and safe external-operation addressing | Run Supervision/adapters with Result History & Publication | RUN-011\u2013RUN-013 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-008"
+    },
+    {
+      "key": "docs/spec/operations.md:882",
+      "owner": "ACC-008",
+      "text": "| Soft-stop boundary, shared cancellation, and publication race | Run Supervision with Result History & Publication | RUN-014, RUN-015 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-008"
+    },
+    {
+      "key": "docs/spec/operations.md:883",
+      "owner": "ACC-008",
+      "text": "| Trial namespaces, external destinations, optional promotion | Run Supervision with storage/history ports | RUN-016\u2013RUN-018 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-008"
+    },
+    {
+      "key": "docs/spec/operations.md:884",
+      "owner": "ACC-008",
+      "text": "| CLI format and exit policy | CLI application | CLI-001\u2013CLI-004 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-008"
+    },
+    {
+      "key": "docs/spec/operations.md:885",
+      "owner": "ACC-008",
+      "text": "| Quantity representation, report identity, durability acknowledgment | Resource Accounting | ACC-001\u2013ACC-008 |",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-008"
+    },
+    {
+      "key": "docs/spec/operations.md:887",
+      "owner": "ACC-008",
+      "text": "Required validation is test-first when implementation begins. Controlled clocks,\nbarriers, fake providers, and instrumented context ports should prove the stated\noutcomes without paid requests or timing-dependent sleeps. Unit tests alone do\nnot prove cross-context ownership: the [acceptance scenarios](acceptance.md) must\nexercise readiness/reuse, retry/claims, cancellation/publication, environment\nrouting, and accounting/recovery together.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-008"
+    },
+    {
+      "key": "docs/spec/operations.md:894",
+      "owner": "ACC-008",
+      "text": "The read-only CLI checkpoint has independent evidence under CLI-001. Operational\nreadiness additionally requires the selected policies above and their failure\ntests before a broad paid provider run. Documenting these requirements, rendering\na terminal mockup, or passing existing store/tracking tests does not establish\nthat those capabilities are implemented.",
+      "disposition": "see-owner-bounded-evidence-residual-unresolved",
+      "requirementReview": "ACC-008"
+    }
+  ]
+}

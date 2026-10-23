@@ -42,6 +42,7 @@
   },
   "files": [
     "pipeline.ts",
-    "reflection-probe.ts"
+    "reflection-probe.ts",
+    "output-bindings.ts"
   ]
 }

@@ -1,0 +1,63 @@
+watchman warning: Recrawled this watch 1 time, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx' ; watchman watch-project '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx'`
+
+(node:87805) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL packages/core/.test-build/test/gap-hunt-dx-output-bindings.test.js
+  ● subtree output retains its exact reference on an identical restart
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "kind": "reused",
+    +   "kind": "published",
+        "reference": Object {
+          "kind": "completed-result",
+    -     "locator": "mdh1|[\"output-bindings\",\"output-bindings\",\"fixture\",2]",
+    +     "locator": "mdh1|[\"output-bindings\",\"output-bindings\",\"fixture\",3]",
+        },
+      }
+
+      24 |     expect(first.kind).toBe('published');
+      25 |     expect(second.value).toEqual(first.value);
+    > 26 |     expect(second).toMatchObject({ kind: 'reused', reference: first.reference });
+         |                    ^
+      27 |   } finally { rmSync(directory, { recursive: true, force: true }); }
+      28 | });
+      29 |
+
+      at test/gap-hunt-dx-output-bindings.test.ts:26:20
+
+  ● forwarded argument output avoids another child publication on identical restart
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+    -   "count": 1,
+    +   "count": 2,
+      }
+
+      38 |     const database = createNodeSqlite().openSqlite(location);
+      39 |     try {
+    > 40 |       expect(database.prepare("SELECT COUNT(*) AS count FROM history_results WHERE subject = 'description'").get()).toMatchObject({ count: 1 });
+         |                                                                                                                     ^
+      41 |     } finally { database.close(); }
+      42 |   } finally { rmSync(directory, { recursive: true, force: true }); }
+      43 | });
+
+      at Object.<anonymous> (test/gap-hunt-dx-output-bindings.test.ts:40:117)
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 2 passed, 4 total
+Snapshots:   0 total
+Time:        1.203 s
+Ran all test suites within paths "packages/core/.test-build/test/gap-hunt-dx-output-bindings.test.js".

@@ -1,0 +1,188 @@
+$ npm ci
+npm warn deprecated prebuild-install@7.1.3: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.
+npm warn deprecated glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
+
+added 614 packages, and audited 626 packages in 3s
+
+111 packages are looking for funding
+  run `npm fund` for details
+
+19 vulnerabilities (17 high, 2 critical)
+
+To address issues that do not require attention, run:
+  npm audit fix
+
+To address all issues (including breaking changes), run:
+  npm audit fix --force
+
+Run `npm audit` for details.
+$ npm run build:packages
+
+> @microdelta/workspace@0.0.0 build:packages
+> npm run build --workspace @microdelta/machine && npm run build --workspace @microdelta/value && npm run build --workspace @microdelta/machine-node && npm run build --workspace @microdelta/definition && npm run build --workspace @microdelta/tracking && npm run build --workspace @microdelta/history && npm run build --workspace @microdelta/accounting && npm run build --workspace @microdelta/materialization && npm run build --workspace @microdelta/resolution && npm run build --workspace @microdelta/supervision && npm run build --workspace microdelta
+
+
+> @microdelta/machine@0.1.0 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+> @microdelta/value@0.1.0 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+> @microdelta/machine-node@0.1.0 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+> @microdelta/definition@0.2.0 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+> @microdelta/tracking@0.2.0 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+> @microdelta/history@0.1.0 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json && api-extractor run --config api-extractor-conformance.json && api-extractor run --config api-extractor-shared.json && node ../../tooling/history-declaration-shims.mjs
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+> @microdelta/accounting@0.0.0 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json && node ../../tooling/trim-declaration-imports.mjs dist/api/accounting.beta.d.ts dist/api/accounting.public.d.ts
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+> @microdelta/materialization@0.1.1 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json && node ../../tooling/trim-declaration-imports.mjs dist/api/materialization.beta.d.ts dist/api/materialization.public.d.ts
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+> @microdelta/resolution@0.2.0 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json && node ../../tooling/trim-declaration-imports.mjs dist/api/resolution.beta.d.ts dist/api/resolution.public.d.ts
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+> @microdelta/supervision@0.2.0 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json && node ../../tooling/trim-declaration-imports.mjs dist/api/supervision.beta.d.ts dist/api/supervision.public.d.ts
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+> microdelta@0.2.0 build
+> tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json && api-extractor run --config api-extractor-conformance.json && node ../../tooling/trim-declaration-imports.mjs dist/api/microdelta.beta.d.ts dist/api/microdelta.public.d.ts
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+$ /Users/mnorth/.nodenv/versions/24.22.1/bin/node node_modules/typescript/bin/tsc -p scratch/gap-hunt/consumer-dx/tsconfig.custom-key.json
+$ /Users/mnorth/.nodenv/versions/24.22.1/bin/node node_modules/eslint/bin/eslint.js scratch/gap-hunt/consumer-dx/custom-key.ts
+$ /Users/mnorth/.nodenv/versions/24.22.1/bin/node --test scratch/gap-hunt/consumer-dx/custom-key.test.mjs
+✖ a no-identity member with an explicit supported string custom key is accepted without fictional fields (67.648416ms)
+✔ no designated identity and no custom strategy is rejected (59.991ms)
+✔ an optional string identity annotation allows absent physical identity when a custom key is supplied (73.63775ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 2
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 252.397084
+
+✖ failing tests:
+
+test at scratch/gap-hunt/consumer-dx/custom-key.test.mjs:15:1
+✖ a no-identity member with an explicit supported string custom key is accepted without fictional fields (67.648416ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + 'rejected'
+  - 'accepted'
+  
+      at TestContext.<anonymous> (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-custom-key-clean/scratch/gap-hunt/consumer-dx/custom-key.test.mjs:16:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: 'rejected',
+    expected: 'accepted',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

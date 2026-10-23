@@ -24,7 +24,7 @@ From a clean checkout containing this branch's fixtures and Node24.x:
 node scratch/gap-hunt/consumer-dx/repro-custom-key.mjs
 ```
 
-Default runner installs locked dependencies, builds all package declarations, strictly compiles only the custom-key fixture, checks it with repository type-aware ESLint, then runs the three assertions. Native better-sqlite3 prerequisites are the same as the repository; no global CLI, credentials or provider execution is needed. Baseline expected exit1 is the intended acceptance failure. `GAP_HUNT_REUSE_BUILD=1` skips bootstrap only when dependencies and generated package outputs are already fresh. No command depends on a user-specific path.
+Default runner installs locked dependencies, builds all package declarations, strictly compiles only the custom-key fixture, checks it with repository type-aware ESLint, then runs the three assertions. Native better-sqlite3 prerequisites are the same as the repository; no global CLI, credentials or provider execution is needed. Validated from detached clean worktree98c70b8: default npmci/build:packages, focused strict compile and type-aware lint all passed, then the intended one-red/two-green runtime assertions produced exit1 (`logs/custom-key-clean-bootstrap.log`). Baseline expected exit1 is the intended acceptance failure. `GAP_HUNT_REUSE_BUILD=1` skips bootstrap only when dependencies and generated package outputs are already fresh. No command depends on a user-specific path.
 
 ## Numbered acceptance criteria
 

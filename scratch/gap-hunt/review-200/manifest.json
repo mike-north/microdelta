@@ -1,5 +1,5 @@
 {
-  "REPORT.md": "a91e918a5546d6c4a499af24dbd88073631b5236aad857ee040376f28999942f",
+  "REPORT.md": "64c05240e297ff0177838d5790e99a85b89fb3ee2007f9be07af6076570a8290",
   "captures/144-controls.log": "2db1e58c49a28117b4041b620e19808332ddd06d937481f5897713b16ef4ce87",
   "captures/144-witnesses-summary.json": "721d85ba836d90a56651451fcc6027e18f76b6abf17cb4734e3251ac3ca8105b",
   "captures/144-witnesses.json": "b561a51c1cf5c486ae37bdd87e65d4ce66349e064b286a3922e1b023e2c4dca3",
@@ -14,6 +14,8 @@
   "captures/excluded-setup/microdelta-review200-s239t6vz-fresh-process.json": "20d78f1548734bcaccd6bbe8d79dcb44cb4c78b4cc597130ceb6c9f95cbb9c42",
   "captures/excluded-setup/microdelta-review200-s239t6vz-fresh-process.log": "4d59c9996277e5fbf622329247dde2cd52774ad191deb8f5e9af3e1a3baf6f57",
   "captures/existing-anchors.log": "98047a863100bcd17bc55e806a5e5da525c9ee38fd5f81fe24b2304ddf968a0c",
+  "captures/existing29-controls.log": "afbe406187b7ebf98cabcec4ba9ad68a34493547182980c654cd80163ddb4b12",
+  "captures/existing29-receipt.json": "02809d67123b5ae96f7438fb23575dbc51aa1932ddf74a3ff2b38ce34902e67b",
   "captures/fault-original-summary.json": "32aa73bea02a3c28d3c8ebbe9ed6e38cc50f7db773a52c8d5becf664ecd3e687",
   "captures/fault-original.json": "8a224adf68526f07fe1007ed7dbe5793a6bd6a717af888b3846c98e96bd6c255",
   "captures/fault-original.log": "9f3ac19784bba62fee94d8a0519700321eafa01d0551505a8f28730affa74329",
@@ -39,6 +41,7 @@
   "captures/owner-public.log": "9d77f98916475043351ddbc49254596e3fe55a6976cf0e7b673a340f06bb3e77",
   "captures/owner-tsd.log": "00cc53e3bd69236cf4c0d988fb48cc254acbffda7ac47529180bb86a258d3180",
   "captures/owner-types.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "captures/preexisting-file-guard.json": "43c8e5c0ae9d45686a1512cb6175e6bf117eb01e620863eeaf2184b5ba9a2404",
   "captures/restored-original-summary.json": "53def25e0e1578813e2dfb88d05f90a0d83fcc34fd0a229ce6a8cfa1d05035eb",
   "captures/restored-original.json": "e7b237c2fffc205854aa04161468d51fccf6582beb371e4b271dafdd7131239a",
   "captures/restored-original.log": "64db532fbaec55357d5f5d98ea1991c8673cad4e39b5697ff14205ddef0553c8",
@@ -58,6 +61,6 @@
   "frozen/resolution-144-controls.mjs": "8332a2c17d6fad84be22f41ef25c6219a4bc6a54584434e1414ec04b944ef80e",
   "frozen/resolution-144.test.ts": "f6fa83bb2b29cf7d94686f8dfc1a945532fdaa90fb1ec73dbdec793f4f4e4148",
   "judge-captures.py": "52c8e06343027d5e241c75ddb3c096760b9a446a12c788c91cdab51ef9b3a283",
-  "reproduce.py": "ff3ef3af51df6bdfae3509ec3c253482c9b7fe3afb59d3ec485019a42d07753e",
+  "reproduce.py": "eb9e249f750a9932a5fb437379fe78dd3e06aba5e80b021630a88a5d2d834e6f",
   "supplemental.test.ts": "960e9b57d84cb744159aea3f454bf85a60b6df6635550e14e867439878c330f1"
 }

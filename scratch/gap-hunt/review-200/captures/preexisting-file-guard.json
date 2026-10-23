@@ -1,0 +1,9 @@
+{
+  "exit": 1,
+  "expectedReason": "transient paths must start absent",
+  "preexistingBytesPreserved": true,
+  "sha256": "99965d35773116187138a95aff6753fd51a7a445c8e948eac2bcb5079ad15faf",
+  "workloadStarted": false,
+  "stdout": "",
+  "stderr": "Traceback (most recent call last):\n  File \"/REVIEW_ROOT/scratch/gap-hunt/review-200/reproduce.py\", line 37, in <module>\n    assert all(not p.exists() for p in [transient,extra,control,static]), 'transient paths must start absent'\n           ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nAssertionError: transient paths must start absent\n"
+}

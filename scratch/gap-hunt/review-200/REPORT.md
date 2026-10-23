@@ -130,4 +130,21 @@ production files against the source pin, verifies absent transient files and
 records restored owner-test/package emitted JavaScript hashes. Their executable
 bytes match after removing the package-only source-map comment. These are
 post-capture guard qualifications; the full workload was not rerun for them.
-The command recipe and runtime fixtures are unchanged.
+The runtime fixtures are unchanged. The original captured 24-command recipe
+was not rerun for guard changes.
+
+A separate appended command then executed the canonical original **29 semantic
+mutation controls** against the exact restored PR200 package: baseline73 and
+restored73 green; every mutant had at least one rejecting semantic witness.
+`existing29-controls.log` and `existing29-receipt.json` preserve this distinct
+execution; the emitted package hash equals the restored successful-recipe hash.
+The current runner now includes this command after the original anchor check.
+It is therefore a 26-command reproduction recipe including the later semantic
+judge, while the original captured full recipe remains the documented24.
+
+Parent review identified that a preflight rejection inside try could delete a
+preexisting transient in finally. All preflight assertions now precede try.
+The clean committed runner was invoked with an actual preexisting sentinel file;
+it rejected on the absence guard, preserved the exact bytes and began no
+workload (`preexisting-file-guard.json`). This guard-only correction required no
+repeat of the successful runtime witnesses.

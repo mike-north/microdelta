@@ -17,6 +17,10 @@ is implemented by History. Memory is process-local and non-durable.
 
 ## Project-private workspace path (alpha)
 
+External pnpm ESM consumers evaluating the published `microdelta@0.2.0`
+durable path need [consumer-local native-build approval](../../docs/native-sqlite-install.md)
+before `openWorkspace`. The public memory Store above remains process-local.
+
 The facade's generated **alpha** declarations also carry the workspace
 authoring and run path. Every name is a project-private `@alpha` contract that
 may change without notice; the default public entry exposes none of it. It

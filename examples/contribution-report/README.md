@@ -13,6 +13,11 @@ process exits.
 > default `microdelta` package entry does not expose any of it, and this
 > example is not an installation guide for a published package.
 
+This checkout example uses npm. A separate
+[pnpm native-build approval guide](../../docs/native-sqlite-install.md) covers
+external ESM evaluation of published `microdelta@0.2.0` and keeps the
+project-private alpha boundary explicit.
+
 ## Run it now
 
 From the repository root, after `npm ci`:

@@ -34,6 +34,11 @@ network access for dependencies. The SQLite adapter uses the native
 native build toolchain is required. Do not assume every newer Node version is
 supported by that dependency.
 
+For a pnpm external ESM consumer of the published `microdelta@0.2.0`, read
+the [targeted native-build approval guide](docs/native-sqlite-install.md)
+before opening the project-private durable workspace. The public memory Store
+does not need that native binding.
+
 From the repository root, choose a store directory that does not already contain
 a previous example run:
 

@@ -468,6 +468,21 @@ describe('template declaration negatives', () => {
     expectDefinitionError(() => callUntyped(template, { slot: 't', collection: foreign, steps }), 'forged-declaration');
   });
 
+  test('COL-1/CMP-4: a collection-shaped source without an identity still requires an explicit key strategy', () => {
+    const noIdentity = source<{ readonly members: readonly { readonly id: number }[]; readonly status: 'complete' | 'open' }>({
+      subject: 'contributors:no-identity',
+      run: () => ({ members: [], status: 'complete' }),
+    });
+    const factory = jest.fn((member: IMemberBuilder<ITestFamily>) => ({
+      p: member.source<string>({ subject: member.subject('p'), run: () => 'p' }),
+    }));
+
+    const failure = expectDefinitionError(() => callUntyped(template, { slot: 't', collection: noIdentity, steps: factory }), 'invalid-collection');
+    expect(failure?.message).toContain('designated identity');
+    expect(failure?.message).toContain('`key` option');
+    expect(factory).not.toHaveBeenCalled();
+  });
+
   test('CMP-4: slots, callbacks and option shapes are validated before the factory runs, without running getters', () => {
     const factory = jest.fn((member: IMemberBuilder<ITestFamily>) => ({ p: member.source<string>({ subject: member.subject('p'), run: () => 'p' }) }));
     const getter = jest.fn((): string => 'contributor');

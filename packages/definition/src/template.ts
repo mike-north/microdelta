@@ -1,8 +1,8 @@
 /**
  * Fanout templates and tracked gates (CMP-1, CMP-4, CMP-8, CMP-9).
  *
- * A fanout template is a member computation declared once over a keyed
- * collection source. Its factory runs exactly once, while composing, against a
+ * A fanout template is a member computation declared once over a collection
+ * result. Its factory runs exactly once, while composing, against a
  * symbolic member: a builder that can mint member-scoped subjects and member
  * step declarations but never sees a member key or any member data. The
  * declarations it returns, and the author record holding them, are copied and
@@ -152,7 +152,7 @@ export type IGateContext<TFamily extends IBindingFamily, TMember> = TFamily['mem
 
 /**
  * Rejects, at the type level, a template over a source whose declared result
- * is not a keyed collection.
+ * does not expose a collection member type.
  * @alpha
  */
 export type IKeyedCollectionCheck<TFamily extends IBindingFamily, TCollection> =
@@ -169,9 +169,9 @@ export interface ITemplateOptions<
 > {
   /** The template slot, unique within a composition and part of every instance descriptor. */
   readonly slot: string;
-  /** The keyed collection source whose members instantiate the template. */
+  /** The collection source whose result supplies the template's members. */
   readonly collection: TCollection & IKeyedCollectionCheck<TFamily, TCollection>;
-  /** An explicit custom-key function overriding the collection's designated identity. */
+  /** An explicit member-key function, required when the source has no designated identity. */
   readonly key?: (member: IMemberOf<TFamily, TCollection>) => string;
   /** A tracked gate: an explicit `false` skips an instance without changing topology. */
   readonly gate?: (context: IGateContext<TFamily, IMemberOf<TFamily, TCollection>>) => boolean;
@@ -196,7 +196,7 @@ export interface IAnyTemplateDeclaration<TFamily extends IBindingFamily> extends
   readonly kind: 'template';
   /** The template slot. */
   readonly slot: string;
-  /** The keyed collection source the template fans out over. */
+  /** The collection source whose result supplies this template's members. */
   readonly collection: IAnySourceDeclaration<TFamily>;
   /** The author's custom-key function, when declared. */
   readonly key: ((member: never) => unknown) | undefined;
@@ -333,10 +333,10 @@ interface ITemplateStep<TFamily extends IBindingFamily> {
 /** A template's private record, reachable only through the builder instance that minted it. */
 export interface ITemplateRecord<TFamily extends IBindingFamily> {
   readonly declaration: IAnyTemplateDeclaration<TFamily>;
-  /** The keyed collection source declaration. */
+  /** The collection-shaped source declaration whose template supplies a designated or explicit key strategy. */
   readonly collection: IAnySourceDeclaration<TFamily>;
-  /** The collection's designated identity field. */
-  readonly identity: string;
+  /** The source's designated identity field when declared; a template key may override it or supply the only identity. */
+  readonly identity: string | undefined;
   readonly customKey: ((member: never) => unknown) | undefined;
   readonly gate: IGateRecord<TFamily> | undefined;
   /** Template steps by slot, in structural (sorted) order. */
@@ -400,10 +400,14 @@ export function declareTemplate<TFamily extends IBindingFamily, TCollection exte
   if (collectionRecord === undefined) {
     return reject('forged-declaration', `Template ${slot} collection is not a declaration this family minted.`);
   }
-  if (collectionRecord.kind !== 'source' || collectionRecord.declaration.collection === undefined) {
-    return reject('invalid-collection', `Template ${slot} must fan out over a keyed collection source declaring its designated identity.`);
+  if (collectionRecord.kind !== 'source') {
+    return reject('invalid-collection', `Template ${slot} must fan out over a collection source declaration.`);
   }
-  const identity = collectionRecord.declaration.collection.identity;
+  const identity = collectionRecord.declaration.collection?.identity;
+  const customKey = read.get('key');
+  if (identity === undefined && customKey === undefined) {
+    return reject('invalid-collection', `Template ${slot} must declare a designated identity on its collection source or provide a custom key with its \`key\` option.`);
+  }
   // Every recognized option was just proven to be an own data property of the
   // expected type (or absent without an inherited property), so these typed
   // reads run no author code and adopt nothing unvalidated.

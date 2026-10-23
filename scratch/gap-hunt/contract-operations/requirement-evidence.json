@@ -499,8 +499,8 @@
     {
       "requirement": "ACC-002",
       "classification": "bounded-aligned-with-residual-evidence-gap",
-      "meaning": "Durably acknowledged usage survives process death exactly once independently of result publication; failed/ambiguous writes issue no false acknowledgment.",
-      "residual": "The named assertions prove the stated bounded outcome; other prose obligations are not automatically discharged.",
+      "meaning": "Acknowledged usage is attributed to actual work independently of publication; two serialized same-scope waiters reuse one paid execution/report while another environment performs independent work.",
+      "residual": "Retention assertion uses synchronous helper-supplied Accounting fixture facts with run-only attribution, not provider operation journaling or real validation request execution; async source typing is separately under ConsumerDX investigation.",
       "executedAssertionIds": [
         56,
         57,
@@ -546,7 +546,16 @@
         339,
         340,
         341
-      ]
+      ],
+      "supplementalNamedAssertions": {
+        "suite": "packages/core/test/gap-hunt-durability-attribution.test.ts",
+        "log": "scratch/gap-hunt/contract-operations/accounting-attribution.log",
+        "outcome": "2 passed",
+        "names": [
+          "two same-scope waiters reuse one paid execution and report; a different environment performs its own work",
+          "a retaining source check reports its new request without charging historical execution to it or a later free reuse"
+        ]
+      }
     },
     {
       "requirement": "ACC-003",
@@ -1134,7 +1143,7 @@
       "requirement": "RES-005",
       "classification": "bounded-aligned-with-residual-evidence-gap",
       "meaning": "Failed/refused attempts and recoverable committed results are distinct; observer failure preserves committed success.",
-      "residual": "Existing test explicitly discloses check-retention recovery reports unsuccessful; parent owns deduplication of this known gap.",
+      "residual": "The selected recovery union reports check-retention execution unsuccessful. This is a disclosed read-only recovery limitation, not a contract defect: RES-005 permits attempts without new results and requires separate current-check, provenance and resource evidence.",
       "executedAssertionIds": [
         87,
         88,

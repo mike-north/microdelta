@@ -9,10 +9,12 @@ print(f'Evidence output: {OUT}',flush=True)
 SOURCE='fc1ccdae7284490066c45d3bcab322b554546a1f'
 OLD='2a640aca75d5728484a2cb06af88c77690616ba9'
 FROZEN='b1b42c304db15fe0c3c306a0fb4f71660970040f'
+NODE_EXECUTABLE=subprocess.check_output(['node','-p','process.execPath'],text=True).strip()
 rows=[]
 def command(name,args,expected=0):
- p=subprocess.run(args,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
- (OUT/f'{name}.log').write_text(p.stdout)
+ env=dict(os.environ);env.pop('GAP_HUNT_REUSE_BUILD',None)
+ p=subprocess.run(args,env=env,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,text=True)
+ (OUT/f'{name}.log').write_text(p.stdout.replace(str(ROOT),'<checkout>').replace(NODE_EXECUTABLE,'<node>'))
  rows.append(dict(name=name,command=args,exit=p.returncode,expected=expected))
  print(f'{name}: {p.returncode} (expected {expected})',flush=True)
  if p.returncode!=expected: raise RuntimeError(f'{name} unexpected exit; see captures')

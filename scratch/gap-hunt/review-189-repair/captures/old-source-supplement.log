@@ -1,12 +1,29 @@
-watchman warning: Recrawled this watch 9 times, most recently because:
+watchman warning: Recrawled this watch 19 times, most recently because:
 MustScanSubDirs UserDroppedTo resolve, please review the information on
 https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
 To clear this warning, run:
-`watchman watch-del '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-189' ; watchman watch-project '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-189'`
+`watchman watch-del '<checkout>' ; watchman watch-project '<checkout>'`
 
-(node:24416) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(node:56158) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
 (Use `node --trace-warnings ...` to show where the warning was created)
 FAIL scratch/gap-hunt/review-189-repair/supplement.test.mjs
+  ● supported identity-less custom key executes an actual member through the generated facade
+
+    DefinitionError: Template member must fan out over a keyed collection source declaring its designated identity.
+
+      600 | /** Reject a construction error with its Definition code, and the value an author callback threw, if any, as its cause. */
+      601 | export function reject(code: DefinitionError['code'], message: string, cause?: unknown): never {
+    > 602 |   throw new DefinitionError(code, message, cause);
+          |         ^
+      603 | }
+      604 |
+      605 | /** An author options record's own data properties, read without invoking accessors. */
+
+      at reject (packages/definition/src/declaration.ts:602:9)
+      at declareTemplate (packages/definition/src/template.ts:404:12)
+      at Object.template (packages/definition/src/declarations.ts:122:10)
+      at Object.<anonymous> (scratch/gap-hunt/review-189-repair/supplement.test.mjs:15:24)
+
   ● identity-less custom key duplicate rejects before every gate and member body
 
     DefinitionError: Template template-distinct must fan out over a keyed collection source declaring its designated identity.
@@ -22,7 +39,7 @@ FAIL scratch/gap-hunt/review-189-repair/supplement.test.mjs
       at reject (packages/definition/src/declaration.ts:602:9)
       at declareTemplate (packages/definition/src/template.ts:404:12)
       at Object.template (packages/definition/src/declarations.ts:122:10)
-      at Object.<anonymous> (scratch/gap-hunt/review-189-repair/supplement.test.mjs:19:26)
+      at Object.<anonymous> (scratch/gap-hunt/review-189-repair/supplement.test.mjs:40:26)
 
   ● identity-less custom key undefined rejects before every gate and member body
 
@@ -39,7 +56,7 @@ FAIL scratch/gap-hunt/review-189-repair/supplement.test.mjs
       at reject (packages/definition/src/declaration.ts:602:9)
       at declareTemplate (packages/definition/src/template.ts:404:12)
       at Object.template (packages/definition/src/declarations.ts:122:10)
-      at Object.<anonymous> (scratch/gap-hunt/review-189-repair/supplement.test.mjs:19:26)
+      at Object.<anonymous> (scratch/gap-hunt/review-189-repair/supplement.test.mjs:40:26)
 
   ● identity-less custom key empty rejects before every gate and member body
 
@@ -56,7 +73,7 @@ FAIL scratch/gap-hunt/review-189-repair/supplement.test.mjs
       at reject (packages/definition/src/declaration.ts:602:9)
       at declareTemplate (packages/definition/src/template.ts:404:12)
       at Object.template (packages/definition/src/declarations.ts:122:10)
-      at Object.<anonymous> (scratch/gap-hunt/review-189-repair/supplement.test.mjs:19:26)
+      at Object.<anonymous> (scratch/gap-hunt/review-189-repair/supplement.test.mjs:40:26)
 
   ● identity-less custom key number rejects before every gate and member body
 
@@ -73,7 +90,7 @@ FAIL scratch/gap-hunt/review-189-repair/supplement.test.mjs
       at reject (packages/definition/src/declaration.ts:602:9)
       at declareTemplate (packages/definition/src/template.ts:404:12)
       at Object.template (packages/definition/src/declarations.ts:122:10)
-      at Object.<anonymous> (scratch/gap-hunt/review-189-repair/supplement.test.mjs:19:26)
+      at Object.<anonymous> (scratch/gap-hunt/review-189-repair/supplement.test.mjs:40:26)
 
   ● identity-less custom key throwing rejects before every gate and member body
 
@@ -90,7 +107,7 @@ FAIL scratch/gap-hunt/review-189-repair/supplement.test.mjs
       at reject (packages/definition/src/declaration.ts:602:9)
       at declareTemplate (packages/definition/src/template.ts:404:12)
       at Object.template (packages/definition/src/declarations.ts:122:10)
-      at Object.<anonymous> (scratch/gap-hunt/review-189-repair/supplement.test.mjs:19:26)
+      at Object.<anonymous> (scratch/gap-hunt/review-189-repair/supplement.test.mjs:40:26)
 
   ● missing strategy rejects before factory and records its available strategy diagnostic
 
@@ -105,18 +122,18 @@ FAIL scratch/gap-hunt/review-189-repair/supplement.test.mjs
 
       Comparing two different types of values. Expected regexp but received string.
 
-      49 |   assert.equal(failure?.name, 'DefinitionError');
-      50 |   assert.match(failure.message, /designated identity/);
-    > 51 |   assert.match(failure.message, /`key` option/);
+      70 |   assert.equal(failure?.name, 'DefinitionError');
+      71 |   assert.match(failure.message, /designated identity/);
+    > 72 |   assert.match(failure.message, /`key` option/);
          |          ^
-      52 |   assert.doesNotMatch(failure.message, /catalog-distinct/);
-      53 |   console.log(JSON.stringify({ evidence: 'AC3-diagnostic-observation', message: failure.message, collectionSourceSubject: 'catalog-distinct', template: 'template-distinct' }));
-      54 | });
+      73 |   assert.doesNotMatch(failure.message, /catalog-distinct/);
+      74 |   console.log(JSON.stringify({ evidence: 'AC3-diagnostic-observation', message: failure.message, collectionSourceSubject: 'catalog-distinct', template: 'template-distinct' }));
+      75 | });
 
-      at Object.<anonymous> (scratch/gap-hunt/review-189-repair/supplement.test.mjs:51:10)
+      at Object.<anonymous> (scratch/gap-hunt/review-189-repair/supplement.test.mjs:72:10)
 
 Test Suites: 1 failed, 1 total
-Tests:       6 failed, 6 total
+Tests:       7 failed, 7 total
 Snapshots:   0 total
-Time:        0.239 s, estimated 1 s
+Time:        0.159 s, estimated 1 s
 Ran all test suites.

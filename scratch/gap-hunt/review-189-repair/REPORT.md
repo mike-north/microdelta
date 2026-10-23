@@ -23,7 +23,8 @@ macOS 27.0.1 arm64, Node 24.22.1, npm 11.12.1; they are not a Linux or deploymen
 1. **Supported identity-less custom keys: PASS.** The seven original fixture and
    support files are byte-identical to the frozen commit, checked before execution.
    Original Jest: 3/3. The optional-identity workaround remains an independent
-   control, and the core restart fixture executes real identity-less members.
+   control, and an additional pure `{ id, score }` runtime payload executes its gate and
+   member body with the expected custom key, without any identity field.
 2. **Generated alpha types: PASS.** `generated.test-d.ts` uses the built alpha
    declaration and tsd to prove exact member type and number-valued gate/body
    access; rejects absent fields, number/undefined/object/Promise/Date key returns,
@@ -73,13 +74,18 @@ macOS 27.0.1 arm64, Node 24.22.1, npm 11.12.1; they are not a Linux or deploymen
 With only the exact old two Definition source files restored and all package
 runtime/declarations rebuilt, the unchanged original Jest proof fails 1 of 3
 (the supported identity-less custom declaration); its other two controls pass.
-The supplemental runtime suite fails all 6 cases: old code refuses each custom
+The supplemental runtime suite fails all 7 cases: old code refuses each custom
 identity-less template, and the missing-strategy message lacks the custom-key
 remedy. Finally both current source files are restored byte-for-byte, package
-build succeeds, and original 3/3 plus supplement 6/6 pass again.
+build succeeds, and original 3/3 plus supplement 7/7 pass again.
 
-The six supplemental green tests include a preserved diagnostic observation.
+The seven supplemental green tests include a preserved diagnostic observation.
 The supervisor accepted the declaration-time naming interpretation above; with
 that explicit boundary, this report concludes bounded PASS for the seven criteria. No paid provider execution,
 publication, formal review, author-branch change, merge, or ledger-count change
 was performed. Evidence is finite and tied to the source pin above.
+
+An exploratory version of the new positive runtime control returned a bare
+number; the selected execution contract requires a record/array root, so it was
+corrected to `{ score }`. That harness failure is not a custom-key product gap.
+Captured checkout and Node executable paths are normalized to placeholders.

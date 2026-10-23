@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "<checkout>/scratch/gap-hunt/error-privacy/run.py", line 35, in <module>
+    assert len(receipt['observations']) == 2
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError

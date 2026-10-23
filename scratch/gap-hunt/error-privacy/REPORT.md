@@ -26,10 +26,12 @@ From a checkout of this evidence commit with Node 24:
 python3 scratch/gap-hunt/error-privacy/run.py
 ```
 
-The runner installs from the lockfile, builds package declarations, strictly compiles tests, lints this fixture, and verifies the exact expected 8-pass/1-fail oracle with no runtime-error suites. It exits zero only if reproduction succeeds; it does not make the product suite green. `receipt.json` records a fresh-checkout run. Only synthetic text is emitted.
+The runner installs from the lockfile, builds package declarations, strictly compiles tests, lints this fixture, and verifies the exact expected 8-pass/1-fail oracle with no runtime-error suites. It exits zero only if reproduction succeeds; it does not make the product suite green. `local-results/receipt.json` records the actual Git head, host, command exits and observations. Public `captures` retain the qualified run. Only synthetic text is emitted.
 
 Earlier harness development used NaN as the invalid child output; Value admits NaN, so that control was corrected to a callable value. That exploratory failure is not counted as a product failure.
 
 ## Deduplication
 
 Parent checked live issue/PR state: closed #147 fixed ordinary author Error interpolation; this public error-class bypass is a distinct recurrence of the same privacy contract. Historical #119/#122 acceptance does not supply this discriminator. Open PRs #188/#187/#185/#184/#179 do not cover it. Parent owns publication and readiness decisions.
+
+The first clean runner at41521ed reached the8-pass/1-fail Jest result but failed its observation parser because Jest sent console records to stderr. That runner failure is historical evidence, not a product failure. The corrected evidence runner parses both output streams and asserts the observed codes, message and identities directly. Production and fixture bytes are unchanged.

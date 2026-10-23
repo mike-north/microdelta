@@ -1,0 +1,108 @@
+[
+  {
+    "name": "historical",
+    "argv": [
+      "python3",
+      "scratch/gap-hunt/review-184/original/repro.py"
+    ],
+    "exit": 1,
+    "expected": 1
+  },
+  {
+    "name": "install",
+    "argv": [
+      "npm",
+      "ci",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "build",
+    "argv": [
+      "npm",
+      "run",
+      "build:packages"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "production-vm",
+    "argv": [
+      "python3",
+      "scratch/gap-hunt/review-184/production-vm.py"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "query-gate",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "tooling/candidate-query.test.mjs"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "runtime",
+    "argv": [
+      "npm",
+      "run",
+      "test:unit",
+      "--workspace",
+      "microdelta",
+      "--",
+      "--runTestsByPath",
+      ".test-build/test/journal/environments.test.js",
+      ".test-build/test/workspace-operations/operations.test.js",
+      ".test-build/test/durable-history/durable-history.test.js",
+      ".test-build/test/m5-acceptance/environments.test.js",
+      "--json",
+      "--outputFile=../../scratch/gap-hunt/review-184/local-results/runtime.json"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "strict",
+    "argv": [
+      "npm",
+      "run",
+      "check",
+      "--workspace",
+      "@microdelta/history",
+      "--workspace",
+      "microdelta"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "old-query-source-negative",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "tooling/candidate-query.test.mjs"
+    ],
+    "exit": 1,
+    "expected": 1
+  },
+  {
+    "name": "restored-query-gate",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "tooling/candidate-query.test.mjs"
+    ],
+    "exit": 0,
+    "expected": 0
+  }
+]

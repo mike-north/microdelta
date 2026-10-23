@@ -1,0 +1,30 @@
+TAP version 13
+# Subtest: candidate query bounds unrelated-subject VM work and rejects the old broad predicate
+not ok 1 - candidate query bounds unrelated-subject VM work and rejects the old broad predicate
+  ---
+  duration_ms: 204.278917
+  type: 'test'
+  location: '<checkout>/tooling/candidate-query.test.mjs:69:1'
+  failureType: 'testCodeFailure'
+  error: 'same-environment: 5100 VM instructions at 1000 versus 600 at 100'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file://<checkout>/tooling/candidate-query.test.mjs:80:14)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.start (node:internal/test_runner/test:1262:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 254.263958

@@ -1,0 +1,18 @@
+TAP version 13
+# candidate-query engines: Python SQLite 3.54.1; Node SQLite 3.53.0
+# candidate-query same-environment VM steps: 179, 179, 179
+# Subtest: candidate query bounds unrelated-subject VM work and rejects the old broad predicate
+ok 1 - candidate query bounds unrelated-subject VM work and rejects the old broad predicate
+  ---
+  duration_ms: 187.813666
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 233.075125

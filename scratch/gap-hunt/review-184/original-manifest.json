@@ -1,0 +1,15 @@
+{
+  "pin": "8cdb4d95d9d37987e98976b7ca8da1d18d727684",
+  "files": [
+    {
+      "source": "scratch/gap-hunt/consumer-requirements/candidate-query/repro.py",
+      "copied": "original/repro.py",
+      "sha256": "c1d9aedfd0fa8bf30f27711e890ff78d10362c99e120c6779e8c76283cf2930a"
+    },
+    {
+      "source": "scratch/gap-hunt/consumer-requirements/candidate-query/captured-sql.json",
+      "copied": "original/captured-sql.json",
+      "sha256": "1f79c576482c60a25b3253d799e9a417c0e51f01b4424cec600ce27bddee80bc"
+    }
+  ]
+}

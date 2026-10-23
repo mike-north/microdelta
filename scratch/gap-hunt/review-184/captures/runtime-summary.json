@@ -1,0 +1,235 @@
+{
+  "counts": {
+    "numPassedTests": 56,
+    "numFailedTests": 0,
+    "numPassedTestSuites": 4,
+    "numFailedTestSuites": 0,
+    "numRuntimeErrorTestSuites": 0
+  },
+  "tests": [
+    {
+      "name": "external operations through the facade (RUN-011, RUN-012, RUN-013, ACC-003) a workspace given an Accounting port offers external operations: each is journaled, and usage is summarized for the run's environment only",
+      "status": "passed"
+    },
+    {
+      "name": "external operations through the facade (RUN-011, RUN-012, RUN-013, ACC-003) the usage accessor narrows by member and by run, and refuses a closed run",
+      "status": "passed"
+    },
+    {
+      "name": "external operations through the facade (RUN-011, RUN-012, RUN-013, ACC-003) without an Accounting port a workspace offers no external operations: the operation fails its member, and operator inspection and usage are invalid requests",
+      "status": "passed"
+    },
+    {
+      "name": "external operations through the facade (RUN-011, RUN-012, RUN-013, ACC-003) an untyped caller's Accounting port without a usage summary accessor is refused when the workspace opens",
+      "status": "passed"
+    },
+    {
+      "name": "external operations through the facade (RUN-011, RUN-012, RUN-013, ACC-003) exit mode: a rate limit with a retry time ends the run reporting that time; a later run admits nothing before it and sends nothing",
+      "status": "passed"
+    },
+    {
+      "name": "external operations through the facade (RUN-011, RUN-012, RUN-013, ACC-003) an operator inspects an unknown operation and abandons it through the run; the member is then free to run again",
+      "status": "passed"
+    },
+    {
+      "name": "unique run identifiers (#121 supervisor note) every run identifier the facade mints carries 128 random host bits, and no two runs share one, even across workspace objects that each start counting afresh",
+      "status": "passed"
+    },
+    {
+      "name": "unique run identifiers (#121 supervisor note) a caller-supplied run identifier must be an identifier, and never the facade's own reserved form",
+      "status": "passed"
+    },
+    {
+      "name": "unique run identifiers (#121 supervisor note) journal records attribute each request attempt to the run that sent it",
+      "status": "passed"
+    },
+    {
+      "name": "environments and recorded promotion (RUN-016, RUN-017) a trial fold satisfies production only through a promotion the run records under the writer lease, keeping its exact trial reference",
+      "status": "passed"
+    },
+    {
+      "name": "environments and recorded promotion (RUN-016, RUN-017) without a promotion production publishes its own fold",
+      "status": "passed"
+    },
+    {
+      "name": "environments and recorded promotion (RUN-016, RUN-017) a result cannot be promoted into the environment it was published in",
+      "status": "passed"
+    },
+    {
+      "name": "environments and recorded promotion (RUN-016, RUN-017) a promotion waits for the writer lease another run holds, and fails with WriterBusyError naming that run at the operator deadline",
+      "status": "passed"
+    },
+    {
+      "name": "environments and recorded promotion (RUN-016, RUN-017) without a deadline a promotion waits while another run holds the lease, and is recorded once that run releases it",
+      "status": "passed"
+    },
+    {
+      "name": "environments and recorded promotion (RUN-016, RUN-017) with stop intent in force a promotion is refused with stopped, and nothing is recorded",
+      "status": "passed"
+    },
+    {
+      "name": "schema, logical store and exact scope a new file receives a versioned History schema distinct from the legacy Store and EXP-3, and reopens by logical identity",
+      "status": "passed"
+    },
+    {
+      "name": "schema, logical store and exact scope a file holding another logical store, another schema version, an incomplete or foreign schema is rejected before any work",
+      "status": "passed"
+    },
+    {
+      "name": "schema, logical store and exact scope exact references resolve their own snapshot; malformed, other-store, wrong-scope and missing references are integrity failures that never follow current",
+      "status": "passed"
+    },
+    {
+      "name": "schema, logical store and exact scope subjects are complete opaque strings and analyses and environments scope them independently",
+      "status": "passed"
+    },
+    {
+      "name": "attempts, staging and atomic publication allocation commits a never-reused identity before staging, including across abandonment and reopen",
+      "status": "passed"
+    },
+    {
+      "name": "attempts, staging and atomic publication a staged attempt is not a completed result, and publication installs everything in one commit",
+      "status": "passed"
+    },
+    {
+      "name": "attempts, staging and atomic publication fresh equal output is a distinct result, both exact results stay readable and current is the latest publication",
+      "status": "passed"
+    },
+    {
+      "name": "attempts, staging and atomic publication stable keys identify one execution: same intent returns it, a changed intent or version rejects, and keys are scoped per subject",
+      "status": "passed"
+    },
+    {
+      "name": "attempts, staging and atomic publication staged payloads must be supported Value data with a container root, and stored results cannot be altered through returned data",
+      "status": "passed"
+    },
+    {
+      "name": "attempts, staging and atomic publication dependencies must be exact completed results in the same store and scope",
+      "status": "passed"
+    },
+    {
+      "name": "candidates, rollback and separate acceptance candidates filter by compatibility version, latest publication first, and rollback acceptance never rewinds current or rewrites provenance",
+      "status": "passed"
+    },
+    {
+      "name": "candidates, rollback and separate acceptance stored results and acceptances are immutable in storage",
+      "status": "passed"
+    },
+    {
+      "name": "single logical writer and clock policy one live holder at a time; release keeps the fence advancing",
+      "status": "passed"
+    },
+    {
+      "name": "single logical writer and clock policy a backward host clock never evaluates before the persisted high-water, so it cannot shorten a holder lease or resurrect an expired one",
+      "status": "passed"
+    },
+    {
+      "name": "single logical writer and clock policy a forward jump can expire a lease early, after which the old fence cannot allocate, stage or publish even when the clock returns",
+      "status": "passed"
+    },
+    {
+      "name": "single logical writer and clock policy a lease is fenced by its token alone: the same holder re-acquiring invalidates its previous fence",
+      "status": "passed"
+    },
+    {
+      "name": "single logical writer and clock policy an unavailable or invalid clock reading refuses the operation without any change",
+      "status": "passed"
+    },
+    {
+      "name": "exact selected reading from the generated index selected leaves, lengths and metadata fingerprints come from the index without root payload reads and equal independent Value oracles",
+      "status": "passed"
+    },
+    {
+      "name": "exact selected reading from the generated index unread changes keep consumed fingerprints equal while consumed changes differ, and old exact references stay stable",
+      "status": "passed"
+    },
+    {
+      "name": "valid-domain parity of the indexed reader every selection over the accepted Value edge domain equals the in-memory Value answer after reopen, without root payload reads",
+      "status": "passed"
+    },
+    {
+      "name": "meaningful corruption is detected, never repaired a tampered scalar leaf fails its indexed digest on read and in verification",
+      "status": "passed"
+    },
+    {
+      "name": "meaningful corruption is detected, never repaired a tampered index row or stored encoding is detected",
+      "status": "passed"
+    },
+    {
+      "name": "meaningful corruption is detected, never repaired index metadata contradicting its node kind is an integrity failure, never a Value answer or incompatible",
+      "status": "passed"
+    },
+    {
+      "name": "meaningful corruption is detected, never repaired recovery never reports a completed attempt whose exact result no longer resolves",
+      "status": "passed"
+    },
+    {
+      "name": "meaningful corruption is detected, never repaired completed retry paths never acknowledge a missing result after reopen; corruption is not turned into a miss",
+      "status": "passed"
+    },
+    {
+      "name": "meaningful corruption is detected, never repaired candidate, current and dependency metadata reject a result whose producing attempt is not completed or whose encoding is unsupported",
+      "status": "passed"
+    },
+    {
+      "name": "meaningful corruption is detected, never repaired stage from a contradicted allocated attempt is an integrity failure that changes no durable evidence",
+      "status": "passed"
+    },
+    {
+      "name": "meaningful corruption is detected, never repaired abandon a contradicted allocated attempt is an integrity failure that changes no durable evidence",
+      "status": "passed"
+    },
+    {
+      "name": "meaningful corruption is detected, never repaired abandon a contradicted staged attempt is an integrity failure that changes no durable evidence",
+      "status": "passed"
+    },
+    {
+      "name": "meaningful corruption is detected, never repaired publish a contradicted staged attempt is an integrity failure that changes no durable evidence",
+      "status": "passed"
+    },
+    {
+      "name": "meaningful corruption is detected, never repaired healthy allocate, stage, publish and staged abandon still commit beside a contradicted attempt",
+      "status": "passed"
+    },
+    {
+      "name": "meaningful corruption is detected, never repaired a missing index address or node for a present member is an integrity failure, never an absent-member fact",
+      "status": "passed"
+    },
+    {
+      "name": "meaningful corruption is detected, never repaired a dangling or wrong-scope dependency and malformed provenance are integrity failures on the dependent envelope",
+      "status": "passed"
+    },
+    {
+      "name": "trial-production-isolation (RUN-016, RUN-017) a trial never satisfies production by accident; after a recorded promotion production reuses every promoted result and pays nothing",
+      "status": "passed"
+    },
+    {
+      "name": "trial-production-isolation (RUN-016, RUN-017) without a promotion production executes and pays for its own work, and the trial's results and usage stay untouched",
+      "status": "passed"
+    },
+    {
+      "name": "environment namespaces a trial run\u2019s attempts, heads, candidates, acceptances and journal records never satisfy a production lookup",
+      "status": "passed"
+    },
+    {
+      "name": "recorded promotion candidate discovery enumerates eligible exact versions once, newest first, without changing durable state",
+      "status": "passed"
+    },
+    {
+      "name": "recorded promotion a promotion admits exactly the named trial results into production, with recorded provenance, and never moves or rewrites trial history",
+      "status": "passed"
+    },
+    {
+      "name": "recorded promotion a trial result promoted into production and accepted there appears only in production\u2019s acceptances, never in trial\u2019s",
+      "status": "passed"
+    },
+    {
+      "name": "recorded promotion a promotion into one environment admits nothing into any other environment",
+      "status": "passed"
+    },
+    {
+      "name": "recorded promotion promotion requires the current writer and distinct exact results of other environments of the same analysis; a refused promotion records nothing",
+      "status": "passed"
+    }
+  ]
+}

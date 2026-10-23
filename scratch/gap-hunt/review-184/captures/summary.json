@@ -1,0 +1,135 @@
+{
+  "head": "8b5c7d82185fa17ac3a6cf96e5fe5c3b3cc11ea7",
+  "reviewed_pin": "8b5c7d82185fa17ac3a6cf96e5fe5c3b3cc11ea7",
+  "historical_frozen_oracle_exit": 1,
+  "production_query_gate": {
+    "pass": 1,
+    "fail": 0
+  },
+  "vm_counts": {
+    "same-environment": [
+      {
+        "population": 100,
+        "steps": 179
+      },
+      {
+        "population": 1000,
+        "steps": 179
+      },
+      {
+        "population": 10000,
+        "steps": 179
+      }
+    ],
+    "other-environment": [
+      {
+        "population": 100,
+        "steps": 179
+      },
+      {
+        "population": 1000,
+        "steps": 179
+      },
+      {
+        "population": 10000,
+        "steps": 179
+      }
+    ],
+    "other-analysis": [
+      {
+        "population": 100,
+        "steps": 179
+      },
+      {
+        "population": 1000,
+        "steps": 179
+      },
+      {
+        "population": 10000,
+        "steps": 179
+      }
+    ]
+  },
+  "exact_parent_vm_negative": {
+    "same-environment": [
+      {
+        "population": 100,
+        "steps": 600
+      },
+      {
+        "population": 1000,
+        "steps": 5100
+      },
+      {
+        "population": 10000,
+        "steps": 50100
+      }
+    ],
+    "other-environment": [
+      {
+        "population": 100,
+        "steps": 600
+      },
+      {
+        "population": 1000,
+        "steps": 5100
+      },
+      {
+        "population": 10000,
+        "steps": 50100
+      }
+    ],
+    "other-analysis": [
+      {
+        "population": 100,
+        "steps": 106
+      },
+      {
+        "population": 1000,
+        "steps": 106
+      },
+      {
+        "population": 10000,
+        "steps": 106
+      }
+    ]
+  },
+  "sql_semantics": {
+    "before": [
+      2,
+      1
+    ],
+    "promoted": [
+      3,
+      2,
+      1
+    ],
+    "duplicate_promotion": [
+      3,
+      2,
+      1
+    ]
+  },
+  "additional_controls": {
+    "direct_not_transitive": true,
+    "local_plus_promotion_deduplicated": true,
+    "exact_promoted_version": true
+  },
+  "runtime": {
+    "numPassedTests": 56,
+    "numFailedTests": 0,
+    "numPassedTestSuites": 4,
+    "numFailedTestSuites": 0,
+    "numRuntimeErrorTestSuites": 0
+  },
+  "old_query_source_negative": {
+    "pass": 0,
+    "fail": 1,
+    "exit": 1
+  },
+  "source_restored_byte_exact": true,
+  "source_sha256": "f679a4a7bc28ad5d3c91d1e0f92f356911b2b21225a5b60472017c8643cc7d42",
+  "schema_sha256": "45f980397e76fefc594ef0e2d0176153bf676f05e1407819469070259c1f3b3d",
+  "verdict": "PASS bounded #177 candidate lookup repair",
+  "scope": "synthetic production-SQL VM discriminator plus generated-declaration History/facade correctness; no consumer timing/capacity/Linux/provider claim"
+}

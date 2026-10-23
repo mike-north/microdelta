@@ -1,0 +1,147 @@
+{
+  "production_source_sha256": "f679a4a7bc28ad5d3c91d1e0f92f356911b2b21225a5b60472017c8643cc7d42",
+  "schema_source_sha256": "45f980397e76fefc594ef0e2d0176153bf676f05e1407819469070259c1f3b3d",
+  "schema_names": [
+    "history_results",
+    "history_results_by_subject",
+    "history_promotions",
+    "history_promotions_by_target",
+    "history_promotion_results",
+    "history_promotion_results_by_result"
+  ],
+  "production_query_sha256": "a90883f2f150a9040c6e642099b8b8cbf12950111d3c7010b8e1e1a1d39093f4",
+  "old_query_parent": "471c1d47ef3dc0700e36d8da2adca7e02534570b",
+  "old_query_sha256": "217166bb52dd6d136e968ade2e427b5dfd2725e94ac593748b874b363ac0bcec",
+  "repaired": {
+    "sqlite_version": "3.54.1",
+    "counts": {
+      "same-environment": [
+        {
+          "population": 100,
+          "steps": 179
+        },
+        {
+          "population": 1000,
+          "steps": 179
+        },
+        {
+          "population": 10000,
+          "steps": 179
+        }
+      ],
+      "other-environment": [
+        {
+          "population": 100,
+          "steps": 179
+        },
+        {
+          "population": 1000,
+          "steps": 179
+        },
+        {
+          "population": 10000,
+          "steps": 179
+        }
+      ],
+      "other-analysis": [
+        {
+          "population": 100,
+          "steps": 179
+        },
+        {
+          "population": 1000,
+          "steps": 179
+        },
+        {
+          "population": 10000,
+          "steps": 179
+        }
+      ]
+    },
+    "semantic": {
+      "before": [
+        2,
+        1
+      ],
+      "promoted": [
+        3,
+        2,
+        1
+      ],
+      "duplicate_promotion": [
+        3,
+        2,
+        1
+      ]
+    }
+  },
+  "exact_parent_query_negative": {
+    "sqlite_version": "3.54.1",
+    "counts": {
+      "same-environment": [
+        {
+          "population": 100,
+          "steps": 600
+        },
+        {
+          "population": 1000,
+          "steps": 5100
+        },
+        {
+          "population": 10000,
+          "steps": 50100
+        }
+      ],
+      "other-environment": [
+        {
+          "population": 100,
+          "steps": 600
+        },
+        {
+          "population": 1000,
+          "steps": 5100
+        },
+        {
+          "population": 10000,
+          "steps": 50100
+        }
+      ],
+      "other-analysis": [
+        {
+          "population": 100,
+          "steps": 106
+        },
+        {
+          "population": 1000,
+          "steps": 106
+        },
+        {
+          "population": 10000,
+          "steps": 106
+        }
+      ]
+    },
+    "semantic": {
+      "before": [
+        2,
+        1
+      ],
+      "promoted": [
+        3,
+        2,
+        1
+      ],
+      "duplicate_promotion": [
+        3,
+        2,
+        1
+      ]
+    }
+  },
+  "controls": {
+    "direct_not_transitive": true,
+    "local_plus_promotion_deduplicated": true,
+    "exact_promoted_version": true
+  },
+  "scope": "SQL VM count and semantics over invented rows, not History integrity or module execution"
+}

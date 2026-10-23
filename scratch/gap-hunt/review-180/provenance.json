@@ -1,0 +1,22 @@
+[
+  {
+    "path": "packages/tracking/test/gap-hunt-contracts-intrinsic-presence.test.ts",
+    "source": "9267a44e1a203966e6ccd73db188e5826506326b",
+    "sha256": "f049f9711f74e0a1d773212fbbecb16ab49837b0916285d6891c334dc94fb6a2"
+  },
+  {
+    "path": "packages/core/test/gap-hunt-contracts-container-guard.test.ts",
+    "source": "9267a44e1a203966e6ccd73db188e5826506326b",
+    "sha256": "6fb604cd3caca0dbafd4d8e5cacd6fd80e36078df24a3fbf986466430cab3895"
+  },
+  {
+    "path": "packages/core/test/gap-hunt-contracts-guard-worker.ts",
+    "source": "9267a44e1a203966e6ccd73db188e5826506326b",
+    "sha256": "c76f05c876c25c12161362f7afff67fb6a2f5e8ab5d074f325a74af0ae5fd07f"
+  },
+  {
+    "path": "packages/tracking/test/gap-hunt-review-171-invalidation.test.ts",
+    "source": "prior171 named semantic supplement; independent unchanged fixture",
+    "sha256": "7d2ba761d1e3d36cc11f963ac4db49bd1c1db29c6a18a9c0188f9b2c3e5211ba"
+  }
+]

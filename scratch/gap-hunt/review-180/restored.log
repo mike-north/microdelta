@@ -1,0 +1,9 @@
+(node:2947) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+Test Suites: 2 passed, 2 total
+Tests:       13 passed, 13 total
+Snapshots:   0 total
+Time:        0.08 s, estimated 1 s
+Ran all test suites within paths "packages/tracking/.test-build/test/gap-hunt-contracts-intrinsic-presence.test.js", "packages/tracking/.test-build/test/gap-hunt-review-171-invalidation.test.js".
+Test results written to: scratch/gap-hunt/review-180/restored.json

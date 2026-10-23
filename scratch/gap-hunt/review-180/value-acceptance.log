@@ -1,0 +1,12 @@
+
+> @microdelta/value@0.1.0 test:unit
+> tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand --runTestsByPath .test-build/test/value.test.js --testNamePattern presence on an ordinary record|own-to-inherited|presence respects supported --json --outputFile ../../scratch/gap-hunt/review-180/value-acceptance.json
+
+(node:98333) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       31 skipped, 6 passed, 37 total
+Snapshots:   0 total
+Time:        0.082 s
+Ran all test suites within paths ".test-build/test/value.test.js".
+Test results written to: ../../scratch/gap-hunt/review-180/value-acceptance.json

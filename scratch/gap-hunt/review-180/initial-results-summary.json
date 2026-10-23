@@ -1,0 +1,38 @@
+{
+  "original-and-guard": {
+    "numPassedTests": 13,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numRuntimeErrorTestSuites": 0
+  },
+  "durable-guard": {
+    "numPassedTests": 5,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numRuntimeErrorTestSuites": 0
+  },
+  "value-acceptance": {
+    "numPassedTests": 6,
+    "numFailedTests": 0,
+    "numPendingTests": 31,
+    "numRuntimeErrorTestSuites": 0
+  },
+  "tracking-acceptance": {
+    "numPassedTests": 1,
+    "numFailedTests": 0,
+    "numPendingTests": 47,
+    "numRuntimeErrorTestSuites": 0
+  },
+  "negative": {
+    "numPassedTests": 2,
+    "numFailedTests": 9,
+    "numPendingTests": 0,
+    "numRuntimeErrorTestSuites": 0
+  },
+  "restored": {
+    "numPassedTests": 13,
+    "numFailedTests": 0,
+    "numPendingTests": 0,
+    "numRuntimeErrorTestSuites": 0
+  }
+}

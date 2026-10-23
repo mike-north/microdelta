@@ -111,7 +111,8 @@ export interface IAnySourceDeclaration<TFamily extends IBindingFamily> extends I
  * @alpha
  */
 export interface ISourceDeclaration<TFamily extends IBindingFamily, TResult, TExtra = unknown> extends IAnySourceDeclaration<TFamily> {
-  readonly run: (context: ISourceRunContext<TFamily, TResult> & TExtra) => IApply<TFamily['outcomes'], TResult>;
+  /** The source's trusted outcome, completed within its invocation lifetime. */
+  readonly run: (context: ISourceRunContext<TFamily, TResult> & TExtra) => IApply<TFamily['outcomes'], TResult> | Promise<IApply<TFamily['outcomes'], TResult>>;
   readonly finality: ((context: IFinalityContext<TFamily, TResult> & TExtra) => unknown) | undefined;
 }
 
@@ -226,8 +227,8 @@ export interface ISourceOptions<TFamily extends IBindingFamily, TResult, TExtra 
   readonly version?: number;
   /** Display metadata only; never identity or correspondence. */
   readonly label?: string;
-  /** The author's check/retrieval callback. */
-  readonly run: (context: ISourceRunContext<TFamily, TResult> & TExtra) => IApply<TFamily['outcomes'], TResult>;
+  /** The author's check/retrieval callback; awaited work must still complete with the declared outcome. */
+  readonly run: (context: ISourceRunContext<TFamily, TResult> & TExtra) => IApply<TFamily['outcomes'], TResult> | Promise<IApply<TFamily['outcomes'], TResult>>;
   /** The author's optional current finality hook. */
   readonly finality?: (context: IFinalityContext<TFamily, TResult> & TExtra) => unknown;
   /** Declares a keyed collection source and names its members' designated identity field (COL-1). */

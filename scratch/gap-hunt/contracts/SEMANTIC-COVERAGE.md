@@ -173,3 +173,14 @@ These are characterization tests: the implementation already satisfied them,
 so no expected-failure implementation cycle or production fix occurred.
 
 Implementer: Codex worker (gpt-6.1-sol), operating for Mike North.
+
+## TEST-5/6 concrete runtime outcomes
+
+`TEST-5-6-COST-REACTIVE.md` records three new passing assertions across ten
+independent processes: exactly three changed enrichment members; CPU-expensive
+strict aggregate over cheap memoized leaves; ten narrow Materialization consumers
+(160 scalar cells, zero root payloads); mutable local filters without stored
+snapshot rewrites; and fresh process-local tags over one exact retained corpus.
+Core strict/type-aware lint and generated-alpha tsd pass. Narrow/reactive views
+compose owner-alpha APIs; a new facade convenience API is not presumed.
+150,000 subjects remains an unmeasured capacity target for this bounded suite.

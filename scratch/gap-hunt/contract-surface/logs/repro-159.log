@@ -1,0 +1,34 @@
+$ /Users/mnorth/.nodenv/versions/24.22.1/bin/node node_modules/typescript/bin/tsc -p packages/core/tsconfig.test.json
+$ /Users/mnorth/.nodenv/versions/24.22.1/bin/node --experimental-vm-modules node_modules/jest/bin/jest.js --config packages/core/jest.config.mjs --runInBand --runTestsByPath packages/core/.test-build/test/gap-hunt-scale/acceptance-readback.test.js
+(node:66820) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL packages/core/.test-build/test/gap-hunt-scale/acceptance-readback.test.js
+  ● acknowledging each new acceptance returns only that acceptance from SQL
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Array [
+        1,
+    -   1,
+    -   1,
+    +   2,
+    +   3,
+      ]
+
+      61 |   // Full inspection must still retain every immutable acceptance record.
+      62 |   expect(history.readAcceptances(reference, scope.environment)).toHaveLength(3);
+    > 63 |   expect(rowsPerAcknowledgement).toEqual([1, 1, 1]);
+         |                                  ^
+      64 | });
+      65 |
+
+      at Object.<anonymous> (test/gap-hunt-scale/acceptance-readback.test.ts:63:34)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        0.127 s, estimated 1 s
+Ran all test suites within paths "packages/core/.test-build/test/gap-hunt-scale/acceptance-readback.test.js".

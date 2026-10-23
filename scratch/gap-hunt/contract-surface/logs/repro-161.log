@@ -1,0 +1,127 @@
+$ /Users/mnorth/.nodenv/versions/24.22.1/bin/node node_modules/typescript/bin/tsc -p packages/core/tsconfig.test.json
+$ /Users/mnorth/.nodenv/versions/24.22.1/bin/node --experimental-vm-modules node_modules/jest/bin/jest.js --config packages/core/jest.config.mjs --runInBand --runTestsByPath packages/core/.test-build/test/workspace-operations/operations.test.js
+(node:67359) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       15 passed, 15 total
+Snapshots:   0 total
+Time:        1.128 s, estimated 2 s
+Ran all test suites within paths "packages/core/.test-build/test/workspace-operations/operations.test.js".
+$ npm run build:examples
+
+> @microdelta/workspace@0.0.0 build:examples
+> tsc -p examples/contribution-report/tsconfig.json
+
+$ /Users/mnorth/.nodenv/versions/24.22.1/bin/node --test examples/contribution-report/test/example.test.mjs
+✔ keyed-cold-and-restarted-report: cold, unchanged restart with zero member, assessment and report bodies, recover and check (495.918208ms)
+✔ nested-equal-output-cutoff then nested-changed-output: rubric B reruns assessments only; rubric C reruns Ben and the report (350.567083ms)
+✔ tracked-gate-instances: threshold 2 skips Cy and reruns only the report; threshold 1 again reuses the cold report (332.726542ms)
+✔ tracked-gate-instances: starting at threshold 2, threshold 1 runs only the newly required Cy and the report (214.297583ms)
+✔ recover after an interrupted strict report: a waiting fold executed no report, yet its members are recovered from the recovered discovery (184.581959ms)
+✔ strict-fold-open-discovery: open discovery leaves the report waiting; closing it again reuses the cold report (336.159209ms)
+✔ custom-key-correspondence: members keyed by upstream profile id correspond across a reordered restart (304.043542ms)
+✔ the example rejects an incomplete command line or an unknown option value with a usage message (627.620875ms)
+ℹ tests 8
+ℹ suites 0
+ℹ pass 8
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 2907.922375
+$ /Users/mnorth/.nodenv/versions/24.22.1/bin/node --test scratch/gap-hunt/contract-surface/package-map.test.mjs
+✖ current package map acknowledges caller-supplied facade Accounting assembly (1.89525ms)
+ℹ tests 1
+ℹ suites 0
+ℹ pass 0
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 59.020042
+
+✖ failing tests:
+
+test at scratch/gap-hunt/contract-surface/package-map.test.mjs:7:1
+✖ current package map acknowledges caller-supplied facade Accounting assembly (1.89525ms)
+  AssertionError [ERR_ASSERTION]: The input was expected to not match the regular expression /facade does not yet wire the accounting port/u. Input:
+  
+  '# Implemented package and context map\n' +
+    '\n' +
+    'This is an implementation map for the current checkout. The [architecture](spec/architecture.md)\n' +
+    'and [package boundary](spec/package-boundaries.md) contracts govern it; an absent\n' +
+    'package below is a planned owner, not a shipped API. The executable role and edge\n' +
+    'registry is [`tooling/package-architecture.mjs`](../tooling/package-architecture.mjs).\n' +
+    'This map describes the checked-out tree. Milestone acceptance and default-branch\n' +
+    'delivery are separate gates recorded in the [M2 evidence record](validation/m2-2026-09-27.md).\n' +
+    '\n' +
+    '| Role | Package now | Existing capability and port | Declared edges |\n' +
+    '| --- | --- | --- | --- |\n' +
+    "| Author facade / assembly | `microdelta` (`packages/core`) | Supplies the Node Machine to History's memory factory; preserves `createMemoryStore(options?)` and exports the existing Store errors, types, and Jest conformance entry. Its project-private alpha workspace path composes the owners: `authoring()` builders bound to Resolution's family, `openWorkspace` over durable History with Node SQLite and clock, supervised runs with the normal (`resolve`) and recovery (`recover`) entry operations, `check`, ordinary work and exact reads, `currentRun()` context lookup, operator stop controllers on Node's timer, and `currentExecution()` execution controls | Composition may consume approved owner contracts and `@microdelta/machine-node`; contexts cannot import through the facade |\n" +
+    "| Definition & Binding | `@microdelta/definition` | Project-private alpha family-bound builders: frozen source/memo declarations with complete subjects and versions, the fixed M3 composition (memo to sibling source per explicit member), exact structural correspondence with distinct missing/ambiguous outcomes, direct-child witness reconnection, and an invocation bridge that hands actual author callbacks to an injected invoker and dispatches argument-free declared handles through an injected port; the topology's declared input and callable slot names, the read-only `isComposing()` composition-phase query, plus label-only `nameOf` | Value Semantics |\n" +
+    '| Tracking & Observation | `@microdelta/tracking` | Process-local tags, frames, cells, and derivations plus project-private `createTrackingObserver(host)` alpha contracts for detached supported wrappers, consumed semantic facts, called-function implementation evidence, current-fact comparison, and cached evidence replay | Value Semantics and `@microdelta/machine` |\n' +
+    "| Result History & Publication | `@microdelta/history` | Existing row Store contract and compatibility row schema; memory adapter receives a snapshot capability; alpha exact completed-result selection and fingerprint-reading ports; project-private alpha durable SQLite authority (`openDurableHistory`) over injected SQLite, clock and SHA-256 capabilities, owning the writer lease, attempts, atomic publication, current pointers, immutable results with a generated selected index, environment-scoped acceptance records, recorded promotions between environments, and Run Supervision's fenced operation journal of opaque versioned records | Value Semantics; `@microdelta/machine` |\n" +
+    "| Reuse Resolution | `@microdelta/resolution` | Project-private alpha `createResolution`: candidate lookup by scoped subject and version, own implementation/input/helper validation, current finality and explicit-retention source policy, direct-child witness reconnection with consumed-output comparison, admission before claims, check-only evaluation, request-key attempt identity with complete intent digests and no-execution recovery over History's durable authority; plus its binding family and minted source outcome envelopes | Definition, Tracking, History, Materialization |\n" +
+    '| Run Supervision | `@microdelta/supervision` | Project-private alpha `createSupervision({ context })` over a structurally injected async-scope capability: scoped runs with volatile run id, analysis and selected environment; `current()` lookup failing outside a live run, after close and during composition; lazy writer-lease use for normal requests only; the caller\'s admission policy; observe-only observers at the fixed `stepLifecycle` and `ordinaryLifecycle` positions; ordinary nonmemoized work; operator stop control (soft drain with no default deadline, deadline escalation, hard stop aborting bodies, sends, permit waits and timed waits), the publication-commit check, a bounded permit pool guarding real sends, the member fan-out window, and scoped execution controls over an injected timer. External operations through structural journal and accounting ports that History\'s operation journal and Accounting\'s adapter satisfy: intent before send, usage before outcome, the retry policy with durable "not before T" deferrals in sleep or exit passes, no blind replay, the taint guard, durable remote state after a hard stop, operator resolve and abandon, and privacy-restricted operation and wait events. The facade does not yet wire the accounting port | Definition, Resolution, Accounting |\n' +
+    "| Resource Accounting | `@microdelta/accounting` (`packages/accounting`, workspace-private until its npm trusted-publishing registration) | Project-private alpha durable port (`IDurableAccounting`) and its SQLite adapter (`openDurableAccounting`) over the injected Machine SQLite capability: usage intents recorded for each request attempt before its paid call, usage reports keyed by (operation, report) and acknowledged only once durable, estimates with their basis kept apart from observations, and lock-free summaries that report a request attempt without a report of its own as unknown, never zero. Operation identities stay with Run Supervision. Every fact is environment-scoped, immutable and idempotent, so no write needs History's writer fence. Satisfies Supervision's structural accounting port; composed with it only in the facade's tests until facade assembly | `@microdelta/machine`, Value Semantics |\n" +
+    "| Value Semantics | `@microdelta/value` (`packages/value`) | Supported canonical equality/snapshot encoding, structured observation addresses, selected facts, and fingerprints through Machine's SHA-256 capability | Machine |\n" +
+    '| Materialization | `@microdelta/materialization` (`packages/materialization`) | Bounded selected scalar loading, lazy nested views through an optional synchronous navigation capability, explicit detached output, and keyed projection observation through injected ports; each reader declares its supported capabilities | History, Tracking, Value Semantics |\n' +
+    '| Machine host contract | `@microdelta/machine` (`packages/machine`) | Portable async-context, detached-snapshot, SHA-256, SQLite, clock, timer and random identifier capability contracts | Supporting contract; consumed by Tracking, History, Resource Accounting, Value Semantics, and the Node adapter |\n' +
+    '| Node Machine adapter | `@microdelta/machine-node` (`packages/machine-node`) | Implements the contracts with Node async hooks, V8 structured serialization, crypto SHA-256, SQLite, the wall clock, Node timers and crypto random identifiers | `@microdelta/machine`; selected by the facade assembly |\n' +
+    '\n' +
+    "History's `types.ts` preserves the old row schema and the facade's existing\n" +
+    'exports. Direct History memory-store construction accepts a snapshot capability;\n' +
+    'the facade keeps its existing `createMemoryStore(options?)` signature by\n' +
+    'supplying the Node adapter at assembly. `Path` addresses rows in that Store; it is not the future structured\n' +
+    'semantic address. `Identity`, `Subject`, and `RecordedRead` remain compatibility\n' +
+    'shapes, not ratification of the target domain model. `nameOf` supplies a label,\n' +
+    'never a durable subject key or current-binding locator.\n' +
+    '\n' +
+    "History's durable authority is a separate alpha entry beside the unchanged\n" +
+    'row Store: the facade does not export it and the public Store API is unchanged.\n' +
+    'It stores Resolution provenance and acceptance evidence as versioned opaque\n' +
+    'records and validates their exact dependency references, without importing\n' +
+    'Definition or Tracking. Environments are namespaces within one store\n' +
+    '(RUN-017): attempts, heads, candidates, acceptances and journal records of one\n' +
+    'environment never satisfy another, except results that a recorded, fenced\n' +
+    "promotion admits. Run Supervision's operation and deferral records are stored\n" +
+    "through the same authority's operation journal, as opaque versioned records\n" +
+    'with compare-and-set revisions under writer fencing; History never interprets\n' +
+    "them. Its real-SQLite and independent-process evidence runs in the facade's\n" +
+    'assembly tests (`packages/core/test/durable-history` and\n' +
+    '`packages/core/test/journal`), because only assembly may compose History with\n' +
+    'the Node adapter.\n' +
+    '\n' +
+    "Reuse Resolution is History's first consumer. It records its provenance,\n" +
+    'acceptance and attempt-ending evidence in its own versioned formats, and its\n' +
+    "behavioral suites also run in the facade's assembly tests\n" +
+    '(`packages/core/test/resolution`) over the real SQLite authority.\n' +
+    '\n' +
+    'Resource Accounting owns its persistence port and schema (`microdelta.accounting.durable`,\n' +
+    "the `accounting_` namespace) in its own SQLite file; it does not share History's\n" +
+    "file, whose exact-schema validation admits only History's objects. Its Node\n" +
+    "conformance and independent-process kill evidence runs in the facade's assembly\n" +
+    'tests (`packages/core/test/accounting`), which alone may compose it with the Node\n' +
+    'adapter; the facade consumes it there as a development dependency only.\n' +
+    '\n' +
+    'Run Supervision owns run lifetime, admission and observer positions without a\n' +
+    'Machine or History import: assembly injects the Node Machine as its scope\n' +
+    "capability, builds each run's Resolution over Supervision's admission and\n" +
+    "observer ports, and supplies History's writer lease through a writer port. The\n" +
+    "facade's alpha workspace path is exactly that composition; its surface is\n" +
+    'declared as facade-local `@alpha` aliases, so the public rollup still exposes\n' +
+    'only the Store API. Its assembly suites (`packages/core/test/workspace`) run\n' +
+    'over the real owners, and the check'... 4364 more characters
+  
+      at TestContext.<anonymous> (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/scratch/gap-hunt/contract-surface/package-map.test.mjs:10:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: '# Implemented package and context map\n\nThis is an implementation map for the current checkout. The [architecture](spec/architecture.md)\nand [package boundary](spec/package-boundaries.md) contracts govern it; an absent\npackage below is a planned owner, not a shipped API. The executable role and edge\nregistry is [`tooling/package-architecture.mjs`](../tooling/package-architecture.mjs).\nThis map describes the checked-out tree. Milestone acceptance and default-branch\ndelivery are separate gates recorded in the [M2 evidence record](validation/m2-2026-09-27.md).\n\n| Role | Package now | Existing capability and port | Declared edges |\n| --- | --- | --- | --- |\n| Author facade / assembly | `microdelta` (`packages/core`) | Supplies the Node Machine to History\'s memory factory; preserves `createMemoryStore(options?)` and exports the existing Store errors, types, and Jest conformance entry. Its project-private alpha workspace path composes the owners: `authoring()` builders bound to Resolution\'s family, `openWorkspace` over durable History with Node SQLite and clock, supervised runs with the normal (`resolve`) and recovery (`recover`) entry operations, `check`, ordinary work and exact reads, `currentRun()` context lookup, operator stop controllers on Node\'s timer, and `currentExecution()` execution controls | Composition may consume approved owner contracts and `@microdelta/machine-node`; contexts cannot import through the facade |\n| Definition & Binding | `@microdelta/definition` | Project-private alpha family-bound builders: frozen source/memo declarations with complete subjects and versions, the fixed M3 composition (memo to sibling source per explicit member), exact structural correspondence with distinct missing/ambiguous outcomes, direct-child witness reconnection, and an invocation bridge that hands actual author callbacks to an injected invoker and dispatches argument-free declared handles through an injected port; the topology\'s declared input and callable slot names, the read-only `isComposing()` composition-phase query, plus label-only `nameOf` | Value Semantics |\n| Tracking & Observation | `@microdelta/tracking` | Process-local tags, frames, cells, and derivations plus project-private `createTrackingObserver(host)` alpha contracts for detached supported wrappers, consumed semantic facts, called-function implementation evidence, current-fact comparison, and cached evidence replay | Value Semantics and `@microdelta/machine` |\n| Result History & Publication | `@microdelta/history` | Existing row Store contract and compatibility row schema; memory adapter receives a snapshot capability; alpha exact completed-result selection and fingerprint-reading ports; project-private alpha durable SQLite authority (`openDurableHistory`) over injected SQLite, clock and SHA-256 capabilities, owning the writer lease, attempts, atomic publication, current pointers, immutable results with a generated selected index, environment-scoped acceptance records, recorded promotions between environments, and Run Supervision\'s fenced operation journal of opaque versioned records | Value Semantics; `@microdelta/machine` |\n| Reuse Resolution | `@microdelta/resolution` | Project-private alpha `createResolution`: candidate lookup by scoped subject and version, own implementation/input/helper validation, current finality and explicit-retention source policy, direct-child witness reconnection with consumed-output comparison, admission before claims, check-only evaluation, request-key attempt identity with complete intent digests and no-execution recovery over History\'s durable authority; plus its binding family and minted source outcome envelopes | Definition, Tracking, History, Materialization |\n| Run Supervision | `@microdelta/supervision` | Project-private alpha `createSupervision({ context })` over a structurally injected async-scope capability: scoped runs with volatile run id, analysis and selected environment; `current()` lookup failing outside a live run, after close and during composition; lazy writer-lease use for normal requests only; the caller\'s admission policy; observe-only observers at the fixed `stepLifecycle` and `ordinaryLifecycle` positions; ordinary nonmemoized work; operator stop control (soft drain with no default deadline, deadline escalation, hard stop aborting bodies, sends, permit waits and timed waits), the publication-commit check, a bounded permit pool guarding real sends, the member fan-out window, and scoped execution controls over an injected timer. External operations through structural journal and accounting ports that History\'s operation journal and Accounting\'s adapter satisfy: intent before send, usage before outcome, the retry policy with durable "not before T" deferrals in sleep or exit passes, no blind replay, the taint guard, durable remote state after a hard stop, operator resolve and abandon, and privacy-restricted operation and wait events. The facade does not yet wire the accounting port | Definition, Resolution, Accounting |\n| Resource Accounting | `@microdelta/accounting` (`packages/accounting`, workspace-private until its npm trusted-publishing registration) | Project-private alpha durable port (`IDurableAccounting`) and its SQLite adapter (`openDurableAccounting`) over the injected Machine SQLite capability: usage intents recorded for each request attempt before its paid call, usage reports keyed by (operation, report) and acknowledged only once durable, estimates with their basis kept apart from observations, and lock-free summaries that report a request attempt without a report of its own as unknown, never zero. Operation identities stay with Run Supervision. Every fact is environment-scoped, immutable and idempotent, so no write needs History\'s writer fence. Satisfies Supervision\'s structural accounting port; composed with it only in the facade\'s tests until facade assembly | `@microdelta/machine`, Value Semantics |\n| Value Semantics | `@microdelta/value` (`packages/value`) | Supported canonical equality/snapshot encoding, structured observation addresses, selected facts, and fingerprints through Machine\'s SHA-256 capability | Machine |\n| Materialization | `@microdelta/materialization` (`packages/materialization`) | Bounded selected scalar loading, lazy nested views through an optional synchronous navigation capability, explicit detached output, and keyed projection observation through injected ports; each reader declares its supported capabilities | History, Tracking, Value Semantics |\n| Machine host contract | `@microdelta/machine` (`packages/machine`) | Portable async-context, detached-snapshot, SHA-256, SQLite, clock, timer and random identifier capability contracts | Supporting contract; consumed by Tracking, History, Resource Accounting, Value Semantics, and the Node adapter |\n| Node Machine adapter | `@microdelta/machine-node` (`packages/machine-node`) | Implements the contracts with Node async hooks, V8 structured serialization, crypto SHA-256, SQLite, the wall clock, Node timers and crypto random identifiers | `@microdelta/machine`; selected by the facade assembly |\n\nHistory\'s `types.ts` preserves the old row schema and the facade\'s existing\nexports. Direct History memory-store construction accepts a snapshot capability;\nthe facade keeps its existing `createMemoryStore(options?)` signature by\nsupplying the Node adapter at assembly. `Path` addresses rows in that Store; it is not the future structured\nsemantic address. `Identity`, `Subject`, and `RecordedRead` remain compatibility\nshapes, not ratification of the target domain model. `nameOf` supplies a label,\nnever a durable subject key or current-binding locator.\n\nHistory\'s durable authority is a separate alpha entry beside the unchanged\nrow Store: the facade does not export it and the public Store API is unchanged.\nIt stores Resolution provenance and acceptance evidence as versioned opaque\nrecords and validates their exact dependency references, without importing\nDefinition or Tracking. Environments are namespaces within one store\n(RUN-017): attempts, heads, candidates, acceptances and journal records of one\nenvironment never satisfy another, except results that a recorded, fenced\npromotion admits. Run Supervision\'s operation and deferral records are stored\nthrough the same authority\'s operation journal, as opaque versioned records\nwith compare-and-set revisions under writer fencing; History never interprets\nthem. Its real-SQLite and independent-process evidence runs in the facade\'s\nassembly tests (`packages/core/test/durable-history` and\n`packages/core/test/journal`), because only assembly may compose History with\nthe Node adapter.\n\nReuse Resolution is History\'s first consumer. It records its provenance,\nacceptance and attempt-ending evidence in its own versioned formats, and its\nbehavioral suites also run in the facade\'s assembly tests\n(`packages/core/test/resolution`) over the real SQLite authority.\n\nResource Accounting owns its persistence port and schema (`microdelta.accounting.durable`,\nthe `accounting_` namespace) in its own SQLite file; it does not share History\'s\nfile, whose exact-schema validation admits only History\'s objects. Its Node\nconformance and independent-process kill evidence runs in the facade\'s assembly\ntests (`packages/core/test/accounting`), which alone may compose it with the Node\nadapter; the facade consumes it there as a development dependency only.\n\nRun Supervision owns run lifetime, admission and observer positions without a\nMachine or History import: assembly injects the Node Machine as its scope\ncapability, builds each run\'s Resolution over Supervision\'s admission and\nobserver ports, and supplies History\'s writer lease through a writer port. The\nfacade\'s alpha workspace path is exactly that composition; its surface is\ndeclared as facade-local `@alpha` aliases, so the public rollup still exposes\nonly the Store API. Its assembly suites (`packages/core/test/workspace`) run\nover the real owners, and the check'... 4364 more characters,
+    expected: /facade does not yet wire the accounting port/u,
+    operator: 'doesNotMatch',
+    diff: 'simple'
+  }

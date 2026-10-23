@@ -1940,5 +1940,13 @@
       "residual": "No claim of complete coverage.",
       "executedAssertionIds": []
     }
-  ]
+  ],
+  "crossVersionSupplement": {
+    "sourceCommit": "bbd2c1ef779ea8ef05ca80bf17c6b2be04aa8209",
+    "report": "scratch/gap-hunt/contract-operations/node26-clt/REPORT.md",
+    "log": "scratch/gap-hunt/contract-operations/node26-clt/cross-version.log",
+    "outcome": "PASS both24-26-24 and26-24-26",
+    "evidence": "independent native installs; identical source commit; actualbody1 then0/0; exactlocator and nestedUnicodepayload equality",
+    "boundary": "macOSarm64 Node24.22.1/26.12.0; locked driver12.9.0 engine range excludes26; CLTSDKcompiler override local only; Linux crossversion unexecuted"
+  }
 }

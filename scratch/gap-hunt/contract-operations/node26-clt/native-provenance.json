@@ -1,0 +1,16 @@
+[
+  {
+    "node": "v24.22.1",
+    "sourceCommit": "bbd2c1ef779ea8ef05ca80bf17c6b2be04aa8209",
+    "nativePath": "/private/var/folders/st/lnv0_82j071b3c_hn5s_j2wc0000gn/T/microdelta-cross-clt-irxfa47b/24/node_modules/better-sqlite3/build/Release/better_sqlite3.node",
+    "nativeSha256": "b3b473ef512e72914b7170855a8276aeee8a5868832e5cad821fe8234d04dc81",
+    "driverVersion": "12.9.0"
+  },
+  {
+    "node": "v26.12.0",
+    "sourceCommit": "bbd2c1ef779ea8ef05ca80bf17c6b2be04aa8209",
+    "nativePath": "/private/var/folders/st/lnv0_82j071b3c_hn5s_j2wc0000gn/T/microdelta-cross-clt-irxfa47b/26/node_modules/better-sqlite3/build/Release/better_sqlite3.node",
+    "nativeSha256": "965c0391fad6ba946685254abd9481d91a4933cd6abdd2bd838a6f27c1a5cbc9",
+    "driverVersion": "12.9.0"
+  }
+]

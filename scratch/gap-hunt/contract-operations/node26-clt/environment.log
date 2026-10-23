@@ -1,0 +1,23 @@
+$ ['node', '-p', 'JSON.stringify({version:process.version,abi:process.versions.modules,platform:process.platform,arch:process.arch})']
+{"version":"v26.12.0","abi":"147","platform":"darwin","arch":"arm64"}
+$ ['xcode-select', '-p']
+/Library/Developer/CommandLineTools
+$ ['xcrun', '--find', 'clang++']
+/Library/Developer/CommandLineTools/usr/bin/clang++
+$ ['xcrun', '--find', 'ld']
+/Library/Developer/CommandLineTools/usr/bin/ld
+$ ['clang++', '--version']
+Apple clang version 21.0.0 (clang-2100.3.34.2)
+Target: arm64-apple-darwin27.0.0
+Thread model: posix
+InstalledDir: /Library/Developer/CommandLineTools/usr/bin
+$ ['ld', '-v']
+@(#)PROGRAM:ld PROJECT:ld-27037.1
+BUILD 21:17:51 Aug 25 2026
+configured to support archs: armv6 armv7 armv7s arm64 arm64e arm64_32 i386 x86_64 x86_64h armv6m armv7k armv7m armv7em armv8m.main armv8.1m.main
+LTO support using: LLVM version 21.0.0 (static support for 30, runtime is 30)
+TAPI support using: Apple TAPI version 21.0.0 (tapi-2100.3.8.1)
+$ ['xcrun', '--show-sdk-path']
+/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk
+command-local DEVELOPER_DIR=/Library/Developer/CommandLineTools
+PATH prefix=/Users/mnorth/.nodenv/versions/26.12.0/bin:/Library/Developer/CommandLineTools/usr/bin

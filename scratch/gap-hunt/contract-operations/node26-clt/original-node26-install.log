@@ -1,0 +1,234 @@
+npm warn EBADENGINE Unsupported engine {
+npm warn EBADENGINE   package: 'better-sqlite3@12.9.0',
+npm warn EBADENGINE   required: { node: '20.x || 22.x || 23.x || 24.x || 25.x' },
+npm warn EBADENGINE   current: { node: 'v26.12.0', npm: '11.20.0' }
+npm warn EBADENGINE }
+npm warn deprecated prebuild-install@7.1.3: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.
+npm error code 1
+npm error path /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/scratch/gap-hunt/portability/node26/node_modules/better-sqlite3
+npm error command failed
+npm error command sh -c prebuild-install || node-gyp rebuild --release
+npm error TOUCH 4292fa9a667d77b27488aa109b010a85bce8e4e7a1c7aa0370cea902395c3866.intermediate
+npm error   ACTION deps_sqlite3_gyp_locate_sqlite3_target_copy_builtin_sqlite3 4292fa9a667d77b27488aa109b010a85bce8e4e7a1c7aa0370cea902395c3866.intermediate
+npm error   TOUCH Release/obj.target/deps/locate_sqlite3.stamp
+npm error   CC(target) Release/obj.target/sqlite3/gen/sqlite3/sqlite3.o
+npm error   LIBTOOL-STATIC Release/sqlite3.a
+npm error   CXX(target) Release/obj.target/better_sqlite3/src/better_sqlite3.o
+npm error   SOLINK_MODULE(target) Release/better_sqlite3.node
+npm error rm 4292fa9a667d77b27488aa109b010a85bce8e4e7a1c7aa0370cea902395c3866.intermediate
+npm error prebuild-install warn install No prebuilt binaries found (target=26.12.0 runtime=node arch=arm64 libc= platform=darwin)
+npm error gyp info it worked if it ends with ok
+npm error gyp info using node-gyp@12.4.0
+npm error gyp info using node@26.12.0 | darwin | arm64
+npm error gyp info find Python using Python version 3.15.0 found at "/opt/homebrew/opt/python@3.15/bin/python3.15"
+npm error gyp http GET https://nodejs.org/download/release/v26.12.0/node-v26.12.0-headers.tar.gz
+npm error (node:51399) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+npm error (Use `node --trace-warnings ...` to show where the warning was created)
+npm error gyp http 200 https://nodejs.org/download/release/v26.12.0/node-v26.12.0-headers.tar.gz
+npm error gyp http GET https://nodejs.org/download/release/v26.12.0/SHASUMS256.txt
+npm error gyp http 200 https://nodejs.org/download/release/v26.12.0/SHASUMS256.txt
+npm error gyp info spawn /opt/homebrew/opt/python@3.15/bin/python3.15
+npm error gyp info spawn args [
+npm error gyp info spawn args '/Users/mnorth/.nodenv/versions/26.12.0/lib/node_modules/npm/node_modules/node-gyp/gyp/gyp_main.py',
+npm error gyp info spawn args 'binding.gyp',
+npm error gyp info spawn args '-f',
+npm error gyp info spawn args 'make',
+npm error gyp info spawn args '-I',
+npm error gyp info spawn args '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/scratch/gap-hunt/portability/node26/node_modules/better-sqlite3/build/config.gypi',
+npm error gyp info spawn args '-I',
+npm error gyp info spawn args '/Users/mnorth/.nodenv/versions/26.12.0/lib/node_modules/npm/node_modules/node-gyp/addon.gypi',
+npm error gyp info spawn args '-I',
+npm error gyp info spawn args '/Users/mnorth/Library/Caches/node-gyp/26.12.0/include/node/common.gypi',
+npm error gyp info spawn args '-Dlibrary=shared_library',
+npm error gyp info spawn args '-Dvisibility=default',
+npm error gyp info spawn args '-Dnode_root_dir=/Users/mnorth/Library/Caches/node-gyp/26.12.0',
+npm error gyp info spawn args '-Dnode_gyp_dir=/Users/mnorth/.nodenv/versions/26.12.0/lib/node_modules/npm/node_modules/node-gyp',
+npm error gyp info spawn args '-Dnode_lib_file=/Users/mnorth/Library/Caches/node-gyp/26.12.0/<(target_arch)/node.lib',
+npm error gyp info spawn args '-Dmodule_root_dir=/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/scratch/gap-hunt/portability/node26/node_modules/better-sqlite3',
+npm error gyp info spawn args '-Dnode_engine=v8',
+npm error gyp info spawn args '--depth=.',
+npm error gyp info spawn args '--no-parallel',
+npm error gyp info spawn args '--generator-output',
+npm error gyp info spawn args 'build',
+npm error gyp info spawn args '-Goutput_dir=.'
+npm error gyp info spawn args ]
+npm error gyp info spawn make
+npm error gyp info spawn args [ 'BUILDTYPE=Release', '-C', 'build' ]
+npm error In file included from ../src/better_sqlite3.cpp:1:
+npm error In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/climits:43:
+npm error In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__config:15:
+npm error /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__configuration/availability.h:204:4: warning: "The selected platform is no longer supported by libc++." [-W#warnings]
+npm error   204 | #  warning "The selected platform is no longer supported by libc++."
+npm error       |    ^
+npm error In file included from ../src/better_sqlite3.cpp:34:
+npm error ../src/addon.cpp:36:3: warning: 'Value' is deprecated: Use the version with the type tag. [-Wdeprecated-declarations]
+npm error    36 |                 OnlyAddon->SqliteError.Reset(OnlyIsolate, SqliteError);
+npm error       |                 ^
+npm error ../src/util/macros.cpp:30:71: note: expanded from macro 'OnlyAddon'
+npm error    30 | #define OnlyAddon static_cast<Addon*>(info.Data().As<v8::External>()->Value())
+npm error       |                                                                       ^
+npm error /Users/mnorth/Library/Caches/node-gyp/26.12.0/include/node/v8-external.h:54:3: note: 'Value' has been explicitly marked deprecated here
+npm error    54 |   V8_DEPRECATED("Use the version with the type tag.")
+npm error       |   ^
+npm error /Users/mnorth/Library/Caches/node-gyp/26.12.0/include/node/v8config.h:615:35: note: expanded from macro 'V8_DEPRECATED'
+npm error   615 | # define V8_DEPRECATED(message) [[deprecated(message)]]
+npm error       |                                   ^
+npm error In file included from ../src/better_sqlite3.cpp:43:
+npm error ../src/objects/backup.cpp:46:2: warning: 'Value' is deprecated: Use the version with the type tag. [-Wdeprecated-declarations]
+npm error    46 |         UseAddon;
+npm error       |         ^
+npm error ../src/util/macros.cpp:33:33: note: expanded from macro 'UseAddon'
+npm error    33 | #define UseAddon Addon* addon = OnlyAddon
+npm error       |                                 ^
+npm error ../src/util/macros.cpp:30:71: note: expanded from macro 'OnlyAddon'
+npm error    30 | #define OnlyAddon static_cast<Addon*>(info.Data().As<v8::External>()->Value())
+npm error       |                                                                       ^
+npm error /Users/mnorth/Library/Caches/node-gyp/26.12.0/include/node/v8-external.h:54:3: note: 'Value' has been explicitly marked deprecated here
+npm error    54 |   V8_DEPRECATED("Use the version with the type tag.")
+npm error       |   ^
+npm error /Users/mnorth/Library/Caches/node-gyp/26.12.0/include/node/v8config.h:615:35: note: expanded from macro 'V8_DEPRECATED'
+npm error   615 | # define V8_DEPRECATED(message) [[deprecated(message)]]
+npm error       |                                   ^
+npm error In file included from ../src/better_sqlite3.cpp:44:
+npm error ../src/objects/statement.cpp:72:2: warning: 'Value' is deprecated: Use the version with the type tag. [-Wdeprecated-declarations]
+npm error    72 |         UseAddon;
+npm error       |         ^
+npm error ../src/util/macros.cpp:33:33: note: expanded from macro 'UseAddon'
+npm error    33 | #define UseAddon Addon* addon = OnlyAddon
+npm error       |                                 ^
+npm error ../src/util/macros.cpp:30:71: note: expanded from macro 'OnlyAddon'
+npm error    30 | #define OnlyAddon static_cast<Addon*>(info.Data().As<v8::External>()->Value())
+npm error       |                                                                       ^
+npm error /Users/mnorth/Library/Caches/node-gyp/26.12.0/include/node/v8-external.h:54:3: note: 'Value' has been explicitly marked deprecated here
+npm error    54 |   V8_DEPRECATED("Use the version with the type tag.")
+npm error       |   ^
+npm error /Users/mnorth/Library/Caches/node-gyp/26.12.0/include/node/v8config.h:615:35: note: expanded from macro 'V8_DEPRECATED'
+npm error   615 | # define V8_DEPRECATED(message) [[deprecated(message)]]
+npm error       |                                   ^
+npm error In file included from ../src/better_sqlite3.cpp:44:
+npm error ../src/objects/statement.cpp:229:2: warning: 'Value' is deprecated: Use the version with the type tag. [-Wdeprecated-declarations]
+npm error   229 |         UseAddon;
+npm error       |         ^
+npm error ../src/util/macros.cpp:33:33: note: expanded from macro 'UseAddon'
+npm error    33 | #define UseAddon Addon* addon = OnlyAddon
+npm error       |                                 ^
+npm error ../src/util/macros.cpp:30:71: note: expanded from macro 'OnlyAddon'
+npm error    30 | #define OnlyAddon static_cast<Addon*>(info.Data().As<v8::External>()->Value())
+npm error       |                                                                       ^
+npm error /Users/mnorth/Library/Caches/node-gyp/26.12.0/include/node/v8-external.h:54:3: note: 'Value' has been explicitly marked deprecated here
+npm error    54 |   V8_DEPRECATED("Use the version with the type tag.")
+npm error       |   ^
+npm error /Users/mnorth/Library/Caches/node-gyp/26.12.0/include/node/v8config.h:615:35: note: expanded from macro 'V8_DEPRECATED'
+npm error   615 | # define V8_DEPRECATED(message) [[deprecated(message)]]
+npm error       |                                   ^
+npm error In file included from ../src/better_sqlite3.cpp:45:
+npm error ../src/objects/database.cpp:155:2: warning: 'Value' is deprecated: Use the version with the type tag. [-Wdeprecated-declarations]
+npm error   155 |         UseAddon;
+npm error       |         ^
+npm error ../src/util/macros.cpp:33:33: note: expanded from macro 'UseAddon'
+npm error    33 | #define UseAddon Addon* addon = OnlyAddon
+npm error       |                                 ^
+npm error ../src/util/macros.cpp:30:71: note: expanded from macro 'OnlyAddon'
+npm error    30 | #define OnlyAddon static_cast<Addon*>(info.Data().As<v8::External>()->Value())
+npm error       |                                                                       ^
+npm error /Users/mnorth/Library/Caches/node-gyp/26.12.0/include/node/v8-external.h:54:3: note: 'Value' has been explicitly marked deprecated here
+npm error    54 |   V8_DEPRECATED("Use the version with the type tag.")
+npm error       |   ^
+npm error /Users/mnorth/Library/Caches/node-gyp/26.12.0/include/node/v8config.h:615:35: note: expanded from macro 'V8_DEPRECATED'
+npm error   615 | # define V8_DEPRECATED(message) [[deprecated(message)]]
+npm error       |                                   ^
+npm error In file included from ../src/better_sqlite3.cpp:45:
+npm error ../src/objects/database.cpp:203:2: warning: 'Value' is deprecated: Use the version with the type tag. [-Wdeprecated-declarations]
+npm error   203 |         UseAddon;
+npm error       |         ^
+npm error ../src/util/macros.cpp:33:33: note: expanded from macro 'UseAddon'
+npm error    33 | #define UseAddon Addon* addon = OnlyAddon
+npm error       |                                 ^
+npm error ../src/util/macros.cpp:30:71: note: expanded from macro 'OnlyAddon'
+npm error    30 | #define OnlyAddon static_cast<Addon*>(info.Data().As<v8::External>()->Value())
+npm error       |                                                                       ^
+npm error /Users/mnorth/Library/Caches/node-gyp/26.12.0/include/node/v8-external.h:54:3: note: 'Value' has been explicitly marked deprecated here
+npm error    54 |   V8_DEPRECATED("Use the version with the type tag.")
+npm error       |   ^
+npm error /Users/mnorth/Library/Caches/node-gyp/26.12.0/include/node/v8config.h:615:35: note: expanded from macro 'V8_DEPRECATED'
+npm error   615 | # define V8_DEPRECATED(message) [[deprecated(message)]]
+npm error       |                                   ^
+npm error In file included from ../src/better_sqlite3.cpp:45:
+npm error ../src/objects/database.cpp:261:2: warning: 'Value' is deprecated: Use the version with the type tag. [-Wdeprecated-declarations]
+npm error   261 |         UseAddon;
+npm error       |         ^
+npm error ../src/util/macros.cpp:33:33: note: expanded from macro 'UseAddon'
+npm error    33 | #define UseAddon Addon* addon = OnlyAddon
+npm error       |                                 ^
+npm error ../src/util/macros.cpp:30:71: note: expanded from macro 'OnlyAddon'
+npm error    30 | #define OnlyAddon static_cast<Addon*>(info.Data().As<v8::External>()->Value())
+npm error       |                                                                       ^
+npm error /Users/mnorth/Library/Caches/node-gyp/26.12.0/include/node/v8-external.h:54:3: note: 'Value' has been explicitly marked deprecated here
+npm error    54 |   V8_DEPRECATED("Use the version with the type tag.")
+npm error       |   ^
+npm error /Users/mnorth/Library/Caches/node-gyp/26.12.0/include/node/v8config.h:615:35: note: expanded from macro 'V8_DEPRECATED'
+npm error   615 | # define V8_DEPRECATED(message) [[deprecated(message)]]
+npm error       |                                   ^
+npm error In file included from ../src/better_sqlite3.cpp:46:
+npm error ../src/objects/statement-iterator.cpp:79:2: warning: 'Value' is deprecated: Use the version with the type tag. [-Wdeprecated-declarations]
+npm error    79 |         UseAddon;
+npm error       |         ^
+npm error ../src/util/macros.cpp:33:33: note: expanded from macro 'UseAddon'
+npm error    33 | #define UseAddon Addon* addon = OnlyAddon
+npm error       |                                 ^
+npm error ../src/util/macros.cpp:30:71: note: expanded from macro 'OnlyAddon'
+npm error    30 | #define OnlyAddon static_cast<Addon*>(info.Data().As<v8::External>()->Value())
+npm error       |                                                                       ^
+npm error /Users/mnorth/Library/Caches/node-gyp/26.12.0/include/node/v8-external.h:54:3: note: 'Value' has been explicitly marked deprecated here
+npm error    54 |   V8_DEPRECATED("Use the version with the type tag.")
+npm error       |   ^
+npm error /Users/mnorth/Library/Caches/node-gyp/26.12.0/include/node/v8config.h:615:35: note: expanded from macro 'V8_DEPRECATED'
+npm error   615 | # define V8_DEPRECATED(message) [[deprecated(message)]]
+npm error       |                                   ^
+npm error ../src/better_sqlite3.cpp:48:1: warning: cast from 'void (*)(v8::Local<v8::Object>, v8::Local<v8::Value>, v8::Local<v8::Context>)' to 'node::addon_context_register_func' (aka 'void (*)(v8::Local<v8::Object>, v8::Local<v8::Value>, v8::Local<v8::Context>, void *)') converts to incompatible function type [-Wcast-function-type-mismatch]
+npm error    48 | NODE_MODULE_INIT(/* exports, context */) {
+npm error       | ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+npm error /Users/mnorth/Library/Caches/node-gyp/26.12.0/include/node/node.h:1444:3: note: expanded from macro 'NODE_MODULE_INIT'
+npm error  1444 |   NODE_MODULE_CONTEXT_AWARE(NODE_GYP_MODULE_NAME,                     \
+npm error       |   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+npm error  1445 |                             NODE_MODULE_INITIALIZER)                  \
+npm error       |                             ~~~~~~~~~~~~~~~~~~~~~~~~
+npm error /Users/mnorth/Library/Caches/node-gyp/26.12.0/include/node/node.h:1413:3: note: expanded from macro 'NODE_MODULE_CONTEXT_AWARE'
+npm error  1413 |   NODE_MODULE_CONTEXT_AWARE_X(modname, regfunc, NULL, 0)
+npm error       |   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+npm error /Users/mnorth/Library/Caches/node-gyp/26.12.0/include/node/node.h:1395:7: note: expanded from macro 'NODE_MODULE_CONTEXT_AWARE_X'
+npm error  1395 |       (node::addon_context_register_func) (regfunc),                  \
+npm error       |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+npm error ../src/better_sqlite3.cpp:60:47: warning: 'New' is deprecated: Use the version with the type tag. [-Wdeprecated-declarations]
+npm error    60 |         v8::Local<v8::External> data = v8::External::New(isolate, addon);
+npm error       |                                                      ^
+npm error /Users/mnorth/Library/Caches/node-gyp/26.12.0/include/node/v8-external.h:31:3: note: 'New' has been explicitly marked deprecated here
+npm error    31 |   V8_DEPRECATED("Use the version with the type tag.")
+npm error       |   ^
+npm error /Users/mnorth/Library/Caches/node-gyp/26.12.0/include/node/v8config.h:615:35: note: expanded from macro 'V8_DEPRECATED'
+npm error   615 | # define V8_DEPRECATED(message) [[deprecated(message)]]
+npm error       |                                   ^
+npm error 11 warnings generated.
+npm error ld: multiple errors: tapi error: malformed file
+npm error /Library/Developer/CommandLineTools/SDKs/MacOSX27.0.sdk/usr/lib/libSystem.B.tbd:4:20: error: unknown architecture
+npm error                    arm64e.x1-macos, arm64e.x1-maccatalyst ]
+npm error                    ^~~~~~~~~~~~~~~
+npm error  in '/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/libSystem.tbd'; tapi error: malformed file
+npm error /Library/Developer/CommandLineTools/SDKs/MacOSX27.0.sdk/usr/lib/libc++.1.tbd:4:54: error: unknown architecture
+npm error                    arm64e-macos, arm64e-maccatalyst, arm64e.x1-macos, arm64e.x1-maccatalyst ]
+npm error                                                      ^~~~~~~~~~~~~~~
+npm error  in '/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/libc++.tbd'
+npm error clang++: error: linker command failed with exit code 1 (use -v to see invocation)
+npm error make: *** [Release/better_sqlite3.node] Error 1
+npm error gyp ERR! build error 
+npm error gyp ERR! stack Error: `make` failed with exit code: 2
+npm error gyp ERR! stack at ChildProcess.<anonymous> (/Users/mnorth/.nodenv/versions/26.12.0/lib/node_modules/npm/node_modules/node-gyp/lib/build.js:219:23)
+npm error gyp ERR! System Darwin 27.0.0
+npm error gyp ERR! command "/Users/mnorth/.nodenv/versions/26.12.0/bin/node" "/Users/mnorth/.nodenv/versions/26.12.0/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js" "rebuild" "--release"
+npm error gyp ERR! cwd /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/scratch/gap-hunt/portability/node26/node_modules/better-sqlite3
+npm error gyp ERR! node -v v26.12.0
+npm error gyp ERR! node-gyp -v v12.4.0
+npm error gyp ERR! $npm_package_name better-sqlite3
+npm error gyp ERR! $npm_package_version 12.9.0
+npm error gyp ERR! not ok
+npm error A complete log of this run can be found in: /Users/mnorth/.npm/_logs/2026-10-23T05_43_49_574Z-debug-0.log

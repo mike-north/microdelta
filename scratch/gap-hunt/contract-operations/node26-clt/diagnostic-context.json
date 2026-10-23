@@ -1,0 +1,21 @@
+{
+  "sourceCommit": "6d3f3f3533d75ea42be226edbd7e3932b974f447",
+  "checkout": "/var/folders/st/lnv0_82j071b3c_hn5s_j2wc0000gn/T/microdelta-158-clean-evidence-m58oh41h/checkout",
+  "command": [
+    "/Users/mnorth/.nodenv/versions/26.12.0/bin/node",
+    "scratch/gap-hunt/contract-operations/diagnose-158-native.mjs"
+  ],
+  "environment": {
+    "DEVELOPER_DIR": "/Library/Developer/CommandLineTools",
+    "CC": "/Library/Developer/CommandLineTools/usr/bin/clang",
+    "CXX": "/Library/Developer/CommandLineTools/usr/bin/clang++",
+    "SDKROOT": "/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+    "CFLAGS": "-isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+    "CXXFLAGS": "-isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk",
+    "LDFLAGS": "-isysroot /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk"
+  },
+  "pathPrefix": "/Users/mnorth/.nodenv/versions/26.12.0/bin:/Library/Developer/CommandLineTools/usr/bin",
+  "cleanBefore": "",
+  "outerExit": 0,
+  "cleanAfter": ""
+}

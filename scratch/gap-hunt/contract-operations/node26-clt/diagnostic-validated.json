@@ -1,0 +1,10 @@
+{
+  "outcome": "PASS",
+  "checks": [
+    "actual Node26.12.0/ABI147 Darwinarm64",
+    "npm/install/smoke status0 no signal/error",
+    "native-sqlite-open-query-ok",
+    "clean evidence checkout before and after"
+  ],
+  "globalSelectionAfter": "/Applications/Xcode.app/Contents/Developer"
+}

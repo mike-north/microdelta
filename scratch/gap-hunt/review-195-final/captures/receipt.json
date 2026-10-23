@@ -1,0 +1,406 @@
+{
+  "source": "0b3cf4b01ef4e0d17211b98fc435385b2b4d2681",
+  "old": "a13a3fd88ffe5ed24334f60af84316b31d98971e",
+  "frozenMutation": "95679b0484bcda7d6e6a00d2cddc165041fe2baf",
+  "frozenOriginal": "49c47b79346e78ae9ef22f8985d254254200a14c",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "native": {
+    "SDKROOT": "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk",
+    "node": "v24.22.1"
+  },
+  "commands": [
+    {
+      "name": "install",
+      "argv": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "build",
+      "argv": [
+        "npm",
+        "run",
+        "build:packages"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "fixtures",
+      "argv": [
+        "npm",
+        "run",
+        "build:fixtures"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "core-test-build",
+      "argv": [
+        "node",
+        "node_modules/typescript/bin/tsc",
+        "-p",
+        "packages/core/tsconfig.test.json"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "original-lint",
+      "argv": [
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "packages/core/test/gap-hunt-review195-final-original.test.ts"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "consumer-compile",
+      "argv": [
+        "node",
+        "node_modules/typescript/bin/tsc",
+        "-p",
+        "scratch/gap-hunt/review-195-final/tsconfig.json"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "consumer-lint",
+      "argv": [
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "-c",
+        "scratch/gap-hunt/review-195-final/eslint.config.mjs",
+        "scratch/gap-hunt/review-195-final/mutation.test.ts"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "original-current",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "packages/core/jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "<captures>/original-current.json",
+        "--runTestsByPath",
+        "packages/core/.test-build/test/gap-hunt-review195-final-original.test.js"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "official",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "packages/core/jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "<captures>/official.json",
+        "--runTestsByPath",
+        "packages/core/.test-build/test/gap-hunt-error-privacy.test.js"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "privacy",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "packages/core/jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "<captures>/privacy.json",
+        "--runTestsByPath",
+        "packages/core/.test-build/test/resolution/author-error-privacy.test.js"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "mutation-current",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/review-195-final/mutation.jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "<captures>/mutation-current.json"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "official-mutation-current",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "packages/core/jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "<captures>/official-mutation-current.json",
+        "--runTestsByPath",
+        "packages/core/.test-build/test/gap-hunt-review-195-mutation.test.js"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "resolution-check",
+      "argv": [
+        "npm",
+        "run",
+        "check",
+        "--workspace",
+        "@microdelta/resolution"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "core-check",
+      "argv": [
+        "npm",
+        "run",
+        "check",
+        "--workspace",
+        "microdelta"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "declarations",
+      "argv": [
+        "npm",
+        "run",
+        "check:declarations"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "old-build",
+      "argv": [
+        "npm",
+        "run",
+        "build:packages"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "original-old",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "packages/core/jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "<captures>/original-old.json",
+        "--runTestsByPath",
+        "packages/core/.test-build/test/gap-hunt-review195-final-original.test.js"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "mutation-old",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/review-195-final/mutation.jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "<captures>/mutation-old.json"
+      ],
+      "exit": 1,
+      "expected": 1
+    },
+    {
+      "name": "restored-build",
+      "argv": [
+        "npm",
+        "run",
+        "build:packages"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "original-restored",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "packages/core/jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "<captures>/original-restored.json",
+        "--runTestsByPath",
+        "packages/core/.test-build/test/gap-hunt-review195-final-original.test.js"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "mutation-restored",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/review-195-final/mutation.jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "<captures>/mutation-restored.json"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "official-mutation-restored",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "packages/core/jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "<captures>/official-mutation-restored.json",
+        "--runTestsByPath",
+        "packages/core/.test-build/test/gap-hunt-review-195-mutation.test.js"
+      ],
+      "exit": 0,
+      "expected": 0
+    }
+  ],
+  "restoredSource": true,
+  "emittedBaseline": {
+    "packages/resolution/dist/api-temp/resolution.api.md": "7540fe51051b7875c3b4e4d048fd36850855d5d60cdcaf9da2a0ede0081c9674",
+    "packages/resolution/dist/api/resolution.untrimmed.d.ts": "8d7a5ff4b2371d2b71ef9b04776ddecc34ace5dfc08cd9e20ec650df502e4251",
+    "packages/resolution/dist/api/resolution.beta.d.ts": "184a2a0027af6cd6d3d7968180e9fdfac1cdfceb1ab8833c28c733d1b738fbfb",
+    "packages/resolution/dist/api/resolution.alpha.d.ts": "8d7a5ff4b2371d2b71ef9b04776ddecc34ace5dfc08cd9e20ec650df502e4251",
+    "packages/resolution/dist/api/tsdoc-metadata.json": "9f18c09d20bcfa171e8da6d6ad3115a7e2c27241b6a4f973de6f8c1fa5bd673d",
+    "packages/resolution/dist/api/resolution.public.d.ts": "184a2a0027af6cd6d3d7968180e9fdfac1cdfceb1ab8833c28c733d1b738fbfb",
+    "packages/resolution/dist/src/evidence.d.ts": "80c627cff75722ba1519cd8f031fd5de6d03be4c3a5649bb5a9bb6022d983b4f",
+    "packages/resolution/dist/src/resolution.d.ts.map": "17bfe027e6207278159c98bac85478d0e7aa73bda0001761d251a096ba73fee5",
+    "packages/resolution/dist/src/intent.d.ts": "2629e927e1a3eeb72c938480fa0605f89e9d3af739e7ec03c359e629aa20d1ab",
+    "packages/resolution/dist/src/family.js.map": "e0034f3790e807548db6e859c5752ab80a9b77ee3fbd0007bbc0bc8d8d369973",
+    "packages/resolution/dist/src/evidence.d.ts.map": "abf5be36064f190447862e2ebe315c1c2036a49869a5401dd60a34a7d82f3e5a",
+    "packages/resolution/dist/src/evidence.js.map": "ae875c3a61f59b3d4e74415f9089fd850d6a544360ffa5310ca632e254410ab0",
+    "packages/resolution/dist/src/outcome.d.ts": "179b4b12d84d07932c106b51ab41f600ddba61a2119220988733daad7e1ca9db",
+    "packages/resolution/dist/src/current.d.ts.map": "66621d22c6a45a8f51086eed081ef956cdf1ad850de4a9e62311803e93b8a49b",
+    "packages/resolution/dist/src/current.js": "24bd47631147c118434c1a1df0a883b5d211f5316fba2e67743573ab05c521a9",
+    "packages/resolution/dist/src/contracts.js.map": "372410efe873b723c90a071df0ed21ced8c251c4134b385335fe02f7e2f8fb2b",
+    "packages/resolution/dist/src/outcome.js": "8804bb395126d3141ff596e8e8fced5fc4ccebc6f594ac0b0c75ddb6a21d75a2",
+    "packages/resolution/dist/src/errors.d.ts": "e94b58482228801bf0d296584706c25b24c4422226bf7bd6a37dc43049cc66a8",
+    "packages/resolution/dist/src/errors.js.map": "c3612de8c56ce775d788334c785596fd6023c8a3bda47175dffb2d066ea01fa2",
+    "packages/resolution/dist/src/outcome.js.map": "c9adb81112ecff2aa98c71978af836df6c18826d906e63d5f94b852a801a2dac",
+    "packages/resolution/dist/src/intent.js": "b1df6ecb70738b85785e007af0e7d396da5a4943368341638931f809c9cc2a39",
+    "packages/resolution/dist/src/resolution.d.ts": "699312aaa52c8b779e962d98da56f413a173c0325572c8b276099c7797cd391f",
+    "packages/resolution/dist/src/index.js": "b84de160952cd8d8a6aba6b1cc82eb177b984efd009e2f5bf02725a89cbf6d6f",
+    "packages/resolution/dist/src/errors.d.ts.map": "3891322792f78dc7502dff52bdc62e30ef6a6497610454ff1d6276b3bfb548fe",
+    "packages/resolution/dist/src/resolution.js": "b40ca5a076009158c850fef9c8cb832cbf67ffeaa59ae4f335810a2969b939b7",
+    "packages/resolution/dist/src/family.d.ts": "27f6990f73511b31097c369ac96a336fa42aa69ff313a5cf157d82ebfa339cba",
+    "packages/resolution/dist/src/contracts.d.ts": "3425ba0c2b535dd42cda0bff6b98af01063fbc90f390191487ffc738238fe163",
+    "packages/resolution/dist/src/errors.js": "4503a18694d26d7ac4adc13efc8e4a40a4759614e1b44043cf9d4fd283e2b160",
+    "packages/resolution/dist/src/current.d.ts": "ea02fd478fba26acc11e59f705d50d6bf84ac1e8b9caeb8ffc54143b9eb5cc7d",
+    "packages/resolution/dist/src/index.js.map": "4f5903c402a235111b7e87da1d5a8e930e606f414cd400881e9c40af6ea02bf6",
+    "packages/resolution/dist/src/evidence.js": "4324452a5a3de4d983cf785855dac03290e1e222a368a97d7ca65c4fe0787b21",
+    "packages/resolution/dist/src/intent.js.map": "e22326a4dbc475c0e6c7b97b60160a53f647c4b56d749d22921d6b23088b8830",
+    "packages/resolution/dist/src/current.js.map": "db269ede27ddc19323354c8637d963b4bf5eabb09c1a71164f31eaa3e61146a8",
+    "packages/resolution/dist/src/index.d.ts": "6729327e7c19d29c1cd7091bed325eb353fc0fa8810e206ec5fd67b5c523d279",
+    "packages/resolution/dist/src/resolution.js.map": "6c56b4210311c595ada422a78eb4051ce9959fd47a3561fede6bc6b8f62a8a1d",
+    "packages/resolution/dist/src/intent.d.ts.map": "1978aaa2337b8fae048d4d46e4bbf2d61574b667f0b37a4406e448e5a1b025d3",
+    "packages/resolution/dist/src/contracts.js": "427a6852d1b4fbc59c12b396120836e73895fb11bee3ec3841f58f9c9f32499d",
+    "packages/resolution/dist/src/family.d.ts.map": "cb2d5c271a2413f04d67956bda287ac3a75d5f2ca845f3baebab57275f6b0801",
+    "packages/resolution/dist/src/family.js": "17dddec285203bdd3abd0a19e3d77fd8e166d5d240ec770cdfddbbb2a6dbcd66",
+    "packages/resolution/dist/src/contracts.d.ts.map": "f9a2cb235e6d1f30e15e86cf712d9c9be55394b093de8ac7e0738635a21a4641",
+    "packages/resolution/dist/src/index.d.ts.map": "8158724ec9855f5af8f4580a905d2498c5a944596f0f515a74b5dbeb70b4cee7",
+    "packages/resolution/dist/src/outcome.d.ts.map": "1e3bce7c1d15436f5fe231226d01c31f86132d8fd692ebc67c50eefd7c1f5634"
+  },
+  "emittedRestored": {
+    "packages/resolution/dist/api-temp/resolution.api.md": "7540fe51051b7875c3b4e4d048fd36850855d5d60cdcaf9da2a0ede0081c9674",
+    "packages/resolution/dist/api/resolution.untrimmed.d.ts": "8d7a5ff4b2371d2b71ef9b04776ddecc34ace5dfc08cd9e20ec650df502e4251",
+    "packages/resolution/dist/api/resolution.beta.d.ts": "184a2a0027af6cd6d3d7968180e9fdfac1cdfceb1ab8833c28c733d1b738fbfb",
+    "packages/resolution/dist/api/resolution.alpha.d.ts": "8d7a5ff4b2371d2b71ef9b04776ddecc34ace5dfc08cd9e20ec650df502e4251",
+    "packages/resolution/dist/api/tsdoc-metadata.json": "9f18c09d20bcfa171e8da6d6ad3115a7e2c27241b6a4f973de6f8c1fa5bd673d",
+    "packages/resolution/dist/api/resolution.public.d.ts": "184a2a0027af6cd6d3d7968180e9fdfac1cdfceb1ab8833c28c733d1b738fbfb",
+    "packages/resolution/dist/src/evidence.d.ts": "80c627cff75722ba1519cd8f031fd5de6d03be4c3a5649bb5a9bb6022d983b4f",
+    "packages/resolution/dist/src/resolution.d.ts.map": "17bfe027e6207278159c98bac85478d0e7aa73bda0001761d251a096ba73fee5",
+    "packages/resolution/dist/src/intent.d.ts": "2629e927e1a3eeb72c938480fa0605f89e9d3af739e7ec03c359e629aa20d1ab",
+    "packages/resolution/dist/src/family.js.map": "e0034f3790e807548db6e859c5752ab80a9b77ee3fbd0007bbc0bc8d8d369973",
+    "packages/resolution/dist/src/evidence.d.ts.map": "abf5be36064f190447862e2ebe315c1c2036a49869a5401dd60a34a7d82f3e5a",
+    "packages/resolution/dist/src/evidence.js.map": "ae875c3a61f59b3d4e74415f9089fd850d6a544360ffa5310ca632e254410ab0",
+    "packages/resolution/dist/src/outcome.d.ts": "179b4b12d84d07932c106b51ab41f600ddba61a2119220988733daad7e1ca9db",
+    "packages/resolution/dist/src/current.d.ts.map": "66621d22c6a45a8f51086eed081ef956cdf1ad850de4a9e62311803e93b8a49b",
+    "packages/resolution/dist/src/current.js": "24bd47631147c118434c1a1df0a883b5d211f5316fba2e67743573ab05c521a9",
+    "packages/resolution/dist/src/contracts.js.map": "372410efe873b723c90a071df0ed21ced8c251c4134b385335fe02f7e2f8fb2b",
+    "packages/resolution/dist/src/outcome.js": "8804bb395126d3141ff596e8e8fced5fc4ccebc6f594ac0b0c75ddb6a21d75a2",
+    "packages/resolution/dist/src/errors.d.ts": "e94b58482228801bf0d296584706c25b24c4422226bf7bd6a37dc43049cc66a8",
+    "packages/resolution/dist/src/errors.js.map": "c3612de8c56ce775d788334c785596fd6023c8a3bda47175dffb2d066ea01fa2",
+    "packages/resolution/dist/src/outcome.js.map": "c9adb81112ecff2aa98c71978af836df6c18826d906e63d5f94b852a801a2dac",
+    "packages/resolution/dist/src/intent.js": "b1df6ecb70738b85785e007af0e7d396da5a4943368341638931f809c9cc2a39",
+    "packages/resolution/dist/src/resolution.d.ts": "699312aaa52c8b779e962d98da56f413a173c0325572c8b276099c7797cd391f",
+    "packages/resolution/dist/src/index.js": "b84de160952cd8d8a6aba6b1cc82eb177b984efd009e2f5bf02725a89cbf6d6f",
+    "packages/resolution/dist/src/errors.d.ts.map": "3891322792f78dc7502dff52bdc62e30ef6a6497610454ff1d6276b3bfb548fe",
+    "packages/resolution/dist/src/resolution.js": "b40ca5a076009158c850fef9c8cb832cbf67ffeaa59ae4f335810a2969b939b7",
+    "packages/resolution/dist/src/family.d.ts": "27f6990f73511b31097c369ac96a336fa42aa69ff313a5cf157d82ebfa339cba",
+    "packages/resolution/dist/src/contracts.d.ts": "3425ba0c2b535dd42cda0bff6b98af01063fbc90f390191487ffc738238fe163",
+    "packages/resolution/dist/src/errors.js": "4503a18694d26d7ac4adc13efc8e4a40a4759614e1b44043cf9d4fd283e2b160",
+    "packages/resolution/dist/src/current.d.ts": "ea02fd478fba26acc11e59f705d50d6bf84ac1e8b9caeb8ffc54143b9eb5cc7d",
+    "packages/resolution/dist/src/index.js.map": "4f5903c402a235111b7e87da1d5a8e930e606f414cd400881e9c40af6ea02bf6",
+    "packages/resolution/dist/src/evidence.js": "4324452a5a3de4d983cf785855dac03290e1e222a368a97d7ca65c4fe0787b21",
+    "packages/resolution/dist/src/intent.js.map": "e22326a4dbc475c0e6c7b97b60160a53f647c4b56d749d22921d6b23088b8830",
+    "packages/resolution/dist/src/current.js.map": "db269ede27ddc19323354c8637d963b4bf5eabb09c1a71164f31eaa3e61146a8",
+    "packages/resolution/dist/src/index.d.ts": "6729327e7c19d29c1cd7091bed325eb353fc0fa8810e206ec5fd67b5c523d279",
+    "packages/resolution/dist/src/resolution.js.map": "6c56b4210311c595ada422a78eb4051ce9959fd47a3561fede6bc6b8f62a8a1d",
+    "packages/resolution/dist/src/intent.d.ts.map": "1978aaa2337b8fae048d4d46e4bbf2d61574b667f0b37a4406e448e5a1b025d3",
+    "packages/resolution/dist/src/contracts.js": "427a6852d1b4fbc59c12b396120836e73895fb11bee3ec3841f58f9c9f32499d",
+    "packages/resolution/dist/src/family.d.ts.map": "cb2d5c271a2413f04d67956bda287ac3a75d5f2ca845f3baebab57275f6b0801",
+    "packages/resolution/dist/src/family.js": "17dddec285203bdd3abd0a19e3d77fd8e166d5d240ec770cdfddbbb2a6dbcd66",
+    "packages/resolution/dist/src/contracts.d.ts.map": "f9a2cb235e6d1f30e15e86cf712d9c9be55394b093de8ac7e0738635a21a4641",
+    "packages/resolution/dist/src/index.d.ts.map": "8158724ec9855f5af8f4580a905d2498c5a944596f0f515a74b5dbeb70b4cee7",
+    "packages/resolution/dist/src/outcome.d.ts.map": "1e3bce7c1d15436f5fe231226d01c31f86132d8fd692ebc67c50eefd7c1f5634"
+  },
+  "emittedRestoredExact": true
+}

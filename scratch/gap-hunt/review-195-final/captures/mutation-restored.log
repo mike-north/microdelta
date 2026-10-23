@@ -1,0 +1,23 @@
+  console.log
+    child-mutation-observation {"mode":"unmodified","outerCode":"unsupported-result","outerMessage":"Body of [\"child-mutation\",\"step\",\"child\",null] returned unsupported data","outerIsMutated":false,"mutations":0,"completed":false,"rows":{"count":0}}
+
+      at Object.<anonymous> (scratch/gap-hunt/review-195-final/dist/mutation.test.js:55:21)
+
+  console.log
+    child-mutation-observation {"mode":"mutate-rethrow","outerCode":"unsupported-result","outerMessage":"Body of [\"child-mutation\",\"step\",\"child\",null] returned unsupported data","outerIsMutated":false,"mutations":1,"completed":false,"rows":{"count":0}}
+
+      at Object.<anonymous> (scratch/gap-hunt/review-195-final/dist/mutation.test.js:55:21)
+
+  console.log
+    child-mutation-observation {"mode":"mutate-swallow","outerCode":"unsupported-result","outerMessage":"Body of [\"child-mutation\",\"step\",\"child\",null] returned unsupported data","outerIsMutated":false,"mutations":1,"completed":false,"rows":{"count":0}}
+
+      at Object.<anonymous> (scratch/gap-hunt/review-195-final/dist/mutation.test.js:55:21)
+
+(node:67582) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       3 passed, 3 total
+Snapshots:   0 total
+Time:        0.174 s, estimated 1 s
+Ran all test suites.
+Test results written to: ../../../../../..<captures>/mutation-restored.json

@@ -1,0 +1,18 @@
+  console.log
+    author-error-observation {"mode":"plain-error","outerCode":"execution-failure","outerMessage":"Body of [\"opaque-author\",\"step\",\"value\",null] failed","causeIsThrown":true,"outerIsThrown":false,"completedResult":false}
+
+      at Object.<anonymous> (test/gap-hunt-review195-final-original.test.ts:103:15)
+
+  console.log
+    author-error-observation {"mode":"author-resolution-error","outerCode":"execution-failure","outerMessage":"Body of [\"opaque-author\",\"step\",\"value\",null] failed","causeIsThrown":true,"outerIsThrown":false,"completedResult":false}
+
+      at Object.<anonymous> (test/gap-hunt-review195-final-original.test.ts:103:15)
+
+(node:66088) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       9 passed, 9 total
+Snapshots:   0 total
+Time:        0.314 s, estimated 1 s
+Ran all test suites within paths "packages/core/.test-build/test/gap-hunt-review195-final-original.test.js".
+Test results written to: ../../../../../..<captures>/original-old.json

@@ -1,0 +1,13 @@
+# PR195 final memo privacy repair qualification
+
+Runtime source: `0b3cf4b01ef4e0d17211b98fc435385b2b4d2681`. This report supersedes no historical capture: the a13 PARTIAL remains accurate at its original pin. The locally authored recipe was executed at this source before this evidence commit; the evidence commit itself was not rerun.
+
+Run `python3 scratch/gap-hunt/review-195-final/reproduce.py` from the checkout root. It owns a default locked install and package build. On Darwin, install uses the locally available CommandLineTools MacOSX26.5 SDK for the native addon. It clears GAP_HUNT_REUSE_BUILD for each command. It requires both Resolution source files to match the runtime source pin and verifies both frozen fixtures against their exact Git blobs.
+
+The unchanged original constructor-privacy witness is frozen from `49c47b79346e78ae9ef22f8985d254254200a14c`; all nine cases pass current, old and restored. The unchanged residual mutation witness is byte-identical to `95679b0484bcda7d6e6a00d2cddc165041fe2baf:scratch/gap-hunt/review-195-repair/mutation.test.ts`. All three pass current and restored. Replacing both errors.ts and resolution.ts with exact `a13a3fd88ffe5ed24334f60af84316b31d98971e` bytes restores exactly two semantic failures (mutate-rethrow and mutate-swallow), with the unmodified control passing. These failures expose the relabeled unsafe outer presentation; they are not build or load errors.
+
+The current official privacy suite passes12, author-error controls pass6, and official genuine-child mutation suite passes10 current and restored. The latter covers nested memo rethrow/swallow, source and supplied observer-cause mutation, and a shared child. Immutable original safe presentation and original opaque cause are preserved. Repaired code may replace a mutable child wrapper; wrapper identity is not a required invariant of this fixture. No parent result row is published on genuine child failure.
+
+All22 commands have expected exits, including strict fixture compilation, type-aware lint, Resolution/Core checks and declaration checks. Captures contain10 exact Jest inventories. `--check-logs captures` accepts them and rejects four synthetic corruptions: missing evidence, load failure, wrong census and runtime-error suite.
+
+Both planted source files were restored byte-for-byte, normal packages rebuilt, and all42 emitted Resolution files matched their pre-plant hashes. The successful restoration is captured; this is not universal proof that restoration builds cannot fail. The temporary Core fixture was removed. The frozen mutation fixture intentionally remains separate from #198 callback scope. No Linux execution, provider execution or deployment is claimed.

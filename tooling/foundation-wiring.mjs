@@ -23,10 +23,13 @@ export function missingFoundationGates({ workspace, packages, workflow, extracto
       problems.push(`CI skips ${command}`);
     }
   }
-  for (const version of ['20', '22', '24']) {
-    if (!new RegExp(`\\b${version}\\b`, 'u').test(workflow)) {
-      problems.push(`CI skips Node ${version}`);
-    }
+  // The Check job's exact Node set is a release gate: an extra retired job or
+  // a missing supported job must fail rather than borrowing a version mention
+  // from documentation or another workflow line.
+  const nodeMatrix = /^\s*node:\s*\[([^\]]*)\]\s*$/mu.exec(workflow)?.[1]
+    ?.split(',').map(version => version.trim());
+  if (nodeMatrix?.length !== 2 || nodeMatrix[0] !== '22' || nodeMatrix[1] !== '24') {
+    problems.push('CI Node matrix must be exactly 22, 24');
   }
   for (const command of ['npm run build', 'npm run check:packages', 'npm run check:workspace']) {
     includes('check', scripts.check, command);

@@ -139,6 +139,16 @@ test('records exact-head release review status without arming auto-merge or merg
   assert.ok(calls.some(([name, sha]) => name === 'readCommitStatus' && sha === releaseHead));
 });
 
+test('a release cannot complete when Node 24 is pending even if Node 22 passed', async () => {
+  const { api, calls, request } = scenario({ requiredChecks: [
+    { name: 'PR metadata', bucket: 'pass' },
+    { name: 'core (22)', bucket: 'pass' },
+    { name: 'core (24)', bucket: 'pending' },
+  ] });
+  await assert.rejects(runReleaseReview(request, api), /must have completed successfully on the exact head: core \(24\)/u);
+  assert.deepEqual(writes(calls), []);
+});
+
 for (const [name, overrides, requestOverrides = {}, pattern] of [
   ['an ordinary feature PR', { pullRequest: { ...scenario().state.pullRequest, title: 'Fix runtime behavior', headRefName: 'fix-runtime', isReleaseVersion: false } }, {}, /only for the Changesets Version Packages PR/u],
   ['a release title on another branch', { pullRequest: { ...scenario().state.pullRequest, headRefName: 'version-packages' } }, {}, /head branch changeset-release\/main/u],
@@ -149,10 +159,12 @@ for (const [name, overrides, requestOverrides = {}, pattern] of [
   ['a draft release PR', { pullRequest: { ...scenario().state.pullRequest, isDraft: true } }, {}, /Draft/u],
   ['a changed head', { pullRequest: { ...scenario().state.pullRequest, headRefOid: 'f'.repeat(40) } }, {}, /head changed/u],
   ['unresolved conversations', { pullRequest: { ...scenario().state.pullRequest, unresolvedThreads: 2 } }, {}, /Resolve all review conversations/u],
-  ['pending required CI', { requiredChecks: [{ name: 'PR metadata', bucket: 'pass' }, { name: 'core (20)', bucket: 'pending' }, { name: 'core (22)', bucket: 'pass' }, { name: 'core (24)', bucket: 'pass' }] }, {}, /must have completed successfully on the exact head: core \(20\)/u],
-  ['skipped required CI', { requiredChecks: [{ name: 'PR metadata', bucket: 'skipping' }, { name: 'core (20)', bucket: 'pass' }, { name: 'core (22)', bucket: 'pass' }, { name: 'core (24)', bucket: 'pass' }] }, {}, /must have completed successfully on the exact head: PR metadata/u],
-  ['failed required CI', { requiredChecks: [{ name: 'PR metadata', bucket: 'pass' }, { name: 'core (20)', bucket: 'pass' }, { name: 'core (22)', bucket: 'fail' }, { name: 'core (24)', bucket: 'pass' }] }, {}, /non-passing results: core \(22\)/u],
-  ['missing required CI', { requiredChecks: [{ name: 'PR metadata', bucket: 'pass' }] }, {}, /Required CI results are missing/u],
+  ['pending Node 22 CI', { requiredChecks: [{ name: 'PR metadata', bucket: 'pass' }, { name: 'core (22)', bucket: 'pending' }, { name: 'core (24)', bucket: 'pass' }] }, {}, /must have completed successfully on the exact head: core \(22\)/u],
+  ['skipped required CI', { requiredChecks: [{ name: 'PR metadata', bucket: 'skipping' }, { name: 'core (22)', bucket: 'pass' }, { name: 'core (24)', bucket: 'pass' }] }, {}, /must have completed successfully on the exact head: PR metadata/u],
+  ['failed Node 22 CI', { requiredChecks: [{ name: 'PR metadata', bucket: 'pass' }, { name: 'core (22)', bucket: 'fail' }, { name: 'core (24)', bucket: 'pass' }] }, {}, /non-passing results: core \(22\)/u],
+  ['failed Node 24 CI', { requiredChecks: [{ name: 'PR metadata', bucket: 'pass' }, { name: 'core (22)', bucket: 'pass' }, { name: 'core (24)', bucket: 'fail' }] }, {}, /non-passing results: core \(24\)/u],
+  ['missing Node 22 CI', { requiredChecks: [{ name: 'PR metadata', bucket: 'pass' }, { name: 'core (24)', bucket: 'pass' }] }, {}, /Required CI results are missing: core \(22\)/u],
+  ['missing Node 24 CI', { requiredChecks: [{ name: 'PR metadata', bucket: 'pass' }, { name: 'core (22)', bucket: 'pass' }] }, {}, /Required CI results are missing: core \(24\)/u],
   ['no Copilot review', { copilotReviews: [] }, {}, /completed Copilot COMMENTED or APPROVED review/u],
   ['only an errored Copilot run', { copilotReviews: [{ authorLogin: 'copilot-pull-request-reviewer[bot]', authorType: 'Bot', commitOid: releaseHead, state: 'COMMENTED', submitted: true, errored: true }] }, {}, /completed Copilot COMMENTED or APPROVED review/u],
   ['a Copilot login from a user account', { copilotReviews: [{ authorLogin: 'copilot-pull-request-reviewer', authorType: 'User', commitOid: releaseHead, state: 'COMMENTED', submitted: true }] }, {}, /completed Copilot COMMENTED or APPROVED review/u],

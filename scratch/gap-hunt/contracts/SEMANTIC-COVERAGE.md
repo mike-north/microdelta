@@ -3,7 +3,7 @@
 Implementer: Codex worker (gpt-6.1-sol), operating for Mike North.
 
 `semantic-clauses.json` retains all 178 non-code paragraph/table blocks of
-`tracking.md`, `composition.md`, and `glossary.md`. Fifty-two named assertion anchors
+`tracking.md`, `composition.md`, and `glossary.md`. Fifty-four named assertion anchors
 record the concrete behavior they establish and the actual execution log. This is
 an exhaustive clause inventory, **not complete normative certification**: 104 blocks
 have bounded semantic assertion evidence, 41 remain explicitly uncovered by this
@@ -100,3 +100,21 @@ The durable scalar branch test adds a passing five-process current-evidence
 assertion: flip the branch, edit the abandoned leaf without rerunning, change a
 newly active leaf and publish, then roll back to the original exact result.
 The operation suite remains 6 intentionally red #155 cases and 8 passing controls.
+
+The owner selected record/array roots for #156; scalar authors use wrappers. The
+original accepted-scalar declarations remain historical mismatch evidence, while
+`ISSUE-156-CONTRACT.md` now gives unconditional acceptance criteria.
+
+Eight new explicit-output rows pass: current comparison distinguishes returned
+record insertion order, missing/present undefined, holes, inherited values and
+ownership, while equal detached shape/custom lookup chains remain equal. The
+request names only the returned subtree; unread sibling edits remain outside it.
+Two new concurrent replay rows pass for cached success and failure. One warmed
+derivation runs once, replays evidence into overlapping async consumers, and
+preserves their disjoint before/after leaves even when one closes first. The async
+suite is now 5/5; Tracking strict compiler and type-aware lint checks pass. These
+are bounded component proofs, not durable workspace or arbitrary async coverage.
+
+Additional glossary explanation is available in the consumerDX branch at 2b4fcb8:
+`scratch/gap-hunt/contract-surface/A3-GLOSSARY-ANCHORS.md`, retaining named assertions
+and residual boundaries for Analysis, Bounded Context and Publication.

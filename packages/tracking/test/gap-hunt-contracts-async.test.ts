@@ -84,3 +84,65 @@ describe('gap hunt TRK-3 async exceptions and late helpers', () => {
     expect(calls).toBe(1);
   });
 });
+
+describe('gap hunt TRK-3 shared derivation across overlapping frames', () => {
+  test.each(['success', 'failure'])('cached %s evidence replays into each concurrent consumer without leaking its peer leaves', async ending => {
+    const subject = observer();
+    const shared = subject.tracked({ value: 'shared' }, { path: ['shared'] });
+    const first = subject.tracked({ before: 'a-before', after: 'a-after' }, { path: ['a'] });
+    const second = subject.tracked({ before: 'b-before', after: 'b-after' }, { path: ['b'] });
+    const aGate = barrier();
+    const bGate = barrier();
+    const failure = new Error('derived failure');
+    let calls = 0;
+    const cached = subject.derived(() => {
+      // eslint-disable-next-line microdelta/tracked-captures -- Counter distinguishes cached evidence replay from author callback re-execution.
+      calls += 1;
+      const value = shared.value;
+      // eslint-disable-next-line microdelta/tracked-captures -- Fixed fixture ending selects cached success versus cached failure before capture.
+      if (ending === 'failure') {
+        // eslint-disable-next-line microdelta/tracked-captures -- Exact exception identity is the failure-cache assertion.
+        throw failure;
+      }
+      return value;
+    });
+    const consume = subject.tracked(function consumeCached(): string {
+      try { return cached.get(); } catch (error: unknown) {
+        // eslint-disable-next-line microdelta/tracked-captures -- Preserve the exact cached exception rather than hiding an unexpected failure.
+        if (error !== failure) { throw error; }
+        return 'caught';
+      }
+    }, { path: ['consume'] });
+    const warm = subject.capture(() => consume());
+    const a = subject.captureAsync(async () => {
+      const before = first.before;
+      // eslint-disable-next-line microdelta/tracked-captures -- Barrier creates an overlap before this consumer requests cached evidence.
+      await aGate.promise;
+      const value = consume();
+      return `${before}/${value}/${first.after}`;
+    });
+    const b = subject.captureAsync(async () => {
+      const before = second.before;
+      const value = consume();
+      // eslint-disable-next-line microdelta/tracked-captures -- Peer remains open while the first frame closes.
+      await bGate.promise;
+      return `${before}/${value}/${second.after}`;
+    });
+    aGate.release();
+    const aResult = await a;
+    bGate.release();
+    const bResult = await b;
+    const value = ending === 'failure' ? 'caught' : 'shared';
+    expect(aResult.value).toBe(`a-before/${value}/a-after`);
+    expect(bResult.value).toBe(`b-before/${value}/b-after`);
+    expect(calls).toBe(1);
+    for (const [capture, own, peer] of [[aResult, 'a', 'b'], [bResult, 'b', 'a']] as const) {
+      const sharedFacts = capture.observations.filter(item => item.binding.path[0] === 'shared' || item.binding.path[0] === 'consume');
+      expect(sharedFacts).toEqual(warm.observations);
+      expect(capture.observations.filter(item => item.binding.path[0] === own).map(item => item.address)).toEqual([
+        [{ kind: 'property', key: 'before' }], [{ kind: 'property', key: 'after' }],
+      ]);
+      expect(capture.observations.some(item => item.binding.path[0] === peer)).toBe(false);
+    }
+  });
+});

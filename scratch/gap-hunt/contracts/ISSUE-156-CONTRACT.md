@@ -1,8 +1,8 @@
-# #156 provisional contract addendum: accepted scalar result roots
+# #156 selected contract addendum: record/array result roots
 
 Implementer: Codex worker (gpt-6.1-sol), operating for Mike North.
 
-Status: **provisional; owner design choice required before implementation-ready**.
+Status: **owner selected record/array roots for the current alpha; document scalar wrappers**.
 The defect is the accepted-type/runtime mismatch. Existing governing text does not
 require extending M3 navigation to scalar roots.
 
@@ -21,34 +21,27 @@ execution rejects all ten cases as `unsupported-result`. Five wrapped `{value}`
 controls succeed. Thus neither type acceptance nor runtime rejection alone resolves
 the intended author contract.
 
-Recommended bounded resolution for owner review: expose and enforce the existing
-record/array root restriction in authoring types and current facade documentation.
-This preserves the selected M3 boundary. Alternatively, explicitly authorize scalar
-root support and specify publication/materialization/read semantics first. The
-issue should not silently select the latter as a bug-fix requirement.
+The owner selected the bounded resolution: expose and enforce the existing
+record/array root restriction in authoring types and facade documentation. Scalar
+values remain supported inside records/arrays; authors use `{ value }` wrappers.
+The historical accepted scalar declarations below reproduce the original mismatch.
 
-## Numbered acceptance criteria, conditional on owner choice
+## Numbered acceptance criteria
 
-1. Record the chosen root contract in the owning specification/API documentation
-   and link the decision from this issue before changing accepted behavior.
-2. If restricting roots: generated alpha `source` and `memo` declarations reject
-   bare string, number, boolean, null and undefined through tsd negative tests.
-   Preserve valid record and readonly-array inference and declaration tiers.
-   Unsupported values entering from untyped JavaScript still fail visibly with
-   the stable supported-result diagnostic and publish no completed result.
-3. If supporting scalar roots: positive source/memo execution assertions for all
-   five atoms succeed, and retained exact scalar results are readable/reusable
-   after restart. Define scalar-root publication, selected-read and output behavior
-   explicitly; do not fabricate a container or infer silent transport migration.
-4. Under either choice, supported nested scalar fields—including present undefined,
-   NaN/infinities and distinct negative zero within the declared Value domain—keep
-   their existing semantics. Wrapped `{value}` positive controls remain valid.
-5. A skipped instance remains distinct from successful author data containing an
-   undefined field. Do not use an unsupported bare-root rejection to collapse
-   the framework's existing outcome distinctions.
+1. Record the selected record/array root contract in owning specification/API
+   documentation, including `{ value }` wrappers for scalar author data.
+2. Generated alpha `source` and `memo` declarations reject bare string, number,
+   boolean, null and undefined through tsd negative tests. Preserve record and
+   readonly-array inference and declaration tiers.
+3. Unsupported roots entering from untyped JavaScript fail visibly with the stable
+   supported-result diagnostic and publish no completed result.
+4. Supported nested scalar fields retain their existing Value semantics, including
+   present undefined, NaN/infinities and distinct negative zero. Wrapped positive
+   controls remain valid.
+5. Skipped/no-value remains distinct from successful data containing an undefined
+   field; root restrictions do not collapse framework outcome distinctions.
 6. Strict TypeScript, generated-declaration tsd, type-aware lint, supported runtime
-   controls and workspace declaration checks pass. Tests must express the chosen
-   contract, not merely snapshot the current rejection.
+   controls and workspace declaration checks pass against the selected contract.
 
 ## Scope, exclusions, dependencies
 
@@ -56,9 +49,8 @@ Scope: the source/memo result-root author contract and faithful API/runtime/docs
 alignment. Out of scope: generic TypeScript serialization completeness, arbitrary
 class/native data support, release/publication, closure soundness, and #155.
 
-Dependency: the owner decision in AC1 is unresolved. Treat the acceptance criteria
-as conditional and keep this issue provisional until it is made; no new policy is
-adopted by this addendum.
+Dependency: no unresolved root-policy decision remains. Implementation belongs to
+the issue owner; this gap-hunt worktree preserves the original reproducer.
 
 ## One clean-checkout Linux reproduction command
 

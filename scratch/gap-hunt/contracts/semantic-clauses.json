@@ -370,6 +370,20 @@
       "title": "TRK-5 ordered ranking changes with selected scores and ignores unselected member fields",
       "proves": "Explicit ranked key sequence reads keys/scores only; changed selected score invalidates while changed unselected avatar fields compare equal.",
       "executionLog": "scratch/gap-hunt/contracts/tracking-results.log"
+    },
+    "outputShape": {
+      "file": "packages/tracking/test/gap-hunt-contracts-output.test.ts",
+      "line": 35,
+      "title": "$name",
+      "proves": "Eight current-shape rows establish selected output sensitivity to record order, missing/undefined, holes, inherited data and ownership, with equal-shape and equal-chain controls; unread sibling is outside the exact subtree request.",
+      "executionLog": "scratch/gap-hunt/contracts/output-results.log"
+    },
+    "concurrentReplay": {
+      "file": "packages/tracking/test/gap-hunt-contracts-async.test.ts",
+      "line": 89,
+      "title": "cached %s evidence replays into each concurrent consumer without leaking its peer leaves",
+      "proves": "Overlapping async frames replay one warmed success/failure derivation without reexecution, close one frame while its peer remains open, and retain exactly each frame own leaves plus shared evidence.",
+      "executionLog": "scratch/gap-hunt/contracts/async-results.log"
     }
   },
   "blocks": [
@@ -1489,7 +1503,8 @@
         "restore",
         "derive",
         "asyncFailure",
-        "lateHelper"
+        "lateHelper",
+        "concurrentReplay"
       ],
       "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
@@ -1613,7 +1628,8 @@
         "restore",
         "derive",
         "asyncFailure",
-        "lateHelper"
+        "lateHelper",
+        "concurrentReplay"
       ],
       "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
@@ -1629,7 +1645,8 @@
         "restore",
         "derive",
         "asyncFailure",
-        "lateHelper"
+        "lateHelper",
+        "concurrentReplay"
       ],
       "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
@@ -1645,7 +1662,8 @@
         "restore",
         "derive",
         "asyncFailure",
-        "lateHelper"
+        "lateHelper",
+        "concurrentReplay"
       ],
       "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
@@ -1699,7 +1717,8 @@
         "restore",
         "derive",
         "asyncFailure",
-        "lateHelper"
+        "lateHelper",
+        "concurrentReplay"
       ],
       "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
@@ -2167,7 +2186,8 @@
         "restore",
         "derive",
         "asyncFailure",
-        "lateHelper"
+        "lateHelper",
+        "concurrentReplay"
       ],
       "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
@@ -2463,7 +2483,8 @@
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "branches",
-        "durableBranches"
+        "durableBranches",
+        "outputShape"
       ],
       "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."

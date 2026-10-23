@@ -8063,7 +8063,8 @@
         "restore",
         "derive",
         "asyncFailure",
-        "lateHelper"
+        "lateHelper",
+        "concurrentReplay"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -8410,7 +8411,8 @@
         "restore",
         "derive",
         "asyncFailure",
-        "lateHelper"
+        "lateHelper",
+        "concurrentReplay"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -8428,7 +8430,8 @@
         "restore",
         "derive",
         "asyncFailure",
-        "lateHelper"
+        "lateHelper",
+        "concurrentReplay"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -8446,7 +8449,8 @@
         "restore",
         "derive",
         "asyncFailure",
-        "lateHelper"
+        "lateHelper",
+        "concurrentReplay"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -8621,7 +8625,8 @@
         "restore",
         "derive",
         "asyncFailure",
-        "lateHelper"
+        "lateHelper",
+        "concurrentReplay"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -8639,7 +8644,8 @@
         "restore",
         "derive",
         "asyncFailure",
-        "lateHelper"
+        "lateHelper",
+        "concurrentReplay"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -8657,7 +8663,8 @@
         "restore",
         "derive",
         "asyncFailure",
-        "lateHelper"
+        "lateHelper",
+        "concurrentReplay"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -8675,7 +8682,8 @@
         "restore",
         "derive",
         "asyncFailure",
-        "lateHelper"
+        "lateHelper",
+        "concurrentReplay"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -8693,7 +8701,8 @@
         "restore",
         "derive",
         "asyncFailure",
-        "lateHelper"
+        "lateHelper",
+        "concurrentReplay"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -11834,7 +11843,8 @@
         "restore",
         "derive",
         "asyncFailure",
-        "lateHelper"
+        "lateHelper",
+        "concurrentReplay"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -11852,7 +11862,8 @@
         "restore",
         "derive",
         "asyncFailure",
-        "lateHelper"
+        "lateHelper",
+        "concurrentReplay"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -11870,7 +11881,8 @@
         "restore",
         "derive",
         "asyncFailure",
-        "lateHelper"
+        "lateHelper",
+        "concurrentReplay"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -11888,7 +11900,8 @@
         "restore",
         "derive",
         "asyncFailure",
-        "lateHelper"
+        "lateHelper",
+        "concurrentReplay"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -12463,7 +12476,8 @@
       "text": "**TRK-8 — Branches and output.** A changed tracked guard invalidates the prior execution when required, then a fresh frame records the newly taken branch.",
       "localBoundedAssertionIds": [
         "branches",
-        "durableBranches"
+        "durableBranches",
+        "outputShape"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -12478,7 +12492,8 @@
       "text": "Do not accumulate abandoned branch reads into current evidence.",
       "localBoundedAssertionIds": [
         "branches",
-        "durableBranches"
+        "durableBranches",
+        "outputShape"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -12493,7 +12508,8 @@
       "text": "Returning tracked input as output must account for the data/reference actually materialized.",
       "localBoundedAssertionIds": [
         "branches",
-        "durableBranches"
+        "durableBranches",
+        "outputShape"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],
@@ -12508,7 +12524,8 @@
       "text": "These are ordinary consumption cases, not extra author dependency declarations.",
       "localBoundedAssertionIds": [
         "branches",
-        "durableBranches"
+        "durableBranches",
+        "outputShape"
       ],
       "surfaceOwnerAnchors": [],
       "ownerAnchors": [],

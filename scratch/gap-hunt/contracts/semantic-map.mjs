@@ -67,6 +67,8 @@ await assertion('edgeNumbers', 'packages/core/test/gap-hunt-contracts-edge-oracl
 await assertion('edgeSparse', 'packages/core/test/gap-hunt-contracts-edge-oracle.test.ts', 'sparse hole and present undefined have distinct indexed membership facts', 'Sparse holes and present undefined differ under indexed membership through restart, later fill and rollback; separate positional-value row equates them.', 'edge-oracle-results.log');
 await assertion('importCapture', 'scratch/gap-hunt/contracts/transitive-capture-lint-probe.mjs', 'assert.equal(diagnostics.length, 4)', 'Actual type-aware lint emits three imported ordinary-helper external-capture diagnostics and one documented unsupported imported-callback diagnostic; no silent bypass in four tested routes.', 'transitive-capture-lint-results.log');
 await assertion('ranking', 'packages/tracking/test/gap-hunt-contracts-invalidation.test.ts', 'TRK-5 ordered ranking changes with selected scores and ignores unselected member fields', 'Explicit ranked key sequence reads keys/scores only; changed selected score invalidates while changed unselected avatar fields compare equal.', 'tracking-results.log');
+await assertion('outputShape', 'packages/tracking/test/gap-hunt-contracts-output.test.ts', '$name', 'Eight current-shape rows establish selected output sensitivity to record order, missing/undefined, holes, inherited data and ownership, with equal-shape and equal-chain controls; unread sibling is outside the exact subtree request.', 'output-results.log');
+await assertion('concurrentReplay', 'packages/tracking/test/gap-hunt-contracts-async.test.ts', 'cached %s evidence replays into each concurrent consumer without leaking its peer leaves', 'Overlapping async frames replay one warmed success/failure derivation without reexecution, close one frame while its peer remains open, and retain exactly each frame own leaves plus shared evidence.', 'async-results.log');
 const blockEvidence = {
  'docs/spec/tracking.md:70': ['ranking'],
  'docs/spec/glossary.md:75': ['leaf','calls'],
@@ -104,9 +106,9 @@ const blockEvidence = {
  'docs/spec/tracking.md:206': ['nestedLoading','nestedMetadata'],
 };
 const ownerEvidence = {
- 'TRK-1': ['primitive','leaf','calls'], 'TRK-2':['calls'], 'TRK-3':['frames','restore','derive','asyncFailure','lateHelper'],
+ 'TRK-1': ['primitive','leaf','calls'], 'TRK-2':['calls'], 'TRK-3':['frames','restore','derive','asyncFailure','lateHelper','concurrentReplay'],
  'TRK-4':['captureLint','importCapture'], 'TRK-5':['leaf','optional','presence','member','identity'], 'TRK-6':['rebind','multiRebind'],
- 'TRK-7':['leaf','identity'], 'TRK-8':['branches','durableBranches'], 'VAL-1':['address','wire','edgeKeys'],
+ 'TRK-7':['leaf','identity'], 'TRK-8':['branches','durableBranches','outputShape'], 'VAL-1':['address','wire','edgeKeys'],
  'VAL-2':['edges','negative','crossprocess','transport','wire','edgeNumbers','edgeSparse'], 'VAL-3':['frozen'],
  'COL-1':['keyed'], 'COL-2':['projection'], 'COL-3':['order','keyed'], 'COL-4':['keyed','gates'],
  'CMP-1':['topology','rejectGraph'], 'CMP-2':['branches','gates'], 'CMP-3':['supplied'],

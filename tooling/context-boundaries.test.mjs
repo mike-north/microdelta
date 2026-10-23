@@ -29,6 +29,7 @@ async function diagnostics(owner, source) {
 test('implemented contexts and facade follow their directed package edges', async () => {
   for (const [owner, source, allowed] of [
     ['packages/core', "export { createMemoryStore } from '@microdelta/history';", true],
+    ['packages/core', "void import('@microdelta/history');", true],
     ['packages/core/test/conformance/store', "export { storeConformance } from '@microdelta/history/conformance/store';", true],
     ['packages/definition', "import type { Store } from '@microdelta/history';", false],
     ['packages/tracking', "import type { Store } from '@microdelta/history';", false],
@@ -49,6 +50,9 @@ test('implemented contexts and facade follow their directed package edges', asyn
     ['packages/accounting', "import Database from 'better-sqlite3';", false],
     ['packages/accounting', "import { readFileSync } from 'node:fs';", false],
     ['packages/accounting', "import type { IRun } from '@microdelta/supervision';", false],
+    ['packages/accounting', "void import('@microdelta/history');", false],
+    ['packages/accounting', "void import('@microdelta/history/dist/src/index.js');", false],
+    ['packages/accounting', 'void import(packageName);', false],
   ]) {
     const messages = await diagnostics(owner, source);
     assert.deepEqual(messages.map(message => message.ruleId), allowed ? [] : [rule], `${owner}: ${source}: ${JSON.stringify(messages)}`);
@@ -282,10 +286,52 @@ test('the executable example may import only the microdelta facade, Node built-i
     ["import type { IResolution } from '@microdelta/resolution';", false],
     ["export { createSupervision } from '@microdelta/supervision';", false],
     ["import { createResolution } from '../../../packages/resolution/src/index.js';", false],
+    ["void import('@microdelta/history');", false],
+    ["void import('@microdelta/history/dist/src/index.js');", false],
+    ["void import('@microdelta/machine-node');", false],
+    ["void import('@microdelta/accounting');", false],
+    ["void import('microdelta/deep');", false],
+    ["void import('../../../packages/history/src/index.js');", false],
+    ['void import(packageName);', false],
+    ["void import(`@microdelta/${packageName}`);", false],
+    ["void import('microdelta');", true],
+    ["void import('node:fs');", true],
+    ["void import('./local.js');", true],
   ]) {
     const [result] = await eslint.lintText(source, { filePath });
     assert.ok(result, 'Expected ESLint to inspect the example probe');
     const errors = result.messages.filter(message => message.severity === 2);
     assert.equal(errors.length === 0, allowed, `${source}: ${JSON.stringify(result.messages)}`);
   }
+});
+
+test('the executable example rejects equivalent workspace source paths regardless of dot prefixes', async () => {
+  const rejected = [];
+  const importers = ['examples/contribution-report', 'packages/accounting'];
+  const specifiers = [
+    '../../../packages/history/src/index.js',
+    './../../../packages/history/src/index.js',
+    '././../../../packages/history/src/../src/index.js',
+  ];
+  for (const owner of importers) {
+    const filePath = path.join(root, owner, 'src', 'probe.ts');
+    for (const specifier of specifiers) {
+      assert.equal(
+        path.resolve(path.dirname(filePath), specifier),
+        path.join(root, 'packages/history/src/index.js'),
+        `${owner}: ${specifier} must resolve to the forbidden History source fixture`,
+      );
+      for (const source of [
+        `import { openDurableHistory } from '${specifier}';`,
+        `void import('${specifier}');`,
+        `type IHistoryModule = import('${specifier}');`,
+      ]) {
+        const messages = await diagnostics(owner, source);
+        if (!messages.some(message => message.severity === 2)) {
+          rejected.push({ owner, source });
+        }
+      }
+    }
+  }
+  assert.deepEqual(rejected, [], 'Equivalent relative spellings must have the same forbidden-source verdict');
 });

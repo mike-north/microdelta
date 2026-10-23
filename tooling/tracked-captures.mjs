@@ -57,6 +57,9 @@ const facadeOwnerFiles = new Set([
   path.resolve(fileURLToPath(new URL('../packages/core/dist/api/microdelta.alpha.d.ts', import.meta.url))),
   path.resolve(fileURLToPath(new URL('../packages/core/dist/api/microdelta.untrimmed.d.ts', import.meta.url))),
 ]);
+/** The proposed authoring constructor is a boundary only at this exact experimental declaration. */
+const experimentalAuthoringFile = path.resolve(fileURLToPath(new URL('../experiments/exp-authoring/src/protocol.ts', import.meta.url)));
+
 /**
  * The author callback options each Definition builder declares, by builder
  * interface and method. Only these options are capture boundaries; a builder
@@ -141,6 +144,16 @@ function canonicalTypes(program, checker) {
   let materializationSymbol;
   for (const sourceFile of program.getSourceFiles()) {
     const filename = path.resolve(sourceFile.fileName);
+    if (filename === experimentalAuthoringFile) {
+      // Resolve the actual declaration, so aliases retain authority while a
+      // same-named local function cannot silently become a capture boundary.
+      for (const statement of sourceFile.statements) {
+        if (ts.isFunctionDeclaration(statement) && statement.name?.text === 'memo') {
+          definitionBuilders.set(statement, new Set(['run']));
+        }
+      }
+      continue;
+    }
     if (definitionOwnerFiles.has(filename)) {
       const definition = definitionTypes(sourceFile, checker);
       definition.builderSignatures.forEach((options, signature) => definitionBuilders.set(signature, options));

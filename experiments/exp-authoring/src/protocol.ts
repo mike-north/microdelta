@@ -12,13 +12,13 @@ const bindingBrand: unique symbol = Symbol('authoring:binding');
 declare const bindingValue: unique symbol;
 /** Analysis ownership is separate from a node's runtime data type. */
 const analysisBrand: unique symbol = Symbol('authoring:analysis');
-/** Type-only input evidence anchors application input inference. */
+/** Type-only input consumption and production make the application contract invariant. */
 declare const analysisInputs: unique symbol;
 
 /** An owned symbolic input or numeric memo output, never its runtime value. @internal */
 export interface IBinding<T> { readonly [bindingBrand]: true; readonly [bindingValue]?: T }
-/** A frozen entry graph with an ordinary application input type. @internal */
-export interface IAnalysis<TInputs extends object> { readonly [analysisBrand]: true; readonly [analysisInputs]?: TInputs }
+/** A frozen entry graph whose invariant input contract cannot be widened before execution. @internal */
+export interface IAnalysis<TInputs extends object> { readonly [analysisBrand]: true; readonly [analysisInputs]?: (inputs: TInputs) => TInputs }
 /** Only explicit application input keys can create input origins. @internal */
 export type IInput<TInputs extends object> = <K extends keyof TInputs & string>(slot: K) => IBinding<TInputs[K]>;
 /** Named owned origins declare graph relationships once. @internal */
@@ -112,7 +112,7 @@ export function memo<TFrom extends IFrom>(options: IMemoOptions<TFrom>): IBindin
 }
 
 /** Only the execution adapter can inspect a graph this experiment minted. @internal */
-export function graphOf(entry: IAnalysis<object>): IGraph {
+export function graphOf<TInputs extends object>(entry: IAnalysis<TInputs>): IGraph {
   const graph = typeof entry === 'object' && entry !== null ? graphs.get(entry) : undefined;
   if (graph === undefined) { throw new TypeError('Expected an analysis owned by this experiment'); }
   return graph;

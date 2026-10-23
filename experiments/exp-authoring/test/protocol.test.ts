@@ -2,6 +2,7 @@
 import { describe, expect, test } from '@jest/globals';
 import type { IBinding } from '../src/protocol.js';
 import { analysis, graphOf, memo } from '../src/protocol.js';
+import { entryFor } from '../authors/entries.js';
 
 /** Fixture input names deliberately differ from the proposed pull-request sketch. */
 interface IInputs { readonly document: { readonly title: string }; readonly factor: number; readonly alternate: { readonly title: string } }
@@ -47,10 +48,8 @@ describe('bounded numeric authoring graph', () => {
   });
 
   test('forged and cross-analysis origins are rejected rather than treated as ordinary inputs', () => {
-    expect(() => analysis<IInputs>(() => {
-      Reflect.apply(memo, undefined, [{ name: 'forged', from: { value: {} }, run: () => 1 }]);
-      throw new Error('Expected owned origin rejection');
-    })).toThrow(/owned|origin/i);
+    expect((): unknown => Reflect.apply(analysis, undefined, [(): unknown =>
+      Reflect.apply(memo, undefined, [{ name: 'forged', from: { value: {} }, run: () => 1 }])])).toThrow(/owned|origin/i);
     const holder: { value?: IBinding<number> } = {};
     analysis<IInputs>(() => {
       const token = memo({ name: 'earlier', from: {}, run: () => 1 });
@@ -74,4 +73,10 @@ test('duplicate complete subjects fail before bodies while two aliases of one no
     return memo({ name: 'parent', from: { left: child, right: child }, run: ({ left, right }) => left + right });
   });
   expect(graphOf(entry).nodes[1]?.edges).toEqual([{ key: 'left', kind: 'memo', slot: 'child' }, { key: 'right', kind: 'memo', slot: 'child' }]);
+});
+
+/** Identity association is evidence, never a reason to rewrite the opaque subject itself. */
+test('subject reassignment keeps the literal complete subjects and structural occurrence names', () => {
+  expect(graphOf(entryFor('base', 'subjects')).nodes.map(({ name, subject }) => ({ name, subject }))).toEqual([{ name: 'a', subject: 'subject-x' }, { name: 'b', subject: 'subject-y' }]);
+  expect(graphOf(entryFor('swapped', 'subjects')).nodes.map(({ name, subject }) => ({ name, subject }))).toEqual([{ name: 'a', subject: 'subject-y' }, { name: 'b', subject: 'subject-x' }]);
 });

@@ -26,7 +26,7 @@ async function main(): Promise<void> {
   const workspace = openWorkspace({ location, logicalStore: 'authoring-proof' });
   const result = await (mode === 'reserved'
     ? execute(workspace, reserved, { analysis: 'authoring:proof', environment: 'test', requestKey, inputs: { ['__proto__']: { title: 'aaaa' } }, observers: [{ observe(event): void { events.push(event); } }] })
-    : execute(workspace, entryFor(scenario, mode), { analysis: 'authoring:proof', environment: 'test', requestKey, inputs: inputsFor(scenario), observers: [{ observe(event): void { events.push(event); } }] })).finally(() => workspace.close());
+    : execute(workspace, entryFor(scenario, mode), { analysis: 'authoring:proof', environment: 'test', requestKey, inputs: mode === 'subjects' ? { ...inputsFor(scenario), unusedNumber: 11 } : inputsFor(scenario), observers: [{ observe(event): void { events.push(event); } }] })).finally(() => workspace.close());
   const nodes = new Map<string, INodeReceipt>();
   for (const event of events) {
     if (event.kind !== 'step') { continue; }

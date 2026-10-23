@@ -28,7 +28,7 @@ export interface IResult {
 /** The runtime keeps its supported record root; this carrier is never authored by the example. */
 interface IStoredNumber { readonly value: number }
 /** Current structural recipe metadata is data evidence, not a closure remembered from an old run. */
-interface IRecipe { readonly helperSlot: string; readonly edges: readonly IEdge[] }
+interface IRecipe { readonly subject: string; readonly helperSlot: string; readonly edges: readonly IEdge[] }
 /** Application snapshots and current recipes use distinct declared input slots. */
 interface IMachineInputs { readonly data: Readonly<Record<string, unknown>>; readonly recipes: Readonly<Record<string, IRecipe>> }
 /** The owner family is unchanged; the experiment only composes its generated declaration surface. */
@@ -56,6 +56,10 @@ async function dispatch(
   helpers: ITrackedHelpers<IHelpers>,
 ): Promise<IStoredNumber> {
   if (recipe === undefined) { throw new Error('Missing current symbolic recipe'); }
+  // A recipe's recorded occurrence path must retain its current complete
+  // subject association; identical dispatch code is not sufficient evidence
+  // when subjects move between otherwise unchanged structural occurrences.
+  if (typeof recipe.subject !== 'string' || recipe.subject.length === 0) { throw new TypeError('Missing current recipe subject association'); }
   const values: Record<string, unknown> = {};
   for (let position = 0; position < recipe.edges.length; position += 1) {
     const edge = recipe.edges[position];
@@ -121,10 +125,10 @@ export async function execute<TInputs extends object>(workspace: IWorkspace, ent
     }
     const occurrence = node.name;
     const helperSlot = `authoring:run:${occurrence}`;
-    Object.defineProperty(recipes, occurrence, { enumerable: true, value: Object.freeze({ helperSlot, edges: node.edges }) });
+    Object.defineProperty(recipes, occurrence, { enumerable: true, value: Object.freeze({ subject: node.subject, helperSlot, edges: node.edges }) });
     callbacks.push({ slot: helperSlot, helper: node.run });
     declarations.set(occurrence, builders.memo({ subject: node.subject, children, run: ({ inputs, helpers, calls }) => {
-      // eslint-disable-next-line microdelta/tracked-captures -- Framework occurrence correspondence is frozen by graph construction and Definition's explicit slot; every semantic edge and callback slot is read from this current tracked recipe, never from an untracked captured plan.
+      // eslint-disable-next-line microdelta/tracked-captures -- Framework occurrence selects a frozen recipe path; dispatch observes its current complete subject association, every semantic edge and callback slot so moved subjects cannot validate another occurrence's old recipe.
       const recipe = inputs.recipes[occurrence];
       return helpers.dispatch(recipe, inputs.data, calls, helpers);
     } }));

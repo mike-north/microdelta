@@ -153,3 +153,27 @@ test('same-child aliases execute successfully and ignored child output changes d
     expect(changed.nodes['report']).toMatchObject({ executions: 0, publications: 0, reference: cold.reference });
   });
 });
+
+/** A complete history subject cannot borrow another occurrence's old recipe and implementation. */
+test('exchanging complete subjects preserves current composed semantics rather than reusing an old child as parent', () => {
+  let cleanReference = '';
+  inStore((run) => {
+    const clean = run('swapped', 'subjects');
+    expect(clean.data).toBe(22);
+    expect(clean.nodes).toMatchObject({ a: { executions: 1, publications: 1 }, b: { executions: 1, publications: 1 } });
+    cleanReference = clean.reference;
+  });
+  expect(cleanReference).not.toBe('');
+  inStore((run) => {
+    const original = run('base', 'subjects');
+    const unchanged = run('base', 'subjects');
+    expect(original.data).toBe(22);
+    expect(unchanged.nodes).toMatchObject({ a: { executions: 0, publications: 0, reference: original.nodes['a']?.reference }, b: { executions: 0, publications: 0, reference: original.reference } });
+    const swapped = run('swapped', 'subjects');
+    expect(swapped.data).toBe(22);
+    expect(swapped.nodes).toMatchObject({ a: { executions: 1, publications: 1 }, b: { executions: 1, publications: 1 } });
+    expect(swapped.reference).not.toBe(original.nodes['a']?.reference);
+    const later = run('swapped', 'subjects');
+    expect(later.nodes).toMatchObject({ a: { executions: 0, publications: 0, reference: swapped.nodes['a']?.reference }, b: { executions: 0, publications: 0, reference: swapped.reference } });
+  });
+});

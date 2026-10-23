@@ -40,7 +40,18 @@ export const ignored = analysis<IInputs>((input) => {
   const score = assess('score', input('pr'), input('scoring'));
   return memo({ name: 'report', from: { score }, run: () => 7 });
 });
+/** Opaque subjects can be reassigned without changing structural occurrence or callback text. */
+function subjects(swapped: boolean): IAnalysis<IInputs> {
+  return analysis<IInputs>((input) => {
+    const a = memo({ name: 'a', subject: swapped ? 'subject-y' : 'subject-x', from: { n: input('unusedNumber') }, run: ({ n }) => n });
+    return memo({ name: 'b', subject: swapped ? 'subject-x' : 'subject-y', from: { n: a }, run: ({ n }) => n * 2 });
+  });
+}
+/** Separate built graphs differ only in their complete subject association. */
+const originalSubjects = subjects(false);
+/** Same structural entry and runtime callbacks, exchanged opaque subjects. */
+const swappedSubjects = subjects(true);
 /** Select only among explicit proof variants; the caller does not synthesize runtime topology. */
 export function entryFor(scenario: string, mode: string): IAnalysis<IInputs> {
-  return mode === 'aliased' ? aliased : mode === 'ignored' ? ignored : mode === 'single' ? single : scenario === 'callback-equal' ? equalCode : scenario === 'callback-changed' ? changedCode : scenario === 'rebound' ? rebound : report;
+  return mode === 'subjects' ? (scenario === 'swapped' ? swappedSubjects : originalSubjects) : mode === 'aliased' ? aliased : mode === 'ignored' ? ignored : mode === 'single' ? single : scenario === 'callback-equal' ? equalCode : scenario === 'callback-changed' ? changedCode : scenario === 'rebound' ? rebound : report;
 }

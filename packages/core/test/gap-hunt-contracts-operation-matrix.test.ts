@@ -37,6 +37,29 @@ describe('gap hunt fresh-process consumer operation matrix', () => {
     } finally { rmSync(directory, { recursive: true, force: true }); }
   });
 
+  test('COL-4 early termination ignores unvisited fields until a changed tracked guard extends traversal', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-early-stop-'));
+    try {
+      const retained = join(directory, 'retained.sqlite');
+      const original = resolve(retained, 'scan-base', 'scan', 'first');
+      expect(original.value).toEqual({ sum: 3 });
+      const unread = resolve(retained, 'scan-unvisited', 'scan', 'second');
+      expect(unread.kind).toBe('reused');
+      expect(unread.reference).toEqual(original.reference);
+      const extended = resolve(retained, 'scan-extended', 'scan', 'third');
+      expect(extended.kind).toBe('published');
+      expect(extended.value).toEqual({ sum: 12 });
+      const cold = resolve(join(directory, 'cold.sqlite'), 'scan-extended', 'scan', 'cold');
+      expect(extended.value).toEqual(cold.value);
+      const active = resolve(retained, 'scan-active-change', 'scan', 'fourth');
+      expect(active.kind).toBe('published');
+      expect(active.value).toEqual({ sum: 13 });
+      const rollback = resolve(retained, 'scan-base', 'scan', 'fifth');
+      expect(rollback.kind).toBe('reused');
+      expect(rollback.reference).toEqual(original.reference);
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
   test('TRK-5 falsey guard values remain distinct consumption across restart despite equal branch output', () => {
     const directory = mkdtempSync(join(tmpdir(), 'microdelta-falsey-'));
     try {

@@ -143,3 +143,33 @@ parent dependencies remain immutable; independent cold Eve/Grace stores agree.
 `MULTIHOP-CURRENT-ARGUMENTS.md` enumerates exact assertions and residual variations.
 No new false reuse or owner design question was found. The owner's Linux report
 covers43444bb only; these new assertions have local Node24.22.1 execution evidence.
+
+
+## Finite mandatory-outcome completion
+
+`TRACK-A-COMPLETION.md` and `completion-audit.json`, reproduced by
+`node scratch/gap-hunt/contracts/completion-audit.mjs`, supersede zero universal
+certification as the Track A completion measure. The clause inventory still
+records source paragraph coverage; it is not a count of unsatisfied requirements.
+The finite audit has 71 mandatory Tracking/Composition outcomes: 64 satisfied,
+7 divergent rows belonging to four existing issues (#155, #162, #164, #168).
+All 67 glossary definitions now link exact executed assertions or bounded owner
+audits; two explicitly carry the known Observation/Member key divergences.
+No additional mandatory outcome lacks executed evidence in this scoped audit.
+Additional cross-product combinations remain optional, not missing mandates.
+
+Two actual missing assembled assertions are now supplied. COL-4 early termination
+visits only [1,2] under a tracked threshold of 2; changing the unvisited third
+value reuses. Raising the threshold to 3 publishes the full traversal, agrees
+with an independent cold store, and later third-value changes invalidate.
+Rollback retains the original exact result. This passes across six processes.
+CMP-4 sibling precedence has one declared child await a host barrier that its
+independent sibling releases; both finish before the parent and event order is
+wait/release/resumed. The focused suites each pass; core strict compiler and
+type-aware lint, 67 existing fold/keyed tests, and Tracking type contracts pass.
+Portable selectors are `early-stop` and `precedence`; their underlying compile,
+test and strict checks ran locally, while installer wrappers were not rerun.
+These are characterization tests: the implementation already satisfied them,
+so no expected-failure implementation cycle or production fix occurred.
+
+Implementer: Codex worker (gpt-6.1-sol), operating for Mike North.

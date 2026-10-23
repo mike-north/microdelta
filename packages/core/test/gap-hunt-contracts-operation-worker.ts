@@ -3,6 +3,7 @@ import { authoring, openWorkspace } from '../src/index.js';
 
 /** Deliberate supported-container transitions exercise ordinary JavaScript consumers. */
 interface IConfig {
+  readonly scan?: { readonly rows: readonly number[]; readonly threshold: number };
   readonly flag?: string | number | boolean | null | undefined;
   readonly detail?: { readonly name: string } | readonly string[] | null;
   readonly nested?: { readonly child?: { readonly name: string } | null } | null;
@@ -15,6 +16,10 @@ type IHelpers = Record<never, never>;
 function configOf(variant: string): IConfig {
   const author = { id: 'a', name: 'Ada', unread: 1 };
   switch (variant) {
+    case 'scan-base': return { scan: { rows: [1, 2, 3], threshold: 2 }, author };
+    case 'scan-unvisited': return { scan: { rows: [1, 2, 9], threshold: 2 }, author };
+    case 'scan-extended': return { scan: { rows: [1, 2, 9], threshold: 3 }, author };
+    case 'scan-active-change': return { scan: { rows: [1, 2, 10], threshold: 3 }, author };
     case 'flag-zero': return { flag: 0, author };
     case 'flag-empty': return { flag: '', author };
     case 'flag-false': return { flag: false, author };
@@ -49,10 +54,23 @@ async function main(): Promise<void> {
   const nullish = builders.memo({ subject: 'nullish', run: ({ inputs }) => ({ value: (inputs.config.detail ?? 'fallback') === 'fallback' }) });
   const optional = builders.memo({ subject: 'optional', run: ({ inputs }) => ({ value: inputs.config.nested?.child?.name ?? 'fallback' }) });
   const leaf = builders.memo({ subject: 'leaf', run: ({ inputs }) => ({ value: inputs.config.author.name }) });
+  const scan = builders.memo({ subject: 'scan', run: ({ inputs }) => {
+    const selected = inputs.config.scan;
+    // eslint-disable-next-line microdelta/tracked-captures -- Native error construction only rejects a malformed fixture; supported scan cases always provide this declared container.
+    if (selected === undefined) { throw new Error('Expected scan fixture'); }
+    let sum = 0;
+    for (let index = 0; index < selected.rows.length; index += 1) {
+      const value = selected.rows[index];
+      if (value === undefined) { break; }
+      sum += value;
+      if (value >= selected.threshold) { break; }
+    }
+    return { sum };
+  } });
   const falsey = builders.memo({ subject: 'falsey', run: ({ inputs }) => ({ value: inputs.config.flag ? 'truthy' : 'falsey' }) });
   const branch = builders.memo({ subject: 'branch', run: ({ inputs }) => ({ value: inputs.config.author.id === 'a' ? inputs.config.author.name : inputs.config.author.unread }) });
   const composition = builders.compose({ scope: 'operation-analysis', inputs: [{ slot: 'config', value: configOf(variant) }], helpers: [], steps: [
-    { slot: 'type', declaration: type }, { slot: 'array', declaration: array }, { slot: 'nullish', declaration: nullish }, { slot: 'optional', declaration: optional }, { slot: 'leaf', declaration: leaf }, { slot: 'branch', declaration: branch }, { slot: 'falsey', declaration: falsey },
+    { slot: 'type', declaration: type }, { slot: 'array', declaration: array }, { slot: 'nullish', declaration: nullish }, { slot: 'optional', declaration: optional }, { slot: 'leaf', declaration: leaf }, { slot: 'branch', declaration: branch }, { slot: 'falsey', declaration: falsey }, { slot: 'scan', declaration: scan },
   ] });
   const workspace = openWorkspace({ location, logicalStore: 'operation-store' });
   try {

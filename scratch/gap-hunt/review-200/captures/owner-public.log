@@ -1,0 +1,4 @@
+
+> @microdelta/resolution@0.3.0 test:public
+> tsc --noEmit -p tsconfig.public-consumer.json
+

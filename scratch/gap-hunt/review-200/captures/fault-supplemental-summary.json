@@ -1,0 +1,94 @@
+{
+  "numTotalTests": 20,
+  "numPassedTests": 1,
+  "numFailedTests": 4,
+  "numPendingTests": 15,
+  "failedTitles": [
+    "supplemental exact parent boundary equal selected content keeps parent body at zero and old provenance immutable after current subject reconnection",
+    "supplemental exact parent boundary changed current content executes the parent exactly once and does not rewrite the old result",
+    "supplemental exact parent boundary missing exact current child data cannot fall back to a historical value or accept the parent",
+    "supplemental exact parent boundary failed child keeps exact failure identity and cannot authorize parent acceptance"
+  ],
+  "titles": [
+    [
+      "child validation isolation a retained parent compares only the substituted current child output",
+      "pending"
+    ],
+    [
+      "child validation isolation a changed consumed fact publishes the parent once with current child provenance",
+      "pending"
+    ],
+    [
+      "child validation isolation check-only reports the child boundary as uncertain and writes no acceptance",
+      "pending"
+    ],
+    [
+      "child validation isolation a current child refusal stops the parent without accepting its candidate",
+      "pending"
+    ],
+    [
+      "child validation isolation a failed current child rejects before parent acceptance",
+      "pending"
+    ],
+    [
+      "child validation isolation historical child integrity is checked before the current-child seam",
+      "pending"
+    ],
+    [
+      "child validation isolation the same seam can take the normal child continuation",
+      "pending"
+    ],
+    [
+      "child validation isolation normal continuation reaches the candidate child sentinel",
+      "pending"
+    ],
+    [
+      "child validation isolation normal continuation reaches the finality child sentinel",
+      "pending"
+    ],
+    [
+      "child validation isolation normal continuation reaches the admission child sentinel",
+      "pending"
+    ],
+    [
+      "child validation isolation normal continuation reaches the body child sentinel",
+      "pending"
+    ],
+    [
+      "child validation isolation a supplied child is substituted only after its current subject and arguments are rebuilt",
+      "pending"
+    ],
+    [
+      "child validation isolation a missing current supplied binding ends check before the child seam",
+      "pending"
+    ],
+    [
+      "child validation isolation an unjustified supplied argument misses before the child seam",
+      "pending"
+    ],
+    [
+      "child validation isolation a nested memo child feeds both parent validation and changed-output execution",
+      "pending"
+    ],
+    [
+      "supplemental exact parent boundary equal selected content keeps parent body at zero and old provenance immutable after current subject reconnection",
+      "failed"
+    ],
+    [
+      "supplemental exact parent boundary changed current content executes the parent exactly once and does not rewrite the old result",
+      "failed"
+    ],
+    [
+      "supplemental exact parent boundary missing exact current child data cannot fall back to a historical value or accept the parent",
+      "failed"
+    ],
+    [
+      "supplemental exact parent boundary check-only execution-required child preserves uncertainty without running the parent",
+      "passed"
+    ],
+    [
+      "supplemental exact parent boundary failed child keeps exact failure identity and cannot authorize parent acceptance",
+      "failed"
+    ]
+  ]
+}

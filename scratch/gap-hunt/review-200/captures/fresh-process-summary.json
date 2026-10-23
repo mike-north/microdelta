@@ -1,0 +1,41 @@
+{
+  "numTotalTests": 8,
+  "numPassedTests": 8,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "failedTitles": [],
+  "titles": [
+    [
+      "nested validation across independent processes an unchanged restart in reversed registration order keeps every exact reference with zero bodies",
+      "passed"
+    ],
+    [
+      "nested validation across independent processes F-04 nested-equal-output-cutoff: the child reruns once, the summary keeps its exact reference and runs zero bodies",
+      "passed"
+    ],
+    [
+      "nested validation across independent processes F-05 nested-changed-output: a changed consumed score reruns the summary and changes its exact reference",
+      "passed"
+    ],
+    [
+      "nested validation across independent processes supplied-assessor-swap: binding B instead of A with equal scores is a child implementation change with the F-04 cutoff",
+      "passed"
+    ],
+    [
+      "nested validation across independent processes binding-and-argument-misses (untracked): the summary reruns with a distinct miss while every child reuses",
+      "passed"
+    ],
+    [
+      "nested validation across independent processes binding-and-argument-misses (unreconstructible): the summary reruns with a distinct miss while every child reuses",
+      "passed"
+    ],
+    [
+      "nested validation across independent processes binding-and-argument-misses (slot supplied none on restart): a distinct miss and a distinct failure before any body",
+      "passed"
+    ],
+    [
+      "nested validation across independent processes binding-and-argument-misses (slot supplied twice on restart): a distinct miss and a distinct failure before any body",
+      "passed"
+    ]
+  ]
+}

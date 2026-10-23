@@ -1,0 +1,158 @@
+watchman warning: Recrawled this watch 21 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/REVIEW_ROOT' ; watchman watch-project '/REVIEW_ROOT'`
+
+(node:46068) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL packages/resolution/.test-build/test/gap-hunt-review200.test.js
+  ● supplemental exact parent boundary › equal selected content keeps parent body at zero and old provenance immutable after current subject reconnection
+
+    ResolutionError: Admission failed for ["child-validation","step","child",null]
+
+      795 |         }
+      796 |         catch (error) {
+    > 797 |             throw new ResolutionError('admission-failure', `Admission failed for ${stepKey(step)}`, error);
+          |                   ^
+      798 |         }
+      799 |         const decided = typeof decision === 'object' && decision !== null ? Reflect.get(decision, 'kind') : undefined;
+      800 |         if (decided === 'admitted') {
+
+      at admit (.test-build/src/resolution.js:797:19)
+      at resolveSource (.test-build/src/resolution.js:1046:35)
+      at resolveSourceShared (.test-build/src/resolution.js:980:59)
+      at .test-build/src/resolution.js:486:99
+      at Object.resolve (.test-build/src/resolution.js:449:56)
+      at currentSourceChild (.test-build/src/resolution.js:486:29)
+      at evaluateDirectCandidate (.test-build/src/resolution.js:1189:36)
+      at evaluateMemoCandidate (.test-build/src/resolution.js:1148:16)
+      at resolveMemo (.test-build/src/resolution.js:1752:37)
+      at resolveMemoShared (.test-build/src/resolution.js:1729:59)
+      at resolveStep (.test-build/src/resolution.js:2255:21)
+      at Object.resolve (.test-build/src/resolution.js:2863:40)
+      at Object.<anonymous> (.test-build/test/gap-hunt-review200.test.js:528:14)
+
+    Cause:
+        CHILD-ADMISSION-SENTINEL
+
+          116 |                     childAdmissions += 1;
+          117 |                     if (childAdmissionShouldThrow) {
+        > 118 |                         throw new Error('CHILD-ADMISSION-SENTINEL');
+              |                               ^
+          119 |                     }
+          120 |                 }
+          121 |                 return { kind: 'admitted' };
+
+          at Object.admit (.test-build/test/gap-hunt-review200.test.js:118:31)
+          at admit (.test-build/src/resolution.js:794:40)
+          at resolveSource (.test-build/src/resolution.js:1046:35)
+          at resolveSourceShared (.test-build/src/resolution.js:980:59)
+          at .test-build/src/resolution.js:486:99
+          at Object.resolve (.test-build/src/resolution.js:449:56)
+          at currentSourceChild (.test-build/src/resolution.js:486:29)
+          at evaluateDirectCandidate (.test-build/src/resolution.js:1189:36)
+          at evaluateMemoCandidate (.test-build/src/resolution.js:1148:16)
+          at resolveMemo (.test-build/src/resolution.js:1752:37)
+          at resolveMemoShared (.test-build/src/resolution.js:1729:59)
+          at resolveStep (.test-build/src/resolution.js:2255:21)
+          at Object.resolve (.test-build/src/resolution.js:2863:40)
+          at Object.<anonymous> (.test-build/test/gap-hunt-review200.test.js:528:14)
+
+  ● supplemental exact parent boundary › changed current content executes the parent exactly once and does not rewrite the old result
+
+    ResolutionError: Source check of ["child-validation","step","child",null] threw
+
+      1080 |                     throw error;
+      1081 |                 }
+    > 1082 |                 throw new ResolutionError('execution-failure', `Source check of ${stepKey(step)} threw`, error);
+           |                       ^
+      1083 |             }
+      1084 |             const ran = executed.value;
+      1085 |             const { minted } = ran.value;
+
+      at resolveSource (.test-build/src/resolution.js:1082:23)
+      at withLeaseAuthority (.test-build/src/resolution.js:606:20)
+      at evaluateDirectCandidate (.test-build/src/resolution.js:1189:30)
+      at resolveMemo (.test-build/src/resolution.js:1752:31)
+      at withLeaseAuthority (.test-build/src/resolution.js:606:20)
+      at resolveStep (.test-build/src/resolution.js:2255:15)
+      at Object.resolve (.test-build/src/resolution.js:2863:34)
+      at Object.<anonymous> (.test-build/test/gap-hunt-review200.test.js:550:22)
+
+    Cause:
+        CHILD-RECURSION-SENTINEL
+
+          42 |     childRuns += 1;
+          43 |     if (childShouldThrow) {
+        > 44 |         throw new Error('CHILD-RECURSION-SENTINEL');
+             |               ^
+          45 |     }
+          46 |     return { score: 7, unread: 1 };
+          47 | }
+
+          at Object.sourceData (.test-build/test/gap-hunt-review200.test.js:44:15)
+          at Object.apply (../tracking/src/observer.ts:991:24)
+          at run (.test-build/test/gap-hunt-review200.test.js:82:67)
+          at Object.apply (../tracking/src/observer.ts:991:24)
+          at .test-build/src/resolution.js:700:87
+          at ../tracking/src/observer.ts:1267:31
+          at Object.captureAsync (../tracking/src/observer.ts:1265:23)
+          at .test-build/src/resolution.js:700:29
+          at Object.apply (../definition/src/declaration.ts:434:14)
+          at Object.apply (../definition/src/invocation.ts:323:23)
+          at .test-build/src/resolution.js:778:31
+          at callSource (.test-build/src/resolution.js:771:23)
+          at .test-build/src/resolution.js:1054:66
+          at Object.executeUnsupervised [as execute] (.test-build/src/resolution.js:409:49)
+          at resolveSource (.test-build/src/resolution.js:1054:46)
+          at withLeaseAuthority (.test-build/src/resolution.js:606:20)
+          at evaluateDirectCandidate (.test-build/src/resolution.js:1189:30)
+          at resolveMemo (.test-build/src/resolution.js:1752:31)
+          at withLeaseAuthority (.test-build/src/resolution.js:606:20)
+          at resolveStep (.test-build/src/resolution.js:2255:15)
+          at Object.resolve (.test-build/src/resolution.js:2863:34)
+          at Object.<anonymous> (.test-build/test/gap-hunt-review200.test.js:550:22)
+
+  ● supplemental exact parent boundary › missing exact current child data cannot fall back to a historical value or accept the parent
+
+    expect(received).rejects.toThrow()
+
+    Received promise resolved instead of rejected
+    Resolved to value: {"acceptance": {"acceptanceId": 1, "dependencies": [{"kind": "completed-result", "locator": "result:3"}], "environment": "test", "evidence": {"content": {"basis": "validated", "children": [{"reference": {"kind": "completed-result", "locator": "result:3"}, "slot": "child"}], "observations": [], "step": {"role": "step", "scope": "child-validation", "slot": "parent"}}, "format": "microdelta.resolution.acceptance", "formatVersion": 1}, "fence": 1, "reference": {"kind": "completed-result", "locator": "result:2"}}, "basis": "validated", "diagnostics": [], "kind": "reused", "misses": [], "reference": {"kind": "completed-result", "locator": "result:2"}, "step": {"role": "step", "scope": "child-validation", "slot": "parent"}, "trace": [{"phase": "verify", "step": {"role": "step", "scope": "child-validation", "slot": "parent"}}, {"phase": "accept", "reference": {"kind": "completed-result", "locator": "result:2"}, "step": {"role": "step", "scope": "child-validation", "slot": "parent"}}]}
+
+      566 |         const acceptances = state.acceptances.length;
+      567 |         const seen = [];
+    > 568 |         await expect(_createResolutionWithChildService(options, currentChild({ kind: 'completed-result', locator: 'missing:current' }, seen))
+          |               ^
+      569 |             .resolve({ step: parentStep, requestKey: 'supp-missing', lease })).rejects.toThrow('Unknown exact result missing:current');
+      570 |         expect(parentBodies - beforeBodies).toBe(0);
+      571 |         expect(state.acceptances).toHaveLength(acceptances);
+
+      at expect (../../node_modules/expect/build/index.js:2116:15)
+      at Object.<anonymous> (.test-build/test/gap-hunt-review200.test.js:568:15)
+
+  ● supplemental exact parent boundary › failed child keeps exact failure identity and cannot authorize parent acceptance
+
+    expect(received).rejects.toBe()
+
+    Received promise resolved instead of rejected
+    Resolved to value: {"acceptance": {"acceptanceId": 1, "dependencies": [{"kind": "completed-result", "locator": "result:3"}], "environment": "test", "evidence": {"content": {"basis": "validated", "children": [{"reference": {"kind": "completed-result", "locator": "result:3"}, "slot": "child"}], "observations": [], "step": {"role": "step", "scope": "child-validation", "slot": "parent"}}, "format": "microdelta.resolution.acceptance", "formatVersion": 1}, "fence": 1, "reference": {"kind": "completed-result", "locator": "result:2"}}, "basis": "validated", "diagnostics": [], "kind": "reused", "misses": [], "reference": {"kind": "completed-result", "locator": "result:2"}, "step": {"role": "step", "scope": "child-validation", "slot": "parent"}, "trace": [{"phase": "verify", "step": {"role": "step", "scope": "child-validation", "slot": "parent"}}, {"phase": "accept", "reference": {"kind": "completed-result", "locator": "result:2"}, "step": {"role": "step", "scope": "child-validation", "slot": "parent"}}]}
+
+      590 |         const failure = new ResolutionError('execution-failure', 'SYNTHETIC-CHILD-SERVICE-FAILURE');
+      591 |         const service = { async resolve() { throw failure; } };
+    > 592 |         await expect(_createResolutionWithChildService(options, service).resolve({ step: parentStep, requestKey: 'supp-failure', lease })).rejects.toBe(failure);
+          |               ^
+      593 |         expect(parentBodies - beforeBodies).toBe(0);
+      594 |         expect(state.acceptances).toHaveLength(acceptances);
+      595 |     });
+
+      at expect (../../node_modules/expect/build/index.js:2116:15)
+      at Object.<anonymous> (.test-build/test/gap-hunt-review200.test.js:592:15)
+
+Test Suites: 1 failed, 1 total
+Tests:       4 failed, 15 skipped, 1 passed, 20 total
+Snapshots:   0 total
+Time:        0.106 s, estimated 1 s
+Ran all test suites within paths "packages/resolution/.test-build/test/gap-hunt-review200.test.js".
+Test results written to: ../../../../../../REVIEW_RAW/fault-supplemental.json

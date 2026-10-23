@@ -1,0 +1,495 @@
+watchman warning: Recrawled this watch 3 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/REVIEW_ROOT' ; watchman watch-project '/REVIEW_ROOT'`
+
+(node:12160) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL packages/core/.test-build/test/nested/restart.test.js
+  ● nested validation across independent processes › an unchanged restart in reversed registration order keeps every exact reference with zero bodies
+
+    worker failed (1/null): /REVIEW_ROOT/node_modules/bindings/bindings.js:126
+      err = new Error(
+            ^
+
+    Error: Could not locate the bindings file. Tried:
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/Debug/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/Release/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/default/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/compiled/24.22.1/darwin/arm64/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/lib/binding/node-v137-darwin-arm64/better_sqlite3.node
+
+      137 |     }
+      138 |     const startedAt = Date.now();
+    > 139 |     const driver = _typedBusy(() => new Database(location, { timeout: busyTimeoutMilliseconds }));
+          |                                     ^
+      140 |     try {
+      141 |         retryWhileBusy(startedAt, () => {
+      142 |             for (const { assignment, setting, expected } of selectedConfiguration) {
+
+      at bindings (../../node_modules/bindings/bindings.js:126:9)
+      at new Database (../../node_modules/better-sqlite3/lib/database.js:48:64)
+      at ../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:139:37
+      at _typedBusy (../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:89:16)
+      at openConnection (../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:139:20)
+      at Object.openSqlite (../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:41:20)
+      at openDurableHistory (../../file:/REVIEW_ROOT/packages/history/dist/src/durable/index.js:82:39)
+      at openHistory (../../file:/REVIEW_ROOT/packages/core/.test-build/test/durable-history/support.js:171:21)
+      at openNestedSession (../../file:/REVIEW_ROOT/packages/core/.test-build/test/nested/support.js:16:21)
+      at main (../../file:/REVIEW_ROOT/packages/core/.test-build/test/nested/worker.js:55:21) {
+        tries: [
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/Debug/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/Release/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/out/Debug/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/Debug/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/out/Release/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/Release/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/default/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/compiled/24.22.1/darwin/arm64/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/lib/binding/node-v137-darwin-arm64/better_sqlite3.node'
+        ]
+      }
+      Node.js v24.22.1
+      at Object.run (test/nested/restart.test.ts:72:15)
+      at cold (test/nested/restart.test.ts:118:24)
+      at Object.<anonymous> (test/nested/restart.test.ts:133:15)
+
+  ● nested validation across independent processes › F-04 nested-equal-output-cutoff: the child reruns once, the summary keeps its exact reference and runs zero bodies
+
+    worker failed (1/null): /REVIEW_ROOT/node_modules/bindings/bindings.js:126
+      err = new Error(
+            ^
+
+    Error: Could not locate the bindings file. Tried:
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/Debug/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/Release/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/default/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/compiled/24.22.1/darwin/arm64/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/lib/binding/node-v137-darwin-arm64/better_sqlite3.node
+
+      137 |     }
+      138 |     const startedAt = Date.now();
+    > 139 |     const driver = _typedBusy(() => new Database(location, { timeout: busyTimeoutMilliseconds }));
+          |                                     ^
+      140 |     try {
+      141 |         retryWhileBusy(startedAt, () => {
+      142 |             for (const { assignment, setting, expected } of selectedConfiguration) {
+
+      at bindings (../../node_modules/bindings/bindings.js:126:9)
+      at new Database (../../node_modules/better-sqlite3/lib/database.js:48:64)
+      at ../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:139:37
+      at _typedBusy (../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:89:16)
+      at openConnection (../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:139:20)
+      at Object.openSqlite (../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:41:20)
+      at openDurableHistory (../../file:/REVIEW_ROOT/packages/history/dist/src/durable/index.js:82:39)
+      at openHistory (../../file:/REVIEW_ROOT/packages/core/.test-build/test/durable-history/support.js:171:21)
+      at openNestedSession (../../file:/REVIEW_ROOT/packages/core/.test-build/test/nested/support.js:16:21)
+      at main (../../file:/REVIEW_ROOT/packages/core/.test-build/test/nested/worker.js:55:21) {
+        tries: [
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/Debug/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/Release/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/out/Debug/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/Debug/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/out/Release/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/Release/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/default/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/compiled/24.22.1/darwin/arm64/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/lib/binding/node-v137-darwin-arm64/better_sqlite3.node'
+        ]
+      }
+      Node.js v24.22.1
+      at Object.run (test/nested/restart.test.ts:72:15)
+      at cold (test/nested/restart.test.ts:118:24)
+      at Object.<anonymous> (test/nested/restart.test.ts:143:15)
+
+  ● nested validation across independent processes › F-05 nested-changed-output: a changed consumed score reruns the summary and changes its exact reference
+
+    worker failed (1/null): /REVIEW_ROOT/node_modules/bindings/bindings.js:126
+      err = new Error(
+            ^
+
+    Error: Could not locate the bindings file. Tried:
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/Debug/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/Release/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/default/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/compiled/24.22.1/darwin/arm64/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/lib/binding/node-v137-darwin-arm64/better_sqlite3.node
+
+      137 |     }
+      138 |     const startedAt = Date.now();
+    > 139 |     const driver = _typedBusy(() => new Database(location, { timeout: busyTimeoutMilliseconds }));
+          |                                     ^
+      140 |     try {
+      141 |         retryWhileBusy(startedAt, () => {
+      142 |             for (const { assignment, setting, expected } of selectedConfiguration) {
+
+      at bindings (../../node_modules/bindings/bindings.js:126:9)
+      at new Database (../../node_modules/better-sqlite3/lib/database.js:48:64)
+      at ../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:139:37
+      at _typedBusy (../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:89:16)
+      at openConnection (../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:139:20)
+      at Object.openSqlite (../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:41:20)
+      at openDurableHistory (../../file:/REVIEW_ROOT/packages/history/dist/src/durable/index.js:82:39)
+      at openHistory (../../file:/REVIEW_ROOT/packages/core/.test-build/test/durable-history/support.js:171:21)
+      at openNestedSession (../../file:/REVIEW_ROOT/packages/core/.test-build/test/nested/support.js:16:21)
+      at main (../../file:/REVIEW_ROOT/packages/core/.test-build/test/nested/worker.js:55:21) {
+        tries: [
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/Debug/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/Release/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/out/Debug/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/Debug/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/out/Release/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/Release/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/default/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/compiled/24.22.1/darwin/arm64/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/lib/binding/node-v137-darwin-arm64/better_sqlite3.node'
+        ]
+      }
+      Node.js v24.22.1
+      at Object.run (test/nested/restart.test.ts:72:15)
+      at cold (test/nested/restart.test.ts:118:24)
+      at Object.<anonymous> (test/nested/restart.test.ts:159:15)
+
+  ● nested validation across independent processes › supplied-assessor-swap: binding B instead of A with equal scores is a child implementation change with the F-04 cutoff
+
+    worker failed (1/null): /REVIEW_ROOT/node_modules/bindings/bindings.js:126
+      err = new Error(
+            ^
+
+    Error: Could not locate the bindings file. Tried:
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/Debug/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/Release/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/default/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/compiled/24.22.1/darwin/arm64/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/lib/binding/node-v137-darwin-arm64/better_sqlite3.node
+
+      137 |     }
+      138 |     const startedAt = Date.now();
+    > 139 |     const driver = _typedBusy(() => new Database(location, { timeout: busyTimeoutMilliseconds }));
+          |                                     ^
+      140 |     try {
+      141 |         retryWhileBusy(startedAt, () => {
+      142 |             for (const { assignment, setting, expected } of selectedConfiguration) {
+
+      at bindings (../../node_modules/bindings/bindings.js:126:9)
+      at new Database (../../node_modules/better-sqlite3/lib/database.js:48:64)
+      at ../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:139:37
+      at _typedBusy (../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:89:16)
+      at openConnection (../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:139:20)
+      at Object.openSqlite (../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:41:20)
+      at openDurableHistory (../../file:/REVIEW_ROOT/packages/history/dist/src/durable/index.js:82:39)
+      at openHistory (../../file:/REVIEW_ROOT/packages/core/.test-build/test/durable-history/support.js:171:21)
+      at openNestedSession (../../file:/REVIEW_ROOT/packages/core/.test-build/test/nested/support.js:16:21)
+      at main (../../file:/REVIEW_ROOT/packages/core/.test-build/test/nested/worker.js:55:21) {
+        tries: [
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/Debug/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/Release/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/out/Debug/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/Debug/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/out/Release/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/Release/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/default/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/compiled/24.22.1/darwin/arm64/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/lib/binding/node-v137-darwin-arm64/better_sqlite3.node'
+        ]
+      }
+      Node.js v24.22.1
+      at Object.run (test/nested/restart.test.ts:72:15)
+      at cold (test/nested/restart.test.ts:118:24)
+      at Object.<anonymous> (test/nested/restart.test.ts:175:15)
+
+  ● nested validation across independent processes › binding-and-argument-misses (untracked): the summary reruns with a distinct miss while every child reuses
+
+    worker failed (1/null): /REVIEW_ROOT/node_modules/bindings/bindings.js:126
+      err = new Error(
+            ^
+
+    Error: Could not locate the bindings file. Tried:
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/Debug/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/Release/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/default/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/compiled/24.22.1/darwin/arm64/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/lib/binding/node-v137-darwin-arm64/better_sqlite3.node
+
+      137 |     }
+      138 |     const startedAt = Date.now();
+    > 139 |     const driver = _typedBusy(() => new Database(location, { timeout: busyTimeoutMilliseconds }));
+          |                                     ^
+      140 |     try {
+      141 |         retryWhileBusy(startedAt, () => {
+      142 |             for (const { assignment, setting, expected } of selectedConfiguration) {
+
+      at bindings (../../node_modules/bindings/bindings.js:126:9)
+      at new Database (../../node_modules/better-sqlite3/lib/database.js:48:64)
+      at ../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:139:37
+      at _typedBusy (../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:89:16)
+      at openConnection (../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:139:20)
+      at Object.openSqlite (../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:41:20)
+      at openDurableHistory (../../file:/REVIEW_ROOT/packages/history/dist/src/durable/index.js:82:39)
+      at openHistory (../../file:/REVIEW_ROOT/packages/core/.test-build/test/durable-history/support.js:171:21)
+      at openNestedSession (../../file:/REVIEW_ROOT/packages/core/.test-build/test/nested/support.js:16:21)
+      at main (../../file:/REVIEW_ROOT/packages/core/.test-build/test/nested/worker.js:55:21) {
+        tries: [
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/Debug/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/Release/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/out/Debug/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/Debug/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/out/Release/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/Release/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/default/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/compiled/24.22.1/darwin/arm64/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/lib/binding/node-v137-darwin-arm64/better_sqlite3.node'
+        ]
+      }
+      Node.js v24.22.1
+      at Object.run (test/nested/restart.test.ts:72:15)
+      at cold (test/nested/restart.test.ts:118:24)
+      at test/nested/restart.test.ts:190:15
+
+  ● nested validation across independent processes › binding-and-argument-misses (unreconstructible): the summary reruns with a distinct miss while every child reuses
+
+    worker failed (1/null): /REVIEW_ROOT/node_modules/bindings/bindings.js:126
+      err = new Error(
+            ^
+
+    Error: Could not locate the bindings file. Tried:
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/Debug/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/Release/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/default/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/compiled/24.22.1/darwin/arm64/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/lib/binding/node-v137-darwin-arm64/better_sqlite3.node
+
+      137 |     }
+      138 |     const startedAt = Date.now();
+    > 139 |     const driver = _typedBusy(() => new Database(location, { timeout: busyTimeoutMilliseconds }));
+          |                                     ^
+      140 |     try {
+      141 |         retryWhileBusy(startedAt, () => {
+      142 |             for (const { assignment, setting, expected } of selectedConfiguration) {
+
+      at bindings (../../node_modules/bindings/bindings.js:126:9)
+      at new Database (../../node_modules/better-sqlite3/lib/database.js:48:64)
+      at ../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:139:37
+      at _typedBusy (../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:89:16)
+      at openConnection (../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:139:20)
+      at Object.openSqlite (../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:41:20)
+      at openDurableHistory (../../file:/REVIEW_ROOT/packages/history/dist/src/durable/index.js:82:39)
+      at openHistory (../../file:/REVIEW_ROOT/packages/core/.test-build/test/durable-history/support.js:171:21)
+      at openNestedSession (../../file:/REVIEW_ROOT/packages/core/.test-build/test/nested/support.js:16:21)
+      at main (../../file:/REVIEW_ROOT/packages/core/.test-build/test/nested/worker.js:55:21) {
+        tries: [
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/Debug/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/Release/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/out/Debug/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/Debug/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/out/Release/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/Release/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/default/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/compiled/24.22.1/darwin/arm64/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/lib/binding/node-v137-darwin-arm64/better_sqlite3.node'
+        ]
+      }
+      Node.js v24.22.1
+      at Object.run (test/nested/restart.test.ts:72:15)
+      at cold (test/nested/restart.test.ts:118:24)
+      at test/nested/restart.test.ts:190:15
+
+  ● nested validation across independent processes › binding-and-argument-misses (slot supplied none on restart): a distinct miss and a distinct failure before any body
+
+    worker failed (1/null): /REVIEW_ROOT/node_modules/bindings/bindings.js:126
+      err = new Error(
+            ^
+
+    Error: Could not locate the bindings file. Tried:
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/Debug/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/Release/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/default/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/compiled/24.22.1/darwin/arm64/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/lib/binding/node-v137-darwin-arm64/better_sqlite3.node
+
+      137 |     }
+      138 |     const startedAt = Date.now();
+    > 139 |     const driver = _typedBusy(() => new Database(location, { timeout: busyTimeoutMilliseconds }));
+          |                                     ^
+      140 |     try {
+      141 |         retryWhileBusy(startedAt, () => {
+      142 |             for (const { assignment, setting, expected } of selectedConfiguration) {
+
+      at bindings (../../node_modules/bindings/bindings.js:126:9)
+      at new Database (../../node_modules/better-sqlite3/lib/database.js:48:64)
+      at ../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:139:37
+      at _typedBusy (../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:89:16)
+      at openConnection (../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:139:20)
+      at Object.openSqlite (../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:41:20)
+      at openDurableHistory (../../file:/REVIEW_ROOT/packages/history/dist/src/durable/index.js:82:39)
+      at openHistory (../../file:/REVIEW_ROOT/packages/core/.test-build/test/durable-history/support.js:171:21)
+      at openNestedSession (../../file:/REVIEW_ROOT/packages/core/.test-build/test/nested/support.js:16:21)
+      at main (../../file:/REVIEW_ROOT/packages/core/.test-build/test/nested/worker.js:55:21) {
+        tries: [
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/Debug/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/Release/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/out/Debug/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/Debug/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/out/Release/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/Release/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/default/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/compiled/24.22.1/darwin/arm64/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/lib/binding/node-v137-darwin-arm64/better_sqlite3.node'
+        ]
+      }
+      Node.js v24.22.1
+      at Object.run (test/nested/restart.test.ts:72:15)
+      at cold (test/nested/restart.test.ts:118:24)
+      at test/nested/restart.test.ts:209:15
+
+  ● nested validation across independent processes › binding-and-argument-misses (slot supplied twice on restart): a distinct miss and a distinct failure before any body
+
+    worker failed (1/null): /REVIEW_ROOT/node_modules/bindings/bindings.js:126
+      err = new Error(
+            ^
+
+    Error: Could not locate the bindings file. Tried:
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/Debug/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/Release/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/build/default/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/compiled/24.22.1/darwin/arm64/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+     → /REVIEW_ROOT/node_modules/better-sqlite3/lib/binding/node-v137-darwin-arm64/better_sqlite3.node
+
+      137 |     }
+      138 |     const startedAt = Date.now();
+    > 139 |     const driver = _typedBusy(() => new Database(location, { timeout: busyTimeoutMilliseconds }));
+          |                                     ^
+      140 |     try {
+      141 |         retryWhileBusy(startedAt, () => {
+      142 |             for (const { assignment, setting, expected } of selectedConfiguration) {
+
+      at bindings (../../node_modules/bindings/bindings.js:126:9)
+      at new Database (../../node_modules/better-sqlite3/lib/database.js:48:64)
+      at ../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:139:37
+      at _typedBusy (../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:89:16)
+      at openConnection (../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:139:20)
+      at Object.openSqlite (../../file:/REVIEW_ROOT/packages/machine-node/dist/src/node/sqlite.js:41:20)
+      at openDurableHistory (../../file:/REVIEW_ROOT/packages/history/dist/src/durable/index.js:82:39)
+      at openHistory (../../file:/REVIEW_ROOT/packages/core/.test-build/test/durable-history/support.js:171:21)
+      at openNestedSession (../../file:/REVIEW_ROOT/packages/core/.test-build/test/nested/support.js:16:21)
+      at main (../../file:/REVIEW_ROOT/packages/core/.test-build/test/nested/worker.js:55:21) {
+        tries: [
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/Debug/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/Release/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/out/Debug/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/Debug/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/out/Release/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/Release/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/build/default/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/compiled/24.22.1/darwin/arm64/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node',
+          '/REVIEW_ROOT/node_modules/better-sqlite3/lib/binding/node-v137-darwin-arm64/better_sqlite3.node'
+        ]
+      }
+      Node.js v24.22.1
+      at Object.run (test/nested/restart.test.ts:72:15)
+      at cold (test/nested/restart.test.ts:118:24)
+      at test/nested/restart.test.ts:209:15
+
+Test Suites: 1 failed, 1 total
+Tests:       8 failed, 8 total
+Snapshots:   0 total
+Time:        1.118 s
+Ran all test suites within paths "packages/core/.test-build/test/nested/restart.test.js".
+Test results written to: ../../../../../../RAW_TMP/microdelta-review200-s239t6vz/fresh-process.json

@@ -1,0 +1,20 @@
+baseline: 5 tests, 0 failing
+
+## a gate omits its own implementation evidence: 1 failing
+- gap hunt existing issue #144 Resolution fault sites a successful gate carries its own implementation observation in its separate gate evidence
+
+## concurrent direct memo calls execute twice: 1 failing
+- gap hunt existing issue #144 Resolution fault sites two concurrent calls of the same direct memo in one parent request execute once and share its result
+
+## supplied intent ignores its invocation: 1 failing
+- gap hunt existing issue #144 Resolution fault sites supplied attempt intent is stable for equal invocations and changes with arguments or implementation
+
+## supplied provenance accepts missing own implementation evidence: 1 failing
+- gap hunt existing issue #144 Resolution fault sites a supplied candidate missing its required own implementation is integrity damage before acceptance
+
+## fold provenance accepts missing own implementation evidence: 1 failing
+- gap hunt existing issue #144 Resolution fault sites a fold candidate missing its required own implementation is integrity damage before acceptance
+
+restored: 5 tests, 0 failing
+
+PASS: 5 controls

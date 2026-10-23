@@ -1,0 +1,23 @@
+[
+  {
+    "label": "install",
+    "argv": [
+      "npm",
+      "ci",
+      "--ignore-scripts"
+    ],
+    "exit": 0,
+    "seconds": 7.571
+  },
+  {
+    "label": "native-addon",
+    "argv": [
+      "npm",
+      "rebuild",
+      "better-sqlite3",
+      "--build-from-source"
+    ],
+    "exit": 1,
+    "seconds": 26.122
+  }
+]

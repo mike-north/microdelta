@@ -1,0 +1,92 @@
+npm warn Unknown cli config "--build-from-source". This will stop working in the next major version of npm.
+npm error code 1
+npm error path /REVIEW_ROOT/node_modules/better-sqlite3
+npm error command failed
+npm error command sh -c prebuild-install || node-gyp rebuild --release
+npm error TOUCH 4292fa9a667d77b27488aa109b010a85bce8e4e7a1c7aa0370cea902395c3866.intermediate
+npm error   ACTION deps_sqlite3_gyp_locate_sqlite3_target_copy_builtin_sqlite3 4292fa9a667d77b27488aa109b010a85bce8e4e7a1c7aa0370cea902395c3866.intermediate
+npm error   TOUCH Release/obj.target/deps/locate_sqlite3.stamp
+npm error   CC(target) Release/obj.target/sqlite3/gen/sqlite3/sqlite3.o
+npm error   LIBTOOL-STATIC Release/sqlite3.a
+npm error   CXX(target) Release/obj.target/better_sqlite3/src/better_sqlite3.o
+npm error   SOLINK_MODULE(target) Release/better_sqlite3.node
+npm error rm 4292fa9a667d77b27488aa109b010a85bce8e4e7a1c7aa0370cea902395c3866.intermediate
+npm error gyp info it worked if it ends with ok
+npm error gyp info using node-gyp@12.2.0
+npm error gyp info using node@24.22.1 | darwin | arm64
+npm error gyp info find Python using Python version 3.15.0 found at "/opt/homebrew/opt/python@3.15/bin/python3.15"
+npm error gyp http GET https://nodejs.org/download/release/v24.22.1/node-v24.22.1-headers.tar.gz
+npm error gyp http 200 https://nodejs.org/download/release/v24.22.1/node-v24.22.1-headers.tar.gz
+npm error gyp http GET https://nodejs.org/download/release/v24.22.1/SHASUMS256.txt
+npm error gyp http 200 https://nodejs.org/download/release/v24.22.1/SHASUMS256.txt
+npm error gyp info spawn /opt/homebrew/opt/python@3.15/bin/python3.15
+npm error gyp info spawn args [
+npm error gyp info spawn args '/USER_HOME/.nodenv/versions/24.22.1/lib/node_modules/npm/node_modules/node-gyp/gyp/gyp_main.py',
+npm error gyp info spawn args 'binding.gyp',
+npm error gyp info spawn args '-f',
+npm error gyp info spawn args 'make',
+npm error gyp info spawn args '-I',
+npm error gyp info spawn args '/REVIEW_ROOT/node_modules/better-sqlite3/build/config.gypi',
+npm error gyp info spawn args '-I',
+npm error gyp info spawn args '/USER_HOME/.nodenv/versions/24.22.1/lib/node_modules/npm/node_modules/node-gyp/addon.gypi',
+npm error gyp info spawn args '-I',
+npm error gyp info spawn args '/USER_HOME/Library/Caches/node-gyp/24.22.1/include/node/common.gypi',
+npm error gyp info spawn args '-Dlibrary=shared_library',
+npm error gyp info spawn args '-Dvisibility=default',
+npm error gyp info spawn args '-Dnode_root_dir=/USER_HOME/Library/Caches/node-gyp/24.22.1',
+npm error gyp info spawn args '-Dnode_gyp_dir=/USER_HOME/.nodenv/versions/24.22.1/lib/node_modules/npm/node_modules/node-gyp',
+npm error gyp info spawn args '-Dnode_lib_file=/USER_HOME/Library/Caches/node-gyp/24.22.1/<(target_arch)/node.lib',
+npm error gyp info spawn args '-Dmodule_root_dir=/REVIEW_ROOT/node_modules/better-sqlite3',
+npm error gyp info spawn args '-Dnode_engine=v8',
+npm error gyp info spawn args '--depth=.',
+npm error gyp info spawn args '--no-parallel',
+npm error gyp info spawn args '--generator-output',
+npm error gyp info spawn args 'build',
+npm error gyp info spawn args '-Goutput_dir=.'
+npm error gyp info spawn args ]
+npm error gyp info spawn make
+npm error gyp info spawn args [ 'BUILDTYPE=Release', '-C', 'build' ]
+npm error In file included from ../src/better_sqlite3.cpp:1:
+npm error In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/climits:43:
+npm error In file included from /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__config:15:
+npm error /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/c++/v1/__configuration/availability.h:204:4: warning: "The selected platform is no longer supported by libc++." [-W#warnings]
+npm error   204 | #  warning "The selected platform is no longer supported by libc++."
+npm error       |    ^
+npm error ../src/better_sqlite3.cpp:48:1: warning: cast from 'void (*)(v8::Local<v8::Object>, v8::Local<v8::Value>, v8::Local<v8::Context>)' to 'node::addon_context_register_func' (aka 'void (*)(v8::Local<v8::Object>, v8::Local<v8::Value>, v8::Local<v8::Context>, void *)') converts to incompatible function type [-Wcast-function-type-mismatch]
+npm error    48 | NODE_MODULE_INIT(/* exports, context */) {
+npm error       | ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+npm error /USER_HOME/Library/Caches/node-gyp/24.22.1/include/node/node.h:1451:3: note: expanded from macro 'NODE_MODULE_INIT'
+npm error  1451 |   NODE_MODULE_CONTEXT_AWARE(NODE_GYP_MODULE_NAME,                     \
+npm error       |   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+npm error  1452 |                             NODE_MODULE_INITIALIZER)                  \
+npm error       |                             ~~~~~~~~~~~~~~~~~~~~~~~~
+npm error /USER_HOME/Library/Caches/node-gyp/24.22.1/include/node/node.h:1420:3: note: expanded from macro 'NODE_MODULE_CONTEXT_AWARE'
+npm error  1420 |   NODE_MODULE_CONTEXT_AWARE_X(modname, regfunc, NULL, 0)
+npm error       |   ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+npm error /USER_HOME/Library/Caches/node-gyp/24.22.1/include/node/node.h:1402:7: note: expanded from macro 'NODE_MODULE_CONTEXT_AWARE_X'
+npm error  1402 |       (node::addon_context_register_func) (regfunc),                  \
+npm error       |       ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+npm error 2 warnings generated.
+npm error ld: multiple errors: tapi error: malformed file
+npm error /Library/Developer/CommandLineTools/SDKs/MacOSX27.0.sdk/usr/lib/libSystem.B.tbd:4:20: error: unknown architecture
+npm error                    arm64e.x1-macos, arm64e.x1-maccatalyst ]
+npm error                    ^~~~~~~~~~~~~~~
+npm error  in '/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/libSystem.tbd'; tapi error: malformed file
+npm error /Library/Developer/CommandLineTools/SDKs/MacOSX27.0.sdk/usr/lib/libc++.1.tbd:4:54: error: unknown architecture
+npm error                    arm64e-macos, arm64e-maccatalyst, arm64e.x1-macos, arm64e.x1-maccatalyst ]
+npm error                                                      ^~~~~~~~~~~~~~~
+npm error  in '/Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/lib/libc++.tbd'
+npm error clang++: error: linker command failed with exit code 1 (use -v to see invocation)
+npm error make: *** [Release/better_sqlite3.node] Error 1
+npm error gyp ERR! build error 
+npm error gyp ERR! stack Error: `make` failed with exit code: 2
+npm error gyp ERR! stack at ChildProcess.<anonymous> (/USER_HOME/.nodenv/versions/24.22.1/lib/node_modules/npm/node_modules/node-gyp/lib/build.js:219:23)
+npm error gyp ERR! System Darwin 27.0.0
+npm error gyp ERR! command "/USER_HOME/.nodenv/versions/24.22.1/bin/node" "/USER_HOME/.nodenv/versions/24.22.1/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js" "rebuild" "--release"
+npm error gyp ERR! cwd /REVIEW_ROOT/node_modules/better-sqlite3
+npm error gyp ERR! node -v v24.22.1
+npm error gyp ERR! node-gyp -v v12.2.0
+npm error gyp ERR! $npm_package_name better-sqlite3
+npm error gyp ERR! $npm_package_version 12.9.0
+npm error gyp ERR! not ok
+npm error A complete log of this run can be found in: /USER_HOME/.npm/_logs/2026-10-23T23_37_59_879Z-debug-0.log

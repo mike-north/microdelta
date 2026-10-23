@@ -1,0 +1,229 @@
+watchman warning: Recrawled this watch 21 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/REVIEW_ROOT' ; watchman watch-project '/REVIEW_ROOT'`
+
+(node:45693) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL packages/resolution/.test-build/test/child-validation.test.js
+  ● child validation isolation › a retained parent compares only the substituted current child output
+
+    CHILD-CANDIDATE-SENTINEL
+
+      133 |                 childQueries += 1;
+      134 |                 if (childQueryMustFail) {
+    > 135 |                     throw new Error('CHILD-CANDIDATE-SENTINEL');
+          |                           ^
+      136 |                 }
+      137 |             }
+      138 |             if (subject.subject === 'parent') {
+
+      at Object.findCandidates (.test-build/test/child-history.js:135:27)
+      at .test-build/src/resolution.js:989:52
+      at integrity (.test-build/src/resolution.js:217:16)
+      at resolveSource (.test-build/src/resolution.js:989:28)
+      at resolveSourceShared (.test-build/src/resolution.js:980:59)
+      at .test-build/src/resolution.js:486:99
+      at Object.resolve (.test-build/src/resolution.js:449:56)
+      at currentSourceChild (.test-build/src/resolution.js:486:29)
+      at evaluateDirectCandidate (.test-build/src/resolution.js:1189:36)
+      at evaluateMemoCandidate (.test-build/src/resolution.js:1148:16)
+      at resolveMemo (.test-build/src/resolution.js:1752:37)
+      at resolveMemoShared (.test-build/src/resolution.js:1729:59)
+      at resolveStep (.test-build/src/resolution.js:2255:21)
+      at Object.resolve (.test-build/src/resolution.js:2863:40)
+      at Object.<anonymous> (.test-build/test/child-validation.test.js:238:14)
+
+  ● child validation isolation › a changed consumed fact publishes the parent once with current child provenance
+
+    ResolutionError: Source check of ["child-validation","step","child",null] threw
+
+      1080 |                     throw error;
+      1081 |                 }
+    > 1082 |                 throw new ResolutionError('execution-failure', `Source check of ${stepKey(step)} threw`, error);
+           |                       ^
+      1083 |             }
+      1084 |             const ran = executed.value;
+      1085 |             const { minted } = ran.value;
+
+      at resolveSource (.test-build/src/resolution.js:1082:23)
+      at withLeaseAuthority (.test-build/src/resolution.js:606:20)
+      at evaluateDirectCandidate (.test-build/src/resolution.js:1189:30)
+      at resolveMemo (.test-build/src/resolution.js:1752:31)
+      at withLeaseAuthority (.test-build/src/resolution.js:606:20)
+      at resolveStep (.test-build/src/resolution.js:2255:15)
+      at Object.resolve (.test-build/src/resolution.js:2863:34)
+      at Object.<anonymous> (.test-build/test/child-validation.test.js:260:22)
+
+    Cause:
+        CHILD-RECURSION-SENTINEL
+
+          40 |     childRuns += 1;
+          41 |     if (childShouldThrow) {
+        > 42 |         throw new Error('CHILD-RECURSION-SENTINEL');
+             |               ^
+          43 |     }
+          44 |     return { score: 7, unread: 1 };
+          45 | }
+
+          at Object.sourceData (.test-build/test/child-validation.test.js:42:15)
+          at Object.apply (../tracking/src/observer.ts:991:24)
+          at run (.test-build/test/child-validation.test.js:77:67)
+          at Object.apply (../tracking/src/observer.ts:991:24)
+          at .test-build/src/resolution.js:700:87
+          at ../tracking/src/observer.ts:1267:31
+          at Object.captureAsync (../tracking/src/observer.ts:1265:23)
+          at .test-build/src/resolution.js:700:29
+          at Object.apply (../definition/src/declaration.ts:434:14)
+          at Object.apply (../definition/src/invocation.ts:323:23)
+          at .test-build/src/resolution.js:778:31
+          at callSource (.test-build/src/resolution.js:771:23)
+          at .test-build/src/resolution.js:1054:66
+          at Object.executeUnsupervised [as execute] (.test-build/src/resolution.js:409:49)
+          at resolveSource (.test-build/src/resolution.js:1054:46)
+          at withLeaseAuthority (.test-build/src/resolution.js:606:20)
+          at evaluateDirectCandidate (.test-build/src/resolution.js:1189:30)
+          at resolveMemo (.test-build/src/resolution.js:1752:31)
+          at withLeaseAuthority (.test-build/src/resolution.js:606:20)
+          at resolveStep (.test-build/src/resolution.js:2255:15)
+          at Object.resolve (.test-build/src/resolution.js:2863:34)
+          at Object.<anonymous> (.test-build/test/child-validation.test.js:260:22)
+
+  ● child validation isolation › check-only reports the child boundary as uncertain and writes no acceptance
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 3
+    + Received  + 1
+
+    - Array [
+    -   "source:child",
+    - ]
+    + Array []
+
+      288 |         expect(check).toMatchObject({ kind: 'uncertain', boundary: { role: 'step', slot: 'child' } });
+      289 |         expect(state.acceptances).toHaveLength(acceptedBefore);
+    > 290 |         expect(seen).toEqual(['source:child']);
+          |                      ^
+      291 |     });
+      292 |     test('a current child refusal stops the parent without accepting its candidate', async () => {
+      293 |         childShouldThrow = false;
+
+      at Object.<anonymous> (.test-build/test/child-validation.test.js:290:22)
+
+  ● child validation isolation › a current child refusal stops the parent without accepting its candidate
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 6
+    + Received  + 1
+
+      Object {
+    -   "disposition": "denied",
+    -   "kind": "refused",
+    -   "refused": Object {
+    -     "role": "step",
+    -     "slot": "child",
+    -   },
+    +   "kind": "reused",
+      }
+
+      308 |         };
+      309 |         const next = await _createResolutionWithChildService(options, service).resolve({ step: parentStep, requestKey: 'refusal', lease });
+    > 310 |         expect(next).toMatchObject({ kind: 'refused', refused: { role: 'step', slot: 'child' }, disposition: 'denied' });
+          |                      ^
+      311 |         expect(state.acceptances).toHaveLength(acceptedBefore);
+      312 |     });
+      313 |     test('a failed current child rejects before parent acceptance', async () => {
+
+      at Object.<anonymous> (.test-build/test/child-validation.test.js:310:22)
+
+  ● child validation isolation › a failed current child rejects before parent acceptance
+
+    expect(received).rejects.toMatchObject()
+
+    Received promise resolved instead of rejected
+    Resolved to value: {"acceptance": {"acceptanceId": 1, "dependencies": [{"kind": "completed-result", "locator": "result:3"}], "environment": "test", "evidence": {"content": {"basis": "validated", "children": [{"reference": {"kind": "completed-result", "locator": "result:3"}, "slot": "child"}], "observations": [], "step": {"role": "step", "scope": "child-validation", "slot": "parent"}}, "format": "microdelta.resolution.acceptance", "formatVersion": 1}, "fence": 1, "reference": {"kind": "completed-result", "locator": "result:2"}}, "basis": "validated", "diagnostics": [], "kind": "reused", "misses": [], "reference": {"kind": "completed-result", "locator": "result:2"}, "step": {"role": "step", "scope": "child-validation", "slot": "parent"}, "trace": [{"phase": "verify", "step": {"role": "step", "scope": "child-validation", "slot": "parent"}}, {"phase": "accept", "reference": {"kind": "completed-result", "locator": "result:2"}, "step": {"role": "step", "scope": "child-validation", "slot": "parent"}}]}
+
+      324 |             },
+      325 |         };
+    > 326 |         await expect(_createResolutionWithChildService(options, service).resolve({ step: parentStep, requestKey: 'failure', lease }))
+          |               ^
+      327 |             .rejects.toMatchObject({ code: 'execution-failure' });
+      328 |         expect(state.acceptances).toHaveLength(acceptedBefore);
+      329 |     });
+
+      at expect (../../node_modules/expect/build/index.js:2116:15)
+      at Object.<anonymous> (.test-build/test/child-validation.test.js:326:15)
+
+  ● child validation isolation › the same seam can take the normal child continuation
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 3
+    + Received  + 1
+
+    - Array [
+    -   "source:child",
+    - ]
+    + Array []
+
+      365 |         expect({ queries: state.childQueries, finalities: childFinalities, admissions: childAdmissions, bodies: childRuns })
+      366 |             .toEqual({ queries: before.queries + 1, finalities: before.finalities + 1, admissions: before.admissions + 1, bodies: before.bodies + 1 });
+    > 367 |         expect(seen).toEqual(['source:child']);
+          |                      ^
+      368 |         expect(next.acceptance.dependencies).toHaveLength(1);
+      369 |     });
+      370 |     test.each([
+
+      at Object.<anonymous> (.test-build/test/child-validation.test.js:367:22)
+
+  ● child validation isolation › a supplied child is substituted only after its current subject and arguments are rebuilt
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Array [
+        Object {
+          "kind": "completed-result",
+    -     "locator": "seed:3",
+    +     "locator": "result:1",
+        },
+      ]
+
+      436 |         }
+      437 |         expect(next.reference).toEqual(cold.reference);
+    > 438 |         expect(next.acceptance.dependencies).toEqual([current]);
+          |                                              ^
+      439 |         expect(seen).toEqual(['supplied:scorer:score:7']);
+      440 |     });
+      441 |     test('a missing current supplied binding ends check before the child seam', async () => {
+
+      at Object.<anonymous> (.test-build/test/child-validation.test.js:438:46)
+
+  ● child validation isolation › a nested memo child feeds both parent validation and changed-output execution
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "published"
+    Received: "reused"
+
+      485 |         };
+      486 |         const next = await _createResolutionWithChildService(options, service).resolve({ step: parentStep, requestKey: 'next-memo', lease });
+    > 487 |         expect(next.kind).toBe('published');
+          |                           ^
+      488 |         if (next.kind !== 'published') {
+      489 |             return;
+      490 |         }
+
+      at Object.<anonymous> (.test-build/test/child-validation.test.js:487:27)
+
+Test Suites: 1 failed, 1 total
+Tests:       8 failed, 7 passed, 15 total
+Snapshots:   0 total
+Time:        0.179 s, estimated 1 s
+Ran all test suites within paths "packages/resolution/.test-build/test/child-validation.test.js".
+Test results written to: ../../../../../../REVIEW_RAW/fault-original.json

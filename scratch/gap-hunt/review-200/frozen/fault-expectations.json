@@ -1,0 +1,34 @@
+{
+  "fault-original": {
+    "counts": {
+      "numTotalTests": 15,
+      "numPassedTests": 7,
+      "numFailedTests": 8,
+      "numPendingTests": 0
+    },
+    "failures": {
+      "child validation isolation a retained parent compares only the substituted current child output": "CHILD-CANDIDATE-SENTINEL",
+      "child validation isolation a changed consumed fact publishes the parent once with current child provenance": "Source check of",
+      "child validation isolation check-only reports the child boundary as uncertain and writes no acceptance": "source:child",
+      "child validation isolation a current child refusal stops the parent without accepting its candidate": "\"refused\"",
+      "child validation isolation a failed current child rejects before parent acceptance": "Received promise resolved instead of rejected",
+      "child validation isolation the same seam can take the normal child continuation": "source:child",
+      "child validation isolation a supplied child is substituted only after its current subject and arguments are rebuilt": "seed:3",
+      "child validation isolation a nested memo child feeds both parent validation and changed-output execution": "Received: \"reused\""
+    }
+  },
+  "fault-supplemental": {
+    "counts": {
+      "numTotalTests": 20,
+      "numPassedTests": 1,
+      "numFailedTests": 4,
+      "numPendingTests": 15
+    },
+    "failures": {
+      "supplemental exact parent boundary equal selected content keeps parent body at zero and old provenance immutable after current subject reconnection": "Admission failed for",
+      "supplemental exact parent boundary changed current content executes the parent exactly once and does not rewrite the old result": "Source check of",
+      "supplemental exact parent boundary missing exact current child data cannot fall back to a historical value or accept the parent": "Received promise resolved instead of rejected",
+      "supplemental exact parent boundary failed child keeps exact failure identity and cannot authorize parent acceptance": "Received promise resolved instead of rejected"
+    }
+  }
+}

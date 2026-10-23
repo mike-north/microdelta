@@ -1,0 +1,18 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+AssertionError [ERR_ASSERTION]: Expected the actual lexical child-resolution routes
+
+0 !== 4
+
+    at file:///REVIEW_ROOT/scratch/gap-hunt/review-200/frozen/arc008-surface.mjs:23:8 {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 0,
+  expected: 4,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.22.1

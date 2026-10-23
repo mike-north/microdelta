@@ -1,0 +1,315 @@
+[
+  {
+    "label": "install",
+    "argv": [
+      "npm",
+      "ci",
+      "--ignore-scripts"
+    ],
+    "exit": 0,
+    "seconds": 5.595
+  },
+  {
+    "label": "native-addon",
+    "argv": [
+      "npm",
+      "rebuild",
+      "better-sqlite3"
+    ],
+    "exit": 0,
+    "seconds": 1.033
+  },
+  {
+    "label": "build",
+    "argv": [
+      "npm",
+      "run",
+      "build:packages"
+    ],
+    "exit": 0,
+    "seconds": 28.679
+  },
+  {
+    "label": "owner-types",
+    "argv": [
+      "node",
+      "node_modules/typescript/bin/tsc",
+      "-p",
+      "packages/resolution/tsconfig.test.json"
+    ],
+    "exit": 0,
+    "seconds": 1.58
+  },
+  {
+    "label": "owner-check",
+    "argv": [
+      "npm",
+      "run",
+      "check",
+      "--workspace",
+      "@microdelta/resolution"
+    ],
+    "exit": 0,
+    "seconds": 4.553
+  },
+  {
+    "label": "owner-tsd",
+    "argv": [
+      "npm",
+      "run",
+      "test:types",
+      "--workspace",
+      "@microdelta/resolution"
+    ],
+    "exit": 0,
+    "seconds": 1.474
+  },
+  {
+    "label": "owner-public",
+    "argv": [
+      "npm",
+      "run",
+      "test:public",
+      "--workspace",
+      "@microdelta/resolution"
+    ],
+    "exit": 0,
+    "seconds": 0.938
+  },
+  {
+    "label": "original",
+    "argv": [
+      "node",
+      "--experimental-vm-modules",
+      "node_modules/jest/bin/jest.js",
+      "--config",
+      "packages/resolution/jest.config.mjs",
+      "--runInBand",
+      "--json",
+      "--outputFile=/REVIEW_RAW/original.json",
+      "--runTestsByPath",
+      "packages/resolution/.test-build/test/child-validation.test.js"
+    ],
+    "exit": 0,
+    "seconds": 0.693
+  },
+  {
+    "label": "supplemental",
+    "argv": [
+      "node",
+      "--experimental-vm-modules",
+      "node_modules/jest/bin/jest.js",
+      "--config",
+      "packages/resolution/jest.config.mjs",
+      "--runInBand",
+      "--json",
+      "--outputFile=/REVIEW_RAW/supplemental.json",
+      "--runTestsByPath",
+      "packages/resolution/.test-build/test/gap-hunt-review200.test.js",
+      "--testNamePattern",
+      "supplemental exact parent boundary"
+    ],
+    "exit": 0,
+    "seconds": 0.463
+  },
+  {
+    "label": "core-types",
+    "argv": [
+      "node",
+      "node_modules/typescript/bin/tsc",
+      "-p",
+      "packages/core/tsconfig.test.json"
+    ],
+    "exit": 0,
+    "seconds": 2.845
+  },
+  {
+    "label": "fresh-process",
+    "argv": [
+      "node",
+      "--experimental-vm-modules",
+      "node_modules/jest/bin/jest.js",
+      "--config",
+      "packages/core/jest.config.mjs",
+      "--runInBand",
+      "--json",
+      "--outputFile=/REVIEW_RAW/fresh-process.json",
+      "--runTestsByPath",
+      "packages/core/.test-build/test/nested/restart.test.js"
+    ],
+    "exit": 0,
+    "seconds": 3.78
+  },
+  {
+    "label": "144-witnesses",
+    "argv": [
+      "node",
+      "--experimental-vm-modules",
+      "node_modules/jest/bin/jest.js",
+      "--config",
+      "packages/core/jest.config.mjs",
+      "--runInBand",
+      "--json",
+      "--outputFile=/REVIEW_RAW/144-witnesses.json",
+      "--runTestsByPath",
+      "packages/core/.test-build/test/gap-hunt-contracts-resolution-144.test.js"
+    ],
+    "exit": 0,
+    "seconds": 0.701
+  },
+  {
+    "label": "existing-anchors",
+    "argv": [
+      "node",
+      "packages/core/test/resolution/controls/resolution-mutation-controls.mjs",
+      "--check-anchors"
+    ],
+    "exit": 0,
+    "seconds": 0.206
+  },
+  {
+    "label": "144-controls",
+    "argv": [
+      "node",
+      "packages/core/test/resolution/controls/review200-144-controls.mjs"
+    ],
+    "exit": 0,
+    "seconds": 22.365
+  },
+  {
+    "label": "original-diagnostic-current",
+    "argv": [
+      "node",
+      "scratch/gap-hunt/review-200/frozen/arc008-surface.mjs"
+    ],
+    "exit": 1,
+    "seconds": 0.325
+  },
+  {
+    "label": "original-diagnostic-prior",
+    "argv": [
+      "node",
+      "scratch/gap-hunt/review-200/frozen/arc008-surface.mjs"
+    ],
+    "exit": 0,
+    "seconds": 0.299
+  },
+  {
+    "label": "fault-owner-build",
+    "argv": [
+      "npm",
+      "run",
+      "build",
+      "--workspace",
+      "@microdelta/resolution"
+    ],
+    "exit": 0,
+    "seconds": 2.52
+  },
+  {
+    "label": "fault-owner-types",
+    "argv": [
+      "node",
+      "node_modules/typescript/bin/tsc",
+      "-p",
+      "packages/resolution/tsconfig.test.json"
+    ],
+    "exit": 0,
+    "seconds": 1.485
+  },
+  {
+    "label": "fault-original",
+    "argv": [
+      "node",
+      "--experimental-vm-modules",
+      "node_modules/jest/bin/jest.js",
+      "--config",
+      "packages/resolution/jest.config.mjs",
+      "--runInBand",
+      "--json",
+      "--outputFile=/REVIEW_RAW/fault-original.json",
+      "--runTestsByPath",
+      "packages/resolution/.test-build/test/child-validation.test.js"
+    ],
+    "exit": 1,
+    "seconds": 0.641
+  },
+  {
+    "label": "fault-supplemental",
+    "argv": [
+      "node",
+      "--experimental-vm-modules",
+      "node_modules/jest/bin/jest.js",
+      "--config",
+      "packages/resolution/jest.config.mjs",
+      "--runInBand",
+      "--json",
+      "--outputFile=/REVIEW_RAW/fault-supplemental.json",
+      "--runTestsByPath",
+      "packages/resolution/.test-build/test/gap-hunt-review200.test.js",
+      "--testNamePattern",
+      "supplemental exact parent boundary"
+    ],
+    "exit": 1,
+    "seconds": 0.476
+  },
+  {
+    "label": "restored-owner-build",
+    "argv": [
+      "npm",
+      "run",
+      "build",
+      "--workspace",
+      "@microdelta/resolution"
+    ],
+    "exit": 0,
+    "seconds": 2.321
+  },
+  {
+    "label": "restored-owner-types",
+    "argv": [
+      "node",
+      "node_modules/typescript/bin/tsc",
+      "-p",
+      "packages/resolution/tsconfig.test.json"
+    ],
+    "exit": 0,
+    "seconds": 1.424
+  },
+  {
+    "label": "restored-original",
+    "argv": [
+      "node",
+      "--experimental-vm-modules",
+      "node_modules/jest/bin/jest.js",
+      "--config",
+      "packages/resolution/jest.config.mjs",
+      "--runInBand",
+      "--json",
+      "--outputFile=/REVIEW_RAW/restored-original.json",
+      "--runTestsByPath",
+      "packages/resolution/.test-build/test/child-validation.test.js"
+    ],
+    "exit": 0,
+    "seconds": 0.521
+  },
+  {
+    "label": "restored-supplemental",
+    "argv": [
+      "node",
+      "--experimental-vm-modules",
+      "node_modules/jest/bin/jest.js",
+      "--config",
+      "packages/resolution/jest.config.mjs",
+      "--runInBand",
+      "--json",
+      "--outputFile=/REVIEW_RAW/restored-supplemental.json",
+      "--runTestsByPath",
+      "packages/resolution/.test-build/test/gap-hunt-review200.test.js",
+      "--testNamePattern",
+      "supplemental exact parent boundary"
+    ],
+    "exit": 0,
+    "seconds": 0.49
+  }
+]

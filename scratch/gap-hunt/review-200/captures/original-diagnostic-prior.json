@@ -1,0 +1,106 @@
+{
+  "kind": "static-source-and-generated-alpha-diagnostic",
+  "productionBaseline": "c5802daca4a0bb8ea91159854d84eddcfa5215b6",
+  "sourceOptions": [
+    "declarations",
+    "composition",
+    "bindings",
+    "environment",
+    "history",
+    "tracking",
+    "host",
+    "admission",
+    "observer",
+    "execution"
+  ],
+  "emittedOptions": [
+    "declarations",
+    "composition",
+    "bindings",
+    "environment",
+    "history",
+    "tracking",
+    "host",
+    "admission",
+    "observer",
+    "execution"
+  ],
+  "recursiveFunctions": [
+    "resolveSourceShared",
+    "resolveSuppliedShared",
+    "resolveMemoShared",
+    "resolveStep"
+  ],
+  "recursiveCalls": [
+    {
+      "callee": "resolveSourceShared",
+      "line": 1573
+    },
+    {
+      "callee": "resolveSourceShared",
+      "line": 1653
+    },
+    {
+      "callee": "resolveMemoShared",
+      "line": 1655
+    },
+    {
+      "callee": "resolveSuppliedShared",
+      "line": 1669
+    },
+    {
+      "callee": "resolveSourceShared",
+      "line": 2320
+    },
+    {
+      "callee": "resolveSourceShared",
+      "line": 2372
+    },
+    {
+      "callee": "resolveMemoShared",
+      "line": 2375
+    },
+    {
+      "callee": "resolveSuppliedShared",
+      "line": 2383
+    },
+    {
+      "callee": "resolveSourceShared",
+      "line": 2475
+    },
+    {
+      "callee": "resolveSourceShared",
+      "line": 2649
+    },
+    {
+      "callee": "resolveMemoShared",
+      "line": 2650
+    },
+    {
+      "callee": "resolveSourceShared",
+      "line": 2661
+    },
+    {
+      "callee": "resolveMemoShared",
+      "line": 2662
+    },
+    {
+      "callee": "resolveStep",
+      "line": 3303
+    },
+    {
+      "callee": "resolveStep",
+      "line": 3427
+    }
+  ],
+  "limits": "This enumerates the actual construction surface and lexical recursive routes. It does not invent an option name, execute a fake child resolver, or infer a runtime defect. The literal validation judgment is documented in ARC-008-LITERAL.md.",
+  "sha256": {
+    "docs/spec/architecture.md": "d76739efd2a3bd989591175af51752ca5cd7a3ead7b82f4f0fe18f8f6c9512c2",
+    "packages/resolution/src/contracts.ts": "2f5e0063efea77202ce59e2f677359ad34099d0b2da9d1a1cde130b427641789",
+    "packages/resolution/dist/api/resolution.alpha.d.ts": "8d7a5ff4b2371d2b71ef9b04776ddecc34ace5dfc08cd9e20ec650df502e4251",
+    "packages/resolution/src/resolution.ts": "0a8c2d2adf9aa5c52a453e8415475cbefbc0daf6233c99d6ae68813714c5c3f5",
+    "packages/core/test/resolution/support.ts": "699b6d1385dba6936485543de4bfc058133390765c74adcf8b8a6711deda308e",
+    "packages/core/test/nested/support.ts": "4ad556a148b2a6bf4da829a10ad533fdb2ff3d555e1fc8f80a4d4bd02f13a937",
+    "packages/resolution/test/outcome.test.ts": "112719fcc84a2a975705bb872300191d76f7635f0d1253a28b1397a72f3a26cd"
+  }
+}

@@ -1,0 +1,1 @@
+{"sourceOptions":["declarations","composition","bindings","environment","history","tracking","host","admission","observer","execution"],"recursiveFunctions":["resolveSourceShared","resolveSuppliedShared","resolveMemoShared","resolveStep"],"recursiveCallSites":15,"staticOnly":true}

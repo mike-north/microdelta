@@ -1,0 +1,28 @@
+{
+  "packages/resolution/src/index.ts": {
+    "sha256": "7fd6f95946496d4aa442d722c573bc01301793d6b422dd61230fcdc2795665de",
+    "seamNamesPresent": []
+  },
+  "packages/resolution/dist/api/resolution.alpha.d.ts": {
+    "sha256": "8d7a5ff4b2371d2b71ef9b04776ddecc34ace5dfc08cd9e20ec650df502e4251",
+    "seamNamesPresent": []
+  },
+  "packages/resolution/dist/api/resolution.beta.d.ts": {
+    "sha256": "184a2a0027af6cd6d3d7968180e9fdfac1cdfceb1ab8833c28c733d1b738fbfb",
+    "seamNamesPresent": []
+  },
+  "packages/resolution/dist/api/resolution.public.d.ts": {
+    "sha256": "184a2a0027af6cd6d3d7968180e9fdfac1cdfceb1ab8833c28c733d1b738fbfb",
+    "seamNamesPresent": []
+  },
+  "packages/resolution/dist/api/resolution.untrimmed.d.ts": {
+    "sha256": "8d7a5ff4b2371d2b71ef9b04776ddecc34ace5dfc08cd9e20ec650df502e4251",
+    "seamNamesPresent": []
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/api/resolution.public.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  }
+}

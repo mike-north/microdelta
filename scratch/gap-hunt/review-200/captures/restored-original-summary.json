@@ -1,0 +1,69 @@
+{
+  "numTotalTests": 15,
+  "numPassedTests": 15,
+  "numFailedTests": 0,
+  "numPendingTests": 0,
+  "failedTitles": [],
+  "titles": [
+    [
+      "child validation isolation a retained parent compares only the substituted current child output",
+      "passed"
+    ],
+    [
+      "child validation isolation a changed consumed fact publishes the parent once with current child provenance",
+      "passed"
+    ],
+    [
+      "child validation isolation check-only reports the child boundary as uncertain and writes no acceptance",
+      "passed"
+    ],
+    [
+      "child validation isolation a current child refusal stops the parent without accepting its candidate",
+      "passed"
+    ],
+    [
+      "child validation isolation a failed current child rejects before parent acceptance",
+      "passed"
+    ],
+    [
+      "child validation isolation historical child integrity is checked before the current-child seam",
+      "passed"
+    ],
+    [
+      "child validation isolation the same seam can take the normal child continuation",
+      "passed"
+    ],
+    [
+      "child validation isolation normal continuation reaches the candidate child sentinel",
+      "passed"
+    ],
+    [
+      "child validation isolation normal continuation reaches the finality child sentinel",
+      "passed"
+    ],
+    [
+      "child validation isolation normal continuation reaches the admission child sentinel",
+      "passed"
+    ],
+    [
+      "child validation isolation normal continuation reaches the body child sentinel",
+      "passed"
+    ],
+    [
+      "child validation isolation a supplied child is substituted only after its current subject and arguments are rebuilt",
+      "passed"
+    ],
+    [
+      "child validation isolation a missing current supplied binding ends check before the child seam",
+      "passed"
+    ],
+    [
+      "child validation isolation an unjustified supplied argument misses before the child seam",
+      "passed"
+    ],
+    [
+      "child validation isolation a nested memo child feeds both parent validation and changed-output execution",
+      "passed"
+    ]
+  ]
+}

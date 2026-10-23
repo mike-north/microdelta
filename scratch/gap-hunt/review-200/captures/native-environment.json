@@ -1,0 +1,4 @@
+{
+  "SDKROOT": "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk",
+  "node": "v24.22.1"
+}

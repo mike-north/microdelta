@@ -1,0 +1,149 @@
+{
+  "cases": [
+    {
+      "name": "unchanged emitted modules",
+      "baseline": {
+        "kind": "published",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",1]",
+        "score": 6,
+        "bodies": 1
+      },
+      "changed": {
+        "kind": "reused",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",1]",
+        "score": 6,
+        "bodies": 0
+      },
+      "repeated": {
+        "kind": "reused",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",1]",
+        "score": 6,
+        "bodies": 0
+      },
+      "beforeSha256": "a25ba967f93a2e9c5c44296b0de24749022d62afc55d1d9c4258cde1dd9e3b35",
+      "afterSha256": "a25ba967f93a2e9c5c44296b0de24749022d62afc55d1d9c4258cde1dd9e3b35",
+      "dependencyVersion": "1.0.0"
+    },
+    {
+      "name": "transitive declared imported leaf body change",
+      "baseline": {
+        "kind": "published",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",1]",
+        "score": 6,
+        "bodies": 1
+      },
+      "changed": {
+        "kind": "published",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",2]",
+        "score": 9,
+        "bodies": 1
+      },
+      "repeated": {
+        "kind": "reused",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",2]",
+        "score": 9,
+        "bodies": 0
+      },
+      "beforeSha256": "a25ba967f93a2e9c5c44296b0de24749022d62afc55d1d9c4258cde1dd9e3b35",
+      "afterSha256": "4a646bffac25d98d942f4b79f72ef274de6541fc9aee2633460306c151b29672",
+      "dependencyVersion": "1.0.0"
+    },
+    {
+      "name": "dependency version metadata alone",
+      "baseline": {
+        "kind": "published",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",1]",
+        "score": 6,
+        "bodies": 1
+      },
+      "changed": {
+        "kind": "reused",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",1]",
+        "score": 6,
+        "bodies": 0
+      },
+      "repeated": {
+        "kind": "reused",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",1]",
+        "score": 6,
+        "bodies": 0
+      },
+      "beforeSha256": "a25ba967f93a2e9c5c44296b0de24749022d62afc55d1d9c4258cde1dd9e3b35",
+      "afterSha256": "a25ba967f93a2e9c5c44296b0de24749022d62afc55d1d9c4258cde1dd9e3b35",
+      "dependencyVersion": "2.0.0"
+    },
+    {
+      "name": "emitted function rename",
+      "baseline": {
+        "kind": "published",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",1]",
+        "score": 6,
+        "bodies": 1
+      },
+      "changed": {
+        "kind": "published",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",2]",
+        "score": 6,
+        "bodies": 1
+      },
+      "repeated": {
+        "kind": "reused",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",2]",
+        "score": 6,
+        "bodies": 0
+      },
+      "beforeSha256": "a25ba967f93a2e9c5c44296b0de24749022d62afc55d1d9c4258cde1dd9e3b35",
+      "afterSha256": "5a0b1791c989ee238c01bcf576d8eb0169143d28e27d5a11f3b880716f765494",
+      "dependencyVersion": "1.0.0"
+    },
+    {
+      "name": "emitted formatting only",
+      "baseline": {
+        "kind": "published",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",1]",
+        "score": 6,
+        "bodies": 1
+      },
+      "changed": {
+        "kind": "published",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",2]",
+        "score": 6,
+        "bodies": 1
+      },
+      "repeated": {
+        "kind": "reused",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",2]",
+        "score": 6,
+        "bodies": 0
+      },
+      "beforeSha256": "a25ba967f93a2e9c5c44296b0de24749022d62afc55d1d9c4258cde1dd9e3b35",
+      "afterSha256": "d6f1e7e00729462844eb336ebf027fb78cf21dcdb68626f67195bcb12cb3fbde",
+      "dependencyVersion": "1.0.0"
+    },
+    {
+      "name": "emitted comment only",
+      "baseline": {
+        "kind": "published",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",1]",
+        "score": 6,
+        "bodies": 1
+      },
+      "changed": {
+        "kind": "published",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",2]",
+        "score": 6,
+        "bodies": 1
+      },
+      "repeated": {
+        "kind": "reused",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",2]",
+        "score": 6,
+        "bodies": 0
+      },
+      "beforeSha256": "a25ba967f93a2e9c5c44296b0de24749022d62afc55d1d9c4258cde1dd9e3b35",
+      "afterSha256": "d8fe78c68c29b9b4f6e28847994d0ebf871c4da78ca5e0db46340751860d0026",
+      "dependencyVersion": "1.0.0"
+    }
+  ],
+  "spawnedProcesses": 18
+}

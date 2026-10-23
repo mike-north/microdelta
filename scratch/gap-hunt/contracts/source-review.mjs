@@ -22,10 +22,11 @@ await anchor('foldObserver', 'packages/core/test/gap-hunt-contracts-fold-observe
 await anchor('foldIntegrity', 'packages/core/test/fold/fold.test.ts', 'malformed version-3 fold evidence is integrity damage, never a miss: %s', 'resolution-gap-controls.log', 'Malformed version-3 fold evidence returns request integrity error; #144 additionally tests missing own implementation.');
 await anchor('calledHelperBodies', 'packages/core/test/resolution/summary-validation.test.ts', 'a changed called formatter re-executes both summaries even with unchanged statistics', 'resolution-gap-controls.log', 'Durable summaries run twice after consumed helper code changes despite equal output.');
 await anchor('uncalledHelperBodies', 'packages/core/test/resolution/summary-validation.test.ts', 'a changed uncalled helper alone retains both summaries', 'resolution-gap-controls.log', 'Durable summaries retain references with zero bodies when only uncalled helper changes.');
+await anchor('durableArtifacts', 'packages/core/test/gap-hunt-contracts-artifact-durable.test.ts', 'Track D durable emitted imported implementation variants', 'artifact-durable-results.log', 'Six cases each use cold/changed/repeated fresh processes over the same store. Declared transitive imported body/name/emitted-comment/emitted-format changes each execute one body with a different exact reference; unchanged modules and version metadata alone execute zero bodies and retain the exact baseline reference. Every repeated variant reuses with zero bodies. Actual references/counts and leaf hashes are in artifact-durable-results.json.');
 const corrections = {
   'TRK1-imported': { status: 'aligned-new-witness', evidence: ['importedDeclaration'], note: 'Prior imported-artifact probe imported a raw function and wrapped it in the consumer; that alone did not prove this requirement.' },
   'TRK2-called-only': { evidence: ['calledHelperBodies', 'uncalledHelperBodies'], note: 'Keep observer evidence and durable re-execution counts distinct.' },
-  'TRK2-artifact-policy': { note: 'Six emitted-artifact cases establish current observation comparison only; they do not count durable memo bodies. Version metadata alone is not consumed implementation. Comment/format edits matter only when present in emitted function text.' },
+  'TRK2-artifact-policy': { status: 'aligned-durable-variant-witnesses', evidence: ['durableArtifacts'], note: 'Original six probes established observer comparison only. Added six durable cases now measure bodies and exact references across 18 fresh processes. All imported implementations are explicit declared helpers; hidden untracked transitive effects remain excluded. Comment/format edits matter only when present in emitted function text.' },
   'TRK4-ordinary-guard': { status: 'historical-divergence-superseded', note: '#155 is baseline evidence; merged #171 at f43c587 changes bounded container-kind navigation. Do not describe the old failure as confirmed current behavior.' },
   'TRK5-length': { evidence: ['lengthPositionTransitions'], note: 'Old observer.test.ts static operation/address assertion did not alone prove length invalidation boundaries.' },
   'TRK5-position': { evidence: ['lengthPositionTransitions'], note: 'Old observer.test.ts static operation/address assertion did not alone prove insertion/edit invalidation boundaries.' },
@@ -38,14 +39,14 @@ const obligations = prior.obligations.map(row => {
   const correction = corrections[row.id];
   return { ...row, historicalStatus: row.status, status: correction?.status ?? (row.status === 'divergent' ? 'baseline-divergence-owner-tracked' : 'bounded-executed-evidence-carried'), reviewNote: correction?.note ?? 'Named evidence retained after source review; no claim that this is a universal proof or a merged-runtime rerun.', evidence: [...row.evidence, ...(correction?.evidence ?? []).map(id => ({ id, ...added[id] }))] };
 });
-const files = [...new Set(['docs/spec/tracking.md', 'docs/spec/composition.md', 'docs/spec/architecture.md', ...Object.values(added).flatMap(item => [item.file, item.executionLog]), base + 'imported-artifact-probe.mjs', base + 'imported-artifact-results.log', base + 'completion-audit.json'])];
+const files = [...new Set(['docs/spec/tracking.md', 'docs/spec/composition.md', 'docs/spec/architecture.md', ...Object.values(added).flatMap(item => [item.file, item.executionLog]), base + 'imported-artifact-probe.mjs', base + 'imported-artifact-results.log', base + 'artifact-durable-results.json', base + 'completion-audit.json'])];
 const hashes = {};
 for (const file of files) hashes[file] = createHash('sha256').update(await readFile(file)).digest('hex');
 await writeFile(base + 'source-review.json', JSON.stringify({
   attribution: 'Implementer: Codex worker (gpt-6.1-sol), operating for Mike North.',
   productionBaseline: prior.baseline,
   priorEvidenceHead: 'ee9c5cf603d85118db3772312e6c7d5112e4dc80',
-  method: 'All 71 historical rows remain inspectable. Source review qualifies overbroad claims and adds required variants; no new aggregate satisfaction count replaces the source-level judgment. Existing executed evidence keeps its original production baseline. Only the two added witnesses and package checks were rerun in this follow-up.',
+  method: 'All 71 historical rows remain inspectable. Source review qualifies overbroad claims and adds required variants; no new aggregate satisfaction count replaces the source-level judgment. Existing executed evidence keeps its original production baseline. Follow-ups execute two added single-case witnesses plus six durable artifact variants and package checks.',
   obligations, addedAssertions: added, sha256: hashes,
 }, null, 2) + '\n');
 console.log(`Preserved ${obligations.length} rows; corrected ${Object.keys(corrections).length}; added ${Object.keys(added).length} exact assertion routes.`);

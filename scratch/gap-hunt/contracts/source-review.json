@@ -2,7 +2,7 @@
   "attribution": "Implementer: Codex worker (gpt-6.1-sol), operating for Mike North.",
   "productionBaseline": "c5802daca4a0bb8ea91159854d84eddcfa5215b6",
   "priorEvidenceHead": "ee9c5cf603d85118db3772312e6c7d5112e4dc80",
-  "method": "All 71 historical rows remain inspectable. Source review qualifies overbroad claims and adds required variants; no new aggregate satisfaction count replaces the source-level judgment. Existing executed evidence keeps its original production baseline. Only the two added witnesses and package checks were rerun in this follow-up.",
+  "method": "All 71 historical rows remain inspectable. Source review qualifies overbroad claims and adds required variants; no new aggregate satisfaction count replaces the source-level judgment. Existing executed evidence keeps its original production baseline. Follow-ups execute two added single-case witnesses plus six durable artifact variants and package checks.",
   "obligations": [
     {
       "id": "TRK1-object-function",
@@ -145,7 +145,7 @@
       "id": "TRK2-artifact-policy",
       "spec": "docs/spec/tracking.md:20-27",
       "requiredOutcome": "Emitted text is the declared bounded artifact policy, conservative under name/format/comment changes and separate from closure soundness.",
-      "status": "bounded-executed-evidence-carried",
+      "status": "aligned-durable-variant-witnesses",
       "evidence": [
         {
           "id": "calls",
@@ -161,11 +161,19 @@
           "line": 58,
           "title": "assert.equal(actual.kind, variant.expected, variant.name)",
           "executionLog": "scratch/gap-hunt/contracts/imported-artifact-results.log"
+        },
+        {
+          "id": "durableArtifacts",
+          "file": "packages/core/test/gap-hunt-contracts-artifact-durable.test.ts",
+          "line": 41,
+          "title": "Track D durable emitted imported implementation variants",
+          "executionLog": "scratch/gap-hunt/contracts/artifact-durable-results.log",
+          "proves": "Six cases each use cold/changed/repeated fresh processes over the same store. Declared transitive imported body/name/emitted-comment/emitted-format changes each execute one body with a different exact reference; unchanged modules and version metadata alone execute zero bodies and retain the exact baseline reference. Every repeated variant reuses with zero bodies. Actual references/counts and leaf hashes are in artifact-durable-results.json."
         }
       ],
       "mandatoryGap": null,
       "historicalStatus": "satisfied",
-      "reviewNote": "Six emitted-artifact cases establish current observation comparison only; they do not count durable memo bodies. Version metadata alone is not consumed implementation. Comment/format edits matter only when present in emitted function text."
+      "reviewNote": "Original six probes established observer comparison only. Added six durable cases now measure bodies and exact references across 18 fresh processes. All imported implementations are explicit declared helpers; hidden untracked transitive effects remain excluded. Comment/format edits matter only when present in emitted function text."
     },
     {
       "id": "TRK3-lifetime",
@@ -2177,6 +2185,13 @@
       "title": "a changed uncalled helper alone retains both summaries",
       "executionLog": "scratch/gap-hunt/contracts/resolution-gap-controls.log",
       "proves": "Durable summaries retain references with zero bodies when only uncalled helper changes."
+    },
+    "durableArtifacts": {
+      "file": "packages/core/test/gap-hunt-contracts-artifact-durable.test.ts",
+      "line": 41,
+      "title": "Track D durable emitted imported implementation variants",
+      "executionLog": "scratch/gap-hunt/contracts/artifact-durable-results.log",
+      "proves": "Six cases each use cold/changed/repeated fresh processes over the same store. Declared transitive imported body/name/emitted-comment/emitted-format changes each execute one body with a different exact reference; unchanged modules and version metadata alone execute zero bodies and retain the exact baseline reference. Every repeated variant reuses with zero bodies. Actual references/counts and leaf hashes are in artifact-durable-results.json."
     }
   },
   "sha256": {
@@ -2195,8 +2210,11 @@
     "scratch/gap-hunt/contracts/fold-observer-results.log": "a44392e2082f2852ca7f1c3a8ddffaed4702c92de29145a505f22bd7376c5c80",
     "packages/core/test/fold/fold.test.ts": "8415cabeba3da9cb0e5d8c19122326d5655dbf1b4cb849204f81a94f8bd90c6c",
     "packages/core/test/resolution/summary-validation.test.ts": "db2a7a7b07f6eccedd5d74075eb6eae9f3d80d4976388cbf8a9a95c8492ae449",
+    "packages/core/test/gap-hunt-contracts-artifact-durable.test.ts": "d52c47ff7953d5ef3bea41a68bc2c8fce6bd5c3fb0a2bee79ec6514c33b3735a",
+    "scratch/gap-hunt/contracts/artifact-durable-results.log": "a01e3e0b9353cdae2c53dab00abfe1e9eac7cf72601b6daebb5bbbbe83a6a892",
     "scratch/gap-hunt/contracts/imported-artifact-probe.mjs": "f34ab8306eb65256b238580756e8d9d67dd0ce8e694d37712e00a167b55a6cff",
     "scratch/gap-hunt/contracts/imported-artifact-results.log": "4a79aa3067cefc81b589f9a4e1c2affe3734a47e7d3af9bf78c9b890fd4e232b",
+    "scratch/gap-hunt/contracts/artifact-durable-results.json": "2db127246dd9077c2c33a4b8d668d3576a893df0e821aa119bf1b06fbce809f5",
     "scratch/gap-hunt/contracts/completion-audit.json": "060d623f48086ba0c61046a7f54630da66cc4cdf69dcdd6024e3bb2fb85765c1"
   }
 }

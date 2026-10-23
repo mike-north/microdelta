@@ -2,7 +2,7 @@
 
 Implementer: Codex worker (gpt-6.1-sol), operating for Mike North.
 
-This follow-up corrects the historical finite-outcome audit rather than treating its 64/71 count as completion. The governing sources are `docs/spec/tracking.md`, `composition.md` and ARC-008 in `architecture.md`. `source-review.json` preserves all 71 prior rows, their named assertions and execution logs, adds ten precise assertion routes, and qualifies ten rows. The prior `completion-audit.json` and `TRACK-A-COMPLETION.md` remain historical snapshots; this report supersedes their overbroad claims described below.
+This follow-up corrects the historical finite-outcome audit rather than treating its 64/71 count as completion. The governing sources are `docs/spec/tracking.md`, `composition.md` and ARC-008 in `architecture.md`. `source-review.json` preserves all 71 prior rows, their named assertions and execution logs, adds eleven precise assertion routes, and qualifies ten rows. The prior `completion-audit.json` and `TRACK-A-COMPLETION.md` remain historical snapshots; this report supersedes their overbroad claims described below.
 
 ## Verification boundary
 
@@ -49,7 +49,7 @@ Proposed short #156 comment for the supervisor: “CMP-8 still distinguishes bar
 | `.length` | Same matrix: “same length element replacement” stays equal; “append changes length” changes. Static presence of a length observation alone was not adequate proof. |
 | Optional versus undefined | Same matrix: “missing versus present undefined value” stays equal, while own presence and inherited membership change. Existing sparse-hole membership and literal falsey scalar cases remain separate. |
 
-All six artifact cases passed in `imported-artifact-results.log`; all eight invalidation rows passed in `tracking-results.log`. `source-review.json` provides exact source/title/log routes and preserves prior pins. These observations support the listed finite boundaries, not complete invalidation soundness for unrestricted JavaScript.
+All six observer artifact cases passed in `imported-artifact-results.log`; all eight invalidation rows passed in `tracking-results.log`. The later [durable artifact controls](ARTIFACT-DURABLE.md) close the original Track D body-count requirement for the five emitted variants above: six passing cases / 18 fresh processes measure actual body counts and exact references. Changed declared imported implementation, name, emitted comments and formatting rerun once with a new reference; version metadata alone and unchanged code reuse with zero bodies. Every repeated variant reuses its changed reference with zero bodies. `source-review.json` provides exact source/title/log routes and preserves prior pins. These observations support the listed finite boundaries, not complete invalidation soundness for unrestricted JavaScript.
 
 ## ARC-008 and actual #144 fault sites
 

@@ -1,0 +1,65 @@
+watchman warning: Recrawled this watch 19 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-durability' ; watchman watch-project '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-durability'`
+
+(node:14385) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL packages/core/.test-build/test/gap-hunt-durability-mixed-people.test.js
+  ● source failure and three-hour quota leave complete people reusable and folds honest across repair
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  2
+    + Received  + 27
+
+      Object {
+        "phase": "initial",
+        "signal": null,
+    -   "status": 0,
+    -   "stderr": "",
+    +   "status": 1,
+    +   "stderr": "node:internal/modules/run_main:107
+    +     triggerUncaughtException(
+    +     ^
+    +
+    + AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+    + + actual - expected
+    +
+    +   {
+    + +   ada: 'succeeded',
+    + -   ada: 'failed',
+    +     ben: 'pending',
+    +     cy: 'succeeded'
+    +   }
+    +
+    +     at file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-durability/packages/core/.test-build/test/gap-hunt-durability-mixed-people-worker.js:84:16
+    +     at async Object.run (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-durability/packages/supervision/dist/src/supervision.js:943:21) {
+    +   generatedMessage: true,
+    +   code: 'ERR_ASSERTION',
+    +   actual: { ada: 'succeeded', ben: 'pending', cy: 'succeeded' },
+    +   expected: { ada: 'failed', ben: 'pending', cy: 'succeeded' },
+    +   operator: 'deepStrictEqual',
+    +   diff: 'simple'
+    + }
+    +
+    + Node.js v24.22.1
+    + ",
+      }
+
+      13 |     for (const phase of ['initial', 'early', 'due', 'repair', 'unchanged']) {
+      14 |       const child = spawnSync(process.execPath, [fileURLToPath(new URL('./gap-hunt-durability-mixed-people-worker.js', import.meta.url)), directory, phase], { encoding: 'utf8', timeout: 15000 });
+    > 15 |       expect({ phase, status: child.status, signal: child.signal, stderr: child.stderr }).toEqual({ phase, status: 0, signal: null, stderr: '' });
+         |                                                                                           ^
+      16 |       const output: unknown = JSON.parse(child.stdout);
+      17 |       expect(output).toMatchObject({ phase });
+      18 |     }
+
+      at Object.<anonymous> (test/gap-hunt-durability-mixed-people.test.ts:15:91)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        0.481 s, estimated 1 s
+Ran all test suites within paths "packages/core/.test-build/test/gap-hunt-durability-mixed-people.test.js".

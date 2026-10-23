@@ -1,0 +1,118 @@
+{"node":"v24.22.1","platform":"darwin","arch":"arm64"}
+c5a3f273ed23acd75a833cbf0c6565e196e29e37
+watchman warning: Recrawled this watch 19 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-durability' ; watchman watch-project '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-durability'`
+
+(node:70093) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       3 passed, 3 total
+Snapshots:   0 total
+Time:        0.097 s
+Ran all test suites within paths "packages/machine-node/.test-build/test/node-location.test.js".
+✖ README.md exposes supported path spellings and the hard-link/WAL restriction (7.133417ms)
+✖ packages/core/README.md exposes supported path spellings and the hard-link/WAL restriction (1.840375ms)
+✖ examples/contribution-report/README.md exposes supported path spellings and the hard-link/WAL restriction (0.113083ms)
+✖ packages/machine-node/src/index.ts narrows its owning canonical-location comment (0.222625ms)
+✖ packages/core/src/workspace.ts narrows its owning canonical-location comment (0.1705ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 0
+ℹ fail 5
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 90.454
+
+✖ failing tests:
+
+test at scratch/gap-hunt/contract-operations/check-store-location-docs.mjs:25:3
+✖ README.md exposes supported path spellings and the hard-link/WAL restriction (7.133417ms)
+  AssertionError [ERR_ASSERTION]: README.md needs directly stated or linked native alias guidance: absolute/relative/redundant/symbolic spellings; distinct hard-linked names; unsafe concurrent WAL/journal access
+      at TestContext.<anonymous> (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-durability/scratch/gap-hunt/contract-operations/check-store-location-docs.mjs:26:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at scratch/gap-hunt/contract-operations/check-store-location-docs.mjs:25:3
+✖ packages/core/README.md exposes supported path spellings and the hard-link/WAL restriction (1.840375ms)
+  AssertionError [ERR_ASSERTION]: packages/core/README.md needs directly stated or linked native alias guidance: absolute/relative/redundant/symbolic spellings; distinct hard-linked names; unsafe concurrent WAL/journal access
+      at TestContext.<anonymous> (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-durability/scratch/gap-hunt/contract-operations/check-store-location-docs.mjs:26:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at scratch/gap-hunt/contract-operations/check-store-location-docs.mjs:25:3
+✖ examples/contribution-report/README.md exposes supported path spellings and the hard-link/WAL restriction (0.113083ms)
+  AssertionError [ERR_ASSERTION]: examples/contribution-report/README.md needs directly stated or linked native alias guidance: absolute/relative/redundant/symbolic spellings; distinct hard-linked names; unsafe concurrent WAL/journal access
+      at TestContext.<anonymous> (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-durability/scratch/gap-hunt/contract-operations/check-store-location-docs.mjs:26:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at scratch/gap-hunt/contract-operations/check-store-location-docs.mjs:43:3
+✖ packages/machine-node/src/index.ts narrows its owning canonical-location comment (0.222625ms)
+  AssertionError [ERR_ASSERTION]: explicitly exclude same-identity inference for hard-linked names
+      at TestContext.<anonymous> (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-durability/scratch/gap-hunt/contract-operations/check-store-location-docs.mjs:46:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }
+
+test at scratch/gap-hunt/contract-operations/check-store-location-docs.mjs:43:3
+✖ packages/core/src/workspace.ts narrows its owning canonical-location comment (0.1705ms)
+  AssertionError [ERR_ASSERTION]: name the supported symbolic-path scope
+      at TestContext.<anonymous> (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-durability/scratch/gap-hunt/contract-operations/check-store-location-docs.mjs:45:12)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: false,
+    expected: true,
+    operator: '==',
+    diff: 'simple'
+  }

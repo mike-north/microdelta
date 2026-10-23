@@ -1,0 +1,8 @@
+{
+  "sourceCommit": "c5a3f273ed23acd75a833cbf0c6565e196e29e37",
+  "command": "bash scratch/gap-hunt/contract-operations/verify-store-location-docs.sh",
+  "checkout": "/var/folders/st/lnv0_82j071b3c_hn5s_j2wc0000gn/T/microdelta-location-docs-clean-8_ldaup1/checkout",
+  "defaultBootstrap": true,
+  "exitCode": 1,
+  "cleanAfter": ""
+}

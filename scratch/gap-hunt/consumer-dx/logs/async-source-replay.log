@@ -1,0 +1,25 @@
+scratch/gap-hunt/consumer-dx/async-source.ts(8,46): error TS2322: Type '({ outcome }: ISourceBindings<Record<string, never>, Record<string, never>> & { readonly previous: IPreviousResult<IValue> | undefined; }) => Promise<...>' is not assignable to type '(context: ISourceBindings<Record<string, never>, Record<string, never>> & { readonly previous: IPreviousResult<IValue> | undefined; }) => ISourceOutcome<...>'.
+  Type 'Promise<ISourceOutcome<IValue>>' is not assignable to type 'ISourceOutcome<IValue>'.
+scratch/gap-hunt/consumer-dx/async-source.ts(9,47): error TS2322: Type '({ outcome, previous }: ISourceBindings<Record<string, never>, Record<string, never>> & { readonly previous: IPreviousResult<IValue> | undefined; }) => Promise<...>' is not assignable to type '(context: ISourceBindings<Record<string, never>, Record<string, never>> & { readonly previous: IPreviousResult<IValue> | undefined; }) => ISourceOutcome<...>'.
+  Type 'Promise<ISourceOutcome<IValue>>' is not assignable to type 'ISourceOutcome<IValue>'.
+scratch/gap-hunt/consumer-dx/async-source.ts(14,68): error TS2322: Type '({ outcome }: ISourceBindings<Record<string, never>, Record<string, never>> & { readonly previous: IPreviousResult<IValue> | undefined; } & IMemberBinding<...>) => Promise<...>' is not assignable to type '(context: ISourceBindings<Record<string, never>, Record<string, never>> & { readonly previous: IPreviousResult<IValue> | undefined; } & IMemberBinding<...>) => ISourceOutcome<...>'.
+  Type 'Promise<ISourceOutcome<IValue>>' is not assignable to type 'ISourceOutcome<IValue>'.
+scratch/gap-hunt/consumer-dx/async-source.ts(15,70): error TS2322: Type '({ outcome, previous }: ISourceBindings<Record<string, never>, Record<string, never>> & { readonly previous: IPreviousResult<IValue> | undefined; } & IMemberBinding<...>) => Promise<...>' is not assignable to type '(context: ISourceBindings<Record<string, never>, Record<string, never>> & { readonly previous: IPreviousResult<IValue> | undefined; } & IMemberBinding<...>) => ISourceOutcome<...>'.
+  Type 'Promise<ISourceOutcome<IValue>>' is not assignable to type 'ISourceOutcome<IValue>'.
+Declaration gap: direct and template async fresh/retain rejected; matching sync controls accepted.
+$ /Users/mnorth/.nodenv/versions/24.22.1/bin/node node_modules/tsd/dist/cli.js scratch/gap-hunt/consumer-dx --files async-source.test-d.ts
+$ /Users/mnorth/.nodenv/versions/24.22.1/bin/node node_modules/eslint/bin/eslint.js --config scratch/gap-hunt/consumer-dx/async-source.eslint.config.mjs scratch/gap-hunt/consumer-dx/async-source.ts
+$ /Users/mnorth/.nodenv/versions/24.22.1/bin/node --experimental-vm-modules node_modules/jest/bin/jest.js --config scratch/gap-hunt/consumer-dx/async-source.jest.config.mjs --runInBand
+watchman warning: Recrawled this watch 1 time, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx' ; watchman watch-project '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx'`
+
+(node:18643) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       2 passed, 2 total
+Snapshots:   0 total
+Time:        0.348 s, estimated 1 s
+Ran all test suites.

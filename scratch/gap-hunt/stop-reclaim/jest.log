@@ -1,0 +1,12 @@
+
+> @microdelta/supervision@0.2.0 test:unit
+> tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand --testPathPatterns stop.test --testNamePattern queued priority lane reclaim --json --outputFile ../../scratch/gap-hunt/stop-reclaim/jest-results.json
+
+(node:64205) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       62 skipped, 2 passed, 64 total
+Snapshots:   0 total
+Time:        0.086 s
+Ran all test suites matching stop.test with tests matching "queued priority lane reclaim".
+Test results written to: ../../scratch/gap-hunt/stop-reclaim/jest-results.json

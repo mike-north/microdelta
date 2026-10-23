@@ -1,0 +1,31 @@
+(node:66066) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL .test-build/test/stop.test.js
+  ● the permit pool (RUN-002) › a queued priority lane reclaim settles with hard stop true, without reviving refused work (RUN-002, RUN-014)
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "sleeper",
+    + ]
+
+      428 |             expect(policyCalls).toEqual(['sleeper', 'holder']);
+      429 |             expect(bodies).toEqual(['sleeper', 'holder']);
+    > 430 |             expect(resumed).toEqual([]);
+          |                             ^
+      431 |             expect(sent).toEqual([]);
+      432 |             expect(published).toEqual([]);
+      433 |             expect(settled.sort()).toEqual(['holder:interrupted', 'queued:cancelled', 'sleeper:interrupted']);
+
+      at .test-build/test/stop.test.js:430:29
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 62 skipped, 1 passed, 64 total
+Snapshots:   0 total
+Time:        0.095 s, estimated 1 s
+Ran all test suites matching stop.test with tests matching "queued priority lane reclaim".
+Test results written to: ../../scratch/gap-hunt/stop-reclaim/mutation-results.json

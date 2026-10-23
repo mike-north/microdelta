@@ -381,6 +381,95 @@ describe('the permit pool (RUN-002)', () => {
     expect(order).toEqual(['first:start', 'second:start', 'holder:start', 'holder:end', 'first:woke', 'second:woke', 'q1:start', 'q2:start', 'q3:start']);
   });
 
+  test.each([false, true])('a queued priority lane reclaim settles with hard stop %s, without reviving refused work (RUN-002, RUN-014)', async (hardStop) => {
+    const timer = fakeTimer();
+    const stop = createStopController();
+    const double = portDouble();
+    const supervisor = supervisionWith(timer);
+    const holderGate = deferred();
+    const policyCalls: string[] = [];
+    const bodies: string[] = [];
+    const resumed: string[] = [];
+    const sent: string[] = [];
+    const published: string[] = [];
+    const settled: string[] = [];
+    const result = await supervisor.run(optionsFor(double, {
+      window: 1,
+      stop,
+      admission: { admit: (request) => {
+        policyCalls.push(request.step.slot);
+        return { kind: 'admitted' };
+      } },
+    }), async () => {
+      const { admission, execution } = double.ports();
+      /** Drive the same admission/body/publication refusal boundary as Resolution, without claiming durable History coverage. */
+      const member = (name: string, work: () => Promise<void>): Promise<void> => execution.member(async () => {
+        const decision = await admission.admit(admissionFor(stepOf(name)));
+        if (decision.kind !== 'admitted') {
+          settled.push(`${name}:${decision.kind}`);
+          return;
+        }
+        const outcome = await execution.execute(stepOf(name), async () => {
+          bodies.push(name);
+          await work();
+          return name;
+        });
+        if (outcome.kind === 'returned' && execution.publicationRefusal() === undefined) {
+          published.push(name);
+        }
+        settled.push(`${name}:${outcome.kind}`);
+      });
+      const sleeper = member('sleeper', async () => {
+        await supervisor.execution().sleepUntil(T0 + hour);
+        resumed.push('sleeper');
+        await supervisor.execution().send({ label: 'resumed', perform: () => {
+          sent.push('sleeper');
+          return Promise.resolve();
+        } });
+      });
+      await settle();
+      const holder = member('holder', async () => holderGate.promise);
+      const queued = member('queued', async () => Promise.resolve());
+      await settle();
+      expect(bodies).toEqual(['sleeper', 'holder']);
+      timer.advance(hour);
+      await settle();
+      // The timer fired, but the sole lane still belongs to holder: sleeper now waits to reclaim it.
+      expect(timer.scheduled.every((entry) => entry.fired || entry.cancelled)).toBe(true);
+      expect(resumed).toEqual([]);
+      expect(settled).toEqual([]);
+      if (hardStop) {
+        stop.request({ level: 'hard' });
+        await Promise.all([sleeper, holder, queued]);
+        // An admitted holder cannot publish even if its detached body eventually returns.
+        expect(execution.publicationRefusal()).toContain('hard stop');
+        holderGate.resolve();
+        await settle();
+      } else {
+        holderGate.resolve();
+        await Promise.all([sleeper, holder, queued]);
+      }
+      return 'settled';
+    });
+    expect(result.value).toBe('settled');
+    expect(timer.scheduled.every((entry) => entry.fired || entry.cancelled)).toBe(true);
+    if (hardStop) {
+      expect(policyCalls).toEqual(['sleeper', 'holder']);
+      expect(bodies).toEqual(['sleeper', 'holder']);
+      expect(resumed).toEqual([]);
+      expect(sent).toEqual([]);
+      expect(published).toEqual([]);
+      expect(settled.sort()).toEqual(['holder:interrupted', 'queued:cancelled', 'sleeper:interrupted']);
+    } else {
+      expect(policyCalls).toEqual(['sleeper', 'holder', 'queued']);
+      expect(bodies).toEqual(['sleeper', 'holder', 'queued']);
+      expect(resumed).toEqual(['sleeper']);
+      expect(sent).toEqual(['sleeper']);
+      expect(published.sort()).toEqual(['holder', 'queued', 'sleeper']);
+      expect(settled.sort()).toEqual(['holder:returned', 'queued:returned', 'sleeper:returned']);
+    }
+  });
+
   test('CMP-9: every run operation, started inside a member or a step attempt, is refused at once as an undeclared call, and the run completes (RUN-002)', async () => {
     let captured: IResolutionPorts | undefined;
     const resolution = (ports: IResolutionPorts): IResolution => {

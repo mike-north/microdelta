@@ -1,0 +1,35 @@
+{
+  "sourcePin": "f43c5872987573d9b98a19f41c324b4d9336894c",
+  "branch": "gap-hunt-stop-reclaim",
+  "changedTrackedFiles": [
+    "packages/supervision/test/stop.test.ts"
+  ],
+  "testPatchSha256": "f6adaa6bece23dd3a72da5361d2a04acc6b58f47cbfca6e3e4e599ce8072664f",
+  "commands": {
+    "install": "npm ci --no-audit --no-fund",
+    "build": "npm run build:packages",
+    "checks": "npm run check (packages/supervision)",
+    "targeted": "npm run test:unit -- --testPathPatterns stop.test --testNamePattern \"queued priority lane reclaim\" --json --outputFile ../../scratch/gap-hunt/stop-reclaim/jest-results.json",
+    "restored": "npm run test:unit -- --testPathPatterns stop.test --json --outputFile ../../scratch/gap-hunt/stop-reclaim/restored-results.json"
+  },
+  "counts": {
+    "jest": {
+      "numPassedTests": 2,
+      "numFailedTests": 0,
+      "numPendingTests": 62,
+      "success": true
+    },
+    "mutation": {
+      "numPassedTests": 1,
+      "numFailedTests": 1,
+      "numPendingTests": 62,
+      "success": false
+    },
+    "restored": {
+      "numPassedTests": 64,
+      "numFailedTests": 0,
+      "numPendingTests": 0,
+      "success": true
+    }
+  }
+}

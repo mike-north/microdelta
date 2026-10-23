@@ -1,0 +1,5 @@
+{"phase":"start","size":10000,"path":"scratch/gap-hunt/scale/collection-10000-73580.sqlite","heap":8765152}
+{"phase":"settled","size":10000,"counts":{"succeeded":10000},"milliseconds":54865.752583,"heap":103576512}
+{"phase":"closed","size":10000,"fileBytes":42921984}
+
+{"size":10000,"timeout":60000,"status":0,"signal":null}

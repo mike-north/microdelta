@@ -1,0 +1,6 @@
+{"probe":"encode-array","size":1000,"bytes":11902,"milliseconds":0.6599170000000072}
+{"probe":"encode-array","size":2000,"bytes":24902,"milliseconds":1.0799580000000049}
+{"probe":"encode-array","size":4000,"bytes":50902,"milliseconds":1.0345829999999978}
+{"probe":"encode-array","size":8000,"bytes":102902,"milliseconds":2.0635410000000007}
+{"probe":"encode-array","size":16000,"bytes":212902,"milliseconds":5.344833000000008}
+{"probe":"publish","size":20000,"payloadBytes":11237781,"fileBytes":61779968,"milliseconds":155544.00358299998}

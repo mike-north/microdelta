@@ -1,0 +1,8 @@
+{"probe":"encode-array","size":1000,"bytes":11902,"milliseconds":0.6322920000000067}
+{"probe":"encode-array","size":2000,"bytes":24902,"milliseconds":0.9737500000000097}
+{"probe":"encode-array","size":4000,"bytes":50902,"milliseconds":1.0073749999999961}
+{"probe":"encode-array","size":8000,"bytes":102902,"milliseconds":1.9691669999999988}
+{"probe":"encode-array","size":16000,"bytes":212902,"milliseconds":3.8336669999999913}
+{"probe":"publish","size":1000,"payloadBytes":558781,"fileBytes":3190784,"milliseconds":388.163416}
+{"probe":"publish","size":2000,"payloadBytes":1119781,"fileBytes":6250496,"milliseconds":1268.067417}
+{"probe":"publish","size":4000,"payloadBytes":2241781,"fileBytes":12345344,"milliseconds":4897.854792}

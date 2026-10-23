@@ -1,0 +1,3 @@
+{"phase":"start","size":100000,"path":"scratch/gap-hunt/scale/collection-100000-77707.sqlite","heap":8789080}
+
+{"size":100000,"timeout":10000,"status":null,"signal":"SIGKILL","error":"spawnSync /Users/mnorth/.nodenv/versions/24.22.1/bin/node ETIMEDOUT"}

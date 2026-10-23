@@ -1,0 +1,20 @@
+$ /Users/mnorth/.nodenv/versions/24.22.1/bin/node node_modules/typescript/bin/tsc -p scratch/gap-hunt/scale/tsconfig.materialization-lifetime.json
+$ /Users/mnorth/.nodenv/versions/24.22.1/bin/node node_modules/eslint/bin/eslint.js --config scratch/gap-hunt/scale/materialization-lifetime.eslint.config.mjs scratch/gap-hunt/scale/materialization-lifetime.ts
+$ /Users/mnorth/.nodenv/versions/24.22.1/bin/node --expose-gc scratch/gap-hunt/scale/dist/materialization-lifetime.js 100
+{"size":100,"valuesChecked":100,"observations":100,"kindObservations":0,"ordinarySubtreeReads":0,"unreadReads":0,"liveDropped":0,"liveRetained":1,"rereadNodeCalls":3,"sameFingerprint":true,"aliasRejected":true,"outputCollected":true,"tagValidBefore":true,"tagInvalidAfter":true}
+$ /Users/mnorth/.nodenv/versions/24.22.1/bin/node --expose-gc scratch/gap-hunt/scale/dist/materialization-lifetime.js 1000
+{"size":1000,"valuesChecked":1000,"observations":1000,"kindObservations":0,"ordinarySubtreeReads":0,"unreadReads":0,"liveDropped":0,"liveRetained":1,"rereadNodeCalls":3,"sameFingerprint":true,"aliasRejected":true,"outputCollected":true,"tagValidBefore":true,"tagInvalidAfter":true}
+$ /Users/mnorth/.nodenv/versions/24.22.1/bin/node --experimental-vm-modules node_modules/jest/bin/jest.js --config scratch/gap-hunt/scale/materialization-lifetime.jest.config.mjs --runInBand
+watchman warning: Recrawled this watch 1 time, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx' ; watchman watch-project '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx'`
+
+(node:28062) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       2 passed, 2 total
+Snapshots:   0 total
+Time:        0.462 s, estimated 1 s
+Ran all test suites.

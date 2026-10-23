@@ -1,0 +1,90 @@
+{
+  "source": "e42e31b7e618222e8a57b67d94b88b51e0c4e14b",
+  "recipeCommit": "e42e31b7e618222e8a57b67d94b88b51e0c4e14b",
+  "frozen": "275124b32fbd1b960cf8fa46b5e341b51dfdb38e",
+  "commands": [
+    {
+      "name": "current",
+      "argv": [
+        "bash",
+        "scratch/gap-hunt/contract-operations/verify-store-location-docs.sh"
+      ],
+      "exit": 0,
+      "seconds": 39.415,
+      "sha256": "ec4a45528b0a1bddc96d15fb66156771a8f6e36e231ee2896383284669739dea"
+    },
+    {
+      "name": "static",
+      "argv": [
+        "node",
+        "scratch/gap-hunt/review-199/static-review.mjs"
+      ],
+      "exit": 0,
+      "seconds": 0.355,
+      "sha256": "a08883b005944b9a10abe305343b4bd9978d66ac725e155883788da5cd3ff743"
+    },
+    {
+      "name": "machine-check",
+      "argv": [
+        "npm",
+        "run",
+        "check",
+        "--workspace",
+        "@microdelta/machine-node"
+      ],
+      "exit": 0,
+      "seconds": 3.55,
+      "sha256": "25cf3da9d70babce314e0e5fb695c1d10c9327fef96132882c31f015dd91647a"
+    },
+    {
+      "name": "core-check",
+      "argv": [
+        "npm",
+        "run",
+        "check",
+        "--workspace",
+        "microdelta"
+      ],
+      "exit": 0,
+      "seconds": 5.789,
+      "sha256": "2fb6bda3901df93060c585c0a03ff6875ef069f943dceba512ab4f256c1613ec"
+    },
+    {
+      "name": "original-docs-negative",
+      "argv": [
+        "bash",
+        "scratch/gap-hunt/contract-operations/verify-store-location-docs.sh"
+      ],
+      "exit": 1,
+      "seconds": 7.287,
+      "sha256": "91aeb13d45198c5428d7c6e6c6636d063fc8a173e3087e26a82dccf8a38d6f55"
+    },
+    {
+      "name": "restored",
+      "argv": [
+        "bash",
+        "scratch/gap-hunt/contract-operations/verify-store-location-docs.sh"
+      ],
+      "exit": 0,
+      "seconds": 7.433,
+      "sha256": "e7b703cffb0bfa2174eef263268c929641a139931ef5c8333928f56548832698"
+    }
+  ],
+  "sourceSha256": {
+    "README.md": "d72391ff676182da59196abe67493a6496f1debb148db9a12799e0a95197d906",
+    "docs/native-store-locations.md": "5e7d648ab78f0b8a1fd9ab3262fe070e6c14c73a45b37023aab5d45b247c4b77",
+    "examples/contribution-report/README.md": "e7d8160d69b99847b78dc5e0507a2f4c8e202b468341d32d95a3cdba6838033a",
+    "packages/core/README.md": "dbcd0960cd004734b2d11adcdb6f81629fd964db8a8747c25da559c25fec6682",
+    "packages/core/src/workspace.ts": "c9afb83d38d8e23f952176945652f358ab3f8784bc7a1f50f6476ae874663e9d",
+    "packages/machine-node/src/index.ts": "f98360a24a8f73068ea9b610f70646b3800c8ed166945710ea44ac6c0e4b57a0"
+  },
+  "sourceRestored": {
+    "README.md": true,
+    "docs/native-store-locations.md": true,
+    "examples/contribution-report/README.md": true,
+    "packages/core/README.md": true,
+    "packages/core/src/workspace.ts": true,
+    "packages/machine-node/src/index.ts": true
+  },
+  "complete": true
+}

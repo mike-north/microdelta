@@ -1,0 +1,22 @@
+{"node":"v24.22.1","platform":"darwin","arch":"arm64"}
+e42e31b7e618222e8a57b67d94b88b51e0c4e14b
+(node:67407) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       3 passed, 3 total
+Snapshots:   0 total
+Time:        0.129 s, estimated 1 s
+Ran all test suites within paths "packages/machine-node/.test-build/test/node-location.test.js".
+✔ README.md exposes supported path spellings and the hard-link/WAL restriction (2.529416ms)
+✔ packages/core/README.md exposes supported path spellings and the hard-link/WAL restriction (0.72825ms)
+✔ examples/contribution-report/README.md exposes supported path spellings and the hard-link/WAL restriction (0.178583ms)
+✔ packages/machine-node/src/index.ts narrows its owning canonical-location comment (0.4195ms)
+✔ packages/core/src/workspace.ts narrows its owning canonical-location comment (0.501292ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 47.455334

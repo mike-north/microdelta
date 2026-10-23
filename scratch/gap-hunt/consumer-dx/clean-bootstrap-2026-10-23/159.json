@@ -1,0 +1,29 @@
+{
+  "issue": 159,
+  "source_commit": "abb9bab1987d18644093fb67dadb17c3ea9f94ce",
+  "argv": [
+    "node",
+    "scratch/gap-hunt/contract-surface/repro-159.mjs"
+  ],
+  "cwd": "/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-clean-159",
+  "started_at_utc": "2026-10-23T08:53:46.188981+00:00",
+  "finished_at_utc": "2026-10-23T08:54:40.874569+00:00",
+  "exit_code": 1,
+  "initial_tracked_and_untracked_status": "",
+  "node_modules_absent_before": true,
+  "reuse_build_environment_absent": true,
+  "node": "v24.22.1",
+  "npm": "11.12.1",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "final_status": "",
+  "log_sha256": "24bb27d418b0d3cf94ff5bf25e153d149bcdd46ce0a74ec1f1488c8fb0652b11",
+  "linux_executed": false,
+  "file_sha256": {
+    "scratch/gap-hunt/contract-surface/repro-159.mjs": "974bf9c494e55fae333d8e1a7e3c9b1ee42486460011f30d00c122fab0a7aabd",
+    "scratch/gap-hunt/contract-surface/repro-support.mjs": "549c4bafb35c8a766d69f06f129f226d8d0532c3277f8400e9f0de8e8fdd0f14",
+    "package-lock.json": "55dfeace3ed7af8246e32c3029b444251df4ca164119f76716e44122e33129e6"
+  },
+  "node_executable": "/Users/mnorth/.nodenv/versions/24.22.1/bin/node",
+  "architecture": "arm64",
+  "verification": "Expected diagnostics and control counts asserted by verify.py; no infrastructure failure counted as reproduction."
+}

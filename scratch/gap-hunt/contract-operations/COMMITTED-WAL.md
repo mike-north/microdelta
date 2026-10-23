@@ -1,0 +1,11 @@
+# Acknowledged committed-WAL corruption characterization
+
+Executed on macOS arm64 Node24.22.1 against this branch's unchanged runtime. Run `npx tsc -p packages/core/tsconfig.test.json`, then `node scratch/gap-hunt/contract-operations/diagnose-committed-wal.mjs`. `committed-wal.log` preserves the completed command's observations; `committed-wal-result.json` includes exact database/original WAL/altered WAL bytes as gzip+base64, byte lengths, SHA256, script, acknowledgment trace and byte offset. Original stores remain disposable temporary files; mutations affect isolated copies only. No SHM is copied, so SQLite rebuilds its WAL index.
+
+The lifecycle worker published one small nested Unicode payload, synchronously traced successful publication and then died by SIGKILL. Before any reopen the diagnostic captured its database and WAL, copied both independently into intact and corrupted directories, and flipped exactly one bit at offset239116: byte100 of the page payload in final committed frame59 (page23, database39pages). It did not repair the WAL checksum. Neither original file changed.
+
+The intact copy recovered completed, resolved the same current exact reference and read the exact original payload. The corrupted copy opened successfully; recovery returned incomplete/staged, current was undefined, and reading the acknowledged reference raised `HistoryIntegrityError: Missing exact completed result mdh1|["store:contributors","analysis:contributors","env:fixture",1]`. No incorrect payload was presented as valid. This is an observed loss of the final acknowledged publication after **external byte corruption**, not a process-crash durability failure, corruption repair guarantee, or evidence that all possible corruptions reject safely. A checksum-preserving malicious alteration and interrupted checkpoint remain unexecuted.
+
+The first harness invocation reached both observations but its intact-reference assertion incorrectly compared object identity. That diagnostic-only assertion was corrected to deep equality; the completed run passes all isolation/control assertions. A subsequent report-format change explicitly encodes undefined rather than allowing JSON to omit it; the final run also passes. No production changes.
+
+Implementer: Codex worker (gpt-6.1-sol).

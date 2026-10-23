@@ -1,0 +1,265 @@
+{
+  "command": "npx tsc -p packages/core/tsconfig.test.json && node scratch/gap-hunt/contract-operations/diagnose-committed-wal.mjs",
+  "node": "v24.22.1",
+  "platform": "darwin",
+  "arch": "arm64",
+  "temporary": "/var/folders/st/lnv0_82j071b3c_hn5s_j2wc0000gn/T/microdelta-committed-wal-D8VEV1",
+  "script": {
+    "location": "/var/folders/st/lnv0_82j071b3c_hn5s_j2wc0000gn/T/microdelta-committed-wal-D8VEV1/original.sqlite",
+    "store": "store:contributors",
+    "steps": [
+      {
+        "op": "time",
+        "at": 1000
+      },
+      {
+        "op": "acquire",
+        "holder": "wal-diagnostic",
+        "lease": 60000
+      },
+      {
+        "op": "allocate",
+        "request": {
+          "analysis": "analysis:contributors",
+          "environment": "env:fixture",
+          "subject": "gap-hunt:wal-corruption",
+          "version": 1,
+          "attemptKey": "acknowledged",
+          "intentDigest": "intent:acknowledged"
+        }
+      },
+      {
+        "op": "stage",
+        "payload": {
+          "value": "acknowledged synthetic payload",
+          "nested": {
+            "unicode": "日本語"
+          }
+        },
+        "label": "wal-diagnostic"
+      },
+      {
+        "op": "publish"
+      },
+      {
+        "op": "kill"
+      }
+    ]
+  },
+  "child": {
+    "signal": "SIGKILL",
+    "status": null,
+    "trace": [
+      {
+        "index": 0,
+        "op": "time",
+        "ok": true,
+        "value": 1000
+      },
+      {
+        "index": 1,
+        "op": "acquire",
+        "ok": true,
+        "value": {
+          "kind": "acquired",
+          "lease": {
+            "holder": "wal-diagnostic",
+            "fence": 1,
+            "expiresAt": 61000
+          }
+        }
+      },
+      {
+        "index": 2,
+        "op": "allocate",
+        "ok": true,
+        "value": {
+          "analysis": "analysis:contributors",
+          "environment": "env:fixture",
+          "subject": "gap-hunt:wal-corruption",
+          "version": 1,
+          "attemptKey": "acknowledged",
+          "intentDigest": "intent:acknowledged",
+          "attemptId": 1,
+          "state": "allocated",
+          "allocatedFence": 1,
+          "endedFence": null,
+          "result": null,
+          "outcome": null
+        }
+      },
+      {
+        "index": 3,
+        "op": "stage",
+        "ok": true,
+        "value": {
+          "analysis": "analysis:contributors",
+          "environment": "env:fixture",
+          "subject": "gap-hunt:wal-corruption",
+          "version": 1,
+          "attemptKey": "acknowledged",
+          "intentDigest": "intent:acknowledged",
+          "attemptId": 1,
+          "state": "staged",
+          "allocatedFence": 1,
+          "endedFence": null,
+          "result": null,
+          "outcome": null
+        }
+      },
+      {
+        "index": 4,
+        "op": "publish",
+        "ok": true,
+        "value": {
+          "kind": "completed-result",
+          "locator": "mdh1|[\"store:contributors\",\"analysis:contributors\",\"env:fixture\",1]"
+        }
+      }
+    ],
+    "stderr": ""
+  },
+  "reference": {
+    "kind": "completed-result",
+    "locator": "mdh1|[\"store:contributors\",\"analysis:contributors\",\"env:fixture\",1]"
+  },
+  "pageSize": 4096,
+  "frameCount": 59,
+  "committedFrames": [
+    {
+      "index": 39,
+      "offset": 156592,
+      "page": 39,
+      "databasePages": 39
+    },
+    {
+      "index": 40,
+      "offset": 160712,
+      "page": 3,
+      "databasePages": 39
+    },
+    {
+      "index": 44,
+      "offset": 177192,
+      "page": 7,
+      "databasePages": 39
+    },
+    {
+      "index": 45,
+      "offset": 181312,
+      "page": 5,
+      "databasePages": 39
+    },
+    {
+      "index": 59,
+      "offset": 238992,
+      "page": 23,
+      "databasePages": 39
+    }
+  ],
+  "mutation": {
+    "index": 59,
+    "offset": 238992,
+    "page": 23,
+    "databasePages": 39,
+    "mutationOffset": 239116,
+    "before": 0,
+    "after": 1,
+    "checksumRepaired": false
+  },
+  "snapshots": {
+    "database": {
+      "bytes": 4096,
+      "sha256": "40cf07c52bfaa52b334ef341456f970787f6dc701ffe18ad3c572cb5056dbd70"
+    },
+    "originalWal": {
+      "bytes": 243112,
+      "sha256": "a08c2409024c1e8aa912a529a46ff03982589e3d44cadd79d4c71771b5ac46c5"
+    },
+    "damagedWal": {
+      "bytes": 243112,
+      "sha256": "a471e0602aaaa1fae3ea307be2e8b901acb4c5fb3ed3d2dc2fda86ff930f4c36"
+    }
+  },
+  "outcomes": {
+    "intact": {
+      "open": "ok",
+      "recover": {
+        "ok": true,
+        "value": {
+          "kind": "completed",
+          "attempt": {
+            "analysis": "analysis:contributors",
+            "environment": "env:fixture",
+            "subject": "gap-hunt:wal-corruption",
+            "version": 1,
+            "attemptKey": "acknowledged",
+            "intentDigest": "intent:acknowledged",
+            "attemptId": 1,
+            "state": "completed",
+            "allocatedFence": 1,
+            "endedFence": 1,
+            "result": {
+              "kind": "completed-result",
+              "locator": "mdh1|[\"store:contributors\",\"analysis:contributors\",\"env:fixture\",1]"
+            },
+            "outcome": null
+          },
+          "reference": {
+            "kind": "completed-result",
+            "locator": "mdh1|[\"store:contributors\",\"analysis:contributors\",\"env:fixture\",1]"
+          }
+        }
+      },
+      "current": {
+        "ok": true,
+        "value": {
+          "kind": "completed-result",
+          "locator": "mdh1|[\"store:contributors\",\"analysis:contributors\",\"env:fixture\",1]"
+        }
+      },
+      "read": {
+        "ok": true,
+        "value": {
+          "value": "acknowledged synthetic payload",
+          "nested": {
+            "unicode": "日本語"
+          }
+        }
+      }
+    },
+    "corrupt": {
+      "open": "ok",
+      "recover": {
+        "ok": true,
+        "value": {
+          "kind": "incomplete",
+          "attempt": {
+            "analysis": "analysis:contributors",
+            "environment": "env:fixture",
+            "subject": "gap-hunt:wal-corruption",
+            "version": 1,
+            "attemptKey": "acknowledged",
+            "intentDigest": "intent:acknowledged",
+            "attemptId": 1,
+            "state": "staged",
+            "allocatedFence": 1,
+            "endedFence": null,
+            "result": null,
+            "outcome": null
+          }
+        }
+      },
+      "current": {
+        "ok": true,
+        "valueKind": "undefined"
+      },
+      "read": {
+        "ok": false,
+        "name": "HistoryIntegrityError",
+        "message": "Missing exact completed result mdh1|[\"store:contributors\",\"analysis:contributors\",\"env:fixture\",1]"
+      }
+    }
+  },
+  "incorrectPayloadPresentedValid": false
+}

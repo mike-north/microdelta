@@ -1,0 +1,29 @@
+  console.log
+    {"sizes":[20,40],"encodeWork":[20,40],"publishWork":[1323,5043]}
+
+      at Object.<anonymous> (test/gap-hunt-scale/array-validation.test.ts:54:11)
+
+(node:18600) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL packages/core/.test-build/test/gap-hunt-scale/array-validation.test.js
+  ● doubling a flat record array keeps publication validation work linear like matched encoding
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 2646
+    Received:    5043
+
+      56 |   expect(encodedLarge).toBeLessThanOrEqual(2 * encodedSmall);
+      57 |   // Proposed scale regression boundary: avoid rereading the entire root per field.
+    > 58 |   expect(publishedLarge).toBeLessThanOrEqual(2 * publishedSmall);
+         |                          ^
+      59 | });
+      60 |
+
+      at Object.<anonymous> (test/gap-hunt-scale/array-validation.test.ts:58:26)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 total
+Snapshots:   0 total
+Time:        0.138 s
+Ran all test suites within paths "packages/core/.test-build/test/gap-hunt-scale/array-validation.test.js".

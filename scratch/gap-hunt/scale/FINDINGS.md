@@ -1,6 +1,63 @@
-# C initial scale evidence
+# C scale evidence
 
-Baseline c5802da, Node24.22.1, Darwin arm64. Synthetic fixtures only. No production edits.
+Baseline c5802da, Node 24.22.1, Darwin arm64. Synthetic fixtures only; no production edits. Current corrected measurements and deterministic reproductions lead this report. Historical/confounded measurements are explicitly separated below.
+
+## Publication repeats root-array validation
+
+Matched record-array fixtures (512-byte body) publish 1k/2k/4k records in 361/1251/4979ms; matched encoding costs 2.10/2.52/4.00ms. JSON sizes are 558781/1119781/2241781 bytes; closed SQLite sizes are 3190784/6250496/12345344 bytes. CPU samples concentrate in assertArraySurface (3792), isArrayIndex (387), and its regex (348). History buildIndex calls observe at each address, repeatedly validating the root array surface.
+
+The deterministic Jest probe `packages/core/test/gap-hunt-scale/array-validation.test.ts` preserves native Object.getOwnPropertyNames and sums array slots exposed during real stage+publish. Doubling 20 to 40 records yields matched encode work [20,40], publication work [1323,5043]; the proposed linear-growth regression boundary fails (5043 > 2646). This is bounded work evidence for the tested shape, not a general complexity proof or promised latency SLA. Direction: validate immutable payloads at the trusted boundary without repeating full-root validation for each address. Log: `logs/array-test-failure.log`.
+
+20k records complete in 155544ms: 11237781 JSON bytes become 61779968 SQLite bytes. One-result store: 80001 nodes, 80000 edges, 80001 addresses, 15083 pages, 2956 free. VACUUM on an isolated copy reduces it to 49025024 bytes in 382.6ms. Index overhead and retained history are intentional; absence of automatic VACUUM is not asserted as a contract defect.
+
+## Corrected repeated-use and fold coverage
+
+The earlier repeated-use samples reused requestKey `same`, contrary to the normal
+request contract, and GC was mistakenly included in reported elapsed time despite
+the replay README wording. They remain historical output only. `context.ts` now
+uses request:<batch>:<iteration> and captures elapsed before explicit GC.
+Corrected fresh-store results: same-source69->394ms per100requests over2000runs;
+AsyncResource74->406ms; fresh-subject+GC72->63ms, heap8.30->8.69MB. These preserve
+the history-growth finding with the proper request contract. See `context-unique-*`.
+
+Matched record-array encoding control (same records/body size as publication)
+1k/2k/4k:2.10/2.52/4.00ms; publication361/1251/4979ms. These corrected output
+samples are `benchmark-matched-node24.jsonl`. Numeric-array encoding remains a
+separate simpler control and is not presented as matched work. No fixed SLA claim.
+
+Wide/deep strict-fold assertions pass: width1000/depth1 total500500 (1717ms);
+width1/depth10 total10 (19.6ms),depth50 total50 (63.0ms),depth100 total100
+(124.9ms). Each reads the completed fold result and compares against independent
+arithmetic width*(width-1)/2+width*depth. No gap found within these bounded cases.
+The initial fixture wrongly aliased child slot prior rather than its declared
+sibling slot and was rejected illegal-edge as required; preserved initial logs
+are consumer fixture errors, not framework failures. Static chains compile under
+strict TS; all generated fold probes pass type-aware lint.
+
+
+Collection fanout: 1k members all succeed in1492ms (4411392-byte store); 10k all succeed in54866ms (42921984-byte store, ~104MB heap). The100k run is killed at10s during discovery with no settled result; no100k correctness claim. Some timing overlapped light probes.
+
+The consumer's actual AsyncResource wrapper creates its resource before execute, including authoring/composition, and uses runInAsyncScope(work).finally(emitDestroy). Our control wraps workspace.run and does not reproduce that full boundary. The reported native ALS issue remains unconfirmed, not disproved. Fresh-subject explicit-GC heap remains8.30->8.69MB over2000runs; RSS growth alone is not a leak proof.
+
+All scale probes compile under strict TypeScript and pass type-aware lint. Wide/deep independent arithmetic assertions pass. The two new Jest tests are intentionally failing regression targets, not fixes or merge-ready green tests.
+
+## Deterministic acceptance acknowledgement reproduction
+
+Supervisor source review refined the hot path: `recordAcceptance` inserts a new
+row, then calls `statements.acceptances.all(resultId,environment).find(id)` inside
+the writer transaction to acknowledge that exact insertion. The full-history
+`readAcceptances` inspection API is not itself a bug. New assembly Jest test
+`packages/core/test/gap-hunt-scale/acceptance-readback.test.ts` instruments real
+SQLite and fails expected[1,1,1] vs actual[1,2,3] returned acceptance rows over
+three acknowledgements. Full inspection still has all3records. Exact commands
+in README; failure log `logs/acceptance-test-failure.log`. Strict TS compile
+passes, repository type-aware lint passes after routine curly-brace correction.
+Suggested direction: query the exact inserted acceptanceId for readback while
+preserving intentional all-history inspection and immutable retained records.
+
+## Historical appendix: superseded initial samples
+
+The following original notes are retained only as historical evidence. Repeated request keys and GC-in-timing confound their reuse numbers; the numeric-array encoding control is not matched to publication. Their statements about missing wide/deep coverage and suggested latest-acceptance lookup are superseded by the current findings above.
 
 ## Confirmed: per-array validation repeats quadratically while indexing
 
@@ -35,40 +92,3 @@ For20krecord one-result store:80001nodes,80000edges,80001addresses,15083pages,29
 
 Consumer's actual AsyncResource workaround was read in contribution-reports/.worktrees/integrate/packages/pipeline/src/runtime/index.ts: withStepContext creates one AsyncResource before execute, runInAsyncScope(work).finally(emitDestroy), and wraps both source and memo. Our isolated-workspace control does not cover fresh authoring/composition inside the boundary; original consumer hypothesis remains unconfirmed by this pass.
 
-## Corrected measurements after supervisory review
-
-The earlier repeated-use samples reused requestKey `same`, contrary to the normal
-request contract, and GC was mistakenly included in reported elapsed time despite
-the replay README wording. They remain historical output only. `context.ts` now
-uses request:<batch>:<iteration> and captures elapsed before explicit GC.
-Corrected fresh-store results: same-source69->394ms per100requests over2000runs;
-AsyncResource74->406ms; fresh-subject+GC72->63ms, heap8.30->8.69MB. These preserve
-the history-growth finding with the proper request contract. See `context-unique-*`.
-
-Matched record-array encoding control (same records/body size as publication)
-1k/2k/4k:2.10/2.52/4.00ms; publication361/1251/4979ms. These corrected output
-samples are `benchmark-matched-node24.jsonl`. Numeric-array encoding remains a
-separate simpler control and is not presented as matched work. No fixed SLA claim.
-
-Wide/deep strict-fold assertions pass: width1000/depth1 total500500 (1717ms);
-width1/depth10 total10 (19.6ms),depth50 total50 (63.0ms),depth100 total100
-(124.9ms). Each reads the completed fold result and compares against independent
-arithmetic width*(width-1)/2+width*depth. No gap found within these bounded cases.
-The initial fixture wrongly aliased child slot prior rather than its declared
-sibling slot and was rejected illegal-edge as required; preserved initial logs
-are consumer fixture errors, not framework failures. Static chains compile under
-strict TS; all generated fold probes pass type-aware lint.
-
-## Deterministic acceptance acknowledgement reproduction
-
-Supervisor source review refined the hot path: `recordAcceptance` inserts a new
-row, then calls `statements.acceptances.all(resultId,environment).find(id)` inside
-the writer transaction to acknowledge that exact insertion. The full-history
-`readAcceptances` inspection API is not itself a bug. New assembly Jest test
-`packages/core/test/gap-hunt-scale/acceptance-readback.test.ts` instruments real
-SQLite and fails expected[1,1,1] vs actual[1,2,3] returned acceptance rows over
-three acknowledgements. Full inspection still has all3records. Exact commands
-in README; failure log `logs/acceptance-test-failure.log`. Strict TS compile
-passes, repository type-aware lint passes after routine curly-brace correction.
-Suggested direction: query the exact inserted acceptanceId for readback while
-preserving intentional all-history inspection and immutable retained records.

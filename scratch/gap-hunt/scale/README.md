@@ -84,3 +84,12 @@ The test wraps the actual SQLite port, records returned acceptance rows only
 while each new acceptance is acknowledged, and expects[1,1,1]. Baseline returns
 [1,2,3]. Full readAcceptances still returns all3 immutable records. This is an
 outcome/resource regression target, not a timing assertion or production fix.
+
+Deterministic array-validation regression (intentionally fails on baseline):
+
+```sh
+node node_modules/typescript/bin/tsc -p packages/core/tsconfig.test.json
+node --experimental-vm-modules node_modules/jest/bin/jest.js --config packages/core/jest.config.mjs --runInBand --runTestsByPath packages/core/.test-build/test/gap-hunt-scale/array-validation.test.js
+```
+
+Matched encoding counts [20,40] exposed array slots; real stage+publish counts [1323,5043]. Doubling the fixture exceeds the proposed linear work boundary. The native reflection spy preserves behavior; no timing threshold is used.

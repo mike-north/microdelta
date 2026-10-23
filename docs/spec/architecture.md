@@ -185,8 +185,11 @@ failure behavior belong in a Machine capability contract, and the Node
 implementation must pass that capability's contract tests. For example, an
 async-context capability must propagate host context through awaits, isolate
 concurrent work, and restore a surrounding context after nested work; Tracking
-continues to own capture-frame lifecycle and late-use policy. A serialization
-capability must state its supported values and isolation semantics before a
+continues to own capture-frame lifecycle and late-use policy. The Node adapter
+must keep completed fresh entries from accumulating distinct host contexts in
+their continuing caller without changing callback results or requiring public
+cleanup. A serialization capability must state its supported values and isolation
+semantics before a
 `node:v8` implementation can satisfy it. This rule does not grant Machine the
 History or Accounting invariants: persistence adapters still implement ports
 owned by those contexts and may consume Machine capabilities behind those ports.

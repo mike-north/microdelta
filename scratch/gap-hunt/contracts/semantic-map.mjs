@@ -49,9 +49,51 @@ await assertion('asyncFailure', 'packages/tracking/test/gap-hunt-contracts-async
 await assertion('lateHelper', 'packages/tracking/test/gap-hunt-contracts-async.test.ts', 'a detached helper callback after capture %s rejects before its body runs', 'After either success or failure, detached tracked helper invocation throws closed-frame before author body; a fresh frame still calls normally.', 'async-results.log');
 await assertion('multiRebind', 'packages/core/test/gap-hunt-contracts-operation-matrix.test.ts', 'TRK-6 historical path rebinds through two equal identities and detects both later leaf updates', 'Five independent processes retain exact references across equal id replacement and publish on both subsequent current-leaf changes.', 'operation-matrix-results.log');
 await assertion('currentArguments', 'packages/core/test/gap-hunt-contracts-nested-current.test.ts', 'renumbered derived subjects and changed forwarded fields agree with cold computation across successive restarts', 'Renumbered PR derived subject executes only new child; changed current forwarded PR field executes only affected child/parent; both match cold current stores; rollback reuses.', 'nested-current-results.log');
+await assertion('captureLint', 'tooling/tracked-captures.test.mjs', 'typed capture fixture accepts branded influences and flags each documented negative', 'Real typed generated-declaration consumer accepts branded inputs and reports extracted scalar, external flag/helper/config, forged brands and unsupported callback syntax.', 'semantic-capture-lint.log');
+await assertion('lengthPosition', obs, 'array length and positional reads remain separate; native reflection rejects the non-enumerable length case', 'Length operation and positional Index address differ; unsupported native reflection rejects visibly.', 'semantic-tracking.log');
+await assertion('selectedOutput', 'packages/tracking/test/output-observation.test.ts', 'pass-through stays neutral until snapshotOutput explicitly detaches the selected subtree', 'Explicit selected output detaches only requested subtree and records materialization evidence.', 'semantic-tracking.log');
+await assertion('slotMissing', 'packages/definition/test/nested-composition.test.ts', 'EXP-4: opening a parent whose declared slot is unsupplied rejects with missing-slot before any callback runs', 'Missing declared supplied slot rejects before author callback.', 'semantic-definition.log');
+await assertion('slotAmbiguous', 'packages/definition/test/nested-composition.test.ts', 'EXP-4: a slot supplied twice rejects with ambiguous-slot, distinct from missing, before any callback runs', 'Multiply supplied slot produces ambiguous-slot before author callback.', 'semantic-definition.log');
+await assertion('memberBinding', 'packages/definition/test/member-binding.test.ts', 'instance source run and finality, and member memo run, receive the supplier', 'Instance run/finality/memo receive current supplied member view; component port assertion only.', 'semantic-definition.log');
+await assertion('justification', 'packages/definition/test/nested-witness.test.ts', 'CMP-7: justification is read back for forwarded and derived recipes alike, never inferred', 'Forwarded and derived justification flags survive witness parsing rather than inferred validity.', 'semantic-definition.log');
+await assertion('argumentMiss', nested, 'an argument derived after an observed untracked read', 'Unjustified and unreconstructible parent variants produce distinct honest misses, one normal parent execution, retained eligible children and report; no validation-only replay.', 'semantic-composition.log');
+await assertion('prepare', 'experiments/exp-2/materialization.test.ts', 'explicit async preparation retains ordinary reads for prepared scalars', 'Experimental prepared name reads normally; unprepared city throws without additional source read.', 'semantic-exp2.log');
+await assertion('scalarLoading', 'experiments/exp-2/materialization.test.ts', 'fingerprint-only verification makes zero payload reads; positive control really reads', 'Experimental scalar fingerprint check performs zero payload reads, with read-positive control.', 'semantic-exp2.log');
+await assertion('nestedLoading', 'experiments/exp-nested/test/nested-sqlite.test.ts', 'view creation, navigation and selected leaves read no root, sibling or unrelated subtree payload', 'Separate-process SQLite nested fixture limits returned payload cells to selected leaf; not disk-page IO or scale evidence.', 'semantic-expnested.log');
+await assertion('nestedMetadata', 'experiments/exp-nested/test/nested-sqlite.test.ts', 'metadata comparison in a fresh process performs zero payload fallback', 'Fresh-process nested SQLite fingerprint comparison requests zero payload fallback.', 'semantic-expnested.log');
+const blockEvidence = {
+ 'docs/spec/composition.md:34': ['supplied','slotMissing','slotAmbiguous'],
+ 'docs/spec/composition.md:51': ['topology','memberBinding','keyed'],
+ 'docs/spec/composition.md:82': ['supplied','slotMissing','slotAmbiguous'],
+ 'docs/spec/composition.md:90': ['keyed'],
+ 'docs/spec/composition.md:104': ['justification','currentArguments'],
+ 'docs/spec/composition.md:110': ['justification','currentArguments'],
+ 'docs/spec/composition.md:111': ['justification','currentArguments'],
+ 'docs/spec/composition.md:112': ['argumentMiss'],
+ 'docs/spec/composition.md:114': ['currentArguments','argumentMiss','nested'],
+ 'docs/spec/composition.md:137': ['fold','coverage','empty','gates'],
+ 'docs/spec/composition.md:175': ['supplied'],
+ 'docs/spec/composition.md:176': ['keyed'],
+ 'docs/spec/composition.md:177': ['gates'],
+ 'docs/spec/composition.md:178': ['rejectGraph'],
+ 'docs/spec/composition.md:179': ['nested'],
+ 'docs/spec/composition.md:180': ['argumentMiss'],
+ 'docs/spec/composition.md:181': ['topology'],
+ 'docs/spec/tracking.md:41': ['captureLint'],
+ 'docs/spec/tracking.md:67': ['lengthPosition'],
+ 'docs/spec/tracking.md:68': ['lengthPosition'],
+ 'docs/spec/tracking.md:73': ['selectedOutput'],
+ 'docs/spec/tracking.md:126': ['transport','wire'],
+ 'docs/spec/tracking.md:135': ['edges','transport'],
+ 'docs/spec/tracking.md:143': ['negative'],
+ 'docs/spec/tracking.md:181': ['scalarLoading'],
+ 'docs/spec/tracking.md:188': ['prepare'],
+ 'docs/spec/tracking.md:196': ['nestedLoading','selectedOutput'],
+ 'docs/spec/tracking.md:206': ['nestedLoading','nestedMetadata'],
+};
 const ownerEvidence = {
  'TRK-1': ['primitive','leaf','calls'], 'TRK-2':['calls'], 'TRK-3':['frames','restore','derive','asyncFailure','lateHelper'],
- 'TRK-4':[], 'TRK-5':['leaf','optional','presence','member','identity'], 'TRK-6':['rebind','multiRebind'],
+ 'TRK-4':['captureLint'], 'TRK-5':['leaf','optional','presence','member','identity'], 'TRK-6':['rebind','multiRebind'],
  'TRK-7':['leaf','identity'], 'TRK-8':['branches'], 'VAL-1':['address','wire'],
  'VAL-2':['edges','negative','crossprocess','transport','wire'], 'VAL-3':['frozen'],
  'COL-1':['keyed'], 'COL-2':['projection'], 'COL-3':['order','keyed'], 'COL-4':['keyed','gates'],
@@ -74,12 +116,15 @@ const blocks = inventory.blocks.filter(b => documents.has(b.key.split(':')[0])).
  if (b.key.startsWith('docs/spec/glossary.md:')) {
   evidence = [...new Set(Object.entries(ownerEvidence).filter(([owner]) => b.text.includes(owner)).flatMap(([, ids]) => ids))];
  }
- const nonbehavior = b.text.startsWith('#') || /^\| (Term|Operation|Recipe|Case|---)/u.test(b.text);
+ if (blockEvidence[b.key]) evidence = blockEvidence[b.key];
+ const nonbehavior = b.text.startsWith('#') || b.text.startsWith('Status:') || /^\| (Term|Operation|Recipe|Case|---)/u.test(b.text);
+ if (nonbehavior) evidence = [];
  return {
   key: b.key, owner: b.owner, clause: b.text,
   obligationKind: nonbehavior ? 'structural' : b.text.includes('EXP-6') || /historical Lean|checked proof|model uses UTF-16/u.test(b.text) ? 'historical-evidence-dormant' : /proposed .*convenience|exact identity-bearing brand\/helper API remains experimental/u.test(b.text) ? 'normative-with-proposed-unavailable-surface' : b.key.startsWith('docs/spec/glossary.md:') ? 'definition-owned-by-linked-contract' : 'normative-or-bounded-selected-contract',
   status: nonbehavior ? 'structural-text-no-runtime-claim' : evidence.length ? 'bounded-assertions-with-explicit-uncovered-remainder' : 'explicit-uncovered',
   executedAssertionIds: evidence,
+  otherOwnerEvidence: b.key.startsWith('docs/spec/glossary.md:') && /operations.md|execution.md/u.test(b.text) ? { branch: 'gap-hunt-durability', commit: 'bfb1cc3', ledger: 'scratch/gap-hunt/contract-operations/requirement-evidence.json', executionIndex: 'scratch/gap-hunt/contract-operations/test-execution-index.json', boundary: 'Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes.' } : null,
   uncoveredBehavior: nonbehavior ? null : evidence.length
    ? 'Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed.'
    : 'No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior.',

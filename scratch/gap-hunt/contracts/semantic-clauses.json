@@ -244,6 +244,90 @@
       "title": "renumbered derived subjects and changed forwarded fields agree with cold computation across successive restarts",
       "proves": "Renumbered PR derived subject executes only new child; changed current forwarded PR field executes only affected child/parent; both match cold current stores; rollback reuses.",
       "executionLog": "scratch/gap-hunt/contracts/nested-current-results.log"
+    },
+    "captureLint": {
+      "file": "tooling/tracked-captures.test.mjs",
+      "line": 30,
+      "title": "typed capture fixture accepts branded influences and flags each documented negative",
+      "proves": "Real typed generated-declaration consumer accepts branded inputs and reports extracted scalar, external flag/helper/config, forged brands and unsupported callback syntax.",
+      "executionLog": "scratch/gap-hunt/contracts/semantic-capture-lint.log"
+    },
+    "lengthPosition": {
+      "file": "packages/tracking/test/observer.test.ts",
+      "line": 533,
+      "title": "array length and positional reads remain separate; native reflection rejects the non-enumerable length case",
+      "proves": "Length operation and positional Index address differ; unsupported native reflection rejects visibly.",
+      "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+    },
+    "selectedOutput": {
+      "file": "packages/tracking/test/output-observation.test.ts",
+      "line": 17,
+      "title": "pass-through stays neutral until snapshotOutput explicitly detaches the selected subtree",
+      "proves": "Explicit selected output detaches only requested subtree and records materialization evidence.",
+      "executionLog": "scratch/gap-hunt/contracts/semantic-tracking.log"
+    },
+    "slotMissing": {
+      "file": "packages/definition/test/nested-composition.test.ts",
+      "line": 264,
+      "title": "EXP-4: opening a parent whose declared slot is unsupplied rejects with missing-slot before any callback runs",
+      "proves": "Missing declared supplied slot rejects before author callback.",
+      "executionLog": "scratch/gap-hunt/contracts/semantic-definition.log"
+    },
+    "slotAmbiguous": {
+      "file": "packages/definition/test/nested-composition.test.ts",
+      "line": 273,
+      "title": "EXP-4: a slot supplied twice rejects with ambiguous-slot, distinct from missing, before any callback runs",
+      "proves": "Multiply supplied slot produces ambiguous-slot before author callback.",
+      "executionLog": "scratch/gap-hunt/contracts/semantic-definition.log"
+    },
+    "memberBinding": {
+      "file": "packages/definition/test/member-binding.test.ts",
+      "line": 97,
+      "title": "instance source run and finality, and member memo run, receive the supplier",
+      "proves": "Instance run/finality/memo receive current supplied member view; component port assertion only.",
+      "executionLog": "scratch/gap-hunt/contracts/semantic-definition.log"
+    },
+    "justification": {
+      "file": "packages/definition/test/nested-witness.test.ts",
+      "line": 153,
+      "title": "CMP-7: justification is read back for forwarded and derived recipes alike, never inferred",
+      "proves": "Forwarded and derived justification flags survive witness parsing rather than inferred validity.",
+      "executionLog": "scratch/gap-hunt/contracts/semantic-definition.log"
+    },
+    "argumentMiss": {
+      "file": "packages/core/test/m4-acceptance/nested.test.ts",
+      "line": 141,
+      "title": "an argument derived after an observed untracked read",
+      "proves": "Unjustified and unreconstructible parent variants produce distinct honest misses, one normal parent execution, retained eligible children and report; no validation-only replay.",
+      "executionLog": "scratch/gap-hunt/contracts/semantic-composition.log"
+    },
+    "prepare": {
+      "file": "experiments/exp-2/materialization.test.ts",
+      "line": 116,
+      "title": "explicit async preparation retains ordinary reads for prepared scalars",
+      "proves": "Experimental prepared name reads normally; unprepared city throws without additional source read.",
+      "executionLog": "scratch/gap-hunt/contracts/semantic-exp2.log"
+    },
+    "scalarLoading": {
+      "file": "experiments/exp-2/materialization.test.ts",
+      "line": 41,
+      "title": "fingerprint-only verification makes zero payload reads; positive control really reads",
+      "proves": "Experimental scalar fingerprint check performs zero payload reads, with read-positive control.",
+      "executionLog": "scratch/gap-hunt/contracts/semantic-exp2.log"
+    },
+    "nestedLoading": {
+      "file": "experiments/exp-nested/test/nested-sqlite.test.ts",
+      "line": 146,
+      "title": "view creation, navigation and selected leaves read no root, sibling or unrelated subtree payload",
+      "proves": "Separate-process SQLite nested fixture limits returned payload cells to selected leaf; not disk-page IO or scale evidence.",
+      "executionLog": "scratch/gap-hunt/contracts/semantic-expnested.log"
+    },
+    "nestedMetadata": {
+      "file": "experiments/exp-nested/test/nested-sqlite.test.ts",
+      "line": 177,
+      "title": "metadata comparison in a fresh process performs zero payload fallback",
+      "proves": "Fresh-process nested SQLite fingerprint comparison requests zero payload fallback.",
+      "executionLog": "scratch/gap-hunt/contracts/semantic-expnested.log"
     }
   },
   "blocks": [
@@ -254,16 +338,18 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
       "key": "docs/spec/composition.md:3",
       "owner": null,
       "clause": "Status: normative boundaries. EXP-1 selects bounded structural correspondence.\n[EXP-4](../../experiments/exp-4/decision.md) selects the bounded nested argument\nrecipe, supplied callable step slots, keyed fanout templates, tracked gates and\nstrict-fold skip treatment recorded below. Arbitrary closure soundness remains\nexcluded.\nOwner: Definition & Binding, collaborating with Reuse Resolution.",
-      "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
+      "obligationKind": "structural",
+      "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": null
     },
     {
       "key": "docs/spec/composition.md:10",
@@ -272,6 +358,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -284,6 +371,7 @@
         "topology",
         "rejectGraph"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -296,6 +384,7 @@
         "branches",
         "gates"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -307,6 +396,7 @@
       "executedAssertionIds": [
         "supplied"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -314,9 +404,14 @@
       "owner": "EXP-4",
       "clause": "**EXP-4 supplied-callable selection:** a supplied step is bound at composition to\na structural callable slot. A step that declares the slot is admitted only when the\nslot resolves to exactly one current implementation; missing and multiply supplied\nslots are distinct misses before the body runs. The parent's evidence names the\nslot descriptor only. The supplied step's implementation evidence belongs to the\nchild's own provenance, so exchanging implementation A for B is a child\nimplementation change, not a parent-graph change or a guessed remap. Two\nclosures with equal emitted text but different captured values are\nindistinguishable to this evidence (preserved counterexample CX-2); captured\nconfiguration must be a tracked input.",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "supplied",
+        "slotMissing",
+        "slotAmbiguous"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/composition.md:45",
@@ -328,6 +423,7 @@
         "topology",
         "keyed"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -335,9 +431,14 @@
       "owner": "EXP-4",
       "clause": "**EXP-4 template selection:** the factory runs once against a symbolic member; its\nreturned declarations are copied and frozen, and every builder rejects later calls.\nA member instance is addressed by the template's step descriptor (which includes\nits collection binding) plus the member key. Discovery keys every member before\nany gate or body runs, using designated identity or an explicit custom-key\nfunction (COL-1). A missing or duplicate key rejects the collection with a\ndiagnostic naming the collection, the key and the custom-key option; no member\nwork is admitted. Renaming a template slot or moving it to another collection is\nchanged correspondence: prior instances are not remapped. Each member step callback\n(source `run` and `finality`, member memo `run`) receives a **member binding**: a\ntracked view of its member's current keyed record, the same view its gate reads.\nIts reads are that step's own observations and are validated against the current\nkeyed snapshot. Explicit (non-template) members have no member binding, and\n`forward.member` origins are accepted only from template instances.",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "topology",
+        "memberBinding",
+        "keyed"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/composition.md:66",
@@ -346,6 +447,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -357,6 +459,7 @@
       "executedAssertionIds": [
         "nested"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -369,6 +472,7 @@
         "supplied",
         "keyed"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -376,18 +480,26 @@
       "owner": "EXP-1",
       "clause": "**EXP-1 mechanism selection:** a fresh registry binds the declared composition\nscope, input/callable/step role, slot, and member key where applicable to current\ndeclarations. Each consumed historical slot must resolve to exactly one current\ndeclaration. Missing and multiply occupied slots produce distinct miss diagnostics.\nA process-local reverse map may discover the slot actually consumed, but only\nstructural descriptors and observed facts enter retained evidence. API spelling\nand descriptor wire encoding remain separate implementation choices.",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "supplied",
+        "slotMissing",
+        "slotAmbiguous"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/composition.md:90",
       "owner": "EXP-1",
       "clause": "For example, registering member `b` before `a` after restart must reconnect each\nmember's own observations and exact retained reference; it cannot exchange their\nresults. The [EXP-1 restart fixture](../../experiments/exp-1/decision.md) proves this\nfor direct supplied callables and flat scalar inputs in separate processes. It\ndoes not establish arbitrary nested argument reconstruction or closure persistence.",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "keyed"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/composition.md:96",
@@ -399,6 +511,7 @@
         "nested",
         "currentArguments"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -406,9 +519,13 @@
       "owner": "EXP-4",
       "clause": "**EXP-4 argument recipe:** a nested call's durable evidence records its structural\nparent and child slots, its position in the parent's call order and one recipe per\nargument (the M3 empty form remains valid):",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "justification",
+        "currentArguments"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/composition.md:108",
@@ -417,6 +534,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -426,6 +544,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -433,36 +552,52 @@
       "owner": "EXP-4",
       "clause": "| `forwarded` | Structural origin: an input path, the member binding, or an earlier child call's output path, and whether its path was justified | Used only when recorded as justified; resolved again from **current** bindings; a stored value is never substituted |",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "justification",
+        "currentArguments"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/composition.md:111",
       "owner": "EXP-4",
       "clause": "| `derived` | Canonical supported value, and whether it was justified | Used only when recorded as justified and every earlier validation step passed |",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "justification",
+        "currentArguments"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/composition.md:112",
       "owner": "EXP-4",
       "clause": "| `unreconstructible` | Its reason (for example a function value) | Always an honest parent miss; the child cannot observe it |",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "argumentMiss"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/composition.md:114",
       "owner": "EXP-4",
       "clause": "Validation checks the parent's own implementation, consumed bindings and facts\nfirst, then each call in recorded order. For call *k* it resolves the recipe,\nobtains the current child result (validated or executed under normal admission)\nand compares only the parent's consumed output facts from that call. Under the\ntracked-influence contract, an unchanged parent prefix replays to the same derived\nvalue, so a changed basis is reported as changed evidence or changed child output\nbefore call *k*. The distinct unjustified-argument miss is reachable when the\nparent made an **observed** untracked read before deriving the argument. The same\nholds for a forwarded path: a path chosen after an observed untracked read is\nrecorded unjustified. Child\nhistory identity is the child descriptor plus its derived argument values;\nforwarded values are identified by origin and observed by the child through\n`argument` binding paths. Untracked influence the runtime cannot observe remains\noutside this justification (preserved counterexample CX-1).",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "currentArguments",
+        "argumentMiss",
+        "nested"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/composition.md:129",
@@ -471,6 +606,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -485,6 +621,7 @@
         "coverage",
         "empty"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -492,9 +629,15 @@
       "owner": "EXP-4",
       "clause": "**EXP-4 strict-fold selection:** a gate yields an explicit `skipped` instance only\nfor an explicit `false`; a non-boolean result or a failed read fails the instance.\nThe gate declares the **required population**. A strict fold receives one explicit\nkeyed entry per current member, `succeeded` with its result view or `skipped`\nwith no data, in canonical key order. It runs only when discovery is closed and\nevery required member has an accepted result. Any failed or cancelled required\nmember fails the fold immediately, naming those keys and still reporting pending\nkeys and open discovery; otherwise open discovery or a pending member leaves it\nwaiting. Neither case runs the body or publishes. A closed empty population is a\nsuccessful complete fold; an open one waits. By supervisor decision on the\nEXP-4 evidence, the strict fold's outcome also carries framework-level coverage\n(required keys, skipped keys, discovery closure), so consumers need not trust the\nbody to report exclusions. Its verification consumes\neach member's included-or-skipped outcome and the result facts it read, not the\ngate's raw observations; those remain the instance's own evidence. A threshold\nchange that flips no outcome therefore reruns nothing unless the fold body itself\nreads the threshold. The fold's evidence also records the template step it\nconsumes: renaming that step or its template slot, or moving the template to\nanother collection, is changed correspondence and a miss, never a remap. When a\nmember has both a denied and a cancelled child, cancellation determines its\noutcome. Run-level infrastructure failures (the admission port, observers,\nintegrity) fail the whole request rather than being attributed to one member, so\nan outage is never mistaken for a terminal member failure. A skip or deletion never\nretracts an earlier publication: the instance's retained history and latest\npointer are unchanged, and that pointer is not evidence that the member is still\nrequired. Tolerant or outcome folds are separate (RUN-010) and outside EXP-4.",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "fold",
+        "coverage",
+        "empty",
+        "gates"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/composition.md:164",
@@ -505,6 +648,7 @@
       "executedAssertionIds": [
         "rejectGraph"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -513,9 +657,8 @@
       "clause": "## Worked cases",
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
-      "executedAssertionIds": [
-        "rejectGraph"
-      ],
+      "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -525,6 +668,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -534,6 +678,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -541,63 +686,84 @@
       "owner": "CMP-9",
       "clause": "| Composition config supplies either scorer A or B | Bind selected scorer before freeze | Definition has a current supplied callable before any source work |",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "supplied"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/composition.md:176",
       "owner": "CMP-9",
       "clause": "| One PR is added to discovery | Instantiate existing retrieval/assessment template once for its key | Unchanged PR assessments retain references |",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "keyed"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/composition.md:177",
       "owner": "CMP-9",
       "clause": "| Tracked gate changes false→true | Previously skipped instance may run | Same abstract nodes/edges, changed predicate evidence |",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "gates"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/composition.md:178",
       "owner": "CMP-9",
       "clause": "| Result contains a function used to add an operation | Reject graph mutation/undeclared binding | No new abstract node or paid call admitted |",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "rejectGraph"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/composition.md:179",
       "owner": "CMP-9",
       "clause": "| Child prompt changes, child emits same selected score | Revalidate/execute child as required, retain outer result | Outer body invocation count stays zero on second run |",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "nested"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/composition.md:180",
       "owner": "CMP-9",
       "clause": "| Saved child arguments lack current justification | Parent miss | No validation-only replay; normal admission gate applies |",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "argumentMiss"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/composition.md:181",
       "owner": "CMP-9",
       "clause": "| Author mutates builder array after freeze | Frozen graph remains unchanged | Stored graph owns its structure |",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "topology"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/composition.md:183",
@@ -608,6 +774,7 @@
       "executedAssertionIds": [
         "rejectGraph"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -617,6 +784,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -626,6 +794,7 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -635,6 +804,7 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -644,6 +814,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -653,6 +824,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -662,6 +834,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -671,6 +844,7 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -680,6 +854,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -689,6 +870,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -698,6 +886,7 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -707,6 +896,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -719,6 +915,7 @@
         "topology",
         "rejectGraph"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -730,6 +927,7 @@
       "executedAssertionIds": [
         "nested"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -739,6 +937,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -751,6 +956,7 @@
         "supplied",
         "keyed"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -762,6 +968,7 @@
       "executedAssertionIds": [
         "supplied"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -774,6 +981,7 @@
         "topology",
         "rejectGraph"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -786,6 +994,7 @@
         "branches",
         "gates"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -798,6 +1007,7 @@
         "topology",
         "keyed"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -812,6 +1022,7 @@
         "coverage",
         "empty"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -826,6 +1037,13 @@
         "coverage",
         "empty"
       ],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -840,6 +1058,13 @@
         "coverage",
         "empty"
       ],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -849,6 +1074,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -861,6 +1093,13 @@
         "nested",
         "currentArguments"
       ],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -872,6 +1111,7 @@
       "executedAssertionIds": [
         "supplied"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -884,6 +1124,7 @@
         "topology",
         "keyed"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -898,6 +1139,13 @@
         "coverage",
         "empty"
       ],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -907,6 +1155,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -916,6 +1171,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -925,6 +1187,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -934,6 +1203,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -943,6 +1219,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -952,6 +1235,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -961,6 +1251,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -970,6 +1267,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -979,6 +1283,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -988,6 +1299,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -997,6 +1315,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1006,6 +1331,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1015,6 +1347,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1024,6 +1363,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1033,6 +1379,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1044,6 +1397,13 @@
       "executedAssertionIds": [
         "rejectGraph"
       ],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1053,6 +1413,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -1062,6 +1423,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -1071,6 +1433,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -1086,6 +1449,7 @@
         "asyncFailure",
         "lateHelper"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1097,6 +1461,7 @@
       "executedAssertionIds": [
         "calls"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1110,6 +1475,7 @@
         "leaf",
         "calls"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1125,6 +1491,7 @@
         "member",
         "identity"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1140,6 +1507,13 @@
         "member",
         "identity"
       ],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1151,6 +1525,7 @@
       "executedAssertionIds": [
         "calls"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1163,6 +1538,7 @@
         "address",
         "wire"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1178,6 +1554,7 @@
         "transport",
         "wire"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1193,6 +1570,7 @@
         "asyncFailure",
         "lateHelper"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1208,6 +1586,7 @@
         "asyncFailure",
         "lateHelper"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1223,6 +1602,7 @@
         "asyncFailure",
         "lateHelper"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1232,6 +1612,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -1241,6 +1622,7 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1250,6 +1632,7 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1265,6 +1648,7 @@
         "asyncFailure",
         "lateHelper"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1274,6 +1658,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -1283,6 +1668,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -1292,6 +1678,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -1305,6 +1692,7 @@
         "identity",
         "keyed"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1314,6 +1702,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1325,6 +1720,7 @@
       "executedAssertionIds": [
         "keyed"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1336,6 +1732,7 @@
       "executedAssertionIds": [
         "projection"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1345,6 +1742,7 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1356,6 +1754,13 @@
       "executedAssertionIds": [
         "frozen"
       ],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1365,6 +1770,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -1374,6 +1780,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -1383,6 +1790,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -1392,6 +1800,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1401,6 +1816,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1410,6 +1832,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1419,6 +1848,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1428,6 +1864,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1437,6 +1880,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1446,6 +1896,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1455,6 +1912,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1464,6 +1928,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1473,6 +1944,7 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1482,6 +1954,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1491,6 +1970,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1500,6 +1986,13 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": {
+        "branch": "gap-hunt-durability",
+        "commit": "bfb1cc3",
+        "ledger": "scratch/gap-hunt/contract-operations/requirement-evidence.json",
+        "executionIndex": "scratch/gap-hunt/contract-operations/test-execution-index.json",
+        "boundary": "Suite-granular bounded owner evidence only; does not certify every glossary sub-obligation; three launch SIGKILL failures are not passes."
+      },
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1509,6 +2002,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -1518,6 +2012,7 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1527,6 +2022,7 @@
       "obligationKind": "definition-owned-by-linked-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1536,16 +2032,18 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
       "key": "docs/spec/tracking.md:3",
       "owner": null,
       "clause": "Status: normative semantics with the bounded EXP-2 encoding selection below.\nThe full tracked materialization surface remains implementation work.\nOwners: Tracking & Observation and Value Semantics in [architecture](architecture.md).",
-      "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
+      "obligationKind": "structural",
+      "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": null
     },
     {
       "key": "docs/spec/tracking.md:7",
@@ -1554,6 +2052,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -1567,6 +2066,7 @@
         "leaf",
         "calls"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1578,6 +2078,7 @@
       "executedAssertionIds": [
         "calls"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1589,6 +2090,7 @@
       "executedAssertionIds": [
         "calls"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1604,6 +2106,7 @@
         "asyncFailure",
         "lateHelper"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1611,9 +2114,12 @@
       "owner": "TRK-4",
       "clause": "**TRK-4 — Capture boundary.** Every external influence intended to affect reuse,\nincluding branch selection, must be tracked or covered by explicit source/freshness/\ncompatibility policy. A typed lint rule should use existing scope and TypeScript\nservices plus the shared brand to flag untracked external captures. Locals and\nparameters need not all be branded. Extracting a scalar from tracked configuration\nbefore the active computation and capturing it can lose tracking and merits a\nfixture. Builtin exemptions are an experiment detail. No semantic-changing autofix\nor claim of sound detection for arbitrary JavaScript. Deliberately memoized random\nor LLM output remains valid; this rule concerns influences expected to invalidate it.\nThe supported syntax and checker limitations are documented in the\n[tracked-capture lint guide](../tooling/tracked-captures.md).",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "captureLint"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/tracking.md:53",
@@ -1622,6 +2128,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -1637,6 +2144,7 @@
         "member",
         "identity"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1646,6 +2154,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -1655,6 +2164,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -1667,6 +2177,7 @@
         "leaf",
         "rebind"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1678,6 +2189,7 @@
       "executedAssertionIds": [
         "optional"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1689,6 +2201,7 @@
       "executedAssertionIds": [
         "optional"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1700,6 +2213,7 @@
       "executedAssertionIds": [
         "presence"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1711,6 +2225,7 @@
       "executedAssertionIds": [
         "presence"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1722,6 +2237,7 @@
       "executedAssertionIds": [
         "member"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1734,6 +2250,7 @@
         "presence",
         "order"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1741,18 +2258,24 @@
       "owner": "TRK-5",
       "clause": "| Array `length` | Length field | All elements | Same-length value edit preserves length-only observation |",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "lengthPosition"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/tracking.md:68",
       "owner": "TRK-5",
       "clause": "| Positional array read | Value at the observed index/path | Entity identity of every element | Inserting before the position may change it |",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "lengthPosition"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/tracking.md:69",
@@ -1763,6 +2286,7 @@
       "executedAssertionIds": [
         "keyed"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1772,6 +2296,7 @@
       "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1783,6 +2308,7 @@
       "executedAssertionIds": [
         "identity"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1794,6 +2320,7 @@
       "executedAssertionIds": [
         "leaf"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1801,9 +2328,12 @@
       "owner": "TRK-5",
       "clause": "| Materialize/return data as result | Actual selected output values/references | All reachable but unreturned data | Pass-through output cannot escape dependency tracking |",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "selectedOutput"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/tracking.md:74",
@@ -1814,6 +2344,7 @@
       "executedAssertionIds": [
         "calls"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1829,6 +2360,7 @@
         "member",
         "identity"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1841,6 +2373,7 @@
         "rebind",
         "multiRebind"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1853,6 +2386,7 @@
         "leaf",
         "identity"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1864,6 +2398,7 @@
       "executedAssertionIds": [
         "branches"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1872,9 +2407,8 @@
       "clause": "## Structured addresses and fingerprints",
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
-      "executedAssertionIds": [
-        "branches"
-      ],
+      "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -1887,6 +2421,7 @@
         "address",
         "wire"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1902,6 +2437,7 @@
         "transport",
         "wire"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1917,6 +2453,7 @@
         "transport",
         "wire"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1924,27 +2461,38 @@
       "owner": "EXP-2",
       "clause": "**EXP-2 encoding selection:** separate normalized equality from snapshot transport.\nThe bounded candidate uses `MDV1` tagged equality input, `MDS1` order-preserving\nsnapshot transport, and `MDO1` operation/address/selected-fact evidence. An equality\ndecoder produces a normal form, not a snapshot suitable for later order-sensitive\nreads. For example, records inserted as `b,a` and `a,b` have equal unordered value\nevidence; transporting the first snapshot must still let an explicit `keys` read\nobserve `b,a`. Unknown versions, malformed nodes, duplicate keys, and lossy or\nnoncanonical records fail closed rather than migrate by guessing.",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "transport",
+        "wire"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/tracking.md:135",
       "owner": "EXP-2",
       "clause": "The selected candidate domain contains undefined, null, booleans, UTF-16 strings,\nfinite numbers, canonical NaN, infinities, distinct negative zero, sparse arrays\nwith explicit holes/length, and string-keyed plain records. It supports at most\ntwo custom plain-data prototype levels ending in null or Object.prototype;\nselected intrinsic prototype member values are rejected. Arrays use the standard\nArray prototype and indexed data slots. Snapshot decoding freezes the decoded\ndata while preserving supported lookup and enumeration meaning.",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "edges",
+        "transport"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/tracking.md:143",
       "owner": "EXP-2",
       "clause": "Cycles/shared references, accessors, nonenumerable data, bigint, user symbols,\ndata functions, Date/Map/Set, and class instances are rejected explicitly. Function\nimplementation evidence is a separate observation, not serializable data-function\nsupport. No framework-brand exemption is inferred from this fixture. The\n[EXP-2 matrix and assertions](../../experiments/exp-2/README.md) define each tested\nedge and the wire grammar. Extending that domain requires explicit semantics and\nnegative/roundtrip assertions before implementation. These fixture encodings do\nnot establish a deployed persistence format or authorize implicit migration.",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "negative"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/tracking.md:152",
@@ -1953,6 +2501,7 @@
       "obligationKind": "historical-evidence-dormant",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1962,6 +2511,7 @@
       "obligationKind": "historical-evidence-dormant",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -1973,6 +2523,7 @@
       "executedAssertionIds": [
         "frozen"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -1980,36 +2531,50 @@
       "owner": "EXP-2",
       "clause": "**EXP-2 access decision:** an indexed synchronous source can supply an unexpected\nselected scalar without a payload-wide read. The tested view covers top-level\nscalars only and rejects nested values, presence/enumeration, and prototype\noperations; it is not the complete TRK-5 facade. Its observations are immutable\ncopies. Fingerprint-only verification reads no payload, with an instrumented\nscalar-read positive control proving the backing reader is observable.",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "scalarLoading"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/tracking.md:188",
       "owner": "EXP-2",
       "clause": "Explicit asynchronous preparation supports ordinary scalar reads of prepared\nfields. It is rejected as a general solution to unexpected ordinary getter reads\nfrom an async-only source: an unprepared field must fail visibly, never fabricate\na scalar or claim the read was observed. DOM-3 and TRK-5 are unchanged. Within\nEXP-2, nested lazy materialization, production cache/eviction policy, and scale\nbehavior remained unproven; its selected-loading evidence is bounded to the\noperations above.",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "prepare"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/tracking.md:196",
       "owner": "EXP-2",
       "clause": "**M3 nested selected-read decision:** the [nested-read gate](../../experiments/exp-nested/protocol.md)\nestablishes a bounded synchronous navigation capability over exact retained\nrecord and array roots. Value returns a tagged scalar fact or container shape; a\ncontainer shape is transport metadata, never a fabricated selected fact.\nTracking records the existing TRK-5 leaf, length, presence, key-order and\nexplicit-output observations. Navigating through a container alone records no\nwhole-object dependency. Materialization composes the optional History\nnavigation capability with the owning Tracking observer; scalar-only readers\nretain their existing contract.",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "nestedLoading",
+        "selectedOutput"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/tracking.md:206",
       "owner": "EXP-2",
       "clause": "The gate uses file-backed SQLite in separate publisher, reader and comparison\nprocesses. Instrumented SQL results demonstrate that navigation and selected\nleaves return no root or unrelated subtree payload, while fingerprint comparison\nreturns no payload cells. Independent MDO1 oracles and in-memory observer parity\ncover the declared fixture and supported Value edge cases. These are SQL\nresult-cell guarantees within that tested scope, not measurements of disk-page\nI/O or scale. An explicit output request may load its selected subtree and\nrecords MDS1 output evidence. Async invocation transports a view inside an\nordinary result carrier so transport does not create a phantom `then`\nobservation or reserve an author data field.",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "nestedLoading",
+        "nestedMetadata"
+      ],
+      "otherOwnerEvidence": null,
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/tracking.md:217",
@@ -2018,6 +2583,7 @@
       "obligationKind": "normative-or-bounded-selected-contract",
       "status": "explicit-uncovered",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
     },
     {
@@ -2027,6 +2593,7 @@
       "obligationKind": "structural",
       "status": "structural-text-no-runtime-claim",
       "executedAssertionIds": [],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": null
     },
     {
@@ -2038,6 +2605,7 @@
       "executedAssertionIds": [
         "keyed"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -2049,6 +2617,7 @@
       "executedAssertionIds": [
         "projection"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -2060,6 +2629,7 @@
       "executedAssertionIds": [
         "projection"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -2072,6 +2642,7 @@
         "order",
         "keyed"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
@@ -2084,6 +2655,7 @@
         "keyed",
         "gates"
       ],
+      "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     }
   ]

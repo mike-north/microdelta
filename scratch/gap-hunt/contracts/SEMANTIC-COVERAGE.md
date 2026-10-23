@@ -3,11 +3,11 @@
 Implementer: Codex worker (gpt-6.1-sol), operating for Mike North.
 
 `semantic-clauses.json` retains all 178 non-code paragraph/table blocks of
-`tracking.md`, `composition.md`, and `glossary.md`. Thirty named assertion anchors
+`tracking.md`, `composition.md`, and `glossary.md`. Forty-six named assertion anchors
 record the concrete behavior they establish and the actual execution log. This is
-an exhaustive clause inventory, **not complete normative certification**: 72 blocks
-have bounded semantic assertion evidence, 77 remain explicitly uncovered by this
-audit, and 29 are structural text. Every partial block explicitly leaves all
+an exhaustive clause inventory, **not complete normative certification**: 98 blocks
+have bounded semantic assertion evidence, 47 remain explicitly uncovered by this
+audit, and 33 are structural text. Every partial block explicitly leaves all
 unproved sub-obligations uncovered. An uncovered block is not itself a defect or
 proof that the repository lacks a relevant test. Literal requirement-ID references
 were never counted as assertion coverage.
@@ -29,8 +29,7 @@ separation, exhaustive versus visited collection evidence, frozen topology,
 tracked gate membership, child-output cutoff, keyed insertion/deletion/reorder,
 and framework strict-fold coverage. These proofs remain bounded to their fixtures.
 
-The ledger deliberately retains gaps: the complete supported capture-lint syntax
-matrix, proposed identity conveniences, arbitrary ordering/ranking variants,
+The ledger deliberately retains gaps: proposed identity conveniences, arbitrary ordering/ranking variants,
 all argument-reconstruction sub-obligations, production cache eviction/scale,
 and glossary definitions owned by operational/history contracts are not certified
 here. EXP-6 Lean remains dormant as directed. Experimental/proposal text must not
@@ -65,3 +64,9 @@ npm run test:unit --workspace @microdelta/value
 npm run test:unit --workspace @microdelta/definition
 npm run test:unit --workspace microdelta -- --runTestsByPath .test-build/test/m4-acceptance/keyed.test.js .test-build/test/m4-acceptance/nested.test.js .test-build/test/m4-acceptance/fold.test.js .test-build/test/m4-acceptance/topology.test.js
 ```
+
+Additional executed owner evidence: documented capture-lint fixtures 34/34,
+EXP-2 value/loading fixtures 28/28, nested SQLite navigation fixtures 12/12.
+Operational glossary entries link the durability worker ledger at commit bfb1cc3
+and preserve its suite-level limits. Lean historical prose remains dormant;
+selected experimental evidence is never represented as production rollout proof.

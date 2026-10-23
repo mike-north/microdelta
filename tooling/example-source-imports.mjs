@@ -14,14 +14,29 @@ export const exampleSourceImports = {
   create(context) {
     const exampleRoot = path.resolve(context.cwd, 'examples/contribution-report');
 
+    /** Resolve path-like literals with the same URL rules used by ESM imports. */
+    function localTarget(specifier) {
+      if (specifier.startsWith('.')) {
+        return fileURLToPath(new URL(specifier, pathToFileURL(context.filename)));
+      }
+      if (specifier.startsWith('file:')) {
+        return fileURLToPath(new URL(specifier));
+      }
+      if (path.isAbsolute(specifier)) {
+        return path.resolve(specifier);
+      }
+      return undefined;
+    }
+
     /** Relative paths are permitted only while their normalized target stays within the example. */
     function check(node, specifier) {
-      if (typeof specifier !== 'string' || !specifier.startsWith('.')) {
+      if (typeof specifier !== 'string') {
         return;
       }
-      // ESM resolves path-like specifiers as URLs, so URL normalization (for
-      // example encoded dot segments) must precede the package-boundary test.
-      const target = fileURLToPath(new URL(specifier, pathToFileURL(context.filename)));
+      const target = localTarget(specifier);
+      if (target === undefined) {
+        return;
+      }
       const relativeTarget = path.relative(exampleRoot, target);
       if (relativeTarget === '..'
         || relativeTarget.startsWith(`..${path.sep}`)
@@ -50,13 +65,12 @@ export const exampleSourceImports = {
       },
       CallExpression(node) {
         if (node.callee.type === 'Identifier' && node.callee.name === 'require') {
-          // A parameter named `require` is an ordinary caller-supplied
-          // function. Only an unbound Node-style require name denotes a
-          // module edge for this literal-path check.
+          // A local binding can be any caller-supplied callable, not a module
+          // edge. Unbound Node-style `require` calls remain subject to checks.
           let scope = context.sourceCode.getScope(node);
           while (scope !== null) {
             const binding = scope.set.get('require');
-            if (binding?.defs.some((definition) => definition.type === 'Parameter')) {
+            if (binding !== undefined && binding.defs.length > 0) {
               return;
             }
             scope = scope.upper;

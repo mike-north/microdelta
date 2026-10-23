@@ -92,7 +92,7 @@ function oracle(root: unknown, address: readonly IAddressSegment[], operation: I
 describe('lazy tracked views over a node source', () => {
   const binding = { path: ['summary', 'activity'] };
 
-  test('a nested leaf read requests only its path and records exactly one consumed leaf', () => {
+  test('a nested leaf read requests only its path and records container kind and exactly one consumed leaf', () => {
     const observer = createTrackingObserver(machine);
     const value = activityFixture();
     const { source, requests } = createSource(value);
@@ -101,8 +101,9 @@ describe('lazy tracked views over a node source', () => {
     const capture = observer.capture(() => view.profile.name);
 
     expect(capture.value).toBe('Ada');
-    expect(capture.observations).toHaveLength(1);
-    expect(capture.observations[0]).toMatchObject({
+    expect(capture.observations).toHaveLength(2);
+    expect(capture.observations[0]?.operation).toBe('container-kind');
+    expect(capture.observations[1]).toMatchObject({
       binding,
       kind: 'fact',
       operation: 'value',
@@ -173,7 +174,7 @@ describe('lazy tracked views over a node source', () => {
 
     const first = observer.capture(() => view.pullRequests[0]?.merged);
     expect(first.observations.map((observation) => `${String(observation.operation)}${label(observation.address)}`))
-      .toEqual(['value.pullRequests[0].merged']);
+      .toEqual(['container-kind.pullRequests', 'container-kind.pullRequests[0]', 'value.pullRequests[0].merged']);
 
     const loop = observer.capture(() => {
       let merged = 0;
@@ -186,9 +187,13 @@ describe('lazy tracked views over a node source', () => {
     });
     expect(loop.value).toBe(2);
     expect(loop.observations.map((observation) => `${String(observation.operation)}${label(observation.address)}`)).toEqual([
+      'container-kind.pullRequests',
       'length.pullRequests',
+      'container-kind.pullRequests[0]',
       'value.pullRequests[0].merged',
+      'container-kind.pullRequests[1]',
       'value.pullRequests[1].merged',
+      'container-kind.pullRequests[2]',
       'value.pullRequests[2].merged',
     ]);
     // Labels, profile and notes were never requested from the source.
@@ -206,8 +211,9 @@ describe('lazy tracked views over a node source', () => {
     expect(output.value).toEqual({ profile: value.profile, count: 1 });
     expect(Object.isFrozen(output.value.profile)).toBe(true);
     expect(observer.materialization.owns(output.value.profile)).toBe(false);
-    expect(output.observations).toHaveLength(1);
-    expect(output.observations[0]).toMatchObject({
+    expect(output.observations).toHaveLength(2);
+    expect(output.observations[0]?.operation).toBe('container-kind');
+    expect(output.observations[1]).toMatchObject({
       kind: 'materialized-output',
       address: [{ kind: 'property', key: 'profile' }],
       fingerprint: fingerprint(encodeSnapshot(value.profile), machine),
@@ -223,7 +229,7 @@ describe('lazy tracked views over a node source', () => {
       }
     });
     expect(repeated.value).toBeInstanceOf(TypeError);
-    expect(repeated.observations).toHaveLength(0);
+    expect(repeated.observations).toMatchObject([{ operation: 'container-kind' }]);
   });
 
   test('lazy views are observer-owned, immutable and reject native reflection', () => {

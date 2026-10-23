@@ -391,3 +391,13 @@ describe('canonical supported domain', () => {
     expect(encodeSnapshot(decoded)).toBe(encodeSnapshot({ child: [1, { name: 'Ada' }] }));
   });
 });
+
+/** Kind evidence is bounded and still uses the supported Value navigation domain. */
+test('container-kind selects only the supported discriminant and rejects unsupported container surfaces', () => {
+  const address = [{ kind: 'property', key: 'detail' }] as const;
+  expect(observe({ detail: { name: 'Ada' } }, address, 'container-kind').fact).toBe('record');
+  expect(observe({ detail: ['Ada'] }, address, 'container-kind').fact).toBe('array');
+  expect(observe({ detail: null }, address, 'container-kind').fact).toBe('scalar');
+  expect(observe({}, address, 'container-kind').fact).toBe('scalar');
+  expect(() => observe({ detail: new Date(0) }, address, 'container-kind')).toThrow(TypeError);
+});

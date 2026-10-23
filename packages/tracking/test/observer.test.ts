@@ -57,8 +57,9 @@ describe('semantic tracking observer', () => {
     });
 
     expect(capture.value).toBe('Ada');
-    expect(capture.observations).toHaveLength(1);
-    expect(capture.observations[0]?.address).toEqual([
+    expect(capture.observations).toHaveLength(2);
+    expect(capture.observations[0]?.operation).toBe('container-kind');
+    expect(capture.observations[1]?.address).toEqual([
       { kind: 'property', key: 'author' },
       { kind: 'property', key: 'name' },
     ]);
@@ -494,13 +495,13 @@ describe('semantic tracking observer', () => {
     const source = createProvider();
     // eslint-disable-next-line microdelta/tracked-captures -- This runtime fixture creates the tracked wrapper inside capture to verify rebinding evidence.
     const captured = observer.capture(() => observer.tracked({ author: { id: 'a', name: 'Ada' } }, binding).author.name);
-    const original = captured.observations[0];
+    const original = captured.observations.find((item) => item.operation === 'value');
     source.set('analysis/author', { author: { id: 'b', name: 'Ada' } });
     expect(observer.compareCurrent(captured, source.provider)).toMatchObject({ kind: 'equal' });
 
     source.set('analysis/author', { author: { id: 'b', name: 'Grace' } });
     expect(observer.compareCurrent(captured, source.provider)).toMatchObject({ kind: 'changed' });
-    expect(captured.observations[0]).toBe(original);
+    expect(captured.observations.find((item) => item.operation === 'value')).toBe(original);
     expect(original?.encoded).toContain('Ada');
   });
 
@@ -793,7 +794,7 @@ describe('semantic tracking observer', () => {
 
     expect(firstSuccess.value).toBe('complete');
     expect(firstSuccess.observations.map(item => item.kind).sort())
-      .toEqual(['collection-order', 'materialized-output', 'projection']);
+      .toEqual(['collection-order', 'fact', 'materialized-output', 'projection']);
     expect(cachedSuccess.observations.map(item => item.fingerprint))
       .toEqual(firstSuccess.observations.map(item => item.fingerprint));
     expect(successCalls).toBe(1);
@@ -825,7 +826,7 @@ describe('semantic tracking observer', () => {
 
     expect(firstFailure.value).toBe('caught');
     expect(firstFailure.observations.map(item => item.kind).sort())
-      .toEqual(['collection-order', 'materialized-output', 'projection']);
+      .toEqual(['collection-order', 'fact', 'materialized-output', 'projection']);
     expect(cachedFailure.observations.map(item => item.fingerprint))
       .toEqual(firstFailure.observations.map(item => item.fingerprint));
     expect(failureCalls).toBe(1);

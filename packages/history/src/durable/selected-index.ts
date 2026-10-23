@@ -470,7 +470,7 @@ export function createSelectedIndex(connection: ISqliteConnection, host: ISha256
     return value;
   }
 
-  /** Answer a presence, length or key-order fact from metadata alone. */
+  /** Answer a container kind, presence, length or key-order fact from metadata alone. */
   function metadataFact(resultId: number, operation: Exclude<IOperation, 'value'>, address: readonly IAddressSegment[]): ISelectedFact {
     const metadata = metadataAt(resultId, address);
     if (metadata === undefined) {
@@ -478,6 +478,8 @@ export function createSelectedIndex(connection: ISqliteConnection, host: ISha256
       return absoluteFact(operation, address, observe(stand, remainder, operation).fact);
     }
     switch (operation) {
+      case 'container-kind':
+        return absoluteFact(operation, address, metadata.kind);
       case 'own':
       case 'membership':
         if (address.length === 0) {

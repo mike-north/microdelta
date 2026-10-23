@@ -308,8 +308,9 @@ describe('selected materialization', () => {
 
     expect(passThrough.observations).toHaveLength(0);
     expect(output.value).toEqual({ color: 'blue', extra: 'preserved' });
-    expect(output.observations).toHaveLength(1);
-    expect(output.observations[0]).toMatchObject({ kind: 'materialized-output', address: [{ kind: 'property', key: 'profile' }] });
+    expect(output.observations).toHaveLength(2);
+    expect(output.observations[0]?.operation).toBe('container-kind');
+    expect(output.observations[1]).toMatchObject({ kind: 'materialized-output', address: [{ kind: 'property', key: 'profile' }] });
     expect(tracking.materialization.owns(output.value)).toBe(false);
   });
 

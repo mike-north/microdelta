@@ -70,8 +70,8 @@ describe('observed untracked reads', () => {
     const inputs = observer.tracked(config, binding);
     const captured = observer.capture(() => observer.untracked(inputs.rubric, 'prompt'));
     expect(captured.value).toBe('v1');
-    expect(kinds(captured.observations)).toEqual(['untracked-read']);
-    const [read] = captured.observations;
+    expect(kinds(captured.observations)).toEqual(['fact', 'untracked-read']);
+    const read = captured.observations.find((item) => item.kind === 'untracked-read');
     expect(read?.binding.path).toEqual(['inputs']);
     expect(read?.address).toEqual([{ kind: 'property', key: 'rubric' }, { kind: 'property', key: 'prompt' }]);
     expect(read?.selection).toEqual({ kind: 'untracked-read', address: read?.address, encodingVersion: 'MDU1' });
@@ -86,8 +86,8 @@ describe('observed untracked reads', () => {
     const inputs = observer.tracked(config, binding);
     const captured = observer.capture(() => [observer.untracked(inputs.rubric.weights, 0), observer.untracked(inputs.rubric.weights, 'length')]);
     expect(captured.value).toEqual([2, 2]);
-    expect(kinds(captured.observations)).toEqual(['untracked-read', 'untracked-read']);
-    expect(captured.observations.map((item) => item.address)).toEqual([
+    expect(kinds(captured.observations)).toEqual(['fact', 'fact', 'untracked-read', 'untracked-read']);
+    expect(captured.observations.filter((item) => item.kind === 'untracked-read').map((item) => item.address)).toEqual([
       [{ kind: 'property', key: 'rubric' }, { kind: 'property', key: 'weights' }, { kind: 'index', index: 0 }],
       [{ kind: 'property', key: 'rubric' }, { kind: 'property', key: 'weights' }, { kind: 'property', key: 'length' }],
     ]);
@@ -100,7 +100,7 @@ describe('observed untracked reads', () => {
       observer.untracked(inputs.rubric, 'prompt');
       return inputs.rubric.prompt;
     });
-    expect(kinds(captured.observations)).toEqual(['untracked-read', 'fact']);
+    expect(kinds(captured.observations)).toEqual(['fact', 'untracked-read', 'fact']);
   });
 
   test('untrackedReadObserved reports reads made so far in the active capture only', async () => {
@@ -140,7 +140,7 @@ describe('observed untracked reads', () => {
       const inner = observer.capture(() => observer.untracked(inputs.rubric, 'prompt'));
       return { inner: inner.observations.length, outerTainted: observer.untrackedReadObserved() };
     });
-    expect(outer.value).toEqual({ inner: 1, outerTainted: false });
+    expect(outer.value).toEqual({ inner: 2, outerTainted: false });
     expect(outer.observations).toEqual([]);
   });
 
@@ -153,7 +153,7 @@ describe('observed untracked reads', () => {
       return { value, tainted: observer.untrackedReadObserved() };
     });
     expect(captured.value).toEqual({ value: 'v1', tainted: true });
-    expect(kinds(captured.observations)).toEqual(['untracked-read']);
+    expect(kinds(captured.observations)).toEqual(['fact', 'untracked-read']);
   });
 
   test('outside any capture an untracked read returns the value and records nothing', () => {
@@ -167,7 +167,9 @@ describe('observed untracked reads', () => {
     const captured = observer.capture(() => observer.untracked(inputs.rubric, 'prompt'));
     let asked = 0;
     const counting: ICurrentFactProvider = { resolve: (...request) => { asked += 1; return nothingCurrent.resolve(...request); } };
-    expect(observer.compareCurrent(captured, counting)).toEqual({ kind: 'equal' });
+    // Navigation remains a tracked shape read; only the scalar untracked evidence is skipped.
+    const scalarOnly = { value: captured.value, observations: captured.observations.filter((item) => item.kind === 'untracked-read') };
+    expect(observer.compareCurrent(scalarOnly, counting)).toEqual({ kind: 'equal' });
     expect(asked).toBe(0);
   });
 
@@ -176,7 +178,7 @@ describe('observed untracked reads', () => {
     const view = observer.materialization.lazyView<{ readonly profile: { readonly name: string; readonly id: string }; readonly notes: string }>({ path: ['child'] }, source);
     const captured = observer.capture(() => observer.untracked(view.profile, 'name'));
     expect(captured.value).toBe('Ada');
-    expect(kinds(captured.observations)).toEqual(['untracked-read']);
+    expect(kinds(captured.observations)).toEqual(['fact', 'untracked-read']);
     expect(captured.observations[0]?.binding.path).toEqual(['child']);
     expect(requests.some((request) => request.includes('notes'))).toBe(false);
     expect(requests.some((request) => request.startsWith('subtree'))).toBe(false);
@@ -231,4 +233,18 @@ describe('observed untracked reads', () => {
     expect(errors).toHaveLength(2);
     expect(errors.every((error) => error instanceof Error && /closed/iu.test(error.message))).toBe(true);
   });
+});
+
+/** Untracked scalar edits stay irrelevant while ordinary container acquisition remains a tracked guard. */
+test('untracked prompt value changes preserve comparison, but losing its container does not', () => {
+  const observer = createTrackingObserver(machine);
+  const inputs = observer.tracked({ rubric: { prompt: 'before' } }, { path: ['inputs'] });
+  const captured = observer.capture(() => observer.untracked(inputs.rubric, 'prompt'));
+  const provider = (root: unknown): ICurrentFactProvider => ({ resolve(_binding, request) {
+    return request.kind === 'selected'
+      ? { kind: 'available', fact: observe(root, request.address, request.operation) }
+      : { kind: 'unavailable' };
+  } });
+  expect(observer.compareCurrent(captured, provider({ rubric: { prompt: 'after' } })).kind).toBe('equal');
+  expect(observer.compareCurrent(captured, provider({ rubric: null })).kind).toBe('changed');
 });

@@ -315,7 +315,7 @@ export class InvalidStorePatchError extends Error {
 }
 
 // @alpha
-export type IOperation = 'value' | 'own' | 'membership' | 'length' | 'keys';
+export type IOperation = 'value' | 'own' | 'membership' | 'length' | 'keys' | 'container-kind';
 
 // @alpha
 export interface IOperationJournal {

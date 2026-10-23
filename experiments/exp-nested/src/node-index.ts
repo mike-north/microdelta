@@ -466,6 +466,8 @@ export function openCandidateNodeIndex(options: ICandidateNodeIndexOptions): ICa
       return absoluteFact(operation, address, observe(stand, remainder, operation).fact);
     }
     switch (operation) {
+      case 'container-kind':
+        return absoluteFact(operation, address, metadata.kind);
       case 'own':
       case 'membership':
         if (address.length === 0) {

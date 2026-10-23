@@ -23,8 +23,9 @@ describe('explicit tracked-output observation', () => {
     const outputCapture = observer.capture(() => observer.snapshotOutput(tracked.profile));
     expect(outputCapture.value).toEqual({ name: 'Ada', tags: ['author'] });
     expect(observer.materialization.owns(outputCapture.value)).toBe(false);
-    expect(outputCapture.observations).toHaveLength(1);
-    expect(outputCapture.observations[0]).toMatchObject({ kind: 'materialized-output', address: [{ kind: 'property', key: 'profile' }] });
+    expect(outputCapture.observations).toHaveLength(2);
+    expect(outputCapture.observations[0]?.operation).toBe('container-kind');
+    expect(outputCapture.observations[1]).toMatchObject({ kind: 'materialized-output', address: [{ kind: 'property', key: 'profile' }] });
     expect(Object.isFrozen(outputCapture.value)).toBe(true);
   });
 

@@ -830,7 +830,11 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
     },
   }, machine);
 
-  /** Select an object or array member without turning navigation into a whole-value fact. */
+  /**
+   * Select one member. A container result consumes only its kind, because
+   * truthiness, null comparison and typeof cannot trigger a later Proxy trap.
+   * Kind evidence never includes members, array length, identity or payload.
+   */
   function wrapContainer(binding: IBindingRecord, root: object, value: object, address: readonly IAddressSegment[]): object {
     const target: object = Array.isArray(value) ? [] : Object.create(null) as object;
     const proxy = new Proxy(target, {
@@ -857,6 +861,7 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
           throw new TypeError('Functions as data fields are unsupported; wrap a callable binding directly');
         }
         if (selected !== null && typeof selected === 'object') {
+          recordFact(binding, root, nextAddress, 'container-kind');
           return wrapContainer(binding, root, selected, nextAddress);
         }
         return recordFact(binding, root, nextAddress, 'value').fact;
@@ -904,7 +909,9 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
   /**
    * Wrap one navigated container from a lazy source. Traps mirror
    * {@link wrapContainer} operation for operation, but each read asks the
-   * source for exactly one node or fact at its full address, after first
+   * source for exactly one node or fact at its full address. Container nodes
+   * contribute the same bounded kind evidence as local navigation, without
+   * requesting their payload or length. Reads first
    * rejecting work inherited from a closed frame.
    */
   function wrapLazy(binding: IBindingRecord, root: ILazyRoot, node: ILazyProxyRecord['node']): object {
@@ -927,6 +934,7 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
           recordLazyFact(binding, next.selected);
           return next.selected.fact;
         }
+        recordLazyFact(binding, { operation: 'container-kind', address: nextAddress, fact: next.kind });
         return wrapLazy(binding, root, next);
       },
       has(_target, key): boolean {

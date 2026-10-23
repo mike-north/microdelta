@@ -25,8 +25,13 @@ export type IAddressSegment =
   /** A positional array lookup; it does not designate a logical member identity. */
   | { readonly kind: 'index'; readonly index: number };
 
-/** @alpha A supported JavaScript observation operation with its own fact meaning. */
-export type IOperation = 'value' | 'own' | 'membership' | 'length' | 'keys';
+/**
+ * A supported observation operation with its own fact meaning. `container-kind`
+ * answers record, array or scalar without consuming any container member or
+ * scalar content; ordinary scalar reads still retain their literal values.
+ * @alpha
+ */
+export type IOperation = 'value' | 'own' | 'membership' | 'length' | 'keys' | 'container-kind';
 
 /**
  * One immediate lookup result for a caller-supplied root, address, and
@@ -557,6 +562,10 @@ function observeAt(
   operation: IOperation,
   rootPath: string,
 ): ISelectedFact {
+  // Container navigation consumes only this bounded discriminant, never its payload.
+  if (operation === 'container-kind') {
+    return { operation, address, fact: navigate(root, address).kind };
+  }
   let targetPath = rootPath;
   if (operation === 'length' || operation === 'keys') {
     let target = root;
@@ -615,7 +624,8 @@ function observeAt(
  * a lazy view, never a whole-object observation, so no member, identity or
  * serialized subtree is implied. Array length is carried so a view need not ask
  * again, but it becomes observation evidence only when a consumer reads it.
- * Shapes are never placed inside {@link ISelectedFact.fact}.
+ * Shape envelopes are never placed inside {@link ISelectedFact.fact}; Tracking
+ * may separately observe the bounded `container-kind` discriminant.
  * @alpha
  */
 export type ISelectedNode =
@@ -772,7 +782,8 @@ export function normalizeSelectedNode(candidate: unknown): ISelectedNode {
  * returns to an author or records as evidence is precisely what was
  * validated. Accessors never run; arrays with iteration, method or prototype
  * behavior of their own are rejected. Presence facts must be booleans, length
- * facts nonnegative integers and key facts dense unique strings; a `value`
+ * facts nonnegative integers, key facts dense unique strings, and container-kind
+ * facts one bounded record/array/scalar discriminant; a `value`
  * fact is a supported scalar or a supported container detached as an
  * immutable snapshot. Whether the fact answers the operation and address a
  * caller requested is the caller's check.
@@ -784,6 +795,11 @@ export function normalizeSelectedFact(candidate: unknown): ISelectedFact {
   const address = copyEnvelopeAddress(fields.get('address'), 'Selected fact address');
   const fact = fields.get('fact');
   switch (operation) {
+    case 'container-kind':
+      if (fact !== 'record' && fact !== 'array' && fact !== 'scalar') {
+        throw new TypeError('A container-kind fact must identify a record, array or scalar');
+      }
+      return Object.freeze({ operation, address, fact });
     case 'value':
       return Object.freeze({ operation, address, fact: isScalar(fact) ? fact : decodeSnapshot(encodeSnapshot(fact)) });
     case 'own':
@@ -877,6 +893,11 @@ export function encodeSelectedFact(selectedFact: ISelectedFact): string {
     }
   }
   switch (selectedFact.operation) {
+    case 'container-kind':
+      if (selectedFact.fact !== 'record' && selectedFact.fact !== 'array' && selectedFact.fact !== 'scalar') {
+        throw new TypeError('Container-kind observation needs a record, array or scalar fact');
+      }
+      break;
     case 'value':
       break;
     case 'own':

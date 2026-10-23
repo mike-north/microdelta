@@ -148,6 +148,16 @@ observed inputs, and source acceptance policy. An old reference alone proves
 neither present eligibility nor freshness. Exact historical reads remain valid
 independently of whether a snapshot is reusable for current execution.
 
+**Tracking evidence compatibility.** New Resolution provenance records identify
+`trackingSemantics: 2` for every source, memo, supplied step, and fold shape.
+Earlier or unknown generations cannot establish complete container-guard evidence
+and are unsupported reuse candidates before current-fact comparison or finality.
+Their exact historical results and operation journals remain readable; History's
+schema does not change. The first current resolution may recompute earlier work,
+including computational children whose prior payload came from a paid operation,
+subject to the normal execution and operation permissions. No inference from an
+empty or apparently scalar-only old observation set may bypass this boundary.
+
 Memoized work may intentionally retain a nondeterministic observation, such as
 an LLM output. The contract does not require all author calculations to be pure
 or deterministic. Influences intended to invalidate reuse must enter through

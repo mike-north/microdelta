@@ -60,6 +60,7 @@ The table is normative; examples name JavaScript semantics, not final API spelli
 | `pr.author.name` | Value at the current bound path | Author ID, unread author fields, whole PR | Replace author, preserve name: equal observation |
 | `obj.optional` / comparison to `undefined` | Returned value | Property existence as separate fact | Missing and present-undefined compare equal for this read |
 | `if (obj.flag)` | Actual flag value | Merely its boolean coercion result | `0` to `''` changes value even though both are falsey |
+| Navigate to a record or array | Bounded container kind (record, array, or scalar on replay) | Members, length, identity, or whole payload | Record→null/missing invalidates; equal-kind replacement preserves unread-member precision |
 | Own-property check | Whether this object owns that key | Inherited existence or sibling keys | Own absent to inherited present remains own-absent |
 | Inherited membership check (`in`) | Presence along the supported lookup chain | Value at that key or all other keys | Present-undefined still present; own→inherited can stay present |
 | Single keyed-member presence | Membership of that one key | Unrelated keys, values or cardinality | Adding another member preserves this observation |
@@ -69,7 +70,7 @@ The table is normative; examples name JavaScript semantics, not final API spelli
 | Keyed member field | Projection under stable member key | Traversal position | Reorder alone preserves per-member assessment |
 | Ordered ranking/list | Selected ordered sequence | Unselected member fields | Rank change invalidates ranking consumers |
 | Explicit identity read | Designated logical identity value | Whole entity content | Equal names with different IDs invalidate identity consumer |
-| Pass object to another function | Nothing beyond what callee/materialization consumes | Automatic deep traversal | Callee reads one leaf: unread siblings remain irrelevant |
+| Pass object to another function | Bounded navigation kind, plus what callee/materialization consumes | Automatic deep traversal | Callee reads one leaf: unread siblings remain irrelevant |
 | Materialize/return data as result | Actual selected output values/references | All reachable but unreturned data | Pass-through output cannot escape dependency tracking |
 | Invoke tracked function | Implementation evidence plus observed internal reads | Uncalled functions' code | Uncalled helper edit does not invalidate caller |
 

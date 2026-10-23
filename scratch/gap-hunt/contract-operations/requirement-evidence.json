@@ -1086,13 +1086,19 @@
       "requirement": "RES-001",
       "classification": "bounded-aligned-with-residual-evidence-gap",
       "meaning": "Renamed display labels and reversed registration retain exact member references.",
-      "residual": "Opaque-subject collisions across every scope/string variant are not all asserted here.",
+      "residual": "Bounded exact-string controls prove six independent histories, including scope case and subject whitespace/case/composed-vs-decomposed Unicode. Exhaustive string combinations and all multi-branch participation shapes are not claimed or invented as additional requirements.",
       "executedAssertionIds": [
         400,
         401,
         402,
         403
-      ]
+      ],
+      "supplementalNamedAssertions": {
+        "suite": "packages/core/test/gap-hunt-durability-subject-scope.test.ts",
+        "log": "scratch/gap-hunt/contract-operations/subject-scope.log",
+        "outcome": "1 passed",
+        "name": "same subject in distinct exact scopes and distinct exact subject strings keep independent histories after reopen"
+      }
     },
     {
       "requirement": "RES-002",

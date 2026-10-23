@@ -1,0 +1,315 @@
+[
+  {
+    "name": "install",
+    "argv": [
+      "npm",
+      "ci",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "environment": {},
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "build",
+    "argv": [
+      "npm",
+      "run",
+      "build:packages"
+    ],
+    "environment": {},
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "environment-helper",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "tooling/context-lifecycle-env.test.mjs"
+    ],
+    "environment": {},
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "current-node24",
+    "argv": [
+      "<node24>",
+      "scratch/gap-hunt/scale/repro-context-component.mjs"
+    ],
+    "environment": {
+      "GAP_HUNT_REUSE_BUILD": "1"
+    },
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "current-node24-census",
+    "argv": [
+      "<node24>",
+      "--expose-gc",
+      "scratch/gap-hunt/scale/dist/context-consumer.js",
+      "component"
+    ],
+    "environment": {
+      "CONTEXT_RUNS": "300",
+      "CONTEXT_BATCH": "100",
+      "CONTEXT_CONFIRM": "1"
+    },
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "current-node24-gate-inherited",
+    "argv": [
+      "<node24>",
+      "--test",
+      "--test-reporter=tap",
+      "tooling/context-lifecycle.test.mjs"
+    ],
+    "environment": {
+      "CONTEXT_COMPONENT_ISOLATED": "1"
+    },
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "current-node26",
+    "argv": [
+      "<node26>",
+      "scratch/gap-hunt/scale/repro-context-component.mjs"
+    ],
+    "environment": {
+      "GAP_HUNT_REUSE_BUILD": "1"
+    },
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "current-node26-census",
+    "argv": [
+      "<node26>",
+      "--expose-gc",
+      "scratch/gap-hunt/scale/dist/context-consumer.js",
+      "component"
+    ],
+    "environment": {
+      "CONTEXT_RUNS": "300",
+      "CONTEXT_BATCH": "100",
+      "CONTEXT_CONFIRM": "1"
+    },
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "current-node26-gate-inherited",
+    "argv": [
+      "<node26>",
+      "--test",
+      "--test-reporter=tap",
+      "tooling/context-lifecycle.test.mjs"
+    ],
+    "environment": {
+      "CONTEXT_COMPONENT_ISOLATED": "1"
+    },
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "old-host-build",
+    "argv": [
+      "npm",
+      "run",
+      "build",
+      "--workspace",
+      "@microdelta/machine-node"
+    ],
+    "environment": {},
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "old-node24-negative",
+    "argv": [
+      "<node24>",
+      "scratch/gap-hunt/scale/repro-context-component.mjs"
+    ],
+    "environment": {
+      "GAP_HUNT_REUSE_BUILD": "1"
+    },
+    "exit": 1,
+    "expected": 1
+  },
+  {
+    "name": "old-node24-external-control",
+    "argv": [
+      "<node24>",
+      "scratch/gap-hunt/scale/repro-context-component.mjs"
+    ],
+    "environment": {
+      "GAP_HUNT_REUSE_BUILD": "1",
+      "CONTEXT_COMPONENT_ISOLATED": "1"
+    },
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "old-node24-gate-default",
+    "argv": [
+      "<node24>",
+      "--test",
+      "--test-reporter=tap",
+      "tooling/context-lifecycle.test.mjs"
+    ],
+    "environment": {},
+    "exit": 1,
+    "expected": 1
+  },
+  {
+    "name": "old-node24-gate-inherited",
+    "argv": [
+      "<node24>",
+      "--test",
+      "--test-reporter=tap",
+      "tooling/context-lifecycle.test.mjs"
+    ],
+    "environment": {
+      "CONTEXT_COMPONENT_ISOLATED": "1"
+    },
+    "exit": 1,
+    "expected": 1
+  },
+  {
+    "name": "old-node26-negative",
+    "argv": [
+      "<node26>",
+      "scratch/gap-hunt/scale/repro-context-component.mjs"
+    ],
+    "environment": {
+      "GAP_HUNT_REUSE_BUILD": "1"
+    },
+    "exit": 1,
+    "expected": 1
+  },
+  {
+    "name": "old-node26-external-control",
+    "argv": [
+      "<node26>",
+      "scratch/gap-hunt/scale/repro-context-component.mjs"
+    ],
+    "environment": {
+      "GAP_HUNT_REUSE_BUILD": "1",
+      "CONTEXT_COMPONENT_ISOLATED": "1"
+    },
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "old-node26-gate-default",
+    "argv": [
+      "<node26>",
+      "--test",
+      "--test-reporter=tap",
+      "tooling/context-lifecycle.test.mjs"
+    ],
+    "environment": {},
+    "exit": 1,
+    "expected": 1
+  },
+  {
+    "name": "old-node26-gate-inherited",
+    "argv": [
+      "<node26>",
+      "--test",
+      "--test-reporter=tap",
+      "tooling/context-lifecycle.test.mjs"
+    ],
+    "environment": {
+      "CONTEXT_COMPONENT_ISOLATED": "1"
+    },
+    "exit": 1,
+    "expected": 1
+  },
+  {
+    "name": "old-gate-old-host-inherited-control",
+    "argv": [
+      "<node24>",
+      "--test",
+      "--test-reporter=tap",
+      "tooling/context-lifecycle.test.mjs"
+    ],
+    "environment": {
+      "CONTEXT_COMPONENT_ISOLATED": "1"
+    },
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "restored-host-build",
+    "argv": [
+      "npm",
+      "run",
+      "build",
+      "--workspace",
+      "@microdelta/machine-node"
+    ],
+    "environment": {},
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "restored-node24",
+    "argv": [
+      "<node24>",
+      "scratch/gap-hunt/scale/repro-context-component.mjs"
+    ],
+    "environment": {
+      "GAP_HUNT_REUSE_BUILD": "1"
+    },
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "restored-node24-gate-inherited",
+    "argv": [
+      "<node24>",
+      "--test",
+      "--test-reporter=tap",
+      "tooling/context-lifecycle.test.mjs"
+    ],
+    "environment": {
+      "CONTEXT_COMPONENT_ISOLATED": "1"
+    },
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "restored-node26",
+    "argv": [
+      "<node26>",
+      "scratch/gap-hunt/scale/repro-context-component.mjs"
+    ],
+    "environment": {
+      "GAP_HUNT_REUSE_BUILD": "1"
+    },
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "restored-node26-gate-inherited",
+    "argv": [
+      "<node26>",
+      "--test",
+      "--test-reporter=tap",
+      "tooling/context-lifecycle.test.mjs"
+    ],
+    "environment": {
+      "CONTEXT_COMPONENT_ISOLATED": "1"
+    },
+    "exit": 0,
+    "expected": 0
+  }
+]

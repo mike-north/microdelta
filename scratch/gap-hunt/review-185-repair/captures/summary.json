@@ -1,0 +1,62 @@
+{
+  "head": "25b8f3f58f295ca3e985126546e79b223ce0ebd4",
+  "reviewed_pin": "25b8f3f58f295ca3e985126546e79b223ce0ebd4",
+  "prior_gate_pin": "aad9b93f23fb38b1cf1387e2f865c5490fc2b434",
+  "old_host_pin": "471c1d47ef3dc0700e36d8da2adca7e02534570b",
+  "original_fixture_pin": "04ff7ee680f48e6436abb92153601cec7ec1a828",
+  "original_fixture_count": 9,
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "machine": "arm64",
+  "node_versions": {
+    "node24": "v24.22.1",
+    "node26": "v26.12.0"
+  },
+  "current": {
+    "node24": {
+      "node": "v24.22.1",
+      "observed": [
+        100,
+        200,
+        300
+      ],
+      "liveALS": [
+        2,
+        2,
+        2
+      ],
+      "confirmed": true
+    },
+    "node26": {
+      "node": "v26.12.0",
+      "observed": [
+        100,
+        200,
+        300
+      ],
+      "liveALS": [
+        2,
+        2,
+        2
+      ],
+      "confirmed": true
+    }
+  },
+  "old_host": {
+    "original_component": "1 semantic pass,1 retention failure;growth200",
+    "external_control": "2pass",
+    "repaired_gate_default_exit": 1,
+    "repaired_gate_inherited_exit": 1,
+    "prior_gate_inherited_exit": 0
+  },
+  "restored": {
+    "source_byte_exact": true,
+    "gate_byte_exact": true,
+    "component": "2pass per host",
+    "inherited_gate_exit": 0
+  },
+  "source_sha256": "ef4093bd9085e1546397e20828bbb2ac6398e94b17cd8a41e843f806ade6eaee",
+  "old_source_sha256": "9eeb7c2988116433c9109cdf4043e3893427961729e64eb99b02dbefcfc97356",
+  "gate_sha256": "f51e654bada1bd65e7d0a84ac2e0fedc5efbe73452a1bd0790e2055f11e442f4",
+  "verdict": "PASS bounded inherited-isolation gate repair",
+  "scope": "Actual recorded OS and supplied Node24/optional26 only; no broad owner-suite rerun, Node22/Linux/universal heap or whole-CI claim"
+}

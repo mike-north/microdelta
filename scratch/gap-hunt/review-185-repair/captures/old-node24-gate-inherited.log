@@ -1,0 +1,62 @@
+TAP version 13
+# Subtest: completed standalone captures do not retain one host context per entry
+not ok 1 - completed standalone captures do not retain one host context per entry
+  ---
+  duration_ms: 2352.499792
+  type: 'test'
+  location: '<checkout>/tooling/context-lifecycle.test.mjs:22:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    $ <node24> node_modules/typescript/bin/tsc -p scratch/gap-hunt/scale/tsconfig.context-consumer.json
+    $ <node24> node_modules/eslint/bin/eslint.js --config scratch/gap-hunt/scale/context-consumer.eslint.config.mjs scratch/gap-hunt/scale/context-consumer.ts
+    $ <node24> --experimental-vm-modules node_modules/jest/bin/jest.js --config scratch/gap-hunt/scale/context-component.jest.config.mjs --runInBand
+
+    (node:84813) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+    (Use `node --trace-warnings ...` to show where the warning was created)
+    FAIL scratch/gap-hunt/scale/context-component.test.mjs
+      ● completed fresh captures leave a bounded continuing caller context
+
+        expect(received).toBeLessThanOrEqual(expected)
+
+        Expected: <= 4
+        Received:    200
+
+          18 |   // Permit a small finite diagnostic/runtime allowance, but never one new ALS per capture.
+          19 |   // Compare batches rather than imposing a platform-independent absolute count.
+        > 20 |   expect(rows[2].liveALS - rows[0].liveALS).toBeLessThanOrEqual(4);
+             |                                             ^
+          21 | });
+          22 |
+
+          at Object.<anonymous> (scratch/gap-hunt/scale/context-component.test.mjs:20:45)
+
+    Test Suites: 1 failed, 1 total
+    Tests:       1 failed, 1 passed, 2 total
+    Snapshots:   0 total
+    Time:        0.413 s, estimated 1 s
+    Ran all test suites.
+
+
+    1 !== 0
+
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<checkout>/tooling/context-lifecycle.test.mjs:33:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.start (node:internal/test_runner/test:1262:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 0
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2408.776

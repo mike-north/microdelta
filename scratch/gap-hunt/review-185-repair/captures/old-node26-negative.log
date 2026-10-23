@@ -1,0 +1,27 @@
+$ <node26> node_modules/typescript/bin/tsc -p scratch/gap-hunt/scale/tsconfig.context-consumer.json
+$ <node26> node_modules/eslint/bin/eslint.js --config scratch/gap-hunt/scale/context-consumer.eslint.config.mjs scratch/gap-hunt/scale/context-consumer.ts
+$ <node26> --experimental-vm-modules node_modules/jest/bin/jest.js --config scratch/gap-hunt/scale/context-component.jest.config.mjs --runInBand
+(node:85038) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL scratch/gap-hunt/scale/context-component.test.mjs
+  ● completed fresh captures leave a bounded continuing caller context
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 4
+    Received:    200
+
+      18 |   // Permit a small finite diagnostic/runtime allowance, but never one new ALS per capture.
+      19 |   // Compare batches rather than imposing a platform-independent absolute count.
+    > 20 |   expect(rows[2].liveALS - rows[0].liveALS).toBeLessThanOrEqual(4);
+         |                                             ^
+      21 | });
+      22 |
+
+      at Object.<anonymous> (scratch/gap-hunt/scale/context-component.test.mjs:20:45)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 passed, 2 total
+Snapshots:   0 total
+Time:        0.397 s, estimated 1 s
+Ran all test suites.

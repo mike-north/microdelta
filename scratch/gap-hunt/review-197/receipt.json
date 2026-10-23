@@ -1,0 +1,122 @@
+{
+  "source": "b5bf8275e1f724aa5d5233d5023729d5430d90d0",
+  "freshCheckout": true,
+  "preexistingNodeModules": false,
+  "inheritedReuseFlag": null,
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "node": "v24.22.1",
+  "initialCommands": [
+    {
+      "name": "install",
+      "argv": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "exit": 0
+    },
+    {
+      "name": "build",
+      "argv": [
+        "npm",
+        "run",
+        "build:packages"
+      ],
+      "exit": 0
+    },
+    {
+      "name": "fixtures",
+      "argv": [
+        "npm",
+        "run",
+        "build:fixtures"
+      ],
+      "exit": 0
+    },
+    {
+      "name": "compile",
+      "argv": [
+        "node",
+        "node_modules/typescript/bin/tsc",
+        "-p",
+        "packages/core/tsconfig.test.json"
+      ],
+      "exit": 0
+    },
+    {
+      "name": "lint",
+      "argv": [
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "packages/core/test/gap-hunt-contracts-resolution-144.test.ts",
+        "packages/core/test/resolution/controls/resolution-mutation-controls.mjs",
+        "packages/core/test/resolution/controls/resolution-mutation-controls.test.mjs"
+      ],
+      "exit": 0
+    },
+    {
+      "name": "anchors",
+      "argv": [
+        "node",
+        "packages/core/test/resolution/controls/resolution-mutation-controls.mjs",
+        "--check-anchors"
+      ],
+      "exit": 0
+    },
+    {
+      "name": "witness",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "packages/core/jest.config.mjs",
+        "--runInBand",
+        "--runTestsByPath",
+        "packages/core/.test-build/test/gap-hunt-contracts-resolution-144.test.js"
+      ],
+      "exit": 0
+    },
+    {
+      "name": "cleanup",
+      "argv": [
+        "node",
+        "--test",
+        "packages/core/test/resolution/controls/resolution-mutation-controls.test.mjs"
+      ],
+      "exit": 0
+    },
+    {
+      "name": "controls",
+      "argv": [
+        "node",
+        "packages/core/test/resolution/controls/resolution-mutation-controls.mjs"
+      ],
+      "exit": 0
+    }
+  ],
+  "canonicalControls": 34,
+  "canonicalBaseline": 78,
+  "canonicalRestored": 78,
+  "addedControlsEachFailExactlyOneMatchingWitness": true,
+  "originalThreeBaseline": 73,
+  "originalThreeRestored": 73,
+  "originalThreeFivePlantsEachFailing": 0,
+  "cleanupCurrentPass": true,
+  "cleanupImmediatePreFix": "c2fc173a961f361b9a744c705609664477be1722",
+  "cleanupImmediatePreFixFailure": "the interrupted runner must remove its isolated checkout",
+  "cleanupRestoredPass": true,
+  "witnessRestoredPass": true,
+  "invalidWhole5e3Negative": "failed early at isolated-checkout census; excluded from cleanup acceptance; source runner restored and emitted packages rebuilt",
+  "trackedClean": true,
+  "sourceHashes": {
+    "packages/core/package.json": "95686859c7b8f4eab272ffc50f27061b332685ec7a9ea6aec03f351dd85af67a",
+    "packages/core/test/gap-hunt-contracts-resolution-144.test.ts": "f6fa83bb2b29cf7d94686f8dfc1a945532fdaa90fb1ec73dbdec793f4f4e4148",
+    "packages/core/test/resolution/controls/resolution-mutation-controls.mjs": "8332a2c17d6fad84be22f41ef25c6219a4bc6a54584434e1414ec04b944ef80e",
+    "packages/core/test/resolution/controls/resolution-mutation-controls.test.mjs": "89683ef757f7ed59bb04d3569538e8b90894a07c07152e3a9dc1c1ca8051d7c6"
+  },
+  "runtimeExecutedAt": "b5bf8275e1f724aa5d5233d5023729d5430d90d0",
+  "evidenceCommitRuntimeRepeated": false,
+  "limitation": "Fresh runtime execution at exact PR source; publication files are subsequent report-only additions, not a separately executed final evidence commit"
+}

@@ -1,0 +1,241 @@
+baseline: 78 tests, 0 failing
+
+## source candidates skip their own implementation and input validation: 3 failing
+- read and unread facts, called and uncalled helpers a changed child implementation is validated beneath the unchanged summary and cut off at equal consumed output
+- current finality after restart a changed retrieval implementation is ineligible even though the current hook would accept: hook runs zero times
+- current finality after restart a changed consumed input makes the candidate ineligible before finality
+
+## a false finality answer retains: 18 failing
+- read and unread facts, called and uncalled helpers a fresh source changing only unread fields publishes a new child but retains the summary
+- read and unread facts, called and uncalled helpers a consumed field change re-executes only its own summary; the other member retains its exact result
+- async child delivery delivering a child records no Promise-assimilation read; an unread then field change retains the summary
+- async child delivery a deliberate author read of a then data field is ordinary evidence
+- compatibility versions and current path rebinding version 1 rollback with changed consumed evidence misses and executes
+- compatibility versions and current path rebinding an equal-name replacement profile retains the summary; a later name change invalidates; original provenance stays intact
+- current finality after restart a false hook enters the check with the eligible carrier; fresh equal data is a distinct publication
+- current finality after restart a check that read its previous result stays eligible later: previous reads are history, not current inputs
+- policy and control failures are never success retaining a carrier look-alike fails, abandons its attempt and leaves the eligible result current
+- policy and control failures are never success returning an envelope-shaped payload fails, abandons its attempt and leaves the eligible result current
+- policy and control failures are never success returning raw data fails, abandons its attempt and leaves the eligible result current
+- policy and control failures are never success a throwing check fails, abandons its attempt and leaves the eligible result current
+- policy and control failures are never success a carrier from an earlier invocation cannot be retained by a later one
+- admission after reuse and before claims a denied summary miss is refused with no claim, attempt or body; its child work was admitted independently
+- admission after reuse and before claims denied source work needed for validation refuses the summary without any attempt
+- check-only evaluation needed source work stops at that boundary with downstream uncertainty and no source check
+- explicit recovery by saved request key a normal retry with an already committed key is rejected before admission, never served as new work
+- lifecycle observers a child publication observer failure beneath a cached parent is reported once, even when the executing body shares the child
+
+## a throwing finality hook becomes acceptance: 2 failing
+- child failures inside a body a body that swallows a failed child call cannot publish: the child failure fails the summary
+- policy and control failures are never success a throwing hook fails current validation without checks, acceptance or publication
+
+## a non-boolean finality answer is accepted: 1 failing
+- policy and control failures are never success a non-boolean hook answer is a policy failure, not acceptance
+
+## retention is not tied to its own eligible carrier: 2 failing
+- policy and control failures are never success retaining a carrier look-alike fails, abandons its attempt and leaves the eligible result current
+- policy and control failures are never success a carrier from an earlier invocation cannot be retained by a later one
+
+## look-alike envelopes are treated as controls: 2 failing
+- policy and control failures are never success returning an envelope-shaped payload fails, abandons its attempt and leaves the eligible result current
+- policy and control failures are never success returning raw data fails, abandons its attempt and leaves the eligible result current
+
+## previous-result reads are validated as current inputs: 1 failing
+- current finality after restart a check that read its previous result stays eligible later: previous reads are history, not current inputs
+
+## consumed child output facts are not compared: 7 failing
+- read and unread facts, called and uncalled helpers a consumed field change re-executes only its own summary; the other member retains its exact result
+- async child delivery a deliberate author read of a then data field is ordinary evidence
+- compatibility versions and current path rebinding version 1 rollback with changed consumed evidence misses and executes
+- compatibility versions and current path rebinding an equal-name replacement profile retains the summary; a later name change invalidates; original provenance stays intact
+- correspondence, witnesses and historical integrity a different subject in the child slot with a changed consumed fact misses and executes
+- admission after reuse and before claims a denied summary miss is refused with no claim, attempt or body; its child work was admitted independently
+- lifecycle observers a child publication observer failure beneath a cached parent is reported once, even when the executing body shares the child
+
+## unsupported witnesses are guessed as correspondence: 3 failing
+- correspondence, witnesses and historical integrity an unknown witness version is an honest miss, never guessed; older valid candidates remain usable
+- correspondence, witnesses and historical integrity an unsupported argument form is an honest miss, never guessed; older valid candidates remain usable
+- correspondence, witnesses and historical integrity a malformed witness is an honest miss, never guessed; older valid candidates remain usable
+
+## a recorded child need not be an exact dependency: 2 failing
+- correspondence, witnesses and historical integrity a recorded child naming a result in another environment outside the exact dependencies is an integrity failure: no body, no attempt, no retargeting
+- correspondence, witnesses and historical integrity a recorded child naming another member's result outside the exact dependencies is an integrity failure: no body, no attempt, no retargeting
+
+## check-only evaluation proceeds to source work: 1 failing
+- check-only evaluation needed source work stops at that boundary with downstream uncertainty and no source check
+
+## check-only memo reuse records acceptance: 1 failing
+- check-only evaluation an unchanged report is reusable with no admission, attempts, bodies or acceptance writes
+
+## a memo admission refusal is ignored: 1 failing
+- admission after reuse and before claims a denied summary miss is refused with no claim, attempt or body; its child work was admitted independently
+
+## the intent digest ignores the invocation: 2 failing
+- explicit recovery by saved request key recovery with a different current intent is rejected rather than served
+- explicit recovery by saved request key reusing an allocated request key for a different execution is a conflict, not a silent hit
+
+## the attempt key ignores the request key: 30 failing
+- admission after reuse and before claims a denied summary miss is refused with no claim, attempt or body; its child work was admitted independently
+- admission after reuse and before claims denied source work needed for validation refuses the summary without any attempt
+- explicit recovery by saved request key documents the disclosed History gap: a check retention ends its attempt without a result, so recovery reports unsuccessful
+- explicit recovery by saved request key absent and unsuccessful executions are reported explicitly and never executed by recovery
+- lifecycle observers a child acceptance observer failure beneath an executing parent is reported on the top-level outcome
+- lifecycle observers a child publication observer failure beneath a cached parent is reported once, even when the executing body shares the child
+- lifecycle observers an explicit check retention ends its claim with release, never abandon
+- current finality after restart a false hook enters the check with the eligible carrier; fresh equal data is a distinct publication
+- current finality after restart a check that read its previous result stays eligible later: previous reads are history, not current inputs
+- current finality after restart an absent hook supplies no shortcut; an explicit check retention keeps the exact reference with separate acceptance
+- current finality after restart a changed retrieval implementation is ineligible even though the current hook would accept: hook runs zero times
+- current finality after restart an incompatible version has no eligible previous result: no finality, absence to the check, old history kept
+- current finality after restart a changed consumed input makes the candidate ineligible before finality
+- policy and control failures are never success retaining a carrier look-alike fails, abandons its attempt and leaves the eligible result current
+- policy and control failures are never success returning an envelope-shaped payload fails, abandons its attempt and leaves the eligible result current
+- policy and control failures are never success returning raw data fails, abandons its attempt and leaves the eligible result current
+- policy and control failures are never success a throwing check fails, abandons its attempt and leaves the eligible result current
+- policy and control failures are never success a carrier from an earlier invocation cannot be retained by a later one
+- read and unread facts, called and uncalled helpers a fresh source changing only unread fields publishes a new child but retains the summary
+- read and unread facts, called and uncalled helpers a consumed field change re-executes only its own summary; the other member retains its exact result
+- read and unread facts, called and uncalled helpers a changed called formatter re-executes both summaries even with unchanged statistics
+- read and unread facts, called and uncalled helpers a changed child implementation is validated beneath the unchanged summary and cut off at equal consumed output
+- child failures inside a body a body that swallows a failed child call cannot publish: the child failure fails the summary
+- async child delivery delivering a child records no Promise-assimilation read; an unread then field change retains the summary
+- async child delivery a deliberate author read of a then data field is ordinary evidence
+- async child delivery an array-root child is delivered cold and validated after restart
+- compatibility versions and current path rebinding version 2 then unchanged version 1 rollback reuses the old exact results without rewinding the current pointer
+- compatibility versions and current path rebinding version 1 rollback with changed consumed evidence misses and executes
+- compatibility versions and current path rebinding an equal-name replacement profile retains the summary; a later name change invalidates; original provenance stays intact
+- correspondence, witnesses and historical integrity a different subject in the child slot with a changed consumed fact misses and executes
+
+## candidate lookup ignores the compatibility version: 3 failing
+- lifecycle observers a child acceptance observer failure beneath an executing parent is reported on the top-level outcome
+- compatibility versions and current path rebinding version 2 then unchanged version 1 rollback reuses the old exact results without rewinding the current pointer
+- current finality after restart an incompatible version has no eligible previous result: no finality, absence to the check, old history kept
+
+## declared helpers are not tracked: 4 failing
+- check-only evaluation a summary whose own evidence changed requires execution, without replaying its body as validation
+- explicit recovery by saved request key reusing an allocated request key for a different execution is a conflict, not a silent hit
+- read and unread facts, called and uncalled helpers a changed called formatter re-executes both summaries even with unchanged statistics
+- read and unread facts, called and uncalled helpers summary provenance records its own implementation, helpers, witness and consumed child facts, not the child's internals
+
+## the author callback is not tracked as the step's own implementation: 51 failing
+- cold and restarted report unchanged restart runs current finality, zero summary bodies and zero checks, and retains exact references
+- cold and restarted report reversed member registration after restart preserves each member's own references
+- read and unread facts, called and uncalled helpers a fresh source changing only unread fields publishes a new child but retains the summary
+- read and unread facts, called and uncalled helpers a consumed field change re-executes only its own summary; the other member retains its exact result
+- read and unread facts, called and uncalled helpers a changed called formatter re-executes both summaries even with unchanged statistics
+- read and unread facts, called and uncalled helpers a changed uncalled helper alone retains both summaries
+- read and unread facts, called and uncalled helpers a changed child implementation is validated beneath the unchanged summary and cut off at equal consumed output
+- read and unread facts, called and uncalled helpers summary provenance records its own implementation, helpers, witness and consumed child facts, not the child's internals
+- child failures inside a body a body that swallows a failed child call cannot publish: the child failure fails the summary
+- async child delivery delivering a child records no Promise-assimilation read; an unread then field change retains the summary
+- async child delivery a deliberate author read of a then data field is ordinary evidence
+- async child delivery an array-root child is delivered cold and validated after restart
+- compatibility versions and current path rebinding version 2 then unchanged version 1 rollback reuses the old exact results without rewinding the current pointer
+- compatibility versions and current path rebinding version 1 rollback with changed consumed evidence misses and executes
+- compatibility versions and current path rebinding an equal-name replacement profile retains the summary; a later name change invalidates; original provenance stays intact
+- correspondence, witnesses and historical integrity an unknown witness version is an honest miss, never guessed; older valid candidates remain usable
+- correspondence, witnesses and historical integrity an unsupported argument form is an honest miss, never guessed; older valid candidates remain usable
+- correspondence, witnesses and historical integrity a malformed witness is an honest miss, never guessed; older valid candidates remain usable
+- correspondence, witnesses and historical integrity a witness whose child slot has no current declaration is an honest correspondence miss
+- correspondence, witnesses and historical integrity a different subject now occupying the child slot is resolved as the current child; equal consumed facts retain the summary
+- correspondence, witnesses and historical integrity a different subject in the child slot with a changed consumed fact misses and executes
+- admission after reuse and before claims valid hits never reach admission
+- admission after reuse and before claims a denied summary miss is refused with no claim, attempt or body; its child work was admitted independently
+- admission after reuse and before claims denied source work needed for validation refuses the summary without any attempt
+- check-only evaluation an unchanged report is reusable with no admission, attempts, bodies or acceptance writes
+- check-only evaluation needed source work stops at that boundary with downstream uncertainty and no source check
+- check-only evaluation a summary whose own evidence changed requires execution, without replaying its body as validation
+- explicit recovery by saved request key recovery returns the exact committed success without hooks, bodies or new acceptance; a new request still runs current policy
+- explicit recovery by saved request key reusing an allocated request key for a different execution is a conflict, not a silent hit
+- explicit recovery by saved request key a normal retry with an already committed key is rejected before admission, never served as new work
+- explicit recovery by saved request key documents the disclosed History gap: a check retention ends its attempt without a result, so recovery reports unsuccessful
+- lifecycle observers a child acceptance observer failure beneath an executing parent is reported on the top-level outcome
+- lifecycle observers child and parent acceptance observer failures beneath a cached parent are each reported once
+- lifecycle observers a child publication observer failure beneath a cached parent is reported once, even when the executing body shares the child
+- lifecycle observers an explicit check retention ends its claim with release, never abandon
+- current finality after restart an accepting current hook retains the exact reference with zero checks, again in every later session
+- current finality after restart a false hook enters the check with the eligible carrier; fresh equal data is a distinct publication
+- current finality after restart a check that read its previous result stays eligible later: previous reads are history, not current inputs
+- current finality after restart an absent hook supplies no shortcut; an explicit check retention keeps the exact reference with separate acceptance
+- current finality after restart a changed retrieval implementation is ineligible even though the current hook would accept: hook runs zero times
+- current finality after restart a changed consumed input makes the candidate ineligible before finality
+- policy and control failures are never success a throwing hook fails current validation without checks, acceptance or publication
+- policy and control failures are never success a non-boolean hook answer is a policy failure, not acceptance
+- policy and control failures are never success retaining a carrier look-alike fails, abandons its attempt and leaves the eligible result current
+- policy and control failures are never success returning an envelope-shaped payload fails, abandons its attempt and leaves the eligible result current
+- policy and control failures are never success returning raw data fails, abandons its attempt and leaves the eligible result current
+- policy and control failures are never success a throwing check fails, abandons its attempt and leaves the eligible result current
+- policy and control failures are never success a carrier from an earlier invocation cannot be retained by a later one
+- supported provenance semantic integrity an unsupported provenance version stays an honest miss; the older valid candidate is still reused
+- gap hunt existing issue #144 Resolution fault sites a supplied candidate missing its required own implementation is integrity damage before acceptance
+- gap hunt existing issue #144 Resolution fault sites a fold candidate missing its required own implementation is integrity damage before acceptance
+
+## direct source invocations are not shared within a request: 5 failing
+- read and unread facts, called and uncalled helpers a consumed field change re-executes only its own summary; the other member retains its exact result
+- async child delivery a deliberate author read of a then data field is ordinary evidence
+- compatibility versions and current path rebinding version 1 rollback with changed consumed evidence misses and executes
+- compatibility versions and current path rebinding an equal-name replacement profile retains the summary; a later name change invalidates; original provenance stays intact
+- lifecycle observers a child publication observer failure beneath a cached parent is reported once, even when the executing body shares the child
+
+## a body that swallowed a failed child still publishes: 1 failing
+- child failures inside a body a body that swallows a failed child call cannot publish: the child failure fails the summary
+
+## a committed request key is served again by a normal request: 1 failing
+- explicit recovery by saved request key a normal retry with an already committed key is rejected before admission, never served as new work
+
+## a child view is resolved through Promise assimilation: 2 failing
+- async child delivery delivering a child records no Promise-assimilation read; an unread then field change retains the summary
+- async child delivery an array-root child is delivered cold and validated after restart
+
+## a different current child subject is treated as lost correspondence: 2 failing
+- correspondence, witnesses and historical integrity a different subject now occupying the child slot is resolved as the current child; equal consumed facts retain the summary
+- correspondence, witnesses and historical integrity a different subject in the child slot with a changed consumed fact misses and executes
+
+## nested post-commit diagnostics stay with each step: 4 failing
+- lifecycle observers a child acceptance observer failure beneath an executing parent is reported on the top-level outcome
+- lifecycle observers child and parent publication observer failures beneath an executing parent are each reported once
+- lifecycle observers child and parent acceptance observer failures beneath a cached parent are each reported once
+- lifecycle observers a child publication observer failure beneath a cached parent is reported once, even when the executing body shares the child
+
+## supported source and memo provenance need not carry its own implementation evidence: 3 failing
+- correspondence, witnesses and historical integrity a supported memo record without its own implementation evidence is an integrity failure before any work
+- supported provenance semantic integrity a supported source record with no observations at all is an integrity failure before finality, admission or checks
+- supported provenance semantic integrity a supported source record with no own implementation observation is an integrity failure before finality, admission or checks
+
+## supported source provenance may carry child edges: 1 failing
+- supported provenance semantic integrity a supported source record with a direct-child edge on a source is an integrity failure before finality, admission or checks
+
+## an unsuccessful attempt ending is not announced as abandon: 3 failing
+- lifecycle observers an admitted execution that fails is observed ending with abandon after its durable ending; the failure stays the outcome
+- lifecycle observers an observer failing at abandon cannot replace the original failure
+- lifecycle observers a child refused during an admitted body ends the summary attempt with abandon; the outcome stays refused
+
+## an ending History refused is still announced: 1 failing
+- lifecycle observers an attempt History could not end is not reported as abandoned
+
+## a post-commit observer failure fails the call: 6 failing
+- lifecycle observers an observer failure after publication commits is a diagnostic beside the committed success
+- lifecycle observers a child acceptance observer failure beneath an executing parent is reported on the top-level outcome
+- lifecycle observers child and parent publication observer failures beneath an executing parent are each reported once
+- lifecycle observers child and parent acceptance observer failures beneath a cached parent are each reported once
+- lifecycle observers a child publication observer failure beneath a cached parent is reported once, even when the executing body shares the child
+- lifecycle observers an observer failing at abandon cannot replace the original failure
+
+## a gate omits its own implementation evidence: 1 failing
+- gap hunt existing issue #144 Resolution fault sites a successful gate carries its own implementation observation in its separate gate evidence
+
+## concurrent direct memo calls execute twice: 1 failing
+- gap hunt existing issue #144 Resolution fault sites two concurrent calls of the same direct memo in one parent request execute once and share its result
+
+## supplied intent ignores its invocation: 1 failing
+- gap hunt existing issue #144 Resolution fault sites supplied attempt intent is stable for equal invocations and changes with arguments or implementation
+
+## supplied provenance accepts missing own implementation evidence: 1 failing
+- gap hunt existing issue #144 Resolution fault sites a supplied candidate missing its required own implementation is integrity damage before acceptance
+
+## fold provenance accepts missing own implementation evidence: 1 failing
+- gap hunt existing issue #144 Resolution fault sites a fold candidate missing its required own implementation is integrity damage before acceptance
+
+restored: 78 tests, 0 failing
+
+PASS: 34 controls

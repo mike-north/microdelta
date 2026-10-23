@@ -1,0 +1,91 @@
+[
+  {
+    "name": "install",
+    "argv": [
+      "npm",
+      "ci",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "build",
+    "argv": [
+      "npm",
+      "run",
+      "build:packages"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "fixtures",
+    "argv": [
+      "npm",
+      "run",
+      "build:fixtures"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "compile",
+    "argv": [
+      "node",
+      "node_modules/typescript/bin/tsc",
+      "-p",
+      "packages/core/tsconfig.test.json"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "lint",
+    "argv": [
+      "node",
+      "node_modules/eslint/bin/eslint.js",
+      "packages/core/test/gap-hunt-contracts-resolution-144.test.ts",
+      "packages/core/test/resolution/controls/resolution-mutation-controls.mjs",
+      "packages/core/test/resolution/controls/resolution-mutation-controls.test.mjs"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "anchors",
+    "argv": [
+      "node",
+      "packages/core/test/resolution/controls/resolution-mutation-controls.mjs",
+      "--check-anchors"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "witness",
+    "argv": [
+      "node",
+      "--experimental-vm-modules",
+      "node_modules/jest/bin/jest.js",
+      "--config",
+      "packages/core/jest.config.mjs",
+      "--runInBand",
+      "--runTestsByPath",
+      "packages/core/.test-build/test/gap-hunt-contracts-resolution-144.test.js"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "cleanup",
+    "argv": [
+      "node",
+      "--test",
+      "packages/core/test/resolution/controls/resolution-mutation-controls.test.mjs"
+    ],
+    "exit": 0
+  },
+  {
+    "name": "controls",
+    "argv": [
+      "node",
+      "packages/core/test/resolution/controls/resolution-mutation-controls.mjs"
+    ],
+    "exit": 0
+  }
+]

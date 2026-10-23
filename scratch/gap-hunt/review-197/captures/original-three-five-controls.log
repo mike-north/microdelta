@@ -1,0 +1,15 @@
+baseline: 73 tests, 0 failing
+
+## a gate omits its own implementation evidence: 0 failing
+
+## concurrent direct memo calls execute twice: 0 failing
+
+## supplied intent ignores its invocation: 0 failing
+
+## supplied provenance accepts missing own implementation evidence: 0 failing
+
+## fold provenance accepts missing own implementation evidence: 0 failing
+
+restored: 73 tests, 0 failing
+
+FAIL: 5 controls

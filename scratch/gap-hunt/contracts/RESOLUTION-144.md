@@ -36,7 +36,7 @@ From a clean branch checkout with supported Node and npm:
 node scratch/gap-hunt/contracts/reproduce.mjs resolution-144
 ```
 
-The wrapper installs dependencies, builds declarations/packages, compiles tests, and runs only the five new tests. For an already installed/built checkout:
+The wrapper installs dependencies, builds declarations/packages, compiles tests, and runs the five baseline witnesses, each matching mutant once, and the restored witnesses. All seven isolated invocations verify the package path and artifact hashes. It exits nonzero unless every mutant fails exactly its corresponding test. The generated local report is `scratch/gap-hunt/contracts/local-resolution-144-focused.json`; recorded original full-matrix evidence is preserved. For an already installed/built checkout:
 
 ```sh
 npm run test:unit --workspace microdelta -- --runTestsByPath .test-build/test/gap-hunt-contracts-resolution-144.test.js
@@ -53,7 +53,7 @@ The mutation runner copies packages and dependencies to a temporary directory, p
 - `resolution-144-focused.json` and `.log`: baseline 5/5, exactly the matching new test fails for each mutant, restored 5/5.
 - `resolution-gap-controls.json` and `.log`: final verified-load baseline/mutant/restoration matrix.
 
-The clean-install wrapper command is provided for reproduction; this run executed the installed/built-checkout commands above, rather than reinstalling dependencies.
+The original matrix used the installed/built-checkout commands above. The later clean-checkout handoff records the one-command bootstrap and focused matrix separately in `RESOLUTION-144-CLEAN.md`.
 
 An earlier diagnostic run used `fs.cpSync({dereference:false})` without `verbatimSymlinks:true`, which rewrote workspace links back to the source checkout. Its claimed survivors were invalid and are excluded entirely. The final runner's path and content guards make that failure explicit. No result from that earlier run supports the coverage conclusion.
 

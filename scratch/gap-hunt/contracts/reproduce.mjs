@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 const cwd = fileURLToPath(new URL('../../../', import.meta.url));
 const suites = {
-  'resolution-144': { workspace: 'microdelta', test: 'gap-hunt-contracts-resolution-144', types: false },
+  'resolution-144': { workspace: 'microdelta', test: 'gap-hunt-contracts-resolution-144', types: false, controls: true },
   '155': { workspace: 'microdelta', test: 'gap-hunt-contracts-container-guard', types: false },
   '156': { workspace: 'microdelta', test: 'gap-hunt-contracts-scalar-roots', types: true },
   'falsey-guard': { workspace: 'microdelta', test: 'gap-hunt-contracts-operation-matrix', types: false, pattern: 'falsey guard values' },
@@ -37,6 +37,11 @@ for (const args of [['ci', '--no-audit', '--no-fund'], ['run', 'build']]) {
   if (status !== 0) process.exit(status);
 }
 if ('probe' in selected) process.exit(run(process.execPath, [`scratch/gap-hunt/contracts/${selected.probe}`]));
+if ('controls' in selected) {
+  const status = run(process.execPath, ['node_modules/typescript/bin/tsc', '-p', 'packages/core/tsconfig.test.json']);
+  if (status !== 0) process.exit(status);
+  process.exit(run(process.execPath, ['scratch/gap-hunt/contracts/resolution-gap-controls.mjs', '--focused']));
+}
 if (selected.types) {
   const status = run('npm', ['run', 'test:types', '--workspace', selected.workspace]);
   if (status !== 0) process.exit(status);

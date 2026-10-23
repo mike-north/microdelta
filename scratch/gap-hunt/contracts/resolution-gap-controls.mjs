@@ -6,6 +6,7 @@ import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 const root = resolve('.');
+const focused = process.argv.includes('--focused');
 const temporary = realpathSync(mkdtempSync(join(tmpdir(), 'microdelta-144-')));
 const judged = ['resolution/source-policy', 'resolution/summary-validation', 'resolution/admission-recovery'];
 const expanded = [...judged, 'keyed/members', 'keyed/restart', 'nested/validation', 'nested/restart', 'nested/arguments', 'fold/fold', 'fold/restart', 'gap-hunt-contracts-cost', 'gap-hunt-contracts-precedence', 'gap-hunt-contracts-resolution-144'];
@@ -18,12 +19,12 @@ const controls = [
  { id: 'fold-own-evidence', file: 'evidence.js', anchor: "if (!observations.some(isOwnImplementation)) {\n        return malformed('fold provenance lacks its own implementation observation');\n    }", replacement: "if (false) {\n        return malformed('fold provenance lacks its own implementation observation');\n    }" },
 ];
 const dist = join(temporary, 'packages/resolution/dist/src');
-const output = { baseline: spawnSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).stdout.trim(), mode: process.argv.includes('--focused') ? 'focused-five' : 'full-matrix', controls: [], anchors: controls };
+const output = { baseline: spawnSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).stdout.trim(), mode: focused ? 'focused-five' : 'full-matrix', controls: [], anchors: controls };
 const inventories = new Map();
 const expectedArtifacts = new Map();
 function digest(text) { return createHash('sha256').update(text).digest('hex'); }
 function run(suites, label) {
- if (process.argv.includes('--focused')) suites = ['gap-hunt-contracts-resolution-144'];
+ if (focused) suites = ['gap-hunt-contracts-resolution-144'];
  const probe = spawnSync(process.execPath, ['--input-type=module', '-e', "console.log(import.meta.resolve('@microdelta/resolution'))"], { cwd: join(temporary, 'packages/core'), encoding: 'utf8' });
  const loaded = probe.status === 0 ? realpathSync(fileURLToPath(probe.stdout.trim())) : '';
  if (loaded !== join(dist, 'index.js')) throw new Error(`Unexpected loaded Resolution entry ${loaded}`);
@@ -46,7 +47,7 @@ function run(suites, label) {
  const previous = inventories.get(key);
  if (previous !== undefined && JSON.stringify(previous) !== JSON.stringify(names)) throw new Error(`Changed test inventory ${label}`);
  inventories.set(key, names);
- return { count: assertions.length, failed };
+ return { count: assertions.length, failed, names: assertions.filter(assertion => assertion.fullName.startsWith('gap hunt existing issue #144')).map(assertion => assertion.fullName) };
 }
 try {
  for (const path of ['node_modules', 'packages']) cpSync(join(root, path), join(temporary, path), { recursive: true, dereference: false, verbatimSymlinks: true });
@@ -54,8 +55,11 @@ try {
  if (!realpathSync(join(temporary, 'node_modules/@microdelta/resolution')).startsWith(temporary)) throw new Error('Resolution link escaped isolated copy');
  for (const file of new Set(controls.map(control => control.file))) expectedArtifacts.set(file, digest(readFileSync(join(dist, file), 'utf8')));
  const baseline = run(expanded, 'baseline');
- run(judged, 'judged-baseline');
- run(previousExpanded, 'before-baseline');
+ if (!focused) {
+   run(judged, 'judged-baseline');
+   run(previousExpanded, 'before-baseline');
+ }
+ if (focused && baseline.count !== controls.length) throw new Error('Focused baseline must contain exactly five witnesses');
  if (baseline.failed.length) throw new Error(`Baseline failed: ${baseline.failed.join('; ')}`);
  output.executedBaseline = baseline;
  console.log(`baseline ${baseline.count} passed`);
@@ -67,17 +71,19 @@ try {
      const mutant = original.replace(control.anchor, control.replacement);
      writeFileSync(path, mutant);
      expectedArtifacts.set(control.file, digest(mutant));
-     const old = run(judged, `${control.id}-judged`);
-     const before = run(previousExpanded, `${control.id}-before`);
+     const old = focused ? undefined : run(judged, `${control.id}-judged`);
+     const before = focused ? undefined : run(previousExpanded, `${control.id}-before`);
      const all = run(expanded, `${control.id}-expanded`);
      output.controls.push({ id: control.id, judged: old, before, expanded: all });
      console.log(JSON.stringify(output.controls.at(-1)));
-     if (!all.failed.some(name => name.startsWith('gap hunt existing issue #144'))) throw new Error(`Unexpected mutant result ${control.id}`);
+     const corresponding = all.failed.filter(name => name.startsWith('gap hunt existing issue #144'));
+     const expected = baseline.names[controls.indexOf(control)];
+     if (corresponding.length !== 1 || corresponding[0] !== expected) throw new Error(`Unexpected mutant result ${control.id}`);
    } finally { writeFileSync(path, original); expectedArtifacts.set(control.file, digest(original)); }
    if (readFileSync(path, 'utf8') !== original) throw new Error('Failed restoration');
  }
  output.restored = run(expanded, 'restored');
  if (output.restored.failed.length) throw new Error('Restored copy failed');
- writeFileSync('scratch/gap-hunt/contracts/resolution-gap-controls.json', JSON.stringify(output, null, 2) + '\n');
+ writeFileSync(`scratch/gap-hunt/contracts/${focused ? 'local-resolution-144-focused' : 'local-resolution-144-full'}.json`, JSON.stringify(output, null, 2) + '\n');
  console.log(`restored ${output.restored.count} passed`);
 } finally { rmSync(temporary, { recursive: true, force: true }); }

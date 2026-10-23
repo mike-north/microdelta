@@ -1,0 +1,16 @@
+{
+  "node": "v24.22.1",
+  "platform": "darwin",
+  "published": {
+    "facade": ">=20",
+    "machine": ">=20",
+    "driver": "20.x || 22.x || 23.x || 24.x || 25.x"
+  },
+  "local": {
+    "facade": ">=20",
+    "machine": ">=20",
+    "driver": "12.9.0"
+  },
+  "mismatch": "Node26 satisfies advertised >=20 but not pinned driver range",
+  "pickupScope": "accurate durable-backend support/native prerequisites documentation and checks; no engine-range change, driver switch, or Node26 support expansion"
+}

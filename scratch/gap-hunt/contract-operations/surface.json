@@ -1,0 +1,393 @@
+{
+  "surfaces": {
+    "IRunObserver": [
+      {
+        "name": "observe",
+        "type": "(event: IRunEvent) => void"
+      }
+    ],
+    "IUsageEstimate": [
+      {
+        "name": "environment",
+        "type": "string"
+      },
+      {
+        "name": "estimate",
+        "type": "string"
+      },
+      {
+        "name": "attribution",
+        "type": "IUsageAttribution"
+      },
+      {
+        "name": "quantities",
+        "type": "readonly IUsageQuantity[]"
+      },
+      {
+        "name": "basis",
+        "type": "IEstimateBasis"
+      }
+    ],
+    "IUsageSummary": [
+      {
+        "name": "status",
+        "type": "\"complete\" | \"incomplete\""
+      },
+      {
+        "name": "unknown",
+        "type": "readonly [] | readonly [IUnknownUsage, ...IUnknownUsage[]]"
+      },
+      {
+        "name": "environment",
+        "type": "string"
+      },
+      {
+        "name": "observed",
+        "type": "readonly IUsageQuantity[]"
+      },
+      {
+        "name": "operations",
+        "type": "number"
+      },
+      {
+        "name": "requestAttempts",
+        "type": "number"
+      },
+      {
+        "name": "reports",
+        "type": "number"
+      },
+      {
+        "name": "estimates",
+        "type": "readonly IRecordedEstimate[]"
+      }
+    ],
+    "IWorkspace": [
+      {
+        "name": "logicalStore",
+        "type": "string"
+      },
+      {
+        "name": "run",
+        "type": "<TInputs extends object, THelpers extends object, T>(options: IWorkspaceRunOptions<TInputs, THelpers>, body: (run: IWorkspaceRun) => T | Promise<T>) => Promise<...>"
+      },
+      {
+        "name": "close",
+        "type": "() => void"
+      }
+    ],
+    "IWorkspaceAccounting": [
+      {
+        "name": "summarizeUsage",
+        "type": "(query: IUsageQuery) => IUsageSummary"
+      },
+      {
+        "name": "recordUsageIntent",
+        "type": "(intent: { readonly environment: string; readonly operation: string; readonly requestAttempt: string; readonly attribution: IOperationAttribution; }) => \"recorded\" | \"duplicate\""
+      },
+      {
+        "name": "acknowledgeUsage",
+        "type": "(report: { readonly environment: string; readonly operation: string; readonly requestAttempt: string; readonly report: string; readonly quantities: readonly IOperationQuantity[]; }) => { ...; }"
+      }
+    ],
+    "IWorkspaceRun": [
+      {
+        "name": "read",
+        "type": "<T>(reference: ICompletedResultReference) => T"
+      },
+      {
+        "name": "usage",
+        "type": "(filter?: IUsageFilter | undefined) => IUsageSummary"
+      },
+      {
+        "name": "context",
+        "type": "IRunContext"
+      },
+      {
+        "name": "open",
+        "type": "boolean"
+      },
+      {
+        "name": "resolve",
+        "type": "(step: IBindingDescriptor, request: IRequestOptions) => Promise<IResolutionOutcome>"
+      },
+      {
+        "name": "resolveMembers",
+        "type": "(target: IMembersTarget, request: IRequestOptions) => Promise<IMembersReport>"
+      },
+      {
+        "name": "resolveFold",
+        "type": "(step: IBindingDescriptor, request: IRequestOptions) => Promise<IFoldReport>"
+      },
+      {
+        "name": "resolveOutcomeFold",
+        "type": "(step: IBindingDescriptor, request: IRequestOptions) => Promise<IOutcomeFoldReport>"
+      },
+      {
+        "name": "check",
+        "type": "(step: IBindingDescriptor) => Promise<ICheckOutcome>"
+      },
+      {
+        "name": "recover",
+        "type": "(step: IBindingDescriptor, request: IRequestOptions) => Promise<IRecoveryResult>"
+      },
+      {
+        "name": "ordinary",
+        "type": "<T>(label: string, work: () => T | Promise<T>) => Promise<Awaited<T>>"
+      },
+      {
+        "name": "inspectOperations",
+        "type": "(query?: { readonly status?: IOperationStatus; } | undefined) => Promise<readonly IOperationView[]>"
+      },
+      {
+        "name": "settleOperation",
+        "type": "(settlement: IOperationSettlement) => Promise<IOperationView>"
+      },
+      {
+        "name": "promote",
+        "type": "(request: IPromotionRequest) => Promise<IPromotionRecord>"
+      },
+      {
+        "name": "promotions",
+        "type": "() => Promise<readonly IPromotionRecord[]>"
+      }
+    ],
+    "IWorkspaceRunOptions": [
+      {
+        "name": "authoring",
+        "type": "IAuthoring<TInputs, THelpers>"
+      },
+      {
+        "name": "composition",
+        "type": "IComposition<TInputs, THelpers>"
+      },
+      {
+        "name": "environment",
+        "type": "string"
+      },
+      {
+        "name": "runId",
+        "type": "string"
+      },
+      {
+        "name": "admission",
+        "type": "IExecutionAdmission"
+      },
+      {
+        "name": "observers",
+        "type": "readonly IRunObserver[]"
+      },
+      {
+        "name": "stop",
+        "type": "IStopController"
+      },
+      {
+        "name": "permits",
+        "type": "number"
+      },
+      {
+        "name": "window",
+        "type": "number"
+      },
+      {
+        "name": "writerWait",
+        "type": "IWriterWaitOptions"
+      },
+      {
+        "name": "deferral",
+        "type": "IDeferralMode"
+      }
+    ],
+    "IDurableAccounting": [
+      {
+        "name": "recordUsageIntent",
+        "type": "(intent: IUsageIntent) => IUsageIntentOutcome"
+      },
+      {
+        "name": "acknowledgeUsage",
+        "type": "(report: IUsageReport) => IUsageAcknowledgment"
+      },
+      {
+        "name": "recordEstimate",
+        "type": "(estimate: IUsageEstimate) => IEstimateOutcome"
+      },
+      {
+        "name": "summarizeUsage",
+        "type": "(query: IUsageQuery) => IUsageSummary"
+      },
+      {
+        "name": "close",
+        "type": "() => void"
+      }
+    ],
+    "IUsageQuantity": [
+      {
+        "name": "unit",
+        "type": "string"
+      },
+      {
+        "name": "amount",
+        "type": "number"
+      }
+    ],
+    "IUsageReport": [
+      {
+        "name": "environment",
+        "type": "string"
+      },
+      {
+        "name": "operation",
+        "type": "string"
+      },
+      {
+        "name": "requestAttempt",
+        "type": "string"
+      },
+      {
+        "name": "report",
+        "type": "string"
+      },
+      {
+        "name": "quantities",
+        "type": "readonly IUsageQuantity[]"
+      }
+    ]
+  },
+  "packages": [
+    {
+      "path": "package.json",
+      "name": "@microdelta/workspace",
+      "bin": null,
+      "exports": null
+    },
+    {
+      "path": "packages/accounting/package.json",
+      "name": "@microdelta/accounting",
+      "bin": null,
+      "exports": {
+        ".": {
+          "types": "./dist/api/accounting.public.d.ts",
+          "import": "./dist/src/index.js"
+        }
+      }
+    },
+    {
+      "path": "packages/core/package.json",
+      "name": "microdelta",
+      "bin": null,
+      "exports": {
+        ".": {
+          "types": "./dist/api/microdelta.public.d.ts",
+          "import": "./dist/src/index.js"
+        },
+        "./conformance/store": {
+          "types": "./dist/api/microdelta.conformance.store.public.d.ts",
+          "import": "./dist/test/conformance/store/index.js"
+        }
+      }
+    },
+    {
+      "path": "packages/definition/package.json",
+      "name": "@microdelta/definition",
+      "bin": null,
+      "exports": {
+        ".": {
+          "types": "./dist/api/definition.public.d.ts",
+          "import": "./dist/src/index.js"
+        }
+      }
+    },
+    {
+      "path": "packages/history/package.json",
+      "name": "@microdelta/history",
+      "bin": null,
+      "exports": {
+        ".": {
+          "types": "./dist/api/history.public.d.ts",
+          "import": "./dist/src/index.js"
+        },
+        "./conformance/store": {
+          "types": "./dist/api/history.conformance.store.public.d.ts",
+          "import": "./dist/test/conformance/store/index.js"
+        }
+      }
+    },
+    {
+      "path": "packages/machine/package.json",
+      "name": "@microdelta/machine",
+      "bin": null,
+      "exports": {
+        ".": {
+          "types": "./dist/api/machine.public.d.ts",
+          "import": "./dist/src/index.js"
+        }
+      }
+    },
+    {
+      "path": "packages/machine-node/package.json",
+      "name": "@microdelta/machine-node",
+      "bin": null,
+      "exports": {
+        ".": {
+          "types": "./dist/api/machine-node.public.d.ts",
+          "import": "./dist/src/index.js"
+        }
+      }
+    },
+    {
+      "path": "packages/materialization/package.json",
+      "name": "@microdelta/materialization",
+      "bin": null,
+      "exports": {
+        ".": {
+          "types": "./dist/api/materialization.public.d.ts",
+          "import": "./dist/src/index.js"
+        }
+      }
+    },
+    {
+      "path": "packages/resolution/package.json",
+      "name": "@microdelta/resolution",
+      "bin": null,
+      "exports": {
+        ".": {
+          "types": "./dist/api/resolution.public.d.ts",
+          "import": "./dist/src/index.js"
+        }
+      }
+    },
+    {
+      "path": "packages/supervision/package.json",
+      "name": "@microdelta/supervision",
+      "bin": null,
+      "exports": {
+        ".": {
+          "types": "./dist/api/supervision.public.d.ts",
+          "import": "./dist/src/index.js"
+        }
+      }
+    },
+    {
+      "path": "packages/tracking/package.json",
+      "name": "@microdelta/tracking",
+      "bin": null,
+      "exports": {
+        ".": {
+          "types": "./dist/api/tracking.public.d.ts",
+          "import": "./dist/src/index.js"
+        }
+      }
+    },
+    {
+      "path": "packages/value/package.json",
+      "name": "@microdelta/value",
+      "bin": null,
+      "exports": {
+        ".": {
+          "types": "./dist/api/value.public.d.ts",
+          "import": "./dist/src/index.js"
+        }
+      }
+    }
+  ]
+}

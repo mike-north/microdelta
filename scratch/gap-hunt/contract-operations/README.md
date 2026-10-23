@@ -14,3 +14,17 @@ The second command is intentionally red: it shows that encoding remaining quota 
 Review `requirement-evidence.json` with `test-execution-index.json`: assertion IDs join the two. Source files/named tests remain authoritative. The map records bounded outcomes and explicit residuals; it does not discharge every paragraph or count requirement-ID references as evidence. `clause-dispositions.json` preserves344 source blocks for follow-up semantic review, including nonnormative passages and upstream inherited-owner limitations.
 
 Implementer: Codex worker (gpt-6.1-sol).
+
+Additional focused probes:
+
+```sh
+node scratch/gap-hunt/contract-operations/inspect-surface.mjs
+node scratch/gap-hunt/contract-operations/cli-consumer.mjs
+node scratch/gap-hunt/contract-operations/preview-consumer.mjs
+node scratch/gap-hunt/contract-operations/lazy-iteration.mjs
+node scratch/gap-hunt/contract-operations/launch-probe.mjs
+```
+
+See HARNESS-LIMIT.md for unchanged journal-assertion replay with file transport, LIFECYCLE.md for strict Jest/type/lint commands, and ISSUE-*.md for grouped target findings. The CLI wrapper records npm executable-discovery failure as data; preview/lazy probes assert supported positive controls and record missing/ambiguous target boundaries.
+
+#157/#158 local pickup addenda specify conservative documentation scope and self-contained `verify-157.sh` / `verify-158.mjs` commands. Linux runtime acceptance remains unverified; metadata checks do not establish native support. The three capability drafts require owner decisions before implementation pickup.

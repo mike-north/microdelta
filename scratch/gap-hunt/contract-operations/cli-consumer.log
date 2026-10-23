@@ -1,0 +1,1 @@
+{"command":"npm exec --offline -- microdelta --help","status":1,"signal":null,"error":null,"stdout":"","stderr":"npm error could not determine executable to run\nnpm error A complete log of this run can be found in: <user-home>/.npm/_logs/2026-10-23T06_11_45_303Z-debug-0.log\n"}

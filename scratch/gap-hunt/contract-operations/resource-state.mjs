@@ -14,9 +14,10 @@ try {
  accounting=openDurableAccounting({location:join(dir,'usage.sqlite'),logicalStore:'quota-probe',sqlite:createNodeSqlite()});
  for (const [i,remaining] of [93,90].entries()) {
   accounting.recordUsageIntent({environment:'trial',operation:`operation-${i}`,requestAttempt:`request-${i}`,attribution:{run:'run',member:null,stepAttempt:null}});
-  accounting.acknowledgeUsage({environment:'trial',operation:`operation-${i}`,requestAttempt:`request-${i}`,report:`response-${i}`,quantities:[{unit:'github.remaining',amount:remaining}]});
+  accounting.acknowledgeUsage({environment:'trial',operation:`operation-${i}`,requestAttempt:`request-${i}`,report:`response-${i}`,quantities:[{unit:'github.remaining',amount:remaining},{unit:'requests',amount:i+2}]});
  }
  const summary=accounting.summarizeUsage({environment:'trial'});
- console.log(JSON.stringify({consumerNeeds:'nonadditive remaining quota by pool/window',availablePort:'additive consumption quantities',observed:summary.observed}));
+ assert.equal(summary.observed.find(q=>q.unit==='requests')?.amount,5,'Additive consumption positive control');
+ console.log(JSON.stringify({additivePositiveControl:{requestDeltas:[2,3],observedRequests:5},consumerNeeds:'nonadditive remaining quota by pool/window',availablePort:'additive consumption quantities',observed:summary.observed}));
  assert.equal(summary.observed.find(q=>q.unit==='github.remaining')?.amount,90,'Consumer latest-state requirement cannot be met by encoding remaining quota as consumption');
 } finally {accounting?.close();rmSync(dir,{recursive:true,force:true});}

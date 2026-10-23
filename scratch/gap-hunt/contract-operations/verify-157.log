@@ -1,0 +1,8 @@
+native-approval-runner platform=Darwin; Linux remains unverified unless this run is Linux
+ WARN  The "workspaces" field in package.json is not supported by pnpm. Create a "pnpm-workspace.yaml" file instead.
+pnpm=10.34.7 install=0 unapproved-durable=1
+public-memory-ok
+{"coldCalls":1,"restartCalls":0,"exactReference":{"kind":"completed-result","locator":"mdh1|[\"portability\",\"portability\",\"fixture\",1]"}}
+pnpm=12.10.1 install=1 unapproved-durable=1
+public-memory-ok
+{"coldCalls":1,"restartCalls":0,"exactReference":{"kind":"completed-result","locator":"mdh1|[\"portability\",\"portability\",\"fixture\",1]"}}

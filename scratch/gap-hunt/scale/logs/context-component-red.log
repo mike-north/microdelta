@@ -1,0 +1,30 @@
+watchman warning: Recrawled this watch 1 time, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx' ; watchman watch-project '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx'`
+
+(node:36253) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL scratch/gap-hunt/scale/context-component.test.mjs
+  ● completed fresh captures leave a bounded continuing caller context
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 4
+    Received:    200
+
+      18 |   // Permit a small finite diagnostic/runtime allowance, but never one new ALS per capture.
+      19 |   // Compare batches rather than imposing a platform-independent absolute count.
+    > 20 |   expect(rows[2].liveALS - rows[0].liveALS).toBeLessThanOrEqual(4);
+         |                                             ^
+      21 | });
+      22 |
+
+      at Object.<anonymous> (scratch/gap-hunt/scale/context-component.test.mjs:20:45)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 passed, 2 total
+Snapshots:   0 total
+Time:        0.411 s
+Ran all test suites.

@@ -1,0 +1,19 @@
+$ /Users/mnorth/.nodenv/versions/24.22.1/bin/node node_modules/typescript/bin/tsc -p scratch/gap-hunt/scale/tsconfig.context-consumer.json
+npm warn deprecated prebuild-install@7.1.3: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.
+
+added 49 packages in 2s
+{"package":"microdelta@0.2.0","entrySha256":"95bc201a4514085836ce9357706928072b668b9fa9d5522d191588736aa99788","lockSha256":"7feb6c12a476818f3fc931f807926903e9623b624357ffb707815f747867c3b7"}
+(node:39098) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+--import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("./scratch/gap-hunt/scale/context-runtime-loader.mjs", pathToFileURL("./"));'
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"node":"v24.22.1","mode":"fresh","isolated":false,"runs":100,"milliseconds":105.112916,"bodies":100,"observed":0,"initialized":0,"destroyed":0,"totalInitialized":0,"totalDestroyed":0,"liveALS":103,"heap":7484112,"rss":89964544}
+(node:39098) ExperimentalWarning: v8.queryObjects() is an experimental feature and might change at any time
+{"node":"v24.22.1","mode":"fresh","isolated":false,"runs":200,"milliseconds":132.60870799999998,"bodies":200,"observed":0,"initialized":0,"destroyed":0,"totalInitialized":0,"totalDestroyed":0,"liveALS":203,"heap":7507344,"rss":90636288}
+{"node":"v24.22.1","mode":"fresh","isolated":false,"runs":300,"milliseconds":111.27862499999998,"bodies":300,"observed":0,"initialized":0,"destroyed":0,"totalInitialized":0,"totalDestroyed":0,"liveALS":303,"heap":7539520,"rss":91160576}
+(node:39125) ExperimentalWarning: `--experimental-loader` may be removed in the future; instead use `register()`:
+--import 'data:text/javascript,import { register } from "node:module"; import { pathToFileURL } from "node:url"; register("./scratch/gap-hunt/scale/context-runtime-loader.mjs", pathToFileURL("./"));'
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"node":"v24.22.1","mode":"fresh","isolated":true,"runs":100,"milliseconds":104.353083,"bodies":100,"observed":0,"initialized":0,"destroyed":0,"totalInitialized":0,"totalDestroyed":0,"liveALS":3,"heap":7493032,"rss":90685440}
+(node:39125) ExperimentalWarning: v8.queryObjects() is an experimental feature and might change at any time
+{"node":"v24.22.1","mode":"fresh","isolated":true,"runs":200,"milliseconds":85.83575000000002,"bodies":200,"observed":0,"initialized":0,"destroyed":0,"totalInitialized":0,"totalDestroyed":0,"liveALS":3,"heap":7505200,"rss":91652096}
+{"node":"v24.22.1","mode":"fresh","isolated":true,"runs":300,"milliseconds":78.45912500000003,"bodies":300,"observed":0,"initialized":0,"destroyed":0,"totalInitialized":0,"totalDestroyed":0,"liveALS":3,"heap":7524216,"rss":92340224}

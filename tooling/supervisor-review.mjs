@@ -17,7 +17,6 @@ export const TARGET_REPOSITORY = 'mike-north/microdelta';
 /** These protected checks remain independent merge gates beside supervisor review. */
 export const REQUIRED_BRANCH_CHECKS = Object.freeze([
   'PR metadata',
-  'core (20)',
   'core (22)',
   'core (24)',
 ]);

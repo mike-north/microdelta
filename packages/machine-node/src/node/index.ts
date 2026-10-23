@@ -5,17 +5,35 @@
  * arbitrary user class prototypes.
  * @packageDocumentation
  */
-import { AsyncLocalStorage } from 'node:async_hooks';
+import { AsyncLocalStorage, AsyncResource } from 'node:async_hooks';
 import { createHash } from 'node:crypto';
 import { deserialize, serialize } from 'node:v8';
 
-import type { IMachine } from '@microdelta/machine';
+import type { IAsyncContext, IMachine } from '@microdelta/machine';
 
 /** Bind the two existing host dependencies to contracts consumed by contexts. @internal */
 export function _createNodeMachineImplementation(): IMachine {
   return Object.freeze({
     createAsyncContext<T>() {
-      return new AsyncLocalStorage<T>();
+      const storage = new AsyncLocalStorage<T>();
+      /**
+       * An entry owns a short-lived host resource, not the continuing caller's
+       * resource. Descendant work keeps its inherited store after this entry
+       * resource is destroyed; the consuming context owns when its value closes.
+       */
+      return {
+        getStore(): T | undefined {
+          return storage.getStore();
+        },
+        run<TResult>(value: T, callback: () => TResult): TResult {
+          const entry = new AsyncResource('microdelta:async-context-entry');
+          try {
+            return entry.runInAsyncScope(() => storage.run(value, callback));
+          } finally {
+            entry.emitDestroy();
+          }
+        },
+      } satisfies IAsyncContext<T>;
     },
     snapshot<T>(value: T): T {
       // The generic API promises a round-trip of T within V8's supported

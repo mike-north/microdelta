@@ -1,0 +1,139 @@
+[
+  {
+    "name": "install",
+    "argv": [
+      "npm",
+      "ci",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "exit": 0,
+    "seconds": 5.98036108299857
+  },
+  {
+    "name": "packages",
+    "argv": [
+      "npm",
+      "run",
+      "build:packages"
+    ],
+    "exit": 0,
+    "seconds": 25.988539542013314
+  },
+  {
+    "name": "fixtures",
+    "argv": [
+      "npm",
+      "run",
+      "build:fixtures"
+    ],
+    "exit": 0,
+    "seconds": 4.500002917018719
+  },
+  {
+    "name": "occurrence-types",
+    "argv": [
+      "node",
+      "node_modules/typescript/bin/tsc",
+      "-p",
+      "scratch/gap-hunt/review-178/tsconfig.occurrence.json"
+    ],
+    "exit": 0,
+    "seconds": 0.7438126670022029
+  },
+  {
+    "name": "occurrence-lint",
+    "argv": [
+      "node",
+      "node_modules/eslint/bin/eslint.js",
+      "--no-ignore",
+      "--config",
+      "scratch/gap-hunt/review-178/occurrence.eslint.config.mjs",
+      "scratch/gap-hunt/review-178/occurrence-worker.ts"
+    ],
+    "exit": 0,
+    "seconds": 1.3207844159915112
+  },
+  {
+    "name": "positive",
+    "argv": [
+      "node",
+      "--experimental-vm-modules",
+      "node_modules/jest/bin/jest.js",
+      "--config",
+      "scratch/gap-hunt/review-178/occurrence.jest.config.mjs",
+      "--runInBand",
+      "--json",
+      "--outputFile",
+      "<checkout>/scratch/gap-hunt/review-178-repair/local-results/positive.json"
+    ],
+    "exit": 0,
+    "seconds": 1.5149719579785597
+  },
+  {
+    "name": "negative",
+    "argv": [
+      "node",
+      "--experimental-vm-modules",
+      "node_modules/jest/bin/jest.js",
+      "--config",
+      "scratch/gap-hunt/review-178/occurrence.jest.config.mjs",
+      "--runInBand",
+      "--json",
+      "--outputFile",
+      "<checkout>/scratch/gap-hunt/review-178-repair/local-results/negative.json"
+    ],
+    "exit": 1,
+    "seconds": 1.2418268749897834
+  },
+  {
+    "name": "restored",
+    "argv": [
+      "node",
+      "--experimental-vm-modules",
+      "node_modules/jest/bin/jest.js",
+      "--config",
+      "scratch/gap-hunt/review-178/occurrence.jest.config.mjs",
+      "--runInBand",
+      "--json",
+      "--outputFile",
+      "<checkout>/scratch/gap-hunt/review-178-repair/local-results/restored.json"
+    ],
+    "exit": 0,
+    "seconds": 1.211063833994558
+  },
+  {
+    "name": "experiment-types",
+    "argv": [
+      "node",
+      "node_modules/typescript/bin/tsc",
+      "-p",
+      "experiments/exp-authoring/tsconfig.test.json"
+    ],
+    "exit": 0,
+    "seconds": 1.125680375000229
+  },
+  {
+    "name": "official-tsd",
+    "argv": [
+      "node",
+      "node_modules/tsd/dist/cli.js",
+      "--typings",
+      "experiments/exp-authoring/src/protocol.ts",
+      "--files",
+      "experiments/exp-authoring/test-d/protocol.test-d.ts"
+    ],
+    "exit": 0,
+    "seconds": 1.2030181669979356
+  },
+  {
+    "name": "origin-checks",
+    "argv": [
+      "node",
+      "--test",
+      "tooling/authoring-origins.test.mjs"
+    ],
+    "exit": 0,
+    "seconds": 0.42113595799310133
+  }
+]

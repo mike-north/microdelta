@@ -1,0 +1,45 @@
+watchman warning: Recrawled this watch 3 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '<checkout>' ; watchman watch-project '<checkout>'`
+
+(node:98565) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL scratch/gap-hunt/review-178/occurrence.test.mjs
+  ● current subject moved to another occurrence validates its current from edge
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 4
+    + Received  + 4
+
+      Object {
+    -   "bodies": 1,
+    -   "data": 2,
+    -   "kind": "published",
+    -   "publications": 1,
+    +   "bodies": 0,
+    +   "data": 1,
+    +   "kind": "reused",
+    +   "publications": 0,
+      }
+
+      44 |   const cold = run('cold');
+      45 |   const swapped = run('swap');
+    > 46 |   expect(swapped).toMatchObject({ data: 2, kind: 'published', bodies: 1, publications: 1 });
+         |                   ^
+      47 |   expect(swapped.reference).not.toEqual(cold.reference);
+      48 | }));
+      49 |
+
+      at scratch/gap-hunt/review-178/occurrence.test.mjs:46:19
+      at inStore (scratch/gap-hunt/review-178/occurrence.test.mjs:16:5)
+      at Object.<anonymous> (scratch/gap-hunt/review-178/occurrence.test.mjs:43:91)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 4 passed, 5 total
+Snapshots:   0 total
+Time:        0.845 s, estimated 1 s
+Ran all test suites.
+Test results written to: scratch/gap-hunt/review-178-repair/local-results/negative.json

@@ -1,0 +1,32 @@
+{
+  "productionCommit": "f43c5872987573d9b98a19f41c324b4d9336894c",
+  "fixtureCommit": "04ff7ee680f48e6436abb92153601cec7ec1a828",
+  "node": "v24.22.1",
+  "npm": "11.12.1",
+  "runtimeArtifacts": [
+    {
+      "file": "packages/tracking/src/observer.ts",
+      "sha256": "aceaf9d33720f32c9a69649d6b6b1a6e06eabeb94be86ed1cf6d4654ee4a469a"
+    },
+    {
+      "file": "packages/tracking/dist/src/observer.js",
+      "sha256": "ac0efc0708d54d582547433d18822b177ea418dd307866ba7cfb1dd490953cb1"
+    },
+    {
+      "file": "packages/machine-node/src/node/index.ts",
+      "sha256": "9eeb7c2988116433c9109cdf4043e3893427961729e64eb99b02dbefcfc97356"
+    },
+    {
+      "file": "packages/machine-node/dist/src/node/index.js",
+      "sha256": "0095d7e972223b64633cab0c665cee06be991201354ba0dbfcac2b472e2ef0b1"
+    },
+    {
+      "file": "scratch/gap-hunt/scale/dist/context-consumer.js",
+      "sha256": "6a2d01a7dfee0f970fc2cbc4f3594237c6b011cdb32542788490f60cf731fdd5"
+    },
+    {
+      "file": "package-lock.json",
+      "sha256": "55dfeace3ed7af8246e32c3029b444251df4ca164119f76716e44122e33129e6"
+    }
+  ]
+}

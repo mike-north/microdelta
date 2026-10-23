@@ -1,0 +1,56 @@
+[
+  {
+    "file": "scratch/gap-hunt/scale/context-component.test.mjs",
+    "sourceCommit": "04ff7ee",
+    "sha256": "a2b215e2fa9c713113eca25a986c71bbe01af84181aeb19914b8f4e3343aee70",
+    "copiedSha256": "a2b215e2fa9c713113eca25a986c71bbe01af84181aeb19914b8f4e3343aee70"
+  },
+  {
+    "file": "scratch/gap-hunt/scale/context-component.jest.config.mjs",
+    "sourceCommit": "04ff7ee",
+    "sha256": "5e13bb8a858fece1d8ee297aee3b39afe4dc43dd6c424110868f6390879727f3",
+    "copiedSha256": "5e13bb8a858fece1d8ee297aee3b39afe4dc43dd6c424110868f6390879727f3"
+  },
+  {
+    "file": "scratch/gap-hunt/scale/context-consumer.ts",
+    "sourceCommit": "04ff7ee",
+    "sha256": "169f4ffa5a0dd08d45c7cea1462aa4dcb37a00f8f37391f69cd9025142a842a6",
+    "copiedSha256": "169f4ffa5a0dd08d45c7cea1462aa4dcb37a00f8f37391f69cd9025142a842a6"
+  },
+  {
+    "file": "scratch/gap-hunt/scale/tsconfig.context-consumer.json",
+    "sourceCommit": "04ff7ee",
+    "sha256": "544b85885c9413665b192bba162fdaaa9baca1cf3f7bcf30feccd6af85cac1e8",
+    "copiedSha256": "544b85885c9413665b192bba162fdaaa9baca1cf3f7bcf30feccd6af85cac1e8"
+  },
+  {
+    "file": "scratch/gap-hunt/scale/tsconfig.json",
+    "sourceCommit": "04ff7ee",
+    "sha256": "6a5bbd59f273e7f73d2ff433638fa848e9492f3fe409a6676c615b61391d1a2f",
+    "copiedSha256": "6a5bbd59f273e7f73d2ff433638fa848e9492f3fe409a6676c615b61391d1a2f"
+  },
+  {
+    "file": "scratch/gap-hunt/scale/context-consumer.eslint.config.mjs",
+    "sourceCommit": "04ff7ee",
+    "sha256": "97cf5b4ce01d89bd302936a013f427f370890f04bfc33ff4ecb0a701101bb3b6",
+    "copiedSha256": "97cf5b4ce01d89bd302936a013f427f370890f04bfc33ff4ecb0a701101bb3b6"
+  },
+  {
+    "file": "scratch/gap-hunt/consumer-dx/eslint.config.mjs",
+    "sourceCommit": "04ff7ee",
+    "sha256": "d3b6d581aed001795e26b7bc8ad30eb6ed307dca890597b21f4d77f2235e37e1",
+    "copiedSha256": "d3b6d581aed001795e26b7bc8ad30eb6ed307dca890597b21f4d77f2235e37e1"
+  },
+  {
+    "file": "scratch/gap-hunt/scale/repro-context-component.mjs",
+    "sourceCommit": "04ff7ee",
+    "sha256": "ef368e063307d6937d567972a9dc8ec0827c2fd127f942a3f57cbe5d994c5242",
+    "copiedSha256": "ef368e063307d6937d567972a9dc8ec0827c2fd127f942a3f57cbe5d994c5242"
+  },
+  {
+    "file": "scratch/gap-hunt/contract-surface/repro-support.mjs",
+    "sourceCommit": "04ff7ee",
+    "sha256": "549c4bafb35c8a766d69f06f129f226d8d0532c3277f8400e9f0de8e8fdd0f14",
+    "copiedSha256": "549c4bafb35c8a766d69f06f129f226d8d0532c3277f8400e9f0de8e8fdd0f14"
+  }
+]

@@ -1,0 +1,5 @@
+(node:89927) ExperimentalWarning: v8.queryObjects() is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+{"node":"v24.22.1","mode":"component","isolated":true,"runs":100,"milliseconds":2.8910000000000053,"bodies":0,"observed":100,"initialized":0,"destroyed":0,"totalInitialized":0,"totalDestroyed":0,"liveALS":2,"liveALSConfirm":2,"heap":6816480,"rss":67518464}
+{"node":"v24.22.1","mode":"component","isolated":true,"runs":200,"milliseconds":1.6681250000000034,"bodies":0,"observed":200,"initialized":0,"destroyed":0,"totalInitialized":0,"totalDestroyed":0,"liveALS":2,"liveALSConfirm":2,"heap":6820152,"rss":67600384}
+{"node":"v24.22.1","mode":"component","isolated":true,"runs":300,"milliseconds":1.7570829999999944,"bodies":0,"observed":300,"initialized":0,"destroyed":0,"totalInitialized":0,"totalDestroyed":0,"liveALS":2,"liveALSConfirm":2,"heap":6836696,"rss":68517888}

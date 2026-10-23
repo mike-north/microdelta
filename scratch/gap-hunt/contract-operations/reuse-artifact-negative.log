@@ -1,0 +1,40 @@
+packages/core/test/gap-hunt-durability-reuse-artifact-worker.ts(26,10): error TS6133: 'runB' is declared but its value is never read.
+
+Second control: wrong selection plus void runB to preserve noUnusedLocals checks.
+watchman warning: Recrawled this watch 19 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-durability' ; watchman watch-project '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-durability'`
+
+(node:36136) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL packages/core/.test-build/test/gap-hunt-durability-reuse-artifact.test.js
+  ● F-10 changing only own implementation at the same version runs once and publishes a distinct exact reference despite equal output
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Array [
+        1,
+    -   1,
+    +   0,
+      ]
+
+      50 |     const first = execute(directory, 'A', 1);
+      51 |     const second = execute(directory, 'B', 1);
+    > 52 |     expect([first.bodyCalls, second.bodyCalls]).toEqual([1, 1]);
+         |                                                 ^
+      53 |     expect(second.reference).not.toBe(first.reference);
+      54 |   } finally { rmSync(directory, { recursive: true, force: true }); }
+      55 | });
+
+      at Object.<anonymous> (test/gap-hunt-durability-reuse-artifact.test.ts:52:49)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 2 passed, 3 total
+Snapshots:   0 total
+Time:        1.244 s
+Ran all test suites within paths "packages/core/.test-build/test/gap-hunt-durability-reuse-artifact.test.js".

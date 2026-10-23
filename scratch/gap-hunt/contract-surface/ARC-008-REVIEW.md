@@ -55,3 +55,13 @@ first add an outcome-based failing component test using existing injected ports.
 Only if they cannot express the contract should a narrower internal seam or a
 clarification of ARC-008 be considered. No production seam or public API change
 was made during this audit.
+
+## Follow-up recommendation: no new API or missing-contract issue
+
+ARC-008 already states the testability obligation; a new “define testability” target would duplicate it. The current supplied callbacks do satisfy the concrete purpose of controlling **child work behavior**: `nested/arguments.test.ts:70–99` injects helpers returning known child values with independent run counters; `:166–169` throws a selected child failure; `:402` asserts unchanged arguments retain both child and parent exact references; `:496` distinguishes parent failure from an in-flight child failure. `resolution/summary-validation.test.ts:208–226` varies the child's implementation and forces equal output, then independently asserts a new child reference, zero parent bodies and exact parent retention. Those are substantive controlled child outcomes, not merely test IDs or mock counts.
+
+The narrower literal reading—replace the *recursive Resolution result* independently of History, Tracking and Definition—remains unproved. The construction contract has no child-resolver port; child resolution is internal recursion. Supplied callback control is therefore not evidence that a separately substituted recursive resolver exists. It would be misleading either to mark that literal isolated seam verified or to infer a runtime defect from its absence.
+
+Recommend **no new issue from this audit**: no missing normative requirement and no concrete invariant has been shown inexpressible through the supplied callbacks and existing injected ports. Retain the precise evidence qualification in the ledger. If future mutation/fault evidence shows a validation invariant cannot be discriminated because recursive child resolution masks it, write that outcome-based component test first; use existing History/Tracking/admission/execution seams where possible, and introduce only the smallest internal seam if actually necessary. An architecture clarification can record that child-work callbacks are the accepted bounded surrogate, if the owner wants to close the literal wording; this is not a reason to mandate a new public interface.
+
+These follow-up anchors were inspected against current source; their earlier execution is recorded by the owning broad suites, rather than claimed as a fresh rerun in this follow-up.

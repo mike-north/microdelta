@@ -1,0 +1,187 @@
+
+> @microdelta/tracking@0.2.0 test:unit
+> tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --runInBand --runTestsByPath .test-build/test/gap-hunt-contracts-intrinsic-presence.test.js
+
+(node:65099) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL .test-build/test/gap-hunt-contracts-intrinsic-presence.test.js
+  ● gap hunt TRK-5 intrinsic presence versus selected value › constructor own-presence does not select intrinsic member data
+
+    TypeError: Unsupported value at $.constructor: intrinsic inherited data
+
+      192 | /** Reject unsupported data with a location instead of JSON-style omission. */
+      193 | function unsupported(path: string, reason: string): never {
+    > 194 |   throw new TypeError(`Unsupported value at ${path}: ${reason}`);
+          |         ^
+      195 | }
+      196 |
+      197 | /** Own descriptors distinguish data from accessors without executing getters. */
+
+      at unsupported (../value/src/value.ts:194:9)
+      at lookupValidated (../value/src/value.ts:533:7)
+      at observeAt (../value/src/value.ts:606:20)
+      at observe (../value/src/value.ts:856:10)
+      at .test-build/test/gap-hunt-contracts-intrinsic-presence.test.js:13:16
+
+  ● gap hunt TRK-5 intrinsic presence versus selected value › __proto__ own-presence does not select intrinsic member data
+
+    TypeError: Unsupported value at $.__proto__: intrinsic inherited data
+
+      192 | /** Reject unsupported data with a location instead of JSON-style omission. */
+      193 | function unsupported(path: string, reason: string): never {
+    > 194 |   throw new TypeError(`Unsupported value at ${path}: ${reason}`);
+          |         ^
+      195 | }
+      196 |
+      197 | /** Own descriptors distinguish data from accessors without executing getters. */
+
+      at unsupported (../value/src/value.ts:194:9)
+      at lookupValidated (../value/src/value.ts:533:7)
+      at observeAt (../value/src/value.ts:606:20)
+      at observe (../value/src/value.ts:856:10)
+      at .test-build/test/gap-hunt-contracts-intrinsic-presence.test.js:13:16
+
+  ● gap hunt TRK-5 intrinsic presence versus selected value › toString own-presence does not select intrinsic member data
+
+    TypeError: Unsupported value at $.toString: intrinsic inherited data
+
+      192 | /** Reject unsupported data with a location instead of JSON-style omission. */
+      193 | function unsupported(path: string, reason: string): never {
+    > 194 |   throw new TypeError(`Unsupported value at ${path}: ${reason}`);
+          |         ^
+      195 | }
+      196 |
+      197 | /** Own descriptors distinguish data from accessors without executing getters. */
+
+      at unsupported (../value/src/value.ts:194:9)
+      at lookupValidated (../value/src/value.ts:533:7)
+      at observeAt (../value/src/value.ts:606:20)
+      at observe (../value/src/value.ts:856:10)
+      at .test-build/test/gap-hunt-contracts-intrinsic-presence.test.js:13:16
+
+  ● gap hunt TRK-5 intrinsic presence versus selected value › hasOwnProperty own-presence does not select intrinsic member data
+
+    TypeError: Unsupported value at $.hasOwnProperty: intrinsic inherited data
+
+      192 | /** Reject unsupported data with a location instead of JSON-style omission. */
+      193 | function unsupported(path: string, reason: string): never {
+    > 194 |   throw new TypeError(`Unsupported value at ${path}: ${reason}`);
+          |         ^
+      195 | }
+      196 |
+      197 | /** Own descriptors distinguish data from accessors without executing getters. */
+
+      at unsupported (../value/src/value.ts:194:9)
+      at lookupValidated (../value/src/value.ts:533:7)
+      at observeAt (../value/src/value.ts:606:20)
+      at observe (../value/src/value.ts:856:10)
+      at .test-build/test/gap-hunt-contracts-intrinsic-presence.test.js:13:16
+
+  ● gap hunt TRK-5 intrinsic presence versus selected value › constructor inherited membership does not select intrinsic member data
+
+    TypeError: Unsupported value at $.constructor: intrinsic inherited data
+
+      192 | /** Reject unsupported data with a location instead of JSON-style omission. */
+      193 | function unsupported(path: string, reason: string): never {
+    > 194 |   throw new TypeError(`Unsupported value at ${path}: ${reason}`);
+          |         ^
+      195 | }
+      196 |
+      197 | /** Own descriptors distinguish data from accessors without executing getters. */
+
+      at unsupported (../value/src/value.ts:194:9)
+      at lookupValidated (../value/src/value.ts:533:7)
+      at observeAt (../value/src/value.ts:606:20)
+      at observe (../value/src/value.ts:856:10)
+      at .test-build/test/gap-hunt-contracts-intrinsic-presence.test.js:16:16
+
+  ● gap hunt TRK-5 intrinsic presence versus selected value › __proto__ inherited membership does not select intrinsic member data
+
+    TypeError: Unsupported value at $.__proto__: intrinsic inherited data
+
+      192 | /** Reject unsupported data with a location instead of JSON-style omission. */
+      193 | function unsupported(path: string, reason: string): never {
+    > 194 |   throw new TypeError(`Unsupported value at ${path}: ${reason}`);
+          |         ^
+      195 | }
+      196 |
+      197 | /** Own descriptors distinguish data from accessors without executing getters. */
+
+      at unsupported (../value/src/value.ts:194:9)
+      at lookupValidated (../value/src/value.ts:533:7)
+      at observeAt (../value/src/value.ts:606:20)
+      at observe (../value/src/value.ts:856:10)
+      at .test-build/test/gap-hunt-contracts-intrinsic-presence.test.js:16:16
+
+  ● gap hunt TRK-5 intrinsic presence versus selected value › toString inherited membership does not select intrinsic member data
+
+    TypeError: Unsupported value at $.toString: intrinsic inherited data
+
+      192 | /** Reject unsupported data with a location instead of JSON-style omission. */
+      193 | function unsupported(path: string, reason: string): never {
+    > 194 |   throw new TypeError(`Unsupported value at ${path}: ${reason}`);
+          |         ^
+      195 | }
+      196 |
+      197 | /** Own descriptors distinguish data from accessors without executing getters. */
+
+      at unsupported (../value/src/value.ts:194:9)
+      at lookupValidated (../value/src/value.ts:533:7)
+      at observeAt (../value/src/value.ts:606:20)
+      at observe (../value/src/value.ts:856:10)
+      at .test-build/test/gap-hunt-contracts-intrinsic-presence.test.js:16:16
+
+  ● gap hunt TRK-5 intrinsic presence versus selected value › hasOwnProperty inherited membership does not select intrinsic member data
+
+    TypeError: Unsupported value at $.hasOwnProperty: intrinsic inherited data
+
+      192 | /** Reject unsupported data with a location instead of JSON-style omission. */
+      193 | function unsupported(path: string, reason: string): never {
+    > 194 |   throw new TypeError(`Unsupported value at ${path}: ${reason}`);
+          |         ^
+      195 | }
+      196 |
+      197 | /** Own descriptors distinguish data from accessors without executing getters. */
+
+      at unsupported (../value/src/value.ts:194:9)
+      at lookupValidated (../value/src/value.ts:533:7)
+      at observeAt (../value/src/value.ts:606:20)
+      at observe (../value/src/value.ts:856:10)
+      at .test-build/test/gap-hunt-contracts-intrinsic-presence.test.js:16:16
+
+  ● gap hunt TRK-5 intrinsic presence versus selected value › ordinary tracked membership needs only a boolean fact, not Object.prototype.constructor
+
+    TypeError: Unsupported value at $.constructor: intrinsic inherited data
+
+      192 | /** Reject unsupported data with a location instead of JSON-style omission. */
+      193 | function unsupported(path: string, reason: string): never {
+    > 194 |   throw new TypeError(`Unsupported value at ${path}: ${reason}`);
+          |         ^
+      195 | }
+      196 |
+      197 | /** Own descriptors distinguish data from accessors without executing getters. */
+
+      at unsupported (../value/src/value.ts:194:9)
+      at lookupValidated (../value/src/value.ts:533:7)
+      at observeAt (../value/src/value.ts:606:20)
+      at observe (../value/src/value.ts:856:10)
+      at observeAt (.test-build/src/observer.js:340:16)
+      at recordFact (.test-build/src/observer.js:328:26)
+      at Object.has (.test-build/src/observer.js:490:32)
+      at .test-build/test/gap-hunt-contracts-intrinsic-presence.test.js:25:62
+      at .test-build/src/observer.js:847:35
+      at Object.capture (.test-build/src/observer.js:845:29)
+      at Object.<anonymous> (.test-build/test/gap-hunt-contracts-intrinsic-presence.test.js:25:34)
+
+Test Suites: 1 failed, 1 total
+Tests:       9 failed, 2 passed, 11 total
+Snapshots:   0 total
+Time:        0.12 s, estimated 1 s
+Ran all test suites within paths ".test-build/test/gap-hunt-contracts-intrinsic-presence.test.js".
+npm error Lifecycle script `test:unit` failed with error:
+npm error code 1
+npm error path /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-contracts/packages/tracking
+npm error workspace @microdelta/tracking@0.2.0
+npm error location /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-contracts/packages/tracking
+npm error command failed
+npm error command sh -c tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --runInBand --runTestsByPath .test-build/test/gap-hunt-contracts-intrinsic-presence.test.js

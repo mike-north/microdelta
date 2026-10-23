@@ -61,6 +61,10 @@ await assertion('prepare', 'experiments/exp-2/materialization.test.ts', 'explici
 await assertion('scalarLoading', 'experiments/exp-2/materialization.test.ts', 'fingerprint-only verification makes zero payload reads; positive control really reads', 'Experimental scalar fingerprint check performs zero payload reads, with read-positive control.', 'semantic-exp2.log');
 await assertion('nestedLoading', 'experiments/exp-nested/test/nested-sqlite.test.ts', 'view creation, navigation and selected leaves read no root, sibling or unrelated subtree payload', 'Separate-process SQLite nested fixture limits returned payload cells to selected leaf; not disk-page IO or scale evidence.', 'semantic-expnested.log');
 await assertion('nestedMetadata', 'experiments/exp-nested/test/nested-sqlite.test.ts', 'metadata comparison in a fresh process performs zero payload fallback', 'Fresh-process nested SQLite fingerprint comparison requests zero payload fallback.', 'semantic-expnested.log');
+await assertion('edgeKeys', 'packages/core/test/gap-hunt-contracts-edge-oracle.test.ts', 'literal special key %s: unread/equal-inherited/changed/current rollback', 'Eight tricky key spellings including lone UTF16 surrogate remain distinct under declared current bindings across unread edits, custom inherited equality, changed values and rollback, matching cold stores.', 'edge-oracle-results.log');
+await assertion('edgeNumbers', 'packages/core/test/gap-hunt-contracts-edge-oracle.test.ts', 'canonical number atoms distinguish zero signs, NaN and infinities across restart and rollback', 'Zero, negative zero, NaN and both infinities produce correct current conditional values and exact publish/reuse expectations through fresh-process warm/cold histories.', 'edge-oracle-results.log');
+await assertion('edgeSparse', 'packages/core/test/gap-hunt-contracts-edge-oracle.test.ts', 'sparse hole and present undefined have distinct indexed membership facts', 'Sparse holes and present undefined differ under indexed membership through restart, later fill and rollback; separate positional-value row equates them.', 'edge-oracle-results.log');
+await assertion('importCapture', 'scratch/gap-hunt/contracts/transitive-capture-lint-probe.mjs', 'assert.equal(diagnostics.length, 4)', 'Actual type-aware lint emits three imported ordinary-helper external-capture diagnostics and one documented unsupported imported-callback diagnostic; no silent bypass in four tested routes.', 'transitive-capture-lint-results.log');
 await assertion('ranking', 'packages/tracking/test/gap-hunt-contracts-invalidation.test.ts', 'TRK-5 ordered ranking changes with selected scores and ignores unselected member fields', 'Explicit ranked key sequence reads keys/scores only; changed selected score invalidates while changed unselected avatar fields compare equal.', 'tracking-results.log');
 const blockEvidence = {
  'docs/spec/tracking.md:70': ['ranking'],
@@ -81,7 +85,7 @@ const blockEvidence = {
  'docs/spec/composition.md:179': ['nested'],
  'docs/spec/composition.md:180': ['argumentMiss'],
  'docs/spec/composition.md:181': ['topology'],
- 'docs/spec/tracking.md:41': ['captureLint'],
+ 'docs/spec/tracking.md:41': ['captureLint','importCapture'],
  'docs/spec/tracking.md:67': ['lengthPosition'],
  'docs/spec/tracking.md:68': ['lengthPosition'],
  'docs/spec/tracking.md:73': ['selectedOutput'],
@@ -95,9 +99,9 @@ const blockEvidence = {
 };
 const ownerEvidence = {
  'TRK-1': ['primitive','leaf','calls'], 'TRK-2':['calls'], 'TRK-3':['frames','restore','derive','asyncFailure','lateHelper'],
- 'TRK-4':['captureLint'], 'TRK-5':['leaf','optional','presence','member','identity'], 'TRK-6':['rebind','multiRebind'],
- 'TRK-7':['leaf','identity'], 'TRK-8':['branches'], 'VAL-1':['address','wire'],
- 'VAL-2':['edges','negative','crossprocess','transport','wire'], 'VAL-3':['frozen'],
+ 'TRK-4':['captureLint','importCapture'], 'TRK-5':['leaf','optional','presence','member','identity'], 'TRK-6':['rebind','multiRebind'],
+ 'TRK-7':['leaf','identity'], 'TRK-8':['branches'], 'VAL-1':['address','wire','edgeKeys'],
+ 'VAL-2':['edges','negative','crossprocess','transport','wire','edgeNumbers','edgeSparse'], 'VAL-3':['frozen'],
  'COL-1':['keyed'], 'COL-2':['projection'], 'COL-3':['order','keyed'], 'COL-4':['keyed','gates'],
  'CMP-1':['topology','rejectGraph'], 'CMP-2':['branches','gates'], 'CMP-3':['supplied'],
  'CMP-4':['topology','keyed'], 'CMP-5':['nested'], 'CMP-6':['supplied','keyed'],
@@ -136,5 +140,13 @@ await writeFile(prefix + 'semantic-clauses.json', JSON.stringify({
  scope: [...documents], attribution: 'Implementer: Codex worker (gpt-6.1-sol), operating for Mike North.',
  method: 'Each exact inventory paragraph/table row is retained. Assertion proves statements are bounded, manually selected semantic correspondences, not literal-ID matches. Uncovered remainder is explicit and never counted as conformance. Experimental/deferred/proposal paragraphs remain inventoried without asserting they are shipped obligations. Full normative certification remains incomplete.',
  assertions, blocks,
+ counterexamples: [{
+  kind: 'confirmed-distinct-root-cause-supervisor-filing-owned',
+  file: 'packages/tracking/test/gap-hunt-contracts-intrinsic-presence.test.ts',
+  executionLog: prefix + 'intrinsic-presence-results.log',
+  status: '9 intentionally red presence assertions;2 green supported/rejected-domain controls',
+  governingClauses: ['docs/spec/tracking.md:63', 'docs/spec/tracking.md:64', 'docs/spec/tracking.md:135-141'],
+  detail: 'Own/membership over Object.prototype intrinsic names reject by selecting unsupported intrinsic data before producing only the required boolean fact. Visible overrejection; not #155 false reuse.',
+ }],
 }, null, 2) + '\n');
 console.log(JSON.stringify({ blocks: blocks.length, assertionAnchors: Object.keys(assertions).length, explicitUncoveredBlocks: blocks.filter(b => b.status === 'explicit-uncovered').length, partialBlocks: blocks.filter(b => b.executedAssertionIds.length).length }));

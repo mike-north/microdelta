@@ -1,0 +1,22 @@
+{
+  "status": "pass",
+  "checked": "direct wrapper, imported callback, same-file callback, nested local bridge",
+  "diagnostics": [
+    {
+      "line": 8,
+      "message": "External influence 'importedHelper' is not a tracked value or approved deterministic capability."
+    },
+    {
+      "line": 11,
+      "message": "This Tracking callback form is outside the linted direct-callback syntax; use a direct callback or same-file function declaration."
+    },
+    {
+      "line": 16,
+      "message": "External influence 'importedHelper' is not a tracked value or approved deterministic capability."
+    },
+    {
+      "line": 23,
+      "message": "External influence 'importedHelper' is not a tracked value or approved deterministic capability."
+    }
+  ]
+}

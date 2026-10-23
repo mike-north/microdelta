@@ -329,6 +329,34 @@
       "proves": "Fresh-process nested SQLite fingerprint comparison requests zero payload fallback.",
       "executionLog": "scratch/gap-hunt/contracts/semantic-expnested.log"
     },
+    "edgeKeys": {
+      "file": "packages/core/test/gap-hunt-contracts-edge-oracle.test.ts",
+      "line": 36,
+      "title": "literal special key %s: unread/equal-inherited/changed/current rollback",
+      "proves": "Eight tricky key spellings including lone UTF16 surrogate remain distinct under declared current bindings across unread edits, custom inherited equality, changed values and rollback, matching cold stores.",
+      "executionLog": "scratch/gap-hunt/contracts/edge-oracle-results.log"
+    },
+    "edgeNumbers": {
+      "file": "packages/core/test/gap-hunt-contracts-edge-oracle.test.ts",
+      "line": 53,
+      "title": "canonical number atoms distinguish zero signs, NaN and infinities across restart and rollback",
+      "proves": "Zero, negative zero, NaN and both infinities produce correct current conditional values and exact publish/reuse expectations through fresh-process warm/cold histories.",
+      "executionLog": "scratch/gap-hunt/contracts/edge-oracle-results.log"
+    },
+    "edgeSparse": {
+      "file": "packages/core/test/gap-hunt-contracts-edge-oracle.test.ts",
+      "line": 50,
+      "title": "sparse hole and present undefined have distinct indexed membership facts",
+      "proves": "Sparse holes and present undefined differ under indexed membership through restart, later fill and rollback; separate positional-value row equates them.",
+      "executionLog": "scratch/gap-hunt/contracts/edge-oracle-results.log"
+    },
+    "importCapture": {
+      "file": "scratch/gap-hunt/contracts/transitive-capture-lint-probe.mjs",
+      "line": 9,
+      "title": "assert.equal(diagnostics.length, 4)",
+      "proves": "Actual type-aware lint emits three imported ordinary-helper external-capture diagnostics and one documented unsupported imported-callback diagnostic; no silent bypass in four tested routes.",
+      "executionLog": "scratch/gap-hunt/contracts/transitive-capture-lint-results.log"
+    },
     "ranking": {
       "file": "packages/tracking/test/gap-hunt-contracts-invalidation.test.ts",
       "line": 98,
@@ -1543,7 +1571,8 @@
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "address",
-        "wire"
+        "wire",
+        "edgeKeys"
       ],
       "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
@@ -1559,7 +1588,9 @@
         "negative",
         "crossprocess",
         "transport",
-        "wire"
+        "wire",
+        "edgeNumbers",
+        "edgeSparse"
       ],
       "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
@@ -2123,7 +2154,8 @@
       "obligationKind": "normative-or-bounded-selected-contract",
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
-        "captureLint"
+        "captureLint",
+        "importCapture"
       ],
       "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
@@ -2428,7 +2460,8 @@
       "status": "bounded-assertions-with-explicit-uncovered-remainder",
       "executedAssertionIds": [
         "address",
-        "wire"
+        "wire",
+        "edgeKeys"
       ],
       "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
@@ -2444,7 +2477,9 @@
         "negative",
         "crossprocess",
         "transport",
-        "wire"
+        "wire",
+        "edgeNumbers",
+        "edgeSparse"
       ],
       "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
@@ -2460,7 +2495,9 @@
         "negative",
         "crossprocess",
         "transport",
-        "wire"
+        "wire",
+        "edgeNumbers",
+        "edgeSparse"
       ],
       "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
@@ -2666,6 +2703,20 @@
       ],
       "otherOwnerEvidence": null,
       "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
+    }
+  ],
+  "counterexamples": [
+    {
+      "kind": "confirmed-distinct-root-cause-supervisor-filing-owned",
+      "file": "packages/tracking/test/gap-hunt-contracts-intrinsic-presence.test.ts",
+      "executionLog": "scratch/gap-hunt/contracts/intrinsic-presence-results.log",
+      "status": "9 intentionally red presence assertions;2 green supported/rejected-domain controls",
+      "governingClauses": [
+        "docs/spec/tracking.md:63",
+        "docs/spec/tracking.md:64",
+        "docs/spec/tracking.md:135-141"
+      ],
+      "detail": "Own/membership over Object.prototype intrinsic names reject by selecting unsupported intrinsic data before producing only the required boolean fact. Visible overrejection; not #155 false reuse."
     }
   ]
 }

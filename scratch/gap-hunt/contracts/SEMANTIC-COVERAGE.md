@@ -3,7 +3,7 @@
 Implementer: Codex worker (gpt-6.1-sol), operating for Mike North.
 
 `semantic-clauses.json` retains all 178 non-code paragraph/table blocks of
-`tracking.md`, `composition.md`, and `glossary.md`. Forty-seven named assertion anchors
+`tracking.md`, `composition.md`, and `glossary.md`. Fifty-one named assertion anchors
 record the concrete behavior they establish and the actual execution log. This is
 an exhaustive clause inventory, **not complete normative certification**: 99 blocks
 have bounded semantic assertion evidence, 46 remain explicitly uncovered by this
@@ -74,3 +74,10 @@ selected experimental evidence is never represented as production rollout proof.
 An additional ordered-ranking operation assertion passes: selected score changes
 invalidate, while unselected avatar edits preserve the ranked-key consumer evidence.
 The focused precision matrix now has 13 passing assertions (`tracking-results.log`).
+
+The finite edge oracle contributes20 passing matrix rows (204 independent workers),
+including special own-data keys, lone UTF16 keys, numeric atoms and sparse arrays.
+The actual imported-helper capture lint probe asserts four expected diagnostics.
+A distinct intrinsic-presence counterexample (9 red/2 green) is recorded separately
+with exact TRK-5 and Value-domain citations; supervisor classification confirmed
+operation-specific presence overrejection, not another #155 instance.

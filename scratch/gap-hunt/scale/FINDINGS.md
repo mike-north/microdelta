@@ -1,5 +1,7 @@
 # C scale evidence
 
+**Superseding status, 2026-10-23:** the first-pass ALS “unconfirmed” assessment below is historical and predates confirmed #172. [Current standalone Tracking component evidence](CONTEXT-COMPONENT-PICKUP.md) and its [clean replay](CONTEXT-COMPONENT-CLEAN.md) establish completed-capture context accumulation with semantic controls; the same pickup records the installed microdelta@0.2.0 comparison and distinguishes the flat current-workspace diagnostic. These are different consumer boundaries, not a blanket workspace leak claim. Later [#173 fanout-admission evidence](FANOUT-ADMISSION.md) identifies corpus-sized queued work before admission, while [materialization lifetime evidence](MATERIALIZATION-LIFETIME.md) finds weakly reclaimed child wrappers and no demonstrated payload-cache defect within its synthetic-reader scope. Those reports govern the current conclusions. Original samples and first-pass interpretations below remain unchanged for historical attribution.
+
 Baseline c5802da, Node 24.22.1, Darwin arm64. Synthetic fixtures only; no production edits. Current corrected measurements and deterministic reproductions lead this report. Historical/confounded measurements are explicitly separated below.
 
 ## Publication repeats root-array validation

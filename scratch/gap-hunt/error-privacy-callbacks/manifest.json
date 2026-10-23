@@ -1,0 +1,111 @@
+{
+  "source": "7677ec4d61fd78efc63da28906175707e1391f12",
+  "executed_proof": "b63657b167e20fd16ea6a2d3815120a1438ce45d",
+  "files": [
+    {
+      "path": "scratch/gap-hunt/error-privacy-callbacks/COMMENT-DRAFT.md",
+      "bytes": 1306,
+      "sha256": "2269e8d1438e57956440455d888810fd15d577528cd099a7b4bfe9a83a6a0f63"
+    },
+    {
+      "path": "scratch/gap-hunt/error-privacy-callbacks/REPORT.md",
+      "bytes": 3861,
+      "sha256": "4d518413f6af64b37ac1be087dee00d5b859649e00d52ef20031e3feef50ff62"
+    },
+    {
+      "path": "scratch/gap-hunt/error-privacy-callbacks/callbacks.test.ts",
+      "bytes": 6246,
+      "sha256": "fc9abaaaaf1f1760ae7742d0f5f4b43bae9f3d393efdf3608fad1c569f978aa3"
+    },
+    {
+      "path": "scratch/gap-hunt/error-privacy-callbacks/captures/build.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "scratch/gap-hunt/error-privacy-callbacks/captures/build.stdout.log",
+      "bytes": 4988,
+      "sha256": "9eb1f0e1ba62cd61262041daf444feb22fd48ec57cb809914e03f96c4504a62d"
+    },
+    {
+      "path": "scratch/gap-hunt/error-privacy-callbacks/captures/compile.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "scratch/gap-hunt/error-privacy-callbacks/captures/compile.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "scratch/gap-hunt/error-privacy-callbacks/captures/historical-compile-failure.log",
+      "bytes": 1220,
+      "sha256": "3f29002cca07270dbb71456b6047f21d563c52cf6b2ca37e6451bc89501258d2"
+    },
+    {
+      "path": "scratch/gap-hunt/error-privacy-callbacks/captures/historical-route-setup-receipt.json",
+      "bytes": 5551,
+      "sha256": "15e499c42f2705cb7f20ba35a4de56090e215e98ee310475a1cdeb89e83ebcc6"
+    },
+    {
+      "path": "scratch/gap-hunt/error-privacy-callbacks/captures/install.stderr.log",
+      "bytes": 427,
+      "sha256": "21e9ed8510fee3af3cfc71b1fcd72b003d5b9e7e347266fcf081335c0dfa3d37"
+    },
+    {
+      "path": "scratch/gap-hunt/error-privacy-callbacks/captures/install.stdout.log",
+      "bytes": 26,
+      "sha256": "06d70ae4940a69937e6a1658b110bfce389f9dbd7d3562f5a9d258ccb726368d"
+    },
+    {
+      "path": "scratch/gap-hunt/error-privacy-callbacks/captures/jest.json",
+      "bytes": 10001,
+      "sha256": "3f4bdece51697d3fd11d400914e5a66b725a3bd149eddb215c637114ca08b591"
+    },
+    {
+      "path": "scratch/gap-hunt/error-privacy-callbacks/captures/jest.stderr.log",
+      "bytes": 7297,
+      "sha256": "5dc4d4a69a307f873379b60cd4ef17d0869dfdfbe72b33f8da6a6d571804451f"
+    },
+    {
+      "path": "scratch/gap-hunt/error-privacy-callbacks/captures/jest.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "scratch/gap-hunt/error-privacy-callbacks/captures/lint.stderr.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "scratch/gap-hunt/error-privacy-callbacks/captures/lint.stdout.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "scratch/gap-hunt/error-privacy-callbacks/captures/receipt.json",
+      "bytes": 5113,
+      "sha256": "85bebcc0b2987176db8b47cfa92109c0b94ec8e05ed4e30e8598b9de658ed723"
+    },
+    {
+      "path": "scratch/gap-hunt/error-privacy-callbacks/eslint.config.mjs",
+      "bytes": 475,
+      "sha256": "07a3cd5c2231fbf606c3e525d2fb00f0723a0db487c3f75936feb1d9e6dd154f"
+    },
+    {
+      "path": "scratch/gap-hunt/error-privacy-callbacks/jest.config.mjs",
+      "bytes": 252,
+      "sha256": "827850ac529dca6987dd1471c88ed503841675ef13326a764f6bdb0aaeac3e2f"
+    },
+    {
+      "path": "scratch/gap-hunt/error-privacy-callbacks/run.py",
+      "bytes": 3987,
+      "sha256": "c4bb9b9fab999a05ff7844f92f365991834e2eee623f70af0ede1887a92dc472"
+    },
+    {
+      "path": "scratch/gap-hunt/error-privacy-callbacks/tsconfig.json",
+      "bytes": 1318,
+      "sha256": "906b0cd5b51f02268b9b520d9a8d6dba4a45ee9d8ebbd5854407bd61766791c3"
+    }
+  ]
+}

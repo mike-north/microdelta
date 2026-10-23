@@ -1,0 +1,184 @@
+{
+  "source": "7677ec4d61fd78efc63da28906175707e1391f12",
+  "head": "d062f6176187521494ec6924fd832e1d0fbbbcf1",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "node": "v24.22.1",
+  "npm": "11.12.1",
+  "node_modules_absent_before": true,
+  "clean_before": true,
+  "commands": [
+    {
+      "name": "install",
+      "argv": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "exit": 0
+    },
+    {
+      "name": "build",
+      "argv": [
+        "npm",
+        "run",
+        "build:packages"
+      ],
+      "exit": 0
+    },
+    {
+      "name": "compile",
+      "argv": [
+        "node_modules/.bin/tsc",
+        "-p",
+        "scratch/gap-hunt/error-privacy-callbacks/tsconfig.json"
+      ],
+      "exit": 0
+    },
+    {
+      "name": "lint",
+      "argv": [
+        "node_modules/.bin/eslint",
+        "-c",
+        "scratch/gap-hunt/error-privacy-callbacks/eslint.config.mjs",
+        "scratch/gap-hunt/error-privacy-callbacks/callbacks.test.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exit": 0
+    },
+    {
+      "name": "jest",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/error-privacy-callbacks/jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "<historical-evidence-output>/jest.json"
+      ],
+      "exit": 1
+    }
+  ],
+  "passed": 1,
+  "failed": [
+    "source/author-resolution-error: outer framework failure keeps authored text in exact cause",
+    "supplied/plain-error: outer framework failure keeps authored text in exact cause",
+    "supplied/author-resolution-error: outer framework failure keeps authored text in exact cause",
+    "strict-fold/plain-error: outer framework failure keeps authored text in exact cause",
+    "strict-fold/author-resolution-error: outer framework failure keeps authored text in exact cause",
+    "outcome-fold/plain-error: outer framework failure keeps authored text in exact cause",
+    "outcome-fold/author-resolution-error: outer framework failure keeps authored text in exact cause"
+  ],
+  "total": 8,
+  "runtime_error_suites": 0,
+  "observations": [
+    {
+      "route": "source",
+      "mode": "plain-error",
+      "outerCode": "execution-failure",
+      "outerMessage": "Source check of [\"callback-privacy\",\"step\",\"value\",null] threw",
+      "outerIsThrown": false,
+      "causeIsThrown": true,
+      "calls": 1,
+      "completedResult": false,
+      "failedStepResults": {
+        "count": 0
+      }
+    },
+    {
+      "route": "source",
+      "mode": "author-resolution-error",
+      "outerCode": "unsupported-result",
+      "outerMessage": "SYNTHETIC-CALLBACK-DETAIL-4c81",
+      "outerIsThrown": true,
+      "causeIsThrown": false,
+      "calls": 1,
+      "completedResult": false,
+      "failedStepResults": {
+        "count": 0
+      }
+    },
+    {
+      "route": "supplied",
+      "mode": "plain-error",
+      "outerCode": "execution-failure",
+      "outerMessage": "Body of [\"callback-privacy\",\"step\",\"value\",null] failed",
+      "outerIsThrown": false,
+      "causeIsThrown": false,
+      "calls": 1,
+      "completedResult": false,
+      "failedStepResults": {
+        "count": 0
+      }
+    },
+    {
+      "route": "supplied",
+      "mode": "author-resolution-error",
+      "outerCode": "unsupported-result",
+      "outerMessage": "SYNTHETIC-CALLBACK-DETAIL-4c81",
+      "outerIsThrown": true,
+      "causeIsThrown": false,
+      "calls": 1,
+      "completedResult": false,
+      "failedStepResults": {
+        "count": 0
+      }
+    },
+    {
+      "route": "strict-fold",
+      "mode": "plain-error",
+      "outerCode": "invalid-request",
+      "outerMessage": "Step [\"callback-privacy\",\"step\",\"value\",null] is a strict fold; resolve it with resolveFold, whose waiting, failed and coverage outcomes a step outcome cannot express",
+      "outerIsThrown": false,
+      "causeIsThrown": false,
+      "calls": 0,
+      "completedResult": false,
+      "failedStepResults": {
+        "count": 0
+      }
+    },
+    {
+      "route": "strict-fold",
+      "mode": "author-resolution-error",
+      "outerCode": "invalid-request",
+      "outerMessage": "Step [\"callback-privacy\",\"step\",\"value\",null] is a strict fold; resolve it with resolveFold, whose waiting, failed and coverage outcomes a step outcome cannot express",
+      "outerIsThrown": false,
+      "causeIsThrown": false,
+      "calls": 0,
+      "completedResult": false,
+      "failedStepResults": {
+        "count": 0
+      }
+    },
+    {
+      "route": "outcome-fold",
+      "mode": "plain-error",
+      "outerCode": "invalid-request",
+      "outerMessage": "Step [\"callback-privacy\",\"step\",\"value\",null] is an outcome fold; resolve it with resolveOutcomeFold, whose waiting and coverage outcomes a step outcome cannot express",
+      "outerIsThrown": false,
+      "causeIsThrown": false,
+      "calls": 0,
+      "completedResult": false,
+      "failedStepResults": {
+        "count": 0
+      }
+    },
+    {
+      "route": "outcome-fold",
+      "mode": "author-resolution-error",
+      "outerCode": "invalid-request",
+      "outerMessage": "Step [\"callback-privacy\",\"step\",\"value\",null] is an outcome fold; resolve it with resolveOutcomeFold, whose waiting and coverage outcomes a step outcome cannot express",
+      "outerIsThrown": false,
+      "causeIsThrown": false,
+      "calls": 0,
+      "completedResult": false,
+      "failedStepResults": {
+        "count": 0
+      }
+    }
+  ]
+}

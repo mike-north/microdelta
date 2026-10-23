@@ -1,0 +1,6 @@
+scratch/gap-hunt/error-privacy-callbacks/callbacks.test.ts(49,35): error TS2322: Type '{ template: ITemplateDeclaration<IAuthoringFamily<Record<string, never>, IHelpers>, ISourceDeclaration<IAuthoringFamily<Record<string, never>, IHelpers>, IListing, unknown>, { ...; }>; step: string; }' is not assignable to type 'IFoldOver<ITemplateDeclaration<IAuthoringFamily<Record<string, never>, IHelpers>, ISourceDeclaration<IAuthoringFamily<Record<string, never>, IHelpers>, IListing, unknown>, { ...; }>, "score">'.
+  Types of property 'step' are incompatible.
+    Type 'string' is not assignable to type '"score"'.
+scratch/gap-hunt/error-privacy-callbacks/callbacks.test.ts(50,42): error TS2322: Type '{ template: ITemplateDeclaration<IAuthoringFamily<Record<string, never>, IHelpers>, ISourceDeclaration<IAuthoringFamily<Record<string, never>, IHelpers>, IListing, unknown>, { ...; }>; step: string; }' is not assignable to type 'IFoldOver<ITemplateDeclaration<IAuthoringFamily<Record<string, never>, IHelpers>, ISourceDeclaration<IAuthoringFamily<Record<string, never>, IHelpers>, IListing, unknown>, { ...; }>, "score">'.
+  Types of property 'step' are incompatible.
+    Type 'string' is not assignable to type '"score"'.

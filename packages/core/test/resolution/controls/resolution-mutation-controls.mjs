@@ -9,8 +9,9 @@
  * rejects, fails the run. Every Jest run is judged fail-closed by the facade's
  * shared `control-outcome.mjs` against the exact suite and title inventory.
  * Planted files are restored after each control, on error, and on
- * SIGINT/SIGTERM/SIGHUP; a SIGKILL cannot be intercepted, but it cannot leave
- * a mutant in the checkout because only the disposable copy is changed.
+ * SIGINT/SIGTERM/SIGHUP; handled signals unwind through final cleanup and
+ * remove the disposable checkout. A SIGKILL cannot be intercepted, but it
+ * cannot leave a mutant in the source checkout.
  *
  * It is an on-demand evidence command, not part of `npm test`: run
  * `npm run build` and `npm run test:unit --workspace microdelta` first, then
@@ -123,17 +124,22 @@ function restoreAll() {
 /** The Jest child currently running and its report directory, so a signal can stop and remove them. */
 let running;
 let reportDirectory;
+let interruptedSignal;
 
-// A signal mid-control must not leave a planted defect in the build.
+// Stop the active suite and remember the signal; top-level cleanup removes the
+// disposable checkout before the runner exits with the interruption status.
 for (const signal of ['SIGINT', 'SIGTERM', 'SIGHUP']) {
   process.on(signal, () => {
+    if (interruptedSignal !== undefined) {
+      return;
+    }
+    interruptedSignal = signal;
     running?.kill('SIGKILL');
     restoreAll();
     if (reportDirectory !== undefined) {
       rmSync(reportDirectory, { recursive: true, force: true });
     }
     console.log(`INTERRUPTED by ${signal}; emitted files restored`);
-    process.exit(130);
   });
 }
 
@@ -180,6 +186,9 @@ async function runSuites(expectedTitles) {
 let failures = 0;
 try {
   const baseline = await runSuites(undefined);
+  if (interruptedSignal !== undefined) {
+    throw new Error('control run interrupted');
+  }
   console.log(`baseline: ${String(baseline.titles.size)} tests, ${String(baseline.failed.length)} failing`);
   if (baseline.failed.length > 0) {
     throw new Error('the unmodified build must pass every test before controls run');
@@ -197,6 +206,9 @@ try {
     expectedArtifacts.set(control.file, digest(readFileSync(path, 'utf8')));
     try {
       const { failed } = await runSuites(baseline.titles);
+      if (interruptedSignal !== undefined) {
+        throw new Error('control run interrupted');
+      }
       console.log(`\n## ${control.name}: ${String(failed.length)} failing`);
       for (const name of failed) console.log(`- ${name}`);
       if (failed.length === 0) failures += 1;
@@ -209,11 +221,16 @@ try {
     }
   }
   const restored = await runSuites(baseline.titles);
+  if (interruptedSignal !== undefined) {
+    throw new Error('control run interrupted');
+  }
   console.log(`\nrestored: ${String(restored.titles.size)} tests, ${String(restored.failed.length)} failing`);
   if (restored.failed.length > 0) failures += 1;
 } catch (error) {
-  console.log(`CONTROL RUN INVALID: ${error instanceof Error ? error.message : String(error)}`);
-  failures += 1;
+  if (interruptedSignal === undefined) {
+    console.log(`CONTROL RUN INVALID: ${error instanceof Error ? error.message : String(error)}`);
+    failures += 1;
+  }
 } finally {
   try {
     restoreAll();
@@ -227,5 +244,9 @@ try {
     rmSync(temporary, { recursive: true, force: true });
   }
 }
-console.log(`\n${failures === 0 ? 'PASS' : 'FAIL'}: ${String(controls.length)} controls`);
-process.exit(failures > 0 ? 1 : 0);
+if (interruptedSignal !== undefined) {
+  process.exitCode = 130;
+} else {
+  console.log(`\n${failures === 0 ? 'PASS' : 'FAIL'}: ${String(controls.length)} controls`);
+  process.exitCode = failures > 0 ? 1 : 0;
+}

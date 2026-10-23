@@ -1,0 +1,30 @@
+watchman warning: Recrawled this watch 19 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '<fixture-checkout>' ; watchman watch-project '<fixture-checkout>'`
+
+(node:5884) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL scratch/gap-hunt/consumer-requirements/candidate-query/.test-build/candidate-query.test.js
+  ● main exact lookup must not scan every unrelated same-analysis subject
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 1200
+    Received:    5100
+
+      45 |     // Doubling allowance is deliberately generous for 10x unrelated growth;
+      46 |     // this is a regression discriminator, not a universal constant-time SLA.
+    > 47 |     expect(steps('main', 'same-analysis', 1000)).toBeLessThanOrEqual(2 * steps('main', 'same-analysis', 100));
+         |                                                  ^
+      48 | });
+      49 |
+
+      at Object.<anonymous> (.test-build/candidate-query.test.js:47:50)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 3 passed, 4 total
+Snapshots:   0 total
+Time:        0.219 s, estimated 1 s
+Ran all test suites.

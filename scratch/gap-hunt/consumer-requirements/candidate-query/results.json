@@ -1,0 +1,278 @@
+{
+  "sqlite_version": "3.54.1",
+  "measurement": "SQLite VM instructions via unchanged SQL, progress callback every instruction",
+  "rows": [
+    {
+      "implementation": "published",
+      "filler": "same-analysis",
+      "population": 100,
+      "ids": [
+        1
+      ],
+      "vm_steps": 69,
+      "plan": [
+        "SEARCH history_results USING INDEX history_results_by_subject (analysis=? AND environment=? AND subject=? AND version=?)"
+      ]
+    },
+    {
+      "implementation": "published",
+      "filler": "same-analysis",
+      "population": 1000,
+      "ids": [
+        1
+      ],
+      "vm_steps": 69,
+      "plan": [
+        "SEARCH history_results USING INDEX history_results_by_subject (analysis=? AND environment=? AND subject=? AND version=?)"
+      ]
+    },
+    {
+      "implementation": "published",
+      "filler": "same-analysis",
+      "population": 10000,
+      "ids": [
+        1
+      ],
+      "vm_steps": 69,
+      "plan": [
+        "SEARCH history_results USING INDEX history_results_by_subject (analysis=? AND environment=? AND subject=? AND version=?)"
+      ]
+    },
+    {
+      "implementation": "published",
+      "filler": "other-analysis",
+      "population": 100,
+      "ids": [
+        1
+      ],
+      "vm_steps": 69,
+      "plan": [
+        "SEARCH history_results USING INDEX history_results_by_subject (analysis=? AND environment=? AND subject=? AND version=?)"
+      ]
+    },
+    {
+      "implementation": "published",
+      "filler": "other-analysis",
+      "population": 1000,
+      "ids": [
+        1
+      ],
+      "vm_steps": 69,
+      "plan": [
+        "SEARCH history_results USING INDEX history_results_by_subject (analysis=? AND environment=? AND subject=? AND version=?)"
+      ]
+    },
+    {
+      "implementation": "published",
+      "filler": "other-analysis",
+      "population": 10000,
+      "ids": [
+        1
+      ],
+      "vm_steps": 69,
+      "plan": [
+        "SEARCH history_results USING INDEX history_results_by_subject (analysis=? AND environment=? AND subject=? AND version=?)"
+      ]
+    },
+    {
+      "implementation": "published",
+      "filler": "other-environment",
+      "population": 100,
+      "ids": [
+        1
+      ],
+      "vm_steps": 69,
+      "plan": [
+        "SEARCH history_results USING INDEX history_results_by_subject (analysis=? AND environment=? AND subject=? AND version=?)"
+      ]
+    },
+    {
+      "implementation": "published",
+      "filler": "other-environment",
+      "population": 1000,
+      "ids": [
+        1
+      ],
+      "vm_steps": 69,
+      "plan": [
+        "SEARCH history_results USING INDEX history_results_by_subject (analysis=? AND environment=? AND subject=? AND version=?)"
+      ]
+    },
+    {
+      "implementation": "published",
+      "filler": "other-environment",
+      "population": 10000,
+      "ids": [
+        1
+      ],
+      "vm_steps": 69,
+      "plan": [
+        "SEARCH history_results USING INDEX history_results_by_subject (analysis=? AND environment=? AND subject=? AND version=?)"
+      ]
+    },
+    {
+      "implementation": "main",
+      "filler": "same-analysis",
+      "population": 100,
+      "ids": [
+        1
+      ],
+      "vm_steps": 600,
+      "plan": [
+        "SEARCH r USING INDEX history_results_by_subject (analysis=?)",
+        "CORRELATED SCALAR SUBQUERY 1",
+        "SEARCH p USING COVERING INDEX history_promotions_by_target (analysis=? AND environment=?)",
+        "SEARCH pr USING COVERING INDEX sqlite_autoindex_history_promotion_results_2 (promotion_id=? AND result_id=?)",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ]
+    },
+    {
+      "implementation": "main",
+      "filler": "same-analysis",
+      "population": 1000,
+      "ids": [
+        1
+      ],
+      "vm_steps": 5100,
+      "plan": [
+        "SEARCH r USING INDEX history_results_by_subject (analysis=?)",
+        "CORRELATED SCALAR SUBQUERY 1",
+        "SEARCH p USING COVERING INDEX history_promotions_by_target (analysis=? AND environment=?)",
+        "SEARCH pr USING COVERING INDEX sqlite_autoindex_history_promotion_results_2 (promotion_id=? AND result_id=?)",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ]
+    },
+    {
+      "implementation": "main",
+      "filler": "same-analysis",
+      "population": 10000,
+      "ids": [
+        1
+      ],
+      "vm_steps": 50100,
+      "plan": [
+        "SEARCH r USING INDEX history_results_by_subject (analysis=?)",
+        "CORRELATED SCALAR SUBQUERY 1",
+        "SEARCH p USING COVERING INDEX history_promotions_by_target (analysis=? AND environment=?)",
+        "SEARCH pr USING COVERING INDEX sqlite_autoindex_history_promotion_results_2 (promotion_id=? AND result_id=?)",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ]
+    },
+    {
+      "implementation": "main",
+      "filler": "other-analysis",
+      "population": 100,
+      "ids": [
+        1
+      ],
+      "vm_steps": 106,
+      "plan": [
+        "SEARCH r USING INDEX history_results_by_subject (analysis=?)",
+        "CORRELATED SCALAR SUBQUERY 1",
+        "SEARCH p USING COVERING INDEX history_promotions_by_target (analysis=? AND environment=?)",
+        "SEARCH pr USING COVERING INDEX sqlite_autoindex_history_promotion_results_2 (promotion_id=? AND result_id=?)",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ]
+    },
+    {
+      "implementation": "main",
+      "filler": "other-analysis",
+      "population": 1000,
+      "ids": [
+        1
+      ],
+      "vm_steps": 106,
+      "plan": [
+        "SEARCH r USING INDEX history_results_by_subject (analysis=?)",
+        "CORRELATED SCALAR SUBQUERY 1",
+        "SEARCH p USING COVERING INDEX history_promotions_by_target (analysis=? AND environment=?)",
+        "SEARCH pr USING COVERING INDEX sqlite_autoindex_history_promotion_results_2 (promotion_id=? AND result_id=?)",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ]
+    },
+    {
+      "implementation": "main",
+      "filler": "other-analysis",
+      "population": 10000,
+      "ids": [
+        1
+      ],
+      "vm_steps": 106,
+      "plan": [
+        "SEARCH r USING INDEX history_results_by_subject (analysis=?)",
+        "CORRELATED SCALAR SUBQUERY 1",
+        "SEARCH p USING COVERING INDEX history_promotions_by_target (analysis=? AND environment=?)",
+        "SEARCH pr USING COVERING INDEX sqlite_autoindex_history_promotion_results_2 (promotion_id=? AND result_id=?)",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ]
+    },
+    {
+      "implementation": "main",
+      "filler": "other-environment",
+      "population": 100,
+      "ids": [
+        1
+      ],
+      "vm_steps": 600,
+      "plan": [
+        "SEARCH r USING INDEX history_results_by_subject (analysis=?)",
+        "CORRELATED SCALAR SUBQUERY 1",
+        "SEARCH p USING COVERING INDEX history_promotions_by_target (analysis=? AND environment=?)",
+        "SEARCH pr USING COVERING INDEX sqlite_autoindex_history_promotion_results_2 (promotion_id=? AND result_id=?)",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ]
+    },
+    {
+      "implementation": "main",
+      "filler": "other-environment",
+      "population": 1000,
+      "ids": [
+        1
+      ],
+      "vm_steps": 5100,
+      "plan": [
+        "SEARCH r USING INDEX history_results_by_subject (analysis=?)",
+        "CORRELATED SCALAR SUBQUERY 1",
+        "SEARCH p USING COVERING INDEX history_promotions_by_target (analysis=? AND environment=?)",
+        "SEARCH pr USING COVERING INDEX sqlite_autoindex_history_promotion_results_2 (promotion_id=? AND result_id=?)",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ]
+    },
+    {
+      "implementation": "main",
+      "filler": "other-environment",
+      "population": 10000,
+      "ids": [
+        1
+      ],
+      "vm_steps": 50100,
+      "plan": [
+        "SEARCH r USING INDEX history_results_by_subject (analysis=?)",
+        "CORRELATED SCALAR SUBQUERY 1",
+        "SEARCH p USING COVERING INDEX history_promotions_by_target (analysis=? AND environment=?)",
+        "SEARCH pr USING COVERING INDEX sqlite_autoindex_history_promotion_results_2 (promotion_id=? AND result_id=?)",
+        "USE TEMP B-TREE FOR ORDER BY"
+      ]
+    }
+  ],
+  "semantics": {
+    "published": {
+      "before_promotion": [
+        2,
+        1
+      ],
+      "after_promotion": null
+    },
+    "main": {
+      "before_promotion": [
+        2,
+        1
+      ],
+      "after_promotion": [
+        3,
+        2,
+        1
+      ]
+    }
+  }
+}

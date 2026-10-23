@@ -546,6 +546,45 @@ function lookupValidated(
   return { present: inherited.present, own: false, value: inherited.value };
 }
 
+/**
+ * Answer only property presence after the supported chain has been validated.
+ * Intrinsic Object.prototype members contribute membership but their values
+ * remain outside the selected-value domain. Inspect the selected descriptor
+ * again so a changed accessor cannot slip through between validation and use.
+ */
+function presenceValidated(
+  record: object,
+  key: string,
+  path: string,
+  operation: 'own' | 'membership',
+  depth = 0,
+): boolean {
+  if (depth > MAX_CUSTOM_PROTOTYPES) {
+    unsupported(path, 'prototype depth');
+  }
+  const descriptor = Object.getOwnPropertyDescriptor(record, key);
+  if (descriptor !== undefined) {
+    if (!descriptor.enumerable || !('value' in descriptor)) {
+      unsupported(`${path}.${key}`, 'nonenumerable or accessor property');
+    }
+    return true;
+  }
+  if (operation === 'own') {
+    return false;
+  }
+  const prototype: unknown = Object.getPrototypeOf(record);
+  if (prototype === null) {
+    return false;
+  }
+  if (prototype === Object.prototype) {
+    return Object.prototype.hasOwnProperty.call(Object.prototype, key);
+  }
+  if (typeof prototype !== 'object') {
+    unsupported(`${path}[[Prototype]]`, 'prototype');
+  }
+  return presenceValidated(prototype, key, `${path}[[Prototype]]`, operation, depth + 1);
+}
+
 /** Extend a diagnostic location using the address operation's container-aware syntax. */
 function childPath(path: string, segment: IAddressSegment): string {
   return segment.kind === 'index' ? `${path}[${segment.index}]` : `${path}.${segment.key}`;
@@ -612,9 +651,11 @@ function observeAt(
     unsupported(targetPath, 'property needs record');
   }
   assertRecordChain(parent, targetPath);
+  if (operation === 'own' || operation === 'membership') {
+    return { operation, address, fact: presenceValidated(parent, last.key, targetPath, operation) };
+  }
   const selected = lookupValidated(parent, last.key, targetPath);
-  const fact = operation === 'value' ? selected.value : operation === 'own' ? selected.own : selected.present;
-  return { operation, address, fact };
+  return { operation, address, fact: selected.value };
 }
 
 /**

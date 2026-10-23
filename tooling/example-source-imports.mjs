@@ -1,5 +1,6 @@
 /** PKG-004/008 rule for keeping the executable consumer inside its own source tree. */
 import path from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 /** Inspect literal relative module paths after resolving their actual target. */
 export const exampleSourceImports = {
@@ -18,7 +19,9 @@ export const exampleSourceImports = {
       if (typeof specifier !== 'string' || !specifier.startsWith('.')) {
         return;
       }
-      const target = path.resolve(path.dirname(context.filename), specifier);
+      // ESM resolves path-like specifiers as URLs, so URL normalization (for
+      // example encoded dot segments) must precede the package-boundary test.
+      const target = fileURLToPath(new URL(specifier, pathToFileURL(context.filename)));
       const relativeTarget = path.relative(exampleRoot, target);
       if (relativeTarget === '..'
         || relativeTarget.startsWith(`..${path.sep}`)
@@ -47,6 +50,17 @@ export const exampleSourceImports = {
       },
       CallExpression(node) {
         if (node.callee.type === 'Identifier' && node.callee.name === 'require') {
+          // A parameter named `require` is an ordinary caller-supplied
+          // function. Only an unbound Node-style require name denotes a
+          // module edge for this literal-path check.
+          let scope = context.sourceCode.getScope(node);
+          while (scope !== null) {
+            const binding = scope.set.get('require');
+            if (binding?.defs.some((definition) => definition.type === 'Parameter')) {
+              return;
+            }
+            scope = scope.upper;
+          }
           check(node, node.arguments[0]?.value);
         }
       },

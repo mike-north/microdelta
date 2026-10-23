@@ -1,0 +1,43 @@
+diff --git a/experiments/exp-nested/test/nested-sqlite.test.ts b/experiments/exp-nested/test/nested-sqlite.test.ts
+index d504686..990bb2e 100644
+--- a/experiments/exp-nested/test/nested-sqlite.test.ts
++++ b/experiments/exp-nested/test/nested-sqlite.test.ts
+@@ -131,11 +131,17 @@ describe('nested selected reads over real SQLite in independent processes', () =
+       sentence: 'Ada authored 3 pull requests, 2 of which were merged, and submitted 5 reviews.',
+     });
+     const expected: readonly (readonly [IOperation, readonly IAddressSegment[]])[] = [
++      ['container-kind', [property('profile')]],
+       ['value', [property('profile'), property('name')]],
++      ['container-kind', [property('pullRequests')]],
+       ['length', [property('pullRequests')]],
++      ['container-kind', [property('pullRequests'), index(0)]],
+       ['value', [property('pullRequests'), index(0), property('merged')]],
++      ['container-kind', [property('pullRequests'), index(1)]],
+       ['value', [property('pullRequests'), index(1), property('merged')]],
++      ['container-kind', [property('pullRequests'), index(2)]],
+       ['value', [property('pullRequests'), index(2), property('merged')]],
++      ['container-kind', [property('reviews')]],
+       ['length', [property('reviews')]],
+     ];
+     expect(read.summary.observations.map((observation) => [observation.operation, observation.address])).toEqual(expected);
+@@ -163,8 +169,9 @@ describe('nested selected reads over real SQLite in independent processes', () =
+     expect(read.output.value).toEqual({ author: base.profile });
+     const author = (read.output.value as { readonly author: object }).author;
+     expect(Object.keys(author)).toEqual(['id', 'name', 'avatarUrl']);
+-    expect(read.output.observations).toHaveLength(1);
+-    expect(read.output.observations[0]).toMatchObject({
++    expect(read.output.observations).toHaveLength(2);
++    expect(read.output.observations[0]?.operation).toBe('container-kind');
++    expect(read.output.observations[1]).toMatchObject({
+       kind: 'materialized-output',
+       address: [property('profile')],
+       fingerprint: fingerprint(encodeSnapshot(base.profile), host),
+@@ -191,7 +198,7 @@ describe('nested selected reads over real SQLite in independent processes', () =
+       unreadOnly: 'equal',
+       renamed: 'changed',
+       mergedChanged: 'changed',
+-      profileArray: 'incompatible',
++      profileArray: 'changed',
+       nameRecord: 'changed',
+     });
+     // Explicit output consumed the whole profile, so an unread avatar is now a consumed change.

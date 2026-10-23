@@ -1,0 +1,8 @@
+{
+  "oldHead": "ba497cbd903a76196ea0eff9d77b46f77fd22233",
+  "currentHead": "c75ca18e060a04034f4868e50dadd65b237e9d38",
+  "changedPaths": [
+    "experiments/exp-nested/test/nested-sqlite.test.ts"
+  ],
+  "assertion": "Exactly one experiment test changes; package runtime, package tests, build configuration, lockfile and all original review reproductions are unchanged."
+}

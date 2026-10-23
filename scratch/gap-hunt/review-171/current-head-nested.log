@@ -1,0 +1,11 @@
+
+> @microdelta/workspace@0.0.0 test:exp-nested
+> tsc -p experiments/exp-nested/tsconfig.test.json && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config experiments/exp-nested/jest.config.mjs --runInBand
+
+(node:68285) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       12 passed, 12 total
+Snapshots:   0 total
+Time:        0.496 s
+Ran all test suites.

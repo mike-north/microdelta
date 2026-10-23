@@ -749,7 +749,7 @@
       "requirement": "ACC-008",
       "classification": "bounded-aligned-with-residual-evidence-gap",
       "meaning": "Observer/gate distinction and explicit retry policy determine execution.",
-      "residual": "No complete add/remove accounting observer invariance matrix or deletion policy proof.",
+      "residual": "Paired runs assert read-only usage-display observer add/remove invariance including incomplete usage. Explicit admission refusal is covered separately. No cleanup/deletion authority or billing-completeness-to-retention path is exercised, so the unreported/zero-currency deletion prohibition remains unproved. Arbitrary observer side effects/failures are not covered by display invariance.",
       "executedAssertionIds": [
         132,
         133,
@@ -774,6 +774,10 @@
         382,
         383,
         384
+      ],
+      "supplementaryNamedAssertions": [
+        "gap-hunt-durability-observer.test.ts: adding/removing usage display preserves sends, outcomes and the unknown usage gap",
+        "workspace/admission-observers.test.ts: a refused cold miss leaves no claim, attempt, body or reference, and strands no writer"
       ]
     },
     {
@@ -871,7 +875,7 @@
       "requirement": "PUB-002",
       "classification": "bounded-aligned-with-residual-evidence-gap",
       "meaning": "Reached kill boundaries preserve complete old/new state; stale holders cannot publish or affect successor; lost acknowledgment returns committed exact result.",
-      "residual": "The named assertions prove the stated bounded outcome; other prose obligations are not automatically discharged.",
+      "residual": "Existing same-holder reacquisition tests reject forged renewed-expiry stale tokens on publish/renew/release; persisted clock high-water prevents resurrection. New exact endpoint tests target every allocation/stage/publish/renew/release at T-1 versus T. These are real SQLite single-process checks; independent-process fencing evidence stays in Track B and crash suites, not inferred from these cases.",
       "executedAssertionIds": [
         349,
         350,
@@ -900,6 +904,11 @@
         431,
         432,
         433
+      ],
+      "supplementaryNamedAssertions": [
+        "gap-hunt-durability-expiry.test.ts: ownership-sensitive mutations at1099/1100",
+        "durable-history/durable-history.test.ts: a lease is fenced by its token alone: the same holder re-acquiring invalidates its previous fence",
+        "durable-history/durable-history.test.ts: a backward host clock never evaluates before the persisted high-water, so it cannot shorten a holder lease or resurrect an expired one"
       ]
     },
     {
@@ -1476,7 +1485,7 @@
       "requirement": "RUN-001",
       "classification": "bounded-aligned-with-residual-evidence-gap",
       "meaning": "Concurrent run/env contexts isolate; thrown frames restore parents; escaped operations fail after closure; new run ID alone reuses.",
-      "residual": "Lazy iterator return/error matrix is not separately established by these workspace tests.",
+      "residual": "Awaited generator yield/resume/return/error cleanup and concurrent lazy sibling isolation are asserted through actual ordinary work. Detached returned iterators remain an ownership-interface question; separate-process recovery reconstruction is not proved by these in-memory context tests.",
       "executedAssertionIds": [
         250,
         251,
@@ -1488,6 +1497,10 @@
         257,
         258,
         387
+      ],
+      "supplementaryNamedAssertions": [
+        "gap-hunt-durability-lazy.test.ts: normal/return/throw iteration",
+        "gap-hunt-durability-lazy.test.ts: a failing lazy scope restores its parent while a concurrent sibling resumes and cleans up in its own environment"
       ]
     },
     {
@@ -1732,7 +1745,7 @@
       "requirement": "RUN-014",
       "classification": "bounded-aligned-with-residual-evidence-gap",
       "meaning": "Soft drains admitted work with no default deadline; hard aborts/discards; committed boundary wins; unknown remote state is durable.",
-      "residual": "CLI first/second interrupt wiring absent with the CLI; shared-consumer cancellation ownership beyond bounded runtime not fully established.",
+      "residual": "Existing lifecycle tests prove stopping one independent run/store does not stop another. They do not create two consumers sharing one logical work owner and then cancel only one waiter; that exact shared-consumer cancellation authority remains unproved and its propagation/ownership mechanism is open. CLI interrupt/exit contract also requires owner decision.",
       "executedAssertionIds": [
         353,
         354,
@@ -1754,6 +1767,9 @@
         450,
         451,
         452
+      ],
+      "supplementaryNamedAssertions": [
+        "stop/lifecycle.test.ts: concurrent runs in one process keep their own context and controls: stopping one never reaches the other"
       ]
     },
     {

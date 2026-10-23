@@ -84,4 +84,59 @@ describe('GAP HUNT lazy ordinary lifetime (RUN-001)', () => {
       await expect(completed.value.iterator.next()).rejects.toMatchObject({ code: 'outside-run' });
     } finally { workspace.close(); rmSync(directory, { recursive: true, force: true }); }
   });
+
+  test('a failing lazy scope restores its parent while a concurrent sibling resumes and cleans up in its own environment', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-lazy-siblings-'));
+    const builders = authoring();
+    const composition = builders.compose({ scope: 'lazy-siblings', inputs: [], helpers: [], steps: [] });
+    const left = openWorkspace({ location: join(directory, 'left.sqlite'), logicalStore: 'left' });
+    const right = openWorkspace({ location: join(directory, 'right.sqlite'), logicalStore: 'right' });
+    const observations: IObservation[] = [];
+    const observe = (where: string): void => { observations.push({ where, ...currentRun() }); };
+    let resumeRight: () => void = () => undefined;
+    const held = new Promise<void>((resolve) => { resumeRight = resolve; });
+    let rightStarted: () => void = () => undefined;
+    const started = new Promise<void>((resolve) => { rightStarted = resolve; });
+    async function* sibling(): AsyncGenerator<number, void, unknown> {
+      try { observe('right-yield'); rightStarted(); yield 1; await held; observe('right-resume'); }
+      finally { await Promise.resolve(); observe('right-cleanup'); }
+    }
+    async function* failing(): AsyncGenerator<number, void, unknown> {
+      try { observe('left-yield'); yield 1; throw new Error('lazy sibling failure'); }
+      finally { await Promise.resolve(); observe('left-cleanup'); }
+    }
+    try {
+      const pendingRight = right.run({ authoring: builders, composition, environment: 'env:right' }, async (run) => {
+        await run.ordinary('right', async () => {
+          const iterator = sibling();
+          expect(await iterator.next()).toEqual({ value: 1, done: false });
+          expect(await iterator.next()).toEqual({ value: undefined, done: true });
+        });
+        observe('right-parent');
+        return run.context.runId;
+      });
+      await started;
+      const completedLeft = await left.run({ authoring: builders, composition, environment: 'env:left' }, async (run) => {
+        await expect(run.ordinary('left', async () => {
+          const iterator = failing();
+          await iterator.next();
+          await iterator.next();
+        })).rejects.toThrow('lazy sibling failure');
+        observe('left-parent');
+        return run.context.runId;
+      });
+      // Left cleanup and parent recovery must not close or replace right's scope.
+      resumeRight();
+      const completedRight = await pendingRight;
+      expect(completedLeft.value).not.toBe(completedRight.value);
+      expect(observations.map((entry) => entry.where)).toEqual(['right-yield', 'left-yield', 'left-cleanup', 'left-parent', 'right-resume', 'right-cleanup', 'right-parent']);
+      for (const entry of observations) {
+        const isLeft = entry.where.startsWith('left');
+        expect(entry.environment).toBe(isLeft ? 'env:left' : 'env:right');
+        expect(entry.runId).toBe(isLeft ? completedLeft.value : completedRight.value);
+      }
+      expect(() => currentRun()).toThrow();
+    } finally { resumeRight(); left.close(); right.close(); rmSync(directory, { recursive: true, force: true }); }
+  });
+
 });

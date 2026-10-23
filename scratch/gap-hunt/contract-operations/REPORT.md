@@ -58,3 +58,7 @@ Durable History publication calls Value `encodeSnapshot(request.payload)` (`hist
 ## Follow-up consumer evidence
 
 Decision-required grouped drafts: [CLI](ISSUE-CLI.md), [previews](ISSUE-PREVIEWS.md), and [resource state](ISSUE-RESOURCE-STATE.md). Each states target stage, expected/observed/replay, severity/direction and duplicate-scan boundary. `surface.json` enumerates actual generated alpha contracts with the TypeScript checker; `preview-consumer.mjs` preserves the no-execution exact-read control; resource-state includes an additive positive control. No missing API spelling is invented. [Lazy iteration](LIFECYCLE.md) now has4strict-TypeScript/Jest passing controls plus an explicit returned-iterator ownership ambiguity.
+
+## Focused residual audit
+
+[FOCUSED-CLAUSES.md](FOCUSED-CLAUSES.md) records14 selected review items with8 bounded delivered sub-obligations,3 target capabilities,2 owner/interface questions and1 unproved broader prohibition. Fresh targeted execution passes55cases across6suites. This does not complete the344-block audit. Concrete residuals now replace generic owner prose for RUN001, RUN014, ACC008 and PUB002.

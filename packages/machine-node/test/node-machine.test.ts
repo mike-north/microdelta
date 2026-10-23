@@ -1,4 +1,5 @@
 import { describe, expect, test } from '@jest/globals';
+import { AsyncLocalStorage } from 'node:async_hooks';
 
 import { createNodeMachine } from '../src/index.js';
 
@@ -77,6 +78,59 @@ describe('Node Machine conformance', () => {
     }
     expect(received).toBe(thrown);
     await expect(context.run('reject', async () => { throw rejected; })).rejects.toBe(rejected);
+    expect(context.getStore()).toBeUndefined();
+  });
+
+  test('A-20: a caller context survives awaited success and rejection without replacing the returned promise', async () => {
+    const caller = new AsyncLocalStorage<string>();
+    const context = createNodeMachine().createAsyncContext<number>();
+    const failure = new Error('captured rejection');
+
+    await caller.run('caller', async () => {
+      let original: Promise<number> | undefined;
+      const returned = context.run(7, () => {
+        original = (async () => {
+          await Promise.resolve();
+          expect(caller.getStore()).toBe('caller');
+          expect(context.getStore()).toBe(7);
+          return 7;
+        })();
+        return original;
+      });
+      expect(returned).toBe(original);
+      await expect(returned).resolves.toBe(7);
+      expect(caller.getStore()).toBe('caller');
+      expect(context.getStore()).toBeUndefined();
+
+      const rejected = Promise.reject<number>(failure);
+      expect(context.run(8, () => rejected)).toBe(rejected);
+      await expect(rejected).rejects.toBe(failure);
+      expect(caller.getStore()).toBe('caller');
+      expect(context.getStore()).toBeUndefined();
+    });
+  });
+
+  test('A-20: work inherited from a closed frame retains its context after the entry returns', async () => {
+    const context = createNodeMachine().createAsyncContext<{ open: boolean }>();
+    const frame = { open: true };
+    const gate = deferred();
+    let inherited: Promise<void> | undefined;
+
+    await context.run(frame, async () => {
+      inherited = gate.promise.then(() => {
+        expect(context.getStore()).toBe(frame);
+        if (!frame.open) {
+          throw new Error('capture frame closed');
+        }
+      });
+      await Promise.resolve();
+    });
+    frame.open = false;
+    gate.release();
+    if (inherited === undefined) {
+      throw new Error('Detached work was not created in the frame');
+    }
+    await expect(inherited).rejects.toThrow('capture frame closed');
     expect(context.getStore()).toBeUndefined();
   });
 

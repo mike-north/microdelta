@@ -9,6 +9,9 @@
  * A scoped value that follows asynchronous work created by its callback.
  * `run` preserves the callback's return value and exact thrown or rejected error;
  * a nested call restores the surrounding value after its callback completes.
+ * Repeated entries into fresh contexts must not leave one distinct host context
+ * per completed entry in a continuing caller once results become unreachable.
+ * The consumer, not this host facility, owns when a propagated value closes.
  * @alpha
  */
 export interface IAsyncContext<T> {

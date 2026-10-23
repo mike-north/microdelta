@@ -1,0 +1,17 @@
+
+> @microdelta/tracking@0.2.0 test:unit
+> tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --runInBand --runTestsByPath .test-build/test/track.test.js --testNamePattern TK-1:|TK-2/A-20: --verbose
+
+watchman warning: Recrawled this watch 5 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-contracts' ; watchman watch-project '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-contracts'`
+
+(node:58786) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       22 skipped, 2 passed, 24 total
+Snapshots:   0 total
+Time:        0.092 s, estimated 1 s
+Ran all test suites within paths ".test-build/test/track.test.js".

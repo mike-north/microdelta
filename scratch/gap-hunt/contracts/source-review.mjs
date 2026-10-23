@@ -23,10 +23,13 @@ await anchor('foldIntegrity', 'packages/core/test/fold/fold.test.ts', 'malformed
 await anchor('calledHelperBodies', 'packages/core/test/resolution/summary-validation.test.ts', 'a changed called formatter re-executes both summaries even with unchanged statistics', 'resolution-gap-controls.log', 'Durable summaries run twice after consumed helper code changes despite equal output.');
 await anchor('uncalledHelperBodies', 'packages/core/test/resolution/summary-validation.test.ts', 'a changed uncalled helper alone retains both summaries', 'resolution-gap-controls.log', 'Durable summaries retain references with zero bodies when only uncalled helper changes.');
 await anchor('durableArtifacts', 'packages/core/test/gap-hunt-contracts-artifact-durable.test.ts', 'Track D durable emitted imported implementation variants', 'artifact-durable-results.log', 'Six cases each use cold/changed/repeated fresh processes over the same store. Declared transitive imported body/name/emitted-comment/emitted-format changes each execute one body with a different exact reference; unchanged modules and version metadata alone execute zero bodies and retain the exact baseline reference. Every repeated variant reuses with zero bodies. Actual references/counts and leaf hashes are in artifact-durable-results.json.');
+await anchor('localTagSerialization', 'packages/tracking/test/track.test.ts', 'TK-1: tags are distinct frozen opaque tokens with no signal state', 'local-tag-boundary-results.log', 'Opaque frozen local tags expose no value/revision/subscribers, reject direct/nested JSON serialization, structuredClone and v8 serialization. This is an explicit negative boundary, beyond successful fresh-process semantic reuse.');
+await anchor('localTagOwner', 'packages/tracking/test/track.test.ts', 'TK-2/A-20: each injected tracker owns isolated tags and capture context', 'local-tag-boundary-results.log', 'Two trackers own distinct tags/capture frames, and the second tracker rejects consuming the first tracker tag.');
 const corrections = {
   'TRK1-imported': { status: 'aligned-new-witness', evidence: ['importedDeclaration'], note: 'Prior imported-artifact probe imported a raw function and wrapped it in the consumer; that alone did not prove this requirement.' },
   'TRK2-called-only': { evidence: ['calledHelperBodies', 'uncalledHelperBodies'], note: 'Keep observer evidence and durable re-execution counts distinct.' },
   'TRK2-artifact-policy': { status: 'aligned-durable-variant-witnesses', evidence: ['durableArtifacts'], note: 'Original six probes established observer comparison only. Added six durable cases now measure bodies and exact references across 18 fresh processes. All imported implementations are explicit declared helpers; hidden untracked transitive effects remain excluded. Comment/format edits matter only when present in emitted function text.' },
+  'TRK3-durable-correspondence': { status: 'aligned-explicit-local-tag-negatives', evidence: ['localTagSerialization', 'localTagOwner'], note: 'Original restart evidence remains valid; focused execution now adds the existing opaque-tag serialization and foreign-owner rejection assertions that the earlier audit selection did not run.' },
   'TRK4-ordinary-guard': { status: 'historical-divergence-superseded', note: '#155 is baseline evidence; merged #171 at f43c587 changes bounded container-kind navigation. Do not describe the old failure as confirmed current behavior.' },
   'TRK5-length': { evidence: ['lengthPositionTransitions'], note: 'Old observer.test.ts static operation/address assertion did not alone prove length invalidation boundaries.' },
   'TRK5-position': { evidence: ['lengthPositionTransitions'], note: 'Old observer.test.ts static operation/address assertion did not alone prove insertion/edit invalidation boundaries.' },
@@ -39,6 +42,15 @@ const obligations = prior.obligations.map(row => {
   const correction = corrections[row.id];
   return { ...row, historicalStatus: row.status, status: correction?.status ?? (row.status === 'divergent' ? 'baseline-divergence-owner-tracked' : 'bounded-executed-evidence-carried'), reviewNote: correction?.note ?? 'Named evidence retained after source review; no claim that this is a universal proof or a merged-runtime rerun.', evidence: [...row.evidence, ...(correction?.evidence ?? []).map(id => ({ id, ...added[id] }))] };
 });
+let verifiedSourceRoutes = 0;
+for (const row of obligations) {
+  for (const item of row.evidence) {
+    const source = await readFile(item.file, 'utf8');
+    if (item.title && !source.includes(item.title)) throw new Error(`Stale assertion route ${row.id}: ${item.file}`);
+    await readFile(item.executionLog, 'utf8');
+    verifiedSourceRoutes += 1;
+  }
+}
 const files = [...new Set(['docs/spec/tracking.md', 'docs/spec/composition.md', 'docs/spec/architecture.md', ...Object.values(added).flatMap(item => [item.file, item.executionLog]), ...['worker', 'leaf', 'intermediary'].map(name => `packages/core/test/gap-hunt-contracts-artifact-${name}.ts`), base + 'imported-artifact-probe.mjs', base + 'imported-artifact-results.log', base + 'artifact-durable-results.json', base + 'completion-audit.json'])];
 const hashes = {};
 for (const file of files) hashes[file] = createHash('sha256').update(await readFile(file)).digest('hex');
@@ -46,7 +58,9 @@ await writeFile(base + 'source-review.json', JSON.stringify({
   attribution: 'Implementer: Codex worker (gpt-6.1-sol), operating for Mike North.',
   productionBaseline: prior.baseline,
   priorEvidenceHead: 'ee9c5cf603d85118db3772312e6c7d5112e4dc80',
-  method: 'All 71 historical rows remain inspectable. Source review qualifies overbroad claims and adds required variants; no new aggregate satisfaction count replaces the source-level judgment. Existing executed evidence keeps its original production baseline. Follow-ups execute two added single-case witnesses plus six durable artifact variants and package checks.',
+  durableTrackDEvidenceHead: '6d5123651de0a0de420102702fb55c96b439f444',
+  method: 'All 71 historical rows remain inspectable. Source review qualifies overbroad claims and adds required variants; no new aggregate satisfaction count replaces the source-level judgment. Existing executed evidence keeps its original production baseline. Follow-ups execute two added single-case witnesses, six durable artifact variants, two existing local-tag negatives and package checks. Source-route validation checks named source assertions and readable execution logs; it is not fresh execution of all routes.',
+  verifiedSourceRoutes,
   obligations, addedAssertions: added, sha256: hashes,
 }, null, 2) + '\n');
 console.log(`Preserved ${obligations.length} rows; corrected ${Object.keys(corrections).length}; added ${Object.keys(added).length} exact assertion routes.`);

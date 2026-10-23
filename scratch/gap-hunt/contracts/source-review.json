@@ -2,7 +2,9 @@
   "attribution": "Implementer: Codex worker (gpt-6.1-sol), operating for Mike North.",
   "productionBaseline": "c5802daca4a0bb8ea91159854d84eddcfa5215b6",
   "priorEvidenceHead": "ee9c5cf603d85118db3772312e6c7d5112e4dc80",
-  "method": "All 71 historical rows remain inspectable. Source review qualifies overbroad claims and adds required variants; no new aggregate satisfaction count replaces the source-level judgment. Existing executed evidence keeps its original production baseline. Follow-ups execute two added single-case witnesses plus six durable artifact variants and package checks.",
+  "durableTrackDEvidenceHead": "6d5123651de0a0de420102702fb55c96b439f444",
+  "method": "All 71 historical rows remain inspectable. Source review qualifies overbroad claims and adds required variants; no new aggregate satisfaction count replaces the source-level judgment. Existing executed evidence keeps its original production baseline. Follow-ups execute two added single-case witnesses, six durable artifact variants, two existing local-tag negatives and package checks. Source-route validation checks named source assertions and readable execution logs; it is not fresh execution of all routes.",
+  "verifiedSourceRoutes": 173,
   "obligations": [
     {
       "id": "TRK1-object-function",
@@ -249,7 +251,7 @@
       "id": "TRK3-durable-correspondence",
       "spec": "docs/spec/tracking.md:36-38",
       "requiredOutcome": "Fresh-process bindings and fingerprints establish reuse without restoring process-local tags/revisions.",
-      "status": "bounded-executed-evidence-carried",
+      "status": "aligned-explicit-local-tag-negatives",
       "evidence": [
         {
           "id": "wire",
@@ -274,11 +276,27 @@
           "title": "equal-output rebinding refreshes earlier-child forwarding and derived subjects without rewriting original provenance",
           "proves": "Eight processes follow source-to-normalize-to-score earlier-child forwarded origins plus transformed derived subject through equal-output cutoff, later new names/score changes, unread edits and rollback; exact current acceptance dependencies change without rewriting original parent dependencies; two cold stores agree.",
           "executionLog": "scratch/gap-hunt/contracts/multihop-results.log"
+        },
+        {
+          "id": "localTagSerialization",
+          "file": "packages/tracking/test/track.test.ts",
+          "line": 40,
+          "title": "TK-1: tags are distinct frozen opaque tokens with no signal state",
+          "executionLog": "scratch/gap-hunt/contracts/local-tag-boundary-results.log",
+          "proves": "Opaque frozen local tags expose no value/revision/subscribers, reject direct/nested JSON serialization, structuredClone and v8 serialization. This is an explicit negative boundary, beyond successful fresh-process semantic reuse."
+        },
+        {
+          "id": "localTagOwner",
+          "file": "packages/tracking/test/track.test.ts",
+          "line": 26,
+          "title": "TK-2/A-20: each injected tracker owns isolated tags and capture context",
+          "executionLog": "scratch/gap-hunt/contracts/local-tag-boundary-results.log",
+          "proves": "Two trackers own distinct tags/capture frames, and the second tracker rejects consuming the first tracker tag."
         }
       ],
       "mandatoryGap": null,
       "historicalStatus": "satisfied",
-      "reviewNote": "Named evidence retained after source review; no claim that this is a universal proof or a merged-runtime rerun."
+      "reviewNote": "Original restart evidence remains valid; focused execution now adds the existing opaque-tag serialization and foreign-owner rejection assertions that the earlier audit selection did not run."
     },
     {
       "id": "TRK4-supported-lint",
@@ -2192,6 +2210,20 @@
       "title": "Track D durable emitted imported implementation variants",
       "executionLog": "scratch/gap-hunt/contracts/artifact-durable-results.log",
       "proves": "Six cases each use cold/changed/repeated fresh processes over the same store. Declared transitive imported body/name/emitted-comment/emitted-format changes each execute one body with a different exact reference; unchanged modules and version metadata alone execute zero bodies and retain the exact baseline reference. Every repeated variant reuses with zero bodies. Actual references/counts and leaf hashes are in artifact-durable-results.json."
+    },
+    "localTagSerialization": {
+      "file": "packages/tracking/test/track.test.ts",
+      "line": 40,
+      "title": "TK-1: tags are distinct frozen opaque tokens with no signal state",
+      "executionLog": "scratch/gap-hunt/contracts/local-tag-boundary-results.log",
+      "proves": "Opaque frozen local tags expose no value/revision/subscribers, reject direct/nested JSON serialization, structuredClone and v8 serialization. This is an explicit negative boundary, beyond successful fresh-process semantic reuse."
+    },
+    "localTagOwner": {
+      "file": "packages/tracking/test/track.test.ts",
+      "line": 26,
+      "title": "TK-2/A-20: each injected tracker owns isolated tags and capture context",
+      "executionLog": "scratch/gap-hunt/contracts/local-tag-boundary-results.log",
+      "proves": "Two trackers own distinct tags/capture frames, and the second tracker rejects consuming the first tracker tag."
     }
   },
   "sha256": {
@@ -2212,6 +2244,8 @@
     "packages/core/test/resolution/summary-validation.test.ts": "db2a7a7b07f6eccedd5d74075eb6eae9f3d80d4976388cbf8a9a95c8492ae449",
     "packages/core/test/gap-hunt-contracts-artifact-durable.test.ts": "d52c47ff7953d5ef3bea41a68bc2c8fce6bd5c3fb0a2bee79ec6514c33b3735a",
     "scratch/gap-hunt/contracts/artifact-durable-results.log": "a01e3e0b9353cdae2c53dab00abfe1e9eac7cf72601b6daebb5bbbbe83a6a892",
+    "packages/tracking/test/track.test.ts": "fe0b71c97a423f77b979de44184a19be55d9c6c234b306eb3cd71edffa246368",
+    "scratch/gap-hunt/contracts/local-tag-boundary-results.log": "7eef4a0c01a9e66534bfb865f00078f15d6c5250929273c42c18780dec5a9cc4",
     "packages/core/test/gap-hunt-contracts-artifact-worker.ts": "771a9a72a4ae41d618f27d26db07d848ab742f015e399fd4b64bb5095619e929",
     "packages/core/test/gap-hunt-contracts-artifact-leaf.ts": "c759ec449496db5599f7cb67a737001c077689fdc8afbdba5f49337b51eb7335",
     "packages/core/test/gap-hunt-contracts-artifact-intermediary.ts": "b6ecb220b8dae255f1209c18f03290b728dad93d3b4b9fb9ac5aa978b09f2777",

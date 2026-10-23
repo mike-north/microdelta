@@ -1,6 +1,8 @@
 /** Tracked nullable input guards must invalidate a durable memo after reopening the store. */
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
+import { spawnSync } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { describe, expect, test } from '@jest/globals';
 import { authoring, openWorkspace } from '../src/index.js';
@@ -55,4 +57,22 @@ describe('gap hunt facade durable nullable-container guards', () => {
       rmSync(directory, { recursive: true, force: true });
     }
   });
+});
+
+/** Each process exits completely before the next reads its retained snapshot. */
+test.each(['null', 'missing'])('TRK-8 independent process replacement with %s recomputes the guard', (variant) => {
+  const directory = mkdtempSync(join(tmpdir(), 'microdelta-guard-process-'));
+  const worker = fileURLToPath(new URL('./gap-hunt-contracts-guard-worker.js', import.meta.url));
+  const run = (choice: string, key: string): unknown => {
+    const result = spawnSync(process.execPath, [worker, join(directory, 'history.sqlite'), choice, key], { encoding: 'utf8' });
+    expect(result.status).toBe(0);
+    if (result.status !== 0) { throw new Error(result.stderr); }
+    return JSON.parse(result.stdout) as unknown;
+  };
+  try {
+    expect(run('object', 'first')).toEqual({ kind: 'published', value: { state: 'present' } });
+    expect(run(variant, 'second')).toEqual({ kind: 'published', value: { state: 'absent' } });
+  } finally {
+    rmSync(directory, { recursive: true, force: true });
+  }
 });

@@ -16,9 +16,8 @@ comparison has the same gap. Explicit own presence correctly detects deletion
 
 Governing obligations: TRK-4 captures branch influences; TRK-5 observes performed
 value reads; TRK-8 invalidates a changed tracked guard. CMP-9's sandbox disclaimer
-does not reject this ordinary tracked-input case. The reproduction proves
-reopened durable-store behavior within one process; it does not claim independent
-process or power-loss evidence.
+does not reject this ordinary tracked-input case. The reproduction proves both reopened durable-store behavior within one process
+and two independent-process cases. It does not claim power-loss evidence.
 
 ## Replay
 
@@ -36,12 +35,13 @@ node --experimental-vm-modules node_modules/jest/bin/jest.js --config packages/c
 
 Install, build, strict TypeScript, and type-aware ESLint pass. The intentionally
 red Tracking suite reports 3 failures and 1 positive-control pass; the facade suite
-reports 2 failures and 1 scalar-control pass. Exact failure output is retained
+reports 4 failures (two reopened-store cases and two independent-process cases)
+and 1 scalar-control pass. Exact failure output is retained
 beside this file as `container-guard-results.log` and
 `facade-container-guard-results.log`.
 
 No production change is included. Tests are assertion-first gap evidence.
 
-Implementer: Mike North, assisted by Codex.
+Implementer: Codex worker (gpt-6.1-sol), operating for Mike North.
 Agent assistance: Codex authored the synthetic reproduction and ran its checks;
 supervisor review and any fix are separate.

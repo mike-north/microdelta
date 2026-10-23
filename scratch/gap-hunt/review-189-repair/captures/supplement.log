@@ -1,0 +1,18 @@
+watchman warning: Recrawled this watch 9 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-189' ; watchman watch-project '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-189'`
+
+  console.log
+    {"evidence":"AC3-diagnostic-observation","message":"Template template-distinct must declare a designated identity on its collection source or provide a custom key with its `key` option.","collectionSourceSubject":"catalog-distinct","template":"template-distinct"}
+
+      at Object.<anonymous> (scratch/gap-hunt/review-189-repair/supplement.test.mjs:53:11)
+
+(node:21876) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        0.189 s, estimated 1 s
+Ran all test suites.

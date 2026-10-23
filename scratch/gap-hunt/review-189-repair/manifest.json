@@ -1,0 +1,150 @@
+{
+  "source": "fc1ccdae7284490066c45d3bcab322b554546a1f",
+  "files": [
+    {
+      "path": "scratch/gap-hunt/consumer-dx/custom-key.ts",
+      "sha256": "0226d8af92a7271e21a171335c1471eb8cc82a7a9973ee37db8635d663e298d7",
+      "bytes": 2699
+    },
+    {
+      "path": "scratch/gap-hunt/consumer-dx/tsconfig.custom-key.json",
+      "sha256": "444c5d5d5eecb88d53792d275bfb1ddbae10f1003aa4ad3d885118cf515fd7be",
+      "bytes": 69
+    },
+    {
+      "path": "scratch/gap-hunt/consumer-dx/tsconfig.all.json",
+      "sha256": "e0999d59a896a5e3869a5ed4ddb311e58a688ab35a518d223ab13f37788abd32",
+      "bytes": 1413
+    },
+    {
+      "path": "scratch/gap-hunt/consumer-dx/custom-key.jest.config.mjs",
+      "sha256": "74fa193c557252985af9716a974607fd16a4423fff286b3e6d897818782df028",
+      "bytes": 242
+    },
+    {
+      "path": "scratch/gap-hunt/consumer-dx/custom-key.test.mjs",
+      "sha256": "87d23d987346eea5d3ba3d70f5b99a12865be879c6548c5a9897ac479d1f7634",
+      "bytes": 1591
+    },
+    {
+      "path": "scratch/gap-hunt/consumer-dx/repro-custom-key.mjs",
+      "sha256": "1cec7b58cd42c59aa22e0736b10ec534577e46647e3d5c554f902c427304845c",
+      "bytes": 769
+    },
+    {
+      "path": "scratch/gap-hunt/contract-surface/repro-support.mjs",
+      "sha256": "549c4bafb35c8a766d69f06f129f226d8d0532c3277f8400e9f0de8e8fdd0f14",
+      "bytes": 1096
+    },
+    {
+      "path": "scratch/gap-hunt/review-189-repair/REPORT.md",
+      "sha256": "a729928784599cbf8b50d191630ce2392d1b74a3c8a54f4d96ae9c5699080e45",
+      "bytes": 5492
+    },
+    {
+      "path": "scratch/gap-hunt/review-189-repair/captures/anchors.log",
+      "sha256": "8a20028e86674bfedbcb3f2a751fd0ef4bd5647bd8cdc5552234d47bf2059857",
+      "bytes": 24
+    },
+    {
+      "path": "scratch/gap-hunt/review-189-repair/captures/core-test-build.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "scratch/gap-hunt/review-189-repair/captures/definition-check.log",
+      "sha256": "a334a22461f8750cde64596af3e2bf25b304a6503ac9b176d8a66e155f2d7248",
+      "bytes": 414
+    },
+    {
+      "path": "scratch/gap-hunt/review-189-repair/captures/definition-tests.log",
+      "sha256": "92b2cd5b68f67b4e8c49b91693f08d72462ac69fc1e3e74be83bea894847e827",
+      "bytes": 1021
+    },
+    {
+      "path": "scratch/gap-hunt/review-189-repair/captures/generated-alpha-types.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "scratch/gap-hunt/review-189-repair/captures/old-source-build.log",
+      "sha256": "9eb1f0e1ba62cd61262041daf444feb22fd48ec57cb809914e03f96c4504a62d",
+      "bytes": 4988
+    },
+    {
+      "path": "scratch/gap-hunt/review-189-repair/captures/old-source-original.log",
+      "sha256": "0037c4f6a934086a7560429df1d5c8d8b110cbf7b2d672db7f282bf7d49d4143",
+      "bytes": 1592
+    },
+    {
+      "path": "scratch/gap-hunt/review-189-repair/captures/old-source-supplement.log",
+      "sha256": "2fe425a8b44e37c2992131f49638841270b3c8e956676bf730c77336442a1eb7",
+      "bytes": 6607
+    },
+    {
+      "path": "scratch/gap-hunt/review-189-repair/captures/original-default-bootstrap.log",
+      "sha256": "27c3749d5517de7a313cb34eca37549f73973aafa3b11e0fc9f3a13062a55471",
+      "bytes": 7163
+    },
+    {
+      "path": "scratch/gap-hunt/review-189-repair/captures/real-consumer-lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "scratch/gap-hunt/review-189-repair/captures/receipt.json",
+      "sha256": "d471b773b341f0796db5aac9d67484ffd0b79cbcec4887b250d13c6f0dc4b608",
+      "bytes": 4325
+    },
+    {
+      "path": "scratch/gap-hunt/review-189-repair/captures/restart.log",
+      "sha256": "f92d7ee235b3511f2de8d4763bddb4231106f6d9c1e770956ac5e9a04f76ebdc",
+      "bytes": 801
+    },
+    {
+      "path": "scratch/gap-hunt/review-189-repair/captures/restored-build.log",
+      "sha256": "9eb1f0e1ba62cd61262041daf444feb22fd48ec57cb809914e03f96c4504a62d",
+      "bytes": 4988
+    },
+    {
+      "path": "scratch/gap-hunt/review-189-repair/captures/restored-original.log",
+      "sha256": "77117ffd615663db03763794e97f60fe73a505c28170df70e6180b7d07b88117",
+      "bytes": 731
+    },
+    {
+      "path": "scratch/gap-hunt/review-189-repair/captures/restored-supplement.log",
+      "sha256": "fa74f69bdc5f92c134b78c3732dfcfa55f7044a187a22a350d91d143a8fb4ed2",
+      "bytes": 1106
+    },
+    {
+      "path": "scratch/gap-hunt/review-189-repair/captures/supplement.log",
+      "sha256": "96a28e155d700721f3b335382f808430b1114383ed51a5cacc0f17c982197232",
+      "bytes": 1106
+    },
+    {
+      "path": "scratch/gap-hunt/review-189-repair/eslint.config.mjs",
+      "sha256": "00526bc186ac88b3e461318c6990ba0fff1802d0853b8c4c34f9ee588f7dc944",
+      "bytes": 505
+    },
+    {
+      "path": "scratch/gap-hunt/review-189-repair/generated.test-d.ts",
+      "sha256": "c42fde063a473dc147587c6f5f2e04bd70a701af7c99daeb3eec527db0e0d2e5",
+      "bytes": 1815
+    },
+    {
+      "path": "scratch/gap-hunt/review-189-repair/jest.config.mjs",
+      "sha256": "1752a9d291e8db0c97f0961331d18fb1f70474cdf87c804e9d3e927132d1b072",
+      "bytes": 211
+    },
+    {
+      "path": "scratch/gap-hunt/review-189-repair/reproduce.py",
+      "sha256": "45f27e5cee3544c639f4f008b08e59d2ecb18407cf5769002dfa70e16b06f59e",
+      "bytes": 3840
+    },
+    {
+      "path": "scratch/gap-hunt/review-189-repair/supplement.test.mjs",
+      "sha256": "31d1a11777200b8deb1a11240e913c0af797242e7bb029537cafb657741a085b",
+      "bytes": 3612
+    }
+  ]
+}

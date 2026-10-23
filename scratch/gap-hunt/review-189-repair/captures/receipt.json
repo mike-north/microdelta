@@ -1,0 +1,191 @@
+{
+  "source": "fc1ccdae7284490066c45d3bcab322b554546a1f",
+  "oldDefinitionSource": "2a640aca75d5728484a2cb06af88c77690616ba9",
+  "frozen": "b1b42c304db15fe0c3c306a0fb4f71660970040f",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "node": "v24.22.1",
+  "npm": "11.12.1",
+  "commands": [
+    {
+      "name": "original-default-bootstrap",
+      "command": [
+        "node",
+        "scratch/gap-hunt/consumer-dx/repro-custom-key.mjs"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "real-consumer-lint",
+      "command": [
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "-c",
+        "scratch/gap-hunt/review-189-repair/eslint.config.mjs",
+        "scratch/gap-hunt/consumer-dx/custom-key.ts",
+        "--max-warnings",
+        "0"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "generated-alpha-types",
+      "command": [
+        "node",
+        "node_modules/tsd/dist/cli.js",
+        "--typings",
+        "packages/core/dist/api/microdelta.alpha.d.ts",
+        "--files",
+        "scratch/gap-hunt/review-189-repair/generated.test-d.ts"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "definition-check",
+      "command": [
+        "npm",
+        "run",
+        "check",
+        "--workspace",
+        "@microdelta/definition"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "definition-tests",
+      "command": [
+        "npm",
+        "run",
+        "test",
+        "--workspace",
+        "@microdelta/definition"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "core-test-build",
+      "command": [
+        "node",
+        "node_modules/typescript/bin/tsc",
+        "-p",
+        "packages/core/tsconfig.test.json"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "restart",
+      "command": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "packages/core/jest.config.mjs",
+        "--runInBand",
+        "--runTestsByPath",
+        "packages/core/.test-build/test/keyed/restart.test.js"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "supplement",
+      "command": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/review-189-repair/jest.config.mjs",
+        "--runInBand"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "anchors",
+      "command": [
+        "node",
+        "packages/core/test/m4-acceptance/controls/m4-mutation-controls.mjs",
+        "--check-anchors"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "old-source-build",
+      "command": [
+        "npm",
+        "run",
+        "build:packages"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "old-source-original",
+      "command": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/consumer-dx/custom-key.jest.config.mjs",
+        "--runInBand"
+      ],
+      "exit": 1,
+      "expected": 1
+    },
+    {
+      "name": "old-source-supplement",
+      "command": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/review-189-repair/jest.config.mjs",
+        "--runInBand"
+      ],
+      "exit": 1,
+      "expected": 1
+    },
+    {
+      "name": "restored-build",
+      "command": [
+        "npm",
+        "run",
+        "build:packages"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "restored-original",
+      "command": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/consumer-dx/custom-key.jest.config.mjs",
+        "--runInBand"
+      ],
+      "exit": 0,
+      "expected": 0
+    },
+    {
+      "name": "restored-supplement",
+      "command": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/review-189-repair/jest.config.mjs",
+        "--runInBand"
+      ],
+      "exit": 0,
+      "expected": 0
+    }
+  ]
+}

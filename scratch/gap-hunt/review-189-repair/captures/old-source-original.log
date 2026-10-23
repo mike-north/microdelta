@@ -1,0 +1,41 @@
+watchman warning: Recrawled this watch 9 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-189' ; watchman watch-project '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-review-189'`
+
+(node:24139) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL scratch/gap-hunt/consumer-dx/custom-key.test.mjs
+  ● a no-identity member with an explicit supported string custom key is accepted without fictional fields
+
+    assert.strictEqual(received, expected)
+
+    Expected value to strictly be equal to:
+      "accepted"
+    Received:
+      "rejected"
+
+    Difference:
+
+    - Expected
+    + Received
+
+    - accepted
+    + rejected
+
+      14 | }
+      15 | test('a no-identity member with an explicit supported string custom key is accepted without fictional fields', () => {
+    > 16 |   assert.equal(run('custom').kind, 'accepted');
+         |          ^
+      17 | });
+      18 | test('no designated identity and no custom strategy is rejected', () => {
+      19 |   assert.equal(run('missing').kind, 'rejected');
+
+      at Object.<anonymous> (scratch/gap-hunt/consumer-dx/custom-key.test.mjs:16:10)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 2 passed, 3 total
+Snapshots:   0 total
+Time:        0.294 s, estimated 1 s
+Ran all test suites.

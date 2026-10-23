@@ -96,6 +96,38 @@ consumer imports only `microdelta`: for example `IMemberBuilder`,
 `IOperationView`, `IOperationEvent`, `IWaitEvent`, `IUsageSummary` and
 `IPromotionRecord`.
 
+For a scalar calculation, retain a record and read its field from the child
+result. This complete declaration example uses the generated alpha view, with
+`microdelta` resolved as in the [example TypeScript configuration](../../examples/contribution-report/tsconfig.json):
+
+```ts
+import { authoring } from 'microdelta';
+
+export const builders = authoring<Record<string, never>, Record<string, never>>();
+const answer = builders.memo({
+  subject: 'answer',
+  run: () => ({ value: 6 * 7 }),
+});
+const summary = builders.memo({
+  subject: 'summary',
+  children: { answer },
+  run: async ({ calls }) => {
+    const { data } = await calls.answer();
+    return { text: `The answer is ${data.value}.` };
+  },
+});
+export const composition = builders.compose({
+  scope: 'wrapped-result',
+  steps: [{ slot: 'answer', declaration: answer }, { slot: 'summary', declaration: summary }],
+});
+```
+
+The `answer` result retains `{ value: 42 }`; `summary` consumes `data.value`
+and also returns a record. Pass `builders` as the run's `authoring` and
+`composition` as its composition when resolving `summary`, following the
+workspace setup in the contribution report example below. A serialized string
+or a present `undefined` uses the same wrapper shape.
+
 The [contribution report example](../../examples/contribution-report/README.md)
 uses this path through the installed workspace's generated alpha declarations.
 The M3 independent-process acceptance harness in `test/acceptance` exercises

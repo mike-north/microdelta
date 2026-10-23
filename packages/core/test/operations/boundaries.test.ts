@@ -36,6 +36,7 @@ import type { ICompletedResultReference, IDurableHistory } from '@microdelta/his
 import type { IResolutionHistory } from '@microdelta/resolution';
 
 import { faultySqlite } from '../accounting/support.js';
+import { turns } from '../stop/support.js';
 import { analysis, createWorld, installWorld } from './fixture.js';
 import type { IWorld } from './fixture.js';
 import { T0, fakeTimer, freshKey, hour, openSession, production, statuses, tempStores, until } from './harness.js';
@@ -160,6 +161,71 @@ describe('the writer lease while a request sleeps (EXP-8 resolution 1)', () => {
       expect(started.events.filter((event) => event.kind === 'wait').map((event) => event.kind === 'wait' ? event.phase : '')).toEqual(['sleeping', 'resumed']);
       expect(received('pr-1')).toHaveLength(2);
     } finally {
+      session.close();
+    }
+  });
+
+  test.each([false, true])('writer reacquisition after durable deferral respects hard stop %s without changing the competing holder (RUN-014, RUN-015)', async (hardStop) => {
+    world.provider.script('assess', 'pr-1', ['rate-limit:3600000']);
+    const session = openSession(stores, timer);
+    const persisted = createNodeSqlite().openSqlite(stores.history);
+    const attempts = persisted.prepare('SELECT * FROM history_attempts ORDER BY attempt_id');
+    const publications = persisted.prepare('SELECT * FROM history_results ORDER BY result_id');
+    try {
+      const stop = createStopController();
+      const started = members(session, { stop });
+      await until(() => started.events.some((event) => event.kind === 'wait' && event.phase === 'sleeping'), 'the deferred pass releases its writer');
+      expect(session.history.currentWriter()).toBeUndefined();
+      const beforeAttempts = attempts.all();
+      const beforePublications = publications.all();
+      const beforeJournal = journalContents(session);
+      expect(beforeJournal).toContainEqual(expect.objectContaining({ member: 'pr-1', status: 'deferred', notBefore: T0 + hour }));
+      expect(beforePublications.length).toBeGreaterThan(0);
+      const probe = session.history.acquireWriter({ holder: 'probe', leaseMilliseconds: 10 * hour });
+      if (probe.kind !== 'acquired') {
+        throw new Error('the competing holder did not acquire the released writer');
+      }
+      timer.advanceTo(T0 + hour);
+      await until(() => timer.pending().includes(T0 + hour + 1_000), 'the deferred pass wakes and waits to reacquire');
+      const beforeSteps = started.events.filter((event) => event.kind === 'step');
+      expect(received('pr-1')).toHaveLength(1);
+      expect(attempts.all()).toEqual(beforeAttempts);
+      expect(publications.all()).toEqual(beforePublications);
+      if (hardStop) {
+        stop.request({ level: 'hard' });
+        const result = await started.done;
+        expect(result.waitingUntil).toBe(T0 + hour);
+        expect(statuses(result.value.members)).toEqual({ 'pr-1': 'pending', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
+        // A stopped waiter has no authority to release or alter the competing writer.
+        expect(session.history.currentWriter()).toEqual(probe.lease);
+        expect(timer.pending()).toEqual([]);
+        expect(started.events.filter((event) => event.kind === 'step')).toEqual(beforeSteps);
+        expect(attempts.all()).toEqual(beforeAttempts);
+        expect(publications.all()).toEqual(beforePublications);
+        expect(journalContents(session)).toEqual(beforeJournal);
+        session.history.releaseWriter(probe.lease);
+        timer.advanceTo(T0 + 2 * hour);
+        await turns(5);
+        // Releasing the unrelated holder later cannot revive the stopped pass.
+        expect(started.events.filter((event) => event.kind === 'step')).toEqual(beforeSteps);
+        expect(attempts.all()).toEqual(beforeAttempts);
+        expect(publications.all()).toEqual(beforePublications);
+        expect(journalContents(session)).toEqual(beforeJournal);
+        expect(received('pr-1')).toHaveLength(1);
+        expect(timer.pending()).toEqual([]);
+      } else {
+        session.history.releaseWriter(probe.lease);
+        timer.advanceTo(T0 + hour + 1_000);
+        const result = await started.done;
+        expect(statuses(result.value.members)).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
+        expect(result.waitingUntil).toBeUndefined();
+        expect(received('pr-1')).toHaveLength(2);
+        expect(attempts.all().length).toBeGreaterThan(beforeAttempts.length);
+        expect(publications.all().length).toBeGreaterThan(beforePublications.length);
+      }
+      expect(session.history.currentWriter()).toBeUndefined();
+    } finally {
+      persisted.close();
       session.close();
     }
   });

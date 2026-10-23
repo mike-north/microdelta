@@ -1,0 +1,37 @@
+{
+  "sourcePin": "f43c5872987573d9b98a19f41c324b4d9336894c",
+  "branch": "gap-hunt-writer-stop",
+  "testPatchSha256": "65072ee72fb078395faf8decf7aa2573b6282f4cc11709fc2535c4b686905e63",
+  "counts": {
+    "jest": {
+      "numPassedTests": 2,
+      "numFailedTests": 0,
+      "numPendingTests": 30,
+      "numRuntimeErrorTestSuites": 0,
+      "success": true
+    },
+    "mutation": {
+      "numPassedTests": 1,
+      "numFailedTests": 1,
+      "numPendingTests": 30,
+      "numRuntimeErrorTestSuites": 0,
+      "success": false
+    },
+    "restored": {
+      "numPassedTests": 2,
+      "numFailedTests": 0,
+      "numPendingTests": 30,
+      "numRuntimeErrorTestSuites": 0,
+      "success": true
+    },
+    "boundaries": {
+      "numPassedTests": 32,
+      "numFailedTests": 0,
+      "numPendingTests": 0,
+      "numRuntimeErrorTestSuites": 0,
+      "success": true
+    }
+  },
+  "scope": "three-member synthetic real SQLite owner assembly; fake time; one deferred member; one competing writer; no paid provider execution",
+  "qualifiedTestSha256": "2942413cfe9bda4fe094199ad37ddf58c171afbb6bdfbc022f7635797c08eec1"
+}

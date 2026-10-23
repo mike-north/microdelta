@@ -1,0 +1,31 @@
+(node:88677) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL .test-build/test/operations/boundaries.test.js
+  ● the writer lease while a request sleeps (EXP-8 resolution 1) › writer reacquisition after durable deferral respects hard stop true without changing the competing holder (RUN-014, RUN-015)
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   1767229201000,
+    + ]
+
+      199 |         // A stopped waiter has no authority to release or alter the competing writer.
+      200 |         expect(session.history.currentWriter()).toEqual(probe.lease);
+    > 201 |         expect(timer.pending()).toEqual([]);
+          |                                 ^
+      202 |         expect(started.events.filter((event) => event.kind === 'step')).toEqual(beforeSteps);
+      203 |         expect(attempts.all()).toEqual(beforeAttempts);
+      204 |         expect(publications.all()).toEqual(beforePublications);
+
+      at test/operations/boundaries.test.ts:201:33
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 30 skipped, 1 passed, 32 total
+Snapshots:   0 total
+Time:        0.158 s, estimated 1 s
+Ran all test suites matching operations/boundaries.test with tests matching "writer reacquisition after durable deferral".
+Test results written to: ../../scratch/gap-hunt/writer-stop/mutation-results.json

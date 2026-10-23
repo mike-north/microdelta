@@ -1,0 +1,12 @@
+
+> microdelta@0.2.0 test:unit
+> tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand --testPathPatterns operations/boundaries.test --json --outputFile ../../scratch/gap-hunt/writer-stop/boundaries-results.json
+
+(node:96675) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       32 passed, 32 total
+Snapshots:   0 total
+Time:        3.153 s
+Ran all test suites matching operations/boundaries.test.
+Test results written to: ../../scratch/gap-hunt/writer-stop/boundaries-results.json

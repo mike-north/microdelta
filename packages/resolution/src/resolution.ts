@@ -403,7 +403,8 @@ interface IMemoFrame {
   unsettledAtReturn: number | undefined;
   refused: { readonly step: IBindingDescriptor; readonly reason: string; readonly disposition: IRefusalDisposition } | undefined;
   /**
-   * The first failed declared child and its original runtime presentation.
+   * The first failed declared child and its original runtime presentation,
+   * including its opaque underlying cause.
    * The author receives the error object and may change its public fields;
    * the parent still cannot publish or adopt those changes as runtime text.
    */
@@ -2247,7 +2248,7 @@ export function createResolution<TInputs extends object, THelpers extends object
       // runtime provenance. The public ResolutionError constructor gives an
       // author body no such authority, whatever code its error selects.
       if (failed?.presentation !== undefined && failed.presentation.code !== 'execution-failure') {
-        throw new ResolutionError(failed.presentation.code, failed.presentation.message, failed.error);
+        throw new ResolutionError(failed.presentation.code, failed.presentation.message, failed.presentation.cause);
       }
       if (failed === undefined && executeLifecycleFailed && error instanceof ResolutionError && error.code !== 'execution-failure') {
         throw error;
@@ -2275,7 +2276,7 @@ export function createResolution<TInputs extends object, THelpers extends object
       const presentation = frame.failed.presentation;
       throw presentation === undefined
         ? new ResolutionError('execution-failure', `A child of ${stepKey(step)} failed`, cause)
-        : new ResolutionError(presentation.code, presentation.message, cause);
+        : new ResolutionError(presentation.code, presentation.message, presentation.cause);
     }
     if (ran.value.detachError !== undefined) {
       abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'the body returned unsupported data' });

@@ -15,11 +15,12 @@ for (const mode of ['unmodified', 'mutate-rethrow', 'mutate-swallow'] as const) 
     const location = join(directory, 'history.sqlite');
     const api = authoring<object, IHelpers>();
     let mutations = 0;
-    let mutated: unknown;
+    let underlying: unknown;
     const mutate = (error: unknown): void => {
       if (!(error instanceof Error)) { throw new Error('Expected an ordinary public Error instance'); }
       mutations += 1;
-      mutated = error;
+      // The framework owns this underlying cause before author code can rewrite the public error.
+      underlying = error.cause;
       error.message = marker;
       Reflect.set(error, 'code', 'policy-failure');
     };
@@ -46,7 +47,7 @@ for (const mode of ['unmodified', 'mutate-rethrow', 'mutate-swallow'] as const) 
       if (!(failure instanceof ResolutionError)) { throw new Error('Expected typed runtime failure'); }
       expect(failure.code).toBe('unsupported-result');
       expect(failure.message).not.toContain(marker);
-      if (mode !== 'unmodified') { expect(failure.cause).toBe(mutated); }
+      if (mode !== 'unmodified') { expect(failure.cause).toBe(underlying); }
     } finally { sqlite.close(); rmSync(directory, { recursive: true, force: true }); }
   });
 }
@@ -57,10 +58,10 @@ for (const mode of ['rethrow', 'swallow'] as const) {
     const directory = mkdtempSync(join(tmpdir(), 'microdelta-direct-child-mutation-'));
     const location = join(directory, 'history.sqlite');
     const api = authoring<object, IHelpers>();
-    let original: unknown;
+    let underlying: unknown;
     const mutate = (error: unknown): void => {
       if (!(error instanceof Error)) { throw new Error('Expected a real child Error'); }
-      original = error;
+      underlying = error.cause;
       error.message = marker;
       Reflect.set(error, 'code', 'policy-failure');
     };
@@ -87,7 +88,7 @@ for (const mode of ['rethrow', 'swallow'] as const) {
       expect(failure.code).toBe('unsupported-result');
       expect(failure.message).toContain('child');
       expect(failure.message).not.toContain(marker);
-      expect(failure.cause).toBe(original);
+      expect(failure.cause).toBe(underlying);
       expect(sqlite.prepare('SELECT count(*) AS count FROM history_results').get()).toEqual({ count: 0 });
     } finally { sqlite.close(); rmSync(directory, { recursive: true, force: true }); }
   });
@@ -100,11 +101,13 @@ test('a second parent sees the original runtime classification and safe text aft
   interface ISharedHelpers extends IHelpers { readonly observe: (error: unknown) => void }
   const api = authoring<object, ISharedHelpers>();
   let original: unknown;
+  let underlying: unknown;
   let second: unknown;
   let mutationCount = 0;
   const mutate = (error: unknown): void => {
     if (!(error instanceof Error)) { throw new Error('Expected a real shared child Error'); }
     original = error;
+    underlying = error.cause;
     mutationCount += 1;
     error.message = marker;
     Reflect.set(error, 'code', 'policy-failure');
@@ -138,9 +141,88 @@ test('a second parent sees the original runtime classification and safe text aft
     expect(second.code).toBe('unsupported-result');
     expect(second.message).not.toContain(marker);
     expect(second).not.toBe(original);
-    expect(second.cause).toBe(original);
+    expect(second.cause).toBe(underlying);
     expect(failure).toBeInstanceOf(ResolutionError);
     expect(failure instanceof ResolutionError ? failure.message : '').not.toContain(marker);
     expect(sqlite.prepare('SELECT count(*) AS count FROM history_results').get()).toEqual({ count: 0 });
   } finally { sqlite.close(); rmSync(directory, { recursive: true, force: true }); }
 });
+
+/**
+ * An observer failure is a real runtime child failure whose original cause is
+ * the caller's observer error. Its parent must preserve that exact cause after
+ * author code mutates all public fields of the child ResolutionError.
+ */
+for (const route of ['direct', 'supplied'] as const) {
+  for (const mode of ['rethrow', 'swallow'] as const) {
+    test(`${route} child observer / ${mode}: parent retains original observer cause after author mutation`, async () => {
+      const directory = mkdtempSync(join(tmpdir(), 'microdelta-observer-child-mutation-'));
+      const location = join(directory, 'history.sqlite');
+      interface IObserverHelpers extends IHelpers { readonly runChild: () => { readonly amount: number } }
+      const api = authoring<object, IObserverHelpers>();
+      const observerError = new Error('SYNTHETIC-OBSERVER-ORIGINAL-31a7');
+      let originalCause: unknown;
+      let childError: unknown;
+      let bodyCalls = 0;
+      const mutate = (error: unknown): void => {
+        if (!(error instanceof Error)) { throw new Error('Expected a runtime child Error'); }
+        childError = error;
+        originalCause = error.cause;
+        error.message = marker;
+        Reflect.set(error, 'code', 'policy-failure');
+        Reflect.set(error, 'cause', new Error(marker));
+      };
+      const runChild = (): { readonly amount: number } => { bodyCalls += 1; return { amount: 1 }; };
+      const helpers = [{ slot: 'mutate', helper: mutate }, { slot: 'runChild', helper: runChild }];
+      const workspace = openWorkspace({ location, logicalStore: 'observer-child-mutation' });
+      let failure: unknown;
+      try {
+        if (route === 'direct') {
+          const child = api.source<{ readonly amount: number }>({ subject: 'observed-child', run: ({ outcome, helpers: bound }) => outcome.fresh(bound.runChild()) });
+          const parent = mode === 'rethrow'
+            ? api.memo({ subject: 'parent', children: { child }, run: async ({ calls, helpers: bound }) => {
+              try { await calls.child(); } catch (error: unknown) { bound.mutate(error); throw error; }
+              return { amount: 0 };
+            } })
+            : api.memo({ subject: 'parent', children: { child }, run: async ({ calls, helpers: bound }) => {
+              try { await calls.child(); } catch (error: unknown) { bound.mutate(error); }
+              return { amount: 0 };
+            } });
+          const composition = api.compose({ scope: 'observer-child-mutation', helpers, steps: [{ slot: 'child', declaration: child }, { slot: 'parent', declaration: parent }] });
+          failure = await workspace.run({ authoring: api, composition, environment: 'env:test', observers: [{ observe: event => {
+            if (event.kind === 'step' && event.event.phase === 'execute' && event.event.step.slot === 'child') { throw observerError; }
+          } }] }, run => run.resolve({ scope: 'observer-child-mutation', role: 'step', slot: 'parent' }, { requestKey: 'cold' })).then(() => undefined, (error: unknown) => error);
+        } else {
+          const slot = api.stepSlot<readonly [], { readonly amount: number }>({ slot: 'supplied' });
+          const child = api.suppliedStep<readonly [], { readonly amount: number }>({ run: ({ helpers: bound }) => bound.runChild() });
+          const parent = mode === 'rethrow'
+            ? api.memo({ subject: 'parent', children: { child: slot }, run: async ({ calls, helpers: bound }) => {
+              try { await calls.child(); } catch (error: unknown) { bound.mutate(error); throw error; }
+              return { amount: 0 };
+            } })
+            : api.memo({ subject: 'parent', children: { child: slot }, run: async ({ calls, helpers: bound }) => {
+              try { await calls.child(); } catch (error: unknown) { bound.mutate(error); }
+              return { amount: 0 };
+            } });
+          const composition = api.compose({ scope: 'observer-child-mutation', helpers, steps: [{ slot: 'parent', declaration: parent }], supplied: [api.supply({ slot, declaration: child, subject: () => 'observed-child' })] });
+          failure = await workspace.run({ authoring: api, composition, environment: 'env:test', observers: [{ observe: event => {
+            if (event.kind === 'step' && event.event.phase === 'execute' && event.event.step.slot === 'supplied') { throw observerError; }
+          } }] }, run => run.resolve({ scope: 'observer-child-mutation', role: 'step', slot: 'parent' }, { requestKey: 'cold' })).then(() => undefined, (error: unknown) => error);
+        }
+      } finally { workspace.close(); }
+      const sqlite = createNodeSqlite().openSqlite(location);
+      try {
+        expect(bodyCalls).toBe(0);
+        expect(childError).toBeInstanceOf(ResolutionError);
+        expect(originalCause).toBe(observerError);
+        expect(failure).toBeInstanceOf(ResolutionError);
+        if (!(failure instanceof ResolutionError)) { throw new Error('Expected typed runtime failure'); }
+        expect(failure.code).toBe('observer-failure');
+        expect(failure.message).not.toContain(marker);
+        // No extra child-error layer: RUN-013 retains the original caller-thrown observer error.
+        expect(failure.cause).toBe(observerError);
+        expect(sqlite.prepare('SELECT count(*) AS count FROM history_results WHERE subject IN (?, ?)').get('observed-child', 'parent')).toEqual({ count: 0 });
+      } finally { sqlite.close(); rmSync(directory, { recursive: true, force: true }); }
+    });
+  }
+}

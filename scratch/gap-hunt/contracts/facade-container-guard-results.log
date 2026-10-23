@@ -1,0 +1,60 @@
+(node:48209) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL packages/core/.test-build/test/gap-hunt-contracts-container-guard.test.js
+  ● gap hunt facade durable nullable-container guards › TRK-5/8 replacing a tracked container with null recomputes its branch
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "kind": "published",
+    +   "kind": "reused",
+        "value": Object {
+    -     "state": "absent",
+    +     "state": "present",
+        },
+      }
+
+      40 |       expect(await resolve(location, { enabled: true, detail: { name: 'Ada' } }, 'first', 'container')).toEqual({ kind: 'published', value: { state: 'present' } });
+      41 |       const config: IConfig = replacement === undefined ? { enabled: true } : { enabled: true, detail: replacement };
+    > 42 |       expect(await resolve(location, config, 'second', 'container')).toEqual({ kind: 'published', value: { state: 'absent' } });
+         |                                                                      ^
+      43 |     } finally {
+      44 |       rmSync(directory, { recursive: true, force: true });
+      45 |     }
+
+      at test/gap-hunt-contracts-container-guard.test.ts:42:70
+
+  ● gap hunt facade durable nullable-container guards › TRK-5/8 replacing a tracked container with undefined recomputes its branch
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "kind": "published",
+    +   "kind": "reused",
+        "value": Object {
+    -     "state": "absent",
+    +     "state": "present",
+        },
+      }
+
+      40 |       expect(await resolve(location, { enabled: true, detail: { name: 'Ada' } }, 'first', 'container')).toEqual({ kind: 'published', value: { state: 'present' } });
+      41 |       const config: IConfig = replacement === undefined ? { enabled: true } : { enabled: true, detail: replacement };
+    > 42 |       expect(await resolve(location, config, 'second', 'container')).toEqual({ kind: 'published', value: { state: 'absent' } });
+         |                                                                      ^
+      43 |     } finally {
+      44 |       rmSync(directory, { recursive: true, force: true });
+      45 |     }
+
+      at test/gap-hunt-contracts-container-guard.test.ts:42:70
+
+Test Suites: 1 failed, 1 total
+Tests:       2 failed, 1 passed, 3 total
+Snapshots:   0 total
+Time:        0.183 s, estimated 1 s
+Ran all test suites within paths "packages/core/.test-build/test/gap-hunt-contracts-container-guard.test.js".

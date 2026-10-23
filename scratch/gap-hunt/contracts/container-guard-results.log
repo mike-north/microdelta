@@ -1,0 +1,59 @@
+(node:53790) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL packages/tracking/.test-build/test/gap-hunt-contracts-container-guard.test.js
+  ● gap hunt tracked container guard precision › TRK-5 explicit null comparison on a tracked container records replacement
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "changed"
+    Received: "equal"
+
+      33 |         const captured = observer.capture(() => input.detail !== null);
+      34 |         expect(captured.value).toBe(true);
+    > 35 |         expect(observer.compareCurrent(captured, current({ detail: null })).kind).toBe('changed');
+         |                                                                                   ^
+      36 |     });
+      37 |     test.each([null, undefined])('TRK-8 container presence guard detects replacement with %s', (replacement) => {
+      38 |         const observer = createTrackingObserver({
+
+      at Object.<anonymous> (.test-build/test/gap-hunt-contracts-container-guard.test.js:35:83)
+
+  ● gap hunt tracked container guard precision › TRK-8 container presence guard detects replacement with null
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "changed"
+    Received: "equal"
+
+      45 |         expect(captured.value).toBe('present');
+      46 |         expect(captured.observations).toHaveLength(0);
+    > 47 |         expect(observer.compareCurrent(captured, current(changed)).kind).toBe('changed');
+         |                                                                          ^
+      48 |     });
+      49 | });
+      50 |
+
+      at .test-build/test/gap-hunt-contracts-container-guard.test.js:47:74
+
+  ● gap hunt tracked container guard precision › TRK-8 container presence guard detects replacement with undefined
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "changed"
+    Received: "equal"
+
+      45 |         expect(captured.value).toBe('present');
+      46 |         expect(captured.observations).toHaveLength(0);
+    > 47 |         expect(observer.compareCurrent(captured, current(changed)).kind).toBe('changed');
+         |                                                                          ^
+      48 |     });
+      49 | });
+      50 |
+
+      at .test-build/test/gap-hunt-contracts-container-guard.test.js:47:74
+
+Test Suites: 1 failed, 1 total
+Tests:       3 failed, 1 passed, 4 total
+Snapshots:   0 total
+Time:        0.129 s, estimated 1 s
+Ran all test suites within paths "packages/tracking/.test-build/test/gap-hunt-contracts-container-guard.test.js".

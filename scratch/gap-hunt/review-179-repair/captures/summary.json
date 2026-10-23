@@ -1,0 +1,37 @@
+{
+  "head": "e00d5f999725800eb4f574b8e73d7300e71ad44d",
+  "reviewed_pin": "e00d5f999725800eb4f574b8e73d7300e71ad44d",
+  "original_suite": {
+    "passed": 12,
+    "failed": 0
+  },
+  "original_probes": 21,
+  "original_matrix": {
+    "passed": 8,
+    "failed": 0,
+    "exit": 0
+  },
+  "residual_matrix": {
+    "passed": 3,
+    "failed": 1,
+    "exit": 1
+  },
+  "previous_config_suite": {
+    "passed": 11,
+    "failed": 1
+  },
+  "previous_config_original_matrix": {
+    "passed": 6,
+    "failed": 2,
+    "exit": 1
+  },
+  "shadowed_local_require": {
+    "current_errors": 1,
+    "previous_errors": 0,
+    "restored_errors": 1
+  },
+  "actual_config_sha256": "93b17176fc7570934bed3286bcbaa163b53fd93c142210221ce71b9267957cfe",
+  "config_restored_byte_exact": true,
+  "verdict": "PARTIAL check:imports boundary: original dot-prefix witness repaired; encoded literal ESM source bypass and lexical-require false positive remain",
+  "scope": "tooling source checks and Node ESM resolution only; no module execution/full CI/runtime/Linux/provider claims"
+}

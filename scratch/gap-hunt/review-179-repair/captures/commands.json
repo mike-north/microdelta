@@ -1,0 +1,148 @@
+[
+  {
+    "name": "install",
+    "argv": [
+      "npm",
+      "ci",
+      "--no-audit",
+      "--no-fund"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "boundaries",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "tooling/context-boundaries.test.mjs"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "original-probes",
+    "argv": [
+      "node",
+      "scratch/gap-hunt/review-179/probes.mjs"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "original-matrix",
+    "argv": [
+      "node",
+      "scratch/gap-hunt/review-179/path-matrix.mjs"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "residual-matrix",
+    "argv": [
+      "node",
+      "--experimental-import-meta-resolve",
+      "scratch/gap-hunt/review-179-repair/residual-matrix.mjs"
+    ],
+    "exit": 1,
+    "expected": 1
+  },
+  {
+    "name": "supplemental-literals",
+    "argv": [
+      "node",
+      "scratch/gap-hunt/review-179-repair/extra-probes.mjs"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "shadowed-require-current",
+    "argv": [
+      "node",
+      "scratch/gap-hunt/review-179-repair/shadowed-require.mjs"
+    ],
+    "exit": 1,
+    "expected": 1
+  },
+  {
+    "name": "previous-config-boundaries",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "tooling/context-boundaries.test.mjs"
+    ],
+    "exit": 1,
+    "expected": 1
+  },
+  {
+    "name": "previous-config-original-matrix",
+    "argv": [
+      "node",
+      "scratch/gap-hunt/review-179/path-matrix.mjs"
+    ],
+    "exit": 1,
+    "expected": 1
+  },
+  {
+    "name": "shadowed-require-previous",
+    "argv": [
+      "node",
+      "scratch/gap-hunt/review-179-repair/shadowed-require.mjs"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "restored-boundaries",
+    "argv": [
+      "node",
+      "--test",
+      "--test-reporter=tap",
+      "tooling/context-boundaries.test.mjs"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "restored-original-matrix",
+    "argv": [
+      "node",
+      "scratch/gap-hunt/review-179/path-matrix.mjs"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "restored-residual-matrix",
+    "argv": [
+      "node",
+      "--experimental-import-meta-resolve",
+      "scratch/gap-hunt/review-179-repair/residual-matrix.mjs"
+    ],
+    "exit": 1,
+    "expected": 1
+  },
+  {
+    "name": "shadowed-require-restored",
+    "argv": [
+      "node",
+      "scratch/gap-hunt/review-179-repair/shadowed-require.mjs"
+    ],
+    "exit": 1,
+    "expected": 1
+  },
+  {
+    "name": "restored-imports",
+    "argv": [
+      "npm",
+      "run",
+      "check:imports"
+    ],
+    "exit": 0,
+    "expected": 0
+  }
+]

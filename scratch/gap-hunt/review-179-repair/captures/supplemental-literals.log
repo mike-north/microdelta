@@ -1,0 +1,58 @@
+[
+  {
+    "syntax": "static",
+    "specifier": "<workspace>/packages/history/src/index.js",
+    "source": "import {openDurableHistory} from '<workspace>/packages/history/src/index.js';",
+    "resolvedNodeURL": "file://<workspace>/packages/history/src/index.js",
+    "targetURL": "file://<workspace>/packages/history/src/index.js",
+    "errors": []
+  },
+  {
+    "syntax": "dynamic",
+    "specifier": "<workspace>/packages/history/src/index.js",
+    "source": "void import('<workspace>/packages/history/src/index.js');",
+    "resolvedNodeURL": "file://<workspace>/packages/history/src/index.js",
+    "targetURL": "file://<workspace>/packages/history/src/index.js",
+    "errors": []
+  },
+  {
+    "syntax": "static",
+    "specifier": "file://<workspace>/packages/history/src/index.js",
+    "source": "import {openDurableHistory} from 'file://<workspace>/packages/history/src/index.js';",
+    "resolvedNodeURL": "file://<workspace>/packages/history/src/index.js",
+    "targetURL": "file://<workspace>/packages/history/src/index.js",
+    "errors": []
+  },
+  {
+    "syntax": "dynamic",
+    "specifier": "file://<workspace>/packages/history/src/index.js",
+    "source": "void import('file://<workspace>/packages/history/src/index.js');",
+    "resolvedNodeURL": "file://<workspace>/packages/history/src/index.js",
+    "targetURL": "file://<workspace>/packages/history/src/index.js",
+    "errors": []
+  },
+  {
+    "syntax": "static",
+    "specifier": "./%2e%2e/%2e%2e/%2e%2e/packages/history/src/index.js",
+    "source": "import {openDurableHistory} from './%2e%2e/%2e%2e/%2e%2e/packages/history/src/index.js';",
+    "resolvedNodeURL": "file://<workspace>/packages/history/src/index.js",
+    "targetURL": "file://<workspace>/packages/history/src/index.js",
+    "errors": []
+  },
+  {
+    "syntax": "dynamic",
+    "specifier": "./%2e%2e/%2e%2e/%2e%2e/packages/history/src/index.js",
+    "source": "void import('./%2e%2e/%2e%2e/%2e%2e/packages/history/src/index.js');",
+    "resolvedNodeURL": "file://<workspace>/packages/history/src/index.js",
+    "targetURL": "file://<workspace>/packages/history/src/index.js",
+    "errors": []
+  },
+  {
+    "source": "type IX=import('@microdelta/history');",
+    "errors": []
+  },
+  {
+    "source": "const h=require('@microdelta/history');",
+    "errors": []
+  }
+]

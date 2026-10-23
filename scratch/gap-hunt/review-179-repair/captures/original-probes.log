@@ -1,0 +1,319 @@
+{
+  "qualified_probes": 21,
+  "results": [
+    {
+      "filePath": "packages/core/src/probe.ts",
+      "source": "void import('@microdelta/history');",
+      "expected_allowed": true,
+      "messages": []
+    },
+    {
+      "filePath": "packages/accounting/src/probe.ts",
+      "source": "void import('@microdelta/history');",
+      "expected_allowed": false,
+      "messages": [
+        {
+          "ruleId": "microdelta/context-imports",
+          "severity": 2,
+          "message": "PKG-004: accounting cannot use @microdelta/history; use an approved declared package surface and edge.",
+          "line": 1,
+          "column": 6,
+          "messageId": "forbidden",
+          "endLine": 1,
+          "endColumn": 35
+        }
+      ]
+    },
+    {
+      "filePath": "packages/accounting/src/probe.ts",
+      "source": "void import('@microdelta/history/dist/src/index.js');",
+      "expected_allowed": false,
+      "messages": [
+        {
+          "ruleId": "microdelta/context-imports",
+          "severity": 2,
+          "message": "PKG-004: accounting cannot use @microdelta/history/dist/src/index.js; use an approved declared package surface and edge.",
+          "line": 1,
+          "column": 6,
+          "messageId": "forbidden",
+          "endLine": 1,
+          "endColumn": 53
+        }
+      ]
+    },
+    {
+      "filePath": "packages/accounting/src/probe.ts",
+      "source": "void import(moduleName);",
+      "expected_allowed": false,
+      "messages": [
+        {
+          "ruleId": "microdelta/context-imports",
+          "severity": 2,
+          "message": "PKG-004: accounting cannot use a computed module path; use an approved declared package surface and edge.",
+          "line": 1,
+          "column": 6,
+          "messageId": "forbidden",
+          "endLine": 1,
+          "endColumn": 24
+        }
+      ]
+    },
+    {
+      "filePath": "packages/definition/src/probe.ts",
+      "source": "void import('@microdelta/machine-node');",
+      "expected_allowed": false,
+      "messages": [
+        {
+          "ruleId": "microdelta/context-imports",
+          "severity": 2,
+          "message": "PKG-004: definition cannot use @microdelta/machine-node; use an approved declared package surface and edge.",
+          "line": 1,
+          "column": 6,
+          "messageId": "forbidden",
+          "endLine": 1,
+          "endColumn": 40
+        }
+      ]
+    },
+    {
+      "filePath": "packages/machine-node/src/node/probe.ts",
+      "source": "void import('node:fs');",
+      "expected_allowed": true,
+      "messages": []
+    },
+    {
+      "filePath": "packages/history/src/probe.ts",
+      "source": "void import('node:fs');",
+      "expected_allowed": false,
+      "messages": [
+        {
+          "ruleId": "microdelta/context-imports",
+          "severity": 2,
+          "message": "PKG-004: history cannot use Node built-in node:fs; use an approved declared package surface and edge.",
+          "line": 1,
+          "column": 6,
+          "messageId": "forbidden",
+          "endLine": 1,
+          "endColumn": 23
+        }
+      ]
+    },
+    {
+      "filePath": "examples/contribution-report/src/probe.ts",
+      "source": "void import('@microdelta/history');",
+      "expected_allowed": false,
+      "messages": [
+        {
+          "ruleId": "no-restricted-syntax",
+          "severity": 2,
+          "message": "The example cannot dynamically import scoped owner packages; its static imports allow only specific named exports.",
+          "line": 1,
+          "column": 6,
+          "messageId": "restrictedSyntax",
+          "endLine": 1,
+          "endColumn": 35
+        }
+      ]
+    },
+    {
+      "filePath": "examples/contribution-report/src/probe.ts",
+      "source": "void import('@microdelta/accounting');",
+      "expected_allowed": false,
+      "messages": [
+        {
+          "ruleId": "no-restricted-syntax",
+          "severity": 2,
+          "message": "The example cannot dynamically import scoped owner packages; its static imports allow only specific named exports.",
+          "line": 1,
+          "column": 6,
+          "messageId": "restrictedSyntax",
+          "endLine": 1,
+          "endColumn": 38
+        }
+      ]
+    },
+    {
+      "filePath": "examples/contribution-report/src/probe.ts",
+      "source": "void import('@microdelta/machine-node');",
+      "expected_allowed": false,
+      "messages": [
+        {
+          "ruleId": "no-restricted-syntax",
+          "severity": 2,
+          "message": "The example cannot dynamically import scoped owner packages; its static imports allow only specific named exports.",
+          "line": 1,
+          "column": 6,
+          "messageId": "restrictedSyntax",
+          "endLine": 1,
+          "endColumn": 40
+        }
+      ]
+    },
+    {
+      "filePath": "examples/contribution-report/src/probe.ts",
+      "source": "void import('microdelta/deep');",
+      "expected_allowed": false,
+      "messages": [
+        {
+          "ruleId": "no-restricted-syntax",
+          "severity": 2,
+          "message": "The example imports only the facade entry, not facade subpaths.",
+          "line": 1,
+          "column": 6,
+          "messageId": "restrictedSyntax",
+          "endLine": 1,
+          "endColumn": 31
+        }
+      ]
+    },
+    {
+      "filePath": "examples/contribution-report/src/probe.ts",
+      "source": "void import('../../../packages/history/src/index.js');",
+      "expected_allowed": false,
+      "messages": [
+        {
+          "ruleId": "microdelta/example-source-imports",
+          "severity": 2,
+          "message": "PKG-004: the example cannot import workspace source outside its own package.",
+          "line": 1,
+          "column": 6,
+          "messageId": "forbidden",
+          "endLine": 1,
+          "endColumn": 54
+        }
+      ]
+    },
+    {
+      "filePath": "examples/contribution-report/src/probe.ts",
+      "source": "void import(moduleName);",
+      "expected_allowed": false,
+      "messages": [
+        {
+          "ruleId": "no-restricted-syntax",
+          "severity": 2,
+          "message": "The example requires a literal dynamic import source so its package boundary can be checked.",
+          "line": 1,
+          "column": 6,
+          "messageId": "restrictedSyntax",
+          "endLine": 1,
+          "endColumn": 24
+        }
+      ]
+    },
+    {
+      "filePath": "examples/contribution-report/src/probe.ts",
+      "source": "void import(`microdelta`);",
+      "expected_allowed": false,
+      "messages": [
+        {
+          "ruleId": "no-restricted-syntax",
+          "severity": 2,
+          "message": "The example requires a literal dynamic import source so its package boundary can be checked.",
+          "line": 1,
+          "column": 6,
+          "messageId": "restrictedSyntax",
+          "endLine": 1,
+          "endColumn": 26
+        }
+      ]
+    },
+    {
+      "filePath": "examples/contribution-report/src/probe.ts",
+      "source": "void import('micro'+'delta');",
+      "expected_allowed": false,
+      "messages": [
+        {
+          "ruleId": "no-restricted-syntax",
+          "severity": 2,
+          "message": "The example requires a literal dynamic import source so its package boundary can be checked.",
+          "line": 1,
+          "column": 6,
+          "messageId": "restrictedSyntax",
+          "endLine": 1,
+          "endColumn": 29
+        }
+      ]
+    },
+    {
+      "filePath": "examples/contribution-report/src/probe.ts",
+      "source": "void import('microdelta');",
+      "expected_allowed": true,
+      "messages": []
+    },
+    {
+      "filePath": "examples/contribution-report/src/probe.ts",
+      "source": "void import('node:fs/promises');",
+      "expected_allowed": true,
+      "messages": []
+    },
+    {
+      "filePath": "examples/contribution-report/src/probe.ts",
+      "source": "void import('./local.js');",
+      "expected_allowed": true,
+      "messages": []
+    },
+    {
+      "filePath": "examples/contribution-report/src/probe.ts",
+      "source": "import {openDurableAccounting} from '@microdelta/accounting';",
+      "expected_allowed": true,
+      "messages": []
+    },
+    {
+      "filePath": "examples/contribution-report/src/probe.ts",
+      "source": "import {createNodeSqlite} from '@microdelta/machine-node';",
+      "expected_allowed": true,
+      "messages": []
+    },
+    {
+      "filePath": "examples/contribution-report/src/probe.ts",
+      "source": "import {createNodeMachine} from '@microdelta/machine-node';",
+      "expected_allowed": false,
+      "messages": [
+        {
+          "ruleId": "no-restricted-imports",
+          "severity": 2,
+          "message": "'createNodeMachine' import from '@microdelta/machine-node' is restricted because only 'createNodeSqlite' is allowed. The example imports only the SQLite capability the Accounting adapter opens with.",
+          "line": 1,
+          "column": 9,
+          "messageId": "allowedImportNameWithCustomMessage",
+          "endLine": 1,
+          "endColumn": 26
+        }
+      ]
+    },
+    {
+      "filePath": "examples/contribution-report/src/probe.ts",
+      "source": "void import('./../../../packages/history/src/index.js');",
+      "observation": "dot-prefixed literal workspace bypass; evaluate independently against parent config",
+      "messages": [
+        {
+          "ruleId": "microdelta/example-source-imports",
+          "severity": 2,
+          "message": "PKG-004: the example cannot import workspace source outside its own package.",
+          "line": 1,
+          "column": 6,
+          "messageId": "forbidden",
+          "endLine": 1,
+          "endColumn": 56
+        }
+      ]
+    },
+    {
+      "filePath": "examples/contribution-report/src/probe.ts",
+      "source": "import {openDurableHistory} from './../../../packages/history/src/index.js';",
+      "observation": "dot-prefixed literal workspace bypass; evaluate independently against parent config",
+      "messages": [
+        {
+          "ruleId": "microdelta/example-source-imports",
+          "severity": 2,
+          "message": "PKG-004: the example cannot import workspace source outside its own package.",
+          "line": 1,
+          "column": 1,
+          "messageId": "forbidden",
+          "endLine": 1,
+          "endColumn": 77
+        }
+      ]
+    }
+  ]
+}

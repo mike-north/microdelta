@@ -32,11 +32,11 @@ transient=ROOT/'packages/resolution/test/gap-hunt-review200.test.ts'
 extra=ROOT/'packages/core/test/gap-hunt-contracts-resolution-144.test.ts'
 control=ROOT/'packages/core/test/resolution/controls/review200-144-controls.mjs'
 static=ROOT/'scratch/gap-hunt/contracts/arc008-surface.json'
+assert subprocess.run(['git','diff','--quiet','HEAD','--','.']).returncode==0, 'tracked working tree must start clean'
+assert subprocess.run(['git','diff','--quiet','1c0adc28df18b167bd4f7a7254108baad7457ea7','--','.',':(exclude)scratch/gap-hunt/review-200']).returncode==0, 'entire production tree must match source pin'
+assert all(not p.exists() for p in [transient,extra,control,static]), 'transient paths must start absent'
+assert hashlib.sha256(original).hexdigest()==hashlib.sha256(subprocess.check_output(['git','show','1c0adc28df18b167bd4f7a7254108baad7457ea7:packages/resolution/src/resolution.ts'])).hexdigest()
 try:
- assert subprocess.run(['git','diff','--quiet','HEAD','--','.']).returncode==0, 'tracked working tree must start clean'
- assert subprocess.run(['git','diff','--quiet','1c0adc28df18b167bd4f7a7254108baad7457ea7','--','.',':(exclude)scratch/gap-hunt/review-200']).returncode==0, 'entire production tree must match source pin'
- assert all(not p.exists() for p in [transient,extra,control,static]), 'transient paths must start absent'
- assert hashlib.sha256(original).hexdigest()==hashlib.sha256(subprocess.check_output(['git','show','1c0adc28df18b167bd4f7a7254108baad7457ea7:packages/resolution/src/resolution.ts'])).hexdigest()
  transient.write_bytes((HERE/'supplemental.test.ts').read_bytes())
  extra.write_bytes((HERE/'frozen/resolution-144.test.ts').read_bytes())
  c=(HERE/'frozen/resolution-144-controls.mjs').read_text()
@@ -60,6 +60,7 @@ try:
  jest('fresh-process','core','nested/restart.test')
  jest('144-witnesses','core','gap-hunt-contracts-resolution-144.test')
  run('existing-anchors',['node','packages/core/test/resolution/controls/resolution-mutation-controls.mjs','--check-anchors'])
+ run('existing29-controls',['node','packages/core/test/resolution/controls/resolution-mutation-controls.mjs'])
  run('144-controls',['node',str(control.relative_to(ROOT))])
  names=['IChildResolutionInvocation','IChildResolutionService','_createResolutionWithChildService']
  paths=[ROOT/'packages/resolution/src/index.ts',*sorted((ROOT/'packages/resolution/dist/api').glob('*.d.ts')),*sorted((ROOT/'packages/resolution').glob('etc/*.api.md'))]

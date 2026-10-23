@@ -1791,7 +1791,7 @@
       "requirement": "RUN-015",
       "classification": "bounded-aligned-with-residual-evidence-gap",
       "meaning": "Soft drains admitted work with no default deadline; hard aborts/discards; committed boundary wins; unknown remote state is durable.",
-      "residual": "CLI first/second interrupt wiring absent with the CLI; shared-consumer cancellation ownership beyond bounded runtime not fully established.",
+      "residual": "Selected workspace contract renews only between requests: held request lease is unchanged after expiry, successor acquires, late output denied, attempt incomplete. Exact request-one-of-three cancellation remains unexecuted; no repeated-identical-progress API rejection is claimed.",
       "executedAssertionIds": [
         353,
         354,
@@ -1813,7 +1813,13 @@
         450,
         451,
         452
-      ]
+      ],
+      "supplementalNamedAssertions": {
+        "suite": "packages/core/test/gap-hunt-durability-hung-lease.test.ts",
+        "log": "scratch/gap-hunt/contract-operations/hung-lease.log",
+        "outcome": "1 passed",
+        "name": "a hung request receives no timer renewal without a stop; a successor fences its late output"
+      }
     },
     {
       "requirement": "RUN-016",

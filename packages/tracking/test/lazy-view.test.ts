@@ -92,7 +92,7 @@ function oracle(root: unknown, address: readonly IAddressSegment[], operation: I
 describe('lazy tracked views over a node source', () => {
   const binding = { path: ['summary', 'activity'] };
 
-  test('a nested leaf read requests only its path and records container kind and exactly one consumed leaf', () => {
+  test('a nested leaf read requests only its path and records exactly one consumed leaf', () => {
     const observer = createTrackingObserver(machine);
     const value = activityFixture();
     const { source, requests } = createSource(value);

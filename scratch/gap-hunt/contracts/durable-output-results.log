@@ -1,0 +1,161 @@
+
+> microdelta@0.2.0 test:unit
+> tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand --runTestsByPath .test-build/test/gap-hunt-contracts-output.test.js
+
+watchman warning: Recrawled this watch 3 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-contracts' ; watchman watch-project '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-contracts'`
+
+(node:57736) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL .test-build/test/gap-hunt-contracts-output.test.js
+  ● gap hunt TRK-8 durable pass-through output shape › base → base agrees with cold output and rollback retains the original exact result
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "reused"
+    Received: "published"
+
+      38 |       const actual = resolve(retained, after, 'two');
+      39 |       const cold = resolve(join(directory, 'cold.sqlite'), after, 'cold');
+    > 40 |       expect(actual.kind).toBe(expected);
+         |                           ^
+      41 |       expect(actual.wire).toBe(cold.wire);
+      42 |       if (expected === 'reused') { expect(actual.reference).toEqual(original.reference); }
+      43 |       const restored = resolve(retained, before, 'three');
+
+      at test/gap-hunt-contracts-output.test.ts:40:27
+
+  ● gap hunt TRK-8 durable pass-through output shape › base → unread agrees with cold output and rollback retains the original exact result
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "reused"
+    Received: "published"
+
+      38 |       const actual = resolve(retained, after, 'two');
+      39 |       const cold = resolve(join(directory, 'cold.sqlite'), after, 'cold');
+    > 40 |       expect(actual.kind).toBe(expected);
+         |                           ^
+      41 |       expect(actual.wire).toBe(cold.wire);
+      42 |       if (expected === 'reused') { expect(actual.reference).toEqual(original.reference); }
+      43 |       const restored = resolve(retained, before, 'three');
+
+      at test/gap-hunt-contracts-output.test.ts:40:27
+
+  ● gap hunt TRK-8 durable pass-through output shape › base → order agrees with cold output and rollback retains the original exact result
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "reused"
+    Received: "published"
+
+      42 |       if (expected === 'reused') { expect(actual.reference).toEqual(original.reference); }
+      43 |       const restored = resolve(retained, before, 'three');
+    > 44 |       expect(restored.kind).toBe('reused');
+         |                             ^
+      45 |       expect(restored.reference).toEqual(original.reference);
+      46 |       expect(restored.wire).toBe(original.wire);
+      47 |     } finally { rmSync(directory, { recursive: true, force: true }); }
+
+      at test/gap-hunt-contracts-output.test.ts:44:29
+
+  ● gap hunt TRK-8 durable pass-through output shape › base → value agrees with cold output and rollback retains the original exact result
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "reused"
+    Received: "published"
+
+      42 |       if (expected === 'reused') { expect(actual.reference).toEqual(original.reference); }
+      43 |       const restored = resolve(retained, before, 'three');
+    > 44 |       expect(restored.kind).toBe('reused');
+         |                             ^
+      45 |       expect(restored.reference).toEqual(original.reference);
+      46 |       expect(restored.wire).toBe(original.wire);
+      47 |     } finally { rmSync(directory, { recursive: true, force: true }); }
+
+      at test/gap-hunt-contracts-output.test.ts:44:29
+
+  ● gap hunt TRK-8 durable pass-through output shape › missing → undefined agrees with cold output and rollback retains the original exact result
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "reused"
+    Received: "published"
+
+      42 |       if (expected === 'reused') { expect(actual.reference).toEqual(original.reference); }
+      43 |       const restored = resolve(retained, before, 'three');
+    > 44 |       expect(restored.kind).toBe('reused');
+         |                             ^
+      45 |       expect(restored.reference).toEqual(original.reference);
+      46 |       expect(restored.wire).toBe(original.wire);
+      47 |     } finally { rmSync(directory, { recursive: true, force: true }); }
+
+      at test/gap-hunt-contracts-output.test.ts:44:29
+
+  ● gap hunt TRK-8 durable pass-through output shape › hole → slot agrees with cold output and rollback retains the original exact result
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "reused"
+    Received: "published"
+
+      42 |       if (expected === 'reused') { expect(actual.reference).toEqual(original.reference); }
+      43 |       const restored = resolve(retained, before, 'three');
+    > 44 |       expect(restored.kind).toBe('reused');
+         |                             ^
+      45 |       expect(restored.reference).toEqual(original.reference);
+      46 |       expect(restored.wire).toBe(original.wire);
+      47 |     } finally { rmSync(directory, { recursive: true, force: true }); }
+
+      at test/gap-hunt-contracts-output.test.ts:44:29
+
+  ● gap hunt TRK-8 durable pass-through output shape › inherited → inherited-change agrees with cold output and rollback retains the original exact result
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "reused"
+    Received: "published"
+
+      42 |       if (expected === 'reused') { expect(actual.reference).toEqual(original.reference); }
+      43 |       const restored = resolve(retained, before, 'three');
+    > 44 |       expect(restored.kind).toBe('reused');
+         |                             ^
+      45 |       expect(restored.reference).toEqual(original.reference);
+      46 |       expect(restored.wire).toBe(original.wire);
+      47 |     } finally { rmSync(directory, { recursive: true, force: true }); }
+
+      at test/gap-hunt-contracts-output.test.ts:44:29
+
+  ● gap hunt TRK-8 durable pass-through output shape › inherited → own agrees with cold output and rollback retains the original exact result
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "reused"
+    Received: "published"
+
+      42 |       if (expected === 'reused') { expect(actual.reference).toEqual(original.reference); }
+      43 |       const restored = resolve(retained, before, 'three');
+    > 44 |       expect(restored.kind).toBe('reused');
+         |                             ^
+      45 |       expect(restored.reference).toEqual(original.reference);
+      46 |       expect(restored.wire).toBe(original.wire);
+      47 |     } finally { rmSync(directory, { recursive: true, force: true }); }
+
+      at test/gap-hunt-contracts-output.test.ts:44:29
+
+Test Suites: 1 failed, 1 total
+Tests:       8 failed, 1 passed, 9 total
+Snapshots:   0 total
+Time:        3.143 s
+Ran all test suites within paths ".test-build/test/gap-hunt-contracts-output.test.js".
+npm error Lifecycle script `test:unit` failed with error:
+npm error code 1
+npm error path /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-contracts/packages/core
+npm error workspace microdelta@0.2.0
+npm error location /Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-contracts/packages/core
+npm error command failed
+npm error command sh -c tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand --runTestsByPath .test-build/test/gap-hunt-contracts-output.test.js

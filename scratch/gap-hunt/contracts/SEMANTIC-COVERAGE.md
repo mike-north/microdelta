@@ -118,3 +118,11 @@ are bounded component proofs, not durable workspace or arbitrary async coverage.
 Additional glossary explanation is available in the consumerDX branch at 2b4fcb8:
 `scratch/gap-hunt/contract-surface/A3-GLOSSARY-ANCHORS.md`, retaining named assertions
 and residual boundaries for Analysis, Bounded Context and Publication.
+
+A further assembled-path precision gap is recorded in `DURABLE-OUTPUT-REUSE.md`:
+input-bound MDS1 output evidence is recorded correctly but ownFactProvider cannot
+answer it on restart. Identical/unread-only inputs therefore force publication;
+the scalar-only control reuses. The durable output suite is 8 red/1 green. This is
+conservative unnecessary execution, not false reuse; supervisor classification is
+pending. Strict core compiler/type-aware lint pass, including documented type-only
+capture suppressions for the historical #156 scalar acceptance fixture.

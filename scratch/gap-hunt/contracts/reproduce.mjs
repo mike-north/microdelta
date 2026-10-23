@@ -7,6 +7,7 @@ const suites = {
   '156': { workspace: 'microdelta', test: 'gap-hunt-contracts-scalar-roots', types: true },
   'operations': { workspace: 'microdelta', test: 'gap-hunt-contracts-operation-matrix', types: false },
   'edge': { workspace: 'microdelta', test: 'gap-hunt-contracts-edge-oracle', types: false },
+  'durable-output': { workspace: 'microdelta', test: 'gap-hunt-contracts-output', types: false },
   'output': { workspace: '@microdelta/tracking', test: 'gap-hunt-contracts-output', types: false },
   'intrinsic': { workspace: '@microdelta/tracking', test: 'gap-hunt-contracts-intrinsic-presence', types: false },
   'async': { workspace: '@microdelta/tracking', test: 'gap-hunt-contracts-async', types: false },

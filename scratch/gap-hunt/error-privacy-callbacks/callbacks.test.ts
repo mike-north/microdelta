@@ -34,13 +34,13 @@ for (const route of routes) {
         if (route === 'source') {
           const declaration = api.source({ subject, run: ({ helpers }) => helpers.fail() });
           const composition = api.compose({ scope, helpers: helperBindings, steps: [{ slot: 'value', declaration }] });
-          failure = await workspace.run({ authoring: api, composition, environment: 'env:test' }, run => run.resolve({ scope, role: 'step', slot: 'value' }, { requestKey: 'cold' })).then(() => { completedResult = true; return undefined; }, (error: unknown) => error);
+          failure = await workspace.run<unknown>({ authoring: api, composition, environment: 'env:test' }, run => run.resolve({ scope, role: 'step', slot: 'value' }, { requestKey: 'cold' })).then(() => { completedResult = true; return undefined; }, (error: unknown) => error);
         } else if (route === 'supplied') {
           const slot = api.stepSlot<readonly [], { readonly value: number }>({ slot: 'supplied' });
           const declaration = api.suppliedStep<readonly [], { readonly value: number }>({ run: ({ helpers }) => helpers.fail() });
           const parent = api.memo({ subject: 'parent', children: { child: slot }, run: async ({ calls: children }) => { const child = await children.child(); return { value: child.data.value }; } });
           const composition = api.compose({ scope, helpers: helperBindings, steps: [{ slot: 'value', declaration: parent }], supplied: [api.supply({ slot, declaration, subject: () => subject })] });
-          failure = await workspace.run({ authoring: api, composition, environment: 'env:test' }, run => run.resolve({ scope, role: 'step', slot: 'value' }, { requestKey: 'cold' })).then(() => { completedResult = true; return undefined; }, (error: unknown) => error);
+          failure = await workspace.run<unknown>({ authoring: api, composition, environment: 'env:test' }, run => run.resolve({ scope, role: 'step', slot: 'value' }, { requestKey: 'cold' })).then(() => { completedResult = true; return undefined; }, (error: unknown) => error);
         } else {
           const listing = api.source<IListing>({ subject: 'listing', collection: { identity: 'key' }, run: ({ outcome }) => outcome.fresh<IListing>({ status: 'complete', members: [{ key: 'one', score: 1 }] }) });
           const template = api.template({ slot: 'member', collection: listing, steps: member => ({ score: member.memo({ subject: member.subject('score'), run: ({ member: bound }) => ({ score: bound.score }) }) }) });
@@ -49,13 +49,15 @@ for (const route of routes) {
             ? api.fold({ subject, over, run: ({ helpers }) => helpers.fail() })
             : api.outcomeFold({ subject, over, run: ({ helpers }) => helpers.fail() });
           const composition = api.compose({ scope, helpers: helperBindings, steps: [{ slot: 'listing', declaration: listing }, { slot: 'value', declaration }], templates: [template] });
-          failure = await workspace.run({ authoring: api, composition, environment: 'env:test' }, run => run.resolve({ scope, role: 'step', slot: 'value' }, { requestKey: 'cold' })).then(() => { completedResult = true; return undefined; }, (error: unknown) => error);
+          failure = await workspace.run<unknown>({ authoring: api, composition, environment: 'env:test' }, run => route === 'strict-fold' ? run.resolveFold({ scope, role: 'step', slot: 'value' }, { requestKey: 'cold' }) : run.resolveOutcomeFold({ scope, role: 'step', slot: 'value' }, { requestKey: 'cold' })).then(() => { completedResult = true; return undefined; }, (error: unknown) => error);
         }
       } finally { workspace.close(); }
       const sqlite = createNodeSqlite().openSqlite(location);
       try {
+        // A supplied failure crosses its memo caller, which may add a safe framework wrapper.
+        const boundaryFailure = route === 'supplied' && failure instanceof ResolutionError && failure.cause instanceof ResolutionError ? failure.cause : failure;
         const failedStepResults = sqlite.prepare('SELECT count(*) AS count FROM history_results WHERE subject = ?').get(subject);
-        console.log('callback-observation', JSON.stringify({ route, mode, outerCode: failure instanceof ResolutionError ? failure.code : null, outerMessage: failure instanceof Error ? failure.message : null, outerIsThrown: failure === thrown, causeIsThrown: failure instanceof ResolutionError && failure.cause === thrown, calls, completedResult, failedStepResults }));
+        console.log('callback-observation', JSON.stringify({ route, mode, outerCode: failure instanceof ResolutionError ? failure.code : null, outerMessage: failure instanceof Error ? failure.message : null, outerIsThrown: failure === thrown, causeIsThrown: failure instanceof ResolutionError && failure.cause === thrown, boundaryCauseIsThrown: boundaryFailure instanceof ResolutionError && boundaryFailure.cause === thrown, calls, completedResult, failedStepResults }));
         expect(failure).toBeInstanceOf(ResolutionError);
         expect(calls).toBe(1);
         expect(completedResult).toBe(false);
@@ -63,7 +65,7 @@ for (const route of routes) {
         if (!(failure instanceof ResolutionError)) { throw new Error('Expected typed framework failure'); }
         expect(failure.message).not.toContain(marker);
         expect(failure.code).toBe('execution-failure');
-        expect(failure.cause).toBe(thrown);
+        expect(boundaryFailure instanceof ResolutionError ? boundaryFailure.cause : undefined).toBe(thrown);
       } finally { sqlite.close(); rmSync(directory, { recursive: true, force: true }); }
     });
   }

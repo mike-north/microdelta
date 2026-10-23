@@ -38,7 +38,7 @@ assert len(observations)==8
 for o in observations:
     assert o['calls']==1 and not o['completedResult'] and o['failedStepResults']=={'count':0},o
     if o['mode']=='plain-error':
-        assert o['outerCode']=='execution-failure' and 'SYNTHETIC-CALLBACK-DETAIL-4c81' not in o['outerMessage'] and o['causeIsThrown'] and not o['outerIsThrown'],o
+        assert o['outerCode']=='execution-failure' and 'SYNTHETIC-CALLBACK-DETAIL-4c81' not in o['outerMessage'] and o['boundaryCauseIsThrown'] and not o['outerIsThrown'],o
     else:
         assert o['outerCode']=='unsupported-result' and o['outerMessage']=='SYNTHETIC-CALLBACK-DETAIL-4c81' and o['outerIsThrown'] and not o['causeIsThrown'],o
 guard();receipt['clean_after']=True;save();print(json.dumps(receipt,indent=2))

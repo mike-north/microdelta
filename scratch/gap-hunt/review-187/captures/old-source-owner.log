@@ -1,0 +1,123 @@
+
+> @microdelta/resolution@0.3.0 test:unit
+> tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand --runTestsByPath .test-build/test/current-output.test.js --json --outputFile ../../scratch/gap-hunt/review-187/local-results/old-source-owner.json
+
+(node:16544) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL .test-build/test/current-output.test.js
+  ● current materialized output facts › unchanged declared-input output and an unread sibling edit compare equal
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "equal"
+    Received: "unavailable"
+
+      41 |     test('unchanged declared-input output and an unread sibling edit compare equal', () => {
+      42 |         const original = { selected: { a: 1, b: 2 }, unread: 'before' };
+    > 43 |         expect(compareInput(original, { selected: { a: 1, b: 2 }, unread: 'before' })).toBe('equal');
+         |                                                                                        ^
+      44 |         expect(compareInput(original, { selected: { a: 1, b: 2 }, unread: 'after' })).toBe('equal');
+      45 |     });
+      46 |     test('a changed selected leaf and changed record insertion order compare as MDS1 output changes', () => {
+
+      at Object.<anonymous> (.test-build/test/current-output.test.js:43:88)
+
+  ● current materialized output facts › a changed selected leaf and changed record insertion order compare as MDS1 output changes
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "changed"
+    Received: "unavailable"
+
+      46 |     test('a changed selected leaf and changed record insertion order compare as MDS1 output changes', () => {
+      47 |         const original = { selected: { a: 1, b: 2 }, unread: 'before' };
+    > 48 |         expect(compareInput(original, { selected: { a: 3, b: 2 }, unread: 'before' })).toBe('changed');
+         |                                                                                        ^
+      49 |         expect(compareInput(original, { selected: { b: 2, a: 1 }, unread: 'before' })).toBe('changed');
+      50 |     });
+      51 |     test('missing versus present undefined and sparse hole versus present undefined remain distinct output shapes', () => {
+
+      at Object.<anonymous> (.test-build/test/current-output.test.js:48:88)
+
+  ● current materialized output facts › missing versus present undefined and sparse hole versus present undefined remain distinct output shapes
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "changed"
+    Received: "unavailable"
+
+      50 |     });
+      51 |     test('missing versus present undefined and sparse hole versus present undefined remain distinct output shapes', () => {
+    > 52 |         expect(compareInput({ selected: {}, unread: '' }, { selected: { a: undefined }, unread: '' })).toBe('changed');
+         |                                                                                                        ^
+      53 |         expect(compareInput({ selected: new Array(1), unread: '' }, { selected: [undefined], unread: '' })).toBe('changed');
+      54 |     });
+      55 |     test('member and forwarded argument output compare at their own current bindings', () => {
+
+      at Object.<anonymous> (.test-build/test/current-output.test.js:52:104)
+
+  ● current materialized output facts › member and forwarded argument output compare at their own current bindings
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "equal"
+    Received: "unavailable"
+
+      61 |             member: { selected: { score: 3 }, unread: 'two' },
+      62 |         });
+    > 63 |         expect(memberObserver.compareCurrent(memberCapture, memberProvider).kind).toBe('equal');
+         |                                                                                   ^
+      64 |         const changedMember = ownFactProvider({
+      65 |             validation: createTrackingObserver(host), slots: slots({ selected: {}, unread: '' }), self: () => undefined,
+      66 |             member: { selected: { score: 4 }, unread: 'one' },
+
+      at Object.<anonymous> (.test-build/test/current-output.test.js:63:83)
+
+  ● current materialized output facts › selection cannot use a stored value, scalar root, foreign binding or missing declaration
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "available"
+    Received: "unavailable"
+
+       98 |         });
+       99 |         const current = provider.resolve({ path: ['inputs'] }, outputAtSelected);
+    > 100 |         expect(current.kind).toBe('available');
+          |                              ^
+      101 |         if (current.kind !== 'available') {
+      102 |             throw new Error('Current subtree was not supplied');
+      103 |         }
+
+      at Object.<anonymous> (.test-build/test/current-output.test.js:100:30)
+
+  ● current materialized output facts › unsupported current data rejects visibly instead of supplying a comparable fact
+
+    expect(received).toThrow(expected)
+
+    Expected pattern: /unsupported/i
+
+    Received function did not throw
+
+      123 |             slots: slots({ selected: { unsupported: new Date(0) }, unread: '' }), self: () => undefined,
+      124 |         });
+    > 125 |         expect(() => provider.resolve({ path: ['inputs'] }, outputAtSelected)).toThrow(/unsupported/i);
+          |                                                                                ^
+      126 |     });
+      127 | });
+      128 |
+
+      at Object.<anonymous> (.test-build/test/current-output.test.js:125:80)
+
+Test Suites: 1 failed, 1 total
+Tests:       6 failed, 6 total
+Snapshots:   0 total
+Time:        0.101 s, estimated 1 s
+Ran all test suites within paths ".test-build/test/current-output.test.js".
+Test results written to: ../../scratch/gap-hunt/review-187/local-results/old-source-owner.json
+npm error Lifecycle script `test:unit` failed with error:
+npm error code 1
+npm error path <checkout>/packages/resolution
+npm error workspace @microdelta/resolution@0.3.0
+npm error location <checkout>/packages/resolution
+npm error command failed
+npm error command sh -c tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand --runTestsByPath .test-build/test/current-output.test.js --json --outputFile ../../scratch/gap-hunt/review-187/local-results/old-source-owner.json

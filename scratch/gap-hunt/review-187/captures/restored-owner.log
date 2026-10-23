@@ -1,0 +1,12 @@
+
+> @microdelta/resolution@0.3.0 test:unit
+> tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand --runTestsByPath .test-build/test/current-output.test.js --json --outputFile ../../scratch/gap-hunt/review-187/local-results/restored-owner.json
+
+(node:17225) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        0.091 s, estimated 1 s
+Ran all test suites within paths ".test-build/test/current-output.test.js".
+Test results written to: ../../scratch/gap-hunt/review-187/local-results/restored-owner.json

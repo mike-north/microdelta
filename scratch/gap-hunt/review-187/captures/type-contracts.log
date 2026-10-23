@@ -1,0 +1,12 @@
+
+> @microdelta/resolution@0.3.0 test:types
+> tsd
+
+
+> @microdelta/tracking@0.2.1 test:types
+> tsd
+
+
+> microdelta@0.3.0 test:types
+> tsd
+

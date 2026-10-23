@@ -1,0 +1,230 @@
+[
+  {
+    "name": "node-version",
+    "argv": [
+      "node",
+      "--version"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "pristine-original-minimal",
+    "argv": [
+      "node",
+      "scratch/gap-hunt/review-187/original-reproduce.mjs",
+      "durable-output-minimal"
+    ],
+    "exit": 2,
+    "expected": 2
+  },
+  {
+    "name": "supported-original-minimal",
+    "argv": [
+      "node",
+      "scratch/gap-hunt/review-187/original-reproduce.mjs",
+      "durable-output-minimal"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "strict",
+    "argv": [
+      "npm",
+      "run",
+      "check",
+      "--workspace",
+      "@microdelta/resolution",
+      "--workspace",
+      "@microdelta/tracking",
+      "--workspace",
+      "microdelta"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "fixture-strict",
+    "argv": [
+      "npm",
+      "run",
+      "check:output-fixture"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "type-contracts",
+    "argv": [
+      "npm",
+      "run",
+      "test:types",
+      "--workspace",
+      "@microdelta/resolution",
+      "--workspace",
+      "@microdelta/tracking",
+      "--workspace",
+      "microdelta"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "current-core",
+    "argv": [
+      "npm",
+      "run",
+      "test:unit",
+      "--workspace",
+      "microdelta",
+      "--",
+      "--runTestsByPath",
+      ".test-build/test/gap-hunt-contracts-output.test.js",
+      ".test-build/test/gap-hunt-dx-output-bindings.test.js",
+      ".test-build/test/output-revalidation-process.test.js",
+      "--json",
+      "--outputFile",
+      "../../scratch/gap-hunt/review-187/local-results/current-core.json"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "current-owner",
+    "argv": [
+      "npm",
+      "run",
+      "test:unit",
+      "--workspace",
+      "@microdelta/resolution",
+      "--",
+      "--runTestsByPath",
+      ".test-build/test/current-output.test.js",
+      "--json",
+      "--outputFile",
+      "../../scratch/gap-hunt/review-187/local-results/current-owner.json"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "tracking-regression",
+    "argv": [
+      "npm",
+      "run",
+      "test:unit",
+      "--workspace",
+      "@microdelta/tracking",
+      "--",
+      "--runTestsByPath",
+      ".test-build/test/output-observation.test.js",
+      ".test-build/test/observer.test.js",
+      "--json",
+      "--outputFile",
+      "../../scratch/gap-hunt/review-187/local-results/tracking-regression.json"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "old-source-build",
+    "argv": [
+      "npm",
+      "run",
+      "build",
+      "--workspace",
+      "@microdelta/resolution"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "old-source-core",
+    "argv": [
+      "npm",
+      "run",
+      "test:unit",
+      "--workspace",
+      "microdelta",
+      "--",
+      "--runTestsByPath",
+      ".test-build/test/gap-hunt-contracts-output.test.js",
+      ".test-build/test/gap-hunt-dx-output-bindings.test.js",
+      ".test-build/test/output-revalidation-process.test.js",
+      "--json",
+      "--outputFile",
+      "../../scratch/gap-hunt/review-187/local-results/old-source-core.json"
+    ],
+    "exit": 1,
+    "expected": 1
+  },
+  {
+    "name": "old-source-owner",
+    "argv": [
+      "npm",
+      "run",
+      "test:unit",
+      "--workspace",
+      "@microdelta/resolution",
+      "--",
+      "--runTestsByPath",
+      ".test-build/test/current-output.test.js",
+      "--json",
+      "--outputFile",
+      "../../scratch/gap-hunt/review-187/local-results/old-source-owner.json"
+    ],
+    "exit": 1,
+    "expected": 1
+  },
+  {
+    "name": "restored-build",
+    "argv": [
+      "npm",
+      "run",
+      "build",
+      "--workspace",
+      "@microdelta/resolution"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "restored-core",
+    "argv": [
+      "npm",
+      "run",
+      "test:unit",
+      "--workspace",
+      "microdelta",
+      "--",
+      "--runTestsByPath",
+      ".test-build/test/gap-hunt-contracts-output.test.js",
+      ".test-build/test/gap-hunt-dx-output-bindings.test.js",
+      ".test-build/test/output-revalidation-process.test.js",
+      "--json",
+      "--outputFile",
+      "../../scratch/gap-hunt/review-187/local-results/restored-core.json"
+    ],
+    "exit": 0,
+    "expected": 0
+  },
+  {
+    "name": "restored-owner",
+    "argv": [
+      "npm",
+      "run",
+      "test:unit",
+      "--workspace",
+      "@microdelta/resolution",
+      "--",
+      "--runTestsByPath",
+      ".test-build/test/current-output.test.js",
+      "--json",
+      "--outputFile",
+      "../../scratch/gap-hunt/review-187/local-results/restored-owner.json"
+    ],
+    "exit": 0,
+    "expected": 0
+  }
+]

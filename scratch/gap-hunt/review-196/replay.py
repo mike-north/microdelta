@@ -1,21 +1,31 @@
 #!/usr/bin/env python3
 """Finite exact-head #173 verification, including eager scheduling negative and restoration."""
-import hashlib, json, os, pathlib, platform, re, subprocess, sys, time
+import hashlib, json, os, pathlib, platform, re, subprocess, sys, time, tempfile
 HERE=pathlib.Path(__file__).resolve().parent
 ROOT=HERE.parents[2]
-OUT=HERE/'results'
-OUT.mkdir(exist_ok=True)
+OUT=pathlib.Path(tempfile.mkdtemp(prefix='microdelta-review-196-'))
+print('Evidence output: '+str(OUT),flush=True)
+from guards import validate, guard_only
+if '--guards-only' in sys.argv:
+    result=guard_only(HERE,OUT)
+    print(json.dumps({'acceptedJestSteps':result['jestStepsAccepted'],'syntheticRejects':len(result['syntheticRejects'])}),flush=True)
+    sys.exit(0)
 HEAD='f7307e1542d6170505f31a3926bdc13917f603df'
 def git(*args):
     return subprocess.check_output(['git','-c','core.fsmonitor=false',*args],cwd=ROOT,text=True).strip()
 def digest(data): return hashlib.sha256(data).hexdigest()
 def normalized(s):
     s=re.sub(r'/Users/[^/]+/\.nodenv/versions/[^/]+/bin/node','<node>',s)
-    return s.replace(str(ROOT),'<checkout>').replace(str(pathlib.Path(sys.executable)),'<python>').replace(str(pathlib.Path(subprocess.check_output(['which','node'],text=True).strip())),'<node>')
+    return s.replace(str(OUT),'<evidence-output>').replace(str(ROOT),'<checkout>').replace(str(pathlib.Path(sys.executable)),'<python>').replace(str(pathlib.Path(subprocess.check_output(['which','node'],text=True).strip())),'<node>')
 receipt={'source':HEAD,'node':subprocess.check_output(['node','--version'],text=True).strip(),'npm':subprocess.check_output(['npm','--version'],text=True).strip(),'host':{'system':platform.system(),'release':platform.release(),'machine':platform.machine()},'commands':[]}
 def run(name,args,expected=0, oracle=None):
     start=time.monotonic()
-    p=subprocess.run(args,cwd=ROOT,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=600,env={**os.environ,'GAP_HUNT_REUSE_BUILD':'1'})
+    env=dict(os.environ)
+    env.pop('GAP_HUNT_REUSE_BUILD',None)
+    # Only fixture replays reuse this invocation's already-built owned checkout.
+    if name in {'current','frozen-original','precise-original','negative','negative-precise-original','restored'}:
+        env['GAP_HUNT_REUSE_BUILD']='1'
+    p=subprocess.run(args,cwd=ROOT,text=True,stdout=subprocess.PIPE,stderr=subprocess.STDOUT,timeout=600,env=env)
     output=normalized(p.stdout)
     (OUT/(name+'.log')).write_text(output)
     row={'name':name,'argv':args,'exit':p.returncode,'seconds':round(time.monotonic()-start,3),'logSha256':digest(output.encode())}
@@ -24,6 +34,7 @@ def run(name,args,expected=0, oracle=None):
     print(name,p.returncode,flush=True)
     if p.returncode!=expected or (oracle is not None and not oracle(output)):
         raise RuntimeError(name+' unexpected result; see '+str(OUT/(name+'.log')))
+    validate(name,output)
     return output
 if git('diff',HEAD,'--','.',':(exclude)scratch/gap-hunt/review-196'):
     raise RuntimeError('Product and original fixture must match exact reviewed source')
@@ -33,9 +44,8 @@ tests=ROOT/'scratch/gap-hunt/scale/fanout-admission.test.mjs'
 originals={p:p.read_bytes() for p in (source,fixture,tests)}
 receipt['inputs']={str(p.relative_to(ROOT)):digest(b) for p,b in originals.items()}
 try:
-    if '--reuse-build' not in sys.argv:
-        run('install',['npm','ci'])
-        run('check',['npm','run','check'])
+    run('install',['npm','ci'])
+    run('check',['npm','run','check'])
     current=run('current',['npm','run','test:fanout-dispatch'])
     matrix=[json.loads(line) for line in current.splitlines() if line.startswith('{"size"')]
     assert len(matrix)==6

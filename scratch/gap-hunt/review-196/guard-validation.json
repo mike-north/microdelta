@@ -1,0 +1,205 @@
+{
+  "capturedRecipe": "f348f72465a7b74189fd51d69cffaa43c745df25",
+  "runtimeRepeated": false,
+  "capturedCommandsAccepted": 15,
+  "jestStepsAccepted": 8,
+  "syntheticRejects": [
+    {
+      "step": "current",
+      "mutation": "missing-log",
+      "reason": "Test Suites needs exactly one summary"
+    },
+    {
+      "step": "current",
+      "mutation": "load-error-with-valid-counts",
+      "reason": "current: runtime/load diagnostic"
+    },
+    {
+      "step": "current",
+      "mutation": "wrong-test-count",
+      "reason": "current: test counts"
+    },
+    {
+      "step": "current",
+      "mutation": "wrong-suite-count",
+      "reason": "current: suite counts"
+    },
+    {
+      "step": "supervision",
+      "mutation": "missing-log",
+      "reason": "Test Suites needs exactly one summary"
+    },
+    {
+      "step": "supervision",
+      "mutation": "load-error-with-valid-counts",
+      "reason": "supervision: runtime/load diagnostic"
+    },
+    {
+      "step": "supervision",
+      "mutation": "wrong-test-count",
+      "reason": "supervision: test counts"
+    },
+    {
+      "step": "supervision",
+      "mutation": "wrong-suite-count",
+      "reason": "supervision: suite counts"
+    },
+    {
+      "step": "facade",
+      "mutation": "missing-log",
+      "reason": "Test Suites needs exactly one summary"
+    },
+    {
+      "step": "facade",
+      "mutation": "load-error-with-valid-counts",
+      "reason": "facade: runtime/load diagnostic"
+    },
+    {
+      "step": "facade",
+      "mutation": "wrong-test-count",
+      "reason": "facade: test counts"
+    },
+    {
+      "step": "facade",
+      "mutation": "wrong-suite-count",
+      "reason": "facade: suite counts"
+    },
+    {
+      "step": "frozen-original",
+      "mutation": "missing-log",
+      "reason": "Test Suites needs exactly one summary"
+    },
+    {
+      "step": "frozen-original",
+      "mutation": "load-error-with-valid-counts",
+      "reason": "frozen-original: runtime/load diagnostic"
+    },
+    {
+      "step": "frozen-original",
+      "mutation": "wrong-test-count",
+      "reason": "frozen-original: test counts"
+    },
+    {
+      "step": "frozen-original",
+      "mutation": "wrong-suite-count",
+      "reason": "frozen-original: suite counts"
+    },
+    {
+      "step": "precise-original",
+      "mutation": "missing-log",
+      "reason": "Test Suites needs exactly one summary"
+    },
+    {
+      "step": "precise-original",
+      "mutation": "load-error-with-valid-counts",
+      "reason": "precise-original: runtime/load diagnostic"
+    },
+    {
+      "step": "precise-original",
+      "mutation": "wrong-test-count",
+      "reason": "precise-original: test counts"
+    },
+    {
+      "step": "precise-original",
+      "mutation": "wrong-suite-count",
+      "reason": "precise-original: suite counts"
+    },
+    {
+      "step": "negative",
+      "mutation": "missing-log",
+      "reason": "Test Suites needs exactly one summary"
+    },
+    {
+      "step": "negative",
+      "mutation": "load-error-with-valid-counts",
+      "reason": "negative: runtime/load diagnostic"
+    },
+    {
+      "step": "negative",
+      "mutation": "wrong-test-count",
+      "reason": "negative: test counts"
+    },
+    {
+      "step": "negative",
+      "mutation": "wrong-suite-count",
+      "reason": "negative: suite counts"
+    },
+    {
+      "step": "negative-precise-original",
+      "mutation": "missing-log",
+      "reason": "Test Suites needs exactly one summary"
+    },
+    {
+      "step": "negative-precise-original",
+      "mutation": "load-error-with-valid-counts",
+      "reason": "negative-precise-original: runtime/load diagnostic"
+    },
+    {
+      "step": "negative-precise-original",
+      "mutation": "wrong-test-count",
+      "reason": "negative-precise-original: test counts"
+    },
+    {
+      "step": "negative-precise-original",
+      "mutation": "wrong-suite-count",
+      "reason": "negative-precise-original: suite counts"
+    },
+    {
+      "step": "restored",
+      "mutation": "missing-log",
+      "reason": "Test Suites needs exactly one summary"
+    },
+    {
+      "step": "restored",
+      "mutation": "load-error-with-valid-counts",
+      "reason": "restored: runtime/load diagnostic"
+    },
+    {
+      "step": "restored",
+      "mutation": "wrong-test-count",
+      "reason": "restored: test counts"
+    },
+    {
+      "step": "restored",
+      "mutation": "wrong-suite-count",
+      "reason": "restored: suite counts"
+    },
+    {
+      "step": "frozen-original",
+      "mutation": "wrong-failed-case",
+      "reason": "frozen-original: unexpected failed case names"
+    },
+    {
+      "step": "frozen-original",
+      "mutation": "wrong-semantic-matcher",
+      "reason": "original raw failure must be equality, not load/runtime"
+    },
+    {
+      "step": "negative",
+      "mutation": "wrong-failed-case",
+      "reason": "negative: unexpected failed case names"
+    },
+    {
+      "step": "negative",
+      "mutation": "wrong-semantic-matcher",
+      "reason": "negative bounded wait failure must report 92 > 8"
+    },
+    {
+      "step": "negative-precise-original",
+      "mutation": "wrong-failed-case",
+      "reason": "negative-precise-original: unexpected failed case names"
+    },
+    {
+      "step": "negative-precise-original",
+      "mutation": "wrong-semantic-matcher",
+      "reason": "unchanged original growth failure must report 900 > 8"
+    }
+  ],
+  "output": "<evidence-output>",
+  "committedCapturesModified": false,
+  "scriptSha256": {
+    "replay.py": "6e4e7895e5bf2fcee005b07f9afee57c1eb8c97139b810217799e0a5f27a47b2",
+    "guards.py": "36cc72ca0e28b3acfb7f480367bc99bee69fd141f28b5b3453cc6a06e2341bcc"
+  },
+  "unconditionalInstallAndCheckAstVerified": true
+}

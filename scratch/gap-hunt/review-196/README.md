@@ -11,9 +11,13 @@ python3 scratch/gap-hunt/review-196/replay.py
 ```
 
 Default execution owns its install, runs the full strict/type-aware-lint/declaration
-`npm run check`, and builds all packages. `--reuse-build` is a development option.
+`npm run check`, and builds all packages. Install/check are unconditional in the
+product replay; inherited `GAP_HUNT_REUSE_BUILD` is removed. Only the fixture
+commands reuse the fresh invocation's completed build. There is no skip-install
+or skip-check option.
 The runner rejects product differences from the frozen reviewed source, allows
-this evidence directory, writes normalized command logs and a receipt in `results/`,
+this evidence directory, prints a fresh temporary output directory and writes normalized command logs
+and a receipt there, preserving the committed captures in `results/`,
 and restores every temporarily replaced source/fixture in `finally`.
 It performs no provider execution, remote writes, or package publication.
 
@@ -84,3 +88,27 @@ supported by source inspection: one cursor registration per active fan-out and a
 most `laneWindow` acquisition loops globally; keys/current evidence stay owned by
 Resolution. Timed sleeping members may retain active execution evidence while
 lending lanes, as required by the existing lifetime contract.
+
+
+## Guard-only amendment after the captured execution
+
+The full fresh install/build/product replay above executed the recipe at
+`f348f72465a7b74189fd51d69cffaa43c745df25`; capture commit
+`76ca301714f57a5240d60f1730cdc88c65b54561` added its logs. The final runner adds
+pure log guards and external output handling; **the final runner has not been
+claimed as a fresh full product execution**. Its guard-only path was executed:
+
+```sh
+python3 scratch/gap-hunt/review-196/replay.py --guards-only
+```
+
+It accepts all 15 hash-verified recorded commands, validates exact suite/test
+counts for all 8 Jest-bearing steps, rejects runtime/load diagnostics, and
+requires the exact named semantic failures and numbers for all expected reds.
+It rejects 38 synthetic cases: missing logs, load errors even with valid count
+summaries, wrong test counts, wrong suite counts, wrong failure names, and wrong
+semantic matchers. `guard-validation.json` records the guard-only execution and
+script hashes. This path writes to its printed temporary directory and checks
+that committed captures remain unchanged; it performs no product runtime replay.
+The output initialization is shared by guard-only and full replay. Future full
+replays now preserve this evidence tree's committed captures as well.

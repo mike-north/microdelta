@@ -55,5 +55,13 @@
     "head": "4408ab236562e1f4fd4d7f15d353d04fe7a86eb7",
     "onlyChange": "resolution test-d import ordering",
     "restored": true
+  },
+  "guardAmendment": {
+    "fullProductRecipeExecuted": "f348f72465a7b74189fd51d69cffaa43c745df25",
+    "finalRunnerFullProductRepeated": false,
+    "guardOnlyAcceptedJestSteps": 8,
+    "syntheticRejections": 38,
+    "output": "printed temporary directory",
+    "installAndCheck": "unconditional; inherited reuse environment removed"
   }
 }

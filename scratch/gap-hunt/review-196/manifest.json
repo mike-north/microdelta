@@ -2,8 +2,8 @@
   "files": [
     {
       "path": "README.md",
-      "bytes": 4957,
-      "sha256": "bde85115355d8c16e0302960acf7faedef8db4712238f8717819a8dbb4c4d8be"
+      "bytes": 6499,
+      "sha256": "cf04d77c57ab1a140238f60a1c8dc49257f51a0f8cea14c5ef4906348e00da1a"
     },
     {
       "path": "frozen/fanout-admission.test.mjs",
@@ -16,9 +16,19 @@
       "sha256": "52e4e9da2a30397fbaae3f0fa46c407a0021ff055db84e15397b681040e2a025"
     },
     {
+      "path": "guard-validation.json",
+      "bytes": 5702,
+      "sha256": "7fa1dbc41bb48bff4956f76dff29aac690a6303a13a2a0c729706a5199c5cb76"
+    },
+    {
+      "path": "guards.py",
+      "bytes": 6732,
+      "sha256": "36cc72ca0e28b3acfb7f480367bc99bee69fd141f28b5b3453cc6a06e2341bcc"
+    },
+    {
       "path": "replay.py",
-      "bytes": 7705,
-      "sha256": "ac8b975ff162c5236707f0c52f6019c1b211e04050dde118dd59987b39f3b86f"
+      "bytes": 8321,
+      "sha256": "6e4e7895e5bf2fcee005b07f9afee57c1eb8c97139b810217799e0a5f27a47b2"
     },
     {
       "path": "results/check.log",
@@ -102,8 +112,8 @@
     },
     {
       "path": "summary.json",
-      "bytes": 1258,
-      "sha256": "5c34bae25878d0953a79df75172f7f5f2cb28cfee96263b888d528e8f2108376"
+      "bytes": 1596,
+      "sha256": "537d1b64434b82f969a65b353796514ac154ac5a91e36d6474b82c3fb1044374"
     }
   ]
 }

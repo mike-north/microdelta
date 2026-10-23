@@ -43,6 +43,8 @@
   "files": [
     "pipeline.ts",
     "reflection-probe.ts",
-    "output-bindings.ts"
+    "output-bindings.ts",
+    "authoring-matrix.ts",
+    "custom-key.ts"
   ]
 }

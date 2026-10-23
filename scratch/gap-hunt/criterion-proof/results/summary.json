@@ -1,0 +1,102 @@
+{
+  "source": "f43c5872987573d9b98a19f41c324b4d9336894c",
+  "overlay_sha256": {
+    "packages/core/test/operations/criterion-boundaries.test.ts": "70051f363aff66d20e26053ff64bbc5603a49bc955838295bd0ba5bb40c7d4d0",
+    "packages/core/test/observation-followup/source-policies.test.ts": "8772a53db1a48a611754f657a381abb29dd3f2930d0ac64ffaa283379e6f905b",
+    "scratch/gap-hunt/observation-followup/tsconfig.json": "2df148253748ff40e9876b2332d567f5220ac26de3e0a0ca4d027c85cdd58fdf",
+    "scratch/gap-hunt/observation-followup/jest.config.mjs": "0dbefa6f34ab928c936d646669208c68dbd82abe7115d80ffd736a1f4e038d95"
+  },
+  "commands": [
+    [
+      "install",
+      [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ]
+    ],
+    [
+      "build",
+      [
+        "npm",
+        "run",
+        "build:packages"
+      ]
+    ],
+    [
+      "core-types",
+      [
+        "npx",
+        "tsc",
+        "-p",
+        "packages/core/tsconfig.test.json"
+      ]
+    ],
+    [
+      "alpha-types",
+      [
+        "npx",
+        "tsc",
+        "-p",
+        "scratch/gap-hunt/observation-followup/tsconfig.json"
+      ]
+    ],
+    [
+      "criterion-tests",
+      [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "packages/core/jest.config.mjs",
+        "--runInBand",
+        "--runTestsByPath",
+        "packages/core/.test-build/test/operations/criterion-boundaries.test.js"
+      ]
+    ],
+    [
+      "observation-tests",
+      [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/observation-followup/jest.config.mjs",
+        "--runInBand"
+      ]
+    ],
+    [
+      "existing-provenance-tests",
+      [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "packages/core/jest.config.mjs",
+        "--runInBand",
+        "--runTestsByPath",
+        "packages/core/.test-build/test/acceptance/source-policy.test.js",
+        "packages/core/.test-build/test/resolution/summary-validation.test.js",
+        "--testNamePattern",
+        "a false current answer enters the check|fresh equal data twice yields|a fresh source changing only unread fields"
+      ]
+    ],
+    [
+      "lint",
+      [
+        "npx",
+        "eslint",
+        "packages/core/test/operations/criterion-boundaries.test.ts",
+        "packages/core/test/observation-followup"
+      ]
+    ]
+  ],
+  "expected_tests": {
+    "new": 4,
+    "existing": 3
+  },
+  "tracked_source_unchanged": true,
+  "node": "v24.22.1",
+  "platform": "darwin"
+}

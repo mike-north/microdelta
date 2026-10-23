@@ -1,0 +1,6 @@
+{
+  "packages/core/test/operations/criterion-boundaries.test.ts": "70051f363aff66d20e26053ff64bbc5603a49bc955838295bd0ba5bb40c7d4d0",
+  "packages/core/test/observation-followup/source-policies.test.ts": "8772a53db1a48a611754f657a381abb29dd3f2930d0ac64ffaa283379e6f905b",
+  "scratch/gap-hunt/observation-followup/tsconfig.json": "2df148253748ff40e9876b2332d567f5220ac26de3e0a0ca4d027c85cdd58fdf",
+  "scratch/gap-hunt/observation-followup/jest.config.mjs": "0dbefa6f34ab928c936d646669208c68dbd82abe7115d80ffd736a1f4e038d95"
+}

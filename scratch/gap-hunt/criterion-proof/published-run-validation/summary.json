@@ -1,0 +1,134 @@
+{
+  "production_baseline": "f43c5872987573d9b98a19f41c324b4d9336894c",
+  "evidence_head": "18764b323f2d6d814cff69be212ba7d45ec33a3a",
+  "baseline_diff_paths": [
+    "packages/core/test/observation-followup/source-policies.test.ts",
+    "packages/core/test/operations/criterion-boundaries.test.ts",
+    "scratch/gap-hunt/criterion-proof/PUBLIC-FILES.json",
+    "scratch/gap-hunt/criterion-proof/README.md",
+    "scratch/gap-hunt/criterion-proof/REMAINING-CRITERIA.md",
+    "scratch/gap-hunt/criterion-proof/SHA256SUMS",
+    "scratch/gap-hunt/criterion-proof/overlay-sha256.json",
+    "scratch/gap-hunt/criterion-proof/results/alpha-types.log",
+    "scratch/gap-hunt/criterion-proof/results/build.log",
+    "scratch/gap-hunt/criterion-proof/results/core-types.log",
+    "scratch/gap-hunt/criterion-proof/results/criterion-tests.log",
+    "scratch/gap-hunt/criterion-proof/results/existing-provenance-tests.log",
+    "scratch/gap-hunt/criterion-proof/results/install.log",
+    "scratch/gap-hunt/criterion-proof/results/lint.log",
+    "scratch/gap-hunt/criterion-proof/results/observation-tests.log",
+    "scratch/gap-hunt/criterion-proof/results/runner.log",
+    "scratch/gap-hunt/criterion-proof/results/summary.json",
+    "scratch/gap-hunt/criterion-proof/run.py",
+    "scratch/gap-hunt/observation-followup/jest.config.mjs",
+    "scratch/gap-hunt/observation-followup/tsconfig.json"
+  ],
+  "overlay_sha256": {
+    "packages/core/test/operations/criterion-boundaries.test.ts": "70051f363aff66d20e26053ff64bbc5603a49bc955838295bd0ba5bb40c7d4d0",
+    "packages/core/test/observation-followup/source-policies.test.ts": "8772a53db1a48a611754f657a381abb29dd3f2930d0ac64ffaa283379e6f905b",
+    "scratch/gap-hunt/observation-followup/tsconfig.json": "2df148253748ff40e9876b2332d567f5220ac26de3e0a0ca4d027c85cdd58fdf",
+    "scratch/gap-hunt/observation-followup/jest.config.mjs": "0dbefa6f34ab928c936d646669208c68dbd82abe7115d80ffd736a1f4e038d95"
+  },
+  "commands": [
+    [
+      "install",
+      [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ]
+    ],
+    [
+      "build",
+      [
+        "npm",
+        "run",
+        "build:packages"
+      ]
+    ],
+    [
+      "core-types",
+      [
+        "npx",
+        "tsc",
+        "-p",
+        "packages/core/tsconfig.test.json"
+      ]
+    ],
+    [
+      "alpha-types",
+      [
+        "npx",
+        "tsc",
+        "-p",
+        "scratch/gap-hunt/observation-followup/tsconfig.json"
+      ]
+    ],
+    [
+      "criterion-tests",
+      [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "packages/core/jest.config.mjs",
+        "--runInBand",
+        "--runTestsByPath",
+        "packages/core/.test-build/test/operations/criterion-boundaries.test.js",
+        "--json",
+        "--outputFile",
+        "/var/folders/st/lnv0_82j071b3c_hn5s_j2wc0000gn/T/microdelta-criterion-proof-ssbdzcuj/criterion-tests.json"
+      ]
+    ],
+    [
+      "observation-tests",
+      [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/observation-followup/jest.config.mjs",
+        "--runInBand",
+        "--json",
+        "--outputFile",
+        "/var/folders/st/lnv0_82j071b3c_hn5s_j2wc0000gn/T/microdelta-criterion-proof-ssbdzcuj/observation-tests.json"
+      ]
+    ],
+    [
+      "existing-provenance-tests",
+      [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "packages/core/jest.config.mjs",
+        "--runInBand",
+        "--runTestsByPath",
+        "packages/core/.test-build/test/acceptance/source-policy.test.js",
+        "packages/core/.test-build/test/resolution/summary-validation.test.js",
+        "--testNamePattern",
+        "a false current answer enters the check|fresh equal data twice yields|a fresh source changing only unread fields",
+        "--json",
+        "--outputFile",
+        "/var/folders/st/lnv0_82j071b3c_hn5s_j2wc0000gn/T/microdelta-criterion-proof-ssbdzcuj/existing-provenance-tests.json"
+      ]
+    ],
+    [
+      "lint",
+      [
+        "npx",
+        "eslint",
+        "packages/core/test/operations/criterion-boundaries.test.ts",
+        "packages/core/test/observation-followup"
+      ]
+    ]
+  ],
+  "actual_passed_tests": {
+    "criterion-tests": 2,
+    "observation-tests": 2,
+    "existing-provenance-tests": 3
+  },
+  "tracked_clean_before_and_after": true,
+  "node": "v24.22.1"
+}

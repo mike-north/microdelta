@@ -1,0 +1,48 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "include": [
+    "../../..//packages/core/test/observation-followup/**/*.ts"
+  ],
+  "compilerOptions": {
+    "noEmit": false,
+    "paths": {
+      "microdelta": [
+        "../../../packages/core/dist/api/microdelta.alpha.d.ts"
+      ],
+      "@microdelta/accounting": [
+        "../../../packages/core/../accounting/dist/api/accounting.alpha.d.ts"
+      ],
+      "@microdelta/definition": [
+        "../../../packages/core/../definition/dist/api/definition.alpha.d.ts"
+      ],
+      "@microdelta/history": [
+        "../../../packages/core/../history/dist/api/history.alpha.d.ts"
+      ],
+      "@microdelta/history/conformance/store": [
+        "../../../packages/core/../history/dist/api/history.conformance.store.alpha.d.ts"
+      ],
+      "@microdelta/machine-node": [
+        "../../../packages/core/../machine-node/dist/api/machine-node.alpha.d.ts"
+      ],
+      "@microdelta/materialization": [
+        "../../../packages/core/../materialization/dist/api/materialization.alpha.d.ts"
+      ],
+      "@microdelta/resolution": [
+        "../../../packages/core/../resolution/dist/api/resolution.alpha.d.ts"
+      ],
+      "@microdelta/supervision": [
+        "../../../packages/core/../supervision/dist/api/supervision.alpha.d.ts"
+      ],
+      "@microdelta/tracking": [
+        "../../../packages/core/../tracking/dist/api/tracking.alpha.d.ts"
+      ],
+      "@microdelta/value": [
+        "../../../packages/core/../value/dist/api/value.alpha.d.ts"
+      ]
+    },
+    "rootDir": "../../..",
+    "outDir": "dist",
+    "declaration": false,
+    "sourceMap": true
+  }
+}

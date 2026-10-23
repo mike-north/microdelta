@@ -1,0 +1,10 @@
+Fresh results: /var/folders/st/lnv0_82j071b3c_hn5s_j2wc0000gn/T/microdelta-criterion-proof-ssbdzcuj
+install
+build
+core-types
+alpha-types
+criterion-tests
+observation-tests
+existing-provenance-tests
+lint
+PASS: actual test counts {'criterion-tests': 2, 'observation-tests': 2, 'existing-provenance-tests': 3}; tracked tree clean; results /var/folders/st/lnv0_82j071b3c_hn5s_j2wc0000gn/T/microdelta-criterion-proof-ssbdzcuj

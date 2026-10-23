@@ -1,0 +1,1 @@
+["npx", "tsc", "-p", "packages/core/tsconfig.test.json"]

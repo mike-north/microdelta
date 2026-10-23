@@ -1,0 +1,1 @@
+["npx", "tsc", "-p", "scratch/gap-hunt/observation-followup/tsconfig.json"]

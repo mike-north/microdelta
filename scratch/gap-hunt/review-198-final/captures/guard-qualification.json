@@ -1,0 +1,10 @@
+{
+  "positive": {
+    "status": "PASS",
+    "productionFiles": 814
+  },
+  "dirtySourceRejected": true,
+  "sourceRestored": true,
+  "timeoutSeconds": 900,
+  "workloadNotRerun": true
+}

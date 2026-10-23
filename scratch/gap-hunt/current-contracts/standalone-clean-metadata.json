@@ -1,0 +1,13 @@
+{
+  "evidenceHead": "ae51eab3878dfdfb0db746f46615de7f8b88f17a",
+  "command": "node scratch/gap-hunt/current-contracts/replay.mjs",
+  "exitCode": 0,
+  "node": "v24.22.1",
+  "npm": "11.12.1",
+  "freshWorktree": true,
+  "borrowedDependencies": false,
+  "fixtureBytesVerifiedByWrapper": true,
+  "gitStatusAfterRun": " M scratch/gap-hunt/current-contracts/local-162-results.json\n M scratch/gap-hunt/current-contracts/local-162.log\n M scratch/gap-hunt/current-contracts/local-164-bindings-results.json\n M scratch/gap-hunt/current-contracts/local-164-bindings.log\n M scratch/gap-hunt/current-contracts/local-164-input-results.json\n M scratch/gap-hunt/current-contracts/local-164-input.log\n M scratch/gap-hunt/current-contracts/local-consumer-lint.log\n M scratch/gap-hunt/current-contracts/local-core-check.log\n M scratch/gap-hunt/current-contracts/local-extension-types.log\n M scratch/gap-hunt/current-contracts/local-replay-summary.json\n M scratch/gap-hunt/current-contracts/local-tracking-check.log\n",
+  "sourceChangesAfterRun": "",
+  "lockSha256": "55dfeace3ed7af8246e32c3029b444251df4ca164119f76716e44122e33129e6"
+}

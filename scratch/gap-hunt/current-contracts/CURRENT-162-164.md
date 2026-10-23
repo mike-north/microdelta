@@ -25,3 +25,9 @@ The wrapper installs locked dependencies, builds, checks fixture hashes, runs on
 The captured run used `node scratch/gap-hunt/current-contracts/replay.mjs --reuse-build` after the separate fresh installation/full build; that wrapper completed exit 0. The default install/build path is composed from those same commands but was not separately executed as a single clean wrapper invocation. `local-replay-summary.json`, `local-*-results.json` and `local-*.log` preserve that focused replay; initial results are also retained. `runtime-source-pins.json` records runtime and source/lock hashes.
 
 No broad suite, provider call, issue comment or production change is included.
+
+## Independent clean default-wrapper verification
+
+The complete default command above was subsequently executed once from a fresh detached checkout at exact evidence head `ae51eab3878dfdfb0db746f46615de7f8b88f17a`, without borrowed dependencies or build outputs. It completed **exit 0**, including locked install and full build, original-fixture hash checks, #162 **9 failed/2 passed**, #164 input **1 failed/1 passed/7 skipped**, bindings **2 failed/2 passed**, zero runtime-error suites, and all strict checks/type/lint passes. Node 24.22.1/npm 11.12.1.
+
+`standalone-clean.log` captures the wrapper output; `standalone-clean-replay-summary.json` and the prefixed per-step logs/Jest JSON preserve its internally captured results. `standalone-clean-metadata.json` records the exact head, command, runtime, lock hash and post-run status. The wrapper rewrites its tracked local evidence files as designed; production source and lockfile have no changes. Original fixture bytes and expectations remain unchanged. This closes the earlier single-invocation verification boundary; no additional runtime scenario was run.

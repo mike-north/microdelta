@@ -72,3 +72,15 @@ resolve request now has a fresh request key, and elapsed time is captured before
 explicit GC. `benchmark-matched-node24.jsonl` additionally measures encoding the
 same record-array shape that publication uses. Earlier snapshots are historical
 measurements with the limitations recorded in FINDINGS.md.
+
+Deterministic acceptance readback regression (intentionally fails on baseline):
+
+```sh
+node node_modules/typescript/bin/tsc -p packages/core/tsconfig.test.json
+node --experimental-vm-modules node_modules/jest/bin/jest.js --config packages/core/jest.config.mjs --runInBand --runTestsByPath packages/core/.test-build/test/gap-hunt-scale/acceptance-readback.test.js
+```
+
+The test wraps the actual SQLite port, records returned acceptance rows only
+while each new acceptance is acknowledged, and expects[1,1,1]. Baseline returns
+[1,2,3]. Full readAcceptances still returns all3 immutable records. This is an
+outcome/resource regression target, not a timing assertion or production fix.

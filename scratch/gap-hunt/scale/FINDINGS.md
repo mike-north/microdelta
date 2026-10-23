@@ -58,3 +58,17 @@ The initial fixture wrongly aliased child slot prior rather than its declared
 sibling slot and was rejected illegal-edge as required; preserved initial logs
 are consumer fixture errors, not framework failures. Static chains compile under
 strict TS; all generated fold probes pass type-aware lint.
+
+## Deterministic acceptance acknowledgement reproduction
+
+Supervisor source review refined the hot path: `recordAcceptance` inserts a new
+row, then calls `statements.acceptances.all(resultId,environment).find(id)` inside
+the writer transaction to acknowledge that exact insertion. The full-history
+`readAcceptances` inspection API is not itself a bug. New assembly Jest test
+`packages/core/test/gap-hunt-scale/acceptance-readback.test.ts` instruments real
+SQLite and fails expected[1,1,1] vs actual[1,2,3] returned acceptance rows over
+three acknowledgements. Full inspection still has all3records. Exact commands
+in README; failure log `logs/acceptance-test-failure.log`. Strict TS compile
+passes, repository type-aware lint passes after routine curly-brace correction.
+Suggested direction: query the exact inserted acceptanceId for readback while
+preserving intentional all-history inspection and immutable retained records.

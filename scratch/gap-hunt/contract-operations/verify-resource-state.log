@@ -1,7 +1,7 @@
 npm warn deprecated prebuild-install@7.1.3: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.
 npm warn deprecated glob@10.5.0: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
 
-added 614 packages in 12s
+added 614 packages in 5s
 
 > @microdelta/workspace@0.0.0 build:packages
 > npm run build --workspace @microdelta/machine && npm run build --workspace @microdelta/value && npm run build --workspace @microdelta/machine-node && npm run build --workspace @microdelta/definition && npm run build --workspace @microdelta/tracking && npm run build --workspace @microdelta/history && npm run build --workspace @microdelta/accounting && npm run build --workspace @microdelta/materialization && npm run build --workspace @microdelta/resolution && npm run build --workspace @microdelta/supervision && npm run build --workspace microdelta
@@ -136,4 +136,4 @@ Analysis will use the bundled TypeScript version 5.9.3
 API Extractor completed successfully
 {"additivePositiveControl":{"requestDeltas":[2,3],"observedRequests":5},"unknown":[],"status":"complete"}
 CONTROL: complete Accounting surface matches reviewed additive consumption port; no state/pool/window/reset record or query.
-TARGET GAP (resource-state): required capability has no supported entry in the reviewed owning surface; owner decision is required. This exit1 is a target-capability assertion, not a regression assertion.
+DIAGNOSTIC (resource-state): reviewed baseline lacks the target capability; owner decision is required. Passing snapshot controls exit0 and are not a future implementation regression test.

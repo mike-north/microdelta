@@ -222,6 +222,38 @@ import { mintedOutcome, sourceOutcome } from './outcome.js';
 import type { IMintedOutcome } from './outcome.js';
 
 /**
+ * Invocation-local provenance for a rejection from the actual tracked author
+ * callback. Public ResolutionError instances and codes cannot provide this
+ * evidence: an author can construct either. The route that opted in consumes
+ * this wrapper and exposes only the exact thrown value as its safe failure's
+ * cause; the wrapper itself never crosses the public boundary.
+ */
+class AuthoredCallbackFailure {
+  public constructor(public readonly thrown: unknown) {}
+}
+
+/** Invoke the tracked author function inside a capture, separating its rejection from framework setup and output finishing. */
+async function invokeCapturedAuthor<TContext, TResult, TFinished>(
+  authored: (context: TContext) => TResult,
+  context: TContext,
+  finish: (value: unknown) => TFinished,
+  begin: (() => void) | undefined,
+  captureAuthorThrow: boolean,
+): Promise<TFinished> {
+  begin?.();
+  let produced: unknown;
+  try {
+    produced = await authored(context);
+  } catch (error: unknown) {
+    if (captureAuthorThrow) {
+      throw new AuthoredCallbackFailure(error);
+    }
+    throw error;
+  }
+  return finish(produced);
+}
+
+/**
  * Resolution failures that belong to the run rather than to one template
  * member: the admission port or an observer failed, historical evidence is
  * damaged, or the request itself is wrong. A members request, like a strict
@@ -1046,13 +1078,19 @@ export function createResolution<TInputs extends object, THelpers extends object
    * step's own implementation (`self`) and run it with the context Definition
    * assembled inside a fresh capture. `finish` runs inside that capture, so
    * explicit output detachment records what the step consumed from its output.
+   * Source checks, supplied steps and fold bodies opt into a private failure
+   * wrapper for the exact callback call. Memo bodies deliberately do not:
+   * their frame records failed declared children for #190's classification.
+   * Source finality also does not: its policy boundary owns that failure.
+   * `begin` and `finish` remain outside the catch so invocation setup and
+   * framework output validation retain their own failure classification.
    */
-  function invoker<TFinished>(finish: (value: unknown) => TFinished, begin?: () => void): IAuthorInvoker<Promise<IObservationCapture<TFinished>>> {
+  function invoker<TFinished>(finish: (value: unknown) => TFinished, begin?: () => void, captureAuthorThrow = false): IAuthorInvoker<Promise<IObservationCapture<TFinished>>> {
     return <TContext, TResult>(callback: (context: TContext) => TResult, context: TContext): Promise<IObservationCapture<TFinished>> => {
       // eslint-disable-next-line microdelta/tracked-captures -- Framework invoker: the callback is the author's actual function from Definition's record, tracked so its implementation is the step's own evidence.
       const authored = tracking.tracked(callback, { path: bindingPaths.self });
-      // eslint-disable-next-line microdelta/tracked-captures -- Framework invoker: this capture is the author call's evidence boundary; `begin` marks the author call's start inside it, then only the tracked author callback runs with Definition's assembled context.
-      return tracking.captureAsync(async () => { begin?.(); return finish(await authored(context)); });
+      // eslint-disable-next-line microdelta/tracked-captures -- Framework capture delegates to the tracked original author callback; begin and finish are Resolution-owned boundaries, not untracked author influences.
+      return tracking.captureAsync(() => invokeCapturedAuthor(authored, context, finish, begin, captureAuthorThrow));
     };
   }
 
@@ -1139,7 +1177,7 @@ export function createResolution<TInputs extends object, THelpers extends object
         }
         return invocation.applyFinality(bindings, supplier, invoker(finish), member);
       }
-      return invocation.apply(bindings, supplier, invoker(finish), member);
+      return invocation.apply(bindings, supplier, invoker(finish, undefined, true), member);
     });
   }
 
@@ -1454,6 +1492,9 @@ export function createResolution<TInputs extends object, THelpers extends object
       if (executed.kind === 'threw') {
         const error = executed.error;
         abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'the source check threw' });
+        if (error instanceof AuthoredCallbackFailure) {
+          throw new ResolutionError('execution-failure', `Source check of ${stepKey(step)} threw`, error.thrown);
+        }
         if (error instanceof ResolutionError) {
           throw error;
         }
@@ -2076,7 +2117,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     let executed: ISupervisedExecution<IObservationCapture<IMemoReturn>>;
     try {
       emit(request, evidence, step, 'execute');
-      executed = await supervision.execute(step, () => active.run(invocation, () => invocation.apply(bindings, supplier, invoker(detachComputation, arm))), { subject, attemptId });
+      executed = await supervision.execute(step, () => active.run(invocation, () => invocation.apply(bindings, supplier, invoker(detachComputation, arm, true))), { subject, attemptId });
     } catch (error: unknown) {
       executed = { kind: 'threw', error };
     } finally {
@@ -2091,6 +2132,9 @@ export function createResolution<TInputs extends object, THelpers extends object
     if (executed.kind === 'threw') {
       const error = executed.error;
       abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'the supplied step threw' });
+      if (error instanceof AuthoredCallbackFailure) {
+        throw new ResolutionError('execution-failure', `Supplied step ${describeSlot(step)} for ${subject.subject} threw`, error.thrown);
+      }
       if (error instanceof ResolutionError) {
         throw error;
       }
@@ -3129,10 +3173,10 @@ export function createResolution<TInputs extends object, THelpers extends object
   function openFoldBody(step: IBindingDescriptor, work: IFoldWork, bindings: IFamily['memo']): { readonly invocation: IInvocationScope; readonly run: () => Promise<IObservationCapture<IMemoReturn>> } {
     if (work.kind === 'fold') {
       const invocation = openFold(step);
-      return { invocation, run: () => active.run(invocation, () => invocation.apply(bindings, foldMembers(work.membership), invoker(detachComputation))) };
+      return { invocation, run: () => active.run(invocation, () => invocation.apply(bindings, foldMembers(work.membership), invoker(detachComputation, undefined, true))) };
     }
     const invocation = openOutcomeFold(step);
-    return { invocation, run: () => active.run(invocation, () => invocation.apply(bindings, outcomeMembers(work.membership), invoker(detachComputation))) };
+    return { invocation, run: () => active.run(invocation, () => invocation.apply(bindings, outcomeMembers(work.membership), invoker(detachComputation, undefined, true))) };
   }
 
   /**
@@ -3193,6 +3237,9 @@ export function createResolution<TInputs extends object, THelpers extends object
     if (executed.kind === 'threw') {
       const error = executed.error;
       abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'the body threw' });
+      if (error instanceof AuthoredCallbackFailure) {
+        throw new ResolutionError('execution-failure', `Body of ${name} ${stepKey(step)} threw`, error.thrown);
+      }
       if (error instanceof ResolutionError) {
         throw error;
       }

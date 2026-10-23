@@ -2,7 +2,7 @@
 
 Codex worker (gpt-6.1-sol), operating for Mike North. Findings and acceptance criteria only; no production fixes.
 Evidence branch: `gap-hunt-dx`; base `c5802daca4a0bb8ea91159854d84eddcfa5215b6`.
-The commit containing these self-contained runners is recorded in the parent handoff after commit.
+Self-contained runners and initial addenda are committed at abb9bab on that branch; later evidence-only commits update logs and ledger without changing the production baseline.
 
 The commands below start from a clean checkout of that evidence branch with Node24 and npm on PATH. They install locked dependencies and build owner declarations themselves; no undocumented local tools, caches, prebuilt declarations, stores, macOS paths or paid credentials are needed. Linux execution has not been performed on this laptop; Docker is unavailable. They use portable Node/npm entrypoints and real SQLite. Package installation requires its usual network/native-toolchain availability. Bootstrap default was verified once with repro-154: npm ci and build:packages both completed, then its compiler negative/positive controls passed (logs/repro-154-clean-bootstrap.log). The other three runner paths were verified with the documented optional GAP_HUNT_REUSE_BUILD=1 environment variable against the same installed/built checkout; each reached its intended failing assertion. Default behavior always bootstraps.
 

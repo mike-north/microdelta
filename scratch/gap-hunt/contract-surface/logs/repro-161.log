@@ -1,11 +1,17 @@
 $ /Users/mnorth/.nodenv/versions/24.22.1/bin/node node_modules/typescript/bin/tsc -p packages/core/tsconfig.test.json
 $ /Users/mnorth/.nodenv/versions/24.22.1/bin/node --experimental-vm-modules node_modules/jest/bin/jest.js --config packages/core/jest.config.mjs --runInBand --runTestsByPath packages/core/.test-build/test/workspace-operations/operations.test.js
-(node:67359) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+watchman warning: Recrawled this watch 1 time, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx' ; watchman watch-project '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx'`
+
+(node:11888) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
 (Use `node --trace-warnings ...` to show where the warning was created)
 Test Suites: 1 passed, 1 total
 Tests:       15 passed, 15 total
 Snapshots:   0 total
-Time:        1.128 s, estimated 2 s
+Time:        1.933 s, estimated 2 s
 Ran all test suites within paths "packages/core/.test-build/test/workspace-operations/operations.test.js".
 $ npm run build:examples
 
@@ -13,14 +19,14 @@ $ npm run build:examples
 > tsc -p examples/contribution-report/tsconfig.json
 
 $ /Users/mnorth/.nodenv/versions/24.22.1/bin/node --test examples/contribution-report/test/example.test.mjs
-✔ keyed-cold-and-restarted-report: cold, unchanged restart with zero member, assessment and report bodies, recover and check (495.918208ms)
-✔ nested-equal-output-cutoff then nested-changed-output: rubric B reruns assessments only; rubric C reruns Ben and the report (350.567083ms)
-✔ tracked-gate-instances: threshold 2 skips Cy and reruns only the report; threshold 1 again reuses the cold report (332.726542ms)
-✔ tracked-gate-instances: starting at threshold 2, threshold 1 runs only the newly required Cy and the report (214.297583ms)
-✔ recover after an interrupted strict report: a waiting fold executed no report, yet its members are recovered from the recovered discovery (184.581959ms)
-✔ strict-fold-open-discovery: open discovery leaves the report waiting; closing it again reuses the cold report (336.159209ms)
-✔ custom-key-correspondence: members keyed by upstream profile id correspond across a reordered restart (304.043542ms)
-✔ the example rejects an incomplete command line or an unknown option value with a usage message (627.620875ms)
+✔ keyed-cold-and-restarted-report: cold, unchanged restart with zero member, assessment and report bodies, recover and check (850.363583ms)
+✔ nested-equal-output-cutoff then nested-changed-output: rubric B reruns assessments only; rubric C reruns Ben and the report (461.300125ms)
+✔ tracked-gate-instances: threshold 2 skips Cy and reruns only the report; threshold 1 again reuses the cold report (383.823917ms)
+✔ tracked-gate-instances: starting at threshold 2, threshold 1 runs only the newly required Cy and the report (253.491ms)
+✔ recover after an interrupted strict report: a waiting fold executed no report, yet its members are recovered from the recovered discovery (235.094292ms)
+✔ strict-fold-open-discovery: open discovery leaves the report waiting; closing it again reuses the cold report (345.763333ms)
+✔ custom-key-correspondence: members keyed by upstream profile id correspond across a reordered restart (332.849125ms)
+✔ the example rejects an incomplete command line or an unknown option value with a usage message (564.882625ms)
 ℹ tests 8
 ℹ suites 0
 ℹ pass 8
@@ -28,9 +34,9 @@ $ /Users/mnorth/.nodenv/versions/24.22.1/bin/node --test examples/contribution-r
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 2907.922375
+ℹ duration_ms 3525.207708
 $ /Users/mnorth/.nodenv/versions/24.22.1/bin/node --test scratch/gap-hunt/contract-surface/package-map.test.mjs
-✖ current package map acknowledges caller-supplied facade Accounting assembly (1.89525ms)
+✖ current package map acknowledges caller-supplied facade Accounting assembly (1.853417ms)
 ℹ tests 1
 ℹ suites 0
 ℹ pass 0
@@ -38,12 +44,12 @@ $ /Users/mnorth/.nodenv/versions/24.22.1/bin/node --test scratch/gap-hunt/contra
 ℹ cancelled 0
 ℹ skipped 0
 ℹ todo 0
-ℹ duration_ms 59.020042
+ℹ duration_ms 58.3625
 
 ✖ failing tests:
 
 test at scratch/gap-hunt/contract-surface/package-map.test.mjs:7:1
-✖ current package map acknowledges caller-supplied facade Accounting assembly (1.89525ms)
+✖ current package map acknowledges caller-supplied facade Accounting assembly (1.853417ms)
   AssertionError [ERR_ASSERTION]: The input was expected to not match the regular expression /facade does not yet wire the accounting port/u. Input:
   
   '# Implemented package and context map\n' +

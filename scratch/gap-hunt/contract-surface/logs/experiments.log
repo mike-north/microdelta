@@ -1,0 +1,77 @@
+
+> @microdelta/workspace@0.0.0 test:experiments
+> tsd --typings experiments/exp-1/src/protocol.ts --files experiments/exp-1/test-d/protocol.test-d.ts && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-1/jest.config.mjs --runInBand && npm run test:exp2 && npm run test:exp3 && npm run test:exp-nested && npm run test:exp4 && npm run test:exp8
+
+(node:43817) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+Test Suites: 2 passed, 2 total
+Tests:       24 passed, 24 total
+Snapshots:   0 total
+Time:        1.027 s
+Ran all test suites.
+
+> @microdelta/workspace@0.0.0 test:exp2
+> tsc -p experiments/exp-2/tsconfig.json && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-2/jest.config.mjs --runInBand
+
+(node:44206) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+Test Suites: 2 passed, 2 total
+Tests:       28 passed, 28 total
+Snapshots:   0 total
+Time:        0.161 s
+Ran all test suites.
+
+> @microdelta/workspace@0.0.0 test:exp3
+> tsc -p experiments/exp-3/tsconfig.test.json && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config experiments/exp-3/jest.config.mjs --runInBand --runTestsByPath .test-build/experiments/exp-3/test/sqlite-capability.test.js && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config experiments/exp-3/jest.config.mjs --runInBand --runTestsByPath .test-build/experiments/exp-3/test/publication.test.js
+
+(node:44363) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       5 passed, 5 total
+Snapshots:   0 total
+Time:        0.09 s
+Ran all test suites within paths ".test-build/experiments/exp-3/test/sqlite-capability.test.js".
+(node:44388) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       16 passed, 16 total
+Snapshots:   0 total
+Time:        1.316 s
+Ran all test suites within paths ".test-build/experiments/exp-3/test/publication.test.js".
+
+> @microdelta/workspace@0.0.0 test:exp-nested
+> tsc -p experiments/exp-nested/tsconfig.test.json && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config experiments/exp-nested/jest.config.mjs --runInBand
+
+(node:44573) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       12 passed, 12 total
+Snapshots:   0 total
+Time:        0.528 s
+Ran all test suites.
+
+> @microdelta/workspace@0.0.0 test:exp4
+> tsd --typings experiments/exp-4/src/protocol.ts --files experiments/exp-4/test-d/protocol.test-d.ts && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-4/jest.config.mjs --runInBand
+
+(node:44924) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+Test Suites: 2 passed, 2 total
+Tests:       59 passed, 59 total
+Snapshots:   0 total
+Time:        2.766 s
+Ran all test suites.
+
+> @microdelta/workspace@0.0.0 test:exp8
+> tsd --typings experiments/exp-8/src/protocol.ts --files experiments/exp-8/test-d/events.test-d.ts && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-8/jest.config.mjs --runInBand
+
+(node:45276) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+Test Suites: 3 passed, 3 total
+Tests:       73 passed, 73 total
+Snapshots:   0 total
+Time:        2.465 s
+Ran all test suites.

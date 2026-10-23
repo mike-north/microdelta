@@ -1,0 +1,114 @@
+
+> @microdelta/machine-node@0.1.0 test
+> npm run test:unit && npm run test:types
+
+
+> @microdelta/machine-node@0.1.0 test:unit
+> tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand
+
+(node:44894) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+first open, 2 processes x 10 trials: 20 opened, 0 typed busy, 0 other
+first open, 4 processes x 10 trials: 40 opened, 0 typed busy, 0 other
+
+Test Suites: 8 passed, 8 total
+Tests:       83 passed, 83 total
+Snapshots:   0 total
+Time:        17.375 s
+Ran all test suites.
+
+> @microdelta/machine-node@0.1.0 test:types
+> tsd
+
+
+> @microdelta/materialization@0.1.1 test
+> npm run test:unit && npm run test:types && npm run test:public
+
+
+> @microdelta/materialization@0.1.1 test:unit
+> tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand
+
+(node:46581) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+Test Suites: 2 passed, 2 total
+Tests:       34 passed, 34 total
+Snapshots:   0 total
+Time:        0.145 s
+Ran all test suites.
+
+> @microdelta/materialization@0.1.1 test:types
+> tsd
+
+
+> @microdelta/materialization@0.1.1 test:public
+> tsc --noEmit -p tsconfig.public-consumer.json
+
+
+> @microdelta/history@0.1.0 test
+> npm run test:unit && npm run test:types
+
+
+> @microdelta/history@0.1.0 test:unit
+> tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --runInBand
+
+(node:46979) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+Test Suites: 3 passed, 3 total
+Tests:       44 passed, 44 total
+Snapshots:   0 total
+Time:        0.132 s
+Ran all test suites.
+
+> @microdelta/history@0.1.0 test:types
+> tsd
+
+
+> @microdelta/accounting@0.0.0 test
+> npm run test:unit && npm run test:types && npm run test:public
+
+
+> @microdelta/accounting@0.0.0 test:unit
+> tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand
+
+(node:47070) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+Test Suites: 3 passed, 3 total
+Tests:       54 passed, 54 total
+Snapshots:   0 total
+Time:        0.136 s
+Ran all test suites.
+
+> @microdelta/accounting@0.0.0 test:types
+> tsd
+
+
+> @microdelta/accounting@0.0.0 test:public
+> tsc --noEmit -p tsconfig.public-consumer.json
+
+
+> @microdelta/supervision@0.2.0 test
+> npm run test:unit && npm run test:types && npm run test:public
+
+
+> @microdelta/supervision@0.2.0 test:unit
+> tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand
+
+(node:47192) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+Test Suites: 5 passed, 5 total
+Tests:       193 passed, 193 total
+Snapshots:   0 total
+Time:        0.519 s
+Ran all test suites.
+
+> @microdelta/supervision@0.2.0 test:types
+> tsd
+
+
+> @microdelta/supervision@0.2.0 test:public
+> tsc --noEmit -p tsconfig.public-consumer.json
+

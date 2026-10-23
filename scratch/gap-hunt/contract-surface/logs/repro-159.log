@@ -1,6 +1,12 @@
 $ /Users/mnorth/.nodenv/versions/24.22.1/bin/node node_modules/typescript/bin/tsc -p packages/core/tsconfig.test.json
 $ /Users/mnorth/.nodenv/versions/24.22.1/bin/node --experimental-vm-modules node_modules/jest/bin/jest.js --config packages/core/jest.config.mjs --runInBand --runTestsByPath packages/core/.test-build/test/gap-hunt-scale/acceptance-readback.test.js
-(node:66820) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+watchman warning: Recrawled this watch 1 time, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx' ; watchman watch-project '/Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx'`
+
+(node:11052) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
 (Use `node --trace-warnings ...` to show where the warning was created)
 FAIL packages/core/.test-build/test/gap-hunt-scale/acceptance-readback.test.js
   ● acknowledging each new acceptance returns only that acceptance from SQL
@@ -30,5 +36,5 @@ FAIL packages/core/.test-build/test/gap-hunt-scale/acceptance-readback.test.js
 Test Suites: 1 failed, 1 total
 Tests:       1 failed, 1 total
 Snapshots:   0 total
-Time:        0.127 s, estimated 1 s
+Time:        0.183 s, estimated 1 s
 Ran all test suites within paths "packages/core/.test-build/test/gap-hunt-scale/acceptance-readback.test.js".

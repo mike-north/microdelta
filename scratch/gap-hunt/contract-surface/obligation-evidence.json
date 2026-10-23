@@ -1,0 +1,684 @@
+{
+  "README": {
+    "obligations": [
+      "One active contract; preserve evidence limits; read owning contracts before changes"
+    ],
+    "reviewedEvidence": [
+      "logs/example-matrix.log:8/8 independent-process CLI tests",
+      "logs/gates-tests.log:34/34 declaration/wiring/trim tests",
+      "logs/imports.log:check:imports pass",
+      "logs/declarations.log:check:declarations pass",
+      "logs/build-fixtures.log:build:fixtures pass"
+    ],
+    "evidenceStatus": "mixed-current-and-process",
+    "remainingBoundary": "Bounded current checkout claims only; M0/M1/M2/M3/M4/M5 acceptance links are historical records, not all rerun here."
+  },
+  "SPEC-1": {
+    "obligations": [
+      "Active authority is spec plus milestones; archived/source material cannot silently override it",
+      "Report conflicting active requirements before implementation"
+    ],
+    "reviewedEvidence": [
+      "docs/spec/README.md authority text",
+      "docs/archive/README.md notice",
+      "docs/spec/artifacts/source-map.csv target audit",
+      "logs/doc-structure.log:4/4 local targets/anchors, source-map targets and explicit fixture outcomes"
+    ],
+    "evidenceStatus": "process-and-structure",
+    "remainingBoundary": "Process/review requirement has no runtime API; current tests cannot establish historical implementation order or human judgment."
+  },
+  "SPEC-2": {
+    "obligations": [
+      "Distinguish settled requirement, proposal, experiment and deferred scope",
+      "Implementation cannot silently promote proposals"
+    ],
+    "reviewedEvidence": [
+      "clause-map.json classification preserves these categories"
+    ],
+    "evidenceStatus": "process-review",
+    "remainingBoundary": "Process/review requirement has no runtime API; current tests cannot establish historical implementation order or human judgment."
+  },
+  "SPEC-3": {
+    "obligations": [
+      "Write outcome/negative tests before implementation",
+      "Comments preserve durable semantic intent and update with contracts",
+      "Reversible doc changes use consistency/link checks"
+    ],
+    "reviewedEvidence": [
+      "new deterministic Jest regressions fail before any fix",
+      "no production implementation in this worktree"
+    ],
+    "evidenceStatus": "process-partially-observed",
+    "remainingBoundary": "Process/review requirement has no runtime API; current tests cannot establish historical implementation order or human judgment. No exhaustive comment-quality or test-order audit of old commits."
+  },
+  "SPEC-4": {
+    "obligations": [
+      "Compile, memory, model and durable evidence establish different facts",
+      "Durable proof requires independent processes and fault injection",
+      "Report unexecuted scope"
+    ],
+    "reviewedEvidence": [
+      "logs/example-matrix.log:8/8 independent-process CLI tests",
+      "logs/experiments.log:EXP3 process-kill suite",
+      "FINDINGS.md and scale/FINDINGS.md coverage boundaries"
+    ],
+    "evidenceStatus": "aligned-within-bounds",
+    "remainingBoundary": "Fault evidence is backend/boundary-specific; no universal durability proof."
+  },
+  "SPEC-5": {
+    "obligations": [
+      "Foundation before dependent experiments; shaped package gates supersede CML",
+      "Selective TLA only; Lean dormant; escalate consequential conflicts only",
+      "Relative links and language-neutral fixtures do not freeze persistence schema"
+    ],
+    "reviewedEvidence": [
+      "logs/gates-tests.log:34/34 declaration/wiring/trim tests",
+      "logs/imports.log:check:imports pass",
+      "logs/declarations.log:check:declarations pass",
+      "logs/build-fixtures.log:build:fixtures pass",
+      "logs/experiments.log",
+      "docs/spec/artifacts/source-map.csv",
+      "logs/doc-structure.log:4/4 local targets/anchors, source-map targets and explicit fixture outcomes"
+    ],
+    "evidenceStatus": "current-gates-pass-process-history-unverified",
+    "remainingBoundary": "Process/review requirement has no runtime API; current tests cannot establish historical implementation order or human judgment."
+  },
+  "domain": {
+    "obligations": [
+      "Shared terms are defined in glossary; owning contracts retain behavior"
+    ],
+    "reviewedEvidence": [
+      "docs/spec/glossary.md"
+    ],
+    "evidenceStatus": "cross-reference",
+    "remainingBoundary": "Vocabulary audit belongs to contracts worker; no new runtime API obligation in introductory prose."
+  },
+  "DOM-1": {
+    "obligations": [
+      "Retained exact results survive process exit",
+      "Author-selected expensive work includes CPU/network/nondeterministic work"
+    ],
+    "reviewedEvidence": [
+      "logs/example-matrix.log:8/8 independent-process CLI tests",
+      "consumer-dx/logs/jest.log:3/3 process probes"
+    ],
+    "evidenceStatus": "aligned-bounded",
+    "remainingBoundary": "Hours-long leases and scale are separate;100k ongoing. Random/nondeterministic provider execution was not performed."
+  },
+  "DOM-2": {
+    "obligations": [
+      "Ordinary TS scoped authoring and implicit host context",
+      "Outside-live-scope lookup fails clearly",
+      "Ordinary nonmemoized work remains observable"
+    ],
+    "reviewedEvidence": [
+      "logs/workspace-operations.log:15/15",
+      "logs/owner-contracts.log:Supervision suite",
+      "packages/supervision/test/supervision.test.ts",
+      "packages/core/test/workspace/scope.test.ts",
+      "logs/workspace-resolution.log:independent current-worker refresh",
+      "packages/core/test/workspace/scope.test.ts:37,48,213,243",
+      "packages/core/test/workspace/admission-observers.test.ts:274"
+    ],
+    "evidenceStatus": "executed-bounded-pass",
+    "remainingBoundary": "Runtime evidence bounded by workspace/resolution fixtures; general hidden JS influence and paid-provider behavior are excluded."
+  },
+  "DOM-3": {
+    "obligations": [
+      "Selected storage-backed reads avoid unrelated payload",
+      "Fingerprint-only comparison avoids payload",
+      "Bounded/reclaimable cache and admitted-fanout memory",
+      "Prefetch cannot change semantics or require custom projections"
+    ],
+    "reviewedEvidence": [
+      "logs/owner-contracts.log:Materialization34",
+      "packages/materialization/test/nested-view.test.ts:163,213",
+      "packages/materialization/test/materialization.test.ts:155,232",
+      "../scale/FINDINGS.md deterministic regressions"
+    ],
+    "evidenceStatus": "partially-aligned-confirmed-scale-gaps",
+    "remainingBoundary": "Cache/eviction and speculative prefetch API not exposed in current bounded reader; no claimed general asynchronous getter.100k resource-limited run pending; publication and acceptance amplification confirmed."
+  },
+  "DOM-4": {
+    "obligations": [
+      "Identity/content/storage/readiness/observation/source acceptance/admission remain separate",
+      "Memoization does not invent identity or paid cost"
+    ],
+    "reviewedEvidence": [
+      "logs/example-matrix.log:8/8 independent-process CLI tests",
+      "consumer-dx/logs/jest.log open snapshots/reference controls",
+      "logs/workspace-operations.log no-port and env accounting controls"
+    ],
+    "evidenceStatus": "aligned-bounded",
+    "remainingBoundary": "General independence is responsibility judgment; tested distinctions cover chosen fixtures."
+  },
+  "DOM-5": {
+    "obligations": [
+      "Exclude resumable stacks/purity proof/exactly-once remote effects",
+      "Defer browser/native classes/distributed scheduling/graphical viewer",
+      "Result outputs cannot mutate frozen graph"
+    ],
+    "reviewedEvidence": [
+      "packages/definition/test/composition.test.ts",
+      "packages/definition/test/template.test.ts",
+      "contracts worker semantic-definition.log:281pass",
+      "logs/experiments.log:EXP4"
+    ],
+    "evidenceStatus": "explicit-non-goals-not-missing-features",
+    "remainingBoundary": "Negative capabilities are checked where an author API exists; no demand to implement excluded guarantees."
+  },
+  "DOM-6": {
+    "obligations": [
+      "Unread labels preserve exact assessment reference; title edits rerun",
+      "Current source policy still runs; equal new source can retain old assessment",
+      "Tracked implementation edits invalidate only affected consumers"
+    ],
+    "reviewedEvidence": [
+      "logs/example-matrix.log:8/8 independent-process CLI tests",
+      "contracts worker semantic-tracking.log:73pass",
+      "packages/core/test/resolution/summary-validation.test.ts",
+      "packages/core/test/resolution/source-policy.test.ts",
+      "logs/workspace-resolution.log:independent current-worker refresh",
+      "packages/core/test/resolution/summary-validation.test.ts:94,134,157,181,196,208",
+      "packages/core/test/resolution/source-policy.test.ts:91,116"
+    ],
+    "evidenceStatus": "executed-bounded-pass",
+    "remainingBoundary": "Runtime evidence bounded by workspace/resolution fixtures; general hidden JS influence and paid-provider behavior are excluded."
+  },
+  "architecture": {
+    "obligations": [
+      "Six context ownership and Machine supporting host boundary"
+    ],
+    "reviewedEvidence": [
+      "logs/gates-tests.log:34/34 declaration/wiring/trim tests",
+      "logs/imports.log:check:imports pass",
+      "logs/declarations.log:check:declarations pass",
+      "logs/build-fixtures.log:build:fixtures pass"
+    ],
+    "evidenceStatus": "structural-evidence",
+    "remainingBoundary": "Ownership semantics also require review; import topology alone cannot prove them."
+  },
+  "ARC-001": {
+    "obligations": [
+      "Six peer contexts own their listed invariant sets; supporting components are not extra contexts",
+      "Approved boundary public does not mean user-public tier"
+    ],
+    "reviewedEvidence": [
+      "logs/gates-tests.log:34/34 declaration/wiring/trim tests",
+      "logs/imports.log:check:imports pass",
+      "logs/declarations.log:check:declarations pass",
+      "logs/build-fixtures.log:build:fixtures pass",
+      "tooling/package-architecture.mjs six context entries",
+      "logs/additional-foundation.log:41/41context/quality/API-policy/formal-retirement negatives and positive controls"
+    ],
+    "evidenceStatus": "structural-and-partial-behavior",
+    "remainingBoundary": "Table ownership is reviewed against ports, not claimed mechanically proven in full."
+  },
+  "ARC-002": {
+    "obligations": [
+      "Value owns canonical addresses/fingerprints, not consumption/freshness",
+      "Numeric object aliases differ from array descriptor semantics; symbols reject explicitly",
+      "Materialization reads via ports, not private rows; no eligibility decision"
+    ],
+    "reviewedEvidence": [
+      "contracts worker semantic-value.log:50pass",
+      "logs/owner-contracts.log:Materialization34",
+      "logs/experiments.log:EXP2 28"
+    ],
+    "evidenceStatus": "aligned-bounded",
+    "remainingBoundary": "Tests cover chosen values/readers; Value universal-type-bag avoidance remains architectural review."
+  },
+  "ARC-003": {
+    "obligations": [
+      "Only allowed contract edges; reverse callbacks via injection",
+      "Accounting and persistence retain their owned ports",
+      "Inspection never computes or imports private source"
+    ],
+    "reviewedEvidence": [
+      "logs/gates-tests.log:34/34 declaration/wiring/trim tests",
+      "logs/imports.log:check:imports pass",
+      "logs/declarations.log:check:declarations pass",
+      "logs/build-fixtures.log:build:fixtures pass",
+      "logs/workspace-operations.log inspection/accounting",
+      "tooling/package-architecture.mjs",
+      "logs/additional-foundation.log:41/41context/quality/API-policy/formal-retirement negatives and positive controls"
+    ],
+    "evidenceStatus": "partially-executed",
+    "remainingBoundary": "No shipped general CLI/provider adapter contract; inspection APIs tested, full target CLI unavailable and deferred."
+  },
+  "ARC-004": {
+    "obligations": [
+      "Tracking works without Store/run/memo/source policy",
+      "Tracked called implementation participates in invalidation but wrapping does not memoize",
+      "No durable live tags/closures/revision clocks; fingerprint is evidence not locator"
+    ],
+    "reviewedEvidence": [
+      "contracts worker semantic-tracking.log:73pass",
+      "logs/experiments.log:EXP1 24",
+      "packages/tracking/test/observer.test.ts",
+      "experiments/exp-1/test"
+    ],
+    "evidenceStatus": "aligned-bounded",
+    "remainingBoundary": "Arbitrary captured JS closure soundness is excluded; tracked-influence contract required."
+  },
+  "ARC-005": {
+    "obligations": [
+      "Frozen abstract graph differs from runtime result expansion",
+      "No result-created/reconnected/reordered graph; gates skip declared operations",
+      "Current lookup independent of label/ordinal/live identity; ambiguity/missing yields honest miss without paid reconstruction"
+    ],
+    "reviewedEvidence": [
+      "logs/example-matrix.log:8/8 independent-process CLI tests",
+      "contracts worker semantic-definition.log:281pass",
+      "logs/experiments.log:EXP1 24;EXP4 59"
+    ],
+    "evidenceStatus": "aligned-bounded",
+    "remainingBoundary": "Concurrency independence beyond declared precedence is bounded by configured fanout and single-writer contract."
+  },
+  "ARC-006": {
+    "obligations": [
+      "Candidate completeness is not validity; current hooks remain authoritative",
+      "Hierarchical child validation and consumed-output cutoff",
+      "Tracking supplied facts cannot decide freshness"
+    ],
+    "reviewedEvidence": [
+      "logs/example-matrix.log:8/8 independent-process CLI tests",
+      "logs/experiments.log:EXP1/4",
+      "packages/core/test/resolution/source-policy.test.ts",
+      "logs/workspace-resolution.log:independent current-worker refresh",
+      "packages/core/test/resolution/source-policy.test.ts:91,116,152,217,231"
+    ],
+    "evidenceStatus": "executed-bounded-pass",
+    "remainingBoundary": "Runtime evidence bounded by workspace/resolution fixtures; general hidden JS influence and paid-provider behavior are excluded."
+  },
+  "ARC-007": {
+    "obligations": [
+      "History alone owns claim/allocation/publication invariant",
+      "Exact immutable references; fresh equal distinct; retain exact old; acceptance separate",
+      "No pointer rewind or dangling references"
+    ],
+    "reviewedEvidence": [
+      "logs/owner-contracts.log:History suite",
+      "packages/history/test/completed-results.test.ts",
+      "logs/experiments.log:EXP3 publication16",
+      "../scale/logs/acceptance-test-failure.log"
+    ],
+    "evidenceStatus": "aligned-bounded-with-performance-gap",
+    "remainingBoundary": "Real backend crash breadth belongs durability worker; acknowledgement-history amplification is confirmed without violating immutable full inspection."
+  },
+  "ARC-008": {
+    "obligations": [
+      "Contract tests with fake ports precede assembly reliance",
+      "Separate binding/Tracking/Resolution/History/Supervision/Accounting/Materialization seams",
+      "Fresh-process assembly does not substitute for isolated invariant evidence"
+    ],
+    "reviewedEvidence": [
+      "logs/owner-contracts.log",
+      "contracts worker semantic-definition/value/tracking logs",
+      "packages/core/test/resolution/support.ts:real SQLite assembly",
+      "packages/core/test/stop/resolution-port.test.ts:142\u2013166 realHistory plus scripted execution port",
+      "packages/core/test/nested/arguments.test.ts:317\u2013340 realHistory/Tracking/Definition"
+    ],
+    "evidenceStatus": "partial-proof-obligation-gap",
+    "remainingBoundary": "Resolution production behavior suites compose real History/Tracking/Definition, not fake current-fact/source-policy/child-resolver ports. Standalone Resolution suite covers source envelopes only. Missing isolated-port evidence is a test architecture gap, not a demonstrated wrong runtime outcome; chronological test-first order unverified. Some admission/execution services are scripted fakes in assembly tests; absence claim is specifically isolated current-fact/source-policy/child-resolver seams, not absence of all doubles."
+  },
+  "ARC-009": {
+    "obligations": [
+      "No active parallel CML model; shaped surfaces plus runtime tests",
+      "Boundary changes update ports/API/contracts together"
+    ],
+    "reviewedEvidence": [
+      "logs/gates-tests.log:34/34 declaration/wiring/trim tests",
+      "logs/imports.log:check:imports pass",
+      "logs/declarations.log:check:declarations pass",
+      "logs/build-fixtures.log:build:fixtures pass",
+      "tooling/package-architecture.mjs",
+      "logs/additional-foundation.log:41/41context/quality/API-policy/formal-retirement negatives and positive controls"
+    ],
+    "evidenceStatus": "current-gates-pass",
+    "remainingBoundary": "Historical boundary-change sequencing requires commit review, no runtime API can prove it."
+  },
+  "ARC-010": {
+    "obligations": [
+      "Node builtins/globals only in Node Machine runtime; tooling/tests excepted",
+      "Injected capabilities define semantics/failures and Node conformance",
+      "Machine does not own persistence/domain policy; no speculative extra hosts"
+    ],
+    "reviewedEvidence": [
+      "logs/gates-tests.log:34/34 declaration/wiring/trim tests",
+      "logs/imports.log:check:imports pass",
+      "logs/declarations.log:check:declarations pass",
+      "logs/build-fixtures.log:build:fixtures pass",
+      "logs/owner-contracts.log:MachineNode suite",
+      "packages/machine-node/test/node-machine.test.ts",
+      "packages/history/test/machine.test.ts",
+      "logs/check-packages.log:all11package strict type and type-aware lint commands pass",
+      "logs/additional-foundation.log:41/41context/quality/API-policy/formal-retirement negatives and positive controls"
+    ],
+    "evidenceStatus": "aligned-bounded",
+    "remainingBoundary": "Current scaffold Node imports paragraph is historical baseline. No browser/Lambda/Worker implementation obligation."
+  },
+  "package-boundaries": {
+    "obligations": [
+      "Package contracts apply release tiers/import direction independently of runtime security"
+    ],
+    "reviewedEvidence": [
+      "logs/gates-tests.log:34/34 declaration/wiring/trim tests",
+      "logs/imports.log:check:imports pass",
+      "logs/declarations.log:check:declarations pass",
+      "logs/build-fixtures.log:build:fixtures pass"
+    ],
+    "evidenceStatus": "aligned-structural",
+    "remainingBoundary": "No public durable workflow support is inferred from internal alpha availability."
+  },
+  "PKG-001": {
+    "obligations": [
+      "microdelta facade and scoped packages; coarse boundaries",
+      "Own source for own checking, declared sibling surface only"
+    ],
+    "reviewedEvidence": [
+      "logs/gates-tests.log:34/34 declaration/wiring/trim tests",
+      "logs/imports.log:check:imports pass",
+      "logs/declarations.log:check:declarations pass",
+      "logs/build-fixtures.log:build:fixtures pass",
+      "logs/wiring.log:check:wiring pass",
+      "tooling/declaration-boundaries.test.mjs",
+      "tooling/foundation-wiring.test.mjs",
+      "logs/check-packages.log:all11package strict type and type-aware lint commands pass",
+      "logs/additional-foundation.log:41/41context/quality/API-policy/formal-retirement negatives and positive controls"
+    ],
+    "evidenceStatus": "aligned-current-mechanical-gates",
+    "remainingBoundary": "Test-first historical sequence and human API review remain process evidence; no full CI/default-branch rerun asserted. Existing-scaffold paragraph is historical."
+  },
+  "PKG-002": {
+    "obligations": [
+      "TS private/# runtime/API tiers independent; do not infer secrecy"
+    ],
+    "reviewedEvidence": [
+      "logs/gates-tests.log:34/34 declaration/wiring/trim tests",
+      "logs/imports.log:check:imports pass",
+      "logs/declarations.log:check:declarations pass",
+      "logs/build-fixtures.log:build:fixtures pass",
+      "logs/wiring.log:check:wiring pass",
+      "tooling/declaration-boundaries.test.mjs",
+      "tooling/foundation-wiring.test.mjs"
+    ],
+    "evidenceStatus": "aligned-current-mechanical-gates",
+    "remainingBoundary": "Test-first historical sequence and human API review remain process evidence; no full CI/default-branch rerun asserted. Existing-scaffold paragraph is historical."
+  },
+  "PKG-003": {
+    "obligations": [
+      "internal/alpha/beta/public declaration sets; default external public",
+      "Alpha project-private; beta deliberate published opt-in; exports/types agree"
+    ],
+    "reviewedEvidence": [
+      "logs/gates-tests.log:34/34 declaration/wiring/trim tests",
+      "logs/imports.log:check:imports pass",
+      "logs/declarations.log:check:declarations pass",
+      "logs/build-fixtures.log:build:fixtures pass",
+      "logs/wiring.log:check:wiring pass",
+      "tooling/declaration-boundaries.test.mjs",
+      "tooling/foundation-wiring.test.mjs"
+    ],
+    "evidenceStatus": "aligned-current-mechanical-gates",
+    "remainingBoundary": "Test-first historical sequence and human API review remain process evidence; no full CI/default-branch rerun asserted. Existing-scaffold paragraph is historical."
+  },
+  "PKG-004": {
+    "obligations": [
+      "Own tests untrimmed only; approved sibling alpha generated paths",
+      "External normal package public/beta resolution; runtime exports separate",
+      "No missing-producer source fallback or forbidden context edge"
+    ],
+    "reviewedEvidence": [
+      "logs/gates-tests.log:34/34 declaration/wiring/trim tests",
+      "logs/imports.log:check:imports pass",
+      "logs/declarations.log:check:declarations pass",
+      "logs/build-fixtures.log:build:fixtures pass",
+      "logs/wiring.log:check:wiring pass",
+      "tooling/declaration-boundaries.test.mjs",
+      "tooling/foundation-wiring.test.mjs",
+      "logs/check-packages.log:all11package strict type and type-aware lint commands pass"
+    ],
+    "evidenceStatus": "aligned-current-mechanical-gates",
+    "remainingBoundary": "Test-first historical sequence and human API review remain process evidence; no full CI/default-branch rerun asserted. Existing-scaffold paragraph is historical."
+  },
+  "PKG-005": {
+    "obligations": [
+      "Every export intentional release tag; underscore diagnostics error",
+      "Trimmed views closed; reports protect approved signatures/tags",
+      "Import analysis still required; no runtime sandbox claim"
+    ],
+    "reviewedEvidence": [
+      "logs/gates-tests.log:34/34 declaration/wiring/trim tests",
+      "logs/imports.log:check:imports pass",
+      "logs/declarations.log:check:declarations pass",
+      "logs/build-fixtures.log:build:fixtures pass",
+      "logs/wiring.log:check:wiring pass",
+      "tooling/declaration-boundaries.test.mjs",
+      "tooling/foundation-wiring.test.mjs",
+      "logs/check-packages.log:all11package strict type and type-aware lint commands pass",
+      "logs/additional-foundation.log:41/41context/quality/API-policy/formal-retirement negatives and positive controls"
+    ],
+    "evidenceStatus": "aligned-current-mechanical-gates",
+    "remainingBoundary": "Test-first historical sequence and human API review remain process evidence; no full CI/default-branch rerun asserted. Existing-scaffold paragraph is historical."
+  },
+  "PKG-006": {
+    "obligations": [
+      "CML retired; shaped surfaces/API reports/compiler/imports govern",
+      "Structural proof does not establish freshness/publication behavior"
+    ],
+    "reviewedEvidence": [
+      "logs/gates-tests.log:34/34 declaration/wiring/trim tests",
+      "logs/imports.log:check:imports pass",
+      "logs/declarations.log:check:declarations pass",
+      "logs/build-fixtures.log:build:fixtures pass",
+      "logs/wiring.log:check:wiring pass",
+      "tooling/declaration-boundaries.test.mjs",
+      "tooling/foundation-wiring.test.mjs",
+      "logs/additional-foundation.log:41/41context/quality/API-policy/formal-retirement negatives and positive controls"
+    ],
+    "evidenceStatus": "aligned-current-mechanical-gates",
+    "remainingBoundary": "Test-first historical sequence and human API review remain process evidence; no full CI/default-branch rerun asserted. Existing-scaffold paragraph is historical."
+  },
+  "PKG-007": {
+    "obligations": [
+      "Positive/negative actual generated fixtures for all four tiers",
+      "Deep/relative/re-export/test alias/missing-producer bypasses reject",
+      "Ownership/signature/tag/edge changes detected for intended reason"
+    ],
+    "reviewedEvidence": [
+      "logs/gates-tests.log:34/34 declaration/wiring/trim tests",
+      "logs/imports.log:check:imports pass",
+      "logs/declarations.log:check:declarations pass",
+      "logs/build-fixtures.log:build:fixtures pass",
+      "logs/wiring.log:check:wiring pass",
+      "tooling/declaration-boundaries.test.mjs",
+      "tooling/foundation-wiring.test.mjs"
+    ],
+    "evidenceStatus": "aligned-current-mechanical-gates",
+    "remainingBoundary": "Test-first historical sequence and human API review remain process evidence; no full CI/default-branch rerun asserted. Existing-scaffold paragraph is historical."
+  },
+  "PKG-008": {
+    "obligations": [
+      "Strict type-aware foundation/checker wiring before experiments",
+      "Fail closed on omitted checker/producer/source bypass",
+      "Deliberately break tags/imports/typed lint and observe specific diagnostics"
+    ],
+    "reviewedEvidence": [
+      "logs/gates-tests.log:34/34 declaration/wiring/trim tests",
+      "logs/imports.log:check:imports pass",
+      "logs/declarations.log:check:declarations pass",
+      "logs/build-fixtures.log:build:fixtures pass",
+      "logs/wiring.log:check:wiring pass",
+      "tooling/declaration-boundaries.test.mjs",
+      "tooling/foundation-wiring.test.mjs",
+      "logs/check-packages.log:all11package strict type and type-aware lint commands pass",
+      "logs/additional-foundation.log:41/41context/quality/API-policy/formal-retirement negatives and positive controls"
+    ],
+    "evidenceStatus": "aligned-current-mechanical-gates",
+    "remainingBoundary": "Test-first historical sequence and human API review remain process evidence; no full CI/default-branch rerun asserted. Existing-scaffold paragraph is historical."
+  },
+  "experiments": {
+    "obligations": [
+      "Mechanism decisions bounded; rejected mechanism does not weaken behavior"
+    ],
+    "reviewedEvidence": [
+      "logs/experiments.log"
+    ],
+    "evidenceStatus": "bounded-experiments-currently-pass",
+    "remainingBoundary": "Adoption chronology and historical reviewer acceptance are separate evidence."
+  },
+  "EXP-0": {
+    "obligations": [
+      "Assertions before mechanism; versions/commands/results/counterexamples/limits retained",
+      "Controlled fake paid work only; bounded domain/candidate set",
+      "Report pass/reject/inconclusive honestly; prerequisite foundation and host contracts"
+    ],
+    "reviewedEvidence": [
+      "logs/experiments.log",
+      "experiments/*/protocol.md and decision records",
+      "logs/wiring.log"
+    ],
+    "evidenceStatus": "current-rerun-pass-history-review-required",
+    "remainingBoundary": "Exact historical assertion-before-implementation sequence is not inferable from current green tests."
+  },
+  "EXP-1": {
+    "obligations": [
+      "Fresh-process structural correspondence and member reordering",
+      "Consumed fields/helpers invalidate; unread/labels do not; missing/ambiguous miss",
+      "Tracked captures and compatibility version validate without storing live tags"
+    ],
+    "reviewedEvidence": [
+      "logs/experiments.log",
+      "experiments/exp-1/test",
+      "experiments/exp-1/README.md"
+    ],
+    "evidenceStatus": "executed-bounded-pass",
+    "remainingBoundary": "Experiment is mechanism evidence, not runtime qualification. Decision documents/outputs and their owning contract amendments need historical adoption review. No universal closure/SQLite/native-type proof."
+  },
+  "EXP-2": {
+    "obligations": [
+      "Value observation table and canonical/snapshot distinction",
+      "Roundtrip/path/SHA/duplicates/unsupported-data negatives",
+      "Fingerprint-only no payload with positive control; scalar/materialized observations"
+    ],
+    "reviewedEvidence": [
+      "logs/experiments.log",
+      "experiments/exp-2/test",
+      "experiments/exp-2/README.md"
+    ],
+    "evidenceStatus": "executed-bounded-pass",
+    "remainingBoundary": "Experiment is mechanism evidence, not runtime qualification. Decision documents/outputs and their owning contract amendments need historical adoption review. No universal closure/SQLite/native-type proof."
+  },
+  "EXP-3": {
+    "obligations": [
+      "Kill at authoritative boundaries, exact old/new result and allocations",
+      "Stale publish/renew/release reject; failed write no completed pointer",
+      "Postcommit observer failure and lost ack do not imply recomputation"
+    ],
+    "reviewedEvidence": [
+      "logs/experiments.log",
+      "experiments/exp-3/test",
+      "experiments/exp-3/protocol.md"
+    ],
+    "evidenceStatus": "executed-bounded-pass",
+    "remainingBoundary": "Experiment is mechanism evidence, not runtime qualification. Decision documents/outputs and their owning contract amendments need historical adoption review. No universal closure/SQLite/native-type proof."
+  },
+  "EXP-4": {
+    "obligations": [
+      "Output cutoff/child hooks/current argument reconstruction",
+      "Template built once, frozen topology, duplicate key pre-work rejection",
+      "Explicit strict-fold required population and skip semantics"
+    ],
+    "reviewedEvidence": [
+      "logs/experiments.log",
+      "experiments/exp-4/test",
+      "experiments/exp-4/README.md"
+    ],
+    "evidenceStatus": "executed-bounded-pass",
+    "remainingBoundary": "Experiment is mechanism evidence, not runtime qualification. Decision documents/outputs and their owning contract amendments need historical adoption review. No universal closure/SQLite/native-type proof."
+  },
+  "EXP-8": {
+    "obligations": [
+      "Stop/no retry/no partial success; remote cancellation vs local abort",
+      "Usage durable ack once, unknown gaps, privacy-safe inspection",
+      "Wait releases permits/leases under chosen durable protocol; fake spend only"
+    ],
+    "reviewedEvidence": [
+      "logs/experiments.log",
+      "experiments/exp-8/test",
+      "experiments/exp-8/README.md"
+    ],
+    "evidenceStatus": "executed-bounded-pass",
+    "remainingBoundary": "Experiment is mechanism evidence, not runtime qualification. Decision documents/outputs and their owning contract amendments need historical adoption review. No universal closure/SQLite/native-type proof."
+  },
+  "EXP-5": {
+    "obligations": [
+      "Retired CML runnable source/checker/fixture absent from active paths"
+    ],
+    "reviewedEvidence": [
+      "package.json scripts",
+      "docs/archive/experiments/exp-5.md",
+      "logs/wiring.log",
+      "logs/additional-foundation.log:41/41context/quality/API-policy/formal-retirement negatives and positive controls"
+    ],
+    "evidenceStatus": "retired-standing-policy",
+    "remainingBoundary": "Historical finding itself is not rerun; no CML install or parser needed."
+  },
+  "EXP-6": {
+    "obligations": [
+      "Lean remains dormant unless concrete renewed need",
+      "Historical flat-record theorem does not prove general TypeScript runtime"
+    ],
+    "reviewedEvidence": [
+      "package.json scripts",
+      "docs/spec/tracking.md VAL-2",
+      "logs/additional-foundation.log:41/41context/quality/API-policy/formal-retirement negatives and positive controls"
+    ],
+    "evidenceStatus": "dormant-standing-policy",
+    "remainingBoundary": "No Lean execution permitted by ordinary audit; old finite proof remains historical."
+  },
+  "EXP-7": {
+    "obligations": [
+      "Selective concrete model states/invariants/bounds/abstractions",
+      "Failing controls, model-to-code map, scheduled crash tests before claim",
+      "Do not infer liveness/linearizability/SQLite guarantee from finite model"
+    ],
+    "reviewedEvidence": [
+      "docs/spec/execution.md PUB-004",
+      "experiments/exp-3/protocol.md"
+    ],
+    "evidenceStatus": "conditional-process-not-blanket-requirement",
+    "remainingBoundary": "No new model justified/created in this pass; old finite model historical; process audited only if new model claim is adopted."
+  },
+  "reconciliation": {
+    "obligations": [
+      "Superseded rules are not independent current requirements",
+      "Preserved product obligations reference owning current contracts",
+      "No fake lease progress/automatic unknown-cost deletion/source-alias shortcut",
+      "Coarse architecture/explicit identity/alpha paths and optional HTTP adapter cache"
+    ],
+    "reviewedEvidence": [
+      "logs/gates-tests.log:34/34 declaration/wiring/trim tests",
+      "logs/imports.log:check:imports pass",
+      "logs/declarations.log:check:declarations pass",
+      "logs/build-fixtures.log:build:fixtures pass",
+      "logs/example-matrix.log:8/8 independent-process CLI tests",
+      "logs/experiments.log",
+      "docs/spec/artifacts/source-map.csv",
+      "logs/doc-structure.log:4/4 local targets/anchors, source-map targets and explicit fixture outcomes"
+    ],
+    "evidenceStatus": "cross-reference-and-migration-process",
+    "remainingBoundary": "Every table row remains preserved in clause map with original IDs; behavior proof belongs listed owning contract, not repeated here. CLI/distributed targets explicitly deferred."
+  },
+  "validation": {
+    "obligations": [
+      "Historical checks describe M0 as of2026-09-26; no new runtime claim"
+    ],
+    "reviewedEvidence": [
+      "docs/spec/validation.md dated scope"
+    ],
+    "evidenceStatus": "dated-evidence-only",
+    "remainingBoundary": "No present runtime obligation inferred from historical4/4 tooling count or119ID count."
+  }
+}

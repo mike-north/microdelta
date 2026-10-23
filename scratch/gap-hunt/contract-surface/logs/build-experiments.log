@@ -1,0 +1,4 @@
+
+> @microdelta/workspace@0.0.0 build:experiments
+> tsc -p experiments/exp-1/tsconfig.test.json && tsc -p experiments/exp-4/tsconfig.test.json && tsc -p experiments/exp-8/tsconfig.test.json
+

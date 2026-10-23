@@ -1,0 +1,12 @@
+✔ selected current spec/README links point to existing local targets and anchors (7.917209ms)
+✔ reconciliation source map resolves every recorded active artifact (0.530333ms)
+✔ restart scenario artifact is parseable and keeps distinct explicit outcomes (1.070375ms)
+✔ active specification has unique stable requirement definitions (4.562709ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 94.35425

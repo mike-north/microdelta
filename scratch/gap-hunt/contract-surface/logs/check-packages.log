@@ -1,0 +1,158 @@
+
+> @microdelta/workspace@0.0.0 check:packages
+> npm run check --workspaces
+
+
+> @microdelta/accounting@0.0.0 check
+> concurrently --success all --names types,lint "npm run check:types" "npm run check:lint"
+
+[lint] 
+[lint] > @microdelta/accounting@0.0.0 check:lint
+[lint] > eslint .
+[lint] 
+[types] 
+[types] > @microdelta/accounting@0.0.0 check:types
+[types] > tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.portable.json
+[types] 
+[types] npm run check:types exited with code 0
+[lint] npm run check:lint exited with code 0
+
+> microdelta@0.2.0 check
+> concurrently --success all --names types,lint "npm run check:types" "npm run check:lint"
+
+[types] 
+[types] > microdelta@0.2.0 check:types
+[types] > tsc --noEmit -p tsconfig.json
+[types] 
+[lint] 
+[lint] > microdelta@0.2.0 check:lint
+[lint] > eslint .
+[lint] 
+[types] npm run check:types exited with code 0
+[lint] npm run check:lint exited with code 0
+
+> @microdelta/definition@0.2.0 check
+> concurrently --success all --names types,lint "npm run check:types" "npm run check:lint"
+
+[lint] 
+[lint] > @microdelta/definition@0.2.0 check:lint
+[lint] > eslint .
+[lint] 
+[types] 
+[types] > @microdelta/definition@0.2.0 check:types
+[types] > tsc --noEmit -p tsconfig.json
+[types] 
+[types] npm run check:types exited with code 0
+[lint] npm run check:lint exited with code 0
+
+> @microdelta/history@0.1.0 check
+> concurrently --success all --names types,lint "npm run check:types" "npm run check:lint"
+
+[types] 
+[types] > @microdelta/history@0.1.0 check:types
+[types] > tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.portable.json
+[types] 
+[lint] 
+[lint] > @microdelta/history@0.1.0 check:lint
+[lint] > eslint .
+[lint] 
+[types] npm run check:types exited with code 0
+[lint] npm run check:lint exited with code 0
+
+> @microdelta/machine@0.1.0 check
+> concurrently --success all --names types,lint "npm run check:types" "npm run check:lint"
+
+[types] 
+[types] > @microdelta/machine@0.1.0 check:types
+[types] > tsc --noEmit -p tsconfig.json
+[types] 
+[lint] 
+[lint] > @microdelta/machine@0.1.0 check:lint
+[lint] > eslint .
+[lint] 
+[types] npm run check:types exited with code 0
+[lint] npm run check:lint exited with code 0
+
+> @microdelta/machine-node@0.1.0 check
+> concurrently --success all --names types,lint "npm run check:types" "npm run check:lint"
+
+[lint] 
+[lint] > @microdelta/machine-node@0.1.0 check:lint
+[lint] > eslint .
+[lint] 
+[types] 
+[types] > @microdelta/machine-node@0.1.0 check:types
+[types] > tsc --noEmit -p tsconfig.json
+[types] 
+[types] npm run check:types exited with code 0
+[lint] npm run check:lint exited with code 0
+
+> @microdelta/materialization@0.1.1 check
+> concurrently --success all --names types,lint "npm run check:types" "npm run check:lint"
+
+[lint] 
+[lint] > @microdelta/materialization@0.1.1 check:lint
+[lint] > eslint .
+[lint] 
+[types] 
+[types] > @microdelta/materialization@0.1.1 check:types
+[types] > tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.portable.json
+[types] 
+[lint] npm run check:lint exited with code 0
+[types] npm run check:types exited with code 0
+
+> @microdelta/resolution@0.2.0 check
+> concurrently --success all --names types,lint "npm run check:types" "npm run check:lint"
+
+[lint] 
+[lint] > @microdelta/resolution@0.2.0 check:lint
+[lint] > eslint .
+[lint] 
+[types] 
+[types] > @microdelta/resolution@0.2.0 check:types
+[types] > tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.portable.json
+[types] 
+[types] npm run check:types exited with code 0
+[lint] npm run check:lint exited with code 0
+
+> @microdelta/supervision@0.2.0 check
+> concurrently --success all --names types,lint "npm run check:types" "npm run check:lint"
+
+[lint] 
+[lint] > @microdelta/supervision@0.2.0 check:lint
+[lint] > eslint .
+[lint] 
+[types] 
+[types] > @microdelta/supervision@0.2.0 check:types
+[types] > tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.portable.json
+[types] 
+[types] npm run check:types exited with code 0
+[lint] npm run check:lint exited with code 0
+
+> @microdelta/tracking@0.2.0 check
+> concurrently --success all --names types,lint "npm run check:types" "npm run check:lint"
+
+[lint] 
+[lint] > @microdelta/tracking@0.2.0 check:lint
+[lint] > eslint .
+[lint] 
+[types] 
+[types] > @microdelta/tracking@0.2.0 check:types
+[types] > tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.portable.json
+[types] 
+[types] npm run check:types exited with code 0
+[lint] npm run check:lint exited with code 0
+
+> @microdelta/value@0.1.0 check
+> concurrently --success all --names types,lint "npm run check:types" "npm run check:lint"
+
+[lint] 
+[lint] > @microdelta/value@0.1.0 check:lint
+[lint] > eslint .
+[lint] 
+[types] 
+[types] > @microdelta/value@0.1.0 check:types
+[types] > tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.portable.json
+[types] 
+[types] npm run check:types exited with code 0
+[lint] npm run check:lint exited with code 0

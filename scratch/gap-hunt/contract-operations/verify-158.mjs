@@ -1,5 +1,6 @@
 // Metadata-only support-boundary reproduction. Does not install native code,
-// change engine ranges or claim Node26 runtime support. Runs on Linux or macOS.
+// change engine ranges or measure runtime compatibility. Declared-range lag
+// alone does not imply incompatibility; owner Linux Node26 runtime tests pass.
 import assert from 'node:assert/strict';
 import {spawnSync} from 'node:child_process';
 import {readFileSync} from 'node:fs';
@@ -12,4 +13,4 @@ assert.equal(machine.dependencies['better-sqlite3'],'12.9.0');
 assert.equal(driver.node,'20.x || 22.x || 23.x || 24.x || 25.x');
 const localFacade=JSON.parse(readFileSync('packages/core/package.json'));
 const localMachine=JSON.parse(readFileSync('packages/machine-node/package.json'));
-console.log(JSON.stringify({node:process.version,platform:process.platform,published:{facade:facade.node,machine:machine.engines.node,driver:driver.node},local:{facade:localFacade.engines.node,machine:localMachine.engines.node,driver:localMachine.dependencies['better-sqlite3']},mismatch:'Node26 satisfies advertised >=20 but not pinned driver range',pickupScope:'accurate durable-backend support/native prerequisites documentation and checks; no engine-range change, driver switch, or Node26 support expansion'},null,2));
+console.log(JSON.stringify({node:process.version,platform:process.platform,published:{facade:facade.node,machine:machine.engines.node,driver:driver.node},local:{facade:localFacade.engines.node,machine:localMachine.engines.node,driver:localMachine.dependencies['better-sqlite3']},declaredRangeLag:'Node26 satisfies facade >=20 but is absent from pinned driver engines; this metadata is not a runtime incompatibility test',runtimeEvidence:'owner-linux-parity.md reports Linuxaarch64 Node26.12.1 independently installed bindings and main full npm test PASS; earlier macOS26.12.0 SDK linker failure is host-specific',pickupScope:'accurate durable-backend support/native prerequisites documentation and checks; no engine-range change, driver switch, or Node26 support expansion'},null,2));

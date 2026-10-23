@@ -27,3 +27,5 @@ Fresh macOS manager download boundary: pnpm10 runner completed; a freshly instal
 These checks diagnose the immutable published0.2.0 release. Any implementation documentation must state which published version it describes; no package mutation/publication is part of this pickup.
 
 Fresh macOS fallback result: both manager versions passed unapproved negative controls, public memory smoke and approved cold1/published then independent restart0/reused exact reference. `verify-157.log` captures the result. This run used `PNPM12_BIN` pointing to the existing exact12.10.1 executable; it does not validate default fresh pnpm12 launch.
+
+Owner Linux parity update: owner-linux-parity.md reports npm install/build/main test success on24.13.0 and26.12.1. Those npm runs do not exercise pnpm10/12 approvals, so the Linux pnpm acceptance boundary here is unchanged.

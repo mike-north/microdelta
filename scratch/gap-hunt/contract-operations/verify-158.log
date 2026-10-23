@@ -11,6 +11,7 @@
     "machine": ">=20",
     "driver": "12.9.0"
   },
-  "mismatch": "Node26 satisfies advertised >=20 but not pinned driver range",
+  "declaredRangeLag": "Node26 satisfies facade >=20 but is absent from pinned driver engines; this metadata is not a runtime incompatibility test",
+  "runtimeEvidence": "owner-linux-parity.md reports Linuxaarch64 Node26.12.1 independently installed bindings and main full npm test PASS; earlier macOS26.12.0 SDK linker failure is host-specific",
   "pickupScope": "accurate durable-backend support/native prerequisites documentation and checks; no engine-range change, driver switch, or Node26 support expansion"
 }

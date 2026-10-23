@@ -61,7 +61,9 @@ await assertion('prepare', 'experiments/exp-2/materialization.test.ts', 'explici
 await assertion('scalarLoading', 'experiments/exp-2/materialization.test.ts', 'fingerprint-only verification makes zero payload reads; positive control really reads', 'Experimental scalar fingerprint check performs zero payload reads, with read-positive control.', 'semantic-exp2.log');
 await assertion('nestedLoading', 'experiments/exp-nested/test/nested-sqlite.test.ts', 'view creation, navigation and selected leaves read no root, sibling or unrelated subtree payload', 'Separate-process SQLite nested fixture limits returned payload cells to selected leaf; not disk-page IO or scale evidence.', 'semantic-expnested.log');
 await assertion('nestedMetadata', 'experiments/exp-nested/test/nested-sqlite.test.ts', 'metadata comparison in a fresh process performs zero payload fallback', 'Fresh-process nested SQLite fingerprint comparison requests zero payload fallback.', 'semantic-expnested.log');
+await assertion('ranking', 'packages/tracking/test/gap-hunt-contracts-invalidation.test.ts', 'TRK-5 ordered ranking changes with selected scores and ignores unselected member fields', 'Explicit ranked key sequence reads keys/scores only; changed selected score invalidates while changed unselected avatar fields compare equal.', 'tracking-results.log');
 const blockEvidence = {
+ 'docs/spec/tracking.md:70': ['ranking'],
  'docs/spec/composition.md:34': ['supplied','slotMissing','slotAmbiguous'],
  'docs/spec/composition.md:51': ['topology','memberBinding','keyed'],
  'docs/spec/composition.md:82': ['supplied','slotMissing','slotAmbiguous'],

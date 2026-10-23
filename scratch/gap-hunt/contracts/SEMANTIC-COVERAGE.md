@@ -3,10 +3,10 @@
 Implementer: Codex worker (gpt-6.1-sol), operating for Mike North.
 
 `semantic-clauses.json` retains all 178 non-code paragraph/table blocks of
-`tracking.md`, `composition.md`, and `glossary.md`. Forty-six named assertion anchors
+`tracking.md`, `composition.md`, and `glossary.md`. Forty-seven named assertion anchors
 record the concrete behavior they establish and the actual execution log. This is
-an exhaustive clause inventory, **not complete normative certification**: 98 blocks
-have bounded semantic assertion evidence, 47 remain explicitly uncovered by this
+an exhaustive clause inventory, **not complete normative certification**: 99 blocks
+have bounded semantic assertion evidence, 46 remain explicitly uncovered by this
 audit, and 33 are structural text. Every partial block explicitly leaves all
 unproved sub-obligations uncovered. An uncovered block is not itself a defect or
 proof that the repository lacks a relevant test. Literal requirement-ID references
@@ -70,3 +70,7 @@ EXP-2 value/loading fixtures 28/28, nested SQLite navigation fixtures 12/12.
 Operational glossary entries link the durability worker ledger at commit bfb1cc3
 and preserve its suite-level limits. Lean historical prose remains dormant;
 selected experimental evidence is never represented as production rollout proof.
+
+An additional ordered-ranking operation assertion passes: selected score changes
+invalidate, while unselected avatar edits preserve the ranked-key consumer evidence.
+The focused precision matrix now has 13 passing assertions (`tracking-results.log`).

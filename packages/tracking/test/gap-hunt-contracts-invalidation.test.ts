@@ -93,3 +93,23 @@ describe('gap hunt TRK-5 invalidation matrix', () => {
     expect(subject.compareCurrent(capture, current({ name: 'Ada', unread: 'changed' })).kind).toBe('equal');
   });
 });
+
+/** Ordered ranking reads only its explicit keys and scores; member payloads remain separate facts. */
+test('TRK-5 ordered ranking changes with selected scores and ignores unselected member fields', () => {
+  const subject = observer();
+  const root = { members: [{ key: 'a', score: 2, avatar: 'old-a' }, { key: 'b', score: 1, avatar: 'old-b' }] };
+  const input = subject.tracked(root, { path: ['ranking'] });
+  const capture = subject.capture(() => {
+    const selected: { key: string; score: number }[] = [];
+    for (let index = 0; index < input.members.length; index += 1) {
+      const member = input.members[index];
+      if (member !== undefined) { selected.push({ key: member.key, score: member.score }); }
+    }
+    selected.sort((left, right) => right.score - left.score);
+    return selected.map(member => member.key);
+  });
+  expect(capture.value).toEqual(['a', 'b']);
+  expect(subject.compareCurrent(capture, current({ members: root.members.map(member => ({ ...member, avatar: 'new' })) })).kind).toBe('equal');
+  expect(subject.compareCurrent(capture, current({ members: [{ key: 'a', score: 0, avatar: 'old-a' }, root.members[1]] })).kind).toBe('changed');
+  expect(JSON.stringify(capture.observations)).not.toContain('avatar');
+});

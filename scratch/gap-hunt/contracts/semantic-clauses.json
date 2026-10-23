@@ -328,6 +328,13 @@
       "title": "metadata comparison in a fresh process performs zero payload fallback",
       "proves": "Fresh-process nested SQLite fingerprint comparison requests zero payload fallback.",
       "executionLog": "scratch/gap-hunt/contracts/semantic-expnested.log"
+    },
+    "ranking": {
+      "file": "packages/tracking/test/gap-hunt-contracts-invalidation.test.ts",
+      "line": 98,
+      "title": "TRK-5 ordered ranking changes with selected scores and ignores unselected member fields",
+      "proves": "Explicit ranked key sequence reads keys/scores only; changed selected score invalidates while changed unselected avatar fields compare equal.",
+      "executionLog": "scratch/gap-hunt/contracts/tracking-results.log"
     }
   },
   "blocks": [
@@ -2294,10 +2301,12 @@
       "owner": "TRK-5",
       "clause": "| Ordered ranking/list | Selected ordered sequence | Unselected member fields | Rank change invalidates ranking consumers |",
       "obligationKind": "normative-or-bounded-selected-contract",
-      "status": "explicit-uncovered",
-      "executedAssertionIds": [],
+      "status": "bounded-assertions-with-explicit-uncovered-remainder",
+      "executedAssertionIds": [
+        "ranking"
+      ],
       "otherOwnerEvidence": null,
-      "uncoveredBehavior": "No independently reviewed executed assertion established this exact clause in this audit. This is an audit coverage gap, not proof the implementation lacks tests or behavior."
+      "uncoveredBehavior": "Every sub-obligation in this exact clause beyond the bounded proves statements of the linked assertions is explicitly uncovered by this semantic audit. Do not count the whole clause or owner as passed."
     },
     {
       "key": "docs/spec/tracking.md:71",

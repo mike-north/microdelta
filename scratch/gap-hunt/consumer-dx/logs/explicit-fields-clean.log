@@ -1,0 +1,101 @@
+{
+  "context": {
+    "runId": "run:5555677e06d03e9703e3f7be99b45e4f",
+    "analysis": "github-report",
+    "environment": "synthetic"
+  },
+  "value": {
+    "template": "pull-request",
+    "step": "assessment",
+    "discovery": {
+      "kind": "keyed",
+      "collection": {
+        "scope": "github-report",
+        "role": "step",
+        "slot": "discovery"
+      },
+      "reference": {
+        "kind": "completed-result",
+        "locator": "mdh1|[\"dx\",\"github-report\",\"synthetic\",1]"
+      },
+      "completion": "complete",
+      "keys": [
+        "pr:1",
+        "pr:2",
+        "pr:3",
+        "pr:4"
+      ]
+    },
+    "members": [
+      {
+        "status": "failed",
+        "key": "pr:1",
+        "step": {
+          "scope": "github-report",
+          "role": "step",
+          "slot": "assessment",
+          "template": "pull-request",
+          "collection": "discovery",
+          "memberKey": "pr:1"
+        },
+        "error": {
+          "code": "unsupported-result",
+          "name": "ResolutionError"
+        }
+      },
+      {
+        "status": "failed",
+        "key": "pr:2",
+        "step": {
+          "scope": "github-report",
+          "role": "step",
+          "slot": "assessment",
+          "template": "pull-request",
+          "collection": "discovery",
+          "memberKey": "pr:2"
+        },
+        "error": {
+          "code": "unsupported-result",
+          "name": "ResolutionError"
+        }
+      },
+      {
+        "status": "failed",
+        "key": "pr:3",
+        "step": {
+          "scope": "github-report",
+          "role": "step",
+          "slot": "assessment",
+          "template": "pull-request",
+          "collection": "discovery",
+          "memberKey": "pr:3"
+        },
+        "error": {
+          "code": "unsupported-result",
+          "name": "ResolutionError"
+        }
+      },
+      {
+        "status": "failed",
+        "key": "pr:4",
+        "step": {
+          "scope": "github-report",
+          "role": "step",
+          "slot": "assessment",
+          "template": "pull-request",
+          "collection": "discovery",
+          "memberKey": "pr:4"
+        },
+        "error": {
+          "code": "unsupported-result",
+          "name": "ResolutionError"
+        }
+      }
+    ]
+  },
+  "diagnostics": [],
+  "stop": {
+    "level": "none"
+  },
+  "interruptions": []
+}

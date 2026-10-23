@@ -1,0 +1,28 @@
+file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/resolution/dist/src/resolution.js:817
+            throw new ResolutionError('wrong-intent', `Request key ${requestKey} already identifies a different execution of ${stepKey(step)}`, error);
+                  ^
+
+ResolutionError: Request key request:1 already identifies a different execution of ["github-report","step","assessment","pr:1","pull-request","discovery"]
+    at conflict (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/resolution/dist/src/resolution.js:817:19)
+    at unusedIdentity (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/resolution/dist/src/resolution.js:864:20)
+    at freshIdentity (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/resolution/dist/src/resolution.js:831:16)
+    ... 3 lines matching cause stack trace ...
+    at async member (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/resolution/dist/src/resolution.js:2329:72)
+    at async Object.member (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/supervision/dist/src/execution.js:123:24)
+    at async Promise.all (index 0)
+    at async settleMembers (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/resolution/dist/src/resolution.js:2340:9) {
+  code: 'wrong-intent',
+  [cause]: AttemptConflictError: Attempt key mdr1:883cea8e72fbf2255d53d0d958ec576db34594381f5c5f8961cc6f602e2a89c5 already identifies a different execution intent or version
+      at assertSameExecution (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/history/dist/src/durable/index.js:454:19)
+      at Object.recoverAttempt (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/history/dist/src/durable/index.js:655:13)
+      at file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/resolution/dist/src/resolution.js:861:45
+      at integrity (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/resolution/dist/src/resolution.js:217:16)
+      at unusedIdentity (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/resolution/dist/src/resolution.js:861:21)
+      at freshIdentity (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/resolution/dist/src/resolution.js:831:16)
+      at resolveMemo (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/resolution/dist/src/resolution.js:1747:26)
+      at resolveMemoShared (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/resolution/dist/src/resolution.js:1707:59)
+      at resolveInstance (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/resolution/dist/src/resolution.js:2222:21)
+      at async member (file:///Users/mnorth/stripe/microdelta/.worktrees/gap-hunt-dx/packages/resolution/dist/src/resolution.js:2329:72)
+}
+
+Node.js v24.22.1

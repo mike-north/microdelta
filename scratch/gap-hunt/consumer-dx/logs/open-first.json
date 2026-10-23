@@ -1,0 +1,217 @@
+{
+  "context": {
+    "runId": "run:013a444d0f34a824ef69cb97588aeea9",
+    "analysis": "github-report",
+    "environment": "synthetic"
+  },
+  "value": {
+    "template": "pull-request",
+    "step": "assessment",
+    "discovery": {
+      "kind": "keyed",
+      "collection": {
+        "scope": "github-report",
+        "role": "step",
+        "slot": "discovery"
+      },
+      "reference": {
+        "kind": "completed-result",
+        "locator": "mdh1|[\"dx\",\"github-report\",\"synthetic\",1]"
+      },
+      "completion": "open",
+      "keys": [
+        "pr:1",
+        "pr:2"
+      ]
+    },
+    "members": [
+      {
+        "status": "succeeded",
+        "key": "pr:1",
+        "step": {
+          "scope": "github-report",
+          "role": "step",
+          "slot": "assessment",
+          "memberKey": "pr:1",
+          "template": "pull-request",
+          "collection": "discovery"
+        },
+        "outcome": {
+          "step": {
+            "scope": "github-report",
+            "role": "step",
+            "slot": "assessment",
+            "memberKey": "pr:1",
+            "template": "pull-request",
+            "collection": "discovery"
+          },
+          "misses": [],
+          "trace": [
+            {
+              "step": {
+                "scope": "github-report",
+                "role": "step",
+                "slot": "assessment",
+                "memberKey": "pr:1",
+                "template": "pull-request",
+                "collection": "discovery"
+              },
+              "phase": "verify"
+            },
+            {
+              "step": {
+                "scope": "github-report",
+                "role": "step",
+                "slot": "assessment",
+                "memberKey": "pr:1",
+                "template": "pull-request",
+                "collection": "discovery"
+              },
+              "phase": "admit"
+            },
+            {
+              "step": {
+                "scope": "github-report",
+                "role": "step",
+                "slot": "assessment",
+                "memberKey": "pr:1",
+                "template": "pull-request",
+                "collection": "discovery"
+              },
+              "phase": "claim"
+            },
+            {
+              "step": {
+                "scope": "github-report",
+                "role": "step",
+                "slot": "assessment",
+                "memberKey": "pr:1",
+                "template": "pull-request",
+                "collection": "discovery"
+              },
+              "phase": "execute"
+            },
+            {
+              "step": {
+                "scope": "github-report",
+                "role": "step",
+                "slot": "assessment",
+                "memberKey": "pr:1",
+                "template": "pull-request",
+                "collection": "discovery"
+              },
+              "phase": "publish",
+              "reference": {
+                "kind": "completed-result",
+                "locator": "mdh1|[\"dx\",\"github-report\",\"synthetic\",2]"
+              }
+            }
+          ],
+          "diagnostics": [],
+          "kind": "published",
+          "reference": {
+            "kind": "completed-result",
+            "locator": "mdh1|[\"dx\",\"github-report\",\"synthetic\",2]"
+          },
+          "attemptId": 2
+        }
+      },
+      {
+        "status": "succeeded",
+        "key": "pr:2",
+        "step": {
+          "scope": "github-report",
+          "role": "step",
+          "slot": "assessment",
+          "memberKey": "pr:2",
+          "template": "pull-request",
+          "collection": "discovery"
+        },
+        "outcome": {
+          "step": {
+            "scope": "github-report",
+            "role": "step",
+            "slot": "assessment",
+            "memberKey": "pr:2",
+            "template": "pull-request",
+            "collection": "discovery"
+          },
+          "misses": [],
+          "trace": [
+            {
+              "step": {
+                "scope": "github-report",
+                "role": "step",
+                "slot": "assessment",
+                "memberKey": "pr:2",
+                "template": "pull-request",
+                "collection": "discovery"
+              },
+              "phase": "verify"
+            },
+            {
+              "step": {
+                "scope": "github-report",
+                "role": "step",
+                "slot": "assessment",
+                "memberKey": "pr:2",
+                "template": "pull-request",
+                "collection": "discovery"
+              },
+              "phase": "admit"
+            },
+            {
+              "step": {
+                "scope": "github-report",
+                "role": "step",
+                "slot": "assessment",
+                "memberKey": "pr:2",
+                "template": "pull-request",
+                "collection": "discovery"
+              },
+              "phase": "claim"
+            },
+            {
+              "step": {
+                "scope": "github-report",
+                "role": "step",
+                "slot": "assessment",
+                "memberKey": "pr:2",
+                "template": "pull-request",
+                "collection": "discovery"
+              },
+              "phase": "execute"
+            },
+            {
+              "step": {
+                "scope": "github-report",
+                "role": "step",
+                "slot": "assessment",
+                "memberKey": "pr:2",
+                "template": "pull-request",
+                "collection": "discovery"
+              },
+              "phase": "publish",
+              "reference": {
+                "kind": "completed-result",
+                "locator": "mdh1|[\"dx\",\"github-report\",\"synthetic\",3]"
+              }
+            }
+          ],
+          "diagnostics": [],
+          "kind": "published",
+          "reference": {
+            "kind": "completed-result",
+            "locator": "mdh1|[\"dx\",\"github-report\",\"synthetic\",3]"
+          },
+          "attemptId": 3
+        }
+      }
+    ]
+  },
+  "diagnostics": [],
+  "stop": {
+    "level": "none"
+  },
+  "interruptions": []
+}

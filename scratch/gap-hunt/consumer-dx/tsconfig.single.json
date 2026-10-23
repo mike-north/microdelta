@@ -1,0 +1,5 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": { "noEmit": true, "baseUrl": "../../..", "paths": { "microdelta": ["packages/core/dist/api/microdelta.alpha.d.ts"] } },
+  "files": ["first-attempt.ts"]
+}

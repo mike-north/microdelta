@@ -1,0 +1,15 @@
+# Next focused delivered-behavior assertions
+
+Two settled operational sub-obligations deserve additional concrete tests in the currently inspected evidence. These are limited follow-ups, not a claim that no test anywhere covers them; the named existing cases establish the precise current boundary. No new implementation policy is needed for either.
+
+1. **RUN001 cleanup itself throws during lazy termination.** Existing gap-hunt-durability-lazy normal/return/throw cases verify successful finally cleanup; the concurrent case throws before finally but finally itself succeeds. Add an awaited generator whose finally throws after an await, including explicit return termination. Assert ordinary failure, parent restored, concurrently suspended sibling retains its own run/environment through resume/cleanup, and late work still rejects. This tests the already-settled “errors and cleanup preserve parent/sibling scopes” requirement without deciding detached returned-iterator ownership.
+2. **ACC008 usage-display invariance through automatic deferral/retry and explicit admission.** Current paired observer scenario has three successful requests with one missing usage report. Existing operations/boundaries tests establish durable retry timing, writer release/reacquisition, stop and admission separately. Compare independent identical controlled-clock quota/deferral scenarios with a read-only usage display absent/present: same request counts, durable not-before times, operation identity, outcomes, observed/unknown totals and refusal when an explicit author gate is installed. The observer must never grant retry permission or change an installed gate. Use existing operation fixtures; do not create another scheduler.
+
+Do not prioritize duplicate tests for these already-explicit assertions:
+
+- PUB002 endpoint equality: concurrency/interleavings W4 already covers independent-process T-1/T allocate/renew, and the focused expiry case extends the matrix to stage/publish/release. W3 and durable-history clock cases cover persisted high-water and stale fence authority.
+- RUN014 supported M5 writer-wait stop ownership: gap-hunt-durability-waiter covers live owner on same store/target, plus existing workspace/writer-wait hard stop and operations/boundaries soft-stop-during-woken-lease-wait. Arbitrary per-consumer cancellation of simultaneously shared work remains an owner/mechanism question, not a test to invent.
+- ACC008/RES006 deletion: current durable API has no cleanup operation, deletion triggers are unconditional and existing named storage/ref-retention tests pass. Currency-sensitive future cleanup needs a contract if introduced.
+- Missing preview/state/CLI surfaces require owner decisions and then behavioral test-first implementation; baseline surface snapshots are diagnostics only.
+
+No additional suites were executed to write this selection. Evidence reviewed: FOCUSED-CLAUSES.md, RETENTION-CANCELLATION.md, the current lazy/observer tests and named operations/boundaries assertions.

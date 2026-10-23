@@ -1,6 +1,6 @@
 """Replay frozen residual import checks and prove sensitivity to the old rule."""
 from pathlib import Path
-import hashlib,json,os,re,subprocess
+import hashlib,json,os,platform,re,subprocess
 ROOT=Path(__file__).resolve().parents[3]
 PREFIX='scratch/gap-hunt/review-179-second-repair/'
 PIN='88f9b35830bf3f35368e8685155e0d7284dad383'
@@ -35,6 +35,6 @@ def main():
  finally:rule.write_bytes(actual)
  assert rule.read_bytes()==actual
  witnesses('restored',0);run('restored-import-check',['npm','run','check:imports']);guard()
- result={'head':git('rev-parse','HEAD').decode().strip(),'reviewed_pin':PIN,'original_witness_pin':manifest['pin'],'original_files_byte_exact':True,'residual':{'passed':4,'failed':0},'shadowed_require_errors':0,'official_rule_tests_passed':14,'official_import_check':'pass','old_rule_residual':{'passed':3,'failed':1},'old_rule_shadowed_require_errors':1,'rule_restored_byte_exact':True,'rule_sha256':sha(actual),'previous_rule_sha256':sha(previous),'verdict':'PASS for the two reported residuals at the reviewed source','scope':'Node24 macOS tooling/source-check and ESM resolution only; no fullCI, Linux, moduleexecution, release or universalcheckercoverage'}
+ result={'head':git('rev-parse','HEAD').decode().strip(),'reviewed_pin':PIN,'original_witness_pin':manifest['pin'],'original_files_byte_exact':True,'residual':{'passed':4,'failed':0},'shadowed_require_errors':0,'official_rule_tests_passed':14,'official_import_check':'pass','old_rule_residual':{'passed':3,'failed':1},'old_rule_shadowed_require_errors':1,'rule_restored_byte_exact':True,'rule_sha256':sha(actual),'previous_rule_sha256':sha(previous),'verdict':'PASS for the two reported residuals at the reviewed source','environment':{'platform':platform.platform(),'architecture':platform.machine(),'node':subprocess.check_output(['node','--version']).decode().strip(),'npm':subprocess.check_output(['npm','--version']).decode().strip()},'scope':'tooling/source-check and ESM resolution on the recorded host only; no fullCI, unexecuted host, moduleexecution, release or universalcheckercoverage'}
  (OUT/'summary.json').write_text(json.dumps(result,indent=2)+'\n');print(json.dumps(result,indent=2))
 if __name__=='__main__':main()

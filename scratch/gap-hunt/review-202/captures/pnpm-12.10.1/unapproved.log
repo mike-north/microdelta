@@ -1,0 +1,46 @@
+/private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/bindings@1.5.0/node_modules/bindings/bindings.js:126
+  err = new Error(
+        ^
+
+Error: Could not locate the bindings file. Tried:
+ → /private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/build/better_sqlite3.node
+ → /private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/build/Debug/better_sqlite3.node
+ → /private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/build/Release/better_sqlite3.node
+ → /private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/out/Debug/better_sqlite3.node
+ → /private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/Debug/better_sqlite3.node
+ → /private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/out/Release/better_sqlite3.node
+ → /private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/Release/better_sqlite3.node
+ → /private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/build/default/better_sqlite3.node
+ → /private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/compiled/24.22.1/darwin/arm64/better_sqlite3.node
+ → /private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node
+ → /private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node
+ → /private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node
+ → /private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/lib/binding/node-v137-darwin-arm64/better_sqlite3.node
+    at bindings (/private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/bindings@1.5.0/node_modules/bindings/bindings.js:126:9)
+    at new Database (/private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/lib/database.js:48:64)
+    at openConnection (file:///private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/@microdelta+machine-node@0.1.0/node_modules/@microdelta/machine-node/dist/src/node/sqlite.js:51:20)
+    at Object.openSqlite (file:///private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/@microdelta+machine-node@0.1.0/node_modules/@microdelta/machine-node/dist/src/node/sqlite.js:38:20)
+    at openDurableHistory (file:///private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/@microdelta+history@0.1.0/node_modules/@microdelta/history/dist/src/durable/index.js:110:39)
+    at openWorkspace (file:///private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/microdelta@0.2.0/node_modules/microdelta/dist/src/workspace.js:107:21)
+    at file:///private<consumer-root>/pnpm-12.10.1/durable.mjs:6:9
+    at ModuleJob.run (node:internal/modules/esm/module_job:561:25)
+    at async node:internal/modules/esm/loader:647:26
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:101:5) {
+  tries: [
+    '/private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/build/better_sqlite3.node',
+    '/private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/build/Debug/better_sqlite3.node',
+    '/private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/build/Release/better_sqlite3.node',
+    '/private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/out/Debug/better_sqlite3.node',
+    '/private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/Debug/better_sqlite3.node',
+    '/private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/out/Release/better_sqlite3.node',
+    '/private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/Release/better_sqlite3.node',
+    '/private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/build/default/better_sqlite3.node',
+    '/private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/compiled/24.22.1/darwin/arm64/better_sqlite3.node',
+    '/private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/addon-build/release/install-root/better_sqlite3.node',
+    '/private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/addon-build/debug/install-root/better_sqlite3.node',
+    '/private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/addon-build/default/install-root/better_sqlite3.node',
+    '/private<consumer-root>/pnpm-12.10.1/node_modules/.pnpm/better-sqlite3@12.9.0/node_modules/better-sqlite3/lib/binding/node-v137-darwin-arm64/better_sqlite3.node'
+  ]
+}
+
+Node.js v24.22.1

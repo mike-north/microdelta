@@ -1,0 +1,282 @@
+{
+  "source": "09da3b0b05eaff0563faa70ba68c44107508ed7b",
+  "runtime": "macOS arm64 Node24.22.1",
+  "command": "PNPM12_BIN=<existing verified12.10.1> bash -x scratch/gap-hunt/contract-operations/verify-157.sh",
+  "exit": 0,
+  "runnerSha256": "b2becb9113b7ee62a2d984612000ce5c52299ec114eedece4de35eb370e7cfc7",
+  "originalRunnerPin": "0683c2ed73934d10f9b5a1ad9e0dd9e3d1a88d4f",
+  "consumerResults": [
+    {
+      "manager": "10.34.7",
+      "installExit": 0,
+      "unapprovedDurableExit": 1,
+      "publicMemory": "public-memory-ok",
+      "cold": {
+        "calls": 1,
+        "outcome": {
+          "step": {
+            "scope": "portability",
+            "role": "step",
+            "slot": "value"
+          },
+          "misses": [],
+          "trace": [
+            {
+              "step": {
+                "scope": "portability",
+                "role": "step",
+                "slot": "value"
+              },
+              "phase": "verify"
+            },
+            {
+              "step": {
+                "scope": "portability",
+                "role": "step",
+                "slot": "value"
+              },
+              "phase": "admit"
+            },
+            {
+              "step": {
+                "scope": "portability",
+                "role": "step",
+                "slot": "value"
+              },
+              "phase": "claim"
+            },
+            {
+              "step": {
+                "scope": "portability",
+                "role": "step",
+                "slot": "value"
+              },
+              "phase": "execute"
+            },
+            {
+              "step": {
+                "scope": "portability",
+                "role": "step",
+                "slot": "value"
+              },
+              "phase": "publish",
+              "reference": {
+                "kind": "completed-result",
+                "locator": "mdh1|[\"portability\",\"portability\",\"fixture\",1]"
+              }
+            }
+          ],
+          "diagnostics": [],
+          "kind": "published",
+          "reference": {
+            "kind": "completed-result",
+            "locator": "mdh1|[\"portability\",\"portability\",\"fixture\",1]"
+          },
+          "attemptId": 1
+        }
+      },
+      "restart": {
+        "calls": 0,
+        "outcome": {
+          "step": {
+            "scope": "portability",
+            "role": "step",
+            "slot": "value"
+          },
+          "misses": [],
+          "trace": [
+            {
+              "step": {
+                "scope": "portability",
+                "role": "step",
+                "slot": "value"
+              },
+              "phase": "verify"
+            },
+            {
+              "step": {
+                "scope": "portability",
+                "role": "step",
+                "slot": "value"
+              },
+              "phase": "accept",
+              "reference": {
+                "kind": "completed-result",
+                "locator": "mdh1|[\"portability\",\"portability\",\"fixture\",1]"
+              }
+            }
+          ],
+          "diagnostics": [],
+          "kind": "reused",
+          "basis": "validated",
+          "reference": {
+            "kind": "completed-result",
+            "locator": "mdh1|[\"portability\",\"portability\",\"fixture\",1]"
+          },
+          "acceptance": {
+            "acceptanceId": 1,
+            "reference": {
+              "kind": "completed-result",
+              "locator": "mdh1|[\"portability\",\"portability\",\"fixture\",1]"
+            },
+            "fence": 2,
+            "evidence": {
+              "format": "microdelta.resolution.acceptance",
+              "formatVersion": 1,
+              "content": {
+                "basis": "validated",
+                "step": {
+                  "scope": "portability",
+                  "role": "step",
+                  "slot": "value"
+                },
+                "observations": [],
+                "children": []
+              }
+            },
+            "dependencies": []
+          }
+        }
+      }
+    },
+    {
+      "manager": "12.10.1",
+      "installExit": 1,
+      "unapprovedDurableExit": 1,
+      "publicMemory": "public-memory-ok",
+      "cold": {
+        "calls": 1,
+        "outcome": {
+          "step": {
+            "scope": "portability",
+            "role": "step",
+            "slot": "value"
+          },
+          "misses": [],
+          "trace": [
+            {
+              "step": {
+                "scope": "portability",
+                "role": "step",
+                "slot": "value"
+              },
+              "phase": "verify"
+            },
+            {
+              "step": {
+                "scope": "portability",
+                "role": "step",
+                "slot": "value"
+              },
+              "phase": "admit"
+            },
+            {
+              "step": {
+                "scope": "portability",
+                "role": "step",
+                "slot": "value"
+              },
+              "phase": "claim"
+            },
+            {
+              "step": {
+                "scope": "portability",
+                "role": "step",
+                "slot": "value"
+              },
+              "phase": "execute"
+            },
+            {
+              "step": {
+                "scope": "portability",
+                "role": "step",
+                "slot": "value"
+              },
+              "phase": "publish",
+              "reference": {
+                "kind": "completed-result",
+                "locator": "mdh1|[\"portability\",\"portability\",\"fixture\",1]"
+              }
+            }
+          ],
+          "diagnostics": [],
+          "kind": "published",
+          "reference": {
+            "kind": "completed-result",
+            "locator": "mdh1|[\"portability\",\"portability\",\"fixture\",1]"
+          },
+          "attemptId": 1
+        }
+      },
+      "restart": {
+        "calls": 0,
+        "outcome": {
+          "step": {
+            "scope": "portability",
+            "role": "step",
+            "slot": "value"
+          },
+          "misses": [],
+          "trace": [
+            {
+              "step": {
+                "scope": "portability",
+                "role": "step",
+                "slot": "value"
+              },
+              "phase": "verify"
+            },
+            {
+              "step": {
+                "scope": "portability",
+                "role": "step",
+                "slot": "value"
+              },
+              "phase": "accept",
+              "reference": {
+                "kind": "completed-result",
+                "locator": "mdh1|[\"portability\",\"portability\",\"fixture\",1]"
+              }
+            }
+          ],
+          "diagnostics": [],
+          "kind": "reused",
+          "basis": "validated",
+          "reference": {
+            "kind": "completed-result",
+            "locator": "mdh1|[\"portability\",\"portability\",\"fixture\",1]"
+          },
+          "acceptance": {
+            "acceptanceId": 1,
+            "reference": {
+              "kind": "completed-result",
+              "locator": "mdh1|[\"portability\",\"portability\",\"fixture\",1]"
+            },
+            "fence": 2,
+            "evidence": {
+              "format": "microdelta.resolution.acceptance",
+              "formatVersion": 1,
+              "content": {
+                "basis": "validated",
+                "step": {
+                  "scope": "portability",
+                  "role": "step",
+                  "slot": "value"
+                },
+                "observations": [],
+                "children": []
+              }
+            },
+            "dependencies": []
+          }
+        }
+      }
+    }
+  ],
+  "captureBoundary": "Exported shell rm function copies disposable consumer artifacts at cleanup before delegating to original rm; exact runner is unedited. Manager12 uses existing exact executable. No denied default launch retried.",
+  "linux": "Owner trace digest verified; source fixture historical pin c3c0409, not independently executed in this review.",
+  "docTests": {
+    "passed": 4,
+    "failed": 0
+  }
+}

@@ -1,0 +1,116 @@
+{
+  "files": [
+    {
+      "path": "REPORT.md",
+      "sha256": "4ad019f5269ef97eda29ead47f855b89d8e21b41afa57e379fec64f7422eb0ca"
+    },
+    {
+      "path": "captures/clean-archive-replay.log",
+      "sha256": "6439d29b3fc5e3d48bf7e88aa444195f5583ed9383c4ca74e7206de434cb7e2f"
+    },
+    {
+      "path": "captures/consumer-fallback.log",
+      "sha256": "c6f3f28fead40bb6b15d841431579c05125c4aa7be00ce8118652f30aea091da"
+    },
+    {
+      "path": "captures/documentation-tests.log",
+      "sha256": "3021648a423a2543143c9fdb34a5609de33596228ec01d0e90eca0c5804374bb"
+    },
+    {
+      "path": "captures/pnpm-10.34.7/assert.mjs",
+      "sha256": "3aa79971acca74b3c2e752dfec487ec421a30d8d0394e910d4ce342c1fc8ce48"
+    },
+    {
+      "path": "captures/pnpm-10.34.7/cold.json",
+      "sha256": "a612dbece92477405e72806bc33b42dd14a26b6de19d3d0042db74222b4038d8"
+    },
+    {
+      "path": "captures/pnpm-10.34.7/durable.mjs",
+      "sha256": "638965fa2b16419c1da7fbb50368731504494e938d92c723f54190f30ad7b55e"
+    },
+    {
+      "path": "captures/pnpm-10.34.7/install.log",
+      "sha256": "60b7812f9adc75211fb9401439d29fa32552f92451372eaab8a7deae42f51018"
+    },
+    {
+      "path": "captures/pnpm-10.34.7/memory.mjs",
+      "sha256": "584cfca036d47e89801dfc4c503d3dcfafdab4549da5115bb1cfeb13ba352b4e"
+    },
+    {
+      "path": "captures/pnpm-10.34.7/package.json",
+      "sha256": "aaa9a6636bc2ab12ac0649d256c3e6adcd574c8f4713c737f6c9563395706aae"
+    },
+    {
+      "path": "captures/pnpm-10.34.7/pnpm-workspace.yaml",
+      "sha256": "9e4c88cb0da3a70ef6ff797eef9e9df59fc2ad855f6f0fbc61bb158c3be3571e"
+    },
+    {
+      "path": "captures/pnpm-10.34.7/rebuild.log",
+      "sha256": "2ef03c64602e6f72333db0a5a6a6022fae8b1c45f631b7e87b5b79ed44e43d7d"
+    },
+    {
+      "path": "captures/pnpm-10.34.7/restart.json",
+      "sha256": "a231d607fa24bb9fdad1dc793487d003448f636c1e39fec4d9b68c9a8ebba660"
+    },
+    {
+      "path": "captures/pnpm-10.34.7/unapproved.log",
+      "sha256": "ca799ea71c88f734faa2e5a9559592113271ecbc5f7b821fba34afdda25d8fd0"
+    },
+    {
+      "path": "captures/pnpm-12.10.1/assert.mjs",
+      "sha256": "3aa79971acca74b3c2e752dfec487ec421a30d8d0394e910d4ce342c1fc8ce48"
+    },
+    {
+      "path": "captures/pnpm-12.10.1/cold.json",
+      "sha256": "a612dbece92477405e72806bc33b42dd14a26b6de19d3d0042db74222b4038d8"
+    },
+    {
+      "path": "captures/pnpm-12.10.1/durable.mjs",
+      "sha256": "638965fa2b16419c1da7fbb50368731504494e938d92c723f54190f30ad7b55e"
+    },
+    {
+      "path": "captures/pnpm-12.10.1/install.log",
+      "sha256": "1c8dcbb5485c70e4a05a87da0ae4ead93c5a147e3efc7bb2d2ce3a85ffb770f1"
+    },
+    {
+      "path": "captures/pnpm-12.10.1/memory.mjs",
+      "sha256": "584cfca036d47e89801dfc4c503d3dcfafdab4549da5115bb1cfeb13ba352b4e"
+    },
+    {
+      "path": "captures/pnpm-12.10.1/package.json",
+      "sha256": "aaa9a6636bc2ab12ac0649d256c3e6adcd574c8f4713c737f6c9563395706aae"
+    },
+    {
+      "path": "captures/pnpm-12.10.1/pnpm-workspace.yaml",
+      "sha256": "9e4c88cb0da3a70ef6ff797eef9e9df59fc2ad855f6f0fbc61bb158c3be3571e"
+    },
+    {
+      "path": "captures/pnpm-12.10.1/rebuild.log",
+      "sha256": "1661f4c5cd097ed45135e3a55d8ba77f9839c3d7db9227c98437694de45dd3fc"
+    },
+    {
+      "path": "captures/pnpm-12.10.1/restart.json",
+      "sha256": "a231d607fa24bb9fdad1dc793487d003448f636c1e39fec4d9b68c9a8ebba660"
+    },
+    {
+      "path": "captures/pnpm-12.10.1/unapproved.log",
+      "sha256": "108b5b77dac3e55447e39f0a6b7e47356380568d6c7629eb42f3ad6246598f45"
+    },
+    {
+      "path": "captures/receipt.json",
+      "sha256": "6138dc836873ed98ad02c13f7aafe494226d378f8e3fc2b7e404d3c979ce24dc"
+    },
+    {
+      "path": "captures/source-links.json",
+      "sha256": "eac14b594a69f8fdb6d5d71302467a5dabc893052c911ecc607df1bdaa222b21"
+    },
+    {
+      "path": "reproduce.py",
+      "sha256": "dc3ce9dddc0f596c5368d28fa32379f86beb4e88cfe70fa78c814b08611936cf"
+    },
+    {
+      "path": "source-files.json",
+      "sha256": "cd7209a103b46e954675724ccb6d1e2911681ac8a5ac244ddb179b59f16a29e5"
+    }
+  ]
+}

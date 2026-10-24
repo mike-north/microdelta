@@ -1,0 +1,8 @@
++ <home>/.nodenv/versions/24.14.0/lib/node_modules/pnpm/pnpm --dir <consumer-root>/pnpm-12.10.1 --store-dir <consumer-root>/store-12.10.1 rebuild better-sqlite3
+✓ Lockfile passes supply-chain policies (verified 774ms ago)
+Already up to date
+.../node_modules/better-sqlite3 install$ prebuild-install || node-gyp rebuild --release
+.../node_modules/better-sqlite3 install: (node:11128) [DEP0176] DeprecationWarning: fs.R_OK is deprecated, use fs.constants.R_OK instead
+.../node_modules/better-sqlite3 install: (Use `node --trace-deprecation ...` to show where the warning was created)
+.../node_modules/better-sqlite3 install: Done
+Done in 873ms using pnpm v12.10.1

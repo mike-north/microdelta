@@ -1,0 +1,85 @@
++ set -Eeuo pipefail
+++ uname -s
++ printf 'native-approval-runner platform=%s; Linux remains unverified unless this run is Linux\n' Darwin
+native-approval-runner platform=Darwin; Linux remains unverified unless this run is Linux
++ node -e 'if(!process.versions.node.startsWith("24."))throw new Error("Use Node24.x for this reproduction");console.log(`node=${process.version} platform=${process.platform} arch=${process.arch}`)'
+node=v24.22.1 platform=darwin arch=arm64
++ case "${1:-both}" in
++ versions=(10.34.7 12.10.1)
+++ mktemp -d <consumer-root>
++ probe_root=<consumer-root>
++ trap 'rm -rf "$probe_root"' EXIT
++ trap 'code=$?; for log in "$consumer"/*.log; do if [[ -f "$log" ]]; then printf "diagnostic %s\n" "${log##*/}"; cat "$log"; fi; done; exit "$code"' ERR
++ for version in "${versions[@]}"
++ consumer=<consumer-root>/pnpm-10.34.7
++ mkdir -p <consumer-root>/pnpm-10.34.7
++ cat
++ cat
++ cat
++ manager=<consumer-root>/manager-10.34.7
++ manager_bin=
++ [[ 10.34.7 == 12.10.1 ]]
++ [[ -z '' ]]
++ npm install --prefix <consumer-root>/manager-10.34.7 --no-audit --no-fund --ignore-scripts pnpm@10.34.7
++ manager_bin=<consumer-root>/manager-10.34.7/node_modules/.bin/pnpm
+++ <consumer-root>/manager-10.34.7/node_modules/.bin/pnpm --version
+ WARN  The "workspaces" field in package.json is not supported by pnpm. Create a "pnpm-workspace.yaml" file instead.
++ [[ 10.34.7 == 10\.34\.7 ]]
++ run_pnpm install
++ install_status=0
++ node <consumer-root>/pnpm-10.34.7/durable.mjs
++ durable_status=1
++ printf 'pnpm=%s install=%s unapproved-durable=%s\n' 10.34.7 0 1
+pnpm=10.34.7 install=0 unapproved-durable=1
++ [[ 10.34.7 == 10.34.7 ]]
++ [[ 0 == 0 ]]
++ grep -q 'Ignored build scripts' <consumer-root>/pnpm-10.34.7/install.log
++ [[ 1 != 0 ]]
++ grep -q 'Could not locate the bindings file' <consumer-root>/pnpm-10.34.7/unapproved.log
++ node <consumer-root>/pnpm-10.34.7/memory.mjs
+public-memory-ok
++ cat
++ run_pnpm rebuild better-sqlite3
++ node <consumer-root>/pnpm-10.34.7/durable.mjs
++ node <consumer-root>/pnpm-10.34.7/durable.mjs
++ cat
++ node <consumer-root>/pnpm-10.34.7/assert.mjs
+{"coldCalls":1,"restartCalls":0,"exactReference":{"kind":"completed-result","locator":"mdh1|[\"portability\",\"portability\",\"fixture\",1]"}}
++ for version in "${versions[@]}"
++ consumer=<consumer-root>/pnpm-12.10.1
++ mkdir -p <consumer-root>/pnpm-12.10.1
++ cat
++ cat
++ cat
++ manager=<consumer-root>/manager-12.10.1
++ manager_bin=
++ [[ 12.10.1 == 12.10.1 ]]
++ [[ -n <home>/.nodenv/versions/24.14.0/lib/node_modules/pnpm/pnpm ]]
++ manager_bin=<home>/.nodenv/versions/24.14.0/lib/node_modules/pnpm/pnpm
++ [[ -z <home>/.nodenv/versions/24.14.0/lib/node_modules/pnpm/pnpm ]]
+++ <home>/.nodenv/versions/24.14.0/lib/node_modules/pnpm/pnpm --version
++ [[ 12.10.1 == 12\.10\.1 ]]
++ run_pnpm install
++ install_status=1
++ node <consumer-root>/pnpm-12.10.1/durable.mjs
++ durable_status=1
++ printf 'pnpm=%s install=%s unapproved-durable=%s\n' 12.10.1 1 1
+pnpm=12.10.1 install=1 unapproved-durable=1
++ [[ 12.10.1 == 10.34.7 ]]
++ [[ 1 != 0 ]]
++ grep -q ERR_PNPM_IGNORED_BUILDS <consumer-root>/pnpm-12.10.1/install.log
++ [[ 1 != 0 ]]
++ grep -q 'Could not locate the bindings file' <consumer-root>/pnpm-12.10.1/unapproved.log
++ node <consumer-root>/pnpm-12.10.1/memory.mjs
+public-memory-ok
++ cat
++ run_pnpm rebuild better-sqlite3
++ node <consumer-root>/pnpm-12.10.1/durable.mjs
++ node <consumer-root>/pnpm-12.10.1/durable.mjs
++ cat
++ node <consumer-root>/pnpm-12.10.1/assert.mjs
+{"coldCalls":1,"restartCalls":0,"exactReference":{"kind":"completed-result","locator":"mdh1|[\"portability\",\"portability\",\"fixture\",1]"}}
++ rm -rf <consumer-root>
++ case "${2:-}" in
++ cp -R -- <consumer-root>/. <repo>/.worktrees/control/pr202-consumers/
++ command rm -rf <consumer-root>

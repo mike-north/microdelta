@@ -1,0 +1,129 @@
+{
+  "allSourceFilesUnchanged": 816,
+  "localLinks": [
+    {
+      "from": "README.md",
+      "target": "examples/contribution-report/README.md"
+    },
+    {
+      "from": "README.md",
+      "target": "docs/native-sqlite-install.md"
+    },
+    {
+      "from": "README.md",
+      "target": "examples/contribution-report/README.md"
+    },
+    {
+      "from": "README.md",
+      "target": "examples/contribution-report/test/example.test.mjs"
+    },
+    {
+      "from": "README.md",
+      "target": "packages/core/README.md"
+    },
+    {
+      "from": "README.md",
+      "target": "docs/spec/tracking.md"
+    },
+    {
+      "from": "README.md",
+      "target": "docs/spec/execution.md"
+    },
+    {
+      "from": "README.md",
+      "target": "docs/spec/execution.md#reuse-001--reuse-is-a-current-contextual-decision"
+    },
+    {
+      "from": "README.md",
+      "target": "docs/spec/tracking.md#structured-addresses-and-fingerprints"
+    },
+    {
+      "from": "README.md",
+      "target": "docs/package-map.md"
+    },
+    {
+      "from": "README.md",
+      "target": "docs/validation/first-release-2026-09-28.md"
+    },
+    {
+      "from": "README.md",
+      "target": "examples/contribution-report/README.md"
+    },
+    {
+      "from": "README.md",
+      "target": "packages/core/README.md"
+    },
+    {
+      "from": "README.md",
+      "target": "docs/package-map.md"
+    },
+    {
+      "from": "README.md",
+      "target": "docs/spec/README.md"
+    },
+    {
+      "from": "README.md",
+      "target": "docs/spec/glossary.md"
+    },
+    {
+      "from": "README.md",
+      "target": "docs/milestones.md"
+    },
+    {
+      "from": "README.md",
+      "target": "ENG_TEAM_INSTRUCTIONS.md"
+    },
+    {
+      "from": "README.md",
+      "target": "docs/releasing.md"
+    },
+    {
+      "from": "packages/core/README.md",
+      "target": "../../docs/package-map.md"
+    },
+    {
+      "from": "packages/core/README.md",
+      "target": "../../docs/spec/README.md"
+    },
+    {
+      "from": "packages/core/README.md",
+      "target": "../../docs/native-sqlite-install.md"
+    },
+    {
+      "from": "packages/core/README.md",
+      "target": "../../examples/contribution-report/README.md"
+    },
+    {
+      "from": "packages/core/README.md",
+      "target": "../../docs/validation/m3-acceptance-2026-09-28.md"
+    },
+    {
+      "from": "packages/core/README.md",
+      "target": "../../docs/validation/m4-acceptance-2026-09-29.md"
+    },
+    {
+      "from": "examples/contribution-report/README.md",
+      "target": "../../docs/native-sqlite-install.md"
+    },
+    {
+      "from": "docs/native-sqlite-install.md",
+      "target": "../scratch/gap-hunt/contract-operations/verify-157.sh"
+    },
+    {
+      "from": "docs/native-sqlite-install.md",
+      "target": "validation/pnpm-native-approval-2026-10-23.md"
+    },
+    {
+      "from": "docs/native-sqlite-install.md",
+      "target": "validation/pnpm-native-approval-2026-10-23.md#linux-arm64-node-24-control"
+    },
+    {
+      "from": "docs/validation/pnpm-native-approval-2026-10-23.md",
+      "target": "../../scratch/gap-hunt/contract-operations/verify-157.sh"
+    },
+    {
+      "from": "docs/validation/pnpm-native-approval-2026-10-23.md",
+      "target": "pnpm-native-linux-node24-2026-10-23.log"
+    }
+  ]
+}

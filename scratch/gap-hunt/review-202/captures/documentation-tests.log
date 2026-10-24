@@ -1,0 +1,12 @@
+✔ all three onboarding entry points link the native install guide (4.37775ms)
+✔ the guide states the targeted approval workflow and negative controls (0.981959ms)
+✔ Linux proof identifies its exact container and keeps the result bounded (0.485084ms)
+✔ the unchanged portable fixture remains available for platform-specific acceptance (0.678167ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 61.71575

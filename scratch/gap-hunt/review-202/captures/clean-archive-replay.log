@@ -1,0 +1,95 @@
+✔ all three onboarding entry points link the native install guide (1.543875ms)
+✔ the guide states the targeted approval workflow and negative controls (0.449291ms)
+✔ Linux proof identifies its exact container and keeps the result bounded (0.26825ms)
+✔ the unchanged portable fixture remains available for platform-specific acceptance (0.975916ms)
+ℹ tests 4
+ℹ suites 0
+ℹ pass 4
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 54.017292
++ set -Eeuo pipefail
+++ uname -s
++ printf 'native-approval-runner platform=%s; Linux remains unverified unless this run is Linux\n' Darwin
+native-approval-runner platform=Darwin; Linux remains unverified unless this run is Linux
++ node -e 'if(!process.versions.node.startsWith("24."))throw new Error("Use Node24.x for this reproduction");console.log(`node=${process.version} platform=${process.platform} arch=${process.arch}`)'
+node=v24.22.1 platform=darwin arch=arm64
++ case "${1:-both}" in
++ versions=(10.34.7 12.10.1)
+++ mktemp -d <consumer-root>
++ probe_root=<consumer-root>
++ trap 'rm -rf "$probe_root"' EXIT
++ trap 'code=$?; for log in "$consumer"/*.log; do if [[ -f "$log" ]]; then printf "diagnostic %s\n" "${log##*/}"; cat "$log"; fi; done; exit "$code"' ERR
++ for version in "${versions[@]}"
++ consumer=<consumer-root>/pnpm-10.34.7
++ mkdir -p <consumer-root>/pnpm-10.34.7
++ cat
++ cat
++ cat
++ manager=<consumer-root>/manager-10.34.7
++ manager_bin=
++ [[ 10.34.7 == 12.10.1 ]]
++ [[ -z '' ]]
++ npm install --prefix <consumer-root>/manager-10.34.7 --no-audit --no-fund --ignore-scripts pnpm@10.34.7
++ manager_bin=<consumer-root>/manager-10.34.7/node_modules/.bin/pnpm
+++ <consumer-root>/manager-10.34.7/node_modules/.bin/pnpm --version
+ WARN  The "workspaces" field in package.json is not supported by pnpm. Create a "pnpm-workspace.yaml" file instead.
++ [[ 10.34.7 == 10\.34\.7 ]]
++ run_pnpm install
++ install_status=0
++ node <consumer-root>/pnpm-10.34.7/durable.mjs
++ durable_status=1
++ printf 'pnpm=%s install=%s unapproved-durable=%s\n' 10.34.7 0 1
+pnpm=10.34.7 install=0 unapproved-durable=1
++ [[ 10.34.7 == 10.34.7 ]]
++ [[ 0 == 0 ]]
++ grep -q 'Ignored build scripts' <consumer-root>/pnpm-10.34.7/install.log
++ [[ 1 != 0 ]]
++ grep -q 'Could not locate the bindings file' <consumer-root>/pnpm-10.34.7/unapproved.log
++ node <consumer-root>/pnpm-10.34.7/memory.mjs
+public-memory-ok
++ cat
++ run_pnpm rebuild better-sqlite3
++ node <consumer-root>/pnpm-10.34.7/durable.mjs
++ node <consumer-root>/pnpm-10.34.7/durable.mjs
++ cat
++ node <consumer-root>/pnpm-10.34.7/assert.mjs
+{"coldCalls":1,"restartCalls":0,"exactReference":{"kind":"completed-result","locator":"mdh1|[\"portability\",\"portability\",\"fixture\",1]"}}
++ for version in "${versions[@]}"
++ consumer=<consumer-root>/pnpm-12.10.1
++ mkdir -p <consumer-root>/pnpm-12.10.1
++ cat
++ cat
++ cat
++ manager=<consumer-root>/manager-12.10.1
++ manager_bin=
++ [[ 12.10.1 == 12.10.1 ]]
++ [[ -n <home>/.nodenv/versions/24.14.0/bin/pnpm ]]
++ manager_bin=<home>/.nodenv/versions/24.14.0/bin/pnpm
++ [[ -z <home>/.nodenv/versions/24.14.0/bin/pnpm ]]
+++ <home>/.nodenv/versions/24.14.0/bin/pnpm --version
++ [[ 12.10.1 == 12\.10\.1 ]]
++ run_pnpm install
++ install_status=1
++ node <consumer-root>/pnpm-12.10.1/durable.mjs
++ durable_status=1
++ printf 'pnpm=%s install=%s unapproved-durable=%s\n' 12.10.1 1 1
+pnpm=12.10.1 install=1 unapproved-durable=1
++ [[ 12.10.1 == 10.34.7 ]]
++ [[ 1 != 0 ]]
++ grep -q ERR_PNPM_IGNORED_BUILDS <consumer-root>/pnpm-12.10.1/install.log
++ [[ 1 != 0 ]]
++ grep -q 'Could not locate the bindings file' <consumer-root>/pnpm-12.10.1/unapproved.log
++ node <consumer-root>/pnpm-12.10.1/memory.mjs
+public-memory-ok
++ cat
++ run_pnpm rebuild better-sqlite3
++ node <consumer-root>/pnpm-12.10.1/durable.mjs
++ node <consumer-root>/pnpm-12.10.1/durable.mjs
++ cat
++ node <consumer-root>/pnpm-12.10.1/assert.mjs
+{"coldCalls":1,"restartCalls":0,"exactReference":{"kind":"completed-result","locator":"mdh1|[\"portability\",\"portability\",\"fixture\",1]"}}
++ rm -rf <consumer-root>
+{"source": "09da3b0b05eaff0563faa70ba68c44107508ed7b", "sourceFilesUnchanged": 816, "docs": "4/4", "consumers": "both managers passed exact original assertions", "linux": "not executed"}

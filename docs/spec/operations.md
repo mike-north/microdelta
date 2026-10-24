@@ -370,8 +370,11 @@ required input invokes whole-analysis graceful stop under RUN-014, rather than
 omitting that input or leaving the rejected analysis running indefinitely.
 
 HTTP status alone need not establish source meaning. Unchanged authentication or
-authorization failures (401/403) MUST NOT automatically retry; a bad request (400)
-is not expected to succeed unchanged. Conflict, rate and server errors (for
+authorization failures (often 401/403) MUST NOT automatically retry. A service may
+use 403 for rate limiting, so the adapter must distinguish that rate signal from
+an authentication/authorization failure using provider context; status alone is
+not the classification. A bad request (400) is not expected to succeed unchanged.
+Conflict, rate and server errors (for
 example 409/429/500) may justify bounded delay according to adapter context;
 404 can mean permanent absence or eventual availability. No universal retry rule
 for these ambiguous statuses is selected. HTTP method does not define acquisition.
@@ -390,7 +393,7 @@ attempts remain recorded, but neither a same-run pass nor a new run may blindly
 replay already completed reusable paid child work. Whole-step reevaluation is not
 resumption of an arbitrary JavaScript continuation.
 
-**Validation:** [A-12a–g](acceptance.md#acquisition-retry-and-rate-admission-cases)
+**Validation:** [A-12a–h](acceptance.md#acquisition-retry-and-rate-admission-cases)
 exercise lost responses, exhaustion, new-run versus same-run allowance,
 classification/default precedence, not-before, cancellation and usage gaps.
 Controlled clocks and providers establish the outcomes without live spend.
@@ -658,7 +661,24 @@ leadership input; it can succeed without exercising leadership analysis. A
 single-point box plot is execution-successful without proving useful variation.
 Automatic economical subset selection is not a prerequisite for trial mode.
 
-### RUN-019 — Shared static rate admission precedes each send
+### RUN-019 — Optional shared static rate admission precedes each send
+
+**Accepted default (owner decision, 2026-10-24).** Proactive rate configuration is
+optional. With no configured rate limit, acquisition proceeds under ordinary
+execution/concurrency controls; the library MUST NOT impose an implicit proactive
+request cap or require source rate configuration. Provider rate-limit signals
+still invoke the applicable RUN-011 bounded retry/backoff policy, including known
+not-before timing. Matching custom source policy/default precedence remains the
+same, and contextual classification is not restricted to HTTP 429. Other failures,
+finite retry allowance, stop, intent/fencing and existing execution limits remain
+in force. Omission of rate configuration grants neither unlimited retries nor
+permission to bypass a previously established not-before time.
+
+**Rationale and boundary.** A user can deliberately configure a lower local limit
+to pace work earlier and leave headroom for other activities. This is the user's
+chosen bound, not an inferred provider capacity, automatic percentage reserve or
+promise that other callers have unused quota. Dynamic quota/reserve management
+remains deferred; optional configuration does not revive it.
 
 A configured units-per-time limit MUST coordinate admission across all concurrent
 calls using the same configured **connection and limit** in one Node process,
@@ -668,10 +688,10 @@ enforce the shared ceiling. Logical central coordination is required; one physic
 network dispatcher is not. A new run's retry allowance does not reset a shared
 in-process rate limit used by other work.
 
-Rate eligibility, request concurrency permits, finite retry allowance and stop
-intent are independent conditions. A callback's immediate retry still requires
-all of them before send. A delayed retry cannot send before its not-before time
-even when rate capacity is available. Waiting holds no network request permit.
+When a rate limit is configured, its eligibility is independent of request
+concurrency permits, finite retry allowance and stop intent. A callback's immediate
+retry must satisfy all applicable conditions before send. A delayed retry cannot
+send before its not-before time even when rate capacity is available. Waiting holds no network request permit.
 Apply RUN-014's selected stop boundary while waiting: soft stop blocks new
 admissions and retries, but an already admitted step may finish its remaining
 first-attempt requests when otherwise eligible; hard stop or deadline escalation
@@ -697,8 +717,9 @@ including retries, obey the configured bound. Separate limits remain independent
 Hard stop or deadline escalation, denied retry allowance and future not-before
 each prevent the affected dispatch even if other conditions pass. Soft stop denies
 new admissions/retries while preserving the admitted-step first-attempt drain
-case in A-12b, still subject to the rate bound. A new run cannot reset another
-run's shared limiter.
+case in A-12b, still subject to the configured rate bound. A new run cannot reset
+another run's shared limiter. A-12h contrasts omitted configuration with a chosen
+proactive limit and checks bounded handling of provider rate-limit signals.
 
 **Open implementation choices:** units known before dispatch versus a conservative
 reservation, window/burst algorithm and boundary behavior, queued fairness,

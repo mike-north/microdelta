@@ -48,6 +48,7 @@ chronological corrections and implementation boundaries.
 | Result-bearing manual recovery, validator/staging/duplicate-submission work is prerequisite to controlled roster | RUN-012; acquisition handoff | Deferred; remove #152 from #170 prerequisite scope while preserving other independent readiness gates |
 | Batching/frontier/fixed extra budget was described as accepted | Owner correction in acquisition decision | Proposal for evaluation only. Rejection gracefully stopping the whole analysis and new-run allowance are independently accepted |
 | Possible conflation: Accounting after a call enforces a shared rate limit | RUN-019; ACC-008 | Shared configured connection+limit needs coordinated pre-send admission within one Node process; Accounting remains evidence |
+| Assumption that every source needs proactive rate configuration or an implicit default cap | RUN-019; A-12h | Proactive pacing is optional; absent configuration retains ordinary controls and bounded contextual provider-response retry policy, not unlimited retries |
 | Possible scope expansion: header-derived dynamic quota/reserves or cross-process coordination follows from local rate control | RUN-019 | Deferred; static configured units/time is the selected bounded scope |
 
 M5/EXP-8 plans and validation records retain original dated claims with pointers

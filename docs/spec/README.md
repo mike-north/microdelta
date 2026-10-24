@@ -118,6 +118,15 @@ The [validation record](validation.md) documents M0 checks and their limits.
 The [reconciliation inventory](artifacts/source-map.csv) records where each former
 design area is covered. Historical docs are not part of the normal reading path.
 
+## Design decisions and remaining work
+
+The [preview-observation plan](../plans/preview-observation.md) records accepted
+2026-10-24 decisions for issue 165: thin change signals, current/recent reads,
+independent observation lifetime, current/stale preview meaning and consumer-owned
+cache policy. RUN-007/008 own requirements; the plan identifies remaining API,
+retention, disposal and aggregate choices and bounded readiness recommendations.
+This is not a claim of delivered behavior or whole-issue implementation readiness.
+
 ## Current checkout
 
 The `microdelta` facade preserves its public History Store API. The checked-out

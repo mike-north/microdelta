@@ -1,0 +1,14 @@
+{
+  "argv": [
+    "node",
+    "node_modules/eslint/bin/eslint.js",
+    "packages/core/test/gap-hunt-source-artifact-boundary.test.ts",
+    "packages/core/test/gap-hunt-source-artifact-worker.ts",
+    "packages/core/test/gap-hunt-source-artifact-intermediary.ts",
+    "packages/core/test/gap-hunt-source-artifact-leaf.ts"
+  ],
+  "exit": 0,
+  "seconds": 2.013927936553955,
+  "timeout": 180,
+  "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

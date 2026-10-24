@@ -1,0 +1,76 @@
+/** TRK-2: source edits affect durable reuse through declared emitted callable evidence. */
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { afterAll, describe, expect, test } from '@jest/globals';
+
+/** Process reports retain semantic outcomes without treating a load error as an invalidation. */
+interface IReport { readonly kind: 'published' | 'reused'; readonly reference: string; readonly score: number; readonly bodies: number; readonly status: number; readonly stdout: string; readonly stderr: string }
+/** Every compiler receipt names actual source and emitted bytes under the same strict policy. */
+interface ICompilation { readonly sourceSha256: string; readonly emittedSha256: string; readonly source: string; readonly emitted: string; readonly status: number; readonly stdout: string; readonly stderr: string }
+/** Each independent store exercises a cold process, edited-source restart and unchanged restart. */
+interface ICaseEvidence { readonly name: string; readonly baselineCompilation: ICompilation; readonly editedCompilation: ICompilation; readonly baseline: IReport; readonly changed: IReport; readonly repeated: IReport }
+interface IVariant { readonly name: string; readonly source: string; readonly changed: boolean; readonly score: number }
+const directory = dirname(fileURLToPath(import.meta.url));
+const root = fileURLToPath(new URL('../../../../', import.meta.url));
+const worker = 'gap-hunt-source-artifact-worker.js';
+const leaf = 'gap-hunt-source-artifact-leaf';
+const intermediary = 'gap-hunt-source-artifact-intermediary.js';
+const original = 'export function dependency(value: number): number {\n  return value * 2;\n}\n';
+const variants: readonly IVariant[] = [
+  { name: 'source-only comment stripped by declared compiler policy', source: 'export function dependency(value: number): number {\n  // This comment is intentionally absent from emitted callable evidence.\n  return value * 2;\n}\n', changed: false, score: 6 },
+  { name: 'source-only formatting normalized by the compiler', source: 'export function dependency( value : number ) : number {\n    return value*2;\n}\n', changed: false, score: 6 },
+  { name: 'source line layout survives emission and conservatively invalidates', source: 'export function dependency( value : number ) : number { return value*2; }\n', changed: true, score: 6 },
+  { name: 'changed emitted callable is the invalidation sensitivity control', source: 'export function dependency(value: number): number {\n  return value * 3;\n}\n', changed: true, score: 9 },
+];
+const evidence: ICaseEvidence[] = [];
+const hash = (text: string): string => createHash('sha256').update(text).digest('hex');
+afterAll(() => {
+  const output = process.env['MICRODELTA_SOURCE_ARTIFACT_EVIDENCE'];
+  if (output !== undefined) { writeFileSync(output, JSON.stringify({ policy: { compiler: 'actual repository TypeScript', extends: 'tsconfig.base.json', removeComments: true, sourceMap: false, declaration: false }, cases: evidence, spawnedProcesses: evidence.length * 3 }, null, 2) + '\n'); }
+});
+/** Actual tsc inherits all strict checks; comments/maps policy is explicit rather than inferred. */
+function compile(modules: string, source: string): ICompilation {
+  writeFileSync(join(modules, leaf + '.ts'), source);
+  writeFileSync(join(modules, 'tsconfig.json'), JSON.stringify({ extends: join(root, 'tsconfig.base.json'), files: ['./' + leaf + '.ts'], compilerOptions: { removeComments: true, sourceMap: false, declaration: false, declarationMap: false, incremental: false } }));
+  const child = spawnSync(process.execPath, [join(root, 'node_modules/typescript/bin/tsc'), '-p', join(modules, 'tsconfig.json')], { encoding: 'utf8', timeout: 60000 });
+  if (child.status !== 0) { throw new Error(`Strict compiler failed: ${child.stdout} ${child.stderr}`); }
+  const emitted = readFileSync(join(modules, leaf + '.js'), 'utf8');
+  return { sourceSha256: hash(source), emittedSha256: hash(emitted), source, emitted, status: child.status, stdout: child.stdout, stderr: child.stderr };
+}
+/** A fresh child is required so module caching or in-run memo sharing cannot fake durable reuse. */
+function run(modules: string, store: string, request: string): IReport {
+  const child = spawnSync(process.execPath, [join(modules, worker), store, request], { encoding: 'utf8', timeout: 60000 });
+  if (child.status !== 0) { throw new Error(`Worker failed: ${child.stdout} ${child.stderr}`); }
+  const report: unknown = JSON.parse(child.stdout);
+  if (typeof report !== 'object' || report === null || !('kind' in report) || (report.kind !== 'published' && report.kind !== 'reused') || !('reference' in report) || typeof report.reference !== 'string' || !('data' in report) || typeof report.data !== 'object' || report.data === null || !('score' in report.data) || typeof report.data.score !== 'number') { throw new Error('Invalid durable worker report'); }
+  return { kind: report.kind, reference: report.reference, score: report.data.score, bodies: child.stderr.split('\n').filter(line => line === 'BODY:analysis').length, status: child.status, stdout: child.stdout, stderr: child.stderr };
+}
+describe('source edits through actual strict emitted-artifact compilation', () => {
+  test.each(variants)('$name', variant => {
+    const modules = mkdtempSync(join(directory, 'source-artifact-'));
+    const storage = mkdtempSync(join(tmpdir(), 'microdelta-source-artifact-'));
+    try {
+      for (const file of [worker, intermediary]) { writeFileSync(join(modules, file), readFileSync(join(directory, file))); }
+      writeFileSync(join(modules, 'package.json'), JSON.stringify({ type: 'module' }));
+      const baselineCompilation = compile(modules, original);
+      const baseline = run(modules, join(storage, 'history.sqlite'), 'baseline');
+      expect(baseline.kind).toBe('published'); expect(baseline.bodies).toBe(1); expect(baseline.score).toBe(6);
+      const editedCompilation = compile(modules, variant.source);
+      expect(editedCompilation.sourceSha256).not.toBe(baselineCompilation.sourceSha256);
+      if (variant.changed) { expect(editedCompilation.emitted).not.toBe(baselineCompilation.emitted); }
+      else { expect(editedCompilation.emitted).toBe(baselineCompilation.emitted); }
+      const changed = run(modules, join(storage, 'history.sqlite'), 'changed');
+      expect(changed.kind).toBe(variant.changed ? 'published' : 'reused');
+      expect(changed.bodies).toBe(variant.changed ? 1 : 0); expect(changed.score).toBe(variant.score);
+      if (variant.changed) { expect(changed.reference).not.toBe(baseline.reference); }
+      else { expect(changed.reference).toBe(baseline.reference); }
+      const repeated = run(modules, join(storage, 'history.sqlite'), 'repeated');
+      expect(repeated.kind).toBe('reused'); expect(repeated.bodies).toBe(0); expect(repeated.reference).toBe(changed.reference); expect(repeated.score).toBe(variant.score);
+      evidence.push({ name: variant.name, baselineCompilation, editedCompilation, baseline, changed, repeated });
+    } finally { rmSync(modules, { recursive: true, force: true }); rmSync(storage, { recursive: true, force: true }); }
+  }, 120000);
+});

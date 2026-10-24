@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "npm",
+    "ci",
+    "--no-audit",
+    "--no-fund"
+  ],
+  "exit": 0,
+  "seconds": 326.85615277290344,
+  "timeout": 900,
+  "log_sha256": "7cc9965e0d42f34957e0d8ff00d4f3e42ee7ccc7b02abd13f96c2ccc0e5a7f43"
+}

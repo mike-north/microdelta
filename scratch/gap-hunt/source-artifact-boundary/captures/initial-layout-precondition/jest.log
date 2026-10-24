@@ -1,0 +1,31 @@
+(node:19989) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL packages/core/.test-build/test/gap-hunt-source-artifact-boundary.test.js
+  ● source edits through actual strict emitted-artifact compilation › source-only formatting normalized by the compiler
+
+    expect(received).toBe(expected) // Object.is equality
+
+    - Expected  - 3
+    + Received  + 1
+
+    - export function dependency(value) {
+    -     return value * 2;
+    - }
+    + export function dependency(value) { return value * 2; }
+      ↵
+
+      62 |       expect(editedCompilation.sourceSha256).not.toBe(baselineCompilation.sourceSha256);
+      63 |       if (variant.changed) { expect(editedCompilation.emitted).not.toBe(baselineCompilation.emitted); }
+    > 64 |       else { expect(editedCompilation.emitted).toBe(baselineCompilation.emitted); }
+         |                                                ^
+      65 |       const changed = run(modules, join(storage, 'history.sqlite'), 'changed');
+      66 |       expect(changed.kind).toBe(variant.changed ? 'published' : 'reused');
+      67 |       expect(changed.bodies).toBe(variant.changed ? 1 : 0); expect(changed.score).toBe(variant.score);
+
+      at test/gap-hunt-source-artifact-boundary.test.ts:64:48
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 2 passed, 3 total
+Snapshots:   0 total
+Time:        3.828 s
+Ran all test suites within paths "packages/core/.test-build/test/gap-hunt-source-artifact-boundary.test.js".

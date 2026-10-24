@@ -1,0 +1,17 @@
+{
+  "runtime": "7a629f94d83366131e4aa25e541a24e41db744fa",
+  "source_hashes": {
+    "packages/core/test/gap-hunt-source-artifact-boundary.test.ts": "9e66631131cff8250eaf33870631ef201aec13cbe4a77279bf8184830b14f01d",
+    "packages/core/test/gap-hunt-source-artifact-worker.ts": "d4ab6ac02c8565df1c3ecec3aa97cc05eff44292fedcd3c7381276c7ea19e921",
+    "packages/core/test/gap-hunt-source-artifact-intermediary.ts": "9c23c23be7691ded48edbc2f3e23ed642f93b607a7ca12e6b74caba560f3734c",
+    "packages/core/test/gap-hunt-source-artifact-leaf.ts": "ef2943bfbb86af7fa4a9a9218ae253464a276cd6d55a7d039c4817affaf6358a"
+  },
+  "source_unchanged": true,
+  "cases": 3,
+  "fresh_processes": 9,
+  "node": "v24.22.1",
+  "platform": "darwin",
+  "cases_sha256": "161ed2f0fbdf9de7ab9f813947772c23ee955219ef9545cb0d8292e52bd37e5d",
+  "product_fixes": false,
+  "paid_provider": false
+}

@@ -1,0 +1,17 @@
+{
+  "argv": [
+    "node",
+    "--experimental-vm-modules",
+    "node_modules/jest/bin/jest.js",
+    "--config",
+    "packages/core/jest.config.mjs",
+    "--runInBand",
+    "--runTestsByPath",
+    "packages/core/.test-build/test/gap-hunt-source-artifact-boundary.test.js",
+    "--verbose"
+  ],
+  "exit": 1,
+  "seconds": 4.899625062942505,
+  "timeout": 300,
+  "log_sha256": "6fd529b77df9944af4e36d0867fcf96d18cb9b066d29819d03ac4a7fe22dc17b"
+}

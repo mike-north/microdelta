@@ -1,0 +1,204 @@
+{
+  "policy": {
+    "compiler": "actual repository TypeScript",
+    "extends": "tsconfig.base.json",
+    "removeComments": true,
+    "sourceMap": false,
+    "declaration": false
+  },
+  "cases": [
+    {
+      "name": "source-only comment stripped by declared compiler policy",
+      "baselineCompilation": {
+        "sourceSha256": "dab892d7ae82b20b8cccdb0e24f1f1ca306c8b907731a227691f8f0e5e452d0c",
+        "emittedSha256": "a9197bce3109e7001dc03b72aa928d5f2d93225faf7bd628b8b1ecb83f8a1cfe",
+        "source": "export function dependency(value: number): number {\n  return value * 2;\n}\n",
+        "emitted": "export function dependency(value) {\n    return value * 2;\n}\n",
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "editedCompilation": {
+        "sourceSha256": "e17279d3666d746c5ea1a4bae47f5d507a6191a0e4ec1a0cba123ce05cbea771",
+        "emittedSha256": "a9197bce3109e7001dc03b72aa928d5f2d93225faf7bd628b8b1ecb83f8a1cfe",
+        "source": "export function dependency(value: number): number {\n  // This comment is intentionally absent from emitted callable evidence.\n  return value * 2;\n}\n",
+        "emitted": "export function dependency(value) {\n    return value * 2;\n}\n",
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "baseline": {
+        "kind": "published",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",1]",
+        "score": 6,
+        "bodies": 1,
+        "status": 0,
+        "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"durable-artifacts-store\\\",\\\"durable-artifacts\\\",\\\"test\\\",1]\",\"data\":{\"score\":6}}\n",
+        "stderr": "BODY:analysis\n"
+      },
+      "changed": {
+        "kind": "reused",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",1]",
+        "score": 6,
+        "bodies": 0,
+        "status": 0,
+        "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"durable-artifacts-store\\\",\\\"durable-artifacts\\\",\\\"test\\\",1]\",\"data\":{\"score\":6}}\n",
+        "stderr": ""
+      },
+      "repeated": {
+        "kind": "reused",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",1]",
+        "score": 6,
+        "bodies": 0,
+        "status": 0,
+        "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"durable-artifacts-store\\\",\\\"durable-artifacts\\\",\\\"test\\\",1]\",\"data\":{\"score\":6}}\n",
+        "stderr": ""
+      }
+    },
+    {
+      "name": "source-only formatting normalized by the compiler",
+      "baselineCompilation": {
+        "sourceSha256": "dab892d7ae82b20b8cccdb0e24f1f1ca306c8b907731a227691f8f0e5e452d0c",
+        "emittedSha256": "a9197bce3109e7001dc03b72aa928d5f2d93225faf7bd628b8b1ecb83f8a1cfe",
+        "source": "export function dependency(value: number): number {\n  return value * 2;\n}\n",
+        "emitted": "export function dependency(value) {\n    return value * 2;\n}\n",
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "editedCompilation": {
+        "sourceSha256": "e40fa842c9abb6f4875bf9a7c78c276e22c4cfa3294d76692fc687a7358c2886",
+        "emittedSha256": "a9197bce3109e7001dc03b72aa928d5f2d93225faf7bd628b8b1ecb83f8a1cfe",
+        "source": "export function dependency( value : number ) : number {\n    return value*2;\n}\n",
+        "emitted": "export function dependency(value) {\n    return value * 2;\n}\n",
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "baseline": {
+        "kind": "published",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",1]",
+        "score": 6,
+        "bodies": 1,
+        "status": 0,
+        "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"durable-artifacts-store\\\",\\\"durable-artifacts\\\",\\\"test\\\",1]\",\"data\":{\"score\":6}}\n",
+        "stderr": "BODY:analysis\n"
+      },
+      "changed": {
+        "kind": "reused",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",1]",
+        "score": 6,
+        "bodies": 0,
+        "status": 0,
+        "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"durable-artifacts-store\\\",\\\"durable-artifacts\\\",\\\"test\\\",1]\",\"data\":{\"score\":6}}\n",
+        "stderr": ""
+      },
+      "repeated": {
+        "kind": "reused",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",1]",
+        "score": 6,
+        "bodies": 0,
+        "status": 0,
+        "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"durable-artifacts-store\\\",\\\"durable-artifacts\\\",\\\"test\\\",1]\",\"data\":{\"score\":6}}\n",
+        "stderr": ""
+      }
+    },
+    {
+      "name": "source line layout survives emission and conservatively invalidates",
+      "baselineCompilation": {
+        "sourceSha256": "dab892d7ae82b20b8cccdb0e24f1f1ca306c8b907731a227691f8f0e5e452d0c",
+        "emittedSha256": "a9197bce3109e7001dc03b72aa928d5f2d93225faf7bd628b8b1ecb83f8a1cfe",
+        "source": "export function dependency(value: number): number {\n  return value * 2;\n}\n",
+        "emitted": "export function dependency(value) {\n    return value * 2;\n}\n",
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "editedCompilation": {
+        "sourceSha256": "9400a1a105be1669756cd45414d81a59ee27e5993fce33662a74a4c20eee46f3",
+        "emittedSha256": "d41acbf5bf2291ef988aec7e88c8e19035070f6338d635db02377e84a849816b",
+        "source": "export function dependency( value : number ) : number { return value*2; }\n",
+        "emitted": "export function dependency(value) { return value * 2; }\n",
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "baseline": {
+        "kind": "published",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",1]",
+        "score": 6,
+        "bodies": 1,
+        "status": 0,
+        "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"durable-artifacts-store\\\",\\\"durable-artifacts\\\",\\\"test\\\",1]\",\"data\":{\"score\":6}}\n",
+        "stderr": "BODY:analysis\n"
+      },
+      "changed": {
+        "kind": "published",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",2]",
+        "score": 6,
+        "bodies": 1,
+        "status": 0,
+        "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"durable-artifacts-store\\\",\\\"durable-artifacts\\\",\\\"test\\\",2]\",\"data\":{\"score\":6}}\n",
+        "stderr": "BODY:analysis\n"
+      },
+      "repeated": {
+        "kind": "reused",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",2]",
+        "score": 6,
+        "bodies": 0,
+        "status": 0,
+        "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"durable-artifacts-store\\\",\\\"durable-artifacts\\\",\\\"test\\\",2]\",\"data\":{\"score\":6}}\n",
+        "stderr": ""
+      }
+    },
+    {
+      "name": "changed emitted callable is the invalidation sensitivity control",
+      "baselineCompilation": {
+        "sourceSha256": "dab892d7ae82b20b8cccdb0e24f1f1ca306c8b907731a227691f8f0e5e452d0c",
+        "emittedSha256": "a9197bce3109e7001dc03b72aa928d5f2d93225faf7bd628b8b1ecb83f8a1cfe",
+        "source": "export function dependency(value: number): number {\n  return value * 2;\n}\n",
+        "emitted": "export function dependency(value) {\n    return value * 2;\n}\n",
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "editedCompilation": {
+        "sourceSha256": "bb32e6a4a779d7cee11e3926116987c4d5c3fd6904152987812abf1e4e90e7fa",
+        "emittedSha256": "9271831f605612fb831ec40120113687461595029f02fbf0aea740d056d566c0",
+        "source": "export function dependency(value: number): number {\n  return value * 3;\n}\n",
+        "emitted": "export function dependency(value) {\n    return value * 3;\n}\n",
+        "status": 0,
+        "stdout": "",
+        "stderr": ""
+      },
+      "baseline": {
+        "kind": "published",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",1]",
+        "score": 6,
+        "bodies": 1,
+        "status": 0,
+        "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"durable-artifacts-store\\\",\\\"durable-artifacts\\\",\\\"test\\\",1]\",\"data\":{\"score\":6}}\n",
+        "stderr": "BODY:analysis\n"
+      },
+      "changed": {
+        "kind": "published",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",2]",
+        "score": 9,
+        "bodies": 1,
+        "status": 0,
+        "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"durable-artifacts-store\\\",\\\"durable-artifacts\\\",\\\"test\\\",2]\",\"data\":{\"score\":9}}\n",
+        "stderr": "BODY:analysis\n"
+      },
+      "repeated": {
+        "kind": "reused",
+        "reference": "mdh1|[\"durable-artifacts-store\",\"durable-artifacts\",\"test\",2]",
+        "score": 9,
+        "bodies": 0,
+        "status": 0,
+        "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"durable-artifacts-store\\\",\\\"durable-artifacts\\\",\\\"test\\\",2]\",\"data\":{\"score\":9}}\n",
+        "stderr": ""
+      }
+    }
+  ],
+  "spawnedProcesses": 12
+}

@@ -1,0 +1,221 @@
+{
+  "runtime_source": "7a629f94d83366131e4aa25e541a24e41db744fa",
+  "executed_local_source": "67f37f9",
+  "files": [
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/REPORT.md",
+      "bytes": 4737,
+      "sha256": "c1710663802e99bd7dedc3e639991f20b545260a3dd15b7a353b2f018821a797"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/corrected-three-case/build.json",
+      "bytes": 211,
+      "sha256": "4b877a744dad6675989cf369e4e7825381c23f3dbff91f0abc1a765bc7d52a91"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/corrected-three-case/build.log",
+      "bytes": 4988,
+      "sha256": "9eb1f0e1ba62cd61262041daf444feb22fd48ec57cb809914e03f96c4504a62d"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/corrected-three-case/cases.json",
+      "bytes": 7047,
+      "sha256": "161ed2f0fbdf9de7ab9f813947772c23ee955219ef9545cb0d8292e52bd37e5d"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/corrected-three-case/install.json",
+      "bytes": 223,
+      "sha256": "fe02a83fc0de10e50be3079111fe0c4985a160bd235f5a7578a5516c71486479"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/corrected-three-case/install.log",
+      "bytes": 453,
+      "sha256": "7ede35de6a2271a971af8542ae08915fec63a48ed028aebe2e0cd8d398f14ffd"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/corrected-three-case/jest.json",
+      "bytes": 712,
+      "sha256": "b8c02d2b4f2fab60f377310f1afa684b8dddff6e26da2db01b77701ba899c134"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/corrected-three-case/jest.log",
+      "bytes": 718,
+      "sha256": "782773d330360aabd47bb1ef0c6eb8494e13a1f78257e598e7efb5812200cec8"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/corrected-three-case/lint.json",
+      "bytes": 474,
+      "sha256": "55a3240a981db529679fbcf4df3672b4b43b3a2d4e4a60dff8c73d1d071167e4"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/corrected-three-case/lint.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/corrected-three-case/receipt.json",
+      "bytes": 862,
+      "sha256": "2d68020fdf87fec977dec1e6ee6ce2a68de04e72b17ced58f9a21337489205e5"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/corrected-three-case/types.json",
+      "bytes": 268,
+      "sha256": "36f1e0a5dff829af6b96e5753cb89ce4da4e18b896a4bbbce9fc33fe2def8c18"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/corrected-three-case/types.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/final-clean-four-case/build.json",
+      "bytes": 211,
+      "sha256": "238b425033e03dd87dbf2c8a21b893f85c640c2be9a44acdfda3c644ff880c3c"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/final-clean-four-case/build.log",
+      "bytes": 4988,
+      "sha256": "9eb1f0e1ba62cd61262041daf444feb22fd48ec57cb809914e03f96c4504a62d"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/final-clean-four-case/cases.json",
+      "bytes": 9312,
+      "sha256": "ecac264f50efeb3b443fda2eceb371a67b04436fc604ba5b6fb125811a30c41f"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/final-clean-four-case/install.json",
+      "bytes": 223,
+      "sha256": "e037f1c797dee025568b6de3ed232a64c4f34b8c5a65c7f78bfabca38e4867ba"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/final-clean-four-case/install.log",
+      "bytes": 453,
+      "sha256": "0c96d20a71003a6f36eedd391e87a94a35ebd2e664bf4265365ad33d85e01506"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/final-clean-four-case/jest.json",
+      "bytes": 441,
+      "sha256": "34fbb7d99528336d2b8d11add3733d4c334d1982499cf75201e0c471f477e784"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/final-clean-four-case/jest.log",
+      "bytes": 386,
+      "sha256": "7b734d5f02770a0d0eb6ab49bb8d662097a5f673069f4b97f2fb71838f69f0f0"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/final-clean-four-case/lint.json",
+      "bytes": 474,
+      "sha256": "caff9950d31d8d6c5e01d7ceafda23655cd95d8d954bd17fee82c1d9175a2125"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/final-clean-four-case/lint.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/final-clean-four-case/receipt.json",
+      "bytes": 863,
+      "sha256": "53cbdad7d02f70e9427bd4f47ea15551d683e711ee3383fd20f25f933414fa0c"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/final-clean-four-case/types.json",
+      "bytes": 267,
+      "sha256": "d7f29c6d9509fc0663d4191564ef41b2bbdd1170115c8ddf5b76c7da3954f46e"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/final-clean-four-case/types.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/initial-layout-precondition/build.json",
+      "bytes": 211,
+      "sha256": "f50a0a229c06ee6ebaa195dd73fa6454870924501979a8976cfa0fe5681b3214"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/initial-layout-precondition/build.log",
+      "bytes": 4988,
+      "sha256": "9eb1f0e1ba62cd61262041daf444feb22fd48ec57cb809914e03f96c4504a62d"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/initial-layout-precondition/cases.json",
+      "bytes": 4810,
+      "sha256": "befd1b9f8a3c09b9bb6ffeb9842f41e63cd0cad65aa8fe8d72ec860d953efd01"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/initial-layout-precondition/initial-test.ts.txt",
+      "bytes": 7187,
+      "sha256": "79a84b57ac192a34e0cf18ed649b6dd2e273d863d0342f083ab9a2cf6ed9eb8e"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/initial-layout-precondition/install.json",
+      "bytes": 223,
+      "sha256": "2f34802aeed4fe93d761a3afeb02cc66ca28df8408d2d652052924304380c68f"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/initial-layout-precondition/install.log",
+      "bytes": 453,
+      "sha256": "7cc9965e0d42f34957e0d8ff00d4f3e42ee7ccc7b02abd13f96c2ccc0e5a7f43"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/initial-layout-precondition/jest.json",
+      "bytes": 441,
+      "sha256": "8f342c832eb047681b0924d43dc8007ac78de7f82e635e02ecd91f5f03ca24ca"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/initial-layout-precondition/jest.log",
+      "bytes": 1575,
+      "sha256": "6fd529b77df9944af4e36d0867fcf96d18cb9b066d29819d03ac4a7fe22dc17b"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/initial-layout-precondition/lint.json",
+      "bytes": 474,
+      "sha256": "a5e910366a2a494f7f1de1603b8c2fe1e8ae95707e7d6b3158344964f68ecde6"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/initial-layout-precondition/lint.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/initial-layout-precondition/types.json",
+      "bytes": 268,
+      "sha256": "a13e700bd92b9ddb4f61f5d3996fe9244fc952ba7cb17dbfb50f1160a5550e8a"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/captures/initial-layout-precondition/types.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/receipt.json",
+      "bytes": 887,
+      "sha256": "9e8a94e5822c936a6c73c56c5e4309d79602e10a1851c3b61314bd0f3f731721"
+    },
+    {
+      "path": "scratch/gap-hunt/source-artifact-boundary/reproduce.py",
+      "bytes": 2420,
+      "sha256": "e1f654aef28726fb6c1104d7f126a846e9f98ed7ca1b290579cb1b122e3f613c"
+    },
+    {
+      "path": "packages/core/test/gap-hunt-source-artifact-boundary.test.ts",
+      "bytes": 7388,
+      "sha256": "2fa9bb1fdef5a49b61c183d40cb7b7fe83b0f17112e8e9229be82393af7794a0"
+    },
+    {
+      "path": "packages/core/test/gap-hunt-source-artifact-intermediary.ts",
+      "bytes": 393,
+      "sha256": "9c23c23be7691ded48edbc2f3e23ed642f93b607a7ca12e6b74caba560f3734c"
+    },
+    {
+      "path": "packages/core/test/gap-hunt-source-artifact-leaf.ts",
+      "bytes": 167,
+      "sha256": "ef2943bfbb86af7fa4a9a9218ae253464a276cd6d55a7d039c4817affaf6358a"
+    },
+    {
+      "path": "packages/core/test/gap-hunt-source-artifact-worker.ts",
+      "bytes": 1978,
+      "sha256": "d4ab6ac02c8565df1c3ecec3aa97cc05eff44292fedcd3c7381276c7ea19e921"
+    }
+  ]
+}

@@ -1,0 +1,15 @@
+{
+  "runtime_source": "7a629f94d83366131e4aa25e541a24e41db744fa",
+  "executed_fixture_source": "67f37f907ec77a5a352aca24dfe152067759e693",
+  "fresh_archive_without_dependencies_or_generated_outputs": true,
+  "clean_default_command_exit": 0,
+  "frozen_source_files_unchanged": 814,
+  "final_cases": 4,
+  "final_fresh_processes": 12,
+  "compiler": "repository TypeScript strict base config; explicit removeComments true, sourceMap false, no check weakening",
+  "outcome": "PASS four finite source-to-emitted variants; no product defect",
+  "initial_precondition": "multiline-to-singleline emitted bytes differed before changed-process run; expected equal-artifact assumption failed, not product behavior",
+  "intermediate_corrected_three_case": "PASS; superseded by complete final four-case clean archive",
+  "product_fixes": false,
+  "runtime_repeated_on_current_or_future_main": false
+}

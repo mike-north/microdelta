@@ -1,0 +1,19 @@
+{
+  "argv": [
+    "node",
+    "--experimental-vm-modules",
+    "node_modules/jest/bin/jest.js",
+    "--config",
+    "packages/core/jest.config.mjs",
+    "--runInBand",
+    "--runTestsByPath",
+    "packages/core/.test-build/test/gap-hunt-source-artifact-boundary.test.js",
+    "--verbose"
+  ],
+  "exit": 0,
+  "seconds": 4.639194965362549,
+  "timeout": 300,
+  "log_sha256": "782773d330360aabd47bb1ef0c6eb8494e13a1f78257e598e7efb5812200cec8",
+  "raw_log_sha256_before_public_path_normalization": "d05e5543d7a2cdcf61ce351a77d628e73f55ec386a6b295e3b17ea042c687c8c",
+  "public_normalization": "Watchman host checkout path replaced with <evidence-checkout>; raw log retained privately in original .test-build output"
+}

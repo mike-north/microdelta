@@ -23,6 +23,7 @@ interface IHelpers {
   readonly suppliedData: (score: number) => { readonly score: number; readonly unread: number };
   readonly memoData: () => { readonly score: number; readonly unread: number };
   readonly sourceFinality: () => boolean;
+  readonly parentBody: () => void;
 }
 
 /** The smallest author family that still reads a selected child output fact. */
@@ -44,6 +45,14 @@ const nestedStep: IBindingDescriptor = { scope: 'child-validation', role: 'step'
 let childShouldThrow = false;
 /** A positive-control count of genuine child checks. */
 let childRuns = 0;
+/** Counts entry into authored parent bodies independently of child calls and outcomes. */
+let parentRuns = 0;
+
+/** A registered helper observes execution without capturing mutable state in author code. */
+function parentBody(): void {
+  parentRuns += 1;
+}
+
 /** Current source policy and admission are independently observable. */
 let childFinalities = 0;
 let childAdmissions = 0;
@@ -92,9 +101,10 @@ const helpers = [
   { slot: 'suppliedData', helper: suppliedData },
   { slot: 'memoData', helper: memoData },
   { slot: 'sourceFinality', helper: sourceFinality },
+  { slot: 'parentBody', helper: parentBody },
 ];
 /** Only these slots are permitted in the author binding record. */
-const helperSlots = ['sourceData', 'suppliedData', 'memoData', 'sourceFinality'];
+const helperSlots = ['sourceData', 'suppliedData', 'memoData', 'sourceFinality', 'parentBody'];
 
 /** One current composition and a parent body that consumes only `score`. */
 function fixture() {
@@ -107,7 +117,8 @@ function fixture() {
   const parent = builders.memo({
     subject: 'parent',
     children: { child },
-    run: async ({ calls }) => {
+    run: async ({ calls, helpers: bound }) => {
+      bound.parentBody();
       const { data } = await calls.child();
       return { doubled: data.score * 2 };
     },
@@ -213,7 +224,8 @@ function memoHarness() {
   });
   const parent = builders.memo({
     subject: 'memo-parent', children: { child },
-    run: async ({ calls }) => {
+    run: async ({ calls, helpers: bound }) => {
+      bound.parentBody();
       const { data } = await calls.child();
       return { doubled: data.score * 2 };
     },
@@ -260,6 +272,10 @@ describe('child validation isolation', () => {
       return;
     }
     expect(state.payloadOf(cold.reference)).toEqual({ doubled: 14 });
+    const parentRunsBefore = parentRuns;
+    // Serialize before reuse so a mutation of the original object cannot alter the oracle.
+    const originalProvenance = JSON.stringify(state.history.readEnvelope(cold.reference).provenance);
+    const originalDependencies = JSON.stringify(state.history.readEnvelope(cold.reference).dependencies);
 
     childShouldThrow = true;
     childFinalityShouldThrow = true;
@@ -275,7 +291,10 @@ describe('child validation isolation', () => {
     if (next.kind !== 'reused') {
       return;
     }
+    expect(parentRuns - parentRunsBefore).toBe(0);
     expect(next.reference).toEqual(cold.reference);
+    expect(JSON.stringify(state.history.readEnvelope(cold.reference).provenance)).toBe(originalProvenance);
+    expect(JSON.stringify(state.history.readEnvelope(cold.reference).dependencies)).toBe(originalDependencies);
     expect(next.acceptance.dependencies).toEqual([current]);
     expect(seen).toEqual(['source:child']);
     expect({ queries: state.childQueries, finalities: childFinalities, admissions: childAdmissions, bodies: childRuns })
@@ -291,6 +310,7 @@ describe('child validation isolation', () => {
     const cold = await createResolution(options).resolve({ step: parentStep, requestKey: 'cold-changed', lease });
     expect(cold.kind).toBe('published');
     childShouldThrow = true;
+    const parentRunsBefore = parentRuns;
     const current = state.seedChild({ score: 8, unread: 1 });
     const seen: string[] = [];
     const next = await _createResolutionWithChildService(options, currentChild(current, seen))
@@ -299,6 +319,7 @@ describe('child validation isolation', () => {
     if (next.kind !== 'published') {
       return;
     }
+    expect(parentRuns - parentRunsBefore).toBe(1);
     expect(state.payloadOf(next.reference)).toEqual({ doubled: 16 });
     expect(next.misses.map((miss) => miss.reason)).toContain('changed');
     expect(state.history.readEnvelope(next.reference).dependencies).toEqual([current]);
@@ -310,6 +331,7 @@ describe('child validation isolation', () => {
     const { state, options } = harness();
     await createResolution(options).resolve({ step: parentStep, requestKey: 'cold-check', lease });
     const acceptedBefore = state.acceptances.length;
+    const parentRunsBefore = parentRuns;
     childShouldThrow = true;
     const seen: string[] = [];
     const service: IChildResolutionService = {
@@ -323,6 +345,7 @@ describe('child validation isolation', () => {
     };
     const check = await _createResolutionWithChildService(options, service).check({ step: parentStep });
     expect(check).toMatchObject({ kind: 'uncertain', boundary: { role: 'step', slot: 'child' } });
+    expect(parentRuns - parentRunsBefore).toBe(0);
     expect(state.acceptances).toHaveLength(acceptedBefore);
     expect(seen).toEqual(['source:child']);
   });
@@ -332,6 +355,7 @@ describe('child validation isolation', () => {
     const { state, options } = harness();
     await createResolution(options).resolve({ step: parentStep, requestKey: 'cold-refusal', lease });
     const acceptedBefore = state.acceptances.length;
+    const parentRunsBefore = parentRuns;
     const service: IChildResolutionService = {
       async resolve(invocation, normal) {
         if (invocation.kind !== 'source') {
@@ -346,6 +370,7 @@ describe('child validation isolation', () => {
     };
     const next = await _createResolutionWithChildService(options, service).resolve({ step: parentStep, requestKey: 'refusal', lease });
     expect(next).toMatchObject({ kind: 'refused', refused: { role: 'step', slot: 'child' }, disposition: 'denied' });
+    expect(parentRuns - parentRunsBefore).toBe(0);
     expect(state.acceptances).toHaveLength(acceptedBefore);
   });
 
@@ -354,6 +379,7 @@ describe('child validation isolation', () => {
     const { state, options } = harness();
     await createResolution(options).resolve({ step: parentStep, requestKey: 'cold-failure', lease });
     const acceptedBefore = state.acceptances.length;
+    const parentRunsBefore = parentRuns;
     const service: IChildResolutionService = {
       async resolve(invocation, normal) {
         if (invocation.kind !== 'source') {
@@ -364,6 +390,7 @@ describe('child validation isolation', () => {
     };
     await expect(_createResolutionWithChildService(options, service).resolve({ step: parentStep, requestKey: 'failure', lease }))
       .rejects.toMatchObject({ code: 'execution-failure' });
+    expect(parentRuns - parentRunsBefore).toBe(0);
     expect(state.acceptances).toHaveLength(acceptedBefore);
   });
 
@@ -498,6 +525,7 @@ describe('child validation isolation', () => {
     const cold = await createResolution(options).resolve({ step: parentStep, requestKey: 'cold-memo', lease });
     expect(cold.kind).toBe('published');
     childShouldThrow = true;
+    const parentRunsBefore = parentRuns;
     const current = state.seedChild({ score: 8, unread: 2 });
     const seen: string[] = [];
     const service: IChildResolutionService = {
@@ -519,6 +547,7 @@ describe('child validation isolation', () => {
     if (next.kind !== 'published') {
       return;
     }
+    expect(parentRuns - parentRunsBefore).toBe(1);
     expect(state.payloadOf(next.reference)).toEqual({ doubled: 16 });
     expect(state.history.readEnvelope(next.reference).dependencies).toEqual([current]);
     expect(seen).toEqual(['memo:memo-child', 'memo:memo-child']);

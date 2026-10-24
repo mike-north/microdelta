@@ -10,8 +10,9 @@ makes compilation and runtime pass. The earlier cd264c3 unqualified manual-recip
 PASS is superseded by this bounded finding. Run `python3 scratch/gap-hunt/review-201/reproduce.py` from its
 worktree root. The runner creates an actual clean source archive in a fresh
 `parent/microdelta` directory with no node_modules, then exercises the original
-issue reproduction and the documented consumer recipe. Every subprocess has a
-900-second timeout. An inherited reuse-build flag is removed. A command-local
+issue reproduction and the documented consumer recipe. Captured workload commands have a
+900-second timeout; the separate literal-input probe has a 120-second outer bound
+and 60-second command bounds. Git archive/preflight reads are outside those bounds. An inherited reuse-build flag is removed. A command-local
 installed macOS26.5 SDK is selected on this host for the locked native addon;
 no global toolchain setting changes.
 
@@ -117,3 +118,8 @@ input then gives compiler0 and runtime0. The source/type/export implementation
 is sound within the bounded controls, while AC1/AC5 manual setup completeness
 needs this small documentation correction. `FINDING.md` is comment-ready; the
 supervisor owns feedback and issue disposition. No product fix was made.
+
+Publication qualification: the original 15-command workload and the literal-input
+probe were executed separately against the same fresh source archive. The final
+one-command runner composes both with the read-only capture verifier; that final
+composition was not rerun as a whole. No underlying source or executed probe changed.

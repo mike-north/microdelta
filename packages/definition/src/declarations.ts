@@ -53,11 +53,14 @@ import {
  * @alpha
  */
 export interface IDeclarations<TFamily extends IBindingFamily> {
-  /** Declare a retained source whose result type is `TResult`. */
-  source<TResult>(options: ISourceOptions<TFamily, TResult>): ISourceDeclaration<TFamily, TResult>;
-  /** Declare a memoized computation with typed sibling children. */
-  memo<TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult = unknown>(
+  /** Declare a retained source whose completed result has a record or array root; runtime validates plainness. */
+  source<TResult extends object>(options: ISourceOptions<TFamily, TResult>): ISourceDeclaration<TFamily, TResult>;
+  /** Declare a memoized computation whose awaited result has a record or array root; noncallable `then` data remains valid. */
+  memo<TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult extends object = object>(
     options: IMemoOptions<TFamily, TChildren, TResult>,
+    // Check the entire settled union while retaining contextual callback inference.
+    // A Promise is an object but cannot carry a scalar past the result-root boundary.
+    ...root: [Awaited<TResult>] extends [object] ? [] : [unsupportedResultRoot: never]
   ): IMemoDeclaration<TFamily, TChildren, TResult>;
   /** Declare a supplied callable step slot with its call signature. */
   stepSlot<TParameters extends readonly unknown[] = readonly [], TResult = unknown>(options: IStepSlotOptions): IStepSlot<TFamily, TParameters, TResult>;
@@ -107,9 +110,10 @@ export function declarations<TFamily extends IBindingFamily>(): IDeclarations<TF
   const templates: ITemplateRecords<TFamily> = new WeakMap();
   const compositions = new WeakMap<object, ICompositionState<TFamily>>();
   return Object.freeze({
-    source: <TResult>(options: ISourceOptions<TFamily, TResult>) => declareSource(records, options),
-    memo: <TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult = unknown>(
+    source: <TResult extends object>(options: ISourceOptions<TFamily, TResult>) => declareSource(records, options),
+    memo: <TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult extends object = object>(
       options: IMemoOptions<TFamily, TChildren, TResult>,
+      ..._root: [Awaited<TResult>] extends [object] ? [] : [unsupportedResultRoot: never]
     ) => declareMemo(records, options),
     stepSlot: <TParameters extends readonly unknown[] = readonly [], TResult = unknown>(options: IStepSlotOptions) =>
       declareStepSlot<TFamily, TParameters, TResult>(options),

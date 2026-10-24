@@ -65,14 +65,14 @@ export interface ICallCounts {
 }
 
 /** Declare the member summary through the member builder, typed from its activity child. */
-function summaryOf(member: IMemberBuilder<ITestFamily, IContributor>, activity: ISourceDeclaration<ITestFamily, string, IMemberBinding<ITestFamily, IContributor>>, calls: ICallCounts) {
-  return member.memo({
+function summaryOf(member: IMemberBuilder<ITestFamily, IContributor>, activity: ISourceDeclaration<ITestFamily, { readonly value: string }, IMemberBinding<ITestFamily, IContributor>>, calls: ICallCounts) {
+  return member.memo<{ readonly activity: typeof activity }, Promise<{ readonly value: string }>>({
     subject: member.subject(summaryPrefix),
     children: { activity },
-    run: async ({ calls: handles }): Promise<string> => {
+    run: async ({ calls: handles }): Promise<{ readonly value: string }> => {
       calls.bodies++;
       const { data } = await handles.activity();
-      return `summary of ${data}`;
+      return { value: `summary of ${data.value}` };
     },
   });
 }
@@ -107,11 +107,11 @@ export function buildKeyed(variation: IKeyedVariation = {}) {
     steps: (member) => {
       factoryCalls++;
       captured = member;
-      const activity = member.source<string>({
+      const activity = member.source<{ readonly value: string }>({
         subject: member.subject(activityPrefix),
         run: () => {
           calls.bodies++;
-          return 'activity';
+          return { value: 'activity' };
         },
       });
       const steps = { activity, summary: summaryOf(member, activity, calls) };

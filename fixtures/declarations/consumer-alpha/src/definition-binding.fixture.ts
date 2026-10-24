@@ -114,7 +114,7 @@ const adaSummary = memo({
     for (let index = 0; index < activity.pulls.length; index++) {
       merged += activity.pulls[index]?.merged === true ? 1 : 0;
     }
-    return helpers.format(profile.name, merged, activity.reviews);
+    return { value: helpers.format(profile.name, merged, activity.reviews) };
   },
 });
 const composition = compose({
@@ -131,7 +131,7 @@ const composition = compose({
 
 /** True only when two types are mutually identical (rejects never/any collapse). */
 type IExact<A, B> = (<T>() => T extends A ? 1 : 2) extends <T>() => T extends B ? 1 : 2 ? true : false;
-const summaryResult: IExact<ReturnType<typeof adaSummary.run>, Promise<string>> = true;
+const summaryResult: IExact<ReturnType<typeof adaSummary.run>, Promise<{ value: string }>> = true;
 const sourceContext: IExact<Parameters<typeof adaActivity.run>[0], IFacadeFamily['source'] & { readonly previous: { readonly data: ITrackedView<IActivity> } | undefined }> = true;
 const finalityContext: IExact<Parameters<NonNullable<typeof adaActivity.finality>>[0], IFacadeFamily['source'] & { readonly previous: { readonly data: ITrackedView<IActivity> } }> = true;
 // Controls: the exactness check rejects a different view and the never collapse.
@@ -201,7 +201,7 @@ memo({
     const { data } = await calls.profile();
     // @ts-expect-error: reviews belong to activity, not the profile child.
     void data.reviews;
-    return 0;
+    return { value: 0 };
   },
 });
 
@@ -211,7 +211,7 @@ memo({
   children: { activity: adaActivity },
   // @ts-expect-error: the declared child produces IActivity, not IProfile.
   run: async (context: IFacadeFamily['memo'] & { readonly calls: { readonly activity: IDeclaredCallHandle<ITrackedView<IProfile>> } }) =>
-    (await context.calls.activity()).data.name,
+    ({ value: (await context.calls.activity()).data.name }),
 });
 
 // A previous carrier is not the raw payload view.
@@ -270,6 +270,6 @@ compose({ scope: 's', members: [{ key: 'k', steps: [{ slot: 'activity', declarat
 // and a source must return the outcome envelope for its result.
 const assessment = suppliedStep<readonly [number], number>({ run: () => 1 });
 // @ts-expect-error: children are sibling source or memo declarations, or step slots.
-memo({ subject: 'summary:n7', children: { assess: assessment }, run: () => 1 });
+memo({ subject: 'summary:n7', children: { assess: assessment }, run: () => ({ value: 1 }) });
 // @ts-expect-error: a source returns the facade's outcome for its result, not raw data.
 source<IProfile>({ subject: 'profile:n8', run: () => ({ name: 'Ada', avatar: 'a.png' }) });

@@ -9,17 +9,19 @@
  *
  * Immutability of completed history is enforced in storage by triggers:
  * results, their generated index, dependencies, acceptance records, promotion
- * records, journal revisions and the identity row cannot be updated or
- * deleted, and attempts, current pointers and writer/sequence rows cannot be
- * deleted. No reclamation exists (RES-006).
+ * records, journal revisions and the identity row cannot be updated,
+ * deleted or replaced through insert conflicts. Attempts, current pointers
+ * and writer/sequence rows cannot be deleted. No reclamation exists (RES-006).
  *
- * Version 2 namespaces acceptance records by the environment that recorded
- * them and adds recorded promotions and Run Supervision's operation journal
- * (RUN-011/012/017). Version 1 files, written before those records existed,
- * are rejected by their recorded version like any other unsupported version:
- * the repository's storage policy is to reject incompatible formats
- * explicitly and never migrate stored data by guessing (execution.md PUB-004,
- * experiments.md EXP-2 gate), and no migration is authorized.
+ * Version 3 adds insert-conflict guards to every immutable table, including
+ * primary and secondary unique identities. They reject SQLite REPLACE before
+ * its implicit deletion, independently of recursive_triggers. Composite-key
+ * immutable tables have no hidden rowid that could bypass their declared keys.
+ * Version 2 added
+ * environment-scoped acceptances, promotions and the operation journal; both
+ * version 1 and version 2 files are now rejected by their recorded version.
+ * No migration is authorized: incompatible formats are rejected explicitly
+ * rather than guessed (execution.md PUB-004, experiments.md EXP-2 gate).
  * @packageDocumentation
  */
 import type { ISqliteConnection, ISqliteRow } from '@microdelta/machine';
@@ -33,22 +35,28 @@ const sql = String.raw;
 export const schemaName = 'microdelta.history.durable';
 
 /** The only schema version this implementation reads or writes. */
-export const schemaVersion = 2;
+export const schemaVersion = 3;
 
-/** Tables whose rows may never be updated or deleted once written. */
-const immutableTables = [
-  'history_identity',
-  'history_results',
-  'history_dependencies',
-  'history_nodes',
-  'history_edges',
-  'history_addresses',
-  'history_acceptances',
-  'history_acceptance_dependencies',
-  'history_promotions',
-  'history_promotion_results',
-  'history_journal',
-] as const;
+/**
+ * Unique identities that could displace immutable history during INSERT OR
+ * REPLACE. Every primary key and independent secondary UNIQUE key must appear:
+ * SQLite's implicit replacement deletes do not run delete triggers unless the
+ * caller enables recursive_triggers. BEFORE INSERT therefore owns this guard.
+ * The result scope UNIQUE includes result_id and is covered by its primary key.
+ */
+const immutableKeys: Readonly<Record<string, readonly (readonly string[])[]>> = {
+  history_identity: [['singleton']],
+  history_results: [['result_id'], ['publication']],
+  history_dependencies: [['attempt_id', 'position']],
+  history_nodes: [['result_id', 'node_id']],
+  history_edges: [['result_id', 'parent_node', 'edge_kind', 'edge_key']],
+  history_addresses: [['result_id', 'address']],
+  history_acceptances: [['acceptance_id']],
+  history_acceptance_dependencies: [['acceptance_id', 'position']],
+  history_promotions: [['promotion_id']],
+  history_promotion_results: [['promotion_id', 'position'], ['promotion_id', 'result_id']],
+  history_journal: [['analysis', 'environment', 'collection', 'journal_key', 'revision'], ['sequence']],
+};
 
 /** Tables whose rows may change state but are never deleted. */
 const retainedTables = ['history_writer', 'history_sequences', 'history_attempts', 'history_current'] as const;
@@ -141,7 +149,7 @@ const schemaObjects: readonly string[] = [
     position INTEGER NOT NULL CHECK (position >= 0),
     dependency_id INTEGER NOT NULL REFERENCES history_results (result_id),
     PRIMARY KEY (attempt_id, position)
-  ) STRICT`,
+  ) STRICT, WITHOUT ROWID`,
   // The generated selected index: one row per node of the canonical payload.
   // Only `scalar` holds author data; everything else is shape or digest.
   sql`CREATE TABLE history_nodes (
@@ -162,7 +170,7 @@ const schemaObjects: readonly string[] = [
         AND prototype IS NULL AND prototype_node IS NULL AND terminal IS NULL)
       OR (kind = 'record' AND scalar IS NULL AND array_length IS NULL AND own_keys IS NOT NULL
         AND prototype IS NOT NULL AND terminal IS NOT NULL AND (prototype = 'custom') = (prototype_node IS NOT NULL)))
-  ) STRICT`,
+  ) STRICT, WITHOUT ROWID`,
   // Structural slots: own record members and present array elements.
   sql`CREATE TABLE history_edges (
     result_id INTEGER NOT NULL REFERENCES history_results (result_id),
@@ -172,7 +180,7 @@ const schemaObjects: readonly string[] = [
     position INTEGER NOT NULL,
     child_node INTEGER NOT NULL,
     PRIMARY KEY (result_id, parent_node, edge_kind, edge_key)
-  ) STRICT`,
+  ) STRICT, WITHOUT ROWID`,
   // Every reachable structured address, with its node and MDO1 value digest.
   sql`CREATE TABLE history_addresses (
     result_id INTEGER NOT NULL REFERENCES history_results (result_id),
@@ -182,7 +190,7 @@ const schemaObjects: readonly string[] = [
     value_fingerprint TEXT,
     PRIMARY KEY (result_id, address),
     CHECK ((address = '[]') = (value_fingerprint IS NULL))
-  ) STRICT`,
+  ) STRICT, WITHOUT ROWID`,
   // The latest publication of each scoped subject; acceptance never moves it.
   sql`CREATE TABLE history_current (
     analysis TEXT NOT NULL,
@@ -210,7 +218,7 @@ const schemaObjects: readonly string[] = [
     position INTEGER NOT NULL CHECK (position >= 0),
     dependency_id INTEGER NOT NULL REFERENCES history_results (result_id),
     PRIMARY KEY (acceptance_id, position)
-  ) STRICT`,
+  ) STRICT, WITHOUT ROWID`,
   // Recorded promotions (RUN-017): each admits exact results of other
   // environments into its target environment, with the promoter's evidence.
   sql`CREATE TABLE history_promotions (
@@ -229,7 +237,7 @@ const schemaObjects: readonly string[] = [
     result_id INTEGER NOT NULL REFERENCES history_results (result_id),
     PRIMARY KEY (promotion_id, position),
     UNIQUE (promotion_id, result_id)
-  ) STRICT`,
+  ) STRICT, WITHOUT ROWID`,
   sql`CREATE INDEX history_promotion_results_by_result ON history_promotion_results (result_id, promotion_id)`,
   // Run Supervision's operation journal: immutable revisions of opaque owner
   // records per environment namespace, owner-named collection and key. The
@@ -248,8 +256,11 @@ const schemaObjects: readonly string[] = [
     format_version INTEGER NOT NULL CHECK (format_version > 0),
     content TEXT NOT NULL,
     PRIMARY KEY (analysis, environment, collection, journal_key, revision)
-  ) STRICT`,
-  ...immutableTables.flatMap((table) => [
+  ) STRICT, WITHOUT ROWID`,
+  ...Object.entries(immutableKeys).flatMap(([table, keys]) => [
+    sql`CREATE TRIGGER ${table}_immutable_insert BEFORE INSERT ON ${table}
+    WHEN EXISTS (SELECT 1 FROM ${table} WHERE ${keys.map((key) => `(${key.map((column) => `${column} = NEW.${column}`).join(' AND ')})`).join(' OR ')})
+    BEGIN SELECT RAISE(ABORT, '${table} rows are immutable history'); END`,
     sql`CREATE TRIGGER ${table}_immutable_update BEFORE UPDATE ON ${table}
     BEGIN SELECT RAISE(ABORT, '${table} rows are immutable history'); END`,
     sql`CREATE TRIGGER ${table}_immutable_delete BEFORE DELETE ON ${table}

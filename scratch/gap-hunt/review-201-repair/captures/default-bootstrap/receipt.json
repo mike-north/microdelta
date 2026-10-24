@@ -1,0 +1,93 @@
+{
+  "source": "4c4934ea61ba6294894c80089423e21adecabdda",
+  "priorSource": "f4211e3d925ed8aaedc313ac468d49a13149826c",
+  "priorProof": "62edd3fce225a664470aca650c180e50486446f4",
+  "changedFiles": [
+    "docs/private-alpha-workspace-consumers.md"
+  ],
+  "sourceFilesUnchanged": 814,
+  "freshInstallBuild": true,
+  "missingInputPersists": true,
+  "commands": [
+    {
+      "label": "install",
+      "argv": [
+        "npm",
+        "ci"
+      ],
+      "exit": 0,
+      "expected": 0,
+      "timeoutSeconds": 900
+    },
+    {
+      "label": "build-packages",
+      "argv": [
+        "npm",
+        "run",
+        "build:packages"
+      ],
+      "exit": 0,
+      "expected": 0,
+      "timeoutSeconds": 900
+    },
+    {
+      "label": "guide-setup-0",
+      "argv": [
+        "bash",
+        "-c",
+        "mkdir -p node_modules"
+      ],
+      "exit": 0,
+      "expected": 0,
+      "timeoutSeconds": 30
+    },
+    {
+      "label": "guide-setup-1",
+      "argv": [
+        "bash",
+        "-c",
+        "ln -s ../../microdelta/packages/core node_modules/microdelta"
+      ],
+      "exit": 0,
+      "expected": 0,
+      "timeoutSeconds": 30
+    },
+    {
+      "label": "literal-new-head-no-input",
+      "argv": [
+        "node",
+        "../microdelta/node_modules/typescript/bin/tsc",
+        "-p",
+        "tsconfig.json"
+      ],
+      "exit": 2,
+      "expected": 2,
+      "timeoutSeconds": 60
+    },
+    {
+      "label": "explicit-copy-compiler",
+      "argv": [
+        "node",
+        "../microdelta/node_modules/typescript/bin/tsc",
+        "-p",
+        "tsconfig.json"
+      ],
+      "exit": 0,
+      "expected": 0,
+      "timeoutSeconds": 60
+    },
+    {
+      "label": "explicit-copy-runtime",
+      "argv": [
+        "node",
+        "runtime-import.mjs"
+      ],
+      "exit": 0,
+      "expected": 0,
+      "timeoutSeconds": 60
+    }
+  ],
+  "platform": "darwin",
+  "node": "v24.22.1",
+  "sdkRootSelected": "/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk"
+}

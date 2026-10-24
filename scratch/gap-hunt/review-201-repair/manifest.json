@@ -2,7 +2,39 @@
   "files": [
     {
       "path": "REPORT.md",
-      "sha256": "8a1351e7a314289f2e56c0c0d407d47da383cf0e8d1a74071c4677a820e6b04c"
+      "sha256": "0ae7481557dff790caf62b323d2d597cf49f5f5ada9819f653cadd8853c974a4"
+    },
+    {
+      "path": "captures/default-bootstrap/build-packages.log",
+      "sha256": "9eb1f0e1ba62cd61262041daf444feb22fd48ec57cb809914e03f96c4504a62d"
+    },
+    {
+      "path": "captures/default-bootstrap/explicit-copy-compiler.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "captures/default-bootstrap/explicit-copy-runtime.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "captures/default-bootstrap/guide-setup-0.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "captures/default-bootstrap/guide-setup-1.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "captures/default-bootstrap/install.log",
+      "sha256": "b6fde70adc59143b8137593caa384a582eeb0e11ef5dc7b408d6b7e150d56e44"
+    },
+    {
+      "path": "captures/default-bootstrap/literal-new-head-no-input.log",
+      "sha256": "6479ce0e94e69abcfe5aef6070a7bc6fbf3395fd8678046a1f63f99e170c6b5e"
+    },
+    {
+      "path": "captures/default-bootstrap/receipt.json",
+      "sha256": "a443e6a0f665070f6bfe5781472a4b3ea4de562d7cc7543e884b2e8de40134ed"
     },
     {
       "path": "captures/explicit-copy-compiler.log",
@@ -26,7 +58,7 @@
     },
     {
       "path": "reproduce.py",
-      "sha256": "8cc9453ad05494091ff094ef138af84432cc5896c445bf695159acd8997fd139"
+      "sha256": "dbcd6fe99054ea9873bcfc99242c50b221a436e5cc7930a6503377dcac0c905a"
     }
   ]
 }

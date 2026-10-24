@@ -8,12 +8,16 @@ The bounded probe made a new exact source archive and an empty sibling. It extra
 
 This reused the earlier independently executed compiler/generated-package build after verifying all814 original source files byte-for-byte and recording the existing emitted-file hashes. It was not a fresh install/build or repetition of the original15-command workload. The literal gap is independent of declaration closure; the compiler fails before checking that closure. No product edits, new issue, remote feedback or Linux execution was performed.
 
-Replay with the retained qualified prior build available:
+## Clean-checkout default replay
 
 ```sh
-BUILD_CHECKOUT=/path/to/prior/f4211e3/build python3 scratch/gap-hunt/review-201-repair/reproduce.py
+python3 scratch/gap-hunt/review-201-repair/reproduce.py
 ```
 
-The helper verifies that build's complete original source inventory before reuse; callers without it must independently install/build the exact prior source rather than infer build qualification. Existing current-head feedback should be reused; the supervisor owns any short follow-up comment.
+The final helper now creates an exact temporary4c4934e archive, installs the lockfile and builds packages, then runs only the literal negative and explicit-copy compiler/runtime controls. It writes all logs/receipt to a newly printed temporary output directory, never the tracked captures. Every subprocess has an explicit timeout: Git/archive60seconds, install/build900seconds each, guide setup30seconds, probes60seconds, Node version30seconds. On macOS only, an installed26.5 Command Line Tools SDK is selected command-locally when present; no global environment is edited.
+
+That default command was executed once on macOS arm64 Node24.22.1. Fresh npmci/build:packages both exit0; literal guide input still givesTS6053; explicit copy yields compiler0/runtime0. All814 archived source files remain byte-identical. `captures/default-bootstrap/` retains the normalized install/build/probe logs and exact seven-command receipt. No full15-command repetition or Linux runtime is claimed.
+
+The earlier qualified-reuse run remains preserved in commit `e3605f4` and the original capture files; it is separate from this later fresh-bootstrap proof. The current default runner no longer requires BUILD_CHECKOUT or writes captured evidence in place.
 
 Attribution: Codex worker GPT-6.1 Sol executed this bounded follow-up for Mike North. No human execution/review claimed.

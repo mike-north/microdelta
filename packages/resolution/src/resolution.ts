@@ -288,6 +288,27 @@ interface IResolvedStep {
 }
 
 /**
+ * The current child invocation after Definition has reconnected its witness
+ * and Resolution has rebuilt any supplied arguments. The identity belongs to
+ * the child's current declaration, never to historical provenance.
+ */
+export interface IChildResolutionInvocation {
+  readonly kind: 'source' | 'memo' | 'supplied';
+  readonly step: IBindingDescriptor;
+  readonly subject: string;
+}
+
+/**
+ * Owner-only substitute for the child-resolution boundary. A test can return
+ * an already resolved current child outcome, or continue through normal
+ * Resolution. It owns no History mutation, parent comparison, or Definition
+ * correspondence; those remain on their real paths around this boundary.
+ */
+export interface IChildResolutionService {
+  resolve(invocation: IChildResolutionInvocation, normal: () => Promise<IResolvedStep>): Promise<IResolvedStep>;
+}
+
+/**
  * A requested step's resolution. A template instance its gate excludes is an
  * explicit skip rather than a work result; `gate` is the instance's gate
  * evidence, absent for steps outside templates and templates without a gate.
@@ -869,6 +890,19 @@ function unsupervised(): IExecutionSupervision {
  * @alpha
  */
 export function createResolution<TInputs extends object, THelpers extends object>(options: IResolutionOptions<TInputs, THelpers>): IResolution {
+  return _createResolutionWithChildService(options, { resolve: (_invocation, normal) => normal() });
+}
+
+/**
+ * Construct Resolution with an owner-test child seam. This deep-module entry
+ * is intentionally absent from the package barrel: consumers still receive
+ * only the normal resolver, while owner tests may isolate a parent's current
+ * child result without bypassing its surrounding contract.
+ */
+export function _createResolutionWithChildService<TInputs extends object, THelpers extends object>(
+  options: IResolutionOptions<TInputs, THelpers>,
+  childService: IChildResolutionService,
+): IResolution {
   type IFamily = IResolutionFamily<TInputs, THelpers>;
   const { composition, history, tracking, host, admission, observer } = options;
   if (typeof options.environment !== 'string' || options.environment.length === 0) {
@@ -906,6 +940,21 @@ export function createResolution<TInputs extends object, THelpers extends object
   const hasOwn: IFamily['memo']['hasOwn'] = (value, key) => tracking.hasOwn(value, key);
   /** Previous carriers this Resolution supplied, with the exact result and the resolution they belong to. */
   const carriers = new WeakMap<object, { readonly reference: ICompletedResultReference; readonly token: object }>();
+
+  /** Delegate one reconnected source child, retaining the normal shared path. */
+  function currentSourceChild(request: IRequestContext, step: IBindingDescriptor, declaration: IAnySourceDeclaration<IFamily>): Promise<IResolvedStep> {
+    return childService.resolve({ kind: 'source', step, subject: declaration.subject }, () => resolveSourceShared(request, step, declaration));
+  }
+
+  /** Delegate one reconnected memo child, retaining the normal shared path. */
+  function currentMemoChild(request: IRequestContext, step: IBindingDescriptor, declaration: IAnyMemoDeclaration<IFamily>): Promise<IResolvedStep> {
+    return childService.resolve({ kind: 'memo', step, subject: declaration.subject }, () => resolveMemoShared(request, step, declaration));
+  }
+
+  /** Delegate one current supplied child after argument and subject rebuild. */
+  function currentSuppliedChild(request: IRequestContext, call: ISuppliedCall<IFamily>): Promise<IResolvedStep> {
+    return childService.resolve({ kind: 'supplied', step: call.slot, subject: call.subject.subject }, () => resolveSuppliedShared(request, call));
+  }
 
   const port: IInvocationPort<IFamily> = Object.freeze({
     active: (): IInvocationScope | undefined => active.getStore(),
@@ -1648,7 +1697,7 @@ export function createResolution<TInputs extends object, THelpers extends object
       // occupying it is simply the current child, resolved under its own
       // eligibility and admission, whose consumed output facts are then compared
       // (REUSE-005/006, RES-003/007). Original provenance keeps the old child.
-      const resolved = await resolveSourceShared(request, childStep, childDeclaration);
+      const resolved = await currentSourceChild(request, childStep, childDeclaration);
       switch (resolved.result.kind) {
         case 'reused':
         case 'published':
@@ -1728,9 +1777,9 @@ export function createResolution<TInputs extends object, THelpers extends object
         const childStep = siblingStep(step, witness.child.slot);
         const childDeclaration = child.declaration;
         if (childDeclaration.kind === 'source') {
-          resolved = await resolveSourceShared(request, childStep, childDeclaration);
+          resolved = await currentSourceChild(request, childStep, childDeclaration);
         } else if (childDeclaration.kind === 'memo') {
-          resolved = await resolveMemoShared(request, childStep, childDeclaration);
+          resolved = await currentMemoChild(request, childStep, childDeclaration);
         } else {
           return missed('correspondence', `${label} names a ${childDeclaration.kind}, which is never a declared call`);
         }
@@ -1744,7 +1793,7 @@ export function createResolution<TInputs extends object, THelpers extends object
           }
           throw error;
         }
-        resolved = await resolveSuppliedShared(request, { slot: witness.child, declaration: child.declaration, subject, values: rebuilt.values, digest: argumentDigest(rebuilt.values) });
+        resolved = await currentSuppliedChild(request, { slot: witness.child, declaration: child.declaration, subject, values: rebuilt.values, digest: argumentDigest(rebuilt.values) });
       }
       switch (resolved.result.kind) {
         case 'reused':
@@ -2458,7 +2507,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     const childStep = siblingStep(frame.step, slot);
     let resolved: IResolvedStep;
     try {
-      resolved = await resolveSourceShared(frame.request, childStep, request.child);
+      resolved = await currentSourceChild(frame.request, childStep, request.child);
     } catch (error: unknown) {
       recordFailedChild(frame, error);
       throw error;
@@ -2510,10 +2559,10 @@ export function createResolution<TInputs extends object, THelpers extends object
     try {
       switch (request.kind) {
         case 'source':
-          resolved = await resolveSourceShared(frame.request, siblingStep(frame.step, witness.child.slot), request.child);
+          resolved = await currentSourceChild(frame.request, siblingStep(frame.step, witness.child.slot), request.child);
           break;
         case 'memo':
-          resolved = await resolveMemoShared(frame.request, siblingStep(frame.step, witness.child.slot), request.child);
+          resolved = await currentMemoChild(frame.request, siblingStep(frame.step, witness.child.slot), request.child);
           break;
         case 'supplied': {
           const outputs = new Map([...frame.calls].map(([index, call]) => [index, call.reference]));
@@ -2521,7 +2570,7 @@ export function createResolution<TInputs extends object, THelpers extends object
           if (rebuilt.status !== 'rebuilt') {
             throw new ResolutionError('execution-failure', `Call ${String(witness.index)} of ${stepKey(frame.step)} cannot be made: ${rebuilt.detail}`);
           }
-          resolved = await resolveSuppliedShared(frame.request, { slot: witness.child, declaration: request.child, subject: request.subject, values: rebuilt.values, digest: argumentDigest(rebuilt.values) });
+          resolved = await currentSuppliedChild(frame.request, { slot: witness.child, declaration: request.child, subject: request.subject, values: rebuilt.values, digest: argumentDigest(rebuilt.values) });
           break;
         }
         default: {

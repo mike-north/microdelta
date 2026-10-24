@@ -134,3 +134,24 @@ an API or storage format. The bounded CML result and Lean proof are historical;
 TLA models are selected only for concrete correctness questions under the
 model-to-code-and-test review contract. Model claims remain limited to the checked
 model, assumptions and bounds.
+
+## Preview decisions superseding the initial proposal
+
+Owner decisions on 2026-10-24 reconcile the earlier issue-165 alternatives under
+RUN-007/008 and [the preview plan](../plans/preview-observation.md). They record
+required behavior, not current implementation conformance.
+
+| Earlier proposal or interpretation | Accepted direction | Remaining boundary |
+| --- | --- | --- |
+| Delivery-relative failure indication in a coalesced push | Thin change signal with no success/failure; current/recent information is pulled | Query, recent-activity ordering/retention/gaps and read/listen race |
+| Observation may end with the execution run | Preview can stay open after completion or stop; closing preview ends observation | Reader resources, exact lazy-view lifetime and pending callback disposal |
+| Newly fetched but unverified is a third preview category | Current incoming snapshots versus potentially stale retained values; verification can clear stale without changing data | Formal acceptance remains separately governed, public discriminants unselected |
+| Notification disconnect clears cursor/cache | Channel lifetime is separate from client-owned read position/state | Cursor format/validity and reconnection protocol; no durable server client-session requirement |
+| First version requires in-memory-only client storage | Superseded: consumer cache/persistence/synchronization is outside library responsibility | No persistence prohibition or library cache/migration implementation |
+| WebSocket discussion selects a transport | Illustrative channel only | No transport/API chosen |
+
+Independent lifetime and thin push do not ratify the former proposal's lazy-load
+failure-after-close rule, pending-signal flush/discard alternatives, or retained
+member inclusion during incomplete discovery. Those choices remain explicit in
+the implementation handoff. Resource-report retention belongs to issue 166 and
+is not changed by this preview record.

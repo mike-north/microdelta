@@ -10,8 +10,8 @@
  * built once against a symbolic member (keyed by designated identity or a
  * custom key, optionally gated), member steps that read their member through
  * the member binding, supplied step slots bound at composition, canonical
- * `forward` origins for arguments, the observed untracked read, and strict
- * folds and outcome (tolerant) folds over a template step's members.
+ * `forward` origins for arguments, own presence, the observed untracked read,
+ * and strict folds and outcome (tolerant) folds over a template step's members.
  *
  * Every type here is a facade-local `@alpha` alias of its owner's contract,
  * declared locally so the default public declaration view never references a
@@ -52,6 +52,7 @@ import type {
 } from '@microdelta/definition';
 import { sourceOutcome as resolutionSourceOutcome } from '@microdelta/resolution';
 import type {
+  IHasOwn as IResolutionHasOwn,
   IPreviousResult as IResolutionPreviousResult,
   IResolutionFamily,
   IResultView as IResolutionResultView,
@@ -117,6 +118,15 @@ export type IDeclaredCallHandle<T> = IDefinitionDeclaredCallHandle<T>;
 
 /** The immutable `{ data }` carrier a declared child call resolves to. @alpha */
 export type IChildResult<T> = IDefinitionChildResult<T>;
+
+/**
+ * The own-presence capability every author callback receives as `hasOwn`.
+ * It records whether the tracked record or array owns one supported string
+ * key, without consuming the value or inherited membership. The workspace's
+ * Tracking observer owns selection and capture lifetime; unowned views reject.
+ * @alpha
+ */
+export type IHasOwn = IResolutionHasOwn;
 
 /**
  * The observed untracked read every step callback receives as `untracked`:

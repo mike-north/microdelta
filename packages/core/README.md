@@ -35,7 +35,14 @@ composes the owners and adds no policy of its own:
   outcome fold over every member's settled status), `stepSlot`,
   `suppliedStep` and `supply` (callable step slots bound at composition),
   the canonical `forward` argument origins, and `compose`. Step callbacks also
-  receive the observed `untracked` read.
+  receive `hasOwn(value, key)` for own-member presence and the observed
+  `untracked` read.
+- Completed source results and awaited memo results have a record or array
+  root in this alpha path. Wrap a scalar as a field, such as `{ value: 42 }`;
+  `undefined` is also supported as a present field value. Source callbacks
+  still return a trusted `sourceOutcome.fresh(recordOrArray)` or `retain()`
+  outcome, synchronously or through a promise. The runtime validates the
+  actual result shape for untyped callers.
 - `openWorkspace({ location, logicalStore })`: durable History over Node's
   SQLite and clock. `workspace.run(options, body)` is one Run Supervision run
   whose Resolution resolves against that store; the run offers the normal entry
@@ -95,10 +102,73 @@ consumer imports only `microdelta`: for example `IMemberBuilder`,
 `IOperationView`, `IOperationEvent`, `IWaitEvent`, `IUsageSummary` and
 `IPromotionRecord`.
 
+For a scalar calculation, retain a record and read its field from the child
+result. This complete declaration example uses the generated alpha view, with
+`microdelta` resolved as in the [example TypeScript configuration](../../examples/contribution-report/tsconfig.json):
+
+```ts
+import { authoring } from 'microdelta';
+
+export const builders = authoring<Record<string, never>, Record<string, never>>();
+const answer = builders.memo({
+  subject: 'answer',
+  run: () => ({ value: 6 * 7 }),
+});
+const summary = builders.memo({
+  subject: 'summary',
+  children: { answer },
+  run: async ({ calls }) => {
+    const { data } = await calls.answer();
+    return { text: `The answer is ${data.value}.` };
+  },
+});
+export const composition = builders.compose({
+  scope: 'wrapped-result',
+  steps: [{ slot: 'answer', declaration: answer }, { slot: 'summary', declaration: summary }],
+});
+```
+
+The `answer` result retains `{ value: 42 }`; `summary` consumes `data.value`
+and also returns a record. Pass `builders` as the run's `authoring` and
+`composition` as its composition when resolving `summary`, following the
+workspace setup in the contribution report example below. A serialized string
+or a present `undefined` uses the same wrapper shape.
+
 Approved sibling workspace consumers must map the facade and any reached owner
 declarations to their generated alpha rollups. See the tested
 [private-alpha workspace consumer recipe](../../docs/private-alpha-workspace-consumers.md);
 the default public entry remains unchanged.
+
+### Own presence in an alpha callback
+
+Use the callback's `hasOwn` capability when a missing field must differ from an
+own field containing `undefined`:
+
+```ts
+import { authoring } from 'microdelta';
+
+const analysis = authoring<{ config: { optional?: number | undefined } }, Record<never, never>>();
+export const configured = analysis.memo({
+  subject: 'configured',
+  run: ({ inputs, hasOwn }) => ({ present: hasOwn(inputs.config, 'optional') }),
+});
+```
+
+`IHasOwn` names this narrow alpha capability. Resolution supplies it from the
+same Tracking observer that owns the callback's views, including lazy child and
+previous-result data. It records own presence, not the field's value, sibling
+keys, or inherited membership. Thus missing → own `undefined` invalidates this
+reader; later value-only changes preserve reuse. Ordinary `in` remains the
+separate supported membership operation, and ordinary value reads can equate
+missing with own `undefined` ([TRK-5](../../docs/spec/tracking.md)).
+
+Keys are strings: records support their Value-domain property names, and arrays
+support canonical nonnegative index strings; array `length` ownership is not a
+supported own-presence fact. Raw objects, foreign-observer views, unsupported
+keys and unsupported values reject rather than report absence. The capability
+uses Tracking's current capture and existing lifetime rules. It exposes neither
+an observer nor a new capture scope. Native `Object.hasOwn` and descriptor
+reflection remain unsupported on tracked views.
 
 The [contribution report example](../../examples/contribution-report/README.md)
 uses this path through the installed workspace's generated alpha declarations.

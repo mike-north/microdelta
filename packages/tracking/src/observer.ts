@@ -646,7 +646,7 @@ const immutableContainerTraps = {
     throw new TypeError('Native reflection is unsupported; use observer.keys for supported records');
   },
   getOwnPropertyDescriptor(): PropertyDescriptor | undefined {
-    throw new TypeError('Native reflection is unsupported; use observer.hasOwn for supported fields');
+    throw new TypeError('Native reflection is unsupported; use callback hasOwn(value, key) in a workspace, or observer.hasOwn for direct Tracking consumers');
   },
   getPrototypeOf(): object | null {
     throw new TypeError('Prototype reflection is unsupported for tracked values');
@@ -1370,6 +1370,11 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
       return frame.untracked;
     },
     hasOwn(value: ITracked<object>, key: string): boolean {
+      // Untyped callers must not coerce a key into a different fact or silently
+      // report absence. Apply the same boundary before local or lazy selection.
+      if (typeof key !== 'string') {
+        throw new TypeError('Own-property checks need a supported string key');
+      }
       const owned = ownership.get(value);
       if (owned === undefined) {
         throw new TypeError('hasOwn needs an observer-owned value');

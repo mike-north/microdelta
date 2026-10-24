@@ -1,5 +1,12 @@
 # EXP-8 bounded mechanism decision
 
+**Supersession notice (2026-10-24):** original results and their dates below are
+preserved. The accepted [data-acquisition retry target](../../docs/plans/data-acquisition-retries.md) replaces the
+external-business-write replay/settlement premise for current acquisition scope.
+These historical passes do not prove finite per-new-run retry or shared static
+rate admission; intent, fencing, stop, privacy and truthful usage evidence remain
+relevant. Manual operator-supplied result recovery is deferred.
+
 **Result: seven candidate mechanisms pass within the stated fixture domain;
 one alternative (request-granularity soft-stop drain) is rejected.** Mechanisms
 1, 3 and 5 pass only in their corrected form. The first submission (PR #111

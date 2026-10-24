@@ -33,6 +33,43 @@ mechanisms. It does not retrofit new runtime behavior into the existing scaffold
 | Java package tree translates literally to workspace packages | PKG-001/006 | Coarse workspace boundary; internal modules remain internal |
 | CML private, TypeScript private, # privacy and release tier are one axis | PKG-002/006 | Independent facts; CML correspondence retired, shaped package/API checks remain authoritative |
 
+## Acquisition target supersession (2026-10-24)
+
+The owner decisions recorded for [#212](https://github.com/mike-north/microdelta/issues/212)
+are accepted target changes, not findings that M5 violated its former rules.
+[The decision and handoff](../plans/data-acquisition-retries.md) records their
+chronological corrections and implementation boundaries.
+
+| Earlier rule or proposal | Current authority | Consequence |
+| --- | --- | --- |
+| Unknown acquisition requires safe-to-repeat/idempotency or effect settlement before retry | DOM-7; RUN-011/012 | Finite current-run acquisition retries can proceed without those safety flags; missing result/usage remains unknown |
+| Persisted operation history acts as a lifetime retry ceiling; later run needs compensating allowance | RUN-011 | New analysis run starts fresh configured allowance; same-run continuation does not. Historical attempts and costs remain |
+| Resolve succeeded consumes the address without supplying data; abandon permits a second effect | RUN-012 compatibility boundary | Historical runtime state must be read honestly and migrated explicitly, not used as target acquisition authorization or a fabricated result |
+| Result-bearing manual recovery, validator/staging/duplicate-submission work is prerequisite to controlled roster | RUN-012; acquisition handoff | Deferred; remove #152 from #170 prerequisite scope while preserving other independent readiness gates |
+| Batching/frontier/fixed extra budget was described as accepted | Owner correction in acquisition decision | Proposal for evaluation only. Rejection gracefully stopping the whole analysis and new-run allowance are independently accepted |
+| Possible conflation: Accounting after a call enforces a shared rate limit | RUN-019; ACC-008 | All applicable overlapping limits need coordinated pre-send admission within one Node process; Accounting remains evidence |
+| Assumption that every source needs proactive rate configuration or an implicit default cap | RUN-019; A-12h | Proactive pacing is optional; absent configuration retains ordinary controls and bounded contextual provider-response retry policy, not unlimited retries |
+| Earlier static/fixed-group-only interpretation of deferred dynamic quota management | RUN-019; A-12k/l | Logical API-surface default, all applicable overlapping limits and a pluggable adaptive grouping/pacing seam are now required. Built-in adaptive quota/reserve strategies and cross-process coordination remain deferred; an extension example authorizes no paid execution |
+
+The later 2026-10-24 owner decisions select three total attempts per operation/run
+by default (finite override), sensible increasing backoff, and first-build shared
+reactive cooldown even without proactive numeric configuration. RUN-011/019 and
+A-12i/j own these additions. Default admission favors earlier-discovered eligible
+work; queue arrival is not a substitute. The goal is earlier intermediate
+completeness, not an optimality guarantee.
+The subsequent accepted extension requirement supports logical API surfaces,
+overlapping limits and adaptive grouping/pacing adapters (A-12k/l). Exact timing,
+identity/membership, discovery sequencing, retry placement, fairness, adapter
+history/state, async/error behavior and queued/in-flight reclassification remain
+bounded implementation choices.
+
+M5/EXP-8 plans and validation records retain original dated claims with pointers
+here. Current-runtime guides label their legacy behavior. Follow-up code, tests,
+generated declarations and examples must migrate together under the handoff's
+compatibility and test-first gates; the documentation change itself repairs no
+runtime behavior. Earlier inspection and resource-state proposals retain their
+own unresolved decisions.
+
 ## Preserved original product obligations
 
 The old success criteria are reconciled here rather than silently discarded.

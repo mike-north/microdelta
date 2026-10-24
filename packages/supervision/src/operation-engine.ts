@@ -821,7 +821,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
               return leaseLost();
             }
             emit('retry-exhausted', exhausted, { stepAttempt, status: 'failed', reason: 'policy-exhausted' });
-            return { stored: written, outcome: { kind: 'error', error: new SupervisionError('operation-failed', `Operation ${operation} is still rate limited after ${String(request.rateLimitRetries)} deferred retries`) } };
+            return { stored: written, outcome: { kind: 'error', error: new SupervisionError('operation-failed', `Operation ${operation} is still rate limited after exhausting its finite retry allowance`) } };
           }
           const written = commit(next, 'rate-limited');
           if (written === undefined) {

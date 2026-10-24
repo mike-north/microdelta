@@ -1,5 +1,21 @@
 # @microdelta/supervision
 
+## 0.3.1
+### Patch Changes
+
+- dbdfee8: Bound fan-out scheduling state to the run's active window while retaining canonical member reports, stop handling, and lane lending.
+- Updated dependencies [d782565]
+- Updated dependencies [bac83f7]
+- Updated dependencies [dbdfee8]
+- Updated dependencies [0af7f74]
+- Updated dependencies [5c9436c]
+- Updated dependencies [8692f2a]
+- Updated dependencies [c20f01e]
+- Updated dependencies [f23d2a1]
+- Updated dependencies [33213fb]
+  - @microdelta/resolution@0.3.1
+  - @microdelta/definition@0.3.1
+
 ## 0.3.0
 ### Minor Changes
 

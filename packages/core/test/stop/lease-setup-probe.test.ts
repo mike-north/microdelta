@@ -50,8 +50,11 @@ test('a rejected pre-send run retains its actual failure in the boundary error',
   });
 });
 
-test('an unobserved boundary stays bounded when its run never settles', async () => {
-  await expect(untilRunReaches(new Promise<never>(() => undefined), () => false, 'provider send', 2)).rejects.toThrow('timed out waiting until provider send');
+test('an unobserved boundary stays bounded with a frozen wall clock and a run that never settles', async () => {
+  const clock = jest.spyOn(Date, 'now').mockReturnValue(1_000);
+  try {
+    await expect(untilRunReaches(new Promise<never>(() => undefined), () => false, 'provider send', 10)).rejects.toThrow('timed out waiting until provider send');
+  } finally { clock.mockRestore(); }
 });
 
 test('a boundary already reached remains observable when its run also settles', async () => {
@@ -60,4 +63,14 @@ test('a boundary already reached remains observable when its run also settles', 
 
 test('completion waits have a real bounded deadline', async () => {
   await expect(within(new Promise<never>(() => undefined), 'missing completion', 5)).rejects.toThrow('timed out waiting for missing completion');
+});
+
+test('a live run reaches an asynchronous boundary after 250 ms with Date.now frozen', async () => {
+  const clock = jest.spyOn(Date, 'now').mockReturnValue(1_000);
+  let reached = false;
+  const boundary = setTimeout(() => { reached = true; }, 250);
+  try {
+    await expect(untilRunReaches(new Promise<never>(() => undefined), () => reached, 'asynchronously delayed send')).resolves.toBeUndefined();
+    expect(reached).toBe(true);
+  } finally { clearTimeout(boundary); clock.mockRestore(); }
 });

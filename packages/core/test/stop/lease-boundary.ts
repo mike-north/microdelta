@@ -1,23 +1,33 @@
 /** Bounded synchronization that distinguishes a missing send from its owning run ending early. */
+import { performance } from 'node:perf_hooks';
 
 /** The actual terminal outcome preserved when a run cannot reach its intended boundary. */
 type IRunEnding<T> = { readonly kind: 'returned'; readonly value: T } | { readonly kind: 'threw'; readonly error: unknown };
 
-/** Wait for the boundary without concealing an already completed or rejected run. */
-export async function untilRunReaches<T>(running: Promise<T>, condition: () => boolean, description: string, maximumTurns = 2_000): Promise<void> {
+/**
+ * Wait on a monotonic real-time deadline, independent of the controlled wall
+ * clock. Timer-backed polling permits asynchronous setup to progress; the
+ * owning run's settlement wakes the wait immediately and preserves its cause.
+ */
+export async function untilRunReaches<T>(running: Promise<T>, condition: () => boolean, description: string, milliseconds = 2_000): Promise<void> {
   let ending: IRunEnding<T> | undefined;
-  void running.then(
+  const ended = running.then(
     (value) => { ending = { kind: 'returned', value }; },
     (error: unknown) => { ending = { kind: 'threw', error }; },
   );
-  for (let turn = 0; turn < maximumTurns; turn += 1) {
+  const deadline = performance.now() + milliseconds;
+  for (;;) {
     if (condition()) { return; }
     if (ending !== undefined) { throw new Error(`Run ended before ${description}`, { cause: ending }); }
-    await new Promise<void>((resolve) => { setImmediate(resolve); });
+    const remaining = deadline - performance.now();
+    if (remaining <= 0) { throw new Error(`timed out waiting until ${description}`); }
+    let tick: ReturnType<typeof setTimeout> | undefined;
+    try {
+      await Promise.race([ended, new Promise<void>((resolve) => {
+        tick = setTimeout(resolve, Math.min(5, remaining));
+      })]);
+    } finally { clearTimeout(tick); }
   }
-  if (condition()) { return; }
-  if (ending !== undefined) { throw new Error(`Run ended before ${description}`, { cause: ending }); }
-  throw new Error(`timed out waiting until ${description}`);
 }
 
 /** Bound completion and cleanup with a real timer, independent of the spied wall clock. */

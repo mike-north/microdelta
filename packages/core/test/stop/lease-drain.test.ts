@@ -1,8 +1,9 @@
 /**
  * Ruling R, RUN-014 and PUB-002 through the actual facade: establish a send,
  * then force lease expiry or successor ownership before late completion.
- * Only Node's wall-clock readings are controlled. Timers, owner composition,
- * SQLite, renewal, fencing, stop and publication behavior remain real.
+ * Node's wall-clock readings are controlled; native timer scheduling is not
+ * mocked. Host timer deadlines also read that clock, so these cases select no
+ * timed stop deadline. Owner composition, SQLite and fencing remain real.
  */
 import { afterEach, beforeEach, describe, expect, jest, test } from '@jest/globals';
 import { performance } from 'node:perf_hooks';
@@ -13,7 +14,7 @@ import { createWorld, installWorld } from './fixture.js';
 import type { IWorld } from './fixture.js';
 import { untilRunReaches, within } from './lease-boundary.js';
 import { freshKey, logicalStore, openStopSession, runIn } from './session.js';
-import { attemptsAt, publishedSubjects, tempStore } from './support.js';
+import { attemptsAt, elapse, publishedSubjects, tempStore } from './support.js';
 import type { ITempStore } from './support.js';
 
 let store: ITempStore;
@@ -38,17 +39,22 @@ describe('a drain that outlives the writer lease cannot publish (ruling R)', () 
       const probe = openHistory({ location: store.location, store: logicalStore, clock: createNodeClock() });
       let delayedSetup = false;
       let setupElapsed = 0;
-      const started = runIn(session, { stop, observers: [{ observe(event) {
-        if (!delayedSetup && event.kind === 'step' && event.event.phase === 'verify') {
+      const request = world.provider.request;
+      world.provider.request = (label, value) => {
+        const perform = request(label, value);
+        return async (signal) => {
           delayedSetup = true;
           expect(probe.currentWriter()).toMatchObject({ expiresAt: now + leaseMilliseconds });
-          // Deliberate synchronous setup cost exceeds the old lease budget. Real
-          // elapsed time cannot consume the controlled post-send loss boundary.
+          // The adapter yields before its actual send. A real timer keeps the
+          // boundary pending beyond the old lease budget while History time
+          // remains fixed; the wait must tolerate this asynchronous setup.
           const before = performance.now();
-          expect(Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 250)).toBe('timed-out');
+          await elapse(250);
           setupElapsed = performance.now() - before;
-        }
-      } }] }, (run) => run.resolve(session.fixture.instance('item:1'), { requestKey: freshKey() }));
+          return perform(signal);
+        };
+      };
+      const started = runIn(session, { stop }, (run) => run.resolve(session.fixture.instance('item:1'), { requestKey: freshKey() }));
       running = started;
       await untilRunReaches(started, () => world.provider.received.includes('item:1'), 'the member is sending');
       expect(delayedSetup).toBe(true);

@@ -19,6 +19,7 @@ import type {
   ICallView,
   ICandidateMiss,
   ICheckOutcome,
+  IExecutionSupervision,
   IFoldCoverage,
   IFoldOutcome,
   IFoldResolution,
@@ -108,6 +109,14 @@ if (checked.kind === 'skipped') {
 // Admission may deny or cancel, each with a reason; nothing else is a decision.
 expectAssignable<IAdmissionDecision>({ kind: 'cancelled', reason: 'withdrawn' });
 expectAssignable<IAdmissionDecision>({ kind: 'denied', reason: 'quota' });
+
+// Internal run scheduling accepts a population count and a lazy position
+// callback; the result counts the contiguous prefix actually started.
+declare const execution: IExecutionSupervision;
+expectType<Promise<number>>(execution.dispatchMembers(8, () => true, async (position) => {
+  expectType<number>(position);
+}));
+expectError(execution.dispatchMembers(['a', 'b'], () => true, async () => undefined));
 expectNotAssignable<IAdmissionDecision>({ kind: 'cancelled' });
 expectNotAssignable<IAdmissionDecision>({ kind: 'skipped', reason: 'gate' });
 

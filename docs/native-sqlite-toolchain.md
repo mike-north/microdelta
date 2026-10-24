@@ -98,6 +98,10 @@ bindings. The Node 26.12.1 patch version substituted for the requested
 author. They do not test pnpm's build approval, Linux same-store cross-version
 reuse, or every Linux host.
 
+The owner-supplied report states:
+
+> Both main-branch full npm test runs passed.
+
 The upstream driver declares `20.x || 22.x || 23.x || 24.x || 25.x`; the
 microdelta facade and Machine Node manifests say `>=20`. The Node 26
 `EBADENGINE` warning expresses that metadata mismatch. The bounded macOS and

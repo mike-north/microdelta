@@ -52,6 +52,16 @@ test('guide attributes Linux npm proof and keeps package metadata separate', () 
   ]) assert.ok(text.includes(marker), `guide must mention ${marker}`);
 });
 
+/** Direct source words distinguish supplied Linux evidence from our interpretation. */
+test('guide quotes the owner Linux result with its immutable source attribution', () => {
+  const text = content(guide);
+  const report = 'https://github.com/mike-north/microdelta/blob/'
+    + 'e475049c3f858c270791581fb77f925e761363ce/'
+    + 'scratch/gap-hunt/contract-operations/owner-linux-parity.md';
+  assert.ok(text.includes(`[owner-supplied Linux aarch64 report](${report})`));
+  assert.ok(text.includes('> Both main-branch full npm test runs passed.'));
+});
+
 test('diagnostic remains the unchanged disposable, outcome-recording fixture', () => {
   const source = content(diagnostic);
   assert.equal(createHash('sha256').update(source).digest('hex'), diagnosticDigest);

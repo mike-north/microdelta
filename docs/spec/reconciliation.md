@@ -47,9 +47,21 @@ chronological corrections and implementation boundaries.
 | Resolve succeeded consumes the address without supplying data; abandon permits a second effect | RUN-012 compatibility boundary | Historical runtime state must be read honestly and migrated explicitly, not used as target acquisition authorization or a fabricated result |
 | Result-bearing manual recovery, validator/staging/duplicate-submission work is prerequisite to controlled roster | RUN-012; acquisition handoff | Deferred; remove #152 from #170 prerequisite scope while preserving other independent readiness gates |
 | Batching/frontier/fixed extra budget was described as accepted | Owner correction in acquisition decision | Proposal for evaluation only. Rejection gracefully stopping the whole analysis and new-run allowance are independently accepted |
-| Possible conflation: Accounting after a call enforces a shared rate limit | RUN-019; ACC-008 | Shared configured connection+limit needs coordinated pre-send admission within one Node process; Accounting remains evidence |
+| Possible conflation: Accounting after a call enforces a shared rate limit | RUN-019; ACC-008 | All applicable overlapping limits need coordinated pre-send admission within one Node process; Accounting remains evidence |
 | Assumption that every source needs proactive rate configuration or an implicit default cap | RUN-019; A-12h | Proactive pacing is optional; absent configuration retains ordinary controls and bounded contextual provider-response retry policy, not unlimited retries |
-| Possible scope expansion: header-derived dynamic quota/reserves or cross-process coordination follows from local rate control | RUN-019 | Dynamic quota/reserves and cross-process coordination remain deferred; optional static pacing plus known-limit reactive cooldown/fair admission in one process are selected |
+| Earlier static/fixed-group-only interpretation of deferred dynamic quota management | RUN-019; A-12k/l | Logical API-surface default, all applicable overlapping limits and a pluggable adaptive grouping/pacing seam are now required. Built-in adaptive quota/reserve strategies and cross-process coordination remain deferred; an extension example authorizes no paid execution |
+
+The later 2026-10-24 owner decisions select three total attempts per operation/run
+by default (finite override), sensible increasing backoff, and first-build shared
+reactive cooldown even without proactive numeric configuration. RUN-011/019 and
+A-12i/j own these additions. Default admission favors earlier-discovered eligible
+work; queue arrival is not a substitute. The goal is earlier intermediate
+completeness, not an optimality guarantee.
+The subsequent accepted extension requirement supports logical API surfaces,
+overlapping limits and adaptive grouping/pacing adapters (A-12k/l). Exact timing,
+identity/membership, discovery sequencing, retry placement, fairness, adapter
+history/state, async/error behavior and queued/in-flight reclassification remain
+bounded implementation choices.
 
 M5/EXP-8 plans and validation records retain original dated claims with pointers
 here. Current-runtime guides label their legacy behavior. Follow-up code, tests,
@@ -122,10 +134,3 @@ an API or storage format. The bounded CML result and Lean proof are historical;
 TLA models are selected only for concrete correctness questions under the
 model-to-code-and-test review contract. Model claims remain limited to the checked
 model, assumptions and bounds.
-
-The later 2026-10-24 owner decisions select three total attempts per operation/run
-by default (finite override), sensible increasing backoff, and first-build shared
-reactive cooldown even without proactive numeric configuration. RUN-011/019 and
-A-12i/j own these additions. Earlier-discovered eligible work is favored; queue
-arrival is not a substitute. Exact timing, shared-scope identity, discovery
-sequencing, retry placement and fairness remain bounded implementation choices.

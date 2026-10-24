@@ -49,7 +49,7 @@ The primary authoring path MUST provide scoped analysis-context access without
 requiring an extra context argument through ordinary step/helper calls. Nested
 asynchronous executions MUST inherit the selected environment while retaining
 their own execution attribution. Concurrent runs MUST remain isolated. Deliberate
-sharing of a configured connection+limit under RUN-019 coordinates admission
+sharing of applicable rate limits under RUN-019 coordinates admission
 without merging run attribution, retry tallies or environment storage.
 
 Environment selection MUST remain stable for the invocation. Volatile metadata
@@ -405,7 +405,7 @@ attempts remain recorded, but neither a same-run pass nor a new run may blindly
 replay already completed reusable paid child work. Whole-step reevaluation is not
 resumption of an arbitrary JavaScript continuation.
 
-**Validation:** [A-12a–j](acceptance.md#acquisition-retry-and-rate-admission-cases)
+**Validation:** [A-12a–l](acceptance.md#acquisition-retry-and-rate-admission-cases)
 exercise lost responses, exhaustion, new-run versus same-run allowance,
 classification/default precedence, not-before, cancellation and usage gaps.
 Controlled clocks and providers establish the outcomes without live spend.
@@ -681,7 +681,8 @@ execution/concurrency controls; the library MUST NOT impose an implicit proactiv
 request cap or require source rate configuration. Provider rate-limit signals
 still invoke the applicable RUN-011 bounded retry/backoff policy, including known
 not-before timing and the shared reactive coordination below. Matching custom
-source policy/default precedence remains the same, and contextual classification is not restricted to HTTP 429. Other failures,
+source policy/default precedence remains the same, and contextual classification
+is not restricted to HTTP 429. Other failures,
 finite retry allowance, stop, intent/fencing and existing execution limits remain
 in force. Omission of rate configuration grants neither unlimited retries nor
 permission to bypass a previously established not-before time.
@@ -689,11 +690,24 @@ permission to bypass a previously established not-before time.
 **Rationale and boundary.** A user can deliberately configure a lower local limit
 to pace work earlier and leave headroom for other activities. This is the user's
 chosen bound, not an inferred provider capacity, automatic percentage reserve or
-promise that other callers have unused quota. Dynamic quota/reserve management
-remains deferred; optional configuration does not revive it.
+promise that other callers have unused quota. A built-in adaptive quota/reserve
+strategy remains deferred. This does not prohibit a pluggable policy from using
+observations to refine grouping/pacing under the adapter requirement below.
+
+**Shared scope and overlapping limits.** The default coordination scope is a
+**logical API surface**, not automatically a hostname, connection or disjoint
+provider bucket. Access/account context can distinguish the applicable scope;
+sharing a hostname does not silently merge unrelated accounts or services.
+The system MUST support overlapping API-wide and narrower limits. Each request
+is subject to **all applicable limits**: passing one cannot bypass another.
+For example, catalog and search requests can share an API-wide constraint while
+search requests additionally share a search-capacity constraint. A search-only
+cooldown need not stop eligible catalog work; an API-wide cooldown holds both.
+Exact identity and membership representations remain open; ordinary use must not
+require a large upfront configuration model.
 
 A configured units-per-time limit MUST coordinate admission across all concurrent
-calls using the same configured **connection and limit** in one Node process,
+calls to which that shared limit applies in one Node process,
 including retries and calls from different analysis paths or runs. Checking each
 caller against an independent copy, or recording usage only after sending, cannot
 enforce the shared ceiling. Logical central coordination is required; one physical
@@ -712,19 +726,46 @@ This coordinates a contextual refusal and retry time; it does not infer remainin
 provider balance or reserve quota. A matching callback cannot bypass an applicable
 shared cooldown by requesting immediate retry.
 
-Among otherwise eligible ready work, admission MUST favor **earlier-discovered
-work** as a simple progress preference: earlier requests may unlock downstream
-work that uses other services. Queue arrival/race-winning order is not discovery
-order. Dependency readiness, not-before, finite allowance, stop and fencing remain
+Among otherwise eligible ready work, default admission MUST favor
+**earlier-discovered work** as a simple progress preference. The goal is greater
+intermediate completeness sooner: resolve useful intermediate stages instead of
+spreading fractional progress across many stages. Earlier requests may unlock
+downstream work that uses other services; discovery order is an approximation,
+not a guarantee of optimal intermediate completion. Queue arrival/race-winning
+order is not discovery order. Dependency readiness, not-before, finite allowance, stop and fencing remain
 prerequisites; an earlier but ineligible item cannot block other eligible
 work. This is fair admission with a discovery preference, not a strict global
 ordering promise, DAG critical-path scheduler or cost optimizer. Define discovery
 sequencing, retry placement and fairness details in the bounded implementation
 design; do not invent a globally deterministic order from asynchronous discovery.
 
+**Pluggable coordination policy (owner decision, 2026-10-24).** The rate
+coordination boundary MUST accept an adapter spanning simple global/API-surface
+policy and sophisticated adaptive grouping/pacing. The extension must provide
+relevant rate-limit observations and history and allow updated applicable group
+membership and pacing decisions. A consumer strategy may, for example, inspect
+successive 429 observations to infer overlapping hidden constraints and revise
+which logical API surfaces share queues, potentially using asynchronous ML/LLM
+assessment. Supporting that strategy is required; implementing or invoking a
+built-in adaptive/ML/LLM strategy is not. The adapter's exact interface, history
+scope/retention and policy-state ownership are not selected here.
+
+The adapter supplies policy decisions; Run Supervision retains admission and
+dispatch authority. A permissive, delayed, stale or failed adapter decision MUST
+NOT bypass any applicable gate, finite run allowance, stop, known not-before,
+request binding, durable intent, taint or fence rule. Asynchronous completion is
+not itself permission to send: runtime must establish current eligibility before
+dispatch. No actual paid execution is authorized by an extension example.
+Retries remain classified under RUN-011; rate policy cannot grant extra attempts
+or manufacture successful data or observed usage. Grouping/pacing changes cannot
+rewrite prior sent-attempt/accounting evidence. The design must explicitly choose
+how policy updates affect queued and in-flight requests and how asynchronous
+errors/timeouts/stale results are handled; no particular fallback or cancellation
+algorithm is selected by this requirement.
+
 Both reactive cooldown and configured proactive eligibility are independent of
-request concurrency permits, finite retry allowance and stop intent. A callback's immediate
-retry must satisfy all applicable conditions before send. A delayed retry cannot
+request concurrency permits, finite retry allowance and stop intent. A callback's
+immediate retry must satisfy all applicable conditions before send. A delayed retry cannot
 send before its not-before time even when rate capacity is available. Waiting
 holds no network request permit.
 Apply RUN-014's selected stop boundary while waiting: soft stop blocks new
@@ -741,33 +782,40 @@ actual received observations separately and does not own scheduling (ACC-008).
 
 **Scope.** Initial coordination is within one Node process only. No cross-process
 or cross-machine limiter, distributed reservation protocol, or shared provider
-quota guarantee is selected. Dynamic provider-header/quota/reset/reserve inference
-is deferred. Honoring a retry time supplied for an operation remains RUN-011;
-it does not implement dynamic account-wide quota admission. Sharing a known
-reactive cooldown is required, not deferred with quota inference. Connection/limit
-identifiers must not expose raw credentials in inspection/events (RUN-013/017).
+quota guarantee is selected. Built-in adaptive provider-quota/reserve inference
+and advanced priority strategies remain deferred; dynamic grouping/pacing through
+the required adapter is in scope. Honoring a retry time remains RUN-011 and does
+not guarantee remaining provider capacity. Shared reactive cooldown and the
+extension boundary are required independently of a built-in adaptive strategy.
+Scope/limit identifiers must not expose raw credentials in inspection/events (RUN-013/017).
 
 **Validation:** a controlled clock and concurrent barriers present requests from
-two paths sharing one configured connection+limit; their combined admitted units,
-including retries, obey the configured bound. Separate limits remain independent.
+two paths sharing a configured limit; their combined admitted units, including
+retries, obey the configured bound. Requests must pass every overlapping limit;
+limits without overlapping callers remain independent.
 Hard stop or deadline escalation, denied retry allowance and future not-before
 each prevent the affected dispatch even if other conditions pass. Soft stop denies
 new admissions/retries while preserving the admitted-step first-attempt drain
-case in A-12b, still subject to the configured rate bound. A new run cannot reset
+case in A-12b, still subject to all applicable rate gates. A new run cannot reset
 another run's shared limiter. A-12h contrasts omitted configuration with a chosen
 proactive limit and checks bounded handling of provider rate-limit signals.
 A-12i checks default attempts/backoff; A-12j checks shared cooldown, controlled
-resume and discovery preference without proactive configuration.
+resume and discovery preference without proactive configuration. A-12k/l cover
+overlapping scope and pluggable synchronous/asynchronous grouping/pacing without
+any live adaptive-provider execution.
 
 **Open implementation choices:** units known before dispatch versus a conservative
 reservation, window/burst algorithm and boundary behavior, reservation release
-on cancellation, lifecycle, connection/limit identity and how a known reactive
-shared scope is identified without numeric configuration. Specify unknown-scope
-handling without silently merging unrelated credentials/services; RUN-011 still
-applies when shared scope is unknown. Select discovery sequencing across branches
-and runs, retry queue placement, fairness/tie handling and cooldown timing
-representation. Select and document these in the bounded implementation issue
-before claiming rate conformance; do not infer a universal default cap or credentials DSL.
+on cancellation, lifecycle, logical API-surface/limit identity, overlapping
+membership and unknown-scope handling without mandatory numeric configuration.
+Select discovery sequencing across branches/runs, retry placement, default
+fairness/tie handling and cooldown representation. Select adapter interface,
+observation/history exposure and retention, policy-state ownership, queued and
+in-flight reclassification, asynchronous decision races, timeout/error/fallback
+behavior and revalidation before dispatch. Document these in the bounded
+implementation design before claiming conformance. These open representations
+do not postpone the required extension capability or permit bypassing runtime
+invariants; they select no universal cap, credentials DSL or paid strategy.
 
 ## CLI and read-side delivery
 

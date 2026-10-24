@@ -1,0 +1,369 @@
+{
+  "cases": [
+    {
+      "name": "length ignores same-length value edit, append invalidates",
+      "mode": "length",
+      "reports": [
+        {
+          "kind": "published",
+          "reference": "mdh1|[\"durable-read-matrix-store\",\"durable-read-matrix\",\"test\",1]",
+          "selected": 3,
+          "factory": "function make(configuration) { return () => configuration.factor * 3; }",
+          "callable": "() => configuration.factor * 3",
+          "bodies": 1,
+          "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",1]\",\"data\":{\"selected\":3},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+          "stderr": "BODY:reader\n"
+        },
+        {
+          "kind": "reused",
+          "reference": "mdh1|[\"durable-read-matrix-store\",\"durable-read-matrix\",\"test\",1]",
+          "selected": 3,
+          "factory": "function make(configuration) { return () => configuration.factor * 3; }",
+          "callable": "() => configuration.factor * 3",
+          "bodies": 0,
+          "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",1]\",\"data\":{\"selected\":3},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+          "stderr": ""
+        },
+        {
+          "kind": "published",
+          "reference": "mdh1|[\"durable-read-matrix-store\",\"durable-read-matrix\",\"test\",2]",
+          "selected": 4,
+          "factory": "function make(configuration) { return () => configuration.factor * 3; }",
+          "callable": "() => configuration.factor * 3",
+          "bodies": 1,
+          "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",2]\",\"data\":{\"selected\":4},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+          "stderr": "BODY:reader\n"
+        },
+        {
+          "kind": "reused",
+          "reference": "mdh1|[\"durable-read-matrix-store\",\"durable-read-matrix\",\"test\",2]",
+          "selected": 4,
+          "factory": "function make(configuration) { return () => configuration.factor * 3; }",
+          "callable": "() => configuration.factor * 3",
+          "bodies": 0,
+          "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",2]\",\"data\":{\"selected\":4},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+          "stderr": ""
+        }
+      ]
+    },
+    {
+      "name": "position ignores later edit and append, insertion before index invalidates",
+      "mode": "position",
+      "reports": [
+        {
+          "kind": "published",
+          "reference": "mdh1|[\"durable-read-matrix-store\",\"durable-read-matrix\",\"test\",1]",
+          "selected": 20,
+          "factory": "function make(configuration) { return () => configuration.factor * 3; }",
+          "callable": "() => configuration.factor * 3",
+          "bodies": 1,
+          "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",1]\",\"data\":{\"selected\":20},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+          "stderr": "BODY:reader\n"
+        },
+        {
+          "kind": "reused",
+          "reference": "mdh1|[\"durable-read-matrix-store\",\"durable-read-matrix\",\"test\",1]",
+          "selected": 20,
+          "factory": "function make(configuration) { return () => configuration.factor * 3; }",
+          "callable": "() => configuration.factor * 3",
+          "bodies": 0,
+          "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",1]\",\"data\":{\"selected\":20},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+          "stderr": ""
+        },
+        {
+          "kind": "reused",
+          "reference": "mdh1|[\"durable-read-matrix-store\",\"durable-read-matrix\",\"test\",1]",
+          "selected": 20,
+          "factory": "function make(configuration) { return () => configuration.factor * 3; }",
+          "callable": "() => configuration.factor * 3",
+          "bodies": 0,
+          "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",1]\",\"data\":{\"selected\":20},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+          "stderr": ""
+        },
+        {
+          "kind": "published",
+          "reference": "mdh1|[\"durable-read-matrix-store\",\"durable-read-matrix\",\"test\",2]",
+          "selected": 10,
+          "factory": "function make(configuration) { return () => configuration.factor * 3; }",
+          "callable": "() => configuration.factor * 3",
+          "bodies": 1,
+          "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",2]\",\"data\":{\"selected\":10},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+          "stderr": "BODY:reader\n"
+        },
+        {
+          "kind": "reused",
+          "reference": "mdh1|[\"durable-read-matrix-store\",\"durable-read-matrix\",\"test\",2]",
+          "selected": 10,
+          "factory": "function make(configuration) { return () => configuration.factor * 3; }",
+          "callable": "() => configuration.factor * 3",
+          "bodies": 0,
+          "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",2]\",\"data\":{\"selected\":10},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+          "stderr": ""
+        }
+      ]
+    },
+    {
+      "name": "optional value equates missing and own undefined, actual value invalidates",
+      "mode": "value",
+      "reports": [
+        {
+          "kind": "published",
+          "reference": "mdh1|[\"durable-read-matrix-store\",\"durable-read-matrix\",\"test\",1]",
+          "selected": "undefined",
+          "factory": "function make(configuration) { return () => configuration.factor * 3; }",
+          "callable": "() => configuration.factor * 3",
+          "bodies": 1,
+          "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",1]\",\"data\":{\"selected\":\"undefined\"},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+          "stderr": "BODY:reader\n"
+        },
+        {
+          "kind": "reused",
+          "reference": "mdh1|[\"durable-read-matrix-store\",\"durable-read-matrix\",\"test\",1]",
+          "selected": "undefined",
+          "factory": "function make(configuration) { return () => configuration.factor * 3; }",
+          "callable": "() => configuration.factor * 3",
+          "bodies": 0,
+          "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",1]\",\"data\":{\"selected\":\"undefined\"},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+          "stderr": ""
+        },
+        {
+          "kind": "published",
+          "reference": "mdh1|[\"durable-read-matrix-store\",\"durable-read-matrix\",\"test\",2]",
+          "selected": 7,
+          "factory": "function make(configuration) { return () => configuration.factor * 3; }",
+          "callable": "() => configuration.factor * 3",
+          "bodies": 1,
+          "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",2]\",\"data\":{\"selected\":7},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+          "stderr": "BODY:reader\n"
+        },
+        {
+          "kind": "reused",
+          "reference": "mdh1|[\"durable-read-matrix-store\",\"durable-read-matrix\",\"test\",2]",
+          "selected": 7,
+          "factory": "function make(configuration) { return () => configuration.factor * 3; }",
+          "callable": "() => configuration.factor * 3",
+          "bodies": 0,
+          "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",2]\",\"data\":{\"selected\":7},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+          "stderr": ""
+        }
+      ]
+    },
+    {
+      "name": "own presence distinguishes missing and own undefined, value change is irrelevant",
+      "mode": "own",
+      "reports": []
+    },
+    {
+      "name": "unchanged helper factory closes over tracked input view",
+      "mode": "closure",
+      "reports": [
+        {
+          "kind": "published",
+          "reference": "mdh1|[\"durable-read-matrix-store\",\"durable-read-matrix\",\"test\",1]",
+          "selected": 6,
+          "factory": "function make(configuration) { return () => configuration.factor * 3; }",
+          "callable": "() => configuration.factor * 3",
+          "bodies": 1,
+          "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",1]\",\"data\":{\"selected\":6},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+          "stderr": "BODY:reader\n"
+        },
+        {
+          "kind": "reused",
+          "reference": "mdh1|[\"durable-read-matrix-store\",\"durable-read-matrix\",\"test\",1]",
+          "selected": 6,
+          "factory": "function make(configuration) { return () => configuration.factor * 3; }",
+          "callable": "() => configuration.factor * 3",
+          "bodies": 0,
+          "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",1]\",\"data\":{\"selected\":6},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+          "stderr": ""
+        },
+        {
+          "kind": "published",
+          "reference": "mdh1|[\"durable-read-matrix-store\",\"durable-read-matrix\",\"test\",2]",
+          "selected": 9,
+          "factory": "function make(configuration) { return () => configuration.factor * 3; }",
+          "callable": "() => configuration.factor * 3",
+          "bodies": 1,
+          "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",2]\",\"data\":{\"selected\":9},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+          "stderr": "BODY:reader\n"
+        },
+        {
+          "kind": "reused",
+          "reference": "mdh1|[\"durable-read-matrix-store\",\"durable-read-matrix\",\"test\",2]",
+          "selected": 9,
+          "factory": "function make(configuration) { return () => configuration.factor * 3; }",
+          "callable": "() => configuration.factor * 3",
+          "bodies": 0,
+          "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",2]\",\"data\":{\"selected\":9},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+          "stderr": ""
+        }
+      ]
+    }
+  ],
+  "processes": [
+    {
+      "mode": "length",
+      "variant": "base",
+      "request": "stage-0",
+      "status": 0,
+      "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",1]\",\"data\":{\"selected\":3},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+      "stderr": "BODY:reader\n",
+      "bodies": 1
+    },
+    {
+      "mode": "length",
+      "variant": "same-length",
+      "request": "stage-1",
+      "status": 0,
+      "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",1]\",\"data\":{\"selected\":3},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+      "stderr": "",
+      "bodies": 0
+    },
+    {
+      "mode": "length",
+      "variant": "append",
+      "request": "stage-2",
+      "status": 0,
+      "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",2]\",\"data\":{\"selected\":4},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+      "stderr": "BODY:reader\n",
+      "bodies": 1
+    },
+    {
+      "mode": "length",
+      "variant": "append",
+      "request": "stage-3",
+      "status": 0,
+      "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",2]\",\"data\":{\"selected\":4},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+      "stderr": "",
+      "bodies": 0
+    },
+    {
+      "mode": "position",
+      "variant": "base",
+      "request": "stage-0",
+      "status": 0,
+      "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",1]\",\"data\":{\"selected\":20},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+      "stderr": "BODY:reader\n",
+      "bodies": 1
+    },
+    {
+      "mode": "position",
+      "variant": "after-position",
+      "request": "stage-1",
+      "status": 0,
+      "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",1]\",\"data\":{\"selected\":20},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+      "stderr": "",
+      "bodies": 0
+    },
+    {
+      "mode": "position",
+      "variant": "append",
+      "request": "stage-2",
+      "status": 0,
+      "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",1]\",\"data\":{\"selected\":20},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+      "stderr": "",
+      "bodies": 0
+    },
+    {
+      "mode": "position",
+      "variant": "insert-before",
+      "request": "stage-3",
+      "status": 0,
+      "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",2]\",\"data\":{\"selected\":10},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+      "stderr": "BODY:reader\n",
+      "bodies": 1
+    },
+    {
+      "mode": "position",
+      "variant": "insert-before",
+      "request": "stage-4",
+      "status": 0,
+      "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",2]\",\"data\":{\"selected\":10},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+      "stderr": "",
+      "bodies": 0
+    },
+    {
+      "mode": "value",
+      "variant": "base",
+      "request": "stage-0",
+      "status": 0,
+      "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",1]\",\"data\":{\"selected\":\"undefined\"},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+      "stderr": "BODY:reader\n",
+      "bodies": 1
+    },
+    {
+      "mode": "value",
+      "variant": "own-undefined",
+      "request": "stage-1",
+      "status": 0,
+      "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",1]\",\"data\":{\"selected\":\"undefined\"},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+      "stderr": "",
+      "bodies": 0
+    },
+    {
+      "mode": "value",
+      "variant": "optional-value",
+      "request": "stage-2",
+      "status": 0,
+      "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",2]\",\"data\":{\"selected\":7},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+      "stderr": "BODY:reader\n",
+      "bodies": 1
+    },
+    {
+      "mode": "value",
+      "variant": "optional-value",
+      "request": "stage-3",
+      "status": 0,
+      "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",2]\",\"data\":{\"selected\":7},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+      "stderr": "",
+      "bodies": 0
+    },
+    {
+      "mode": "own",
+      "variant": "base",
+      "request": "stage-0",
+      "status": 1,
+      "stdout": "",
+      "stderr": "BODY:reader\nfile:///private<evidence-checkout>/packages/resolution/dist/src/resolution.js:1832\n            throw new ResolutionError('execution-failure', `Body of ${stepKey(step)} failed`, cause);\n                  ^\n\nResolutionError: Body of [\"durable-read-matrix\",\"step\",\"own\",null] failed\n    at resolveMemo (file:///private<evidence-checkout>/packages/resolution/dist/src/resolution.js:1832:19)\n    at async withLeaseAuthority (file:///private<evidence-checkout>/packages/resolution/dist/src/resolution.js:591:20)\n    at async resolveStep (file:///private<evidence-checkout>/packages/resolution/dist/src/resolution.js:2258:15)\n    at async Object.resolve (file:///private<evidence-checkout>/packages/resolution/dist/src/resolution.js:2866:34)\n    at async Object.pass (file:///private<evidence-checkout>/packages/supervision/dist/src/supervision.js:813:41)\n    at async inPasses (file:///private<evidence-checkout>/packages/supervision/dist/src/supervision.js:724:30) {\n  code: 'execution-failure',\n  [cause]: TypeError: Native reflection is unsupported; use observer.hasOwn for supported fields\n      at Object.getOwnPropertyDescriptor (file:///private<evidence-checkout>/packages/tracking/dist/src/observer.js:276:15)\n      at Proxy.hasOwn (<anonymous>)\n      at Object.hasOwn (<anonymous>)\n      at Object.ownCheck (file:///private<evidence-checkout>/packages/core/.test-build/test/gap-hunt-durable-read-worker.js:6:50)\n      at Object.apply (file:///private<evidence-checkout>/packages/tracking/dist/src/observer.js:597:32)\n      at run (file:///private<evidence-checkout>/packages/core/.test-build/test/gap-hunt-durable-read-worker.js:33:121)\n      at Object.apply (file:///private<evidence-checkout>/packages/tracking/dist/src/observer.js:597:32)\n      at file:///private<evidence-checkout>/packages/resolution/dist/src/resolution.js:685:87\n      at file:///private<evidence-checkout>/packages/tracking/dist/src/observer.js:873:41\n      at AsyncLocalStorage.run (node:internal/async_local_storage/async_context_frame:65:14)\n}\n\nNode.js v24.22.1\n",
+      "bodies": 1
+    },
+    {
+      "mode": "closure",
+      "variant": "base",
+      "request": "stage-0",
+      "status": 0,
+      "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",1]\",\"data\":{\"selected\":6},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+      "stderr": "BODY:reader\n",
+      "bodies": 1
+    },
+    {
+      "mode": "closure",
+      "variant": "unread",
+      "request": "stage-1",
+      "status": 0,
+      "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",1]\",\"data\":{\"selected\":6},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+      "stderr": "",
+      "bodies": 0
+    },
+    {
+      "mode": "closure",
+      "variant": "factor",
+      "request": "stage-2",
+      "status": 0,
+      "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",2]\",\"data\":{\"selected\":9},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+      "stderr": "BODY:reader\n",
+      "bodies": 1
+    },
+    {
+      "mode": "closure",
+      "variant": "factor",
+      "request": "stage-3",
+      "status": 0,
+      "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"durable-read-matrix-store\\\",\\\"durable-read-matrix\\\",\\\"test\\\",2]\",\"data\":{\"selected\":9},\"implementation\":{\"factory\":\"function make(configuration) { return () => configuration.factor * 3; }\",\"callable\":\"() => configuration.factor * 3\"}}\n",
+      "stderr": "",
+      "bodies": 0
+    }
+  ],
+  "freshProcesses": 18,
+  "successfulStages": 17
+}

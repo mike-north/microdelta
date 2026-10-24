@@ -1,0 +1,91 @@
+{
+  "runtime": "7eb1aba6363d91ef7ddd3ee8d431f00491ea83dd",
+  "sourcesAtFrozen7a": true,
+  "generatedDeclarationsFromCleanBuild": true,
+  "findings": [
+    "No hasOwn export on microdelta alpha; callbacks expose inputs/helpers/untracked only.",
+    "Workspace constructs and owns Tracking observer; open/run options and scoped run/execution context expose no owning observer.",
+    "Tracking alpha has explicit hasOwn on ITrackingObserver; foreign observer ownership is rejected.",
+    "Lower-level createResolution can receive caller-owned Tracking observer, so owner semantics exist outside default workspace authoring seam.",
+    "Native reflection rejection is selected boundary; spelling Object.hasOwn is not normative. Missing facade access to explicit own semantics is the candidate gap."
+  ],
+  "excerpts": [
+    {
+      "file": "packages/core/src/workspace.ts",
+      "lineStart": 554,
+      "lineEnd": 580,
+      "sha256": "a7fa5fc929a2ff260aa0272f00f5586020bba5e6f14fdb857439469678ded3cf",
+      "excerpt": "export interface IWorkspaceOptions {\n  /** The SQLite file location. Moving the file does not change its logical store. */\n  readonly location: string;\n  /** The logical store identity this file holds, or is created to hold. */\n  readonly logicalStore: string;\n  /**\n   * Positive safe-integer writer lease duration in milliseconds, renewed when\n   * each normal request of a run starts. Defaults to 30 seconds. It is not\n   * renewed while one request runs: a single request (a source check or\n   * summary body) that outlives the lease fails with History's stale-writer\n   * error and leaves its attempt incomplete and recoverable. Choose a lease\n   * longer than the slowest single request.\n   */\n  readonly leaseMilliseconds?: number;\n  /**\n   * The caller's Resource Accounting port. With it, every run of the\n   * workspace offers external operations (`currentExecution().operation`),\n   * operator inspection and settlement, and usage summaries; the workspace\n   * builds History's operation journal and the host's random source itself.\n   * Without it, those fail with `invalid-request`.\n   */\n  readonly accounting?: IWorkspaceAccounting;\n}\n\n/**\n * Options for one workspace run over an author's composition.\n * @alpha"
+    },
+    {
+      "file": "packages/core/src/workspace.ts",
+      "lineStart": 855,
+      "lineEnd": 869,
+      "sha256": "a7fa5fc929a2ff260aa0272f00f5586020bba5e6f14fdb857439469678ded3cf",
+      "excerpt": "        promotion: history,\n        // The holder names this run for diagnostics; History's fence, not the name, orders writers.\n        writer: writerFor(history, `microdelta-run:${runId}`, leaseMilliseconds),\n        resolution: (ports) => createResolution({\n          declarations: authoring,\n          composition,\n          bindings: { inputs: composition.topology.inputs, helpers: composition.topology.helpers },\n          environment: runOptions.environment,\n          history,\n          tracking: createTrackingObserver(machine),\n          host: machine,\n          admission: ports.admission,\n          observer: ports.observer,\n          execution: ports.execution,\n        }),"
+    },
+    {
+      "file": "packages/resolution/src/family.ts",
+      "lineStart": 93,
+      "lineEnd": 101,
+      "sha256": "8b3d1c23fac0ab177e4faff1c366ad8895c8fffe1eec2cacbc133af7b16ad0a0",
+      "excerpt": "export interface IStepBindings<TInputs extends object, THelpers extends object> {\n  /** Declared current inputs, one tracked record keyed by input slot. */\n  readonly inputs: ITrackedView<TInputs>;\n  /** Declared helpers keyed by callable slot. */\n  readonly helpers: ITrackedHelpers<THelpers>;\n  /** The explicit observed untracked read. */\n  readonly untracked: IUntrackedRead;\n}\n"
+    },
+    {
+      "file": "packages/tracking/src/observer.ts",
+      "lineStart": 638,
+      "lineEnd": 645,
+      "sha256": "aceaf9d33720f32c9a69649d6b6b1a6e06eabeb94be86ed1cf6d4654ee4a469a",
+      "excerpt": "const immutableContainerTraps = {\n  ownKeys(): ArrayLike<string | symbol> {\n    throw new TypeError('Native reflection is unsupported; use observer.keys for supported records');\n  },\n  getOwnPropertyDescriptor(): PropertyDescriptor | undefined {\n    throw new TypeError('Native reflection is unsupported; use observer.hasOwn for supported fields');\n  },\n  getPrototypeOf(): object | null {"
+    },
+    {
+      "file": "packages/tracking/src/observer.ts",
+      "lineStart": 1355,
+      "lineEnd": 1362,
+      "sha256": "aceaf9d33720f32c9a69649d6b6b1a6e06eabeb94be86ed1cf6d4654ee4a469a",
+      "excerpt": "    hasOwn(value: ITracked<object>, key: string): boolean {\n      const owned = ownership.get(value);\n      if (owned === undefined) {\n        throw new TypeError('hasOwn needs an observer-owned value');\n      }\n      if (owned.kind === 'lazy') {\n        const isArray = owned.node.kind === 'array';\n        if (isArray && key === 'length') {"
+    },
+    {
+      "file": "packages/core/dist/api/microdelta.alpha.d.ts",
+      "lineStart": 806,
+      "lineEnd": 890,
+      "sha256": "9fad6ffdb2250a1d72d0458ac0b730ff7af9483acd1a279aea987bd1f1bed55c",
+      "excerpt": "export declare interface IWorkspaceOptions {\n    /** The SQLite file location. Moving the file does not change its logical store. */\n    readonly location: string;\n    /** The logical store identity this file holds, or is created to hold. */\n    readonly logicalStore: string;\n    /**\n     * Positive safe-integer writer lease duration in milliseconds, renewed when\n     * each normal request of a run starts. Defaults to 30 seconds. It is not\n     * renewed while one request runs: a single request (a source check or\n     * summary body) that outlives the lease fails with History's stale-writer\n     * error and leaves its attempt incomplete and recoverable. Choose a lease\n     * longer than the slowest single request.\n     */\n    readonly leaseMilliseconds?: number;\n    /**\n     * The caller's Resource Accounting port. With it, every run of the\n     * workspace offers external operations (`currentExecution().operation`),\n     * operator inspection and settlement, and usage summaries; the workspace\n     * builds History's operation journal and the host's random source itself.\n     * Without it, those fail with `invalid-request`.\n     */\n    readonly accounting?: IWorkspaceAccounting;\n}\n\n/**\n * A live workspace run: Supervision's run operations (including recorded\n * promotion and the promotions into the run's environment) plus an exact read\n * of a completed result's data for ordinary work such as report assembly, and\n * its environment's usage summary. It omits Supervision's declared-call\n * check, which only the facade's own handle uses.\n * @alpha\n */\nexport declare interface IWorkspaceRun extends Omit<IRun, 'assertDeclaredCall'> {\n    /**\n     * The deeply frozen data of one exact completed result in this workspace.\n     * It is an exact-reference read: it records no acceptance, observation or\n     * dependency, and a missing or wrong-store reference fails rather than\n     * retargeting. It fails with `run-closed` once the run has actually closed.\n     */\n    read<T>(reference: ICompletedResultReference): T;\n    /**\n     * Resource Accounting's usage summary of this run's environment, optionally\n     * narrowed, read through the workspace's Accounting port. Read-only.\n     * Fails with `invalid-request` when the workspace has no Accounting port,\n     * and with `run-closed` once the run has closed.\n     */\n    usage(filter?: IUsageFilter): IUsageSummary;\n}\n\n/**\n * Options for one workspace run over an author's composition.\n * @alpha\n */\nexport declare interface IWorkspaceRunOptions<TInputs extends object, THelpers extends object> {\n    /** The builders that minted the composition. */\n    readonly authoring: IAuthoring<TInputs, THelpers>;\n    /** The frozen current composition; its scope is the analysis. */\n    readonly composition: IComposition<TInputs, THelpers>;\n    /** The environment selected for the whole run. */\n    readonly environment: string;\n    /**\n     * Optional volatile run identifier. When absent, the facade mints\n     * `run:<32 hex digits>` from 128 random host bits, unique per run across\n     * processes and hosts. A caller-supplied one must be an identifier\n     * (lower-case, starting with a letter, at most 64 of `a-z`, `0-9`, `.`,\n     * `_`, `:` and `-`, the rule of operation names) and must not take the\n     * minted form, which is reserved; anything else is refused with\n     * `invalid-request`. The caller must also keep it unique per run, since\n     * retries and usage are correlated by run identity; the facade does not\n     * detect collisions.\n     */\n    readonly runId?: string;\n    /** Admission policy for work validation could not avoid; admits everything when absent. */\n    readonly admission?: IAdmissionPolicy;\n    /** Observers, captured when the run starts. */\n    readonly observers?: readonly IRunObserver[];\n    /** The operator's stop intent for this run, from {@link createStopController}; never stopped when absent. */\n    readonly stop?: IStopController;\n    /**\n     * How many sends may be in flight at once (the run's permit pool). A\n     * permit guards only a real send, never waiting. Defaults to 1.\n     */\n    readonly permits?: number;\n    /**\n     * How many fan-out members actively resolve at once, independent of"
+    },
+    {
+      "file": "packages/resolution/dist/api/resolution.alpha.d.ts",
+      "lineStart": 966,
+      "lineEnd": 975,
+      "sha256": "8d7a5ff4b2371d2b71ef9b04776ddecc34ace5dfc08cd9e20ec650df502e4251",
+      "excerpt": "export declare interface IStepBindings<TInputs extends object, THelpers extends object> {\n    /** Declared current inputs, one tracked record keyed by input slot. */\n    readonly inputs: ITrackedView<TInputs>;\n    /** Declared helpers keyed by callable slot. */\n    readonly helpers: ITrackedHelpers<THelpers>;\n    /** The explicit observed untracked read. */\n    readonly untracked: IUntrackedRead;\n}\n\n/**"
+    },
+    {
+      "file": "packages/resolution/dist/api/resolution.alpha.d.ts",
+      "lineStart": 811,
+      "lineEnd": 819,
+      "sha256": "8d7a5ff4b2371d2b71ef9b04776ddecc34ace5dfc08cd9e20ec650df502e4251",
+      "excerpt": "    /** History's environment within the composition's analysis scope. */\n    readonly environment: string;\n    /** History's durable authority. */\n    readonly history: IResolutionHistory;\n    /** The Tracking observer that captures author evidence and owns result views. */\n    readonly tracking: ITrackingObserver;\n    /** Host capabilities. */\n    readonly host: IResolutionHost;\n    /** Run Supervision's admission port. */"
+    },
+    {
+      "file": "packages/tracking/dist/api/tracking.alpha.d.ts",
+      "lineStart": 380,
+      "lineEnd": 397,
+      "sha256": "d5e8ef16e73419a5e31e7fc28ad67aa8082cd96cd8c60567661e2dd1e1e3d7c3",
+      "excerpt": "    /** Process-local tag tracking remains available to composed runtime owners. */\n    readonly local: ITracking;\n    /** Copy supported data into an immutable owned snapshot and bind its wrapper. */\n    tracked<T extends object>(value: T, binding: ITrackingBinding): ITracked<T>;\n    /** Capture selected facts across a synchronous callback. */\n    capture<T>(callback: () => T): IObservationCapture<T>;\n    /** Capture selected facts across asynchronous work and awaits. */\n    captureAsync<T>(callback: () => Promise<T>): Promise<IObservationCapture<T>>;\n    /** Compare captured content against facts selected by current correspondence. */\n    compareCurrent(capture: IObservationCapture<unknown>, provider: ICurrentFactProvider): ICurrentComparison;\n    /** Explicitly detach an output graph and observe only its observer-owned subtrees. */\n    snapshotOutput<T>(output: T): IDetachedOutput<T>;\n    /** Explicit ordered record-key enumeration; native reflection remains rejected. */\n    keys(value: ITracked<object>): readonly string[];\n    /** Explicit own-member presence without conflating it with inherited membership. */\n    hasOwn(value: ITracked<object>, key: string): boolean;\n    /**\n     * Explicit observed untracked read: return one scalar member of an"
+    },
+    {
+      "file": "packages/supervision/dist/api/supervision.alpha.d.ts",
+      "lineStart": 1074,
+      "lineEnd": 1082,
+      "sha256": "4fde4c0d5c13fd93ee107fdf3f07238199f8454377862139beb6c41e3b6670c0",
+      "excerpt": "export declare interface IRunContext {\n    /** Volatile identity of this run; never reuse evidence. */\n    readonly runId: string;\n    /** The analysis scope the run supervises. */\n    readonly analysis: string;\n    /** The environment selected for the whole run. */\n    readonly environment: string;\n}\n"
+    },
+    {
+      "file": "packages/supervision/dist/api/supervision.alpha.d.ts",
+      "lineStart": 1126,
+      "lineEnd": 1192,
+      "sha256": "4fde4c0d5c13fd93ee107fdf3f07238199f8454377862139beb6c41e3b6670c0",
+      "excerpt": "export declare interface IRunExecution {\n    /** The run's volatile identifier. */\n    readonly runId: string;\n    /** The admitted step whose body this execution belongs to; undefined outside one. */\n    readonly step: IBindingDescriptor | undefined;\n    /**\n     * The run's stop intent now. It stays readable after the run closes (it is\n     * the operator's controller state); only `send` and `sleepUntil` then fail.\n     */\n    readonly stop: IStopState;\n    /**\n     * Aborts when a hard stop takes effect for the run. It stays readable after\n     * the run closes, and a stop requested after the close no longer aborts it.\n     */\n    readonly signal: IAbortSignal;\n    /**\n     * Perform one send holding one of the run's permits.\n     *\n     * - A hard stop refuses it, and a soft stop refuses a retry, or any send\n     *   outside an admitted step. A step attempt whose earlier send or wait was\n     *   refused or aborted sends nothing more.\n     * - Waiting for a permit holds none; a hard stop ends the wait (a permit\n     *   granted afterwards is handed straight back).\n     * - A hard stop aborts it in flight: the permit is released, provider\n     *   cancellation is requested where supported, and the remote state is\n     *   recorded.\n     *\n     * A refusal or abort rejects with `SupervisionError('stopped')`, and the\n     * step attempt it belonged to can no longer publish; a send's own failure\n     * rejects with its error. After the run closes it rejects with `run-closed`.\n     */\n    send<T>(request: ISendRequest<T>): Promise<T>;\n    /**\n     * Wait, holding no permit, until the wall clock reaches\n     * `epochMilliseconds`: the wait before a retry or a deferred resumption.\n     * A fan-out member lends its window lane for the wait and, on waking,\n     * reclaims one ahead of members that have not started (wakers among\n     * themselves first in, first out), so it never stalls its siblings. While\n     * the lane is lent, other branches of the member's body (for example the\n     * other side of `Promise.all([sleepUntil(t), send(...)])`) keep running\n     * without one: the window bounds members holding a lane, not every branch\n     * of a member's body, while permits still bound the actual sends. Because\n     * a stop forbids the retry the wait precedes, any stop ends the wait at\n     * once with `SupervisionError('stopped')`, and the step attempt can no\n     * longer publish.\n     */\n    sleepUntil(epochMilliseconds: number): Promise<void>;\n    /**\n     * Perform one declared external operation from inside an admitted step\n     * attempt's body (RUN-011, RUN-012, RUN-013). Before each send its intent\n     * is committed through History's journal and Accounting's usage intent is\n     * recorded; each send holds one permit as {@link IRunExecution.send} does.\n     * It resolves the provider's value once the operation succeeds. Otherwise\n     * it rejects with a `SupervisionError`:\n     *\n     * - `operation-failed`: a permanent refusal, or an exhausted policy;\n     * - `operation-deferred`: a rate or quota limit deferred it until a time,\n     *   or its intent could not be made durable (Accounting busy, or a commit\n     *   it could not confirm), so nothing was sent and it is retried after a\n     *   short delay;\n     * - `operation-unknown`: its outcome is unknown and it may not be retried;\n     * - `operation-resolved`: an operator resolved the operation at this\n     *   address as succeeded, so nothing is sent again (no value is carried);\n     * - `stopped`: stop intent refused or aborted it;\n     * - `invalid-request`: a malformed request, a call outside an admitted\n     *   step attempt or after it ended, a second call at an address while one\n     *   is in progress, or a run without operation ports, a timer or a random"
+    }
+  ]
+}

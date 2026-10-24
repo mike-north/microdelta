@@ -1,0 +1,26 @@
+[
+  {
+    "path": "captures/final-clean/jest.json",
+    "raw_sha256": "cdb0a97dff64c84446fa0585958f5cebee30f4ede6b4633817fe14175f3ba10b",
+    "public_sha256": "1179935398b36b339a9d5d78fc1b765124661a2ee45bc4be9d17efa2c8674a80",
+    "replacement": "local archive/output paths -> named placeholders; raw command hashes remain original"
+  },
+  {
+    "path": "captures/final-clean/jest.log",
+    "raw_sha256": "48551a2f66eca1be0c8551fd5cc604e2c6453bb90a61957ec02fa4b6a7eaa75d",
+    "public_sha256": "38c7935da6550a0a6d89c05eb5171aabb0827eeff8909dad6ce5d359cd44b1d8",
+    "replacement": "local archive/output paths -> named placeholders; raw command hashes remain original"
+  },
+  {
+    "path": "captures/final-clean/cases.json",
+    "raw_sha256": "178f9176a6b12998c151531186522c4641e86492d23a788d48de27a57f549633",
+    "public_sha256": "10b03ca19bb6529f9a06b62b36c7796aadd1084d9970a5179e8e2009bf3cae28",
+    "replacement": "local archive/output paths -> named placeholders; raw command hashes remain original"
+  },
+  {
+    "path": "captures/final-clean/jest-results.json",
+    "raw_sha256": "6ca244f2fcb3a03229e6f9146aa2d5b796f16852d877ddac98c4c7642f4740b3",
+    "public_sha256": "59d5152770bd54643b2409eeacd7f62e83494aed79bce779d7a075a14ec9adaa",
+    "replacement": "local archive/output paths -> named placeholders; raw command hashes remain original"
+  }
+]

@@ -1,0 +1,48 @@
+(node:16871) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL packages/core/.test-build/test/gap-hunt-durable-read-matrix.test.js
+  ● finite durable literal read matrix › own presence distinguishes missing and own undefined, value change is irrelevant
+
+    Worker failed:  BODY:reader
+    file:///private<evidence-checkout>/packages/resolution/dist/src/resolution.js:1832
+                throw new ResolutionError('execution-failure', `Body of ${stepKey(step)} failed`, cause);
+                      ^
+
+    ResolutionError: Body of ["durable-read-matrix","step","own",null] failed
+
+      1830 |                 throw error;
+      1831 |             }
+    > 1832 |             throw new ResolutionError('execution-failure', `Body of ${stepKey(step)} failed`, cause);
+           |                   ^
+      1833 |         }
+      1834 |         const ran = executed.value;
+      1835 |         const unsettled = frame.unsettledAtReturn ?? 0;
+
+      at resolveMemo (../../file:/private<evidence-checkout>/packages/resolution/dist/src/resolution.js:1832:19)
+      at async withLeaseAuthority (../../file:/private<evidence-checkout>/packages/resolution/dist/src/resolution.js:591:20)
+      at async resolveStep (../../file:/private<evidence-checkout>/packages/resolution/dist/src/resolution.js:2258:15)
+      at async Object.resolve (../../file:/private<evidence-checkout>/packages/resolution/dist/src/resolution.js:2866:34)
+      at async Object.pass (../../file:/private<evidence-checkout>/packages/supervision/dist/src/supervision.js:813:41)
+      at async inPasses (../../file:/private<evidence-checkout>/packages/supervision/dist/src/supervision.js:724:30) {
+        code: 'execution-failure',
+        [cause]: TypeError: Native reflection is unsupported; use observer.hasOwn for supported fields
+      at Object.getOwnPropertyDescriptor (../../file:/private<evidence-checkout>/packages/tracking/dist/src/observer.js:276:15)
+            at Proxy.hasOwn (<anonymous>)
+            at Object.hasOwn (<anonymous>)
+      at Object.ownCheck (../../file:/private<evidence-checkout>/packages/core/.test-build/test/gap-hunt-durable-read-worker.js:6:50)
+      at Object.apply (../../file:/private<evidence-checkout>/packages/tracking/dist/src/observer.js:597:32)
+      at run (../../file:/private<evidence-checkout>/packages/core/.test-build/test/gap-hunt-durable-read-worker.js:33:121)
+      at Object.apply (../../file:/private<evidence-checkout>/packages/tracking/dist/src/observer.js:597:32)
+      at ../../file:/private<evidence-checkout>/packages/resolution/dist/src/resolution.js:685:87
+      at ../../file:/private<evidence-checkout>/packages/tracking/dist/src/observer.js:873:41
+      }
+      Node.js v24.22.1
+      at run (test/gap-hunt-durable-read-matrix.test.ts:41:35)
+      at test/gap-hunt-durable-read-matrix.test.ts:52:24
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 4 passed, 5 total
+Snapshots:   0 total
+Time:        1.507 s
+Ran all test suites within paths "packages/core/.test-build/test/gap-hunt-durable-read-matrix.test.js".
+Test results written to: ../microdelta-durable-read-output-p0x7p_av/jest-results.json

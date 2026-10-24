@@ -1,0 +1,17 @@
+{
+  "rejected": [
+    "missing-process",
+    "wrong-body",
+    "wrong-reference",
+    "wrong-error",
+    "wrong-test-count"
+  ],
+  "positive": {
+    "classification": "four-finite-families-pass-and-own-presence-negative-proved",
+    "jest_exit_expected": 1,
+    "wrapper_exit": 0,
+    "fresh_processes": 18,
+    "successful_stages": 17,
+    "failed_processes": 1
+  }
+}

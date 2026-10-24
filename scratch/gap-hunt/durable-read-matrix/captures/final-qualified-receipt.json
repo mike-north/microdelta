@@ -1,0 +1,24 @@
+{
+  "runtime": "7a629f94d83366131e4aa25e541a24e41db744fa",
+  "source_hashes": {
+    "packages/core/test/gap-hunt-durable-read-matrix.test.ts": "5a607f83c3ac13762a2232973163610fe3ff778cc6cfee75eefaecf08f8d0b1e",
+    "packages/core/test/gap-hunt-durable-read-worker.ts": "124ff802b36fd7a40244b8cd673c3a68a42bfebc40a73893b3ab7aa334d0341e"
+  },
+  "source_unchanged": true,
+  "cases": 5,
+  "fresh_processes": 18,
+  "successful_stages": 17,
+  "jest_exit": 1,
+  "tests_passed": 4,
+  "tests_failed": 1,
+  "classification": "own-presence-authoring-gap-reproduced",
+  "node": "v24.22.1",
+  "platform": "darwin",
+  "cases_sha256": "178f9176a6b12998c151531186522c4641e86492d23a788d48de27a57f549633",
+  "product_fixes": false,
+  "paid_provider": false,
+  "executedFixturePin": "7eb1aba6363d91ef7ddd3ee8d431f00491ea83dd",
+  "cleanArchiveHadNoDependenciesOrGeneratedOutputs": true,
+  "finalGreenWrapper": "guarded existing raw Jest exit1; final runner wrapper classification-only delta, no runtime fixture changes",
+  "finalGuardValidatedAgainstPublicAndRawCaptures": true
+}

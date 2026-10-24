@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "node",
+    "node_modules/eslint/bin/eslint.js",
+    "packages/core/test/gap-hunt-durable-read-matrix.test.ts",
+    "packages/core/test/gap-hunt-durable-read-worker.ts"
+  ],
+  "exit": 0,
+  "seconds": 1.90289306640625,
+  "timeout": 180,
+  "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

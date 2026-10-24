@@ -1,0 +1,14 @@
+{
+  "executedFixturePin": "7eb1aba6363d91ef7ddd3ee8d431f00491ea83dd",
+  "runtime": "7a629f94d83366131e4aa25e541a24e41db744fa",
+  "finalFixturesByteIdentical": true,
+  "finalRecipeDelta": "classification-only green wrapper calls outcome_guard on unchanged raw runtime outputs; full recipe not rerun after wrapper/report additions",
+  "guardPositiveAndFiveSyntheticNegativesPassed": true,
+  "rawJestExit": 1,
+  "rawRecipeExit": 1,
+  "finalWrapperVerifiedExit": 0,
+  "privateMarkers": [],
+  "manifestEntries": 30,
+  "productFixes": false,
+  "githubWrites": false
+}

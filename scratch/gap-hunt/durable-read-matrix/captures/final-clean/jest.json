@@ -1,0 +1,20 @@
+{
+  "argv": [
+    "node",
+    "--experimental-vm-modules",
+    "node_modules/jest/bin/jest.js",
+    "--config",
+    "packages/core/jest.config.mjs",
+    "--runInBand",
+    "--runTestsByPath",
+    "packages/core/.test-build/test/gap-hunt-durable-read-matrix.test.js",
+    "--verbose",
+    "--json",
+    "--outputFile",
+    "/private<evidence-output>/jest-results.json"
+  ],
+  "exit": 1,
+  "seconds": 2.052386999130249,
+  "timeout": 300,
+  "log_sha256": "48551a2f66eca1be0c8551fd5cc604e2c6453bb90a61957ec02fa4b6a7eaa75d"
+}

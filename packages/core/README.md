@@ -22,6 +22,10 @@ for one WAL database. This does not change the public memory `Store` API.
 
 ## Project-private workspace path (alpha)
 
+External pnpm ESM consumers evaluating the published `microdelta@0.2.0`
+durable path need [consumer-local native-build approval](../../docs/native-sqlite-install.md)
+before `openWorkspace`. The public memory Store above remains process-local.
+
 The durable Node SQLite path has [platform-qualified native installation and
 diagnostic guidance](../../docs/native-sqlite-toolchain.md). It is separate
 from the public memory Store and from the alpha declaration setup.

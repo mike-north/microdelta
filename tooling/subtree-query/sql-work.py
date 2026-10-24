@@ -4,6 +4,21 @@ import json,sqlite3,hashlib,sys
 HERE=Path(__file__).resolve().parent
 CAPTURE=Path(sys.argv[1])
 
+
+def listing_result_id(case):
+ """Bind controls to the one captured listing, rejecting mixed or stale result evidence."""
+ ids={row['result_id'] for table in ('history_nodes','history_edges') for row in case['tables'][table]}
+ if len(ids)!=1:raise AssertionError(f'Expected one captured listing result, found {ids}')
+ result_id=ids.pop()
+ if type(result_id) is not int:raise AssertionError('Captured result ID must be an integer')
+ statements={statement['role']:statement for statement in case['statements']}
+ payload=statements['subtree-payload']['values']
+ structure=statements['subtree-structure']['values']
+ if len(payload)!=4 or payload[1:]!=[result_id]*3:raise AssertionError('Payload bindings do not match captured listing result')
+ if len(structure)!=2 or structure[0]!=result_id:raise AssertionError('Structure bindings do not match captured listing result')
+ return result_id
+
+
 def run():
  raw=CAPTURE.read_bytes();capture=json.loads(raw);rows=[]
  for case in capture['captures']:
@@ -14,6 +29,7 @@ def run():
    db.executemany(f'INSERT INTO {table} ({quoted}) VALUES ({",".join("?" for _ in columns)})',[[r[c] for c in columns] for r in values])
   queries=[{'role':s['role'],'sql':s['sql'],'values':s['values'],'expected_rows':s['rows']} for s in case['statements']]
   node=next(q for q in queries if q['role']=='subtree-payload')
+  result_id=listing_result_id(case)
   # Frozen old-path control uses the same captured listing rows and bindings.
   old_sql='''/* subtree-payload */ WITH RECURSIVE subtree(node_id) AS (
         SELECT ?
@@ -26,8 +42,8 @@ def run():
   queries.append({'role':'old-negative','sql':old_sql,'values':node['values'],'expected_rows':node['expected_rows']})
   # These controls were selected before measurement and are never used as replacements for production SQL.
   queries.extend([
-   {'role':'linear-control','sql':'SELECT node_id FROM history_nodes WHERE result_id = ? ORDER BY node_id','values':[1],'expected_rows':3*case['size']+3},
-   {'role':'broad-negative','sql':'SELECT count(*) AS n FROM history_nodes a CROSS JOIN history_nodes b WHERE a.result_id = ? AND b.result_id = ?','values':[1,1],'expected_rows':1},
+   {'role':'linear-control','sql':'SELECT node_id FROM history_nodes WHERE result_id = ? ORDER BY node_id','values':[result_id],'expected_rows':3*case['size']+3},
+   {'role':'broad-negative','sql':'SELECT count(*) AS n FROM history_nodes a CROSS JOIN history_nodes b WHERE a.result_id = ? AND b.result_id = ?','values':[result_id,result_id],'expected_rows':1},
   ])
   for query in queries:
    steps=0

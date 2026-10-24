@@ -6,14 +6,17 @@
  * operations really overlapped inside History rather than assuming it; SQLite's
  * IMMEDIATE transactions then serialize them. Assertions hold for every
  * schedule: at most one process holds authority at a time, each loser
- * receives History's typed refusal (`held` naming the holder, or
- * `StaleWriterError`), and storage receives writes in non-decreasing fence
- * order, which is the fencing property
+ * either observes the holder or reports storage contention without authority,
+ * stale mutation receives `StaleWriterError`, and storage receives writes in
+ * non-decreasing fence order, which is the fencing property
  * `StorageSeesNonDecreasingFences` of `experiments/exp-7/WriterLease.tla`.
  *
- * C1 and C2 drive History directly, where the refusal of an acquisition is
- * the `held` outcome. C3 drives real waiters: Run Supervision's wait for the
- * lease over the facade's writer port, on Node's real timer, with an operator
+ * C1 and C2 drive History directly. C1 settles only typed nondecisions from
+ * initial losers with bounded same-time re-observations, requiring an actual
+ * `held` result before proceeding. Its initial barrier still requires exactly
+ * one grant. C2 records contention separately. C3 drives real waiters: Run
+ * Supervision's wait for the lease over the facade's writer port, on Node's
+ * real timer, with an operator
  * deadline, so every wait must end granted or as the typed writer-busy error.
  * Whether a free-running waiter is granted only after waiting depends on host
  * speed (issue #140), so C3 first forces that interleaving and a deadline
@@ -29,7 +32,9 @@ import { afterEach, describe, expect, test } from '@jest/globals';
 import type { IWriterLease } from '@microdelta/history';
 
 import { cleanup } from '../durable-history/support.js';
-import { expectRefused, freshStore, heldFrom, leaseFrom, locatorFrom, measureConcurrency, reopenForReading, snapshot, startWorker, stopWorkers } from './driver.js';
+import { settleC1Loser } from './c1-acquisition.js';
+import type { IC1AcquireRequest } from './c1-acquisition.js';
+import { expectRefused, freshStore, leaseFrom, locatorFrom, measureConcurrency, reopenForReading, snapshot, startWorker, stopWorkers } from './driver.js';
 import type { IConcurrencyMeasure, IDurableState, IWorkerHandle } from './driver.js';
 import { attemptRequest, concurrencyStore, subject } from './fixture.js';
 import { hostMonotonicMilliseconds, parseContentionLog, parseWaitContention, parseWaitStatus } from './protocol.js';
@@ -81,9 +86,14 @@ describe('barrier-aligned contention with a controlled clock (C1)', () => {
     for (let round = 1; round <= rounds; round += 1) {
       // Every previous lease has expired by this round's reading.
       const at = round * 1_000;
-      const acquisitions = await together(workers, (target) => ({ op: 'acquire', at, holder: `contender-${target.name}`, leaseMilliseconds }));
+      const notBefore = barrier();
+      const participants = workers.map((target) => {
+        const request: IC1AcquireRequest = { op: 'acquire', at, holder: `contender-${target.name}`, leaseMilliseconds, notBefore };
+        return { target, request };
+      });
+      const acquisitions = await Promise.all(participants.map(({ target, request }) => target.step(request)));
       measures.push(measureConcurrency(acquisitions));
-      const outcomes = workers.map((target, index) => ({ target, value: valueOf(target, acquisitions[index]) }));
+      const outcomes = participants.map(({ target, request }, index) => ({ target, request, value: valueOf(target, acquisitions[index]) }));
       const winners = outcomes.filter(({ value }) => typeof value === 'object' && value !== null && Reflect.get(value, 'kind') === 'acquired');
       expect(winners).toHaveLength(1);
       const winner = winners[0];
@@ -94,7 +104,10 @@ describe('barrier-aligned contention with a controlled clock (C1)', () => {
       // Grants are strictly increasing: one fence per round, starting at 1.
       expect(granted).toEqual({ holder: `contender-${winner.target.name}`, fence: round, expiresAt: at + leaseMilliseconds });
       for (const loser of outcomes.filter((outcome) => outcome !== winner)) {
-        expect(heldFrom(loser.value)).toEqual({ holder: granted.holder, expiresAt: granted.expiresAt });
+        // The barrier is complete and the logical clock stays fixed. A storage
+        // nondecision must settle to actual held evidence, never an extra grant.
+        const settled = await settleC1Loser(loser.target, loser.request, loser.value, granted);
+        expect(settled.held).toEqual({ holder: granted.holder, expiresAt: granted.expiresAt });
       }
       leases.set(winner.target.name, granted);
 
@@ -168,7 +181,8 @@ describe('free-running contention with the host clock (C2)', () => {
         // History's typed contention outcome (issue #136): only acquisition and renewal report it, nothing
         // changed, and a writer it names was really granted the writer.
         expect(['acquire', 'renew']).toContain(event.op);
-        expect(event.error).toBeUndefined();
+        expect(event.errorKind).toBeUndefined();
+        expect(event.errorName).toBeUndefined();
         if (event.heldBy !== undefined) {
           expect(names.map((name) => `free-${name}`)).toContain(event.heldBy);
         }
@@ -176,8 +190,9 @@ describe('free-running contention with the host clock (C2)', () => {
         // A refused acquisition names a holder that really was granted the writer.
         expect(names.map((name) => `free-${name}`)).toContain(event.heldBy);
       } else if (!event.ok) {
-        // Every other refusal is History's typed stale-writer refusal; a raw driver error such as SQLITE_BUSY fails here.
-        expect(event.error).toBe('StaleWriterError');
+        // Data operations may be refused only by a stale lease or History's typed storage contention.
+        expect(['stale-writer', 'storage-busy']).toContain(event.errorKind);
+        expect(event.errorName).toBe(event.errorKind === 'stale-writer' ? 'StaleWriterError' : 'HistoryBusyError');
       } else if (event.op !== 'acquire') {
         // An accepted mutation presented a fence this process was granted.
         expect(grantee.get(event.fence)).toBe(event.holder);
@@ -198,7 +213,7 @@ describe('free-running contention with the host clock (C2)', () => {
     // The run exercised contention rather than a single uncontested holder.
     expect(grants.length).toBeGreaterThanOrEqual(2);
     expect(all.some((event) => event.op === 'acquire' && !event.ok && event.contended !== true)).toBe(true);
-    expect(all.some((event) => event.error === 'StaleWriterError')).toBe(true);
+    expect(all.some((event) => event.errorKind === 'stale-writer')).toBe(true);
     expect(state.results.length).toBeGreaterThanOrEqual(2);
   }, 120_000);
 });

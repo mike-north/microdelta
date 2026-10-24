@@ -26,7 +26,7 @@ function expectDefinitionError(action: () => unknown, code: DefinitionError['cod
 
 describe('step declarations', () => {
   test('RES-001: the complete author subject is retained exactly, without trimming or prefixes', () => {
-    const run = (): number => 1;
+    const run = (): { readonly value: number } => ({ value: 1 });
     const exact = ' summary:https://example.test/repo/pull/42 ';
     const declaration = memo({ subject: exact, label: 'Retrieve PR', run });
     expect(declaration.subject).toBe(exact);
@@ -34,8 +34,8 @@ describe('step declarations', () => {
   });
 
   test('RES-001: subjects must be nonempty strings; no subject is derived from a name', () => {
-    function namedRun(): number {
-      return 1;
+    function namedRun(): { readonly value: number } {
+      return { value: 1 };
     }
     expectDefinitionError(() => memo({ subject: '', run: namedRun }), 'invalid-subject');
     const untyped: unknown = { run: namedRun };
@@ -45,10 +45,10 @@ describe('step declarations', () => {
   });
 
   test('REUSE-008: the compatibility version defaults to 1', () => {
-    expect(source({ subject: 'activity:a', run: () => 1 }).version).toBe(1);
-    expect(memo({ subject: 'summary:a', run: () => 1 }).version).toBe(1);
-    expect(memo({ subject: 'summary:a', version: 2, run: () => 1 }).version).toBe(2);
-    expect(memo({ subject: 'summary:a', version: Number.MAX_SAFE_INTEGER, run: () => 1 }).version)
+    expect(source({ subject: 'activity:a', run: () => ({ value: 1 }) }).version).toBe(1);
+    expect(memo({ subject: 'summary:a', run: () => ({ value: 1 }) }).version).toBe(1);
+    expect(memo({ subject: 'summary:a', version: 2, run: () => ({ value: 1 }) }).version).toBe(2);
+    expect(memo({ subject: 'summary:a', version: Number.MAX_SAFE_INTEGER, run: () => ({ value: 1 }) }).version)
       .toBe(Number.MAX_SAFE_INTEGER);
   });
 
@@ -62,9 +62,9 @@ describe('step declarations', () => {
   });
 
   test('TRK-2: the declaration retains the actual author callbacks, never a generic wrapper', () => {
-    const run = (): string => 'fetched';
+    const run = (): { readonly value: string } => ({ value: 'fetched' });
     const finality = (): boolean => true;
-    const summaryRun = (): string => 'summary';
+    const summaryRun = (): { readonly value: string } => ({ value: 'summary' });
     const activity = source({ subject: 'activity:a', run, finality });
     const summary = memo({ subject: 'summary:a', children: { activity }, run: summaryRun });
     expect(activity.run).toBe(run);
@@ -74,7 +74,7 @@ describe('step declarations', () => {
   });
 
   test('CMP-9: declaring a step never invokes an author callback', () => {
-    const run = jest.fn((): number => 1);
+    const run = jest.fn((): { readonly value: number } => ({ value: 1 }));
     const finality = jest.fn((): boolean => true);
     const activity = source({ subject: 'activity:a', run, finality });
     memo({ subject: 'summary:a', children: { activity }, run });
@@ -96,7 +96,7 @@ describe('step declarations', () => {
   test('CMP-9: inherited option accessors are rejected without being invoked', () => {
     // Regression (independent review of 9500a4b): only own options were inspected,
     // then destructuring read inherited finality/children getters during declaration.
-    const run = (): number => 1;
+    const run = (): { readonly value: number } => ({ value: 1 });
     const activity = source({ subject: 'activity:a', run });
     const finalityGetter = jest.fn((): (() => boolean) => () => true);
     const childrenGetter = jest.fn((): Record<string, typeof activity> => ({ activity }));
@@ -115,7 +115,7 @@ describe('step declarations', () => {
   });
 
   test('CMP-9: inherited option data is rejected rather than silently becoming a callback or edge', () => {
-    const run = (): number => 1;
+    const run = (): { readonly value: number } => ({ value: 1 });
     const activity = source({ subject: 'activity:a', run });
     const inheritedFinality: unknown = Object.assign(Object.create({ finality: () => true }), { subject: 'activity:b', run });
     const inheritedChildren: unknown = Object.assign(Object.create({ children: { activity } }), { subject: 'summary:a', run });
@@ -128,7 +128,7 @@ describe('step declarations', () => {
   test('CMP-7: child records whose slots would be lost by collection are rejected', () => {
     // Regression (Copilot on 3dc42ff; independent review finding 4): a non-enumerable
     // own slot passed validation but vanished from children and topology.
-    const run = (): number => 1;
+    const run = (): { readonly value: number } => ({ value: 1 });
     const activity = source({ subject: 'activity:a', run });
     class ChildRecord {
       public readonly activity = activity;
@@ -142,16 +142,16 @@ describe('step declarations', () => {
   });
 
   test('CMP-7: a null-prototype child record keeps every declared slot', () => {
-    const activity = source({ subject: 'activity:a', run: () => 1 });
+    const activity = source({ subject: 'activity:a', run: () => ({ value: 1 }) });
     const children: Record<string, typeof activity> = Object.assign(Object.create(null) as Record<string, typeof activity>, { activity });
-    expect(memo({ subject: 'summary:a', children, run: () => 1 }).children).toEqual(['activity']);
+    expect(memo({ subject: 'summary:a', children, run: () => ({ value: 1 }) }).children).toEqual(['activity']);
   });
 
   test('CMP-1: declarations are frozen framework-owned copies of the author options', () => {
-    const activity = source({ subject: 'activity:a', run: () => 1 });
-    const other = source({ subject: 'activity:b', run: () => 2 });
+    const activity = source({ subject: 'activity:a', run: () => ({ value: 1 }) });
+    const other = source({ subject: 'activity:b', run: () => ({ value: 2 }) });
     const children: Record<string, typeof activity> = { activity };
-    const options = { subject: 'summary:a', children, run: (): number => 1 };
+    const options = { subject: 'summary:a', children, run: (): { readonly value: number } => ({ value: 1 }) };
     const declaration = memo(options);
     children['other'] = other;
     options.subject = 'summary:changed';
@@ -162,17 +162,17 @@ describe('step declarations', () => {
   });
 
   test('CMP-7: child edges name nonempty call names holding source or memo declarations; sources declare none', () => {
-    expect(memo({ subject: 'summary:a', run: () => 1 }).children).toEqual([]);
-    const activity = source({ subject: 'activity:a', run: () => 1 });
-    expectDefinitionError(() => memo({ subject: 'summary:a', children: { '': activity }, run: () => 1 }), 'illegal-edge');
-    const profile = memo({ subject: 'profile:a', children: { activity }, run: () => 1 });
-    expect(memo({ subject: 'summary:a', children: { activity, profile }, run: () => 1 }).children).toEqual(['activity', 'profile']);
+    expect(memo({ subject: 'summary:a', run: () => ({ value: 1 }) }).children).toEqual([]);
+    const activity = source({ subject: 'activity:a', run: () => ({ value: 1 }) });
+    expectDefinitionError(() => memo({ subject: 'summary:a', children: { '': activity }, run: () => ({ value: 1 }) }), 'illegal-edge');
+    const profile = memo({ subject: 'profile:a', children: { activity }, run: () => ({ value: 1 }) });
+    expect(memo({ subject: 'summary:a', children: { activity, profile }, run: () => ({ value: 1 }) }).children).toEqual(['activity', 'profile']);
     const sourceWithChildren: unknown = { subject: 'activity:a', children: { other: activity }, run: () => 1 };
     expectDefinitionError(() => Reflect.apply(source, undefined, [sourceWithChildren]), 'illegal-edge');
   });
 
   test('ownership: only Definition-minted declarations are recognized; look-alikes are forged', () => {
-    const genuine = memo({ subject: 'summary:a', run: () => 1 });
+    const genuine = memo({ subject: 'summary:a', run: () => ({ value: 1 }) });
     const lookalike: unknown = { ...genuine };
     expect(isDeclaration(genuine)).toBe(true);
     expect(isDeclaration(lookalike)).toBe(false);
@@ -181,8 +181,8 @@ describe('step declarations', () => {
 
   test('ownership: builders from another family instance mint declarations this instance does not own', () => {
     const other = declarations<ITestFamily>();
-    const foreign = other.source({ subject: 'activity:a', run: () => 1 });
+    const foreign = other.source({ subject: 'activity:a', run: () => ({ value: 1 }) });
     expect(isDeclaration(foreign)).toBe(true);
-    expectDefinitionError(() => memo({ subject: 'summary:a', children: { activity: foreign }, run: () => 1 }), 'forged-declaration');
+    expectDefinitionError(() => memo({ subject: 'summary:a', children: { activity: foreign }, run: () => ({ value: 1 }) }), 'forged-declaration');
   });
 });

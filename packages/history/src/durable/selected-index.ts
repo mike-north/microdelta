@@ -30,9 +30,12 @@ import {
   fingerprint,
   navigate,
   observe,
+  observePrepared,
+  prepareValue,
+  preparedRoot,
   recordFromEntries,
 } from '@microdelta/value';
-import type { IAddressSegment, IOperation, ISelectedFact, ISelectedNode } from '@microdelta/value';
+import type { IAddressSegment, IOperation, IPreparedValue, ISelectedFact, ISelectedNode } from '@microdelta/value';
 
 import type {
   ICompletedNavigationReader,
@@ -125,6 +128,14 @@ function ownValue(record: object, key: string): unknown {
  * that an earlier level does not shadow.
  */
 export function buildIndex(root: object, host: ISha256Capability): IIndexRows {
+  // Validate and detach once before constructing addresses; selected reads then
+  // consult Value's prepared immutable facts without rescanning ancestor arrays.
+  const prepared: IPreparedValue = prepareValue(root);
+  const preparedRootValue = preparedRoot(prepared);
+  if (preparedRootValue === null || typeof preparedRootValue !== 'object') {
+    throw new TypeError('A completed result payload needs a record or array root');
+  }
+  const snapshotRoot = preparedRootValue;
   const nodes: INodeRow[] = [];
   const edges: IEdgeRow[] = [];
   const addresses: IAddressRow[] = [];
@@ -189,7 +200,7 @@ export function buildIndex(root: object, host: ISha256Capability): IIndexRows {
       address: encodeAddress(address),
       nodeId,
       own: own ? 1 : 0,
-      valueFingerprint: address.length === 0 ? null : fingerprint(encodeSelectedFact(observe(root, address, 'value')), host),
+      valueFingerprint: address.length === 0 ? null : fingerprint(encodeSelectedFact(observePrepared(prepared, address, 'value')), host),
     });
     const node = nodes[nodeId];
     if (node?.kind === 'array') {
@@ -217,7 +228,7 @@ export function buildIndex(root: object, host: ISha256Capability): IIndexRows {
     }
   }
 
-  addAddress(addNode(root), [], true);
+  addAddress(addNode(snapshotRoot), [], true);
   return { nodes, edges, addresses };
 }
 
@@ -360,9 +371,13 @@ export function createSelectedIndex(connection: ISqliteConnection, host: ISha256
     fingerprints: connection.prepare(sql`/* fingerprint */ SELECT a.value_fingerprint, n.snapshot_fingerprint
       FROM history_addresses a JOIN history_nodes n ON n.result_id = a.result_id AND n.node_id = a.node_id
       WHERE a.result_id = ? AND a.address = ?`),
+    // The selected frontier drives each edge lookup through the existing
+    // (result_id, parent_node) key prefix; a result-wide edge scan per node
+    // would multiply work while discovering a large retained subtree.
     subtreeNodes: connection.prepare(sql`/* subtree-payload */ WITH RECURSIVE subtree(node_id) AS (
         SELECT ?
-        UNION SELECT e.child_node FROM history_edges e JOIN subtree s ON e.parent_node = s.node_id WHERE e.result_id = ?
+        UNION SELECT e.child_node FROM subtree s CROSS JOIN history_edges e
+          WHERE e.result_id = ? AND e.parent_node = s.node_id
         UNION SELECT n.prototype_node FROM history_nodes n JOIN subtree s ON n.node_id = s.node_id
           WHERE n.result_id = ? AND n.prototype_node IS NOT NULL
       )

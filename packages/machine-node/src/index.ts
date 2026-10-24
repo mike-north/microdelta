@@ -55,10 +55,11 @@ export function createNodeTimer(): ITimerCapability {
 
 /**
  * The canonical location of an existing local store file: its absolute real
- * path, with symbolic links and redundant segments resolved, so two spellings
- * of one file compare equal and distinct files do not. Assembly uses it to
- * recognize two handles over one store. A location naming no existing file
- * throws.
+ * path, with supported symbolic links and redundant segments resolved.
+ * Relative and absolute spellings of that path share a canonical location;
+ * distinct hard-linked names remain distinct paths. Assembly uses this
+ * pathname identity to recognize handles opened through supported aliases.
+ * A location naming no existing file throws.
  * @alpha
  */
 export function canonicalNodeLocation(location: string): string {

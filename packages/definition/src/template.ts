@@ -1,8 +1,8 @@
 /**
  * Fanout templates and tracked gates (CMP-1, CMP-4, CMP-8, CMP-9).
  *
- * A fanout template is a member computation declared once over a keyed
- * collection source. Its factory runs exactly once, while composing, against a
+ * A fanout template is a member computation declared once over a collection
+ * result. Its factory runs exactly once, while composing, against a
  * symbolic member: a builder that can mint member-scoped subjects and member
  * step declarations but never sees a member key or any member data. The
  * declarations it returns, and the author record holding them, are copied and
@@ -122,11 +122,14 @@ export interface ITemplateMemoOptions<TFamily extends IBindingFamily, TChildren 
 export interface IMemberBuilder<TFamily extends IBindingFamily, TMember = unknown> {
   /** A member subject whose instances are `prefix:key`, computed from the key only. */
   subject(prefix: string): IMemberSubject;
-  /** Declare a member-scoped retained source whose callbacks receive the member binding. */
-  source<TResult>(options: ITemplateSourceOptions<TFamily, TResult, TMember>): ISourceDeclaration<TFamily, TResult, IMemberBinding<TFamily, TMember>>;
-  /** Declare a member-scoped memoized computation over sibling member steps, receiving the member binding. */
-  memo<TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult = unknown>(
+  /** Declare a member source with a container-root result and the member binding. */
+  source<TResult extends object>(options: ITemplateSourceOptions<TFamily, TResult, TMember>): ISourceDeclaration<TFamily, TResult, IMemberBinding<TFamily, TMember>>;
+  /** Declare a member memo whose awaited result has a container root. */
+  memo<TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult extends object = object>(
     options: ITemplateMemoOptions<TFamily, TChildren, TResult, TMember>,
+    // Check the entire settled union while retaining contextual callback inference.
+    // A Promise is an object but cannot carry a scalar past the result-root boundary.
+    ...root: [Awaited<TResult>] extends [object] ? [] : [unsupportedResultRoot: never]
   ): IMemoDeclaration<TFamily, TChildren, TResult, IMemberBinding<TFamily, TMember>>;
 }
 
@@ -152,7 +155,7 @@ export type IGateContext<TFamily extends IBindingFamily, TMember> = TFamily['mem
 
 /**
  * Rejects, at the type level, a template over a source whose declared result
- * is not a keyed collection.
+ * does not expose a collection member type.
  * @alpha
  */
 export type IKeyedCollectionCheck<TFamily extends IBindingFamily, TCollection> =
@@ -169,9 +172,9 @@ export interface ITemplateOptions<
 > {
   /** The template slot, unique within a composition and part of every instance descriptor. */
   readonly slot: string;
-  /** The keyed collection source whose members instantiate the template. */
+  /** The collection source whose result supplies the template's members. */
   readonly collection: TCollection & IKeyedCollectionCheck<TFamily, TCollection>;
-  /** An explicit custom-key function overriding the collection's designated identity. */
+  /** An explicit member-key function, required when the source has no designated identity. */
   readonly key?: (member: IMemberOf<TFamily, TCollection>) => string;
   /** A tracked gate: an explicit `false` skips an instance without changing topology. */
   readonly gate?: (context: IGateContext<TFamily, IMemberOf<TFamily, TCollection>>) => boolean;
@@ -196,7 +199,7 @@ export interface IAnyTemplateDeclaration<TFamily extends IBindingFamily> extends
   readonly kind: 'template';
   /** The template slot. */
   readonly slot: string;
-  /** The keyed collection source the template fans out over. */
+  /** The collection source whose result supplies this template's members. */
   readonly collection: IAnySourceDeclaration<TFamily>;
   /** The author's custom-key function, when declared. */
   readonly key: ((member: never) => unknown) | undefined;
@@ -333,10 +336,10 @@ interface ITemplateStep<TFamily extends IBindingFamily> {
 /** A template's private record, reachable only through the builder instance that minted it. */
 export interface ITemplateRecord<TFamily extends IBindingFamily> {
   readonly declaration: IAnyTemplateDeclaration<TFamily>;
-  /** The keyed collection source declaration. */
+  /** The collection-shaped source declaration whose template supplies a designated or explicit key strategy. */
   readonly collection: IAnySourceDeclaration<TFamily>;
-  /** The collection's designated identity field. */
-  readonly identity: string;
+  /** The source's designated identity field when declared; a template key may override it or supply the only identity. */
+  readonly identity: string | undefined;
   readonly customKey: ((member: never) => unknown) | undefined;
   readonly gate: IGateRecord<TFamily> | undefined;
   /** Template steps by slot, in structural (sorted) order. */
@@ -400,10 +403,14 @@ export function declareTemplate<TFamily extends IBindingFamily, TCollection exte
   if (collectionRecord === undefined) {
     return reject('forged-declaration', `Template ${slot} collection is not a declaration this family minted.`);
   }
-  if (collectionRecord.kind !== 'source' || collectionRecord.declaration.collection === undefined) {
-    return reject('invalid-collection', `Template ${slot} must fan out over a keyed collection source declaring its designated identity.`);
+  if (collectionRecord.kind !== 'source') {
+    return reject('invalid-collection', `Template ${slot} must fan out over a collection source declaration.`);
   }
-  const identity = collectionRecord.declaration.collection.identity;
+  const identity = collectionRecord.declaration.collection?.identity;
+  const customKey = read.get('key');
+  if (identity === undefined && customKey === undefined) {
+    return reject('invalid-collection', `Template ${slot} must declare a designated identity on its collection source or provide a custom key with its \`key\` option.`);
+  }
   // Every recognized option was just proven to be an own data property of the
   // expected type (or absent without an inherited property), so these typed
   // reads run no author code and adopt nothing unvalidated.
@@ -461,7 +468,7 @@ export function declareTemplate<TFamily extends IBindingFamily, TCollection exte
       prefixes.set(subject, prefix);
       return subject;
     },
-    source<TResult>(
+    source<TResult extends object>(
       sourceOptions: ITemplateSourceOptions<TFamily, TResult, IMemberOf<TFamily, TCollection>>,
     ): ISourceDeclaration<TFamily, TResult, IMemberBinding<TFamily, IMemberOf<TFamily, TCollection>>> {
       assertOpen();
@@ -482,8 +489,9 @@ export function declareTemplate<TFamily extends IBindingFamily, TCollection exte
       adopt(declaration);
       return declaration;
     },
-    memo<TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult = unknown>(
+    memo<TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult extends object = object>(
       memoOptions: ITemplateMemoOptions<TFamily, TChildren, TResult, IMemberOf<TFamily, TCollection>>,
+      ..._root: [Awaited<TResult>] extends [object] ? [] : [unsupportedResultRoot: never]
     ): IMemoDeclaration<TFamily, TChildren, TResult, IMemberBinding<TFamily, IMemberOf<TFamily, TCollection>>> {
       assertOpen();
       const fields = readOptions(memoOptions);

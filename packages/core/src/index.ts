@@ -17,6 +17,9 @@
 import { createMemoryStore as createHistoryMemoryStore } from '@microdelta/history';
 import type { MemoryStoreOptions, Store } from '@microdelta/history';
 
+/** History's alpha SQLite-contention class is available to facade consumers. */
+export { HistoryBusyError } from '@microdelta/history';
+
 import { machine } from './host.js';
 
 /**
@@ -72,6 +75,7 @@ export {
   type IFoldEntry,
   type IForward,
   type IForwarded,
+  type IHasOwn,
   type IKeyedMember,
   type IKeyedSnapshot,
   type IKeyingDiagnostic,

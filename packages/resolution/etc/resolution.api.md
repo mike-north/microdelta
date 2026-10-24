@@ -126,6 +126,7 @@ export interface IExecutionAttempt {
 
 // @alpha
 export interface IExecutionSupervision {
+    dispatchMembers(count: number, continueWhile: () => boolean, work: (position: number) => Promise<void>): Promise<number>;
     execute<T>(step: IBindingDescriptor, work: () => Promise<T>, attempt?: IExecutionAttempt): Promise<ISupervisedExecution<T>>;
     member<T>(work: () => Promise<T>): Promise<T>;
     publicationRefusal(): string | undefined;
@@ -189,6 +190,9 @@ export interface IGateEvidence {
     readonly observations: readonly ITrackingObservation[];
     readonly selected: 'required' | 'skipped';
 }
+
+// @alpha
+export type IHasOwn = (value: ITracked<object>, key: string) => boolean;
 
 // @alpha
 export type IIncompleteOutcomeFoldCoverage = IOutcomeFoldCoverage & {
@@ -456,6 +460,7 @@ export interface ISourceOutcomes {
 
 // @alpha
 export interface IStepBindings<TInputs extends object, THelpers extends object> {
+    readonly hasOwn: IHasOwn;
     readonly helpers: ITrackedHelpers<THelpers>;
     readonly inputs: ITrackedView<TInputs>;
     readonly untracked: IUntrackedRead;

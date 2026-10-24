@@ -223,6 +223,38 @@ import { mintedOutcome, sourceOutcome } from './outcome.js';
 import type { IMintedOutcome } from './outcome.js';
 
 /**
+ * Invocation-local provenance for a rejection from the actual tracked author
+ * callback. Public ResolutionError instances and codes cannot provide this
+ * evidence: an author can construct either. The route that opted in consumes
+ * this wrapper and exposes only the exact thrown value as its safe failure's
+ * cause; the wrapper itself never crosses the public boundary.
+ */
+class AuthoredCallbackFailure {
+  public constructor(public readonly thrown: unknown) {}
+}
+
+/** Invoke the tracked author function inside a capture, separating its rejection from framework setup and output finishing. */
+async function invokeCapturedAuthor<TContext, TResult, TFinished>(
+  authored: (context: TContext) => TResult,
+  context: TContext,
+  finish: (value: unknown) => TFinished,
+  begin: (() => void) | undefined,
+  captureAuthorThrow: boolean,
+): Promise<TFinished> {
+  begin?.();
+  let produced: unknown;
+  try {
+    produced = await authored(context);
+  } catch (error: unknown) {
+    if (captureAuthorThrow) {
+      throw new AuthoredCallbackFailure(error);
+    }
+    throw error;
+  }
+  return finish(produced);
+}
+
+/**
  * Resolution failures that belong to the run rather than to one template
  * member: the admission port or an observer failed, historical evidence is
  * damaged, or the request itself is wrong. A members request, like a strict
@@ -253,6 +285,27 @@ interface IResolvedStep {
   readonly step: IBindingDescriptor;
   readonly result: IStepResult;
   readonly evidence: IStepEvidence;
+}
+
+/**
+ * The current child invocation after Definition has reconnected its witness
+ * and Resolution has rebuilt any supplied arguments. The identity belongs to
+ * the child's current declaration, never to historical provenance.
+ */
+export interface IChildResolutionInvocation {
+  readonly kind: 'source' | 'memo' | 'supplied';
+  readonly step: IBindingDescriptor;
+  readonly subject: string;
+}
+
+/**
+ * Owner-only substitute for the child-resolution boundary. A test can return
+ * an already resolved current child outcome, or continue through normal
+ * Resolution. It owns no History mutation, parent comparison, or Definition
+ * correspondence; those remain on their real paths around this boundary.
+ */
+export interface IChildResolutionService {
+  resolve(invocation: IChildResolutionInvocation, normal: () => Promise<IResolvedStep>): Promise<IResolvedStep>;
 }
 
 /**
@@ -559,10 +612,22 @@ class LeaseLost extends Error {
  * lifecycle observers) or to a failure detaching an author's returned data:
  * those failures name the step and the failure kind only, and keep the
  * thrown value as the failure's `cause` (RUN-013: diagnostics name fields
- * and keys, not their contents).
+ * and keys, not their contents). Like Definition's thrown-detail boundary,
+ * this reads only an Error's own data message; coercion, getters and proxy
+ * traps cannot replace the framework failure with another throw.
  */
 function frameworkDetail(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  try {
+    if (error instanceof Error) {
+      const message = Object.getOwnPropertyDescriptor(error, 'message');
+      if (message !== undefined && 'value' in message && typeof message.value === 'string') {
+        return message.value;
+      }
+    }
+    return typeof error === 'string' ? error : `a thrown ${error === null ? 'null' : typeof error}`;
+  } catch {
+    return 'non-printable error';
+  }
 }
 
 /** Whether a value is a supported completed-result root (record or array). */
@@ -805,6 +870,15 @@ function unsupervised(): IExecutionSupervision {
       tail = next.then(() => undefined, () => undefined);
       return next;
     },
+    async dispatchMembers(count: number, continueWhile: () => boolean, work: (position: number) => Promise<void>): Promise<number> {
+      // Without a run window, a single sequence is the full active bound.
+      let started = 0;
+      while (started < count && continueWhile()) {
+        await work(started);
+        started += 1;
+      }
+      return started;
+    },
     publicationRefusal: (): string | undefined => undefined,
   });
 }
@@ -816,6 +890,19 @@ function unsupervised(): IExecutionSupervision {
  * @alpha
  */
 export function createResolution<TInputs extends object, THelpers extends object>(options: IResolutionOptions<TInputs, THelpers>): IResolution {
+  return _createResolutionWithChildService(options, { resolve: (_invocation, normal) => normal() });
+}
+
+/**
+ * Construct Resolution with an owner-test child seam. This deep-module entry
+ * is intentionally absent from the package barrel: consumers still receive
+ * only the normal resolver, while owner tests may isolate a parent's current
+ * child result without bypassing its surrounding contract.
+ */
+export function _createResolutionWithChildService<TInputs extends object, THelpers extends object>(
+  options: IResolutionOptions<TInputs, THelpers>,
+  childService: IChildResolutionService,
+): IResolution {
   type IFamily = IResolutionFamily<TInputs, THelpers>;
   const { composition, history, tracking, host, admission, observer } = options;
   if (typeof options.environment !== 'string' || options.environment.length === 0) {
@@ -849,8 +936,25 @@ export function createResolution<TInputs extends object, THelpers extends object
    * without consuming it and records the read in the active capture.
    */
   const untracked: IFamily['memo']['untracked'] = (value, key) => tracking.untracked(value, key);
+  /** Own presence stays with the execution observer and its current capture, not a separate validation observer. */
+  const hasOwn: IFamily['memo']['hasOwn'] = (value, key) => tracking.hasOwn(value, key);
   /** Previous carriers this Resolution supplied, with the exact result and the resolution they belong to. */
   const carriers = new WeakMap<object, { readonly reference: ICompletedResultReference; readonly token: object }>();
+
+  /** Delegate one reconnected source child, retaining the normal shared path. */
+  function currentSourceChild(request: IRequestContext, step: IBindingDescriptor, declaration: IAnySourceDeclaration<IFamily>): Promise<IResolvedStep> {
+    return childService.resolve({ kind: 'source', step, subject: declaration.subject }, () => resolveSourceShared(request, step, declaration));
+  }
+
+  /** Delegate one reconnected memo child, retaining the normal shared path. */
+  function currentMemoChild(request: IRequestContext, step: IBindingDescriptor, declaration: IAnyMemoDeclaration<IFamily>): Promise<IResolvedStep> {
+    return childService.resolve({ kind: 'memo', step, subject: declaration.subject }, () => resolveMemoShared(request, step, declaration));
+  }
+
+  /** Delegate one current supplied child after argument and subject rebuild. */
+  function currentSuppliedChild(request: IRequestContext, call: ISuppliedCall<IFamily>): Promise<IResolvedStep> {
+    return childService.resolve({ kind: 'supplied', step: call.slot, subject: call.subject.subject }, () => resolveSuppliedShared(request, call));
+  }
 
   const port: IInvocationPort<IFamily> = Object.freeze({
     active: (): IInvocationScope | undefined => active.getStore(),
@@ -1052,7 +1156,7 @@ export function createResolution<TInputs extends object, THelpers extends object
       }
     }
     Object.freeze(helpers);
-    return Object.freeze({ inputs: trusted<IFamily['memo']['inputs']>(inputs), helpers: trusted<IFamily['memo']['helpers']>(helpers), untracked });
+    return Object.freeze({ inputs: trusted<IFamily['memo']['inputs']>(inputs), helpers: trusted<IFamily['memo']['helpers']>(helpers), untracked, hasOwn });
   }
 
   /**
@@ -1060,13 +1164,19 @@ export function createResolution<TInputs extends object, THelpers extends object
    * step's own implementation (`self`) and run it with the context Definition
    * assembled inside a fresh capture. `finish` runs inside that capture, so
    * explicit output detachment records what the step consumed from its output.
+   * Source checks, supplied steps and fold bodies opt into a private failure
+   * wrapper for the exact callback call. Memo bodies deliberately do not:
+   * their frame records failed declared children to preserve runtime failure classification.
+   * Source finality also does not: its policy boundary owns that failure.
+   * `begin` and `finish` remain outside the catch so invocation setup and
+   * framework output validation retain their own failure classification.
    */
-  function invoker<TFinished>(finish: (value: unknown) => TFinished, begin?: () => void): IAuthorInvoker<Promise<IObservationCapture<TFinished>>> {
+  function invoker<TFinished>(finish: (value: unknown) => TFinished, begin?: () => void, captureAuthorThrow = false): IAuthorInvoker<Promise<IObservationCapture<TFinished>>> {
     return <TContext, TResult>(callback: (context: TContext) => TResult, context: TContext): Promise<IObservationCapture<TFinished>> => {
       // eslint-disable-next-line microdelta/tracked-captures -- Framework invoker: the callback is the author's actual function from Definition's record, tracked so its implementation is the step's own evidence.
       const authored = tracking.tracked(callback, { path: bindingPaths.self });
-      // eslint-disable-next-line microdelta/tracked-captures -- Framework invoker: this capture is the author call's evidence boundary; `begin` marks the author call's start inside it, then only the tracked author callback runs with Definition's assembled context.
-      return tracking.captureAsync(async () => { begin?.(); return finish(await authored(context)); });
+      // eslint-disable-next-line microdelta/tracked-captures -- Framework capture delegates to the tracked original author callback; begin and finish are Resolution-owned boundaries, not untracked author influences.
+      return tracking.captureAsync(() => invokeCapturedAuthor(authored, context, finish, begin, captureAuthorThrow));
     };
   }
 
@@ -1153,7 +1263,7 @@ export function createResolution<TInputs extends object, THelpers extends object
         }
         return invocation.applyFinality(bindings, supplier, invoker(finish), member);
       }
-      return invocation.apply(bindings, supplier, invoker(finish), member);
+      return invocation.apply(bindings, supplier, invoker(finish, undefined, true), member);
     });
   }
 
@@ -1468,6 +1578,9 @@ export function createResolution<TInputs extends object, THelpers extends object
       if (executed.kind === 'threw') {
         const error = executed.error;
         abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'the source check threw' });
+        if (error instanceof AuthoredCallbackFailure) {
+          throw new ResolutionError('execution-failure', `Source check of ${stepKey(step)} threw`, error.thrown);
+        }
         if (error instanceof ResolutionError) {
           throw error;
         }
@@ -1584,7 +1697,7 @@ export function createResolution<TInputs extends object, THelpers extends object
       // occupying it is simply the current child, resolved under its own
       // eligibility and admission, whose consumed output facts are then compared
       // (REUSE-005/006, RES-003/007). Original provenance keeps the old child.
-      const resolved = await resolveSourceShared(request, childStep, childDeclaration);
+      const resolved = await currentSourceChild(request, childStep, childDeclaration);
       switch (resolved.result.kind) {
         case 'reused':
         case 'published':
@@ -1664,9 +1777,9 @@ export function createResolution<TInputs extends object, THelpers extends object
         const childStep = siblingStep(step, witness.child.slot);
         const childDeclaration = child.declaration;
         if (childDeclaration.kind === 'source') {
-          resolved = await resolveSourceShared(request, childStep, childDeclaration);
+          resolved = await currentSourceChild(request, childStep, childDeclaration);
         } else if (childDeclaration.kind === 'memo') {
-          resolved = await resolveMemoShared(request, childStep, childDeclaration);
+          resolved = await currentMemoChild(request, childStep, childDeclaration);
         } else {
           return missed('correspondence', `${label} names a ${childDeclaration.kind}, which is never a declared call`);
         }
@@ -1680,7 +1793,7 @@ export function createResolution<TInputs extends object, THelpers extends object
           }
           throw error;
         }
-        resolved = await resolveSuppliedShared(request, { slot: witness.child, declaration: child.declaration, subject, values: rebuilt.values, digest: argumentDigest(rebuilt.values) });
+        resolved = await currentSuppliedChild(request, { slot: witness.child, declaration: child.declaration, subject, values: rebuilt.values, digest: argumentDigest(rebuilt.values) });
       }
       switch (resolved.result.kind) {
         case 'reused':
@@ -1952,17 +2065,35 @@ export function createResolution<TInputs extends object, THelpers extends object
    * index keys, it satisfies Definition's frozen-array check, and `in`, key
    * reflection and every array method see its elements.
    *
-   * The proxy adds only observation: reading `length`, a position past the
-   * end, an `in` check or key reflection records the list's shape (its length,
-   * or the absent position), each returning exactly what the target answers,
-   * as the proxy invariants for a frozen target require. Shape observations
-   * are armed only when the author callback starts, because Definition's
-   * frozen-array check reflects on the list before that, possibly inside a
-   * parent body's capture where a record would be misattributed.
+   * Once the child callback starts, all list operations require both that
+   * invocation and its exact Tracking frame. Definition may reflect the
+   * unarmed frozen array beforehand without attributing its check to the
+   * parent. Returning this exact proxy as output is rejected during normal
+   * detachment traversal, even when it is empty or nested; an explicit copy
+   * such as `[...args]` is ordinary supported output. Its object-valued
+   * elements remain Tracking-owned wrappers with their existing semantics.
+   * A Proxy is not structured-cloneable, so `structuredClone(args)` raises
+   * `DataCloneError`; copy the list before cloning it.
    */
-  function argumentViews(values: readonly IArgumentValue[]): { readonly views: readonly unknown[]; readonly arm: () => void } {
+  function argumentViews(values: readonly IArgumentValue[], invocation: ISuppliedInvocation<IFamily>): { readonly views: readonly unknown[]; readonly arm: () => void; readonly finish: (value: unknown) => IMemoReturn } {
     const whole = tracking.tracked(argumentList(values), { path: bindingPaths.argument });
     let armed = false;
+    let assertFrame: (() => void) | undefined;
+    let finishing = false;
+    /** Reject foreign and ended work before any tracked or otherwise-unobserved list read. */
+    const assertOwner = (): void => {
+      if (!armed) { return; }
+      if (active.getStore() !== invocation || !invocation.open) {
+        throw new TypeError('The supplied argument list belongs to another or closed invocation');
+      }
+      if (assertFrame === undefined) {
+        throw new TypeError('The supplied argument list has no owning capture frame');
+      }
+      assertFrame();
+      if (finishing) {
+        throw new TypeError('A supplied-step argument list cannot be returned as output; return [...args] instead');
+      }
+    };
     const observeArity = (): void => {
       if (armed) {
         void Reflect.get(whole, 'length');
@@ -1973,6 +2104,7 @@ export function createResolution<TInputs extends object, THelpers extends object
       Object.defineProperty(target, position, {
         enumerable: true,
         get: (): unknown => {
+          assertOwner();
           if (value.kind === 'opaque') {
             throw new TypeError(`Argument ${String(position)} is unreconstructible (${value.reason}); a supplied step can never observe it`);
           }
@@ -1983,30 +2115,54 @@ export function createResolution<TInputs extends object, THelpers extends object
     Object.freeze(target);
     const views = new Proxy(target, {
       get(held, key, receiver): unknown {
+        assertOwner();
         if (key === 'length') {
           observeArity();
           return held.length;
         }
         if (typeof key === 'string' && /^(?:0|[1-9][0-9]*)$/u.test(key) && Number(key) >= held.length) {
+          if (!Number.isSafeInteger(Number(key))) {
+            // An unsafe decimal key is not an array index and supplies no argument evidence.
+            return undefined;
+          }
           // A position past the end: its absence is a fact of this list's shape.
           return Reflect.get(whole, key);
         }
         return Reflect.get(held, key, receiver);
       },
       has(held, key): boolean {
+        assertOwner();
         observeArity();
         return Reflect.has(held, key);
       },
       ownKeys(held): ArrayLike<string | symbol> {
+        assertOwner();
         observeArity();
         return Reflect.ownKeys(held);
       },
       getOwnPropertyDescriptor(held, key): PropertyDescriptor | undefined {
+        assertOwner();
         observeArity();
         return Reflect.getOwnPropertyDescriptor(held, key);
       },
+      getPrototypeOf(held): object | null {
+        assertOwner();
+        return Reflect.getPrototypeOf(held);
+      },
+      isExtensible(held): boolean {
+        assertOwner();
+        return Reflect.isExtensible(held);
+      },
     });
-    return { views, arm: () => { armed = true; } };
+    return {
+      views,
+      arm: (): void => { assertFrame = tracking.currentCaptureAssertion(); armed = true; },
+      finish: (value: unknown): IMemoReturn => {
+        // The existing detacher owns this rejection and preserves its safe outer failure.
+        finishing = true;
+        return detachComputation(value);
+      },
+    };
   }
 
   /** Resolve one supplied slot call once per top-level request, for its slot, subject, version and arguments. */
@@ -2080,7 +2236,7 @@ export function createResolution<TInputs extends object, THelpers extends object
       invocation.close();
       throw error;
     }
-    const { views, arm } = argumentViews(call.values);
+    const { views, arm, finish } = argumentViews(call.values, invocation);
     const supplier: IArgumentSupplier<IFamily> = Object.freeze({
       views: <TParameters extends readonly unknown[]>(declaration: ISuppliedStepDeclaration<IFamily, TParameters, unknown>): IArgumentViews<IFamily, TParameters> => {
         void declaration;
@@ -2090,7 +2246,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     let executed: ISupervisedExecution<IObservationCapture<IMemoReturn>>;
     try {
       emit(request, evidence, step, 'execute');
-      executed = await supervision.execute(step, () => active.run(invocation, () => invocation.apply(bindings, supplier, invoker(detachComputation, arm))), { subject, attemptId });
+      executed = await supervision.execute(step, () => active.run(invocation, () => invocation.apply(bindings, supplier, invoker(finish, arm, true))), { subject, attemptId });
     } catch (error: unknown) {
       executed = { kind: 'threw', error };
     } finally {
@@ -2105,6 +2261,9 @@ export function createResolution<TInputs extends object, THelpers extends object
     if (executed.kind === 'threw') {
       const error = executed.error;
       abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'the supplied step threw' });
+      if (error instanceof AuthoredCallbackFailure) {
+        throw new ResolutionError('execution-failure', `Supplied step ${describeSlot(step)} for ${subject.subject} threw`, error.thrown);
+      }
       if (error instanceof ResolutionError) {
         throw error;
       }
@@ -2348,7 +2507,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     const childStep = siblingStep(frame.step, slot);
     let resolved: IResolvedStep;
     try {
-      resolved = await resolveSourceShared(frame.request, childStep, request.child);
+      resolved = await currentSourceChild(frame.request, childStep, request.child);
     } catch (error: unknown) {
       recordFailedChild(frame, error);
       throw error;
@@ -2400,10 +2559,10 @@ export function createResolution<TInputs extends object, THelpers extends object
     try {
       switch (request.kind) {
         case 'source':
-          resolved = await resolveSourceShared(frame.request, siblingStep(frame.step, witness.child.slot), request.child);
+          resolved = await currentSourceChild(frame.request, siblingStep(frame.step, witness.child.slot), request.child);
           break;
         case 'memo':
-          resolved = await resolveMemoShared(frame.request, siblingStep(frame.step, witness.child.slot), request.child);
+          resolved = await currentMemoChild(frame.request, siblingStep(frame.step, witness.child.slot), request.child);
           break;
         case 'supplied': {
           const outputs = new Map([...frame.calls].map(([index, call]) => [index, call.reference]));
@@ -2411,7 +2570,7 @@ export function createResolution<TInputs extends object, THelpers extends object
           if (rebuilt.status !== 'rebuilt') {
             throw new ResolutionError('execution-failure', `Call ${String(witness.index)} of ${stepKey(frame.step)} cannot be made: ${rebuilt.detail}`);
           }
-          resolved = await resolveSuppliedShared(frame.request, { slot: witness.child, declaration: request.child, subject: request.subject, values: rebuilt.values, digest: argumentDigest(rebuilt.values) });
+          resolved = await currentSuppliedChild(frame.request, { slot: witness.child, declaration: request.child, subject: request.subject, values: rebuilt.values, digest: argumentDigest(rebuilt.values) });
           break;
         }
         default: {
@@ -2768,11 +2927,10 @@ export function createResolution<TInputs extends object, THelpers extends object
       }
     };
     /**
-     * Resolve one member inside the run's bounded active window (RUN-002).
-     * Every member is presented at once, in canonical key order, and the
-     * window starts them in that order. A member not yet started holds
-     * nothing, so after a stop it is presented to admission, and refused,
-     * only when a lane reaches it; after a run-level failure it does not start.
+     * Resolve one member already selected by the run's bounded dispatcher
+     * (RUN-002, DOM-3). Undispatched keys hold no execution continuation or
+     * lane wait. The dispatcher selects positions in canonical order; this
+     * callback performs the current evidence and status work for each key.
      *
      * Invariant: the window's lane pool is run-wide, so a member's work must
      * never reach another `settleMembers` (a nested fan-out) under the same
@@ -2798,8 +2956,24 @@ export function createResolution<TInputs extends object, THelpers extends object
         settled.set(position, { key, step: instance, resolved: error });
       }
     };
-    // Members already started finish before a run-level failure is reported, so no member work outlives the request.
-    await Promise.all(keys.map((key, position) => supervision.member(() => member(key, position))));
+    // A run-level failure stops only this fan-out's new starts. Hard stop
+    // leaves a contiguous suffix: process it one member at a time through
+    // the existing (already-aborted) member frame, preserving current
+    // evidence and complete report statuses without a corpus-sized queue.
+    const started = await supervision.dispatchMembers(keys.length, () => runFailure.first === undefined, async (position) => {
+      const key = keys[position];
+      if (key !== undefined) {
+        await member(key, position);
+      }
+    });
+    if (runFailure.first === undefined) {
+      for (let position = started; position < keys.length; position += 1) {
+        const key = keys[position];
+        if (key !== undefined) {
+          await supervision.member(() => member(key, position));
+        }
+      }
+    }
     if (runFailure.first !== undefined) {
       throw runFailure.first.error;
     }
@@ -3148,10 +3322,10 @@ export function createResolution<TInputs extends object, THelpers extends object
   function openFoldBody(step: IBindingDescriptor, work: IFoldWork, bindings: IFamily['memo']): { readonly invocation: IInvocationScope; readonly run: () => Promise<IObservationCapture<IMemoReturn>> } {
     if (work.kind === 'fold') {
       const invocation = openFold(step);
-      return { invocation, run: () => active.run(invocation, () => invocation.apply(bindings, foldMembers(work.membership), invoker(detachComputation))) };
+      return { invocation, run: () => active.run(invocation, () => invocation.apply(bindings, foldMembers(work.membership), invoker(detachComputation, undefined, true))) };
     }
     const invocation = openOutcomeFold(step);
-    return { invocation, run: () => active.run(invocation, () => invocation.apply(bindings, outcomeMembers(work.membership), invoker(detachComputation))) };
+    return { invocation, run: () => active.run(invocation, () => invocation.apply(bindings, outcomeMembers(work.membership), invoker(detachComputation, undefined, true))) };
   }
 
   /**
@@ -3212,6 +3386,9 @@ export function createResolution<TInputs extends object, THelpers extends object
     if (executed.kind === 'threw') {
       const error = executed.error;
       abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'the body threw' });
+      if (error instanceof AuthoredCallbackFailure) {
+        throw new ResolutionError('execution-failure', `Body of ${name} ${stepKey(step)} threw`, error.thrown);
+      }
       if (error instanceof ResolutionError) {
         throw error;
       }

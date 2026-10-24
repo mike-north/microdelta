@@ -12,6 +12,7 @@ import { FingerprintAlgorithmMismatchError } from '@microdelta/history';
 import { GenerationPatch } from '@microdelta/history';
 import { GenerationRow } from '@microdelta/history';
 import { GenerationState } from '@microdelta/history';
+import { HistoryBusyError } from '@microdelta/history';
 import type { IAbortSignal as IAbortSignal_2 } from '@microdelta/supervision';
 import type { IAdmissionDecision as IAdmissionDecision_2 } from '@microdelta/resolution';
 import type { IAdmissionRequest as IAdmissionRequest_2 } from '@microdelta/resolution';
@@ -43,6 +44,7 @@ import type { IFoldReport as IFoldReport_2 } from '@microdelta/supervision';
 import type { IForward as IForward_2 } from '@microdelta/definition';
 import type { IForwarded as IForwarded_2 } from '@microdelta/definition';
 import type { IGateEvidence as IGateEvidence_2 } from '@microdelta/resolution';
+import type { IHasOwn as IHasOwn_2 } from '@microdelta/resolution';
 import type { IIncompleteOutcomeFoldCoverage as IIncompleteOutcomeFoldCoverage_2 } from '@microdelta/resolution';
 import type { IKeyedMember as IKeyedMember_2 } from '@microdelta/definition';
 import type { IKeyedSnapshot as IKeyedSnapshot_2 } from '@microdelta/definition';
@@ -171,6 +173,8 @@ export { GenerationRow }
 
 export { GenerationState }
 
+export { HistoryBusyError }
+
 // @alpha
 export type IAbortSignal = IAbortSignal_2;
 
@@ -262,6 +266,9 @@ export type IForwarded<T = unknown> = IForwarded_2<T>;
 
 // @alpha
 export type IGateEvidence = IGateEvidence_2;
+
+// @alpha
+export type IHasOwn = IHasOwn_2;
 
 // @alpha
 export type IIncompleteOutcomeFoldCoverage = IIncompleteOutcomeFoldCoverage_2;

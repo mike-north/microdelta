@@ -133,6 +133,11 @@ and also returns a record. Pass `builders` as the run's `authoring` and
 workspace setup in the contribution report example below. A serialized string
 or a present `undefined` uses the same wrapper shape.
 
+Approved sibling workspace consumers must map the facade and any reached owner
+declarations to their generated alpha rollups. See the tested
+[private-alpha workspace consumer recipe](../../docs/private-alpha-workspace-consumers.md);
+the default public entry remains unchanged.
+
 The [contribution report example](../../examples/contribution-report/README.md)
 uses this path through the installed workspace's generated alpha declarations.
 The M3 independent-process acceptance harness in `test/acceptance` exercises

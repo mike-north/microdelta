@@ -126,6 +126,7 @@ export interface IExecutionAttempt {
 
 // @alpha
 export interface IExecutionSupervision {
+    dispatchMembers(count: number, continueWhile: () => boolean, work: (position: number) => Promise<void>): Promise<number>;
     execute<T>(step: IBindingDescriptor, work: () => Promise<T>, attempt?: IExecutionAttempt): Promise<ISupervisedExecution<T>>;
     member<T>(work: () => Promise<T>): Promise<T>;
     publicationRefusal(): string | undefined;

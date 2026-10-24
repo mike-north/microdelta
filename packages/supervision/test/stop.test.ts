@@ -381,6 +381,95 @@ describe('the permit pool (RUN-002)', () => {
     expect(order).toEqual(['first:start', 'second:start', 'holder:start', 'holder:end', 'first:woke', 'second:woke', 'q1:start', 'q2:start', 'q3:start']);
   });
 
+  test('bounded dispatch starts a canonical window and advances only as lanes become available (RUN-002, DOM-3)', async () => {
+    const double = portDouble();
+    const gate = deferred();
+    const order: number[] = [];
+    await supervisionWith(fakeTimer()).run(optionsFor(double, { window: 3 }), async () => {
+      const dispatch = double.ports().execution.dispatchMembers(12, () => true, async (position) => {
+        order.push(position);
+        await gate.promise;
+      });
+      await settle();
+      expect(order).toEqual([0, 1, 2]);
+      gate.resolve();
+      expect(await dispatch).toBe(12);
+    });
+    expect(order).toEqual(Array.from({ length: 12 }, (_unused, index) => index));
+  });
+
+  test('a per-dispatch failure stops only its own canonical suffix while another dispatch continues', async () => {
+    const double = portDouble();
+    const release = deferred();
+    const first: number[] = [];
+    const second: number[] = [];
+    let continueFirst = true;
+    await supervisionWith(fakeTimer()).run(optionsFor(double, { window: 1 }), async () => {
+      const execution = double.ports().execution;
+      const failed = execution.dispatchMembers(5, () => continueFirst, async (position) => {
+        first.push(position);
+        continueFirst = false;
+        await release.promise;
+      });
+      const independent = execution.dispatchMembers(3, () => true, async (position) => {
+        second.push(position);
+      });
+      await settle();
+      expect(first).toEqual([0]);
+      release.resolve();
+      expect(await failed).toBe(1);
+      expect(await independent).toBe(3);
+    });
+    expect(second).toEqual([0, 1, 2]);
+  });
+
+  test('bounded dispatch fills a lent lane and honors a woken member before an unstarted suffix', async () => {
+    const timer = fakeTimer();
+    const double = portDouble();
+    const supervisor = supervisionWith(timer);
+    const holder = deferred();
+    const order: string[] = [];
+    await supervisor.run(optionsFor(double, { window: 1 }), async () => {
+      const dispatch = double.ports().execution.dispatchMembers(4, () => true, async (position) => {
+        order.push(`${String(position)}:start`);
+        if (position === 0) {
+          await supervisor.execution().sleepUntil(T0 + hour);
+          order.push('0:woke');
+        } else if (position === 1) {
+          await holder.promise;
+          order.push('1:end');
+        }
+      });
+      await settle();
+      expect(order).toEqual(['0:start', '1:start']);
+      timer.advance(hour);
+      await settle();
+      expect(order).toEqual(['0:start', '1:start']);
+      holder.resolve();
+      expect(await dispatch).toBe(4);
+    });
+    expect(order).toEqual(['0:start', '1:start', '1:end', '0:woke', '2:start', '3:start']);
+  });
+
+  test('hard stop returns the unstarted suffix without starting its callbacks', async () => {
+    const double = portDouble();
+    const stop = createStopController();
+    const gate = deferred();
+    const started: number[] = [];
+    await supervisionWith(fakeTimer()).run(optionsFor(double, { window: 2, stop }), async () => {
+      const dispatch = double.ports().execution.dispatchMembers(1000, () => true, async (position) => {
+        started.push(position);
+        await gate.promise;
+      });
+      await settle();
+      expect(started).toEqual([0, 1]);
+      stop.request({ level: 'hard' });
+      gate.resolve();
+      expect(await dispatch).toBe(2);
+    });
+    expect(started).toEqual([0, 1]);
+  });
+
   test('CMP-9: every run operation, started inside a member or a step attempt, is refused at once as an undeclared call, and the run completes (RUN-002)', async () => {
     let captured: IResolutionPorts | undefined;
     const resolution = (ports: IResolutionPorts): IResolution => {
@@ -1069,6 +1158,7 @@ describe('abort listeners are released once they can no longer run (regression: 
       stopped: createAbortSource(),
       permits: createPermitPool(1),
       lanes: createPermitPool(1),
+      laneWindow: 1,
       timer: undefined,
       operations: undefined,
       interruptions: [],

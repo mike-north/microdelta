@@ -18,6 +18,7 @@ import type { IDurableAccounting } from '@microdelta/accounting';
 import type { IDurableHistory } from '@microdelta/history';
 import type { IRunPromotionPort } from '@microdelta/supervision';
 import { expectAssignable, expectError, expectNotAssignable, expectType } from 'tsd';
+import { HistoryBusyError } from '../dist/api/microdelta.alpha.js';
 
 import type {
   IDeferralMode,
@@ -45,6 +46,9 @@ declare const run: IWorkspaceRun;
 declare const result: IRunResult<unknown>;
 declare const runOptions: IWorkspaceRunOptions<object, object>;
 declare const event: IRunEvent;
+
+// The facade carries History's exact alpha busy class to callers of durable workspaces.
+expectAssignable<Error>(HistoryBusyError.prototype);
 
 // Accounting's durable adapter is a structural Accounting port of the facade, and of Supervision's operation port the facade names.
 expectAssignable<IWorkspaceAccounting>(durable);

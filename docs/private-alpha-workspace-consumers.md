@@ -95,6 +95,7 @@ Create a local package link, save the runtime probe below as
 the runtime probe from `consumer/`:
 
 ```sh
+cp ../microdelta/fixtures/declarations/consumer-alpha/alpha-import-only.ts ./alpha-import-only.ts
 mkdir -p node_modules
 ln -s ../../microdelta/packages/core node_modules/microdelta
 node ../microdelta/node_modules/typescript/bin/tsc -p tsconfig.json

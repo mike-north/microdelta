@@ -16,6 +16,7 @@
 export { ResolutionError, type IResolutionErrorCode } from './errors.js';
 export type {
   ICallView,
+  IHasOwn,
   IPreviousResult,
   IResolutionFamily,
   IResolutionOutcomes,

@@ -262,10 +262,10 @@ export interface IDeclarations<TFamily extends IBindingFamily> {
     fold<TTemplate extends IAnyTemplateDeclaration<TFamily>, TStep extends keyof IStepsOf<TTemplate> & string, TResult>(options: IFoldOptions<TFamily, TTemplate, TStep, TResult>): IFoldDeclaration<TFamily, IResultOf<TFamily, IStepsOf<TTemplate>[TStep]>, TResult>;
     readonly forward: IForward;
     gateOf(composition: IComposition<TFamily>, instance: IBindingDescriptor): IGateInvocation<TFamily> | undefined;
-    memo<TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult = unknown>(options: IMemoOptions<TFamily, TChildren, TResult>): IMemoDeclaration<TFamily, TChildren, TResult>;
+    memo<TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult extends object = object>(options: IMemoOptions<TFamily, TChildren, TResult>, ...root: [Awaited<TResult>] extends [object] ? [] : [unsupportedResultRoot: never]): IMemoDeclaration<TFamily, TChildren, TResult>;
     openInvocation(composition: IComposition<TFamily>, parent: IBindingDescriptor, port: IInvocationPort<TFamily>): IInvocation<TFamily>;
     outcomeFold<TTemplate extends IAnyTemplateDeclaration<TFamily>, TStep extends keyof IStepsOf<TTemplate> & string, TResult>(options: IOutcomeFoldOptions<TFamily, TTemplate, TStep, TResult>): IOutcomeFoldDeclaration<TFamily, IResultOf<TFamily, IStepsOf<TTemplate>[TStep]>, TResult>;
-    source<TResult>(options: ISourceOptions<TFamily, TResult>): ISourceDeclaration<TFamily, TResult>;
+    source<TResult extends object>(options: ISourceOptions<TFamily, TResult>): ISourceDeclaration<TFamily, TResult>;
     stepSlot<TParameters extends readonly unknown[] = readonly [], TResult = unknown>(options: IStepSlotOptions): IStepSlot<TFamily, TParameters, TResult>;
     suppliedStep<TParameters extends readonly unknown[] = readonly [], TResult = unknown>(options: ISuppliedStepOptions<TFamily, TParameters, TResult>): ISuppliedStepDeclaration<TFamily, TParameters, TResult>;
     supply<TParameters extends readonly unknown[], TResult>(options: ISupplyOptions<TFamily, TParameters, TResult>): ISuppliedStepRegistration<TFamily>;
@@ -561,8 +561,8 @@ export interface IMemberBinding<TFamily extends IBindingFamily, TMember> {
 
 // @alpha
 export interface IMemberBuilder<TFamily extends IBindingFamily, TMember = unknown> {
-    memo<TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult = unknown>(options: ITemplateMemoOptions<TFamily, TChildren, TResult, TMember>): IMemoDeclaration<TFamily, TChildren, TResult, IMemberBinding<TFamily, TMember>>;
-    source<TResult>(options: ITemplateSourceOptions<TFamily, TResult, TMember>): ISourceDeclaration<TFamily, TResult, IMemberBinding<TFamily, TMember>>;
+    memo<TChildren extends IChildDeclarations<TFamily> = Record<never, never>, TResult extends object = object>(options: ITemplateMemoOptions<TFamily, TChildren, TResult, TMember>, ...root: [Awaited<TResult>] extends [object] ? [] : [unsupportedResultRoot: never]): IMemoDeclaration<TFamily, TChildren, TResult, IMemberBinding<TFamily, TMember>>;
+    source<TResult extends object>(options: ITemplateSourceOptions<TFamily, TResult, TMember>): ISourceDeclaration<TFamily, TResult, IMemberBinding<TFamily, TMember>>;
     subject(prefix: string): IMemberSubject;
 }
 

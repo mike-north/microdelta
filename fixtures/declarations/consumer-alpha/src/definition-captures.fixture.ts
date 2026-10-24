@@ -58,7 +58,7 @@ declare const trackedLimit: ITracked<{ readonly value: number }>;
 declare const externalThreshold: number;
 declare const capturedHandle: IDeclaredCallHandle<ITrackedView<IActivity>>;
 declare const liveScope: IInvocationScope;
-declare function callbackFactory(): () => string;
+declare function callbackFactory(): () => { readonly value: string };
 
 // Positive: the M3 authoring shape uses only context parameters and tracked captures.
 const activity = source<IActivity>({
@@ -75,18 +75,18 @@ const summary = memo({
     for (let index = 0; index < data.pulls.length; index++) {
       merged += data.pulls[index]?.merged === true ? 1 : 0;
     }
-    return helpers.format(data.profile.name, merged, Math.min(data.reviews, trackedLimit.value));
+    return { value: helpers.format(data.profile.name, merged, Math.min(data.reviews, trackedLimit.value)) };
   },
 });
 
 /** A same-file function declaration is a supported direct callback form. */
-function summarizeBen({ helpers }: IBindings): string {
-  return helpers.format('Ben', 2, 3);
+function summarizeBen({ helpers }: IBindings): { readonly value: string } {
+  return { value: helpers.format('Ben', 2, 3) };
 }
 memo({ subject: 'summary:acme/widget:2026-Q1:person:ben', children: { activity }, run: summarizeBen });
 
 // Positive: a canonical declared handle captured from outside is a handle, not raw data.
-memo({ subject: 'summary:handle', run: async () => (await capturedHandle()).data.reviews });
+memo({ subject: 'summary:handle', run: async () => ({ value: (await capturedHandle()).data.reviews }) });
 
 // Same-spelled unrelated APIs do not create boundaries.
 forgedMemo({ subject: 'summary:forged', run: () => externalThreshold });
@@ -94,12 +94,12 @@ forgedMemo({ subject: 'summary:forged', run: () => externalThreshold });
 memo({
   subject: 'summary:raw',
   // eslint-disable-next-line microdelta/tracked-captures -- An untracked captured scalar is a raw external influence.
-  run: ({ helpers }) => helpers.format('Ada', externalThreshold, 0),
+  run: ({ helpers }) => ({ value: helpers.format('Ada', externalThreshold, 0) }),
 });
 
-source<number>({
+source<{ readonly value: number }>({
   subject: 'activity:raw-finality',
-  run: () => 1,
+  run: () => ({ value: 1 }),
   // eslint-disable-next-line microdelta/tracked-captures -- Source finality callbacks are capture boundaries too.
   finality: () => externalThreshold > 0,
 });
@@ -107,13 +107,13 @@ source<number>({
 memo({
   subject: 'summary:forged-handle',
   // eslint-disable-next-line microdelta/tracked-captures -- A look-alike handle brand conveys no Definition authority.
-  run: async () => (await forgedHandle()).data,
+  run: async () => ({ value: (await forgedHandle()).data }),
 });
 
 memo({
   subject: 'summary:scope-family',
   // eslint-disable-next-line microdelta/tracked-captures -- Definition receivers are not whitelisted as a family; only canonical handles are.
-  run: () => liveScope.open,
+  run: () => ({ value: liveScope.open }),
 });
 
 memo({

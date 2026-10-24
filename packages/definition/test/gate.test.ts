@@ -87,7 +87,7 @@ describe('gate exposure (CMP-8)', () => {
       collection,
       steps: (member) => {
         gate?.apply({}, supplying(ada, []), invoke);
-        return { p: member.source<string>({ subject: member.subject('probe'), run: () => 'p' }) };
+        return { p: member.source<{ readonly value: string }>({ subject: member.subject('probe'), run: () => ({ value: 'p' }) }) };
       },
     }), 'composition-phase');
     expect(invoke).not.toHaveBeenCalled();

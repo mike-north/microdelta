@@ -1,7 +1,7 @@
 # Run supervision, CLI, and resource accounting
 
 **Status:** normative behavioral contract, consolidated 2026-09-26; acquisition
-retry and static-rate target revised by owner decisions on 2026-10-24. This document
+retry and shared-rate target revised by owner decisions on 2026-10-24. This document
 specifies required outcomes, not implemented capabilities. Mechanisms explicitly
 marked **Open** are not selected by implication. Requirement identifiers are
 stable; wording and validation fixtures can improve without renumbering them.
@@ -351,9 +351,21 @@ replenish it. Process restart alone does not identify a new run: an explicit new
 run starts new allowance, while continuation preserves the existing run's tally.
 Read-only recovery of a named execution is neither and authorizes no send.
 Historical attempts, observed costs, unknown usage and eligible completed results
-persist independently. No universal numeric cap or new pooled-budget allocation
-is selected here; each chosen attempt/retry cap must state what it counts and
-remain finite. All actual request attempts are accounted for under that policy.
+persist independently. The default is **three total request attempts per logical
+operation per analysis run**: the initial attempt and up to two retries when
+classification permits them. An explicit policy may override that allowance but
+MUST remain finite and state what it counts. No pooled-budget allocation is
+selected. Waiting for rate eligibility consumes no sent-attempt allowance; every
+actual request attempt counts under the applicable policy.
+
+**Default backoff.** Built-in retryable-failure handling MUST provide a sensible
+initial delay that can ride out brief contention and increasing later delays,
+rather than requiring every source to configure timing. This does not make every
+409 retryable or override provider/context classification. Matching custom policy
+still wins, and a known provider not-before time remains a lower bound even when
+an immediate or shorter retry is requested. Exact durations, growth and jitter
+are bounded implementation choices to document and test; no numeric timing
+schedule is selected here.
 
 **Exhaustion and classification.** No further request may be sent after current
 allowance is exhausted. A failed or exhausted request attempt remains diagnostic
@@ -393,7 +405,7 @@ attempts remain recorded, but neither a same-run pass nor a new run may blindly
 replay already completed reusable paid child work. Whole-step reevaluation is not
 resumption of an arbitrary JavaScript continuation.
 
-**Validation:** [A-12a–h](acceptance.md#acquisition-retry-and-rate-admission-cases)
+**Validation:** [A-12a–j](acceptance.md#acquisition-retry-and-rate-admission-cases)
 exercise lost responses, exhaustion, new-run versus same-run allowance,
 classification/default precedence, not-before, cancellation and usage gaps.
 Controlled clocks and providers establish the outcomes without live spend.
@@ -661,15 +673,15 @@ leadership input; it can succeed without exercising leadership analysis. A
 single-point box plot is execution-successful without proving useful variation.
 Automatic economical subset selection is not a prerequisite for trial mode.
 
-### RUN-019 — Optional shared static rate admission precedes each send
+### RUN-019 — Shared rate admission precedes each send
 
 **Accepted default (owner decision, 2026-10-24).** Proactive rate configuration is
 optional. With no configured rate limit, acquisition proceeds under ordinary
 execution/concurrency controls; the library MUST NOT impose an implicit proactive
 request cap or require source rate configuration. Provider rate-limit signals
 still invoke the applicable RUN-011 bounded retry/backoff policy, including known
-not-before timing. Matching custom source policy/default precedence remains the
-same, and contextual classification is not restricted to HTTP 429. Other failures,
+not-before timing and the shared reactive coordination below. Matching custom
+source policy/default precedence remains the same, and contextual classification is not restricted to HTTP 429. Other failures,
 finite retry allowance, stop, intent/fencing and existing execution limits remain
 in force. Omission of rate configuration grants neither unlimited retries nor
 permission to bypass a previously established not-before time.
@@ -688,10 +700,33 @@ enforce the shared ceiling. Logical central coordination is required; one physic
 network dispatcher is not. A new run's retry allowance does not reset a shared
 in-process rate limit used by other work.
 
-When a rate limit is configured, its eligibility is independent of request
-concurrency permits, finite retry allowance and stop intent. A callback's immediate
+**Reactive coordination (owner decision, 2026-10-24; first-build scope).** When a
+provider rate signal applies to a known shared limit, affected callers MUST share
+its cooldown and fair admission queue within the Node process, even without a
+proactive numeric rate configuration. Applicable initial requests and retries
+wait together; independent per-request sleeps followed by a race do not meet this
+requirement. Unrelated sources/limits can continue. Waiting consumes no sent
+attempt and holds no network request permit. Cooldown expiry returns eligible
+work through controlled concurrency admission, not an all-waiters release burst.
+This coordinates a contextual refusal and retry time; it does not infer remaining
+provider balance or reserve quota. A matching callback cannot bypass an applicable
+shared cooldown by requesting immediate retry.
+
+Among otherwise eligible ready work, admission MUST favor **earlier-discovered
+work** as a simple progress preference: earlier requests may unlock downstream
+work that uses other services. Queue arrival/race-winning order is not discovery
+order. Dependency readiness, not-before, finite allowance, stop and fencing remain
+prerequisites; an earlier but ineligible item cannot block other eligible
+work. This is fair admission with a discovery preference, not a strict global
+ordering promise, DAG critical-path scheduler or cost optimizer. Define discovery
+sequencing, retry placement and fairness details in the bounded implementation
+design; do not invent a globally deterministic order from asynchronous discovery.
+
+Both reactive cooldown and configured proactive eligibility are independent of
+request concurrency permits, finite retry allowance and stop intent. A callback's immediate
 retry must satisfy all applicable conditions before send. A delayed retry cannot
-send before its not-before time even when rate capacity is available. Waiting holds no network request permit.
+send before its not-before time even when rate capacity is available. Waiting
+holds no network request permit.
 Apply RUN-014's selected stop boundary while waiting: soft stop blocks new
 admissions and retries, but an already admitted step may finish its remaining
 first-attempt requests when otherwise eligible; hard stop or deadline escalation
@@ -708,7 +743,8 @@ actual received observations separately and does not own scheduling (ACC-008).
 or cross-machine limiter, distributed reservation protocol, or shared provider
 quota guarantee is selected. Dynamic provider-header/quota/reset/reserve inference
 is deferred. Honoring a retry time supplied for an operation remains RUN-011;
-it does not implement dynamic account-wide quota admission. Connection/limit
+it does not implement dynamic account-wide quota admission. Sharing a known
+reactive cooldown is required, not deferred with quota inference. Connection/limit
 identifiers must not expose raw credentials in inspection/events (RUN-013/017).
 
 **Validation:** a controlled clock and concurrent barriers present requests from
@@ -720,12 +756,18 @@ new admissions/retries while preserving the admitted-step first-attempt drain
 case in A-12b, still subject to the configured rate bound. A new run cannot reset
 another run's shared limiter. A-12h contrasts omitted configuration with a chosen
 proactive limit and checks bounded handling of provider rate-limit signals.
+A-12i checks default attempts/backoff; A-12j checks shared cooldown, controlled
+resume and discovery preference without proactive configuration.
 
 **Open implementation choices:** units known before dispatch versus a conservative
-reservation, window/burst algorithm and boundary behavior, queued fairness,
-reservation release on cancellation, lifecycle and connection/limit configuration
-identity. Select and document these in the bounded implementation issue before
-claiming rate conformance; do not infer a universal default cap or credentials DSL.
+reservation, window/burst algorithm and boundary behavior, reservation release
+on cancellation, lifecycle, connection/limit identity and how a known reactive
+shared scope is identified without numeric configuration. Specify unknown-scope
+handling without silently merging unrelated credentials/services; RUN-011 still
+applies when shared scope is unknown. Select discovery sequencing across branches
+and runs, retry queue placement, fairness/tie handling and cooldown timing
+representation. Select and document these in the bounded implementation issue
+before claiming rate conformance; do not infer a universal default cap or credentials DSL.
 
 ## CLI and read-side delivery
 
@@ -975,7 +1017,7 @@ silently filled by old exploratory signatures or expanded into new products.
 | Source-specific discovery closure and subsequent updates | Run Supervision and source adapters, accepted through Reuse Resolution | RUN-003–RUN-005 |
 | Preview types, coalescing/error lifetime, aggregate loading | Observation boundary with Materialization | RUN-006–RUN-008, CLI-004 |
 | Per-run allowance, source classification, legacy journal compatibility and acquisition identity | Run Supervision/adapters with Result History & Publication | RUN-011–RUN-013 |
-| Shared single-process static rate admission and connection/limit representation | Run Supervision with source adapters and Machine timing | RUN-019; ACC-008 does not schedule |
+| Shared single-process proactive/reactive rate admission and limit identity | Run Supervision with source adapters and Machine timing | RUN-019; ACC-008 does not schedule |
 | Soft-stop boundary, shared cancellation, and publication race | Run Supervision with Result History & Publication | RUN-014, RUN-015 |
 | Trial namespaces, external destinations, optional promotion | Run Supervision with storage/history ports | RUN-016–RUN-018 |
 | CLI format and exit policy | CLI application | CLI-001–CLI-004 |

@@ -49,7 +49,7 @@ chronological corrections and implementation boundaries.
 | Batching/frontier/fixed extra budget was described as accepted | Owner correction in acquisition decision | Proposal for evaluation only. Rejection gracefully stopping the whole analysis and new-run allowance are independently accepted |
 | Possible conflation: Accounting after a call enforces a shared rate limit | RUN-019; ACC-008 | Shared configured connection+limit needs coordinated pre-send admission within one Node process; Accounting remains evidence |
 | Assumption that every source needs proactive rate configuration or an implicit default cap | RUN-019; A-12h | Proactive pacing is optional; absent configuration retains ordinary controls and bounded contextual provider-response retry policy, not unlimited retries |
-| Possible scope expansion: header-derived dynamic quota/reserves or cross-process coordination follows from local rate control | RUN-019 | Deferred; static configured units/time is the selected bounded scope |
+| Possible scope expansion: header-derived dynamic quota/reserves or cross-process coordination follows from local rate control | RUN-019 | Dynamic quota/reserves and cross-process coordination remain deferred; optional static pacing plus known-limit reactive cooldown/fair admission in one process are selected |
 
 M5/EXP-8 plans and validation records retain original dated claims with pointers
 here. Current-runtime guides label their legacy behavior. Follow-up code, tests,
@@ -122,3 +122,10 @@ an API or storage format. The bounded CML result and Lean proof are historical;
 TLA models are selected only for concrete correctness questions under the
 model-to-code-and-test review contract. Model claims remain limited to the checked
 model, assumptions and bounds.
+
+The later 2026-10-24 owner decisions select three total attempts per operation/run
+by default (finite override), sensible increasing backoff, and first-build shared
+reactive cooldown even without proactive numeric configuration. RUN-011/019 and
+A-12i/j own these additions. Earlier-discovered eligible work is favored; queue
+arrival is not a substitute. Exact timing, shared-scope identity, discovery
+sequencing, retry placement and fairness remain bounded implementation choices.

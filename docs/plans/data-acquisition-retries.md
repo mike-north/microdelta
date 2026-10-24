@@ -30,11 +30,12 @@ former contract. No live provider execution is authorized by the decision.
 | Decision | Owning requirement | Supersedes or preserves |
 | --- | --- | --- |
 | External operations in current scope acquire analysis data; a lost response may retry within finite authority without an effect-safety declaration or provider deduplication prerequisite | DOM-7, RUN-011/012 | Supersedes the external-business-write/no-blind-replay gate for this scope; provider idempotency can still aid deduplication but proves no billing total |
-| Every new analysis run starts fresh configured retry tallies; same-run continuation does not replenish them | RUN-011 | Supersedes the earlier audit's lifetime operation ceiling and its suggestion that a new run always needs additional authorization after prior exhaustion |
+| Three total attempts per operation per run are the default, with finite overrides and sensible increasing default backoff; every new analysis run starts fresh retry tallies; same-run continuation does not replenish them | RUN-011 | Supersedes the earlier audit's lifetime operation ceiling and its suggestion that a new run always needs additional authorization after prior exhaustion |
 | Exhausted acquisition supplies no result; rejecting further retries for required input gracefully stops the entire analysis | RUN-010/011/014 | Preserves attempt diagnostics, incomplete coverage, soft-stop drain and completed reusable work; does not omit required input or manufacture partial success |
 | A matching reusable source callback overrides built-in retry defaults and returns immediate retry, delayed retry with duration, or stop retrying; it receives prior-attempt information | RUN-011 | Classification/delay is separate from finite allowance; no fourth callback result or per-call policy boilerplate is selected |
 | Optional proactive rate configuration: when absent, ordinary execution/concurrency and bounded provider-response retry policies apply without an implicit proactive cap | RUN-019 | No mandatory rate configuration, unlimited retries, automatic headroom reservation or dynamic quota inference |
 | When configured, static units-per-time limits coordinate before sending for all concurrent users of the same configured connection and limit, including retries, in one Node process | RUN-019 | Preserves independent request permits and Accounting evidence; no cross-process coordinator or provider-remaining-quota guarantee |
+| Shared reactive cooldown and fair admission for a known common limit apply even without proactive numeric configuration; eligible earlier-discovered work is favored | RUN-019 | Extends earlier configured-only coordination scope for the first build; no arrival-order equivalence, all-waiter burst, global deterministic ordering or advanced priority optimizer |
 | Manual operator-supplied result recovery is deferred | RUN-012 | Earlier validator-at-definition, pending-evidence validation and duplicate-submission discussions are not current implementation requirements |
 
 The owner's later rate-default clarification makes proactive pacing optional.
@@ -42,8 +43,14 @@ Without rate configuration, work continues under normal execution/concurrency
 controls and reacts to contextual provider rate signals through bounded source
 retry policy. A user may choose a lower configured limit to leave headroom for
 other activities; this selects local pacing, not automatic reserve management or
-a guarantee of remaining provider capacity. This clarification does not change
-retry defaults, finite allowance, known not-before times or stop/fencing rules.
+a guarantee of remaining provider capacity. A later owner decision selects three
+total attempts by default, a sensible
+initial backoff and increasing later waits, with finite allowance overrides and
+exact timing still open. Another later decision extends first-build coordination
+to a known shared reactive cooldown even without numeric configuration. It favors
+earlier-discovered eligible work because it may unlock downstream progress;
+queue arrival does not express that preference. Neither decision changes known
+not-before times or stop/fencing rules.
 Provider-limit report visibility/retention is separate #166 work and is not
 selected here.
 
@@ -51,6 +58,7 @@ The earlier batching/frontier/fixed-additional-budget account was explicitly a
 **proposal for evaluation**, not an accepted instruction. Its initial accepted
 label was corrected by the owner. It does not establish a queue, prompt frontier,
 fixed grant size, allocation across requests, or approval of future requests.
+The separately accepted rate-admission queue is not this approval proposal.
 Rejecting further required retries and new-run replenishment were accepted later
 and stand independently of that proposal.
 
@@ -65,8 +73,11 @@ new bounded context. A memoized assessment and an ordinary source can use the sa
 remote service and connection without sharing their result identities.
 
 A configured **connection** identifies the applicable remote access configuration;
-a **limit** identifies the configured local units/time constraint shared by its
-callers. This identity is not a raw credential or provider body. Environment
+a **limit** identifies the common rate scope of applicable callers, whether
+known from source/provider context for a reactive cooldown or explicitly configured
+for proactive units/time pacing. Numeric configuration is not required to know
+that concurrent calls share a limit. This identity is not a raw credential or
+provider body. Environment
 selection and credential/service isolation remain RUN-017 responsibilities.
 Matching retry policy and sharing a rate limit are related configuration decisions,
 not the same operation: a policy match does not silently merge distinct accounts,
@@ -123,15 +134,15 @@ negative controls and independent review remain required.
 | Slice and owner | Test-first outcomes | Dependencies and readiness boundary |
 | --- | --- | --- |
 | Acquisition allowance and journal compatibility — Supervision with History/Accounting conformance, Core assembly | A-12a/b/c/f/g: lost response then success without safety flags; current-run cap; same-run pass cannot reset; new run can try with fresh cap while prior usage stays unknown; old records reopen truthfully; crash/lease/intent controls survive | Accepted behavioral scope is ready for a contained implementation issue. That issue must first document explicit run identity/continuation and version-1 compatibility handling, and preserve generated alpha contracts. Do not wait on manual recovery or approval batching |
-| Reusable retry classification — source adapters with Supervision | A-12d: immediate/delayed/stop, prior-attempt backoff, custom match wins, no-match default, exhausted allowance and stop still prohibit send | Semantics ready for a bounded issue. Select callback encoding, safe context/history scope, matching ambiguity rules and concrete default classification/delays there before tests freeze them; do not select the whole data-source/credential DSL |
-| Shared static rate admission — Supervision with injected Machine timing | A-12e/h: omitted configuration admits ordinary work without an implicit cap; contextual provider rate signals still obey finite retry/not-before; configured concurrent paths and retries share one configured connection+limit; controlled clock denies premature/oversized aggregate work; separate limits stay independent; hard stop/deadline escalation during wait sends nothing while soft drain retains first-attempt eligibility | Accepted single-process scope is ready for a bounded implementation design. Specify unit-cost availability, time-window/burst algorithm, cancellation reservation handling and configuration identity before implementation; do not infer dynamic provider capacity or cross-process state |
+| Reusable retry classification — source adapters with Supervision | A-12d/i: default three total attempts and increasing backoff with finite override; immediate/delayed/stop, prior-attempt backoff, custom match wins, no-match default, exhausted allowance and stop still prohibit send | Semantics ready for a bounded issue. Select callback encoding, safe context/history scope, matching ambiguity rules and concrete default classification/delays there before tests freeze them; do not select the whole data-source/credential DSL |
+| Shared proactive and reactive rate admission — Supervision with injected Machine timing | A-12e/h/j: known shared cooldown without numeric configuration, no sent-attempt/permit consumption while waiting, controlled resume, earlier-discovered eligible work preference; omitted configuration admits ordinary work without an implicit cap; contextual provider rate signals still obey finite retry/not-before; configured concurrent paths and retries share one configured connection+limit; controlled clock denies premature/oversized aggregate work; separate limits stay independent; hard stop/deadline escalation during wait sends nothing while soft drain retains first-attempt eligibility | Accepted single-process scope is ready for a bounded implementation design. Specify unit-cost availability, time-window/burst algorithm, cancellation reservation handling, known/unknown shared-scope identity, discovery sequencing across branches/runs, retry placement, fairness and cooldown timing representation before implementation; do not infer dynamic provider capacity or cross-process state |
 | Graceful rejection and controlled acquisition example — Supervision/Core and example | A-12b/c: no sends past allowance, declined required retry triggers existing soft stop/drain, completed siblings reusable in new run; status distinguishes attempt failure from missing input | Reuse existing stop control. Depends on acquisition allowance and the minimum operator boundary chosen for rejection; no general batch-approval UI or supplied-result workflow is required. Command/exit representation is still to be specified, not fabricated here |
 | Within-run additional authorization / approval batching | Evaluate explicit finite authority without treating old attempts as absent; inspection never grants it | **Not pickup-ready as an API feature.** Approval frontier, batching, grant size/allocation and repeated-decision behavior remain proposed. New-run allowance is already settled and must not wait for this proposal |
 
 The unit/window algorithm may be an engineering choice if it preserves an
 explicitly documented bound; a material burst/latency or author-visible tradeoff
-must be brought back for decision. Do not invent a universal numeric cap, default
-time window or a fictitious provider quota unit to make a slice look ready.
+must be brought back for decision. Do not invent a universal proactive rate cap,
+default rate time window or a fictitious provider quota unit to make a slice look ready.
 
 ## Evaluation of the approval proposal
 
@@ -160,8 +171,8 @@ RUN-011 without erasing the old evidence.
   own scope and unresolved decisions. Neither their proposals nor full roster
   delivery become accepted or implementation-ready wholesale through this change.
 - Dynamic header/quota/reset/reserve inference, cross-process or cross-machine
-  rate coordination, result injection, business-write replay and credential DSL
-  construction are outside this implementation sequence. Honoring an already
+  rate coordination, advanced DAG/cost priority scheduling, result injection,
+  business-write replay and credential DSL construction are outside this implementation sequence. Honoring an already
   supplied retry-not-before time remains required; it is not a new provider-quota
   admission system.
 - The currently shipped M5 API still implements the former effect-settlement

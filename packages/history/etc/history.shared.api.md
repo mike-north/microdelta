@@ -96,6 +96,13 @@ export interface GenerationRow {
 export type GenerationState = 'claimed' | 'current' | 'superseded' | 'abandoned';
 
 // @alpha
+export class HistoryBusyError extends Error {
+    constructor(message: string, cause: SqliteBusyError);
+    // Warning: (ae-forgotten-export) The symbol "SqliteBusyError" needs to be exported by the entry point api-surface.d.ts
+    readonly cause: SqliteBusyError;
+}
+
+// @alpha
 export class HistoryClockError extends Error {
     constructor(message: string);
 }

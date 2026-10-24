@@ -34,7 +34,6 @@
  * or distributed-time guarantee.
  * @packageDocumentation
  */
-import { SqliteBusyError } from '@microdelta/machine';
 import type { IClockCapability, ISqliteConnection, ISqliteRow } from '@microdelta/machine';
 import { decodeSnapshot, encodeSnapshot } from '@microdelta/value';
 
@@ -70,6 +69,7 @@ import {
   AttemptConflictError,
   AttemptStateError,
   HistoryClockError,
+  HistoryBusyError,
   HistoryIntegrityError,
   StaleWriterError,
 } from './errors.js';
@@ -77,6 +77,7 @@ import { parseReference, referenceFor } from './locator.js';
 import { createJournalStore } from './journal.js';
 import { historyScope, integer, loadRecord, requireName, requireNonnegative, requirePositive, safeSum, storeRecord, text } from './records.js';
 import { initializeSchema } from './schema.js';
+import { isHistorySqliteBoundaryBusy, openHistorySqlite } from './sqlite-boundary.js';
 import { buildIndex, createSelectedIndex, indexVersion } from './selected-index.js';
 
 /** Identity tag for embedded SQL; the text is passed through unchanged. */
@@ -131,15 +132,19 @@ function attemptState(row: ISqliteRow): IAttemptState {
 export function openDurableHistory(options: IDurableHistoryOptions): IDurableHistory {
   const logicalStore = requireName(options.logicalStore, 'logicalStore');
   const clock: IClockCapability = options.clock;
-  const connection: ISqliteConnection = options.sqlite.openSqlite(options.location);
-  try {
-    initializeSchema(connection, logicalStore);
-  } catch (error: unknown) {
-    connection.close();
-    throw error;
+  const connection: ISqliteConnection = openHistorySqlite(options.sqlite, options.location);
+  /** Close a partly opened History handle without hiding the original opening failure. */
+  function duringOpening<T>(operation: () => T): T {
+    try {
+      return operation();
+    } catch (error: unknown) {
+      try { connection.close(); } catch { /* The opening failure is the diagnostic owed to the caller. */ }
+      throw error;
+    }
   }
+  duringOpening(() => initializeSchema(connection, logicalStore));
 
-  const statements = {
+  const statements = duringOpening(() => ({
     writer: connection.prepare(sql`/* writer */ SELECT last_fence, holder, expires_at, time_high_water FROM history_writer WHERE singleton = 1`),
     observeTime: connection.prepare(sql`/* writer */ UPDATE history_writer SET time_high_water = ? WHERE singleton = 1`),
     // Only a grant writes the fence. Renewal and release leave last_fence as
@@ -223,7 +228,7 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
       ORDER BY p.promotion_id`),
     promotionResults: connection.prepare(sql`/* promotion */ SELECT pr.position, pr.result_id, r.result_id AS present, r.analysis, r.environment
       FROM history_promotion_results pr LEFT JOIN history_results r ON r.result_id = pr.result_id WHERE pr.promotion_id = ? ORDER BY pr.position`),
-  };
+  }));
 
   /**
    * Resolve an exact reference to a completed result of this store: the
@@ -255,7 +260,7 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
     return { resultId: parts.resultId, scope: { analysis: parts.analysis, environment: parts.environment } };
   }
 
-  const index = createSelectedIndex(connection, options.sha256, (reference) => resolveResult(reference).resultId);
+  const index = duringOpening(() => createSelectedIndex(connection, options.sha256, (reference) => resolveResult(reference).resultId));
 
   /** Issue the exact reference for a stored result row. */
   function referenceOf(resultId: number, scope: IHistoryScope): ICompletedResultReference {
@@ -320,8 +325,8 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
    * of a valid host reading and the persisted high-water, which is then
    * persisted. A host failure or invalid reading aborts the transaction.
    */
-  function observeTime(writer: IWriterRow): number {
-    const reading = clock.currentEpochMilliseconds();
+  function observeTime(writer: IWriterRow, readClock: () => number = () => clock.currentEpochMilliseconds()): number {
+    const reading = readClock();
     if (!Number.isSafeInteger(reading) || reading < 0) {
       throw new HistoryClockError(`Clock reading ${String(reading)} is not a nonnegative safe integer of epoch milliseconds`);
     }
@@ -339,13 +344,13 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
    * guessed, while any other read failure, such as a missing writer row, is
    * thrown as the failure it is.
    */
-  function contention(busy: SqliteBusyError): IWriterContention {
+  function contention(busy: HistoryBusyError): IWriterContention {
     let writer: IWriterLease | undefined;
     try {
       const recorded = readWriter();
       writer = recorded.holder === null ? undefined : Object.freeze({ holder: recorded.holder, fence: recorded.lastFence, expiresAt: recorded.expiresAt });
     } catch (error: unknown) {
-      if (!(error instanceof SqliteBusyError)) {
+      if (!isHistorySqliteBoundaryBusy(error)) {
         throw error;
       }
     }
@@ -354,14 +359,26 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
 
   /**
    * Run a lease operation that a waiter repeats, reporting SQLite contention
-   * as History's typed outcome. Only the host's busy failure qualifies, and it
-   * guarantees the transaction changed nothing; every other failure is thrown.
+   * as History's typed outcome. A clock callback's exact exception remains a
+   * callback failure even if it contains a busy error from this or another
+   * History handle; only boundary errors outside that callback qualify.
    */
-  function orContended<T>(operation: () => T): T | IWriterContention {
+  function orContended<T>(operation: (readClock: () => number) => T): T | IWriterContention {
+    let callbackFailed = false;
+    let callbackError: unknown;
+    const readClock = (): number => {
+      try {
+        return clock.currentEpochMilliseconds();
+      } catch (error: unknown) {
+        callbackFailed = true;
+        callbackError = error;
+        throw error;
+      }
+    };
     try {
-      return operation();
+      return operation(readClock);
     } catch (error: unknown) {
-      if (!(error instanceof SqliteBusyError)) {
+      if ((callbackFailed && error === callbackError) || !isHistorySqliteBoundaryBusy(error)) {
         throw error;
       }
       return contention(error);
@@ -374,13 +391,13 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
    * `operation` runs. A stale lease commits only the time observation and then
    * fails with {@link StaleWriterError}; any other failure rolls everything back.
    */
-  function asHolder<T>(presented: IWriterLease, operation: (now: number) => T): T {
+  function asHolder<T>(presented: IWriterLease, operation: (now: number) => T, readClock: () => number = () => clock.currentEpochMilliseconds()): T {
     const lease = leaseArgument(presented);
     let outcome: { readonly value: T } | undefined;
     let stale: string | undefined;
     connection.transaction(() => {
       const writer = readWriter();
-      const now = observeTime(writer);
+      const now = observeTime(writer, readClock);
       if (writer.holder !== lease.holder || writer.lastFence !== lease.fence) {
         stale = `Writer lease ${lease.holder}/${String(lease.fence)} is not the current holder`;
       } else if (writer.expiresAt <= now) {
@@ -397,7 +414,7 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
   }
 
   /** Run Supervision's journal ports share this connection and writer check. */
-  const journals = createJournalStore(connection, asHolder);
+  const journals = duringOpening(() => createJournalStore(connection, asHolder));
 
   /** Read one attempt row by identity inside the caller's transaction. */
   function requireAttemptRow(attemptId: number): ISqliteRow {
@@ -612,9 +629,9 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
       const holder = requireName(request.holder, 'holder');
       const leaseMilliseconds = requirePositive(request.leaseMilliseconds, 'leaseMilliseconds');
       let acquisition: IWriterAcquisition | undefined;
-      const busy = orContended(() => connection.transaction(() => {
+      const busy = orContended((readClock) => connection.transaction(() => {
         const writer = readWriter();
-        const now = observeTime(writer);
+        const now = observeTime(writer, readClock);
         if (writer.holder !== null && writer.expiresAt > now) {
           acquisition = Object.freeze({ kind: 'held', holder: writer.holder, expiresAt: writer.expiresAt });
           return undefined;
@@ -636,11 +653,13 @@ export function openDurableHistory(options: IDurableHistoryOptions): IDurableHis
 
     renewWriter(lease: IWriterLease, leaseMilliseconds: number): IWriterRenewal {
       const duration = requirePositive(leaseMilliseconds, 'leaseMilliseconds');
-      return orContended(() => asHolder(lease, (now): IWriterRenewal => {
+      // Read caller-owned lease properties before classifying storage contention.
+      const presented = leaseArgument(lease);
+      return orContended((readClock) => asHolder(presented, (now): IWriterRenewal => {
         const expiresAt = safeSum(now, duration, 'lease expiry');
         statements.extendHolder.run(expiresAt);
-        return Object.freeze({ kind: 'renewed', lease: Object.freeze({ holder: lease.holder, fence: lease.fence, expiresAt }) });
-      }));
+        return Object.freeze({ kind: 'renewed', lease: Object.freeze({ holder: presented.holder, fence: presented.fence, expiresAt }) });
+      }, readClock));
     },
 
     releaseWriter(lease: IWriterLease): void {

@@ -20,3 +20,4 @@ expectError(facade.sourceOutcome);
 expectError(facade.stepLifecycle);
 expectError(facade.ResolutionError);
 expectError(facade.SupervisionError);
+expectError(facade.HistoryBusyError);

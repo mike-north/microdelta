@@ -179,7 +179,8 @@ export type IHarnessReply = IStepTiming & (
 /**
  * One event of a free-running contention loop (`contend`), in the order the
  * worker observed it. `fence` is the lease the worker presented or was
- * granted; `error` is the class name of a refusal.
+ * granted; failure kind is based on runtime class identity and the name is
+ * retained separately for diagnostics.
  */
 export interface IContentionEvent {
   /** What the worker attempted. */
@@ -190,8 +191,10 @@ export interface IContentionEvent {
   readonly fence: number;
   /** For a `held` acquisition, the holder History named. */
   readonly heldBy?: string;
-  /** For a refusal, the thrown class name. */
-  readonly error?: string;
+  /** For a thrown refusal, the class-based category. */
+  readonly errorKind?: 'storage-busy' | 'stale-writer';
+  /** The thrown class name, retained to diagnose protocol violations. */
+  readonly errorName?: string;
   /** For an acquisition or renewal History reported as storage contention: nothing was granted, refused or changed. */
   readonly contended?: boolean;
 }
@@ -381,7 +384,38 @@ export function parseContentionLog(value: unknown): readonly IContentionEvent[] 
       throw new TypeError('contention event needs a boolean outcome');
     }
     const heldBy = entry.heldBy === undefined ? {} : { heldBy: stringField(entry, 'heldBy') };
-    const error = entry.error === undefined ? {} : { error: stringField(entry, 'error') };
+    const errorKind = entry.errorKind;
+    const errorName = entry.errorName;
+    if (errorKind !== undefined && errorKind !== 'storage-busy' && errorKind !== 'stale-writer') {
+      throw new TypeError(`unsupported ${op} contention failure kind ${String(errorKind)}`);
+    }
+    if ((errorKind === undefined) !== (errorName === undefined)
+      || (errorKind === 'storage-busy' && errorName !== 'HistoryBusyError')
+      || (errorKind === 'stale-writer' && errorName !== 'StaleWriterError')) {
+      throw new TypeError(`unsupported ${op} contention failure name ${String(errorName)}`);
+    }
+    if (entry.error !== undefined || (entry.contended !== undefined && entry.contended !== true)) {
+      throw new TypeError(`unsupported ${op} contention failure metadata`);
+    }
+    const contendedOutcome = entry.contended === true;
+    if (entry.ok) {
+      if (errorKind !== undefined || contendedOutcome) {
+        throw new TypeError(`successful ${op} contention event carries a refusal`);
+      }
+    } else if (op === 'acquire') {
+      if (errorKind !== undefined || (!contendedOutcome && entry.heldBy === undefined)) {
+        throw new TypeError(`acquire contention event must report a held or contended outcome`);
+      }
+    } else if (contendedOutcome) {
+      if (op !== 'renew' || errorKind !== undefined) {
+        throw new TypeError(`unsupported ${op} contended outcome`);
+      }
+    } else if (errorKind === undefined) {
+      throw new TypeError(`refused ${op} contention event lacks a typed failure`);
+    }
+    const error: Pick<IContentionEvent, 'errorKind' | 'errorName'> = errorKind === 'storage-busy' || errorKind === 'stale-writer'
+      ? { errorKind, errorName: stringField(entry, 'errorName') }
+      : {};
     const contended = entry.contended === true ? { contended: true } : {};
     return { op, ok: entry.ok, fence: numberField(entry, 'fence'), ...heldBy, ...error, ...contended };
   });

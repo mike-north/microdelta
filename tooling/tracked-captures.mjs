@@ -440,6 +440,10 @@ export const trackedCaptures = {
      * facade's `authoring()`. Parameters, `let` bindings, object literals and
      * casts can claim the builder type while holding anything, so they never
      * qualify.
+     * This syntactic test may still accept `Object.assign` or
+     * `Object.defineProperty` mutations of an otherwise canonical receiver.
+     * Definition freezes both the builders object and `forward`, so those
+     * attempted mutations fail at runtime; lint does not model that rejection.
      */
     /** The ESLint variable an identifier refers to, searching outward from its scope. */
     const variableOf = identifier => {

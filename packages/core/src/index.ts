@@ -75,6 +75,7 @@ export {
   type IFoldEntry,
   type IForward,
   type IForwarded,
+  type IHasOwn,
   type IKeyedMember,
   type IKeyedSnapshot,
   type IKeyingDiagnostic,

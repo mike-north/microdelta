@@ -890,6 +890,8 @@ export function createResolution<TInputs extends object, THelpers extends object
    * without consuming it and records the read in the active capture.
    */
   const untracked: IFamily['memo']['untracked'] = (value, key) => tracking.untracked(value, key);
+  /** Own presence stays with the execution observer and its current capture, not a separate validation observer. */
+  const hasOwn: IFamily['memo']['hasOwn'] = (value, key) => tracking.hasOwn(value, key);
   /** Previous carriers this Resolution supplied, with the exact result and the resolution they belong to. */
   const carriers = new WeakMap<object, { readonly reference: ICompletedResultReference; readonly token: object }>();
 
@@ -1093,7 +1095,7 @@ export function createResolution<TInputs extends object, THelpers extends object
       }
     }
     Object.freeze(helpers);
-    return Object.freeze({ inputs: trusted<IFamily['memo']['inputs']>(inputs), helpers: trusted<IFamily['memo']['helpers']>(helpers), untracked });
+    return Object.freeze({ inputs: trusted<IFamily['memo']['inputs']>(inputs), helpers: trusted<IFamily['memo']['helpers']>(helpers), untracked, hasOwn });
   }
 
   /**

@@ -84,6 +84,19 @@ Own/inherited distinctions are required semantics where supported. EXP-2 must
 specify the supported prototype/value domain or reject unsupported cases clearly;
 it must not silently reinterpret `in` as an own-only check.
 
+**Current alpha own-presence access:** default workspace author callbacks receive
+`hasOwn(value, key)`, supplied by Resolution from the same Tracking observer that
+owns their input and retained-result views. Its `IHasOwn` facade type is alpha.
+The capability records the own-property fact defined by TRK-5; it does not expose
+the observer, enable native reflection, or change the existing capture lifetime.
+Inherited-only fields are not own; own `undefined` is own. Values, sibling keys
+and inherited membership are not additional evidence for this operation.
+Supported keys are strings (canonical nonnegative index strings for arrays,
+excluding array `length` ownership). Unsupported keys/values and foreign views
+reject, never silently become absence. Value reads and `in` retain their separate
+TRK-5 semantics. The [facade guide](../../packages/core/README.md#own-presence-in-an-alpha-callback)
+shows the author route.
+
 **TRK-6 — Current paths and historical provenance.** Revalidate a consumed path
 against the current input binding, even when an intermediate object's identity
 changes. Equal consumed value can preserve the result. Record current acceptance

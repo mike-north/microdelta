@@ -19,11 +19,24 @@ all its behavior in one implementation.
 | Tracking & Observation | Meaning and capture of value, presence, identity, membership, order and implementation observations; comparison with supplied current facts | Observe objects/functions; open/close capture scopes; produce and compare semantic observations | Storage, source freshness, claims, retries |
 | Reuse Resolution | Current candidate acceptance, compatibility, current source policy, nested validation, consumed-content cutoff and honest misses | Resolve invocation; validate candidate; return acceptance/execution-required/failure with evidence | Direct mutation of history rows or publication authority |
 | Result History & Publication | Attempts, claims, allocation, immutable snapshots, retained references/history, publication pointers and separate acceptance records | Find candidates; read exact reference; acquire/renew; publish/abandon; record acceptance | Deciding contextual freshness or whether a candidate is valid now |
-| Run Supervision | Run lifetime/environment, admission, discovery closure, pending/retry/cancellation state and progress | Start/control run; admit/wait/retry/cancel; report run status | Reinterpreting cache evidence or bypassing publication fencing |
+| Run Supervision | Run lifetime/environment, finite per-run retry allowance, shared single-process connection/limit admission, discovery closure, pending/retry/cancellation state and progress | Start/control run; admit/wait/retry/cancel; report run status | Reinterpreting cache evidence or bypassing publication fencing |
 | Resource Accounting | Observed quantities, units, attribution, acknowledgment, deduplication and reporting gaps | Record/acknowledge observations; query attributed quantities | Inventing missing usage, treating estimates as observed charges |
 
 Public contract in this document means a capability available across an approved
 context boundary. It does not necessarily mean the `@public` user release tier.
+
+### Acquisition policy and shared rate coordination
+
+[RUN-011/012/019](operations.md) refine the existing owners for analysis data
+acquisition. A reusable remote-source policy classifies failure/delay; Supervision
+enforces current-run allowance, stop, timing and shared pre-send rate admission.
+Accounting reports observed consumption, not scheduling authority. History retains
+fenced opaque journal records and publication ownership. Configured connection and
+limit scope spans concurrent paths in one Node process; it does not create a
+cross-process coordinator or require one physical transport dispatcher. Source
+result acceptance remains Reuse Resolution's responsibility. The
+[decision record](../plans/data-acquisition-retries.md#responsibilities-without-a-new-service-dsl)
+distinguishes source, service and connection without selecting a credential DSL.
 
 ## ARC-002 — Strong supporting components
 

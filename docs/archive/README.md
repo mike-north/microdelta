@@ -1,5 +1,10 @@
 # Historical material
 
+The accepted [2026-10-24 acquisition scope](../plans/data-acquisition-retries.md)
+also supersedes archived external-business-write/no-repeat-cost premises for
+current analysis calls. Original chronology remains evidence, not retry policy;
+local durability/fencing and truthful unknown usage are not retired.
+
 Start with [the active specification](../spec/README.md).
 
 Everything in `pre-consolidation/` is historical context from before the

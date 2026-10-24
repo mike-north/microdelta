@@ -1,6 +1,7 @@
 # Run supervision, CLI, and resource accounting
 
-**Status:** normative behavioral contract, consolidated 2026-09-26. This document
+**Status:** normative behavioral contract, consolidated 2026-09-26; acquisition
+retry and shared-rate target revised by owner decisions on 2026-10-24. This document
 specifies required outcomes, not implemented capabilities. Mechanisms explicitly
 marked **Open** are not selected by implication. Requirement identifiers are
 stable; wording and validation fixtures can improve without renumbering them.
@@ -47,7 +48,9 @@ public class names or a new serialized enum.
 The primary authoring path MUST provide scoped analysis-context access without
 requiring an extra context argument through ordinary step/helper calls. Nested
 asynchronous executions MUST inherit the selected environment while retaining
-their own execution attribution. Concurrent runs MUST remain isolated.
+their own execution attribution. Concurrent runs MUST remain isolated. Deliberate
+sharing of applicable rate limits under RUN-019 coordinates admission
+without merging run attribution, retry tallies or environment storage.
 
 Environment selection MUST remain stable for the invocation. Volatile metadata
 such as a run identifier or cancellation signal MUST NOT invalidate results
@@ -306,7 +309,9 @@ resource consumption.
 **Validation:** fail one PR assessment while independent assessments complete;
 their results remain reusable. The failed member's strict consumer does not
 silently omit it. A storage-ownership failure is distinguishable from an isolated
-provider failure and cannot fabricate successful publication.
+provider failure and cannot fabricate successful publication. Operator rejection
+of further required retries is a distinct whole-analysis stop under RUN-014;
+independent-sibling continuation does not override that explicit stop.
 
 ### RUN-010 — Strict and outcome folds have different contracts
 
@@ -371,113 +376,119 @@ makes them reconsider their input.
 - **Separation.** Strict and outcome folds record distinct provenance versions and
   step kinds, so neither contract ever accepts the other's result.
 
-### RUN-011 — Retry support includes unattended quota waits
+### RUN-011 — Finite acquisition retries belong to each run
 
-The system MUST support retries for recognized recoverable failures and rate
-limits, including policies that resume after waits lasting hours. The operator
-must not need to restart or repair every recognized quota deferral manually.
-Applicable retry policy determines eligibility, limits, and resumption; retries
-are not implicit behavior of storage, observation, or accounting.
+The system MUST support finite retries for recoverable acquisition failures,
+including lost responses and rate/transient delays lasting hours. It MUST supply
+reasonable built-in retry defaults so every remote source need not declare a
+custom policy. A matching reusable remote data-source callback takes precedence;
+when none matches, built-in defaults apply. Matching/selection is separate from
+the callback's decision; no fourth "no opinion" result is selected.
 
-Deferred work MUST show why it is waiting and any known next eligible time.
-Independent work outside the affected resource scope can continue. A run with
-no currently admissible work may be honestly idle awaiting a reset. Unknown
-reset times, permanent failures, and exhausted policy MUST NOT become fabricated
-progress or an unconditional promise of eventual success.
+The callback returns one decision object with exactly one of three meanings:
+retry immediately, retry after an explicit delay duration, or stop retrying. It
+receives prior-attempt information sufficient for backoff (for example, a prior
+delay multiplied by a factor). This classification and timing decision MUST NOT
+mint allowance, override stop intent or bypass admission. The API spelling,
+history view and matching representation remain open. Historical attempts remain
+available as evidence; their existence alone MUST NOT carry an exhausted tally
+into a new run. Exact prior-delay/history exposure is an implementation decision
+to document, not permission to expose secrets in events.
 
-Retry policy MUST distinguish another request attempt within a body from a new
-durable step attempt. It MUST NOT indiscriminately replay earlier successful paid
-work in an enclosing body. Waiting MUST NOT retain request permits or invent
-changing progress values to keep a claim alive. The claim/deferral protocol must
-preserve publication ownership and prevent unintended duplicate execution.
+**Allowance.** Retry tallies are scoped to **one analysis run**, not the lifetime
+of the analysis or a persisted operation. Every new run starts fresh configured
+finite allowance. Continuing the same run, starting another deferral pass,
+waiting/reacquiring a lease, or reconstructing that run's bookkeeping MUST NOT
+replenish it. Process restart alone does not identify a new run: an explicit new
+run starts new allowance, while continuation preserves the existing run's tally.
+Read-only recovery of a named execution is neither and authorizes no send.
+Historical attempts, observed costs, unknown usage and eligible completed results
+persist independently. The default is **three total request attempts per logical
+operation per analysis run**: the initial attempt and up to two retries when
+classification permits them. An explicit policy may override that allowance but
+MUST remain finite and state what it counts. No pooled-budget allocation is
+selected. Waiting for rate eligibility consumes no sent-attempt allowance; every
+actual request attempt counts under the applicable policy.
 
-**Validation:** a controlled provider reports a future reset; no premature or
-busy-loop requests occur; unrelated work proceeds; permitted work resumes when
-eligible. Trace both request and step attempt boundaries. Test cancellation
-during the wait and claim ownership through the selected deferral protocol.
+**Default backoff.** Built-in retryable-failure handling MUST provide a sensible
+initial delay that can ride out brief contention and increasing later delays,
+rather than requiring every source to configure timing. This does not make every
+409 retryable or override provider/context classification. Matching custom policy
+still wins, and a known provider not-before time remains a lower bound even when
+an immediate or shorter retry is requested. Exact durations, growth and jitter
+are bounded implementation choices to document and test; no numeric timing
+schedule is selected here.
 
-**Open:** policies/defaults, coordinated cooldown representation, claim transitions
-during long deferral, deadlines, and durable deferred-work recovery after process
-restart. Durable deferral is not promised merely because results are durable.
+**Exhaustion and classification.** No further request may be sent after current
+allowance is exhausted. A failed or exhausted request attempt remains diagnostic
+evidence; it does not provide the missing required input or complete an analysis.
+Where further authorization is being considered, dependent work remains pending
+without a fabricated value. A permanent failure can settle an attempt/member as
+failed under RUN-010; that still cannot satisfy complete-success coverage.
+The operator may choose to authorize further work; the exact within-run
+authorization mechanism, including batching/frontier or grant allocation, remains
+an unselected proposal in the
+[decision record](../plans/data-acquisition-retries.md#evaluation-of-the-approval-proposal).
+This does not postpone new-run replenishment. Rejecting further retries for
+required input invokes whole-analysis graceful stop under RUN-014, rather than
+omitting that input or leaving the rejected analysis running indefinitely.
 
-**Owner decision (2026-09-30).**
-- **Retries by default.** Rate-limit and quota responses that carry a retry time
-  are retried by default.
-- **Deferral.** The retry goes through a **durable deferral** that records "not
-  before T". The deferral releases the writer lease and holds no execution permit.
-- **Waiting mode.** By default the process sleeps and resumes. A run may instead
-  exit and report "waiting until T".
-- **Restarts.** Later runs admit the deferred work no earlier than T and reuse
-  completed work.
-- **Other failures.** Other transient failures retry only under an author-declared
-  policy with limits and backoff.
-- **Mutations** never retry blindly.
+HTTP status alone need not establish source meaning. Unchanged authentication or
+authorization failures (often 401/403) MUST NOT automatically retry. A service may
+use 403 for rate limiting, so the adapter must distinguish that rate signal from
+an authentication/authorization failure using provider context; status alone is
+not the classification. A bad request (400) is not expected to succeed unchanged.
+Conflict, rate and server errors (for
+example 409/429/500) may justify bounded delay according to adapter context;
+404 can mean permanent absence or eventual availability. No universal retry rule
+for these ambiguous statuses is selected. HTTP method does not define acquisition.
+The callback's "stop retrying" is a classification decision, not itself an
+operator's rejection or a new whole-run cancellation policy.
 
-[EXP-8](experiments.md) selects the concrete deferral record and resume mechanics.
+**Timing and passes.** Preserve durable "not before T", including known provider
+retry times, across passes and new runs; fresh allowance never bypasses that time.
+Waits hold no request permit, lend the waiting member's window lane, and release
+the writer lease when only deferred work remains. Sleep mode resumes after the
+wait; exit mode reports the waiting time. Any stop ends retry/deferral waits and
+prohibits those resumed retries. Soft-stop drain still permits an already admitted
+step's remaining first-attempt requests under RUN-014/019; hard stop does not.
+A woken pass acquires a valid writer lease under RUN-002. Failed earlier
+attempts remain recorded, but neither a same-run pass nor a new run may blindly
+replay already completed reusable paid child work. Whole-step reevaluation is not
+resumption of an arbitrary JavaScript continuation.
 
-**Selected mechanism (M5, #119).**
-- **Policy.** A rate or quota response with a retry time defers its operation
-  durably ("not before T") and is retried by default, at most 5 times unless
-  the author's policy sets another cap; the next refusal fails it as
-  exhausted. A transient failure (including a rate limit without a retry time)
-  retries only within the author's `maxAttempts`, after a backoff that is
-  itself a short durable deferral holding no permit and lending its member's
-  window lane. A permanent refusal is final.
-- **Pending, not failed.** A deferral ends the step attempt without a result;
-  the step stays pending (never failed or cancelled) and its member reports
-  the deferral and its time.
-- **Passes.** A normal request runs in passes. Once only deferred work
-  remains, the run releases the writer lease. In sleep mode it waits for the
-  earliest time (any stop ends the wait) and runs another pass, under the
-  derived request key `<key>#pass:<n>` (a caller's normal request key may not
-  contain `#pass:`), in which the deferred work resumes
-  under the same operation identities and work that settled in an earlier
-  pass, such as a failed member, is not executed again. A woken pass obtains
-  the writer lease as any normal request does (RUN-002 owner decision): it
-  waits while another process holds it, until an operator deadline, with no
-  default deadline. In exit mode it returns and reports the time. A strict fold that has failed is returned
-  without waiting.
-- **Restarts.** Admission reads each step's unsettled operations before the
-  caller's policy: before T it denies the work and the run waits or exits
-  until T; after T it admits it, and the operation is retried under its
-  identity. A stop refuses resumed deferrals.
+**Validation:** [A-12a–l](acceptance.md#acquisition-retry-and-rate-admission-cases)
+exercise lost responses, exhaustion, new-run versus same-run allowance,
+classification/default precedence, not-before, cancellation and usage gaps.
+Controlled clocks and providers establish the outcomes without live spend.
 
-### RUN-012 — External idempotency belongs to the logical operation
+**Supersession.** The 2026-10-24 owner decisions replace M5's effect-safety gate,
+persisted lifetime counters and fixed historical policy defaults as the current
+target. [M5's plan](../plans/m5-operations.md) and
+[EXP-8](../../experiments/exp-8/decision.md) preserve the former mechanisms and
+results. Their intent/deferral/fencing/privacy evidence still matters; it does not
+prove these new allowance or classification requirements are implemented.
 
-Supported retry facilities MUST accommodate provider idempotency for ambiguous
-external mutations. An uncertain response is not evidence that no side effect
-occurred. Retrying the same intended operation requires the corresponding stable
-operation identity and equivalent request binding under that provider's contract;
-a deliberately new operation must remain distinct.
+### RUN-012 — One acquisition, distinct request attempts, truthful evidence
 
-One step can perform several external operations, and several network attempts
-can belong to one operation. A result subject, a fresh attempt identifier, or an
-accidental call index MUST NOT silently substitute for that distinction. Recovery
-must not claim safe replay when it cannot reconstruct the required operation
-identity/binding. A provider without suitable idempotency support requires an
-explicit policy for ambiguous writes, not an automatic safety guarantee.
+An external operation in current scope obtains analysis data (DOM-7). Multiple
+request attempts may belong to one logical acquisition. A lost response or an
+unclassifiable response is unknown evidence about that attempt, not proof of no
+remote processing, no charge, or a successful acquired result. Within finite
+RUN-011 authority, it may retry without `safeToRepeat` or provider-idempotency
+permission. Provider idempotency may use the stable operation identity when
+supported; it is a deduplication aid, not a retry prerequisite or a billing proof.
+External business mutations and their exactly-once reconciliation are not promised.
 
-**Validation:** a fake provider commits then loses its response. Repeat the same
-logical operation and verify one mutation. Exercise multiple operations per step,
-changed parameters, a deliberately new operation, expired provider deduplication,
-and unsupported idempotency. Ambiguity remains visible. If restart-safe replay is
-promised, interrupt before/after send and prove the original binding is recovered.
+**Identity and preserved local correctness.** An operation is addressed by the
+step subject, a name and the author's request binding. Its stable identity and
+request binding are retained across its retries; every network attempt has its
+own attributable identity. A changed intended request remains distinct. A new
+run's allowance is not a reason to erase or mint replacement history merely to
+hide an earlier attempt. Only one call at an address may be in progress in a run,
+and an ended step attempt sends nothing. The compatible mapping for legacy settled
+addresses must be specified before migrating their representation.
 
-**Open:** addressing/API, persistence-before-send protocol, and provider-specific
-recovery policy. General reconciliation and universal exactly-once remote
-execution are outside this requirement.
-
-**Owner decision (2026-09-30).** A stable operation identity is persisted before
-every external call. When the provider offers no idempotency and a response is
-lost, the outcome is **unknown** and there is no automatic replay. The author may
-declare an operation safe to repeat, which permits a retry under the same
-operation identity. Otherwise the operator decides.
-
-**Selected mechanism (M5, #119).**
-- **Addressing.** An operation is addressed by its step attempt's subject, an
-  identifier name and an author-supplied binding digest. An unsettled
-  operation at an address (pending, deferred or unknown) keeps its identity
-  for every retry; a settled address or a changed binding is a new operation.
 - **Intent before send.** After the permit is held and stop intent rechecked,
   one fenced commit through History's operation journal records the operation
   as pending with the new request attempt, then Accounting records the usage
@@ -493,34 +504,38 @@ operation identity. Otherwise the operator decides.
   the provider idempotency key and is kept by every retry. Only one call at an
   address may be in progress in a run, and an attempt that ended sends
   nothing.
-- **Unknown outcomes.** A lost response, or one the adapter cannot classify,
-  is unknown. It is retried only with a safety basis (the author's
-  safe-to-repeat declaration, or provider idempotency keys, which carry the
-  operation identity) and a policy allowing another attempt. Otherwise the
-  step attempt is tainted: every later call it makes rethrows the signal
-  without sending, its step stays pending, and later runs are denied
-  admission until an operator resolves or abandons the operation. An
-  operation that a dead run, or a run that lost its lease, left in flight is
-  recorded unknown by the next writer.
-- **Operator settlement.** Resolving records the asserted outcome and
-  acknowledges usage the operator learned through Accounting under an
-  operator-namespaced report identity; abandoning leaves the usage unknown.
-  Both are fenced journal commits, and both unblock the step.
-  - **Resolved as succeeded.** The effect happened, so the address stays
-    consumed: a later call at the same subject, name and binding mints and
-    sends nothing and fails with a typed `operation-resolved` code that
-    carries no value. The author may catch it; uncaught, the step attempt
-    fails, naming the code. Mutations are never retried blindly (A-12).
-    The address stays consumed until the operator abandons the operation,
-    which frees it and explicitly authorizes a possible second effect
-    ([#121](https://github.com/mike-north/microdelta/issues/121)). A second
-    resolution is refused, and so is abandoning an operation resolved as
-    failed, whose address is already free.
-  - **Resolved as failed** asserts that nothing happened, and frees the
-    address for a new operation.
-  - **Abandoned.** The address is free: abandoning is the operator's explicit
-    authorization of a possible second effect.
-  - A resolution that supplies the operation's result is deferred to M6.
+
+The intent and usage protocol above is retained from the bounded M5 mechanism;
+its local persistence-retry handling is not a source callback's provider policy.
+History remains the fencing and atomic-record owner; Accounting remains the
+usage-evidence owner. No failure to persist required intent may dispatch a request.
+
+**Unknowns, taint and stop.** The next authorized writer records a dead or
+lease-lost run's in-flight request as unknown, retaining correlation and possible
+usage gaps. Retrying is then evaluated against the current run's finite allowance,
+classification, timing and stop state. It does not require the operator to claim
+that the provider did nothing. Deferral or unavailable acquisition must not be
+caught to manufacture a completed result: the taint guard prevents later sends
+from that ended/tainted step attempt and prevents publication of its apparent
+return value. A later properly admitted attempt remains possible under RUN-011.
+A later successful request supplies its own result and usage; it does not repair
+unknown earlier consumption by inference.
+
+**Manual recovery and compatibility.** Supplying an operation's missing result
+manually is deferred, including reusable-validator, staging and submission
+idempotency proposals. The former resolve/abandon model and consumed-success
+address remain historical runtime behavior, not prerequisites to the acquisition
+target. A statement that a remote effect happened is not the missing data. Existing
+journal records and APIs require explicit migration/compatibility treatment before
+implementation; no documentation change silently reinterprets them. Preserve
+existing local writes, audit evidence, result validation, privacy and Accounting
+report deduplication independently of that deferred workflow.
+
+**Validation:** lose a paid POST-like acquisition response, then succeed under
+finite policy with one logical identity and distinct attempts, no safety flags,
+and an unknown first usage record. Kill before/after send and publication; preserve
+durable intent, no stale-fence publication, truthful recovery and exact completed
+child reuse. Legacy resolved records never become fabricated values. See A-12.
 
 ### RUN-013 — Retry history is part of supervision
 
@@ -531,7 +546,7 @@ cancellation, and unresolved remote outcome. A scheduled retry MUST NOT be count
 as another completed request or settled member.
 
 **Validation:** a transient failure followed by success, a long quota wait,
-exhaustion with continuing siblings, and an idempotent recovery all preserve
+exhaustion with continuing siblings, and a later permitted acquisition all preserve
 correlation and ordering. Attaching a trace consumer does not initiate a retry.
 ACC-002 and ACC-003 prevent duplicated resource totals across these views.
 
@@ -580,9 +595,11 @@ and as a result finishes. Distinguish local cancellation from provider-confirmed
 cancellation; preserve completed results and received resource observations.
 Exercise shared consumers without silently transferring cancellation authority.
 
-**Open:** active-work policy, exact propagation scopes, shared-work ownership,
-deadlines, publication/cancellation race rule, and final exit behavior. These must
-be specified and tested before end-to-end cancellation is declared complete.
+**Mechanism status:** M5/EXP-8 selected admitted-step drain, operator deadline
+escalation and publication-commit linearization; those rules are preserved.
+Remaining CLI final-exit representation and any broader shared-work cancellation
+policy must be specified before their separate end-to-end claims. This acquisition
+change does not reopen the selected stop mechanics.
 
 **Owner decision (2026-09-30).** A soft stop admits no new work and drains
 in-flight work, with **no default deadline**. An operator deadline or a hard stop
@@ -591,11 +608,34 @@ interrupted. Remote state is recorded as cancelled, still running or unknown,
 never omitted. [EXP-8](experiments.md) selects the drain unit, the escalation
 mechanics and the publication/cancellation race rule.
 
-**Selected mechanism (M5, #119).** The remote state of an external operation's
+**Preserved M5 mechanism and revised acquisition consequence.** The remote state
+of an external operation's
 aborted request attempt is committed through the operation journal by operation
 and request attempt, so later runs and the operator see it after a restart. A
 provider-confirmed cancellation settles the operation; `running` or `unknown`
-leaves it unknown and its step blocked until an operator settles it.
+leaves that attempt unknown. Hard stop or deadline escalation prohibits further
+sends from the affected work. Soft stop instead refuses new admissions and retries
+while an already admitted step may finish its remaining first-attempt requests
+under permits, rate admission and the current fence, then publish under the
+existing commit rule. A later new run applies RUN-011/012 with fresh allowance
+and preserved unknown evidence, rather than requiring a statement about an
+external business effect.
+
+**Required-retry rejection (owner decision, 2026-10-24).** Rejecting further retries
+for an input required by the declared graph gracefully stops the entire analysis.
+Use the existing soft-stop admission/drain contract, without a new default deadline
+or a claim of provider cancellation. Preserve completed durable work for a later
+new run. Do not silently omit the input, publish partial complete-success output,
+or leave rejected work running indefinitely. Escalation remains the existing
+operator deadline/hard stop. This decision does not ratify a batch-approval queue.
+
+**Validation:** exhaust required input A after admitted sibling B has completed
+request 1 of a two-request body, then reject more retries for A. Admit no new work
+or retry, but allow B's first attempt of request 2 under permits, rate and fence
+checks, and let B publish. A hard stop or operator-deadline escalation before
+request 2 prevents that send and partial publication. Retain completed results
+for a later new run with fresh allowance and ordinary reuse. No missing input
+becomes success; A-12b supplies the concrete positive and negative controls.
 
 ### RUN-015 — Partial work is not a completed result
 
@@ -646,7 +686,7 @@ environment boundary must cover results, mutable heads, claims, acceptance and
 accounting records, and cleanup authority as applicable. Concurrent environments
 MUST NOT be routed through a mutable process-global selection. Environment labels
 alone do not establish isolation, and isolated local storage does not establish
-isolation of external side effects.
+isolation of remote access or provider charges.
 
 Within the same compatible environment, repeated trials and widening scope MUST
 reuse eligible completed member work while affected aggregates reconsider their
@@ -658,19 +698,20 @@ proof that deleting a result is permitted.
 **Validation:** run trial and production concurrently; inspect store/claim routing
 and cleanup. Clearing trial data cannot delete production results or break
 retained references. Widen trial membership and reuse unaffected eligible member
-results. Separate external-output destinations are exercised where the application
-performs writes.
+results. Remote connections and credentials respect their configured scope;
+local namespace isolation alone is not a provider-account or spending boundary.
 
 **Open:** separate storage remains the recommended default, but exact backend or
-namespace routing, external destinations, and deliberate import/promotion rules
+namespace routing, remote connection configuration, and deliberate import/promotion rules
 are unresolved. This does not select a promotion feature.
 
 **Owner decision (2026-09-30), superseding the separate-storage recommendation
 above.** Environments are **namespaced within one store**. Results, current heads,
 claims, acceptances, accounting and cleanup are all isolated per environment.
 Trial work satisfies production only through an explicit, recorded promotion. The
-environment is selected per run, never process-wide. External destinations remain
-open.
+environment is selected per run, never process-wide. The concrete remote-service
+and credential configuration representation remains open; external business-write
+destinations are outside the selected acquisition scope.
 
 ### RUN-018 — Trial adequacy is distinct from execution success
 
@@ -683,6 +724,150 @@ must not silently expand paid work to satisfy inferred goals.
 leadership input; it can succeed without exercising leadership analysis. A
 single-point box plot is execution-successful without proving useful variation.
 Automatic economical subset selection is not a prerequisite for trial mode.
+
+### RUN-019 — Shared rate admission precedes each send
+
+**Accepted default (owner decision, 2026-10-24).** Proactive rate configuration is
+optional. With no configured rate limit, acquisition proceeds under ordinary
+execution/concurrency controls; the library MUST NOT impose an implicit proactive
+request cap or require source rate configuration. Provider rate-limit signals
+still invoke the applicable RUN-011 bounded retry/backoff policy, including known
+not-before timing and the shared reactive coordination below. Matching custom
+source policy/default precedence remains the same, and contextual classification
+is not restricted to HTTP 429. Other failures,
+finite retry allowance, stop, intent/fencing and existing execution limits remain
+in force. Omission of rate configuration grants neither unlimited retries nor
+permission to bypass a previously established not-before time.
+
+**Rationale and boundary.** A user can deliberately configure a lower local limit
+to pace work earlier and leave headroom for other activities. This is the user's
+chosen bound, not an inferred provider capacity, automatic percentage reserve or
+promise that other callers have unused quota. A built-in adaptive quota/reserve
+strategy remains deferred. This does not prohibit a pluggable policy from using
+observations to refine grouping/pacing under the adapter requirement below.
+
+**Shared scope and overlapping limits.** The default coordination scope is a
+**logical API surface**, not automatically a hostname, connection or disjoint
+provider bucket. Access/account context can distinguish the applicable scope;
+sharing a hostname does not silently merge unrelated accounts or services.
+The system MUST support overlapping API-wide and narrower limits. Each request
+is subject to **all applicable limits**: passing one cannot bypass another.
+For example, catalog and search requests can share an API-wide constraint while
+search requests additionally share a search-capacity constraint. A search-only
+cooldown need not stop eligible catalog work; an API-wide cooldown holds both.
+Exact identity and membership representations remain open; ordinary use must not
+require a large upfront configuration model.
+
+A configured units-per-time limit MUST coordinate admission across all concurrent
+calls to which that shared limit applies in one Node process,
+including retries and calls from different analysis paths or runs. Checking each
+caller against an independent copy, or recording usage only after sending, cannot
+enforce the shared ceiling. Logical central coordination is required; one physical
+network dispatcher is not. A new run's retry allowance does not reset a shared
+in-process rate limit used by other work.
+
+**Reactive coordination (owner decision, 2026-10-24; first-build scope).** When a
+provider rate signal applies to a known shared limit, affected callers MUST share
+its cooldown and fair admission queue within the Node process, even without a
+proactive numeric rate configuration. Applicable initial requests and retries
+wait together; independent per-request sleeps followed by a race do not meet this
+requirement. Unrelated sources/limits can continue. Waiting consumes no sent
+attempt and holds no network request permit. Cooldown expiry returns eligible
+work through controlled concurrency admission, not an all-waiters release burst.
+This coordinates a contextual refusal and retry time; it does not infer remaining
+provider balance or reserve quota. A matching callback cannot bypass an applicable
+shared cooldown by requesting immediate retry.
+
+Among otherwise eligible ready work, default admission MUST favor
+**earlier-discovered work** as a simple progress preference. The goal is greater
+intermediate completeness sooner: resolve useful intermediate stages instead of
+spreading fractional progress across many stages. Earlier requests may unlock
+downstream work that uses other services; discovery order is an approximation,
+not a guarantee of optimal intermediate completion. Queue arrival/race-winning
+order is not discovery order. Dependency readiness, not-before, finite allowance, stop and fencing remain
+prerequisites; an earlier but ineligible item cannot block other eligible
+work. This is fair admission with a discovery preference, not a strict global
+ordering promise, DAG critical-path scheduler or cost optimizer. Define discovery
+sequencing, retry placement and fairness details in the bounded implementation
+design; do not invent a globally deterministic order from asynchronous discovery.
+
+**Pluggable coordination policy (owner decision, 2026-10-24).** The rate
+coordination boundary MUST accept an adapter spanning simple global/API-surface
+policy and sophisticated adaptive grouping/pacing. The extension must provide
+relevant rate-limit observations and history and allow updated applicable group
+membership and pacing decisions. A consumer strategy may, for example, inspect
+successive 429 observations to infer overlapping hidden constraints and revise
+which logical API surfaces share queues, potentially using asynchronous ML/LLM
+assessment. Supporting that strategy is required; implementing or invoking a
+built-in adaptive/ML/LLM strategy is not. The adapter's exact interface, history
+scope/retention and policy-state ownership are not selected here.
+
+The adapter supplies policy decisions; Run Supervision retains admission and
+dispatch authority. A permissive, delayed, stale or failed adapter decision MUST
+NOT bypass any applicable gate, finite run allowance, stop, known not-before,
+request binding, durable intent, taint or fence rule. Asynchronous completion is
+not itself permission to send: runtime must establish current eligibility before
+dispatch. No actual paid execution is authorized by an extension example.
+Retries remain classified under RUN-011; rate policy cannot grant extra attempts
+or manufacture successful data or observed usage. Grouping/pacing changes cannot
+rewrite prior sent-attempt/accounting evidence. The design must explicitly choose
+how policy updates affect queued and in-flight requests and how asynchronous
+errors/timeouts/stale results are handled; no particular fallback or cancellation
+algorithm is selected by this requirement.
+
+Both reactive cooldown and configured proactive eligibility are independent of
+request concurrency permits, finite retry allowance and stop intent. A callback's
+immediate retry must satisfy all applicable conditions before send. A delayed retry cannot
+send before its not-before time even when rate capacity is available. Waiting
+holds no network request permit.
+Apply RUN-014's selected stop boundary while waiting: soft stop blocks new
+admissions and retries, but an already admitted step may finish its remaining
+first-attempt requests when otherwise eligible; hard stop or deadline escalation
+prevents further sends from affected work. Available rate capacity does not bypass
+those rules. Intent persistence/fencing under RUN-012 remains a prerequisite too.
+
+The configured unit may be requests or an application-defined quantity. Retrieved
+GraphQL nodes, for example, are not automatically GitHub billed quota units.
+Rate admission uses the configured quantity/bound, not invented observed usage
+or a guarantee about a provider's remaining capacity. Accounting still records
+actual received observations separately and does not own scheduling (ACC-008).
+
+**Scope.** Initial coordination is within one Node process only. No cross-process
+or cross-machine limiter, distributed reservation protocol, or shared provider
+quota guarantee is selected. Built-in adaptive provider-quota/reserve inference
+and advanced priority strategies remain deferred; dynamic grouping/pacing through
+the required adapter is in scope. Honoring a retry time remains RUN-011 and does
+not guarantee remaining provider capacity. Shared reactive cooldown and the
+extension boundary are required independently of a built-in adaptive strategy.
+Scope/limit identifiers must not expose raw credentials in inspection/events (RUN-013/017).
+
+**Validation:** a controlled clock and concurrent barriers present requests from
+two paths sharing a configured limit; their combined admitted units, including
+retries, obey the configured bound. Requests must pass every overlapping limit;
+limits without overlapping callers remain independent.
+Hard stop or deadline escalation, denied retry allowance and future not-before
+each prevent the affected dispatch even if other conditions pass. Soft stop denies
+new admissions/retries while preserving the admitted-step first-attempt drain
+case in A-12b, still subject to all applicable rate gates. A new run cannot reset
+another run's shared limiter. A-12h contrasts omitted configuration with a chosen
+proactive limit and checks bounded handling of provider rate-limit signals.
+A-12i checks default attempts/backoff; A-12j checks shared cooldown, controlled
+resume and discovery preference without proactive configuration. A-12k/l cover
+overlapping scope and pluggable synchronous/asynchronous grouping/pacing without
+any live adaptive-provider execution.
+
+**Open implementation choices:** units known before dispatch versus a conservative
+reservation, window/burst algorithm and boundary behavior, reservation release
+on cancellation, lifecycle, logical API-surface/limit identity, overlapping
+membership and unknown-scope handling without mandatory numeric configuration.
+Select discovery sequencing across branches/runs, retry placement, default
+fairness/tie handling and cooldown representation. Select adapter interface,
+observation/history exposure and retention, policy-state ownership, queued and
+in-flight reclassification, asynchronous decision races, timeout/error/fallback
+behavior and revalidation before dispatch. Document these in the bounded
+implementation design before claiming conformance. These open representations
+do not postpone the required extension capability or permit bypassing runtime
+invariants; they select no universal cap, credentials DSL or paid strategy.
 
 ## CLI and read-side delivery
 
@@ -830,8 +1015,9 @@ idempotent and is never summed twice. Correction and ordering rules follow
 
 **Selected mechanism (M5, #119).** Run Supervision namespaces report identities
 by their source: a provider's report is acknowledged as `provider:<report>` and
-usage an operator learns while resolving an unknown operation as
-`operator:<report>`, so the two can never collide.
+legacy operator-reported usage as `operator:<report>`, so the two can never
+collide. This historical namespace remains evidence/compatibility data; it does
+not require the deferred manual result-recovery workflow.
 
 ### ACC-004 — Resource state is not additive consumption
 
@@ -933,7 +1119,8 @@ silently filled by old exploratory signatures or expanded into new products.
 | Scoped lifetime across lazy iteration and recovery | Run Supervision with Definition & Binding | RUN-001, RUN-002 |
 | Source-specific discovery closure and subsequent updates | Run Supervision and source adapters, accepted through Reuse Resolution | RUN-003–RUN-005 |
 | Preview read/activity shapes, signal coalescing, reader resources and aggregate loading | Observation boundary with Materialization | RUN-006–RUN-008, CLI-004 |
-| Retry/long-deferral ownership and safe external-operation addressing | Run Supervision/adapters with Result History & Publication | RUN-011–RUN-013 |
+| Per-run allowance, source classification, legacy journal compatibility and acquisition identity | Run Supervision/adapters with Result History & Publication | RUN-011–RUN-013 |
+| Shared single-process proactive/reactive rate admission and limit identity | Run Supervision with source adapters and Machine timing | RUN-019; ACC-008 does not schedule |
 | Soft-stop boundary, shared cancellation, and publication race | Run Supervision with Result History & Publication | RUN-014, RUN-015 |
 | Trial namespaces, external destinations, optional promotion | Run Supervision with storage/history ports | RUN-016–RUN-018 |
 | CLI format and exit policy | CLI application | CLI-001–CLI-004 |

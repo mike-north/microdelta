@@ -33,6 +33,30 @@ mechanisms. It does not retrofit new runtime behavior into the existing scaffold
 | Java package tree translates literally to workspace packages | PKG-001/006 | Coarse workspace boundary; internal modules remain internal |
 | CML private, TypeScript private, # privacy and release tier are one axis | PKG-002/006 | Independent facts; CML correspondence retired, shaped package/API checks remain authoritative |
 
+## Acquisition target supersession (2026-10-24)
+
+The owner decisions recorded for [#212](https://github.com/mike-north/microdelta/issues/212)
+are accepted target changes, not findings that M5 violated its former rules.
+[The decision and handoff](../plans/data-acquisition-retries.md) records their
+chronological corrections and implementation boundaries.
+
+| Earlier rule or proposal | Current authority | Consequence |
+| --- | --- | --- |
+| Unknown acquisition requires safe-to-repeat/idempotency or effect settlement before retry | DOM-7; RUN-011/012 | Finite current-run acquisition retries can proceed without those safety flags; missing result/usage remains unknown |
+| Persisted operation history acts as a lifetime retry ceiling; later run needs compensating allowance | RUN-011 | New analysis run starts fresh configured allowance; same-run continuation does not. Historical attempts and costs remain |
+| Resolve succeeded consumes the address without supplying data; abandon permits a second effect | RUN-012 compatibility boundary | Historical runtime state must be read honestly and migrated explicitly, not used as target acquisition authorization or a fabricated result |
+| Result-bearing manual recovery, validator/staging/duplicate-submission work is prerequisite to controlled roster | RUN-012; acquisition handoff | Deferred; remove #152 from #170 prerequisite scope while preserving other independent readiness gates |
+| Batching/frontier/fixed extra budget was described as accepted | Owner correction in acquisition decision | Proposal for evaluation only. Rejection gracefully stopping the whole analysis and new-run allowance are independently accepted |
+| Possible conflation: Accounting after a call enforces a shared rate limit | RUN-019; ACC-008 | Shared configured connection+limit needs coordinated pre-send admission within one Node process; Accounting remains evidence |
+| Possible scope expansion: header-derived dynamic quota/reserves or cross-process coordination follows from local rate control | RUN-019 | Deferred; static configured units/time is the selected bounded scope |
+
+M5/EXP-8 plans and validation records retain original dated claims with pointers
+here. Current-runtime guides label their legacy behavior. Follow-up code, tests,
+generated declarations and examples must migrate together under the handoff's
+compatibility and test-first gates; the documentation change itself repairs no
+runtime behavior. Earlier inspection and resource-state proposals retain their
+own unresolved decisions.
+
 ## Preserved original product obligations
 
 The old success criteria are reconciled here rather than silently discarded.

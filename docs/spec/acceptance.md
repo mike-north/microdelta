@@ -35,7 +35,7 @@ and rename display labels. Nothing depends on surviving closures/tags.
 | A-09 Publication and fencing | Kill every commit boundary; stale publish/renew/release | Old history intact, no partial current value, authorized publisher only | M3/M5 |
 | A-10 Reference integrity | Supersession, fresh equal output, explicit retain, missing target, scoped stores | Exact retained pointers; no silent recompute/retarget/delete | M3/M5 |
 | A-11 Failure/readiness | One failed member, one pending, one successful, open discovery | Independent siblings continue; strict fold waits/fails honestly; outcome fold reports settled statuses with coverage, never complete while unsettled, and reconsiders after repair | M4/M5 |
-| A-12 Retry/idempotency | Rate wait, exhaustion, lost response to mutation | Correlated attempts, correct key reuse, no unsafe blind replay | M5 |
+| A-12 Acquisition retry and rate admission | Lost response, current-run exhaustion, new-run reset, callback precedence, shared units/time, required-retry rejection | A-12a–g below: correlated attempts, no unapproved sends or fabricated result/usage, shared pre-send bound, preserved fencing/stop | Changed target after M5; new evidence required |
 | A-13 Cancellation | Soft then hard stop, provider unsupported, commit race | No unwanted future admissions, no partial success, honest remote state | M5/M6 |
 | A-14 Accounting | Duplicate/lost acknowledgment, crash, unreported usage | Durable known observations exactly once; unknown not zero | M5 |
 | A-15 Declaration boundaries | Own, sibling, public, beta, hidden-type leak, source bypass | API Extractor rollups plus real compiler positive/negative fixtures; missing declarations and forbidden source imports fail for the expected reason | M0.5 |
@@ -57,6 +57,29 @@ universal platform instance count or elapsed-time limit is specified.
 Language-neutral [restart cases](artifacts/reuse-cases.json) define concrete
 inputs and expected semantic outcomes for A-02/A-04/A-05. They are fixture data,
 not executable tests or a selected stored record shape.
+
+## Acquisition retry and rate admission cases
+
+These are normative expected outcomes for RUN-011/012/014/019, **not recorded
+passing tests**. They supersede the former A-12 external-mutation scenario for
+current acquisition scope. M5/EXP-8 keep their historical result; the
+[decision and handoff](../plans/data-acquisition-retries.md) identifies implementation
+and compatibility work. Use fake providers, controlled clocks and barriers.
+
+| Case | Controlled input | Required assertions and limits |
+| --- | --- | --- |
+| A-12a — Lost acquisition response | A paid POST-like data request without safety flags or provider idempotency loses its response; finite policy permits another attempt which returns valid data | One logical acquisition/binding, distinct request attempts, second request may run and supply the result; first usage remains unknown even when second usage is known. Do not require resolve/abandon or infer that either call was free. This does not qualify business-write replay |
+| A-12b — Exhaustion and rejection | A required acquisition uses its finite current-run allowance without usable data while another admitted step can finish; operator rejects further required retries | No further request beyond authority; exhaustion/failure diagnostics and incomplete required coverage visible; strict success cannot omit the input, tolerant status is not complete success. Rejection invokes whole-analysis soft stop, blocks new admissions/retries and drains admitted work under existing rules. Preserve its completed results and usage |
+| A-12c — Run versus continuation | Exhaust a configured allowance; continue the same run through another pass or recovered bookkeeping; then explicitly start a new run after a repair | Continuation sends nothing beyond the existing allowance. New run starts fresh configured allowance without extra permission solely for historical exhaustion; prior attempts/costs/gaps remain inspectable, completed eligible children retain exact references. Known not-before times still apply. Inspecting/recovering a named result does not create an execution run or refill a counter |
+| A-12d — Shared source classification | Matching custom policy returns each of immediate retry, delayed retry with duration, stop; a separate call has no matching custom policy; prior-attempt information drives a calculated delay | Custom match wins, no-match uses built-in defaults, no fourth callback outcome. Immediate retry still obeys allowance/stop/rate; delayed retry cannot dispatch early; stop permits no retry by that decision. Context-sensitive404 is not universally retried or treated as permanent; unchanged401/403 cannot automatically retry. The callback does not grant allowance; history/API and concrete defaults must be specified by implementation |
+| A-12e — Shared static rate bound | Concurrent paths/runs and retries use the same configured connection+limit; another limit is independent; clock is held at a boundary | Combined pre-send units obey the configured, documented window/burst rule; separate counters per caller cannot overspend it. Retry allowance reset cannot reset another caller's limiter. Denied allowance, future not-before and cancellation prevent sends even with rate capacity. No cross-process or provider-remaining-capacity claim; units are configured, not inferred billed quota |
+| A-12f — Durability and stop | Kill after intent/before send, after remote processing/before response, and before publication; lose writer lease; stop while waiting | No send without required durable intent, no stale-fence write/publication, no partial result, and no stopped send. Recovered in-flight attempts remain unknown until actual evidence; retry uses applicable run allowance. A tainted author's catch/return cannot publish success. Distinct actual usage reports count once each, duplicate deliveries once, missing reports unknown |
+| A-12g — Legacy compatibility | Reopen representative version-1 pending/deferred/unknown/failed/resolved/abandoned records and existing alpha callers | Apply the documented compatibility choice without corrupting journal/block state, erasing audit/usage evidence, manufacturing data from a success assertion, or silently resetting a continuing run. Record old-to-new identity/tally treatment and generated API/type expectations before implementation; this case selects no migration or deprecation scheme |
+
+Manual result injection, its validator/staging and idempotent submission are not
+required controls here. Within-run approval batching/grant allocation is proposed,
+not a prerequisite for A-12c. General schema validation of actual acquired results,
+read-only inspection privacy and existing publication/Accounting gates remain.
 
 ## Weekly roster workflow
 
@@ -116,6 +139,11 @@ roster callback examples remain historical API exploration, not the new runtime.
    reevaluation/reuse rather than a claimed restored JavaScript continuation.
 9. Inspect during/after execution: CLI status and explanation reveal outcomes,
    references, waits, history and resource observations without starting work.
+10. Lose an acquisition response, exhaust its finite run allowance, and reject more
+    retries for required input: no fabricated summary, whole-analysis graceful
+    stop, preserved completed results/unknown usage, then a new run with fresh
+    allowance and ordinary reuse. Manual supplied-result recovery is not a roster
+    prerequisite; apply A-12a–g rather than the historical effect-settlement story.
 
 ## Large-data and alternate-cost acceptance
 
@@ -139,7 +167,8 @@ results. Storage-backed cached outputs reenter observation normally.
 requirement ID, machine-readable artifact syntax, decision-table coverage, and
 supersession mapping. Review at least the identity/name, automatic implementation
 tracking, no-stored-finality, exact-reference, alpha-sibling, fixed-topology and
-no-paid-replay invariants across documents. No active document should direct an
+no-paid-validation-replay invariants across documents. Acquisition retry is
+separate from evaluating paid author work merely to inspect or validate a cache. No active document should direct an
 agent to follow an archived API/schema. Leave baseline fixtures explicitly labeled.
 
 Closing this gate means the specification is ready to guide M0.5, not that M0.5 has

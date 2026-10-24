@@ -1,5 +1,12 @@
 # Implemented package and context map
 
+**Target versus implementation:** the
+[accepted acquisition retry/rate change](plans/data-acquisition-retries.md) is not
+yet implemented by the M5 operation surface described below. Its no-blind-replay,
+resolve/abandon and persisted-attempt policy are legacy behavior awaiting explicit
+compatibility work, not the current acquisition target. Historical tests do not
+prove new-run allowance or shared configured rate admission.
+
 This is an implementation map for the current checkout. The [architecture](spec/architecture.md)
 and [package boundary](spec/package-boundaries.md) contracts govern it; an absent
 package below is a planned owner, not a shipped API. The executable role and edge

@@ -1,5 +1,12 @@
 # M5 independent-process acceptance (issue #122)
 
+**Supersession notice (2026-10-24):** original results and their dates below are
+preserved. The accepted [data-acquisition retry target](../plans/data-acquisition-retries.md) replaces the
+external-business-write replay/settlement premise for current acquisition scope.
+These historical passes do not prove finite per-new-run retry or shared static
+rate admission; intent, fencing, stop, privacy and truthful usage evidence remain
+relevant. Manual operator-supplied result recovery is deferred.
+
 Implementation base: `30b5bdd` (`origin/main` on 2026-10-01, after #142),
 later merged with `origin/main` at `18af318`, which brings #143 (#135, the
 control anchor drift guard) and #148 (#147, the fixes for the defects this

@@ -1,13 +1,34 @@
 /**
  * Distinct failure classes of the durable History authority. Diagnostics must
- * distinguish stale ownership, conflicting execution identity, invalid
- * lifecycle transitions, unsupported storage, journal compare-and-set
- * conflicts, undeclared journal record versions and integrity failures rather
- * than report a generic miss (execution.md, required validation fixtures).
+ * distinguish exhausted SQLite contention, stale ownership, conflicting
+ * execution identity, invalid lifecycle transitions, unsupported storage,
+ * journal compare-and-set conflicts, undeclared journal record versions and
+ * integrity failures rather than report a generic miss (execution.md,
+ * required validation fixtures).
  * None of these classes extends `TypeError`, so a reader never mistakes a
  * storage failure for Value's rejection of a selection's shape.
  * @packageDocumentation
  */
+import type { SqliteBusyError } from '@microdelta/machine';
+
+/**
+ * A History-owned SQLite operation exhausted Machine's bounded busy wait.
+ * The exact host failure is retained as `cause`, so callers can distinguish
+ * contention from corruption or a stale writer without losing host detail.
+ * History wraps only failures raised at its SQLite capability boundary, never
+ * an application callback that happened to throw a Machine busy error.
+ * @alpha
+ */
+export class HistoryBusyError extends Error {
+  /** The exact Machine failure that History received. */
+  public declare readonly cause: SqliteBusyError;
+
+  /** Create History's boundary failure while retaining the original host error. */
+  public constructor(message: string, cause: SqliteBusyError) {
+    super(message, { cause });
+    this.name = 'HistoryBusyError';
+  }
+}
 
 /**
  * The store's contents contradict History's invariants or the caller's exact

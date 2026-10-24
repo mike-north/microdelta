@@ -96,7 +96,7 @@ for (let run = 1; run <= runs; run += 1) {
     for (const child of c2) child.kill('SIGKILL');
     const events = replies.flatMap((reply) => reply.value);
     const count = (predicate) => events.filter(predicate).length;
-    const refusals = [...new Set(events.filter((event) => !event.ok && event.op !== 'acquire').map((event) => event.error))];
+    const refusals = [...new Set(events.filter((event) => !event.ok && event.op !== 'acquire').map((event) => event.errorName))];
     const loops = measure(replies);
     console.log(`run ${String(run)} C2: grants ${String(count((event) => event.op === 'acquire' && event.ok))}, held ${String(count((event) => event.op === 'acquire' && !event.ok))}, accepted mutations ${String(count((event) => event.op !== 'acquire' && event.ok))}, refused mutations ${String(count((event) => event.op !== 'acquire' && !event.ok))} (${refusals.join(',')}); loop skew ${ms(loops.skew)}, loops overlapped ${ms(loops.overlap)}`);
   } finally {

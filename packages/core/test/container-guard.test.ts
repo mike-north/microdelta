@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync, readFileSync, writeFileSync } from 'node:fs';
 import { gunzipSync } from 'node:zlib';
 import { createHash } from 'node:crypto';
 import { createNodeMachine, createNodeSqlite } from '@microdelta/machine-node';
-import { openDurableHistory } from '@microdelta/history';
+import { HistorySchemaError, openDurableHistory } from '@microdelta/history';
 import { tmpdir } from 'node:os';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -119,17 +119,81 @@ test.each([
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
-/** Upgrade revalidation preserves old exact history and opaque journal data. */
-test('pre-kind runtime history misses once, then the current generation reuses after another restart', () => {
-  const directory = mkdtempSync(join(tmpdir(), 'microdelta-guard-upgrade-'));
-  const location = join(directory, 'history.sqlite');
-  // This is actual SQLite from main 86a4f17, not a synthesized new-runtime provenance record.
+/** Frozen bytes genuinely produced by the pre-kind runtime, with its v2 schema. */
+function preKindDatabase(): Buffer {
   const fixture: unknown = JSON.parse(readFileSync(new URL('../../test/fixtures/container-guard-pre-kind.json', import.meta.url), 'utf8'));
   if (fixture === null || typeof fixture !== 'object' || !('gzipBase64' in fixture) || typeof fixture.gzipBase64 !== 'string'
     || !('sha256' in fixture) || typeof fixture.sha256 !== 'string') { throw new Error('Malformed pre-kind fixture'); }
   const database = gunzipSync(Buffer.from(fixture.gzipBase64, 'base64'));
   expect(createHash('sha256').update(database).digest('hex')).toBe(fixture.sha256);
+  return database;
+}
+
+/** The real old-runtime file remains v2 and must never be silently migrated. */
+test('the genuine pre-kind v2 database is rejected without changing bytes, rows or schema', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'microdelta-guard-v2-'));
+  const location = join(directory, 'history.sqlite');
+  const database = preKindDatabase();
   writeFileSync(location, database);
+  try {
+    const before = createNodeSqlite().openSqlite(location);
+    const objects = before.prepare('SELECT name, sql FROM sqlite_master ORDER BY name').all();
+    const tables = before.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all();
+    const rows = tables.map((table) => before.prepare(`SELECT * FROM ${String(table.name)}`).all());
+    before.close();
+    expect(() => openDurableHistory({ location, logicalStore: 'guard-process-store', sqlite: createNodeSqlite(),
+      sha256: createNodeMachine(), clock: { currentEpochMilliseconds: () => Date.now() } }))
+      .toThrow(new HistorySchemaError('Unsupported History schema microdelta.history.durable version 2; this implementation reads only version 3 and never migrates stored data by guessing'));
+    const after = createNodeSqlite().openSqlite(location);
+    expect(after.prepare('SELECT name, sql FROM sqlite_master ORDER BY name').all()).toEqual(objects);
+    expect(tables.map((table) => after.prepare(`SELECT * FROM ${String(table.name)}`).all())).toEqual(rows);
+    after.close();
+    expect(readFileSync(location)).toEqual(database);
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+/**
+ * Construct v3 storage containing the original frozen pre-kind rows, verbatim.
+ * This is solely a test fixture for provenance compatibility, not a migration
+ * facility or a claim that the old runtime produced a v3 database.
+ */
+function copyPreKindRows(original: string, location: string): void {
+  openDurableHistory({ location, logicalStore: 'guard-process-store', sqlite: createNodeSqlite(),
+    sha256: createNodeMachine(), clock: { currentEpochMilliseconds: () => Date.now() } }).close();
+  const source = createNodeSqlite().openSqlite(original);
+  const target = createNodeSqlite().openSqlite(location);
+  try {
+    target.exec('PRAGMA foreign_keys = OFF');
+    const tables = source.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name <> 'history_identity'").all();
+    for (const table of tables) {
+      const name = String(table.name);
+      const rows = source.prepare(`SELECT * FROM ${name}`).all();
+      for (const row of rows) {
+        const columns = Object.keys(row);
+        if (name === 'history_writer' || name === 'history_sequences') {
+          target.prepare(`UPDATE ${name} SET ${columns.map((column) => `${column} = ?`).join(', ')}`).run(...Object.values(row));
+        } else {
+          target.prepare(`INSERT INTO ${name} (${columns.join(', ')}) VALUES (${columns.map(() => '?').join(', ')})`).run(...Object.values(row));
+        }
+      }
+      // WITHOUT ROWID can change scan order; compare every field in a stable
+      // column order instead of treating physical row order as history meaning.
+      const columns = source.prepare(`PRAGMA table_info(${name})`).all().map((column) => String(column.name));
+      const query = `SELECT * FROM ${name} ORDER BY ${columns.join(', ')}`;
+      expect(target.prepare(query).all()).toEqual(source.prepare(query).all());
+    }
+    target.exec('PRAGMA foreign_keys = ON');
+    expect(target.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
+  } finally { source.close(); target.close(); }
+}
+
+/** Old provenance misses once without altering exact history or journal evidence. */
+test('constructed v3 storage carrying pre-kind provenance misses once, then reuses after restart', () => {
+  const directory = mkdtempSync(join(tmpdir(), 'microdelta-guard-upgrade-'));
+  const location = join(directory, 'history.sqlite');
+  const original = join(directory, 'original-v2.sqlite');
+  writeFileSync(original, preKindDatabase());
+  copyPreKindRows(original, location);
   const worker = fileURLToPath(new URL('./container-guard-worker.js', import.meta.url));
   const execute = (key: string): unknown => {
     const result = spawnSync(process.execPath, [worker, location, 'null', key, 'container'], { encoding: 'utf8' });

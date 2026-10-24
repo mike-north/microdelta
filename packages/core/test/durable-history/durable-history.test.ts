@@ -10,6 +10,8 @@
  * @see ../../../../docs/spec/tracking.md (VAL-1/2, M3 nested selected-read decision)
  * @see ../../../../docs/plans/m3-contribution-analysis.md (History, host operations and durable records)
  */
+import { readFileSync } from 'node:fs';
+
 import { afterEach, describe, expect, test } from '@jest/globals';
 import {
   AttemptConflictError,
@@ -137,8 +139,8 @@ describe('schema, logical store and exact scope', () => {
 
     const raw = openRaw(location);
     const identity = raw.prepare('SELECT schema_name, schema_version, logical_store FROM history_identity').get();
-    // Version 2 adds environment-scoped acceptances, recorded promotions and the operation journal.
-    expect(identity).toEqual({ schema_name: 'microdelta.history.durable', schema_version: 2, logical_store: logicalStore });
+    // Version 3 also rejects conflict replacement of immutable history.
+    expect(identity).toEqual({ schema_name: 'microdelta.history.durable', schema_version: 3, logical_store: logicalStore });
     const tables = raw.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").all().map((row) => row.name);
     // No legacy Store rows and no EXP-3 or EXP-nested candidate tables: every table is History-owned.
     expect(tables.every((name) => typeof name === 'string' && name.startsWith('history_'))).toBe(true);
@@ -155,11 +157,11 @@ describe('schema, logical store and exact scope', () => {
     expect(() => openHistory({ location: other, store: 'store:another' })).toThrow(HistorySchemaError);
 
     // The earlier version 1 layout and an unknown later version are both rejected by name; neither is migrated.
-    for (const version of [1, 3]) {
+    for (const version of [1, 2, 4]) {
       const versioned = freshLocation();
       openHistory({ location: versioned }).close();
       tamper(versioned, `UPDATE history_identity SET schema_version = ${String(version)}`);
-      expect(() => openHistory({ location: versioned })).toThrow(new HistorySchemaError(`Unsupported History schema microdelta.history.durable version ${String(version)}; this implementation reads only version 2 and never migrates stored data by guessing`));
+      expect(() => openHistory({ location: versioned })).toThrow(new HistorySchemaError(`Unsupported History schema microdelta.history.durable version ${String(version)}; this implementation reads only version 3 and never migrates stored data by guessing`));
       const unchanged = openRaw(versioned);
       expect(unchanged.prepare('SELECT schema_version FROM history_identity').get()).toEqual({ schema_version: version });
       unchanged.close();
@@ -170,7 +172,7 @@ describe('schema, logical store and exact scope', () => {
     const layout = openRaw(older);
     layout.exec('DROP TABLE history_journal; DROP TRIGGER history_identity_immutable_update; UPDATE history_identity SET schema_version = 1');
     layout.close();
-    expect(() => openHistory({ location: older })).toThrow(new HistorySchemaError('Unsupported History schema microdelta.history.durable version 1; this implementation reads only version 2 and never migrates stored data by guessing'));
+    expect(() => openHistory({ location: older })).toThrow(new HistorySchemaError('Unsupported History schema microdelta.history.durable version 1; this implementation reads only version 3 and never migrates stored data by guessing'));
 
     const incomplete = freshLocation();
     openHistory({ location: incomplete }).close();
@@ -194,6 +196,22 @@ describe('schema, logical store and exact scope', () => {
     extended.exec('CREATE TABLE history_unexpected (id INTEGER)');
     extended.close();
     expect(() => openHistory({ location: extra })).toThrow(HistorySchemaError);
+  });
+
+  test('the actual version 2 layout is rejected by version without changing any rows or schema definitions', () => {
+    const location = freshLocation();
+    const raw = openRaw(location);
+    // Frozen pre-v3 SQL, independent of the current schema factory.
+    raw.exec(readFileSync(new URL('../../../test/durable-history/fixtures/schema-v2.sql', import.meta.url), 'utf8'));
+    const objects = raw.prepare('SELECT name, sql FROM sqlite_master ORDER BY name').all();
+    const tables = raw.prepare("SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name").all();
+    const before = tables.map((row) => raw.prepare(`SELECT * FROM ${String(row.name)}`).all());
+    raw.close();
+    expect(() => openHistory({ location })).toThrow(new HistorySchemaError('Unsupported History schema microdelta.history.durable version 2; this implementation reads only version 3 and never migrates stored data by guessing'));
+    const reopened = openRaw(location);
+    expect(reopened.prepare('SELECT name, sql FROM sqlite_master ORDER BY name').all()).toEqual(objects);
+    expect(tables.map((row) => reopened.prepare(`SELECT * FROM ${String(row.name)}`).all())).toEqual(before);
+    reopened.close();
   });
 
   test('exact references resolve their own snapshot; malformed, other-store, wrong-scope and missing references are integrity failures that never follow current', () => {
@@ -393,6 +411,109 @@ describe('candidates, rollback and separate acceptance', () => {
     const second = history.recordAcceptance(lease, { reference: v1New, evidence: { format: 'test.acceptance', formatVersion: 1, content: { check: 'again' } }, dependencies: [], environment: scope.environment });
     expect(second.acceptanceId).toBeGreaterThan(acceptance.acceptanceId);
     expect(history.readAcceptances(v1New, scope.environment)).toEqual([acceptance, second]);
+  });
+
+  // Every immutable table is independently challenged so a missing guard cannot
+  // be hidden by a failure on another table or by SQLite's recursive delete triggers.
+  test.each([
+    'history_identity', 'history_results', 'history_dependencies', 'history_nodes',
+    'history_edges', 'history_addresses', 'history_acceptances',
+    'history_acceptance_dependencies', 'history_promotions',
+    'history_promotion_results', 'history_journal',
+  ])('%s rejects primary-key replacement and preserves every row with recursive triggers disabled', (table) => {
+    const location = freshLocation();
+    const history = openHistory({ location });
+    const lease = acquire(history);
+    const child = publish(history, lease, adaActivity(), { key: 'child' });
+    const reference = publish(history, lease, adaActivity(), { key: 'parent', dependencies: [child] });
+    history.recordAcceptance(lease, { reference, evidence: provenance('accepted'), dependencies: [child], environment: scope.environment });
+    history.promoteResults(lease, { target: { ...scope, environment: 'other' }, references: [reference], evidence: provenance('promoted') });
+    const journal = history.openJournal({ formats: [{ format: 'test.record', versions: [1] }] });
+    journal.commit(lease, { ...scope, writes: [{ collection: 'test', key: 'one', expectedRevision: 0, record: { format: 'test.record', formatVersion: 1, content: {} } }] });
+    const raw = openRaw(location);
+    raw.exec('PRAGMA recursive_triggers = OFF');
+    expect(raw.prepare('PRAGMA recursive_triggers').get()).toEqual({ recursive_triggers: 0 });
+    const before = raw.prepare(`SELECT * FROM ${table}`).all();
+    expect(before.length).toBeGreaterThan(0);
+    for (const verb of ['INSERT OR REPLACE', 'REPLACE']) {
+      expect(() => raw.exec(`${verb} INTO ${table} SELECT * FROM ${table} LIMIT 1`)).toThrow(/immutable/u);
+      expect(raw.prepare(`SELECT * FROM ${table}`).all()).toEqual(before);
+    }
+    raw.close();
+    // New publications still advance the mutable current pointer, while old
+    // exact results and their dependent records remain valid.
+    const next = publish(history, lease, { newer: true }, { key: 'next' });
+    expect(history.readCurrent({ ...scope, subject: summarySubject })).toEqual(next);
+    expect(history.verifyResult(reference)).toEqual({ kind: 'consistent' });
+  });
+
+  test.each([
+    ['history_results', 'result_id', 'result_id + 100'],
+    ['history_promotion_results', 'position', 'position + 100'],
+    ['history_journal', 'revision', 'revision + 100'],
+  ])('%s rejects secondary UNIQUE replacement even with a fresh primary key', (table, column, replacement) => {
+    const location = freshLocation();
+    const history = openHistory({ location });
+    const lease = acquire(history);
+    const reference = publish(history, lease, adaActivity(), { key: 'unique' });
+    history.promoteResults(lease, { target: { ...scope, environment: 'other' }, references: [reference], evidence: provenance('promoted') });
+    const journal = history.openJournal({ formats: [{ format: 'test.record', versions: [1] }] });
+    journal.commit(lease, { ...scope, writes: [{ collection: 'test', key: 'one', expectedRevision: 0, record: { format: 'test.record', formatVersion: 1, content: {} } }] });
+    const raw = openRaw(location);
+    // Disable foreign keys so they cannot mask a missing immutability guard on
+    // a result's fresh identity. The rejection must come from History itself.
+    raw.exec('PRAGMA recursive_triggers = OFF; PRAGMA foreign_keys = OFF');
+    const before = raw.prepare(`SELECT * FROM ${table}`).all();
+    const columns = raw.prepare(`PRAGMA table_info(${table})`).all().map((row) => String(row.name));
+    const selected = columns.map((name) => name === column ? replacement : name).join(', ');
+    for (const verb of ['INSERT OR REPLACE', 'REPLACE']) {
+      expect(() => raw.exec(`${verb} INTO ${table} SELECT ${selected} FROM ${table} LIMIT 1`)).toThrow(/immutable/u);
+      expect(raw.prepare(`SELECT * FROM ${table}`).all()).toEqual(before);
+    }
+    raw.close();
+  });
+
+  test.each([
+    ['history_identity', 'singleton'], ['history_results', 'result_id'],
+    ['history_acceptances', 'acceptance_id'], ['history_promotions', 'promotion_id'],
+    ['history_dependencies', undefined], ['history_nodes', undefined],
+    ['history_edges', undefined], ['history_addresses', undefined],
+    ['history_acceptance_dependencies', undefined], ['history_promotion_results', undefined],
+    ['history_journal', undefined],
+  ])('%s cannot replace history through SQLite row identity aliases', (table, integerKey) => {
+    const location = freshLocation();
+    const history = openHistory({ location });
+    const lease = acquire(history);
+    const child = publish(history, lease, adaActivity(), { key: 'rowid-child' });
+    const reference = publish(history, lease, adaActivity(), { key: 'rowid-parent', dependencies: [child] });
+    history.recordAcceptance(lease, { reference, evidence: provenance('accepted'), dependencies: [child], environment: scope.environment });
+    history.promoteResults(lease, { target: { ...scope, environment: 'other' }, references: [reference], evidence: provenance('promoted') });
+    history.openJournal({ formats: [{ format: 'test.record', versions: [1] }] }).commit(lease, {
+      ...scope, writes: [{ collection: 'test', key: 'one', expectedRevision: 0, record: { format: 'test.record', formatVersion: 1, content: {} } }],
+    });
+    const raw = openRaw(location);
+    raw.exec('PRAGMA recursive_triggers = OFF; PRAGMA foreign_keys = OFF');
+    const before = raw.prepare(`SELECT * FROM ${table}`).all();
+    expect(before.length).toBeGreaterThan(0);
+    const columns = raw.prepare(`PRAGMA table_info(${table})`).all();
+    for (const alias of ['rowid', '_rowid_', 'oid']) {
+      // Integer primary keys alias SQLite row identity and must reach the
+      // immutable insert guard. Composite identities must expose no hidden
+      // row identity at all, even when every declared unique key is fresh.
+      const names = columns.map((column) => column.name === integerKey ? alias : String(column.name));
+      const selected = columns.map((column) => {
+        const name = String(column.name);
+        if (integerKey !== undefined || (column.pk === 0 && name !== 'sequence')) { return name; }
+        return column.type === 'INTEGER' ? `${name} + 100` : `${name} || ':fresh'`;
+      });
+      if (integerKey === undefined) { names.unshift(alias); selected.unshift('1'); }
+      for (const verb of ['INSERT OR REPLACE', 'REPLACE']) {
+        expect(() => raw.exec(`${verb} INTO ${table} (${names.join(', ')}) SELECT ${selected.join(', ')} FROM ${table} LIMIT 1`))
+          .toThrow(integerKey === undefined ? /no column named/u : /immutable/u);
+        expect(raw.prepare(`SELECT * FROM ${table}`).all()).toEqual(before);
+      }
+    }
+    raw.close();
   });
 
   test('stored results and acceptances are immutable in storage', () => {

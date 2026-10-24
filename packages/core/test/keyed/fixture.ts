@@ -233,6 +233,8 @@ export interface IVariation {
   readonly order?: 'forward' | 'reversed';
   /** Designated identity (`key`) or the custom key (`id`). */
   readonly key?: 'designated' | 'custom';
+  /** Omit the source's designated identity marker; a template then needs its explicit custom key. */
+  readonly identityless?: boolean;
   /** The gate threshold input. */
   readonly minimumAuthored?: number;
   /** Mutate every author array, record and input object after composing. */
@@ -275,12 +277,18 @@ export function composeKeyed(variation: IVariation = {}): IKeyed {
   const { source, stepSlot, suppliedStep, supply, forward, template, compose } = builders;
   const describer = stepSlot<readonly [string], IDescription>({ slot: 'describer' });
 
-  const roster = source<IRoster>({
-    subject: 'contributors:acme/widget:2026-Q1',
-    collection: { identity: 'key' },
-    finality: ({ helpers }) => helpers.discoveryFinal(),
-    run: ({ helpers }) => helpers.discover(),
-  });
+  const roster = variation.identityless === true
+    ? source<IRoster>({
+        subject: 'contributors:acme/widget:2026-Q1',
+        finality: ({ helpers }) => helpers.discoveryFinal(),
+        run: ({ helpers }) => helpers.discover(),
+      })
+    : source<IRoster>({
+        subject: 'contributors:acme/widget:2026-Q1',
+        collection: { identity: 'key' },
+        finality: ({ helpers }) => helpers.discoveryFinal(),
+        run: ({ helpers }) => helpers.discover(),
+      });
 
   let factoryCalls = 0;
   /** The factory's returned record, kept so the mutation variant can change it after composing. */

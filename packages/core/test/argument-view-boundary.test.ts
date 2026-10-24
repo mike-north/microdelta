@@ -65,6 +65,10 @@ async function runCase(arity: IArity, inspect: (args: readonly (number | { reado
       catch (error: unknown) { return { kind: 'threw', error } as const; }
     },
     member<T>(work: () => Promise<T>): Promise<T> { return work(); },
+    /** This fixture models supplied-child interruption only; member fanout is outside its contract. */
+    dispatchMembers(_count: number, _continueWhile: () => boolean, _work: (position: number) => Promise<void>): Promise<number> {
+      throw new Error('Unexpected member fanout in argument-boundary fixture');
+    },
     publicationRefusal(): undefined { return undefined; },
   };
   const resolution = createResolution({ declarations: api, composition, bindings: { inputs: [], helpers: ['inspect', 'after'] }, environment: 'test', history: authority, tracking: observer, host: machine, admission: { admit: () => ({ kind: 'admitted' }) }, execution });

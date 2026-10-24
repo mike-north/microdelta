@@ -95,8 +95,8 @@ Create a local package link, save the runtime probe below as
 the runtime probe from `consumer/`:
 
 ```sh
-mkdir -p ../consumer/node_modules
-ln -s ../../microdelta/packages/core ../consumer/node_modules/microdelta
+mkdir -p node_modules
+ln -s ../../microdelta/packages/core node_modules/microdelta
 node ../microdelta/node_modules/typescript/bin/tsc -p tsconfig.json
 node runtime-import.mjs
 ```

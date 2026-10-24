@@ -1,0 +1,9 @@
+(node:33413) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+Test Suites: 2 passed, 2 total
+Tests:       34 passed, 34 total
+Snapshots:   0 total
+Time:        0.155 s
+Ran all test suites within paths "packages/materialization/.test-build/test/materialization.test.js", "packages/materialization/.test-build/test/nested-view.test.js".
+Test results written to: ../../../../../..<captures>/jest-materialization.json

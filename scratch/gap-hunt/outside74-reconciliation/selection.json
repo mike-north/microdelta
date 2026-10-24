@@ -1,0 +1,53 @@
+{
+  "source": "e3e1920a1300b4205b5c417f98d1202e75f2d3ba",
+  "selectedFiles": [
+    "packages/core/test/acceptance/restart.test.ts",
+    "packages/core/test/acceptance/changes.test.ts",
+    "packages/core/test/acceptance/source-policy.test.ts",
+    "packages/tracking/test/track.test.ts",
+    "packages/materialization/test/materialization.test.ts",
+    "packages/materialization/test/nested-view.test.ts",
+    "packages/core/test/acceptance/integrity-io.test.ts",
+    "packages/core/test/keyed/restart.test.ts",
+    "packages/core/test/nested/validation.test.ts",
+    "packages/core/test/m4-acceptance/topology.test.ts",
+    "packages/core/test/durable-history/durable-history.test.ts",
+    "packages/core/test/acceptance/crash-recovery.test.ts",
+    "packages/core/test/m5-acceptance/lifecycle.test.ts",
+    "packages/core/test/m5-acceptance/usage.test.ts",
+    "packages/core/test/m5-acceptance/environments.test.ts",
+    "tooling/context-boundaries.test.mjs",
+    "tooling/declaration-boundaries.test.mjs",
+    "tooling/quality-gates.test.mjs",
+    "tooling/foundation-wiring.test.mjs"
+  ],
+  "falseLexicalAnchors": [
+    {
+      "path": "packages/machine-node/test/node-timer.test.ts",
+      "line": 140,
+      "title": "\\n",
+      "reason": "lexical split argument inside existing test, not a test declaration"
+    },
+    {
+      "path": "packages/materialization/test/nested-view.test.ts",
+      "line": 87,
+      "title": "#"
+    },
+    {
+      "path": "packages/core/test/keyed/restart.test.ts",
+      "line": 87,
+      "title": "\\n"
+    },
+    {
+      "path": "tooling/foundation-wiring.test.mjs",
+      "line": 36,
+      "title": ","
+    }
+  ],
+  "historicalInventoryModified": false,
+  "carriedPriorAnchors": {
+    "machine": 21,
+    "tracking": 54
+  },
+  "historicalLexicalStrings": 294
+}

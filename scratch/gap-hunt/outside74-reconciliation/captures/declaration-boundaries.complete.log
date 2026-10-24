@@ -1,0 +1,148 @@
+TAP version 13
+# Subtest: actual packages and fixture producers generate all release views and API reports
+ok 1 - actual packages and fixture producers generate all release views and API reports
+  ---
+  duration_ms: 0.95075
+  type: 'test'
+  ...
+# Subtest: Store conformance subpaths use closed generated release tiers
+ok 2 - Store conformance subpaths use closed generated release tiers
+  ---
+  duration_ms: 3.848458
+  type: 'test'
+  ...
+# Subtest: external Store conformance consumers use the public package export
+ok 3 - external Store conformance consumers use the public package export
+  ---
+  duration_ms: 1217.20475
+  type: 'test'
+  ...
+# Subtest: normal package consumers compose facade, History, and conformance types
+ok 4 - normal package consumers compose facade, History, and conformance types
+  ---
+  duration_ms: 4579.352584
+  type: 'test'
+  ...
+# Subtest: own untrimmed consumer sees internal exports but not unexported source
+ok 5 - own untrimmed consumer sees internal exports but not unexported source
+  ---
+  duration_ms: 888.318334
+  type: 'test'
+  ...
+# Subtest: approved sibling uses only alpha declarations
+ok 6 - approved sibling uses only alpha declarations
+  ---
+  duration_ms: 770.274916
+  type: 'test'
+  ...
+# Subtest: normal external package resolution exposes public only
+ok 7 - normal external package resolution exposes public only
+  ---
+  duration_ms: 2105.0175
+  type: 'test'
+  ...
+# Subtest: separately selected beta package version exposes beta and public only
+ok 8 - separately selected beta package version exposes beta and public only
+  ---
+  duration_ms: 1351.351125
+  type: 'test'
+  ...
+# Subtest: legitimate runtime package imports resolve built JS without TS path rewriting
+ok 9 - legitimate runtime package imports resolve built JS without TS path rewriting
+  ---
+  duration_ms: 78.443083
+  type: 'test'
+  ...
+# Subtest: each actual package declaration view typechecks without hidden references
+ok 10 - each actual package declaration view typechecks without hidden references
+  ---
+  duration_ms: 15790.401334
+  type: 'test'
+  ...
+# Subtest: each History release tier composes root and conformance callbacks
+ok 11 - each History release tier composes root and conformance callbacks
+  ---
+  duration_ms: 1817.65225
+  type: 'test'
+  ...
+# Subtest: History entry shims fail closed on wrong tier, missing canonical, and export drift
+ok 12 - History entry shims fail closed on wrong tier, missing canonical, and export drift
+  ---
+  duration_ms: 131.900458
+  type: 'test'
+  ...
+# Subtest: missing producer declarations and test-only source aliases fail explicitly
+ok 13 - missing producer declarations and test-only source aliases fail explicitly
+  ---
+  duration_ms: 311.411792
+  type: 'test'
+  ...
+# Subtest: a missing Value alpha declaration fails for its declared package path
+ok 14 - a missing Value alpha declaration fails for its declared package path
+  ---
+  duration_ms: 157.284209
+  type: 'test'
+  ...
+# Subtest: inherited paths and invented aliases cannot expose sibling source or untrimmed declarations
+ok 15 - inherited paths and invented aliases cannot expose sibling source or untrimmed declarations
+  ---
+  duration_ms: 311.410334
+  type: 'test'
+  ...
+# Subtest: facade compiler maps each approved owner import, including both History entries, to its generated alpha declaration
+ok 16 - facade compiler maps each approved owner import, including both History entries, to its generated alpha declaration
+  ---
+  duration_ms: 0.955042
+  type: 'test'
+  ...
+# Subtest: generated Machine, Tracking, History, and Value declarations compile as portable consumers
+ok 17 - generated Machine, Tracking, History, and Value declarations compile as portable consumers
+  ---
+  duration_ms: 413.138791
+  type: 'test'
+  ...
+# Subtest: types-empty consumers reject a deliberate Node declaration leak
+ok 18 - types-empty consumers reject a deliberate Node declaration leak
+  ---
+  duration_ms: 426.848541
+  type: 'test'
+  ...
+# Subtest: real package configs reject wrong sibling tiers and forbidden context edges
+ok 19 - real package configs reject wrong sibling tiers and forbidden context edges
+  ---
+  duration_ms: 318.499125
+  type: 'test'
+  ...
+# Subtest: a context may map only the alpha declaration closure of its approved producers
+ok 20 - a context may map only the alpha declaration closure of its approved producers
+  ---
+  duration_ms: 456.519083
+  type: 'test'
+  ...
+# Subtest: the executable example maps only installed generated alpha declarations
+ok 21 - the executable example maps only installed generated alpha declarations
+  ---
+  duration_ms: 637.067958
+  type: 'test'
+  ...
+# Subtest: Materialization package aliases through workspace node_modules remain pinned to generated tiers
+ok 22 - Materialization package aliases through workspace node_modules remain pinned to generated tiers
+  ---
+  duration_ms: 454.8415
+  type: 'test'
+  ...
+# Subtest: unknown package compiler config fails closed
+ok 23 - unknown package compiler config fails closed
+  ---
+  duration_ms: 169.305667
+  type: 'test'
+  ...
+1..23
+# tests 23
+# suites 0
+# pass 23
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 32624.304709

@@ -1,0 +1,318 @@
+TAP version 13
+# Subtest: actual packages and fixture producers generate all release views and API reports
+not ok 1 - actual packages and fixture producers generate all release views and API reports
+  ---
+  duration_ms: 1.187417
+  type: 'test'
+  location: '<checkout>/tooling/declaration-boundaries.test.mjs:82:1'
+  failureType: 'testCodeFailure'
+  error: 'Fixture untrimmed view'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file://<checkout>/tooling/declaration-boundaries.test.mjs:91:12)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.start (node:internal/test_runner/test:1262:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17)
+  ...
+# Subtest: Store conformance subpaths use closed generated release tiers
+ok 2 - Store conformance subpaths use closed generated release tiers
+  ---
+  duration_ms: 6.106291
+  type: 'test'
+  ...
+# Subtest: external Store conformance consumers use the public package export
+ok 3 - external Store conformance consumers use the public package export
+  ---
+  duration_ms: 1475.160125
+  type: 'test'
+  ...
+# Subtest: normal package consumers compose facade, History, and conformance types
+ok 4 - normal package consumers compose facade, History, and conformance types
+  ---
+  duration_ms: 4926.977084
+  type: 'test'
+  ...
+# Subtest: own untrimmed consumer sees internal exports but not unexported source
+not ok 5 - own untrimmed consumer sees internal exports but not unexported source
+  ---
+  duration_ms: 407.31375
+  type: 'test'
+  location: '<checkout>/tooling/declaration-boundaries.test.mjs:151:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    ../../../../../..<temporary-path>(1,32): error TS2307: Cannot find module '@microdelta/fixture-producer' or its corresponding type declarations.
+    
+    
+    2 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<checkout>/tooling/declaration-boundaries.test.mjs:154:10)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: approved sibling uses only alpha declarations
+not ok 6 - approved sibling uses only alpha declarations
+  ---
+  duration_ms: 428.339
+  type: 'test'
+  location: '<checkout>/tooling/declaration-boundaries.test.mjs:158:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    ../../../../../..<temporary-path>(1,52): error TS2307: Cannot find module '@microdelta/fixture-producer' or its corresponding type declarations.
+    
+    
+    2 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 2
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<checkout>/tooling/declaration-boundaries.test.mjs:161:10)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: normal external package resolution exposes public only
+not ok 7 - normal external package resolution exposes public only
+  ---
+  duration_ms: 4.63875
+  type: 'test'
+  location: '<checkout>/tooling/declaration-boundaries.test.mjs:165:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, lstat '<checkout>/fixtures/declarations/producer/dist'"
+  code: 'ENOENT'
+  stack: |-
+    async lstat (node:internal/fs/promises:1741:18)
+    async Promise.all (index 0)
+    async checkPaths (node:internal/fs/cp/cp:77:39)
+    async cpFn (node:internal/fs/cp/cp:66:17)
+    async compile (file://<checkout>/tooling/declaration-boundaries.test.mjs:45:7)
+    async TestContext.<anonymous> (file://<checkout>/tooling/declaration-boundaries.test.mjs:166:20)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: separately selected beta package version exposes beta and public only
+not ok 8 - separately selected beta package version exposes beta and public only
+  ---
+  duration_ms: 10.890792
+  type: 'test'
+  location: '<checkout>/tooling/declaration-boundaries.test.mjs:173:1'
+  failureType: 'testCodeFailure'
+  error: "ENOENT: no such file or directory, lstat '<checkout>/fixtures/declarations/producer/dist'"
+  code: 'ENOENT'
+  stack: |-
+    async lstat (node:internal/fs/promises:1741:18)
+    async Promise.all (index 0)
+    async checkPaths (node:internal/fs/cp/cp:77:39)
+    async cpFn (node:internal/fs/cp/cp:66:17)
+    async compile (file://<checkout>/tooling/declaration-boundaries.test.mjs:45:7)
+    async TestContext.<anonymous> (file://<checkout>/tooling/declaration-boundaries.test.mjs:174:20)
+    async Test.run (node:internal/test_runner/test:1409:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: legitimate runtime package imports resolve built JS without TS path rewriting
+ok 9 - legitimate runtime package imports resolve built JS without TS path rewriting
+  ---
+  duration_ms: 66.916792
+  type: 'test'
+  ...
+# Subtest: each actual package declaration view typechecks without hidden references
+ok 10 - each actual package declaration view typechecks without hidden references
+  ---
+  duration_ms: 17299.790125
+  type: 'test'
+  ...
+# Subtest: each History release tier composes root and conformance callbacks
+ok 11 - each History release tier composes root and conformance callbacks
+  ---
+  duration_ms: 1985.22025
+  type: 'test'
+  ...
+# Subtest: History entry shims fail closed on wrong tier, missing canonical, and export drift
+ok 12 - History entry shims fail closed on wrong tier, missing canonical, and export drift
+  ---
+  duration_ms: 185.524542
+  type: 'test'
+  ...
+# Subtest: missing producer declarations and test-only source aliases fail explicitly
+ok 13 - missing producer declarations and test-only source aliases fail explicitly
+  ---
+  duration_ms: 372.85075
+  type: 'test'
+  ...
+# Subtest: a missing Value alpha declaration fails for its declared package path
+ok 14 - a missing Value alpha declaration fails for its declared package path
+  ---
+  duration_ms: 172.951916
+  type: 'test'
+  ...
+# Subtest: inherited paths and invented aliases cannot expose sibling source or untrimmed declarations
+ok 15 - inherited paths and invented aliases cannot expose sibling source or untrimmed declarations
+  ---
+  duration_ms: 317.876083
+  type: 'test'
+  ...
+# Subtest: facade compiler maps each approved owner import, including both History entries, to its generated alpha declaration
+ok 16 - facade compiler maps each approved owner import, including both History entries, to its generated alpha declaration
+  ---
+  duration_ms: 1.158958
+  type: 'test'
+  ...
+# Subtest: generated Machine, Tracking, History, and Value declarations compile as portable consumers
+ok 17 - generated Machine, Tracking, History, and Value declarations compile as portable consumers
+  ---
+  duration_ms: 497.993208
+  type: 'test'
+  ...
+# Subtest: types-empty consumers reject a deliberate Node declaration leak
+ok 18 - types-empty consumers reject a deliberate Node declaration leak
+  ---
+  duration_ms: 896.857625
+  type: 'test'
+  ...
+# Subtest: real package configs reject wrong sibling tiers and forbidden context edges
+ok 19 - real package configs reject wrong sibling tiers and forbidden context edges
+  ---
+  duration_ms: 440.585417
+  type: 'test'
+  ...
+# Subtest: a context may map only the alpha declaration closure of its approved producers
+ok 20 - a context may map only the alpha declaration closure of its approved producers
+  ---
+  duration_ms: 547.632625
+  type: 'test'
+  ...
+# Subtest: the executable example maps only installed generated alpha declarations
+not ok 21 - the executable example maps only installed generated alpha declarations
+  ---
+  duration_ms: 640.961959
+  type: 'test'
+  location: '<checkout>/tooling/declaration-boundaries.test.mjs:500:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    inspected <checkout>/packages/accounting/test-d/tsconfig.json
+    inspected <checkout>/packages/accounting/tsconfig.build.json
+    inspected <checkout>/packages/accounting/tsconfig.json
+    inspected <checkout>/packages/accounting/tsconfig.portable.json
+    inspected <checkout>/packages/accounting/tsconfig.public-consumer.json
+    inspected <checkout>/packages/accounting/tsconfig.test.json
+    inspected <checkout>/packages/core/test-d/tsconfig.json
+    inspected <checkout>/packages/core/tsconfig.build.json
+    inspected <checkout>/packages/core/tsconfig.extractor.json
+    inspected <checkout>/packages/core/tsconfig.json
+    inspected <checkout>/packages/core/tsconfig.test.json
+    inspected <checkout>/packages/definition/test-d/tsconfig.json
+    inspected <checkout>/packages/definition/tsconfig.build.json
+    inspected <checkout>/packages/definition/tsconfig.json
+    inspected <checkout>/packages/definition/tsconfig.test.json
+    inspected <checkout>/packages/history/test-d/tsconfig.json
+    inspected <checkout>/packages/history/tsconfig.build.json
+    inspected <checkout>/packages/history/tsconfig.json
+    inspected <checkout>/packages/history/tsconfig.portable.json
+    inspected <checkout>/packages/history/tsconfig.test.json
+    inspected <checkout>/packages/machine/test-d/tsconfig.json
+    inspected <checkout>/packages/machine/tsconfig.build.json
+    inspected <checkout>/packages/machine/tsconfig.json
+    inspected <checkout>/packages/machine-node/test-d/tsconfig.json
+    inspected <checkout>/packages/machine-node/tsconfig.build.json
+    inspected <checkout>/packages/machine-node/tsconfig.json
+    inspected <checkout>/packages/machine-node/tsconfig.test.json
+    inspected <checkout>/packages/materialization/test-d/tsconfig.json
+    inspected <checkout>/packages/materialization/tsconfig.build.json
+    inspected <checkout>/packages/materialization/tsconfig.json
+    inspected <checkout>/packages/materialization/tsconfig.portable.json
+    inspected <checkout>/packages/materialization/tsconfig.public-consumer.json
+    inspected <checkout>/packages/materialization/tsconfig.test.json
+    inspected <checkout>/packages/resolution/test-d/tsconfig.json
+    inspected <checkout>/packages/resolution/tsconfig.build.json
+    inspected <checkout>/packages/resolution/tsconfig.json
+    inspected <checkout>/packages/resolution/tsconfig.portable.json
+    inspected <checkout>/packages/resolution/tsconfig.public-consumer.json
+    inspected <checkout>/packages/resolution/tsconfig.test.json
+    inspected <checkout>/packages/supervision/test-d/tsconfig.json
+    inspected <checkout>/packages/supervision/tsconfig.build.json
+    inspected <checkout>/packages/supervision/tsconfig.json
+    inspected <checkout>/packages/supervision/tsconfig.portable.json
+    inspected <checkout>/packages/supervision/tsconfig.public-consumer.json
+    inspected <checkout>/packages/supervision/tsconfig.test.json
+    inspected <checkout>/packages/tracking/test-d/tsconfig.json
+    inspected <checkout>/packages/tracking/tsconfig.build.json
+    inspected <checkout>/packages/tracking/tsconfig.json
+    inspected <checkout>/packages/tracking/tsconfig.portable.json
+    inspected <checkout>/packages/tracking/tsconfig.test.json
+    inspected <checkout>/packages/value/test-d/tsconfig.json
+    inspected <checkout>/packages/value/tsconfig.build.json
+    inspected <checkout>/packages/value/tsconfig.json
+    inspected <checkout>/packages/value/tsconfig.portable.json
+    inspected <checkout>/packages/value/tsconfig.test.json
+    inspected <checkout>/fixtures/declarations/capture-producer/tsconfig.json
+    inspected <checkout>/fixtures/declarations/consumer-alpha/tsconfig.json
+    inspected <checkout>/fixtures/declarations/consumer-alpha/tsconfig.public.json
+    inspected <checkout>/fixtures/declarations/forged/tsconfig.json
+    inspected <checkout>/fixtures/declarations/producer/tsconfig.json
+    inspected <checkout>/examples/contribution-report/tsconfig.json
+    Missing producer declaration: <checkout>/fixtures/declarations/producer/dist/api/fixture.untrimmed.d.ts
+    Missing producer declaration: <checkout>/fixtures/declarations/producer/dist/api/fixture.alpha.d.ts
+    Missing producer declaration: <checkout>/fixtures/declarations/producer/dist/api/fixture.beta.d.ts
+    Missing producer declaration: <checkout>/fixtures/declarations/producer/dist/api/fixture.public.d.ts
+    Missing producer declaration: <checkout>/fixtures/declarations/capture-producer/dist/api/capture.untrimmed.d.ts
+    Missing producer declaration: <checkout>/fixtures/declarations/capture-producer/dist/api/capture.alpha.d.ts
+    Missing producer declaration: <checkout>/fixtures/declarations/capture-producer/dist/api/capture.beta.d.ts
+    Missing producer declaration: <checkout>/fixtures/declarations/capture-producer/dist/api/capture.public.d.ts
+    Missing producer declaration: <checkout>/fixtures/declarations/forged/dist/api/forged.untrimmed.d.ts
+    Missing producer declaration: <checkout>/fixtures/declarations/forged/dist/api/forged.alpha.d.ts
+    Missing producer declaration: <checkout>/fixtures/declarations/forged/dist/api/forged.beta.d.ts
+    Missing producer declaration: <checkout>/fixtures/declarations/forged/dist/api/forged.public.d.ts
+    Missing producer declaration: <checkout>/fixtures/declarations/consumer-alpha/tsconfig.json: @microdelta/capture-producer -> <checkout>/fixtures/declarations/capture-producer/dist/api/capture.alpha.d.ts
+    Missing producer declaration: <checkout>/fixtures/declarations/consumer-alpha/tsconfig.public.json: @microdelta/fixture-producer -> <checkout>/fixtures/declarations/producer/dist/api/fixture.public.d.ts
+    Missing producer declaration: <checkout>/fixtures/declarations/consumer-alpha/tsconfig.public.json: @microdelta/capture-producer -> <checkout>/fixtures/declarations/capture-producer/dist/api/capture.public.d.ts
+    
+    
+    1 !== 0
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 1
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file://<checkout>/tooling/declaration-boundaries.test.mjs:506:10)
+    Test.runInAsyncScope (node:async_hooks:227:14)
+    Test.run (node:internal/test_runner/test:1402:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+    Test.postRun (node:internal/test_runner/test:1542:19)
+    Test.run (node:internal/test_runner/test:1467:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:974:7)
+  ...
+# Subtest: Materialization package aliases through workspace node_modules remain pinned to generated tiers
+ok 22 - Materialization package aliases through workspace node_modules remain pinned to generated tiers
+  ---
+  duration_ms: 529.029541
+  type: 'test'
+  ...
+# Subtest: unknown package compiler config fails closed
+ok 23 - unknown package compiler config fails closed
+  ---
+  duration_ms: 164.693292
+  type: 'test'
+  ...
+1..23
+# tests 23
+# suites 0
+# pass 17
+# fail 6
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 31551.946334

@@ -1,0 +1,9 @@
+(node:28819) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+Test Suites: 12 passed, 12 total
+Tests:       147 passed, 147 total
+Snapshots:   0 total
+Time:        44.675 s
+Ran all test suites within paths "packages/core/.test-build/test/acceptance/restart.test.js", "packages/core/.test-build/test/acceptance/changes.test.js", "packages/core/.test-build/test/acceptance/source-policy.test.js", "packages/core/.test-build/test/acceptance/integrity-io.test.js", "packages/core/.test-build/test/keyed/restart.test.js", "packages/core/.test-build/test/nested/validation.test.js", "packages/core/.test-build/test/m4-acceptance/topology.test.js", "packages/core/.test-build/test/durable-history/durable-history.test.js", "packages/core/.test-build/test/acceptance/crash-recovery.test.js", "packages/core/.test-build/test/m5-acceptance/lifecycle.test.js", "packages/core/.test-build/test/m5-acceptance/usage.test.js", "packages/core/.test-build/test/m5-acceptance/environments.test.js".
+Test results written to: ../../../../../..<captures>/jest-core.json

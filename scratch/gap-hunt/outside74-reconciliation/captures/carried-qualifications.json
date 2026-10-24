@@ -1,0 +1,620 @@
+[
+  {
+    "status": "21 actual machine anchors qualified by prior exact-source execution; one false lexical anchor excluded",
+    "qualificationTarget": "e3e1920a1300b4205b5c417f98d1202e75f2d3ba",
+    "anchorSource": "52e3786516a404e3433bef03807a027c8103786c",
+    "executedSource": "aad9b93f23fb38b1cf1387e2f865c5490fc2b434",
+    "artifact": "c14c94dc2c2d01a7e0512a644970fec276bd4d59",
+    "executionReceipt": "scratch/gap-hunt/review-185/captures/machine-runtime-summary.json",
+    "receiptSha256": "7aeb5ad0dde2a0efd6ef37688df4ce8cdce63bf289a59f74c10977bf3975978d",
+    "historicalExecution": {
+      "passedTests": 85,
+      "suites": 8,
+      "failed": 0,
+      "node": "v24.22.1",
+      "platform": "macOS"
+    },
+    "unchangedScopes": [
+      "packages/machine",
+      "packages/machine-node",
+      "package-lock.json"
+    ],
+    "rootConfigDifferences": "Root tsconfig adds only microdelta facade path unused by machine. Root package adds unrelated experiment/output-fixture scripts; machine test:unit command unchanged. Whole package trees contain unchanged test configs/helper fixtures and all transitive local runtime source. better-sqlite3 and toolchain lockfile identical. No dependency on changed Value/Definition/History/Resolution.",
+    "scope": "Prior actual assertion execution under identical relevant source/dependencies; no new runtime or whole-current-suite execution claim. No conformance denominator.",
+    "matched": [
+      {
+        "path": "packages/machine-node/test/node-machine.test.ts",
+        "line": 14,
+        "title": "A-20: SHA-256 capability matches independent UTF-8 conformance vectors",
+        "executedFullName": "Node Machine conformance A-20: SHA-256 capability matches independent UTF-8 conformance vectors",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/machine-node/test/node-machine.test.ts",
+        "line": 26,
+        "title": "A-20: async context propagates through awaits and restores nested context",
+        "executedFullName": "Node Machine conformance A-20: async context propagates through awaits and restores nested context",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/machine-node/test/node-machine.test.ts",
+        "line": 45,
+        "title": "A-20: concurrently interleaved callbacks retain separate context values",
+        "executedFullName": "Node Machine conformance A-20: concurrently interleaved callbacks retain separate context values",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/machine-node/test/node-machine.test.ts",
+        "line": 66,
+        "title": "A-20: run preserves synchronous returns, thrown values, and rejected promises",
+        "executedFullName": "Node Machine conformance A-20: run preserves synchronous returns, thrown values, and rejected promises",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/machine-node/test/node-machine.test.ts",
+        "line": 84,
+        "title": "A-20: a caller context survives awaited success and rejection without replacing the returned promise",
+        "executedFullName": "Node Machine conformance A-20: a caller context survives awaited success and rejection without replacing the returned promise",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/machine-node/test/node-machine.test.ts",
+        "line": 113,
+        "title": "A-20: work inherited from a closed frame retains its context after the entry returns",
+        "executedFullName": "Node Machine conformance A-20: work inherited from a closed frame retains its context after the entry returns",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/machine-node/test/node-machine.test.ts",
+        "line": 137,
+        "title": "A-20: snapshots preserve structural values and graph identity while detaching copies",
+        "executedFullName": "Node Machine conformance A-20: snapshots preserve structural values and graph identity while detaching copies",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/machine-node/test/node-machine.test.ts",
+        "line": 166,
+        "title": "A-20: unsupported functions, symbols, and raw shared memory fail",
+        "executedFullName": "Node Machine conformance A-20: unsupported functions, symbols, and raw shared memory fail",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/machine-node/test/node-machine.test.ts",
+        "line": 176,
+        "title": "A-20: enumerable getters are evaluated by the V8 snapshot codec",
+        "executedFullName": "Node Machine conformance A-20: enumerable getters are evaluated by the V8 snapshot codec",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/machine-node/test/node-machine.test.ts",
+        "line": 188,
+        "title": "A-20: custom prototypes, nonenumerable fields, and symbol keys are not preserved",
+        "executedFullName": "Node Machine conformance A-20: custom prototypes, nonenumerable fields, and symbol keys are not preserved",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/machine-node/test/node-sqlite.test.ts",
+        "line": 75,
+        "title": "rejected async callbacks are contained under --unhandled-rejections=strict",
+        "executedFullName": "Node SQLite process boundary rejected async callbacks are contained under --unhandled-rejections=strict",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/machine-node/test/node-sqlite.test.ts",
+        "line": 106,
+        "title": "an open that cannot switch the file to WAL within the busy wait fails with SqliteBusyError, then succeeds once the lock is released",
+        "executedFullName": "Node SQLite open under contention an open that cannot switch the file to WAL within the busy wait fails with SqliteBusyError, then succeeds once the lock is released",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/machine-node/test/node-timer.test.ts",
+        "line": 40,
+        "title": "its clock is the wall clock in whole epoch milliseconds",
+        "executedFullName": "Node timer capability conformance its clock is the wall clock in whole epoch milliseconds",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/machine-node/test/node-timer.test.ts",
+        "line": 44,
+        "title": "a callback runs once when the clock reaches the requested time, and not before",
+        "executedFullName": "Node timer capability conformance a callback runs once when the clock reaches the requested time, and not before",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/machine-node/test/node-timer.test.ts",
+        "line": 55,
+        "title": "a time already reached fires asynchronously, never inside schedule",
+        "executedFullName": "Node timer capability conformance a time already reached fires asynchronously, never inside schedule",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/machine-node/test/node-timer.test.ts",
+        "line": 63,
+        "title": "cancelling prevents the call; cancelling twice or after the call does nothing",
+        "executedFullName": "Node timer capability conformance cancelling prevents the call; cancelling twice or after the call does nothing",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/machine-node/test/node-timer.test.ts",
+        "line": 75,
+        "title": "a clock moved backwards before the wake-up re-arms instead of firing early",
+        "executedFullName": "Node timer capability conformance a clock moved backwards before the wake-up re-arms instead of firing early",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/machine-node/test/node-timer.test.ts",
+        "line": 89,
+        "title": "a wait longer than the host timer range is split and fires on time",
+        "executedFullName": "Node timer capability conformance a wait longer than the host timer range is split and fires on time",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/machine-node/test/node-timer.test.ts",
+        "line": 100,
+        "title": "a thirty-day wait fires at thirty days, not at Node\\'s overflow fallback of one millisecond",
+        "executedFullName": "Node timer capability conformance a thirty-day wait fires at thirty days, not at Node's overflow fallback of one millisecond",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/machine-node/test/node-timer.test.ts",
+        "line": 129,
+        "title": "a timer without keep-alive never holds the process open by itself",
+        "executedFullName": "Node timer keep-alive (real child processes) a timer without keep-alive never holds the process open by itself",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/machine-node/test/node-timer.test.ts",
+        "line": 137,
+        "title": "a timer with the default keep-alive holds the process open until it fires",
+        "executedFullName": "Node timer keep-alive (real child processes) a timer with the default keep-alive holds the process open until it fires",
+        "executedStatus": "passed"
+      }
+    ],
+    "excluded": [
+      {
+        "path": "packages/machine-node/test/node-timer.test.ts",
+        "line": 140,
+        "title": "\\n",
+        "classification": "lexical-parser-false-positive",
+        "reason": "String argument of run.stdout.trim().split, not test declaration"
+      }
+    ],
+    "previousQualificationTarget": "e59c64d0e1c607b5a4a8ae1fa124b1be5cdc2573",
+    "carryChecks": [
+      {
+        "scope": "packages/machine",
+        "unchanged": true
+      },
+      {
+        "scope": "packages/machine-node",
+        "unchanged": true
+      },
+      {
+        "scope": "package-lock.json",
+        "unchanged": true
+      }
+    ],
+    "newRuntimeExecuted": false
+  },
+  {
+    "qualificationTarget": "e3e1920a1300b4205b5c417f98d1202e75f2d3ba",
+    "anchorSource": "52e3786516a404e3433bef03807a027c8103786c",
+    "executedSource": "0af7f746aa82fc72e88d24c3945061b1a17c0511",
+    "artifact": "565f8384d8ca32681d45b8db262f2cf9571d04c7",
+    "actualExecution": {
+      "passed": 54,
+      "suites": 2,
+      "runtimeErrors": 0,
+      "node": "v24.22.1",
+      "platform": "macOS"
+    },
+    "privateAssertionJson": ".worktrees/gap-hunt-review-187/scratch/gap-hunt/review-187/local-results/tracking-regression.json",
+    "privateAssertionSha256": "42b4767ff3735a3dded6bd5dccf2cd410db78e43d9abead721ffca9b8b87e9f6",
+    "committedLog": "scratch/gap-hunt/review-187/captures/tracking-regression.log",
+    "committedLogSha256": "7767de2f4b69ca45b9e324c007a9d3e5da07abf4bc25adb7f7e437d51b5ea3cc",
+    "unchangedScopes": [
+      "packages/tracking",
+      "packages/value",
+      "package-lock.json"
+    ],
+    "changedMachineQualification": "Both tests inject Node AsyncLocalStorage/createHash/structuredClone directly; Tracking and Value import Machine only as types. Changed machine-node implementation is outside executed runtime closure. No changes in local runtime dependencies or test helpers/configs.",
+    "supportOverlay": "Runtime executed under exact a97c11f missing tsconfig.all.json support overlay; pristine historical full build failed. Overlay is unrelated root scratch fixture build and does not alter selected owner sources/configs. Do not promote pristine build to PASS.",
+    "scope": "Prior actual assertion execution with unchanged relevant runtime closure, no new execution and no full-spec denominator.",
+    "matched": [
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 52,
+        "title": "tracked containers navigate without whole-tree reads; pass-through is observed only by the callee",
+        "executedFullName": "semantic tracking observer tracked containers navigate without whole-tree reads; pass-through is observed only by the callee",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 69,
+        "title": "returning a tracked input preserves the same wrapper and does not imply materialization",
+        "executedFullName": "semantic tracking observer returning a tracked input preserves the same wrapper and does not imply materialization",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 81,
+        "title": "materialization reads reject unowned and foreign-observer values",
+        "executedFullName": "semantic tracking observer materialization reads reject unowned and foreign-observer values",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 91,
+        "title": "detached materialization record capabilities retain selected facts, projections, and collection order",
+        "executedFullName": "semantic tracking observer detached materialization record capabilities retain selected facts, projections, and collection order",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 131,
+        "title": "materialization record capabilities leave inputs untouched when no capture frame is active",
+        "executedFullName": "semantic tracking observer materialization record capabilities leave inputs untouched when no capture frame is active",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 180,
+        "title": "detached materialization record capabilities reject closed inherited frames before inspecting content",
+        "executedFullName": "semantic tracking observer detached materialization record capabilities reject closed inherited frames before inspecting content",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 243,
+        "title": "synchronous capture rejects promises and ordinary thenable results",
+        "executedFullName": "semantic tracking observer synchronous capture rejects promises and ordinary thenable results",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 249,
+        "title": "async wrapper pass-through preserves Promise assimilation reads as actual observations",
+        "executedFullName": "semantic tracking observer async wrapper pass-through preserves Promise assimilation reads as actual observations",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 256,
+        "title": "async capture passes tracked functions through without invoking or observing them",
+        "executedFullName": "semantic tracking observer async capture passes tracked functions through without invoking or observing them",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 294,
+        "title": "rejects non-configurable own then lookup without changing ordinary function calls",
+        "executedFullName": "semantic tracking observer rejects non-configurable own then lookup without changing ordinary function calls",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 306,
+        "title": "copies registration bindings and retained facts so later source mutation cannot retarget evidence",
+        "executedFullName": "semantic tracking observer copies registration bindings and retained facts so later source mutation cannot retarget evidence",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 320,
+        "title": "rejects binding accessors and sparse correspondence paths instead of executing or guessing them",
+        "executedFullName": "semantic tracking observer rejects binding accessors and sparse correspondence paths instead of executing or guessing them",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 327,
+        "title": "compares selected facts through current bindings while preserving original evidence",
+        "executedFullName": "semantic tracking observer compares selected facts through current bindings while preserving original evidence",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 341,
+        "title": "membership evidence ignores unrelated additions and changes when the selected member is removed",
+        "executedFullName": "semantic tracking observer membership evidence ignores unrelated additions and changes when the selected member is removed",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 353,
+        "title": "intrinsic-name presence is captured as one fact and compared against current source facts",
+        "executedFullName": "semantic tracking observer intrinsic-name presence is captured as one fact and compared against current source facts",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 377,
+        "title": "explicit identity reads ignore unread names but change when the identity changes",
+        "executedFullName": "semantic tracking observer explicit identity reads ignore unread names but change when the identity changes",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 389,
+        "title": "matches selected addresses by segment meaning rather than object member order",
+        "executedFullName": "semantic tracking observer matches selected addresses by segment meaning rather than object member order",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 419,
+        "title": "classifies unsupported selected provider payloads as incompatible",
+        "executedFullName": "semantic tracking observer classifies unsupported selected provider payloads as incompatible",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 433,
+        "title": "classifies malformed selected envelopes and addresses as incompatible",
+        "executedFullName": "semantic tracking observer classifies malformed selected envelopes and addresses as incompatible",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 451,
+        "title": "compares an exact compatible fingerprint request without asking for payload and rejects mismatched metadata descriptors",
+        "executedFullName": "semantic tracking observer compares an exact compatible fingerprint request without asking for payload and rejects mismatched metadata descriptors",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 491,
+        "title": "rejects accessor-backed current fact envelopes without invoking provider getters",
+        "executedFullName": "semantic tracking observer rejects accessor-backed current fact envelopes without invoking provider getters",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 518,
+        "title": "rebinding an intermediate object keeps equal consumed values and compares later changes at the new path",
+        "executedFullName": "semantic tracking observer rebinding an intermediate object keeps equal consumed values and compares later changes at the new path",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 532,
+        "title": "compares absent and present undefined as the same value read, preserving falsey values literally",
+        "executedFullName": "semantic tracking observer compares absent and present undefined as the same value read, preserving falsey values literally",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 547,
+        "title": "retains distinct consumed facts when wrappers share one structural address",
+        "executedFullName": "semantic tracking observer retains distinct consumed facts when wrappers share one structural address",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 558,
+        "title": "array length and positional reads remain separate; native reflection rejects the non-enumerable length case",
+        "executedFullName": "semantic tracking observer array length and positional reads remain separate; native reflection rejects the non-enumerable length case",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 573,
+        "title": "explicit keys, own-property checks, and inherited membership keep their operation meanings",
+        "executedFullName": "semantic tracking observer explicit keys, own-property checks, and inherited membership keep their operation meanings",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 582,
+        "title": "called functions record implementation evidence; uncalled functions do not and calls are not memoized",
+        "executedFullName": "semantic tracking observer called functions record implementation evidence; uncalled functions do not and calls are not memoized",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 604,
+        "title": "uninspectable current implementation replacements are unavailable without executing them",
+        "executedFullName": "semantic tracking observer uninspectable current implementation replacements are unavailable without executing them",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 622,
+        "title": "current implementation comparison preserves host digest failures",
+        "executedFullName": "semantic tracking observer current implementation comparison preserves host digest failures",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 645,
+        "title": "classifies unsupported materialized output as incompatible",
+        "executedFullName": "semantic tracking observer classifies unsupported materialized output as incompatible",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 654,
+        "title": "classifies unsupported collection order as incompatible",
+        "executedFullName": "semantic tracking observer classifies unsupported collection order as incompatible",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 665,
+        "title": "materialized output and collection order digest failures remain host errors",
+        "executedFullName": "semantic tracking observer materialized output and collection order digest failures remain host errors",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 692,
+        "title": "selected fact digest failures remain host errors",
+        "executedFullName": "semantic tracking observer selected fact digest failures remain host errors",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 719,
+        "title": "function-source fingerprints preserve distinct unpaired UTF-16 surrogate code units",
+        "executedFullName": "semantic tracking observer function-source fingerprints preserve distinct unpaired UTF-16 surrogate code units",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 740,
+        "title": "rejects callable forms without source evidence and unsupported function metadata or construction",
+        "executedFullName": "semantic tracking observer rejects callable forms without source evidence and unsupported function metadata or construction",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 757,
+        "title": "inspectable function text containing native-code wording remains supported",
+        "executedFullName": "semantic tracking observer inspectable function text containing native-code wording remains supported",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 764,
+        "title": "cached derivations replay successful and failed semantic observations, including nested derivations",
+        "executedFullName": "semantic tracking observer cached derivations replay successful and failed semantic observations, including nested derivations",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 794,
+        "title": "cached derivations replay materialized output, projection, and order facts on both success and failure",
+        "executedFullName": "semantic tracking observer cached derivations replay materialized output, projection, and order facts on both success and failure",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 859,
+        "title": "retains only projection descriptor and digest while keeping visited coverage explicit",
+        "executedFullName": "semantic tracking observer retains only projection descriptor and digest while keeping visited coverage explicit",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 908,
+        "title": "classifies a valid projection with a different selected address or traversal as incompatible before hashing",
+        "executedFullName": "semantic tracking observer classifies a valid projection with a different selected address or traversal as incompatible before hashing",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 961,
+        "title": "projection descriptors compare semantically while matching changed content still hashes",
+        "executedFullName": "semantic tracking observer projection descriptors compare semantically while matching changed content still hashes",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 1006,
+        "title": "projection descriptor comparison accepts Value-normalized null-prototype records",
+        "executedFullName": "semantic tracking observer projection descriptor comparison accepts Value-normalized null-prototype records",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 1035,
+        "title": "visited projection selection preserves ordered keys, membership, and completion semantics",
+        "executedFullName": "semantic tracking observer visited projection selection preserves ordered keys, membership, and completion semantics",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 1077,
+        "title": "local replacement invalidates tags and replaces the semantic branch observations",
+        "executedFullName": "semantic tracking observer local replacement invalidates tags and replaces the semantic branch observations",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 1087,
+        "title": "closed inherited frames reject first and dirty derived evaluation before callbacks run",
+        "executedFullName": "semantic tracking observer closed inherited frames reject first and dirty derived evaluation before callbacks run",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 1127,
+        "title": "async capture isolates concurrent frames and rejects detached reads after closure",
+        "executedFullName": "semantic tracking observer async capture isolates concurrent frames and rejects detached reads after closure",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 1144,
+        "title": "async tracked calls preserve post-await reads and nested failure restores the parent capture",
+        "executedFullName": "semantic tracking observer async tracked calls preserve post-await reads and nested failure restores the parent capture",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/observer.test.ts",
+        "line": 1174,
+        "title": "primitive and class inputs fail at runtime",
+        "executedFullName": "semantic tracking observer primitive and class inputs fail at runtime",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/output-observation.test.ts",
+        "line": 17,
+        "title": "pass-through stays neutral until snapshotOutput explicitly detaches the selected subtree",
+        "executedFullName": "explicit tracked-output observation pass-through stays neutral until snapshotOutput explicitly detaches the selected subtree",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/output-observation.test.ts",
+        "line": 32,
+        "title": "ordinary local containers are copied without an external dependency and supported shape is preserved",
+        "executedFullName": "explicit tracked-output observation ordinary local containers are copied without an external dependency and supported shape is preserved",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/output-observation.test.ts",
+        "line": 52,
+        "title": "rejects cycles, repeated references, and accessors without invoking getters or recording fabricated output facts",
+        "executedFullName": "explicit tracked-output observation rejects cycles, repeated references, and accessors without invoking getters or recording fabricated output facts",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/output-observation.test.ts",
+        "line": 81,
+        "title": "supports output of a previously selected scalar without enumerating unread siblings",
+        "executedFullName": "explicit tracked-output observation supports output of a previously selected scalar without enumerating unread siblings",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/output-observation.test.ts",
+        "line": 91,
+        "title": "keeps keyed content and used member order as separate observation facts",
+        "executedFullName": "explicit tracked-output observation keeps keyed content and used member order as separate observation facts",
+        "executedStatus": "passed"
+      },
+      {
+        "path": "packages/tracking/test/output-observation.test.ts",
+        "line": 116,
+        "title": "rejects the materialization bridge on unowned values",
+        "executedFullName": "explicit tracked-output observation rejects the materialization bridge on unowned values",
+        "executedStatus": "passed"
+      }
+    ],
+    "previousQualificationTarget": "e59c64d0e1c607b5a4a8ae1fa124b1be5cdc2573",
+    "carryChecks": [
+      {
+        "scope": "packages/tracking",
+        "unchanged": true
+      },
+      {
+        "scope": "packages/value",
+        "unchanged": true
+      },
+      {
+        "scope": "package-lock.json",
+        "unchanged": true
+      }
+    ],
+    "newRuntimeExecuted": false
+  }
+]

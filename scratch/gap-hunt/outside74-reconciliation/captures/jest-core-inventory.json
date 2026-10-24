@@ -1,0 +1,737 @@
+[
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "schema, logical store and exact scope a new file receives a versioned History schema distinct from the legacy Store and EXP-3, and reopens by logical identity",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "schema, logical store and exact scope a file holding another logical store, another schema version, an incomplete or foreign schema is rejected before any work",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "schema, logical store and exact scope the actual version 2 layout is rejected by version without changing any rows or schema definitions",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "schema, logical store and exact scope exact references resolve their own snapshot; malformed, other-store, wrong-scope and missing references are integrity failures that never follow current",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "schema, logical store and exact scope subjects are complete opaque strings and analyses and environments scope them independently",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "attempts, staging and atomic publication allocation commits a never-reused identity before staging, including across abandonment and reopen",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "attempts, staging and atomic publication a staged attempt is not a completed result, and publication installs everything in one commit",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "attempts, staging and atomic publication fresh equal output is a distinct result, both exact results stay readable and current is the latest publication",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "attempts, staging and atomic publication stable keys identify one execution: same intent returns it, a changed intent or version rejects, and keys are scoped per subject",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "attempts, staging and atomic publication staged payloads must be supported Value data with a container root, and stored results cannot be altered through returned data",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "attempts, staging and atomic publication dependencies must be exact completed results in the same store and scope",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance candidates filter by compatibility version, latest publication first, and rollback acceptance never rewinds current or rewrites provenance",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_identity rejects primary-key replacement and preserves every row with recursive triggers disabled",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_results rejects primary-key replacement and preserves every row with recursive triggers disabled",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_dependencies rejects primary-key replacement and preserves every row with recursive triggers disabled",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_nodes rejects primary-key replacement and preserves every row with recursive triggers disabled",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_edges rejects primary-key replacement and preserves every row with recursive triggers disabled",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_addresses rejects primary-key replacement and preserves every row with recursive triggers disabled",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_acceptances rejects primary-key replacement and preserves every row with recursive triggers disabled",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_acceptance_dependencies rejects primary-key replacement and preserves every row with recursive triggers disabled",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_promotions rejects primary-key replacement and preserves every row with recursive triggers disabled",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_promotion_results rejects primary-key replacement and preserves every row with recursive triggers disabled",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_journal rejects primary-key replacement and preserves every row with recursive triggers disabled",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_results rejects secondary UNIQUE replacement even with a fresh primary key",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_promotion_results rejects secondary UNIQUE replacement even with a fresh primary key",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_journal rejects secondary UNIQUE replacement even with a fresh primary key",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_identity cannot replace history through SQLite row identity aliases",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_results cannot replace history through SQLite row identity aliases",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_acceptances cannot replace history through SQLite row identity aliases",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_promotions cannot replace history through SQLite row identity aliases",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_dependencies cannot replace history through SQLite row identity aliases",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_nodes cannot replace history through SQLite row identity aliases",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_edges cannot replace history through SQLite row identity aliases",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_addresses cannot replace history through SQLite row identity aliases",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_acceptance_dependencies cannot replace history through SQLite row identity aliases",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_promotion_results cannot replace history through SQLite row identity aliases",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance history_journal cannot replace history through SQLite row identity aliases",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "candidates, rollback and separate acceptance stored results and acceptances are immutable in storage",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "single logical writer and clock policy one live holder at a time; release keeps the fence advancing",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "single logical writer and clock policy a backward host clock never evaluates before the persisted high-water, so it cannot shorten a holder lease or resurrect an expired one",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "single logical writer and clock policy a forward jump can expire a lease early, after which the old fence cannot allocate, stage or publish even when the clock returns",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "single logical writer and clock policy a lease is fenced by its token alone: the same holder re-acquiring invalidates its previous fence",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "single logical writer and clock policy an unavailable or invalid clock reading refuses the operation without any change",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "exact selected reading from the generated index selected leaves, lengths and metadata fingerprints come from the index without root payload reads and equal independent Value oracles",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "exact selected reading from the generated index unread changes keep consumed fingerprints equal while consumed changes differ, and old exact references stay stable",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "valid-domain parity of the indexed reader every selection over the accepted Value edge domain equals the in-memory Value answer after reopen, without root payload reads",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "meaningful corruption is detected, never repaired a tampered scalar leaf fails its indexed digest on read and in verification",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "meaningful corruption is detected, never repaired a tampered index row or stored encoding is detected",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "meaningful corruption is detected, never repaired index metadata contradicting its node kind is an integrity failure, never a Value answer or incompatible",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "meaningful corruption is detected, never repaired recovery never reports a completed attempt whose exact result no longer resolves",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "meaningful corruption is detected, never repaired completed retry paths never acknowledge a missing result after reopen; corruption is not turned into a miss",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "meaningful corruption is detected, never repaired candidate, current and dependency metadata reject a result whose producing attempt is not completed or whose encoding is unsupported",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "meaningful corruption is detected, never repaired stage from a contradicted allocated attempt is an integrity failure that changes no durable evidence",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "meaningful corruption is detected, never repaired abandon a contradicted allocated attempt is an integrity failure that changes no durable evidence",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "meaningful corruption is detected, never repaired abandon a contradicted staged attempt is an integrity failure that changes no durable evidence",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "meaningful corruption is detected, never repaired publish a contradicted staged attempt is an integrity failure that changes no durable evidence",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "meaningful corruption is detected, never repaired healthy allocate, stage, publish and staged abandon still commit beside a contradicted attempt",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "meaningful corruption is detected, never repaired a missing index address or node for a present member is an integrity failure, never an absent-member fact",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/durable-history/durable-history.test.js",
+    "fullName": "meaningful corruption is detected, never repaired a dangling or wrong-scope dependency and malformed provenance are integrity failures on the dependent envelope",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/nested/validation.test.js",
+    "fullName": "provenance v2 and cold execution a cold run records ordered calls with v2 witnesses, argument recipes, exact child references and per-call consumed facts",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/nested/validation.test.js",
+    "fullName": "provenance v2 and cold execution an M3-shaped parent keeps provenance v1, and a supplied child records v2 with argument observations under its slot subject",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/nested/validation.test.js",
+    "fullName": "provenance v2 and cold execution an unchanged restart with reversed registration reuses every exact reference and runs no body",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/nested/validation.test.js",
+    "fullName": "validation order own evidence is checked first: a changed own fact misses before any child is resolved",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/nested/validation.test.js",
+    "fullName": "validation order calls are validated in recorded order; the first changed consumed output is reported and later calls are not reached",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/nested/validation.test.js",
+    "fullName": "validation order forwarded arguments are rebuilt from the current output of an earlier call, never from stored values",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/nested/validation.test.js",
+    "fullName": "validation order a forwarded origin whose current output changes a consumed score makes the parent rerun",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/nested/validation.test.js",
+    "fullName": "validation order a sibling memo child that reruns with equal consumed output leaves the parent exact reference",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/nested/validation.test.js",
+    "fullName": "validation order a check-only request stops at a supplied child that needs work, executing nothing",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/nested/validation.test.js",
+    "fullName": "equal-output cutoff through a supplied child F-04: a changed child input with equal consumed score reruns each child once and keeps both exact summary references",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/nested/validation.test.js",
+    "fullName": "equal-output cutoff through a supplied child a supplied implementation swap A to B with equal scores behaves like F-04",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/nested/validation.test.js",
+    "fullName": "honest misses an argument derived after an observed untracked read is unjustified: the parent reruns while its children reuse",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/nested/validation.test.js",
+    "fullName": "honest misses an unreconstructible argument is an immediate miss before its child is invoked; the parent reruns and children reuse",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/nested/validation.test.js",
+    "fullName": "honest misses a supplied slot bound none on restart is a distinct miss and a distinct failure with no child work at all",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/nested/validation.test.js",
+    "fullName": "honest misses a supplied slot bound twice on restart is a distinct miss and a distinct failure with no child work at all",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/nested/validation.test.js",
+    "fullName": "honest misses an unsupported recorded witness is found before any child work, even when an earlier call would need work",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/nested/validation.test.js",
+    "fullName": "honest misses an M3-shaped (version-1) candidate whose recorded witness is not version 1 is unsupported evidence",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/nested/validation.test.js",
+    "fullName": "honest misses an older candidate is validated and reused after a newer candidate misses",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/nested/validation.test.js",
+    "fullName": "honest misses a changed call count (a pull request added) is changed call-0 output; only new calls run",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/nested/validation.test.js",
+    "fullName": "honest misses a changed call count (a pull request removed) is changed call-0 output; only new calls run",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/nested/validation.test.js",
+    "fullName": "honest misses a child failing while the parent is validated fails the request once, with no parent admission or body",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/nested/validation.test.js",
+    "fullName": "honest misses an unknown provenance version and an unknown recorded witness version are unsupported evidence; the older valid candidate is reused",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/nested/validation.test.js",
+    "fullName": "honest misses every miss kind has a distinct reason and a distinct diagnostic",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/keyed/restart.test.js",
+    "fullName": "keyed-cold-and-restarted-report a cold process runs every member once; an unchanged restart in reversed registration and member order runs zero member bodies",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/keyed/restart.test.js",
+    "fullName": "discovery-insert-delete-reorder insertion runs only the new member; its admissions are its own work",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/keyed/restart.test.js",
+    "fullName": "discovery-insert-delete-reorder deletion runs no remaining member body and never retracts the removed member's publication",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/keyed/restart.test.js",
+    "fullName": "discovery-insert-delete-reorder reordering discovery runs discovery again but no member body",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/keyed/restart.test.js",
+    "fullName": "discovery-insert-delete-reorder a changed unread discovery field runs nothing; a changed consumed member field reruns only that member",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/keyed/restart.test.js",
+    "fullName": "discovery-insert-delete-reorder a member memo's own read of a consumed member field reruns only that member's memo; its unread fields change nothing",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/keyed/restart.test.js",
+    "fullName": "custom-key-correspondence a custom key keeps each member's instance across renumbered designated ids; only the activity checks that read the renumbered field run",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/keyed/restart.test.js",
+    "fullName": "custom-key-correspondence under the designated key, renumbered ids are new instances whose unchanged children still reuse",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/keyed/restart.test.js",
+    "fullName": "changed correspondence is never remapped (CMP-4, COL-1) a renamed template: every instance executes as a correspondence miss; no prior instance is reused or retracted",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/keyed/restart.test.js",
+    "fullName": "changed correspondence is never remapped (CMP-4, COL-1) a collection moved to another slot: every instance executes as a correspondence miss; no prior instance is reused or retracted",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/keyed/restart.test.js",
+    "fullName": "duplicate-and-missing-identity a duplicate designated key rejects the snapshot with its diagnostic and admits no gate or member work",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/keyed/restart.test.js",
+    "fullName": "duplicate-and-missing-identity a missing designated key rejects the snapshot with its diagnostic and admits no gate or member work",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/keyed/restart.test.js",
+    "fullName": "duplicate-and-missing-identity a duplicate custom key rejects the snapshot with its diagnostic and admits no gate or member work",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/keyed/restart.test.js",
+    "fullName": "frozen-template-topology mutating every author array, record and input after composition changes nothing in a later process",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/keyed/restart.test.js",
+    "fullName": "frozen-template-topology an operation created from a result is rejected before any admission, and nothing is published for it",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/keyed/restart.test.js",
+    "fullName": "tracked-gate-instances raising the threshold skips Cy without changing topology or retracting its publication; lowering it reconnects Cy with zero bodies",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/keyed/restart.test.js",
+    "fullName": "tracked-gate-instances lowering the threshold requires a never-run member: only its work runs",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/crash-recovery.test.js",
+    "fullName": "publication-kill-boundaries (A-09) through a real summary invocation killed before the writer acquisition commits: nothing changed, no holder, the saved key identifies nothing",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/crash-recovery.test.js",
+    "fullName": "publication-kill-boundaries (A-09) through a real summary invocation killed before the summary allocation commits: the source result is committed, the summary attempt never existed",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/crash-recovery.test.js",
+    "fullName": "publication-kill-boundaries (A-09) through a real summary invocation killed after the summary allocation commits: no partial result, old history intact, the attempt is honestly incomplete and never auto-executes",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/crash-recovery.test.js",
+    "fullName": "publication-kill-boundaries (A-09) through a real summary invocation killed before the summary staging commits: no partial result, old history intact, the attempt is honestly incomplete and never auto-executes",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/crash-recovery.test.js",
+    "fullName": "publication-kill-boundaries (A-09) through a real summary invocation killed after the summary staging commits: no partial result, old history intact, the attempt is honestly incomplete and never auto-executes",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/crash-recovery.test.js",
+    "fullName": "publication-kill-boundaries (A-09) through a real summary invocation killed immediately before the summary publication commits: no partial result, old history intact, the attempt is honestly incomplete and never auto-executes",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/crash-recovery.test.js",
+    "fullName": "publication-kill-boundaries (A-09) through a real summary invocation an unsuccessful summary attempt is reported as such by recovery and is never re-executed automatically",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/crash-recovery.test.js",
+    "fullName": "publication-kill-boundaries (A-09) through a real summary invocation after the killed holder's lease has certainly expired, lost-acknowledgment recovery still performs no writer activity",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/crash-recovery.test.js",
+    "fullName": "publication-kill-boundaries (A-09) through a real summary invocation killed after the summary publication commits (lost acknowledgment): recovery returns the exact committed result with no author work or acceptance, wrong intent is rejected, and a fresh request applies current policy",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/changes.test.js",
+    "fullName": "read-unread-and-called-helper (A-02) changing only unread labels and avatar publishes a fresh source but keeps the exact summary",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/changes.test.js",
+    "fullName": "read-unread-and-called-helper (A-02) Ada's consumed merged-status change reevaluates only Ada while Ben keeps his exact result",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/changes.test.js",
+    "fullName": "read-unread-and-called-helper (A-02) Ada's consumed review change reevaluates only Ada while Ben keeps his exact result",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/changes.test.js",
+    "fullName": "read-unread-and-called-helper (A-02) a changed called formatter reevaluates both summaries even though the sentences are unchanged",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/changes.test.js",
+    "fullName": "read-unread-and-called-helper (A-02) a changed uncalled helper adds no dependency: both exact summaries are kept",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/changes.test.js",
+    "fullName": "compatibility-rollback (A-02, REUSE-008) version 1 to 2 misses, rollback to 1 retains the old exact result without rewinding the latest pointer, and changed-input rollback misses",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/changes.test.js",
+    "fullName": "equal-name-profile-rebinding (A-04) a replaced profile with an equal name keeps the summary, a later name change invalidates it, and original provenance still resolves the old profile",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/m4-acceptance/topology.test.js",
+    "fullName": "frozen-template-topology the step factory runs once per process, and mutating every author array, record and input after composing changes nothing in a later process",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/m4-acceptance/topology.test.js",
+    "fullName": "frozen-template-topology an operation created from a result is rejected before any work is admitted for it; nothing is published for it or for the summaries that tried it",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/m4-acceptance/topology.test.js",
+    "fullName": "tracked-gate-instances with a report that does not read the threshold, a gate flip reaches the fold only through membership, and a flip-free edit runs nothing at all",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/m4-acceptance/topology.test.js",
+    "fullName": "tracked-gate-instances lowering the threshold requires never-run Cy without changing topology and runs only Cy's work and the report; a flip-free threshold runs no member work; raising it again skips Cy without retracting it",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/m5-acceptance/usage.test.js",
+    "fullName": "usage-exactly-once (A-14, ACC-003, ACC-005, ACC-007) a SIGKILL before-send of pr-2: known usage survives once, unknown usage stays unknown, and the in-flight operation is never replayed",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/m5-acceptance/usage.test.js",
+    "fullName": "usage-exactly-once (A-14, ACC-003, ACC-005, ACC-007) a SIGKILL after-send of pr-2: known usage survives once, unknown usage stays unknown, and the in-flight operation is never replayed",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/m5-acceptance/usage.test.js",
+    "fullName": "usage-exactly-once (A-14, ACC-003, ACC-005, ACC-007) a SIGKILL after-usage of pr-2: known usage survives once, unknown usage stays unknown, and the in-flight operation is never replayed",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/m5-acceptance/usage.test.js",
+    "fullName": "usage-exactly-once (A-14, ACC-003, ACC-005, ACC-007) a lost acknowledgment whose commit landed is counted exactly once, and the committed outcome stands",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/m5-acceptance/usage.test.js",
+    "fullName": "usage-exactly-once (A-14, ACC-003, ACC-005, ACC-007) an acknowledgment that recorded nothing leaves that attempt unknown, never zero",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/m5-acceptance/usage.test.js",
+    "fullName": "usage-exactly-once (A-14, ACC-003, ACC-005, ACC-007) a report redelivered after a crash is counted once; the retry that only redelivered it has unknown usage of its own",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/m5-acceptance/usage.test.js",
+    "fullName": "usage-exactly-once (A-14, ACC-003, ACC-005, ACC-007) the same report identity on two operations is two reports, counted twice",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/integrity-io.test.js",
+    "fullName": "exact-reference-integrity (A-10) a superseded summary stays exactly readable beside its successor",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/integrity-io.test.js",
+    "fullName": "exact-reference-integrity (A-10) a missing reference, a reference from another store and a wrong-scope reference fail without retargeting or recomputation",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/integrity-io.test.js",
+    "fullName": "exact-reference-integrity (A-10) an author mutating the eligible previous result changes no stored data",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/integrity-io.test.js",
+    "fullName": "selected-node-io (A-17 within M3) cold summary bodies read only the consumed scalar leaves of their source results, never a root payload",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/integrity-io.test.js",
+    "fullName": "selected-node-io (A-17 within M3) fingerprint-only validation: with accepting hooks that never read the previous result, restart validation reads zero payload",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/integrity-io.test.js",
+    "fullName": "selected-node-io (A-17 within M3) eligible restart validation is metadata-only: no source payload beyond the finality hooks' own selected reads",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/integrity-io.test.js",
+    "fullName": "selected-node-io (A-17 within M3) a consumed change reads only the re-executed summary's consumed leaves; the unaffected member validates by metadata",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/source-policy.test.js",
+    "fullName": "current-finality-under-cached-summary (A-03) an accepting current hook runs once per member in every new process and retains the exact source without a check",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/source-policy.test.js",
+    "fullName": "current-finality-under-cached-summary (A-03) a false current answer enters the check, whose fresh equal data is a distinct source while the summary is kept",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/source-policy.test.js",
+    "fullName": "current-finality-under-cached-summary (A-03) an absent finality hook enters the current check in every new process",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/source-policy.test.js",
+    "fullName": "current-finality-under-cached-summary (A-03) a changed current finality hook is what runs; the earlier accepting decision cannot mask it",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/source-policy.test.js",
+    "fullName": "current-finality-under-cached-summary (A-03) a changed source implementation is not excused by an accepting hook: finality is skipped and admitted source work runs",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/source-policy.test.js",
+    "fullName": "retain-versus-fresh-equal (A-03/A-10) an explicit retention keeps the exact source reference and ends the claim without publishing",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/source-policy.test.js",
+    "fullName": "retain-versus-fresh-equal (A-03/A-10) fresh equal data twice yields two distinct exact source references, each readable, while the summary is kept",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/m5-acceptance/environments.test.js",
+    "fullName": "trial-production-isolation (RUN-016, RUN-017) a trial never satisfies production by accident; after a recorded promotion production reuses every promoted result and pays nothing",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/m5-acceptance/environments.test.js",
+    "fullName": "trial-production-isolation (RUN-016, RUN-017) without a promotion production executes and pays for its own work, and the trial's results and usage stay untouched",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/m5-acceptance/lifecycle.test.js",
+    "fullName": "lifecycle-isolation (A-18, RUN-001) concurrent scopes, a thrown nested frame and a late detached callback: no cross-run leakage, and late use fails clearly",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/restart.test.js",
+    "fullName": "cold-and-restarted-report (TEST-1/2) a cold process publishes both sources and summaries once and assembles the ordered report once",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/restart.test.js",
+    "fullName": "cold-and-restarted-report (TEST-1/2) an unchanged restart runs current finality, no summary bodies or checks, keeps exact references and assembles once",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/restart.test.js",
+    "fullName": "cold-and-restarted-report (TEST-1/2) reversed registration and invocation order keep each member's own exact results and evidence",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/core/.test-build/test/acceptance/restart.test.js",
+    "fullName": "cold-and-restarted-report (TEST-1/2) renamed display labels after restart do not change correspondence or reuse",
+    "status": "passed"
+  }
+]

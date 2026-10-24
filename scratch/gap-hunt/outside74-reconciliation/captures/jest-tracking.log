@@ -1,0 +1,8 @@
+(node:33347) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       24 passed, 24 total
+Snapshots:   0 total
+Time:        0.176 s
+Ran all test suites within paths "packages/tracking/.test-build/test/track.test.js".
+Test results written to: ../../../../../..<captures>/jest-tracking.json

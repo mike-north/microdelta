@@ -1,0 +1,142 @@
+TAP version 13
+# Subtest: production: implicit any fails strict compilation
+ok 1 - production: implicit any fails strict compilation
+  ---
+  duration_ms: 1535.991042
+  type: 'test'
+  ...
+# Subtest: production: explicit any and a floating promise fail lint
+ok 2 - production: explicit any and a floating promise fail lint
+  ---
+  duration_ms: 1472.409834
+  type: 'test'
+  ...
+# Subtest: production: unknown narrowing and an awaited promise pass
+ok 3 - production: unknown narrowing and an awaited promise pass
+  ---
+  duration_ms: 1427.946584
+  type: 'test'
+  ...
+# Subtest: test: implicit any fails strict compilation
+ok 4 - test: implicit any fails strict compilation
+  ---
+  duration_ms: 1114.626917
+  type: 'test'
+  ...
+# Subtest: test: explicit any and a floating promise fail lint
+ok 5 - test: explicit any and a floating promise fail lint
+  ---
+  duration_ms: 281.460416
+  type: 'test'
+  ...
+# Subtest: test: unknown narrowing and an awaited promise pass
+ok 6 - test: unknown narrowing and an awaited promise pass
+  ---
+  duration_ms: 1206.542584
+  type: 'test'
+  ...
+# Subtest: experiment: implicit any fails strict compilation
+ok 7 - experiment: implicit any fails strict compilation
+  ---
+  duration_ms: 1505.248625
+  type: 'test'
+  ...
+# Subtest: experiment: explicit any and a floating promise fail lint
+ok 8 - experiment: explicit any and a floating promise fail lint
+  ---
+  duration_ms: 325.085958
+  type: 'test'
+  ...
+# Subtest: experiment: unknown narrowing and an awaited promise pass
+ok 9 - experiment: unknown narrowing and an awaited promise pass
+  ---
+  duration_ms: 1488.973667
+  type: 'test'
+  ...
+# Subtest: undocumented TS and ESLint suppressions and broad double assertions fail lint
+ok 10 - undocumented TS and ESLint suppressions and broad double assertions fail lint
+  ---
+  duration_ms: 3238.150709
+  type: 'test'
+  ...
+# Subtest: specific suppression explanations pass lint
+ok 11 - specific suppression explanations pass lint
+  ---
+  duration_ms: 2685.7095
+  type: 'test'
+  ...
+# Subtest: a new package TS location fails closed without a compiler program
+ok 12 - a new package TS location fails closed without a compiler program
+  ---
+  duration_ms: 6046.665334
+  type: 'test'
+  ...
+# Subtest: workspace check covers a newly nested experiment
+ok 13 - workspace check covers a newly nested experiment
+  ---
+  duration_ms: 7012.586
+  type: 'test'
+  ...
+# Subtest: strict optional, indexed, and declaration checks reject their counterexamples
+ok 14 - strict optional, indexed, and declaration checks reject their counterexamples
+  ---
+  duration_ms: 3089.029042
+  type: 'test'
+  ...
+# Subtest: file-wide ESLint disable cannot hide active TS violations
+ok 15 - file-wide ESLint disable cannot hide active TS violations
+  ---
+  duration_ms: 3115.332291
+  type: 'test'
+  ...
+# Subtest: type-contract test files receive explicit-any and floating-promise lint
+ok 16 - type-contract test files receive explicit-any and floating-promise lint
+  ---
+  duration_ms: 281.481333
+  type: 'test'
+  ...
+# Subtest: unsafe JSON values cannot escape through typed returns or arguments
+ok 17 - unsafe JSON values cannot escape through typed returns or arguments
+  ---
+  duration_ms: 27.910666
+  type: 'test'
+  ...
+# Subtest: unsupported live TypeScript extensions fail the checked command
+ok 18 - unsupported live TypeScript extensions fail the checked command
+  ---
+  duration_ms: 8467.0745
+  type: 'test'
+  ...
+# Subtest: suppression scan ignores template, regexp, and explanatory prose text
+ok 19 - suppression scan ignores template, regexp, and explanatory prose text
+  ---
+  duration_ms: 3930.459917
+  type: 'test'
+  ...
+# Subtest: configured type-aware lint retains component dependency enforcement
+ok 20 - configured type-aware lint retains component dependency enforcement
+  ---
+  duration_ms: 25.687833
+  type: 'test'
+  ...
+# Subtest: inline ESLint severity changes fail the independent suppression check
+ok 21 - inline ESLint severity changes fail the independent suppression check
+  ---
+  duration_ms: 2821.974708
+  type: 'test'
+  ...
+# Subtest: double assertions through unknown fail for as, angle, and mixed spellings
+ok 22 - double assertions through unknown fail for as, angle, and mixed spellings
+  ---
+  duration_ms: 16.947834
+  type: 'test'
+  ...
+1..22
+# tests 22
+# suites 0
+# pass 22
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 53888.386417

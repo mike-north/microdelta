@@ -1,0 +1,58 @@
+TAP version 13
+# Subtest: clean CI reaches build, declaration, import, lint, and consumer gates
+ok 1 - clean CI reaches build, declaration, import, lint, and consumer gates
+  ---
+  duration_ms: 7.255833
+  type: 'test'
+  ...
+# Subtest: the Check job tests exactly Node 22 and 24 while retaining each clean gate
+ok 2 - the Check job tests exactly Node 22 and 24 while retaining each clean gate
+  ---
+  duration_ms: 0.923584
+  type: 'test'
+  ...
+# Subtest: the foundation checker rejects a missing or extra Node test version
+ok 3 - the foundation checker rejects a missing or extra Node test version
+  ---
+  duration_ms: 1.049417
+  type: 'test'
+  ...
+# Subtest: the declaration checker accepts the generated alpha package path needed by external rollups
+ok 4 - the declaration checker accepts the generated alpha package path needed by external rollups
+  ---
+  duration_ms: 310.58725
+  type: 'test'
+  ...
+# Subtest: Value package build, checks, declaration views, and package order are required
+ok 5 - Value package build, checks, declaration views, and package order are required
+  ---
+  duration_ms: 3.503792
+  type: 'test'
+  ...
+# Subtest: the executable example is built, checked, linted and run by the aggregate gates
+ok 6 - the executable example is built, checked, linted and run by the aggregate gates
+  ---
+  duration_ms: 2.600125
+  type: 'test'
+  ...
+# Subtest: skipping an import, declaration, or API report checker is detected
+ok 7 - skipping an import, declaration, or API report checker is detected
+  ---
+  duration_ms: 5.915125
+  type: 'test'
+  ...
+# Subtest: the release workflow audit and first-party graph check are required checks
+ok 8 - the release workflow audit and first-party graph check are required checks
+  ---
+  duration_ms: 1.843166
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 403.641542

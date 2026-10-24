@@ -1,0 +1,26 @@
+
+> @microdelta/workspace@0.0.0 build:fixtures
+> tsc -p fixtures/declarations/producer/tsconfig.json && api-extractor run --config fixtures/declarations/producer/api-extractor.json && tsc -p fixtures/declarations/capture-producer/tsconfig.json && api-extractor run --config fixtures/declarations/capture-producer/api-extractor.json && node tooling/trim-declaration-imports.mjs fixtures/declarations/capture-producer/dist/api/capture.untrimmed.d.ts fixtures/declarations/capture-producer/dist/api/capture.alpha.d.ts fixtures/declarations/capture-producer/dist/api/capture.beta.d.ts fixtures/declarations/capture-producer/dist/api/capture.public.d.ts && tsc -p fixtures/declarations/forged/tsconfig.json && api-extractor run --config fixtures/declarations/forged/api-extractor.json && npm run build:output-fixture
+
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+[1mapi-extractor 7.59.2 [36m - https://api-extractor.com/[39m
+[22m
+Analysis will use the bundled TypeScript version 5.9.3
+
+API Extractor completed successfully
+
+> @microdelta/workspace@0.0.0 build:output-fixture
+> tsc -p scratch/gap-hunt/consumer-dx/tsconfig.output-bindings.json
+

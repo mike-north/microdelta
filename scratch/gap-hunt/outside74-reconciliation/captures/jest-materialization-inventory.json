@@ -1,0 +1,172 @@
+[
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/nested-view.test.js",
+    "fullName": "nested selected materialization a nested name returns exactly one consumed leaf and requests only its path",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/nested-view.test.js",
+    "fullName": "nested selected materialization indexed loops record length only when read and each visited selected field",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/nested-view.test.js",
+    "fullName": "nested selected materialization consumed changes invalidate, unread changes do not, and comparison reads no payload",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/nested-view.test.js",
+    "fullName": "nested selected materialization container-kind changes can never compare equal",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/nested-view.test.js",
+    "fullName": "nested selected materialization an old exact reference never follows the current reference",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/nested-view.test.js",
+    "fullName": "nested selected materialization missing, wrong-scope and incompatible content fail without observations",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/nested-view.test.js",
+    "fullName": "nested selected materialization malformed reader envelopes are rejected before any observation or accessor call",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/nested-view.test.js",
+    "fullName": "nested selected materialization reader facts are consumed exactly as validated: inconsistent arrays are rejected before observation",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/nested-view.test.js",
+    "fullName": "nested selected materialization member order returned to the author is the recorded indexed sequence; inconsistent arrays are rejected",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/nested-view.test.js",
+    "fullName": "nested selected materialization views reject mutation and native reflection and are owned by the composed observer",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/nested-view.test.js",
+    "fullName": "nested selected materialization explicit wrapper output detaches the subtree and records its MDS1 fact for later comparison",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/nested-view.test.js",
+    "fullName": "nested selected materialization views read after their capture frame closes fail before any reader request",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/nested-view.test.js",
+    "fullName": "nested selected materialization scalar-only readers keep their existing behavior and cannot create nested views",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/nested-view.test.js",
+    "fullName": "asynchronous invocation transport an ordinary result carrier around a view adds no phantom then observation",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/nested-view.test.js",
+    "fullName": "asynchronous invocation transport resolving a view directly probes then, which is why transport uses a carrier",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/nested-view.test.js",
+    "fullName": "asynchronous invocation transport a legitimate author field named then remains ordinary data",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/nested-view.test.js",
+    "fullName": "asynchronous invocation transport asynchronous-only storage cannot pose as a synchronous navigation reader",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/materialization.test.js",
+    "fullName": "selected materialization rejects bigint and symbol scalar reads before Tracking can ignore an out-of-frame fact",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/materialization.test.js",
+    "fullName": "selected materialization continues to expose each supported scalar value through selected reads",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/materialization.test.js",
+    "fullName": "selected materialization compatible metadata comparisons dispatch against current exact references without payload fallback",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/materialization.test.js",
+    "fullName": "selected materialization inherited closed frames reject all explicit materialization before any work",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/materialization.test.js",
+    "fullName": "selected materialization loads only selected top-level scalars from the exact saved reference and records them in Tracking",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/materialization.test.js",
+    "fullName": "selected materialization copies a validated locator when a lazy scalar view is created",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/materialization.test.js",
+    "fullName": "selected materialization rejects getter-backed address segments without evaluating malformed reader data",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/materialization.test.js",
+    "fullName": "selected materialization materializeOutput preserves tracking pass-through semantics and delegates to detached output observation",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/materialization.test.js",
+    "fullName": "selected materialization records one aggregate projection fact, canonicalizing unordered exhaustive member order",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/materialization.test.js",
+    "fullName": "selected materialization reads a projection only through its separately supplied exact reader capability",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/materialization.test.js",
+    "fullName": "selected materialization validates malformed projection selections before invoking the projection reader",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/materialization.test.js",
+    "fullName": "selected materialization dispatches a detached frozen descriptor and validates against its stable meaning",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/materialization.test.js",
+    "fullName": "selected materialization accepts semantically equivalent null-prototype projection descriptors from the reader",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/materialization.test.js",
+    "fullName": "selected materialization returns nested selected records in the same canonical order as their content fact",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/materialization.test.js",
+    "fullName": "selected materialization requires projection capability and rejects mismatched reader selections without observations",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/materialization.test.js",
+    "fullName": "selected materialization rejects duplicate keys and false exhaustive coverage with collection context",
+    "status": "passed"
+  },
+  {
+    "path": "<checkout>/packages/materialization/.test-build/test/materialization.test.js",
+    "fullName": "selected materialization preserves collection context and records nothing when projection content is unsupported",
+    "status": "passed"
+  }
+]

@@ -17,5 +17,5 @@ def verify(directory):
  assert 'authoring' in (p/'public-consumer.log').read_text()
  d=json.loads((p/'boundary.json').read_text());assert d['archiveSource']=='f4211e3d925ed8aaedc313ac468d49a13149826c' and not d['siblingConfigContainsAbsolutePath']
  assert all('./alpha' not in v['exports'] for v in d['packageExports'].values())
- return {'commands':15,'uniqueOfficialCases':4,'officialInvocations':2,'missingOwnerNegatives':5,'publicFacadeNegative':1,'originalDiagnostics':114,'status':'PASS'}
+ return {'commands':15,'uniqueOfficialCases':4,'officialInvocations':2,'missingOwnerNegatives':5,'publicFacadeNegative':1,'originalDiagnostics':114,'capturedRecipeExpectedExits':True,'documentationAcceptance':'separate literal-input finding; not established by this verifier'}
 if __name__=='__main__':print(json.dumps(verify(sys.argv[1]),indent=2))

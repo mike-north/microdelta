@@ -59,3 +59,7 @@ finally:
 # Read-only final capture verification; no additional runtime workload.
 verified=subprocess.run(["python3",str(HERE/"verify-captures.py"),str(OUT)],capture_output=True,text=True,timeout=30)
 print(verified.stdout,flush=True);assert verified.returncode==0,verified.stderr
+
+# Diagnose manual documentation completeness separately from the green fixture.
+literal=subprocess.run(["python3",str(HERE/"literal-doc-input.py"),str(CHECKOUT),str(OUT/"literal-input-check")],capture_output=True,text=True,timeout=120)
+print(literal.stdout,flush=True);assert literal.returncode==0,literal.stderr

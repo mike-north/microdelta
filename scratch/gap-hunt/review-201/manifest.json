@@ -1,5 +1,6 @@
 {
-  "REPORT.md": "506626c8b0287f6930c5cf685be8213d40086ac0d178d210d33c615fbf8c1a30",
+  "FINDING.md": "8f55d51ec8f91ff547f733635e6aad95a96f0f6665aa8b4e66b5480ccda6071f",
+  "REPORT.md": "30fb97caa329968c98d771231c6a88c1f0643f2540c221335c8345be06bbc59f",
   "captures/archive-source-proof.json": "1f2a11ffb86682d1011b6ccf068a29d26e25e11b23836aa8bdab3da89bec51a8",
   "captures/boundary.json": "f81d36261370602b67ae95d3df2e635665afabf29d84ca34ddfe63a072ba83df",
   "captures/capture-guard-qualification.json": "25184c7f26408165822a23a3e774d32e3c989198a9175a8c0c5d71ec4c36e666",
@@ -14,6 +15,10 @@
   "captures/excluded-harness/reporter-guard-attempt-commands.json": "82a26c85d7d413f666a4ec7155b6752d4f6073e54cd514b625658bb5c3c49448",
   "captures/excluded-harness/unsupported-script-attempt-commands.json": "ac598f23c6b18d6c1c1f3ab06f84bf8b950664a8d9363b986b7bee28f0473067",
   "captures/fixture-lint.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "captures/literal-input-check/literal-input-receipt.json": "513cb529052b2f7f4e7f8b9ee69dd43de37844650d0703239aad2ae8543a38ff",
+  "captures/literal-input-check/literal-no-input.log": "b717fd3796dbb0b05414642e13b67b0de4f82a1456d39ae7883527d559f8c836",
+  "captures/literal-input-check/literal-runtime-after-copy.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "captures/literal-input-check/literal-with-copy.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "captures/missing-definition.log": "7d5d18968a7e926aeac678cb0d3af397742c5f2067a35444145455c0aed430de",
   "captures/missing-history.log": "b4d7b0ebc58089b915ae119d1d0321b884379eb676c829487841bd0480e6be8f",
   "captures/missing-resolution.log": "4e4b130158366ad453c2f61b3c7ffb46c6aa978cc21763e039d09cb147d6f1e5",
@@ -26,6 +31,7 @@
   "frozen/repro-support.mjs": "549c4bafb35c8a766d69f06f129f226d8d0532c3277f8400e9f0de8e8fdd0f14",
   "frozen/tsconfig.alpha-facade.json": "d47f682445d235805a96f86c22b9834e967c97131f4660ee20cd4bbd9bddab1f",
   "frozen/tsconfig.alpha-six.json": "30ea35f6df4d8aac0c830069f765a40d8945c5c4eddc8d2abfef929b57f352dd",
-  "reproduce.py": "73311b90dd16e62d8ea6acee1a4dbe39dca09d5e83fce66c5485ee03c30b7f1b",
-  "verify-captures.py": "db314841d1cb571ba06df4a3ea8e1da51c7fea949fe3b30e11c11424d8b84bb8"
+  "literal-doc-input.py": "d1204c25a7a469e3a16998602915a650ffcf29bafca726260890ad718a948df6",
+  "reproduce.py": "453dd2387633386057ad72247dace027086719241ce817de251a275ba422f9f6",
+  "verify-captures.py": "b10ea3500ace42481aa6c095b80830b8a2c93b5a018fe4a0dd6eabb45f43cfc5"
 }

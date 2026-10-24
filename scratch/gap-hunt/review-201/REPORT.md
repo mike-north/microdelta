@@ -2,7 +2,12 @@
 
 Source `f4211e3d925ed8aaedc313ac468d49a13149826c`, based on
 `e59c64d0e1c607b5a4a8ae1fa124b1be5cdc2573`. This evidence branch changes no
-product files. Run `python3 scratch/gap-hunt/review-201/reproduce.py` from its
+product files. **Revised verdict: the checked-in fixture and type/runtime controls pass,
+but the literal manual sibling recipe is incomplete.** It references
+`alpha-import-only.ts` without creating or copying it. A fresh consumer following
+only those instructions fails TS6053; explicitly copying the checked-in input
+makes compilation and runtime pass. The earlier cd264c3 unqualified manual-recipe
+PASS is superseded by this bounded finding. Run `python3 scratch/gap-hunt/review-201/reproduce.py` from its
 worktree root. The runner creates an actual clean source archive in a fresh
 `parent/microdelta` directory with no node_modules, then exercises the original
 issue reproduction and the documented consumer recipe. Every subprocess has a
@@ -15,9 +20,11 @@ no global toolchain setting changes.
 1. The guide documents package build prerequisites, strict TypeScript with
    explicit generated alpha rollups, and ordinary built-package runtime
    resolution. Both facade and contribution-example README links resolve to it.
-   The manual sibling probe uses the exact second JSON fence and exact JavaScript
-   fence extracted from the guide, with an actual consumer beside the archive;
-   the local package link is relative. No absolute source/home/worktree path is
+   The initial manual sibling probe used the exact second JSON fence and JavaScript
+   fence plus a synthesized TypeScript input. That extra input step is absent
+   from the guide. A separate literal probe omits that synthesis and exposes
+   TS6053; an explicit fixture-copy control restores compilation/runtime. The
+   local package link is relative. No absolute source/home/worktree path is
    present in the documented config.
 2. The exact original `abb9bab1987d18644093fb67dadb17c3ea9f94ce` reproduction
    script, bootstrap helper and three import-only inputs are frozen here. The
@@ -36,10 +43,12 @@ no global toolchain setting changes.
    and warns that another API can reach another closure. The five omission
    controls are evidence for this concrete input, not universal minimum claims.
 5. Clean archive compilation, root and fixture-directory documented commands,
-   and the separate literal sibling compiler/runtime commands all run. The
+   and the separate sibling compiler/runtime commands with the extra input all run.
+   The literal manual commands fail until that input is explicitly copied. The
    official four-test suite also constructs its own temporary sibling fixture;
    the manual probe independently uses an actual archived checkout rather than
-   that test's checkout symlink. TypeScript and runtime resolution remain separate.
+   that test's checkout symlink, but its synthesized input meant it did not
+   establish literal documentation completeness. TypeScript and runtime resolution remain separate.
 
 ## Ownership and scope review
 
@@ -80,7 +89,8 @@ independent acceptance, publication and workflow changes.
 The final clean archive recipe passed all **15** top-level commands with their
 expected exits. The original script also ran npm ci and the full package build.
 Its facade-only input produced exactly **114 TS2305** diagnostics. Both official
-four-case invocations passed; literal sibling compilation/runtime passed. Missing
+four-case invocations passed; sibling compilation/runtime with a synthesized input passed; the later literal
+no-input probe separately fails TS6053. Missing
 Definition gives39 TS2305 plus3 downstream TS2536 diagnostics; missing History,
 Resolution, Supervision and Tracking give6/42/57/8 TS2305 respectively. The public
 default rejects authoring with one TS2305. Core tsd and focused fixture lint pass.
@@ -93,3 +103,17 @@ It independently accepted the final capture and rejected four corruptions:
 missing command, wrong diagnostic, wrong test count and an injected alpha export.
 The final runner appends this read-only verifier; that guard-only addition did
 not require another execution of the successful workload.
+
+## Confirmed manual-recipe finding
+
+The guide names `files: ["alpha-import-only.ts"]` in its manual sibling config,
+but does not instruct the reader to create or copy that file. The earlier
+fixture discussion identifies what the checked-in fixture imports; it does not
+state that the manual reader must copy that fixture into the new consumer.
+`literal-doc-input.py` uses only the guide's config/probe/package link before
+its negative compiler request. That request exits2 with exactly the missing
+input TS6053, not a declaration-closure error. An explicit copy of the checked-in
+input then gives compiler0 and runtime0. The source/type/export implementation
+is sound within the bounded controls, while AC1/AC5 manual setup completeness
+needs this small documentation correction. `FINDING.md` is comment-ready; the
+supervisor owns feedback and issue disposition. No product fix was made.

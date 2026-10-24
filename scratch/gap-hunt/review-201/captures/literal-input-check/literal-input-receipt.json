@@ -1,0 +1,46 @@
+{
+  "source": "f4211e3d925ed8aaedc313ac468d49a13149826c",
+  "noInputFixtureSynthesizedBeforeNegative": true,
+  "negativeIsMissingInputNotClosure": true,
+  "manualRecipeRequiresUndocumentedInputStep": true,
+  "commands": [
+    {
+      "label": "literal-no-input",
+      "argv": [
+        "node",
+        "../microdelta/node_modules/typescript/bin/tsc",
+        "-p",
+        "tsconfig.json"
+      ],
+      "exit": 2
+    },
+    {
+      "label": "explicit-input-copy",
+      "argv": [
+        "cp",
+        "../microdelta/fixtures/declarations/consumer-alpha/alpha-import-only.ts",
+        "."
+      ],
+      "exit": 0,
+      "performedBy": "shutil.copyfile with exact fixture bytes"
+    },
+    {
+      "label": "literal-with-copy",
+      "argv": [
+        "node",
+        "../microdelta/node_modules/typescript/bin/tsc",
+        "-p",
+        "tsconfig.json"
+      ],
+      "exit": 0
+    },
+    {
+      "label": "literal-runtime-after-copy",
+      "argv": [
+        "node",
+        "runtime-import.mjs"
+      ],
+      "exit": 0
+    }
+  ]
+}

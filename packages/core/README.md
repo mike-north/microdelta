@@ -22,6 +22,10 @@ authoring and run path. Every name is a project-private `@alpha` contract that
 may change without notice; the default public entry exposes none of it. It
 composes the owners and adds no policy of its own:
 
+The durable Node SQLite path has [platform-qualified native installation and
+diagnostic guidance](../../docs/native-sqlite-toolchain.md). It is separate
+from the public memory Store and from the alpha declaration setup.
+
 - `authoring<TInputs, THelpers>()`: Definition's builders bound to Reuse
   Resolution's binding family: `source` (including keyed collection sources),
   `memo`, `template` (fanout over a keyed collection with an optional custom

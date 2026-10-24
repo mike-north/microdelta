@@ -1,0 +1,13 @@
+{
+  "extends": "../../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": "../../../",
+    "noEmit": true,
+    "skipLibCheck": false,
+    "types": [],
+    "paths": {
+      "microdelta": ["packages/core/dist/api/microdelta.alpha.d.ts"]
+    }
+  },
+  "files": ["alpha-import-only.ts"]
+}

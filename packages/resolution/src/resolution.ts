@@ -612,10 +612,22 @@ class LeaseLost extends Error {
  * lifecycle observers) or to a failure detaching an author's returned data:
  * those failures name the step and the failure kind only, and keep the
  * thrown value as the failure's `cause` (RUN-013: diagnostics name fields
- * and keys, not their contents).
+ * and keys, not their contents). Like Definition's thrown-detail boundary,
+ * this reads only an Error's own data message; coercion, getters and proxy
+ * traps cannot replace the framework failure with another throw.
  */
 function frameworkDetail(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+  try {
+    if (error instanceof Error) {
+      const message = Object.getOwnPropertyDescriptor(error, 'message');
+      if (message !== undefined && 'value' in message && typeof message.value === 'string') {
+        return message.value;
+      }
+    }
+    return typeof error === 'string' ? error : `a thrown ${error === null ? 'null' : typeof error}`;
+  } catch {
+    return 'non-printable error';
+  }
 }
 
 /** Whether a value is a supported completed-result root (record or array). */
@@ -2051,17 +2063,35 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
    * index keys, it satisfies Definition's frozen-array check, and `in`, key
    * reflection and every array method see its elements.
    *
-   * The proxy adds only observation: reading `length`, a position past the
-   * end, an `in` check or key reflection records the list's shape (its length,
-   * or the absent position), each returning exactly what the target answers,
-   * as the proxy invariants for a frozen target require. Shape observations
-   * are armed only when the author callback starts, because Definition's
-   * frozen-array check reflects on the list before that, possibly inside a
-   * parent body's capture where a record would be misattributed.
+   * Once the child callback starts, all list operations require both that
+   * invocation and its exact Tracking frame. Definition may reflect the
+   * unarmed frozen array beforehand without attributing its check to the
+   * parent. Returning this exact proxy as output is rejected during normal
+   * detachment traversal, even when it is empty or nested; an explicit copy
+   * such as `[...args]` is ordinary supported output. Its object-valued
+   * elements remain Tracking-owned wrappers with their existing semantics.
+   * A Proxy is not structured-cloneable, so `structuredClone(args)` raises
+   * `DataCloneError`; copy the list before cloning it.
    */
-  function argumentViews(values: readonly IArgumentValue[]): { readonly views: readonly unknown[]; readonly arm: () => void } {
+  function argumentViews(values: readonly IArgumentValue[], invocation: ISuppliedInvocation<IFamily>): { readonly views: readonly unknown[]; readonly arm: () => void; readonly finish: (value: unknown) => IMemoReturn } {
     const whole = tracking.tracked(argumentList(values), { path: bindingPaths.argument });
     let armed = false;
+    let assertFrame: (() => void) | undefined;
+    let finishing = false;
+    /** Reject foreign and ended work before any tracked or otherwise-unobserved list read. */
+    const assertOwner = (): void => {
+      if (!armed) { return; }
+      if (active.getStore() !== invocation || !invocation.open) {
+        throw new TypeError('The supplied argument list belongs to another or closed invocation');
+      }
+      if (assertFrame === undefined) {
+        throw new TypeError('The supplied argument list has no owning capture frame');
+      }
+      assertFrame();
+      if (finishing) {
+        throw new TypeError('A supplied-step argument list cannot be returned as output; return [...args] instead');
+      }
+    };
     const observeArity = (): void => {
       if (armed) {
         void Reflect.get(whole, 'length');
@@ -2072,6 +2102,7 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
       Object.defineProperty(target, position, {
         enumerable: true,
         get: (): unknown => {
+          assertOwner();
           if (value.kind === 'opaque') {
             throw new TypeError(`Argument ${String(position)} is unreconstructible (${value.reason}); a supplied step can never observe it`);
           }
@@ -2082,30 +2113,54 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
     Object.freeze(target);
     const views = new Proxy(target, {
       get(held, key, receiver): unknown {
+        assertOwner();
         if (key === 'length') {
           observeArity();
           return held.length;
         }
         if (typeof key === 'string' && /^(?:0|[1-9][0-9]*)$/u.test(key) && Number(key) >= held.length) {
+          if (!Number.isSafeInteger(Number(key))) {
+            // An unsafe decimal key is not an array index and supplies no argument evidence.
+            return undefined;
+          }
           // A position past the end: its absence is a fact of this list's shape.
           return Reflect.get(whole, key);
         }
         return Reflect.get(held, key, receiver);
       },
       has(held, key): boolean {
+        assertOwner();
         observeArity();
         return Reflect.has(held, key);
       },
       ownKeys(held): ArrayLike<string | symbol> {
+        assertOwner();
         observeArity();
         return Reflect.ownKeys(held);
       },
       getOwnPropertyDescriptor(held, key): PropertyDescriptor | undefined {
+        assertOwner();
         observeArity();
         return Reflect.getOwnPropertyDescriptor(held, key);
       },
+      getPrototypeOf(held): object | null {
+        assertOwner();
+        return Reflect.getPrototypeOf(held);
+      },
+      isExtensible(held): boolean {
+        assertOwner();
+        return Reflect.isExtensible(held);
+      },
     });
-    return { views, arm: () => { armed = true; } };
+    return {
+      views,
+      arm: (): void => { assertFrame = tracking.currentCaptureAssertion(); armed = true; },
+      finish: (value: unknown): IMemoReturn => {
+        // The existing detacher owns this rejection and preserves its safe outer failure.
+        finishing = true;
+        return detachComputation(value);
+      },
+    };
   }
 
   /** Resolve one supplied slot call once per top-level request, for its slot, subject, version and arguments. */
@@ -2179,7 +2234,7 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
       invocation.close();
       throw error;
     }
-    const { views, arm } = argumentViews(call.values);
+    const { views, arm, finish } = argumentViews(call.values, invocation);
     const supplier: IArgumentSupplier<IFamily> = Object.freeze({
       views: <TParameters extends readonly unknown[]>(declaration: ISuppliedStepDeclaration<IFamily, TParameters, unknown>): IArgumentViews<IFamily, TParameters> => {
         void declaration;
@@ -2189,7 +2244,7 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
     let executed: ISupervisedExecution<IObservationCapture<IMemoReturn>>;
     try {
       emit(request, evidence, step, 'execute');
-      executed = await supervision.execute(step, () => active.run(invocation, () => invocation.apply(bindings, supplier, invoker(detachComputation, arm, true))), { subject, attemptId });
+      executed = await supervision.execute(step, () => active.run(invocation, () => invocation.apply(bindings, supplier, invoker(finish, arm, true))), { subject, attemptId });
     } catch (error: unknown) {
       executed = { kind: 'threw', error };
     } finally {

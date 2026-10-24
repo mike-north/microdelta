@@ -849,6 +849,15 @@ function unsupervised(): IExecutionSupervision {
       tail = next.then(() => undefined, () => undefined);
       return next;
     },
+    async dispatchMembers(count: number, continueWhile: () => boolean, work: (position: number) => Promise<void>): Promise<number> {
+      // Without a run window, a single sequence is the full active bound.
+      let started = 0;
+      while (started < count && continueWhile()) {
+        await work(started);
+        started += 1;
+      }
+      return started;
+    },
     publicationRefusal: (): string | undefined => undefined,
   });
 }
@@ -2867,11 +2876,10 @@ export function createResolution<TInputs extends object, THelpers extends object
       }
     };
     /**
-     * Resolve one member inside the run's bounded active window (RUN-002).
-     * Every member is presented at once, in canonical key order, and the
-     * window starts them in that order. A member not yet started holds
-     * nothing, so after a stop it is presented to admission, and refused,
-     * only when a lane reaches it; after a run-level failure it does not start.
+     * Resolve one member already selected by the run's bounded dispatcher
+     * (RUN-002, DOM-3). Undispatched keys hold no execution continuation or
+     * lane wait. The dispatcher selects positions in canonical order; this
+     * callback performs the current evidence and status work for each key.
      *
      * Invariant: the window's lane pool is run-wide, so a member's work must
      * never reach another `settleMembers` (a nested fan-out) under the same
@@ -2897,8 +2905,24 @@ export function createResolution<TInputs extends object, THelpers extends object
         settled.set(position, { key, step: instance, resolved: error });
       }
     };
-    // Members already started finish before a run-level failure is reported, so no member work outlives the request.
-    await Promise.all(keys.map((key, position) => supervision.member(() => member(key, position))));
+    // A run-level failure stops only this fan-out's new starts. Hard stop
+    // leaves a contiguous suffix: process it one member at a time through
+    // the existing (already-aborted) member frame, preserving current
+    // evidence and complete report statuses without a corpus-sized queue.
+    const started = await supervision.dispatchMembers(keys.length, () => runFailure.first === undefined, async (position) => {
+      const key = keys[position];
+      if (key !== undefined) {
+        await member(key, position);
+      }
+    });
+    if (runFailure.first === undefined) {
+      for (let position = started; position < keys.length; position += 1) {
+        const key = keys[position];
+        if (key !== undefined) {
+          await supervision.member(() => member(key, position));
+        }
+      }
+    }
     if (runFailure.first !== undefined) {
       throw runFailure.first.error;
     }

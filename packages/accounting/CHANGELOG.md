@@ -1,5 +1,14 @@
 # @microdelta/accounting
 
+## 0.1.1
+### Patch Changes
+
+- Updated dependencies [8b4283e]
+- Updated dependencies [5010548]
+- Updated dependencies [77715af]
+  - @microdelta/value@0.2.0
+  - @microdelta/machine@0.2.1
+
 ## 0.1.0
 ### Minor Changes
 

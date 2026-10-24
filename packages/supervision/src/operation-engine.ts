@@ -323,6 +323,14 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
    * Callers still owe unique public labels for attribution and usage.
    */
   let runInstance: string | undefined;
+  /**
+   * Request intents that this live invocation knows never reached `perform`.
+   * If the not-sent restoration cannot be committed, the durable pending row
+   * remains conservatively recoverable as unknown by another invocation;
+   * only this invocation may exclude its own stronger no-dispatch evidence
+   * from the sent-attempt allowance after reacquiring the writer.
+   */
+  const neverDispatched = new Set<string>();
   function currentRunInstance(): string {
     if (runInstance === undefined) {
       const minted: unknown = random.randomIdentifier();
@@ -332,6 +340,13 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       runInstance = `run-instance-${minted}`;
     }
     return runInstance;
+  }
+  /** Durable evidence counts conservatively; local no-dispatch evidence narrows only this invocation's tally. */
+  function spentInRun(record: IOperationRecord): number {
+    const instance = currentRunInstance();
+    const durable = spentAttempts(record, instance);
+    const knownUnsent = record.attempts.filter((attempt) => attempt.runInstance === instance && attempt.status !== 'not-sent' && neverDispatched.has(attempt.requestAttempt)).length;
+    return durable - knownUnsent;
   }
   /**
    * Addresses with a call in progress in this run. A second call at an
@@ -456,7 +471,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       return { kind: 'deferred', operation: record.operation, notBefore: record.notBefore };
     }
     if (record.status === 'unknown') {
-      const decision = unknownRetry(record, spentAttempts(record, currentRunInstance()));
+      const decision = unknownRetry(record, spentInRun(record));
       return decision === 'retry' ? undefined : { kind: 'unknown-outcome', operation: record.operation, reason: decision };
     }
     return undefined;
@@ -663,7 +678,12 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     const sent = await transport.transmit<IOperationResponse<T>>({
       label: request.name,
       retry,
-      perform: (signal) => request.perform({ signal, operation, requestAttempt, idempotencyKey: request.providerIdempotency ? operation : undefined }),
+      perform: (signal) => {
+        // If a formerly unconfirmed intent is eventually sent under the same
+        // request ID, local no-dispatch evidence no longer excludes it.
+        neverDispatched.delete(requestAttempt);
+        return request.perform({ signal, operation, requestAttempt, idempotencyKey: request.providerIdempotency ? operation : undefined });
+      },
       cancel: request.cancel,
     }, () => {
       if (attempt.ended) {
@@ -700,9 +720,10 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
         try {
           current = write(lease, restored, current.revision);
         } catch {
+          neverDispatched.add(requestAttempt);
           // Deliberately conservative: if recording the restoration fails too, the operation stays `pending` durably, and the
-          // next writer records it unknown (an operator then settles it), although nothing was sent. Treating an unconfirmed
-          // record as proof that nothing happened would be the optimistic error RUN-012 forbids.
+          // next writer records it unknown. A later invocation cannot infer no-send from that row; only this live invocation
+          // knows its pre-send callback failed before `perform` and may exclude the phantom from its allowance.
           engine.diagnose(`lease-lost: operation ${operation} request attempt ${requestAttempt} stays pending though it was never sent`);
         }
         throw error;
@@ -765,7 +786,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       notBefore,
     });
     /** The configured fixed wait or increasing default after sent attempts of this invocation. */
-    const retryDelay = (record: IOperationRecord): number => request.backoff ?? defaultRetryDelay(spentAttempts(record, currentRunInstance()));
+    const retryDelay = (record: IOperationRecord): number => request.backoff ?? defaultRetryDelay(spentInRun(record));
     /** Commit and report; a lost lease makes the outcome unknown (ruling R). */
     const commit = (next: IOperationRecord, reason: IOperationReason | undefined): IStored | undefined => {
       const written = settle(current, next, lease);
@@ -793,7 +814,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
           const refused = settledAs('rate-limited', 'deferred');
           const notBefore = Math.max(response.retryAt ?? now(), now() + retryDelay(refused));
           const next: IOperationRecord = { ...refused, notBefore };
-          if (spentAttempts(next, currentRunInstance()) >= request.maxAttempts || rateLimited(next, currentRunInstance()) > request.rateLimitRetries) {
+          if (spentInRun(next) >= request.maxAttempts || rateLimited(next, currentRunInstance()) > request.rateLimitRetries) {
             const exhausted: IOperationRecord = { ...next, status: 'failed', notBefore: undefined };
             const written = commit(exhausted, 'rate-limited');
             if (written === undefined) {
@@ -812,7 +833,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
         // A permanent failure, or a transient one (including a rate limit without a retry time).
         const transient = response.kind === 'rate-limited' || response.transient;
         const failed = settledAs('failed', 'failed');
-        const retryable = transient && spentAttempts(failed, currentRunInstance()) < request.maxAttempts;
+        const retryable = transient && spentInRun(failed) < request.maxAttempts;
         if (!retryable) {
           const written = commit(failed, transient ? (response.kind === 'rate-limited' ? 'rate-limited' : 'transient') : 'permanent');
           if (written === undefined) {
@@ -841,7 +862,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       }
       case 'unknown': {
         const unknown = settledAs('unknown', 'unknown');
-        const decision = unknownRetry(request, spentAttempts(unknown, currentRunInstance()));
+        const decision = unknownRetry(request, spentInRun(unknown));
         const delay = decision === 'retry' ? retryDelay(unknown) : 0;
         const notBefore = decision === 'retry' ? now() + delay : undefined;
         const scheduled: IOperationRecord = { ...unknown, notBefore };

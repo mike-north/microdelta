@@ -116,7 +116,7 @@ export function subjectKey(subject: Pick<IOperationSubject, 'subject' | 'version
   return JSON.stringify([subject.subject, subject.version]);
 }
 
-/** Actually sent request attempts belonging to one live invocation, independent of public run attribution. */
+/** Persisted sent-attempt evidence for one invocation; a live engine may know a pending intent never dispatched. */
 export function spentAttempts(record: IOperationRecord, runInstance: string): number {
   return record.attempts.filter((attempt) => attempt.status !== 'not-sent' && attempt.runInstance === runInstance).length;
 }

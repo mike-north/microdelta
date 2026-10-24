@@ -168,7 +168,7 @@ const controls = [
     guard: 'deferral',
     name: "a transient failure is retried beyond the author's attempts",
     target: 'engine',
-    anchor: 'const retryable = transient && spentAttempts(failed, currentRunInstance()) < request.maxAttempts;',
+    anchor: 'const retryable = transient && spentInRun(failed) < request.maxAttempts;',
     replacement: 'const retryable = transient;',
     breaks: ['durable-quota-deferral'],
   },

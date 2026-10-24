@@ -36,6 +36,7 @@ import type { ICompletedResultReference, IDurableHistory } from '@microdelta/his
 import type { IResolutionHistory } from '@microdelta/resolution';
 
 import { faultySqlite } from '../accounting/support.js';
+import { cleanup, rawReaderCount } from '../durable-history/support.js';
 import { analysis, assessmentSubject, createWorld, installWorld } from './fixture.js';
 import type { IWorld } from './fixture.js';
 import { T0, fakeTimer, freshKey, hour, openSession, production, statuses, tempStores, until } from './harness.js';
@@ -54,7 +55,14 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  stores.remove();
+  try {
+    // Readers opened by History inspection must be closed before their store
+    // is removed, including on platforms that lock open SQLite files.
+    cleanup();
+    expect(rawReaderCount()).toBe(0);
+  } finally {
+    stores.remove();
+  }
 });
 
 /** A fresh world over the same persisted provider ledger, standing in for a new process. */

@@ -1,188 +1,136 @@
-# Proposed resource-state observation plan
+# Resource-state reports: accepted scope and implementation handoff
 
-**Standing:** proposal for owner review, not accepted. This plan does not amend
-the normative [operations contract](../spec/operations.md), select an API or
-storage format, or claim implementation evidence. Owner decisions remain open.
+Status: accepted owner decisions from 2026-10-24 for
+[issue 166](https://github.com/mike-north/microdelta/issues/166), superseding the
+initial proposal's unresolved retention and mandatory selected-balance questions.
+This records target behavior, not runtime delivery. [ACC-004/007/008](../spec/operations.md#resource-accounting)
+own the contract; [A-14a–f](../spec/acceptance.md#resource-state-report-cases) define
+future proof obligations. Exact APIs and storage formats remain implementation choices.
 
-## Purpose and existing boundaries
+## Purpose and accepted decisions
 
-“What did this work consume?” and “what balance did a provider report?” are
-different questions. Consumption is additive evidence attributed to work. A
-remaining balance is a point-in-time report about shared capacity and may
-reflect other actors' work. It is not a delta, entitlement, admission permit,
-or proof of capacity now.
+Consumers need to read what a provider reported about allowed or remaining limits.
+A report is time-qualified evidence about shared capacity, not a consumption delta,
+a guaranteed current balance or permission to send. Provider activity and windows
+continue when the analysis or process restarts, so a still-relevant report must
+survive that restart. An old report that no longer matters should not accumulate
+indefinitely beside immutable usage history.
 
-[ACC-001–008](../spec/operations.md#resource-accounting) remain authoritative.
-ACC-004 separates state from consumption and forbids invented balances across
-pools/windows. ACC-005 says missing usage is unknown, not zero. ACC-008 says
-accounting evidence grants no retry permission and schedules no work. The
-[six-context ownership](../spec/architecture.md#arc-001--six-contexts-one-owner-per-invariant)
-also remains intact; this plan adds no context or quota authority.
+| Owner decision | Consequence and limit |
+| --- | --- |
+| Expose reported remaining-limit information to consumers that want it | Provide recording and read-side access; no dedicated remaining-limit notification system or complete quota-management product is required |
+| Retain reports across analysis/process restart while relevant | Durable acknowledged reports remain queryable within their retention period; reopening does not restart their age |
+| Prefer an explicit provider reset/validity boundary | Qualify the report by that evidence; expiry does not prove that the provider reset or has capacity |
+| Without that information, default to one hour from observation, with an optional override | This is a local retention fallback, not an inferred provider window or balance-validity guarantee; ordinary adapters/users need not supply expiry configuration |
+| Evict promptly when irrelevant/expired | Retention is bounded state maintenance, not an indefinite resource-state history; do not evict durable usage, request-attempt or result evidence with it |
 
-## Proposed concepts and relationships
+The one-hour default resolves the earlier proposal's request for an owner-selected
+retention duration. Provider/source validity information takes precedence over the
+fallback. A chosen fallback override changes local retention, not provider facts.
+Record the observation time and the retention basis so a consumer can distinguish
+provider information from a local default/override. Neither a new analysis nor
+redelivery of the same recorded observation makes it new evidence.
 
-### Separate consumption from state
+## Reports before derived balances
 
-Present the two side by side, never derive one from the other. For same-scope
-provider balances 93 then 90 and usage deltas 2 then 3, show **5 observed units
-consumed** and **90 last reported remaining**. Do not sum balances to 183,
-subtract usage from 90 again, or infer total consumption from balance changes.
+For usage deltas 2 and 3 and same-scope reports of remaining 93 and 90, consumption
+is 5. The read side may expose both time-qualified reports while retained; it must
+not sum them to 183, subtract usage from 90 again or infer usage from their change.
+A consumer can inspect the reported numbers without the library first selecting
+an authoritative latest balance. Receipt order, a lower number or equal timestamps
+do not establish provider source order. Missing report, reported zero, missing
+scope/window and known scope/window must remain distinguishable.
 
-Usage completeness and state availability are independent:
+Keep available provider/service, account/pool, resource/unit and time/window
+qualifications with their reports; do not combine unrelated scopes or expose raw
+credentials. Unknown qualifications remain unknown, not a universal pool. A
+provider may omit a window and still produce a useful inspectable report: the
+local retention fallback does not manufacture that missing window.
 
-| Usage reports | State report | Truthful view |
-| --- | --- | --- |
-| Complete | Ordered/comparable | Consumption complete; show selected reported balance. |
-| Incomplete | Present | Show state and usage gap; state does not fill the gap. |
-| Complete | Missing/incomparable | Consumption complete; state missing or incomparable. |
-| Incomplete | Missing/incomparable | Show both uncertainties separately. |
+No source-order protocol, latest-state reducer, minimum-balance tie-break, complete
+provider taxonomy or multi-provider aggregation engine is a prerequisite to this
+slice. If a later feature promises a selected latest balance, it must separately
+specify the comparison/ordering evidence and ambiguity behavior. The initial
+proposal's latest-balance and source-order recommendations are not accepted
+requirements merely because the owner accepted report visibility.
 
-An empty usage report is the reporter's explicit zero for that attempt. A state
-report cannot acknowledge a missing usage report or make another attempt
-complete.
+State availability and usage completeness are independent. A state report cannot
+acknowledge missing usage, and complete usage does not prove a state report exists.
+Neither a report nor its expiration authorizes admission, retry, refresh or deletion
+of immutable analysis history.
 
-### Identify the reported scope
+## Retention, reads and ownership
 
-Comparison depends on the **provider namespace** (which provider's semantics
-apply), **pool** (provider/account capacity), **resource** (the constrained
-quantity), **unit** (what its number measures), and **window** (the
-provider-defined interval, if any). Only quantities whose provider namespace,
-scope, unit, and applicable window are comparable can support a selected state
-view. Adapters should supply stable identities with documented meaning. Do not
-expose credentials or use a credential hash as pool identity: credentials
-rotate, may share a pool, or may address multiple resources.
+Resource Accounting owns typed state-report evidence, its persistence/read ports,
+retention qualification and cleanup. Provider adapters translate actually received
+reports; they need not invent a reset or require every caller to configure expiry.
+Machine supplies injected clock/storage capabilities. Run Supervision retains
+scheduling, retry and admission authority. History retains its result/reference
+and publication invariants; expiring resource state does not grant deletion there.
 
-Keep three identities/evidence roles distinct: pool identity says which shared
-capacity is described; observation replay identity lets Accounting recognize
-redelivery of the same report; source-order evidence establishes whether one
-report follows another. One value must not silently serve all three roles.
-Replay identity must be stable for its deduplication purpose, while source order
-must have documented provider meaning; neither is a credential-derived pool
-identifier.
+Reads are read-only. They must not refresh the provider, dispatch analysis work,
+renew claims, initialize schemas or perform eviction as a hidden query side effect.
+A read must not present an expired report as retained applicable information.
+Physical eviction belongs to an explicit Accounting maintenance/write path with
+prompt, bounded cleanup, including on reopening after a long absence. Specify that
+mechanism and exact expiry-boundary behavior in the implementation issue. Query
+filtering alone is not proof that stored expired records stop accumulating.
 
-Known **no fixed window** differs from **unknown window**. No-window reports
-compare only where adapter semantics support that comparison; unknown-window
-reports are not a universal bucket or silently joined to a known window.
-Missing state, unknown scope, and a reported numeric zero are likewise
-different; only an actual report of zero establishes zero remaining.
+Apply [ACC-007](../spec/operations.md#acc-007--acknowledgment-must-state-its-durability-guarantee):
+only a durable acknowledgment promises restart survival. Persistence failure must
+not issue that acknowledgment. Document report identity, duplicate/conflicting
+redelivery and failure behavior before implementation; retain the existing additive
+usage deduplication contract independently. No changed state record may rewrite
+already recorded usage or invent request-attempt attribution.
 
-Environment isolation applies. Two environments may describe the same physical
-pool, but their facts do not merge automatically or imply that the provider
-partitions that pool by environment.
+Built-in adaptive quota/reserve management is outside this report slice. That does
+not prohibit a pluggable rate-coordination adapter from consuming observations
+under its own execution contract; report recording itself grants no such authority.
+Client cache/persistence policy and preview notification semantics are separate
+consumer/preview concerns. No dedicated notification transport is required here.
 
-### Order reports without guessing
+## Examples and required proof
 
-Receipt time means when this system learned a report, not necessarily when the
-provider observed state. Adapters may provide source ordering with documented
-meaning. Arrival order, clock equality/skew, and a lower balance do not by
-themselves establish which report is newer.
+These are expected outcomes, not tests already passed:
 
-**Recommended direction:** call a balance “latest reported” only inside an
-identified, comparable pool/resource/window when supported source ordering
-distinguishes the observations. If identity, window, or ordering is missing or
-incomparable, show that limitation and the available facts. An alternative is a
-“last received” view, explicitly labeled as such, never as current provider
-state. If source evidence orders 90 after 93, late arrival of 93 does not
-replace 90. Conflicting reports with only the same apparent timestamp remain
-conflicting/incomparable. Minimum balance is not a generic tie-break: balances
-can rise and reports can cover different windows.
+1. Record a provider report with a reset at 11:00; acknowledge durably. Restart at
+   10:45: the report remains readable with its original time and reset qualification.
+   After expiry, no report establishes a renewed balance, and maintenance removes
+   the expired state without touching consumption or attempts.
+2. Observe a report at 10:00 with no reset and no configuration. Its local retention
+   ends at 11:00; label the one-hour basis as local. A documented optional fallback
+   override changes that deadline. Reopening at 10:30 does not move it to 11:30;
+   reopening three days later does not resurrect it or manufacture new capacity.
+3. Record remaining 93 then 90 alongside deltas 2 then 3, including out-of-order
+   arrivals. Read retained reports with their qualifications and observed consumption
+   5. No latest-balance reducer or invented source order is needed to inspect them.
+4. Report remaining zero in one pool and omit a report in another. Zero and missing
+   stay distinct. Expire state while an attempt's usage is unknown; the usage gap
+   remains unknown, and previously recorded usage remains durable.
+5. Use rejecting execution/claim/write ports during reads, plus a controlled clock
+   and instrumented maintenance path. Reads have no side effects; cleanup really
+   removes expired state and preserves all durable usage/result/attempt evidence.
 
-### Retain evidence and handle windows
+## Smallest implementation handoff
 
-**Recommended direction:** retain attributable, durably acknowledged state
-observations as facts and derive the selected view. Same identity/content
-redelivery is idempotent; same identity with changed content is a visible
-conflict, not an overwrite. A distinct late report remains inspectable and
-supersedes another only when source ordering supports it.
+One bounded issue can deliver typed report intake, durable qualified-report reads
+and retention/eviction under ACC-004/007/008 and A-14a–f. Start with fake providers,
+controlled clocks, a separate-process restart control and tests that fail before
+implementation. Preserve strict type/lint checks, release tiers, context boundaries
+and durable intent comments. No live provider calls are needed.
 
-This is bounded inspectability, not unlimited history, arbitrary analytics, or
-indefinite retention. Any retention duration, limit, or pruning rule needs an
-owner decision. Query shape and evidence retention are separate choices.
+Choose and document the record/query representation, observation-time interpretation,
+expiry comparison, identity/redelivery behavior and cleanup trigger/cadence in that
+issue before code. These are routine engineering choices within the settled
+outcomes, not another blanket owner-approval gate. Raise a concrete conflict if a
+choice changes an accepted behavior or public responsibility. Raw qualified reports
+are sufficient: do not block this work on source ordering, current-balance synthesis,
+a scheduling product or a complete provider adapter catalog.
 
-Keep the last balance qualified by its window. When a known window elapses, do
-not imply that a successor window exists or synthesize one. The old balance is
-historical; applicable state after that window remains unknown until a new
-report establishes it. Elapsed local time does not prove reset or replenishment.
-Unknown reset time means unknown applicability, not permanent validity. A
-reported reset time and provider-confirmed reset are different evidence. Neither
-causes refresh, retry, admission, or scheduled work. An alternative is to hide
-the old number from the primary view while retaining it for inspection; this
-reduces accidental reliance but loses context for the unknown later state.
-
-## Ownership and current seams
-
-- **Resource Accounting** owns state evidence, attribution, and interpretation
-  in queries; it keeps state distinct from additive `IUsageReport` quantities
-  and usage-summary completeness.
-- **Provider adapters** translate pool/resource/window/order/reset evidence;
-  missing or unsupported evidence stays explicit.
-- **Run Supervision** owns attempts, admission, retries, and deferrals. A state
-  report supplies evidence, not permission.
-- **CLI inspection** presents recorded evidence without fetching state. [CLI-001](../spec/operations.md#cli-001--read-only-inspection-is-an-explicit-delivery-checkpoint)
-  forbids mutation, provider refresh, and starting work while inspecting.
-- **History** owns result attempts/references/publication; **Materialization**
-  owns selected stored data. Neither owns quota semantics.
-
-`openDurableAccounting` initializes schema during open, so its read-only summary
-query does not provide a read-only-open contract for CLI inspection. A separate
-read-side boundary needs its own contract; no mechanism is selected here.
-[#151](https://github.com/mike-north/microdelta/issues/151) concerns the
-existing facade port only if a selected integration needs it; it does not
-provide state semantics.
-
-Issue [#167](https://github.com/mike-north/microdelta/issues/167) makes its
-complete CLI checkpoint depend on #165 and #166. This plan does not accept those
-targets or settle M6 placement. M6 names resource observations and inspection,
-but #166 calls the exact placement an interpretation to confirm.
-
-## Alternatives and owner questions
-
-1. **No source order:** prefer explicit incomparability; alternatively expose
-   “last received.” What claim serves the first consumer, and what order can an
-   adapter substantiate?
-2. **Retention:** prefer bounded inspection of acknowledged facts; alternatively
-   retain selected state and minimum explanatory provenance. What finite
-   retention promise is needed?
-3. **Elapsed window:** prefer historical balance beside an unknown applicable
-   balance afterward; alternatively hide the old number in the primary view.
-   Which best prevents stale capacity from looking available?
-4. **Intake:** accept only response-attached state, or also external reports?
-   Either needs attribution without inventing a request attempt or usage intent.
-5. **Milestone:** require bounded state inspection for M6, or state its absence
-   and defer it? This remains a proposal, not a ratified M6 criterion.
-
-These are domain/delivery questions, not proposed method names, fields, tables,
-or serialized variants. Accepting one does not settle the others.
-
-## Proposed acceptance scenarios after decisions
-
-These are future test candidates, not tests run here or evidence that behavior
-exists. Write behavioral tests first against the selected contract and adapters:
-
-1. Deltas 2 and 3 plus ordered same-scope balances 93 then 90; after restart,
-   show consumption 5 and selected balance 90.
-2. Identical duplicate is idempotent; changed content for same identity is a
-   conflict; late distinct older report does not supersede newer ordered state.
-3. Reports without a supported tie-break are incomparable; minimum is not a
-   generic ordering rule.
-4. Vary pool/resource/environment/window separately. Keep known windows and
-   environments distinct; distinguish no-window from unknown; never expose
-   credentials or their hashes as pool identity.
-5. Elapse a known window without a new report: old state is historical, the
-   applicable balance afterward is unknown, with no successor window inferred
-   and no refresh, retry, admission, or schedule.
-6. State without usage leaves the usage gap unknown; complete usage without
-   state leaves state missing. Inspect both after restart.
-7. Inspection with failing write/dispatch/refresh hooks reads retained evidence
-   without schema creation, mutation, execution, or retry.
-8. If owner decisions select durable acknowledgment for state facts, terminate
-   immediately after acknowledgment and recover the observation exactly once
-   under its replay identity; persistence failure issues no durable
-   acknowledgment. This candidate follows ACC-007 and selects no API or
-   mechanism.
-
-## Placement in the specification
-
-This proposal is linked from the spec index for review. It does not extend
-ACC-004, CLI-001, or the accepted M6 milestone. Owner acceptance and a later
-contract edit are required before any recommendation or scenario is normative.
+The consumer may be a library caller before full CLI assembly. [Issue 151](https://github.com/mike-north/microdelta/issues/151)
+is relevant only if its facade port is needed for the chosen integration; it does
+not supply state semantics. [Issue 167](https://github.com/mike-north/microdelta/issues/167)
+can consume this capability for its resource display, but its complete CLI checkpoint
+and [issue 165](https://github.com/mike-north/microdelta/issues/165)'s preview work are
+not prerequisites to the narrow report store/query slice. This decision does not
+change the accepted bounded M5 additive evidence or claim the full M6/M7 delivered.

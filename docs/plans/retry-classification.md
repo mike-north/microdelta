@@ -372,6 +372,12 @@ compatible already accepted future not-before; fresh default backoff history doe
 not erase an existing timing restriction. No within-run repair, grant, or new
 process/run-resume API is introduced.
 
+An explicitly initiated ordinary new run may make its initial acquisition after a
+prior accepted `stop`, subject to all current gates. A genuine unchanged
+authentication failure then stops automatic retries within that run. The library
+does not automatically relaunch stopped runs or infer repair or changed credentials
+from fresh allowance; this requires no cross-run repair-attestation mechanism.
+
 Crash boundaries must remain distinguishable. Before response commitment, existing
 in-flight/unknown recovery applies. After response commitment but before decision
 commitment, known response/facts/usage survive as pending; a missing live generation

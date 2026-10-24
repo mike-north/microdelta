@@ -555,8 +555,10 @@ export interface IDurableHistoryOptions {
  * changes. Acquisition and renewal, the lease operations a waiter repeats,
  * report it as their `contended` outcome ({@link IWriterContention}), so
  * contention is never mistaken for ownership or staleness (PUB-005). Any other
- * operation fails with Machine's `SqliteBusyError`. Whether to try again is
- * always the caller's policy, never History's.
+ * History-owned SQLite operation, including opening and reads, fails with
+ * `HistoryBusyError` whose cause is the exact Machine `SqliteBusyError`.
+ * Callback-thrown failures retain their identity and do not become contention
+ * outcomes. Whether to try again is always the caller's policy, never History's.
  * @alpha
  */
 export interface IDurableHistory {

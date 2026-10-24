@@ -17,7 +17,8 @@ import type {
   IWriterRenewal,
   IWriterLease,
 } from '../dist/api/history.alpha.js';
-import { HistoryIntegrityError, StaleWriterError, openDurableHistory } from '../dist/api/history.alpha.js';
+import { HistoryBusyError, HistoryIntegrityError, StaleWriterError, openDurableHistory } from '../dist/api/history.alpha.js';
+import { SqliteBusyError } from '@microdelta/machine';
 import * as publicTier from '../dist/api/history.public.js';
 
 declare const options: IDurableHistoryOptions;
@@ -82,6 +83,11 @@ if (recovery.kind === 'completed') {
 // Failure classes are Error subclasses; their runtime distinctness is asserted by the assembly suites.
 expectAssignable<Error>(new HistoryIntegrityError('x'));
 expectAssignable<Error>(new StaleWriterError('x'));
+const busy = new SqliteBusyError('machine busy', 1);
+const historyBusy = new HistoryBusyError('history busy', busy);
+expectAssignable<Error>(historyBusy);
+expectType<SqliteBusyError>(historyBusy.cause);
+expectError(new HistoryBusyError('history busy', new Error('not Machine busy')));
 
 // The durable authority is project-private: the public tier does not export it.
 expectError(publicTier.openDurableHistory);

@@ -33,6 +33,7 @@ import { SupervisionError, WriterBusyError, createStopController, createSupervis
 import type { IRun, IRunTimer, IRunWriter, IStopController, ISupervision, IWriterAttempt } from '@microdelta/supervision';
 
 import { writerFor } from '../../src/writer.js';
+import { classifyContentionFailure } from './contention-failure.js';
 import { controlledClock, observedSqlite, openHistory } from '../durable-history/support.js';
 import { attemptRequest, evidence, labelAddress, lastPartAddress, payload, provenance, subject } from './fixture.js';
 import { hostMonotonicMilliseconds, lifecyclePrefix, parseCommand, parseLaunch } from './protocol.js';
@@ -131,14 +132,14 @@ function stage(key: string, label: string, attemptId: number = requireAttempt(ke
   return history.stageAttempt(requireLease(), { attemptId, payload: payload(label), provenance: provenance(label), dependencies: [] });
 }
 
-/** Record one step of the contention loop: accepted, or refused with its class name. */
+/** Record one step of the contention loop: accepted, or refused by a recognized History class. */
 function attempt(log: IContentionEvent[], op: IContentionEvent['op'], fence: number, operation: () => unknown): boolean {
   try {
     operation();
     log.push({ op, ok: true, fence });
     return true;
   } catch (error: unknown) {
-    log.push({ op, ok: false, fence, error: error instanceof Error ? error.name : 'unknown' });
+    log.push({ op, ok: false, fence, ...classifyContentionFailure(error) });
     return false;
   }
 }
@@ -186,7 +187,7 @@ function contend(holder: string, durationMilliseconds: number, leaseMilliseconds
         log.push({ op: 'renew', ok: true, fence });
       }
     } catch (error: unknown) {
-      log.push({ op: 'renew', ok: false, fence, error: error instanceof Error ? error.name : 'unknown' });
+      log.push({ op: 'renew', ok: false, fence, ...classifyContentionFailure(error) });
     }
     // Outlive the lease on the shared host clock, then present it again.
     sleep(lease.expiresAt - Date.now() + 5);

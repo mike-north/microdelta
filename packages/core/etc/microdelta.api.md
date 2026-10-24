@@ -12,6 +12,7 @@ import { FingerprintAlgorithmMismatchError } from '@microdelta/history';
 import { GenerationPatch } from '@microdelta/history';
 import { GenerationRow } from '@microdelta/history';
 import { GenerationState } from '@microdelta/history';
+import { HistoryBusyError } from '@microdelta/history';
 import type { IAbortSignal as IAbortSignal_2 } from '@microdelta/supervision';
 import type { IAdmissionDecision as IAdmissionDecision_2 } from '@microdelta/resolution';
 import type { IAdmissionRequest as IAdmissionRequest_2 } from '@microdelta/resolution';
@@ -170,6 +171,8 @@ export { GenerationPatch }
 export { GenerationRow }
 
 export { GenerationState }
+
+export { HistoryBusyError }
 
 // @alpha
 export type IAbortSignal = IAbortSignal_2;

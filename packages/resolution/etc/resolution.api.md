@@ -192,6 +192,9 @@ export interface IGateEvidence {
 }
 
 // @alpha
+export type IHasOwn = (value: ITracked<object>, key: string) => boolean;
+
+// @alpha
 export type IIncompleteOutcomeFoldCoverage = IOutcomeFoldCoverage & {
     readonly complete: false;
 };
@@ -457,6 +460,7 @@ export interface ISourceOutcomes {
 
 // @alpha
 export interface IStepBindings<TInputs extends object, THelpers extends object> {
+    readonly hasOwn: IHasOwn;
     readonly helpers: ITrackedHelpers<THelpers>;
     readonly inputs: ITrackedView<TInputs>;
     readonly untracked: IUntrackedRead;

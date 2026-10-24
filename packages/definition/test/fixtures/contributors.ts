@@ -81,11 +81,11 @@ export function summarySubject(key: IFixtureMemberKey): string {
   return `summary:acme/widget:2026-Q1:${key}`;
 }
 
-/** Fresh callbacks per build so no process-local function identity survives. */
+/** Fresh container-root callbacks per build so no process-local function identity survives. */
 export interface IMemberCallbacks {
-  readonly activityRun: () => string;
+  readonly activityRun: () => { readonly value: string };
   readonly activityFinality: () => boolean;
-  readonly summaryRun: () => string;
+  readonly summaryRun: () => { readonly value: string };
 }
 
 /** Declarations and callbacks built for one member, retained so tests can check identity. */
@@ -100,12 +100,12 @@ export interface IBuiltMember {
 /** Build one member with freshly allocated callbacks and declarations. */
 export function buildMember(key: IFixtureMemberKey, variation: IFixtureVariation = {}): IBuiltMember {
   const callbacks: IMemberCallbacks = {
-    activityRun: () => `fetch ${key}`,
+    activityRun: () => ({ value: `fetch ${key}` }),
     activityFinality: () => true,
-    summaryRun: () => `summarize ${key}`,
+    summaryRun: () => ({ value: `summarize ${key}` }),
   };
   const labelPrefix = variation.labelPrefix ?? 'Read';
-  const activity = source<string>({
+  const activity = source<{ readonly value: string }>({
     subject: activitySubject(key),
     label: `${labelPrefix} activity for ${key}`,
     run: callbacks.activityRun,

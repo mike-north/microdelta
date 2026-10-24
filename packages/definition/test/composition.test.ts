@@ -162,7 +162,7 @@ describe('fixed M3 topology', () => {
   });
 
   test('CMP-9: composing and resolving never invokes step callbacks or helpers', () => {
-    const run = jest.fn((): number => 1);
+    const run = jest.fn((): { readonly value: number } => ({ value: 1 }));
     const finality = jest.fn((): boolean => true);
     const helper = jest.fn((): number => 1);
     const activity = source({ subject: 'activity:a', run, finality });
@@ -192,14 +192,14 @@ describe('fixed M3 topology', () => {
   });
 
   test('ownership: a look-alike declaration object cannot be registered', () => {
-    const genuine = memo({ subject: 'summary:a', run: () => 1 });
+    const genuine = memo({ subject: 'summary:a', run: () => ({ value: 1 }) });
     const forged: unknown = { ...genuine };
     const options: unknown = { scope: fixtureScope, members: [{ key: 'person:ada', steps: [{ slot: 'summary', declaration: forged }] }] };
     expectDefinitionError(() => Reflect.apply(compose, undefined, [options]), 'forged-declaration');
   });
 
   test('CMP-6: scope, member keys and slots must be nonempty strings', () => {
-    const declaration = memo({ subject: 'summary:a', run: () => 1 });
+    const declaration = memo({ subject: 'summary:a', run: () => ({ value: 1 }) });
     expectDefinitionError(() => compose({ scope: '', members: [] }), 'invalid-descriptor');
     expectDefinitionError(() => compose({ scope: fixtureScope, members: [{ key: '', steps: [] }] }), 'invalid-descriptor');
     expectDefinitionError(() => compose({ scope: fixtureScope, members: [{ key: 'person:ada', steps: [{ slot: '', declaration }] }] }), 'invalid-descriptor');
@@ -257,8 +257,8 @@ describe('registration capture consistency', () => {
     // Regression (supervisor reproduction on 3b3f782): a declaration getter
     // returning A first and B afterwards was read six times during compose;
     // resolve reported B while openInvocation.apply executed A's record.
-    const runA = (): string => 'A';
-    const runB = (): string => 'B';
+    const runA = (): { readonly value: string } => ({ value: 'A' });
+    const runB = (): { readonly value: string } => ({ value: 'B' });
     const sourceA = source({ subject: 'activity:a', run: runA });
     const sourceB = source({ subject: 'activity:b', run: runB });
     let reads = 0;
@@ -287,7 +287,7 @@ describe('registration capture consistency', () => {
     const bound = resolution.status === 'bound' && resolution.target.role === 'step' ? resolution.target.declaration : undefined;
     expect(bound === sourceA || bound === sourceB).toBe(true);
     expect(seen).toEqual([bound?.run]);
-    expect(outcome).toBe(bound === sourceA ? 'A' : 'B');
+    expect(outcome).toEqual({ value: bound === sourceA ? 'A' : 'B' });
   });
 
   test('registration: a helper that changes between reads cannot bind a non-function', () => {
@@ -316,7 +316,7 @@ describe('registration capture consistency', () => {
   });
 
   test('registration: accessor or inherited registration fields reject before any work, without running getters', () => {
-    const activity = source({ subject: 'activity:a', run: () => 1 });
+    const activity = source({ subject: 'activity:a', run: () => ({ value: 1 }) });
     const getter = jest.fn((): unknown => 'person:ada');
     /** Build an object whose named field is an accessor backed by the spy. */
     const accessor = (base: object, key: string): object => Object.defineProperty({ ...base }, key, { get: getter, enumerable: true });
@@ -348,21 +348,21 @@ describe('illegal edges', () => {
   }
 
   test('CMP-7: a memo edge must name an existing sibling slot', () => {
-    const activity = source({ subject: 'activity:a', run: () => 1 });
-    const summary = memo({ subject: 'summary:a', children: { activity }, run: () => 1 });
+    const activity = source({ subject: 'activity:a', run: () => ({ value: 1 }) });
+    const summary = memo({ subject: 'summary:a', children: { activity }, run: () => ({ value: 1 }) });
     expectDefinitionError(() => composeMember([{ slot: 'summary', declaration: summary }]), 'illegal-edge');
   });
 
   test('CMP-7: a memo cannot name its own slot as a child', () => {
-    const activity = source({ subject: 'activity:a', run: () => 1 });
-    const summary = memo({ subject: 'summary:a', children: { summary: activity }, run: () => 1 });
+    const activity = source({ subject: 'activity:a', run: () => ({ value: 1 }) });
+    const summary = memo({ subject: 'summary:a', children: { summary: activity }, run: () => ({ value: 1 }) });
     expectDefinitionError(() => composeMember([{ slot: 'activity', declaration: activity }, { slot: 'summary', declaration: summary }]), 'illegal-edge');
   });
 
   test('CMP-7: a sibling slot holding a memo is not a permitted child, so memo-to-memo cycles cannot form', () => {
-    const activity = source({ subject: 'activity:a', run: () => 1 });
-    const summary = memo({ subject: 'summary:a', children: { second: activity }, run: () => 1 });
-    const second = memo({ subject: 'summary:second', children: { summary: activity }, run: () => 1 });
+    const activity = source({ subject: 'activity:a', run: () => ({ value: 1 }) });
+    const summary = memo({ subject: 'summary:a', children: { second: activity }, run: () => ({ value: 1 }) });
+    const second = memo({ subject: 'summary:second', children: { summary: activity }, run: () => ({ value: 1 }) });
     expectDefinitionError(() => composeMember([
       { slot: 'summary', declaration: summary },
       { slot: 'second', declaration: second },
@@ -372,13 +372,13 @@ describe('illegal edges', () => {
   test('bridge: each typed child must be the exact declaration occupying its current sibling slot', () => {
     const ada = buildMember('person:ada');
     const ben = buildMember('person:ben');
-    const mismatched = memo({ subject: 'summary:mismatched', children: { activity: ben.activity }, run: () => 1 });
+    const mismatched = memo({ subject: 'summary:mismatched', children: { activity: ben.activity }, run: () => ({ value: 1 }) });
     expectDefinitionError(() => composeMember([
       { slot: 'activity', declaration: ada.activity },
       { slot: 'summary', declaration: mismatched },
     ]), 'illegal-edge');
     const equalButDistinct = source({ subject: activitySubject('person:ada'), run: ada.callbacks.activityRun, finality: ada.callbacks.activityFinality });
-    const pinned = memo({ subject: 'summary:pinned', children: { activity: equalButDistinct }, run: () => 1 });
+    const pinned = memo({ subject: 'summary:pinned', children: { activity: equalButDistinct }, run: () => ({ value: 1 }) });
     expectDefinitionError(() => composeMember([
       { slot: 'activity', declaration: ada.activity },
       { slot: 'summary', declaration: pinned },
@@ -386,8 +386,8 @@ describe('illegal edges', () => {
   });
 
   test('bridge: a typed child in an ambiguous sibling slot is rejected rather than chosen by order', () => {
-    const activity = source({ subject: 'activity:a', run: () => 1 });
-    const summary = memo({ subject: 'summary:a', children: { activity }, run: () => 1 });
+    const activity = source({ subject: 'activity:a', run: () => ({ value: 1 }) });
+    const summary = memo({ subject: 'summary:a', children: { activity }, run: () => ({ value: 1 }) });
     expectDefinitionError(() => composeMember([
       { slot: 'activity', declaration: activity },
       { slot: 'activity', declaration: activity },
@@ -399,7 +399,7 @@ describe('illegal edges', () => {
 describe('scoped subjects', () => {
   test('RES-001: distinct definitions cannot silently share one scoped subject', () => {
     const ada = buildMember('person:ada');
-    const impostor = source({ subject: activitySubject('person:ada'), run: () => 'other' });
+    const impostor = source({ subject: activitySubject('person:ada'), run: () => ({ value: 'other' }) });
     expectDefinitionError(() => compose({
       scope: fixtureScope,
       members: [ada.registration, { key: 'person:ben', steps: [{ slot: 'activity', declaration: impostor }] }],
@@ -408,8 +408,8 @@ describe('scoped subjects', () => {
 
   test('RES-001: a source and a memo cannot share one scoped subject', () => {
     const shared = 'shared:subject';
-    const activity = source({ subject: shared, run: () => 1 });
-    const summary = memo({ subject: shared, children: { activity }, run: () => 1 });
+    const activity = source({ subject: shared, run: () => ({ value: 1 }) });
+    const summary = memo({ subject: shared, children: { activity }, run: () => ({ value: 1 }) });
     expectDefinitionError(() => compose({
       scope: fixtureScope,
       members: [{ key: 'person:ada', steps: [{ slot: 'activity', declaration: activity }, { slot: 'summary', declaration: summary }] }],
@@ -417,9 +417,9 @@ describe('scoped subjects', () => {
   });
 
   test('RES-001: one reused declaration may participate in several branches under one scoped subject', () => {
-    const repositoryActivity = source({ subject: 'activity:acme/widget', run: () => 'repository' });
-    const adaSummary = memo({ subject: summarySubject('person:ada'), children: { activity: repositoryActivity }, run: () => 1 });
-    const benSummary = memo({ subject: summarySubject('person:ben'), children: { activity: repositoryActivity }, run: () => 1 });
+    const repositoryActivity = source({ subject: 'activity:acme/widget', run: () => ({ value: 'repository' }) });
+    const adaSummary = memo({ subject: summarySubject('person:ada'), children: { activity: repositoryActivity }, run: () => ({ value: 1 }) });
+    const benSummary = memo({ subject: summarySubject('person:ben'), children: { activity: repositoryActivity }, run: () => ({ value: 1 }) });
     const composition = compose({
       scope: fixtureScope,
       members: [
@@ -438,7 +438,7 @@ describe('scoped subjects', () => {
     // branch whose sibling differs is rejected by the sibling-identity check.
     const ada = buildMember('person:ada');
     const ben = buildMember('person:ben');
-    const sharedSummary = memo({ subject: 'summary:shared', children: { activity: ada.activity }, run: () => 1 });
+    const sharedSummary = memo({ subject: 'summary:shared', children: { activity: ada.activity }, run: () => ({ value: 1 }) });
     expectDefinitionError(() => compose({
       scope: fixtureScope,
       members: [
@@ -450,7 +450,7 @@ describe('scoped subjects', () => {
 
   test('RES-001: distinct memo declarations sharing a subject conflict even with identical callbacks', () => {
     const ada = buildMember('person:ada');
-    const run = (): number => 1;
+    const run = (): { readonly value: number } => ({ value: 1 });
     const first = memo({ subject: 'summary:shared', children: { activity: ada.activity }, run });
     const second = memo({ subject: 'summary:shared', version: 2, children: { activity: ada.activity }, run });
     expectDefinitionError(() => compose({
@@ -460,7 +460,7 @@ describe('scoped subjects', () => {
   });
 
   test('ownership: a declaration minted by another family instance cannot be registered', () => {
-    const foreign = declarations<ITestFamily>().source({ subject: 'activity:foreign', run: () => 1 });
+    const foreign = declarations<ITestFamily>().source({ subject: 'activity:foreign', run: () => ({ value: 1 }) });
     expectDefinitionError(() => compose({
       scope: fixtureScope,
       members: [{ key: 'person:ada', steps: [{ slot: 'activity', declaration: foreign }] }],
@@ -561,8 +561,8 @@ describe('current structural correspondence', () => {
   });
 
   test('EXP-1: duplicate step slots within one member are ambiguous', () => {
-    const first = source({ subject: 'activity:first', run: () => 1 });
-    const second = source({ subject: 'activity:second', run: () => 2 });
+    const first = source({ subject: 'activity:first', run: () => ({ value: 1 }) });
+    const second = source({ subject: 'activity:second', run: () => ({ value: 2 }) });
     const composition = compose({
       scope: fixtureScope,
       members: [{ key: 'person:ada', steps: [{ slot: 'activity', declaration: first }, { slot: 'activity', declaration: second }] }],

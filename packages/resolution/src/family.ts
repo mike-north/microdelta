@@ -8,6 +8,7 @@
  *   implementation becomes evidence and an uncalled one does not;
  * - a child call's result as a lazy view over its exact retained data, and a
  *   supplied step's arguments as views observed under `argument` bindings;
+ * - own-member presence through the same observer that owns the input views;
  * - an explicit observed untracked read, the only way a callback reads a
  *   tracked member without consuming it;
  * - a source's eligible previous result as an immutable `{ data }` carrier;
@@ -86,6 +87,15 @@ export type ITrackedHelpers<THelpers extends object> = {
 export type IUntrackedRead = <V extends ITracked<object>, K extends IUntrackedKey<V>>(value: V, key: K) => V[K];
 
 /**
+ * Test whether an observer-owned record or array owns one supported string key.
+ * This records presence alone, independently of the value and inherited
+ * membership. Tracking owns the supported key domain and capture lifetime;
+ * raw values and views from another observer reject rather than imply absence.
+ * @alpha
+ */
+export type IHasOwn = (value: ITracked<object>, key: string) => boolean;
+
+/**
  * The current bindings every source, memo and supplied step callback receives
  * beside the context names Definition supplies (`previous`, `calls` or `args`).
  * @alpha
@@ -97,6 +107,8 @@ export interface IStepBindings<TInputs extends object, THelpers extends object> 
   readonly helpers: ITrackedHelpers<THelpers>;
   /** The explicit observed untracked read. */
   readonly untracked: IUntrackedRead;
+  /** Own-member presence recorded by the observer that owns these bindings. */
+  readonly hasOwn: IHasOwn;
 }
 
 /**

@@ -130,11 +130,11 @@ describe('keying by custom key (COL-1)', () => {
         return member.score > 0;
       },
       steps: (member) => ({
-        score: member.source<number>({
+        score: member.source<{ readonly score: number }>({
           subject: member.subject('score'),
           run: ({ member: record }) => {
             calls.body++;
-            return record.score;
+            return { score: record.score };
           },
         }),
       }),
@@ -163,7 +163,7 @@ describe('keying by custom key (COL-1)', () => {
 
   test('COL-1: keys are scoped per template: two templates over one collection key it independently', () => {
     const collection = source<IContributors>({ subject: 'shared', collection: { identity: 'key' }, run: () => ({ members: [], status: 'complete' }) });
-    const steps = (prefix: string) => (member: IMemberBuilder<ITestFamily>) => ({ p: member.source<string>({ subject: member.subject(prefix), run: () => 'p' }) });
+    const steps = (prefix: string) => (member: IMemberBuilder<ITestFamily>) => ({ p: member.source<{ readonly value: string }>({ subject: member.subject(prefix), run: () => ({ value: 'p' }) }) });
     const byIdentity = template({ slot: 'by-identity', collection, steps: steps('identity') });
     const byLogin = template({ slot: 'by-login', collection, key: (member) => member.login, steps: steps('login') });
     const composition = compose({ scope: keyedScope, steps: [{ slot: 'c', declaration: collection }], templates: [byLogin, byIdentity] });
@@ -176,8 +176,8 @@ describe('keying by custom key (COL-1)', () => {
     // Snapshot data is untrusted at runtime: the custom key reads `login`,
     // which these records omit or mistype despite the declared member type.
     const collection = source<IContributors>({ subject: 'c:custom', collection: { identity: 'key' }, run: () => ({ members: [], status: 'complete' }) });
-    const byLogin = template({ slot: 'by-login', collection, key: (member) => member.login, steps: (member) => ({ p: member.source<string>({ subject: member.subject('login'), run: () => 'p' }) }) });
-    const byUpper = template({ slot: 'by-upper', collection, key: (member) => member.login.toUpperCase(), steps: (member) => ({ p: member.source<string>({ subject: member.subject('upper'), run: () => 'p' }) }) });
+    const byLogin = template({ slot: 'by-login', collection, key: (member) => member.login, steps: (member) => ({ p: member.source<{ readonly value: string }>({ subject: member.subject('login'), run: () => ({ value: 'p' }) }) }) });
+    const byUpper = template({ slot: 'by-upper', collection, key: (member) => member.login.toUpperCase(), steps: (member) => ({ p: member.source<{ readonly value: string }>({ subject: member.subject('upper'), run: () => ({ value: 'p' }) }) }) });
     const composition = compose({ scope: keyedScope, steps: [{ slot: 'roster', declaration: collection }], templates: [byLogin, byUpper] });
     const cases: readonly [string, unknown, IKeyingDiagnostic['reason']][] = [
       ['by-login', { id: 'gh:1' }, 'missing-key'],
@@ -207,7 +207,7 @@ describe('keying rejections (COL-1)', () => {
         key: () => {
           throw value;
         },
-        steps: (member) => ({ p: member.source<string>({ subject: member.subject(`unprintable-${String(index)}`), run: () => 'p' }) }),
+        steps: (member) => ({ p: member.source<{ readonly value: string }>({ subject: member.subject(`unprintable-${String(index)}`), run: () => ({ value: 'p' }) }) }),
       })),
     });
     thrown.forEach((_value, index) => {
@@ -228,7 +228,7 @@ describe('keying rejections (COL-1)', () => {
         key: () => {
           throw new Error('key lookup failed AUTHOR-SECRET-7e57');
         },
-        steps: (member) => ({ p: member.source<string>({ subject: member.subject('secret'), run: () => 'p' }) }),
+        steps: (member) => ({ p: member.source<{ readonly value: string }>({ subject: member.subject('secret'), run: () => ({ value: 'p' }) }) }),
       })],
     });
     const diagnostic = rejected(composition.keyMembers('by-secret', { members: [ada], status: 'complete' }));
@@ -366,7 +366,7 @@ describe('keying boundary (CMP-9, A-07)', () => {
       collection,
       steps: (member) => {
         composition.keyMembers('contributor', { members: [ada], status: 'complete' });
-        return { p: member.source<string>({ subject: member.subject('probe'), run: () => 'p' }) };
+        return { p: member.source<{ readonly value: string }>({ subject: member.subject('probe'), run: () => ({ value: 'p' }) }) };
       },
     }), 'composition-phase');
   });

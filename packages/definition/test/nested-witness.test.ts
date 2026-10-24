@@ -258,7 +258,7 @@ describe('version-2 witness reconnection (acceptance 5)', () => {
 
   test('CMP-7: a member-binding origin under a composition-level parent is an unsupported argument form', () => {
     const assessor = stepSlot<IAssessorParameters, IAssessment>({ slot: 'assessor' });
-    const report = memo({ subject: 'report:slot', children: { assess: assessor }, run: () => 1 });
+    const report = memo({ subject: 'report:slot', children: { assess: assessor }, run: () => ({ value: 1 }) });
     const composition = compose({
       scope: nestedScope,
       steps: [{ slot: 'report', declaration: report }],

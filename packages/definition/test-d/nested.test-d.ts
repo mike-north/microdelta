@@ -124,7 +124,7 @@ memo({
     expectError(await calls.assess(forward.child<string>(activityResult), { number: 1, merged: true }));
     expectError(await calls.activity(1));
     expectError(await calls.profile(forward.input<number>('config')));
-    return assessment.score;
+    return { score: assessment.score };
   },
 });
 

@@ -203,7 +203,8 @@ import {
   siblingStep,
 } from './current.js';
 import type { IArgumentValue, ICurrentSlots } from './current.js';
-import { ResolutionError } from './errors.js';
+import { ResolutionError, resolutionPresentation } from './errors.js';
+import type { IResolutionErrorPresentation } from './errors.js';
 import { acceptanceRecord, bindingPaths, endingRecord, plainDescriptor, provenanceRecord, readProvenance } from './evidence.js';
 import type {
   ICallEvidence,
@@ -401,8 +402,21 @@ interface IMemoFrame {
    */
   unsettledAtReturn: number | undefined;
   refused: { readonly step: IBindingDescriptor; readonly reason: string; readonly disposition: IRefusalDisposition } | undefined;
-  /** The first failed child resolution; a body that swallows it still cannot publish. */
-  failed: { readonly error: unknown } | undefined;
+  /**
+   * The first failed declared child and its original runtime presentation,
+   * including its opaque underlying cause.
+   * The author receives the error object and may change its public fields;
+   * the parent still cannot publish or adopt those changes as runtime text.
+   */
+  failed: { readonly error: unknown; readonly presentation: IResolutionErrorPresentation | undefined } | undefined;
+}
+
+/** Keep the first declared-child failure before its mutable public error reaches author code. */
+function recordFailedChild(frame: IMemoFrame, error: unknown): void {
+  frame.failed ??= Object.freeze({
+    error,
+    presentation: error instanceof ResolutionError ? resolutionPresentation(error) : undefined,
+  });
 }
 
 /** One refused child, as a memo frame records it. */
@@ -790,6 +804,15 @@ function unsupervised(): IExecutionSupervision {
       const next = tail.then(work);
       tail = next.then(() => undefined, () => undefined);
       return next;
+    },
+    async dispatchMembers(count: number, continueWhile: () => boolean, work: (position: number) => Promise<void>): Promise<number> {
+      // Without a run window, a single sequence is the full active bound.
+      let started = 0;
+      while (started < count && continueWhile()) {
+        await work(started);
+        started += 1;
+      }
+      return started;
     },
     publicationRefusal: (): string | undefined => undefined,
   });
@@ -2182,8 +2205,16 @@ export function createResolution<TInputs extends object, THelpers extends object
     const frame: IMemoFrame = { request, step, children: new Map(), calls: new Map(), inflight: new Set(), unsettledAtReturn: undefined, refused: undefined, failed: undefined };
     frames.set(invocation, frame);
     let executed: ISupervisedExecution<IObservationCapture<IMemoReturn>>;
+    let executeLifecycleFailed = false;
     try {
-      emit(request, evidence, step, 'execute');
+      try {
+        emit(request, evidence, step, 'execute');
+      } catch (error: unknown) {
+        // This failure came from Resolution's lifecycle boundary before the
+        // author body ran; its classification belongs to the runtime.
+        executeLifecycleFailed = true;
+        throw error;
+      }
       executed = await supervision.execute(step, () => active.run(invocation, () => invocation.apply(bindings, invoker((value): IMemoReturn => {
         // Taken inside the capture, as the body's value is: which started calls it left unsettled.
         frame.unsettledAtReturn = frame.inflight.size;
@@ -2222,8 +2253,14 @@ export function createResolution<TInputs extends object, THelpers extends object
       }
       const cause = failed?.error ?? error;
       abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'the body failed' });
-      if (cause instanceof ResolutionError && cause.code !== 'execution-failure') {
-        throw cause;
+      // A failed declared call or the exact pre-body lifecycle boundary has
+      // runtime provenance. The public ResolutionError constructor gives an
+      // author body no such authority, whatever code its error selects.
+      if (failed?.presentation !== undefined && failed.presentation.code !== 'execution-failure') {
+        throw new ResolutionError(failed.presentation.code, failed.presentation.message, failed.presentation.cause);
+      }
+      if (failed === undefined && executeLifecycleFailed && error instanceof ResolutionError && error.code !== 'execution-failure') {
+        throw error;
       }
       throw new ResolutionError('execution-failure', `Body of ${stepKey(step)} failed`, cause);
     }
@@ -2245,7 +2282,10 @@ export function createResolution<TInputs extends object, THelpers extends object
       // A body that swallowed a failed child cannot publish a result missing that child's current evidence.
       const cause = frame.failed.error;
       abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'a declared call failed' });
-      throw cause instanceof ResolutionError ? cause : new ResolutionError('execution-failure', `A child of ${stepKey(step)} failed`, cause);
+      const presentation = frame.failed.presentation;
+      throw presentation === undefined
+        ? new ResolutionError('execution-failure', `A child of ${stepKey(step)} failed`, cause)
+        : new ResolutionError(presentation.code, presentation.message, presentation.cause);
     }
     if (ran.value.detachError !== undefined) {
       abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'the body returned unsupported data' });
@@ -2304,13 +2344,13 @@ export function createResolution<TInputs extends object, THelpers extends object
       // Definition sends memo and supplied slot calls only with the version-2
       // witness; anything else is refused before any child work.
       const error = new ResolutionError('unbound-step', `A ${request.kind} call with a version-1 witness is not supported by this Resolution`);
-      frame.failed ??= { error };
+      recordFailedChild(frame, error);
       throw error;
     }
     const reconnected = composition.resolveWitness(witness);
     if (reconnected.status !== 'bound' || reconnected.child.declaration !== request.child) {
       const error = new ResolutionError('unbound-step', 'A declared call does not reconnect to its current child declaration');
-      frame.failed ??= { error };
+      recordFailedChild(frame, error);
       throw error;
     }
     const slot = witness.child.slot;
@@ -2319,7 +2359,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     try {
       resolved = await resolveSourceShared(frame.request, childStep, request.child);
     } catch (error: unknown) {
-      frame.failed ??= { error };
+      recordFailedChild(frame, error);
       throw error;
     }
     if (resolved.result.kind !== 'reused' && resolved.result.kind !== 'published') {
@@ -2358,7 +2398,7 @@ export function createResolution<TInputs extends object, THelpers extends object
    */
   async function dispatchNested<TResult>(frame: IMemoFrame, request: IDeclaredInvocationRequest<IFamily, TResult>, witness: INestedInvocationWitness): Promise<{ readonly data: unknown }> {
     const fail = (error: unknown): unknown => {
-      frame.failed ??= { error };
+      recordFailedChild(frame, error);
       return error;
     };
     const reconnected = composition.resolveWitness(witness);
@@ -2737,11 +2777,10 @@ export function createResolution<TInputs extends object, THelpers extends object
       }
     };
     /**
-     * Resolve one member inside the run's bounded active window (RUN-002).
-     * Every member is presented at once, in canonical key order, and the
-     * window starts them in that order. A member not yet started holds
-     * nothing, so after a stop it is presented to admission, and refused,
-     * only when a lane reaches it; after a run-level failure it does not start.
+     * Resolve one member already selected by the run's bounded dispatcher
+     * (RUN-002, DOM-3). Undispatched keys hold no execution continuation or
+     * lane wait. The dispatcher selects positions in canonical order; this
+     * callback performs the current evidence and status work for each key.
      *
      * Invariant: the window's lane pool is run-wide, so a member's work must
      * never reach another `settleMembers` (a nested fan-out) under the same
@@ -2767,8 +2806,24 @@ export function createResolution<TInputs extends object, THelpers extends object
         settled.set(position, { key, step: instance, resolved: error });
       }
     };
-    // Members already started finish before a run-level failure is reported, so no member work outlives the request.
-    await Promise.all(keys.map((key, position) => supervision.member(() => member(key, position))));
+    // A run-level failure stops only this fan-out's new starts. Hard stop
+    // leaves a contiguous suffix: process it one member at a time through
+    // the existing (already-aborted) member frame, preserving current
+    // evidence and complete report statuses without a corpus-sized queue.
+    const started = await supervision.dispatchMembers(keys.length, () => runFailure.first === undefined, async (position) => {
+      const key = keys[position];
+      if (key !== undefined) {
+        await member(key, position);
+      }
+    });
+    if (runFailure.first === undefined) {
+      for (let position = started; position < keys.length; position += 1) {
+        const key = keys[position];
+        if (key !== undefined) {
+          await supervision.member(() => member(key, position));
+        }
+      }
+    }
     if (runFailure.first !== undefined) {
       throw runFailure.first.error;
     }

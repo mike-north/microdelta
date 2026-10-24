@@ -12,10 +12,16 @@ process exits.
 > project-private `@alpha` contract that may change without notice. The
 > default `microdelta` package entry does not expose any of it, and this
 > example is not an installation guide for a published package.
+> For approved sibling workspace consumers, see the tested
+> [private-alpha TypeScript setup](../../docs/private-alpha-workspace-consumers.md).
 
 ## Run it now
 
 From the repository root, after `npm ci`:
+
+The `--store` location is a project-private Node SQLite workspace store. Read
+the [native store location guidance](../../docs/native-store-locations.md)
+before using alternate paths to access the same store.
 
 ```sh
 npm run build                     # builds the packages and this example

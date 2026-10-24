@@ -13,9 +13,12 @@ import {
   encodeValue,
   fingerprint,
   observe,
+  observePrepared,
+  prepareValue,
+  preparedRoot,
   recordFromEntries,
 } from '../src/value.js';
-import type { ISelectedFact } from '../src/value.js';
+import type { IPreparedValue, ISelectedFact } from '../src/value.js';
 
 /** The test adapter keeps host hashing out of the portable candidate. */
 const digest: ISha256Capability = {
@@ -28,6 +31,95 @@ const digest: ISha256Capability = {
 test('Node digest adapter conforms to independent SHA-256 vectors', () => {
   expect(digest.sha256('')).toBe('e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855');
   expect(digest.sha256('abc')).toBe('ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
+});
+
+describe('Value-owned prepared snapshots', () => {
+  test('preserve independent selected facts and exact snapshot meaning for sparse nested arrays', () => {
+    const sparse = new Array<unknown>(6);
+    sparse[0] = undefined;
+    sparse[3] = -0;
+    sparse[5] = Number.NaN;
+    const grandparent = { inherited: 'grandparent' };
+    const parent = Object.create(grandparent) as { inherited: string; shadowed: string };
+    parent.inherited = 'parent';
+    parent.shadowed = 'from parent';
+    const custom = Object.create(parent) as { own: string };
+    custom.own = 'own value';
+    const nullPrototype = Object.create(null) as { member: string };
+    nullPrototype.member = 'null-prototype value';
+    const source = { list: sparse, nested: [{ value: 'Ada' }], custom, nullPrototype, zeta: 1, alpha: 2 };
+    const sourceEncoding = encodeSnapshot(source);
+    const prepared = prepareValue(source);
+    const root = preparedRoot(prepared);
+    const oracle = decodeSnapshot(sourceEncoding);
+    const requests = [
+      { address: [{ kind: 'property', key: 'list' }], operation: 'value' },
+      { address: [{ kind: 'property', key: 'list' }], operation: 'length' },
+      { address: [{ kind: 'property', key: 'list' }, { kind: 'index', index: 0 }], operation: 'value' },
+      { address: [{ kind: 'property', key: 'list' }, { kind: 'index', index: 1 }], operation: 'own' },
+      { address: [{ kind: 'property', key: 'list' }, { kind: 'index', index: 3 }], operation: 'value' },
+      { address: [{ kind: 'property', key: 'list' }, { kind: 'index', index: 5 }], operation: 'value' },
+      { address: [{ kind: 'property', key: 'nested' }, { kind: 'index', index: 0 }, { kind: 'property', key: 'value' }], operation: 'value' },
+      { address: [{ kind: 'property', key: 'custom' }, { kind: 'property', key: 'inherited' }], operation: 'value' },
+      { address: [{ kind: 'property', key: 'custom' }, { kind: 'property', key: 'inherited' }], operation: 'own' },
+      { address: [{ kind: 'property', key: 'custom' }, { kind: 'property', key: 'inherited' }], operation: 'membership' },
+      { address: [{ kind: 'property', key: 'nullPrototype' }, { kind: 'property', key: 'missing' }], operation: 'membership' },
+      { address: [], operation: 'keys' },
+    ] as const;
+
+    expect(encodeSnapshot(root)).toBe(sourceEncoding);
+    expect(Object.isFrozen(source)).toBe(false);
+    expect(Object.isFrozen(sparse)).toBe(false);
+    expect(Object.isFrozen(root)).toBe(true);
+    const preparedList = observePrepared(prepared, [{ kind: 'property', key: 'list' }], 'value').fact;
+    expect(Object.isFrozen(preparedList)).toBe(true);
+    for (const request of requests) {
+      expect(encodeSelectedFact(observePrepared(prepared, request.address, request.operation)))
+        .toBe(encodeSelectedFact(observe(oracle, request.address, request.operation)));
+    }
+  });
+
+  test('owns a detached immutable copy and does not trust the caller after preparation', () => {
+    const source = { rows: [{ value: 'before' }] };
+    const prepared = prepareValue(source);
+    const root = preparedRoot(prepared);
+    const row = source.rows[0];
+    if (row === undefined) {
+      throw new Error('Expected fixture row');
+    }
+    row.value = 'after';
+
+    expect(observePrepared(prepared, [{ kind: 'property', key: 'rows' }, { kind: 'index', index: 0 }, { kind: 'property', key: 'value' }], 'value').fact)
+      .toBe('before');
+    expect(Object.isFrozen(source)).toBe(false);
+    expect(Object.isFrozen(root)).toBe(true);
+  });
+
+  test('reject malformed values at preparation and reject fabricated runtime tokens', () => {
+    const accessor: unknown[] = [];
+    Object.defineProperty(accessor, '0', { enumerable: true, get: () => 'must not run' });
+    accessor.length = 1;
+    const cyclic: unknown[] = [];
+    cyclic.push(cyclic);
+    const shared = { value: true };
+    const sharedReference = [shared, shared];
+    const withSymbol: unknown[] = [];
+    Object.defineProperty(withSymbol, Symbol('unsupported'), { value: true });
+    const withExtraProperty: unknown[] = [];
+    Object.defineProperty(withExtraProperty, 'extra', { value: true });
+    const alteredPrototype = new Proxy(new Array<unknown>(), {
+      getPrototypeOf: (): object => Object.freeze({ marker: true }),
+    });
+
+    for (const value of [accessor, cyclic, sharedReference, withSymbol, withExtraProperty, alteredPrototype]) {
+      expect(() => prepareValue(value)).toThrow(TypeError);
+    }
+
+    // This deliberately evades the opaque compile-time brand to prove the Value runtime guard.
+    const fabricated = Object.create(null) as IPreparedValue;
+    expect(() => preparedRoot(fabricated)).toThrow(TypeError);
+    expect(() => observePrepared(fabricated, [], 'value')).toThrow(TypeError);
+  });
 });
 
 describe('literal observation facts', () => {

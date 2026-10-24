@@ -195,6 +195,8 @@ export interface ISupervisedRun {
   readonly permits: IPermitPool;
   /** The lanes of the bounded active window of member fan-out. */
   readonly lanes: IPermitPool;
+  /** Maximum lanes the run may grant; also bounds the coordinator's pending acquisitions. */
+  readonly laneWindow: number;
   readonly timer: IRunTimer | undefined;
   /** The run's external operations, when assembly supplied their ports. */
   readonly operations: IRunOperations | undefined;
@@ -271,15 +273,179 @@ export interface IFrameAccess {
 }
 
 /**
+ * One active fan-out's cursor, not a queue of its members. The coordinator
+ * retains one registration per active request; only granted positions create
+ * member execution state. A position that has started remains active while it
+ * lends its lane for a timed wait.
+ */
+interface IMemberDispatch {
+  readonly count: number;
+  readonly continueWhile: () => boolean;
+  readonly work: (position: number) => Promise<void>;
+  readonly request: IRequestScope | undefined;
+  readonly resolve: (started: number) => void;
+  readonly reject: (error: unknown) => void;
+  /** The contiguous prefix whose callbacks actually began; reservations alone do not count. */
+  started: number;
+  next: number;
+  active: number;
+  queued: boolean;
+  failure: { readonly error: unknown } | undefined;
+}
+
+/**
  * The cancellation port Supervision hands to Resolution for one run. Each
  * execution runs in its own attempt frame inside the run's scope, inheriting
- * the window lane of the member it belongs to; each fan-out member runs in a
- * window lane.
+ * the window lane of the member it belongs to. A hard-stopped member enters
+ * the same frame after lane acquisition has been cancelled.
  * @param run - The live run.
  * @param frames - Access to the run's asynchronous scope.
  * @returns The port.
  */
 export function supervisedExecution(run: ISupervisedRun, frames: IFrameAccess): IExecutionSupervision {
+  /** Run one member in its request frame, whether a lane was granted or hard stop already cancelled acquisition. */
+  const enterMember = async <T>(work: () => Promise<T>, permit: IPermit | undefined, request: IRequestScope | undefined): Promise<T> => {
+    const lane: IMemberLane = { permit, waits: 0, closed: false };
+    try {
+      return await frames.enter({ run, attempt: undefined, lane, request }, work);
+    } finally {
+      lane.closed = true;
+      lane.permit?.release();
+      lane.permit = undefined;
+    }
+  };
+
+  /** Pending fan-outs share the run's one lane pool; no key or per-key closure lives in this queue. */
+  const dispatches: IMemberDispatch[] = [];
+  /** At most one ordinary lane acquisition per configured window position is pending globally. */
+  let acquiring = 0;
+
+  /** Settle a dispatch only after its started members have finished. */
+  const completeDispatch = (dispatch: IMemberDispatch): void => {
+    if (dispatch.queued || dispatch.active > 0) {
+      return;
+    }
+    if (dispatch.failure !== undefined) {
+      dispatch.reject(dispatch.failure.error);
+    } else {
+      dispatch.resolve(dispatch.started);
+    }
+  };
+
+  /** Stop selecting positions from one request while other fan-outs remain independent. */
+  const removeDispatch = (dispatch: IMemberDispatch): void => {
+    const index = dispatches.indexOf(dispatch);
+    if (index >= 0) {
+      dispatches.splice(index, 1);
+    }
+    dispatch.queued = false;
+    completeDispatch(dispatch);
+  };
+
+  /** Reserve at most one canonical position per window acquisition, so a population equal to the window queues no extra wait. */
+  const nextDispatch = (): { readonly dispatch: IMemberDispatch; readonly position: number } | undefined => {
+    while (dispatches.length > 0) {
+      const dispatch = dispatches[0];
+      if (dispatch === undefined) {
+        return undefined;
+      }
+      if (run.hard.signal.aborted || dispatch.failure !== undefined || dispatch.next >= dispatch.count) {
+        removeDispatch(dispatch);
+        continue;
+      }
+      try {
+        if (!dispatch.continueWhile()) {
+          removeDispatch(dispatch);
+          continue;
+        }
+      } catch (error: unknown) {
+        dispatch.failure = { error };
+        removeDispatch(dispatch);
+        continue;
+      }
+      const position = dispatch.next;
+      dispatch.next += 1;
+      dispatch.active += 1;
+      if (dispatch.next === dispatch.count) {
+        removeDispatch(dispatch);
+      }
+      return { dispatch, position };
+    }
+    return undefined;
+  };
+
+  /** One window-sized acquisition loop. A lent lane can start a new member while its earlier owner waits. */
+  const acquireNext = async (): Promise<void> => {
+    try {
+      while (dispatches.length > 0) {
+        const selected = nextDispatch();
+        if (selected === undefined) {
+          return;
+        }
+        const permit = await run.lanes.acquire(run.hard.signal);
+        if (permit === undefined) {
+          selected.dispatch.active -= 1;
+          removeDispatch(selected.dispatch);
+          while (dispatches.length > 0) {
+            const dispatch = dispatches[0];
+            if (dispatch !== undefined) {
+              removeDispatch(dispatch);
+            }
+          }
+          return;
+        }
+        const { dispatch, position } = selected;
+        let mayStart = !run.hard.signal.aborted && dispatch.failure === undefined;
+        if (mayStart) {
+          try {
+            mayStart = dispatch.continueWhile();
+          } catch (error: unknown) {
+            dispatch.failure = { error };
+            mayStart = false;
+          }
+        }
+        if (!mayStart) {
+          dispatch.active -= 1;
+          removeDispatch(dispatch);
+          permit.release();
+          continue;
+        }
+        dispatch.started += 1;
+        // The selected callback owns Resolution's member outcome. Its promise
+        // may outlive this lane when it sleeps; the acquisition loop continues.
+        void enterMember(async () => {
+          try {
+            await dispatch.work(position);
+          } catch (error: unknown) {
+            // Failure precedes lane release, so a waiting acquisition cannot
+            // start a later member of this failed dispatch.
+            dispatch.failure ??= { error };
+            throw error;
+          }
+        }, permit, dispatch.request).then(() => {
+          dispatch.active -= 1;
+          completeDispatch(dispatch);
+        }, (error: unknown) => {
+          dispatch.failure ??= { error };
+          dispatch.active -= 1;
+          removeDispatch(dispatch);
+        });
+      }
+    } finally {
+      acquiring -= 1;
+      // A registration can arrive as the last acquisition loop exits.
+      startAcquisitions();
+    }
+  };
+
+  /** Keep no more than the configured window's acquisitions alive for all fan-outs combined. */
+  const startAcquisitions = (): void => {
+    while (dispatches.length > 0 && acquiring < run.laneWindow) {
+      acquiring += 1;
+      void acquireNext();
+    }
+  };
+
   return Object.freeze({
     async execute<T>(step: IBindingDescriptor, work: () => Promise<T>, claimed?: IExecutionAttempt): Promise<ISupervisedExecution<T>> {
       if (!run.open) {
@@ -336,14 +502,23 @@ export function supervisedExecution(run: ISupervisedRun, frames: IFrameAccess): 
       // inside member work or a step attempt as an undeclared call (CMP-9),
       // so the pool is never awaited from inside a lane holder.
       const request = frames.current()?.request;
-      const lane: IMemberLane = { permit: await run.lanes.acquire(run.hard.signal), waits: 0, closed: false };
-      try {
-        return await frames.enter({ run, attempt: undefined, lane, request }, work);
-      } finally {
-        lane.closed = true;
-        lane.permit?.release();
-        lane.permit = undefined;
+      return enterMember(work, await run.lanes.acquire(run.hard.signal), request);
+    },
+    dispatchMembers(count: number, continueWhile: () => boolean, work: (position: number) => Promise<void>): Promise<number> {
+      if (!Number.isSafeInteger(count) || count < 0) {
+        return Promise.reject(new SupervisionError('invalid-request', 'Member dispatch needs a nonnegative safe population count'));
       }
+      if (count === 0 || run.hard.signal.aborted) {
+        return Promise.resolve(0);
+      }
+      return new Promise<number>((resolve, reject) => {
+        const dispatch: IMemberDispatch = {
+          count, continueWhile, work, request: frames.current()?.request,
+          resolve, reject, started: 0, next: 0, active: 0, queued: true, failure: undefined,
+        };
+        dispatches.push(dispatch);
+        startAcquisitions();
+      });
     },
     publicationRefusal: (): string | undefined => run.publicationRefusal(),
   });

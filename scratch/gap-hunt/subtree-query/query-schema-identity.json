@@ -1,0 +1,37 @@
+{
+  "pins": [
+    "f46223193696b67499322bdf70260b85a6277564",
+    "7f7e7744be111416ec24e48352bcb726e1f3b7be"
+  ],
+  "blocks": [
+    {
+      "path": "packages/history/src/durable/selected-index.ts",
+      "block": "subtreeNodes: connection.prepare(sql`",
+      "sha256": "86f7f87c2dde8f6e8c51d5efa16c4add6e82651d377607193774ff3da8c7e777",
+      "byte_exact_across_pins": true,
+      "matches_actual_node_capture": true
+    },
+    {
+      "path": "packages/history/src/durable/selected-index.ts",
+      "block": "subtreeEdges: connection.prepare(sql`",
+      "sha256": "fa986f1c46d6e07ab27a7628dca2a3040cba4a5547a9b601bf795a5bb6c2640b",
+      "byte_exact_across_pins": true,
+      "matches_actual_node_capture": true
+    },
+    {
+      "path": "packages/history/src/durable/schema.ts",
+      "block": "sql`CREATE TABLE history_nodes (",
+      "sha256": "12a7d0e2e9a388525edc969db3894f3e21418b765d0d00205a147b16de94ebd4",
+      "byte_exact_across_pins": true,
+      "matches_actual_node_capture": true
+    },
+    {
+      "path": "packages/history/src/durable/schema.ts",
+      "block": "sql`CREATE TABLE history_edges (",
+      "sha256": "3f4fca4c1c1f8d7570a49a236970c3aace74efe2eee6cb93284780f090eea371",
+      "byte_exact_across_pins": true,
+      "matches_actual_node_capture": true
+    }
+  ],
+  "qualification": "Only the exact2 production query text blocks and2 relevant table DDL blocks are compared, not the full selected-index file or full repository/runtime. No execution at the later main pin is claimed."
+}

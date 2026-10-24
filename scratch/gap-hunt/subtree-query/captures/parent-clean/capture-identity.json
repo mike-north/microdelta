@@ -1,0 +1,77 @@
+{
+  "original_proof": "aca1c18b723768db2f5d013efdb24c36af6aeb27",
+  "parent_clean_default_command_executed": true,
+  "parent_raw_capture_sha256": "426db5273f6eceb85a48602fe606080e3182c3c91372df7c9d931c6e13d2cd92",
+  "original_raw_capture_sha256": "c7f023b5e295c9a204b51f2e41ac2f5af63290dbd5a325410e9eccd559f90ee8",
+  "capture_not_duplicated": true,
+  "comparisons": [
+    {
+      "size": 10,
+      "same_sql_parameters_rows_and_plans": true,
+      "same_actual_schema": true,
+      "same_listing_nodes_and_edges": true,
+      "same_exact_body_keys": true,
+      "same_node_engine": true
+    },
+    {
+      "size": 20,
+      "same_sql_parameters_rows_and_plans": true,
+      "same_actual_schema": true,
+      "same_listing_nodes_and_edges": true,
+      "same_exact_body_keys": true,
+      "same_node_engine": true
+    },
+    {
+      "size": 40,
+      "same_sql_parameters_rows_and_plans": true,
+      "same_actual_schema": true,
+      "same_listing_nodes_and_edges": true,
+      "same_exact_body_keys": true,
+      "same_node_engine": true
+    }
+  ],
+  "same_vm_counts_and_predeclared_checks": true,
+  "copied_files": [
+    {
+      "path": "receipt.json",
+      "raw_sha256": "35210bf905bd347408ab49f73b1851e9aaf54d8fc9615bf76c4a65a7b3585984",
+      "normalized_sha256": "b63456b29b034dc2dabfc2cb88feba0b34e1830f117caab71113def6c366b397"
+    },
+    {
+      "path": "install.log",
+      "raw_sha256": "0c96d20a71003a6f36eedd391e87a94a35ebd2e664bf4265365ad33d85e01506",
+      "normalized_sha256": "0c96d20a71003a6f36eedd391e87a94a35ebd2e664bf4265365ad33d85e01506"
+    },
+    {
+      "path": "build.log",
+      "raw_sha256": "9eb1f0e1ba62cd61262041daf444feb22fd48ec57cb809914e03f96c4504a62d",
+      "normalized_sha256": "9eb1f0e1ba62cd61262041daf444feb22fd48ec57cb809914e03f96c4504a62d"
+    },
+    {
+      "path": "compile.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "normalized_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "lint.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "normalized_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "production.log",
+      "raw_sha256": "ac147b64c97b06160e5f567f8b18a165aaacaef2038821db69f5d506b06fb23c",
+      "normalized_sha256": "ac147b64c97b06160e5f567f8b18a165aaacaef2038821db69f5d506b06fb23c"
+    },
+    {
+      "path": "sql-work.log",
+      "raw_sha256": "2692f9b40da050c3e802401a692b468916df9507ed5ff57e33bd31d8802689c6",
+      "normalized_sha256": "2692f9b40da050c3e802401a692b468916df9507ed5ff57e33bd31d8802689c6"
+    },
+    {
+      "path": "sql-work-results.json",
+      "raw_sha256": "2692f9b40da050c3e802401a692b468916df9507ed5ff57e33bd31d8802689c6",
+      "normalized_sha256": "2692f9b40da050c3e802401a692b468916df9507ed5ff57e33bd31d8802689c6"
+    }
+  ],
+  "qualification": "Parent ran the unchanged default fresh-worktree command once as an independent clean reproduction; not tuning/query changes. Actual Node VM instruction cost and full100k causality remain unproven."
+}

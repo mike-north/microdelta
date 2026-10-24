@@ -1,0 +1,556 @@
+{
+  "capture_sha256": "426db5273f6eceb85a48602fe606080e3182c3c91372df7c9d931c6e13d2cd92",
+  "python_sqlite_version": "3.54.1",
+  "node_sqlite_versions": [
+    {
+      "version": "3.53.0"
+    },
+    {
+      "version": "3.53.0"
+    },
+    {
+      "version": "3.53.0"
+    }
+  ],
+  "bound": "W(2N) <= 2*W(N)+500, fixed before execution",
+  "rows": [
+    {
+      "size": 10,
+      "role": "subtree-payload",
+      "vm_instructions": 6691,
+      "returned_rows": 33,
+      "python_plan": [
+        [
+          2,
+          0,
+          0,
+          "CO-ROUTINE subtree"
+        ],
+        [
+          6,
+          2,
+          0,
+          "SETUP"
+        ],
+        [
+          7,
+          6,
+          0,
+          "SCAN CONSTANT ROW"
+        ],
+        [
+          20,
+          2,
+          0,
+          "RECURSIVE STEP"
+        ],
+        [
+          21,
+          20,
+          0,
+          "COMPOUND QUERY"
+        ],
+        [
+          22,
+          21,
+          0,
+          "LEFT-MOST SUBQUERY"
+        ],
+        [
+          24,
+          22,
+          56,
+          "SEARCH e USING PRIMARY KEY (result_id=?)"
+        ],
+        [
+          30,
+          22,
+          216,
+          "SCAN s"
+        ],
+        [
+          41,
+          21,
+          0,
+          "UNION ALL"
+        ],
+        [
+          43,
+          41,
+          216,
+          "SCAN s"
+        ],
+        [
+          44,
+          41,
+          45,
+          "SEARCH n USING PRIMARY KEY (result_id=? AND node_id=?)"
+        ],
+        [
+          63,
+          0,
+          220,
+          "SCAN s"
+        ],
+        [
+          66,
+          0,
+          45,
+          "SEARCH n USING PRIMARY KEY (result_id=? AND node_id=?)"
+        ]
+      ],
+      "sql_sha256": "86f7f87c2dde8f6e8c51d5efa16c4add6e82651d377607193774ff3da8c7e777"
+    },
+    {
+      "size": 10,
+      "role": "subtree-structure",
+      "vm_instructions": 1162,
+      "returned_rows": 32,
+      "python_plan": [
+        [
+          3,
+          0,
+          56,
+          "SEARCH history_edges USING PRIMARY KEY (result_id=? AND parent_node=?)"
+        ],
+        [
+          9,
+          0,
+          0,
+          "LIST SUBQUERY 1"
+        ],
+        [
+          11,
+          9,
+          0,
+          "SCAN json_each VIRTUAL TABLE INDEX 1:"
+        ],
+        [
+          47,
+          0,
+          0,
+          "USE TEMP B-TREE FOR LAST TERM OF ORDER BY"
+        ]
+      ],
+      "sql_sha256": "fa986f1c46d6e07ab27a7628dca2a3040cba4a5547a9b601bf795a5bb6c2640b"
+    },
+    {
+      "size": 10,
+      "role": "linear-control",
+      "vm_instructions": 143,
+      "returned_rows": 33,
+      "python_plan": [
+        [
+          3,
+          0,
+          56,
+          "SEARCH history_nodes USING PRIMARY KEY (result_id=?)"
+        ]
+      ],
+      "sql_sha256": "73398a3deb6eb1a7cddc8583046c65b09869b018fadf38dd47638e79846c09df"
+    },
+    {
+      "size": 10,
+      "role": "broad-negative",
+      "vm_instructions": 3449,
+      "returned_rows": 1,
+      "python_plan": [
+        [
+          4,
+          0,
+          56,
+          "SEARCH a USING PRIMARY KEY (result_id=?)"
+        ],
+        [
+          10,
+          0,
+          56,
+          "SEARCH b USING PRIMARY KEY (result_id=?)"
+        ]
+      ],
+      "sql_sha256": "57a7f837b30a1786109e0ff032696e963df3c773a0db0f676445ce98939510bb"
+    },
+    {
+      "size": 20,
+      "role": "subtree-payload",
+      "vm_instructions": 22201,
+      "returned_rows": 63,
+      "python_plan": [
+        [
+          2,
+          0,
+          0,
+          "CO-ROUTINE subtree"
+        ],
+        [
+          6,
+          2,
+          0,
+          "SETUP"
+        ],
+        [
+          7,
+          6,
+          0,
+          "SCAN CONSTANT ROW"
+        ],
+        [
+          20,
+          2,
+          0,
+          "RECURSIVE STEP"
+        ],
+        [
+          21,
+          20,
+          0,
+          "COMPOUND QUERY"
+        ],
+        [
+          22,
+          21,
+          0,
+          "LEFT-MOST SUBQUERY"
+        ],
+        [
+          24,
+          22,
+          56,
+          "SEARCH e USING PRIMARY KEY (result_id=?)"
+        ],
+        [
+          30,
+          22,
+          216,
+          "SCAN s"
+        ],
+        [
+          41,
+          21,
+          0,
+          "UNION ALL"
+        ],
+        [
+          43,
+          41,
+          216,
+          "SCAN s"
+        ],
+        [
+          44,
+          41,
+          45,
+          "SEARCH n USING PRIMARY KEY (result_id=? AND node_id=?)"
+        ],
+        [
+          63,
+          0,
+          220,
+          "SCAN s"
+        ],
+        [
+          66,
+          0,
+          45,
+          "SEARCH n USING PRIMARY KEY (result_id=? AND node_id=?)"
+        ]
+      ],
+      "sql_sha256": "86f7f87c2dde8f6e8c51d5efa16c4add6e82651d377607193774ff3da8c7e777"
+    },
+    {
+      "size": 20,
+      "role": "subtree-structure",
+      "vm_instructions": 2212,
+      "returned_rows": 62,
+      "python_plan": [
+        [
+          3,
+          0,
+          56,
+          "SEARCH history_edges USING PRIMARY KEY (result_id=? AND parent_node=?)"
+        ],
+        [
+          9,
+          0,
+          0,
+          "LIST SUBQUERY 1"
+        ],
+        [
+          11,
+          9,
+          0,
+          "SCAN json_each VIRTUAL TABLE INDEX 1:"
+        ],
+        [
+          47,
+          0,
+          0,
+          "USE TEMP B-TREE FOR LAST TERM OF ORDER BY"
+        ]
+      ],
+      "sql_sha256": "fa986f1c46d6e07ab27a7628dca2a3040cba4a5547a9b601bf795a5bb6c2640b"
+    },
+    {
+      "size": 20,
+      "role": "linear-control",
+      "vm_instructions": 263,
+      "returned_rows": 63,
+      "python_plan": [
+        [
+          3,
+          0,
+          56,
+          "SEARCH history_nodes USING PRIMARY KEY (result_id=?)"
+        ]
+      ],
+      "sql_sha256": "73398a3deb6eb1a7cddc8583046c65b09869b018fadf38dd47638e79846c09df"
+    },
+    {
+      "size": 20,
+      "role": "broad-negative",
+      "vm_instructions": 12239,
+      "returned_rows": 1,
+      "python_plan": [
+        [
+          4,
+          0,
+          56,
+          "SEARCH a USING PRIMARY KEY (result_id=?)"
+        ],
+        [
+          10,
+          0,
+          56,
+          "SEARCH b USING PRIMARY KEY (result_id=?)"
+        ]
+      ],
+      "sql_sha256": "57a7f837b30a1786109e0ff032696e963df3c773a0db0f676445ce98939510bb"
+    },
+    {
+      "size": 40,
+      "role": "subtree-payload",
+      "vm_instructions": 80221,
+      "returned_rows": 123,
+      "python_plan": [
+        [
+          2,
+          0,
+          0,
+          "CO-ROUTINE subtree"
+        ],
+        [
+          6,
+          2,
+          0,
+          "SETUP"
+        ],
+        [
+          7,
+          6,
+          0,
+          "SCAN CONSTANT ROW"
+        ],
+        [
+          20,
+          2,
+          0,
+          "RECURSIVE STEP"
+        ],
+        [
+          21,
+          20,
+          0,
+          "COMPOUND QUERY"
+        ],
+        [
+          22,
+          21,
+          0,
+          "LEFT-MOST SUBQUERY"
+        ],
+        [
+          24,
+          22,
+          56,
+          "SEARCH e USING PRIMARY KEY (result_id=?)"
+        ],
+        [
+          30,
+          22,
+          216,
+          "SCAN s"
+        ],
+        [
+          41,
+          21,
+          0,
+          "UNION ALL"
+        ],
+        [
+          43,
+          41,
+          216,
+          "SCAN s"
+        ],
+        [
+          44,
+          41,
+          45,
+          "SEARCH n USING PRIMARY KEY (result_id=? AND node_id=?)"
+        ],
+        [
+          63,
+          0,
+          220,
+          "SCAN s"
+        ],
+        [
+          66,
+          0,
+          45,
+          "SEARCH n USING PRIMARY KEY (result_id=? AND node_id=?)"
+        ]
+      ],
+      "sql_sha256": "86f7f87c2dde8f6e8c51d5efa16c4add6e82651d377607193774ff3da8c7e777"
+    },
+    {
+      "size": 40,
+      "role": "subtree-structure",
+      "vm_instructions": 4312,
+      "returned_rows": 122,
+      "python_plan": [
+        [
+          3,
+          0,
+          56,
+          "SEARCH history_edges USING PRIMARY KEY (result_id=? AND parent_node=?)"
+        ],
+        [
+          9,
+          0,
+          0,
+          "LIST SUBQUERY 1"
+        ],
+        [
+          11,
+          9,
+          0,
+          "SCAN json_each VIRTUAL TABLE INDEX 1:"
+        ],
+        [
+          47,
+          0,
+          0,
+          "USE TEMP B-TREE FOR LAST TERM OF ORDER BY"
+        ]
+      ],
+      "sql_sha256": "fa986f1c46d6e07ab27a7628dca2a3040cba4a5547a9b601bf795a5bb6c2640b"
+    },
+    {
+      "size": 40,
+      "role": "linear-control",
+      "vm_instructions": 503,
+      "returned_rows": 123,
+      "python_plan": [
+        [
+          3,
+          0,
+          56,
+          "SEARCH history_nodes USING PRIMARY KEY (result_id=?)"
+        ]
+      ],
+      "sql_sha256": "73398a3deb6eb1a7cddc8583046c65b09869b018fadf38dd47638e79846c09df"
+    },
+    {
+      "size": 40,
+      "role": "broad-negative",
+      "vm_instructions": 46019,
+      "returned_rows": 1,
+      "python_plan": [
+        [
+          4,
+          0,
+          56,
+          "SEARCH a USING PRIMARY KEY (result_id=?)"
+        ],
+        [
+          10,
+          0,
+          56,
+          "SEARCH b USING PRIMARY KEY (result_id=?)"
+        ]
+      ],
+      "sql_sha256": "57a7f837b30a1786109e0ff032696e963df3c773a0db0f676445ce98939510bb"
+    }
+  ],
+  "checks": [
+    {
+      "role": "subtree-payload",
+      "from": 10,
+      "to": 20,
+      "allowance": 13882,
+      "observed": 22201,
+      "within_predeclared_bound": false
+    },
+    {
+      "role": "subtree-payload",
+      "from": 20,
+      "to": 40,
+      "allowance": 44902,
+      "observed": 80221,
+      "within_predeclared_bound": false
+    },
+    {
+      "role": "subtree-structure",
+      "from": 10,
+      "to": 20,
+      "allowance": 2824,
+      "observed": 2212,
+      "within_predeclared_bound": true
+    },
+    {
+      "role": "subtree-structure",
+      "from": 20,
+      "to": 40,
+      "allowance": 4924,
+      "observed": 4312,
+      "within_predeclared_bound": true
+    },
+    {
+      "role": "linear-control",
+      "from": 10,
+      "to": 20,
+      "allowance": 786,
+      "observed": 263,
+      "within_predeclared_bound": true
+    },
+    {
+      "role": "linear-control",
+      "from": 20,
+      "to": 40,
+      "allowance": 1026,
+      "observed": 503,
+      "within_predeclared_bound": true
+    },
+    {
+      "role": "broad-negative",
+      "from": 10,
+      "to": 20,
+      "allowance": 7398,
+      "observed": 12239,
+      "within_predeclared_bound": false
+    },
+    {
+      "role": "broad-negative",
+      "from": 20,
+      "to": 40,
+      "allowance": 24978,
+      "observed": 46019,
+      "within_predeclared_bound": false
+    }
+  ],
+  "linear_control_passed": true,
+  "broad_negative_rejected": true,
+  "production_within_bound": false,
+  "qualification": "Python SQLite VM-work counter using captured actual production SQL/schema/listing data. This is not an actual Node-engine instruction count, full consumer timing attribution, or universal complexity proof. Node plans are separately preserved in production-captures.json. No SQL/product repair or retry."
+}

@@ -1,0 +1,76 @@
+{
+  "pin": "f46223193696b67499322bdf70260b85a6277564",
+  "source_files": 813,
+  "source_unchanged": true,
+  "commands": [
+    {
+      "name": "install",
+      "argv": [
+        "npm",
+        "ci",
+        "--no-audit",
+        "--no-fund"
+      ],
+      "exit": 0,
+      "seconds": 3.2864312089805026
+    },
+    {
+      "name": "build",
+      "argv": [
+        "npm",
+        "run",
+        "build:packages"
+      ],
+      "exit": 0,
+      "seconds": 21.452026666986058
+    },
+    {
+      "name": "compile",
+      "argv": [
+        "node",
+        "node_modules/typescript/bin/tsc",
+        "-p",
+        "scratch/gap-hunt/subtree-query/tsconfig.json"
+      ],
+      "exit": 0,
+      "seconds": 1.4310645830119029
+    },
+    {
+      "name": "lint",
+      "argv": [
+        "node",
+        "node_modules/eslint/bin/eslint.js",
+        "--config",
+        "scratch/gap-hunt/subtree-query/eslint.config.mjs",
+        "scratch/gap-hunt/subtree-query/probe.test.ts"
+      ],
+      "exit": 0,
+      "seconds": 1.9630458750179969
+    },
+    {
+      "name": "production",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/subtree-query/jest.config.mjs",
+        "--runInBand"
+      ],
+      "exit": 0,
+      "seconds": 1.3664262499951292
+    },
+    {
+      "name": "sql-work",
+      "argv": [
+        "python3",
+        "scratch/gap-hunt/subtree-query/sql-work.py"
+      ],
+      "exit": 1,
+      "seconds": 0.6670197079947684
+    }
+  ],
+  "expected_counterexample_exit": 1,
+  "no_retry": true,
+  "worktree": "<parent-clean-worktree>"
+}

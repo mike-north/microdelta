@@ -501,6 +501,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       stopped: createAbortSource(listenerFailure('stop')),
       permits: createPermitPool(permits),
       lanes: createPermitPool(window),
+      laneWindow: window,
       timer,
       operations: engine,
       interruptions: [],

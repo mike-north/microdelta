@@ -144,7 +144,7 @@ export const controls = Object.freeze([
     name: 'renewal adopts the current fence instead of checking the presented one',
     model: 'WriterLease',
     fault: 'renew-ignores-fence',
-    edits: [{ anchor: 'return orContended(() => asHolder(lease, (now) => {', replacement: 'return orContended(() => asHolder({ ...lease, fence: readWriter().lastFence }, (now) => {' }],
+    edits: [{ anchor: 'return orContended((readClock) => asHolder(presented, (now) => {', replacement: 'return orContended((readClock) => asHolder({ ...presented, fence: readWriter().lastFence }, (now) => {' }],
   },
   {
     name: 'acquisition takes over one millisecond before the recorded expiry',
@@ -191,8 +191,8 @@ export const controls = Object.freeze([
     model: null,
     unmodeled: 'SQLite locks and host failures are outside the model; the port suite shows that damaged storage and clock failures must stay failures.',
     edits: [{
-      anchor: 'const busy = orContended(() => connection.transaction(() => {',
-      replacement: 'const busy = ((operation) => { try { return operation(); } catch (error) { return contention(error); } })(() => connection.transaction(() => {',
+      anchor: 'const busy = orContended((readClock) => connection.transaction(() => {',
+      replacement: 'const busy = ((operation) => { try { return operation(() => clock.currentEpochMilliseconds()); } catch (error) { return contention(error); } })((readClock) => connection.transaction(() => {',
     }],
   },
   {

@@ -40,6 +40,33 @@ export type IResolutionErrorCode =
   | 'collection-rejected';
 
 /**
+ * The code, diagnostic text and underlying cause a ResolutionError received
+ * when constructed. The cause is opaque caller data; retaining its identity
+ * preserves the failure boundary without reading mutable public Error fields.
+ * This is presentation history, not proof of runtime provenance: authors can
+ * construct the public class too. Only a separately recorded runtime boundary
+ * may use it to report a child failure after author code saw the error.
+ * @internal
+ */
+export interface IResolutionErrorPresentation {
+  readonly code: IResolutionErrorCode;
+  readonly message: string;
+  readonly cause: unknown;
+}
+
+/** Private constructor-time presentation; public Error fields remain mutable to callers. */
+const originalPresentations = new WeakMap<ResolutionError, IResolutionErrorPresentation>();
+
+/**
+ * Recover a constructor-time presentation when this module actually made the
+ * instance. A forged prototype has no entry and must not gain classification.
+ * @internal
+ */
+export function resolutionPresentation(error: ResolutionError): IResolutionErrorPresentation | undefined {
+  return originalPresentations.get(error);
+}
+
+/**
  * A failed resolution. The underlying author, History or host failure, when
  * there is one, is preserved as `cause` rather than translated into success,
  * a miss or a retry. The message names the step and the failure kind; it
@@ -60,5 +87,6 @@ export class ResolutionError extends Error {
     super(message, cause === undefined ? undefined : { cause });
     this.name = 'ResolutionError';
     this.code = code;
+    originalPresentations.set(this, Object.freeze({ code, message, cause }));
   }
 }

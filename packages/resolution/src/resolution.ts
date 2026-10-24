@@ -203,7 +203,8 @@ import {
   siblingStep,
 } from './current.js';
 import type { IArgumentValue, ICurrentSlots } from './current.js';
-import { ResolutionError } from './errors.js';
+import { ResolutionError, resolutionPresentation } from './errors.js';
+import type { IResolutionErrorPresentation } from './errors.js';
 import { acceptanceRecord, bindingPaths, endingRecord, plainDescriptor, provenanceRecord, readProvenance } from './evidence.js';
 import type {
   ICallEvidence,
@@ -401,8 +402,21 @@ interface IMemoFrame {
    */
   unsettledAtReturn: number | undefined;
   refused: { readonly step: IBindingDescriptor; readonly reason: string; readonly disposition: IRefusalDisposition } | undefined;
-  /** The first failed child resolution; a body that swallows it still cannot publish. */
-  failed: { readonly error: unknown } | undefined;
+  /**
+   * The first failed declared child and its original runtime presentation,
+   * including its opaque underlying cause.
+   * The author receives the error object and may change its public fields;
+   * the parent still cannot publish or adopt those changes as runtime text.
+   */
+  failed: { readonly error: unknown; readonly presentation: IResolutionErrorPresentation | undefined } | undefined;
+}
+
+/** Keep the first declared-child failure before its mutable public error reaches author code. */
+function recordFailedChild(frame: IMemoFrame, error: unknown): void {
+  frame.failed ??= Object.freeze({
+    error,
+    presentation: error instanceof ResolutionError ? resolutionPresentation(error) : undefined,
+  });
 }
 
 /** One refused child, as a memo frame records it. */
@@ -2182,8 +2196,16 @@ export function createResolution<TInputs extends object, THelpers extends object
     const frame: IMemoFrame = { request, step, children: new Map(), calls: new Map(), inflight: new Set(), unsettledAtReturn: undefined, refused: undefined, failed: undefined };
     frames.set(invocation, frame);
     let executed: ISupervisedExecution<IObservationCapture<IMemoReturn>>;
+    let executeLifecycleFailed = false;
     try {
-      emit(request, evidence, step, 'execute');
+      try {
+        emit(request, evidence, step, 'execute');
+      } catch (error: unknown) {
+        // This failure came from Resolution's lifecycle boundary before the
+        // author body ran; its classification belongs to the runtime.
+        executeLifecycleFailed = true;
+        throw error;
+      }
       executed = await supervision.execute(step, () => active.run(invocation, () => invocation.apply(bindings, invoker((value): IMemoReturn => {
         // Taken inside the capture, as the body's value is: which started calls it left unsettled.
         frame.unsettledAtReturn = frame.inflight.size;
@@ -2222,8 +2244,14 @@ export function createResolution<TInputs extends object, THelpers extends object
       }
       const cause = failed?.error ?? error;
       abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'the body failed' });
-      if (cause instanceof ResolutionError && cause.code !== 'execution-failure') {
-        throw cause;
+      // A failed declared call or the exact pre-body lifecycle boundary has
+      // runtime provenance. The public ResolutionError constructor gives an
+      // author body no such authority, whatever code its error selects.
+      if (failed?.presentation !== undefined && failed.presentation.code !== 'execution-failure') {
+        throw new ResolutionError(failed.presentation.code, failed.presentation.message, failed.presentation.cause);
+      }
+      if (failed === undefined && executeLifecycleFailed && error instanceof ResolutionError && error.code !== 'execution-failure') {
+        throw error;
       }
       throw new ResolutionError('execution-failure', `Body of ${stepKey(step)} failed`, cause);
     }
@@ -2245,7 +2273,10 @@ export function createResolution<TInputs extends object, THelpers extends object
       // A body that swallowed a failed child cannot publish a result missing that child's current evidence.
       const cause = frame.failed.error;
       abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'a declared call failed' });
-      throw cause instanceof ResolutionError ? cause : new ResolutionError('execution-failure', `A child of ${stepKey(step)} failed`, cause);
+      const presentation = frame.failed.presentation;
+      throw presentation === undefined
+        ? new ResolutionError('execution-failure', `A child of ${stepKey(step)} failed`, cause)
+        : new ResolutionError(presentation.code, presentation.message, presentation.cause);
     }
     if (ran.value.detachError !== undefined) {
       abandon(request, evidence, step, attemptId, 'failed', { ending: 'failed', detail: 'the body returned unsupported data' });
@@ -2304,13 +2335,13 @@ export function createResolution<TInputs extends object, THelpers extends object
       // Definition sends memo and supplied slot calls only with the version-2
       // witness; anything else is refused before any child work.
       const error = new ResolutionError('unbound-step', `A ${request.kind} call with a version-1 witness is not supported by this Resolution`);
-      frame.failed ??= { error };
+      recordFailedChild(frame, error);
       throw error;
     }
     const reconnected = composition.resolveWitness(witness);
     if (reconnected.status !== 'bound' || reconnected.child.declaration !== request.child) {
       const error = new ResolutionError('unbound-step', 'A declared call does not reconnect to its current child declaration');
-      frame.failed ??= { error };
+      recordFailedChild(frame, error);
       throw error;
     }
     const slot = witness.child.slot;
@@ -2319,7 +2350,7 @@ export function createResolution<TInputs extends object, THelpers extends object
     try {
       resolved = await resolveSourceShared(frame.request, childStep, request.child);
     } catch (error: unknown) {
-      frame.failed ??= { error };
+      recordFailedChild(frame, error);
       throw error;
     }
     if (resolved.result.kind !== 'reused' && resolved.result.kind !== 'published') {
@@ -2358,7 +2389,7 @@ export function createResolution<TInputs extends object, THelpers extends object
    */
   async function dispatchNested<TResult>(frame: IMemoFrame, request: IDeclaredInvocationRequest<IFamily, TResult>, witness: INestedInvocationWitness): Promise<{ readonly data: unknown }> {
     const fail = (error: unknown): unknown => {
-      frame.failed ??= { error };
+      recordFailedChild(frame, error);
       return error;
     };
     const reconnected = composition.resolveWitness(witness);

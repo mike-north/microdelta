@@ -241,6 +241,7 @@ export interface ITrackingObserver {
     capture<T>(callback: () => T): IObservationCapture<T>;
     captureAsync<T>(callback: () => Promise<T>): Promise<IObservationCapture<T>>;
     compareCurrent(capture: IObservationCapture<unknown>, provider: ICurrentFactProvider): ICurrentComparison;
+    currentCaptureAssertion(): () => void;
     derived<T>(callback: () => T): {
         get(): T;
     };

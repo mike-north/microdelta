@@ -1,0 +1,13 @@
+{
+  "at": "2026-10-24T01:20:58.364151+00:00",
+  "node": "v24.22.1",
+  "platform": "Darwin",
+  "output": "<captures>",
+  "owned_worktrees": [],
+  "workloads": [
+    "fix100-control",
+    "baseline100k-45s-only"
+  ],
+  "paid_or_live_provider": false,
+  "step3_fix100k_executed": false
+}

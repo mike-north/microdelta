@@ -1,0 +1,807 @@
+{
+  "environment": {
+    "at": "2026-10-24T01:20:58.364151+00:00",
+    "node": "v24.22.1",
+    "platform": "Darwin",
+    "output": "<captures>",
+    "owned_worktrees": [],
+    "workloads": [
+      "fix100-control",
+      "baseline100k-45s-only"
+    ],
+    "paid_or_live_provider": false,
+    "step3_fix100k_executed": false
+  },
+  "runs": {
+    "fix100": {
+      "source": "f46223193696b67499322bdf70260b85a6277564",
+      "source_files": 813,
+      "source_unchanged": true,
+      "runtime": {
+        "argv": [
+          "node",
+          "--max-old-space-size=1536",
+          "--cpu-prof",
+          "--cpu-prof-dir=<captures>/fix100",
+          "scratch/gap-hunt/100k-profile/dist/collections.js",
+          "100"
+        ],
+        "bound_seconds": 30,
+        "exit": 0,
+        "seconds": 0.33539108297554776,
+        "observations": [
+          {
+            "phase": "start",
+            "size": 100,
+            "path": "scratch/gap-hunt/scale/collection-100-38932.sqlite",
+            "heap": 9637600
+          },
+          {
+            "phase": "settled",
+            "size": 100,
+            "counts": {
+              "succeeded": 100
+            },
+            "milliseconds": 96.694833,
+            "heap": 12367448
+          },
+          {
+            "phase": "closed",
+            "size": 100,
+            "fileBytes": 548864
+          }
+        ],
+        "normal_exit_profile_required": true,
+        "profiles": [
+          {
+            "file": "CPU.20261023.182130.38932.0.001.cpuprofile",
+            "sha256": "4412123061e706527eda68adbbfa6910b8ebeef720a3c5a917394d0ea335c55f",
+            "samples": 132,
+            "nodes": 585,
+            "readable": true
+          }
+        ],
+        "runtime_frames": [
+          {
+            "frame": {
+              "functionName": "",
+              "scriptId": "176",
+              "url": "file://<fix>/packages/machine-node/dist/src/node/sqlite.js",
+              "lineNumber": 253,
+              "columnNumber": 36
+            },
+            "self_samples": 2
+          },
+          {
+            "frame": {
+              "functionName": "",
+              "scriptId": "176",
+              "url": "file://<fix>/packages/machine-node/dist/src/node/sqlite.js",
+              "lineNumber": 245,
+              "columnNumber": 38
+            },
+            "self_samples": 2
+          },
+          {
+            "frame": {
+              "functionName": "isPlainRecord",
+              "scriptId": "197",
+              "url": "file://<fix>/packages/definition/dist/src/declaration.js",
+              "lineNumber": 326,
+              "columnNumber": 29
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "validateSchema",
+              "scriptId": "142",
+              "url": "file://<fix>/packages/history/dist/src/durable/schema.js",
+              "lineNumber": 313,
+              "columnNumber": 23
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "awaitWriter",
+              "scriptId": "233",
+              "url": "file://<fix>/packages/supervision/dist/src/writer.js",
+              "lineNumber": 90,
+              "columnNumber": 33
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "toWire",
+              "scriptId": "138",
+              "url": "file://<fix>/packages/value/dist/src/value.js",
+              "lineNumber": 214,
+              "columnNumber": 15
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "copyNode",
+              "scriptId": "217",
+              "url": "file://<fix>/packages/tracking/dist/src/output-observation.js",
+              "lineNumber": 15,
+              "columnNumber": 21
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "provenanceRecord",
+              "scriptId": "219",
+              "url": "file://<fix>/packages/resolution/dist/src/evidence.js",
+              "lineNumber": 49,
+              "columnNumber": 32
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "decodeCanonical",
+              "scriptId": "138",
+              "url": "file://<fix>/packages/value/dist/src/value.js",
+              "lineNumber": 393,
+              "columnNumber": 24
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "toWire",
+              "scriptId": "138",
+              "url": "file://<fix>/packages/value/dist/src/value.js",
+              "lineNumber": 214,
+              "columnNumber": 15
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "toWire",
+              "scriptId": "138",
+              "url": "file://<fix>/packages/value/dist/src/value.js",
+              "lineNumber": 214,
+              "columnNumber": 15
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "encodeValue",
+              "scriptId": "138",
+              "url": "file://<fix>/packages/value/dist/src/value.js",
+              "lineNumber": 278,
+              "columnNumber": 27
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "fingerprint",
+              "scriptId": "138",
+              "url": "file://<fix>/packages/value/dist/src/value.js",
+              "lineNumber": 977,
+              "columnNumber": 27
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "",
+              "scriptId": "176",
+              "url": "file://<fix>/packages/machine-node/dist/src/node/sqlite.js",
+              "lineNumber": 245,
+              "columnNumber": 38
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "toRow",
+              "scriptId": "176",
+              "url": "file://<fix>/packages/machine-node/dist/src/node/sqlite.js",
+              "lineNumber": 273,
+              "columnNumber": 14
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "readSubtree",
+              "scriptId": "143",
+              "url": "file://<fix>/packages/history/dist/src/durable/selected-index.js",
+              "lineNumber": 481,
+              "columnNumber": 19
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "discover",
+              "scriptId": "212",
+              "url": "file://<fix>/packages/resolution/dist/src/resolution.js",
+              "lineNumber": 2040,
+              "columnNumber": 27
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "record",
+              "scriptId": "216",
+              "url": "file://<fix>/packages/tracking/dist/src/observer.js",
+              "lineNumber": 432,
+              "columnNumber": 14
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "observeAt",
+              "scriptId": "138",
+              "url": "file://<fix>/packages/value/dist/src/value.js",
+              "lineNumber": 498,
+              "columnNumber": 18
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "toRow",
+              "scriptId": "176",
+              "url": "file://<fix>/packages/machine-node/dist/src/node/sqlite.js",
+              "lineNumber": 273,
+              "columnNumber": 14
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "_typedBusy",
+              "scriptId": "176",
+              "url": "file://<fix>/packages/machine-node/dist/src/node/sqlite.js",
+              "lineNumber": 85,
+              "columnNumber": 26
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "assertArraySurface",
+              "scriptId": "138",
+              "url": "file://<fix>/packages/value/dist/src/value.js",
+              "lineNumber": 162,
+              "columnNumber": 27
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "started",
+              "scriptId": "228",
+              "url": "file://<fix>/packages/supervision/dist/src/execution.js",
+              "lineNumber": 40,
+              "columnNumber": 16
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "",
+              "scriptId": "176",
+              "url": "file://<fix>/packages/machine-node/dist/src/node/sqlite.js",
+              "lineNumber": 245,
+              "columnNumber": 38
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "toWire",
+              "scriptId": "138",
+              "url": "file://<fix>/packages/value/dist/src/value.js",
+              "lineNumber": 214,
+              "columnNumber": 15
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "toWire",
+              "scriptId": "138",
+              "url": "file://<fix>/packages/value/dist/src/value.js",
+              "lineNumber": 214,
+              "columnNumber": 15
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "",
+              "scriptId": "176",
+              "url": "file://<fix>/packages/machine-node/dist/src/node/sqlite.js",
+              "lineNumber": 245,
+              "columnNumber": 38
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "publish",
+              "scriptId": "212",
+              "url": "file://<fix>/packages/resolution/dist/src/resolution.js",
+              "lineNumber": 918,
+              "columnNumber": 20
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "openMemo",
+              "scriptId": "212",
+              "url": "file://<fix>/packages/resolution/dist/src/resolution.js",
+              "lineNumber": 702,
+              "columnNumber": 21
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "get",
+              "scriptId": "176",
+              "url": "file://<fix>/packages/machine-node/dist/src/node/sqlite.js",
+              "lineNumber": 248,
+              "columnNumber": 11
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "isClassConstructor",
+              "scriptId": "216",
+              "url": "file://<fix>/packages/tracking/dist/src/observer.js",
+              "lineNumber": 190,
+              "columnNumber": 27
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "encodeSnapshot",
+              "scriptId": "138",
+              "url": "file://<fix>/packages/value/dist/src/value.js",
+              "lineNumber": 283,
+              "columnNumber": 30
+            },
+            "self_samples": 1
+          }
+        ],
+        "top_frames": [
+          {
+            "frame": {
+              "functionName": "sqliteTransaction",
+              "scriptId": "239",
+              "url": "file://<fix>/node_modules/better-sqlite3/lib/methods/transaction.js",
+              "lineNumber": 51,
+              "columnNumber": 130
+            },
+            "self_samples": 22
+          },
+          {
+            "frame": {
+              "functionName": "sqliteTransaction",
+              "scriptId": "239",
+              "url": "file://<fix>/node_modules/better-sqlite3/lib/methods/transaction.js",
+              "lineNumber": 51,
+              "columnNumber": 130
+            },
+            "self_samples": 8
+          },
+          {
+            "frame": {
+              "functionName": "open",
+              "scriptId": "0",
+              "url": "",
+              "lineNumber": -1,
+              "columnNumber": -1
+            },
+            "self_samples": 5
+          },
+          {
+            "frame": {
+              "functionName": "sqliteTransaction",
+              "scriptId": "239",
+              "url": "file://<fix>/node_modules/better-sqlite3/lib/methods/transaction.js",
+              "lineNumber": 51,
+              "columnNumber": 130
+            },
+            "self_samples": 5
+          },
+          {
+            "frame": {
+              "functionName": "open",
+              "scriptId": "0",
+              "url": "",
+              "lineNumber": -1,
+              "columnNumber": -1
+            },
+            "self_samples": 3
+          },
+          {
+            "frame": {
+              "functionName": "(garbage collector)",
+              "scriptId": "0",
+              "url": "",
+              "lineNumber": -1,
+              "columnNumber": -1
+            },
+            "self_samples": 3
+          },
+          {
+            "frame": {
+              "functionName": "compileSourceTextModule",
+              "scriptId": "76",
+              "url": "node:internal/modules/esm/utils",
+              "lineNumber": 316,
+              "columnNumber": 32
+            },
+            "self_samples": 2
+          },
+          {
+            "frame": {
+              "functionName": "readPackageJSON",
+              "scriptId": "0",
+              "url": "",
+              "lineNumber": -1,
+              "columnNumber": -1
+            },
+            "self_samples": 2
+          },
+          {
+            "frame": {
+              "functionName": "read",
+              "scriptId": "0",
+              "url": "",
+              "lineNumber": -1,
+              "columnNumber": -1
+            },
+            "self_samples": 2
+          },
+          {
+            "frame": {
+              "functionName": "readFileUtf8",
+              "scriptId": "0",
+              "url": "",
+              "lineNumber": -1,
+              "columnNumber": -1
+            },
+            "self_samples": 2
+          },
+          {
+            "frame": {
+              "functionName": "Database",
+              "scriptId": "235",
+              "url": "file://<fix>/node_modules/better-sqlite3/lib/database.js",
+              "lineNumber": 8,
+              "columnNumber": 17
+            },
+            "self_samples": 2
+          },
+          {
+            "frame": {
+              "functionName": "pragma",
+              "scriptId": "240",
+              "url": "file://<fix>/node_modules/better-sqlite3/lib/methods/pragma.js",
+              "lineNumber": 3,
+              "columnNumber": 32
+            },
+            "self_samples": 2
+          },
+          {
+            "frame": {
+              "functionName": "exec",
+              "scriptId": "238",
+              "url": "file://<fix>/node_modules/better-sqlite3/lib/methods/wrappers.js",
+              "lineNumber": 7,
+              "columnNumber": 28
+            },
+            "self_samples": 2
+          },
+          {
+            "frame": {
+              "functionName": "",
+              "scriptId": "176",
+              "url": "file://<fix>/packages/machine-node/dist/src/node/sqlite.js",
+              "lineNumber": 253,
+              "columnNumber": 36
+            },
+            "self_samples": 2
+          },
+          {
+            "frame": {
+              "functionName": "",
+              "scriptId": "176",
+              "url": "file://<fix>/packages/machine-node/dist/src/node/sqlite.js",
+              "lineNumber": 245,
+              "columnNumber": 38
+            },
+            "self_samples": 2
+          },
+          {
+            "frame": {
+              "functionName": "close",
+              "scriptId": "238",
+              "url": "file://<fix>/node_modules/better-sqlite3/lib/methods/wrappers.js",
+              "lineNumber": 12,
+              "columnNumber": 30
+            },
+            "self_samples": 2
+          },
+          {
+            "frame": {
+              "functionName": "(program)",
+              "scriptId": "0",
+              "url": "",
+              "lineNumber": -1,
+              "columnNumber": -1
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "cwd",
+              "scriptId": "0",
+              "url": "",
+              "lineNumber": -1,
+              "columnNumber": -1
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "compileForInternalLoader",
+              "scriptId": "6",
+              "url": "node:internal/bootstrap/realm",
+              "lineNumber": 382,
+              "columnNumber": 26
+            },
+            "self_samples": 1
+          },
+          {
+            "frame": {
+              "functionName": "compileForInternalLoader",
+              "scriptId": "6",
+              "url": "node:internal/bootstrap/realm",
+              "lineNumber": 382,
+              "columnNumber": 26
+            },
+            "self_samples": 1
+          }
+        ]
+      }
+    },
+    "baseline100k": {
+      "source": "c5802daca4a0bb8ea91159854d84eddcfa5215b6",
+      "source_files": 750,
+      "source_unchanged": true,
+      "runtime": {
+        "argv": [
+          "node",
+          "--max-old-space-size=1536",
+          "scratch/gap-hunt/100k-profile/dist/collections.js",
+          "100000"
+        ],
+        "source": "c5802daca4a0bb8ea91159854d84eddcfa5215b6",
+        "size": 100000,
+        "heap_limit_mib": 1536,
+        "lease_milliseconds": 3600000,
+        "bound_seconds": 45,
+        "seconds": 45.092716708022635,
+        "exit": -9,
+        "timed_out": true,
+        "signal": "SIGKILL",
+        "child_gone": true,
+        "external_samples": [
+          {
+            "label": "near-10s",
+            "started_seconds": 10.08628141702502,
+            "exit": 0,
+            "file": "near-10s.sample.txt",
+            "exists": true,
+            "sha256": "fd93dad78b1ca92a29484fdf771166d200cd4105f6e2630ea2fed3baeb36337c",
+            "readable_stack_report": true
+          },
+          {
+            "label": "near-30s",
+            "started_seconds": 30.05863362501259,
+            "exit": 0,
+            "file": "near-30s.sample.txt",
+            "exists": true,
+            "sha256": "d8e781dd3a41db675c817e639b1002e38057ebc6aeb8c86597f3181e69829dea",
+            "readable_stack_report": true
+          }
+        ],
+        "state_samples": [
+          {
+            "elapsed_seconds": 0.0028596250049304217,
+            "pid": 41886,
+            "rss_kib": 656,
+            "store_exists": false
+          },
+          {
+            "elapsed_seconds": 5.082033250015229,
+            "pid": 41886,
+            "rss_kib": 756960,
+            "store_exists": true,
+            "files": {
+              "collection-100000-41886.sqlite": 7544832,
+              "collection-100000-41886.sqlite-wal": 7626152,
+              "collection-100000-41886.sqlite-shm": 32768
+            },
+            "committed_counts": {
+              "history_attempts": 1,
+              "history_results": 0,
+              "history_nodes": 0,
+              "history_edges": 0,
+              "history_addresses": 0
+            }
+          },
+          {
+            "elapsed_seconds": 10.08628141702502,
+            "pid": 41886,
+            "rss_kib": 749600,
+            "store_exists": true,
+            "files": {
+              "collection-100000-41886.sqlite": 7544832,
+              "collection-100000-41886.sqlite-wal": 7626152,
+              "collection-100000-41886.sqlite-shm": 32768
+            },
+            "committed_counts": {
+              "history_attempts": 1,
+              "history_results": 0,
+              "history_nodes": 0,
+              "history_edges": 0,
+              "history_addresses": 0
+            }
+          },
+          {
+            "elapsed_seconds": 15.032456583023304,
+            "pid": 41886,
+            "rss_kib": 729600,
+            "store_exists": true,
+            "files": {
+              "collection-100000-41886.sqlite": 7544832,
+              "collection-100000-41886.sqlite-wal": 7626152,
+              "collection-100000-41886.sqlite-shm": 32768
+            },
+            "committed_counts": {
+              "history_attempts": 1,
+              "history_results": 0,
+              "history_nodes": 0,
+              "history_edges": 0,
+              "history_addresses": 0
+            }
+          },
+          {
+            "elapsed_seconds": 20.024666792014614,
+            "pid": 41886,
+            "rss_kib": 727856,
+            "store_exists": true,
+            "files": {
+              "collection-100000-41886.sqlite": 7544832,
+              "collection-100000-41886.sqlite-wal": 7626152,
+              "collection-100000-41886.sqlite-shm": 32768
+            },
+            "committed_counts": {
+              "history_attempts": 1,
+              "history_results": 0,
+              "history_nodes": 0,
+              "history_edges": 0,
+              "history_addresses": 0
+            }
+          },
+          {
+            "elapsed_seconds": 25.102296958008083,
+            "pid": 41886,
+            "rss_kib": 725344,
+            "store_exists": true,
+            "files": {
+              "collection-100000-41886.sqlite": 7544832,
+              "collection-100000-41886.sqlite-wal": 7626152,
+              "collection-100000-41886.sqlite-shm": 32768
+            },
+            "committed_counts": {
+              "history_attempts": 1,
+              "history_results": 0,
+              "history_nodes": 0,
+              "history_edges": 0,
+              "history_addresses": 0
+            }
+          },
+          {
+            "elapsed_seconds": 30.05863362501259,
+            "pid": 41886,
+            "rss_kib": 646336,
+            "store_exists": true,
+            "files": {
+              "collection-100000-41886.sqlite": 7544832,
+              "collection-100000-41886.sqlite-wal": 7626152,
+              "collection-100000-41886.sqlite-shm": 32768
+            },
+            "committed_counts": {
+              "history_attempts": 1,
+              "history_results": 0,
+              "history_nodes": 0,
+              "history_edges": 0,
+              "history_addresses": 0
+            }
+          },
+          {
+            "elapsed_seconds": 35.01142883300781,
+            "pid": 41886,
+            "rss_kib": 727584,
+            "store_exists": true,
+            "files": {
+              "collection-100000-41886.sqlite": 7544832,
+              "collection-100000-41886.sqlite-wal": 7626152,
+              "collection-100000-41886.sqlite-shm": 32768
+            },
+            "committed_counts": {
+              "history_attempts": 1,
+              "history_results": 0,
+              "history_nodes": 0,
+              "history_edges": 0,
+              "history_addresses": 0
+            }
+          },
+          {
+            "elapsed_seconds": 40.042545292002615,
+            "pid": 41886,
+            "rss_kib": 730096,
+            "store_exists": true,
+            "files": {
+              "collection-100000-41886.sqlite": 7544832,
+              "collection-100000-41886.sqlite-wal": 7626152,
+              "collection-100000-41886.sqlite-shm": 32768
+            },
+            "committed_counts": {
+              "history_attempts": 1,
+              "history_results": 0,
+              "history_nodes": 0,
+              "history_edges": 0,
+              "history_addresses": 0
+            }
+          },
+          {
+            "elapsed_seconds": 45.053521708003245,
+            "pid": 41886,
+            "rss_kib": null,
+            "store_exists": true,
+            "files": {
+              "collection-100000-41886.sqlite": 7544832,
+              "collection-100000-41886.sqlite-wal": 7626152,
+              "collection-100000-41886.sqlite-shm": 32768
+            },
+            "committed_counts": {
+              "history_attempts": 1,
+              "history_results": 0,
+              "history_nodes": 0,
+              "history_edges": 0,
+              "history_addresses": 0
+            }
+          }
+        ],
+        "python_sqlite_version": "3.54.1",
+        "profile_flush_on_kill_assumed": false,
+        "observational_overlay": false
+      }
+    }
+  }
+}

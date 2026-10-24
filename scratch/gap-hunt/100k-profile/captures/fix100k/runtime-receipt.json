@@ -1,0 +1,150 @@
+{
+  "source": "f46223193696b67499322bdf70260b85a6277564",
+  "argv": [
+    "node",
+    "--max-old-space-size=1536",
+    "scratch/gap-hunt/100k-profile/dist/collections.js",
+    "100000"
+  ],
+  "size": 100000,
+  "heap_limit_mib": 1536,
+  "lease_milliseconds": 3600000,
+  "bound_seconds": 300,
+  "seconds": 300.0746635830146,
+  "exit": -9,
+  "timed_out": true,
+  "signal": "SIGKILL",
+  "child_gone": true,
+  "store": "<fix>/scratch/gap-hunt/scale/collection-100000-67503.sqlite",
+  "observations": [
+    {
+      "phase": "start",
+      "size": 100000,
+      "path": "scratch/gap-hunt/scale/collection-100000-67503.sqlite",
+      "heap": 8847232
+    }
+  ],
+  "state_samples": [
+    {
+      "elapsed_seconds": 15.071079250017647,
+      "pid": 67503,
+      "rss_kib": 705776,
+      "store_exists": true,
+      "files": {
+        "collection-100000-67503.sqlite": 100171776,
+        "collection-100000-67503.sqlite-wal": 93256232,
+        "collection-100000-67503.sqlite-shm": 196608
+      },
+      "committed_counts": {
+        "history_attempts": 1,
+        "history_results": 1,
+        "history_nodes": 300003,
+        "history_edges": 300002,
+        "history_addresses": 300003
+      },
+      "planned_seconds": 15
+    },
+    {
+      "elapsed_seconds": 30.089606291003292,
+      "pid": 67503,
+      "rss_kib": 647200,
+      "store_exists": true,
+      "files": {
+        "collection-100000-67503.sqlite": 100171776,
+        "collection-100000-67503.sqlite-wal": 93256232,
+        "collection-100000-67503.sqlite-shm": 196608
+      },
+      "committed_counts": {
+        "history_attempts": 1,
+        "history_results": 1,
+        "history_nodes": 300003,
+        "history_edges": 300002,
+        "history_addresses": 300003
+      },
+      "planned_seconds": 30
+    },
+    {
+      "elapsed_seconds": 60.08731412500492,
+      "pid": 67503,
+      "rss_kib": 649712,
+      "store_exists": true,
+      "files": {
+        "collection-100000-67503.sqlite": 100171776,
+        "collection-100000-67503.sqlite-wal": 93256232,
+        "collection-100000-67503.sqlite-shm": 196608
+      },
+      "committed_counts": {
+        "history_attempts": 1,
+        "history_results": 1,
+        "history_nodes": 300003,
+        "history_edges": 300002,
+        "history_addresses": 300003
+      },
+      "planned_seconds": 60
+    },
+    {
+      "elapsed_seconds": 120.03630241600331,
+      "pid": 67503,
+      "rss_kib": 646576,
+      "store_exists": true,
+      "files": {
+        "collection-100000-67503.sqlite": 100171776,
+        "collection-100000-67503.sqlite-wal": 93256232,
+        "collection-100000-67503.sqlite-shm": 196608
+      },
+      "committed_counts": {
+        "history_attempts": 1,
+        "history_results": 1,
+        "history_nodes": 300003,
+        "history_edges": 300002,
+        "history_addresses": 300003
+      },
+      "planned_seconds": 120
+    },
+    {
+      "elapsed_seconds": 240.05495216601412,
+      "pid": 67503,
+      "rss_kib": 647936,
+      "store_exists": true,
+      "files": {
+        "collection-100000-67503.sqlite": 100171776,
+        "collection-100000-67503.sqlite-wal": 93256232,
+        "collection-100000-67503.sqlite-shm": 196608
+      },
+      "committed_counts": {
+        "history_attempts": 1,
+        "history_results": 1,
+        "history_nodes": 300003,
+        "history_edges": 300002,
+        "history_addresses": 300003
+      },
+      "planned_seconds": 240
+    },
+    {
+      "elapsed_seconds": 300.0746635830146,
+      "pid": 67503,
+      "rss_kib": null,
+      "store_exists": true,
+      "files": {
+        "collection-100000-67503.sqlite": 100171776,
+        "collection-100000-67503.sqlite-wal": 93256232,
+        "collection-100000-67503.sqlite-shm": 196608
+      },
+      "committed_counts": {
+        "history_attempts": 1,
+        "history_results": 1,
+        "history_nodes": 300003,
+        "history_edges": 300002,
+        "history_addresses": 300003
+      }
+    }
+  ],
+  "external_sample": null,
+  "closed": false,
+  "observational_overlay": false,
+  "python_sqlite_version": "3.54.1",
+  "correctness": {
+    "passed": false,
+    "reason": "Runtime did not complete normally and close with 100000 succeeded"
+  }
+}

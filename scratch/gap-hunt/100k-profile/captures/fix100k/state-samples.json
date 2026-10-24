@@ -1,0 +1,115 @@
+[
+  {
+    "elapsed_seconds": 15.071079250017647,
+    "pid": 67503,
+    "rss_kib": 705776,
+    "store_exists": true,
+    "files": {
+      "collection-100000-67503.sqlite": 100171776,
+      "collection-100000-67503.sqlite-wal": 93256232,
+      "collection-100000-67503.sqlite-shm": 196608
+    },
+    "committed_counts": {
+      "history_attempts": 1,
+      "history_results": 1,
+      "history_nodes": 300003,
+      "history_edges": 300002,
+      "history_addresses": 300003
+    },
+    "planned_seconds": 15
+  },
+  {
+    "elapsed_seconds": 30.089606291003292,
+    "pid": 67503,
+    "rss_kib": 647200,
+    "store_exists": true,
+    "files": {
+      "collection-100000-67503.sqlite": 100171776,
+      "collection-100000-67503.sqlite-wal": 93256232,
+      "collection-100000-67503.sqlite-shm": 196608
+    },
+    "committed_counts": {
+      "history_attempts": 1,
+      "history_results": 1,
+      "history_nodes": 300003,
+      "history_edges": 300002,
+      "history_addresses": 300003
+    },
+    "planned_seconds": 30
+  },
+  {
+    "elapsed_seconds": 60.08731412500492,
+    "pid": 67503,
+    "rss_kib": 649712,
+    "store_exists": true,
+    "files": {
+      "collection-100000-67503.sqlite": 100171776,
+      "collection-100000-67503.sqlite-wal": 93256232,
+      "collection-100000-67503.sqlite-shm": 196608
+    },
+    "committed_counts": {
+      "history_attempts": 1,
+      "history_results": 1,
+      "history_nodes": 300003,
+      "history_edges": 300002,
+      "history_addresses": 300003
+    },
+    "planned_seconds": 60
+  },
+  {
+    "elapsed_seconds": 120.03630241600331,
+    "pid": 67503,
+    "rss_kib": 646576,
+    "store_exists": true,
+    "files": {
+      "collection-100000-67503.sqlite": 100171776,
+      "collection-100000-67503.sqlite-wal": 93256232,
+      "collection-100000-67503.sqlite-shm": 196608
+    },
+    "committed_counts": {
+      "history_attempts": 1,
+      "history_results": 1,
+      "history_nodes": 300003,
+      "history_edges": 300002,
+      "history_addresses": 300003
+    },
+    "planned_seconds": 120
+  },
+  {
+    "elapsed_seconds": 240.05495216601412,
+    "pid": 67503,
+    "rss_kib": 647936,
+    "store_exists": true,
+    "files": {
+      "collection-100000-67503.sqlite": 100171776,
+      "collection-100000-67503.sqlite-wal": 93256232,
+      "collection-100000-67503.sqlite-shm": 196608
+    },
+    "committed_counts": {
+      "history_attempts": 1,
+      "history_results": 1,
+      "history_nodes": 300003,
+      "history_edges": 300002,
+      "history_addresses": 300003
+    },
+    "planned_seconds": 240
+  },
+  {
+    "elapsed_seconds": 300.0746635830146,
+    "pid": 67503,
+    "rss_kib": null,
+    "store_exists": true,
+    "files": {
+      "collection-100000-67503.sqlite": 100171776,
+      "collection-100000-67503.sqlite-wal": 93256232,
+      "collection-100000-67503.sqlite-shm": 196608
+    },
+    "committed_counts": {
+      "history_attempts": 1,
+      "history_results": 1,
+      "history_nodes": 300003,
+      "history_edges": 300002,
+      "history_addresses": 300003
+    }
+  }
+]

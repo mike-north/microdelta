@@ -1,0 +1,10 @@
+{
+  "argv": [
+    "npm",
+    "run",
+    "build:packages"
+  ],
+  "exit": 0,
+  "seconds": 23.632861624995712,
+  "log_sha256": "d3b897366790a7b33fd8de10a759c7523a98aa5e97374328a6832891dcf850ff"
+}

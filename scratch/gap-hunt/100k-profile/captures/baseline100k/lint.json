@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "node",
+    "node_modules/eslint/bin/eslint.js",
+    "--config",
+    "scratch/gap-hunt/100k-profile/eslint.config.mjs",
+    "scratch/gap-hunt/100k-profile/collections.ts"
+  ],
+  "exit": 0,
+  "seconds": 1.6985700000077486,
+  "log_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+}

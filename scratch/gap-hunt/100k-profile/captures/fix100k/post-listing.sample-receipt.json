@@ -1,0 +1,12 @@
+{
+  "pid": 67503,
+  "started_utc": "2026-10-24T01:28:34.518677+00:00",
+  "process_elapsed_before_sample": "about80s;60s planned snapshot still1attempt/1result",
+  "reason": "Single external sample separately authorized by supervisor after stalled post-listing60s state",
+  "duration_seconds": 5.209160708007403,
+  "exit": 0,
+  "file": "post-listing.sample.txt",
+  "sha256": "73a0b14727f3637b5f380570266a9b9cb1ec8c11ce798b363f52eb89f2734d39",
+  "runtime_cap_unchanged": true,
+  "runtime_helper_unchanged": true
+}

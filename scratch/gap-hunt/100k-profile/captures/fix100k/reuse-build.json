@@ -1,0 +1,6 @@
+{
+  "explicit_reuse": true,
+  "source_verified_against": "../fix100/source-receipt.json",
+  "prior_locked_install_build_compile_lint": true,
+  "source": "f46223193696b67499322bdf70260b85a6277564"
+}

@@ -1,0 +1,237 @@
+{
+  "executed_fix": "f46223193696b67499322bdf70260b85a6277564",
+  "executed_baseline": "c5802daca4a0bb8ea91159854d84eddcfa5215b6",
+  "fixture_source": "88812f7aafcc18f4736f23dd7ae5c6d4e27de62f",
+  "files": [
+    {
+      "path": "README.md",
+      "bytes": 5982,
+      "sha256": "938241027d7adb934553166a292c26ae98d7752ee54fdb2db828c2369752e4a7"
+    },
+    {
+      "path": "captures/baseline100k/build.json",
+      "bytes": 193,
+      "sha256": "28a6718001e691006a4a2a2498bea94d236e8586148f020570ee761773208c1c"
+    },
+    {
+      "path": "captures/baseline100k/build.log",
+      "bytes": 4988,
+      "sha256": "d3b897366790a7b33fd8de10a759c7523a98aa5e97374328a6832891dcf850ff"
+    },
+    {
+      "path": "captures/baseline100k/compile.json",
+      "bytes": 261,
+      "sha256": "26afdfdda825644c737dd3604d5ceac0ba976c3f11213cdf09b6c46a6035116f"
+    },
+    {
+      "path": "captures/baseline100k/compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "captures/baseline100k/install.json",
+      "bytes": 204,
+      "sha256": "aec721d38ef6e62812c022aea6efd9de036b7f892f0dadcbc926aebce8f03005"
+    },
+    {
+      "path": "captures/baseline100k/install.log",
+      "bytes": 453,
+      "sha256": "0c96d20a71003a6f36eedd391e87a94a35ebd2e664bf4265365ad33d85e01506"
+    },
+    {
+      "path": "captures/baseline100k/lint.json",
+      "bytes": 325,
+      "sha256": "04185373271cde96aea472977bacd1896960edbbbdb134aef595445aa60b1a52"
+    },
+    {
+      "path": "captures/baseline100k/lint.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "captures/baseline100k/near-10s.sample.txt",
+      "bytes": 281714,
+      "sha256": "bc1de728ca41bdbd57688a4e1ae52b5f84f1c76c238ce3446f65c7d92a91d06f"
+    },
+    {
+      "path": "captures/baseline100k/near-10s.sampler.log",
+      "bytes": 221,
+      "sha256": "1531a8ab5ec754ae93160c76ae21e03a24976fa4a0b2a27d63916f324b28d93c"
+    },
+    {
+      "path": "captures/baseline100k/near-30s.sample.txt",
+      "bytes": 278598,
+      "sha256": "2fc8c099b37afed30440b44bb568ba13466b3f952bb7fdba8f7378cd3d54b3ad"
+    },
+    {
+      "path": "captures/baseline100k/near-30s.sampler.log",
+      "bytes": 221,
+      "sha256": "dae58360c5eb8d278ca80d7ba86ff5e57fa707b8d6b011cda78287f0ee372fb1"
+    },
+    {
+      "path": "captures/baseline100k/runtime-receipt.json",
+      "bytes": 5746,
+      "sha256": "c571ef1012d07a043a8e65cdd5d91f4bdb59db41e919492ae17c4ecff21d5ffc"
+    },
+    {
+      "path": "captures/baseline100k/runtime.log",
+      "bytes": 110,
+      "sha256": "3772fcec1bef2e9e4fba7290e80b18de9c2a43980d00560bb40711d008c7b3b9"
+    },
+    {
+      "path": "captures/baseline100k/source-receipt.json",
+      "bytes": 266591,
+      "sha256": "272fd05d8156c345c46bd4684e50fa88108c6a4f3f51d8cae1ccd146600710c1"
+    },
+    {
+      "path": "captures/baseline100k/state-samples.json",
+      "bytes": 4283,
+      "sha256": "2c097639c43e12af5ce040b12fb0b4f821ad6b44f8f986f6977af29a63be74ad"
+    },
+    {
+      "path": "captures/environment.json",
+      "bytes": 285,
+      "sha256": "f898fe8cdd62c97d520b2f9e690bef32b782b95e1e26c09efaf400ba85431834"
+    },
+    {
+      "path": "captures/fix100/CPU.20261023.182130.38932.0.001.cpuprofile",
+      "bytes": 110687,
+      "sha256": "8e37ed53a25fdf55b2114e238617bf4ee94d6063493482d9f948552564b0890f"
+    },
+    {
+      "path": "captures/fix100/build.json",
+      "bytes": 193,
+      "sha256": "8b8e1c7dfa06a593d44192397ee67e3fecf419fbf19286f115725b93c082c718"
+    },
+    {
+      "path": "captures/fix100/build.log",
+      "bytes": 4988,
+      "sha256": "9eb1f0e1ba62cd61262041daf444feb22fd48ec57cb809914e03f96c4504a62d"
+    },
+    {
+      "path": "captures/fix100/compile.json",
+      "bytes": 260,
+      "sha256": "cdda51a5a1a07d1b780f9004d26dabedf4b39217772ceca8d2cecf1962e64540"
+    },
+    {
+      "path": "captures/fix100/compile.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "captures/fix100/install.json",
+      "bytes": 204,
+      "sha256": "912d529df30778a79bf5ab9455c26326418e64506a05900622f3deb5313d201d"
+    },
+    {
+      "path": "captures/fix100/install.log",
+      "bytes": 453,
+      "sha256": "1452b267d295c65e25c38abc07c5609aa666e28358ede28af953b575c0cf80e9"
+    },
+    {
+      "path": "captures/fix100/lint.json",
+      "bytes": 325,
+      "sha256": "9ee275e67e87d4fa42024f6a06465df07d4f1522f5d3b45570d8556f93f56962"
+    },
+    {
+      "path": "captures/fix100/lint.log",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "captures/fix100/runtime-receipt.json",
+      "bytes": 13708,
+      "sha256": "2808bf9add4c86f6b475f3ac9c3b7e9aa8f3a94b7fccd5e6a93a15db76688d46"
+    },
+    {
+      "path": "captures/fix100/runtime.log",
+      "bytes": 252,
+      "sha256": "148a59a02a6401401647e12bcf42d9ef3356ec42716cde99c38202540fdcb0e7"
+    },
+    {
+      "path": "captures/fix100/source-receipt.json",
+      "bytes": 289867,
+      "sha256": "793aebb827e217e553f352490d00bfb9584a30ec8169995ee1471dc34840f0b7"
+    },
+    {
+      "path": "captures/fix100k/environment.json",
+      "bytes": 145,
+      "sha256": "2e86d6823483609c305889deda6edb44186fd501f0bea33a321da9643f076c1f"
+    },
+    {
+      "path": "captures/fix100k/post-listing.sample-receipt.json",
+      "bytes": 512,
+      "sha256": "6431a03b1c5487574ce5a27eac3a61b6d09a00e18e9693ae1e84c3a986480a9b"
+    },
+    {
+      "path": "captures/fix100k/post-listing.sample.txt",
+      "bytes": 80697,
+      "sha256": "6ba6b64fe135a24aebaad27e1650b14bb10e6e1c694fd21def4540f4e192e90a"
+    },
+    {
+      "path": "captures/fix100k/post-listing.sampler.log",
+      "bytes": 220,
+      "sha256": "d4a1455df01a5c275ff1dfa80e5d2064918c29765c6ba8da4ed67d21e92a5414"
+    },
+    {
+      "path": "captures/fix100k/reuse-build.json",
+      "bytes": 198,
+      "sha256": "f537ada1b52f52b95d6cddfb8ec6a63777861b805c4a0861b9281877e92501a3"
+    },
+    {
+      "path": "captures/fix100k/runtime-receipt.json",
+      "bytes": 4174,
+      "sha256": "1a5568caf462ea1470f41765f8546264eba6343fefeaec47360d2406c079033a"
+    },
+    {
+      "path": "captures/fix100k/runtime.log",
+      "bytes": 110,
+      "sha256": "c53131f6dbc14898d3a893e7594b13bf89c0a787c93b29628043258727e6adb8"
+    },
+    {
+      "path": "captures/fix100k/source-receipt.json",
+      "bytes": 211015,
+      "sha256": "9ff2506ae68cc7e37a8262aceeed9953e3158080118b280d8b697bab29f5a083"
+    },
+    {
+      "path": "captures/fix100k/state-samples.json",
+      "bytes": 3028,
+      "sha256": "4a8142767b6657a0bb6e17e92f7bfdf773cd4a9d37a53e789756ee3ca9e6f80d"
+    },
+    {
+      "path": "captures/receipt.json",
+      "bytes": 24792,
+      "sha256": "f8eb9d4e5b839e3b43e2cb212a356a83e7770bb9c525b68325d54be8703d49b3"
+    },
+    {
+      "path": "collections.ts",
+      "bytes": 2251,
+      "sha256": "a3b7a408eab69e4b725df4ba0ea163b9851fd8ca42127426a7c3f4802b2b5118"
+    },
+    {
+      "path": "eslint.config.mjs",
+      "bytes": 653,
+      "sha256": "e5e69bf339ad15ab1614da8ffe63014d933c758d4bbb1530b92b0ec7da522c25"
+    },
+    {
+      "path": "fix100k.py",
+      "bytes": 7174,
+      "sha256": "15e2f6ff99b382c44f98522941eaa379236238bf2d0e4b8119fced9b3ebb6060"
+    },
+    {
+      "path": "reproduce.py",
+      "bytes": 9819,
+      "sha256": "d67491682e97cce08bb9b7c3feda817be4d80eeb036a72300ca0d200c13e2242"
+    },
+    {
+      "path": "summary.json",
+      "bytes": 31680,
+      "sha256": "e443fd38c0d0debe3f3c7df5b3d3436f5dcb45866305527940ae9f995b1cde46"
+    },
+    {
+      "path": "tsconfig.json",
+      "bytes": 1315,
+      "sha256": "1119b919321a3a23c60a8fb9237b434239a1abf0125ef8cf9e9d22737291b71b"
+    }
+  ]
+}

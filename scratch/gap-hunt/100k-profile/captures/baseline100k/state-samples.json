@@ -1,0 +1,170 @@
+[
+  {
+    "elapsed_seconds": 0.0028596250049304217,
+    "pid": 41886,
+    "rss_kib": 656,
+    "store_exists": false
+  },
+  {
+    "elapsed_seconds": 5.082033250015229,
+    "pid": 41886,
+    "rss_kib": 756960,
+    "store_exists": true,
+    "files": {
+      "collection-100000-41886.sqlite": 7544832,
+      "collection-100000-41886.sqlite-wal": 7626152,
+      "collection-100000-41886.sqlite-shm": 32768
+    },
+    "committed_counts": {
+      "history_attempts": 1,
+      "history_results": 0,
+      "history_nodes": 0,
+      "history_edges": 0,
+      "history_addresses": 0
+    }
+  },
+  {
+    "elapsed_seconds": 10.08628141702502,
+    "pid": 41886,
+    "rss_kib": 749600,
+    "store_exists": true,
+    "files": {
+      "collection-100000-41886.sqlite": 7544832,
+      "collection-100000-41886.sqlite-wal": 7626152,
+      "collection-100000-41886.sqlite-shm": 32768
+    },
+    "committed_counts": {
+      "history_attempts": 1,
+      "history_results": 0,
+      "history_nodes": 0,
+      "history_edges": 0,
+      "history_addresses": 0
+    }
+  },
+  {
+    "elapsed_seconds": 15.032456583023304,
+    "pid": 41886,
+    "rss_kib": 729600,
+    "store_exists": true,
+    "files": {
+      "collection-100000-41886.sqlite": 7544832,
+      "collection-100000-41886.sqlite-wal": 7626152,
+      "collection-100000-41886.sqlite-shm": 32768
+    },
+    "committed_counts": {
+      "history_attempts": 1,
+      "history_results": 0,
+      "history_nodes": 0,
+      "history_edges": 0,
+      "history_addresses": 0
+    }
+  },
+  {
+    "elapsed_seconds": 20.024666792014614,
+    "pid": 41886,
+    "rss_kib": 727856,
+    "store_exists": true,
+    "files": {
+      "collection-100000-41886.sqlite": 7544832,
+      "collection-100000-41886.sqlite-wal": 7626152,
+      "collection-100000-41886.sqlite-shm": 32768
+    },
+    "committed_counts": {
+      "history_attempts": 1,
+      "history_results": 0,
+      "history_nodes": 0,
+      "history_edges": 0,
+      "history_addresses": 0
+    }
+  },
+  {
+    "elapsed_seconds": 25.102296958008083,
+    "pid": 41886,
+    "rss_kib": 725344,
+    "store_exists": true,
+    "files": {
+      "collection-100000-41886.sqlite": 7544832,
+      "collection-100000-41886.sqlite-wal": 7626152,
+      "collection-100000-41886.sqlite-shm": 32768
+    },
+    "committed_counts": {
+      "history_attempts": 1,
+      "history_results": 0,
+      "history_nodes": 0,
+      "history_edges": 0,
+      "history_addresses": 0
+    }
+  },
+  {
+    "elapsed_seconds": 30.05863362501259,
+    "pid": 41886,
+    "rss_kib": 646336,
+    "store_exists": true,
+    "files": {
+      "collection-100000-41886.sqlite": 7544832,
+      "collection-100000-41886.sqlite-wal": 7626152,
+      "collection-100000-41886.sqlite-shm": 32768
+    },
+    "committed_counts": {
+      "history_attempts": 1,
+      "history_results": 0,
+      "history_nodes": 0,
+      "history_edges": 0,
+      "history_addresses": 0
+    }
+  },
+  {
+    "elapsed_seconds": 35.01142883300781,
+    "pid": 41886,
+    "rss_kib": 727584,
+    "store_exists": true,
+    "files": {
+      "collection-100000-41886.sqlite": 7544832,
+      "collection-100000-41886.sqlite-wal": 7626152,
+      "collection-100000-41886.sqlite-shm": 32768
+    },
+    "committed_counts": {
+      "history_attempts": 1,
+      "history_results": 0,
+      "history_nodes": 0,
+      "history_edges": 0,
+      "history_addresses": 0
+    }
+  },
+  {
+    "elapsed_seconds": 40.042545292002615,
+    "pid": 41886,
+    "rss_kib": 730096,
+    "store_exists": true,
+    "files": {
+      "collection-100000-41886.sqlite": 7544832,
+      "collection-100000-41886.sqlite-wal": 7626152,
+      "collection-100000-41886.sqlite-shm": 32768
+    },
+    "committed_counts": {
+      "history_attempts": 1,
+      "history_results": 0,
+      "history_nodes": 0,
+      "history_edges": 0,
+      "history_addresses": 0
+    }
+  },
+  {
+    "elapsed_seconds": 45.053521708003245,
+    "pid": 41886,
+    "rss_kib": null,
+    "store_exists": true,
+    "files": {
+      "collection-100000-41886.sqlite": 7544832,
+      "collection-100000-41886.sqlite-wal": 7626152,
+      "collection-100000-41886.sqlite-shm": 32768
+    },
+    "committed_counts": {
+      "history_attempts": 1,
+      "history_results": 0,
+      "history_nodes": 0,
+      "history_edges": 0,
+      "history_addresses": 0
+    }
+  }
+]

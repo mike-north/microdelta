@@ -431,7 +431,7 @@ describe('scoped run context (RUN-001, DOM-2)', () => {
   test('lookup while a composition is being constructed fails, even inside a live run', async () => {
     const supervisor = supervision();
     const { source, compose } = declarations<IBindingFamily & { readonly source: object; readonly memo: object }>();
-    const activity = source<string>({ subject: 'activity:ada', run: () => 'ada' });
+    const activity = source<{ readonly value: string }>({ subject: 'activity:ada', run: () => ({ value: 'ada' }) });
     const lookups: unknown[] = [];
     await supervisor.run(runOptions().options, () => {
       const members = new Proxy([{ key: 'person:ada', steps: [{ slot: 'activity', declaration: activity }] }], {
@@ -458,7 +458,7 @@ describe('scoped run context (RUN-001, DOM-2)', () => {
   test('a run cannot start while a composition is being constructed', async () => {
     const supervisor = supervision();
     const { source, compose } = declarations<IBindingFamily & { readonly source: object; readonly memo: object }>();
-    const activity = source<string>({ subject: 'activity:ada', run: () => 'ada' });
+    const activity = source<{ readonly value: string }>({ subject: 'activity:ada', run: () => ({ value: 'ada' }) });
     let started: Promise<unknown> | undefined;
     const members = new Proxy([{ key: 'person:ada', steps: [{ slot: 'activity', declaration: activity }] }], {
       get(target, key, receiver): unknown {

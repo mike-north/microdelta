@@ -30,7 +30,7 @@ Only the framework's recipe-path selection has a documented callback-capture exc
 
 `test/protocol.test.ts` rejects forged/foreign tokens, duplicate occurrences and complete subjects, and graphs beyond two nodes. It verifies copied frozen edges, factory-once/body-never construction and legal aliases. `test/invalid-result.test.ts` deliberately crosses the untyped JavaScript boundary and rejects Promise, thenable, record, string and null results with no completed publication. `test-d/protocol.test-d.ts` checks numeric inference and rejects invalid inputs, raw origins, unknown fields, authored wrappers and async callbacks.
 
-Baseline owner controls are preserved in `test/baseline-worker.ts`. On base `f43c587`, a raw scalar memo executes then reports unsupported-result without publication (#156). A subtree-output child publishes reference 2 on cold run, then executes/publishes reference 3 on unchanged fresh-process restart while its parent retains reference 1 with zero bodies (#164). The bounded numeric adapter does not repair either owner contract; its tests measure both levels to avoid hiding that distinction.
+Baseline owner controls are preserved in `test/baseline-worker.mjs`. On base `f43c587`, a raw scalar memo executes then reports unsupported-result without publication (#156). The current type boundary rejects that authoring shape; the JavaScript worker deliberately bypasses typing to retain the historical runtime-negative probe. A subtree-output child publishes reference 2 on cold run, then executes/publishes reference 3 on unchanged fresh-process restart while its parent retains reference 1 with zero bodies (#164). The bounded numeric adapter does not repair either owner contract; its tests measure both levels to avoid hiding that distinction.
 
 ## Reproduction and observed progression
 
@@ -51,9 +51,9 @@ node --test tooling/tracked-captures.test.mjs tooling/authoring-captures.test.mj
 Baseline controls after build:
 
 ```sh
-node .test-build/experiments/exp-authoring/test/baseline-worker.js /tmp/authoring-scalar.sqlite scalar first
-node .test-build/experiments/exp-authoring/test/baseline-worker.js /tmp/authoring-subtree.sqlite subtree first
-node .test-build/experiments/exp-authoring/test/baseline-worker.js /tmp/authoring-subtree.sqlite subtree second
+node experiments/exp-authoring/test/baseline-worker.mjs /tmp/authoring-scalar.sqlite scalar first
+node experiments/exp-authoring/test/baseline-worker.mjs /tmp/authoring-subtree.sqlite subtree first
+node experiments/exp-authoring/test/baseline-worker.mjs /tmp/authoring-subtree.sqlite subtree second
 ```
 
 Use fresh database paths for baseline controls. Required full gates are `npm run check`, `npm test`, and `npm run build`; their final results are recorded in the pull request rather than inferred from focused tests.

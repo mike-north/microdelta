@@ -49,13 +49,13 @@ function buildNestedTemplate(subject: (derived: IDerivedArguments<IAssessorParam
     collection,
     steps: (member) => {
       const activity = member.source<IActivity>({ subject: member.subject('activity:acme/widget'), run: () => ({ pullRequests: [] }) });
-      const profile = member.memo({ subject: member.subject('profile:acme/widget'), children: { activity }, run: () => 'profile' });
-      const summary = member.memo({
+      const profile = member.memo({ subject: member.subject('profile:acme/widget'), children: { activity }, run: () => ({ value: 'profile' }) });
+      const summary = member.memo<{ readonly activity: typeof activity; readonly profile: typeof profile; readonly assess: typeof assessor }, { readonly value: string }>({
         subject: member.subject('summary:acme/widget'),
         children: { activity, profile, assess: assessor },
         run: (context) => {
           captured.calls = context.calls;
-          return 'summary';
+          return { value: 'summary' };
         },
       });
       return { activity, profile, summary };

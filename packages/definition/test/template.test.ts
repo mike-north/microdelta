@@ -61,7 +61,7 @@ function singleStepTemplate(slot: string, collection: ReturnType<typeof contribu
   return template({
     slot,
     collection,
-    steps: (member) => ({ profile: member.source<string>({ subject: member.subject(prefix), run: () => 'profile' }) }),
+    steps: (member) => ({ profile: member.source<{ readonly value: string }>({ subject: member.subject(prefix), run: () => ({ value: 'profile' }) }) }),
   });
 }
 
@@ -78,7 +78,7 @@ describe('keyed collection sources (COL-1)', () => {
     const { contributors } = buildKeyed();
     expect(contributors.collection).toEqual({ identity: 'key' });
     expect(Object.isFrozen(contributors.collection)).toBe(true);
-    expect(source<string>({ subject: 'plain', run: () => 'x' }).collection).toBeUndefined();
+    expect(source<{ readonly value: string }>({ subject: 'plain', run: () => ({ value: 'x' }) }).collection).toBeUndefined();
   });
 
   test('COL-1: the identity option is copied, so later author mutation cannot change it', () => {
@@ -133,7 +133,7 @@ describe('fanout template factory (CMP-1, CMP-4)', () => {
       collection: contributorsSource(),
       steps: (member) => {
         observed.push(isComposing());
-        return { profile: member.source<string>({ subject: member.subject('probe'), run: () => 'p' }) };
+        return { profile: member.source<{ readonly value: string }>({ subject: member.subject('probe'), run: () => ({ value: 'p' }) }) };
       },
     });
     expect(observed).toEqual([true]);
@@ -168,8 +168,8 @@ describe('fanout template factory (CMP-1, CMP-4)', () => {
       throw new Error('factory did not run');
     }
     const originalActivity = built.contributor.steps.activity;
-    returned['activity'] = source<string>({ subject: 'intruder', run: () => 'intruder' });
-    returned['extra'] = source<string>({ subject: 'extra', run: () => 'extra' });
+    returned['activity'] = source<{ readonly value: string }>({ subject: 'intruder', run: () => ({ value: 'intruder' }) });
+    returned['extra'] = source<{ readonly value: string }>({ subject: 'extra', run: () => ({ value: 'extra' }) });
     expect(built.contributor.steps.activity).toBe(originalActivity);
     expect(Object.keys(built.contributor.steps).sort()).toEqual(['activity', 'summary']);
     expect(Object.isFrozen(built.contributor)).toBe(true);
@@ -266,7 +266,7 @@ describe('template topology and instance correspondence (CMP-4, CMP-6)', () => {
       steps: (member) => {
         const minted = member.subject('probe-prefix');
         subject = minted;
-        return { profile: member.source<string>({ subject: minted, run: () => 'p' }) };
+        return { profile: member.source<{ readonly value: string }>({ subject: minted, run: () => ({ value: 'p' }) }) };
       },
     });
     expect(typeof subject).toBe('object');
@@ -343,7 +343,7 @@ describe('rejected topology (A-08, CMP-1, CMP-9)', () => {
     expectDefinitionError(() => callUntyped(compose, { scope: keyedScope, steps: [{ slot: 'contributors', declaration: built.contributors }], templates: [derived.run] }), 'forged-declaration');
     const foreign = declarations<ITestFamily>();
     const foreignCollection = foreign.source<IContributors>({ subject: 'c', collection: { identity: 'key' }, run: () => ({ members: [], status: 'complete' }) });
-    const foreignTemplate = foreign.template({ slot: 'contributor', collection: foreignCollection, steps: (member) => ({ p: member.source<string>({ subject: member.subject('p'), run: () => 'p' }) }) });
+    const foreignTemplate = foreign.template({ slot: 'contributor', collection: foreignCollection, steps: (member) => ({ p: member.source<{ readonly value: string }>({ subject: member.subject('p'), run: () => ({ value: 'p' }) }) }) });
     expectDefinitionError(() => callUntyped(compose, { scope: keyedScope, steps: [{ slot: 'contributors', declaration: built.contributors }], templates: [foreignTemplate] }), 'forged-declaration');
   });
 
@@ -374,7 +374,7 @@ describe('template declaration negatives', () => {
       collection: contributorsSource(),
       steps: (member) => {
         foreignSubject = member.subject('first');
-        return { profile: member.source<string>({ subject: member.subject('first-profile'), run: () => 'p' }) };
+        return { profile: member.source<{ readonly value: string }>({ subject: member.subject('first-profile'), run: () => ({ value: 'p' }) }) };
       },
     });
     const cases: readonly unknown[] = ['plain:subject', foreignSubject, { prefix: 'forged' }, undefined];
@@ -388,12 +388,12 @@ describe('template declaration negatives', () => {
     expectDefinitionError(() => template({
       slot: 'second',
       collection: contributorsSource(),
-      steps: (member) => ({ profile: member.source<string>({ subject: member.subject(''), run: () => 'p' }) }),
+      steps: (member) => ({ profile: member.source<{ readonly value: string }>({ subject: member.subject(''), run: () => ({ value: 'p' }) }) }),
     }), 'invalid-subject');
   });
 
   test('CMP-4: the factory must return a nonempty plain record of its own member step declarations', () => {
-    const ordinary = source<string>({ subject: 'ordinary', run: () => 'o' });
+    const ordinary = source<{ readonly value: string }>({ subject: 'ordinary', run: () => ({ value: 'o' }) });
     const results: readonly ((member: IMemberBuilder<ITestFamily>) => unknown)[] = [
       () => ({ profile: ordinary }),
       () => [],
@@ -401,13 +401,13 @@ describe('template declaration negatives', () => {
       () => null,
       () => Promise.resolve({}),
       () => new Map(),
-      (member) => [member.source<string>({ subject: member.subject('array'), run: () => 'a' })],
+      (member) => [member.source<{ readonly value: string }>({ subject: member.subject('array'), run: () => ({ value: 'a' }) })],
       (member) => {
-        const profile = member.source<string>({ subject: member.subject('twice'), run: () => 't' });
+        const profile = member.source<{ readonly value: string }>({ subject: member.subject('twice'), run: () => ({ value: 't' }) });
         return { first: profile, second: profile };
       },
       (member) => Object.defineProperty({}, 'profile', {
-        get: () => member.source<string>({ subject: member.subject('getter'), run: () => 'g' }),
+        get: () => member.source<{ readonly value: string }>({ subject: member.subject('getter'), run: () => ({ value: 'g' }) }),
         enumerable: true,
       }),
     ];
@@ -417,27 +417,27 @@ describe('template declaration negatives', () => {
   });
 
   test('CMP-4: member memo children must be sibling member sources occupying the named slot', () => {
-    const ordinary = source<string>({ subject: 'ordinary', run: () => 'o' });
+    const ordinary = source<{ readonly value: string }>({ subject: 'ordinary', run: () => ({ value: 'o' }) });
     let otherTemplateSource: unknown;
     template({
       slot: 'other',
       collection: contributorsSource(),
       steps: (member) => {
-        const profile = member.source<string>({ subject: member.subject('other-profile'), run: () => 'p' });
+        const profile = member.source<{ readonly value: string }>({ subject: member.subject('other-profile'), run: () => ({ value: 'p' }) });
         otherTemplateSource = profile;
         return { profile };
       },
     });
     const factories: readonly ((member: IMemberBuilder<ITestFamily>) => unknown)[] = [
-      (member) => ({ summary: member.memo({ subject: member.subject('s'), children: { activity: ordinary }, run: () => 1 }) }),
+      (member) => ({ summary: member.memo({ subject: member.subject('s'), children: { activity: ordinary }, run: () => ({ value: 1 }) }) }),
       (member) => ({ summary: callUntyped(member.memo, { subject: member.subject('s'), children: { activity: otherTemplateSource }, run: () => 1 }) }),
       (member) => {
-        const activity = member.source<string>({ subject: member.subject('a'), run: () => 'a' });
-        return { activity, summary: member.memo({ subject: member.subject('s'), children: { feed: activity }, run: () => 1 }) };
+        const activity = member.source<{ readonly value: string }>({ subject: member.subject('a'), run: () => ({ value: 'a' }) });
+        return { activity, summary: member.memo({ subject: member.subject('s'), children: { feed: activity }, run: () => ({ value: 1 }) }) };
       },
       (member) => {
-        const activity = member.source<string>({ subject: member.subject('a'), run: () => 'a' });
-        return { summary: member.memo({ subject: member.subject('s'), children: { activity }, run: () => 1 }) };
+        const activity = member.source<{ readonly value: string }>({ subject: member.subject('a'), run: () => ({ value: 'a' }) });
+        return { summary: member.memo({ subject: member.subject('s'), children: { activity }, run: () => ({ value: 1 }) }) };
       },
     ];
     for (const steps of factories) {
@@ -451,18 +451,18 @@ describe('template declaration negatives', () => {
         slot: 'overlap',
         collection: contributorsSource(),
         steps: (member) => ({
-          a: member.source<string>({ subject: member.subject(first), run: () => 'a' }),
-          b: member.source<string>({ subject: member.subject(second), run: () => 'b' }),
+          a: member.source<{ readonly value: string }>({ subject: member.subject(first), run: () => ({ value: 'a' }) }),
+          b: member.source<{ readonly value: string }>({ subject: member.subject(second), run: () => ({ value: 'b' }) }),
         }),
       }), 'conflicting-subject');
     }
   });
 
   test('COL-1: a template requires a keyed collection source this family minted', () => {
-    const plain = source<string>({ subject: 'plain', run: () => 'x' });
-    const steps = (member: IMemberBuilder<ITestFamily>): unknown => ({ p: member.source<string>({ subject: member.subject('p'), run: () => 'p' }) });
+    const plain = source<{ readonly value: string }>({ subject: 'plain', run: () => ({ value: 'x' }) });
+    const steps = (member: IMemberBuilder<ITestFamily>): unknown => ({ p: member.source<{ readonly value: string }>({ subject: member.subject('p'), run: () => ({ value: 'p' }) }) });
     expectDefinitionError(() => callUntyped(template, { slot: 't', collection: plain, steps }), 'invalid-collection');
-    expectDefinitionError(() => callUntyped(template, { slot: 't', collection: memo({ subject: 'm', run: () => 1 }), steps }), 'invalid-collection');
+    expectDefinitionError(() => callUntyped(template, { slot: 't', collection: memo({ subject: 'm', run: () => ({ value: 1 }) }), steps }), 'invalid-collection');
     expectDefinitionError(() => callUntyped(template, { slot: 't', collection: { ...contributorsSource() }, steps }), 'forged-declaration');
     const foreign = declarations<ITestFamily>().source<IContributors>({ subject: 'c', collection: { identity: 'key' }, run: () => ({ members: [], status: 'complete' }) });
     expectDefinitionError(() => callUntyped(template, { slot: 't', collection: foreign, steps }), 'forged-declaration');
@@ -474,7 +474,7 @@ describe('template declaration negatives', () => {
       run: () => ({ members: [], status: 'complete' }),
     });
     const factory = jest.fn((member: IMemberBuilder<ITestFamily>) => ({
-      p: member.source<string>({ subject: member.subject('p'), run: () => 'p' }),
+      p: member.source<{ readonly value: string }>({ subject: member.subject('p'), run: () => ({ value: 'p' }) }),
     }));
 
     const failure = expectDefinitionError(() => callUntyped(template, { slot: 't', collection: noIdentity, steps: factory }), 'invalid-collection');
@@ -484,7 +484,7 @@ describe('template declaration negatives', () => {
   });
 
   test('CMP-4: slots, callbacks and option shapes are validated before the factory runs, without running getters', () => {
-    const factory = jest.fn((member: IMemberBuilder<ITestFamily>) => ({ p: member.source<string>({ subject: member.subject('p'), run: () => 'p' }) }));
+    const factory = jest.fn((member: IMemberBuilder<ITestFamily>) => ({ p: member.source<{ readonly value: string }>({ subject: member.subject('p'), run: () => ({ value: 'p' }) }) }));
     const getter = jest.fn((): string => 'contributor');
     const collection = contributorsSource();
     const cases: readonly [unknown, DefinitionError['code']][] = [
@@ -510,8 +510,8 @@ describe('template declaration negatives', () => {
       slot: 'outer',
       collection,
       steps: (member) => {
-        template({ slot: 'inner', collection, steps: (inner) => ({ p: inner.source<string>({ subject: inner.subject('inner'), run: () => 'p' }) }) });
-        return { p: member.source<string>({ subject: member.subject('outer'), run: () => 'p' }) };
+        template({ slot: 'inner', collection, steps: (inner) => ({ p: inner.source<{ readonly value: string }>({ subject: inner.subject('inner'), run: () => ({ value: 'p' }) }) }) });
+        return { p: member.source<{ readonly value: string }>({ subject: member.subject('outer'), run: () => ({ value: 'p' }) }) };
       },
     }), 'invalid-template');
     expectDefinitionError(() => callUntyped(template, {
@@ -577,10 +577,10 @@ describe('composing templates and composition-level steps', () => {
     const nested = singleStepTemplate('nested', collection, 'shared:deeper');
     expectDefinitionError(() => compose({ scope: keyedScope, steps: [{ slot: 'c', declaration: collection }], templates: [first, second] }), 'conflicting-subject');
     expectDefinitionError(() => compose({ scope: keyedScope, steps: [{ slot: 'c', declaration: collection }], templates: [first, nested] }), 'conflicting-subject');
-    const ordinary = source<string>({ subject: 'shared:person:ada', run: () => 'x' });
+    const ordinary = source<{ readonly value: string }>({ subject: 'shared:person:ada', run: () => ({ value: 'x' }) });
     expectDefinitionError(() => compose({ scope: keyedScope, steps: [{ slot: 'c', declaration: collection }, { slot: 'o', declaration: ordinary }], templates: [first] }), 'conflicting-subject');
     // `prefix:` alone cannot collide, since every member key is nonempty.
-    const separatorOnly = source<string>({ subject: 'shared:', run: () => 'x' });
+    const separatorOnly = source<{ readonly value: string }>({ subject: 'shared:', run: () => ({ value: 'x' }) });
     expect(compose({ scope: keyedScope, steps: [{ slot: 'c', declaration: collection }, { slot: 'o', declaration: separatorOnly }], templates: [first] }).topology.templates).toHaveLength(1);
   });
 
@@ -606,7 +606,7 @@ describe('composing templates and composition-level steps', () => {
   });
 
   test('CMP-4: an M3 composition declares no templates or folds, and template fields never match its member steps', () => {
-    const activity = source<string>({ subject: 'activity:m3', run: () => 'a' });
+    const activity = source<{ readonly value: string }>({ subject: 'activity:m3', run: () => ({ value: 'a' }) });
     const composition = compose({ scope: keyedScope, members: [{ key: 'person:ada', steps: [{ slot: 'activity', declaration: activity }] }] });
     expect(composition.topology.templates).toEqual([]);
     expect(composition.topology.folds).toEqual([]);

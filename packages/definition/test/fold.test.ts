@@ -109,7 +109,7 @@ describe('strict fold declaration (CMP-8)', () => {
     expectDefinitionError(() => callUntyped(fold, { subject: 'r', run }), 'illegal-edge');
     const foreign = declarations<ITestFamily>();
     const collection = foreign.source<IContributors>({ subject: 'c', collection: { identity: 'key' }, run: () => ({ members: [], status: 'complete' }) });
-    const foreignTemplate = foreign.template({ slot: 't', collection, steps: (member) => ({ p: member.source<string>({ subject: member.subject('p'), run: () => 'p' }) }) });
+    const foreignTemplate = foreign.template({ slot: 't', collection, steps: (member) => ({ p: member.source<{ readonly value: string }>({ subject: member.subject('p'), run: () => ({ value: 'p' }) }) }) });
     expectDefinitionError(() => callUntyped(fold, { subject: 'r', over: { template: foreignTemplate, step: 'p' }, run }), 'forged-declaration');
   });
 
@@ -235,7 +235,7 @@ describe('strict fold context (CMP-8)', () => {
       collection,
       steps: (member) => {
         live.apply({}, outcomes([]), invoke);
-        return { p: member.source<string>({ subject: member.subject('probe'), run: () => 'p' }) };
+        return { p: member.source<{ readonly value: string }>({ subject: member.subject('probe'), run: () => ({ value: 'p' }) }) };
       },
     }), 'composition-phase');
     expect(invoke).not.toHaveBeenCalled();

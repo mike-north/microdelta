@@ -204,6 +204,11 @@ operations above.
 establishes a bounded synchronous navigation capability over exact retained
 record and array roots. Value returns a tagged scalar fact or container shape; a
 container shape is transport metadata, never a fabricated selected fact.
+The current alpha authoring builders accept record and array result roots for
+sources and awaited memos; authors may wrap a scalar as a field, for example
+`{ value: 1 }`. Scalar atoms, including present `undefined`, remain valid
+inside those roots. The runtime still rejects unsupported roots from untyped
+callers; this type boundary does not expand the supported runtime value domain.
 Tracking records the existing TRK-5 leaf, length, presence, key-order and
 explicit-output observations. Navigating through a container alone records no
 whole-object dependency. Materialization composes the optional History

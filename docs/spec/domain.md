@@ -41,14 +41,34 @@ source acceptance, and permission to execute are separate. Selecting memoization
 adds durability/reuse; it does not invent entity identity, determine provider cost,
 or make every intermediate update eligible for expensive recomputation.
 
+## Analysis data acquisition
+
+**DOM-7 — External work obtains analysis data.** The current external-operation
+scope is data acquisition, including paid generated/model output regardless of
+HTTP method. Losing a response leaves data unavailable and usage potentially
+unknown; another permitted request may acquire it and may incur another charge.
+Possible duplicate cost is not a remote-business-write safety prohibition.
+[RUN-011/012](operations.md) govern finite per-run retry, identity and truthful
+outcomes; [RUN-019](operations.md) governs shared local rate admission with
+overlapping limits and pluggable grouping/pacing, while supervision retains
+send authority. Reusable
+source retry policy is distinct from source-result acceptance and from the remote
+service it calls. The [decision and handoff](../plans/data-acquisition-retries.md)
+records this accepted 2026-10-24 scope change and the still-open representation.
+
 ## Non-goals and deferred work
 
 **DOM-5 — Explicit limits.** No partial reevaluation inside a memoized body; authors
 split independent work into steps. No arbitrary closure serialization, general
 JavaScript purity proof, hidden-environment detection guarantee, or resumable JS
 stack after a crash. No deterministic-output requirement for LLM/random judgments.
-No guarantee of exactly-once remote side effects or recovery of an unreported
-provider bill. No automatic reconstruction of invoice currency from token counts.
+External business-write workflows and their replay/reconciliation are outside
+the selected acquisition scope. No guarantee of exactly-once remote execution or
+recovery of an unreported provider bill. Manual operator-supplied result recovery,
+built-in adaptive quota/reserve strategies and cross-process rate coordination
+are deferred. Pluggable adaptive grouping/pacing is required under RUN-019; this
+extension capability is distinct from delivering or executing an adaptive strategy.
+No automatic reconstruction of invoice currency from token counts.
 No result-driven mutation of the abstract graph. A graphical viewer, browser runtime,
 smart trial sampling, extensive distributed scheduling, class-aware `tracked()`
 support and broad native-value support are deferred. Class visibility inspection

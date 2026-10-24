@@ -183,6 +183,14 @@ listing changes no member.
 
 ## Operating the analysis: the paid-like assessor
 
+**Current implementation boundary:** this example still exercises M5's legacy
+effect-settlement policy. The accepted
+[data-acquisition retry target](../../docs/plans/data-acquisition-retries.md)
+permits bounded lost-response retries with per-new-run allowance and defers manual
+result recovery. The commands and test claims below describe what currently runs,
+not that changed target. Updating the controlled example and its tests is a
+separate implementation slice; no live provider work is implied.
+
 `--rubric P` supplies the **paid-like assessor**: each PR's assessment is one
 declared external operation (`currentExecution().operation`) sent to the
 example's fake provider (`src/provider.ts`). It never costs money. It answers
@@ -230,7 +238,7 @@ Trial results satisfy production only through a recorded promotion, after
 which production reuses them and pays nothing. `npm run test:examples` drives
 each of these through separate processes (`test/paid.test.mjs`).
 
-### Settling an unknown operation
+### Legacy settlement commands
 
 An operator settles an unknown operation (a lost response, or a request whose
 process died) in one of three ways:
@@ -244,8 +252,9 @@ process died) in one of three ways:
   address stays **consumed**. Every later run's call there sends nothing and
   fails with `operation-resolved`, without any value: an author may catch it
   and fall back, and otherwise the member fails (`run --json` shows its
-  `cause`) and keeps failing. A resolution that carries the result is later
-  work. To run the member again, the operator then abandons the resolved
+  `cause`) and keeps failing. A resolution that carries the result is
+  deferred work, not a controlled-roster prerequisite. To run the member again
+  under this legacy implementation, the operator then abandons the resolved
   operation, which authorizes the possible second effect.
 
 ## Limits

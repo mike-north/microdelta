@@ -1,14 +1,17 @@
 /**
  * Resource Accounting (ARC-001): durable, keyed usage observations with known
  * and unknown usage kept apart, estimates kept apart from observations, and
- * the summaries derived from them (ACC-001–ACC-008).
+ * the summaries derived from them, and separate time-qualified raw resource
+ * reports with bounded retention (ACC-001–ACC-008).
  *
  * Supervision records a usage intent for each request attempt before its paid
  * call and acknowledges each usage report keyed by (operation, report); both
  * are idempotent facts that need no writer fence. A recorded request attempt
  * without an acknowledged report is unknown, never zero, in every summary. Everything is scoped per environment.
  * The SQLite adapter owns its schema, version and `accounting_` namespace and
- * reaches storage only through the injected Machine capability.
+ * reaches storage only through the injected Machine capability. Expiring state
+ * uses a separate dedicated schema/file and never changes additive evidence;
+ * its reader carries no initialization, maintenance or execution authority.
  *
  * Every export is a project-private `@alpha` contract; spellings are not a
  * public API.
@@ -50,3 +53,12 @@ export {
   type IUnattributableReason,
 } from './errors.js';
 export { openDurableAccounting } from './sqlite/index.js';
+export type {
+  IResourceReport,
+  IRetainedResourceReport,
+  IResourceReports,
+  IResourceReportReader,
+  IResourceReportsOptions,
+  IResourceReportReaderOptions,
+} from './reports/contracts.js';
+export { openResourceReports, openResourceReportReader } from './reports/index.js';

@@ -13,12 +13,13 @@
  * @packageDocumentation
  */
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { closeSync, openSync, readSync } from 'node:fs';
 import { types } from 'node:util';
 
 import Database from 'better-sqlite3';
 
 import { SqliteBusyError } from '@microdelta/machine';
-import type { ISqliteCapability, ISqliteConnection, ISqliteRow, ISqliteRunResult, ISqliteStatement, ISqliteSynchronousResult, ISqliteValue } from '@microdelta/machine';
+import type { ISqliteOpenOptions, ISqliteReadCapability, ISqliteReader, ISqliteReadStatement, ISqliteCapability, ISqliteConnection, ISqliteRow, ISqliteRunResult, ISqliteStatement, ISqliteSynchronousResult, ISqliteValue } from '@microdelta/machine';
 
 /** The bounded wait, in milliseconds, before a locked database fails with SQLITE_BUSY. */
 const busyTimeoutMilliseconds = 500;
@@ -26,11 +27,10 @@ const busyTimeoutMilliseconds = 500;
 /**
  * The durable configuration applied to every connection, and the value each
  * setting must read back as before the connection is handed to a caller.
- * WAL lets readers proceed beside one writer, FULL (2) syncs every commit,
+ * Journal selection is separate; FULL (2) syncs every commit,
  * foreign keys are enforced, and lock waits are bounded.
  */
 const selectedConfiguration: readonly { readonly assignment: string; readonly setting: string; readonly expected: string | number }[] = [
-  { assignment: 'journal_mode = WAL', setting: 'journal_mode', expected: 'wal' },
   { assignment: 'synchronous = FULL', setting: 'synchronous', expected: 2 },
   { assignment: 'foreign_keys = ON', setting: 'foreign_keys', expected: 1 },
   { assignment: `busy_timeout = ${String(busyTimeoutMilliseconds)}`, setting: 'busy_timeout', expected: busyTimeoutMilliseconds },
@@ -53,8 +53,8 @@ interface ITransactionLifetime {
 /** Bind the portable SQLite contract to the native driver. @internal */
 export function _createNodeSqliteImplementation(): ISqliteCapability {
   return Object.freeze({
-    openSqlite(location: string): ISqliteConnection {
-      return openConnection(location);
+    openSqlite(location: string, options?: ISqliteOpenOptions): ISqliteConnection {
+      return openConnection(location, options);
     },
   });
 }
@@ -153,15 +153,21 @@ function retryWhileBusy(startedAt: number, step: () => void): void {
  * file closes that handle before rethrowing; files themselves are never
  * removed, because an existing file may hold another owner's data.
  */
-function openConnection(location: string): ISqliteConnection {
+function openConnection(location: string, options?: ISqliteOpenOptions): ISqliteConnection {
   if (nonPersistentLocations.has(location)) {
     throw new TypeError(`SQLite location ${JSON.stringify(location)} cannot hold a persistent write-ahead-logged database`);
   }
+  const journalMode = options?.journalMode ?? 'wal';
+  if (journalMode !== 'wal' && journalMode !== 'delete') { throw new TypeError('Unsupported SQLite journal mode'); }
+  if (journalMode === 'delete') { refuseWal(location, true); }
   const startedAt = Date.now();
   const driver = _typedBusy(() => new Database(location, { timeout: busyTimeoutMilliseconds }));
   try {
     retryWhileBusy(startedAt, () => {
-      for (const { assignment, setting, expected } of selectedConfiguration) {
+      for (const { assignment, setting, expected } of [
+        { assignment: `journal_mode = ${journalMode}`, setting: 'journal_mode', expected: journalMode },
+        ...selectedConfiguration,
+      ]) {
         driver.pragma(assignment);
         const actual = driver.pragma(setting, { simple: true });
         if (actual !== expected) {
@@ -386,4 +392,57 @@ function containNativeRejection(value: Promise<unknown>): void {
   } catch {
     // Containment is best effort; the transaction is already being refused.
   }
+}
+
+/**
+ * Bind inspection to an existing read-only driver handle. Unlike writable open,
+ * this never assigns journal mode or initializes a file. WAL files are refused
+ * before SQLite can create coordination sidecars; callers receive no mutation
+ * authority. Rollback-journal contention is surfaced instead of hidden.
+ * @internal
+ */
+export function _createNodeSqliteReaderImplementation(): ISqliteReadCapability {
+  return Object.freeze({
+    openSqliteReader(location: string): ISqliteReader {
+      if (nonPersistentLocations.has(location)) {
+        throw new TypeError('SQLite inspection requires an existing persistent file');
+      }
+      refuseWal(location, false);
+      const driver = _typedBusy(() => new Database(location, { readonly: true, fileMustExist: true, timeout: busyTimeoutMilliseconds }));
+      const connection = createConnection(driver);
+      return Object.freeze({
+        prepare(sql: string): ISqliteReadStatement {
+          const statement = _typedBusy(() => driver.prepare(sql));
+          if (!statement.reader || !statement.readonly) {
+            throw new TypeError('SQLite inspection refuses mutation statements');
+          }
+          const read = connection.prepare(sql);
+          return Object.freeze({ get: read.get, all: read.all });
+        },
+        close: connection.close,
+      });
+    },
+  });
+}
+
+/**
+ * Read only SQLite's fixed header before the driver can create WAL sidecars.
+ * Empty/foreign files are left to SQLite/schema validation. Missing files may
+ * be created only by writable open. The owner must keep journal layout stable
+ * while handles live; concurrent external mode changes are unsupported.
+ */
+function refuseWal(location: string, allowMissing: boolean): void {
+  let descriptor: number;
+  try { descriptor = openSync(location, 'r'); }
+  catch (error: unknown) {
+    if (allowMissing && typeof error === 'object' && error !== null && 'code' in error && error.code === 'ENOENT') { return; }
+    throw error;
+  }
+  try {
+    const header = new Uint8Array(20);
+    const count = readSync(descriptor, header, 0, header.length, 0);
+    if (count === header.length && (header[18] === 2 || header[19] === 2)) {
+      throw new TypeError('SQLite WAL files cannot be opened through rollback-journal or side-effect-free inspection capabilities');
+    }
+  } finally { closeSync(descriptor); }
 }

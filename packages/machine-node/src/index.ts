@@ -7,13 +7,13 @@
  * can recognize two handles over one file without reading the host itself.
  * @packageDocumentation
  */
-import type { IClockCapability, IMachine, IRandomIdentifierCapability, ISqliteCapability, ITimerCapability } from '@microdelta/machine';
+import type { IClockCapability, IMachine, IRandomIdentifierCapability, ISqliteReadCapability, ISqliteCapability, ITimerCapability } from '@microdelta/machine';
 
 import { _createNodeClockImplementation } from './node/clock.js';
 import { _canonicalNodeLocationImplementation } from './node/location.js';
 import { _createNodeMachineImplementation } from './node/index.js';
 import { _createNodeRandomImplementation } from './node/random.js';
-import { _createNodeSqliteImplementation } from './node/sqlite.js';
+import { _createNodeSqliteImplementation, _createNodeSqliteReaderImplementation } from './node/sqlite.js';
 import { _createNodeTimerImplementation } from './node/timer.js';
 
 /**
@@ -27,7 +27,7 @@ export function createNodeMachine(): IMachine {
 
 /**
  * Create Node's persistent local SQLite capability. Every connection it opens
- * uses the selected WAL, FULL synchronous, foreign-key and bounded-busy-wait
+ * uses the selected journal mode (WAL by default), FULL synchronous, foreign-key and bounded-busy-wait
  * configuration; callers own their SQL, schema and connection lifetime.
  * @alpha
  */
@@ -73,4 +73,14 @@ export function canonicalNodeLocation(location: string): string {
  */
 export function createNodeRandom(): IRandomIdentifierCapability {
   return _createNodeRandomImplementation();
+}
+
+/**
+ * Create inspection-only access to existing rollback-journal SQLite files, with no creation,
+ * schema initialization or journal-mode assignment during opening. WAL files
+ * are refused before SQLite can create coordination sidecars.
+ * @alpha
+ */
+export function createNodeSqliteReader(): ISqliteReadCapability {
+  return _createNodeSqliteReaderImplementation();
 }

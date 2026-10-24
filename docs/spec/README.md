@@ -148,3 +148,11 @@ records the final milestone decision and the documentation delivery result. The
 [M0.5 acceptance record](../validation/foundation-2026-09-26.md) and
 [M1 evidence record](../validation/m1-2026-09-26.md) retain their bounded evidence;
 [historical validation](../validation.md) remains dated evidence, not a fresh run.
+
+## Proposals for owner review
+
+The following plan is proposed work, not an accepted contract or requirement:
+
+- [Resource-state observation](../plans/resource-state-observation.md):
+  candidate meanings, ownership and acceptance scenarios for state distinct from
+  additive consumption. Owner decisions remain open.

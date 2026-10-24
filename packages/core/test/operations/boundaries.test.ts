@@ -344,6 +344,9 @@ describe('an Accounting intent that is not durable (ACC-007)', () => {
 
   test('an intent whose commit is not confirmed sends nothing, leaves the member pending, and sleep mode retries it', async () => {
     world.keys = ['pr-1'];
+    // A failed pre-send intent consumes no network attempt; even a one-send
+    // allowance must remain available when this run resumes.
+    world.options['pr-1'] = { retry: { maxAttempts: 1 } };
     const faulty = faultySqlite();
     const session = openSession(stores, timer, { accountingSqlite: faulty.capability });
     try {
@@ -355,6 +358,9 @@ describe('an Accounting intent that is not durable (ACC-007)', () => {
       expect(started.events.filter((event) => event.kind === 'wait').map((event) => event.kind === 'wait' ? event.phase : '')).toEqual(['sleeping', 'resumed']);
       expect(received('pr-1')).toHaveLength(1);
       expect(applied('pr-1')).toHaveLength(1);
+      // Its unconfirmed pre-send intent was restated under /1, so the
+      // historical not-sent row is replaced by the one actual send.
+      expect(journalContents(session)).toContainEqual(expect.objectContaining({ attempts: [expect.objectContaining({ status: 'succeeded', requestAttempt: expect.stringMatching(/\/1$/u) })] }));
       expect(session.usage()).toEqual(expect.objectContaining({ status: 'complete', requestAttempts: 1 }));
     } finally {
       session.close();
@@ -365,6 +371,9 @@ describe('an Accounting intent that is not durable (ACC-007)', () => {
 describe('an intent that landed though its commit was not confirmed (ACC-007, ACC-005)', () => {
   test('the retry reuses the unsent request attempt, so the landed intent gets its usage and the summary is complete with one intent', async () => {
     world.keys = ['pr-1'];
+    // Restating an unconfirmed intent keeps the public request-attempt ID;
+    // only the later actual send spends this run's one-send allowance.
+    world.options['pr-1'] = { retry: { maxAttempts: 1 } };
     const faulty = faultySqlite();
     const session = openSession(stores, timer, { accountingSqlite: faulty.capability });
     try {
@@ -531,6 +540,8 @@ describe('operations follow-ups (#139)', () => {
 
   test('settling an operation waits for the writer lease while another holder has it briefly, then records the settlement', async () => {
     world.keys = ['pr-1'];
+    // This lease control first needs one unresolved acquisition to settle.
+    world.options['pr-1'] = { retry: { maxAttempts: 1 } };
     world.provider.script('assess', 'pr-1', ['lost']);
     const session = openSession(stores, timer);
     try {

@@ -10,11 +10,11 @@
  * hand-derived from the owner decisions and EXP-8's stage table:
  *
  * - a kill between intent and usage leaves that attempt's usage unknown,
- *   never zero; a later run records the operation unknown and does not replay
- *   it (CX-4 when the provider received nothing);
+ *   never zero; a later invocation records the prior attempt unknown and may
+ *   acquire the missing data under its fresh finite allowance;
  * - a kill after the usage acknowledgment keeps exactly one usage record;
- * - a repeat-safe operation is retried by the next process under the same
- *   identity; with provider idempotency keys the effect is applied once;
+ * - an operation is retried by the next process under the same identity
+ *   without an effect-safety prerequisite; provider idempotency may dedupe;
  * - a quota deferral is honored by a process before T and retried by one
  *   after T under the same operation identity, with new request attempt,
  *   step attempt and run identities;
@@ -123,7 +123,7 @@ function trace(report: IWorkerReport): readonly string[] {
 }
 
 describe('process death around the send and the usage acknowledgment (ACC-005, ACC-007, A-14)', () => {
-  test('a kill after the intent but before the send leaves usage unknown and the operation unknown, and nothing is replayed (CX-4)', () => {
+  test('a kill after intent but before send leaves usage unknown and the next process acquires the missing data', () => {
     const killed = stage({ now: T0, runId: 'run:A', action: 'members', kill: 'before-send' });
     expect(killed.signal).toBe('SIGKILL');
     expect(ledger('received')).toHaveLength(0);
@@ -132,37 +132,39 @@ describe('process death around the send and the usage acknowledgment (ACC-005, A
     expect(usageOf(before).status).toBe('incomplete');
     expect(pr1Operations(before).map((view) => view['status'])).toEqual(['pending']);
     const after = clean({ now: T0 + 10_000, runId: 'run:B', action: 'members' });
-    expect(after.statuses).toEqual({ 'pr-1': 'pending', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
+    expect(after.statuses).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
     expect(trace(after)).toContain('assess@pr-1:recovered:unknown:recovered-after-crash');
-    expect(pr1Operations(after).map((view) => view['status'])).toEqual(['unknown']);
-    expect(ledger('received')).toHaveLength(0);
+    expect(pr1Operations(after).map((view) => view['status'])).toEqual(['succeeded']);
+    expect(usageOf(after).status).toBe('incomplete');
+    expect(ledger('received')).toHaveLength(1);
   });
 
-  test('a kill after the provider applied the effect leaves usage and outcome unknown, applied once, never replayed', () => {
+  test('a kill after provider application retains unknown usage and a new process retries to obtain data', () => {
     expect(stage({ now: T0, runId: 'run:A', action: 'members', kill: 'after-send' }).signal).toBe('SIGKILL');
     const after = clean({ now: T0 + 10_000, runId: 'run:B', action: 'members' });
-    expect(after.statuses).toEqual({ 'pr-1': 'pending', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
+    expect(after.statuses).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
     expect(usageOf(after).status).toBe('incomplete');
     const again = clean({ now: T0 + 20_000, runId: 'run:C', action: 'members' });
-    expect(again.statuses?.['pr-1']).toBe('pending');
-    expect(ledger('received')).toHaveLength(1);
-    expect(ledger('applied')).toHaveLength(1);
+    expect(again.statuses?.['pr-1']).toBe('succeeded');
+    expect(ledger('received')).toHaveLength(2);
+    expect(ledger('applied')).toHaveLength(2);
   });
 
-  test('a kill after the usage acknowledgment keeps exactly one usage record while the outcome stays unknown', () => {
+  test('a kill after usage acknowledgment preserves that report and records a later acquisition separately', () => {
     expect(stage({ now: T0, runId: 'run:A', action: 'members', kill: 'after-usage' }).signal).toBe('SIGKILL');
     const after = clean({ now: T0 + 10_000, runId: 'run:B', action: 'members' });
-    expect(after.statuses?.['pr-1']).toBe('pending');
-    expect(usageOf(after)).toEqual({ status: 'complete', observed: [{ unit: 'tokens', amount: 300 }], unknown: [] });
-    expect(ledger('applied')).toHaveLength(1);
+    expect(after.statuses?.['pr-1']).toBe('succeeded');
+    expect(usageOf(after)).toEqual({ status: 'complete', observed: [{ unit: 'tokens', amount: 400 }], unknown: [] });
+    expect(ledger('applied')).toHaveLength(2);
   });
 
   test('a process that reuses the dead run\'s identifier still records its in-flight operation unknown (regression: run identifiers repeat across processes, fences do not)', () => {
     expect(stage({ now: T0, runId: 'run:same', action: 'members', kill: 'after-send' }).signal).toBe('SIGKILL');
     const after = clean({ now: T0 + 10_000, runId: 'run:same', action: 'members' });
     expect(trace(after)).toContain('assess@pr-1:recovered:unknown:recovered-after-crash');
-    expect(after.blocked?.['pr-1']).toEqual(expect.objectContaining({ kind: 'unknown-outcome', reason: 'not-repeat-safe' }));
-    expect(ledger('received')).toHaveLength(1);
+    expect(after.statuses?.['pr-1']).toBe('succeeded');
+    expect(ledger('received')).toHaveLength(2);
+    expect(new Set(ledger('received').map((request) => request.requestAttempt)).size).toBe(2);
   });
 
   test('a repeat-safe operation is retried by the next process under the same identity (the author accepted two effects)', () => {
@@ -228,7 +230,7 @@ describe('a drain that outlives its lease (A-09, EXP-8 ruling R)', () => {
     const successorAt = T0 + 10_000;
     const drained = clean({ now: T0, runId: 'run:drain', action: 'members', drainPastLease: { now: successorAt, runId: 'run:successor' } });
     // The successor took the lease over, found pr-1 in flight, and settled the other members.
-    expect(drained.successor?.statuses).toEqual({ 'pr-1': 'pending', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
+    expect(drained.successor?.statuses).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
     // The drained run: its late completion of pr-1 could not be recorded, and it could record nothing for pr-2 or pr-3,
     // not even an acceptance of the successor's results. Every member has a typed outcome.
     expect(trace(drained)).toContain('assess@pr-1:request-settled:unknown:lease-lost');
@@ -239,7 +241,7 @@ describe('a drain that outlives its lease (A-09, EXP-8 ruling R)', () => {
     const after = clean({ now: successorAt + 10_000, runId: 'run:read', action: 'inspect' });
     const byMember = (report: IWorkerReport): Readonly<Record<string, unknown>> => Object.fromEntries(report.operations.flatMap((view) => typeof view === 'object' && view !== null ? [[String(Reflect.get(view, 'member')), view]] : []));
     expect(byMember(after)).toEqual(byMember(drained.successor ?? { events: [], operations: [], usage: undefined }));
-    expect(pr1Operations(after)).toEqual([expect.objectContaining({ status: 'unknown' })]);
+    expect(pr1Operations(after)).toEqual([expect.objectContaining({ status: 'succeeded' })]);
   });
 });
 

@@ -10,35 +10,35 @@
  *    name and its binding. The subject's block index names the operations at
  *    its addresses that are still unsettled; a call at such an address reuses
  *    that operation's identity, otherwise it mints a new one.
- * 2. **Taint guard.** An attempt that met a deferral or an unknown outcome
- *    rethrows that signal without sending; a deferral is never sent before
- *    its time, and an unknown outcome is never replayed without a safety basis
- *    and an author policy.
+ * 2. **Taint guard.** An attempt that met a deferral or exhausted unknown
+ *    outcome rethrows that signal without sending; a deferral is never sent
+ *    before its time. A distinct admitted attempt may retry under this run's
+ *    finite allowance without an effect-safety declaration.
  * 3. **Intent before send.** Once the permit is held and stop intent
  *    rechecked, one journal commit records the operation as `pending` with
  *    the new request attempt, then Accounting records the usage intent, and
  *    only then is the request sent. If either fails, nothing is sent.
  * 4. **Usage before outcome.** A usage report is acknowledged through
  *    Accounting before the outcome is committed.
- * 5. **Outcome and policy.** Success settles the operation. A permanent
- *    failure, or an exhausted policy, settles it failed. A transient failure
- *    under an author policy waits out its backoff as a short durable deferral,
- *    holding no permit and no lane, then retries. A rate or quota response
- *    with a retry time defers the operation durably until then and ends the
- *    attempt pending, retried by default up to a cap of 5. An unknown outcome
- *    is retried at once only with a safety basis and a policy allowing
- *    another attempt; otherwise the attempt ends pending.
+ * 5. **Outcome and policy.** Success settles the operation. Current known-
+ *    failure settlement remains distinct from unknown exhaustion, which
+ *    stays pending. Every actual send, including a rate refusal, consumes
+ *    one of this invocation's finite total attempts. Classified retries
+ *    defer durably for built-in increasing or explicit timing, with provider
+ *    not-before as a floor; waits hold no network permit. The legacy rate
+ *    cap can only restrict this total. A lost response is retryable under
+ *    that allowance and remains unknown evidence even after later success.
  * 6. **Hard stop.** An aborted request's remote state is committed to the
  *    journal by operation and request attempt; a provider-confirmed
  *    cancellation settles the operation, otherwise it is unknown.
- * 7. **Operator settlement.** Resolving an unknown operation as succeeded
+ * 7. **Legacy operator settlement.** Resolving an unknown operation as succeeded
  *    asserts its effect happened, so its address stays consumed: a later call
  *    there mints and sends nothing and fails with `operation-resolved`, which
  *    carries no value. Resolving as failed (no effect) or abandoning frees the
  *    address; abandoning is the operator's explicit authorization of a
  *    possible second effect, and an operation resolved as succeeded may
- *    still be abandoned later to free its address. A resolution carrying a
- *    result is M6 work.
+ *    still be abandoned later to free its address. This surface supplies no
+ *    data value; result-bearing manual recovery remains deferred.
  *
  * Every commit uses the lease of the normal request pass the attempt belongs
  * to, so a pass that lost its lease commits nothing (ruling R): its operation
@@ -95,8 +95,20 @@ import type { IAttemptRecord, IBlockEntry, IOperationRecord, ISafetyBasis } from
  */
 const identifierRule = /^[a-z][a-z0-9_.:-]{0,63}$/u;
 
-/** The default cap on deferred retries of rate or quota responses (EXP-8 resolution 6). */
+/** A compatibility-only rate-refusal subcap, unable to raise the total request allowance. */
 const defaultRateLimitRetries = 5;
+
+/** The ordinary acquisition allowance counts all actual sends, including rate refusals. */
+const defaultMaxAttempts = 3;
+
+/** Bounded deterministic direct-path backoff; providers' later not-before times still win. */
+const defaultRetryBackoff = Object.freeze({ initialMilliseconds: 2_000, capMilliseconds: 60_000 });
+
+/** Default wait after one or more sent attempts of this invocation. */
+function defaultRetryDelay(spent: number): number {
+  const doublings = Math.max(0, spent - 1);
+  return doublings >= 5 ? defaultRetryBackoff.capMilliseconds : Math.min(defaultRetryBackoff.capMilliseconds, defaultRetryBackoff.initialMilliseconds * 2 ** doublings);
+}
 
 /**
  * The backoff after an intent that could not be made durable (Accounting
@@ -160,7 +172,8 @@ interface IValidatedRequest<T> {
   readonly binding: string;
   readonly safety: ISafetyBasis;
   readonly maxAttempts: number;
-  readonly backoff: number;
+  /** An author-specified fixed delay; absent uses the bounded increasing default. */
+  readonly backoff: number | undefined;
   readonly rateLimitRetries: number;
   readonly providerIdempotency: boolean;
   readonly perform: IOperationRequest<T>['perform'];
@@ -188,12 +201,13 @@ function validated<T>(request: IOperationRequest<T>): IValidatedRequest<T> {
     throw new SupervisionError('invalid-request', `Operation ${name} has a malformed safety declaration or retry policy`);
   }
   const policy = (field: string): unknown => typeof retry === 'object' && retry !== null ? Reflect.get(retry, field) : undefined;
+  const declaredBackoff = policy('backoffMilliseconds');
   return {
     name,
     binding,
     safety: providerIdempotency === true ? 'provider-idempotency' : safeToRepeat === true ? 'safe-to-repeat' : 'none',
-    maxAttempts: count(policy('maxAttempts'), 1, 'maxAttempts', 1),
-    backoff: count(policy('backoffMilliseconds'), 0, 'backoffMilliseconds', 0),
+    maxAttempts: count(policy('maxAttempts'), defaultMaxAttempts, 'maxAttempts', 1),
+    backoff: declaredBackoff === undefined ? undefined : count(declaredBackoff, 0, 'backoffMilliseconds', 0),
     rateLimitRetries: count(policy('rateLimitRetries'), defaultRateLimitRetries, 'rateLimitRetries', 0),
     providerIdempotency: providerIdempotency === true,
     // Validated just above; the request's own declared types describe these members.
@@ -302,6 +316,23 @@ export interface IOperationEngine extends IRunOperations {
  */
 export function createOperationEngine(engine: IOperationEngineContext): IOperationEngine {
   const { context, ports, timer, random } = engine;
+  /**
+   * Lazy so a new operation keeps the first random operation identity stable
+   * for existing deterministic callers. Once minted it belongs to this run
+   * invocation, so a repeated public label cannot merge retry allowances.
+   * Callers still owe unique public labels for attribution and usage.
+   */
+  let runInstance: string | undefined;
+  function currentRunInstance(): string {
+    if (runInstance === undefined) {
+      const minted: unknown = random.randomIdentifier();
+      if (typeof minted !== 'string' || !randomRule.test(minted)) {
+        throw new SupervisionError('invalid-request', 'The random identifier source returned a malformed run instance');
+      }
+      runInstance = `run-instance-${minted}`;
+    }
+    return runInstance;
+  }
   /**
    * Addresses with a call in progress in this run. A second call at an
    * address while one is in progress, even one started in the same turn, is
@@ -421,11 +452,11 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
 
   /** The block an unsettled record imposes now, or undefined when it may be resumed. */
   function blockOf(record: IOperationRecord): IOperationBlock | undefined {
-    if (record.status === 'deferred' && record.notBefore !== undefined && now() < record.notBefore) {
+    if ((record.status === 'deferred' || record.status === 'unknown') && record.notBefore !== undefined && now() < record.notBefore) {
       return { kind: 'deferred', operation: record.operation, notBefore: record.notBefore };
     }
     if (record.status === 'unknown') {
-      const decision = unknownRetry(record, spentAttempts(record));
+      const decision = unknownRetry(record, spentAttempts(record, currentRunInstance()));
       return decision === 'retry' ? undefined : { kind: 'unknown-outcome', operation: record.operation, reason: decision };
     }
     return undefined;
@@ -644,7 +675,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
         status: 'pending',
         notBefore: undefined,
         unrecorded: before.record.unrecorded,
-        attempts: [...earlier, { requestAttempt, run: attribution.run, stepAttempt: attribution.stepAttempt, status: 'pending', remote: undefined, usage: undefined, intent: undefined }],
+        attempts: [...earlier, { requestAttempt, run: attribution.run, runInstance: currentRunInstance(), stepAttempt: attribution.stepAttempt, status: 'pending', remote: undefined, usage: undefined, intent: undefined }],
       };
       current = write(lease, intent, before.revision);
       try {
@@ -702,7 +733,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     }
     const response = classify(sent);
     const usage = acknowledge(current.record, requestAttempt, stepAttempt, response.usage);
-    return settleResponse(current, response, usage, { stepAttempt, requestAttempt, request, transport, lease });
+    return settleResponse(current, response, usage, { stepAttempt, requestAttempt, request, lease });
   }
 
   /**
@@ -724,15 +755,17 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     current: IStored,
     response: IClassified<T>,
     usage: IAttemptUsage,
-    where: { readonly stepAttempt: string; readonly requestAttempt: string; readonly request: IValidatedRequest<T>; readonly transport: IOperationTransport; readonly lease: IRunLease },
+    where: { readonly stepAttempt: string; readonly requestAttempt: string; readonly request: IValidatedRequest<T>; readonly lease: IRunLease },
   ): Promise<{ readonly stored: IStored; readonly outcome: IAttemptOutcome<T> }> {
-    const { stepAttempt, requestAttempt, request, transport, lease } = where;
+    const { stepAttempt, requestAttempt, request, lease } = where;
     const operation = current.record.operation;
     const settledAs = (attemptStatus: IRequestAttemptStatus, status: IOperationStatus, notBefore?: number): IOperationRecord => ({
       ...withLast(current.record, { status: attemptStatus, usage }),
       status,
       notBefore,
     });
+    /** The configured fixed wait or increasing default after sent attempts of this invocation. */
+    const retryDelay = (record: IOperationRecord): number => request.backoff ?? defaultRetryDelay(spentAttempts(record, currentRunInstance()));
     /** Commit and report; a lost lease makes the outcome unknown (ruling R). */
     const commit = (next: IOperationRecord, reason: IOperationReason | undefined): IStored | undefined => {
       const written = settle(current, next, lease);
@@ -757,8 +790,10 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       case 'failed': {
         const rateLimitedWithTime = response.kind === 'rate-limited' && response.retryAt !== undefined;
         if (rateLimitedWithTime) {
-          const next = settledAs('rate-limited', 'deferred', response.retryAt);
-          if (rateLimited(next) > request.rateLimitRetries) {
+          const refused = settledAs('rate-limited', 'deferred');
+          const notBefore = Math.max(response.retryAt ?? now(), now() + retryDelay(refused));
+          const next: IOperationRecord = { ...refused, notBefore };
+          if (spentAttempts(next, currentRunInstance()) >= request.maxAttempts || rateLimited(next, currentRunInstance()) > request.rateLimitRetries) {
             const exhausted: IOperationRecord = { ...next, status: 'failed', notBefore: undefined };
             const written = commit(exhausted, 'rate-limited');
             if (written === undefined) {
@@ -771,14 +806,13 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
           if (written === undefined) {
             return leaseLost();
           }
-          const notBefore = next.notBefore ?? now();
           emit('retry-scheduled', next, { stepAttempt, status: 'deferred', reason: 'rate-limited', notBefore });
           return { stored: written, outcome: { kind: 'pending', block: { kind: 'deferred', operation, notBefore } } };
         }
         // A permanent failure, or a transient one (including a rate limit without a retry time).
         const transient = response.kind === 'rate-limited' || response.transient;
         const failed = settledAs('failed', 'failed');
-        const retryable = transient && spentAttempts(failed) < request.maxAttempts;
+        const retryable = transient && spentAttempts(failed, currentRunInstance()) < request.maxAttempts;
         if (!retryable) {
           const written = commit(failed, transient ? (response.kind === 'rate-limited' ? 'rate-limited' : 'transient') : 'permanent');
           if (written === undefined) {
@@ -791,28 +825,35 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
           return { stored: written, outcome: { kind: 'error', error: new SupervisionError('operation-failed', `Operation ${operation} failed${transient ? ' after its retry policy was exhausted' : ''}`, cause) } };
         }
         // A short durable deferral covers the backoff, so a crash during it leaves a time a later run honors.
-        const notBefore = now() + request.backoff;
+        const delay = retryDelay(failed);
+        const notBefore = now() + delay;
         const waiting = settledAs('failed', 'deferred', notBefore);
         const written = commit(waiting, response.kind === 'rate-limited' ? 'rate-limited' : 'transient');
         if (written === undefined) {
           return leaseLost();
         }
         emit('retry-scheduled', waiting, { stepAttempt, status: 'deferred', reason: 'transient', notBefore });
-        if (request.backoff > 0) {
-          // Holds no permit and lends the member's lane; any stop ends it (and taints the attempt).
-          await transport.sleepUntil(notBefore);
-        }
-        return { stored: written, outcome: { kind: 'retry' } };
+        // A timed retry is a durable pass deferral: it releases the request
+        // lane and, when only deferred work remains, the writer lease.
+        return { stored: written, outcome: delay > 0
+          ? { kind: 'pending', block: { kind: 'deferred', operation, notBefore } }
+          : { kind: 'retry' } };
       }
       case 'unknown': {
         const unknown = settledAs('unknown', 'unknown');
-        const written = commit(unknown, 'lost-response');
+        const decision = unknownRetry(request, spentAttempts(unknown, currentRunInstance()));
+        const delay = decision === 'retry' ? retryDelay(unknown) : 0;
+        const notBefore = decision === 'retry' ? now() + delay : undefined;
+        const scheduled: IOperationRecord = { ...unknown, notBefore };
+        const written = commit(scheduled, 'lost-response');
         if (written === undefined) {
           return leaseLost();
         }
-        const decision = unknownRetry({ safety: request.safety, maxAttempts: request.maxAttempts }, spentAttempts(unknown));
         if (decision === 'retry') {
-          return { stored: written, outcome: { kind: 'retry' } };
+          emit('retry-scheduled', scheduled, { stepAttempt, status: 'unknown', reason: 'lost-response', notBefore });
+          return { stored: written, outcome: delay > 0 && notBefore !== undefined
+            ? { kind: 'pending', block: { kind: 'deferred', operation, notBefore } }
+            : { kind: 'retry' } };
         }
         return { stored: written, outcome: { kind: 'pending', block: { kind: 'unknown-outcome', operation, reason: decision } } };
       }

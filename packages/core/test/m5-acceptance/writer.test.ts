@@ -15,7 +15,7 @@
  * - Takeover happens only after expiry and only with the next fence. A waiter
  *   started while a killed holder's lease is unexpired is granted the lease
  *   at or after that expiry, with fence + 1, and records the dead run's
- *   in-flight operation unknown without replaying it.
+ *   in-flight operation unknown before the successor's separate run retries it.
  * - A stale holder (one whose lease expired, whether or not a successor took
  *   over) can neither publish, renew nor release on another holder's
  *   behalf. Its late completion commits nothing: no History row changes, its
@@ -124,7 +124,7 @@ describe('writer-wait-and-takeover (A-09, RUN-002)', () => {
     expect(s.keys('received')).toEqual(['pr-1', 'pr-2', 'pr-3']);
   });
 
-  test('after the holder is killed, a waiter takes over only at its expiry, with the next fence, and records the in-flight operation unknown without replaying it', async () => {
+  test('after the holder is killed, a waiter takes over at expiry with the next fence and can retry the recovered unknown acquisition', async () => {
     const s = freshScenario(baseWorld({ script: { 'pr-1': [{ kind: 'gate', gate: 'never' }], 'pr-3': [{ kind: 'gate', gate: 'successor' }] } }));
     const doomed = s.start({ kind: 'members' }, { window: 1, leaseMilliseconds: 1_500 });
     await doomed.waitForLine((line) => line['t'] === 'event' && line['kind'] === 'operation' && line['phase'] === 'request-started', 'the doomed holder is sending pr-1');
@@ -149,9 +149,8 @@ describe('writer-wait-and-takeover (A-09, RUN-002)', () => {
     s.open('successor');
     const run = clean(await successor.exited);
     expect(run.operations).toContain('recovered:unknown:recovered-after-crash@pr-1');
-    expect(statuses(run)).toEqual({ 'pr-1': 'pending', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
-    expect(run.result.members['pr-1']?.blocked).toEqual({ kind: 'unknown-outcome', operation: operationOf(run, 'pr-1'), reason: 'not-repeat-safe' });
-    expect(s.keys('received')).toEqual(['pr-1', 'pr-2', 'pr-3']);
+    expect(statuses(run)).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
+    expect(s.ledger().filter((entry) => entry.kind === 'received' && entry.key === 'pr-1').map((entry) => entry.operation)).toEqual([operationOf(run, 'pr-1'), operationOf(run, 'pr-1')]);
   });
 });
 
@@ -169,15 +168,15 @@ const interleavings: readonly IInterleaving[] = (['publish', 'renew', 'release']
 
 /**
  * Accounting's usage after the stale holder's late completion of pr-1, by
- * the successor's position. The holder's pr-1 answer (100 tokens) is always
- * recorded. A successor (fence + 1) found pr-1 in flight and recorded it
- * unknown without sending; it answered pr-2 (100 tokens) and, when finished,
- * pr-3 (100 tokens); while holding, its pr-3 request is in flight (unknown).
+ * the successor's position. The holder's late pr-1 answer (100 tokens) is
+ * recorded. A successor (fence + 1) found pr-1 in flight, recorded that
+ * attempt unknown, then retried its acquisition (100 tokens). It also answered
+ * pr-2 and, when finished, pr-3; while holding, pr-3 is in flight (unknown).
  */
 const usageAfterLatePublish: Readonly<Record<ISuccessor, IUsageView>> = {
   none: { status: 'complete', observed: [{ unit: 'tokens', amount: 100 }], unknown: 0, operations: 1, reports: 1, requestAttempts: 1 },
-  holding: { status: 'incomplete', observed: [{ unit: 'tokens', amount: 200 }], unknown: 1, operations: 3, reports: 2, requestAttempts: 3 },
-  finished: { status: 'complete', observed: [{ unit: 'tokens', amount: 300 }], unknown: 0, operations: 3, reports: 3, requestAttempts: 3 },
+  holding: { status: 'incomplete', observed: [{ unit: 'tokens', amount: 300 }], unknown: 1, operations: 3, reports: 3, requestAttempts: 4 },
+  finished: { status: 'complete', observed: [{ unit: 'tokens', amount: 400 }], unknown: 0, operations: 3, reports: 4, requestAttempts: 4 },
 };
 
 describe('stale-holder-interleavings (A-09, A-10, PUB-004)', () => {
@@ -303,12 +302,13 @@ describe('drain-outlives-lease (A-09, EXP-8 ruling R)', () => {
     // The late completion published nothing and left the successor's lease and every row exactly as they were.
     expect(s.rows()).toEqual(before);
     expect(drained.operations).toContain('request-settled:unknown:lease-lost@pr-1');
-    // Its usage is preserved: pr-1's answer (100 tokens) and the successor's pr-2 (100 tokens); the successor's pr-3 is in flight.
-    expect(usageOf(s.usage())).toEqual({ status: 'incomplete', observed: [{ unit: 'tokens', amount: 200 }], unknown: 1, operations: 3, reports: 2, requestAttempts: 3 });
+    // Its usage is preserved: the late pr-1 answer, successor pr-1 retry,
+    // and pr-2 each reported 100 tokens; pr-3 remains in flight.
+    expect(usageOf(s.usage())).toEqual({ status: 'incomplete', observed: [{ unit: 'tokens', amount: 300 }], unknown: 1, operations: 3, reports: 3, requestAttempts: 4 });
 
     s.open('successor');
     const finished = clean(await successor.exited);
-    expect(statuses(finished)).toEqual({ 'pr-1': 'pending', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
+    expect(statuses(finished)).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
     expect(fencesWritten(before, s.rows())).toEqual([drainFence + 1]);
   });
 
@@ -323,7 +323,7 @@ describe('drain-outlives-lease (A-09, EXP-8 ruling R)', () => {
       const operation = operationOf(drained, 'pr-1');
       expect(drained.result.members).toEqual({
         // pr-1's attempt ended without authority: its outcome is unrecorded, so the member is pending on an unknown outcome.
-        'pr-1': { status: 'pending', reason: `Operation ${operation} has an unknown outcome (unrecorded); it is not replayed`, blocked: { kind: 'unknown-outcome', operation, reason: 'unrecorded' } },
+        'pr-1': { status: 'pending', reason: `Operation ${operation} has an unknown outcome (unrecorded); this attempt cannot send again`, blocked: { kind: 'unknown-outcome', operation, reason: 'unrecorded' } },
         // pr-2's reuse needed an acceptance the stale lease cannot record: pending, lease-lost.
         'pr-2': { status: 'pending', reason: 'lease-lost' },
         // pr-3 was never admitted after the soft stop.

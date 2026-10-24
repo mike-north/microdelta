@@ -14,8 +14,9 @@
  *   operations holding that subject's addresses: those still unsettled
  *   (`pending`, `deferred` or `unknown`), and those an operator resolved as
  *   succeeded, whose address stays consumed. Admission reads it to honor a
- *   deferral or an unknown outcome before any claim, and a call reads it to
- *   reuse an unsettled operation's identity or to refuse a resolved address.
+ *   deferral or an unknown outcome whose current run allowance is spent
+ *   before any claim; a call reads it to reuse an unsettled operation's
+ *   identity or to refuse a resolved address.
  *   An operation leaves it, in the same commit, exactly when it settles any
  *   other way.
  *
@@ -36,13 +37,15 @@ import type {
   IRequestAttemptView,
 } from './operations.js';
 
-/** The basis on which an unknown outcome may be retried: none, the author's declaration, or provider idempotency keys. */
+/** Historical author/deduplication hint retained in journal records; acquisition retry no longer requires it. */
 export type ISafetyBasis = 'none' | 'safe-to-repeat' | 'provider-idempotency';
 
-/** One request attempt as stored. */
+/** One request attempt as stored, with immutable public attribution and private allowance membership. */
 export interface IAttemptRecord {
   readonly requestAttempt: string;
   readonly run: string;
+  /** Private invocation identity used only for this run's finite allowance; absent on historical v1 attempts. */
+  readonly runInstance?: string | undefined;
   readonly stepAttempt: string;
   readonly status: IRequestAttemptStatus;
   readonly remote: IOperationRemoteState | undefined;
@@ -55,7 +58,7 @@ export interface IAttemptRecord {
   readonly intent: 'unconfirmed' | undefined;
 }
 
-/** One external operation as stored. */
+/** One external operation as stored; all historical attempts remain after a run's allowance resets. */
 export interface IOperationRecord {
   readonly operation: string;
   /** The subject and compatibility group that own the operation; analysis and environment are the namespace's. */
@@ -67,6 +70,7 @@ export interface IOperationRecord {
   readonly binding: string;
   readonly safety: ISafetyBasis;
   readonly maxAttempts: number;
+  /** Legacy rate-only retry subcap, never a separate pool above maxAttempts. */
   readonly rateLimitRetries: number;
   readonly status: IOperationStatus;
   /** Consecutive intents of this operation that could not be made durable; it sets the intent retry backoff. */
@@ -112,34 +116,30 @@ export function subjectKey(subject: Pick<IOperationSubject, 'subject' | 'version
   return JSON.stringify([subject.subject, subject.version]);
 }
 
-/** Request attempts that count against the author's transient and unknown-outcome policy. */
-export function spentAttempts(record: IOperationRecord): number {
-  return record.attempts.filter((attempt) => attempt.status !== 'not-sent' && attempt.status !== 'rate-limited').length;
+/** Actually sent request attempts belonging to one live invocation, independent of public run attribution. */
+export function spentAttempts(record: IOperationRecord, runInstance: string): number {
+  return record.attempts.filter((attempt) => attempt.status !== 'not-sent' && attempt.runInstance === runInstance).length;
 }
 
-/** Request attempts a rate or quota limit refused. */
-export function rateLimited(record: IOperationRecord): number {
-  return record.attempts.filter((attempt) => attempt.status === 'rate-limited').length;
+/** Rate refusals within one invocation: a restrictive legacy subcap, never additional allowance. */
+export function rateLimited(record: IOperationRecord, runInstance: string): number {
+  return record.attempts.filter((attempt) => attempt.status === 'rate-limited' && attempt.runInstance === runInstance).length;
 }
 
 /**
- * Whether an unknown outcome may be retried: it needs a safety basis (the
- * author's safe-to-repeat declaration, or provider idempotency keys) and a
- * policy allowing another attempt (EXP-8 resolution 4). Otherwise it waits
- * for an operator.
+ * Whether another acquisition attempt is allowed after an unknown response.
+ * Provider idempotency helps deduplication, but is not retry authority for
+ * data acquisition; only the current invocation's finite tally governs.
  */
-export function unknownRetry(record: Pick<IOperationRecord, 'safety' | 'maxAttempts'>, spent: number): 'retry' | 'not-repeat-safe' | 'policy-exhausted' {
-  if (record.safety === 'none') {
-    return 'not-repeat-safe';
-  }
+export function unknownRetry(record: Pick<IOperationRecord, 'maxAttempts'>, spent: number): 'retry' | 'policy-exhausted' {
   return spent < record.maxAttempts ? 'retry' : 'policy-exhausted';
 }
 
-/** Encode an operation record as Value data. */
+/** Encode current operation records as v2 Value data while carrying v1 attempts without invented run identity. */
 export function encodeOperation(record: IOperationRecord): IJournalRecordValue {
   return {
     format: operationFormat,
-    formatVersion: 1,
+    formatVersion: 2,
     content: {
       operation: record.operation,
       subject: record.subject,
@@ -156,6 +156,7 @@ export function encodeOperation(record: IOperationRecord): IJournalRecordValue {
       attempts: record.attempts.map((attempt) => ({
         requestAttempt: attempt.requestAttempt,
         run: attempt.run,
+        runInstance: attempt.runInstance ?? null,
         stepAttempt: attempt.stepAttempt,
         status: attempt.status,
         remote: attempt.remote ?? null,
@@ -231,6 +232,15 @@ function optionalText(value: unknown, name: string, what: string): string | unde
   return typeof read === 'string' && read.length > 0 ? read : damaged(what);
 }
 
+/** A v2 private run identity is distinct from caller-supplied correlation labels. */
+const runInstanceRule = /^run-instance-[0-9a-f]{32}$/u;
+
+/** Decode a current private identity, allowing null only for an upgraded v1 attempt. */
+function decodedRunInstance(value: unknown, what: string): string | undefined {
+  const read = optionalText(value, 'runInstance', what);
+  return read === undefined || runInstanceRule.test(read) ? read : damaged(what);
+}
+
 /** A required safe-integer field. */
 function whole(value: unknown, name: string, what: string): number {
   const read = field(value, name);
@@ -263,10 +273,13 @@ function requireFormat(record: IJournalRecordValue, format: string, what: string
   return record.content;
 }
 
-/** Decode a stored operation record. */
+/** Decode v1 and v2 operation records; missing v2 run identity is damage rather than a new allowance. */
 export function decodeOperation(record: IJournalRecordValue): IOperationRecord {
   const what = 'operation record';
-  const content = requireFormat(record, operationFormat, what);
+  if (record.format !== operationFormat || (record.formatVersion !== 1 && record.formatVersion !== 2)) {
+    damaged(what);
+  }
+  const content = record.content;
   const attempts: unknown = field(content, 'attempts');
   const settlement: unknown = field(content, 'settlement');
   const resolution: unknown = field(content, 'resolution');
@@ -289,6 +302,7 @@ export function decodeOperation(record: IJournalRecordValue): IOperationRecord {
     attempts: attempts.map((attempt: unknown): IAttemptRecord => ({
       requestAttempt: text(attempt, 'requestAttempt', what),
       run: text(attempt, 'run', what),
+      runInstance: record.formatVersion === 1 ? undefined : decodedRunInstance(attempt, what),
       stepAttempt: text(attempt, 'stepAttempt', what),
       status: oneOf(attempt, 'status', attemptStatuses, what),
       remote: optionalOneOf(attempt, 'remote', remoteStates, what),

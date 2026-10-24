@@ -63,8 +63,8 @@ describe('soft-then-hard-stop (A-13, RUN-014)', () => {
       usage: { status: 'complete', observed: [{ unit: 'requests', amount: 1 }], unknown: 0, operations: 1, reports: 1, requestAttempts: 1 },
     },
     {
-      // A lost response declared safe to repeat is retried at once within the call; a soft stop refuses that send.
-      retry: 'a lost response retried at once under a safety basis',
+      // A lost response is eligible under the finite allowance; a soft stop refuses that send.
+      retry: 'a lost response retried within its finite allowance',
       script: [{ kind: 'lost' }],
       declaration: { safeToRepeat: true, maxAttempts: 2 },
       usage: { status: 'incomplete', observed: [], unknown: 1, operations: 1, reports: 0, requestAttempts: 1 },
@@ -157,9 +157,10 @@ describe('soft-then-hard-stop (A-13, RUN-014)', () => {
       expect(statuses(later)).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
       expect(s.ledger().filter((entry) => entry.kind === 'received' && entry.key === 'pr-1').map((entry) => entry.operation === operation)).toEqual([true, false]);
     } else {
-      // Running or unknown remote work blocks the member until an operator settles it; nothing is sent again.
-      expect(later.result.members['pr-1']).toMatchObject({ status: 'pending', blocked: { kind: 'unknown-outcome', operation } });
-      expect(s.keys('received').filter((key) => key === 'pr-1')).toEqual(['pr-1']);
+      // The hard-stopped run made no further send. A later run can retry the
+      // unsettled acquisition under the same logical operation identity.
+      expect(later.result.members['pr-1']).toMatchObject({ status: 'succeeded' });
+      expect(s.ledger().filter((entry) => entry.kind === 'received' && entry.key === 'pr-1').map((entry) => entry.operation)).toEqual([operation, operation]);
     }
   });
 });

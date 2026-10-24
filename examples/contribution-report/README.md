@@ -183,13 +183,11 @@ listing changes no member.
 
 ## Operating the analysis: the paid-like assessor
 
-**Current implementation boundary:** this example still exercises M5's legacy
-effect-settlement policy. The accepted
-[data-acquisition retry target](../../docs/plans/data-acquisition-retries.md)
-permits bounded lost-response retries with per-new-run allowance and defers manual
-result recovery. The commands and test claims below describe what currently runs,
-not that changed target. Updating the controlled example and its tests is a
-separate implementation slice; no live provider work is implied.
+**Current implementation boundary:** this controlled example exercises the
+direct path's finite acquisition retry allowance and the existing legacy
+operator-settlement commands. It does not implement manual result recovery or
+the later reusable source API. The paid-like provider is a local fake; no live
+provider work is implied.
 
 `--rubric P` supplies the **paid-like assessor**: each PR's assessment is one
 declared external operation (`currentExecution().operation`) sent to the
@@ -231,9 +229,10 @@ the Node SQLite capability it opens with, as the facade's caller.
 | `promote --from trial --to production` | Promote every result the source environment's current report rests on into the target; executes nothing. `operations --environment production` then lists the promotions recorded *into* production |
 
 Usage is counted once per report. An attempt whose response was lost, or whose
-process died before its report, is **unknown**, never zero, and is never
-replayed until an operator settles it. A rate limit with a retry time defers
-only that assessment; its siblings finish, and no run sends it before the time.
+process died before its report, is **unknown**, never zero. A later request
+may acquire the value within a finite run allowance while preserving that
+earlier unknown usage. A rate limit with a retry time defers only that
+assessment; its siblings finish, and no run sends it before the time.
 Trial results satisfy production only through a recorded promotion, after
 which production reuses them and pays nothing. `npm run test:examples` drives
 each of these through separate processes (`test/paid.test.mjs`).

@@ -93,8 +93,10 @@ export function usePaidAssessor(provider: IPaidAssessor): void {
  * operation through the live run's execution controls. Its binding is a
  * digest of the request it sends (the PR number and merged flag), never the
  * request itself, so a changed request is a new operation while a retry of
- * the same request keeps its identity. The operation is not declared safe to
- * repeat: a lost response stays unknown until an operator settles it.
+ * the same request keeps its identity. The operation uses the direct path's
+ * finite default acquisition allowance. A lost response remains unknown
+ * evidence even if a later request obtains the value; exhausted unknown
+ * input stays unsettled for a later run or legacy operator settlement.
  */
 export async function assessRubricP(number: number, pullRequest: IResultView<IPullRequest>): Promise<IAssessment> {
   const provider = paidProvider;

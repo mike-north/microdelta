@@ -18,6 +18,28 @@ const PROJECTION_VERSION = 'MDP1|';
 /** Explicit prototype chains are bounded so lookup meaning stays inspectable. */
 const MAX_CUSTOM_PROTOTYPES = 2;
 
+/** Compile-time identity for snapshots that Value has detached and validated. */
+declare const preparedValueBrand: unique symbol;
+
+/**
+ * One detached, immutable Value snapshot prepared for repeated exact reads.
+ * Only Value can create a valid token; callers cannot use it to authorize
+ * observation of a mutable source object.
+ * @alpha
+ */
+export interface IPreparedValue {
+  /** Opaque brand keeps ordinary values from being treated as prepared snapshots. */
+  readonly [preparedValueBrand]: never;
+}
+
+/** State belongs to Value so a forged structural token cannot skip validation. */
+interface IPreparedValueState {
+  readonly root: unknown;
+}
+
+/** Prepared snapshots own their detached roots and never cache source objects. */
+const preparedValues = new WeakMap<IPreparedValue, IPreparedValueState>();
+
 /** @alpha A path segment whose kind follows the container's operation semantics. */
 export type IAddressSegment =
   /** A literal string-keyed record lookup, including keys containing punctuation. */
@@ -593,36 +615,43 @@ function childPath(path: string, segment: IAddressSegment): string {
 /**
  * Select one fact while carrying its original caller-relative location through
  * nested navigation. This path is diagnostic context only; the structured
- * address remains the semantic location and no sibling is traversed.
+ * address remains the semantic location and no sibling is traversed. The
+ * `prevalidated` path is reserved for an opaque Value-owned snapshot token and
+ * skips only surface checks already established for its frozen owned graph.
  */
 function observeAt(
   root: unknown,
   address: readonly IAddressSegment[],
   operation: IOperation,
   rootPath: string,
+  prevalidated = false,
 ): ISelectedFact {
   // Container navigation consumes only this bounded discriminant, never its payload.
   if (operation === 'container-kind') {
-    return { operation, address, fact: navigate(root, address).kind };
+    return { operation, address, fact: navigateAt(root, address, prevalidated).kind };
   }
   let targetPath = rootPath;
   if (operation === 'length' || operation === 'keys') {
     let target = root;
     for (const segment of address) {
-      target = observeAt(target, [segment], 'value', targetPath).fact;
+      target = observeAt(target, [segment], 'value', targetPath, prevalidated).fact;
       targetPath = childPath(targetPath, segment);
     }
     if (operation === 'length') {
       if (!Array.isArray(target)) {
         unsupported(targetPath, 'length needs an array');
       }
-      assertArraySurface(target, targetPath);
+      if (!prevalidated) {
+        assertArraySurface(target, targetPath);
+      }
       return { operation, address, fact: target.length };
     }
     if (target === null || typeof target !== 'object' || Array.isArray(target)) {
       unsupported(targetPath, 'keys needs a record');
     }
-    assertRecordChain(target, targetPath);
+    if (!prevalidated) {
+      assertRecordChain(target, targetPath);
+    }
     return { operation, address, fact: Object.keys(target) };
   }
   if (address.length === 0) {
@@ -630,7 +659,7 @@ function observeAt(
   }
   let parent = root;
   for (const segment of address.slice(0, -1)) {
-    parent = observeAt(parent, [segment], 'value', targetPath).fact;
+    parent = observeAt(parent, [segment], 'value', targetPath, prevalidated).fact;
     targetPath = childPath(targetPath, segment);
   }
   const last = address[address.length - 1];
@@ -642,7 +671,9 @@ function observeAt(
     if (!Array.isArray(parent) || !Number.isSafeInteger(last.index) || last.index < 0) {
       unsupported(selectedPath, 'index needs array and nonnegative integer');
     }
-    assertArraySurface(parent, targetPath);
+    if (!prevalidated) {
+      assertArraySurface(parent, targetPath);
+    }
     const selected = ownData(parent, String(last.index), selectedPath);
     const fact = operation === 'value' ? selected.value : selected.present;
     return { operation, address, fact };
@@ -650,7 +681,9 @@ function observeAt(
   if (parent === null || typeof parent !== 'object' || Array.isArray(parent)) {
     unsupported(targetPath, 'property needs record');
   }
-  assertRecordChain(parent, targetPath);
+  if (!prevalidated) {
+    assertRecordChain(parent, targetPath);
+  }
   if (operation === 'own' || operation === 'membership') {
     return { operation, address, fact: presenceValidated(parent, last.key, targetPath, operation) };
   }
@@ -866,30 +899,26 @@ export function normalizeSelectedFact(candidate: unknown): ISelectedFact {
   }
 }
 
-/**
- * Select the node at one exact address without traversing siblings or
- * descendants. Intermediate steps use the same Property/Index lookup rules as
- * {@link observe}; the selected container's own supported surface is validated
- * so a view never exposes an unsupported shape. The empty address names the
- * root, which must itself be a record or array: a scalar root has no member
- * address at which its value could be observed.
- * @alpha
- */
-export function navigate(root: unknown, address: readonly IAddressSegment[]): ISelectedNode {
+/** Navigate from an ordinary source or a Value-owned immutable root. */
+function navigateAt(root: unknown, address: readonly IAddressSegment[], prevalidated: boolean): ISelectedNode {
   const copied = copyEnvelopeAddress(address, 'Navigation address');
   let target: unknown = root;
   let targetPath = '$';
   if (copied.length > 0) {
-    const selected = observeAt(root, copied, 'value', '$');
+    const selected = observeAt(root, copied, 'value', '$', prevalidated);
     target = selected.fact;
     targetPath = copied.reduce(childPath, '$');
   }
   if (target !== null && typeof target === 'object') {
     if (Array.isArray(target)) {
-      assertArraySurface(target, targetPath);
+      if (!prevalidated) {
+        assertArraySurface(target, targetPath);
+      }
       return Object.freeze({ kind: 'array', address: copied, length: target.length });
     }
-    assertRecordChain(target, targetPath);
+    if (!prevalidated) {
+      assertRecordChain(target, targetPath);
+    }
     return Object.freeze({ kind: 'record', address: copied });
   }
   if (copied.length === 0) {
@@ -899,6 +928,15 @@ export function navigate(root: unknown, address: readonly IAddressSegment[]): IS
     unsupported(targetPath, typeof target);
   }
   return scalarNode(copied, target);
+}
+
+/**
+ * Navigate one ordinary source value, validating its selected container surface
+ * so an unsupported shape never crosses the lazy-view boundary.
+ * @alpha
+ */
+export function navigate(root: unknown, address: readonly IAddressSegment[]): ISelectedNode {
+  return navigateAt(root, address, false);
 }
 
 /** Observe exactly the requested fact; no sibling or whole-tree read is implied. */
@@ -911,6 +949,50 @@ export function navigate(root: unknown, address: readonly IAddressSegment[]): IS
  */
 export function observe(root: unknown, address: readonly IAddressSegment[], operation: IOperation): ISelectedFact {
   return observeAt(root, address, operation, '$');
+}
+
+/**
+ * Detach and validate caller data once for a sequence of exact Value reads.
+ * The returned token owns a frozen snapshot; later caller mutation cannot alter
+ * what its prepared observations mean.
+ * @alpha
+ */
+export function prepareValue(value: unknown): IPreparedValue {
+  const root = decodeSnapshot(encodeSnapshot(value));
+  const token = Object.freeze(Object.create(null)) as IPreparedValue;
+  preparedValues.set(token, { root });
+  return token;
+}
+
+/**
+ * Return the Value-owned immutable root represented by a prepared token.
+ * Fabricated or foreign tokens fail closed before any observation bypass.
+ * @alpha
+ */
+export function preparedRoot(prepared: IPreparedValue): unknown {
+  const state = preparedValues.get(prepared);
+  if (state === undefined) {
+    throw new TypeError('Prepared Value token was not created by Value');
+  }
+  return state.root;
+}
+
+/**
+ * Observe an exact fact from a Value-owned frozen snapshot whose complete
+ * supported shape was checked during {@link prepareValue}. Per-read checks
+ * inspect selected descriptors while skipping repeated full-container scans.
+ * @alpha
+ */
+export function observePrepared(
+  prepared: IPreparedValue,
+  address: readonly IAddressSegment[],
+  operation: IOperation,
+): ISelectedFact {
+  const state = preparedValues.get(prepared);
+  if (state === undefined) {
+    throw new TypeError('Prepared Value token was not created by Value');
+  }
+  return observeAt(state.root, address, operation, '$', true);
 }
 
 /** Encode operation and structural address independently from the selected fact. */

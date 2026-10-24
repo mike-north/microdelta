@@ -13,11 +13,15 @@ export {
   normalizeProjectionDescriptor,
   normalizeProjectionFact,
   observe,
+  observePrepared,
+  prepareValue,
+  preparedRoot,
   recordFromEntries,
 } from './value.js';
 export type {
   IAddressSegment,
   IOperation,
+  IPreparedValue,
   ISelectedFact,
   ISelectedNode,
   IValueProjectionDescriptor,

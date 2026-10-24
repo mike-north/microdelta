@@ -15,6 +15,11 @@ await store.close();
 The existing Jest suite remains available at `microdelta/conformance/store` and
 is implemented by History. Memory is process-local and non-durable.
 
+The [native store location guidance](../../docs/native-store-locations.md)
+describes how the project-private Node SQLite workspace canonicalizes existing
+store paths and why distinct hard-linked names must not be used concurrently
+for one WAL database. This does not change the public memory `Store` API.
+
 ## Project-private workspace path (alpha)
 
 The facade's generated **alpha** declarations also carry the workspace

@@ -371,9 +371,13 @@ export function createSelectedIndex(connection: ISqliteConnection, host: ISha256
     fingerprints: connection.prepare(sql`/* fingerprint */ SELECT a.value_fingerprint, n.snapshot_fingerprint
       FROM history_addresses a JOIN history_nodes n ON n.result_id = a.result_id AND n.node_id = a.node_id
       WHERE a.result_id = ? AND a.address = ?`),
+    // The selected frontier drives each edge lookup through the existing
+    // (result_id, parent_node) key prefix; a result-wide edge scan per node
+    // would multiply work while discovering a large retained subtree.
     subtreeNodes: connection.prepare(sql`/* subtree-payload */ WITH RECURSIVE subtree(node_id) AS (
         SELECT ?
-        UNION SELECT e.child_node FROM history_edges e JOIN subtree s ON e.parent_node = s.node_id WHERE e.result_id = ?
+        UNION SELECT e.child_node FROM subtree s CROSS JOIN history_edges e
+          WHERE e.result_id = ? AND e.parent_node = s.node_id
         UNION SELECT n.prototype_node FROM history_nodes n JOIN subtree s ON n.node_id = s.node_id
           WHERE n.result_id = ? AND n.prototype_node IS NOT NULL
       )

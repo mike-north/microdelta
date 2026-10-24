@@ -1,0 +1,3 @@
+packages/core/test/gap-hunt-durable-read-worker.ts(34,51): error TS2345: Argument of type '{ readonly rows: { readonly [index: number]: number; readonly length: number; } & ITrackedBrand; readonly optional?: number | undefined; readonly factor: number; readonly unread: string; } & ITrackedBrand' is not assignable to parameter of type 'IConfig'.
+  Types of property 'rows' are incompatible.
+    Type '{ readonly [index: number]: number; readonly length: number; } & ITrackedBrand' is missing the following properties from type 'readonly number[]': concat, join, slice, indexOf, and 19 more.

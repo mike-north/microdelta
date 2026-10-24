@@ -1,0 +1,14 @@
+[
+  {
+    "path": "scratch/gap-hunt/durable-read-matrix/captures/initial-lint-boundary/lint.log",
+    "raw_sha256": "8e34a12be73c5a1d01bc9ba340f799e77d48460d53e867fc39a50031d8642ca2",
+    "public_sha256": "9977eeadb0c0a945418b0bbe812dad542e71aac166c0fecab1b1ab2f19b9c817",
+    "replacement": "local checkout path -> <evidence-checkout>"
+  },
+  {
+    "path": "scratch/gap-hunt/durable-read-matrix/captures/initial-runtime-negative/local-jest.log",
+    "raw_sha256": "c3527c7d49647a5d12efa21659a1e22379bea9971de0e786135cd30f11d03f34",
+    "public_sha256": "40965fbae9f72975184645c3ab407f1388d6788a5cf7009cb959c770053fd892",
+    "replacement": "local checkout path -> <evidence-checkout>"
+  }
+]

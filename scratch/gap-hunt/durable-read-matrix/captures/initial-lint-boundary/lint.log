@@ -1,0 +1,6 @@
+
+<evidence-checkout>/packages/core/test/gap-hunt-durable-read-worker.ts
+  34:113  error  External influence 'Object' is not a tracked value or approved deterministic capability  microdelta/tracked-captures
+
+✖ 1 problem (1 error, 0 warnings)
+

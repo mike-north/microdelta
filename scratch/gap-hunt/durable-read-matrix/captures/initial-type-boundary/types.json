@@ -1,0 +1,12 @@
+{
+  "argv": [
+    "node",
+    "node_modules/typescript/bin/tsc",
+    "-p",
+    "packages/core/tsconfig.test.json"
+  ],
+  "exit": 1,
+  "seconds": 2.3337197303771973,
+  "timeout": 180,
+  "log_sha256": "b680d33ef727f47fe9226619bc9463c779f7fc6db3110161e0b97fa76f832adf"
+}

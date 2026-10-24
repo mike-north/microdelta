@@ -1,0 +1,50 @@
+/** One fresh process measures actual memo execution through the supported facade. */
+import { authoring, openWorkspace } from 'microdelta';
+interface IConfig { readonly rows: readonly number[]; readonly optional?: number | undefined; readonly factor: number; readonly unread: string }
+/** The factory only needs this structural view; tracked arrays deliberately omit native array methods. */
+interface IFactor { readonly factor: number }
+interface IInputs { readonly config: IConfig }
+interface IHelpers { readonly trace: () => void; readonly make: (configuration: IFactor) => () => number }
+/** Close over the runtime's tracked argument view, without extracting a scalar first. */
+function make(configuration: IFactor): () => number { return () => configuration.factor * 3; }
+/** A test counter, never an invalidating influence. */
+function trace(): void { process.stderr.write('BODY:reader\n'); }
+/** Variants alter exactly the intended consumption boundary. */
+function configOf(variant: string): IConfig {
+  const base: IConfig = { rows: [10, 20, 30], factor: 2, unread: 'base' };
+  switch (variant) {
+    case 'base': return base;
+    case 'same-length': return { ...base, rows: [99, 88, 77] };
+    case 'after-position': return { ...base, rows: [10, 20, 99] };
+    case 'append': return { ...base, rows: [10, 20, 30, 40] };
+    case 'insert-before': return { ...base, rows: [5, 10, 20, 30] };
+    case 'own-undefined': return { ...base, optional: undefined };
+    case 'optional-value': return { ...base, optional: 7 };
+    case 'unread': return { ...base, unread: 'changed' };
+    case 'factor': return { ...base, factor: 3 };
+    default: throw new Error(`Unknown variant ${variant}`);
+  }
+}
+const [location, mode, variant, requestKey] = process.argv.slice(2);
+if (location === undefined || mode === undefined || variant === undefined || requestKey === undefined) { throw new Error('Expected store, mode, variant and request key'); }
+const builders = authoring<IInputs, IHelpers>();
+const length = builders.memo({ subject: 'length', run: ({ inputs, helpers }) => { helpers.trace(); return { selected: inputs.config.rows.length }; } });
+const position = builders.memo({ subject: 'position', run: ({ inputs, helpers }) => { helpers.trace(); return { selected: inputs.config.rows[1] }; } });
+const value = builders.memo({ subject: 'value', run: ({ inputs, helpers }) => { helpers.trace(); return { selected: inputs.config.optional === undefined ? 'undefined' : inputs.config.optional }; } });
+const own = builders.memo({ subject: 'own', run: ({ inputs, helpers }) => { helpers.trace(); return { selected: Object.hasOwn(inputs.config, 'optional') }; } });
+const closure = builders.memo({ subject: 'closure', run: ({ inputs, helpers }) => {
+  helpers.trace(); const calculate = helpers.make(inputs.config); return { selected: calculate() };
+} });
+const composition = builders.compose({ scope: 'durable-read-matrix', inputs: [{ slot: 'config', value: configOf(variant) }], helpers: [{ slot: 'trace', helper: trace }, { slot: 'make', helper: make }], steps: [
+  { slot: 'length', declaration: length }, { slot: 'position', declaration: position }, { slot: 'value', declaration: value }, { slot: 'own', declaration: own }, { slot: 'closure', declaration: closure },
+] });
+const workspace = openWorkspace({ location, logicalStore: 'durable-read-matrix-store' });
+try {
+  const result = await workspace.run({ authoring: builders, composition, environment: 'test' }, async run => {
+    const outcome = await run.resolve({ scope: 'durable-read-matrix', role: 'step', slot: mode }, { requestKey });
+    if (outcome.kind !== 'published' && outcome.kind !== 'reused') { throw new Error(`Unexpected ${outcome.kind}`); }
+    return { kind: outcome.kind, reference: outcome.reference.locator, data: run.read<unknown>(outcome.reference) };
+  });
+  // This raw probe reports emitted text only; it never supplies runtime evidence or values.
+  process.stdout.write(`${JSON.stringify({ ...result.value, implementation: { factory: make.toString(), callable: make(configOf('base')).toString() } })}\n`);
+} finally { workspace.close(); }

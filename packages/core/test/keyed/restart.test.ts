@@ -252,6 +252,65 @@ describe('custom-key-correspondence', () => {
     return contributors().map((member, index) => ({ ...member, key: `person:${String(index + 1)}` }));
   }
 
+  /** Contributor payloads without the field used by the fixture's default key strategy. */
+  function withoutDesignatedIdentity(): IContributor[] {
+    return contributors().map((member) => {
+      const { key, ...record } = member;
+      void key;
+      return record;
+    });
+  }
+
+  test('an explicit custom key supports an identity-less source and preserves stable references across reordered restarts', () => {
+    const scene = scenario();
+    const variation = { key: 'custom', identityless: true } as const;
+    const originalMembers = withoutDesignatedIdentity();
+    const a = cold(scene, variation, createWorld(originalMembers));
+    expect(a.report.discovery).toMatchObject({ kind: 'keyed', keys: ['gh:1001', 'gh:1002', 'gh:1003'] });
+
+    const b = scene.run({ ...variation, order: 'reversed' }, reversedWorld(originalMembers));
+    expect(b.discovery).toMatchObject({ kind: 'keyed', keys: ['gh:1001', 'gh:1002', 'gh:1003'] });
+    expect(b.topology).toBe(a.report.topology);
+    expectNoMemberBodies(b);
+    expectRetained(b, a.references, ['gh:1001', 'gh:1002', 'gh:1003']);
+
+    const changedKey = originalMembers.map((member) => member.id === 'gh:1001' ? { ...member, id: 'gh:9001' } : member);
+    const c = scene.run({ ...variation, order: 'reversed' }, reversedWorld(changedKey));
+    expect(c.discovery).toMatchObject({ kind: 'keyed', keys: ['gh:1002', 'gh:1003', 'gh:9001'] });
+    expect(c.members['gh:9001']).toMatchObject({ status: 'succeeded', kind: 'published' });
+    expect(referenceOf(c, 'gh:9001')).not.toBe(a.references['gh:1001']);
+    expectRetained(c, a.references, ['gh:1002', 'gh:1003']);
+    expect(scene.candidates(summarySubject('gh:1001'))).toEqual([a.references['gh:1001']]);
+  });
+
+  test('an invalid custom-key snapshot rejects before any gate or member work and a corrected snapshot reconnects', () => {
+    const scene = scenario();
+    const variation = { key: 'custom', identityless: true } as const;
+    const originalMembers = withoutDesignatedIdentity();
+    const a = cold(scene, variation, createWorld(originalMembers));
+    const duplicateMembers = originalMembers.map((member) => member.id === 'gh:1002' ? { ...member, id: 'gh:1001' } : member);
+
+    const b = scene.run({ ...variation, order: 'reversed' }, reversedWorld(duplicateMembers));
+    expect(b.discovery).toMatchObject({
+      kind: 'rejected',
+      reason: 'duplicate-key',
+      key: 'gh:1001',
+      collection: 'contributors',
+      template: 'contributor',
+      identity: null,
+      customKey: true,
+    });
+    expect(b.discovery.kind === 'rejected' ? b.discovery.message : '').toMatch(/duplicate member key .* custom key/u);
+    expect(b.members).toEqual({});
+    expectNoMemberBodies(b);
+    expect(b.admissions).toEqual(['source:contributors:acme/widget:2026-Q1']);
+
+    const c = scene.run({ ...variation, order: 'reversed' }, reversedWorld(originalMembers));
+    expect(c.topology).toBe(a.report.topology);
+    expectNoMemberBodies(c);
+    expectRetained(c, a.references, ['gh:1001', 'gh:1002', 'gh:1003']);
+  });
+
   test('a custom key keeps each member\'s instance across renumbered designated ids; only the activity checks that read the renumbered field run', () => {
     const scene = scenario();
     const a = cold(scene, { key: 'custom' });

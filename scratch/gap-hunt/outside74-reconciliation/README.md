@@ -14,3 +14,5 @@ The final recipe includes the fixture build missing from the initial stage.
 [reconciliation.json](reconciliation.json) preserves each paragraph/requirement row and bounds its evidence. [runtime-assertion-index.json](captures/runtime-assertion-index.json) binds all270 successful runtime cases to229 parser-derived assertion declarations and source links. The75 carried lexical anchors are separate prior execution qualifications, not extra current cases. Historical74 and lexical294 inventories remain unchanged.
 
 `complete-selected.py` is the captured local recovery-stage script, retained for transparency with its original output-directory literal normalized; the clean-checkout recipe is `replay.py`. Captures normalize checkout, Node executable, and temporary paths. See manifest.json for SHA256 of all other artifact files.
+
+Post-capture static qualification added exact TAP pass/skip/todo census guards, rejected extra untracked files outside the evidence prefix, and made future Linux metadata reflect the actual host. Current capture totals were checked against these guards without reexecuting workloads.

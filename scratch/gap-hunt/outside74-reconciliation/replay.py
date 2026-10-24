@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Finite outside74 owner/tooling execution at an exact source; no product changes."""
 from pathlib import Path
-import json,hashlib,os,platform,subprocess,tempfile,time
+import json,hashlib,os,platform,subprocess,tempfile,time,re
 ROOT=Path(__file__).resolve().parents[3];HERE=Path(__file__).resolve().parent;os.chdir(ROOT)
 SEL=json.loads((HERE/'selection.json').read_text());SOURCE=SEL['source'];PREFIX=str(HERE.relative_to(ROOT))
 def git(*a):return subprocess.check_output(['git','-c','core.fsmonitor=false',*a],timeout=30)
@@ -12,6 +12,7 @@ def hashes():
  return out
 assert not git('diff','--name-only','HEAD').strip(),'tracked start must be clean'
 assert not git('diff','--name-only',SOURCE,'--','.',':(exclude)'+PREFIX).strip(),'complete source must match pin'
+assert not git('ls-files','--others','--exclude-standard','--','.',':(exclude)'+PREFIX).strip(),'untracked source outside evidence prefix'
 assert not Path('node_modules').exists(),'fresh checkout must not reuse node_modules'
 assert subprocess.check_output(['node','-p','process.versions.node'],text=True,timeout=30).split('.')[0]=='24','Node24 required'
 before=hashes();OUT=Path(tempfile.mkdtemp(prefix='microdelta-outside74-'));print('Evidence output: '+str(OUT),flush=True)
@@ -34,8 +35,10 @@ try:
  command('install',['npm','ci','--no-audit','--no-fund']);command('build',['npm','run','build:packages']);command('build-fixtures',['npm','run','build:fixtures']);command('declarations',['node',str(HERE/'declarations.mjs'),str(OUT/'declarations.json')])
  for owner in ['core','tracking','materialization']:command('compile-'+owner,['node','node_modules/typescript/bin/tsc','-p','packages/'+owner+'/tsconfig.test.json'])
  for owner in ['core','tracking','materialization']:jest(owner,[p for p in SEL['selectedFiles'] if p.startswith('packages/'+owner+'/')])
- for p in [p for p in SEL['selectedFiles'] if p.startswith('tooling/')]:command(Path(p).stem,['node','--test','--test-reporter=tap',p])
+ for p in [p for p in SEL['selectedFiles'] if p.startswith('tooling/')]:
+  n=Path(p).stem;command(n,['node','--test','--test-reporter=tap',p]);tap=(OUT/(n+'.log')).read_text();expected={'context-boundaries.test':12,'declaration-boundaries.test':23,'quality-gates.test':22,'foundation-wiring.test':8}[n]
+  for key,count in {'tests':expected,'pass':expected,'fail':0,'cancelled':0,'skipped':0,'todo':0}.items():assert re.search(r'^# '+key+' '+str(count)+r'$',tap,re.M),(n,key)
 except BaseException as e:primary=str(e);raise
 finally:
  try:after=hashes()
- finally:(OUT/'receipt.json').write_text(json.dumps(dict(source=SOURCE,platform=platform.platform(),node=subprocess.check_output(['node','-v'],text=True,timeout=30).strip(),sourceBefore=before,sourceAfter=after,sourceUnchanged=before==after,commands=records,primaryError=primary,linuxExecuted=False,paidProviderExecuted=False,historicalInventoriesModified=False),indent=2)+'\n')
+ finally:(OUT/'receipt.json').write_text(json.dumps(dict(source=SOURCE,platform=platform.platform(),node=subprocess.check_output(['node','-v'],text=True,timeout=30).strip(),sourceBefore=before,sourceAfter=after,sourceUnchanged=before==after,commands=records,primaryError=primary,linuxExecuted=platform.system()=='Linux',paidProviderExecuted=False,historicalInventoriesModified=False),indent=2)+'\n')

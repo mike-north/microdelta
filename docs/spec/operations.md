@@ -193,48 +193,100 @@ upstream paid calls. Absent values do not silently become zero.
 **Open:** override syntax and supported provisional-calculation API. Read-only
 inspection in CLI-001 does not run arbitrary user-defined preview bodies.
 
-### RUN-007 — Preview envelopes preserve availability, freshness, and errors
+### RUN-007 — Preview reads preserve availability, freshness, and recent activity
 
 Previews MUST expose the latest available value through a library envelope that
 keeps framework status separate from author data and requires explicit unwrapping.
-Unavailable, available-but-unverified/stale, and accepted data MUST be
-distinguishable. Legitimate empty values, zero, or a successful `undefined` MUST
-NOT stand in for unavailable data or failure.
+Unavailable data is distinct from an available value and its freshness. Legitimate
+empty values, zero, or a successful selected `undefined` MUST NOT stand in for
+unavailable data or failure; this does not expand the accepted result-root domain.
 
-If a refresh fails, a previous value MUST remain available with its stale status
-and the refresh error. If no value exists, expose unavailability and the error.
-A verified read MUST report the failure instead of silently returning the stale
-preview as success. A failed attempt does not become a completed result envelope.
+**Accepted owner clarification (2026-10-24).** An in-progress preview may mix
+current incoming snapshots and retained **stale** values. Stale means potentially
+stale until successfully verified not stale, not proven incorrect or changed.
+Successful verification may clear stale with equal author data; merely finding
+a member identity does not replace required freshness verification. Incoming
+snapshots are current/newly fetched for this display; no third fetched-but-unverified
+display category is required. Formal source acceptance, downstream eligibility
+and complete-success coverage remain their owners' separate facts: preview
+freshness neither fabricates their evidence nor initiates evaluation.
 
-**Validation:** refresh with and without a prior value; assert visible error and
-status in both cases. Change freshness while preserving equal author data and
-ensure observers can see the status change. A verified consumer never receives
-the stale fallback as an accepted result.
+If a refresh fails, a previous value MUST remain available with stale status and
+the refresh error. If no value exists, expose unavailability and the error. A
+verified read MUST report the failure instead of silently returning stale preview
+as success. A failed attempt does not become a completed result envelope.
 
-**Open:** discriminants, error retention across later coalesced updates, and
-observer attachment/disposal lifetime. Disposing an observer must not silently
-select an otherwise unspecified execution-cancellation policy.
+The read side MUST also support inspection of what happened recently, including
+failure followed by success, separately from the latest value/status. Error and
+success information belongs in reads, not notification payloads. Signal order or
+coalescing MUST NOT determine the order of recent activity; reads use recorded
+evidence. Equal-data recovery does not erase the distinction between an earlier
+failure and subsequent success within the supported retention window. No
+unbounded history, lossless event replay or specific snapshot/cursor API is
+selected; retention, evidence ordering and gap behavior must be specified before
+claiming this read capability complete.
 
-### RUN-008 — Throttled observation remains live and bounded
+**Validation:** [A-16a–c/f](acceptance.md#preview-observation-cases) exercise failure
+with/without prior data, equal-data freshness changes and recovery before a
+coalesced signal. Current snapshot display never substitutes for verified graph
+acceptance. Repeated reads leave execution and mutation ports untouched.
 
-Preview delivery MUST support optional throttling: continued arrivals permit
-periodic latest-state delivery without requiring a quiet interval, and the final
-coalesced state MUST be delivered after activity settles. Throttling MUST NOT
-renew a claim, establish readiness, or authorize expensive work.
+**Open:** discriminants, selected evaluation scope, current error representation,
+recent-activity query/ordering/retention and missing-range behavior. The accepted
+purpose does not select exact record fields or an unlimited error log.
+
+### RUN-008 — Thin change signals and independent observation remain bounded
+
+**Accepted owner decisions (2026-10-24).** Push notifications MUST contain only a
+change signal and **no success/failure information**. They indicate that read-side
+information changed; the consumer obtains current information and recent activity
+through RUN-007. They are not an ordered result/error history. Notification
+coalescing or delivery does not clear read-side evidence or grant execution rights.
+
+Observation MUST be able to remain open after an analysis finishes or stops, so
+results and recent activity remain inspectable. Closing preview ends observation;
+it does not implicitly cancel execution. Notification attachment/detachment is
+separate from client read state. A last-seen cursor, if used by the selected read
+protocol, is client-owned ephemeral read position, not a durable server-managed
+preview session. Disconnect does not require erasing it, and the server need not
+infer frontend restart from a channel closing.
+
+Client caching and persistence are outside MicroDelta's responsibilities.
+Consumers may choose to retain or persist compatible read state and own its
+synchronization/model migration. There is no required in-memory-only client or
+prohibition on consumer persistence; no cache implementation is selected here.
+WebSocket is an illustrative channel, not a mandated transport or API.
+
+Optional throttling/coalescing MUST remain live under sustained changes: while
+attached, periodic change signals must permit reads without waiting for quiet,
+and a final coalesced change signal follows activity settling. This re-expresses
+the former latest-state delivery obligation through thin push and explicit pull;
+it does not put business state in the signal. Read-side freshness/status changes
+remain visible even with equal author data. No reliable replay of every signal
+is promised. Timer waits and reads MUST NOT renew claims, establish readiness or
+authorize expensive work. Exact pending-delivery behavior at disposal is open;
+normal trailing delivery does not mandate flushing a closing subscription or
+clearing client state.
 
 Updating an existing member's contribution MUST replace its prior contribution
 in a preview aggregate rather than count two result snapshots as two members.
-Settled aggregates MUST reflect established removals. Observation of selected
-fields MUST NOT require materializing every member's unrelated large payload.
+Settled aggregates MUST reflect established removals. Missing rediscovery alone
+is not established removal. Observation of selected fields MUST NOT require
+materializing every member's unrelated large payload. Stored views retain exact
+references; the ownership of lazy views after reader closure remains to specify.
 
-**Validation:** use a controlled clock to sustain arrivals across several throttle
-intervals, then stop. Observe periodic delivery and the final state; inspect
-actual payload reads and refresh work. Refresh one PR into another histogram
-bucket and verify it contributes once.
+**Validation:** [A-16c–g](acceptance.md#preview-observation-cases) use controlled
+clocks, failure/success reads, run completion/stop and channel detach. Assert no
+success/failure notification payload; observe periodic/trailing signals and pull
+latest/recent information. Refresh one member into another aggregate bucket and
+count it once, without unrelated payload loading or execution.
 
-**Open:** interval defaults, leading/trailing details, treatment of retained old
-members during an unfinished refresh, and storage-specific aggregate optimization.
-No general SQL query engine or incremental aggregate engine is selected.
+**Open:** read/listen attachment race, throttle defaults and leading/trailing
+details, in-flight/pending callback disposal, lazy-view ownership after closure,
+retained-member inclusion during unfinished discovery and aggregate optimization.
+These choices do not reopen independent observation lifetime or assign consumer
+cursor/cache lifecycle to the server. No general query/aggregation engine is
+selected. See the [decision and readiness plan](../plans/preview-observation.md).
 
 ## Failure, retry, and cancellation
 
@@ -703,7 +755,10 @@ The CLI MUST let the operator inspect progressing values, visible errors and
 coverage, retry reasons/eligibility, and observed usage sufficiently to decide
 whether to stop, adjust the analysis, and start a later run. Prior values MUST
 not hide failed refreshes. Stop requests use RUN-014; attaching a display or
-resource sink must not change execution or retry policy.
+resource sink must not change execution or retry policy. Inspection remains
+available after execution ends under RUN-008. Thin push prompts read-side
+inspection of current/recent information; it carries no success/failure payload.
+CLI delivery does not assign consumer cache persistence to the library.
 
 **Validation:** a run with successful, failed, waiting, and stale-preview members
 remains inspectable; its resource gaps remain visible. First and second interrupts
@@ -877,7 +932,7 @@ silently filled by old exploratory signatures or expanded into new products.
 | --- | --- | --- |
 | Scoped lifetime across lazy iteration and recovery | Run Supervision with Definition & Binding | RUN-001, RUN-002 |
 | Source-specific discovery closure and subsequent updates | Run Supervision and source adapters, accepted through Reuse Resolution | RUN-003–RUN-005 |
-| Preview types, coalescing/error lifetime, aggregate loading | Observation boundary with Materialization | RUN-006–RUN-008, CLI-004 |
+| Preview read/activity shapes, signal coalescing, reader resources and aggregate loading | Observation boundary with Materialization | RUN-006–RUN-008, CLI-004 |
 | Retry/long-deferral ownership and safe external-operation addressing | Run Supervision/adapters with Result History & Publication | RUN-011–RUN-013 |
 | Soft-stop boundary, shared cancellation, and publication race | Run Supervision with Result History & Publication | RUN-014, RUN-015 |
 | Trial namespaces, external destinations, optional promotion | Run Supervision with storage/history ports | RUN-016–RUN-018 |

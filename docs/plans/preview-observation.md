@@ -1,153 +1,125 @@
-# Preview observation: proposed decisions for issue 165
+# Preview observation: accepted direction and remaining design
 
-Status: **Proposal; no new behavior is accepted or implemented by this document.**
-[Issue 165](https://github.com/mike-north/microdelta/issues/165) remains dependent
-on owner decisions. This plan develops its consumer questions under
-[RUN-006–008](../spec/operations.md#run-006--preview-access-does-not-authorize-recomputation),
-[CLI-001](../spec/operations.md#cli-001--read-only-inspection-is-an-explicit-delivery-checkpoint)
-and [CLI-004](../spec/operations.md#cli-004--inspection-supports-intervention-without-concealing-errors).
-Those contracts govern; the alternatives below do not silently amend them.
+Status: accepted owner decisions from 2026-10-24 for
+[issue 165](https://github.com/mike-north/microdelta/issues/165), with explicit
+remaining choices. This is a contract/readiness revision, not delivered behavior
+or a runtime implementation claim. [RUN-006–008](../spec/operations.md#run-006--preview-access-does-not-authorize-recomputation)
+and [CLI-004](../spec/operations.md#cli-004--inspection-supports-intervention-without-concealing-errors)
+own behavior; [A-16a–g](../spec/acceptance.md#preview-observation-cases) own required
+outcomes. API spellings, storage schemas and transport are not selected here.
 
 ## Consumer and meaning
 
-An operator needs to answer three separate questions: what value can I inspect,
-what does the recorded evidence establish about it, and what happened while
-trying to improve it? A previous value, a current acceptance, and a failed
-attempt are different facts. A preview presents them together without acquiring
-permission to evaluate the analysis.
+An operator needs to inspect available results and recent activity while deciding
+whether to continue, and after execution finishes or stops. The preview can mix
+current snapshots with values retained from a prior analysis. It must identify
+which retained values are **stale**: potentially stale until successfully verified
+not stale, not proven wrong or different. Successful verification can clear stale
+without changing author data. Mere member-identity rediscovery is insufficient
+where the governing reuse policy requires verification.
 
-The following distinctions are already required, not new choices:
+The owner treats incoming snapshots as current/newly fetched for this display;
+no third “newly fetched but unverified” display category was accepted. Formal
+source acceptance, downstream validation and complete-success coverage remain
+separate: a current snapshot in a preview does not prove the whole graph accepted
+or authorize evaluation. Absence also remains separate from the author value;
+zero, empty data and a successful selected undefined are not absence sentinels.
+The current alpha result-root boundary remains unchanged: wrapped/selected
+undefined controls do not establish bare-root undefined publication support.
 
-- Availability is separate from the author value. Empty data, zero and an
-  undefined selected value cannot be absence sentinels.
-- An available result may be stale or unverified. Recorded acceptance must name
-  its evaluation scope; a reader cannot declare it current by invoking policy.
-- A failed refresh preserves prior data with stale status and the error. With
-  no prior result, absence and the error remain visible. Verified evaluation
-  reports the failure instead of accepting a stale fallback.
-- Observation does not dispatch, refresh, retry, acquire or renew claims, or
-  publish acceptance. Disposing a display does not cancel execution.
-- Throttling periodically delivers the latest state during sustained activity
-  and delivers the final coalesced state after activity settles. Equal author
-  data cannot suppress a selected status change.
+## Accepted decisions and supersession
 
-The current alpha result-root decision in
-[issue 156](https://github.com/mike-north/microdelta/issues/156#issuecomment-6360538071)
-remains in force. A wrapped or selected undefined value tests the distinction
-from absence; it does not establish support for publishing bare-root undefined.
-The full-target result domain is a separate acceptance boundary.
+| Question | Accepted direction and rationale | Boundary still open |
+| --- | --- | --- |
+| Failure followed by success before a notification | Push says only that information changed, with **no success/failure information**. Pull supplies latest information and recent activity, so signal order is not the order of business events | Query shape, ordering evidence, recent-activity retention and gap behavior; no lossless notification/event-log promise |
+| Run completion or stop | Observation has an independently owned lifetime; execution ending does not close inspection of results/recent activity. Closing preview ends observation | Reader API, attachment/read race, lazy-view ownership and resources after reader closure |
+| Mixed current and prior values | Current snapshots and stale retained values coexist with clear freshness indication; stale means potentially stale until verified | Public discriminants, evaluation-scope representation and member policy during incomplete discovery |
+| Notification disconnect and cursor | Subscription/channel lifetime is distinct from client read position. A cursor is client-owned read state, not a durable server-managed preview session | Optional cursor/query representation, validity/gap rules and callback-disposal race; disconnect does not mandate erasing client state |
+| Client caching/persistence | Outside MicroDelta responsibility; consumers may choose storage and own synchronization/model migration | No in-memory-only requirement, persistence prohibition, cache implementation or migration system follows |
+| Transport | WebSocket was an illustrative notification channel | No WebSocket API, transport implementation or terminal/GUI toolkit selected |
 
-## Proposed choices for owner review
+The earlier proposal recommended an observer-delivery-relative “failure since
+last delivery” indication. Thin change signals supersede that push-side design;
+recent failure/success information belongs in read-side evidence. A latest-value-only
+read would omit the accepted recent-activity need. Notifications may be coalesced
+or debounced; their delivery neither establishes event order nor clears retained
+error/activity evidence. No reliable replay of every signal is promised.
 
-### Failure visibility through coalescing
+The earlier independently owned reader recommendation is accepted at the
+user-facing lifetime level. Its proposed rule that lazy loads fail after reader
+closure was **not** accepted; neither indefinite resource retention for escaped
+views nor that failure rule is selected by implication.
 
-Suppose value A is followed by a failed refresh and then a successful equal-valued
-result B, all before the next throttled delivery. B is current; marking it stale
-would be false. Dropping every indication of the failure may also prevent the
-operator from understanding the intervening problem.
+The earlier disposal alternatives—discard pending delivery or flush before
+closing—remain unresolved for concrete callback/timer behavior. Closing a channel
+does not decide whether the consumer clears its cursor or cached values. The
+initial discussion of keeping preview client state in memory only was explicitly
+superseded: MicroDelta does not own the consumer's storage policy. The ephemeral
+cursor direction rejects a library-owned durable client session; it is not a
+ban on a consumer persisting its own compatible read state.
 
-**Recommendation:** deliver the latest state with a bounded indication that a
-refresh failed since the observer's previous delivery. Clear that indication
-after delivery independently of B's successful status. Delivery does not clear an
-unresolved current refresh error; that error remains part of the current state.
-This is not an unbounded
-event log or a promise to replay every exception. Recorded attempt evidence
-remains the authority for inspection; notifications need not contain author data
-or raw error text.
+## Concrete examples and proof boundaries
 
-**Alternative:** deliver current state only, allowing recovery to clear an
-undelivered error, with earlier failures available through explicit history
-inspection. This avoids delivery-relative state but the live display may never
-show the failed refresh. RUN-007 leaves this retention choice open. The owner
-must select the intended failure-visibility guarantee before implementation,
-including the baseline indication for an observer attaching after recovery.
+1. A value A is followed by a refresh failure and a successful equal-valued B
+   before a coalesced change signal. That signal contains no result/error status.
+   Reading current information shows B, while querying the retained recent
+   activity can reveal failure then success using read-side evidence. Neither
+   signal order nor equal author data erases that distinction. Exact retention,
+   ordering and completeness/gap semantics must be specified before implementation.
+2. A preview displays current member A and retained stale member B. Later
+   successful verification of B returns equal data: B can stop being stale without
+   a value change. The reader performs no source refresh or acceptance write.
+   Not-yet-rediscovered membership is not an established removal; default inclusion
+   of old contributions during incomplete discovery remains a bounded choice.
+3. Execution stops; the preview still reads available values and recent activity.
+   Detaching the notification channel ends that subscription but does not cancel
+   execution or command a client cursor reset. On reconnection the consumer can
+   request a fresh baseline or use compatible retained read state under the
+   eventual query contract; no durable server-side preview session is required.
+   The server need not infer frontend restart from a transport disconnect.
 
-### Observation lifetime
-
-The [M6 checkpoint](../milestones.md#m6--usable-cli-and-inspection-checkpoint)
-already requires a separate inspection process without author callbacks.
-Permanent run-only access cannot fulfill that target.
-
-**Recommendation:** give read-side observation an explicitly owned lifetime
-independent of an execution run. A run's display can use the same meanings; run
-completion does not silently close an independently opened reader. Closing the
-reader releases its own resources. Under this recommendation, previously delivered
-lazy views are owned by that reader: later loads after closure fail clearly, while
-already detached data remains ordinary caller-owned data. Retaining resources
-for escaped lazy views is an alternative lifetime choice, not an implicit promise.
-A new process opens a new reader and obtains
-a truthful baseline from retained evidence; no durable notification replay or
-cross-process subscription mechanism is selected here.
-
-**Alternative:** keep live delivery attached to a run and separately open a
-retained-state reader with the same preview meanings. This may reuse existing
-run signals but needs explicit semantic parity and reattachment rules. Both
-options must prevent a baseline/read-to-listen gap from silently losing a change.
-Missing currency or attempt evidence remains unknown, not accepted success.
-
-### Disposal and final delivery
-
-**Recommendation:** disposal ends delivery immediately and discards an undelivered
-coalesced state. No callback begins after disposal returns. This supports ordinary
-consumer teardown without a surprise final callback. Normal quiescence while
-still attached must deliver the final state under either choice.
-
-**Alternative:** flush the pending state before closing. This preserves the last
-update at explicit teardown, but closing can invoke consumer code and may need
-an asynchronous completion boundary. The owner must choose rather than inheriting
-an accidental timer behavior. Neither choice changes execution or retry policy.
-
-### Members during incomplete discovery
-
-A member not yet rediscovered is not an established removal.
-
-**Recommendation:** retain its last contribution as explicitly stale, with
-incomplete population coverage visible, until evidence establishes replacement
-or removal. A newer available contribution replaces the old contribution by member
-identity with its own explicit status, even when unverified or equal in data.
-Acceptance is not a prerequisite for updating a preview. The display must not claim a
-complete population while discovery remains open.
-
-**Alternative:** omit not-yet-rediscovered contributions while visibly reporting
-incomplete coverage. This avoids displaying old contributions but can make a
-partial total temporarily shrink. Either choice preserves established removal
-and forbids interpreting absence so far as proof of absence.
+These examples are intended outcomes, not passing runtime evidence. Consumers
+remain responsible for their cache contents and reconnection/migration choices;
+MicroDelta must provide honest read-side freshness and explicit query limits,
+not reconcile consumer storage. Exact historical references keep their meaning.
 
 ## Owners and implementation boundaries
 
 History supplies recorded result, attempt and acceptance evidence. Materialization
-loads selected values at exact references; it does not decide freshness. The
-observation boundary composes those facts and owns delivery policy. Machine
-supplies host timing capabilities, not throttle or retry policy. A display and
-its disposal never become execution authority.
+loads selected values at exact references and does not decide freshness. The
+observation boundary composes those facts into read-side information and thin
+change signals. Machine supplies host timing capabilities, not throttle or retry
+policy. A display and its disposal never become execution authority.
 
-Envelope construction must not load unrelated member payloads or compare whole
-result trees merely to detect framework-status changes. A delivered view backed by
-a stored result must retain its exact reference so later selected reads cannot mix
-publications. Provisional calculations and preview aggregates need not themselves
-be completed History results; their input views retain that reference discipline.
-Thin lifecycle events can signal a possible change; they do not by themselves
-establish durable state or permission to include payloads in events.
+Observation must not dispatch, refresh, retry, acquire/renew claims or publish
+acceptance. Constructing preview information must not load unrelated large payloads
+or compare entire result trees merely to notice framework-status changes. Stored
+value views retain exact references so selected reads cannot mix publications.
+Provisional displays and aggregates need not themselves be completed History
+results, and their usability is not complete-success evidence.
 
 [Issue 166](https://github.com/mike-north/microdelta/issues/166) separately owns
-nonadditive resource-state identity, windows, ordering and expiry.
-[Issue 167](https://github.com/mike-north/microdelta/issues/167) owns CLI commands,
-public read-side composition, output and interrupt behavior; its complete
-checkpoint depends on both 165 and 166. This proposal selects no method names,
-terminal toolkit, storage schema, general aggregation engine or new host.
+resource-state reporting/retention; its newer owner decisions are not selected or
+rejected here. [Issue 167](https://github.com/mike-north/microdelta/issues/167) owns
+CLI commands, public composition, formats and interrupts. Its complete checkpoint
+consumes these observation semantics and resource reporting; documenting this
+plan does not make the full CLI ready wholesale.
 
-## Decision and proof boundary
+## Remaining design and implementation readiness
 
-No runtime test has been run for this proposal. Before implementation, record the
-owner's selected alternatives and rationale in the owning contract, then derive
-behavioral tests from those choices. Preserve the rejected alternatives and the
-conditions that would justify revisiting them.
+| Slice | Accepted outcomes and test-first basis | Readiness recommendation |
+| --- | --- | --- |
+| Read-side availability/freshness and current error | A-16a/b/f: absent vs successful values; current/stale provenance; equal-data verification; failed refresh retains stale prior value/error; readonly exact selected reads | Ready for a bounded implementation-design issue. Choose discriminants and evaluation-scope mapping against existing acceptance contracts before behavioral/type tests; do not add a third fetched-unverified display category |
+| Current information plus recent activity | A-16c/f: failure then success remains inspectable through retained read evidence, independent of signal order; read-only inspection | Semantic purpose accepted. Specify query shape, evidence ordering, retention, gap/baseline behavior and cursor validity before calling the implementation contract ready. No mandatory snapshot-plus-cursor API is chosen |
+| Thin live change signals and independent observation | A-16c/d/e: no success/failure payload, coalescing liveness, reading after execution ends, detach does not own cursor/cache/cancellation | Ready for bounded lifetime/delivery design. Select attachment/read race handling, throttle interval/defaults and pending callback disposal behavior, and separately settle lazy-view ownership; no transport selection required by this record |
+| Aggregate member projection | A-16g: replacement counts once, established removal disappears, selected fields avoid unrelated loads, incomplete coverage stays explicit | Existing invariant owners remain. Decide retained-member inclusion during unfinished discovery and aggregate implementation scope before pickup; a general incremental-query engine is not selected |
+| Consumer persistence, WebSocket transport and full GUI | Client-owned storage and a transport-neutral library contract | Not requirements of this issue; do not claim that acceptance mandates implementation or prohibits a consumer choosing these |
 
-The acceptance matrix must include failed refresh with and without prior data;
-equal-data recovery within one throttle interval; late attachment; run completion
-and reader disposal; periodic and trailing delivery with a controlled clock;
-status-only changes; open discovery with retained members; replacement and
-established removal; and selected-field I/O. Rejecting dispatch, source and
-mutation ports must remain untouched during observation. A separate process must
-inspect recorded evidence without loading analysis callbacks. A passing wrapper
-undefined control must not be reported as bare-root result-domain acceptance.
+The supervisor should split or refine readiness only for these contained slices;
+issue 165 as a whole still has unresolved author-visible and lifecycle choices.
+No runtime claim/label, paid-provider request, issue mutation or publication is
+part of this local documentation revision. When implementing, use rejecting
+execution/mutation ports, controlled clocks and read-load counters, observe the
+expected test failures first, then run package/type/lint checks and independent
+review. Documentation link/consistency checks establish only this record's
+internal coherence.

@@ -39,7 +39,7 @@ and rename display labels. Nothing depends on surviving closures/tags.
 | A-13 Cancellation | Soft then hard stop, provider unsupported, commit race | No unwanted future admissions, no partial success, honest remote state | M5/M6 |
 | A-14 Accounting | Duplicate/lost acknowledgment, crash, unreported usage | Durable known observations exactly once; unknown not zero | M5 |
 | A-15 Declaration boundaries | Own, sibling, public, beta, hidden-type leak, source bypass | API Extractor rollups plus real compiler positive/negative fixtures; missing declarations and forbidden source imports fail for the expected reason | M0.5 |
-| A-16 Explain/CLI isolation | Observe current, old, missing, uncertain downstream data | No admitted computation/claims/writes merely by viewing | M6 |
+| A-16 Explain/CLI isolation and preview | Observe current, stale, missing and recent activity; coalesced signals and execution ending | A-16a–g below; no admitted computation/claims/writes merely by viewing | M6 |
 | A-17 Materialization/scale | Large unread payload, several narrow consumers, early-stop loop | Instrumented loads/memory; fingerprint-only positive control | M2/M7 |
 | A-19 Admission/middleware | Budget refusal, cached hit, throwing observer, check-only miss | Hits served, misses refused before claims, committed success preserved | M3/M5 |
 | A-18 Context lifecycle | Concurrent scopes, thrown nested frame, detached callback after close, repeated standalone fresh captures in a continuing caller | No cross-run leakage; late use fails clearly; completed captures do not retain a distinct host context per entry after observers/results become unreachable | M2/M5 and host lifecycle regression |
@@ -57,6 +57,23 @@ universal platform instance count or elapsed-time limit is specified.
 Language-neutral [restart cases](artifacts/reuse-cases.json) define concrete
 inputs and expected semantic outcomes for A-02/A-04/A-05. They are fixture data,
 not executable tests or a selected stored record shape.
+
+## Preview observation cases
+
+These are required outcomes for RUN-006–008 and CLI-004, not recorded passing
+runtime tests. The [decision plan](../plans/preview-observation.md) distinguishes
+accepted semantics from query/retention/lifetime choices still to specify. Use
+controlled clocks and retained evidence, without paid providers or author callbacks.
+
+| Case | Controlled input | Required assertions and limits |
+| --- | --- | --- |
+| A-16a — Value and failure | Successful zero/empty/selected undefined, no result, failed refresh with and without a prior value | Availability is separate from author data. Failed refresh preserves stale prior data plus error, or absence plus error. Verified read reports failure and never accepts stale fallback. Selected/wrapped undefined does not prove bare-root undefined publication support |
+| A-16b — Mixed freshness | Current member A and retained stale B; B is later successfully verified with equal data; compare mere identity rediscovery | Stale means potentially stale, not proven wrong. Successful verification clears stale without requiring changed author data; identity alone does not substitute for required verification. No third fetched-but-unverified display category is introduced; source/downstream acceptance remains separate and is never fabricated by preview |
+| A-16c — Thin push and recent recovery | Prior A, refresh failure, then equal-valued successful B before a coalesced notification; late attachment reads within the supported recent-activity window | Notifications contain no success/failure information. Current read presents B; retained recent-activity read reveals failure then success independently of signal order. Coalescing/delivery cannot clear that evidence. Test the selected ordering, retention and gap contract before claiming completion; no unlimited/lossless event history or fixed cursor API is implied |
+| A-16d — Independent observation and client state | Keep preview open after run completion and stop; detach/reconnect only notification channel while consumer read state survives; separately close reader | Results/recent information remain inspectable after execution ends. Closing preview ends its observation without cancelling execution. Channel detach does not require cursor/cache erasure or a durable server session. Consumer persistence is neither required nor prohibited. Specify pending-callback and escaped-lazy-view behavior before implementation; neither disposal-flush nor lazy-load failure is selected here |
+| A-16e — Sustained and trailing signal | Controlled clock sustains changes across throttle intervals then quiesces, while subscription remains attached; author data may stay equal while freshness changes | Periodic thin signals allow current/recent reads without waiting for quiet; a trailing coalesced signal follows quiescence. Equal data does not hide freshness/status changes on read. Signal counts/order do not claim event replay; timer/delivery invokes no execution or claim renewal. Pending signal behavior on disposal remains a separate design choice |
+| A-16f — Read-only exact projection | Repeated reads and a separate inspection process with rejecting dispatch/source/retry/claim/write ports; instrument selected payload loads | Reads never invoke forbidden ports or load analysis callbacks. Stored views keep exact references and cannot silently follow later publications; selected fields avoid unrelated large loads. Missing current evidence is not converted to successful acceptance; no synthetic activity is created to make display current |
+| A-16g — Aggregate membership | Update member into a different bucket, establish removal, then leave discovery unfinished with an old member not yet rediscovered | Replacement contributes once; established removal disappears from settled aggregate. Incomplete discovery cannot claim complete population or removal from absence-so-far. Retained-member inclusion policy remains to select explicitly; neither generic incremental-query engine nor premature deletion is implied |
 
 ## Weekly roster workflow
 

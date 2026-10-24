@@ -1,0 +1,49 @@
+watchman warning: Recrawled this watch 19 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '<checkout>' ; watchman watch-project '<checkout>'`
+
+  console.log
+    {"counterfactual":{"phase":"b","counts":{"a":0,"b":0,"aggregate":1,"cpu":0,"aggregateIterations":100000,"cpuIterations":0},"results":{"aggregate":{"kind":"published","reference":{"kind":"completed-result","locator":"mdh1|[\"cost-neutrality\",\"cost-neutrality\",\"synthetic\",5]"},"data":{"total":500000}},"cpu":{"kind":"reused","reference":{"kind":"completed-result","locator":"mdh1|[\"cost-neutrality\",\"cost-neutrality\",\"synthetic\",4]"},"data":{"total":700000}},"a":{"kind":"reused","reference":{"kind":"completed-result","locator":"mdh1|[\"cost-neutrality\",\"cost-neutrality\",\"synthetic\",2]"},"data":{"score":2,"note":"original"}},"b":{"kind":"reused","reference":{"kind":"completed-result","locator":"mdh1|[\"cost-neutrality\",\"cost-neutrality\",\"synthetic\",3]"},"data":{"score":3,"note":"stable"}}}}}
+
+      at Object.<anonymous> (validation.test.mjs:45:11)
+
+(node:12266) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL scratch/gap-hunt/cost-neutrality/validation.test.mjs
+  ● unchanged cost oracle rejects legitimate extra aggregate execution
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+        "a": 0,
+    -   "aggregate": 0,
+    -   "aggregateIterations": 0,
+    +   "aggregate": 1,
+    +   "aggregateIterations": 100000,
+        "b": 0,
+        "cpu": 0,
+        "cpuIterations": 0,
+      }
+
+      13 | }
+      14 | function counts(value, a, b, aggregate, cpu) {
+    > 15 |   expect(value.counts).toEqual({ a, b, aggregate, cpu, aggregateIterations: aggregate * 100000, cpuIterations: cpu * 100000 });
+         |                        ^
+      16 | }
+      17 | function retained(next, previous, slots) {
+      18 |   for (const slot of slots) expect(next.results[slot].reference).toEqual(previous.results[slot].reference);
+
+      at counts (validation.test.mjs:15:24)
+      at Object.<anonymous> (validation.test.mjs:46:3)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 1 skipped, 2 total
+Snapshots:   0 total
+Time:        0.246 s, estimated 1 s
+Ran all test suites.
+Test results written to: ../../../../../..<temporary-1>/counterfactual-oracle.json

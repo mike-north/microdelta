@@ -1,0 +1,128 @@
+{
+  "productPin": "e59c64d0e1c607b5a4a8ae1fa124b1be5cdc2573",
+  "commands": [
+    {
+      "name": "install",
+      "command": [
+        "npm",
+        "ci"
+      ],
+      "expected": 0,
+      "exit": 0
+    },
+    {
+      "name": "build",
+      "command": [
+        "npm",
+        "run",
+        "build:packages"
+      ],
+      "expected": 0,
+      "exit": 0
+    },
+    {
+      "name": "types",
+      "command": [
+        "node_modules/.bin/tsc",
+        "-p",
+        "scratch/gap-hunt/cost-neutrality/tsconfig.json"
+      ],
+      "expected": 0,
+      "exit": 0
+    },
+    {
+      "name": "lint",
+      "command": [
+        "node_modules/.bin/eslint",
+        "-c",
+        "scratch/gap-hunt/cost-neutrality/eslint.config.mjs",
+        "scratch/gap-hunt/cost-neutrality/worker.ts"
+      ],
+      "expected": 0,
+      "exit": 0
+    },
+    {
+      "name": "matrix",
+      "command": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/cost-neutrality/jest.config.mjs",
+        "--runInBand"
+      ],
+      "expected": 0,
+      "exit": 0
+    },
+    {
+      "name": "negative-cold",
+      "command": [
+        "node",
+        "scratch/gap-hunt/cost-neutrality/dist/worker.js",
+        "<temporary-6>",
+        "a"
+      ],
+      "expected": 0,
+      "exit": 0
+    },
+    {
+      "name": "counterfactual-types",
+      "command": [
+        "node_modules/.bin/tsc",
+        "-p",
+        "scratch/gap-hunt/cost-neutrality/tsconfig.json"
+      ],
+      "expected": 0,
+      "exit": 0
+    },
+    {
+      "name": "counterfactual-oracle",
+      "command": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/cost-neutrality/jest.config.mjs",
+        "--runInBand"
+      ],
+      "expected": 1,
+      "exit": 1
+    },
+    {
+      "name": "restored-types",
+      "command": [
+        "node_modules/.bin/tsc",
+        "-p",
+        "scratch/gap-hunt/cost-neutrality/tsconfig.json"
+      ],
+      "expected": 0,
+      "exit": 0
+    },
+    {
+      "name": "restored-oracle",
+      "command": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/cost-neutrality/jest.config.mjs",
+        "--runInBand"
+      ],
+      "expected": 0,
+      "exit": 0
+    },
+    {
+      "name": "restored-matrix",
+      "command": [
+        "node",
+        "--experimental-vm-modules",
+        "node_modules/jest/bin/jest.js",
+        "--config",
+        "scratch/gap-hunt/cost-neutrality/jest.config.mjs",
+        "--runInBand"
+      ],
+      "expected": 0,
+      "exit": 0
+    }
+  ]
+}

@@ -1,0 +1,80 @@
+{
+  "productPin": "e59c64d0e1c607b5a4a8ae1fa124b1be5cdc2573",
+  "requirements": [
+    "TEST-6",
+    "DOM-1"
+  ],
+  "kind": "finite supplemental executed cost-placement witness",
+  "historical74Changed": false,
+  "aggregateKind": "ordinary memo with two explicit cheap memo children",
+  "iterationsPerCpuBody": 100000,
+  "phaseBodyCounts": {
+    "a": [
+      1,
+      1,
+      1,
+      1
+    ],
+    "b": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "c": [
+      1,
+      0,
+      0,
+      0
+    ],
+    "d": [
+      1,
+      0,
+      1,
+      0
+    ],
+    "e": [
+      0,
+      0,
+      0,
+      1
+    ]
+  },
+  "bodyCountOrder": [
+    "cheapA",
+    "cheapB",
+    "aggregate",
+    "cpu"
+  ],
+  "capturedCommands": 11,
+  "allExpectedExitsMatched": true,
+  "counterfactual": "legitimate tracked implementation invalidation with equal output; zero-work oracle rejected",
+  "restoration": {
+    "exactSourceRestored": true,
+    "exactEmittedWorkerRestored": true,
+    "sourceSha256": "d8234aae46a6639656c746c05af568351a5db8cc6ed7b0d43290f953a03f6112",
+    "negativeStore": "<temporary-3>",
+    "primaryError": null,
+    "restorationErrors": []
+  },
+  "linuxExecuted": false,
+  "paidProviderExecuted": false,
+  "productChanged": false,
+  "wholeSpecClaim": false,
+  "runtimeSource": "e59c64d0e1c607b5a4a8ae1fa124b1be5cdc2573",
+  "proofHead": "0de2533e74b1a0598ecedbd9e4d9b25eabfe0072",
+  "finalCapture": "results-final",
+  "preservedInitialCapture": "results",
+  "finalPreflightSourceFiles": 809,
+  "inheritedOracleEnvironmentCleared": true,
+  "commandTimeoutSeconds": 900,
+  "workerTimeoutMs": 30000,
+  "exactJestInventories": 4,
+  "syntheticCorruptionsRejected": [
+    "missing",
+    "load",
+    "wrong-census",
+    "runtime-suite",
+    "wrong-skip"
+  ]
+}

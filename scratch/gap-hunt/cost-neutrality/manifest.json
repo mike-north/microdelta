@@ -1,0 +1,173 @@
+{
+  "algorithm": "sha256",
+  "files": [
+    {
+      "path": "ASSERTIONS.md",
+      "sha256": "50c7662da9262d89aa4e28da9026211cd571b7218b40cd5aeb8c73ee9e67113c"
+    },
+    {
+      "path": "README.md",
+      "sha256": "0f9e076e0cbcd8c1c67f3c77222c5a0aefec9806e251da9142ad638f2e00a473"
+    },
+    {
+      "path": "eslint.config.mjs",
+      "sha256": "6860d974de678a270d0a529016983d876ebed05e73f77444f158b6603db42f83"
+    },
+    {
+      "path": "jest.config.mjs",
+      "sha256": "407e501401c0965cd1cb9a5da1ad4a1929c9f1985c957e34e4cc256435ea9ea1"
+    },
+    {
+      "path": "replay.py",
+      "sha256": "3cdde6447d499e5225d94c98e1d91e3a7d97df8bcf75f7425fe8d852c9568e00"
+    },
+    {
+      "path": "results/baseline.json",
+      "sha256": "dc2e8f441b64d1d3c3c82da33c93733051fa8abc5ede3888ed6fed2c6bc178d2"
+    },
+    {
+      "path": "results/build.log",
+      "sha256": "9eb1f0e1ba62cd61262041daf444feb22fd48ec57cb809914e03f96c4504a62d"
+    },
+    {
+      "path": "results/counterfactual-oracle.log",
+      "sha256": "c185c5829d281c9d4b863e33bce0dffe89725d850866b654d2f91a7a83cd4e4f"
+    },
+    {
+      "path": "results/counterfactual-types.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "results/install.log",
+      "sha256": "860d7fa65f63cecd45725c82f99cf693bbc12caa18c607e8d594a0163854f83b"
+    },
+    {
+      "path": "results/lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "results/matrix.log",
+      "sha256": "308061bc70eedabbd0eb3beff3fa64bdacf545b7f4b8d85291eeb39471fd4334"
+    },
+    {
+      "path": "results/negative-cold.log",
+      "sha256": "e1f8ab0ca6052dad03aaef10fd05c9b77c8fffcea694da8e14e96c9d39f83870"
+    },
+    {
+      "path": "results/receipt.json",
+      "sha256": "b2fbedf10cc56958edc30b33a514d85509b956f8fbc1e3e9cdbbcb5de3df6e11"
+    },
+    {
+      "path": "results/restoration.json",
+      "sha256": "56a0d8478a9a89a32da71719af52aa664ff22560cad8ca40d4704f77ef7c58b1"
+    },
+    {
+      "path": "results/restored-matrix.log",
+      "sha256": "314ce96cb806742788f85ea51a64ee7febc92fad070c8af9264cfb0a96e52a93"
+    },
+    {
+      "path": "results/restored-oracle.log",
+      "sha256": "523c311ac281c4776584b46d81bc653e2edf0ee9decfee061e1a45a3e80d6786"
+    },
+    {
+      "path": "results/restored-types.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "results/types.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "results-final/baseline.json",
+      "sha256": "dc2e8f441b64d1d3c3c82da33c93733051fa8abc5ede3888ed6fed2c6bc178d2"
+    },
+    {
+      "path": "results-final/build.log",
+      "sha256": "9eb1f0e1ba62cd61262041daf444feb22fd48ec57cb809914e03f96c4504a62d"
+    },
+    {
+      "path": "results-final/counterfactual-oracle.json",
+      "sha256": "89ee0a454db93229fb93b9c6854eda4582ab7bc19014a4cf1545c0676d4649c9"
+    },
+    {
+      "path": "results-final/counterfactual-oracle.log",
+      "sha256": "7d7986e2357aeff70c42b6ec5b3b3ad4679aae86f4f39d3318d01d73abff6a13"
+    },
+    {
+      "path": "results-final/counterfactual-types.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "results-final/guard-qualification.json",
+      "sha256": "eb9a73ac0fdb4bb49371449853f846e763d0a6f45b4e053451233f100ab0c7db"
+    },
+    {
+      "path": "results-final/install.log",
+      "sha256": "a60bcfe865802715707f5aea3135cf13edb92ab70dcc35cb66dea4033c5af6dd"
+    },
+    {
+      "path": "results-final/lint.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "results-final/matrix.json",
+      "sha256": "98d982f7f50d17e9a526145b7b4abeac5e136767e295cf2a62981b2cf2e15674"
+    },
+    {
+      "path": "results-final/matrix.log",
+      "sha256": "51c202b3575064e2cc68817bbe75c909780efda7c052de095da57dfc94d36b7f"
+    },
+    {
+      "path": "results-final/negative-cold.log",
+      "sha256": "e1f8ab0ca6052dad03aaef10fd05c9b77c8fffcea694da8e14e96c9d39f83870"
+    },
+    {
+      "path": "results-final/receipt.json",
+      "sha256": "2ca370ddaa4f671640fb2e434e87165107c8c73b3b25aa1d0960b407ae94d7a4"
+    },
+    {
+      "path": "results-final/restoration.json",
+      "sha256": "6c044212bd81c13342fad7aff1f8a36851daf73781ecce4904d3a6848140947c"
+    },
+    {
+      "path": "results-final/restored-matrix.json",
+      "sha256": "39913e6dbdde41876b469db1d07942e1b6a3038184ad4a92897fd853b3c08f80"
+    },
+    {
+      "path": "results-final/restored-matrix.log",
+      "sha256": "11aeb68cccf0c421a4674e4bbdca3d26aef37227b487e4a810fa47c97dd3fd65"
+    },
+    {
+      "path": "results-final/restored-oracle.json",
+      "sha256": "3f9cb7495541c3fdb1af21a8b352a2e965e9956a120e9752bfcb0b9514ad6d84"
+    },
+    {
+      "path": "results-final/restored-oracle.log",
+      "sha256": "f28898196d3b631474b4d7ac1f0bfe3cbdec7377e998f6914b40c37a0b572038"
+    },
+    {
+      "path": "results-final/restored-types.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "results-final/types.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "summary.json",
+      "sha256": "a8d0cbfad4c14f839a9ec6730418d4f4d9a45ed49afe36444e043014e945a25f"
+    },
+    {
+      "path": "tsconfig.json",
+      "sha256": "876ff9659a510fa8642eb8bca03c492fabea3a29b78e84aecc6b8d841d7dc6df"
+    },
+    {
+      "path": "validation.test.mjs",
+      "sha256": "f127024e60b4873eea5421a390769b1eb1a07d3e5c5958e4f45cbdf2ff6c88c7"
+    },
+    {
+      "path": "worker.ts",
+      "sha256": "d8234aae46a6639656c746c05af568351a5db8cc6ed7b0d43290f953a03f6112"
+    }
+  ]
+}

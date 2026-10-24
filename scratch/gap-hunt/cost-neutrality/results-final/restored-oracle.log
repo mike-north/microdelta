@@ -1,0 +1,19 @@
+watchman warning: Recrawled this watch 19 times, most recently because:
+MustScanSubDirs UserDroppedTo resolve, please review the information on
+https://facebook.github.io/watchman/docs/troubleshooting.html#recrawl
+To clear this warning, run:
+`watchman watch-del '<checkout>' ; watchman watch-project '<checkout>'`
+
+  console.log
+    {"counterfactual":{"phase":"b","counts":{"a":0,"b":0,"aggregate":0,"cpu":0,"aggregateIterations":0,"cpuIterations":0},"results":{"aggregate":{"kind":"reused","reference":{"kind":"completed-result","locator":"mdh1|[\"cost-neutrality\",\"cost-neutrality\",\"synthetic\",1]"},"data":{"total":500000}},"cpu":{"kind":"reused","reference":{"kind":"completed-result","locator":"mdh1|[\"cost-neutrality\",\"cost-neutrality\",\"synthetic\",4]"},"data":{"total":700000}},"a":{"kind":"reused","reference":{"kind":"completed-result","locator":"mdh1|[\"cost-neutrality\",\"cost-neutrality\",\"synthetic\",2]"},"data":{"score":2,"note":"original"}},"b":{"kind":"reused","reference":{"kind":"completed-result","locator":"mdh1|[\"cost-neutrality\",\"cost-neutrality\",\"synthetic\",3]"},"data":{"score":3,"note":"stable"}}}}}
+
+      at Object.<anonymous> (validation.test.mjs:45:11)
+
+(node:12793) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+Test Suites: 1 passed, 1 total
+Tests:       1 skipped, 1 passed, 2 total
+Snapshots:   0 total
+Time:        0.266 s, estimated 1 s
+Ran all test suites.
+Test results written to: ../../../../../..<temporary-1>/restored-oracle.json

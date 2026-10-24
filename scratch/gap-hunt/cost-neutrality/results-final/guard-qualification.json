@@ -1,0 +1,11 @@
+{
+  "exactInventoriesAccepted": 4,
+  "syntheticCorruptionsRejected": [
+    "missing",
+    "load",
+    "wrong-census",
+    "runtime-suite",
+    "wrong-skip"
+  ],
+  "qualification": "Pure capture guards only; no product runtime repeated"
+}

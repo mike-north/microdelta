@@ -101,6 +101,47 @@ const plain = source<{ readonly total: number }>({ subject: 'plain', run: () => 
 declare const plainMember: IMemberOf<IFamily, typeof plain>;
 expectType<never>(plainMember);
 
+/** Collection-shaped data may use template-owned identity without a designated identity field. */
+interface IAnonymousContributor {
+  readonly id: number;
+  readonly authored: number;
+}
+type IAnonymousContributors = ICollectionResult<IAnonymousContributor>;
+const anonymousContributors = source<IAnonymousContributors>({
+  subject: 'anonymous-contributors',
+  run: () => ({ kind: 'retain' }),
+});
+const anonymousContributor = template({
+  slot: 'anonymous-contributor',
+  collection: anonymousContributors,
+  key: (member) => {
+    expectType<IAnonymousContributor>(member);
+    return `upstream:${member.id}`;
+  },
+  gate: ({ member }) => {
+    expectType<IView<IAnonymousContributor>>(member);
+    return member.authored > 0;
+  },
+  steps: (member) => ({
+    activity: member.source<number>({
+      subject: member.subject('activity'),
+      run: ({ member: view }) => ({ kind: 'fresh', data: view.authored }),
+    }),
+  }),
+});
+expectType<ISourceDeclaration<IFamily, number, IMemberBinding<IFamily, IAnonymousContributor>>>(anonymousContributor.steps.activity);
+expectError(template({
+  slot: 'anonymous-invalid-key',
+  collection: anonymousContributors,
+  key: (member) => member.id,
+  steps: (member) => ({
+    activity: member.source<number>({
+      subject: member.subject('activity'),
+      run: () => ({ kind: 'fresh', data: 1 }),
+    }),
+  }),
+}));
+
 // Templates: the custom key sees the raw member record; the gate sees memo bindings plus the member view.
 const contributor = template({
   slot: 'contributor',

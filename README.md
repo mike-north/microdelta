@@ -37,6 +37,10 @@ supported by that dependency.
 From the repository root, choose a store directory that does not already contain
 a previous example run:
 
+Before choosing a durable store location, review the [native store location
+guidance](docs/native-store-locations.md) for supported path spellings and the
+SQLite hard-link/WAL limitation.
+
 ```sh
 npm ci
 npm run build

@@ -701,6 +701,53 @@ describe('exact selected reading from the generated index', () => {
   });
 });
 
+describe('selected subtree SQL scope', () => {
+  test('nested subtree SQL returns only the selected result and branch, while a root read covers its full structure', () => {
+    const sqlite = observedSqlite();
+    const location = freshLocation();
+    const history = openHistory({ location, sqlite: sqlite.capability });
+    const lease = acquire(history);
+    const firstData = { target: { marker: 'first', nested: [1, undefined, 3] }, sibling: { marker: 'hidden' } };
+    const secondData = { target: { marker: 'second', nested: [4, undefined, 6] }, sibling: { marker: 'other' } };
+    const first = publish(history, lease, firstData, { key: 'first' });
+    const second = publish(history, lease, secondData, { key: 'second' });
+    const raw = openRaw(location);
+    const results = raw.prepare('SELECT result_id FROM history_results ORDER BY result_id').all();
+    expect(results).toHaveLength(2);
+    const firstId = results[0]?.result_id;
+    const secondId = results[1]?.result_id;
+    if (typeof firstId !== 'number' || typeof secondId !== 'number') {
+      throw new Error('Expected two exact result IDs');
+    }
+    const firstNodeIds = raw.prepare('SELECT node_id FROM history_nodes WHERE result_id = ? ORDER BY node_id').all(firstId).map((row) => row.node_id);
+    const secondNodeIds = raw.prepare('SELECT node_id FROM history_nodes WHERE result_id = ? ORDER BY node_id').all(secondId).map((row) => row.node_id);
+    expect(secondNodeIds).toEqual(firstNodeIds); // Equal local node IDs make the result predicate observable.
+    const siblingIds = raw.prepare('SELECT node_id FROM history_addresses WHERE result_id = ? AND address IN (?, ?)').all(
+      firstId, JSON.stringify([['p', 'sibling']]), JSON.stringify([['p', 'sibling'], ['p', 'marker']]),
+    ).map((row) => row.node_id);
+    expect(siblingIds).toHaveLength(2);
+
+    const start = sqlite.mark();
+    expect(encodeSnapshot(history.reader.readSubtree(first, path('target')))).toBe(encodeSnapshot(firstData.target));
+    const selected = sqlite.events(start).filter((event) => event.role === 'subtree-payload');
+    expect(selected).toHaveLength(1);
+    const selectedRows = selected[0]?.rows.map((row) => row.node_id) ?? [];
+    expect(selectedRows.length).toBeGreaterThan(0);
+    for (const siblingId of siblingIds) {
+      expect(selectedRows).not.toContain(siblingId);
+    }
+    expect(selected[0]?.values.slice(1)).toEqual([firstId, firstId, firstId]);
+    expect(sqlite.evidence(start).rootPayloadCells).toBe(0);
+    expect(encodeSnapshot(history.reader.readSubtree(second, path('target')))).toBe(encodeSnapshot(secondData.target));
+
+    const rootStart = sqlite.mark();
+    expect(encodeSnapshot(history.reader.readSubtree(first, []))).toBe(encodeSnapshot(firstData));
+    const rootRows = sqlite.events(rootStart).find((event) => event.role === 'subtree-payload')?.rows;
+    expect(rootRows?.map((row) => row.node_id).sort()).toEqual([...firstNodeIds].sort());
+    raw.close();
+  });
+});
+
 describe('valid-domain parity of the indexed reader', () => {
   /** Addresses covering present, absent, inherited, shadowed, hole, present-undefined and invalid selections. */
   const addresses: readonly (readonly IAddressSegment[])[] = [
@@ -823,6 +870,22 @@ describe('meaningful corruption is detected, never repaired', () => {
     const unfingerprinted = publishedPair();
     tamperUnchecked(unfingerprinted.location, `UPDATE history_addresses SET value_fingerprint = NULL WHERE result_id = 1 AND address = '[["p","profile"],["p","name"]]'`);
     expect(() => unfingerprinted.history.reader.resolveFingerprint(unfingerprinted.source, { kind: 'selected', operation: 'value', address: path('profile', 'name'), encoding: 'MDO1' })).toThrow(HistoryIntegrityError);
+  });
+
+  test('a selected subtree with a missing edge, child node or prototype node fails closed', () => {
+    const edgeless = publishedPair();
+    tamper(edgeless.location, `DELETE FROM history_edges WHERE result_id = 1 AND edge_kind = 'property' AND edge_key = 'name' AND parent_node = (SELECT node_id FROM history_addresses WHERE result_id = 1 AND address = '[["p","profile"]]')`);
+    expect(() => edgeless.history.reader.readSubtree(edgeless.source, path('profile'))).toThrow(HistoryIntegrityError);
+
+    const nodeless = publishedPair();
+    tamper(nodeless.location, `DELETE FROM history_nodes WHERE result_id = 1 AND node_id = (SELECT node_id FROM history_addresses WHERE result_id = 1 AND address = '[["p","profile"],["p","name"]]')`);
+    expect(() => nodeless.history.reader.readSubtree(nodeless.source, path('profile'))).toThrow(HistoryIntegrityError);
+
+    const location = freshLocation();
+    const history = openHistory({ location });
+    const reference = publish(history, acquire(history), domainRecord(), { key: 'prototype' });
+    tamper(location, `DELETE FROM history_nodes WHERE result_id = 1 AND node_id = (SELECT prototype_node FROM history_nodes WHERE result_id = 1 AND node_id = (SELECT node_id FROM history_addresses WHERE result_id = 1 AND address = '[["p","child"]]'))`);
+    expect(() => history.reader.readSubtree(reference, path('child'))).toThrow(HistoryIntegrityError);
   });
 
   test('recovery never reports a completed attempt whose exact result no longer resolves', () => {

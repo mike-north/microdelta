@@ -119,3 +119,5 @@ From a fresh Node24 checkout of this evidence branch, run `python3 scratch/gap-h
 - [localFilter](https://github.com/mike-north/microdelta/blob/9fdf8e8efcd379280e649fe3ba90fcb43e369a6d/scratch/gap-hunt/local-filter/REPORT.md)
 - [cpuNeutrality](https://github.com/mike-north/microdelta/blob/0ae938a4b4518333ecfff69e8dc24e451049c8fe/scratch/gap-hunt/cost-neutrality/README.md)
 - [literalGuideQualification](https://github.com/mike-north/microdelta/blob/62edd3fce225a664470aca650c180e50486446f4/scratch/gap-hunt/review-201/REPORT.md)
+
+Public carry qualifications replace the prior private Tracking assertion JSON path with `<private-local-assertion-json>`; its hash, historical artifact provenance and exact carried titles remain. Private raw qualification is preserved outside this artifact.

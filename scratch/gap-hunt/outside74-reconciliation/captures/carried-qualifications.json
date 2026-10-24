@@ -208,7 +208,7 @@
       "node": "v24.22.1",
       "platform": "macOS"
     },
-    "privateAssertionJson": ".worktrees/gap-hunt-review-187/scratch/gap-hunt/review-187/local-results/tracking-regression.json",
+    "privateAssertionJson": "<private-local-assertion-json>",
     "privateAssertionSha256": "42b4767ff3735a3dded6bd5dccf2cd410db78e43d9abead721ffca9b8b87e9f6",
     "committedLog": "scratch/gap-hunt/review-187/captures/tracking-regression.log",
     "committedLogSha256": "7767de2f4b69ca45b9e324c007a9d3e5da07abf4bc25adb7f7e437d51b5ea3cc",

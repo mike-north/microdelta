@@ -7,7 +7,7 @@
  * History over Node's real SQLite capability, because the hazard is SQLite's
  * cross-process locking while a new file is switched to write-ahead logging.
  * Every trial uses a fresh nonexistent file and every opener in every trial
- * must either open or fail with the typed `SqliteBusyError`; a raw driver error
+ * must either open or fail with History's typed `HistoryBusyError`; a raw driver error
  * or any other failure is a defect. No minimum success rate is required,
  * because a loaded host can legitimately exhaust the bounded busy wait.
  *
@@ -66,7 +66,7 @@ describe('concurrent first open of a new durable History store', () => {
   test.each([
     [2, 10],
     [4, 10],
-  ])('%i processes opening a new store together each open or fail with a typed SqliteBusyError, across %i trials', async (processes, trials) => {
+  ])('%i processes opening a new store together each open or fail with a typed HistoryBusyError, across %i trials', async (processes, trials) => {
     const directory = mkdtempSync(join(tmpdir(), 'microdelta-history-first-open-'));
     directories.push(directory);
     const rawFailures: IOpenerReport[] = [];
@@ -78,7 +78,7 @@ describe('concurrent first open of a new durable History store', () => {
       for (const report of await Promise.all(Array.from({ length: processes }, () => runOpener(location, startAt)))) {
         if (report.opened) {
           opened += 1;
-        } else if (report.name === 'SqliteBusyError') {
+        } else if (report.name === 'HistoryBusyError') {
           busy += 1;
         } else {
           rawFailures.push(report);

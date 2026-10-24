@@ -111,6 +111,47 @@ describe('keying by designated identity (COL-1)', () => {
 });
 
 describe('keying by custom key (COL-1)', () => {
+  test('COL-1/CMP-4: a custom string key can identify records without a designated identity field', () => {
+    const members = [{ id: 7, score: 3 }, { id: 8, score: 0 }];
+    const discovery = source<{ readonly members: readonly { readonly id: number; readonly score: number }[]; readonly status: 'complete' | 'open' }>({
+      subject: 'contributors:upstream',
+      run: () => ({ members, status: 'complete' }),
+    });
+    const calls = { key: 0, gate: 0, body: 0 };
+    const contributor = template({
+      slot: 'upstream-contributor',
+      collection: discovery,
+      key: (member) => {
+        calls.key++;
+        return `upstream:${member.id}`;
+      },
+      gate: ({ member }) => {
+        calls.gate++;
+        return member.score > 0;
+      },
+      steps: (member) => ({
+        score: member.source<{ readonly score: number }>({
+          subject: member.subject('score'),
+          run: ({ member: record }) => {
+            calls.body++;
+            return { score: record.score };
+          },
+        }),
+      }),
+    });
+    const composition = compose({
+      scope: 'contributors:upstream',
+      steps: [{ slot: 'contributors', declaration: discovery }],
+      templates: [contributor],
+    });
+
+    const result = composition.keyMembers('upstream-contributor', { members, status: 'complete' });
+    expect(result.status).toBe('keyed');
+    expect(keysOf(result)).toEqual(['upstream:7', 'upstream:8']);
+    expect(keyed(result).members[0]?.member).toBe(members[0]);
+    expect(calls).toEqual({ key: 2, gate: 0, body: 0 });
+  });
+
   test('COL-1: an explicit custom key overrides designated identity, even when that field is absent', () => {
     const built = buildKeyed({ customKey: true });
     const anonymous = { id: 'gh:1004', login: 'dee', authored: 1 };

@@ -2,8 +2,8 @@
  * Keyed collections and member keying (COL-1, CMP-4).
  *
  * A keyed collection is a retained source whose result carries its discovered
- * members and a completion status. The source declares which member field is
- * the designated identity; a fanout template may instead supply an explicit
+ * members and a completion status. The source may declare a member field as
+ * designated identity; otherwise a fanout template must supply an explicit
  * custom-key function. Keying turns one collection snapshot into member keys in
  * canonical order before any gate or member body runs. It is all-or-nothing: a
  * missing, non-string, empty or duplicate key rejects the whole snapshot with a
@@ -27,7 +27,7 @@ import type { IBindingFamily } from './family.js';
 export type ICollectionStatus = 'complete' | 'open';
 
 /**
- * The result shape of a keyed collection source: the discovered member records,
+ * The result shape a collection source uses: discovered member records,
  * in whatever order discovery produced them, and the completion status. Order
  * is not identity; members are keyed by designated identity or a custom key.
  * @alpha
@@ -70,8 +70,8 @@ export interface ICollectionIdentity {
 }
 
 /**
- * The member record type of a keyed collection source declaration, or `never`
- * when the declaration's result is not a keyed collection.
+ * The member record type of a collection-shaped source declaration, or `never`
+ * when the declaration's result does not carry members and completion status.
  * @alpha
  */
 export type IMemberOf<TFamily extends IBindingFamily, TCollection> =
@@ -161,7 +161,8 @@ export type IKeyedSnapshot =
 export interface IKeyStrategy {
   readonly template: string;
   readonly collection: string;
-  readonly identity: string;
+  /** The source's default identity field, absent when only a custom key can key this collection. */
+  readonly identity: string | undefined;
   readonly customKey: ((member: never) => unknown) | undefined;
 }
 
@@ -258,6 +259,9 @@ function memberKey(strategy: IKeyStrategy, member: object):
   | { readonly status: 'failed'; readonly failure: IFailure } {
   let raw: unknown;
   if (strategy.customKey === undefined) {
+    if (strategy.identity === undefined) {
+      return { status: 'failed', failure: { reason: 'missing-key', key: undefined, detail: undefined } };
+    }
     raw = ownData(member, strategy.identity).value;
   } else {
     try {
@@ -284,7 +288,7 @@ function memberKey(strategy: IKeyStrategy, member: object):
 function rejection(strategy: IKeyStrategy, failure: IFailure): IKeyedSnapshot {
   const { reason, key, detail } = failure;
   const custom = strategy.customKey !== undefined;
-  const origin = custom ? 'the custom key' : `designated identity field ${JSON.stringify(strategy.identity)}`;
+  const origin = custom ? 'the custom key' : strategy.identity === undefined ? 'a designated identity' : `designated identity field ${JSON.stringify(strategy.identity)}`;
   const where = `Collection ${strategy.collection} (template ${strategy.template})`;
   const remedy = custom ? "Revise the template's `key` option." : "Declare a custom key with the template's `key` option.";
   const problems: Readonly<Record<IKeyingFailure, string>> = {
@@ -321,9 +325,9 @@ function ownData(value: unknown, key: string): { readonly present: boolean; read
 }
 
 /**
- * Read and validate a source's `collection` option: a plain record whose own
- * `identity` data property is a nonempty string. Accessors are rejected
- * without being invoked, and the author's record is never retained.
+ * Read and validate a source's optional `collection` option: a plain record
+ * whose own `identity` data property is a nonempty string. Accessors are
+ * rejected without being invoked, and the author's record is never retained.
  * @param value - The captured option value, or undefined when absent.
  * @returns The frozen keyed-collection marker, or undefined for an ordinary source.
  */

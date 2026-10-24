@@ -1,0 +1,7 @@
+● Validation Error:
+
+  Directory <worktree>/scratch/gap-hunt/subtree-query/dist in the roots[0] option was not found.
+
+  Configuration Documentation:
+  https://jestjs.io/docs/configuration
+

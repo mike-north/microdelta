@@ -1,0 +1,62 @@
+{
+  "source": "f46223193696b67499322bdf70260b85a6277564",
+  "source_files": 813,
+  "source_unchanged": true,
+  "node": "v24.22.1",
+  "platform": "macOS arm64",
+  "facade_matrix": {
+    "sizes": [
+      10,
+      20,
+      40
+    ],
+    "executions_each": 1,
+    "jest_exit": 0,
+    "strict_compile_exit": 0,
+    "type_aware_lint_exit": 0,
+    "exact_outcomes": true,
+    "closed_stores": true
+  },
+  "sql_work_matrix": {
+    "sizes": [
+      10,
+      20,
+      40
+    ],
+    "executions_each": 1,
+    "exit": 1,
+    "production_within_predeclared_bound": false,
+    "python_engine_is_not_node_engine": true
+  },
+  "setup_failures_no_workloads": "Initial fixture syntax and missing-output Jest configuration failures ran zero cases and created no stores; fixed before finite matrix.",
+  "captures": [
+    {
+      "path": "captures/install.log",
+      "raw_sha256": "1452b267d295c65e25c38abc07c5609aa666e28358ede28af953b575c0cf80e9",
+      "normalized_sha256": "1452b267d295c65e25c38abc07c5609aa666e28358ede28af953b575c0cf80e9"
+    },
+    {
+      "path": "captures/build.log",
+      "raw_sha256": "9eb1f0e1ba62cd61262041daf444feb22fd48ec57cb809914e03f96c4504a62d",
+      "normalized_sha256": "9eb1f0e1ba62cd61262041daf444feb22fd48ec57cb809914e03f96c4504a62d"
+    },
+    {
+      "path": "captures/initial-setup-jest.log",
+      "raw_sha256": "097639a64582bb0ba510bcde18ce7084c6de76592879cb9e1019db1d1483c2e8",
+      "normalized_sha256": "6feb4787455ac02bc81ee6481d064a4ea5a3ac3455ccfa4f39948b1f9fab60c0"
+    },
+    {
+      "path": "captures/production-runtime.log",
+      "raw_sha256": "a4fb6ef4b6ba4cb211bb60e586a134b2efa61a344d539d5b380ffa6fdeda256d",
+      "normalized_sha256": "a4fb6ef4b6ba4cb211bb60e586a134b2efa61a344d539d5b380ffa6fdeda256d"
+    },
+    {
+      "path": "captures/sql-work.log",
+      "raw_sha256": "591884daa64e5d19c0da877a6e3646b84a17e57840466c69db34f2c1102980a4",
+      "normalized_sha256": "591884daa64e5d19c0da877a6e3646b84a17e57840466c69db34f2c1102980a4"
+    }
+  ],
+  "no_product_edits": true,
+  "no_100k_repeat": true,
+  "published": false
+}

@@ -15,6 +15,11 @@ process exits.
 > For approved sibling workspace consumers, see the tested
 > [private-alpha TypeScript setup](../../docs/private-alpha-workspace-consumers.md).
 
+This checkout example uses npm. A separate
+[pnpm native-build approval guide](../../docs/native-sqlite-install.md) covers
+external ESM evaluation of published `microdelta@0.2.0` and keeps the
+project-private alpha boundary explicit.
+
 ## Run it now
 
 From the repository root, after `npm ci`:

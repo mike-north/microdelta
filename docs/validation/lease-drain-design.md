@@ -1,0 +1,9 @@
+# Deterministic lease-drain test design
+
+Ruling R, RUN-014 and PUB-002 require late completion to retain an incomplete attempt without publishing after lease loss. The existing fixture spends a real 150 ms lease during request setup, before the test's intended send/drain boundary. Its polling helper can conceal a completed refusal as a missing send.
+
+Node's existing clock reads `Date.now()` dynamically. These tests therefore retain the full facade assembly and scope a Jest spy to that host clock reading: freeze it during request setup, explicitly advance only after the provider receives the send, and restore it in `finally`. Timers and asynchronous APIs remain real. No owner reconstruction, production option, renewal behavior or fencing behavior changes.
+
+A deliberately delayed setup uses real timers while the host clock stays fixed; it cannot spend the intended post-send expiry boundary. A bounded helper waits for the provider-received condition but fails promptly with the run's actual terminal outcome if it settles first. After the real send, each case requests soft stop and advances the clock to the observed current lease's expiry. The successor case additionally acquires through History's real owner port. Both release the provider and assert lease-lost/denied, no work publication, unchanged incomplete attempt, and unchanged successor identity where applicable. Cleanup stops/releases outstanding work and settles it before closing storage, then restores time.
+
+A controlled probe of the old facade fixture advances wall time between lease acquisition and send, demonstrating pre-send refusal separately from the post-loss assertions. A meaningful negative control will remove the real publication lease guard from temporary built output only, require named late-publication assertions to fail, and restore output in a finally block. No production source or behavior changes are intended.

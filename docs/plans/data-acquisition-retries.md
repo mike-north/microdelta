@@ -83,7 +83,10 @@ configuration API remains to be chosen in a bounded implementation design.
   from provider retry classification.
 - Preserve durable not-before timing across new runs, release of permits/window
   lanes during waits, lease release/reacquisition, and no stale publication. New
-  allowance does not override a wait, stop or ownership failure.
+  allowance does not override a wait, the selected stop boundary or ownership
+  failure. Soft stop refuses new admissions/retries but preserves an already
+  admitted step's remaining first-attempt requests under permits/rate/fence; hard
+  stop or deadline escalation prevents further affected sends (A-12b).
 - Preserve taint/no-fabricated-result protection, privacy-safe identifier events,
   strict/outcome-fold coverage and readonly inspection. A provider success on a
   later attempt does not fill earlier missing usage; each distinct reported

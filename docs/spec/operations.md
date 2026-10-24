@@ -382,8 +382,10 @@ operator's rejection or a new whole-run cancellation policy.
 retry times, across passes and new runs; fresh allowance never bypasses that time.
 Waits hold no request permit, lend the waiting member's window lane, and release
 the writer lease when only deferred work remains. Sleep mode resumes after the
-wait; exit mode reports the waiting time. Stop ends waits and prohibits resumed
-sends. A woken pass acquires a valid writer lease under RUN-002. Failed earlier
+wait; exit mode reports the waiting time. Any stop ends retry/deferral waits and
+prohibits those resumed retries. Soft-stop drain still permits an already admitted
+step's remaining first-attempt requests under RUN-014/019; hard stop does not.
+A woken pass acquires a valid writer lease under RUN-002. Failed earlier
 attempts remain recorded, but neither a same-run pass nor a new run may blindly
 replay already completed reusable paid child work. Whole-step reevaluation is not
 resumption of an arbitrary JavaScript continuation.
@@ -544,9 +546,13 @@ of an external operation's
 aborted request attempt is committed through the operation journal by operation
 and request attempt, so later runs and the operator see it after a restart. A
 provider-confirmed cancellation settles the operation; `running` or `unknown`
-leaves that attempt unknown. Stop still prohibits sends in the stopped run; a
-later new run applies RUN-011/012 with fresh allowance and preserved unknown
-evidence, rather than requiring a statement about an external business effect.
+leaves that attempt unknown. Hard stop or deadline escalation prohibits further
+sends from the affected work. Soft stop instead refuses new admissions and retries
+while an already admitted step may finish its remaining first-attempt requests
+under permits, rate admission and the current fence, then publish under the
+existing commit rule. A later new run applies RUN-011/012 with fresh allowance
+and preserved unknown evidence, rather than requiring a statement about an
+external business effect.
 
 **Required-retry rejection (owner decision, 2026-10-24).** Rejecting further retries
 for an input required by the declared graph gracefully stops the entire analysis.
@@ -556,10 +562,13 @@ new run. Do not silently omit the input, publish partial complete-success output
 or leave rejected work running indefinitely. Escalation remains the existing
 operator deadline/hard stop. This decision does not ratify a batch-approval queue.
 
-**Validation:** exhaust a required input while an independent admitted step is in
-flight; reject more retries. Admit no new work or retry, drain that step under the
-existing ownership/publication rule, retain completed results, and start a later
-new run with fresh allowance and ordinary reuse. No missing input becomes success.
+**Validation:** exhaust required input A after admitted sibling B has completed
+request 1 of a two-request body, then reject more retries for A. Admit no new work
+or retry, but allow B's first attempt of request 2 under permits, rate and fence
+checks, and let B publish. A hard stop or operator-deadline escalation before
+request 2 prevents that send and partial publication. Retain completed results
+for a later new run with fresh allowance and ordinary reuse. No missing input
+becomes success; A-12b supplies the concrete positive and negative controls.
 
 ### RUN-015 — Partial work is not a completed result
 
@@ -662,9 +671,12 @@ in-process rate limit used by other work.
 Rate eligibility, request concurrency permits, finite retry allowance and stop
 intent are independent conditions. A callback's immediate retry still requires
 all of them before send. A delayed retry cannot send before its not-before time
-even when rate capacity is available. Waiting holds no network request permit;
-cancellation during waiting must not later release an unauthorized send. Intent
-persistence/fencing under RUN-012 remains a prerequisite too.
+even when rate capacity is available. Waiting holds no network request permit.
+Apply RUN-014's selected stop boundary while waiting: soft stop blocks new
+admissions and retries, but an already admitted step may finish its remaining
+first-attempt requests when otherwise eligible; hard stop or deadline escalation
+prevents further sends from affected work. Available rate capacity does not bypass
+those rules. Intent persistence/fencing under RUN-012 remains a prerequisite too.
 
 The configured unit may be requests or an application-defined quantity. Retrieved
 GraphQL nodes, for example, are not automatically GitHub billed quota units.
@@ -682,8 +694,11 @@ identifiers must not expose raw credentials in inspection/events (RUN-013/017).
 **Validation:** a controlled clock and concurrent barriers present requests from
 two paths sharing one configured connection+limit; their combined admitted units,
 including retries, obey the configured bound. Separate limits remain independent.
-Cancellation, denied retry allowance and future not-before each prevent dispatch
-even if other conditions pass. A new run cannot reset another run's shared limiter.
+Hard stop or deadline escalation, denied retry allowance and future not-before
+each prevent the affected dispatch even if other conditions pass. Soft stop denies
+new admissions/retries while preserving the admitted-step first-attempt drain
+case in A-12b, still subject to the rate bound. A new run cannot reset another
+run's shared limiter.
 
 **Open implementation choices:** units known before dispatch versus a conservative
 reservation, window/burst algorithm and boundary behavior, queued fairness,

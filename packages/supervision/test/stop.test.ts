@@ -616,6 +616,103 @@ describe('sends under stop intent (RUN-014)', () => {
     expect(controlEvents(events)).toEqual(['stop:soft:operator', 'send:first:begin', 'send:first:end', 'send:retry:refused']);
   });
 
+  test('a hard stop from the send-begin observer refuses dispatch before the provider is invoked', async () => {
+    const controller = createStopController();
+    const provider = stubProvider({ settleOnAbort: true });
+    const double = portDouble();
+    const supervisor = supervisionWith(fakeTimer());
+    const events: IRunEvent[] = [];
+    let code: string | undefined;
+    const result = await supervisor.run(optionsFor(double, {
+      stop: controller,
+      observers: [{ observe: (event) => {
+        events.push(event);
+        if (event.kind === 'send' && event.phase === 'begin' && event.label === 'probe') {
+          controller.request({ level: 'hard' });
+        }
+      } }],
+    }), () => double.ports().execution.execute(stepOf('step'), async () => {
+      code = await codeOf(supervisor.execution().send({ label: 'probe', perform: provider.request('probe', 1) }));
+      return 'partial';
+    }));
+    expect(code).toBe('stopped');
+    expect(provider.received).toEqual([]);
+    expect(provider.aborted).toEqual([]);
+    expect(result.value).toEqual({ kind: 'interrupted', reason: expect.stringContaining('hard stop') });
+    expect(result.interruptions).toEqual([]);
+    expect(controlEvents(events)).toEqual(['send:probe:begin', 'stop:hard:operator', 'send:probe:refused']);
+  });
+
+  test('a deadline escalation from send-begin prevents provider dispatch', async () => {
+    const timer = fakeTimer();
+    const controller = createStopController({ timer });
+    const provider = stubProvider({ settleOnAbort: true });
+    const events: IRunEvent[] = [];
+    const supervisor = supervisionWith(timer);
+    const result = await supervisor.run(optionsFor(portDouble(), {
+      stop: controller,
+      observers: [{ observe: (event) => {
+        events.push(event);
+        if (event.kind === 'send' && event.phase === 'begin') {
+          controller.request({ level: 'soft', deadline: T0 });
+        }
+      } }],
+    }), () => codeOf(supervisor.execution().send({ label: 'deadline', perform: provider.request('deadline', 1) })));
+    expect(result.value).toBe('stopped');
+    expect(provider.received).toEqual([]);
+    expect(result.interruptions).toEqual([]);
+    expect(controlEvents(events)).toEqual(['send:deadline:begin', 'stop:soft:operator', 'stop:hard:deadline', 'send:deadline:refused']);
+  });
+
+  test('a soft stop from send-begin still lets an admitted step finish its first send but refuses its retry', async () => {
+    const controller = createStopController();
+    const provider = stubProvider();
+    const double = portDouble();
+    const supervisor = supervisionWith(fakeTimer());
+    const events: IRunEvent[] = [];
+    const result = await supervisor.run(optionsFor(double, {
+      stop: controller,
+      observers: [{ observe: (event) => {
+        events.push(event);
+        if (event.kind === 'send' && event.phase === 'begin' && event.label === 'first') {
+          controller.request({ level: 'soft' });
+        }
+      } }],
+    }), () => double.ports().execution.execute(stepOf('step'), async () => {
+      provider.release('first');
+      const first = await supervisor.execution().send({ label: 'first', perform: provider.request('first', 1) });
+      const retry = await codeOf(supervisor.execution().send({ label: 'retry', retry: true, perform: provider.request('retry', 2) }));
+      return { first, retry };
+    }));
+    expect(provider.received).toEqual(['first']);
+    expect(result.value).toEqual({ kind: 'interrupted', reason: expect.stringContaining('soft stop') });
+    expect(controlEvents(events)).toEqual(['send:first:begin', 'stop:soft:operator', 'send:first:end', 'send:retry:refused']);
+  });
+
+  test('a failing begin observer does not replace a synchronous provider error', async () => {
+    const observerError = new Error('private observer detail');
+    const providerError = new Error('private provider detail');
+    const supervisor = supervisionWith(fakeTimer());
+    const result = await supervisor.run(optionsFor(portDouble(), {
+      observers: [{ observe: (event) => {
+        if (event.kind === 'send' && event.phase === 'begin') {
+          throw observerError;
+        }
+      } }],
+    }), async () => {
+      try {
+        await supervisor.execution().send({ label: 'probe', perform: () => { throw providerError; } });
+      } catch (error: unknown) {
+        return error;
+      }
+      return undefined;
+    });
+    expect(result.value).toBe(providerError);
+    expect(result.diagnostics).toContain('Run observer failed at send probe begin');
+    expect(result.diagnostics.join(' ')).not.toContain(observerError.message);
+    expect(result.diagnostics.join(' ')).not.toContain(providerError.message);
+  });
+
   test('once a step attempt was refused, it sends nothing more, even a first attempt (taint guard)', async () => {
     const controller = createStopController();
     const provider = stubProvider();
@@ -1169,6 +1266,37 @@ describe('abort listeners are released once they can no longer run (regression: 
     };
     return { run, hard };
   }
+
+  test('a stop from send-begin releases the permit it had acquired before refusing dispatch', async () => {
+    const { run, hard } = handBuiltRun();
+    const pool = createPermitPool(1);
+    let releases = 0;
+    const observed: ISupervisedRun = {
+      ...run,
+      permits: {
+        async acquire(signal, options) {
+          const permit = await pool.acquire(signal, options);
+          return permit === undefined ? undefined : {
+            release(): void {
+              releases += 1;
+              permit.release();
+            },
+          };
+        },
+      },
+      report: (event) => {
+        if (event.kind === 'send' && event.phase === 'begin') {
+          hard.abort();
+        }
+      },
+    };
+    const controls = runControls({ run: observed, attempt: undefined, lane: undefined, request: undefined });
+    let performed = 0;
+    expect(await codeOf(controls.send({ label: 'probe', perform: () => { performed += 1; return Promise.resolve(1); } }))).toBe('stopped');
+    expect(performed).toBe(0);
+    expect(releases).toBe(1);
+    expect(observed.interruptions).toEqual([]);
+  });
 
   test('each send gets its own signal, detached once the send settles, so an adapter that never removes its listener retains nothing through the run', async () => {
     const { run, hard } = handBuiltRun();

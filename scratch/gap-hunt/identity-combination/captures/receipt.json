@@ -1,0 +1,26 @@
+{
+  "runtime": "7a629f94d83366131e4aa25e541a24e41db744fa",
+  "source_hashes": {
+    "packages/core/test/gap-hunt-identity-combination.test.ts": "6c75b3114ece38c264e45e75d2b3cdb7673bdba38eb0f3676322e8c0628eeded",
+    "packages/core/test/gap-hunt-identity-combination-worker.ts": "dff2dcb9e400f245abbef6ebb713f947efddb887446cada6ffcf8c60dcc3696e"
+  },
+  "source_unchanged": true,
+  "fresh_processes": 6,
+  "tests_passed": 1,
+  "tests_failed": 0,
+  "body_counts": [
+    1,
+    0,
+    0,
+    1,
+    1,
+    0
+  ],
+  "unique_references": 3,
+  "classification": "bounded combined input identity consumption, independent explicit output identity and subject",
+  "node": "v24.22.1",
+  "platform": "darwin",
+  "cases_sha256": "87f8909772c6b0466c24f8aef42da1255e4304a324870741483fcf27ea53f203",
+  "product_fixes": false,
+  "paid_provider": false
+}

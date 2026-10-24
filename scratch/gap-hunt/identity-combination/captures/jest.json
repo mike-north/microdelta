@@ -1,0 +1,20 @@
+{
+  "argv": [
+    "node",
+    "--experimental-vm-modules",
+    "node_modules/jest/bin/jest.js",
+    "--config",
+    "packages/core/jest.config.mjs",
+    "--runInBand",
+    "--runTestsByPath",
+    "packages/core/.test-build/test/gap-hunt-identity-combination.test.js",
+    "--verbose",
+    "--json",
+    "--outputFile",
+    "<evidence-output>/jest-results.json"
+  ],
+  "exit": 0,
+  "seconds": 1.099787950515747,
+  "timeout": 300,
+  "log_sha256": "4e8f18cef229388666be1db6b758473adca3cd30b936b397f7ef11004e076e05"
+}

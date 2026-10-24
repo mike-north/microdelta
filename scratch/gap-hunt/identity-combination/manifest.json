@@ -1,0 +1,103 @@
+{
+  "runtime": "7a629f94d83366131e4aa25e541a24e41db744fa",
+  "executedSource": "00ad7621b33f5250b163ba14616e82dddd20986d",
+  "command": "python3 scratch/gap-hunt/identity-combination/reproduce.py",
+  "freshProcesses": 6,
+  "testsPassed": 1,
+  "testsFailed": 0,
+  "bodyCounts": [
+    1,
+    0,
+    0,
+    1,
+    1,
+    0
+  ],
+  "captures": [
+    {
+      "path": "captures/build.json",
+      "raw_sha256": "b5baa9732bdda1fdd8c4a124abff48e3718b5f2e96634eff212c2b92cd89b25f",
+      "sha256": "b5baa9732bdda1fdd8c4a124abff48e3718b5f2e96634eff212c2b92cd89b25f",
+      "bytes": 210
+    },
+    {
+      "path": "captures/build.log",
+      "raw_sha256": "9eb1f0e1ba62cd61262041daf444feb22fd48ec57cb809914e03f96c4504a62d",
+      "sha256": "9eb1f0e1ba62cd61262041daf444feb22fd48ec57cb809914e03f96c4504a62d",
+      "bytes": 4988
+    },
+    {
+      "path": "captures/cases.json",
+      "raw_sha256": "87f8909772c6b0466c24f8aef42da1255e4304a324870741483fcf27ea53f203",
+      "sha256": "87f8909772c6b0466c24f8aef42da1255e4304a324870741483fcf27ea53f203",
+      "bytes": 4355
+    },
+    {
+      "path": "captures/install.json",
+      "raw_sha256": "b6848b25ca1de26962ffe84de511a82bdaf6c1341930acdcd24633ff92d32d11",
+      "sha256": "b6848b25ca1de26962ffe84de511a82bdaf6c1341930acdcd24633ff92d32d11",
+      "bytes": 223
+    },
+    {
+      "path": "captures/install.log",
+      "raw_sha256": "0c96d20a71003a6f36eedd391e87a94a35ebd2e664bf4265365ad33d85e01506",
+      "sha256": "0c96d20a71003a6f36eedd391e87a94a35ebd2e664bf4265365ad33d85e01506",
+      "bytes": 453
+    },
+    {
+      "path": "captures/jest-results.json",
+      "raw_sha256": "eacd659a8ab84096b0071c8afb69f338fc14400d2831508ae7e708bda15ff5fe",
+      "sha256": "0cc365b70827d8763c566f8f7140059fbb814898a41eb8beadb43fdff589c46e",
+      "bytes": 1316
+    },
+    {
+      "path": "captures/jest.json",
+      "raw_sha256": "0a4807a6e6cb18444c78a6142f3eeaa42b79f0bf6e6e230904584610dd0c2ccc",
+      "sha256": "9f7ba51685fc80869a7dd4d296b0e5435a7f9f1fb0f274e9a8f93e91230dc427",
+      "bytes": 514
+    },
+    {
+      "path": "captures/jest.log",
+      "raw_sha256": "4e8f18cef229388666be1db6b758473adca3cd30b936b397f7ef11004e076e05",
+      "sha256": "af98d2296b4030d0c20dff6dfd3db6e5d77c04d05023e2af012b869785d69e00",
+      "bytes": 463
+    },
+    {
+      "path": "captures/lint.json",
+      "raw_sha256": "0c391db8c9db8df357926e2fad0a1da3d35cbe0c9255a4de905be6c1a617aa32",
+      "sha256": "0c391db8c9db8df357926e2fad0a1da3d35cbe0c9255a4de905be6c1a617aa32",
+      "bytes": 350
+    },
+    {
+      "path": "captures/lint.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    },
+    {
+      "path": "captures/receipt.json",
+      "raw_sha256": "c73e56592fae1cfbd8f18582c89c1a44912f67b66882e62c24160a54758d35c6",
+      "sha256": "c73e56592fae1cfbd8f18582c89c1a44912f67b66882e62c24160a54758d35c6",
+      "bytes": 837
+    },
+    {
+      "path": "captures/types.json",
+      "raw_sha256": "9636e68068fd3c6e720b6010588b0eff6d7a2d28a0e1e1dda3e3e690bc045eb0",
+      "sha256": "9636e68068fd3c6e720b6010588b0eff6d7a2d28a0e1e1dda3e3e690bc045eb0",
+      "bytes": 267
+    },
+    {
+      "path": "captures/types.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0
+    }
+  ],
+  "sourceHashes": {
+    "packages/core/test/gap-hunt-identity-combination.test.ts": "6c75b3114ece38c264e45e75d2b3cdb7673bdba38eb0f3676322e8c0628eeded",
+    "packages/core/test/gap-hunt-identity-combination-worker.ts": "dff2dcb9e400f245abbef6ebb713f947efddb887446cada6ffcf8c60dcc3696e"
+  },
+  "classification": "bounded-passing-control",
+  "newRuntimeMechanism": false,
+  "productFixes": false
+}

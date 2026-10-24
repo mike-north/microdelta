@@ -1,0 +1,125 @@
+{
+  "captures": [
+    {
+      "stage": {
+        "variant": "base",
+        "changed": true,
+        "first": "first:a",
+        "second": "second:a"
+      },
+      "requestKey": "stage-0",
+      "status": 0,
+      "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"identity-combination-store\\\",\\\"identity-combination\\\",\\\"test\\\",1]\",\"data\":{\"key\":\"output:fixed\",\"first\":\"first:a\",\"second\":\"second:a\"}}\n",
+      "stderr": "BODY:combined\n",
+      "report": {
+        "kind": "published",
+        "reference": "mdh1|[\"identity-combination-store\",\"identity-combination\",\"test\",1]",
+        "key": "output:fixed",
+        "first": "first:a",
+        "second": "second:a",
+        "bodies": 1
+      }
+    },
+    {
+      "stage": {
+        "variant": "base",
+        "changed": false,
+        "first": "first:a",
+        "second": "second:a"
+      },
+      "requestKey": "stage-1",
+      "status": 0,
+      "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"identity-combination-store\\\",\\\"identity-combination\\\",\\\"test\\\",1]\",\"data\":{\"key\":\"output:fixed\",\"first\":\"first:a\",\"second\":\"second:a\"}}\n",
+      "stderr": "",
+      "report": {
+        "kind": "reused",
+        "reference": "mdh1|[\"identity-combination-store\",\"identity-combination\",\"test\",1]",
+        "key": "output:fixed",
+        "first": "first:a",
+        "second": "second:a",
+        "bodies": 0
+      }
+    },
+    {
+      "stage": {
+        "variant": "unread",
+        "changed": false,
+        "first": "first:a",
+        "second": "second:a"
+      },
+      "requestKey": "stage-2",
+      "status": 0,
+      "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"identity-combination-store\\\",\\\"identity-combination\\\",\\\"test\\\",1]\",\"data\":{\"key\":\"output:fixed\",\"first\":\"first:a\",\"second\":\"second:a\"}}\n",
+      "stderr": "",
+      "report": {
+        "kind": "reused",
+        "reference": "mdh1|[\"identity-combination-store\",\"identity-combination\",\"test\",1]",
+        "key": "output:fixed",
+        "first": "first:a",
+        "second": "second:a",
+        "bodies": 0
+      }
+    },
+    {
+      "stage": {
+        "variant": "first",
+        "changed": true,
+        "first": "first:b",
+        "second": "second:a"
+      },
+      "requestKey": "stage-3",
+      "status": 0,
+      "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"identity-combination-store\\\",\\\"identity-combination\\\",\\\"test\\\",2]\",\"data\":{\"key\":\"output:fixed\",\"first\":\"first:b\",\"second\":\"second:a\"}}\n",
+      "stderr": "BODY:combined\n",
+      "report": {
+        "kind": "published",
+        "reference": "mdh1|[\"identity-combination-store\",\"identity-combination\",\"test\",2]",
+        "key": "output:fixed",
+        "first": "first:b",
+        "second": "second:a",
+        "bodies": 1
+      }
+    },
+    {
+      "stage": {
+        "variant": "second",
+        "changed": true,
+        "first": "first:b",
+        "second": "second:b"
+      },
+      "requestKey": "stage-4",
+      "status": 0,
+      "stdout": "{\"kind\":\"published\",\"reference\":\"mdh1|[\\\"identity-combination-store\\\",\\\"identity-combination\\\",\\\"test\\\",3]\",\"data\":{\"key\":\"output:fixed\",\"first\":\"first:b\",\"second\":\"second:b\"}}\n",
+      "stderr": "BODY:combined\n",
+      "report": {
+        "kind": "published",
+        "reference": "mdh1|[\"identity-combination-store\",\"identity-combination\",\"test\",3]",
+        "key": "output:fixed",
+        "first": "first:b",
+        "second": "second:b",
+        "bodies": 1
+      }
+    },
+    {
+      "stage": {
+        "variant": "second",
+        "changed": false,
+        "first": "first:b",
+        "second": "second:b"
+      },
+      "requestKey": "stage-5",
+      "status": 0,
+      "stdout": "{\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"identity-combination-store\\\",\\\"identity-combination\\\",\\\"test\\\",3]\",\"data\":{\"key\":\"output:fixed\",\"first\":\"first:b\",\"second\":\"second:b\"}}\n",
+      "stderr": "",
+      "report": {
+        "kind": "reused",
+        "reference": "mdh1|[\"identity-combination-store\",\"identity-combination\",\"test\",3]",
+        "key": "output:fixed",
+        "first": "first:b",
+        "second": "second:b",
+        "bodies": 0
+      }
+    }
+  ],
+  "freshProcesses": 6
+}

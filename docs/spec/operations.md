@@ -808,8 +808,8 @@ latest-balance reducer or provider source-order protocol is required. Preserve
 available provider/account/pool/resource/unit/window and timing qualifications,
 with missing information explicit and without raw credentials. Receipt order or
 a lower balance is not proof of provider source order. State is never summed as
-consumption, deducted twice, or used to fill missing usage. A dedicated remaining-
-limit notification system or complete quota-management product is not required.
+consumption, deducted twice, or used to fill missing usage. A dedicated
+remaining-limit notification system or complete quota-management product is not required.
 
 Resource Accounting owns recording, durable evidence, queries and state retention;
 its adapters implement those ports. Apply ACC-007 acknowledgment guarantees.

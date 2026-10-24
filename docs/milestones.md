@@ -187,7 +187,7 @@ writer per store. Multi-writer parallelism and scale remain M7 measurement
 topics; lease-wait fairness and eventual grant are unproven. The accepted
 [2026-10-24 acquisition target](plans/data-acquisition-retries.md) supersedes M5's
 external-write replay policy without rewriting this historical acceptance.
-Result-carrying manual operator recovery is deferred, not a M6 or controlled-roster
+Result-carrying manual operator recovery is deferred, not an M6 or controlled-roster
 prerequisite. The CLI remains M6. New-run retry allowance, source classification
 and shared single-process static rate admission need their own implementation
 proof before the changed operational target is called delivered.

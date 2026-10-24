@@ -111,7 +111,7 @@ fanout and folds, fenced writer coordination, retry and cancellation controls,
 environment isolation, and known-versus-unknown resource accounting. The accepted
 [acquisition retry/rate target](docs/plans/data-acquisition-retries.md) changes the
 legacy M5 replay policy and still needs runtime implementation; this documentation
-change alone delivers no new retry behavior. Its historical evidence
+change alone delivers no new retry behavior. The implemented runtime's historical evidence
 is bounded to one fenced writer per store on single-host SQLite, including process
 kill/restart tests; it does not establish distributed or power-loss guarantees,
 lease-wait fairness, or production readiness.

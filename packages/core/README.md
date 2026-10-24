@@ -36,6 +36,12 @@ composes the owners and adds no policy of its own:
   `suppliedStep` and `supply` (callable step slots bound at composition),
   the canonical `forward` argument origins, and `compose`. Step callbacks also
   receive the observed `untracked` read.
+- Completed source results and awaited memo results have a record or array
+  root in this alpha path. Wrap a scalar as a field, such as `{ value: 42 }`;
+  `undefined` is also supported as a present field value. Source callbacks
+  still return a trusted `sourceOutcome.fresh(recordOrArray)` or `retain()`
+  outcome, synchronously or through a promise. The runtime validates the
+  actual result shape for untyped callers.
 - `openWorkspace({ location, logicalStore })`: durable History over Node's
   SQLite and clock. `workspace.run(options, body)` is one Run Supervision run
   whose Resolution resolves against that store; the run offers the normal entry
@@ -94,6 +100,38 @@ consumer imports only `microdelta`: for example `IMemberBuilder`,
 `IOutcomeFoldRunOutcome`, `IOutcomeFoldCoverage`, `IOperationRequest`,
 `IOperationView`, `IOperationEvent`, `IWaitEvent`, `IUsageSummary` and
 `IPromotionRecord`.
+
+For a scalar calculation, retain a record and read its field from the child
+result. This complete declaration example uses the generated alpha view, with
+`microdelta` resolved as in the [example TypeScript configuration](../../examples/contribution-report/tsconfig.json):
+
+```ts
+import { authoring } from 'microdelta';
+
+export const builders = authoring<Record<string, never>, Record<string, never>>();
+const answer = builders.memo({
+  subject: 'answer',
+  run: () => ({ value: 6 * 7 }),
+});
+const summary = builders.memo({
+  subject: 'summary',
+  children: { answer },
+  run: async ({ calls }) => {
+    const { data } = await calls.answer();
+    return { text: `The answer is ${data.value}.` };
+  },
+});
+export const composition = builders.compose({
+  scope: 'wrapped-result',
+  steps: [{ slot: 'answer', declaration: answer }, { slot: 'summary', declaration: summary }],
+});
+```
+
+The `answer` result retains `{ value: 42 }`; `summary` consumes `data.value`
+and also returns a record. Pass `builders` as the run's `authoring` and
+`composition` as its composition when resolving `summary`, following the
+workspace setup in the contribution report example below. A serialized string
+or a present `undefined` uses the same wrapper shape.
 
 Approved sibling workspace consumers must map the facade and any reached owner
 declarations to their generated alpha rollups. See the tested

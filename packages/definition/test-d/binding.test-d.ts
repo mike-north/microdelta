@@ -90,7 +90,7 @@ const summary = memo({
     const exactProfile: IExact<typeof profileData, IView<IProfile>> = true;
     void exactActivity;
     void exactProfile;
-    return `${profileData.name}: ${format(activityData.reviews)}`;
+    return { sentence: `${profileData.name}: ${format(activityData.reviews)}` };
   },
 });
 expectType<ISourceDeclaration<IFamily, IActivity>>(activity);
@@ -123,7 +123,7 @@ expectError(compose({ scope: 's', members: [{ key: 'k', steps: [{ slot: 'activit
 // Author negatives.
 // eslint-disable-next-line @typescript-eslint/no-unsafe-return -- This negative tsd case intentionally reads a field absent from the child view.
 expectError(memo({ subject: 's', children: { activity }, run: async ({ calls }) => (await calls.activity()).data.name }));
-expectError(memo({ subject: 's', children: { summary: 'summary' }, run: () => 1 }));
+expectError(memo({ subject: 's', children: { summary: 'summary' }, run: () => ({ value: 1 }) }));
 expectError(source<IActivity>({ subject: 's', run: () => ({ reviews: 1 }) }));
 expectError(source<IActivity>({
   subject: 's',
@@ -134,9 +134,9 @@ expectError(source<IActivity>({
 }));
 // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- This negative tsd case intentionally reads the payload field on the carrier itself.
 expectError(source<IActivity>({ subject: 's', run: ({ previous }) => ({ kind: 'fresh', data: { reviews: previous?.reviews ?? 0 } }) }));
-expectError(memo({ subject: 's', version: '1', run: () => 1 }));
+expectError(memo({ subject: 's', version: '1', run: () => ({ value: 1 }) }));
 expectError(source<IActivity>({ subject: 's', children: { activity }, run: () => ({ kind: 'retain' }) }));
-expectError(memo({ run: () => 1 }));
+expectError(memo({ run: () => ({ value: 1 }) }));
 
 // Handles take no runtime arguments and return a readonly carrier.
 declare const handle: IDeclaredCallHandle<IView<IActivity>>;

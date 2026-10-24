@@ -117,21 +117,21 @@ function recordingInvoker(pairs: IInvokedPair[]): IAuthorInvoker<unknown> {
 
 /** A member whose summary records the calls record Definition supplied. */
 interface ICapturingMember {
-  readonly activity: ISourceDeclaration<ITestFamily, string>;
-  readonly activityRun: () => string;
-  readonly summaryRun: (context: { readonly calls: { readonly activity: IDeclaredCallHandle<string> } }) => string;
-  readonly captured: { calls?: { readonly activity: IDeclaredCallHandle<string> } };
+  readonly activity: ISourceDeclaration<ITestFamily, { readonly value: string }>;
+  readonly activityRun: () => { readonly value: string };
+  readonly summaryRun: (context: { readonly calls: { readonly activity: IDeclaredCallHandle<{ readonly value: string }> } }) => { readonly value: string };
+  readonly captured: { calls?: { readonly activity: IDeclaredCallHandle<{ readonly value: string }> } };
   readonly steps: readonly IStepRegistration<ITestFamily>[];
 }
 
 /** Build one member whose summary run captures its calls. */
 function capturingMember(key: IFixtureMemberKey): ICapturingMember {
   const captured: ICapturingMember['captured'] = {};
-  const activityRun = (): string => `fetch ${key}`;
-  const activity = source<string>({ subject: activitySubject(key), run: activityRun });
+  const activityRun = (): { readonly value: string } => ({ value: `fetch ${key}` });
+  const activity = source<{ readonly value: string }>({ subject: activitySubject(key), run: activityRun });
   const summaryRun: ICapturingMember['summaryRun'] = context => {
     captured.calls = context.calls;
-    return key;
+    return { value: key };
   };
   const summary = memo({ subject: summarySubject(key), children: { activity }, run: summaryRun });
   return { activity, activityRun, summaryRun, captured, steps: [{ slot: 'activity', declaration: activity }, { slot: 'summary', declaration: summary }] };
@@ -165,7 +165,7 @@ function openSummary(
   key: IFixtureMemberKey,
   fake: IFakePort,
   built = capturingComposition([key]),
-): { readonly invocation: IMemoInvocation<ITestFamily>; readonly handle: IDeclaredCallHandle<string>; readonly member: ICapturingMember } {
+): { readonly invocation: IMemoInvocation<ITestFamily>; readonly handle: IDeclaredCallHandle<{ readonly value: string }>; readonly member: ICapturingMember } {
   const member = built.members.get(key);
   if (member === undefined) {
     throw new Error(`missing member ${key}`);
@@ -236,7 +236,7 @@ describe('invocation bridge', () => {
     const pairs: IInvokedPair[] = [];
     const bindings = { inputs: 'current-inputs', helpers: 'current-helpers' };
     const outcome = invocation.apply(bindings, recordingInvoker(pairs));
-    expect(outcome).toBe('person:ada');
+    expect(outcome).toEqual({ value: 'person:ada' });
     expect(pairs).toHaveLength(1);
     expect(pairs[0]?.callback).toBe(member?.summaryRun);
     expect(pairs[0]?.context).toEqual({ inputs: 'current-inputs', helpers: 'current-helpers', calls: member?.captured.calls });
@@ -252,7 +252,7 @@ describe('invocation bridge', () => {
     const pairs: IInvokedPair[] = [];
     const carrier = carrierOf('previous activity');
     const supplier = supplierOf(carrier, []);
-    expect(invocation.apply({}, supplier, recordingInvoker(pairs))).toBe('fetch person:ada');
+    expect(invocation.apply({}, supplier, recordingInvoker(pairs))).toEqual({ value: 'fetch person:ada' });
     expect(invocation.hasFinality).toBe(true);
     expect(invocation.applyFinality({}, supplier, recordingInvoker(pairs))).toBe(true);
     expect(pairs.map(pair => pair.callback)).toEqual([ada.callbacks.activityRun, ada.callbacks.activityFinality]);
@@ -422,14 +422,14 @@ describe('invocation bridge', () => {
     // ordinary calls object hit the inherited setter, so a valid slot failed at apply.
     const fake = fakePort();
     for (const slot of ['__proto__', 'constructor']) {
-      const child = source<string>({ subject: `activity:${slot}`, run: () => slot });
-      const captured: { calls?: Readonly<Record<string, IDeclaredCallHandle<string>>> } = {};
+      const child = source<{ readonly value: string }>({ subject: `activity:${slot}`, run: () => ({ value: slot }) });
+      const captured: { calls?: Readonly<Record<string, IDeclaredCallHandle<{ readonly value: string }>>> } = {};
       const summary = memo({
         subject: `summary:${slot}`,
         children: Object.fromEntries([[slot, child]]),
-        run: (context: { readonly calls: Readonly<Record<string, IDeclaredCallHandle<string>>> }) => {
+        run: (context: { readonly calls: Readonly<Record<string, IDeclaredCallHandle<{ readonly value: string }>>> }) => {
           captured.calls = context.calls;
-          return slot;
+          return { value: slot };
         },
       });
       const composition = compose({
@@ -438,7 +438,7 @@ describe('invocation bridge', () => {
       });
       const invocation = asMemo(openInvocation(composition, stepDescriptor('person:ada', 'summary'), fake.port));
       fake.active = invocation;
-      expect(invocation.apply({}, recordingInvoker([]))).toBe(slot);
+      expect(invocation.apply({}, recordingInvoker([]))).toEqual({ value: slot });
       const calls = captured.calls;
       expect(calls === undefined ? [] : Object.keys(calls)).toEqual([slot]);
       const handle: unknown = calls === undefined ? undefined : Object.getOwnPropertyDescriptor(calls, slot)?.value;
@@ -454,10 +454,10 @@ describe('invocation bridge', () => {
 
   test('CMP-9: composing, resolving and opening invocations never run callbacks or the invoker', () => {
     const fake = fakePort();
-    const run = jest.fn((): string => 'x');
+    const run = jest.fn((): { readonly value: string } => ({ value: 'x' }));
     const finality = jest.fn((): boolean => true);
-    const summaryRun = jest.fn((): string => 'y');
-    const activity = source<string>({ subject: 'activity:a', run, finality });
+    const summaryRun = jest.fn((): { readonly value: string } => ({ value: 'y' }));
+    const activity = source<{ readonly value: string }>({ subject: 'activity:a', run, finality });
     const summary = memo({ subject: 'summary:a', children: { activity }, run: summaryRun });
     const composition = compose({ scope: fixtureScope, members: [{ key: 'person:ada', steps: [{ slot: 'activity', declaration: activity }, { slot: 'summary', declaration: summary }] }] });
     composition.resolve(stepDescriptor('person:ada', 'summary'));
@@ -488,7 +488,7 @@ describe('invocation bridge', () => {
     expectDefinitionError(() => openInvocation(duplicated, stepDescriptor('person:ada', 'summary'), fake.port), 'unresolved-parent');
     expectDefinitionError(() => openInvocation(built.composition, { scope: fixtureScope, role: 'input', slot: 'config' }, fake.port), 'unresolved-parent');
     const other = declarations<ITestFamily>();
-    const foreignActivity = other.source({ subject: 'activity:f', run: () => 1 });
+    const foreignActivity = other.source({ subject: 'activity:f', run: () => ({ value: 1 }) });
     const foreign = other.compose({ scope: fixtureScope, members: [{ key: 'person:ada', steps: [{ slot: 'activity', declaration: foreignActivity }] }] });
     expectDefinitionError(() => openInvocation(foreign, stepDescriptor('person:ada', 'activity'), fake.port), 'forged-composition');
   });
@@ -642,7 +642,7 @@ describe('handle ownership', () => {
     const { handle: genuine } = openSummary('person:ada', fake);
     // The forgery carries the brand spelling and a genuine witness value.
     const forged = Object.assign(() => Promise.resolve({ data: 1 }), { __microdeltaDeclaredCall: describeHandle(genuine) });
-    const wrapper = (): Promise<IChildResult<string>> => genuine();
+    const wrapper = (): Promise<IChildResult<{ readonly value: string }>> => genuine();
     expect(describeHandle(forged)).toBeUndefined();
     expect(describeHandle(wrapper)).toBeUndefined();
     expect(describeHandle(genuine.bind(undefined))).toBeUndefined();

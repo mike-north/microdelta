@@ -121,14 +121,14 @@ export function nestedMember(
 ): INestedMember {
   const captured: ISummaryCapture = {};
   const activity = source<IActivity>({ subject: `activity:acme/widget:2026-Q1:${key}`, run: () => ({ pullRequests: [] }) });
-  const profile = memo({ subject: `profile:acme/widget:${key}`, children: { activity }, run: () => key });
+  const profile = memo({ subject: `profile:acme/widget:${key}`, children: { activity }, run: () => ({ value: key }) });
   const children: ISummaryChildren = { activity, profile, assess: assessor };
-  const summary = memo({
+  const summary = memo<ISummaryChildren, { readonly value: INestedMemberKey }>({
     subject: `summary:acme/widget:2026-Q1:${key}`,
     children,
     run: context => {
       captured.calls = context.calls;
-      return key;
+      return { value: key };
     },
   });
   return {
@@ -154,7 +154,7 @@ export function buildNested(variation: INestedVariation = {}): INestedBuild {
   const implementation = rubric(variation.rubric ?? 'A');
   const subject = variation.subject ?? assessmentSubject;
   const discovery = source<readonly string[]>({ subject: 'contributors:acme/widget:2026-Q1', run: () => [...nestedMembers] });
-  const report = memo({ subject: 'report:acme/widget:2026-Q1', children: { discovery }, run: () => 'report' });
+  const report = memo({ subject: 'report:acme/widget:2026-Q1', children: { discovery }, run: () => ({ value: 'report' }) });
   const ada = nestedMember('person:ada', assessor);
   const ben = nestedMember('person:ben', assessor);
   const reversed = variation.order === 'reversed';

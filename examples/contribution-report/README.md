@@ -12,6 +12,8 @@ process exits.
 > project-private `@alpha` contract that may change without notice. The
 > default `microdelta` package entry does not expose any of it, and this
 > example is not an installation guide for a published package.
+> For approved sibling workspace consumers, see the tested
+> [private-alpha TypeScript setup](../../docs/private-alpha-workspace-consumers.md).
 
 ## Run it now
 

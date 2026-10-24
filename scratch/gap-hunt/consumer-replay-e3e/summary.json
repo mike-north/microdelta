@@ -1,0 +1,509 @@
+{
+  "consumer_pin": "d172f5f7c0790914bfc7a0ffbf1398618dd72ad8",
+  "main_pin": "e3e1920a1300b4205b5c417f98d1202e75f2d3ba",
+  "node": "v24.22.1",
+  "pnpm": "12.10.1",
+  "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+  "compatibility": {
+    "prepush_exit": 0,
+    "prepush_tests": 641,
+    "focused_exit": 0,
+    "focused_tests": 329,
+    "declaration_patch_applied": false,
+    "installed_graph_byte_verified_packages": 10
+  },
+  "rehearsal": {
+    "exit_code": 1,
+    "seconds": 660.3235011100769,
+    "timeout_bound_seconds": 900,
+    "final_report_exists": true,
+    "log_sha256": "e88f7a9c15b87d243bc305ebd424d5d49ec3efc97c3aa8949a4a56d68edd370a",
+    "completed_stage_measurements": [
+      {
+        "run": 1,
+        "stage": "collection.roster",
+        "milliseconds": 60.311082999999996,
+        "rssBytes": 211288064,
+        "heapUsedBytes": 70208872,
+        "counts": {
+          "people": 391
+        }
+      },
+      {
+        "run": 1,
+        "stage": "collection.discovery",
+        "milliseconds": 2092.756417,
+        "rssBytes": 407896064,
+        "heapUsedBytes": 160331896,
+        "counts": {
+          "pulls": 70304,
+          "audiences": 405
+        }
+      },
+      {
+        "run": 1,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 13184.998792,
+        "rssBytes": 686718976,
+        "heapUsedBytes": 228441784,
+        "counts": {
+          "completed": 10000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 1,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 13941.625166,
+        "rssBytes": 767393792,
+        "heapUsedBytes": 351100320,
+        "counts": {
+          "completed": 20000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 1,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 14666.770416999996,
+        "rssBytes": 890241024,
+        "heapUsedBytes": 424481376,
+        "counts": {
+          "completed": 30000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 1,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 13605.304458000006,
+        "rssBytes": 1012334592,
+        "heapUsedBytes": 383562256,
+        "counts": {
+          "completed": 40000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 1,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 13466.71624999999,
+        "rssBytes": 1115144192,
+        "heapUsedBytes": 868631720,
+        "counts": {
+          "completed": 50000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 1,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 13579.235250000012,
+        "rssBytes": 1205157888,
+        "heapUsedBytes": 678594576,
+        "counts": {
+          "completed": 60000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 1,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 13176.933208999995,
+        "rssBytes": 1436712960,
+        "heapUsedBytes": 389631624,
+        "counts": {
+          "completed": 70000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 1,
+        "stage": "collection.pulls",
+        "milliseconds": 96002.838125,
+        "rssBytes": 1436712960,
+        "heapUsedBytes": 430818296,
+        "counts": {
+          "pulls": 70304
+        }
+      },
+      {
+        "run": 1,
+        "stage": "collection.hubble",
+        "milliseconds": 13332.017166999998,
+        "rssBytes": 1706295296,
+        "heapUsedBytes": 859648680,
+        "counts": {
+          "dailyTokens": 95471,
+          "dailyPresence": 159127
+        }
+      },
+      {
+        "run": 1,
+        "stage": "collection.assembly",
+        "milliseconds": 9447.486625000005,
+        "rssBytes": 2132246528,
+        "heapUsedBytes": 1197084000
+      },
+      {
+        "run": 1,
+        "stage": "collection.aggregate",
+        "milliseconds": 15127.091165999984,
+        "rssBytes": 4056088576,
+        "heapUsedBytes": 2087610768
+      },
+      {
+        "run": 1,
+        "stage": "emitter.validate-serialize",
+        "milliseconds": 7590.942165999993,
+        "rssBytes": 2701787136,
+        "heapUsedBytes": 1293967584,
+        "counts": {
+          "files": 1676,
+          "totalPlaintextBytes": 337226059,
+          "largestPlaintextBytes": 2039192,
+          "audiences": 405
+        },
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 1,
+        "stage": "emitter.bundle",
+        "milliseconds": 10043.187333999987,
+        "rssBytes": 2923118592,
+        "heapUsedBytes": 1271260664,
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 1,
+        "stage": "emitter.write",
+        "milliseconds": 594.6164580000041,
+        "rssBytes": 2823192576,
+        "heapUsedBytes": 1244037808,
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 1,
+        "stage": "emitter.verify-staging",
+        "milliseconds": 103632.260458,
+        "rssBytes": 2113126400,
+        "heapUsedBytes": 2476499264,
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 1,
+        "stage": "emitter.replace-verify-installed",
+        "milliseconds": 98959.364417,
+        "rssBytes": 2446065664,
+        "heapUsedBytes": 1513971832,
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 1,
+        "stage": "collection.emit",
+        "milliseconds": 220824.08179199998,
+        "rssBytes": 2446606336,
+        "heapUsedBytes": 1514065128
+      },
+      {
+        "run": 2,
+        "stage": "collection.roster",
+        "milliseconds": 26,
+        "rssBytes": 1989509120,
+        "heapUsedBytes": 86318344,
+        "counts": {
+          "people": 391
+        }
+      },
+      {
+        "run": 2,
+        "stage": "collection.discovery",
+        "milliseconds": 1281.2144170000101,
+        "rssBytes": 1994948608,
+        "heapUsedBytes": 181117624,
+        "counts": {
+          "pulls": 70304,
+          "audiences": 405
+        }
+      },
+      {
+        "run": 2,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 7738.598541999992,
+        "rssBytes": 1993637888,
+        "heapUsedBytes": 382019000,
+        "counts": {
+          "completed": 10000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 2,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 8827.345583000046,
+        "rssBytes": 1994735616,
+        "heapUsedBytes": 468674248,
+        "counts": {
+          "completed": 20000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 2,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 10294.967874999973,
+        "rssBytes": 1519534080,
+        "heapUsedBytes": 542845312,
+        "counts": {
+          "completed": 30000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 2,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 9023.690292000014,
+        "rssBytes": 1571160064,
+        "heapUsedBytes": 465929288,
+        "counts": {
+          "completed": 40000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 2,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 9420.944666999974,
+        "rssBytes": 1630371840,
+        "heapUsedBytes": 342049040,
+        "counts": {
+          "completed": 50000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 2,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 7795.032624999993,
+        "rssBytes": 1631731712,
+        "heapUsedBytes": 763234256,
+        "counts": {
+          "completed": 60000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 2,
+        "stage": "collection.pulls.progress",
+        "milliseconds": 7683.715166000009,
+        "rssBytes": 1639677952,
+        "heapUsedBytes": 463576704,
+        "counts": {
+          "completed": 70000,
+          "total": 70304
+        },
+        "parentStage": "collection.pulls"
+      },
+      {
+        "run": 2,
+        "stage": "collection.pulls",
+        "milliseconds": 61077.99766599998,
+        "rssBytes": 1639759872,
+        "heapUsedBytes": 515525728,
+        "counts": {
+          "pulls": 70304
+        }
+      },
+      {
+        "run": 2,
+        "stage": "collection.hubble",
+        "milliseconds": 5437.516667000018,
+        "rssBytes": 1681637376,
+        "heapUsedBytes": 1244572232,
+        "counts": {
+          "dailyTokens": 95471,
+          "dailyPresence": 159127
+        }
+      },
+      {
+        "run": 2,
+        "stage": "collection.assembly",
+        "milliseconds": 9174.246958000003,
+        "rssBytes": 2203435008,
+        "heapUsedBytes": 674708648
+      },
+      {
+        "run": 2,
+        "stage": "collection.aggregate",
+        "milliseconds": 3831.8419169999543,
+        "rssBytes": 2728935424,
+        "heapUsedBytes": 909021168
+      },
+      {
+        "run": 2,
+        "stage": "emitter.validate-serialize",
+        "milliseconds": 6797.506208000006,
+        "rssBytes": 2590687232,
+        "heapUsedBytes": 1170504704,
+        "counts": {
+          "files": 1676,
+          "totalPlaintextBytes": 337226059,
+          "largestPlaintextBytes": 2039192,
+          "audiences": 405
+        },
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 2,
+        "stage": "emitter.bundle",
+        "milliseconds": 9250.653500000015,
+        "rssBytes": 2644754432,
+        "heapUsedBytes": 1217039536,
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 2,
+        "stage": "emitter.write",
+        "milliseconds": 711.4808339999872,
+        "rssBytes": 2557689856,
+        "heapUsedBytes": 1186890496,
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 2,
+        "stage": "emitter.verify-staging",
+        "milliseconds": 100764.63995799999,
+        "rssBytes": 1481752576,
+        "heapUsedBytes": 1607269776,
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 2,
+        "stage": "emitter.replace-verify-installed",
+        "milliseconds": 99974.80249999999,
+        "rssBytes": 1730461696,
+        "heapUsedBytes": 1781554016,
+        "parentStage": "collection.emit"
+      },
+      {
+        "run": 2,
+        "stage": "collection.emit",
+        "milliseconds": 217647.22112500004,
+        "rssBytes": 1733918720,
+        "heapUsedBytes": 1785676392
+      }
+    ],
+    "final_report_sha256": "d52df66eb6b7aecc3f9b46b7c0d9d07f6011deb758c6211d36acb92f2a09e4a4",
+    "reported_status": "failed",
+    "reported_failure": "Target already exists: cp returned EEXIST (<consumer>/out/synthetic-bundle already exists) <consumer>/out/synthetic-bundle",
+    "output_audit": {
+      "people": 391,
+      "authoredH1": 34917,
+      "authoredH2": 35287,
+      "submittedReviews": 90362,
+      "cappedPrs": 2,
+      "complete3000Prs": 2,
+      "unknownTenurePeople": 10,
+      "unavailableCalendars": 10,
+      "workingDayHalves": 782,
+      "comparisons": 2346,
+      "personCohortStats": 391,
+      "halfMixes": 782,
+      "globalDistributionTables": 1,
+      "scopedDistributionTables": 13,
+      "distributionRows": 93,
+      "tables": 838,
+      "representativeIcKeyringsChecked": 1,
+      "restrictedFilesDenied": 810,
+      "milliseconds": 2498.234999999986
+    },
+    "runs": [
+      {
+        "milliseconds": 357347.982875,
+        "providerCalls": 777223,
+        "fileCount": 2082,
+        "totalBytes": 18843216,
+        "largestBytes": 388592,
+        "bodiesExecuted": 71822,
+        "siteAssetsBudgetVerified": false,
+        "inventory_sha256": "a9d4e9968fcffb1e4420a04e486c5ca70c31bbef34373ca004a58922a9a95416"
+      },
+      {
+        "milliseconds": 299455.36629100004,
+        "providerCalls": 0,
+        "fileCount": 2082,
+        "totalBytes": 18843216,
+        "largestBytes": 388592,
+        "bodiesExecuted": 0,
+        "siteAssetsBudgetVerified": false,
+        "inventory_sha256": "a9d4e9968fcffb1e4420a04e486c5ca70c31bbef34373ca004a58922a9a95416"
+      }
+    ]
+  },
+  "adapters": {
+    "consumer_pin": "d172f5f7c0790914bfc7a0ffbf1398618dd72ad8",
+    "main_pin": "e3e1920a1300b4205b5c417f98d1202e75f2d3ba",
+    "tracked_changes": [
+      "pnpm-lock.yaml",
+      "pnpm-workspace.yaml"
+    ],
+    "all_other_tracked_source_byte_exact": true,
+    "declaration_patch_applied": false,
+    "installed_definition_alpha_byte_exact_build": true,
+    "definition_alpha_sha256": "232b44bd166207f1f8ef61776872d9c55f19c0b20d7e7d7a792696b98256aed1",
+    "generator_adapter": "External scratch generator exact0.3guard; tracked0.2generator unchanged",
+    "pnpm_adapter": "verifyDepsBeforeRun:false, issuer graph byte verified",
+    "prior_setup_failures": "Expected unchanged tracked0.2postinstall guard; no other setup failure.",
+    "full_synthetic_timeout_seconds": 900
+  },
+  "qualification": "One frozen current-main synthetic run after PR191; no published baseline or capacity rerun. Phase durations are uncontrolled measurements, not causal timing evidence. Provider counters refer to synthetic stub activity; no live or paid provider execution.",
+  "supplemental_saved_output_validation": {
+    "original_exit": 1,
+    "original_status": "failed; finalcopy EEXIST after bothpasses",
+    "saved_inventory_matches_independent_audit": true,
+    "data_bytes": 18843216,
+    "asset_bytes": 438035,
+    "total_bytes": 19281251,
+    "limit_bytes": 20971520,
+    "headroom_bytes": 1690269,
+    "combined_site_budget_pass": true,
+    "built_encrypted_bytes_match_saved_bundle": true,
+    "original_artifacts_and_existing_dist_unchanged": true,
+    "new_collection_or_provider_calls": false,
+    "qualification": "SUPPLEMENTAL SAVED-OUTPUT TERMINAL VALIDATION; original full command remains exit1 EEXIST; cold/warm inventory equality independently checked",
+    "receipt_sha256": "1ac567e72f52c42f235189c30f1308a20a31d869bcad3fd8cc13bddbea6ea109"
+  },
+  "runtime_identity_after_rehearsal": {
+    "frozen_runtime": "e3e1920a1300b4205b5c417f98d1202e75f2d3ba",
+    "consumer": "d172f5f7c0790914bfc7a0ffbf1398618dd72ad8",
+    "packages": 10,
+    "dist_src_files": 280,
+    "javascript_files": 70,
+    "before_graph_sha256": "cb5c135c6d0874c440257dcab962cccfcaea3c807f65c10e513d03b0a3cff801",
+    "before_canonical_runtime_sha256": "8a9a692cf14cee45dd8b8a16106c25fd7157849ed6c0cf49cfe67ac642b790cc",
+    "after_canonical_runtime_sha256": "8a9a692cf14cee45dd8b8a16106c25fd7157849ed6c0cf49cfe67ac642b790cc",
+    "before_after_equal": true,
+    "current_build_equal": true,
+    "manifest_names_versions_dependencies_equal": true,
+    "dependency_mutations_during_check": false,
+    "private_receipt_sha256": "7dbe7c06b3a7faf2ba030b3f28eb4ef23cbba2a13fe9cbcb088d0883d84c9eb2"
+  },
+  "merge_qualification": {
+    "reviewed_pr191": "fd8167b67a86e3d0c5166291846c3ae5b48bd32b",
+    "entire_tree_identical": true,
+    "tree": "864b10fb6baf31eb0e8138e6f211ffe979204ca0"
+  }
+}

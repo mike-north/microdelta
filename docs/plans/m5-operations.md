@@ -1,5 +1,12 @@
 # M5: operational correctness for the contribution analysis
 
+**Historical scope notice (2026-10-24):** this delivered M5 plan retains its
+original effect-safety/settlement and retry-policy selections. The accepted
+[data-acquisition target](data-acquisition-retries.md) supersedes those selections
+for current acquisition work, including per-new-run allowance. Its other local
+fencing, durability, stop, usage and privacy obligations remain. This is historical
+delivery evidence, not an instruction to implement manual result recovery.
+
 Status: M5 implementation plan for [issue #114](https://github.com/mike-north/microdelta/issues/114).
 M4 is accepted ([#89](https://github.com/mike-north/microdelta/issues/89)). The owner's
 product decisions of 2026-09-30 are recorded in the owning contracts

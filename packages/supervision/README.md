@@ -170,8 +170,15 @@ Writer-lease waiting builds on these primitives and is not decided here.
 
 ## External operations
 
-These implement RUN-011 to RUN-014 and ACC-003/005/007 with the mechanisms
-EXP-8 selected (mechanisms 3 to 7, supervisor resolutions 1 to 8, ruling R).
+This section describes the **current legacy M5 implementation**, including
+EXP-8's original replay/settlement policy (mechanisms 3 to 7, supervisor
+resolutions 1 to 8, ruling R). The accepted
+[acquisition retry/rate target](../../docs/plans/data-acquisition-retries.md)
+supersedes that policy: per-new-run finite allowance, bounded lost-response retries
+without effect-safety prerequisites, source classification and coordinated static
+rate admission are not yet implemented here. Preserve local intent/fencing,
+stop, privacy and Accounting evidence during that migration. The API descriptions
+below must not be read as the changed target contract.
 A run offers them when assembly passes `options.operations: { journal,
 accounting }`, which needs the Supervision's timer:
 
@@ -258,7 +265,8 @@ accounting }`, which needs the Supervision's timer:
   operation resolved as `failed`, is refused. The operation view then keeps both: the abandonment as its `settlement`, and the superseded resolution (with its usage report) as its `resolution`. A resolution
   as `failed`, or an abandonment (the operator's explicit authorization of a
   possible second effect), frees the address for a new operation. A
-  resolution carrying a result is M6 work. Both actions are run operations,
+  resolution carrying a result is deferred, not a required M6 or roster feature.
+  Both legacy actions are run operations,
   so a call from inside member or step work is refused as an undeclared call
   (CMP-9).
 - **Identities.** An operation identity is `op-` and an identifier from the

@@ -135,6 +135,26 @@ TLA models are selected only for concrete correctness questions under the
 model-to-code-and-test review contract. Model claims remain limited to the checked
 model, assumptions and bounds.
 
+## Resource-state report decisions (2026-10-24)
+
+[The issue-166 plan](../plans/resource-state-observation.md) records accepted owner
+choices under ACC-004/007/008, distinct from bounded M5 additive Accounting evidence.
+
+| Earlier proposal or assumption | Current direction |
+| --- | --- |
+| All remaining-limit visibility is deferred or needs a dedicated notification product | Consumers can read reported limits; no dedicated notification system or complete quota product is required |
+| State reports remain indefinitely with durable request accounting | Reports persist across analysis/process restart only while relevant; prompt expiry/eviction must not delete durable consumption, usage gaps, attempts or results |
+| Every adapter/user must define an expiry policy | Prefer explicit provider/source reset/validity; otherwise one-hour local retention from observation, with optional override |
+| A fallback hour establishes the provider's window or renewed balance | Local retention only; missing provider validity stays missing, and expiration grants no admission or retry authority |
+| A latest-balance reducer and complete source ordering must precede useful reads | Qualified raw reports suffice; selected-current-balance ordering remains a separate feature, not a gate on report intake/query |
+| Deferred built-in quota/reserve management prohibits all adaptive consumers | Recording supplies evidence only; pluggable coordination policies may consume it under separate runtime authority |
+
+The original proposal remains in version history. Its unaccepted ordering,
+identity and intake recommendations are not adopted wholesale by the retention
+decision. Routine record/query/cleanup choices belong in the bounded implementation
+issue; no new method names, tables, provider taxonomy or client-cache policy are
+selected here. Preview and full CLI delivery retain their own contracts.
+
 ## Preview decisions superseding the initial proposal
 
 Owner decisions on 2026-10-24 reconcile the earlier issue-165 alternatives under

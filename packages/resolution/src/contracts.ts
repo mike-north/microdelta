@@ -184,6 +184,20 @@ export interface IExecutionSupervision {
    */
   member<T>(work: () => Promise<T>): Promise<T>;
   /**
+   * Dispatch a canonical population of `count` members (a nonnegative safe
+   * integer) without allocating execution state for
+   * every undispatched member (DOM-3, RUN-002). `work` receives a position
+   * only when a run-wide window lane can start that member; Resolution owns
+   * the position-to-key mapping and all current evidence. `continueWhile`
+   * stops this dispatch after a run-level Resolution failure, independently
+   * of other requests. A hard run stop also halts new starts; a soft stop
+   * leaves dispatch running so admission can refuse new work while admitted
+   * work drains. The result is the contiguous prefix of positions started,
+   * after those starts settle. Resolution can report the hard-stopped suffix
+   * through the ordinary member frame without eagerly queuing it.
+   */
+  dispatchMembers(count: number, continueWhile: () => boolean, work: (position: number) => Promise<void>): Promise<number>;
+  /**
    * Why run cancellation forbids committing new output right now, or
    * undefined when a commit may proceed. Called in the same synchronous turn
    * as the commit it guards, so the commit is the linearization point: a hard

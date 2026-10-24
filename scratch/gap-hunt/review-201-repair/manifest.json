@@ -1,0 +1,32 @@
+{
+  "files": [
+    {
+      "path": "REPORT.md",
+      "sha256": "8a1351e7a314289f2e56c0c0d407d47da383cf0e8d1a74071c4677a820e6b04c"
+    },
+    {
+      "path": "captures/explicit-copy-compiler.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "captures/explicit-copy-runtime.log",
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "captures/literal-new-head-no-input.log",
+      "sha256": "6479ce0e94e69abcfe5aef6070a7bc6fbf3395fd8678046a1f63f99e170c6b5e"
+    },
+    {
+      "path": "captures/probe-summary.log",
+      "sha256": "693191e996f2cbfaf61fe03ab5217530ae89b7e70ec0d201307021f0a5bf4732"
+    },
+    {
+      "path": "captures/receipt.json",
+      "sha256": "57e395a3170008129c78d66ff95a24484295a85fd2984dd0b48ebaa6886a0de8"
+    },
+    {
+      "path": "reproduce.py",
+      "sha256": "8cc9453ad05494091ff094ef138af84432cc5896c445bf695159acd8997fd139"
+    }
+  ]
+}

@@ -186,6 +186,12 @@ export interface ITrackingObserver {
   capture<T>(callback: () => T): IObservationCapture<T>;
   /** Capture selected facts across asynchronous work and awaits. */
   captureAsync<T>(callback: () => Promise<T>): Promise<IObservationCapture<T>>;
+  /**
+   * Remember this observer's current open frame as a zero-observation assertion.
+   * The assertion succeeds only while that same frame is current and open; it
+   * reveals no frame identity and cannot open, restore, or extend a capture.
+   */
+  currentCaptureAssertion(): () => void;
   /** Compare captured content against facts selected by current correspondence. */
   compareCurrent(capture: IObservationCapture<unknown>, provider: ICurrentFactProvider): ICurrentComparison;
   /** Explicitly detach an output graph and observe only its observer-owned subtrees. */
@@ -1270,6 +1276,17 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
           frame.open = false;
         }
       });
+    },
+    currentCaptureAssertion(): () => void {
+      const frame = captures.getStore();
+      if (frame === undefined || !frame.open) {
+        throw new TypeError('A current open capture is required');
+      }
+      return (): void => {
+        if (captures.getStore() !== frame || !frame.open) {
+          throw new TypeError('The owning capture frame is not current and open');
+        }
+      };
     },
     compareCurrent,
     snapshotOutput: outputObservation.snapshotOutput,

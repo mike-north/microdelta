@@ -33,6 +33,8 @@ const machine: ITrackingObserverHost = {
   sha256: (_input: string) => '0'.repeat(64),
 };
 const observer: ITrackingObserver = createTrackingObserver(machine);
+/** Resolution may assert frame identity through alpha without receiving a frame token or changing observations. */
+expectType<() => void>(observer.currentCaptureAssertion());
 const binding = { path: ['analysis', 'config'] } as const;
 const address: IAddressSegment = { kind: 'property', key: 'profile.name' };
 const trackingAddress: ITrackingAddressSegment = address;

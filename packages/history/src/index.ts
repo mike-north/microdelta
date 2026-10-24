@@ -47,6 +47,7 @@ export type {
 export {
   AttemptConflictError,
   AttemptStateError,
+  HistoryBusyError,
   HistoryClockError,
   HistoryIntegrityError,
   HistorySchemaError,

@@ -1,0 +1,32 @@
+(node:73578) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL scratch/fresh-docs-cursor/dist/source-pagination.test.js
+  ● source-body pagination across independent processes › cold traverses both pages once; current accepted restart traverses none
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 4
+
+    - Array []
+    + Array [
+    +   "provider-page:null",
+    +   "provider-page:page:2",
+    + ]
+
+      17 |             const second = launch();
+      18 |             expect(first.pages).toEqual(['provider-page:null', 'provider-page:page:2']);
+    > 19 |             expect(second.pages).toEqual([]);
+         |                                  ^
+      20 |             expect(first.value).toMatchObject({ kind: 'published', executions: { snapshot: 1, summary: 1 }, data: { count: 4, total: 10, ids: [1, 2, 3, 4] } });
+      21 |             expect(second.value).toMatchObject({ kind: 'reused', executions: {}, data: { count: 4, total: 10, ids: [1, 2, 3, 4] } });
+      22 |             if (typeof first.value !== 'object' || first.value === null || !('reference' in first.value) || typeof second.value !== 'object' || second.value === null || !('reference' in second.value)) {
+
+      at Object.<anonymous> (dist/source-pagination.test.js:19:34)
+
+
+Test Suites: 1 failed, 2 passed, 3 total
+Tests:       1 failed, 5 passed, 6 total
+Snapshots:   0 total
+Time:        0.446 s, estimated 1 s
+Ran all test suites.

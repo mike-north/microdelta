@@ -1,0 +1,7 @@
+node_modules/jest-watcher/build/index.d.ts(9,8): error TS1259: Module '"<USER_PATH>"' can only be default-imported using the 'allowSyntheticDefaultImports' flag
+scratch/fresh-docs-cursor/adapter.test.ts(2,34): error TS2307: Cannot find module './adapter.js' or its corresponding type declarations.
+scratch/fresh-docs-cursor/adapter.test.ts(10,25): error TS7006: Parameter 'record' implicitly has an 'any' type.
+scratch/fresh-docs-cursor/adapter.test.ts(11,29): error TS7006: Parameter 'sum' implicitly has an 'any' type.
+scratch/fresh-docs-cursor/adapter.test.ts(11,34): error TS7006: Parameter 'record' implicitly has an 'any' type.
+scratch/fresh-docs-cursor/adapter.test.ts(18,32): error TS7006: Parameter 'cursor' implicitly has an 'any' type.
+scratch/fresh-docs-cursor/adapter.test.ts(25,32): error TS7006: Parameter 'cursor' implicitly has an 'any' type.

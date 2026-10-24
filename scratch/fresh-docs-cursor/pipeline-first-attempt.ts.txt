@@ -1,0 +1,25 @@
+// Literal attempt from facade prose + the explicitly illustrative M3 plan.
+import { authoring, openWorkspace } from 'microdelta';
+import { collect, fixture } from './adapter.js';
+
+interface IInputs { readonly revision: string }
+interface IHelpers { readonly collect: typeof collect }
+const builders = authoring<IInputs, IHelpers>();
+const snapshot = builders.source({
+  subject: 'github-like:four-record-snapshot',
+  finality: () => true,
+  run: async () => ({ data: await collect(fixture().fetch) }),
+});
+const summary = builders.memo({
+  subject: 'github-like:summary',
+  children: ['snapshot'],
+  run: async ({ calls }) => {
+    const { data } = await calls.snapshot();
+    return { total: data.reduce((sum, record) => sum + record.score, 0) };
+  },
+});
+const analysis = builders.compose({ snapshot, summary });
+const workspace = openWorkspace({ location: '.test-build/fresh-docs-cursor', logicalStore: 'cursor' });
+await workspace.run({ analysis, inputs: { revision: 'v1' }, helpers: { collect } }, async run => {
+  console.log(await run.resolve(summary, { requestKey: 'first' }));
+});

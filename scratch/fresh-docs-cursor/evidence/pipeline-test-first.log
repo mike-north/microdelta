@@ -1,0 +1,52 @@
+node:internal/modules/cjs/loader:1568
+  throw err;
+  ^
+
+Error: Cannot find module '<USER_PATH>'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1564:15)
+    at wrapResolveFilename (node:internal/modules/cjs/loader:1118:27)
+    at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1142:10)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1169:12)
+    at Module._load (node:internal/modules/cjs/loader:1341:5)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:261:19)
+    at Module.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:154:5)
+    at node:internal/main/run_main_module:33:47 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v24.22.1
+(node:23890) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL scratch/fresh-docs-cursor/dist/pipeline.test.js
+  ● snapshot pipeline independent restarts › retains stable summary and exact reference in a second same-store process
+
+    Command failed: <USER_PATH> <USER_PATH> <TEMP_PATH>
+    node:internal/modules/cjs/loader:1568
+      throw err;
+      ^
+
+    Error: Cannot find module '<USER_PATH>'
+
+       8 |     test('retains stable summary and exact reference in a second same-store process', () => {
+       9 |         const directory = mkdtempSync(join(tmpdir(), 'microdelta-cursor-'));
+    > 10 |         const launch = () => JSON.parse(execFileSync(process.execPath, [join(import.meta.dirname, 'pipeline.js'), join(directory, 'history.sqlite')], { encoding: 'utf8' }));
+         |                                         ^
+      11 |         try {
+      12 |             const first = launch();
+      13 |             const second = launch();
+
+      at ../../node:internal/main/run_main_module:33:47 {
+        code: 'MODULE_NOT_FOUND',
+        requireStack: []
+      }
+      Node.js v24.22.1
+      at launch (dist/pipeline.test.js:10:41)
+      at Object.<anonymous> (dist/pipeline.test.js:12:27)
+
+
+Test Suites: 1 failed, 1 passed, 2 total
+Tests:       1 failed, 4 passed, 5 total
+Snapshots:   0 total
+Time:        0.171 s, estimated 1 s
+Ran all test suites.

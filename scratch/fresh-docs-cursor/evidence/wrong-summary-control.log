@@ -1,0 +1,38 @@
+(node:73768) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL scratch/fresh-docs-cursor/dist/pipeline.test.js
+  ● snapshot pipeline independent restarts › retains stable summary and exact reference in a second same-store process
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 1
+    + Received  + 1
+
+    @@ -9,9 +9,9 @@
+            1,
+            2,
+            3,
+            4,
+          ],
+    -     "total": 10,
+    +     "total": 14,
+        },
+        "kind": "published",
+      }
+
+      12 |             const first = launch();
+      13 |             const second = launch();
+    > 14 |             expect(first).toMatchObject({ calls: [null, 'page:2'], kind: 'published', data: { count: 4, total: 10, ids: [1, 2, 3, 4] } });
+         |                           ^
+      15 |             expect(second).toMatchObject({ calls: [null, 'page:2'], kind: 'reused', data: { count: 4, total: 10, ids: [1, 2, 3, 4] } });
+      16 |             if (typeof first !== 'object' || first === null || !('reference' in first) || typeof second !== 'object' || second === null || !('reference' in second)) {
+      17 |                 throw new Error('missing exact reference');
+
+      at Object.<anonymous> (dist/pipeline.test.js:14:27)
+
+
+Test Suites: 1 failed, 2 passed, 3 total
+Tests:       1 failed, 5 passed, 6 total
+Snapshots:   0 total
+Time:        0.519 s, estimated 1 s
+Ran all test suites.

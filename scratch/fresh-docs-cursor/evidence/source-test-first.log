@@ -1,0 +1,29 @@
+[Watchman recrawl warning omitted; raw retained privately]
+
+(node:70214) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+FAIL scratch/fresh-docs-cursor/dist/source-pagination.test.js
+  ● source-body pagination across independent processes › cold traverses both pages once; current accepted restart traverses none
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 1
+
+      10 |         const launch = () => {
+      11 |             const result = spawnSync(process.execPath, [join(import.meta.dirname, 'source-pagination.js'), join(directory, 'history.sqlite')], { encoding: 'utf8' });
+    > 12 |             expect(result.status).toBe(0);
+         |                                   ^
+      13 |             return { value: JSON.parse(result.stdout), pages: result.stderr.split('\n').filter(line => line.startsWith('provider-page:')) };
+      14 |         };
+      15 |         try {
+
+      at launch (dist/source-pagination.test.js:12:35)
+      at Object.<anonymous> (dist/source-pagination.test.js:16:27)
+
+
+Test Suites: 1 failed, 2 passed, 3 total
+Tests:       1 failed, 5 passed, 6 total
+Snapshots:   0 total
+Time:        0.414 s, estimated 1 s
+Ran all test suites.

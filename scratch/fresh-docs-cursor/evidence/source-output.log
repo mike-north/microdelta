@@ -1,0 +1,4 @@
+provider-page:null
+provider-page:page:2
+{"executions":{"summary":1,"snapshot":1},"kind":"published","reference":{"kind":"completed-result","locator":"mdh1|[\"cursor\",\"cursor-pipeline\",\"fixture\",1]"},"data":{"count":4,"total":10,"ids":[1,2,3,4]}}
+{"executions":{},"kind":"reused","reference":{"kind":"completed-result","locator":"mdh1|[\"cursor\",\"cursor-pipeline\",\"fixture\",1]"},"data":{"count":4,"total":10,"ids":[1,2,3,4]}}

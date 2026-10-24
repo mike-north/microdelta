@@ -1,0 +1,10 @@
+[Watchman recrawl warning omitted; raw retained privately]
+
+(node:70943) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+Test Suites: 3 passed, 3 total
+Tests:       6 passed, 6 total
+Snapshots:   0 total
+Time:        0.511 s, estimated 1 s
+Ran all test suites.

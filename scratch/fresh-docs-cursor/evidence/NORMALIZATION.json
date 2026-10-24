@@ -1,0 +1,141 @@
+{
+  "transform": "UTF-8; strip ANSI SGR; replace Watchman recrawl block, /Users paths and OS temp paths with placeholders; no other edits",
+  "raw_location": "private ignored/external storage; not committed",
+  "logs": [
+    {
+      "file": "adapter-check.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "public_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "adapter-test.log",
+      "raw_sha256": "0f33b6bf2849734e23b661354e27f9cf204b4650cdf4aa72fec2dba1859b5b4b",
+      "public_sha256": "0f33b6bf2849734e23b661354e27f9cf204b4650cdf4aa72fec2dba1859b5b4b"
+    },
+    {
+      "file": "archive-dropped-page-control.log",
+      "raw_sha256": "02b2324774ea2d02dd101aa3e1400674c911db111cdae233a9a861b3d7122467",
+      "public_sha256": "02b2324774ea2d02dd101aa3e1400674c911db111cdae233a9a861b3d7122467"
+    },
+    {
+      "file": "archive-reproduce.log",
+      "raw_sha256": "58b188e7ec612b07a1044c7339ae507d29fd2509f287614083935ea4da1c11da",
+      "public_sha256": "26b5cf6c338b75431e8dc1f0fba25a627b0dc7d1b2758d4c90ec3c129bc4c0f4"
+    },
+    {
+      "file": "archive-unconditional-source-refresh-control.log",
+      "raw_sha256": "8079357952e60decd431749c551e2d91f349814ddd10f58d188e95ba8d324203",
+      "public_sha256": "8079357952e60decd431749c551e2d91f349814ddd10f58d188e95ba8d324203"
+    },
+    {
+      "file": "archive-wrong-summary-control.log",
+      "raw_sha256": "866a7a88dd9942199cd2644ea94e26edf8260da40fd7126173b321cedc40200a",
+      "public_sha256": "866a7a88dd9942199cd2644ea94e26edf8260da40fd7126173b321cedc40200a"
+    },
+    {
+      "file": "build.log",
+      "raw_sha256": "ab7fb2ff40636a04645d9840386b6f6609f7f149466e47e5f0bf6774c14f84ea",
+      "public_sha256": "7f2184763d34915c53001ba8e1c84a3bfa95eaea04ab1c742d0e3ea0d2b3de9f"
+    },
+    {
+      "file": "controls.log",
+      "raw_sha256": "b00e0f3dacd1114665c16bbecbb0cd9a07ea719a6e08d0fadbea7d41ec58f9a4",
+      "public_sha256": "b00e0f3dacd1114665c16bbecbb0cd9a07ea719a6e08d0fadbea7d41ec58f9a4"
+    },
+    {
+      "file": "dropped-page-control.log",
+      "raw_sha256": "899e1522e8113e7214053f47ec82eee878a354864545b50c9004ebc90b809dd1",
+      "public_sha256": "899e1522e8113e7214053f47ec82eee878a354864545b50c9004ebc90b809dd1"
+    },
+    {
+      "file": "followup-controls.log",
+      "raw_sha256": "0e2e6fba1fcd4cac2cf47b146fe095cf9c78db0baa3acd4743466919054fd5b0",
+      "public_sha256": "0e2e6fba1fcd4cac2cf47b146fe095cf9c78db0baa3acd4743466919054fd5b0"
+    },
+    {
+      "file": "followup-lint.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "public_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "lint.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "public_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "pipeline-check.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "public_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "pipeline-first-attempt.log",
+      "raw_sha256": "f4af8103affb045270678ca225979b8f026d710c1feae3f8801f1e9a54ed0c1e",
+      "public_sha256": "f4af8103affb045270678ca225979b8f026d710c1feae3f8801f1e9a54ed0c1e"
+    },
+    {
+      "file": "pipeline-test-first.log",
+      "raw_sha256": "b50def155f0981c50a2ce6fa34549b349ae1c63fc45422426c849b6800628587",
+      "public_sha256": "15a6c554f61efccba2beca779696dcd81032b27457195a95ab47989d0e791f93"
+    },
+    {
+      "file": "pipeline-test.log",
+      "raw_sha256": "bec87eb8f312d714e400a45d3ddf3210ea3177917b51d798de109b9a9307d2fc",
+      "public_sha256": "bec87eb8f312d714e400a45d3ddf3210ea3177917b51d798de109b9a9307d2fc"
+    },
+    {
+      "file": "reproduce-interrupted.log",
+      "raw_sha256": "d84927819c8536d82ff527b6710df0ce5f773eab64fa45914b5d0a195fea47fa",
+      "public_sha256": "70afdecbb4786f17d8db417e1d7b81cc6e9276ad73bf76aee25d95769574efdd"
+    },
+    {
+      "file": "reproduce.log",
+      "raw_sha256": "86f224c60c8777a4227f2fafd30cb6d7c99ba183e54cc9c12e32c5e400c49fae",
+      "public_sha256": "1afc1a8bf6c4dad2f276904fa346f81124f7575ec5aaf0e392d093b0fb104841"
+    },
+    {
+      "file": "snapshot-output.log",
+      "raw_sha256": "5466691379fadd1a65ed59bf30bb9f03ed6f72fb35b2c3092f1bd96a92237cfb",
+      "public_sha256": "5466691379fadd1a65ed59bf30bb9f03ed6f72fb35b2c3092f1bd96a92237cfb"
+    },
+    {
+      "file": "source-check.log",
+      "raw_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "public_sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "file": "source-output.log",
+      "raw_sha256": "81c0a74fe9eb0616b2f5714b947ab91a15e78c7b24c51e6aecac4dd1024b65d1",
+      "public_sha256": "81c0a74fe9eb0616b2f5714b947ab91a15e78c7b24c51e6aecac4dd1024b65d1"
+    },
+    {
+      "file": "source-test-first.log",
+      "raw_sha256": "d716a0d0adcf77a7cecf58d47f132f07c6650ad48ddad7a32e9464dcc92945f0",
+      "public_sha256": "b912dbedd94b2ca29773b876d45f16905133036a39dbcc9963b4106767a26b12"
+    },
+    {
+      "file": "source-test.log",
+      "raw_sha256": "2d4e74c9c7e5ab8127f83221d16a150c9ef336211aaa38071a568afdb5c4b376",
+      "public_sha256": "ded39712f45746c9ae7fb538ee6d2d2eee6eebe12839fbe06c6b9656fbebfa96"
+    },
+    {
+      "file": "test-first.log",
+      "raw_sha256": "a881a1cc02759a52a4210eb125c4e54cbc318947f2194674eb4af19f1da2820d",
+      "public_sha256": "ae19957edb43448424d4a17474e6a0aa21660d4de3780d9bebe469d80b2c8f90"
+    },
+    {
+      "file": "tracked-array-first-attempt.log",
+      "raw_sha256": "1e4b638e68075a21c7d3584ec36a39854096d21a7dec65b2446ab4dadf4b0daa",
+      "public_sha256": "1e4b638e68075a21c7d3584ec36a39854096d21a7dec65b2446ab4dadf4b0daa"
+    },
+    {
+      "file": "unconditional-source-refresh-control.log",
+      "raw_sha256": "02f89d47d6b5ad43a063e50bc877a3d980df1ab192b4aebbd315297b3e6e3d0f",
+      "public_sha256": "02f89d47d6b5ad43a063e50bc877a3d980df1ab192b4aebbd315297b3e6e3d0f"
+    },
+    {
+      "file": "wrong-summary-control.log",
+      "raw_sha256": "63aed855e77151a04eb0aa1e122c0766b0f0c302eea026bde43d712562140a83",
+      "public_sha256": "63aed855e77151a04eb0aa1e122c0766b0f0c302eea026bde43d712562140a83"
+    }
+  ]
+}

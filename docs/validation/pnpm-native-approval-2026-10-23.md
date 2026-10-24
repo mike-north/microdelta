@@ -49,7 +49,7 @@ official `node:24-bookworm` image had image ID and repository digest
 The disposable container reported Linux aarch64, Node 24.14.0 and npm 11.9.0;
 Python 3, `make` and `g++` were present. No privileged flag, host mount,
 remote shell or global trust edit was used; the unapproved negative controls
-showed no inherited approval for `better-sqlite3` affected this run.
+showed that no inherited approval for `better-sqlite3` affected this run.
 The exact committed fixture at `c3c0409a4e10dac2765bda10015bf286a20624e0`
 was streamed as a Git archive, verified inside the container against its
 SHA-256 above, then run with no version argument:

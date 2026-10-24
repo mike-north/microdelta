@@ -42,6 +42,11 @@ export type IAddressSegment =
 export type IOperation = 'value' | 'own' | 'membership' | 'length' | 'keys' | 'container-kind';
 
 // @alpha
+export interface IPreparedValue {
+    readonly [preparedValueBrand]: never;
+}
+
+// @alpha
 export interface ISelectedFact {
     readonly address: readonly IAddressSegment[];
     readonly fact: unknown;
@@ -115,6 +120,15 @@ export function normalizeSelectedNode(candidate: unknown): ISelectedNode;
 
 // @alpha
 export function observe(root: unknown, address: readonly IAddressSegment[], operation: IOperation): ISelectedFact;
+
+// @alpha
+export function observePrepared(prepared: IPreparedValue, address: readonly IAddressSegment[], operation: IOperation): ISelectedFact;
+
+// @alpha
+export function preparedRoot(prepared: IPreparedValue): unknown;
+
+// @alpha
+export function prepareValue(value: unknown): IPreparedValue;
 
 // @alpha
 export function recordFromEntries(entries: readonly (readonly [string, unknown])[], prototype: object | null): Record<string, unknown>;

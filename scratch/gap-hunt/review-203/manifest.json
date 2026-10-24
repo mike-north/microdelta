@@ -1,0 +1,36 @@
+{
+  "files": [
+    {
+      "path": "REPORT.md",
+      "sha256": "7c99ceecaf3ffbce34a9ef1df42b9dae69d01c2cc8b22c9fc5dd269ae95dfcad"
+    },
+    {
+      "path": "captures/diagnostic-contract.log",
+      "sha256": "8011ccdc52d9b958357d126d889775072fdd732c9ccda2432516129f4f65e18a"
+    },
+    {
+      "path": "captures/docs.log",
+      "sha256": "64076b9b450b24958f0bd50471e2f605a6794e919ef23e51d22be225b610756f"
+    },
+    {
+      "path": "captures/historical-raw-qualification.json",
+      "sha256": "a557d26a1616199f02a89690a5fce9dce9cf9a784e7a3998489639d95255ec8b"
+    },
+    {
+      "path": "captures/receipt.json",
+      "sha256": "1bc4df6d8e7d6082dc7ff3a26caaeacb83fe83f0b0740c794366c9248ecd8081"
+    },
+    {
+      "path": "captures/recipe-environment.json",
+      "sha256": "a2f0399ad6f8931383dd9236fca79b08fdc2e0b0f92f0ad5099cf8523f021368"
+    },
+    {
+      "path": "diagnostic-contract.test.mjs",
+      "sha256": "6fdaf4714bd8ffdc18e6b16b916f6d6d0646569f3d8b9d665720050a9f6a0088"
+    },
+    {
+      "path": "reproduce.py",
+      "sha256": "79ab4ca35ad8ca7eb450e6870f1a87343e5cc6a97864b7d2d869bee943285f05"
+    }
+  ]
+}

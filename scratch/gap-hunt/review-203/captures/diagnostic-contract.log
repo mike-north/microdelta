@@ -1,0 +1,15 @@
+(node:35009) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+✔ install failure remains a diagnostic observation and never runs smoke (1.89625ms)
+✔ successful install/open remains valid and retains the smoke marker (0.845625ms)
+✔ failed native open remains visibly failed despite diagnostic completion (0.759333ms)
+✔ infrastructure error/signal remains visible without fabricated smoke success (0.659333ms)
+✔ unselected Node version rejects before child execution (0.642ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 58.833958

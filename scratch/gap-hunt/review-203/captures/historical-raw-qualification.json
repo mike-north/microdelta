@@ -1,0 +1,12 @@
+{
+  "pin": "6d3f3f3533d75ea42be226edbd7e3932b974f447",
+  "path": "scratch/gap-hunt/contract-operations/node26-clt/original-node26-install.log",
+  "sha256": "7fa5b55c938662bfa4b1243ea3f6f69fbeb9a0e5ba844994aec3895549677442",
+  "markers": [
+    "No prebuilt binaries found",
+    "http 200",
+    "malformed file",
+    "unknown architecture"
+  ],
+  "executedThisReview": false
+}

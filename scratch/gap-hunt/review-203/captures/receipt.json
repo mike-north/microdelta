@@ -1,0 +1,193 @@
+{
+  "source": "3e8fe78df48222b3ccb2f56163a8e2ad159c8807",
+  "commands": [
+    {
+      "label": "docs",
+      "argv": [
+        "node",
+        "--test",
+        "tooling/native-toolchain-docs.test.mjs"
+      ],
+      "exit": 0,
+      "tests": 5
+    },
+    {
+      "label": "diagnostic-contract",
+      "argv": [
+        "node",
+        "--experimental-vm-modules",
+        "--test",
+        "scratch/gap-hunt/review-203/diagnostic-contract.test.mjs"
+      ],
+      "exit": 0,
+      "tests": 5
+    }
+  ],
+  "sourceFilesUnchanged": 816,
+  "fixtureSha256": "05062901824f478b0ca4a25b6c1f2ce101cd76e2f8c0b9169a3d4012b97953a4",
+  "adaptationGuardOnlyHashVerified": true,
+  "capturedNode24HashVerified": true,
+  "historicalSources": [
+    {
+      "pin": "6d3f3f3533d75ea42be226edbd7e3932b974f447",
+      "path": "scratch/gap-hunt/contract-operations/node26-clt/REPORT.md",
+      "sha256": "6de4d448b2ff73a967686be91b89b181f35ac2f8bf66c20b9e21f9fda57d1cf6",
+      "markersVerified": [
+        "stdio.h not found",
+        "SDKROOT=",
+        "24\u219226\u219224",
+        "26\u219224\u219226"
+      ]
+    },
+    {
+      "pin": "faa7d2563945374b75cbd5b239a82df4e17a334d",
+      "path": "scratch/gap-hunt/contract-operations/node26-clt/DIAGNOSTIC-158.md",
+      "sha256": "cbc15d9331c70dfcc7444ac6b64ed1cda430b3665b4aeff42dc221ee145e8ca5",
+      "markersVerified": [
+        "Node26.12.0",
+        "install status0",
+        "smoke status0"
+      ]
+    },
+    {
+      "pin": "e475049c3f858c270791581fb77f925e761363ce",
+      "path": "scratch/gap-hunt/contract-operations/LINUX-PROVENANCE.md",
+      "sha256": "432909213ac49fd306ee4168362f19ad57ac6018eb11dc252b44905a59afd0c4",
+      "markersVerified": [
+        "Node24.13.0",
+        "26.12.1",
+        "not rerun",
+        "npm success does not test pnpm"
+      ]
+    }
+  ],
+  "localLinks": [
+    {
+      "source": "README.md",
+      "target": "examples/contribution-report/README.md"
+    },
+    {
+      "source": "README.md",
+      "target": "examples/contribution-report/README.md"
+    },
+    {
+      "source": "README.md",
+      "target": "examples/contribution-report/test/example.test.mjs"
+    },
+    {
+      "source": "README.md",
+      "target": "packages/core/README.md"
+    },
+    {
+      "source": "README.md",
+      "target": "docs/spec/tracking.md"
+    },
+    {
+      "source": "README.md",
+      "target": "docs/spec/execution.md"
+    },
+    {
+      "source": "README.md",
+      "target": "docs/spec/execution.md#reuse-001--reuse-is-a-current-contextual-decision"
+    },
+    {
+      "source": "README.md",
+      "target": "docs/spec/tracking.md#structured-addresses-and-fingerprints"
+    },
+    {
+      "source": "README.md",
+      "target": "docs/package-map.md"
+    },
+    {
+      "source": "README.md",
+      "target": "docs/validation/first-release-2026-09-28.md"
+    },
+    {
+      "source": "README.md",
+      "target": "examples/contribution-report/README.md"
+    },
+    {
+      "source": "README.md",
+      "target": "packages/core/README.md"
+    },
+    {
+      "source": "README.md",
+      "target": "docs/native-sqlite-toolchain.md"
+    },
+    {
+      "source": "README.md",
+      "target": "docs/package-map.md"
+    },
+    {
+      "source": "README.md",
+      "target": "docs/spec/README.md"
+    },
+    {
+      "source": "README.md",
+      "target": "docs/spec/glossary.md"
+    },
+    {
+      "source": "README.md",
+      "target": "docs/milestones.md"
+    },
+    {
+      "source": "README.md",
+      "target": "ENG_TEAM_INSTRUCTIONS.md"
+    },
+    {
+      "source": "README.md",
+      "target": "docs/releasing.md"
+    },
+    {
+      "source": "packages/core/README.md",
+      "target": "../../docs/package-map.md"
+    },
+    {
+      "source": "packages/core/README.md",
+      "target": "../../docs/spec/README.md"
+    },
+    {
+      "source": "packages/core/README.md",
+      "target": "../../docs/native-sqlite-toolchain.md"
+    },
+    {
+      "source": "packages/core/README.md",
+      "target": "../../examples/contribution-report/README.md"
+    },
+    {
+      "source": "packages/core/README.md",
+      "target": "../../docs/validation/m3-acceptance-2026-09-28.md"
+    },
+    {
+      "source": "packages/core/README.md",
+      "target": "../../docs/validation/m4-acceptance-2026-09-29.md"
+    },
+    {
+      "source": "docs/native-sqlite-toolchain.md",
+      "target": "../README.md"
+    },
+    {
+      "source": "docs/native-sqlite-toolchain.md",
+      "target": "../scratch/gap-hunt/contract-operations/diagnose-158-native.mjs"
+    },
+    {
+      "source": "docs/native-sqlite-toolchain.md",
+      "target": "validation/native-sqlite-toolchain-2026-10-23.md"
+    },
+    {
+      "source": "docs/validation/native-sqlite-toolchain-2026-10-23.md",
+      "target": "../native-sqlite-toolchain.md"
+    },
+    {
+      "source": "docs/validation/native-sqlite-toolchain-2026-10-23.md",
+      "target": "../../scratch/gap-hunt/contract-operations/diagnose-158-native.mjs"
+    },
+    {
+      "source": "docs/validation/native-sqlite-toolchain-2026-10-23.md",
+      "target": "native-sqlite-node24-probe-2026-10-23.json"
+    }
+  ],
+  "nativeInstallExecuted": false,
+  "linuxRuntimeExecuted": false,
+  "scope": "Synthetic diagnostic ports prove output classification/control flow only. Historical real-native and supplied Linux evidence retain their original provenance."
+}

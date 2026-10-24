@@ -1,0 +1,13 @@
+✔ root and facade onboarding resolve to the native toolchain guide (1.175042ms)
+✔ guide separates the three macOS observations and gives only command-local repair (0.420667ms)
+✔ guide attributes Linux npm proof and keeps package metadata separate (0.152334ms)
+✔ diagnostic remains the unchanged disposable, outcome-recording fixture (1.125167ms)
+✔ current host probe records its Node 24 adaptation and child results (0.445417ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 58.891583

@@ -1,0 +1,17 @@
+{
+  "argv": [
+    "node",
+    "--experimental-vm-modules",
+    "node_modules/jest/bin/jest.js",
+    "--config",
+    "packages/core/jest.config.mjs",
+    "--runInBand",
+    "--runTestsByPath",
+    "packages/core/.test-build/test/gap-hunt-duplicate-labels.test.js",
+    "--verbose"
+  ],
+  "exit": 0,
+  "seconds": 71.83851194381714,
+  "timeout": 300,
+  "log_sha256": "f82420f3f3a3ac6da680daf1ad2d9f1130c964ec02fe98a225321e4d54f2313a"
+}

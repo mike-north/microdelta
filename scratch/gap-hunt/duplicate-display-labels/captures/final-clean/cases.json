@@ -1,0 +1,91 @@
+{
+  "cases": [
+    {
+      "mode": "duplicate",
+      "cold": {
+        "reports": [
+          {
+            "slot": "first",
+            "kind": "published",
+            "reference": "mdh1|[\"duplicate-labels-store\",\"duplicate-labels\",\"test\",1]",
+            "score": 11
+          },
+          {
+            "slot": "second",
+            "kind": "published",
+            "reference": "mdh1|[\"duplicate-labels-store\",\"duplicate-labels\",\"test\",2]",
+            "score": 29
+          }
+        ],
+        "bodies": 2,
+        "status": 0,
+        "stdout": "[{\"slot\":\"first\",\"kind\":\"published\",\"reference\":\"mdh1|[\\\"duplicate-labels-store\\\",\\\"duplicate-labels\\\",\\\"test\\\",1]\",\"data\":{\"score\":11}},{\"slot\":\"second\",\"kind\":\"published\",\"reference\":\"mdh1|[\\\"duplicate-labels-store\\\",\\\"duplicate-labels\\\",\\\"test\\\",2]\",\"data\":{\"score\":29}}]\n",
+        "stderr": "BODY:first\nBODY:second\n"
+      },
+      "restart": {
+        "reports": [
+          {
+            "slot": "first",
+            "kind": "reused",
+            "reference": "mdh1|[\"duplicate-labels-store\",\"duplicate-labels\",\"test\",1]",
+            "score": 11
+          },
+          {
+            "slot": "second",
+            "kind": "reused",
+            "reference": "mdh1|[\"duplicate-labels-store\",\"duplicate-labels\",\"test\",2]",
+            "score": 29
+          }
+        ],
+        "bodies": 0,
+        "status": 0,
+        "stdout": "[{\"slot\":\"first\",\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"duplicate-labels-store\\\",\\\"duplicate-labels\\\",\\\"test\\\",1]\",\"data\":{\"score\":11}},{\"slot\":\"second\",\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"duplicate-labels-store\\\",\\\"duplicate-labels\\\",\\\"test\\\",2]\",\"data\":{\"score\":29}}]\n",
+        "stderr": ""
+      }
+    },
+    {
+      "mode": "distinct",
+      "cold": {
+        "reports": [
+          {
+            "slot": "first",
+            "kind": "published",
+            "reference": "mdh1|[\"duplicate-labels-store\",\"duplicate-labels\",\"test\",1]",
+            "score": 11
+          },
+          {
+            "slot": "second",
+            "kind": "published",
+            "reference": "mdh1|[\"duplicate-labels-store\",\"duplicate-labels\",\"test\",2]",
+            "score": 29
+          }
+        ],
+        "bodies": 2,
+        "status": 0,
+        "stdout": "[{\"slot\":\"first\",\"kind\":\"published\",\"reference\":\"mdh1|[\\\"duplicate-labels-store\\\",\\\"duplicate-labels\\\",\\\"test\\\",1]\",\"data\":{\"score\":11}},{\"slot\":\"second\",\"kind\":\"published\",\"reference\":\"mdh1|[\\\"duplicate-labels-store\\\",\\\"duplicate-labels\\\",\\\"test\\\",2]\",\"data\":{\"score\":29}}]\n",
+        "stderr": "BODY:first\nBODY:second\n"
+      },
+      "restart": {
+        "reports": [
+          {
+            "slot": "first",
+            "kind": "reused",
+            "reference": "mdh1|[\"duplicate-labels-store\",\"duplicate-labels\",\"test\",1]",
+            "score": 11
+          },
+          {
+            "slot": "second",
+            "kind": "reused",
+            "reference": "mdh1|[\"duplicate-labels-store\",\"duplicate-labels\",\"test\",2]",
+            "score": 29
+          }
+        ],
+        "bodies": 0,
+        "status": 0,
+        "stdout": "[{\"slot\":\"first\",\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"duplicate-labels-store\\\",\\\"duplicate-labels\\\",\\\"test\\\",1]\",\"data\":{\"score\":11}},{\"slot\":\"second\",\"kind\":\"reused\",\"reference\":\"mdh1|[\\\"duplicate-labels-store\\\",\\\"duplicate-labels\\\",\\\"test\\\",2]\",\"data\":{\"score\":29}}]\n",
+        "stderr": ""
+      }
+    }
+  ],
+  "freshProcesses": 4
+}

@@ -1,0 +1,20 @@
+{
+  "runtime": "7a629f94d83366131e4aa25e541a24e41db744fa",
+  "source_hashes": {
+    "packages/core/test/gap-hunt-duplicate-label-worker.ts": "82e1171b7e5a0103e1ab52ff9543dc61b4a7d6a681349106043df2b506488bb7",
+    "packages/core/test/gap-hunt-duplicate-labels.test.ts": "6b8e7151e7babe230f6b0c01c81a6b66b100f021080b6a93164029e607aff2a3"
+  },
+  "cases": 2,
+  "fresh_processes": 4,
+  "node": "v24.22.1",
+  "platform": "darwin",
+  "cases_sha256": "0b069168028c91382b3dfb711e33ad56157989837933e95da9ab7d4ab68dcec5",
+  "product_fixes": false,
+  "paid_provider": false,
+  "executedSource": "37a42ea7b4165dbe9348967225ee235dd92d9aa9",
+  "frozenFilesByteExact": 814,
+  "productionChanges": [],
+  "githubWrites": false,
+  "cleanArchive": true,
+  "initialRun": "Separate first fresh-worktree install/build/types/lint/Jest also passed; final clean archive is authoritative."
+}

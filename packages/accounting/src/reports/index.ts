@@ -11,7 +11,7 @@ import { initializeSchema, verifySchema } from './schema.js';
 import { fromRow, identity, integer, normalize } from './validation.js';
 import { writeFailure } from '../sqlite/index.js';
 
-/** Failed scheduled cleanup retries in one minute; persistent storage failure cannot promise eviction. */
+/** Scheduled cleanup retries after one minute when the host can allocate a timer; unavailable storage or scheduling can delay eviction. */
 const maintenanceRetryMilliseconds = 60_000;
 
 /** Commit acknowledgment is returned only after host transaction success. */
@@ -52,7 +52,16 @@ export function openResourceReports(options: IResourceReportsOptions): IResource
       cancel = undefined;
       try { maintain(); }
       catch (error: unknown) {
-        if (!closed) { schedule(integer(options.timer.currentEpochMilliseconds() + maintenanceRetryMilliseconds)); }
+        try {
+          if (!closed) { schedule(integer(options.timer.currentEpochMilliseconds() + maintenanceRetryMilliseconds)); }
+        } catch (schedulingError: unknown) {
+          // The spent timer cannot recover itself if the host cannot allocate
+          // another. Report both failures without escaping the timer turn;
+          // explicit maintenance, later intake or reopening can resume cleanup.
+          notifyFailure(error);
+          notifyFailure(schedulingError);
+          return;
+        }
         notifyFailure(error);
       }
     }, { keepAlive: false });

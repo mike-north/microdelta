@@ -428,8 +428,9 @@ export function _createNodeSqliteReaderImplementation(): ISqliteReadCapability {
 /**
  * Read only SQLite's fixed header before the driver can create WAL sidecars.
  * Empty/foreign files are left to SQLite/schema validation. Missing files may
- * be created only by writable open. The owner must keep journal layout stable
- * while handles live; concurrent external mode changes are unsupported.
+ * be created only by writable open. Cooperative owners must keep the pathname and journal layout stable from
+ * this preflight through the subsequent driver open and throughout handle
+ * lifetime; concurrent external path replacement or mode changes are unsupported.
  */
 function refuseWal(location: string, allowMissing: boolean): void {
   let descriptor: number;

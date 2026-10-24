@@ -27,7 +27,9 @@ implemented lifecycle:
   timer is now retained until its replacement is armed, and scheduling failure
   is reported separately from a successful durable acknowledgment.
 
-The focused final report suite passed all 10 scenarios using:
+- Combined storage failure and retry allocation failure first escaped with `timer allocation failed` (1 failed, 10 passed). Both errors are now delivered to the observer without escaping, even if the observer throws. No timer is claimed when allocation fails; explicit maintenance after recovery restores cleanup.
+
+The focused final report suite passed all 12 scenarios using:
 
 ```sh
 npx tsc -p packages/core/tsconfig.test.json
@@ -39,7 +41,7 @@ node --experimental-vm-modules node_modules/jest/bin/jest.js --config packages/c
 | Contract | Executable proof |
 | --- | --- |
 | A-14a/f raw evidence | `resource-reports.test.ts`: distinct 93/90 reports alongside consumption 5; explicit zero/unknown; pool/window/account qualification; out-of-order arrivals; retained duplicate/conflict and unchanged observation/expiry |
-| A-14b/e durability | Same suite: a separate Node process reads acknowledged evidence before expiry; injected failed commit emits no acknowledgment; wrong-store/foreign/empty storage is refused |
+| A-14b/e durability | Same suite: SIGKILL immediately after synchronous acknowledgment preserves evidence for a separate reader process; a before-record SIGKILL control leaves no evidence; injected failed commit emits no acknowledgment; wrong-store/foreign/empty storage is refused |
 | A-14c expiry | Same suite: explicit provider validity overrides local fallback; omitted override defaults to one hour; half-hour inspection/redelivery preserves original expiry; exact boundary filters immediately; reopening three days later physically removes rows |
 | A-14d eviction | Same suite: controlled injected timers physically delete rows at expiry; 20 repeated cycles remain empty after cleanup; idle writer polls notice reports from another closed writer; failed cleanup retries and close blocks queued callbacks |
 | A-14d evidence isolation | Same suite: usage 5, an unknown request attempt, all usage attempts, and actual History completed-result/attempt evidence survive state eviction and foreign-file refusal |
@@ -54,7 +56,7 @@ The final source passed the required commands sequentially, each with exit 0:
 - `npm run check`: strict compiler, type-aware lint, generated declarations,
   package boundaries and all workspace checks.
 - `npm test`: complete tooling/workspace/experiment/example suite. Core passed
-  90 suites and 1,073 tests, including all 10 report scenarios; Node Machine
+  90 suites and 1,075 tests, including all 12 report scenarios; Node Machine
   passed 9 suites and 90 tests. Accounting and Machine tsd suites passed.
 - `npm run build`: all package/declaration, fixture, experiment and example
   builds.
@@ -73,12 +75,14 @@ Reports use a dedicated DELETE-journal file; existing additive and History
 storage retain the default WAL behavior. Read-only opening never changes journal
 mode or repairs a hot journal. Recovery may require the writable owner.
 Rollback-journal readers can contend with a writer; failure is never interpreted
-as absent or zero evidence. External journal-mode changes while handles are live
-are unsupported.
+as absent or zero evidence. Cooperative owners must preserve pathname and journal layout from header preflight
+through driver open and throughout handle lifetime; the preflight is not atomic.
 
 Expiry removes stored rows and makes their SQLite pages reusable; it does not
 promise file truncation or secure erasure. Persistent unavailable storage can
-delay physical eviction, with failures reported and retried; read filtering
+delay physical eviction, with failures reported and retried when timer allocation
+succeeds. Combined storage/timer failure reports both errors without claiming a
+retry; explicit maintenance, intake or reopen can restore cleanup after recovery; read filtering
 continues to exclude expired reports. Deduplication ends with physical expiry,
 so caller identities and original observation timestamps must never be reused
 or revised. Opaque account/provider labels must not contain credentials.

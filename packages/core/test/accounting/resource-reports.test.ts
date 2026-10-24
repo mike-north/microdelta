@@ -291,3 +291,88 @@ test('a failed post-commit scheduling read preserves the existing cleanup timer 
     expect(inspect.prepare('SELECT COUNT(*) AS n FROM resource_reports').get()).toEqual({ n: 0 });
   } finally { inspect.close(); reader.close(); writer.close(); f.cleanup(); }
 });
+
+test('combined cleanup and retry-allocation failure reports both errors without escaping or claiming a future timer', () => {
+  const f = fixture();
+  const base = createNodeSqlite();
+  const storageFailure = new Error('storage offline');
+  const schedulingFailure = new Error('timer allocation failed');
+  const failures: unknown[] = [];
+  let unavailable = false;
+  const writer = openResourceReports({
+    sqlite: { openSqlite(location, openOptions) {
+      const connection = base.openSqlite(location, openOptions);
+      return { ...connection, transaction<T>(operation: () => T): T {
+        if (unavailable) { throw storageFailure; }
+        let outcome: { readonly value: T } | undefined;
+        connection.transaction(() => { outcome = { value: operation() }; });
+        if (outcome === undefined) { throw new Error('transaction did not run'); }
+        return outcome.value;
+      } };
+    } },
+    timer: {
+      currentEpochMilliseconds: () => f.timer.currentEpochMilliseconds(),
+      schedule(at, callback) {
+        if (unavailable) { throw schedulingFailure; }
+        return f.timer.schedule(at, callback);
+      },
+    },
+    location: f.location, logicalStore: 'store',
+    onMaintenanceError(error) { failures.push(error); throw new Error('observer failed'); },
+  });
+  const reader = openResourceReportReader({ sqlite: createNodeSqliteReader(), clock: f.timer, location: f.location, logicalStore: 'store' });
+  const inspect = createNodeSqliteReader().openSqliteReader(f.location);
+  try {
+    expect(writer.record(report('acknowledged', { validUntil: 10_100 }))).toBe('recorded');
+    unavailable = true;
+    expect(() => f.timer.advance(10_100)).not.toThrow();
+    expect(failures).toEqual([storageFailure, schedulingFailure]);
+    expect(f.timer.pending.size).toBe(0);
+    expect(reader.query('production')).toEqual([]);
+    expect(inspect.prepare('SELECT COUNT(*) AS n FROM resource_reports').get()).toEqual({ n: 1 });
+    unavailable = false;
+    expect(writer.maintain()).toBe(1);
+    expect(f.timer.pending.size).toBe(1);
+    expect(inspect.prepare('SELECT COUNT(*) AS n FROM resource_reports').get()).toEqual({ n: 0 });
+  } finally { inspect.close(); reader.close(); writer.close(); f.cleanup(); }
+});
+
+test('SIGKILL immediately after acknowledgment preserves evidence; before-record control has none', () => {
+  const f = fixture();
+  const accounting = fileURLToPath(new URL('../../../../accounting/dist/src/index.js', import.meta.url));
+  const machine = fileURLToPath(new URL('../../../../machine-node/dist/src/index.js', import.meta.url));
+  const env = { ...process.env, ACCOUNTING: accounting, MACHINE: machine, LOCATION: f.location };
+  try {
+    for (const boundary of ['before-record', 'after-acknowledgment']) {
+      // Synchronous stdout proves the boundary was reached before an uncatchable kill.
+      // Neither writer path closes the handle or allows graceful shutdown maintenance.
+      const killed = spawnSync(process.execPath, ['--input-type=module', '-e', `
+        import {writeSync} from 'node:fs';
+        const {openResourceReports}=await import(process.env.ACCOUNTING);
+        const {createNodeSqlite,createNodeTimer}=await import(process.env.MACHINE);
+        const writer=openResourceReports({sqlite:createNodeSqlite(),timer:createNodeTimer(),location:process.env.LOCATION,logicalStore:'store',onMaintenanceError:()=>{}});
+        if(process.env.BOUNDARY==='before-record') {
+          writeSync(1,'before-record\\n'); process.kill(process.pid,'SIGKILL');
+        }
+        const outcome=writer.record({...JSON.parse(process.env.REPORT),observedAt:Date.now(),validUntil:Date.now()+60000});
+        writeSync(1,outcome+'\\n'); process.kill(process.pid,'SIGKILL');
+      `], { encoding: 'utf8', timeout: 10_000, env: { ...env, BOUNDARY: boundary, REPORT: JSON.stringify(report('crash-ack')) } });
+      expect(killed.error).toBeUndefined();
+      expect(killed.status).toBeNull();
+      expect(killed.signal).toBe('SIGKILL');
+      expect(killed.stderr).toBe('');
+      expect(killed.stdout).toBe(boundary === 'before-record' ? 'before-record\n' : 'recorded\n');
+      // A fresh process inspects persisted evidence without recovering or writing it.
+      const readback = spawnSync(process.execPath, ['--input-type=module', '-e', `
+        const {openResourceReportReader}=await import(process.env.ACCOUNTING);
+        const {createNodeSqliteReader}=await import(process.env.MACHINE);
+        const reader=openResourceReportReader({sqlite:createNodeSqliteReader(),clock:{currentEpochMilliseconds:()=>Date.now()},location:process.env.LOCATION,logicalStore:'store'});
+        console.log(JSON.stringify(reader.query('production'))); reader.close();
+      `], { encoding: 'utf8', timeout: 10_000, env });
+      expect(readback.error).toBeUndefined();
+      expect(readback.stderr).toBe('');
+      expect(readback.status).toBe(0);
+      expect(JSON.parse(readback.stdout)).toEqual(boundary === 'before-record' ? [] : [expect.objectContaining({ report: 'crash-ack', remaining: 93, retentionBasis: 'provider' })]);
+    }
+  } finally { f.cleanup(); }
+});

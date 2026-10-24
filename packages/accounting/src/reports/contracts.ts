@@ -71,7 +71,7 @@ export interface IResourceReportsOptions {
   readonly location: string;
   /** Expected logical store identity. */
   readonly logicalStore: string;
-  /** Receives scheduled cleanup failure after retry is armed; callback exceptions are contained. */
+  /** Receives cleanup failure and any retry-allocation failure separately; observer exceptions are contained. A failed retry allocation leaves no promised future timer. */
   readonly onMaintenanceError: (error: unknown) => void;
 }
 

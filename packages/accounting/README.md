@@ -142,8 +142,10 @@ or retimed after eviction; there is no permanent deduplication tombstone.
 Writers remove expired rows on open, successful intake, explicit `maintain`, and
 scheduled maintenance. The injected timer schedules the earlier of the next
 known expiry and a one-minute poll, including while idle. Storage failures reach
-`onMaintenanceError` and retry one minute later. Errors thrown by that observer
-are contained. Persistent storage failure can delay physical removal; it cannot
+`onMaintenanceError` and retry one minute later when timer allocation succeeds.
+If allocation also fails, both errors are reported without claiming a future
+timer; explicit maintenance, intake or reopen can restore cleanup after recovery.
+Errors thrown by that observer are contained. Persistent storage failure can delay physical removal; it cannot
 make expired reports appear in queries. `close` cancels scheduling, and timers
 do not keep an otherwise finished process alive.
 
@@ -157,8 +159,9 @@ The report file uses DELETE rollback journaling with FULL synchronous commits,
 so read-only opening creates no WAL sidecars. Existing Machine storage defaults
 remain WAL. Inspection and DELETE opening refuse existing WAL files before
 mutation. Readers see committed evidence while the writer remains open, but
-rollback-journal contention can return the host's typed busy error. Journal mode
-must not change externally while handles are live; hot-journal recovery belongs
+rollback-journal contention can return the host's typed busy error. Cooperative owners
+must preserve pathname and journal layout from preflight through driver open and
+throughout handle lifetime; hot-journal recovery belongs
 to a writable open. No result is substituted for a failed read.
 
 See the [bounded design and lifecycle](../../docs/validation/resource-report-design.md)

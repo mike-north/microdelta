@@ -304,7 +304,11 @@ export interface ISqliteReader {
 
 /** Inspection-only storage authority, separate from writable database creation. @alpha */
 export interface ISqliteReadCapability {
-  /** Open an existing rollback-journal file read-only; missing files and WAL files fail without mutation. */
+  /**
+   * Open an existing rollback-journal file read-only; missing files and WAL files fail without mutation.
+   * Cooperative owners preserve pathname and journal layout from preflight through
+   * driver open and throughout handle lifetime.
+   */
   openSqliteReader(location: string): ISqliteReader;
 }
 
@@ -314,7 +318,8 @@ export interface ISqliteOpenOptions {
    * WAL is the default. DELETE uses rollback journaling with FULL synchronous
    * commits, allowing side-effect-free readers but permitting reader/writer
    * contention. DELETE refuses existing WAL files instead of changing them.
-   * Owners must not change journal layout while handles are live.
+   * Cooperative owners must keep the pathname and journal layout stable from
+   * preflight through opening and for the lifetime of every handle.
    */
   readonly journalMode: 'wal' | 'delete';
 }

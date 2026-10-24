@@ -78,7 +78,9 @@ export function createNodeRandom(): IRandomIdentifierCapability {
 /**
  * Create inspection-only access to existing rollback-journal SQLite files, with no creation,
  * schema initialization or journal-mode assignment during opening. WAL files
- * are refused before SQLite can create coordination sidecars.
+ * are refused before SQLite can create coordination sidecars. Cooperative owners
+ * preserve pathname and journal layout from preflight through driver open and
+ * throughout handle lifetime; this preflight does not lock the filesystem.
  * @alpha
  */
 export function createNodeSqliteReader(): ISqliteReadCapability {

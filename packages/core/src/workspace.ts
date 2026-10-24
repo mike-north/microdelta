@@ -792,9 +792,11 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
     logicalStore: options.logicalStore,
   });
   /**
-   * The store's file identity, however the caller spelled its location:
-   * workspace objects over one file share one writer lease, so they share one
-   * key for nested-run refusal. The file exists once History has opened it.
+   * The store's supported canonical pathname: absolute/relative spellings,
+   * redundant segments and symbolic links resolve to one identity, while
+   * distinct hard-linked names remain distinct. Workspace objects using one
+   * such pathname share one key for nested-run refusal. The file exists after
+   * History has opened it; this key does not establish inode-level identity.
    */
   const store = canonicalNodeLocation(options.location);
   const accounting = options.accounting;

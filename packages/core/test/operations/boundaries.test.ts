@@ -330,9 +330,13 @@ describe('an Accounting intent that is not durable (ACC-007)', () => {
         ...journal,
         commit: (lease, request) => {
           const restoringNotSent = request.writes.some((write) => {
-            if (write.collection !== operationsCollection) return false;
+            if (write.collection !== operationsCollection) {
+              return false;
+            }
             const content = write.record.content;
-            if (typeof content !== 'object' || content === null) return false;
+            if (typeof content !== 'object' || content === null) {
+              return false;
+            }
             const attempts: unknown = Reflect.get(content, 'attempts');
             const last: unknown = Array.isArray(attempts) ? attempts.at(-1) : undefined;
             return Reflect.get(content, 'status') === 'deferred' && typeof last === 'object' && last !== null && Reflect.get(last, 'status') === 'not-sent';

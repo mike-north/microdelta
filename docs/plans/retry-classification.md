@@ -269,15 +269,28 @@ Supervision applies this order:
 | Omitted direct `backoffMilliseconds`, no custom match | 2,000ms after first sent failure, 4,000ms after second; doubling capped at 60,000ms for larger finite overrides, matching #213's chosen direct-path schedule |
 | Explicit nonnegative safe-integer `backoffMilliseconds`, no custom match | Existing fixed-delay override, including zero; does not make a permanent normalized response retryable |
 | Explicit fixed backoff plus custom match | Custom delay wins; do not add or maximize the legacy fixed backoff against it |
-| Legacy `rateLimitRetries` | Retains #213's restrictive subcap for normalized rate-refusal retries, even when a custom policy chooses immediate/delayed retry; never an independent pool or permission beyond `maxAttempts` |
+| Legacy `rateLimitRetries` | Restricts all normalized `rate-limited` responses, with or without `retryAt`, under default or custom classification (the deliberate alpha correction below), even when a custom policy chooses immediate/delayed retry; never an independent pool or permission beyond `maxAttempts` |
 | Known not-before plus any retry decision | The later floor wins, regardless of custom/default/fixed delay or new-run allowance |
 
-The legacy rate-only subcap refers to the adapter's actual `rate-limited` response
-category; a provider-code string is not a new universal rate classifier. Adapters
-should normalize known rate refusals accordingly. This slice neither widens the
-legacy subcap to all failures nor adds a rate/authority field to the three-way
-callback result. All actual sends, including a custom reinterpretation of a
-conservatively normalized failure, still consume the common finite allowance.
+The rate-only subcap refers to the adapter's actual `rate-limited` response
+category. This deliberately corrects the inspected #213 alpha behavior, which
+consults `rateLimitRetries` only when that response also has `retryAt`; untimed
+rate refusals currently take its ordinary transient branch. This candidate applies
+the restrictive cap to all normalized rate refusals, under both built-in and
+matched custom classification. It is not unchanged #213 compatibility. Preserve
+the normalized rate category in durable attempt evidence even without a timestamp,
+so the authoritative current-run rate-refusal count is not lost as generic failure.
+
+After recording the current rate refusal, a retry is forbidden when the count of
+current-run normalized rate refusals exceeds `rateLimitRetries`, or the total sent
+count reaches `maxAttempts`. Thus `rateLimitRetries: 0` permits no retry after the
+first refusal; `1` permits one, provided the independent total allowance permits it.
+Neither callback timing nor a missing provider timestamp bypasses this rule.
+A provider-code string, HTTP status, `notBefore` field or callback decision never
+changes the normalized category or expands this cap to other failures. Adapters
+should normalize known rate refusals accordingly. All actual sends, including a
+custom reinterpretation of a conservatively normalized failure, still consume the
+common finite allowance.
 
 For a validated `retry-after`, require a positive safe-integer duration in
 milliseconds. Zero is expressed by `retry-now`; the old fixed-backoff zero remains
@@ -313,6 +326,63 @@ these illustrative codes. A small source-owned facts seam is preferable to
 passing arbitrary errors/bodies to a global predicate: it preserves context for
 custom precedence without making Supervision parse provider payloads or secrets.
 
+## Durable classification lifecycle and address ownership
+
+The following semantic states belong to Supervision's durable operation record;
+codec spelling is an implementation choice. They are separate from the recorded
+provider attempt status and the outward member outcome. A known failed response
+is not a still-in-flight request, and a policy error is not another provider
+failure. Preserve the same logical operation, request-attempt identity, request
+binding, source scope and originating private run instance throughout classification.
+
+Before invoking a callback, commit the normalized nonsuccess response, validated
+facts, actual usage acknowledgement and strongest known timing floor under the
+current fence, together with `decision-pending`. The record and address index must
+retain their association atomically under the existing persistence protocol.
+Do not use a terminal `failed` operation settlement that frees the address. If the
+response commit fails, do not invoke classification; retain the existing unrecorded
+or unknown-outcome recovery path rather than fabricate durable response evidence.
+
+| Durable classification state | Outward behavior and same-run address rule |
+| --- | --- |
+| `decision-pending`, owning generation still live | The member is waiting/pending with its required input incomplete. Re-entry attaches to or observes the existing wait; it never invokes a second callback or allocates a fresh operation. |
+| Accepted `retry-now` or `retry-after` | Decision, selected duration and absolute effective floor commit together before retry admission. Re-entry reuses them and the same operation; the next actual request gets a new attempt identity and charges the existing run tally. |
+| Accepted `stop` | Retain the decision and operation/address for this run. Re-entry reports the same stopped acquisition without reclassification, default retry, fresh operation or allowance reset. It supplies no acquired data or complete-success coverage. |
+| `decision-failed` | Persist a bounded policy-error reason, retaining the known response, attempt and address. The waiting member may fail with the typed local policy error; same-run re-entry returns that error without callback/default/send. |
+| Retry forbidden by an independent runtime gate | Persist a bounded no-retry reason under the current fence, retaining response, attempt and address; expose the existing exhaustion/block or stop outcome without invoking a callback for permission. Same-run re-entry cannot bypass that gate with a fresh operation. This is a framework outcome, not a callback-selected stop. |
+| `decision-cancelled` | When still fenced, persist interruption by stop/deadline, retaining address and evidence. The required input remains incomplete under existing stop/coverage semantics; same-run re-entry cannot revive classification or retry. |
+| Pending after ownership/generation loss | The persisted response is still known, but there is no accepted decision or live authorized wait. Report an interrupted classification block with incomplete required input. It remains blocked even within the same invocation until an explicit new run. |
+
+Only the captured live generation may accept its answer, and only while its
+operation/attempt, private instance, source scope, record revision and lease/fence
+are current. Losing that authority does not authorize a cancellation write: leave
+pending or the newer writer's state untouched. Discard late answers without any
+journal, address-index, usage, decision or publication mutation. These states are
+framework lifecycle outcomes, not a fourth callback decision. The broader #214
+known-failure/fold-coverage repair remains separate; this seam must not claim
+complete coverage merely because classification ended.
+
+An explicit ordinary new run can recover a retained pending, failed, cancelled or
+stopped classification using its normal fresh allowance and configuration. It
+keeps the existing logical operation/address and prior attempt identities, checks
+request-binding/environment/access compatibility, and appends a fresh request
+attempt if all send gates permit. It does not rerun a classifier against the old
+response. Preserve actual historical usage, the durable provider floor and any
+compatible already accepted future not-before; fresh default backoff history does
+not erase an existing timing restriction. No within-run repair, grant, or new
+process/run-resume API is introduced.
+
+Crash boundaries must remain distinguishable. Before response commitment, existing
+in-flight/unknown recovery applies. After response commitment but before decision
+commitment, known response/facts/usage survive as pending; a missing live generation
+blocks re-entry, even if a callback computed an answer before crashing. An answer
+that never committed is not authoritative. After accepted decision commitment,
+existing same-run continuation reuses the recorded decision/deadline without
+callback reinvocation; a genuinely new run follows the fresh-run rules above.
+This specifies durable record handling, not support for resuming a process or
+reconstructing an old run identity. All retained records preserve unknown usage as
+unknown and do not debit a send merely for callback execution or recovery.
+
 ## Callback errors, stopped waits and stale answers
 
 Invoke classification outside a live author request-execution capability, with
@@ -328,10 +398,11 @@ accessor, malformed duration or attempted allowance field is a typed local polic
 failure. Return `undefined` is invalid, not no opinion. Do not call defaults, send,
 charge an attempt, fabricate data, or clear the actual provider/usage evidence.
 Use bounded error codes without copying source facts or exception text into events
-or durable diagnostics. Record that the current attempt has no usable retry
-decision, so a same-run pass does not repeatedly invoke the failed callback or
-silently obtain a default retry. A repaired explicit new run follows its normal
-fresh-allowance and configuration path; no within-run repair/grant API is added.
+or durable diagnostics. Commit `decision-failed` under the current fence and retain the address as defined
+in the [durable lifecycle](#durable-classification-lifecycle-and-address-ownership).
+If ownership was lost, make no stale write; unresolved pending remains blocked.
+A repaired explicit new run follows that lifecycle's fresh-attempt path; no
+within-run repair/grant API is added.
 
 An async decision wait races any stop or deadline escalation. Abort its decision
 signal, detach the wait without requiring cooperative settlement, and handle a

@@ -34,8 +34,17 @@ network access for dependencies. The SQLite adapter uses the native
 native build toolchain is required. Do not assume every newer Node version is
 supported by that dependency.
 
+For a pnpm external ESM consumer of the published `microdelta@0.2.0`, read
+the [targeted native-build approval guide](docs/native-sqlite-install.md)
+before opening the project-private durable workspace. The public memory Store
+does not need that native binding.
+
 From the repository root, choose a store directory that does not already contain
 a previous example run:
+
+Before choosing a durable store location, review the [native store location
+guidance](docs/native-store-locations.md) for supported path spellings and the
+SQLite hard-link/WAL limitation.
 
 ```sh
 npm ci
@@ -131,6 +140,8 @@ package supplied through an injected port.
   recover, and inspect the fixture analysis.
 - [Facade API guide](packages/core/README.md): public compatibility Store versus
   private-alpha authoring and operations.
+- [Native SQLite toolchain guide](docs/native-sqlite-toolchain.md): qualified
+  installation evidence and a disposable host diagnostic for the durable path.
 - [Implementation map](docs/package-map.md): package responsibilities and delivered
   capabilities.
 - [Specification](docs/spec/README.md) and [glossary](docs/spec/glossary.md): active

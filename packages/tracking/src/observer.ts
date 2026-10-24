@@ -186,6 +186,12 @@ export interface ITrackingObserver {
   capture<T>(callback: () => T): IObservationCapture<T>;
   /** Capture selected facts across asynchronous work and awaits. */
   captureAsync<T>(callback: () => Promise<T>): Promise<IObservationCapture<T>>;
+  /**
+   * Remember this observer's current open frame as a zero-observation assertion.
+   * The assertion succeeds only while that same frame is current and open; it
+   * reveals no frame identity and cannot open, restore, or extend a capture.
+   */
+  currentCaptureAssertion(): () => void;
   /** Compare captured content against facts selected by current correspondence. */
   compareCurrent(capture: IObservationCapture<unknown>, provider: ICurrentFactProvider): ICurrentComparison;
   /** Explicitly detach an output graph and observe only its observer-owned subtrees. */
@@ -640,7 +646,7 @@ const immutableContainerTraps = {
     throw new TypeError('Native reflection is unsupported; use observer.keys for supported records');
   },
   getOwnPropertyDescriptor(): PropertyDescriptor | undefined {
-    throw new TypeError('Native reflection is unsupported; use observer.hasOwn for supported fields');
+    throw new TypeError('Native reflection is unsupported; use callback hasOwn(value, key) in a workspace, or observer.hasOwn for direct Tracking consumers');
   },
   getPrototypeOf(): object | null {
     throw new TypeError('Prototype reflection is unsupported for tracked values');
@@ -1271,6 +1277,17 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
         }
       });
     },
+    currentCaptureAssertion(): () => void {
+      const frame = captures.getStore();
+      if (frame === undefined || !frame.open) {
+        throw new TypeError('A current open capture is required');
+      }
+      return (): void => {
+        if (captures.getStore() !== frame || !frame.open) {
+          throw new TypeError('The owning capture frame is not current and open');
+        }
+      };
+    },
     compareCurrent,
     snapshotOutput: outputObservation.snapshotOutput,
     keys(value: ITracked<object>): readonly string[] {
@@ -1353,6 +1370,11 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
       return frame.untracked;
     },
     hasOwn(value: ITracked<object>, key: string): boolean {
+      // Untyped callers must not coerce a key into a different fact or silently
+      // report absence. Apply the same boundary before local or lazy selection.
+      if (typeof key !== 'string') {
+        throw new TypeError('Own-property checks need a supported string key');
+      }
       const owned = ownership.get(value);
       if (owned === undefined) {
         throw new TypeError('hasOwn needs an observer-owned value');

@@ -21,8 +21,6 @@ export type ISqliteConnection = ReturnType<ISqliteCapability['openSqlite']>;
 export type ISqliteStatement = ReturnType<ISqliteConnection['prepare']>;
 /** One returned row. */
 export type ISqliteRow = NonNullable<ReturnType<ISqliteStatement['get']>>;
-/** One bound value. */
-export type ISqliteValue = Parameters<ISqliteStatement['run']>[number];
 
 /** The Node host shared by tests; only its SHA-256 capability is used here. */
 export const machine = createNodeMachine();
@@ -36,6 +34,9 @@ const payloadColumns: ReadonlySet<string> = new Set(['payload', 'scalar', 'stage
 /** One executed statement, classified by its leading role comment. */
 export interface IStatementEvent {
   readonly role: string;
+  /** Exact prepared SQL and bound parameters at execution, including result scope. */
+  readonly sql: string;
+  readonly values: readonly unknown[];
   readonly rows: readonly ISqliteRow[];
 }
 
@@ -68,6 +69,8 @@ export interface IObservedSqlite {
   mark(): number;
   /** Summarize statements from `start` to now. */
   evidence(start?: number): IReadEvidence;
+  /** Inspect exact statements and returned rows since a test window began. */
+  events(start?: number): readonly IStatementEvent[];
   /** Arm a fault for later transactions; `undefined` disarms. */
   arm(plan: IFaultPlan | undefined): void;
 }
@@ -99,24 +102,24 @@ export function observedSqlite(): IObservedSqlite {
 
   const wrapStatement = (text: string, statement: ISqliteStatement): ISqliteStatement => {
     const role = roleOf(text);
-    const note = (rows: readonly ISqliteRow[]): void => {
-      events.push({ role, rows });
+    const note = (values: readonly unknown[], rows: readonly ISqliteRow[]): void => {
+      events.push({ role, sql: text, values, rows });
       transactionRoles?.add(role);
     };
     return {
       run(...values) {
         const result = statement.run(...values);
-        note([]);
+        note(values, []);
         return result;
       },
       get(...values) {
         const row = statement.get(...values);
-        note(row === undefined ? [] : [row]);
+        note(values, row === undefined ? [] : [row]);
         return row;
       },
       all(...values) {
         const rows = statement.all(...values);
-        note(rows);
+        note(values, rows);
         return rows;
       },
     };
@@ -161,6 +164,7 @@ export function observedSqlite(): IObservedSqlite {
   return {
     capability,
     mark: () => events.length,
+    events: (start = 0): readonly IStatementEvent[] => events.slice(start),
     evidence(start = 0): IReadEvidence {
       const window = events.slice(start);
       const roles: Record<string, number> = {};

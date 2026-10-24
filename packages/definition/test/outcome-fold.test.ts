@@ -132,7 +132,7 @@ describe('outcome fold declaration (RUN-010)', () => {
     expectDefinitionError(() => callUntyped(outcomeFold, { subject: 't', run }), 'illegal-edge');
     const foreign = declarations<ITestFamily>();
     const collection = foreign.source<IContributors>({ subject: 'c', collection: { identity: 'key' }, run: () => ({ members: [], status: 'complete' }) });
-    const foreignTemplate = foreign.template({ slot: 't', collection, steps: (member) => ({ p: member.source<string>({ subject: member.subject('p'), run: () => 'p' }) }) });
+    const foreignTemplate = foreign.template({ slot: 't', collection, steps: (member) => ({ p: member.source<{ readonly value: string }>({ subject: member.subject('p'), run: () => ({ value: 'p' }) }) }) });
     expectDefinitionError(() => callUntyped(outcomeFold, { subject: 't', over: { template: foreignTemplate, step: 'p' }, run }), 'forged-declaration');
   });
 

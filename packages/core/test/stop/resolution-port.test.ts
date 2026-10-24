@@ -110,6 +110,19 @@ function scriptedPort(lanes = 1): IScriptedPort {
         }
       }
     },
+    async dispatchMembers(count: number, continueWhile: () => boolean, work: (position: number) => Promise<void>): Promise<number> {
+      // This scripted port has no timed lane lending. A bounded set of
+      // callers models its lanes while Resolution owns each member outcome.
+      let next = 0;
+      await Promise.all(Array.from({ length: Math.min(lanes, count) }, async () => {
+        while (next < count && continueWhile()) {
+          const position = next;
+          next += 1;
+          await port.member(() => work(position));
+        }
+      }));
+      return next;
+    },
     async execute<T>(step: IBindingDescriptor, work: () => Promise<T>): Promise<ISupervisedExecution<T>> {
       port.executed.push(step.slot);
       if (port.interrupt.has(step.slot)) {

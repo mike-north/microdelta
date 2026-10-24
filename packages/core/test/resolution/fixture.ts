@@ -555,9 +555,9 @@ function keyedDeclarations(builders: IDeclarations<IFamily>) {
     slot: 'contributor',
     collection: contributors,
     steps: (member) => ({
-      summary: member.source<string>({
+      summary: member.source<{ readonly value: string }>({
         subject: member.subject('keyed-summary:acme/widget:2026-Q1'),
-        run: ({ outcome }) => outcome.fresh('summary'),
+        run: ({ outcome }) => outcome.fresh({ value: 'summary' }),
       }),
     }),
   });

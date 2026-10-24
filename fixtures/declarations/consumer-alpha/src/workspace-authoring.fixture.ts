@@ -69,13 +69,13 @@ source<IActivity>({
 memo({
   subject: 'summary:raw',
   // eslint-disable-next-line microdelta/tracked-captures -- An untracked captured scalar is a raw external influence.
-  run: () => externalThreshold,
+  run: () => ({ value: externalThreshold }),
 });
 
 memo({
   subject: 'summary:context-in-callback',
   // eslint-disable-next-line microdelta/tracked-captures -- Runtime context is scoped access, not tracked evidence; callbacks may not read it directly.
-  run: () => currentRun().environment,
+  run: () => ({ value: currentRun().environment }),
 });
 
 source<IActivity>({

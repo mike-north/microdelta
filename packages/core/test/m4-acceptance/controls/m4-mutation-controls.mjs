@@ -147,8 +147,8 @@ const controls = [
   {
     name: 'the custom key is ignored in favor of designated identity',
     target: 'collection',
-    anchor: 'if (strategy.customKey === undefined) {\n        raw = ownData(member, strategy.identity).value;',
-    replacement: 'if (true) {\n        raw = ownData(member, strategy.identity).value;',
+    anchor: 'if (strategy.customKey === undefined) {\n        if (strategy.identity === undefined) {',
+    replacement: 'if (true) {\n        if (strategy.identity === undefined) {',
     breaks: ['custom-key-correspondence'],
   },
   {

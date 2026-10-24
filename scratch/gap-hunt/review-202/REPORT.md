@@ -1,6 +1,6 @@
 # PR202 / #157 bounded consumer qualification
 
-Reviewed exact `09da3b0b05eaff0563faa70ba68c44107508ed7b`, base `e3e1920a1300b4205b5c417f98d1202e75f2d3ba`. **PASS for the bounded documentation and macOS existing-manager consumer controls.** Linux evidence is a qualified owner capture, not a runtime execution performed by this reviewer. No product fix or remote write was made.
+Reviewed exact `09da3b0b05eaff0563faa70ba68c44107508ed7b`, base `e3e1920a1300b4205b5c417f98d1202e75f2d3ba`. **PASS for the bounded documentation and macOS existing-manager consumer controls.** Linux evidence is a qualified owner capture, not a runtime execution performed by this reviewer (`capturedThisReviewLinuxFalse: true`). No product fix or remote write was made.
 
 The eight-file patch supplies the native-build guide, three onboarding links, a pinned published-package fixture, four documentation checks, and a bounded Linux evidence record. It changes no runtime, package export, driver version, engine range, trust default or release machinery. The guide identifies immutable published `microdelta@0.2.0`, public memory versus project-private alpha durable usage, targeted local `allowBuilds` plus `pnpm rebuild better-sqlite3`, and #154/#158 boundaries. All 31 local Markdown links inspected across the five touched guides resolve to files. The four documentation checks pass.
 
@@ -33,3 +33,5 @@ PNPM12_BIN=/path/to/existing/pnpm12.10.1 python3 scratch/gap-hunt/review-202/rep
 This archives the exact reviewed source, runs the four docs assertions and unchanged original published-consumer fixture, checks every source file before cleanup, and uses no inherited repository build. It refuses an absent/wrong-version fallback. The path above is caller-provided, not portable configuration. No default denied-manager retry or host-policy workaround is included.
 
 Attribution: Codex worker GPT-6.1 Sol prepared and independently executed these bounded controls for Mike North. No human or independent Linux execution is claimed.
+
+Publication refinement: the final artifact renames its manifest to lowercase, reports the future replay host dynamically, and bounds manager-version/docs checks to30/120seconds. Static syntax and timeout/host-field inspection pass; these metadata/guard edits were not used to repeat the already completed consumer workload. Captured logs retain the actual earlier macOS execution.

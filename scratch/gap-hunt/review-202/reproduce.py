@@ -5,6 +5,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 
 PIN = '09da3b0b05eaff0563faa70ba68c44107508ed7b'
@@ -20,7 +21,7 @@ def main():
     assert hashlib.sha256((ROOT / FIXTURE).read_bytes()).hexdigest() == DIGEST
     manager = os.environ.get('PNPM12_BIN')
     assert manager, 'Supply an existing approved exact pnpm12.10.1 executable; do not retry denied downloads.'
-    assert subprocess.check_output([manager, '--version'], text=True).strip() == '12.10.1'
+    assert subprocess.check_output([manager, '--version'], text=True, timeout=30).strip() == '12.10.1'
     with tempfile.TemporaryDirectory(prefix='microdelta-review202-') as directory:
         checkout = Path(directory) / 'source'
         checkout.mkdir()
@@ -28,10 +29,10 @@ def main():
         subprocess.run(['tar', '-xf', '-', '-C', str(checkout)], input=archive, check=True)
         files = {str(p.relative_to(checkout)): hashlib.sha256(p.read_bytes()).hexdigest()
                  for p in checkout.rglob('*') if p.is_file()}
-        subprocess.run(['node', '--test', 'tooling/native-install-docs.test.mjs'], cwd=checkout, check=True)
+        subprocess.run(['node', '--test', 'tooling/native-install-docs.test.mjs'], cwd=checkout, check=True, timeout=120)
         subprocess.run(['bash', '-x', FIXTURE], cwd=checkout, check=True, timeout=900)
         assert all(hashlib.sha256((checkout / p).read_bytes()).hexdigest() == h for p, h in files.items())
-        print(json.dumps({'source': PIN, 'sourceFilesUnchanged': len(files), 'docs': '4/4', 'consumers': 'both managers passed exact original assertions', 'linux': 'not executed'}))
+        print(json.dumps({'source': PIN, 'sourceFilesUnchanged': len(files), 'docs': '4/4', 'consumers': 'both managers passed exact original assertions', 'hostPlatform': sys.platform, 'nodeHost': json.loads(subprocess.check_output(['node', '-p', 'JSON.stringify({node:process.version,platform:process.platform,arch:process.arch})'], text=True, timeout=30)), 'linuxExecuted': sys.platform.startswith('linux')}))
 
 if __name__ == '__main__':
     main()

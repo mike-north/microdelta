@@ -81,5 +81,5 @@ public-memory-ok
 {"coldCalls":1,"restartCalls":0,"exactReference":{"kind":"completed-result","locator":"mdh1|[\"portability\",\"portability\",\"fixture\",1]"}}
 + rm -rf <consumer-root>
 + case "${2:-}" in
-+ cp -R -- <consumer-root>/. <repo>/.worktrees/control/pr202-consumers/
++ cp -R -- <consumer-root>/. <capture-directory>/
 + command rm -rf <consumer-root>

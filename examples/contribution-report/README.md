@@ -17,6 +17,10 @@ process exits.
 
 From the repository root, after `npm ci`:
 
+The `--store` location is a project-private Node SQLite workspace store. Read
+the [native store location guidance](../../docs/native-store-locations.md)
+before using alternate paths to access the same store.
+
 ```sh
 npm run build                     # builds the packages and this example
 node examples/contribution-report/dist/main.js run --store .test-build/example-store

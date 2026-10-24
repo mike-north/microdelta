@@ -140,6 +140,8 @@ package supplied through an injected port.
   recover, and inspect the fixture analysis.
 - [Facade API guide](packages/core/README.md): public compatibility Store versus
   private-alpha authoring and operations.
+- [Native SQLite toolchain guide](docs/native-sqlite-toolchain.md): qualified
+  installation evidence and a disposable host diagnostic for the durable path.
 - [Implementation map](docs/package-map.md): package responsibilities and delivered
   capabilities.
 - [Specification](docs/spec/README.md) and [glossary](docs/spec/glossary.md): active

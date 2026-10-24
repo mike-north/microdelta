@@ -26,6 +26,10 @@ External pnpm ESM consumers evaluating the published `microdelta@0.2.0`
 durable path need [consumer-local native-build approval](../../docs/native-sqlite-install.md)
 before `openWorkspace`. The public memory Store above remains process-local.
 
+The durable Node SQLite path has [platform-qualified native installation and
+diagnostic guidance](../../docs/native-sqlite-toolchain.md). It is separate
+from the public memory Store and from the alpha declaration setup.
+
 The facade's generated **alpha** declarations also carry the workspace
 authoring and run path. Every name is a project-private `@alpha` contract that
 may change without notice; the default public entry exposes none of it. It

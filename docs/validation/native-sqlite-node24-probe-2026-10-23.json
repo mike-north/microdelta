@@ -1,0 +1,30 @@
+{
+  "provenance": "current native diagnostic execution",
+  "node": "v24.14.0",
+  "modulesABI": "137",
+  "platform": "darwin",
+  "arch": "arm64",
+  "npm": {
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "stdout": "11.18.0\n",
+    "stderr": ""
+  },
+  "dependency": "better-sqlite3@12.9.0",
+  "install": {
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "stdout": "\nadded 38 packages in 816ms\n",
+    "stderr": "npm warn deprecated prebuild-install@7.1.3: No longer maintained. Please contact the author of the relevant native addon; alternatives are available.\nnpm warn allow-scripts 1 package has install scripts not yet covered by allowScripts:\nnpm warn allow-scripts   better-sqlite3@12.9.0 (install: prebuild-install || node-gyp rebuild --release)\nnpm warn allow-scripts\nnpm warn allow-scripts Run `npm install-scripts ls` to review, or `npm install-scripts approve <pkg>` to allow.\nnpm notice\nnpm notice New minor version of npm available! 11.18.0 -> 11.21.1\nnpm notice Changelog: https://github.com/npm/cli/releases/tag/v11.21.1\nnpm notice To update run: npm install -g npm@11.21.1\nnpm notice\n"
+  },
+  "smoke": {
+    "status": 0,
+    "signal": null,
+    "error": null,
+    "stdout": "native-sqlite-open-query-ok\n",
+    "stderr": ""
+  },
+  "interpretation": "Host-specific observed result only. Declared engine range does not determine runtime compatibility. No microdelta full-suite or cross-version store test is performed."
+}

@@ -1,6 +1,7 @@
 # Issue 165: proposed observation protocol and implementation plan
 
-**Status: proposed engineering plan for independent adversarial review.** This
+**Status: proposed engineering plan, revised after four findings. The same
+independent reviewer's re-review is pending.** This
 document proposes concrete contracts and bounded implementation work under the
 accepted semantics in [the preview-observation plan](preview-observation.md) and
 [RUN-006, RUN-007, RUN-008 and CLI-004](../spec/operations.md#run-006--preview-access-does-not-authorize-recomputation).
@@ -106,12 +107,53 @@ owner-supplied published/reused evidence tied to the exact reference and
 evaluation scope.
 
 The starting fact is recorded before admission so a second process can see that
-an evaluation began even if it later died. A convenience “latest evaluation”
-selector, if approved, means latest **recorded start** in the addressed scope;
-the initial contract should select an exact evaluation identity so parallel
-work cannot be replaced by whichever callback returns last. A failed
-start-record commit stops admission of that observation-capable evaluation;
-otherwise a new refresh could happen invisibly while old data appears current.
+an evaluation began even if it later died. The start operation assigns a stable
+opaque `evaluationId`, persists it with the owner metadata, and returns it to the
+writer before work is admitted; callers can carry that ID into a fresh reader.
+A fresh reader that lacks the ID discovers it with the read-only, exact-scope
+`listEvaluations` query below. A failed start-record commit stops admission of
+that observation-capable evaluation; otherwise a new refresh could happen
+invisibly while old data appears current.
+
+### Discovering evaluations from a fresh reader
+
+Add a bounded, read-only `listEvaluations(scope, {limit, after?})` query over
+the durable Supervision owner metadata, filtered by exact analysis and
+environment and optionally by structural step/member identity. It returns
+stable `evaluationId` values, each evaluation's immutable start revision and
+exact scope, explicit coverage, a per-call `asOfRevision`, and a continuation
+token when more matches remain. Evaluation identity and start facts remain
+durable independently of the disposable 1,024-entry activity index, so
+activity eviction cannot make a retained evaluation undiscoverable. Terminal
+state is mutable owner evidence and is read separately through the exact
+`readCurrent` query at that query's own `asOfRevision`; enumeration does not
+promise a cross-page snapshot of terminal state. The owner metadata remains
+unreclaimed under this proposal; the page bounds entry count, not stored history
+or arbitrary identity bytes.
+
+Order pages by recorded start revision descending; where one commit group
+contains multiple starts, use stable `evaluationId` order as deterministic
+tie-break presentation, not causal precedence. Require an explicit positive
+page limit, enforce a proposed maximum of 100 evaluation entries per page, and
+bind the opaque continuation token to store incarnation, exact filter scope, a
+high-water start revision fixed by the first page, and the last
+`(startRevision, evaluationId)` pair. Later pages apply that high-water filter
+to immutable owner start records; new starts are excluded without holding a
+SQLite snapshot or creating a server session. A token from another store/scope
+or a malformed/unsupported token returns an explicit invalid-continuation
+result and a fresh-first-page path; normal activity eviction does not expire it.
+This is page continuation for owner metadata discovery, not an incremental
+activity cursor or a durable preview session.
+
+Multiple matches are returned as multiple candidates. Neither enumeration nor
+an exact-current read chooses one by callback return order. A caller needing one
+must supply its stable ID; an optional future “latest evaluation” convenience
+selector would mean latest recorded start and must surface ambiguity within a
+commit group rather than claiming a causal winner. If legacy owner facts lack a
+stable evaluation identity or exact scope mapping, return them as
+`identity-unavailable`/prior-coverage evidence; do not mint a guessed ID,
+collapse them into a current evaluation, or treat their absence as proof that no
+older evaluation exists.
 
 ### Shared commit order, not inferred causality
 
@@ -160,18 +202,33 @@ owner transition and let subscribers request reads afterward.
 
 ### Current, recent and coverage reads
 
-Propose separate `readCurrent(addressedScope, evaluationSelection)` and
-`readRecent(scope, limit?)` concepts. The initial current-read contract selects
-an exact evaluation identity; it must not silently pick an evaluation by
-callback return order. Both reads return their own `asOfRevision` and
-explicit coverage. Current metadata selects exact references and includes the
-latest applicable current error/evaluation facts independently of activity
-eviction. Recent activity returns compact owner references in observation
-commit order, plus retained lower/upper revision boundaries, the start of
-recording support, whether filters narrowed the scope, and whether the response
-was truncated. The two independent reads do not promise one common snapshot.
-If a consumer later needs a combined baseline, compose it from one bounded
-read-snapshot transaction rather than assuming two calls were atomic together.
+Propose three separate reads: `listEvaluations(scope, {limit, after?})`,
+`readCurrent(addressedScope, evaluationId)`, and `readRecent(scope, limit?)`.
+Enumeration discovers stable exact IDs without analysis callbacks; the initial
+current-read contract requires one of those IDs (or the stable ID returned to
+the writer) and never chooses an evaluation by callback return order. All reads
+return their own `asOfRevision` and explicit coverage.
+
+For a selected evaluation E, current metadata returns the exact result
+reference from E's highest-revision native publication or owner-verified
+reuse/adoption/correspondence fact. If E has no such associated reference, it
+returns the exact predecessor reference recorded for E at its start, if one
+exists. It never follows a global current pointer merely because another
+evaluation published a later value. Errors are selected only from E; terminal
+completion remains a separate fact. A failure in E marks E's selected reference
+stale while retaining
+it, or reports unavailable plus E's error if no reference exists. A later
+successful equal-data verification by an owner can make that exact reference
+current for E without a new publication. Another evaluation's failure does not
+stale E, and another evaluation's publication cannot replace E's reference
+unless a native owner explicitly records adoption/correspondence for E.
+
+Recent activity returns compact owner references in observation commit order,
+plus retained lower/upper revision boundaries, the start of recording support,
+whether filters narrowed the scope, and whether the response was truncated.
+The independent reads do not promise one common snapshot. If a consumer later
+needs a combined baseline, compose it from one bounded read-snapshot transaction
+rather than assuming unrelated calls were atomic together.
 
 Do not add an incremental client cursor for the first contract. A bounded recent
 baseline with stable record identities satisfies the recovery case while
@@ -401,12 +458,21 @@ change.
 | Case | Proposed read or lifecycle assertion | Bounded proof |
 | --- | --- | --- |
 | A-16a — Value and failure | Zero, empty and selected undefined are available values; absence is separate. Failure keeps stale prior value plus current error, or unavailable plus error. Verified reads do not accept stale fallback. | Read-only exact selected-read tests, with and without a prior reference; wrapped/selected undefined remains within existing result-root boundary. |
-| A-16b — Mixed freshness | Current A and stale B coexist. Equal-data successful verification clears B's stale status; key rediscovery alone does not. Display freshness does not fabricate source/downstream acceptance or graph success. | Distinct owner evidence fixtures for publish/reuse/identity-only discovery and equal data; rejecting mutation/dispatch ports. |
+| A-16b — Mixed freshness | Current A and stale B coexist. Equal-data successful verification clears B's stale status; key rediscovery alone does not. Display freshness does not fabricate source/downstream acceptance or graph success. Overlapping evaluations remain isolated: another evaluation's failure cannot stale the selected one or its publication replace that selection without explicit owner adoption. | Distinct owner evidence fixtures for publish/reuse/identity-only discovery and equal data; A/B overlap race (A starts from P, B publishes Q, A fails); rejecting mutation/dispatch ports. |
 | A-16c — Thin push and recent recovery | A→failure→equal-valued B remains queryable in commit order despite one coalesced unit signal; current read returns B and recent read retains failure then success under stated coverage. | Different processes, attachment after changes, bounded retention boundary and truncation/gap metadata; signals contain no business state. |
 | A-16d — Independent observation and client state | Observation reads after run finish/stop; closing it never cancels execution. Channel detach leaves client state alone. Selected-value handle close is separate and deterministic. | Stop/completion, detach/reconnect, observation close with retained handle, handle close with escaped child view, no durable server session. |
 | A-16e — Sustained and trailing signal | Controlled sustained changes yield periodic thin invalidations and a trailing invalidation after settling, including equal data with changed freshness metadata. | Controlled timers/barriers; sampling failure is visible health state, not a signal payload; no claim renewal or execution. |
-| A-16f — Read-only exact projection | Separate inspection process has no analysis callbacks or write/claim/source/dispatch ports. Reads use exact references, selected fields and no synthetic acceptance/activity. | Missing-store open creates nothing; unsupported schema does not migrate; concurrent writer snapshot checks; selected-load counters reject unrelated payload loads. |
+| A-16f — Read-only exact projection | Separate inspection process has no analysis callbacks or write/claim/source/dispatch ports. It can enumerate stable IDs from exact scope and read an exact selected evaluation; concurrent evaluations never merge through a global pointer. Reads use exact references, selected fields and no synthetic acceptance/activity. | Missing-store open creates nothing; unsupported schema does not migrate; fresh-process enumeration after diagnostic eviction; ambiguous/multiple matches, page continuation and legacy identity-unavailable cases; concurrent writer snapshot checks; selected-load counters reject unrelated payload loads. |
 | A-16g — Aggregate membership | Replacement at same key counts once; established removal disappears; unfinished discovery retains old members as unconfirmed and incomplete, including members seen in a prior accepted open snapshot. Failed/cancelled discovery cannot remove them; a fresh run's retained display is not its current-population proof. | Open/closed/empty populations, explicit predecessor correspondence, binding mismatch, failed/cancelled discovery, unavailable member, selection budget/truncation and no unrelated loads. |
+
+Guarded read tests must prove the selected-evaluation race explicitly: A starts
+from predecessor P, B publishes Q, then A fails. Reading A returns P marked
+stale with A's error; reading B returns Q current without A's error. If A first
+publishes R and then fails, A returns R stale with A's error. Equal-valued
+successful owner verification can clear stale only for the exact associated
+reference. B cannot replace A's selected value without an explicit native owner
+adoption/correspondence fact. Enumeration discovers B as a separate evaluation;
+there is no implicit global merge or callback-order selection.
 
 Fault injection must cover each native transition/index atomicity boundary,
 terminal evidence write failure, and the publication-to-overall-evaluation
@@ -430,10 +496,11 @@ ready before its dependency is accepted.
    active writer. No owner event API, signal or new projection yet.
 2. **Owner facts and population handoff.** Add Supervision's durable
    evaluation-start/terminal metadata and Resolution's durable keyed-population
-   metadata through narrow typed ports. Preserve Definition key validation and
-   Resolution completion ownership. Test all crash boundaries, unsupported old
-   evidence, pre-allocation failures and explicit unresolved outcomes. No
-   progressive feed or inferred closure.
+   metadata through narrow typed ports. Preserve the split: Definition validates
+   source completion shape; Resolution owns selected keyed-population/completion
+   evidence; Supervision owns operational closure/readiness from that evidence.
+   Test all crash boundaries, unsupported old evidence, pre-allocation failures
+   and explicit unresolved outcomes. No progressive feed or inferred closure.
 3. **Current/recent observation reads and freshness composition.** Implement
    explicit scope/evaluation reads, exact references, current error retention,
    recent coverage and legacy-history limitation. Exercise A-16a/b/c/f in a
@@ -449,17 +516,20 @@ ready before its dependency is accepted.
 
 ## Current runtime gaps and readiness
 
-At baseline `5353ff3112379d48edfa5f9cdcdb0bbc6a978fb2`, the facade includes an
-alpha stateless projection fed by a caller's exact result reference and
-Resolution outcome. The broader requirements are not delivered: no separate
-read-only History opener/snapshot capability; no attempt/evaluation enumeration
-or common observation commit index; no durable run/request/structural failure
-scope mapping; no cross-process change feed; no durable rolling activity with
-coverage/gap metadata; no independently owned observation reader; no explicit
-value-handle lifetime beyond Tracking capture; no durable Resolution population
-projection for read-side membership; and no retained-union finite aggregate
-read. Existing journal revisions cannot stand in for the rolling index, and
-existing observers cannot stand in for durable or cross-process notification.
+The cited `b711adb6a912d332ecf4f2640c9ccb2208775545` issue-222 candidate
+contains a narrow alpha stateless projection fed by a caller's exact result
+reference and Resolution outcome. That candidate is unmerged and is not part of
+baseline `5353ff3112379d48edfa5f9cdcdb0bbc6a978fb2`; it is only evidence of the
+caller-fed projection shape, not delivered baseline behavior. The broader
+requirements are not delivered: no separate read-only History opener/snapshot
+capability; no attempt/evaluation enumeration or common observation commit
+index; no durable run/request/structural failure scope mapping; no cross-process
+change feed; no durable rolling activity with coverage/gap metadata; no
+independently owned observation reader; no explicit value-handle lifetime
+beyond Tracking capture; no durable Resolution population projection for
+read-side membership; and no retained-union finite aggregate read. Existing
+journal revisions cannot stand in for the rolling index, and existing observers
+cannot stand in for durable or cross-process notification.
 
 The repository's operating constraints remain in force: no write caused by
 inspection; no test without a first stated failing outcome; no runtime

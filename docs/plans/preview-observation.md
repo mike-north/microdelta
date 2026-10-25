@@ -108,16 +108,18 @@ plan does not make the full CLI ready wholesale.
 ## Remaining design and implementation readiness
 
 The companion [proposed observation protocol](preview-observation-protocol.md)
-offers an engineering decomposition and concrete defaults for review. Its
-activity index, read-only opener, sampling, disposal, value-handle, and
-retained-member choices are proposals only; this accepted plan's status and
-owner decisions remain unchanged until those choices are independently
-reviewed and explicitly selected.
+offers an engineering decomposition and concrete defaults for review. It has
+been revised to address four findings from its first adversarial review; the
+same independent reviewer's re-review is pending. Its activity index,
+evaluation enumeration and overlap semantics, read-only opener, sampling,
+disposal, value-handle, and retained-member choices remain proposals only; this
+accepted plan's status and owner decisions remain unchanged until those choices
+are explicitly selected.
 
 | Slice | Accepted outcomes and test-first basis | Readiness recommendation |
 | --- | --- | --- |
-| Read-side availability/freshness and current error | A-16a/b/f: absent vs successful values; current/stale provenance; equal-data verification; failed refresh retains stale prior value/error; read-only exact selected reads | Ready for a bounded implementation-design issue. Choose discriminants and evaluation-scope mapping against existing acceptance contracts before behavioral/type tests; do not add a third fetched-unverified display category |
-| Current information plus recent activity | A-16c/f: failure then success remains inspectable through retained read evidence, independent of signal order; read-only inspection | Semantic purpose accepted. Specify query shape, evidence ordering, retention, gap/baseline behavior and cursor validity before calling the implementation contract ready. No mandatory snapshot-plus-cursor API is chosen |
+| Read-side availability/freshness and current error | A-16a/b/f: absent vs successful values; current/stale provenance; equal-data verification; failed refresh retains stale prior value/error; read-only exact selected reads | The protocol proposes exact evaluation IDs, stable scope discovery, per-evaluation error/reference isolation, and predecessor fallback. Owner selection and discriminant/type design remain before behavioral/type tests; do not add a third fetched-unverified display category |
+| Current information plus recent activity | A-16c/f: failure then success remains inspectable through retained read evidence, independent of signal order; read-only inspection | The proposed protocol now specifies stable exact-scope evaluation discovery, exact-ID current selection, per-evaluation reference/error isolation, bounded page continuation and activity coverage. These remain proposed pending same-reviewer re-review and owner selection; no activity cursor is selected |
 | Thin live change signals and independent observation | A-16c/d/e: no success/failure payload, coalescing liveness, reading after execution ends, detach does not own cursor/cache/cancellation | Ready for bounded lifetime/delivery design. Select attachment/read race handling, throttle interval/defaults and pending callback disposal behavior, and separately settle lazy-view ownership; no transport selection required by this record |
 | Aggregate member projection | A-16g: replacement counts once, established removal disappears, selected fields avoid unrelated loads, incomplete coverage stays explicit | Existing invariant owners remain. Decide retained-member inclusion during unfinished discovery and aggregate implementation scope before pickup; a general incremental-query engine is not selected |
 | Consumer persistence, WebSocket transport and full GUI | Client-owned storage and a transport-neutral library contract | Not requirements of this issue; do not claim that acceptance mandates implementation or prohibits a consumer choosing these |

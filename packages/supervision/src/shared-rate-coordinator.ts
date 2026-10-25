@@ -181,7 +181,6 @@ interface ISurfaceState {
   readonly scope: readonly [string, string, string];
   readonly gatesSignature: string;
   planPaceMilliseconds: number | undefined;
-  planCommittedAt: number | undefined;
   nextPlanAdmission: number | undefined;
   hasCommittedDebit: boolean;
 }
@@ -265,11 +264,7 @@ export function createSharedRateCoordinator(options: ISharedRateCoordinatorOptio
 
   /** Epoch corrections are accepted as observations; only invalid samples close the current check. */
   const epochNow = (): { readonly value: number } | { readonly reason: string } => {
-    const reading = readClock(() => options.epochClock.currentEpochMilliseconds(), 'Epoch');
-    if ('reason' in reading) {
-      return reading;
-    }
-    return reading;
+    return readClock(() => options.epochClock.currentEpochMilliseconds(), 'Epoch');
   };
 
   /** Resolve an opaque handle by object identity so callers cannot forge a matching public ID. */
@@ -415,7 +410,6 @@ export function createSharedRateCoordinator(options: ISharedRateCoordinatorOptio
       state.gateKeys.add(key);
       state.gates.set(key, gate);
       state.planPaceMilliseconds = pace;
-      state.planCommittedAt = elapsed.value;
       state.nextPlanAdmission = firstPacedAdmission;
     },
     inspectDebits(surface: ISharedRateSurface, gateId: string): readonly IDebit[] {
@@ -489,7 +483,6 @@ export function createSharedRateCoordinator(options: ISharedRateCoordinatorOptio
         scope,
         gatesSignature,
         planPaceMilliseconds: undefined,
-        planCommittedAt: undefined,
         nextPlanAdmission: undefined,
         hasCommittedDebit: false,
       };

@@ -68,6 +68,42 @@ function codeOf(pending: Promise<unknown>): Promise<string> {
 }
 
 describe('stop intent and resumed deferrals (RUN-014)', () => {
+  test('a pre-dispatch hard stop spends no network attempt under a one-send allowance, while a new run retains the usage gap', async () => {
+    world.keys = ['pr-1'];
+    world.options['pr-1'] = { retry: { maxAttempts: 1 } };
+    const stop = createStopController();
+    const session = openSession(stores, timer);
+    try {
+      const started = members(session, { stop, deferral: 'exit', observe: (event) => {
+        if (event.kind === 'send' && event.phase === 'begin' && event.label === 'assess') {
+          stop.request({ level: 'hard' });
+        }
+      } });
+      const first = await started.done;
+      expect(memberOf(first.value, 'pr-1').status).toBe('cancelled');
+      expect(received('pr-1')).toHaveLength(0);
+      expect(applied('pr-1')).toHaveLength(0);
+      expect(first.interruptions).toEqual([]);
+      expect(started.events.filter((event) => event.kind === 'operation' && event.phase === 'request-started')).toEqual([]);
+      const [stopped] = journalContents(session);
+      expect(stopped).toEqual(expect.objectContaining({
+        status: 'deferred', attempts: [expect.objectContaining({ status: 'not-sent', requestAttempt: expect.stringMatching(/\/1$/u) })],
+      }));
+      expect(session.usage()).toEqual(expect.objectContaining({ requestAttempts: 1, reports: 0, unknown: [expect.any(Object)] }));
+
+      const resumed = await members(session, { deferral: 'exit' }).done;
+      expect(memberOf(resumed.value, 'pr-1').status).toBe('succeeded');
+      expect(received('pr-1')).toHaveLength(1);
+      expect(journalContents(session)).toEqual([expect.objectContaining({ attempts: [
+        expect.objectContaining({ status: 'not-sent', requestAttempt: expect.stringMatching(/\/1$/u) }),
+        expect.objectContaining({ status: 'succeeded', requestAttempt: expect.stringMatching(/\/2$/u) }),
+      ] })]);
+      expect(session.usage()).toEqual(expect.objectContaining({ requestAttempts: 2, reports: 1, unknown: [expect.any(Object)] }));
+    } finally {
+      session.close();
+    }
+  });
+
   test('a stop refuses a resumable deferral at admission, even for the child of a draining step, so the resumed body never runs', async () => {
     world.gates.open('parent');
     world.provider.script('paid', 'parent', ['rate-limit:3600000']);

@@ -46,6 +46,9 @@ afterEach(() => {
 
 /** Leave pr-1's assessment unknown through a lost response, returning its operation identity. */
 async function leaveUnknown(): Promise<string> {
+  // These settlement controls need an unresolved operation after one send;
+  // a fresh run may still acquire its own allowance if left unsettled.
+  world.options['pr-1'] = { ...world.options['pr-1'], retry: { maxAttempts: 1 } };
   world.provider.script('assess', 'pr-1', ['lost']);
   const session = openSession(stores, timer);
   try {
@@ -105,7 +108,7 @@ describe('operator settlement of an unknown operation (EXP-8 resolution 5)', () 
   });
 
   test('with provider idempotency keys too, a resolved-succeeded address is never sent again (regression B1)', async () => {
-    world.options['pr-1'] = { providerIdempotency: true };
+    world.options['pr-1'] = { providerIdempotency: true, retry: { maxAttempts: 1 } };
     const operation = await leaveUnknown();
     const session = openSession(stores, timer);
     try {
@@ -271,7 +274,7 @@ describe('durable remote state after a hard stop (RUN-014, supervisor ruling on 
     expect(memberOf(result.value, 'pr-1').status).toBe('cancelled');
   }
 
-  test('without provider cancellation the attempt reads unknown after a restart, and the member stays blocked', async () => {
+  test('without provider cancellation the stopped attempt remains unknown after restart, and a new run can retry', async () => {
     const a = openSession(stores, timer);
     try {
       await hardStopInFlight(a, undefined);
@@ -284,8 +287,8 @@ describe('durable remote state after a hard stop (RUN-014, supervisor ruling on 
       expect(view?.status).toBe('unknown');
       expect(view?.attempts.map((attempt) => [attempt.status, attempt.remote])).toEqual([['unknown', 'unknown']]);
       const result = await members(b).done;
-      expect(memberOf(result.value, 'pr-1').status).toBe('pending');
-      expect(received('pr-1')).toHaveLength(1);
+      expect(memberOf(result.value, 'pr-1').status).toBe('succeeded');
+      expect(received('pr-1')).toHaveLength(2);
     } finally {
       b.close();
     }

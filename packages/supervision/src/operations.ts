@@ -74,8 +74,8 @@ export interface IOperationUsage {
  *   a `retryAt` time it is deferred durably until then and retried by default;
  *   without one it is a transient failure.
  * - `unknown`: whether the provider applied it is not known, for example a
- *   lost response. A rejected `perform` means the same. It is never replayed
- *   without a safety basis and an author policy.
+ *   lost response. A rejected `perform` means the same. A finite acquisition
+ *   allowance can permit another request without an effect-safety hint.
  *
  * `error` is the adapter's own detail for the author's body; Supervision
  * never records it, reports it or puts it in a diagnostic (RUN-013).
@@ -106,25 +106,25 @@ export interface IOperationSend {
 }
 
 /**
- * An author's retry policy for one operation. Without one, a transient
- * failure is final and an unknown outcome is never retried, while rate or
- * quota responses with a retry time are still deferred and retried by
- * default (RUN-011 owner decision; EXP-8 resolution 6).
+ * An author's finite override for one direct acquisition operation. Without
+ * one, three total sent attempts and bounded increasing backoff apply to
+ * classified retryable responses. Historical rate-only settings can restrict
+ * that total, but never grant extra unknown/transient sends (RUN-011).
  * @alpha
  */
 export interface IOperationRetryPolicy {
   /**
-   * The most request attempts spent on transient failures and, with a safety
-   * basis, unknown outcomes; a positive safe integer, 1 (no retry) when
-   * absent. Attempts refused by a rate limit are counted separately.
+   * The most actually sent request attempts in one analysis-run invocation,
+   * including initial, unknown, transient and rate-refused sends. A positive
+   * safe integer; three total when absent. A new run has fresh allowance.
    */
   readonly maxAttempts?: number;
-  /** The wait before a transient retry, holding no permit; 0 when absent. */
+  /** Fixed wait override for classified retries, holding no network permit; absent uses increasing 2s/4s bounded backoff. */
   readonly backoffMilliseconds?: number;
   /**
-   * How many times a rate or quota response with a retry time is deferred and
-   * retried before the operation fails as exhausted; a nonnegative safe
-   * integer, 5 when absent.
+   * Legacy restrictive subcap on rate-refusal retries. It is never an
+   * independent allowance above `maxAttempts`; five when absent. Retained for
+   * existing alpha callers and v1 records pending a separate API decision.
    */
   readonly rateLimitRetries?: number;
 }
@@ -157,15 +157,14 @@ export interface IOperationRequest<T> {
    */
   readonly binding: string;
   /**
-   * The author's declaration that repeating this operation is acceptable, so
-   * an unknown outcome may be retried under the same identity when the retry
-   * policy allows another attempt (EXP-8 resolution 4).
+   * Historical effect-safety declaration retained for source compatibility
+   * and journal audit. It is not required for acquisition retry authority.
    */
   readonly safeToRepeat?: boolean;
   /**
    * The provider deduplicates by idempotency key: each send carries the
-   * operation identity as its key, which is also a safety basis for retrying
-   * an unknown outcome.
+   * operation identity as its key. This can reduce duplicate effects, but is
+   * neither retry authority nor proof of a charge total.
    */
   readonly providerIdempotency?: boolean;
   /** The author's retry policy. */
@@ -326,10 +325,10 @@ export type IOperationSettlement =
 
 /**
  * Why a step's work is blocked by an unsettled external operation: deferred
- * until `notBefore`, or an unknown outcome that may not be retried and awaits
- * an operator: it has no safety basis (`not-repeat-safe`), its policy is
- * exhausted (`policy-exhausted`), or its outcome could not be recorded
- * because the pass lost its writer lease (`unrecorded`, EXP-8 ruling R).
+ * until `notBefore`, or an unknown outcome whose current run's finite policy
+ * is exhausted. `unrecorded` means a lost writer lease could not settle the
+ * outcome (EXP-8 ruling R). `not-repeat-safe` remains in the alpha union for
+ * old consumers but is not emitted for acquisition by the current engine.
  * @alpha
  */
 export type IOperationBlock =
@@ -518,8 +517,9 @@ export type IOperationPhase =
 /**
  * The closed reason codes operation events carry (never free text):
  * `rate-limited`, `transient` and `permanent` classify a refusal;
- * `lost-response` an unknown outcome; `not-repeat-safe` and
- * `policy-exhausted` why an unknown outcome is not retried; `not-before` a
+ * `lost-response` an unknown outcome; `policy-exhausted` why the current
+ * run cannot retry it (`not-repeat-safe` remains for alpha compatibility);
+ * `not-before` a
  * deferral; `stopped` stop intent; `lease-lost` a commit the writer lease no
  * longer authorizes; `recovered-after-crash` an attempt a dead run left in
  * flight; `unrecorded` a usage write that issued no acknowledgment;
@@ -638,7 +638,7 @@ export const blocksFormat = 'microdelta.supervision.blocks';
  */
 export const operationJournalDeclaration: { readonly formats: readonly { readonly format: string; readonly versions: readonly number[] }[] } = Object.freeze({
   formats: Object.freeze([
-    Object.freeze({ format: operationFormat, versions: Object.freeze([1]) }),
+    Object.freeze({ format: operationFormat, versions: Object.freeze([1, 2]) }),
     Object.freeze({ format: blocksFormat, versions: Object.freeze([1]) }),
   ]),
 });

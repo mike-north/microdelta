@@ -157,6 +157,13 @@ shared rate coordinator or operator grant APIs described below.
 | Graceful rejection and controlled acquisition example — Supervision/Core and example | A-12b/c: no sends past allowance, declined required retry triggers existing soft stop/drain, completed siblings reusable in new run; status distinguishes attempt failure from missing input | Reuse existing stop control. Depends on acquisition allowance and the minimum operator boundary chosen for rejection; no general batch-approval UI or supplied-result workflow is required. Command/exit representation is still to be specified, not fabricated here |
 | Within-run additional authorization / approval batching | Evaluate explicit finite authority without treating old attempts as absent; inspection never grants it | **Not pickup-ready as an API feature.** Approval frontier, batching, grant size/allocation and repeated-decision behavior remain proposed. New-run allowance is already settled and must not wait for this proposal |
 
+The [retry-classification design candidate](retry-classification.md) and its
+[bounded implementation handoff](retry-classification-implementation.md) elaborate
+only the reusable classification slice for #220. They preserve matching custom
+precedence and independent allowance; engineering representation remains subject
+to review and is not delivered runtime evidence. Shared rate coordination and
+broader approval/source authoring remain separate work.
+
 The unit/window algorithm may be an engineering choice if it preserves an
 explicitly documented bound; a material burst/latency or author-visible tradeoff
 must be brought back for decision. Do not invent a universal proactive rate cap,

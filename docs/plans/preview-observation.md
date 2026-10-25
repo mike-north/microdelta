@@ -107,6 +107,13 @@ plan does not make the full CLI ready wholesale.
 
 ## Remaining design and implementation readiness
 
+The companion [proposed observation protocol](preview-observation-protocol.md)
+offers an engineering decomposition and concrete defaults for review. Its
+activity index, read-only opener, sampling, disposal, value-handle, and
+retained-member choices are proposals only; this accepted plan's status and
+owner decisions remain unchanged until those choices are independently
+reviewed and explicitly selected.
+
 | Slice | Accepted outcomes and test-first basis | Readiness recommendation |
 | --- | --- | --- |
 | Read-side availability/freshness and current error | A-16a/b/f: absent vs successful values; current/stale provenance; equal-data verification; failed refresh retains stale prior value/error; read-only exact selected reads | Ready for a bounded implementation-design issue. Choose discriminants and evaluation-scope mapping against existing acceptance contracts before behavioral/type tests; do not add a third fetched-unverified display category |

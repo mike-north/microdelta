@@ -68,6 +68,33 @@ describe('Node elapsed clock capability conformance', () => {
   });
 
   test.each([
+    ['NaN', Number.NaN],
+    ['positive infinity', Number.POSITIVE_INFINITY],
+    ['unsafe integer', 2 ** 53],
+    ['negative elapsed time', -1],
+  ] as const)('Node refuses a %s performance reading', (_label, hostReading) => {
+    jest.spyOn(performance, 'now').mockReturnValue(hostReading);
+    const clock = createNodeElapsedClock();
+
+    expect(() => clock.currentElapsedMilliseconds()).toThrow(RangeError);
+  });
+
+  test('Node floors a normal fractional performance reading to a supported millisecond', () => {
+    jest.spyOn(performance, 'now').mockReturnValue(12.9);
+    const clock = createNodeElapsedClock();
+
+    expect(clock.currentElapsedMilliseconds()).toBe(12);
+  });
+
+  test('Node refuses a decreasing performance reading instead of returning it', () => {
+    jest.spyOn(performance, 'now').mockReturnValueOnce(12).mockReturnValueOnce(11);
+    const clock = createNodeElapsedClock();
+
+    expect(clock.currentElapsedMilliseconds()).toBe(12);
+    expect(() => clock.currentElapsedMilliseconds()).toThrow(RangeError);
+  });
+
+  test.each([
     ['non-finite', [0, Number.NaN, 2]],
     ['fractional', [0, 1.5, 2]],
     ['unsafe', [0, 2 ** 53, 2]],

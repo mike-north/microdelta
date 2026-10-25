@@ -118,7 +118,12 @@ semantics.
 Plan inspection is mandatory for the full CLI-002 checkpoint. A recorded
 Definition descriptor/read seam is needed to inspect safely in a fresh process
 without callbacks. It must say what declaration it describes and its coverage;
-runtime population and discovery progress remain separate Supervision evidence.
+the recorded declaration descriptor belongs to Definition. Resolution supplies
+the selected, validated keyed population and its coverage evidence, using
+Definition's keying rules. Supervision reports operational progress and closure
+from those owner-supplied facts; its progress records do not replace the selected
+population evidence. The facade composes these distinct facts without selecting
+a persistence mechanism or a retained-member policy.
 If descriptor evidence is absent, report that gap as an unmet capability rather
 than fabricating a plan from History rows. Do not narrow the issue to only the
 easier finite query slice or silently defer plan inspection.
@@ -184,9 +189,19 @@ retarget. Instrument selected-load counts to exclude unrelated payloads.
 Seed success, failed attempt, prior stale value plus refresh failure, absent
 value, unknown validity, equal-value verification versus retention, reuse
 without source request, refusal/cancellation/not-started, required-input and
-discovery waits, nested mixed coverage, and known/gap usage with qualified,
-expired, zero and missing reports. Keep plan declaration coverage distinct
-before and after runtime discovery. For follow, cover baseline race, coalesced
+discovery waits, owner waits, scheduled retries, nested mixed coverage, and
+known/gap usage with qualified, expired, zero and missing reports. The owner-wait
+fixture must preserve its recorded reason; the scheduled-retry fixture must
+preserve its reason and eligibility, then show one actual execution when shared
+consumers become eligible rather than duplicate executions. Keep plan declaration
+coverage distinct from Resolution's selected validated population/coverage and
+Supervision's operational progress, both before and after runtime discovery.
+For aggregate coverage, carry forward A-16g as a full-checkpoint dependency and
+acceptance case: a member moving buckets replaces its prior contribution once,
+established removal disappears, and unfinished rediscovery does not treat an
+old member's temporary absence as removal. This case awaits #165's retained-
+member and aggregate policy choices; it selects no retained-union rule here.
+For follow, cover baseline race, coalesced
 failure/recovery, equal-data metadata changes, read failure, coverage gaps,
 completion followed by continued inspection, and detach without run
 cancellation. Assert local interrupts cause zero run-control writes; separately

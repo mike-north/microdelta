@@ -30,6 +30,9 @@ export const blocksCollection = "microdelta.supervision.blocks";
 export const blocksFormat = "microdelta.supervision.blocks";
 
 // @alpha
+export function createSharedRateCoordinator(options: ISharedRateCoordinatorOptions): ISharedRateCoordinator;
+
+// @alpha
 export function createStopController(options?: IStopControllerOptions): IStopController;
 
 // @alpha
@@ -526,6 +529,16 @@ export interface IRunContext {
 }
 
 // @alpha
+export interface IRunElapsedClock {
+    currentElapsedMilliseconds(): number;
+}
+
+// @alpha
+export interface IRunEpochClock {
+    currentEpochMilliseconds(): number;
+}
+
+// @alpha
 export type IRunEvent = {
     readonly kind: 'step';
     readonly runId: string;
@@ -676,6 +689,90 @@ export interface ISendRequest<T> {
 }
 
 // @alpha
+export type ISharedRateAdmission = ({
+    readonly kind: 'admitted';
+} & ISharedRateReservation) | {
+    readonly kind: 'wait';
+    readonly notBefore?: number;
+    readonly retryAtElapsed?: number;
+} | {
+    readonly kind: 'refused';
+    readonly reason: string;
+} | {
+    readonly kind: 'timing-failure';
+    readonly reason: string;
+};
+
+// @alpha
+export type ISharedRateCommitResult = {
+    readonly kind: 'committed';
+} | {
+    readonly kind: 'wait';
+    readonly notBefore?: number;
+    readonly retryAtElapsed?: number;
+} | {
+    readonly kind: 'refused';
+    readonly reason: string;
+} | {
+    readonly kind: 'timing-failure';
+    readonly reason: string;
+};
+
+// @alpha
+export interface ISharedRateCoordinator {
+    admit(request: {
+        readonly surface: ISharedRateSurface;
+        readonly run: string;
+        readonly quantityCost?: number;
+        readonly acceptedNotBefore?: number;
+    }): ISharedRateAdmission;
+    observeCooldown(surface: ISharedRateSurface, gateId: string, epochFloor: number): void;
+    registerSurface(declaration: ISharedRateSurfaceDeclaration): ISharedRateSurface;
+}
+
+// @alpha
+export interface ISharedRateCoordinatorOptions {
+    readonly elapsedClock: IRunElapsedClock;
+    readonly epochClock: IRunEpochClock;
+}
+
+// @alpha
+export type ISharedRateErrorCode = 'invalid-declaration' | 'conflicting-declaration' | 'unknown-association' | 'invalid-plan';
+
+// @alpha
+export interface ISharedRateGateDeclaration {
+    readonly id: string;
+    readonly limit?: ISharedRateLimit;
+}
+
+// @alpha
+export interface ISharedRateLimit {
+    readonly costBasis: 'requests' | 'quantity';
+    readonly intervalMilliseconds: number;
+    readonly units: number;
+}
+
+// @alpha
+export interface ISharedRateReservation {
+    commitPossibleSend(): ISharedRateCommitResult;
+    rollbackBeforeSend(): void;
+}
+
+// @alpha
+export interface ISharedRateSurface {
+    readonly id: string;
+}
+
+// @alpha
+export interface ISharedRateSurfaceDeclaration {
+    readonly accessContext: string;
+    readonly environment: string;
+    readonly gates?: readonly ISharedRateGateDeclaration[];
+    readonly service: string;
+    readonly surface: string;
+}
+
+// @alpha
 export interface ISourceRetryPolicy {
     decide(input: IRetryDecisionInput): IRetryDecision | Promise<IRetryDecision>;
     readonly id: string;
@@ -808,6 +905,12 @@ export const operationsCollection = "microdelta.supervision.operations";
 
 // @alpha
 export const ordinaryLifecycle: readonly IOrdinaryPhase[];
+
+// @alpha
+export class SharedRateCoordinatorError extends Error {
+    constructor(code: ISharedRateErrorCode, message: string);
+    readonly code: ISharedRateErrorCode;
+}
 
 // @alpha
 export const stepLifecycle: IStepLifecycle;

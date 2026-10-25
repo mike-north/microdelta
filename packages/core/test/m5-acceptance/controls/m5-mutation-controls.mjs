@@ -128,7 +128,7 @@ const controls = [
     guard: 'deferral',
     name: 'a deferral is not honored before its time',
     target: 'engine',
-    anchor: "if (record.status === 'deferred' && record.notBefore !== undefined && now() < record.notBefore) {",
+    anchor: "if ((record.status === 'deferred' || record.status === 'unknown') && record.notBefore !== undefined && now() < record.notBefore) {",
     replacement: 'if (false) {',
     breaks: ['durable-quota-deferral'],
   },
@@ -160,19 +160,20 @@ const controls = [
     guard: 'deferral',
     name: 'the rate-limit retry cap is not enforced',
     target: 'engine',
-    anchor: 'if (rateLimited(next) > request.rateLimitRetries) {',
-    replacement: 'if (false) {',
+    anchor: 'rateLimited(next, currentRunInstance()) > request.rateLimitRetries',
+    replacement: 'false',
     breaks: ['durable-quota-deferral'],
   },
   {
     guard: 'deferral',
     name: "a transient failure is retried beyond the author's attempts",
     target: 'engine',
-    anchor: 'const retryable = transient && spentAttempts(failed) < request.maxAttempts;',
+    anchor: 'const retryable = transient && spentInRun(failed) < request.maxAttempts;',
     replacement: 'const retryable = transient;',
     breaks: ['durable-quota-deferral'],
   },
-  // No blind replay (RUN-012): an unknown outcome is retried only with a safety basis, never by a tainted attempt.
+  // No blind replay (RUN-011/012): finite allowance and the taint guard both
+  // constrain a lost-response retry, independent of a legacy safety hint.
   {
     guard: 'no-replay',
     name: 'an unknown outcome is replayed blindly',

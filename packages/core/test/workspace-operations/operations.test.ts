@@ -208,6 +208,9 @@ describe('external operations through the facade (RUN-011, RUN-012, RUN-013, ACC
   });
 
   test('an operator inspects an unknown operation and abandons it through the run; the member is then free to run again', async () => {
+    // Settlement is exercised after one lost send; another run may still
+    // acquire a fresh allowance if the operator leaves the address unsettled.
+    world.retries['pr-1'] = { maxAttempts: 1 };
     world.provider.script('assess', 'pr-1', ['lost', 'ok']);
     const first = await workspace.run(options(production), async (run) => {
       const report = await run.resolveMembers({ template: 'pr', step: 'assess' }, key());

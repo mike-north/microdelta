@@ -349,7 +349,7 @@ export type IOperationView = ISupervisionOperationView;
 /** An operator's settlement of an unknown operation: resolve it with the learned outcome (and any usage), or abandon it. @alpha */
 export type IOperationSettlement = ISupervisionOperationSettlement;
 
-/** What holds a pending member back: a deferral not yet due, or an unknown outcome awaiting the operator. @alpha */
+/** What holds a pending member back: a time gate or unknown acquisition beyond this run's finite allowance. @alpha */
 export type IOperationBlock = ISupervisionOperationBlock;
 
 /** One correlated, privacy-restricted operation event, as run observers see it. @alpha */

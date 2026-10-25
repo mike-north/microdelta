@@ -6,8 +6,9 @@
  * Expectations, written by hand from the owner decision and the M5
  * selection (RUN-010):
  *
- * - pr-1 is answered; pr-2's response is lost, so its operation is unknown
- *   and its member pending (unsettled); pr-3 is refused permanently three
+ * - pr-1 is answered; pr-2 loses a response in each of two runs constrained
+ *   to one send, so it stays unknown and pending until operator settlement;
+ *   pr-3 is refused permanently three
  *   times (failed each time) and answered on its fourth request.
  * - The strict report never folds a failed or pending member: it fails,
  *   naming pr-3 failed and pr-2 pending, and runs no body.
@@ -38,7 +39,10 @@ function tallies(lines: readonly Readonly<Record<string, unknown>>[]): number {
 
 describe('outcome-fold-coverage (A-11, RUN-010)', () => {
   test('settled statuses with coverage, never completeness while a member is unsettled, and reconsideration after repair', () => {
-    const s = freshScenario(baseWorld({ script: { 'pr-2': [{ kind: 'lost' }], 'pr-3': [{ kind: 'refuse' }, { kind: 'refuse' }, { kind: 'refuse' }, { kind: 'ok' }] } }));
+    const s = freshScenario(baseWorld({
+      script: { 'pr-2': [{ kind: 'lost' }, { kind: 'lost' }], 'pr-3': [{ kind: 'refuse' }, { kind: 'refuse' }, { kind: 'refuse' }, { kind: 'ok' }] },
+      declarations: { 'pr-2': { maxAttempts: 1 } },
+    }));
 
     const strict = clean(s.run({ kind: 'fold' }, { window: 1 }));
     expect(statuses(strict)).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'pending', 'pr-3': 'failed' });
@@ -88,6 +92,6 @@ describe('outcome-fold-coverage (A-11, RUN-010)', () => {
     expect(unchanged.assessed).toEqual([]);
     expect(tallies(unchanged.lines)).toBe(0);
     expect(unchanged.result.tally).toMatchObject({ status: 'folded', kind: 'reused', reference: repaired.result.tally?.reference });
-    expect(s.keys('received')).toEqual(['pr-1', 'pr-2', 'pr-3', 'pr-3', 'pr-2', 'pr-3', 'pr-3']);
+    expect(s.keys('received')).toEqual(['pr-1', 'pr-2', 'pr-3', 'pr-2', 'pr-3', 'pr-2', 'pr-3', 'pr-3']);
   });
 });

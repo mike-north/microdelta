@@ -188,3 +188,18 @@ recovery; see the [M3 acceptance record](../../docs/validation/m3-acceptance-202
 The M4 independent-process acceptance suite in `test/m4-acceptance` drives the
 keyed, gated, nested and strictly folded contribution analysis through the same
 path; see the [M4 acceptance record](../../docs/validation/m4-acceptance-2026-09-29.md).
+
+## Project-private preview projection (alpha)
+
+`createPreviewProjection` composes an existing Materialization `materializeView`
+capability with an explicitly selected exact result and evaluation scope. Save
+an actual `run.resolve` outcome (or caught error) with its run context, request
+key and step descriptor. Matching successful evidence marks the selected exact
+result current; no evidence leaves it stale. A matching refresh failure exposes
+the prior value as stale plus `refresh.kind: 'failed'`, or unavailable plus error
+when there is no prior result. Availability never depends on value truthiness.
+
+This projection performs no evaluation, source verification, acceptance mutation
+or dispatch. Lazy values retain the supplied reader/Tracking lifetime. It is not
+a recent-history query, subscription or independent-reader API. See the
+[scope and evidence mapping](../../docs/plans/preview-projection.md).

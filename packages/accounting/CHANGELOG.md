@@ -1,5 +1,20 @@
 # @microdelta/accounting
 
+## 0.2.0
+### Minor Changes
+
+- 47bea75: Add separate durable raw resource reports with qualified expiry, read-only inspection, and scheduled physical eviction. Add rollback-journal SQLite selection and side-effect-free existing-file readers while preserving WAL defaults; carry the new open-options type through History's existing compatibility exports.
+
+### Patch Changes
+
+- Updated dependencies [8b4283e]
+- Updated dependencies [5010548]
+- Updated dependencies [77715af]
+- Updated dependencies [0d7ad9a]
+- Updated dependencies [47bea75]
+  - @microdelta/value@0.2.0
+  - @microdelta/machine@0.3.0
+
 ## 0.1.0
 ### Minor Changes
 

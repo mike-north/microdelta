@@ -178,7 +178,7 @@ export interface IRunOperations {
 export function pendingError(signal: IPendingSignal): SupervisionError {
   return signal.kind === 'deferred'
     ? new SupervisionError('operation-deferred', `Operation ${signal.operation} is deferred until ${String(signal.notBefore)}; nothing is sent before then`)
-    : new SupervisionError('operation-unknown', `Operation ${signal.operation} has an unknown outcome (${signal.reason}); it is not replayed`);
+    : new SupervisionError('operation-unknown', `Operation ${signal.operation} has an unknown outcome (${signal.reason}); this attempt cannot send again`);
 }
 
 /**

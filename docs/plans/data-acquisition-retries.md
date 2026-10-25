@@ -144,6 +144,11 @@ Every implementation starts with the named outcome tests and observes their
 expected failure before code. Strict package/type/lint checks, intent comments,
 negative controls and independent review remain required.
 
+The [#213 implementation record](issue-213-run-acquisition.md) documents the
+existing direct-operation slice: run identity, journal compatibility and finite
+attempt/backoff choices. It does not implement the reusable source classifier,
+shared rate coordinator or operator grant APIs described below.
+
 | Slice and owner | Test-first outcomes | Dependencies and readiness boundary |
 | --- | --- | --- |
 | Acquisition allowance and journal compatibility — Supervision with History/Accounting conformance, Core assembly | A-12a/b/c/f/g: lost response then success without safety flags; current-run cap; same-run pass cannot reset; new run can try with fresh cap while prior usage stays unknown; old records reopen truthfully; crash/lease/intent controls survive | Accepted behavioral scope is ready for a contained implementation issue. That issue must first document explicit run identity/continuation and version-1 compatibility handling, and preserve generated alpha contracts. Do not wait on manual recovery or approval batching |

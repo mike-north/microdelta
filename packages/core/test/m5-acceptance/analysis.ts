@@ -84,20 +84,20 @@ export interface IWorldPullRequest {
 
 /**
  * The author's per-PR operation declaration, as an adapter's configuration
- * would state it. Absent fields keep the framework's defaults: no safety
- * basis, one attempt, the default rate-limit retry cap and no provider
- * cancellation.
+ * would state it. Absent fields keep the framework's defaults: no effect
+ * safety hint, three total sent attempts per run, increasing retry backoff,
+ * a legacy restrictive rate-only subcap and no provider cancellation.
  */
 export interface IOperationDeclaration {
-  /** The author declares repeating this operation acceptable. */
+  /** Historical effect-safety hint; acquisition retries use the finite allowance instead. */
   readonly safeToRepeat?: boolean;
-  /** The provider deduplicates by idempotency key. */
+  /** The provider may deduplicate by stable idempotency key without guaranteeing one charge. */
   readonly providerIdempotency?: boolean;
-  /** Request attempts allowed for transient failures and, with a safety basis, unknown outcomes. */
+  /** Total sent request attempts allowed in one analysis run, across retryable classifications. */
   readonly maxAttempts?: number;
-  /** The wait before a transient retry. */
+  /** Fixed retry wait override; absent uses the direct path's increasing default. */
   readonly backoffMilliseconds?: number;
-  /** Deferred retries of a rate limit with a retry time before the operation fails as exhausted. */
+  /** Historical restrictive cap on rate-limit retries within the total allowance. */
   readonly rateLimitRetries?: number;
   /** How the provider answers a cancellation request after a hard stop; absent, it supports none. */
   readonly cancel?: 'cancelled' | 'running';

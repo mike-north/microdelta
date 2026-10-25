@@ -77,8 +77,9 @@ function codeOf(pending: Promise<unknown>): Promise<string> {
 }
 
 describe('stop intent and resumed deferrals (RUN-014)', () => {
-  test('hard stop at send-begin leaves durable intent and an unknown usage gap, but sends and publishes nothing', async () => {
+  test('a pre-dispatch hard stop spends no network attempt under a one-send allowance, while a new run retains the usage gap', async () => {
     world.keys = ['pr-1'];
+    world.options['pr-1'] = { retry: { maxAttempts: 1 } };
     const stop = createStopController();
     const session = openSession(stores, timer);
     try {
@@ -94,8 +95,9 @@ describe('stop intent and resumed deferrals (RUN-014)', () => {
       expect(publishedSubjects(stores.history)).not.toContain(assessmentSubject('pr-1'));
       expect(attemptsAt(stores.history).find((row) => row.subject === assessmentSubject('pr-1'))).toMatchObject({ state: 'interrupted', ending: 'stopped' });
       expect(result.interruptions).toEqual([]);
+      expect(started.events.filter((event) => event.kind === 'operation' && event.phase === 'request-started')).toEqual([]);
       expect(journalContents(session)).toEqual([expect.objectContaining({
-        status: 'deferred', attempts: [expect.objectContaining({ status: 'not-sent' })],
+        status: 'deferred', attempts: [expect.objectContaining({ status: 'not-sent', requestAttempt: expect.stringMatching(/\/1$/u) })],
       })]);
       expect(session.usage()).toEqual(expect.objectContaining({
         status: 'incomplete', requestAttempts: 1, reports: 0, observed: [], unknown: [expect.any(Object)],
@@ -106,8 +108,8 @@ describe('stop intent and resumed deferrals (RUN-014)', () => {
       expect(memberOf(resumed.value, 'pr-1').status).toBe('succeeded');
       expect(received('pr-1')).toHaveLength(1);
       expect(journalContents(session)).toEqual([expect.objectContaining({ attempts: [
-        expect.objectContaining({ status: 'not-sent' }),
-        expect.objectContaining({ status: 'succeeded' }),
+        expect.objectContaining({ status: 'not-sent', requestAttempt: expect.stringMatching(/\/1$/u) }),
+        expect.objectContaining({ status: 'succeeded', requestAttempt: expect.stringMatching(/\/2$/u) }),
       ] })]);
       expect(session.usage()).toEqual(expect.objectContaining({
         status: 'incomplete', requestAttempts: 2, reports: 1, unknown: [expect.any(Object)],
@@ -368,6 +370,66 @@ describe('provider idempotency keys are globally unique', () => {
 });
 
 describe('an Accounting intent that is not durable (ACC-007)', () => {
+  test.each(['before-commit', 'after-commit'] as const)('a failed not-sent restoration after an Accounting %s fault does not spend this invocation\'s only send', async (timing) => {
+    world.keys = ['pr-1'];
+    world.options['pr-1'] = { retry: { maxAttempts: 1 } };
+    const faulty = faultySqlite();
+    let restorationFailures = 0;
+    const session = openSession(stores, timer, {
+      accountingSqlite: faulty.capability,
+      wrapJournal: (journal) => ({
+        ...journal,
+        commit: (lease, request) => {
+          const restoringNotSent = request.writes.some((write) => {
+            if (write.collection !== operationsCollection) {
+              return false;
+            }
+            const content = write.record.content;
+            if (typeof content !== 'object' || content === null) {
+              return false;
+            }
+            const attempts: unknown = Reflect.get(content, 'attempts');
+            const last: unknown = Array.isArray(attempts) ? attempts.at(-1) : undefined;
+            return Reflect.get(content, 'status') === 'deferred' && typeof last === 'object' && last !== null && Reflect.get(last, 'status') === 'not-sent';
+          });
+          if (restoringNotSent && restorationFailures === 0) {
+            restorationFailures += 1;
+            throw new Error('the not-sent restoration could not be committed');
+          }
+          return journal.commit(lease, request);
+        },
+      }),
+    });
+    try {
+      faulty.arm({ role: 'intent', timing, action: 'throw' });
+      const started = members(session);
+      await until(() => started.events.some((event) => event.kind === 'wait' && event.phase === 'sleeping'), 'the non-durable intent defers the run');
+      expect(restorationFailures).toBe(1);
+      expect(received('pr-1')).toHaveLength(0);
+      const [pending] = journalContents(session);
+      expect(pending).toEqual(expect.objectContaining({ status: 'pending', attempts: [expect.objectContaining({ status: 'pending' })] }));
+      const [firstRevision] = session.journal.list({ analysis, environment: production, collection: operationsCollection });
+      await until(() => session.history.currentWriter() === undefined, 'the deferred pass releases its writer lease');
+      timer.advanceTo(T0 + 1_000);
+      const result = await started.done;
+      expect(started.events.filter((event) => event.kind === 'wait').map((event) => event.kind === 'wait' ? event.phase : '')).toEqual(['sleeping', 'resumed']);
+      expect(memberOf(result.value, 'pr-1').status).toBe('succeeded');
+      expect(received('pr-1')).toHaveLength(1);
+      expect(applied('pr-1')).toHaveLength(1);
+      const [resumedRevision] = session.journal.list({ analysis, environment: production, collection: operationsCollection });
+      expect(resumedRevision?.fence).toBeGreaterThan(firstRevision?.fence ?? Number.POSITIVE_INFINITY);
+      expect(journalContents(session)).toContainEqual(expect.objectContaining({ status: 'succeeded', attempts: [
+        expect.objectContaining({ status: 'unknown', requestAttempt: expect.stringMatching(/\/1$/u) }),
+        expect.objectContaining({ status: 'succeeded', requestAttempt: expect.stringMatching(/\/2$/u) }),
+      ] }));
+      // A landed but unacknowledged Accounting intent remains unknown even
+      // though local no-dispatch knowledge preserves the network allowance.
+      expect(session.usage()).toEqual(expect.objectContaining({ requestAttempts: timing === 'after-commit' ? 2 : 1, unknown: timing === 'after-commit' ? [expect.any(Object)] : [] }));
+    } finally {
+      session.close();
+    }
+  });
+
   test('a busy Accounting store sends nothing and leaves the member pending, retried once the store is free', async () => {
     world.keys = ['pr-1'];
     const session = openSession(stores, timer);
@@ -393,6 +455,9 @@ describe('an Accounting intent that is not durable (ACC-007)', () => {
 
   test('an intent whose commit is not confirmed sends nothing, leaves the member pending, and sleep mode retries it', async () => {
     world.keys = ['pr-1'];
+    // A failed pre-send intent consumes no network attempt; even a one-send
+    // allowance must remain available when this run resumes.
+    world.options['pr-1'] = { retry: { maxAttempts: 1 } };
     const faulty = faultySqlite();
     const session = openSession(stores, timer, { accountingSqlite: faulty.capability });
     try {
@@ -404,6 +469,9 @@ describe('an Accounting intent that is not durable (ACC-007)', () => {
       expect(started.events.filter((event) => event.kind === 'wait').map((event) => event.kind === 'wait' ? event.phase : '')).toEqual(['sleeping', 'resumed']);
       expect(received('pr-1')).toHaveLength(1);
       expect(applied('pr-1')).toHaveLength(1);
+      // Its unconfirmed pre-send intent was restated under /1, so the
+      // historical not-sent row is replaced by the one actual send.
+      expect(journalContents(session)).toContainEqual(expect.objectContaining({ attempts: [expect.objectContaining({ status: 'succeeded', requestAttempt: expect.stringMatching(/\/1$/u) })] }));
       expect(session.usage()).toEqual(expect.objectContaining({ status: 'complete', requestAttempts: 1 }));
     } finally {
       session.close();
@@ -414,6 +482,9 @@ describe('an Accounting intent that is not durable (ACC-007)', () => {
 describe('an intent that landed though its commit was not confirmed (ACC-007, ACC-005)', () => {
   test('the retry reuses the unsent request attempt, so the landed intent gets its usage and the summary is complete with one intent', async () => {
     world.keys = ['pr-1'];
+    // Restating an unconfirmed intent keeps the public request-attempt ID;
+    // only the later actual send spends this run's one-send allowance.
+    world.options['pr-1'] = { retry: { maxAttempts: 1 } };
     const faulty = faultySqlite();
     const session = openSession(stores, timer, { accountingSqlite: faulty.capability });
     try {
@@ -580,6 +651,8 @@ describe('operations follow-ups (#139)', () => {
 
   test('settling an operation waits for the writer lease while another holder has it briefly, then records the settlement', async () => {
     world.keys = ['pr-1'];
+    // This lease control first needs one unresolved acquisition to settle.
+    world.options['pr-1'] = { retry: { maxAttempts: 1 } };
     world.provider.script('assess', 'pr-1', ['lost']);
     const session = openSession(stores, timer);
     try {

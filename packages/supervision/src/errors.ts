@@ -24,8 +24,8 @@ import type { IWriterAttempt } from './contracts.js';
  *   policy is exhausted (RUN-011). The step attempt may still handle it.
  * - `operation-deferred`: an external operation is deferred until a later time (RUN-011). Nothing was sent before that
  *   time; the step attempt can no longer publish or send, and its work stays pending.
- * - `operation-unknown`: an external operation's outcome is unknown and it may not be retried (RUN-012). Nothing was
- *   replayed; the step attempt can no longer publish or send, and its work stays pending until an operator settles it.
+ * - `operation-unknown`: an acquisition's outcome is unknown and this run's finite allowance is spent (RUN-012).
+ *   The step attempt can no longer publish or send; its work stays pending, while a new run may retry it.
  * - `operation-unrecorded`: usage an operator supplied could not be made durable, so nothing was settled (ACC-007). An
  *   operation's own intent that cannot be made durable instead leaves its step pending on a short deferral.
  * - `operation-resolved`: an operator resolved the operation at this address as succeeded, so its effect happened and it

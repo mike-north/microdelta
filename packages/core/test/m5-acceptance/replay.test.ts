@@ -1,19 +1,17 @@
 /**
- * `no-blind-replay` and `operator-resolves-unknown` (A-12, RUN-012), in
+ * Run-bounded acquisition retry and `operator-resolves-unknown` (A-12, RUN-012), in
  * separate processes over the assembled facade path.
  *
  * Expectations, written by hand from the owner decision and the selected
  * mechanism (RUN-012):
  *
- * - A lost response is an **unknown** outcome. Without a safety basis
- *   (safe-to-repeat, or provider idempotency) it is never retried, whatever
- *   the author's attempt policy: the step attempt is tainted, so an author
- *   body that catches the failure and calls the operation again, or makes a
- *   different fallback operation instead, sends nothing, and every later
- *   process denies the member's work until an operator settles the
- *   operation. The member stays pending, never failed.
- * - Declared safe to repeat, it is retried under the same operation identity
- *   with a new request attempt; the author accepted a second effect.
+ * - A lost response is an **unknown** outcome. The current run retries only
+ *   within its finite allowance, without requiring a write-effect safety
+ *   declaration. Once that allowance is spent, the step attempt is tainted:
+ *   an author's caught failure cannot send the same or a fallback operation.
+ *   The member stays pending, and a new run can retry the same address.
+ * - A retry retains the operation identity and mints another request attempt;
+ *   a lost report remains unknown even if later data arrives.
  * - With provider idempotency, every send carries the operation identity as
  *   its key, the retry reuses it, and the provider applies the effect once.
  * - An operator's settlement is recorded with its provenance (action,
@@ -40,10 +38,27 @@ function pr2Sends(lines: readonly { readonly kind: string; readonly key: string 
   return lines.filter((entry) => entry.kind === 'received' && entry.key === 'pr-2').length;
 }
 
-describe('no-blind-replay (A-12, RUN-012)', () => {
-  test('a lost response to a non-idempotent call is sent once: the author\'s catch-and-retry sends nothing, and no later process replays it', () => {
-    // An attempt policy alone is not a safety basis.
-    const s = freshScenario(baseWorld({ script: { 'pr-2': [{ kind: 'lost' }] }, declarations: { 'pr-2': { maxAttempts: 3, catchAndRetry: true } } }));
+describe('run-bounded acquisition retry (A-12, RUN-012)', () => {
+  test('the omitted policy sends three total attempts in one process, leaves the fold waiting, and a new process can acquire the value', () => {
+    const s = freshScenario(baseWorld({ script: { 'pr-2': [{ kind: 'lost' }, { kind: 'lost' }, { kind: 'lost' }, { kind: 'ok' }] } }));
+    const first = clean(s.run({ kind: 'fold' }, { window: 1 }));
+    const operation = operationOf(first, 'pr-2');
+    expect(pr2Sends(s.ledger())).toBe(3);
+    expect(first.result.members['pr-2']).toMatchObject({ status: 'pending', blocked: { kind: 'unknown-outcome', operation, reason: 'policy-exhausted' } });
+    expect(first.result.fold).toEqual({ status: 'waiting', pending: ['pr-2'] });
+    expect(usageOf(first.result.usage).unknown).toBe(3);
+
+    const next = clean(s.run({ kind: 'fold' }, { window: 1 }));
+    const sends = s.ledger().filter((entry) => entry.kind === 'received' && entry.key === 'pr-2');
+    expect(sends).toHaveLength(4);
+    expect(new Set(sends.map((entry) => entry.operation))).toEqual(new Set([operation]));
+    expect(new Set(sends.map((entry) => entry.requestAttempt)).size).toBe(4);
+    expect(next.result.fold).toMatchObject({ status: 'succeeded', kind: 'published' });
+    expect(usageOf(next.result.usage).unknown).toBe(3);
+  });
+
+  test('a capped lost response taints caught author retry, while a later run gets a fresh allowance', () => {
+    const s = freshScenario(baseWorld({ script: { 'pr-2': [{ kind: 'lost' }] }, declarations: { 'pr-2': { maxAttempts: 1, catchAndRetry: true } } }));
     const first = clean(s.run({ kind: 'members' }, { window: 1 }));
     expect(first.lines.filter((line) => line['t'] === 'trace' && line['helper'] === 'caught').map((line) => line['key'])).toEqual(['pr-2']);
     expect(pr2Sends(s.ledger())).toBe(1);
@@ -51,25 +66,24 @@ describe('no-blind-replay (A-12, RUN-012)', () => {
     expect(first.operations).toContain('request-settled:unknown:lost-response@pr-2');
     const operation = operationOf(first, 'pr-2');
     expect(statuses(first)).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'pending', 'pr-3': 'succeeded' });
-    expect(first.result.members['pr-2']?.blocked).toEqual({ kind: 'unknown-outcome', operation, reason: 'not-repeat-safe' });
+    expect(first.result.members['pr-2']?.blocked).toEqual({ kind: 'unknown-outcome', operation, reason: 'policy-exhausted' });
 
-    for (let pass = 0; pass < 2; pass += 1) {
-      const later = clean(s.run({ kind: 'members' }, { window: 1 }));
-      expect(later.assessed).toEqual([]);
-      expect(pr2Sends(s.ledger())).toBe(1);
-      expect(later.result.members['pr-2']).toMatchObject({ status: 'pending', blocked: { kind: 'unknown-outcome', operation, reason: 'not-repeat-safe' } });
-      expect(later.operations).toContain('blocked:unknown:not-repeat-safe@pr-2');
-    }
+    const later = clean(s.run({ kind: 'members' }, { window: 1 }));
+    expect(later.assessed).toEqual(['pr-2']);
+    expect(pr2Sends(s.ledger())).toBe(2);
+    expect(later.operations).toContain('retry-started@pr-2');
+    expect(later.result.members['pr-2']).toMatchObject({ status: 'succeeded' });
+    expect(usageOf(later.result.usage).unknown).toBe(1);
   });
 
   test('after a lost response the step attempt is tainted: a different fallback operation the author makes instead sends nothing', () => {
-    const s = freshScenario(baseWorld({ script: { 'pr-2': [{ kind: 'lost' }] }, declarations: { 'pr-2': { catchAndFallback: true } } }));
+    const s = freshScenario(baseWorld({ script: { 'pr-2': [{ kind: 'lost' }] }, declarations: { 'pr-2': { maxAttempts: 1, catchAndFallback: true } } }));
     const run = clean(s.run({ kind: 'members' }, { window: 1 }));
     expect(run.lines.filter((line) => line['t'] === 'trace' && line['helper'] === 'caught').map((line) => line['key'])).toEqual(['pr-2']);
     // Only the original request reached the provider; the fallback was never minted or sent.
     expect(pr2Sends(s.ledger())).toBe(1);
     expect(run.result.operations.filter((view) => view.member === 'pr-2').map((view) => view.name)).toEqual(['assess']);
-    expect(run.result.members['pr-2']).toMatchObject({ status: 'pending', blocked: { kind: 'unknown-outcome', reason: 'not-repeat-safe' } });
+    expect(run.result.members['pr-2']).toMatchObject({ status: 'pending', blocked: { kind: 'unknown-outcome', reason: 'policy-exhausted' } });
   });
 
   test('declared safe to repeat, the lost response is retried under the same operation identity, and the author accepts a second effect', () => {
@@ -100,7 +114,7 @@ describe('no-blind-replay (A-12, RUN-012)', () => {
 
 describe('operator-resolves-unknown (A-12, RUN-012)', () => {
   test('resolving an unknown operation as failed is recorded with its provenance and frees the member, which a later process sends as a new operation', () => {
-    const s = freshScenario(baseWorld({ script: { 'pr-2': [{ kind: 'lost-unapplied' }] } }));
+    const s = freshScenario(baseWorld({ script: { 'pr-2': [{ kind: 'lost-unapplied' }] }, declarations: { 'pr-2': { maxAttempts: 1 } } }));
     const lost = clean(s.run({ kind: 'members' }, { window: 1 }));
     const operation = operationOf(lost, 'pr-2');
     const settled = clean(s.run({ kind: 'settle', operation, action: 'resolve', outcome: 'failed' }));
@@ -121,7 +135,7 @@ describe('operator-resolves-unknown (A-12, RUN-012)', () => {
   });
 
   test('resolving as succeeded acknowledges the operator\'s usage once and keeps the address consumed until the operator abandons it', () => {
-    const s = freshScenario(baseWorld({ script: { 'pr-2': [{ kind: 'lost' }] } }));
+    const s = freshScenario(baseWorld({ script: { 'pr-2': [{ kind: 'lost' }] }, declarations: { 'pr-2': { maxAttempts: 1 } } }));
     const lost = clean(s.run({ kind: 'fold' }, { window: 1 }));
     expect(lost.result.fold).toEqual({ status: 'waiting', pending: ['pr-2'] });
     const operation = operationOf(lost, 'pr-2');
@@ -149,7 +163,7 @@ describe('operator-resolves-unknown (A-12, RUN-012)', () => {
   });
 
   test('abandoning an unknown operation leaves its usage unknown and lets a later process send the member afresh', () => {
-    const s = freshScenario(baseWorld({ script: { 'pr-2': [{ kind: 'lost' }] } }));
+    const s = freshScenario(baseWorld({ script: { 'pr-2': [{ kind: 'lost' }] }, declarations: { 'pr-2': { maxAttempts: 1 } } }));
     const lost = clean(s.run({ kind: 'members' }, { window: 1 }));
     const operation = operationOf(lost, 'pr-2');
     const abandoned = clean(s.run({ kind: 'settle', operation, action: 'abandon' }));

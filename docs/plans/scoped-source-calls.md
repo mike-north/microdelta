@@ -1,9 +1,13 @@
 # Scoped current detail calls for completed contribution searches
 
-**Standing: Proposal for #252; no representation accepted or runtime delivery claimed.**
+**Standing: #252 supervisory-selected source-callable direction; detailed contract
+and API representation remain proposed. No runtime delivery claimed.**
 This gap-fill supports the first usable contribution report under #170/#240 and
 its owner-selected 24-hour target. That target is not an implementation estimate.
-Independent adversarial review and supervisory selection precede implementation.
+Independent adversarial review and resolution of the decisions below precede
+implementation. The supervisor selected the distinct source-capable dynamic
+callable direction after review of candidate `b6c39d01`; this selection does not
+accept API spelling or settle persistence and shared-subject questions.
 
 ## Purpose and governing boundaries
 
@@ -45,12 +49,12 @@ Current generated declarations expose these distinct capabilities:
 | Nested PR collection/template | Expresses per-person PR sets and strict folds, but requires nested membership, descriptors, discovery and fold lifecycle. Prefer only if this consumer cannot be expressed soundly with the smaller call boundary. |
 | Grouped result mechanism | A global grouping callback with plain arrays merely moves manual orchestration outside tracked edges. A sound mechanism must expose independent group dependencies, completion, references and failures; that is additional composition machinery, not a free equivalent. |
 
-**Preferred proposal:** introduce a distinct source-capable callable slot and
+**Supervisory-selected direction:** introduce a distinct source-capable callable slot and
 supplied source declaration. Preserve supplied memo steps unchanged. Reuse the
 existing person template and its summary memo; declare a possible detail-call edge
 once, instantiate dynamic calls while consuming the completed search. No runtime
 topology factory and no nested collection API are needed for this bounded shape.
-This preference remains subject to the decisions below and adversarial review.
+The detailed contract remains subject to the decisions below and adversarial review.
 
 ## Proposed contract
 
@@ -95,10 +99,15 @@ finality, a current refresh can require a full fetch.
 structural slot correspondence, author subject basis, argument recipes, call order,
 exact child result and parent's consumed output facts using CMP-6/7 witnesses.
 Across a fresh process, validate the summary's own implementation and consumed
-person/search/input facts first. If that prefix remains valid, reconstruct calls
-in recorded order from current bindings/justified derived values; resolve each
-current detail source, then compare consumed detail facts before deciding assessor
-and summary eligibility. A changed earlier output invalidates the parent prefix;
+non-child member/input facts first. Then resolve the completed-search child under
+current source policy at its recorded call position, and compare its consumed
+count/ID facts. Historical search data is not current pre-call evidence. Only if
+that prefix remains valid, reconstruct subsequent calls in recorded order from
+current bindings/justified derived values. Resolve each current detail source;
+compare only facts the summary itself consumed, then reconstruct the assessment
+call using its current forwarded detail binding. The assessor validates its own
+consumed detail facts before the summary compares its consumed assessment facts.
+A changed earlier output invalidates the parent prefix;
 execute the admitted parent normally rather than replaying obsolete later calls.
 Unjustified/unreconstructible arguments produce an honest parent miss; they never
 justify a stale child or require paid execution disguised as validation.
@@ -146,13 +155,13 @@ tracked application input; two people below are a fixture, not framework policy.
 ```ts
 // Composition once: possible edges and separate subject histories are fixed.
 const detail = sourceSlot<[QualifiedPrId], PrDetail>({ slot: 'pr-detail' });
-const assessor = stepSlot<[PrDetail, Prompt], Assessment>({ slot: 'assessor' });
+const assessor = stepSlot<[QualifiedPrId, PrDetail, Prompt], Assessment>({ slot: 'assessor' });
 bindSource(detail, suppliedSource({
   // False in the mutable fixture; current policy must refresh even for equal IDs.
   finality: ({ args, previous, input }) => acceptsCurrent(args, previous, input),
   run: ({ args, previous, input }) => acquireDetail(args[0], previous, input),
 }), { subject: ([id]) => `detail:${id}` });
-bind(assessor, assessPr, { subject: ([detail]) => `assessment:${detail.id}` });
+bind(assessor, assessPr, { subject: ([id]) => `assessment:${id}` });
 
 const people = keyedRoster(input.people); // fixture: Ada and Grace
 const perPerson = template(people, person => {
@@ -161,17 +170,32 @@ const perPerson = template(people, person => {
     run: context => completedSearch(context.member, context.input.window),
   });
   return person.memo({ children: [search, detail, assessor], run: async context => {
-    const completed = await context.call(search);
+    const completedCarrier = await context.call(search);
+    const completed = completedCarrier.data; // tracked completed search value
+    const count = completed.count;
     const assessments = [];
-    for (const id of completed.ids) {
-      const current = await context.call(detail, id);
-      assessments.push(await context.call(assessor, current, context.input.prompt));
+    for (const id of completed.ids) { // read each qualified ID as a derived scalar
+      const detailCarrier = await context.call(detail, id);
+      const assessed = await context.call(assessor,
+        id, // derived ID supplies the assessment subject; forwarded slots are holes
+        forward.child<PrDetail>(detailCarrier), // exact carrier, no detail copying
+        forward.input<Prompt>('prompt')); // declared tracked composition input
+      assessments.push(assessed.data); // summarizeStrict observes assessment fields
     }
-    return summarizeStrict(context.member, completed.count, assessments);
+    return summarizeStrict(context.member, count, assessments);
   }});
 });
 const report = strictFold(perPerson); // independent person results feed this consumer
 ```
+
+Argument recipes are precise despite proposed API spelling: the detail call's ID
+and assessor's first ID are justified derived scalars from the current completed
+search; assessor detail is forwarded from the earlier exact child carrier, and
+prompt is forwarded from the declared input. Only the assessor body reads detail
+fields. Constructing a forward token does not make the summary consume those
+fields; the summary consumes search count/IDs and the assessment facts used by
+`summarizeStrict`. Raw tracked values cannot be passed as ordinary call arguments,
+and copying detail into plain data would impose a broader dependency than intended.
 
 Fixture: Ada initially has `repo#101, repo#102`, Grace has `repo#201`; next search
 returns identical IDs but 101 changes from open to merged. Ada's search observes
@@ -193,6 +217,8 @@ bodies, assessment/summary bodies, exact references and admission events.
 | Cold; unchanged restart | All required work completes once; restart reconnects current source hooks and retains only explicitly accepted source references and equal downstream references (SCD-1–4). |
 | Same ID, changed detail | Revision changes; identical search IDs; mutable 101 refreshes beneath cached Ada; consuming assessment/summary change. Zero detail execution plus stale Ada is failure (SCD-3/4). |
 | Equal refreshed detail | Finality false; full fetch yields equal payload and new source reference; equal consumed facts retain assessor and summary exact references, with refresh work recorded (SCD-4). |
+| Unconsumed detail change | Refresh changes only a detail field the assessor does not read; new source reference, assessor and person summary retain exact references. Passing/copying all detail through the parent is failure (SCD-2/4). |
+| Shared PR across people | Both people select the same qualified ID; verify compatible binding/current arguments and restart correspondence, reject incompatible bindings, and exercise differing policy inputs under the selected sharing contract. Hook deduplication across the whole report is not implied (SCD-1/3). |
 | Added/removed/reordered IDs | Changed membership reruns Ada; survivors reuse; removed child is not refreshed; reordered search is interpreted according to the application's observed ordering; stable identity never follows index (SCD-1/5). |
 | Unaffected person | Grace retains her exact summary while Ada changes; no global fold identity/failure or closure barrier invalidates Grace (SCD-5/6). |
 | Pending/failed/empty search | No detail before completion; failed/truncated/pending is not empty; certified empty enables zero-detail summary (SCD-5). |
@@ -223,9 +249,11 @@ Proposed bounded sequence after acceptance:
 
 ## Decisions required before implementation
 
-- **Select the mechanism:** source-capable callable is preferred; independent review
-  must challenge whether existing argument recipes can reconstruct the example
-  without a nested collection. API spelling is still open.
+- **Mechanism selected; prove its representation:** the supervisor selected the
+  distinct source-capable dynamic callable direction. Existing derived/forwarded
+  argument recipes are the proposed basis; implementation readiness still requires
+  independent inspection of their lowering through source dispatch and restart.
+  API spelling remains open; this is not a new recipe category.
 - **Confirm shared-subject scope:** source subject is PR evidence independent of
   person membership. Confirm how the current registry admits the same compatible
   callable invocation from two person instances without conflicting bindings; if

@@ -14,11 +14,17 @@ if (scenario === 'unexpected-ready') {
 } else if (scenario === 'no-ready') {
   // A bounded natural exit keeps the no-cleanup mutant self-cleaning after its assertion fails.
   setTimeout(() => process.exit(0), 350);
-} else if (scenario === 'ignore-release') {
+} else if (scenario === 'ignore-release' || scenario === 'exit-nonzero-after-release' || scenario === 'signal-after-release') {
   const connection = createNodeSqlite().openSqlite(location);
   connection.exec('BEGIN IMMEDIATE');
   process.send?.({ kind: 'locked' });
-  process.on('message', () => undefined);
+  process.on('message', (message: unknown) => {
+    if (scenario === 'ignore-release' || typeof message !== 'object' || message === null || !('kind' in message) || message.kind !== 'release') { return; }
+    connection.exec('ROLLBACK');
+    connection.close();
+    if (scenario === 'exit-nonzero-after-release') { process.exit(1); }
+    process.kill(process.pid, 'SIGTERM');
+  });
 } else if (scenario !== 'no-ready') {
   throw new Error(`unknown lock scenario ${scenario}`);
 }

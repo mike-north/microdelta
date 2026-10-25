@@ -10,12 +10,24 @@ import type { ChildProcess } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 /** Failure modes used only to prove that the lock helper cleans up its process. */
-export type IContentionLockScenario = 'no-ready' | 'unexpected-ready' | 'exit-before-ready' | 'ignore-release';
+export type IContentionLockScenario =
+  | 'no-ready'
+  | 'unexpected-ready'
+  | 'exit-before-ready'
+  | 'ignore-release'
+  | 'exit-nonzero-after-release'
+  | 'signal-after-release';
 
 /** Narrow test seams for exercising bounded helper failures without delaying normal C3 runs. */
 export interface IContentionLockOptions {
   readonly scenario?: IContentionLockScenario;
   readonly timeoutMilliseconds?: number;
+}
+
+/** Process termination facts retained so cleanup can distinguish orderly release from failure. */
+interface IChildExitStatus {
+  readonly code: number | null;
+  readonly signal: NodeJS.Signals | null;
 }
 
 /** Children remain here until exit has been observed, for cleanup assertions. */
@@ -30,10 +42,10 @@ const ordinaryWorker = fileURLToPath(new URL('./history-busy-lock.js', import.me
 const scenarioWorker = fileURLToPath(new URL('./contention-lock-scenario.js', import.meta.url));
 
 /** Rejects with a bounded diagnostic if the child has not exited by `timeoutMilliseconds`. */
-async function waitForExit(exit: Promise<void>, timeoutMilliseconds: number, reason: string): Promise<void> {
+async function waitForExit(exit: Promise<IChildExitStatus>, timeoutMilliseconds: number, reason: string): Promise<IChildExitStatus> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    await Promise.race([
+    return await Promise.race([
       exit,
       new Promise<never>((_resolve, reject) => {
         timer = setTimeout(() => reject(new Error(reason)), timeoutMilliseconds);
@@ -70,15 +82,19 @@ function waitForLockReady(child: ChildProcess, timeoutMilliseconds: number, diag
 }
 
 /** Release a ready lock holder and wait for its orderly exit within the same bound. */
-function requestRelease(child: ChildProcess, exit: Promise<void>, timeoutMilliseconds: number, diagnostic: () => string): Promise<void> {
+function requestRelease(child: ChildProcess, timeoutMilliseconds: number, diagnostic: () => string): Promise<void> {
   return new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => {
       child.off('exit', onExit);
       reject(new Error(`lock holder did not release the SQLite write lock: ${diagnostic()}`));
     }, timeoutMilliseconds);
-    const onExit = (): void => {
+    const onExit = (code: number | null, signal: NodeJS.Signals | null): void => {
       clearTimeout(timer);
-      resolve();
+      if (code === 0 && signal === null) {
+        resolve();
+      } else {
+        reject(new Error(`lock holder ended ${String(code)}/${String(signal)} after release: ${diagnostic()}`));
+      }
     };
     child.once('exit', onExit);
     try {
@@ -94,7 +110,6 @@ function requestRelease(child: ChildProcess, exit: Promise<void>, timeoutMillise
       child.off('exit', onExit);
       reject(error instanceof Error ? error : new Error(String(error)));
     }
-    void exit.catch(() => undefined);
   });
 }
 
@@ -116,31 +131,33 @@ export async function withIndependentWriteLock<T>(
   let diagnosticText = '';
   child.stderr?.setEncoding('utf8').on('data', (chunk: string) => { diagnosticText += chunk; });
   const diagnostic = (): string => diagnosticText || 'no worker diagnostics';
-  const exit = new Promise<void>((resolve) => { child.once('exit', () => { resolve(); }); });
+  const exit = new Promise<IChildExitStatus>((resolve) => {
+    child.once('exit', (code, signal) => { resolve({ code, signal }); });
+  });
   let exited = false;
   void exit.then(() => { exited = true; });
   let ready = false;
-  let releaseTimedOut = false;
-  let originalFailure: unknown;
+  let releaseFailed = false;
+  let hasOriginalFailure = false;
   try {
     await waitForLockReady(child, timeoutMilliseconds, diagnostic);
     ready = true;
     const result = await operation();
     try {
-      await requestRelease(child, exit, timeoutMilliseconds, diagnostic);
+      await requestRelease(child, timeoutMilliseconds, diagnostic);
     } catch (error: unknown) {
-      releaseTimedOut = true;
+      releaseFailed = true;
       throw error;
     }
     return result;
   } catch (error: unknown) {
-    originalFailure = error;
+    hasOriginalFailure = true;
     throw error;
   } finally {
     let cleanupFailure: Error | undefined;
     if (child.exitCode === null && child.signalCode === null) {
       try {
-        if (ready && !releaseTimedOut && child.connected) {
+        if (ready && !releaseFailed && child.connected) {
           try { child.send({ kind: 'release' }); } catch { /* A bounded SIGKILL below still reaps the child. */ }
         }
         await waitForExit(exit, timeoutMilliseconds, 'lock child did not exit after release');
@@ -155,6 +172,6 @@ export async function withIndependentWriteLock<T>(
       }
     }
     if (exited) { activeChildren.delete(child); }
-    if (cleanupFailure !== undefined && originalFailure === undefined) { throw cleanupFailure; }
+    if (cleanupFailure !== undefined && !hasOriginalFailure) { throw cleanupFailure; }
   }
 }

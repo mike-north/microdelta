@@ -6,10 +6,15 @@ accepted semantics in [the preview-observation plan](preview-observation.md) and
 [RUN-006, RUN-007, RUN-008 and CLI-004](../spec/operations.md#run-006--preview-access-does-not-authorize-recomputation).
 It does not accept new owner decisions, change normative requirements, establish
 runtime behavior, or declare issue 165 ready to close. The proposal is based on
-the project baseline at `5353ff3112379d48edfa5f9cdcdb0bbc6a978fb2`. The
-unmerged issue-222 candidate source at
-`b711adb6a912d332ecf4f2640c9ccb2208775545` is cited only as evidence of a narrow
-caller-fed alpha projection; it is not a durable query contract or proof of the
+the project baseline at `5353ff3112379d48edfa5f9cdcdb0bbc6a978fb2`, which
+predates PR222 and does not contain its projection. Since then, the narrow
+caller-fed alpha projection from issue 216 was merged to main by PR222 at
+`e77c9ced52300b6debfcbce37ea392711c4d0b32`. It combines supplied evaluation
+scope/outcome evidence with an optional exact result reference for a read-only
+selected projection. This delivered slice does not provide durable evaluation
+enumeration, cross-process observation, or the broader protocol proposed below.
+The source originated at `b711adb6a912d332ecf4f2640c9ccb2208775545`; its merge is
+implementation evidence for that narrow slice, not proof or adoption of the
 capabilities below.
 
 This plan separates owner-authored facts from their coordination and indexing,
@@ -537,20 +542,21 @@ be presented as ready before its dependency is accepted.
 
 ## Current runtime gaps and readiness
 
-The cited `b711adb6a912d332ecf4f2640c9ccb2208775545` issue-222 candidate
-contains a narrow alpha stateless projection fed by a caller's exact result
-reference and Resolution outcome. That candidate is unmerged and is not part of
-baseline `5353ff3112379d48edfa5f9cdcdb0bbc6a978fb2`; it is only evidence of the
-caller-fed projection shape, not delivered baseline behavior. The broader
-requirements are not delivered: no separate read-only History opener/snapshot
-capability; no attempt/evaluation enumeration or common observation commit
-index; no durable run/request/structural failure scope mapping; no cross-process
-change feed; no durable rolling activity with coverage/gap metadata; no
-independently owned observation reader; no explicit value-handle lifetime
-beyond Tracking capture; no durable Resolution population projection for
-read-side membership; and no retained-union finite aggregate read. Existing
-journal revisions cannot stand in for the rolling index, and existing observers
-cannot stand in for durable or cross-process notification.
+At historical baseline `5353ff3112379d48edfa5f9cdcdb0bbc6a978fb2`, the
+issue-216 projection was absent. Current main at PR222 merge
+`e77c9ced52300b6debfcbce37ea392711c4d0b32` contains a narrow, stateless alpha
+projection fed by caller-supplied evaluation scope/outcome and an optional exact
+result reference. It supports read-only selected display for that supplied
+context; it does not discover evaluations or establish durable associations.
+The broader issue-165 requirements remain undelivered and proposed: no separate
+read-only History opener/snapshot capability; no attempt/evaluation enumeration
+or common observation commit index; no durable run/request/structural failure
+scope mapping; no cross-process change feed; no durable rolling activity with
+coverage/gap metadata; no independently owned observation reader; no explicit
+value-handle lifetime beyond Tracking capture; no durable Resolution population
+projection for read-side membership; and no retained-union finite aggregate
+read. Existing journal revisions cannot stand in for the rolling index, and
+existing observers cannot stand in for durable or cross-process notification.
 
 The repository's operating constraints remain in force: no write caused by
 inspection; no test without a first stated failing outcome; no runtime

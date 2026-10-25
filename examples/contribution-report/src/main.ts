@@ -87,15 +87,13 @@ interface IObserved {
   readonly executions: Record<string, number>;
   /** Finality evaluations, by step. */
   readonly finality: Record<string, number>;
-  /** Exact publications or accepted references, grouped by step for bounded reuse evidence. */
-  readonly references: Record<string, string[]>;
   /** The run's operation, wait and stop events, in order: identifiers, statuses, times and usage figures, never values. */
   readonly events: IRunEvent[];
 }
 
 /** An observer that counts executions and finality evaluations and collects operational events. */
 function observer(): { readonly observed: IObserved; readonly observe: (event: IRunEvent) => void } {
-  const observed: IObserved = { executions: {}, finality: {}, references: {}, events: [] };
+  const observed: IObserved = { executions: {}, finality: {}, events: [] };
   const bump = (record: Record<string, number>, name: string): void => {
     record[name] = (record[name] ?? 0) + 1;
   };
@@ -115,10 +113,6 @@ function observer(): { readonly observed: IObserved; readonly observe: (event: I
         bump(observed.executions, name);
       } else if (phase === 'finality') {
         bump(observed.finality, name);
-      } else if ((phase === 'publish' || phase === 'accept') && event.event.reference !== undefined) {
-        const references = observed.references[name] ?? [];
-        references.push(event.event.reference.locator);
-        observed.references[name] = references;
       }
     },
   };
@@ -330,7 +324,6 @@ function operational(result: IRunResult<unknown>, observed: IObserved, usage: un
     usage,
     executions: observed.executions,
     finality: observed.finality,
-    references: observed.references,
     diagnostics: result.diagnostics,
   };
 }

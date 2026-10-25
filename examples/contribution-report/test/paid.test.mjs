@@ -75,7 +75,7 @@ const coldText = [
   'Coverage: 3 required, 0 skipped; discovery closed',
 ].join('\n');
 
-/** Every body a cold paid run executes once: discovery, ID searches, six detail calls, summaries, assessments and the report. */
+/** Every body a cold paid run executes once: discovery, three activities, three summaries, six assessments and the report. */
 const coldExecutions = {
   contributors: 1,
   'person:ada/activity': 1,
@@ -84,7 +84,6 @@ const coldExecutions = {
   'person:ben/summary': 1,
   'person:cy/activity': 1,
   'person:cy/summary': 1,
-  pullRequestDetail: 6,
   assessor: 6,
   report: 1,
 };
@@ -233,7 +232,7 @@ test('durable-quota-deferral: exit mode reports "waiting until T", a run before 
     const resumed = cli('run', '--store', store, '--rubric', 'P');
     assert.equal(resumed.text, coldText);
     assert.equal(resumed.waitingUntil, null);
-    assert.deepEqual(resumed.executions, { 'person:ben/summary': 1, pullRequestDetail: 1, assessor: 2, report: 1 });
+    assert.deepEqual(resumed.executions, { 'person:ben/summary': 1, assessor: 2, report: 1 });
     const requests201 = ledger(store).filter((entry) => entry.kind === 'received' && entry.pullRequest === 201);
     assert.equal(requests201.length, 2);
     assert.equal(requests201[1].operation, requests201[0].operation);
@@ -343,9 +342,9 @@ test('trial-production-isolation: a trial run, then a recorded promotion, then p
     assert.notEqual(unpromoted.checked.discovery.kind, 'reusable');
 
     // The promotion names every result the trial report rests on: discovery, three activities,
-    // six details, six assessments, three summaries and the report itself.
+    // six assessments, three summaries and the report itself.
     const promoted = cli('promote', '--store', store, '--rubric', 'P', '--from', 'trial', '--to', 'production');
-    assert.equal(promoted.promotion.references.length, 20);
+    assert.equal(promoted.promotion.references.length, 14);
     assert.ok(promoted.promotion.references.includes(trial.fold.reference));
     for (const key of designatedKeys) {
       assert.ok(promoted.promotion.references.includes(trial.members[key].reference));

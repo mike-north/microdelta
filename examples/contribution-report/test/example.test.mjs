@@ -39,14 +39,13 @@
  */
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
 const main = fileURLToPath(new URL('../dist/main.js', import.meta.url));
-const fixtureFile = fileURLToPath(new URL('../data/acme-widget.json', import.meta.url));
 
 const ada = 'person:ada';
 const ben = 'person:ben';
@@ -78,12 +77,11 @@ const coldText = [
   'Coverage: 3 required, 0 skipped; discovery closed',
 ].join('\n');
 
-/** Every body a cold run executes once: search, member summaries, six detail retrievals, six assessments and the report. */
+/** Every body a cold run executes once: discovery, three activities, three summaries, six assessments and the report. */
 const coldExecutions = {
   contributors: 1,
   'person:ada/activity': 1,
   'person:ada/summary': 1,
-  pullRequestDetail: 6,
   'person:ben/activity': 1,
   'person:ben/summary': 1,
   'person:cy/activity': 1,
@@ -97,26 +95,6 @@ function cli(...args) {
   const result = spawnSync(process.execPath, [main, ...args, '--json'], { encoding: 'utf8' });
   assert.equal(result.status, 0, `${args.join(' ')} failed: ${result.stderr}`);
   return JSON.parse(result.stdout);
-}
-
-/** Run the generated CLI with a local alternate upstream fixture, still in its own process. */
-function cliWithFixture(fixturePath, ...args) {
-  const result = spawnSync(process.execPath, [main, ...args, '--json'], {
-    encoding: 'utf8',
-    env: { ...process.env, MICRODELTA_CONTRIBUTION_REPORT_FIXTURE: fixturePath },
-  });
-  assert.equal(result.status, 0, `${args.join(' ')} failed: ${result.stderr}`);
-  return JSON.parse(result.stdout);
-}
-
-/** Run a fixture-backed search expected to fail before it can produce a report. */
-function failingWithFixture(fixturePath, ...args) {
-  const result = spawnSync(process.execPath, [main, ...args], {
-    encoding: 'utf8',
-    env: { ...process.env, MICRODELTA_CONTRIBUTION_REPORT_FIXTURE: fixturePath },
-  });
-  assert.notEqual(result.status, 0, `${args.join(' ')} unexpectedly succeeded: ${result.stdout}`);
-  return { stderr: result.stderr, stdout: result.stdout };
 }
 
 /** Run one CLI command expecting a nonzero exit, returning its stderr. */
@@ -168,14 +146,11 @@ function assertCold(cold) {
   assert.deepEqual(cold.executions, coldExecutions);
 }
 
-test('keyed-cold-and-restarted-report: completed ID search, separate details, cold and exact unchanged restart reuse', () => {
+test('keyed-cold-and-restarted-report: cold, unchanged restart with zero member, assessment and report bodies, recover and check', () => {
   withStore((store) => {
     const cold = cli('run', '--store', store);
     assertCold(cold);
     const coldMembers = references(cold);
-    const coldDetails = cold.references.pullRequestDetail;
-    assert.equal(coldDetails.length, 6);
-    assert.equal(new Set(coldDetails).size, 6);
 
     // Recovery of the cold run's saved request key returns its exact committed discovery, report and member summaries without running author code.
     const recovered = cli('recover', '--store', store);
@@ -189,7 +164,6 @@ test('keyed-cold-and-restarted-report: completed ID search, separate details, co
     const restarted = cli('run', '--store', store, '--reverse');
     assert.equal(restarted.text, coldText);
     assert.deepEqual(restarted.executions, {});
-    assert.deepEqual(restarted.references.pullRequestDetail, coldDetails);
     // Discovery and each member's activity run their current finality policy once.
     assert.deepEqual(restarted.finality, { contributors: 1, 'person:ada/activity': 1, 'person:ben/activity': 1, 'person:cy/activity': 1 });
     for (const key of designatedKeys) {
@@ -276,61 +250,6 @@ test('tracked-gate-instances: threshold 2 skips Cy and reruns only the report; t
   });
 });
 
-test('completed-search-change-and-failure: changed IDs keep unchanged people, and a failed search is never a successful empty report', () => {
-  withStore((store) => {
-    const fixtureDirectory = mkdtempSync(path.join(tmpdir(), 'microdelta-fixtures-'));
-    try {
-      const original = JSON.parse(readFileSync(fixtureFile, 'utf8'));
-      const withoutAda103 = {
-        ...original,
-        revision: original.revision + 1,
-        pullRequests: original.pullRequests.filter((pull) => pull.number !== 103),
-      };
-      const changedIdsPath = path.join(fixtureDirectory, 'changed-ids.json');
-      writeFileSync(changedIdsPath, JSON.stringify(withoutAda103));
-
-      const cold = cli('run', '--store', store);
-      assertCold(cold);
-      const updated = cliWithFixture(changedIdsPath, 'run', '--store', store);
-      assert.deepEqual(updated.discovery.keys, designatedKeys);
-      assert.deepEqual(updated.executions, {
-        contributors: 1,
-        'person:ada/activity': 1,
-        'person:ben/activity': 1,
-        'person:cy/activity': 1,
-        'person:ada/summary': 1,
-        report: 1,
-      });
-      assert.equal(updated.members[ada].kind, 'published');
-      assert.notEqual(updated.members[ada].reference, cold.members[ada].reference);
-      for (const key of [ben, cy]) {
-        assert.deepEqual(updated.members[key], { status: 'succeeded', kind: 'reused', reference: cold.members[key].reference });
-      }
-    assert.equal(updated.references.pullRequestDetail.length, 5);
-    assert.ok(updated.references.pullRequestDetail.every((reference) => cold.references.pullRequestDetail.includes(reference)));
-      assert.deepEqual(updated.report.required.map((entry) => [entry.key, entry.score]), [[ada, 4], [ben, 3], [cy, 2]]);
-
-      const emptyPath = path.join(fixtureDirectory, 'valid-empty.json');
-      writeFileSync(emptyPath, JSON.stringify({ ...original, revision: original.revision + 2, pullRequests: [], reviews: [] }));
-      const empty = cliWithFixture(emptyPath, 'run', '--store', path.join(fixtureDirectory, 'empty-store'));
-      assert.deepEqual(empty.discovery, { kind: 'keyed', completion: 'complete', keys: [] });
-      assert.deepEqual(empty.fold.coverage, { required: [], skipped: [], closed: true });
-      assert.deepEqual(empty.report.required, []);
-
-      const failedSearchPath = path.join(fixtureDirectory, 'failed-search.json');
-      writeFileSync(failedSearchPath, JSON.stringify({
-        ...original,
-        revision: original.revision + 3,
-        pullRequests: [...original.pullRequests, { number: 999, author: 'person:unknown', createdAt: '2026-02-01T00:00:00Z', merged: false, labels: [] }],
-      }));
-      const failedSearch = failingWithFixture(failedSearchPath, 'run', '--store', path.join(fixtureDirectory, 'failed-store'));
-      assert.match(failedSearch.stderr, /Source check .*contributors.*threw/u);
-    } finally {
-      rmSync(fixtureDirectory, { recursive: true, force: true });
-    }
-  });
-});
-
 test('tracked-gate-instances: starting at threshold 2, threshold 1 runs only the newly required Cy and the report', () => {
   withStore((store) => {
     const gated = cli('run', '--store', store, '--minimum-authored', '2');
@@ -343,7 +262,7 @@ test('tracked-gate-instances: starting at threshold 2, threshold 1 runs only the
     // Cy was never required, so Cy's activity check, summary and PR 301's assessment run for the first time;
     // the membership changed, so the report reruns. Discovery, Ada and Ben keep their exact results.
     const required = cli('run', '--store', store, '--minimum-authored', '1');
-    assert.deepEqual(required.executions, { 'person:cy/activity': 1, 'person:cy/summary': 1, pullRequestDetail: 1, assessor: 1, report: 1 });
+    assert.deepEqual(required.executions, { 'person:cy/activity': 1, 'person:cy/summary': 1, assessor: 1, report: 1 });
     assert.deepEqual(required.members[ada], { status: 'succeeded', kind: 'reused', reference: gated.members[ada].reference });
     assert.deepEqual(required.members[ben], { status: 'succeeded', kind: 'reused', reference: gated.members[ben].reference });
     assert.equal(required.members[cy].kind, 'published');

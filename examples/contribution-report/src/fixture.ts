@@ -100,16 +100,10 @@ export function currentUpstreamListing(): ICollectionStatus {
   return upstreamListing;
 }
 
-/**
- * Read and validate the deterministic upstream fixture. `MICRODELTA_CONTRIBUTION_REPORT_FIXTURE`
- * lets an isolated process use an alternate local fixture so restart tests can
- * model upstream membership changes without contacting a provider.
- */
+/** Read and validate the fixture file; duplicates and unknown authors are fixture errors. */
 export function readFixture(): IFixture {
   // The record shape is trusted as the checked-in fixture's; only duplicate PR numbers and review ids and unknown authors are validated below.
-  const fixturePath = process.env.MICRODELTA_CONTRIBUTION_REPORT_FIXTURE;
-  const source = fixturePath === undefined ? new URL('../data/acme-widget.json', import.meta.url) : fixturePath;
-  const fixture = JSON.parse(readFileSync(source, 'utf8')) as IFixture;
+  const fixture = JSON.parse(readFileSync(new URL('../data/acme-widget.json', import.meta.url), 'utf8')) as IFixture;
   const keys = new Set(fixture.profiles.map((profile) => profile.key));
   const numbers = new Set<number>();
   for (const pull of fixture.pullRequests) {

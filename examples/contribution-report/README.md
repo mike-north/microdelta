@@ -56,9 +56,8 @@ executed bodies and finality evaluations by step, observed through run
 observers. `npm run test:examples` runs these commands as separate processes
 and checks their output.
 
-The first `run` executes discovery, each contributor's completed ID search,
-summary, six separate detail retrievals, six assessments and the report once,
-and prints:
+The first `run` executes discovery, each contributor's activity source and
+summary, six assessments and the report once, and prints:
 
 ```text
 Contribution report for acme/widget, 2026-01-01 to 2026-04-01 (exclusive)
@@ -70,19 +69,19 @@ Coverage: 3 required, 0 skipped; discovery closed
 ```
 
 A later `run` in a new process evaluates discovery's and each activity's
-current finality policy and executes no member, detail, assessment or report
-body: the report and every summary keep their exact references.
+current finality policy and executes no member, assessment or report body: the
+report and every summary keep their exact references.
 
 ## What changes rerun
 
 | Change | What executes | What keeps its exact reference |
 | --- | --- | --- |
-| Nothing (restart, in either registration order) | No body; finality policies only | Discovery, ID searches, details, summaries, assessments, report |
+| Nothing (restart, in either registration order) | No body; finality policies only | Discovery, activities, summaries, assessments, report |
 | `--rubric B` (explanation text only) | The six assessments | Every summary and the report |
 | `--rubric C` (Ben's merged bug fix scores 3) | The six assessments, Ben's summary and the report | Ada's and Cy's summaries |
 | `--minimum-authored 2` | The report; Cy is skipped | Ada's and Ben's summaries |
 | `--minimum-authored 1` again | Nothing | Cy's summary and the earlier report validate again |
-| `--minimum-authored 1` after starting at 2 | Cy's activity and summary, PR 301's detail and assessment, and the report | Discovery, Ada's and Ben's summaries and assessments |
+| `--minimum-authored 1` after starting at 2 | Cy's activity and summary, PR 301's assessment and the report | Discovery, Ada's and Ben's summaries and assessments |
 | `--open-discovery` | Discovery's check; the report waits | Every summary; no report is published |
 | Closed listing again | Discovery's check | The earlier complete report validates again |
 
@@ -106,15 +105,13 @@ report consumed and reruns it.
 - **Member binding.** Each member's `activity` source reads its member's `key`
   through the `member` binding to select that contributor's activity. Its
   subject is `activity:acme/widget:2026-Q1:<member key>`.
-- **Completed search, memoized details and assessment.** Each member `activity`
-  source returns its completed ordered PR-ID list without PR detail. Its
-  `summary` calls that source, then calls the `pullRequestDetail` supplied slot
-  once per ID. Each detail publishes independently under
-  `pull-request:acme/widget:<number>`. The summary forwards that exact detail
-  result to the `assessor` slot, whose result publishes under
-  `assessment:acme/widget:<number>`. A stable ID set reuses each detail and
-  assessment on restart; changing one member's IDs retains other members'
-  exact summaries, while the changed member and strict report are recomputed.
+- **Nested memoized calls through a supplied assessor.** Each `summary` calls
+  `activity`, then the `assessor` step slot once per authored PR. The PR number
+  is a derived argument, and the PR record is forwarded from the activity result
+  (`forward.child(activity, ['pullRequests', index])`). Each assessment
+  publishes under `assessment:acme/widget:<number>`. The summary consumes each
+  assessment's `score`, never its explanation, so an equal score keeps the
+  summary even when the assessment reran.
 - **Strict fold** (`report`). The report runs only when discovery is closed
   and every required member succeeded. Its body receives one entry per current
   member in key order: succeeded with the member's summary, or skipped. It
@@ -124,9 +121,7 @@ report consumed and reruns it.
   outcome, not from the body. With open discovery or a pending member the
   report waits, and a failed member fails it; neither runs its body.
 - **Source policy.** The fixture adapters read `data/acme-widget.json` in place
-  of a live GitHub API. Isolated tests may set
-  `MICRODELTA_CONTRIBUTION_REPORT_FIXTURE` to another local JSON fixture to
-  model a changed upstream response across processes. Activity finality treats the previous result as final
+  of a live GitHub API. Activity finality treats the previous result as final
   while the fixture revision is unchanged. Discovery finality also requires
   the upstream's listing status to be unchanged. Both confirm the run's
   environment with `currentRun()`; no context parameter is threaded through a
@@ -177,13 +172,14 @@ These are the example's application policy, not framework rules:
 
 ## Array-position semantics
 
-The selected activity keeps PR IDs ordered by number and reviews by id. The
-summary reads the ID count, each separately retrieved detail's merged status,
-and the review count. Detail subjects use the stable PR ID, so changing one
-member's ID list reuses details for IDs still present and leaves other
-members' summaries unchanged. Changing a consumed merged status recomputes the
-assessment and summary. Discovery order is not identity: members are keyed, and
-reordering the listing changes no member.
+The selected activity keeps PRs ordered by number and reviews by id. The
+summary reads `pullRequests.length`, each `pullRequests[index].merged` and
+`number`, and `reviews.length` with indexed loops. Those are positional facts
+about the exact retained arrays: changing an unread field (a label, the avatar
+URL, profile identity or the fixture revision) keeps the summary, while
+changing a consumed merged status or the number of PRs or reviews reevaluates
+it. Discovery order is not identity: members are keyed, and reordering the
+listing changes no member.
 
 ## Operating the analysis: the paid-like assessor
 

@@ -9,10 +9,11 @@
  * then reruns the unchanged M5 acceptance suites, whose worker processes load
  * those builds through the built facade.
  *
- * The controls cover the guards the M5 exit names: stop, deferral, no blind
- * replay, accounting exactly once, fencing and privacy, plus environment
- * isolation and run-scope lifecycle. Every control names the planned evidence
- * cases (the suites' `describe` titles) it is predicted to break, written
+ * The controls cover the guards the M5 exit names: stop, deferral,
+ * run-bounded acquisition retry, accounting exactly once, fencing and
+ * privacy, plus environment isolation and run-scope lifecycle. Every control
+ * names the planned evidence cases (the suites' `describe` titles) it is
+ * predicted to break, written
  * before the control ran; a control fails the run when any predicted case
  * still passes, when no test fails at all, or when any of its anchors does
  * not match exactly once. A control is one defect, which may need
@@ -172,23 +173,23 @@ const controls = [
     replacement: 'const retryable = transient;',
     breaks: ['durable-quota-deferral'],
   },
-  // No blind replay (RUN-011/012): finite allowance and the taint guard both
-  // constrain a lost-response retry, independent of a legacy safety hint.
+  // Acquisition retry (RUN-011/012): each run's finite allowance constrains
+  // retries, and taint blocks caught author work after an attempt ends.
   {
-    guard: 'no-replay',
-    name: 'an unknown outcome is replayed blindly',
+    guard: 'acquisition',
+    name: "unknown retries exceed the current run's allowance",
     target: 'records',
     anchor: 'export function unknownRetry(record, spent) {',
     replacement: "export function unknownRetry(record, spent) { return 'retry';",
-    breaks: ['no-blind-replay'],
+    breaks: ['run-bounded acquisition retry (A-12, RUN-012)'],
   },
   {
-    guard: 'no-replay',
+    guard: 'acquisition',
     name: 'a tainted step attempt keeps sending',
     target: 'engine',
     anchor: 'if (attempt.pending !== undefined) {',
     replacement: 'if (false) {',
-    breaks: ['no-blind-replay'],
+    breaks: ['run-bounded acquisition retry (A-12, RUN-012)'],
   },
   {
     guard: 'no-replay',
@@ -199,12 +200,12 @@ const controls = [
     breaks: ['operator-resolves-unknown'],
   },
   {
-    guard: 'no-replay',
+    guard: 'acquisition',
     name: 'the provider idempotency key is not sent',
     target: 'engine',
     anchor: 'idempotencyKey: request.providerIdempotency ? operation : undefined',
     replacement: 'idempotencyKey: undefined',
-    breaks: ['no-blind-replay', 'usage-exactly-once'],
+    breaks: ['run-bounded acquisition retry (A-12, RUN-012)', 'usage-exactly-once'],
   },
   // Accounting exactly once (ACC-003, ACC-005, ACC-007): every report once, unknown never zero.
   {

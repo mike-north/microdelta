@@ -100,6 +100,13 @@ import type { IResolutionErrorCode as IResolutionErrorCode_2 } from '@microdelta
 import type { IResolutionFamily } from '@microdelta/resolution';
 import type { IResolutionOutcome as IResolutionOutcome_2 } from '@microdelta/resolution';
 import type { IResultView as IResultView_2 } from '@microdelta/resolution';
+import type { IRetryAttemptSummary as IRetryAttemptSummary_2 } from '@microdelta/supervision';
+import type { IRetryDecision as IRetryDecision_2 } from '@microdelta/supervision';
+import type { IRetryDecisionInput as IRetryDecisionInput_2 } from '@microdelta/supervision';
+import type { IRetryFacts as IRetryFacts_2 } from '@microdelta/supervision';
+import type { IRetryHistory as IRetryHistory_2 } from '@microdelta/supervision';
+import type { IRetryOutcome as IRetryOutcome_2 } from '@microdelta/supervision';
+import type { IRetrySourceScope as IRetrySourceScope_2 } from '@microdelta/supervision';
 import type { IRun } from '@microdelta/supervision';
 import type { IRunContext as IRunContext_2 } from '@microdelta/supervision';
 import type { IRunEvent as IRunEvent_2 } from '@microdelta/supervision';
@@ -113,6 +120,7 @@ import type { ISkippedEntry as ISkippedEntry_2 } from '@microdelta/definition';
 import type { ISlotSubject as ISlotSubject_2 } from '@microdelta/definition';
 import type { ISourceOutcome as ISourceOutcome_2 } from '@microdelta/resolution';
 import type { ISourceOutcomes as ISourceOutcomes_2 } from '@microdelta/resolution';
+import type { ISourceRetryPolicy as ISourceRetryPolicy_2 } from '@microdelta/supervision';
 import type { IStepSlot as IStepSlot_2 } from '@microdelta/definition';
 import type { IStopCause as IStopCause_2 } from '@microdelta/supervision';
 import type { IStopController as IStopController_2 } from '@microdelta/supervision';
@@ -483,6 +491,27 @@ export type IResolutionOutcome = IResolutionOutcome_2;
 export type IResultView<T> = IResultView_2<T>;
 
 // @alpha
+export type IRetryAttemptSummary = IRetryAttemptSummary_2;
+
+// @alpha
+export type IRetryDecision = IRetryDecision_2;
+
+// @alpha
+export type IRetryDecisionInput = IRetryDecisionInput_2;
+
+// @alpha
+export type IRetryFacts = IRetryFacts_2;
+
+// @alpha
+export type IRetryHistory = IRetryHistory_2;
+
+// @alpha
+export type IRetryOutcome = IRetryOutcome_2;
+
+// @alpha
+export type IRetrySourceScope = IRetrySourceScope_2;
+
+// @alpha
 export type IRunContext = IRunContext_2;
 
 // @alpha
@@ -517,6 +546,9 @@ export type ISourceOutcome<T> = ISourceOutcome_2<T>;
 
 // @alpha
 export type ISourceOutcomes = ISourceOutcomes_2;
+
+// @alpha
+export type ISourceRetryPolicy = ISourceRetryPolicy_2;
 
 // @alpha
 export type IStepDescriptor = IBindingDescriptor;
@@ -649,6 +681,7 @@ export interface IWorkspaceRunOptions<TInputs extends object, THelpers extends o
     readonly environment: string;
     readonly observers?: readonly IRunObserver[];
     readonly permits?: number;
+    readonly retryPolicies?: readonly ISourceRetryPolicy[];
     readonly runId?: string;
     readonly stop?: IStopController;
     readonly window?: number;

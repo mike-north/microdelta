@@ -20,12 +20,26 @@ import type { IRunPromotionPort } from '@microdelta/supervision';
 import { expectAssignable, expectError, expectNotAssignable, expectType } from 'tsd';
 import { HistoryBusyError } from '../dist/api/microdelta.alpha.js';
 
+// The reusable source policy is an internal alpha contract, not a default public-package type.
+// @ts-expect-error: The generated public tier must not export source retry policies.
+export type { ISourceRetryPolicy as IPublicRetryPolicyMustRemainHidden } from 'microdelta';
+// @ts-expect-error: The generated public tier must not expose retry decision observations.
+export type { IRetryDecisionInput as IPublicRetryInputMustRemainHidden } from 'microdelta';
+
 import type {
   IDeferralMode,
   IOperationAccounting,
   IOperationEvent,
   IOperationRequest,
   IOperationResponse,
+  IRetryDecision,
+  IRetryDecisionInput,
+  IRetryAttemptSummary,
+  IRetryFacts,
+  IRetryHistory,
+  IRetryOutcome,
+  IRetrySourceScope,
+  ISourceRetryPolicy,
   IOperationView,
   IPromotionEvent,
   IPromotionRecord,
@@ -88,6 +102,31 @@ expectType<string>(summary.unknown[0]?.operation ?? '');
 expectAssignable<IOperationRequest<number>>({ name: 'assess', binding: 'sha256:1', perform: () => Promise.resolve<IOperationResponse<number>>({ kind: 'succeeded', value: 1 }) });
 expectNotAssignable<IOperationRequest<number>>({ name: 'assess', perform: () => Promise.resolve<IOperationResponse<number>>({ kind: 'succeeded', value: 1 }) });
 expectAssignable<IOperationResponse<number>>({ kind: 'rate-limited', retryAt: 1 });
+
+// Source policies see bounded readonly facts and same-operation attempt history.
+declare const retryInput: IRetryDecisionInput;
+declare const retryHistory: IRetryHistory;
+declare const retryFacts: IRetryFacts;
+const retrySource: IRetrySourceScope = { source: 'catalog', service: 'catalog-api', connection: 'org-a-read' };
+const sourcePolicy: ISourceRetryPolicy = {
+  id: 'catalog-retry',
+  scope: retrySource,
+  decide: (input) => input.outcome.kind === 'unknown' ? { kind: 'retry-now' } : { kind: 'stop' },
+};
+expectType<readonly IRetryDecisionInput['history']['prior'][number][]>(retryHistory.prior);
+expectType<IRetryAttemptSummary | undefined>(retryHistory.prior[0]);
+expectType<IRetryOutcome>(retryInput.outcome);
+expectError(retryHistory.prior = []);
+expectType<readonly string[] | undefined>(retryFacts.conditions);
+expectType<IRetryDecision | Promise<IRetryDecision>>(sourcePolicy.decide(retryInput));
+expectNotAssignable<IRetryDecision>({ kind: 'no-opinion' });
+expectNotAssignable<IRetryDecision>({ kind: 'retry-now', maxAttempts: 99 });
+expectNotAssignable<IRetryFacts>({ headers: { authorization: 'secret' } });
+expectAssignable<IOperationRequest<number>>({
+  name: 'catalog-read', binding: 'sha256:request', retrySource,
+  perform: () => Promise.resolve({ kind: 'failed', transient: false, retryFacts: { httpStatus: 404, conditions: ['resource-expected-later'] } }),
+});
+expectAssignable<Pick<IWorkspaceRunOptions<object, object>, 'retryPolicies'>>({ retryPolicies: [sourcePolicy] });
 
 // Operation and wait events are members of the run's event union.
 if (event.kind === 'operation') {

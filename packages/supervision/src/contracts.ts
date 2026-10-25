@@ -18,6 +18,7 @@
  * evidence.
  */
 import type { IBindingDescriptor } from '@microdelta/definition';
+import type { ISourceRetryPolicy } from './operations.js';
 import type {
   ICheckOutcome,
   IDiscoveryOutcome,
@@ -352,6 +353,8 @@ export interface IRunOptions {
    * consults no operation records. They need the Supervision's timer.
    */
   readonly operations?: IRunOperationPorts;
+  /** Exact-scoped reusable source classifiers; matches replace defaults but never grant retries. */
+  readonly retryPolicies?: readonly ISourceRetryPolicy[];
   /**
    * How the run treats work deferred until a later time once only deferred
    * work remains: `sleep` (the default) releases the writer lease, waits and

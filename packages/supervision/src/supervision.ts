@@ -485,12 +485,15 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       ports: operationPorts,
       random,
       timer,
+      ...(runOptions.retryPolicies === undefined ? {} : { retryPolicies: runOptions.retryPolicies }),
+      stop: controller,
       report: (event, position) => {
         state.report(event, position);
       },
       diagnose: (message) => {
         diagnostics.push(message);
       },
+      runPolicy: (work) => scope.run({ run: state, attempt: undefined, lane: undefined, request: undefined }, work),
     });
 
     const state: ISupervisedRun = {
@@ -661,7 +664,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         notify(observers, Object.freeze({ kind: 'step', runId: context.runId, event }));
       },
     });
-    const resolution: IResolution = runOptions.resolution(Object.freeze({ admission, observer, execution: supervisedExecution(state, frames) }));
+    const resolution: IResolution = runOptions.resolution(Object.freeze({ admission, observer, execution: supervisedExecution(state, frames, (subject) => engine?.terminalClassificationError(subject)) }));
 
     /**
      * The refusal of a run operation called from inside a member's work or a

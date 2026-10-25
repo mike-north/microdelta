@@ -31,7 +31,7 @@ import type { IOperationResponse, IOperationSend } from '@microdelta/supervision
 export const planted = 'PLANTED-c0ffee-SECRET';
 
 /** One scripted response. */
-export type IScriptEntry = 'ok' | 'ok-no-usage' | 'permanent' | 'transient' | 'rate-limit' | `rate-limit:${number}` | 'lost' | 'lost-unapplied' | 'hang';
+export type IScriptEntry = 'ok' | 'ok-no-usage' | 'permanent' | 'contextual-404' | 'transient' | 'rate-limit' | `rate-limit:${number}` | 'lost' | 'lost-unapplied' | 'hang';
 
 /** One ledger line: a request the provider received, an effect it applied, or a cancellation. */
 export interface ILedgerEntry {
@@ -169,6 +169,8 @@ export function fakeProvider(now: () => number, ledgerPath?: string): IFakeProvi
             return { kind: 'succeeded', value };
           case 'permanent':
             return { kind: 'failed', transient: false, error: new Error(`provider refused: ${planted}`), usage: refusal };
+          case 'contextual-404':
+            return { kind: 'failed', transient: false, error: new Error(`provider refused: ${planted}`), usage: refusal, retryFacts: { httpStatus: 404, conditions: ['resource-expected-later'] } };
           case 'transient':
             return { kind: 'failed', transient: true, error: new Error(`provider unavailable: ${planted}`), usage: refusal };
           case 'rate-limit':

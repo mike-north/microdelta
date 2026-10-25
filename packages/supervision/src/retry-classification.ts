@@ -64,25 +64,32 @@ export function validatedRetryPolicies(value: readonly ISourceRetryPolicy[] | un
   }
   const ids = new Set<string>();
   const scopes = new Set<string>();
-  const policies = value.map((candidate: unknown): ISourceRetryPolicy => {
-    if (typeof candidate !== 'object' || candidate === null || Array.isArray(candidate)) {
-      throw new SupervisionError('invalid-request', 'A retry policy registration is malformed');
-    }
-    const id = configurationField(candidate, 'id');
-    const rawScope = configurationField(candidate, 'scope');
-    const decide = configurationField(candidate, 'decide');
-    const scope = validatedRetrySource(rawScope, 'retry policy scope');
-    if (typeof id !== 'string' || !retryIdentifierRule.test(id) || !isRetryCallback(decide)) {
-      throw new SupervisionError('invalid-request', 'A retry policy needs a bounded identifier and a decision function');
-    }
-    const scopeKey = JSON.stringify([scope.source, scope.service, scope.connection]);
-    if (ids.has(id) || scopes.has(scopeKey)) {
-      throw new SupervisionError('invalid-request', 'Retry policy identifiers and exact scopes must be unique');
-    }
-    ids.add(id);
-    scopes.add(scopeKey);
-    return Object.freeze({ id, scope, decide: (input: IRetryDecisionInput) => decide(input) });
-  });
+  let policies: ISourceRetryPolicy[];
+  try {
+    policies = value.map((candidate: unknown): ISourceRetryPolicy => {
+      if (typeof candidate !== 'object' || candidate === null || Array.isArray(candidate)) {
+        throw new SupervisionError('invalid-request', 'A retry policy registration is malformed');
+      }
+      const id = configurationField(candidate, 'id');
+      const rawScope = configurationField(candidate, 'scope');
+      const decide = configurationField(candidate, 'decide');
+      const scope = validatedRetrySource(rawScope, 'retry policy scope');
+      if (typeof id !== 'string' || !retryIdentifierRule.test(id) || !isRetryCallback(decide)) {
+        throw new SupervisionError('invalid-request', 'A retry policy needs a bounded identifier and a decision function');
+      }
+      const scopeKey = JSON.stringify([scope.source, scope.service, scope.connection]);
+      if (ids.has(id) || scopes.has(scopeKey)) {
+        throw new SupervisionError('invalid-request', 'Retry policy identifiers and exact scopes must be unique');
+      }
+      ids.add(id);
+      scopes.add(scopeKey);
+      return Object.freeze({ id, scope, decide: (input: IRetryDecisionInput) => decide(input) });
+    });
+  } catch {
+    // Array index access can itself run caller code. Contain its private
+    // exception before admission, just like a policy's field getters.
+    throw new SupervisionError('invalid-request', 'A retry policy registration is malformed');
+  }
   return Object.freeze(policies);
 }
 
@@ -197,7 +204,9 @@ export function retryHistory(record: IOperationRecord, requestAttempt: string, r
       requestAttempt: attempt.requestAttempt,
       status: attempt.status,
       usage: attempt.usage ?? 'none',
-      ...(attempt.decision === undefined ? {} : { decision: attempt.decision }),
+      // A prior decision is durable evidence. Give callbacks a detached,
+      // frozen projection so they cannot alter the record used by this pass.
+      ...(attempt.decision === undefined ? {} : { decision: Object.freeze({ ...attempt.decision }) }),
     })];
   });
   const omittedPriorAttempts = Math.max(0, eligible.length - 8);

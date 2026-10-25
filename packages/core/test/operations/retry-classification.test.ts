@@ -10,9 +10,9 @@ import type { IRetryDecisionInput, ISourceRetryPolicy } from '@microdelta/superv
 
 import { analysis, createWorld, installWorld } from './fixture.js';
 import type { IWorld } from './fixture.js';
-import { T0, fakeTimer, openSession, production, tempStores, until } from './harness.js';
+import { T0, fakeTimer, freshKey, openSession, production, tempStores, until } from './harness.js';
 import type { IFakeTimer, IOperationStores } from './harness.js';
-import { driveUntilSettled, failureCode, journalContents, memberOf, members, received } from './support.js';
+import { driveUntilSettled, failureCode, inspect, journalContents, memberOf, members, received } from './support.js';
 import { planted } from './provider.js';
 
 let stores: IOperationStores;
@@ -33,6 +33,82 @@ afterEach(() => {
 const catalogScope = { source: 'catalog', service: 'catalog-api', connection: 'org-a-read' } as const;
 
 describe('durable source retry classification', () => {
+  test('an accepted retry of an unknown effect remains inspectable and abandonable before its floor', async () => {
+    world.keys = ['pr-1'];
+    world.provider.script('assess', 'pr-1', ['lost', 'ok']);
+    const session = openSession(stores, timer);
+    try {
+      const started = members(session, { deferral: 'exit' });
+      const first = await started.done;
+      expect(memberOf(first.value, 'pr-1').status).toBe('pending');
+      expect(started.events).toContainEqual(expect.objectContaining({
+        kind: 'operation', phase: 'retry-scheduled', status: 'unknown', reason: 'lost-response',
+      }));
+      const operation = received('pr-1')[0]?.operation;
+      if (operation === undefined) { throw new Error('Expected the unknown operation address'); }
+      expect((await inspect(session)).find((view) => view.operation === operation)?.status).toBe('unknown');
+      expect(journalContents(session)).toContainEqual(expect.objectContaining({
+        operation, status: 'unknown', notBefore: T0 + 2_000,
+        classification: expect.objectContaining({ kind: 'accepted', decision: { kind: 'retry-after', delayMilliseconds: 2_000 } }),
+      }));
+      await members(session, { deferral: 'exit' }).done;
+      expect(received('pr-1')).toHaveLength(1);
+      const abandoned = (await session.start({}, (run) => run.settleOperation({ action: 'abandon', operation, operator: 'operator.ada' })).done).value;
+      expect(abandoned.status).toBe('abandoned');
+      expect(received('pr-1')).toHaveLength(1);
+    } finally {
+      session.close();
+    }
+  });
+
+  test('an accepted retry of an unknown effect can send after its floor', async () => {
+    world.keys = ['pr-1'];
+    world.provider.script('assess', 'pr-1', ['lost', 'ok']);
+    const session = openSession(stores, timer);
+    try {
+      await members(session, { deferral: 'exit' }).done;
+      expect(received('pr-1')).toHaveLength(1);
+      timer.advanceTo(T0 + 2_000);
+      const next = await members(session).done;
+      expect(memberOf(next.value, 'pr-1').status).toBe('succeeded');
+      expect(received('pr-1')).toHaveLength(2);
+      expect(received('pr-1')[1]?.operation).toBe(received('pr-1')[0]?.operation);
+    } finally {
+      session.close();
+    }
+  });
+
+  test.each([
+    { refusal: 'permanent', matched: false, memberStatus: 'failed', code: 'operation-failed', classification: 'accepted' },
+    { refusal: 'transient', matched: false, memberStatus: 'pending', code: undefined, classification: 'no-retry' },
+    { refusal: 'permanent', matched: true, memberStatus: 'pending', code: undefined, classification: 'no-retry' },
+  ] as const)('with one attempt, $refusal matched=$matched preserves terminal meaning without a retry', async ({ refusal, matched, memberStatus, code, classification }) => {
+    world.keys = ['pr-1'];
+    world.provider.script('assess', 'pr-1', [refusal, 'ok']);
+    world.options['pr-1'] = { retry: { maxAttempts: 1 }, ...(matched ? { retrySource: catalogScope } : {}) };
+    let calls = 0;
+    const policy: ISourceRetryPolicy = { id: 'catalog-policy', scope: catalogScope, decide() {
+      calls += 1;
+      return { kind: 'retry-now' };
+    } };
+    const session = openSession(stores, timer);
+    try {
+      const result = await members(session, { retryPolicies: matched ? [policy] : [] }).done;
+      const member = memberOf(result.value, 'pr-1');
+      expect(member.status).toBe(memberStatus);
+      expect(failureCode(member)).toBe(code);
+      expect(calls).toBe(0);
+      expect(received('pr-1')).toHaveLength(1);
+      expect(journalContents(session)).toContainEqual(expect.objectContaining({
+        status: 'retry-exhausted',
+        classification: expect.objectContaining({ kind: classification }),
+        attempts: [expect.objectContaining({ status: 'failed' })],
+      }));
+    } finally {
+      session.close();
+    }
+  });
+
   test('without source configuration the default sends at most three attempts after 2s and 4s', async () => {
     world.keys = ['pr-1'];
     world.provider.script('assess', 'pr-1', ['transient', 'transient', 'transient', 'ok']);
@@ -105,6 +181,9 @@ describe('durable source retry classification', () => {
     try {
       await expect(members(session, { retryPolicies: [policy, policy] }).done).rejects.toThrow(SupervisionError);
       await expect(members(session, { retryPolicies: [throwing] }).done).rejects.toThrow(SupervisionError);
+      const inaccessible: ISourceRetryPolicy[] = [policy];
+      Object.defineProperty(inaccessible, '0', { get(): never { throw new Error('private array getter secret'); } });
+      await expect(members(session, { retryPolicies: inaccessible }).done).rejects.toThrow(SupervisionError);
       expect(received('pr-1')).toHaveLength(0);
       expect(journalContents(session)).toHaveLength(0);
     } finally {
@@ -261,6 +340,37 @@ describe('durable source retry classification', () => {
     }
   });
 
+  test('a later callback cannot mutate a prior accepted decision through its history snapshot', async () => {
+    world.keys = ['pr-1'];
+    world.provider.script('assess', 'pr-1', ['transient', 'transient']);
+    world.options['pr-1'] = { retrySource: catalogScope };
+    let calls = 0;
+    let changedPrior: boolean | undefined;
+    const policy: ISourceRetryPolicy = { id: 'catalog-policy', scope: catalogScope, decide(input) {
+      calls += 1;
+      if (calls === 1) {
+        return { kind: 'retry-after', delayMilliseconds: 1_000 };
+      }
+      changedPrior = Reflect.set(input.history.prior[0]?.decision ?? {}, 'kind', 'stop');
+      return { kind: 'stop' };
+    } };
+    const session = openSession(stores, timer);
+    try {
+      const started = members(session, { retryPolicies: [policy] });
+      await until(() => timer.pending().includes(T0 + 1_000), 'the first accepted classifier delay');
+      timer.advanceTo(T0 + 1_000);
+      await started.done;
+      expect(calls).toBe(2);
+      expect(changedPrior).toBe(false);
+      expect(journalContents(session)).toContainEqual(expect.objectContaining({ attempts: [
+        expect.objectContaining({ decision: { kind: 'retry-after', delayMilliseconds: 1_000 } }),
+        expect.objectContaining({ decision: { kind: 'stop' } }),
+      ] }));
+    } finally {
+      session.close();
+    }
+  });
+
   test('a later pass rejects a changed source tuple for the same operation and private run before send', async () => {
     world.keys = ['pr-1'];
     world.provider.script('assess', 'pr-1', ['contextual-404', 'ok']);
@@ -280,7 +390,8 @@ describe('durable source retry classification', () => {
       const result = await started.done;
       expect(received('pr-1')).toHaveLength(1);
       expect(calls).toBe(1);
-      expect(memberOf(result.value, 'pr-1').status).not.toBe('succeeded');
+      expect(memberOf(result.value, 'pr-1').status).toBe('failed');
+      expect(failureCode(memberOf(result.value, 'pr-1'))).toBe('invalid-request');
       expect(journalContents(session)).toContainEqual(expect.objectContaining({
         operation: first?.operation,
         classification: expect.objectContaining({ kind: 'accepted', decision: { kind: 'retry-after', delayMilliseconds: 5_000 } }),
@@ -486,6 +597,78 @@ describe('durable source retry classification', () => {
     }
   });
 
+  test.each([
+    { decision: 'failed', expectedCode: 'operation-classification-failed' },
+    { decision: 'stop', expectedCode: 'operation-failed' },
+  ] as const)('a later request pass in one run retains a $decision classification', async ({ decision, expectedCode }) => {
+    world.keys = ['pr-1'];
+    world.provider.script('assess', 'pr-1', ['contextual-404', 'ok']);
+    world.options['pr-1'] = { retrySource: catalogScope };
+    let calls = 0;
+    const policy: ISourceRetryPolicy = { id: 'catalog-policy', scope: catalogScope, decide() {
+      calls += 1;
+      if (decision === 'failed') {
+        throw new Error('private classification detail');
+      }
+      return { kind: 'stop' };
+    } };
+    const session = openSession(stores, timer);
+    try {
+      const started = session.start({ retryPolicies: [policy] }, async (run) => {
+        const first = await run.resolveMembers({ template: 'pr', step: 'assess' }, freshKey());
+        world.plans['pr-1'] = 'return-value';
+        const operationBefore = journalContents(session);
+        const second = await run.resolveMembers({ template: 'pr', step: 'assess' }, freshKey());
+        return { first, second, operationBefore };
+      });
+      const result = await started.done;
+      expect(failureCode(memberOf(result.value.first, 'pr-1'))).toBe(expectedCode);
+      expect(failureCode(memberOf(result.value.second, 'pr-1'))).toBe(expectedCode);
+      expect(world.log).not.toContain('entered-return-value:pr-1');
+      expect(journalContents(session)).toEqual(result.value.operationBefore);
+      expect(calls).toBe(1);
+      expect(received('pr-1')).toHaveLength(1);
+    } finally {
+      session.close();
+    }
+  });
+
+  test.each(['failed', 'stop'] as const)('a later pass cannot use a new operation address after a retained %s classifier', async (decision) => {
+    world.keys = ['pr-1'];
+    world.provider.script('assess', 'pr-1', ['contextual-404']);
+    world.provider.script('polish', 'pr-1', ['ok']);
+    world.options['pr-1'] = { retrySource: catalogScope };
+    let calls = 0;
+    const policy: ISourceRetryPolicy = { id: 'catalog-policy', scope: catalogScope, decide() {
+      calls += 1;
+      if (decision === 'failed') {
+        throw new Error('private classifier detail');
+      }
+      return { kind: 'stop' };
+    } };
+    const session = openSession(stores, timer);
+    try {
+      const started = session.start({ retryPolicies: [policy] }, async (run) => {
+        const first = await run.resolveMembers({ template: 'pr', step: 'assess' }, freshKey());
+        world.plans['pr-1'] = 'polish-first';
+        const operationBefore = journalContents(session);
+        const second = await run.resolveMembers({ template: 'pr', step: 'assess' }, freshKey());
+        return { first, second, operationBefore };
+      });
+      const result = await started.done;
+      expect(memberOf(result.value.second, 'pr-1').status).toBe('failed');
+      expect(failureCode(memberOf(result.value.second, 'pr-1'))).toBe(decision === 'failed'
+        ? 'operation-classification-failed' : 'operation-failed');
+      expect(world.log).not.toContain('entered-polish-first:pr-1');
+      expect(journalContents(session)).toEqual(result.value.operationBefore);
+      expect(received('pr-1')).toHaveLength(1);
+      expect(received('pr-1', 'polish')).toHaveLength(0);
+      expect(calls).toBe(1);
+    } finally {
+      session.close();
+    }
+  });
+
   test('a rejected decision commit leaves the known response pending and a new run preserves its evidence', async () => {
     world.keys = ['pr-1'];
     world.provider.script('assess', 'pr-1', ['contextual-404', 'ok']);
@@ -535,6 +718,60 @@ describe('durable source retry classification', () => {
         attempts: [
           expect.objectContaining({ status: 'failed', usage: 'acknowledged', facts: { httpStatus: 404, conditions: ['resource-expected-later'] } }),
           expect.objectContaining({ status: 'succeeded', usage: 'acknowledged' }),
+        ],
+      }));
+    } finally {
+      session.close();
+    }
+  });
+
+  test('a failed default decision commit retains a known rate refusal across a fresh run', async () => {
+    world.keys = ['pr-1'];
+    world.provider.script('assess', 'pr-1', ['rate-limit:10000', 'ok']);
+    const underlying = world.provider;
+    world.provider = { ...underlying, async perform(name, key, send) {
+      const response = await underlying.perform(name, key, send);
+      return response.kind === 'rate-limited'
+        ? { ...response, retryFacts: { httpStatus: 429, providerCode: 'provider_busy' } }
+        : response;
+    } };
+    let decisionFailures = 0;
+    const session = openSession(stores, timer, { wrapJournal: (journal) => ({
+      ...journal,
+      commit(lease, request) {
+        const accepting = request.writes.some((write) => {
+          if (write.collection !== operationsCollection || typeof write.record.content !== 'object' || write.record.content === null) {
+            return false;
+          }
+          const classification: unknown = Reflect.get(write.record.content, 'classification');
+          return typeof classification === 'object' && classification !== null && Reflect.get(classification, 'kind') === 'accepted';
+        });
+        if (accepting && decisionFailures === 0) {
+          decisionFailures += 1;
+          throw new Error('simulated default decision commit refusal');
+        }
+        return journal.commit(lease, request);
+      },
+    }) });
+    try {
+      const first = await members(session).done;
+      expect(memberOf(first.value, 'pr-1').status).toBe('pending');
+      expect(decisionFailures).toBe(1);
+      expect(received('pr-1')).toHaveLength(1);
+      expect(journalContents(session)).toContainEqual(expect.objectContaining({
+        status: 'pending',
+        attempts: [expect.objectContaining({ status: 'rate-limited', usage: 'acknowledged', facts: { httpStatus: 429, providerCode: 'provider_busy' } })],
+      }));
+      const second = members(session);
+      await until(() => timer.pending().includes(T0 + 10_000), 'known provider floor after default decision fault');
+      expect(received('pr-1')).toHaveLength(1);
+      timer.advanceTo(T0 + 10_000);
+      expect(memberOf((await second.done).value, 'pr-1').status).toBe('succeeded');
+      expect(received('pr-1')).toHaveLength(2);
+      expect(journalContents(session)).toContainEqual(expect.objectContaining({
+        attempts: [
+          expect.objectContaining({ status: 'rate-limited', facts: { httpStatus: 429, providerCode: 'provider_busy' }, usage: 'acknowledged' }),
+          expect.objectContaining({ status: 'succeeded' }),
         ],
       }));
     } finally {
@@ -1228,7 +1465,7 @@ describe('durable source retry classification', () => {
     const session = openSession(stores, timer);
     try {
       const result = await members(session, { retryPolicies: [policy] }).done;
-      expect(failureCode(memberOf(result.value, 'pr-1'))).toBe('invalid-request');
+      expect(failureCode(memberOf(result.value, 'pr-1'))).toBe('invalid-response');
       expect(calls).toBe(0);
       expect(received('pr-1')).toHaveLength(1);
       expect(journalContents(session)).toContainEqual(expect.objectContaining({
@@ -1237,6 +1474,64 @@ describe('durable source retry classification', () => {
       expect(session.usage().unknown).toEqual(expect.arrayContaining([expect.objectContaining({
         operation: received('pr-1')[0]?.operation, requestAttempt: received('pr-1')[0]?.requestAttempt,
       })]));
+    } finally {
+      session.close();
+    }
+  });
+
+  test.each(['response-getter', 'facts-reflection'] as const)('throwing %s is a bounded invalid response after a send', async (failure) => {
+    world.keys = ['pr-1'];
+    world.provider.script('assess', 'pr-1', ['contextual-404', 'ok']);
+    world.options['pr-1'] = { retrySource: catalogScope };
+    const underlying = world.provider;
+    world.provider = { ...underlying, async perform(name, key, send) {
+      const response = await underlying.perform(name, key, send);
+      if (response.kind !== 'failed') {
+        return response;
+      }
+      if (failure === 'response-getter') {
+        return { ...response, get retryFacts(): never { throw new Error('private response getter secret'); } };
+      }
+      const facts = new Proxy({ httpStatus: 404 }, {
+        ownKeys(): never { throw new Error('private response proxy secret'); },
+      });
+      return { ...response, retryFacts: facts };
+    } };
+    let calls = 0;
+    const policy: ISourceRetryPolicy = { id: 'catalog-policy', scope: catalogScope, decide() {
+      calls += 1;
+      return { kind: 'retry-now' };
+    } };
+    const session = openSession(stores, timer);
+    try {
+      const result = await members(session, { retryPolicies: [policy] }).done;
+      expect(failureCode(memberOf(result.value, 'pr-1'))).toBe('invalid-response');
+      expect(calls).toBe(0);
+      expect(received('pr-1')).toHaveLength(1);
+      expect(JSON.stringify(result.diagnostics)).not.toContain('private response');
+      expect(JSON.stringify(journalContents(session))).not.toContain('private response');
+    } finally {
+      session.close();
+    }
+  });
+
+  test('success does not inspect retry refusal facts or timing', async () => {
+    world.keys = ['pr-1'];
+    world.provider.script('assess', 'pr-1', ['ok']);
+    const underlying = world.provider;
+    world.provider = { ...underlying, async perform(name, key, send) {
+      const response = await underlying.perform(name, key, send);
+      return response.kind === 'succeeded'
+        ? { ...response,
+          get retryFacts(): never { throw new Error('private success facts'); },
+          get notBefore(): never { throw new Error('private success floor'); } }
+        : response;
+    } };
+    const session = openSession(stores, timer);
+    try {
+      const result = await members(session).done;
+      expect(memberOf(result.value, 'pr-1').status).toBe('succeeded');
+      expect(received('pr-1')).toHaveLength(1);
     } finally {
       session.close();
     }

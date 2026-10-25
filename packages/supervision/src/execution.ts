@@ -316,7 +316,11 @@ interface IMemberDispatch {
  * @param frames - Access to the run's asynchronous scope.
  * @returns The port.
  */
-export function supervisedExecution(run: ISupervisedRun, frames: IFrameAccess): IExecutionSupervision {
+export function supervisedExecution(
+  run: ISupervisedRun,
+  frames: IFrameAccess,
+  retainedClassificationError: (subject: IOperationSubject) => SupervisionError | undefined,
+): IExecutionSupervision {
   /** Run one member in its request frame, whether a lane was granted or hard stop already cancelled acquisition. */
   const enterMember = async <T>(work: () => Promise<T>, permit: IPermit | undefined, request: IRequestScope | undefined): Promise<T> => {
     const lane: IMemberLane = { permit, waits: 0, closed: false };
@@ -467,6 +471,18 @@ export function supervisedExecution(run: ISupervisedRun, frames: IFrameAccess): 
       }
       if (run.hard.signal.aborted) {
         return { kind: 'interrupted', reason: 'a hard stop interrupted the step before it started' };
+      }
+      // A retained classifier owns this step before author code may choose a
+      // different address or fabricate a value on a later request pass.
+      if (claimed?.subject !== undefined) {
+        try {
+          const terminal = retainedClassificationError(claimed.subject);
+          if (terminal !== undefined) {
+            return { kind: 'threw', error: terminal };
+          }
+        } catch (error: unknown) {
+          return { kind: 'threw', error };
+        }
       }
       const parent = frames.current();
       const attempt: IAttemptFrame = {

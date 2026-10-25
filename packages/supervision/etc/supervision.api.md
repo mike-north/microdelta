@@ -748,7 +748,7 @@ export interface ISupervision {
 }
 
 // @alpha
-export type ISupervisionErrorCode = 'outside-run' | 'run-closed' | 'composition-phase' | 'observer-failure' | 'writer-busy' | 'invalid-request' | 'stopped' | 'operation-failed' | 'operation-classification-failed' | 'operation-classification-incomplete' | 'operation-deferred' | 'operation-unknown' | 'operation-exhausted' | 'operation-unrecorded' | 'operation-resolved' | 'integrity' | 'undeclared-call';
+export type ISupervisionErrorCode = 'outside-run' | 'run-closed' | 'composition-phase' | 'observer-failure' | 'writer-busy' | 'invalid-request' | 'invalid-response' | 'stopped' | 'operation-failed' | 'operation-classification-failed' | 'operation-classification-incomplete' | 'operation-deferred' | 'operation-unknown' | 'operation-exhausted' | 'operation-unrecorded' | 'operation-resolved' | 'integrity' | 'undeclared-call';
 
 // @alpha
 export interface ISupervisionOptions {

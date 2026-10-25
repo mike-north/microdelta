@@ -57,6 +57,10 @@ export interface IRoster {
  *   return a fallback;
  * - `two-ops`: call `assess`, catch its failure, then call a second
  *   operation `polish` (a tainted attempt must send nothing more);
+ * - `polish-first`: use a different operation address before the prior one,
+ *   to prove a retained classifier cannot be bypassed on a later pass;
+ * - `return-value`: attempt to publish a value without revisiting the prior
+ *   operation, proving a retained terminal classifier blocks the author body;
  * - `concurrent`: start `assess`, wait for the `<key>:second` gate while it is
  *   in flight, then call `assess` again at the same address; both outcomes
  *   are noted;
@@ -68,7 +72,7 @@ export interface IRoster {
  *   message carries the planted value (author text that no framework message,
  *   event or diagnostic may repeat).
  */
-export type IPlan = 'single' | 'catch-retry' | 'two-ops' | 'concurrent' | 'detached' | 'twin' | 'author-throws';
+export type IPlan = 'single' | 'catch-retry' | 'two-ops' | 'polish-first' | 'return-value' | 'concurrent' | 'detached' | 'twin' | 'author-throws';
 
 /** Per-member operation declarations a test chooses. */
 export interface IOperationOptions {
@@ -203,6 +207,12 @@ async function assess(key: string): Promise<IAssessment> {
       }
       return { key, verdict: 'fallback' };
     }
+    case 'polish-first':
+      world.log.push(`entered-polish-first:${key}`);
+      return operation('polish', key);
+    case 'return-value':
+      world.log.push(`entered-return-value:${key}`);
+      return { key, verdict: 'fabricated' };
     case 'two-ops': {
       try {
         await operation('assess', key);

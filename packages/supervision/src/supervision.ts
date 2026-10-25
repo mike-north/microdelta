@@ -664,7 +664,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         notify(observers, Object.freeze({ kind: 'step', runId: context.runId, event }));
       },
     });
-    const resolution: IResolution = runOptions.resolution(Object.freeze({ admission, observer, execution: supervisedExecution(state, frames) }));
+    const resolution: IResolution = runOptions.resolution(Object.freeze({ admission, observer, execution: supervisedExecution(state, frames, (subject) => engine?.terminalClassificationError(subject)) }));
 
     /**
      * The refusal of a run operation called from inside a member's work or a

@@ -291,20 +291,29 @@ function classify<T>(sent: Extract<ITransmitted<IOperationResponse<T>>, { readon
   if (typeof response !== 'object' || response === null) {
     return { kind: 'unknown', usage: undefined, facts: Object.freeze({}), notBefore: undefined };
   }
-  const usage = usageOf(Reflect.get(response, 'usage'));
-  const answer = sent.value;
-  const facts = retryFacts(Reflect.get(response, 'retryFacts'));
-  const notBefore = retryFloor(Reflect.get(response, 'notBefore'));
-  switch (answer.kind) {
-    case 'succeeded':
+  try {
+    const usage = usageOf(Reflect.get(response, 'usage'));
+    const answer = sent.value;
+    // A successful response is never a retry refusal: its unrelated retry
+    // fields are neither read nor validated by this classification seam.
+    if (answer.kind === 'succeeded') {
       return { kind: 'succeeded', value: answer.value, usage };
-    case 'failed':
-      return { kind: 'failed', transient: answer.transient === true, error: answer.error, usage, facts, notBefore };
-    case 'rate-limited':
-      return { kind: 'rate-limited', retryAt: typeof answer.retryAt === 'number' && Number.isSafeInteger(answer.retryAt) ? answer.retryAt : undefined, usage, facts, notBefore };
-    default:
-      // An `unknown` answer, or a kind no adapter may answer.
-      return { kind: 'unknown', usage, facts, notBefore };
+    }
+    const facts = retryFacts(Reflect.get(response, 'retryFacts'));
+    const notBefore = retryFloor(Reflect.get(response, 'notBefore'));
+    switch (answer.kind) {
+      case 'failed':
+        return { kind: 'failed', transient: answer.transient === true, error: answer.error, usage, facts, notBefore };
+      case 'rate-limited':
+        return { kind: 'rate-limited', retryAt: typeof answer.retryAt === 'number' && Number.isSafeInteger(answer.retryAt) ? answer.retryAt : undefined, usage, facts, notBefore };
+      default:
+        // An `unknown` answer, or a kind no adapter may answer.
+        return { kind: 'unknown', usage, facts, notBefore };
+    }
+  } catch {
+    // Adapter-owned accessors and reflection traps can throw private text.
+    // The attempt was sent, but malformed evidence grants no classification.
+    throw new SupervisionError('invalid-response', 'A source returned malformed response evidence');
   }
 }
 
@@ -347,6 +356,8 @@ export interface IOperationEngine extends IRunOperations {
    * retry under stop intent, or undefined when the step may proceed.
    */
   admit(request: IAdmissionRequest, scope: IRequestScope | undefined, stopped: boolean): IAdmissionDecision | undefined;
+  /** Read a same-private-run terminal classifier before executing the claimed step body. */
+  terminalClassificationError(subject: IOperationSubject): SupervisionError | undefined;
   /** The environment's operations, optionally of one status. */
   inspect(status: IOperationStatus | undefined): readonly IOperationView[];
   /** Record an operator's settlement of one unknown operation under `lease`. */
@@ -549,6 +560,25 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     return record.notBefore !== undefined && now() < record.notBefore;
   }
 
+  /**
+   * A retained source decision that ended this private run's attempt. It is
+   * terminal for the author's whole step, even if a later pass changes the
+   * operation address or tries to return a value without revisiting it.
+   */
+  function retainedClassificationError(record: IOperationRecord): SupervisionError | undefined {
+    const classification = record.classification;
+    if (classification?.runInstance !== currentRunInstance()) {
+      return undefined;
+    }
+    if (classification.kind === 'failed') {
+      return new SupervisionError('operation-classification-failed', `Operation ${record.operation} source policy failed`);
+    }
+    if (classification.kind === 'accepted' && classification.decision.kind === 'stop') {
+      return new SupervisionError('operation-failed', `Operation ${record.operation} source policy stopped retrying`);
+    }
+    return undefined;
+  }
+
   /** The block an unsettled record imposes now, or undefined when it may be resumed. */
   function blockOf(record: IOperationRecord): IOperationBlock | undefined {
     if (record.status === 'retry-exhausted') {
@@ -724,14 +754,9 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       // decisions about this exact address. Repeating an author call in the
       // same run reports that decision, rather than relabeling it as finite
       // allowance exhaustion or minting another operation.
-      const classification = stored.record.classification;
-      if (classification?.runInstance === currentRunInstance()) {
-        if (classification.kind === 'failed') {
-          throw new SupervisionError('operation-classification-failed', `Operation ${stored.record.operation} source policy failed`);
-        }
-        if (classification.kind === 'accepted' && classification.decision.kind === 'stop') {
-          throw new SupervisionError('operation-failed', `Operation ${stored.record.operation} source policy stopped retrying`);
-        }
+      const terminal = retainedClassificationError(stored.record);
+      if (terminal !== undefined) {
+        throw terminal;
       }
       // The current declaration governs a call's own retry decision.
       const current: IOperationRecord = {
@@ -1004,20 +1029,21 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       .filter((floor): floor is number => floor !== undefined);
     const knownNotBefore = knownFloors.length === 0 ? undefined : Math.max(...knownFloors);
     const selectedPolicy = selectRetryPolicy(retryPolicies, request.retrySource);
-    const generation = selectedPolicy === undefined ? undefined : random.randomIdentifier();
-    if (generation !== undefined && !randomRule.test(generation)) {
+    const generation = random.randomIdentifier();
+    if (!randomRule.test(generation)) {
       throw new SupervisionError('invalid-request', 'The random identifier source returned a malformed classification generation');
     }
     const responseRecord: IOperationRecord = {
       ...withLast(current.record, { status: attemptStatus, usage, source: request.retrySource, outcome, facts: response.facts }),
       status: 'pending',
       notBefore: knownNotBefore,
-      ...(selectedPolicy === undefined || generation === undefined ? {} : {
-        classification: {
-          kind: 'pending' as const, runInstance, requestAttempt, source: selectedPolicy.scope,
-          outcome, facts: response.facts, generation: `decision-${generation}`,
-        },
-      }),
+      // Every known refusal has a durable decision boundary, including the
+      // built-in policy. A failed decision commit must not make its already
+      // recorded provider response look like an in-flight unknown send.
+      classification: {
+        kind: 'pending', runInstance, requestAttempt, source: selectedPolicy?.scope,
+        outcome, facts: response.facts, generation: `decision-${generation}`,
+      },
     };
     try {
       current = write(lease, responseRecord, current.revision);
@@ -1039,7 +1065,13 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       retryExhaustedRunInstance: response.kind === 'unknown' ? undefined : runInstance,
       classification,
     });
-    if (!eligible) {
+    // A known permanent refusal has a terminal built-in decision even when
+    // no retry remains. The allowance limits another send, not recognition
+    // of the provider's final failure. Matched policies remain gated because
+    // invoking one after exhaustion would grant new decision authority.
+    const defaultPermanentStop = selectedPolicy === undefined && response.kind === 'failed'
+      && !response.transient && engine.stop.state.level === 'none';
+    if (!eligible && !defaultPermanentStop) {
       const whyStopped = engine.stop.state.level !== 'none';
       const stopped: IOperationRecord = keepNoRetry(whyStopped
         ? { kind: 'cancelled', runInstance, code: 'stopped' }
@@ -1150,7 +1182,11 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     }
     const notBefore = Math.max(timed, knownNotBefore ?? timed);
     const acceptedClassification: IClassificationRecord = { kind: 'accepted', runInstance, decision, delayMilliseconds: delay, notBefore };
-    const acceptedStatus: IOperationStatus = decision.kind === 'stop' ? 'retry-exhausted' : 'deferred';
+    // An accepted delay does not erase uncertainty about an effect. Keep an
+    // unknown operation visible for operator settlement while its accepted
+    // decision and floor still govern whether a later send may occur.
+    const acceptedStatus: IOperationStatus = decision.kind === 'stop' ? 'retry-exhausted'
+      : response.kind === 'unknown' ? 'unknown' : 'deferred';
     const accepted: IOperationRecord = {
       ...withLast(responseRecord, { decision }),
       status: acceptedStatus,
@@ -1164,10 +1200,10 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     }
     if (decision.kind === 'stop') {
       emit('retry-exhausted', accepted, { stepAttempt, requestAttempt, status: 'retry-exhausted', reason: 'policy-exhausted' });
-      return { stored: written, outcome: { kind: 'error', error: new SupervisionError('operation-failed', `Operation ${operation} source policy stopped retrying`) } };
+      return { stored: written, outcome: { kind: 'error', error: new SupervisionError('operation-failed', `Operation ${operation} source policy stopped retrying`, defaultPermanentStop && response.kind === 'failed' ? response.error : undefined) } };
     }
     if (notBefore > now()) {
-      emit('retry-scheduled', accepted, { stepAttempt, status: 'deferred', reason: response.kind === 'unknown' ? 'lost-response' : response.kind === 'rate-limited' ? 'rate-limited' : 'transient', notBefore });
+      emit('retry-scheduled', accepted, { stepAttempt, status: acceptedStatus, reason: response.kind === 'unknown' ? 'lost-response' : response.kind === 'rate-limited' ? 'rate-limited' : 'transient', notBefore });
       return { stored: written, outcome: { kind: 'pending', block: { kind: 'deferred', operation, notBefore } } };
     }
     emit('retry-scheduled', accepted, { stepAttempt, status: response.kind === 'unknown' ? 'unknown' : response.kind === 'rate-limited' ? 'rate-limited' : 'failed', reason: response.kind === 'unknown' ? 'lost-response' : response.kind === 'rate-limited' ? 'rate-limited' : 'transient', notBefore });
@@ -1176,6 +1212,20 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
 
   return Object.freeze({
     call,
+
+    terminalClassificationError(subject: IOperationSubject): SupervisionError | undefined {
+      for (const entry of readBlocks(subject).entries) {
+        const stored = readOperation(entry.operation);
+        if (stored === undefined) {
+          throw new SupervisionError('integrity', `The block index of ${subject.subject} names a missing operation`);
+        }
+        const terminal = retainedClassificationError(stored.record);
+        if (terminal !== undefined) {
+          return terminal;
+        }
+      }
+      return undefined;
+    },
 
     admit(request: IAdmissionRequest, scope: IRequestScope | undefined, stopped: boolean): IAdmissionDecision | undefined {
       const blocks = readBlocks(request.subject);
@@ -1206,6 +1256,13 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
             }
             stored = recover(stored, scope?.lease);
           }
+        }
+        // Admission still runs normal stop and caller policy checks. A
+        // terminal classifier is replayed before the author body, where it
+        // can fail with its exact type without letting changed code send.
+        if (retainedClassificationError(stored.record) !== undefined) {
+          resumable = true;
+          continue;
         }
         const block = blockOf(stored.record);
         if (block === undefined) {

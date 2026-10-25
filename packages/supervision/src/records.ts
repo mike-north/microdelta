@@ -94,7 +94,7 @@ export interface IOperationRecord {
   readonly sourceSelection?: { readonly runInstance: string; readonly scope: IRetrySourceScope | undefined } | undefined;
   /** Last accepted retry duration in this run, independent of its absolute provider floor. */
   readonly previousDelayMilliseconds?: number | undefined;
-  /** The private invocation whose known refusal exhausted allowance; only v3 can carry this authority. */
+  /** The private invocation whose known refusal exhausted allowance; v3 and v4 retain this authority. */
   readonly retryExhaustedRunInstance?: string | undefined;
   readonly attempts: readonly IAttemptRecord[];
   readonly settlement: IOperationSettlementRecord | undefined;
@@ -578,7 +578,7 @@ function decodeDecision(value: unknown, what: string): IRetryDecision {
   exactKeys(value, kind === 'retry-after' ? ['kind', 'delayMilliseconds'] : ['kind'], what);
   if (kind === 'retry-after') {
     const delayMilliseconds = whole(value, 'delayMilliseconds', what);
-    if (delayMilliseconds === 0) {
+    if (delayMilliseconds <= 0) {
       return damaged(what);
     }
     return { kind, delayMilliseconds };

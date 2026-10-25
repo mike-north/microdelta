@@ -361,7 +361,7 @@ describe('intent before send (ACC-007)', () => {
       expect.objectContaining({ requestAttempt: `${firstOperation}/1`, status: 'pending' }),
     ]);
     expect(journal.operation(firstOperation)).toEqual(expect.objectContaining({
-      status: 'deferred', notBefore: T0 + 2_000,
+      status: 'unknown', notBefore: T0 + 2_000,
       classification: expect.objectContaining({
         kind: 'accepted', decision: { kind: 'retry-after', delayMilliseconds: 2_000 }, notBefore: T0 + 2_000,
       }),
@@ -721,6 +721,7 @@ describe('records written before the intent mark existed', () => {
       expect(() => decodeOperation({ ...valid, content: { ...content, classification } })).toThrow(SupervisionError);
     }
     expect(() => decodeOperation({ ...valid, content: { ...content, previousDelayMilliseconds: -1 } })).toThrow(SupervisionError);
+    expect(() => decodeOperation({ ...valid, content: { ...content, attempts: [{ ...content.attempts[0], decision: { kind: 'retry-after', delayMilliseconds: -1 } }] } })).toThrow(SupervisionError);
   });
 
   test('a current invocation can retry a v1 unknown record even when the public runId repeats', async () => {

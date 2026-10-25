@@ -1,14 +1,16 @@
 # Reusable acquisition retry classification
 
-Status: engineering design candidate for [#220](https://github.com/mike-north/microdelta/issues/220),
-pending independent review and supervisory acceptance. This document elaborates
+Status: supervisory-accepted engineering design for [#220](https://github.com/mike-north/microdelta/issues/220)
+([acceptance record](https://github.com/mike-north/microdelta/issues/220#issuecomment-6393745216)).
+Runtime delivery is tracked by [#235](https://github.com/mike-north/microdelta/issues/235);
+this design does not claim that delivery. It elaborates
 [the accepted acquisition decisions](data-acquisition-retries.md#accepted-decisions-and-supersession),
 [RUN-011](../spec/operations.md#run-011--finite-acquisition-retries-belong-to-each-run)
 and [A-12d/i](../spec/acceptance.md#acquisition-retry-and-rate-admission-cases).
-It does not claim implementation, change the accepted three-way decision or
-select a full source/service/credential authoring DSL. The
-[implementation handoff](retry-classification-implementation.md) is a subsequent
-bounded runtime task, not authorization to implement runtime in this revision.
+It does not change the accepted three-way decision or select a full
+source/service/credential authoring DSL. The
+[implementation handoff](retry-classification-implementation.md) specifies the
+bounded runtime task and its acceptance evidence.
 
 ## Caller situations before representation
 

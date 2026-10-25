@@ -34,15 +34,72 @@ import type { IWriterLease } from '@microdelta/history';
 import { cleanup } from '../durable-history/support.js';
 import { settleC1Loser } from './c1-acquisition.js';
 import type { IC1AcquireRequest } from './c1-acquisition.js';
+import { withIndependentWriteLock } from './contention-lock.js';
 import { expectRefused, freshStore, leaseFrom, locatorFrom, measureConcurrency, reopenForReading, snapshot, startWorker, stopWorkers } from './driver.js';
 import type { IConcurrencyMeasure, IDurableState, IWorkerHandle } from './driver.js';
 import { attemptRequest, concurrencyStore, subject } from './fixture.js';
 import { hostMonotonicMilliseconds, parseContentionLog, parseWaitContention, parseWaitStatus } from './protocol.js';
 import type { IContentionEvent, IHarnessCommand, IHarnessReply, IWaitContentionEvent, IWaitStatus } from './protocol.js';
 
+/** Every durable fence issued in a fresh C3 store must appear as one observed grant. */
+function expectCompleteC3GrantAccounting(durableLastFence: number, events: readonly { readonly kind: string; readonly fence?: number }[]): void {
+  const observedFences = events.flatMap((event) => event.kind === 'granted' && event.fence !== undefined ? [event.fence] : [])
+    .sort((left, right) => left - right);
+  expect(observedFences).toEqual(Array.from({ length: durableLastFence }, (_unused, index) => index + 1));
+}
+
 afterEach(async () => {
   await stopWorkers();
   cleanup();
+});
+
+test('C3 records the supervised grant before independently locked allocation and reports rollback by phase', async () => {
+  const location = freshStore();
+  const worker = await startWorker('postgrant-contention', { location, store: concurrencyStore, clock: 'controlled' });
+  const priorStarted = await worker.step({
+    op: 'wait-start', at: 900, holder: 'prior-granted-holder', leaseMilliseconds: 10_000,
+    pollMilliseconds: 5, key: 'postgrant:prior-success',
+  });
+  const priorOutcome = parseWaitStatus(valueOf(worker, priorStarted)).outcome;
+  expect(priorOutcome.kind).toBe('acquired');
+  if (priorOutcome.kind !== 'acquired') { throw new Error('the positive control did not publish'); }
+  const initial = snapshot(location);
+  await worker.step({ op: 'wait-finish', at: 901 });
+  const started = await worker.step({
+    op: 'wait-start', at: 1_000, holder: 'postgrant-holder', leaseMilliseconds: 10_000,
+    pollMilliseconds: 5, key: 'postgrant:allocation', grantBarrier: true,
+  });
+  const granted = parseWaitStatus(valueOf(worker, started));
+  expect(granted.attempts.map((attempt) => attempt.kind)).toEqual(['acquired']);
+  expect(granted.outcome).toEqual({ kind: 'pending' });
+  expect(snapshot(location).writer).toMatchObject({ holder: 'postgrant-holder', lastFence: priorOutcome.fence + 1 });
+
+  const refused = await withIndependentWriteLock(location, async () => {
+    const reply = await worker.step({ op: 'wait-barrier-release' });
+    return parseWaitStatus(valueOf(worker, reply));
+  });
+  expect(refused.outcome).toEqual({ kind: 'storage-busy', phase: 'allocate', fence: priorOutcome.fence + 1, error: 'HistoryBusyError' });
+  expect(refused.attempts.map((attempt) => attempt.fence)).toEqual([priorOutcome.fence + 1]);
+  const after = snapshot(location);
+  expect(after.writer).toMatchObject({ holder: 'postgrant-holder', lastFence: priorOutcome.fence + 1 });
+  expect(after.sequences).toEqual(initial.sequences);
+  expect(after.attempts).toEqual(initial.attempts);
+  expect(after.results).toEqual(initial.results);
+  expect(after.current).toEqual(initial.current);
+  expect(after.acceptances).toEqual(initial.acceptances);
+
+  const realGrantEvents = [
+    { kind: 'granted', fence: priorOutcome.fence },
+    { kind: 'granted', fence: refused.attempts[0]?.fence ?? 0 },
+  ];
+  expectCompleteC3GrantAccounting(after.writer.lastFence, realGrantEvents);
+  // This models the original defect: hide the real final grant as busy while
+  // naming a previously granted live holder. C3 must compare every observed
+  // grant with History's durable final fence to reject this weakened record.
+  const finalGrantHiddenAsBusy = [realGrantEvents[0]!, { kind: 'busy', holder: priorOutcome.holder }];
+  expect(() => expectCompleteC3GrantAccounting(after.writer.lastFence, finalGrantHiddenAsBusy)).toThrow();
+  await worker.step({ op: 'wait-finish', at: 1_001 });
+  await worker.close();
 });
 
 /** An instant shortly ahead on the host monotonic clock, at which every worker starts the next command together. */
@@ -201,6 +258,7 @@ describe('free-running contention with the host clock (C2)', () => {
 
     const state = snapshot(location);
     expectFenceOrderedStorage(state);
+    expect(state.writer.lastFence).toBe(fences.at(-1));
     for (const attempt of state.attempts) {
       expect(grantee.get(attempt.allocatedFence)).toBe(attempt.key.split(':')[0]);
       // Attempts presented for publication only with an outlived lease are never published.
@@ -404,8 +462,17 @@ describe('real waiters contending for the lease with operator deadlines (C3)', (
 
     const state = snapshot(location);
     expectFenceOrderedStorage(state);
-    // Every grant published exactly once under its own fence, in fence order.
-    expect(state.results.map((result) => result.publishedFence)).toEqual(fences);
+    expectCompleteC3GrantAccounting(state.writer.lastFence, events.map(({ event }) => event));
+    // Every successful publication belongs to its grant; a typed post-grant refusal retains the grant without inventing a result.
+    const publishedFences = grants.filter((grant) => grant.published !== null).map((grant) => grant.fence).sort((left, right) => left - right);
+    expect(state.results.map((result) => result.publishedFence)).toEqual(publishedFences);
+    for (const grant of grants) {
+      if (grant.postGrantFailure !== undefined) {
+        expect(grant.published).toBeNull();
+        expect(grant.postGrantFailure.kind).toBe('storage-busy');
+        expect(grant.postGrantFailure.error).toBe('HistoryBusyError');
+      }
+    }
     // The forced phase guarantees a grant after a refused try and a deadline outcome; these union assertions are
     // regression guards and do not require the free-running phase to produce either.
     expect(grants.length).toBeGreaterThanOrEqual(2);

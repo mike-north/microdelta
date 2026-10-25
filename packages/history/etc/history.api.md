@@ -449,7 +449,7 @@ export interface ISha256Capability {
 
 // @alpha
 export interface ISqliteCapability {
-    openSqlite(location: string): ISqliteConnection;
+    openSqlite(location: string, options?: ISqliteOpenOptions): ISqliteConnection;
 }
 
 // @alpha
@@ -458,6 +458,11 @@ export interface ISqliteConnection {
     exec(sql: string): void;
     prepare(sql: string): ISqliteStatement;
     transaction<T>(operation: () => T & ISqliteSynchronousResult<T>): T;
+}
+
+// @alpha
+export interface ISqliteOpenOptions {
+    readonly journalMode: 'wal' | 'delete';
 }
 
 // @alpha

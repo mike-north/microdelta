@@ -100,6 +100,7 @@ export type {
   IClockCapability,
   ISha256Capability,
   ISqliteCapability,
+  ISqliteOpenOptions,
   ISqliteConnection,
   ISqliteRow,
   ISqliteRunResult,

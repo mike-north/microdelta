@@ -191,6 +191,24 @@ describe('durable source retry classification', () => {
     }
   });
 
+  test.each(['only hole', 'leading hole before valid policy'] as const)('sparse retry registrations (%s) fail admission before a send', async (shape) => {
+    world.keys = ['pr-1'];
+    world.options['pr-1'] = { retrySource: catalogScope };
+    const policy: ISourceRetryPolicy = { id: 'catalog-policy', scope: catalogScope, decide: () => ({ kind: 'retry-now' }) };
+    const policies = new Array<ISourceRetryPolicy>(shape === 'only hole' ? 1 : 2);
+    if (shape === 'leading hole before valid policy') {
+      policies[1] = policy;
+    }
+    const session = openSession(stores, timer);
+    try {
+      await expect(members(session, { retryPolicies: policies }).done).rejects.toMatchObject({ code: 'invalid-request' });
+      expect(received('pr-1')).toHaveLength(0);
+      expect(journalContents(session)).toHaveLength(0);
+    } finally {
+      session.close();
+    }
+  });
+
   test('registration and request source mutations after capture cannot relabel the chosen response', async () => {
     world.keys = ['pr-1'];
     world.provider.script('assess', 'pr-1', ['contextual-404']);
@@ -1474,6 +1492,39 @@ describe('durable source retry classification', () => {
       expect(session.usage().unknown).toEqual(expect.arrayContaining([expect.objectContaining({
         operation: received('pr-1')[0]?.operation, requestAttempt: received('pr-1')[0]?.requestAttempt,
       })]));
+    } finally {
+      session.close();
+    }
+  });
+
+  test.each(['only hole', 'hole with valid condition'] as const)('sparse retry conditions (%s) are invalid after one actual send', async (shape) => {
+    world.keys = ['pr-1'];
+    world.provider.script('assess', 'pr-1', ['contextual-404', 'ok']);
+    world.options['pr-1'] = { retrySource: catalogScope };
+    const conditions = new Array<string>(shape === 'only hole' ? 1 : 2);
+    if (shape === 'hole with valid condition') {
+      conditions[1] = 'resource-expected-later';
+    }
+    const underlying = world.provider;
+    world.provider = { ...underlying, async perform(name, key, send) {
+      const answer = await underlying.perform(name, key, send);
+      return answer.kind === 'failed' ? { ...answer, retryFacts: { httpStatus: 404, conditions } } : answer;
+    } };
+    let calls = 0;
+    const policy: ISourceRetryPolicy = { id: 'catalog-policy', scope: catalogScope, decide() {
+      calls += 1;
+      return { kind: 'retry-now' };
+    } };
+    const session = openSession(stores, timer);
+    try {
+      const result = await members(session, { retryPolicies: [policy] }).done;
+      expect(failureCode(memberOf(result.value, 'pr-1'))).toBe('invalid-response');
+      expect(calls).toBe(0);
+      expect(received('pr-1')).toHaveLength(1);
+      expect(journalContents(session)).toContainEqual(expect.objectContaining({
+        status: 'pending', attempts: [expect.objectContaining({ status: 'pending', facts: null })],
+      }));
+      expect(JSON.stringify(journalContents(session))).not.toContain('conditions');
     } finally {
       session.close();
     }

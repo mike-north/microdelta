@@ -561,7 +561,15 @@ function decodeFacts(value: unknown, what: string): IRetryFacts {
   if (conditions !== undefined && (!Array.isArray(conditions) || conditions.length > 8)) {
     return damaged(what);
   }
-  const checkedConditions = conditions === undefined ? undefined : conditions.map((condition: unknown) => boundedIdentifier(condition, what));
+  // Inspect each durable slot so an in-memory sparse array cannot bypass the
+  // same identifier checks that reject JSON's dense null representation.
+  let checkedConditions: string[] | undefined;
+  if (conditions !== undefined) {
+    checkedConditions = [];
+    for (let index = 0; index < conditions.length; index += 1) {
+      checkedConditions.push(boundedIdentifier(conditions[index], what));
+    }
+  }
   if (checkedConditions !== undefined && new Set(checkedConditions).size !== checkedConditions.length) {
     return damaged(what);
   }

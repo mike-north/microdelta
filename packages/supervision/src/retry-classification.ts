@@ -64,9 +64,15 @@ export function validatedRetryPolicies(value: readonly ISourceRetryPolicy[] | un
   }
   const ids = new Set<string>();
   const scopes = new Set<string>();
-  let policies: ISourceRetryPolicy[];
+  const policies: ISourceRetryPolicy[] = [];
   try {
-    policies = value.map((candidate: unknown): ISourceRetryPolicy => {
+    const count: unknown = Reflect.get(value, 'length');
+    if (typeof count !== 'number' || !Number.isSafeInteger(count) || count < 0) {
+      throw new SupervisionError('invalid-request', 'A retry policy registration is malformed');
+    }
+    // Every declared slot is a registration, including an absent array slot.
+    for (let index = 0; index < count; index += 1) {
+      const candidate: unknown = value[index];
       if (typeof candidate !== 'object' || candidate === null || Array.isArray(candidate)) {
         throw new SupervisionError('invalid-request', 'A retry policy registration is malformed');
       }
@@ -83,8 +89,8 @@ export function validatedRetryPolicies(value: readonly ISourceRetryPolicy[] | un
       }
       ids.add(id);
       scopes.add(scopeKey);
-      return Object.freeze({ id, scope, decide: (input: IRetryDecisionInput) => decide(input) });
-    });
+      policies.push(Object.freeze({ id, scope, decide: (input: IRetryDecisionInput) => decide(input) }));
+    }
   } catch {
     // Array index access can itself run caller code. Contain its private
     // exception before admission, just like a policy's field getters.
@@ -130,12 +136,18 @@ export function retryFacts(value: unknown): IRetryFacts {
   if (rawConditions !== undefined && (!Array.isArray(rawConditions) || rawConditions.length > 8)) {
     throw new SupervisionError('invalid-request', 'A response has invalid retry conditions');
   }
-  const conditions = rawConditions === undefined ? undefined : rawConditions.map((condition: unknown) => {
-    if (typeof condition !== 'string' || !retryIdentifierRule.test(condition)) {
-      throw new SupervisionError('invalid-request', 'A response has an invalid retry condition');
+  let conditions: string[] | undefined;
+  if (rawConditions !== undefined) {
+    conditions = [];
+    // A hole cannot silently become a missing condition or durable JSON null.
+    for (let index = 0; index < rawConditions.length; index += 1) {
+      const condition: unknown = rawConditions[index];
+      if (typeof condition !== 'string' || !retryIdentifierRule.test(condition)) {
+        throw new SupervisionError('invalid-request', 'A response has an invalid retry condition');
+      }
+      conditions.push(condition);
     }
-    return condition;
-  });
+  }
   if (conditions !== undefined && new Set(conditions).size !== conditions.length) {
     throw new SupervisionError('invalid-request', 'A response repeats a retry condition');
   }

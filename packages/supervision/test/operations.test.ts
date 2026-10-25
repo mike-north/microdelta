@@ -712,6 +712,15 @@ describe('records written before the intent mark existed', () => {
     const restored = decodeOperation(valid);
     expect(Reflect.get(restored, 'classification')).toEqual(content.classification);
     expect(() => decodeOperation({ ...valid, content: { ...content, classification: { ...content.classification, facts: { headers: { authorization: 'secret' } } } } })).toThrow(SupervisionError);
+    for (const conditionCount of [1, 2]) {
+      const conditions = new Array<string>(conditionCount);
+      if (conditionCount === 2) {
+        conditions[1] = 'resource-expected-later';
+      }
+      expect(() => decodeOperation({ ...valid, content: { ...content, classification: {
+        ...content.classification, facts: { conditions },
+      } } })).toThrow(SupervisionError);
+    }
     for (const classification of [
       { ...content.classification, runInstance: 'run:public-label' },
       { kind: 'failed', runInstance: 'run:public-label', code: 'policy-error' },

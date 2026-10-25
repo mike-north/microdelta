@@ -37,7 +37,7 @@ and rename display labels. Nothing depends on surviving closures/tags.
 | A-11 Failure/readiness | One failed member, one pending, one successful, open discovery | Independent siblings continue; strict fold waits/fails honestly; outcome fold reports settled statuses with coverage, never complete while unsettled, and reconsiders after repair | M4/M5 |
 | A-12 Acquisition retry and rate admission | Lost response, current-run exhaustion, new-run reset, callback precedence, shared units/time, required-retry rejection | A-12a–l below: correlated attempts, no unapproved sends or fabricated result/usage, shared pre-send bound, preserved fencing/stop | Changed target after M5; new evidence required |
 | A-13 Cancellation | Soft then hard stop, provider unsupported, commit race | No unwanted future admissions, no partial success, honest remote state | M5/M6 |
-| A-14 Accounting | Duplicate/lost acknowledgment, crash, unreported usage | Durable known observations exactly once; unknown not zero | M5 |
+| A-14 Accounting | Duplicate/lost acknowledgment, crash, unreported usage; time-qualified remaining-limit reports | Durable usage exactly once; unknown not zero; A-14a–f separate retained state from consumption | M5 additive evidence; new state-report target needs proof |
 | A-15 Declaration boundaries | Own, sibling, public, beta, hidden-type leak, source bypass | API Extractor rollups plus real compiler positive/negative fixtures; missing declarations and forbidden source imports fail for the expected reason | M0.5 |
 | A-16 Explain/CLI isolation and preview | Observe current, stale, missing and recent activity; coalesced signals and execution ending | A-16a–g below; no admitted computation/claims/writes merely by viewing | M6 |
 | A-17 Materialization/scale | Large unread payload, several narrow consumers, early-stop loop | Instrumented loads/memory; fingerprint-only positive control | M2/M7 |
@@ -96,6 +96,22 @@ Manual result injection, its validator/staging and idempotent submission are not
 required controls here. Within-run approval batching/grant allocation is proposed,
 not a prerequisite for A-12c. General schema validation of actual acquired results,
 read-only inspection privacy and existing publication/Accounting gates remain.
+
+## Resource-state report cases
+
+These expected outcomes implement ACC-004/007/008 and the accepted
+[resource-state plan](../plans/resource-state-observation.md); they are not recorded
+passing tests. Use fake reports and controlled clocks, with separate-process
+restart evidence for durability. No live provider execution is required.
+
+| Case | Controlled input | Required outcome |
+| --- | --- | --- |
+| A-14a — Reports versus consumption | Remaining reports 93 and 90, usage deltas 2 and 3, separately qualified pools/windows and a reported zero | Read retained qualified reports and observed usage 5; never sum balances, infer usage from their difference, combine unrelated scopes or treat missing as zero. Raw reports suffice; no invented latest-state/source-order reducer |
+| A-14b — Explicit validity and restart | Durably acknowledge a report with a provider reset; reopen before reset, then after it | Original report/time/basis survives while retained. After expiry it supplies no applicable balance or renewed capacity. Restart never extends age; usage and attempts remain intact |
+| A-14c — Low-configuration fallback | Observe at 10:00 without reset or expiry config; compare explicit provider reset and optional fallback override; restart at 10:30 and three days later | Default local retention ends at 11:00 from observation, not reopening. Explicit provider/source validity takes precedence over fallback; override affects local retention only. No mandatory expiry configuration, provider-window inference or request authority |
+| A-14d — Physical eviction and evidence isolation | Expire reports across repeated observation/cleanup cycles; retain additive usage, usage gaps, attempts and result references | Prompt bounded maintenance removes expired state rather than only hiding growing rows. Read queries filter expired applicability without cleanup writes. All immutable usage/attempt/result evidence and unknown gaps survive state eviction |
+| A-14e — Read-only and acknowledgment boundaries | Reopen after durable acknowledgment; inject persistence failure; inspect with rejecting dispatch/refresh/retry/claim/write ports | Durable acknowledged report survives under its documented identity contract; failure produces no durable acknowledgment. Queries neither write/init schema/evict nor trigger work. State intake cannot fabricate usage intent or acknowledge missing consumption |
+| A-14f — Qualified raw evidence | Duplicate/conflicting delivery, out-of-order reports, missing window/order and malformed validity | Exercise documented identity/intake/expiry behavior without inventing provider order, overwriting usage or renewing a recorded report's age. Missing window stays missing despite fallback retention; no credentials in identifiers/inspection. No dedicated notification or latest-balance product is needed |
 
 ## Preview observation cases
 

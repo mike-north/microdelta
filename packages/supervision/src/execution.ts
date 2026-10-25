@@ -133,7 +133,8 @@ export function isDraining(attempt: IAttemptFrame | undefined): boolean {
  * How one transmission (a permit-guarded send) ended:
  *
  * - `returned` / `threw`: `perform` settled on its own;
- * - `refused`: stop intent refused it before anything was sent (the attempt
+ * - `refused`: stop intent refused it before `perform`, including after a
+ *   durable intent was recorded and an observer requested stop (the attempt
  *   is tainted);
  * - `aborted`: a hard stop abandoned it in flight, with the remote state
  *   recorded (the attempt is tainted);
@@ -158,9 +159,9 @@ export interface ISendFields<T> {
 /**
  * What the run's external operations use of the execution controls: a
  * transmission with a hook that runs after the permit is held and stop
- * intent rechecked, synchronously just before `perform` (where the intent is
- * committed), and a stop-aware wait that holds no permit and lends the
- * member's lane.
+ * intent rechecked (where the intent is committed), and a stop-aware wait
+ * that holds no permit and lends the member's lane. The transmission
+ * rechecks stop after the hook and observer callbacks before `perform`.
  */
 export interface IOperationTransport {
   transmit<T>(fields: ISendFields<T>, beforePerform: () => void): Promise<ITransmitted<T>>;
@@ -639,11 +640,11 @@ export function runControls(frame: IRunFrame): IRunExecution {
   };
 
   /**
-   * One permit-guarded transmission. `beforePerform` runs once the permit is
-   * held and stop intent rechecked, in the same synchronous turn as
-   * `perform`, so nothing can intervene between them: an external operation
-   * commits its intent there (intent before send). If it throws, nothing is
-   * sent and the permit is handed back.
+   * One permit-guarded transmission. `beforePerform` commits an external
+   * operation's intent after the permit and initial stop check. It and the
+   * begin observer can re-enter run control synchronously, so stop authority
+   * is rechecked after each before the provider callback. A refusal releases
+   * the permit without treating an uncalled provider as remotely aborted.
    */
   async function transmit<T>(fields: ISendFields<T>, beforePerform: () => void): Promise<ITransmitted<T>> {
     const { label, retry, perform, cancel } = fields;
@@ -665,7 +666,17 @@ export function runControls(frame: IRunFrame): IRunExecution {
       permit.release();
       return { kind: 'unrecorded', error };
     }
+    const afterIntent = sendRefusal(retry);
+    if (afterIntent !== undefined) {
+      permit.release();
+      return refuse(label, afterIntent);
+    }
     sendEvent(label, 'begin');
+    const beforeDispatch = sendRefusal(retry);
+    if (beforeDispatch !== undefined) {
+      permit.release();
+      return refuse(label, beforeDispatch);
+    }
     // The send's own signal: it aborts when the run's hard signal does, and is
     // detached from the run as soon as the send settles. An adapter listener
     // that is never removed therefore stays on this short-lived signal and

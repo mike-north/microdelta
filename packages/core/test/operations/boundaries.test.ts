@@ -36,11 +36,13 @@ import type { ICompletedResultReference, IDurableHistory } from '@microdelta/his
 import type { IResolutionHistory } from '@microdelta/resolution';
 
 import { faultySqlite } from '../accounting/support.js';
-import { analysis, createWorld, installWorld } from './fixture.js';
+import { cleanup, rawReaderCount } from '../durable-history/support.js';
+import { analysis, assessmentSubject, createWorld, installWorld } from './fixture.js';
 import type { IWorld } from './fixture.js';
 import { T0, fakeTimer, freshKey, hour, openSession, production, statuses, tempStores, until } from './harness.js';
 import type { IFakeTimer, IOperationStores } from './harness.js';
 import { applied, driveUntilSettled, failureCode, fold, journalContents, memberOf, members, received } from './support.js';
+import { attemptsAt, publishedSubjects } from '../stop/support.js';
 
 let stores: IOperationStores;
 let timer: IFakeTimer;
@@ -53,7 +55,14 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  stores.remove();
+  try {
+    // Readers opened by History inspection must be closed before their store
+    // is removed, including on platforms that lock open SQLite files.
+    cleanup();
+    expect(rawReaderCount()).toBe(0);
+  } finally {
+    stores.remove();
+  }
 });
 
 /** A fresh world over the same persisted provider ledger, standing in for a new process. */
@@ -79,18 +88,22 @@ describe('stop intent and resumed deferrals (RUN-014)', () => {
           stop.request({ level: 'hard' });
         }
       } });
-      const first = await started.done;
-      expect(memberOf(first.value, 'pr-1').status).toBe('cancelled');
+      const result = await started.done;
       expect(received('pr-1')).toHaveLength(0);
       expect(applied('pr-1')).toHaveLength(0);
-      expect(first.interruptions).toEqual([]);
+      expect(memberOf(result.value, 'pr-1').status).toBe('cancelled');
+      expect(publishedSubjects(stores.history)).not.toContain(assessmentSubject('pr-1'));
+      expect(attemptsAt(stores.history).find((row) => row.subject === assessmentSubject('pr-1'))).toMatchObject({ state: 'interrupted', ending: 'stopped' });
+      expect(result.interruptions).toEqual([]);
       expect(started.events.filter((event) => event.kind === 'operation' && event.phase === 'request-started')).toEqual([]);
-      const [stopped] = journalContents(session);
-      expect(stopped).toEqual(expect.objectContaining({
+      expect(journalContents(session)).toEqual([expect.objectContaining({
         status: 'deferred', attempts: [expect.objectContaining({ status: 'not-sent', requestAttempt: expect.stringMatching(/\/1$/u) })],
+      })]);
+      expect(session.usage()).toEqual(expect.objectContaining({
+        status: 'incomplete', requestAttempts: 1, reports: 0, observed: [], unknown: [expect.any(Object)],
       }));
-      expect(session.usage()).toEqual(expect.objectContaining({ requestAttempts: 1, reports: 0, unknown: [expect.any(Object)] }));
-
+      // A later run may acquire the still-missing result with a new request
+      // attempt; its report does not turn the earlier intent's gap into zero.
       const resumed = await members(session, { deferral: 'exit' }).done;
       expect(memberOf(resumed.value, 'pr-1').status).toBe('succeeded');
       expect(received('pr-1')).toHaveLength(1);
@@ -98,7 +111,9 @@ describe('stop intent and resumed deferrals (RUN-014)', () => {
         expect.objectContaining({ status: 'not-sent', requestAttempt: expect.stringMatching(/\/1$/u) }),
         expect.objectContaining({ status: 'succeeded', requestAttempt: expect.stringMatching(/\/2$/u) }),
       ] })]);
-      expect(session.usage()).toEqual(expect.objectContaining({ requestAttempts: 2, reports: 1, unknown: [expect.any(Object)] }));
+      expect(session.usage()).toEqual(expect.objectContaining({
+        status: 'incomplete', requestAttempts: 2, reports: 1, unknown: [expect.any(Object)],
+      }));
     } finally {
       session.close();
     }

@@ -682,7 +682,13 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
         // If a formerly unconfirmed intent is eventually sent under the same
         // request ID, local no-dispatch evidence no longer excludes it.
         neverDispatched.delete(requestAttempt);
-        return request.perform({ signal, operation, requestAttempt, idempotencyKey: request.providerIdempotency ? operation : undefined });
+        try {
+          return request.perform({ signal, operation, requestAttempt, idempotencyKey: request.providerIdempotency ? operation : undefined });
+        } finally {
+          // This phase means the provider callback was invoked, not merely
+          // that its durable intents were recorded before a stop.
+          emit('request-started', current.record, { stepAttempt, requestAttempt, status: 'pending' });
+        }
       },
       cancel: request.cancel,
     }, () => {
@@ -728,7 +734,6 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
         }
         throw error;
       }
-      emit('request-started', intent, { stepAttempt, requestAttempt, status: 'pending' });
     });
     if (sent.kind === 'unrecorded') {
       if (sent.error instanceof EndedAttemptError) {
@@ -743,6 +748,23 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       return { stored: current, outcome: { kind: 'pending', block: { kind: 'deferred', operation, notBefore } } };
     }
     if (sent.kind === 'refused') {
+      // A stop after durable intent but before provider invocation is not a
+      // remotely aborted request. Preserve its Accounting intent as an
+      // unknown usage gap, but record the journal attempt as definitely
+      // unsent so a later run may try this address without inventing an
+      // effect or spending a sent-attempt allowance.
+      const last = current.record.attempts.at(-1);
+      if (current.revision !== before.revision && last?.requestAttempt === requestAttempt && last.status === 'pending') {
+        const unsentRecord: IOperationRecord = { ...withLast(current.record, { status: 'not-sent' }), status: 'deferred', notBefore: now() };
+        try {
+          current = write(lease, unsentRecord, current.revision);
+          emit('request-settled', unsentRecord, { stepAttempt, requestAttempt, status: 'not-sent', reason: 'stopped' });
+        } catch {
+          // A failed fenced restoration cannot turn an unconfirmed pending
+          // row into durable no-dispatch evidence for another invocation.
+          engine.diagnose(`lease-lost: operation ${operation} request attempt ${requestAttempt} stays pending after pre-dispatch stop`);
+        }
+      }
       return { stored: current, outcome: { kind: 'error', error: new SupervisionError('stopped', `Operation ${operation} was refused: ${sent.reason}`) } };
     }
     if (sent.kind === 'aborted') {

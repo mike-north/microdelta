@@ -251,7 +251,8 @@ export type IRemoteState = 'cancelled' | 'running' | 'unknown';
  * Positions of one send (a permit-guarded real request):
  *
  * - `refused`: stop intent refused it before anything was sent;
- * - `begin`: it holds a permit and is being sent;
+ * - `begin`: it holds a permit at the dispatch boundary; a synchronous
+ *   observer may still stop the run before the provider is invoked;
  * - `end` or `fail`: it settled on its own, successfully or not;
  * - `aborted`: a hard stop abandoned it locally while in flight;
  * - `cancel-requested`: provider cancellation was then requested;

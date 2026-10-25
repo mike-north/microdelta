@@ -137,7 +137,7 @@ export type ISqliteSynchronousResult<T> = 0 extends 1 & T
 /**
  * An open connection to one persistent local SQLite database file. The caller
  * that opened it owns it and must close it. The host selects durable
- * configuration for every connection: write-ahead logging, FULL synchronous
+ * configuration for every connection: selected persistent journaling, FULL synchronous
  * commits, enforced foreign keys and a bounded wait on a locked database.
  * Callers supply every SQL statement and schema; the connection has no
  * knowledge of what the tables mean. A statement, exec or transaction that
@@ -213,7 +213,7 @@ export class SqliteBusyError extends Error {
  */
 export interface ISqliteCapability {
   /** Open or create the database file at `location` and return its owned connection. */
-  openSqlite(location: string): ISqliteConnection;
+  openSqlite(location: string, options?: ISqliteOpenOptions): ISqliteConnection;
 }
 
 /**
@@ -284,4 +284,42 @@ export interface ITimerCapability extends IClockCapability {
 export interface IRandomIdentifierCapability {
   /** Return a fresh identifier of 32 lowercase hexadecimal characters, or throw. */
   randomIdentifier(): string;
+}
+
+/** A statement restricted to inspecting existing rows; never a mutation port. @alpha */
+export interface ISqliteReadStatement {
+  /** Read at most one row from a read-only statement. */
+  get(...values: readonly ISqliteValue[]): ISqliteRow | undefined;
+  /** Read all matching rows from a read-only statement. */
+  all(...values: readonly ISqliteValue[]): readonly ISqliteRow[];
+}
+
+/** An existing rollback-journal SQLite file opened without filesystem or configuration writes. @alpha */
+export interface ISqliteReader {
+  /** Prepare a read-only statement; mutation statements are refused. */
+  prepare(sql: string): ISqliteReadStatement;
+  /** Release this handle; repeated close is harmless. */
+  close(): void;
+}
+
+/** Inspection-only storage authority, separate from writable database creation. @alpha */
+export interface ISqliteReadCapability {
+  /**
+   * Open an existing rollback-journal file read-only; missing files and WAL files fail without mutation.
+   * Cooperative owners preserve pathname and journal layout from preflight through
+   * driver open and throughout handle lifetime.
+   */
+  openSqliteReader(location: string): ISqliteReader;
+}
+
+/** Host journal selection for dedicated storage; schema and retention remain caller-owned. @alpha */
+export interface ISqliteOpenOptions {
+  /**
+   * WAL is the default. DELETE uses rollback journaling with FULL synchronous
+   * commits, allowing side-effect-free readers but permitting reader/writer
+   * contention. DELETE refuses existing WAL files instead of changing them.
+   * Cooperative owners must keep the pathname and journal layout stable from
+   * preflight through opening and for the lifetime of every handle.
+   */
+  readonly journalMode: 'wal' | 'delete';
 }

@@ -125,10 +125,9 @@ independent observation lifetime, current/stale preview meaning and consumer-own
 cache policy. RUN-007/008 own requirements; the plan identifies remaining API,
 retention, disposal and aggregate choices and bounded readiness recommendations.
 The companion [proposed observation protocol](../plans/preview-observation-protocol.md)
-offers a concrete engineering decomposition. It was revised after four
-findings from its first review; the same independent reviewer's re-review is
-pending. Its new mechanism choices are not accepted requirements. Neither
-document claims delivered behavior or whole-issue implementation readiness.
+offers a concrete engineering decomposition; its new mechanism choices remain
+proposed and unselected. Neither document claims delivered behavior or
+whole-issue implementation readiness.
 
 ## Current checkout
 

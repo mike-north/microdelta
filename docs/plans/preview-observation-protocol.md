@@ -1,7 +1,6 @@
 # Issue 165: proposed observation protocol and implementation plan
 
-**Status: proposed engineering plan, revised after four findings. The same
-independent reviewer's re-review is pending.** This
+**Status: proposed and unselected engineering plan.** This
 document proposes concrete contracts and bounded implementation work under the
 accepted semantics in [the preview-observation plan](preview-observation.md) and
 [RUN-006, RUN-007, RUN-008 and CLI-004](../spec/operations.md#run-006--preview-access-does-not-authorize-recomputation).
@@ -13,11 +12,10 @@ unmerged issue-222 candidate source at
 caller-fed alpha projection; it is not a durable query contract or proof of the
 capabilities below.
 
-This plan names design selections for review, separates owner-authored facts
-from their coordination and indexing, and breaks the work into ordered child
-handoffs. No handoff has been filed. The accepted RUN-007/008 and A-16a–g
-outcomes remain the authority; where this proposal selects a mechanism, the
-selection remains proposed until the owner records acceptance.
+This plan separates owner-authored facts from their coordination and indexing,
+and lays out a proposed sequence of bounded child work. The accepted
+RUN-007/008 and A-16a–g outcomes remain the authority; its mechanism choices
+remain proposals until the owner records acceptance.
 
 ## Consumer questions and scope
 
@@ -89,12 +87,23 @@ preserve the accepted ownership split.
 Keep lossless native identities and population metadata in their owning durable
 records. Add a versioned durable mapping for each selected evaluation, scoped by
 analysis/environment and carrying structural step/member identity plus the
-Supervision run ID and request key. The start fact must commit before the
-evaluation's work can be admitted. Record its terminal owner outcome when known.
-Failure information is required even when no History attempt was allocated.
-Supervision owns its start/terminal operational facts; Resolution owns its
-semantic result and keyed-population facts. History stores typed references and
-order; it must not interpret these payloads.
+Supervision run ID and request key. The evaluation-start transaction assigns and
+persists the stable ID, exact structural scope, and exact predecessor reference
+available at that start; it must commit before the evaluation's work can be
+admitted. Never reconstruct the predecessor later from a global current pointer.
+Record the terminal owner outcome when known. Failure information is required
+even when no History attempt was allocated. Supervision owns its start/terminal
+operational facts; Resolution owns its semantic result and keyed-population
+facts. History stores typed references and order; it must not interpret these
+payloads.
+
+For every publication, successful acceptance/reuse, or owner-authorized adoption
+that can make a value selectable for evaluation E, the native owner supplies an
+immutable scoped association from E and its structural identity to that exact
+result reference. Any correspondence/adoption is validated by its semantic
+owner before commit. History validates structural identity and exact-reference
+integrity, then persists the association with the native fact; it does not
+decide freshness or authorize reuse.
 
 Do not serialize arbitrary thrown JavaScript values or executable state. Store a
 bounded owner-defined diagnostic summary, an explicit truncation/completeness
@@ -176,22 +185,29 @@ cancelled, succeeded, closed, or removed.
 
 ### Atomicity and crash behavior
 
-Publication, acceptance, and durable attempt-ending facts append their typed
-activity references in the **same History transaction** as the native state
-transition. An activity entry cannot name a missing native fact. An independent
-follow-up journal write is insufficient because a crash between commits would
-lose observation of an already committed transition. Starting/terminal
-Supervision records and Resolution keyed-population records are written through
-separate typed owner ports under the fenced writer authority; coordinating the
-write does not transfer semantic ownership to History or Supervision.
+Publication, successful acceptance/reuse/adoption, and durable attempt-ending
+facts append their typed activity references in the **same fenced History
+transaction** as the native state transition. Any evaluation-to-reference
+association required by `readCurrent(E)` is immutable native evidence in that
+same transaction: the semantic owner supplies the validated scoped correlation,
+and History persists it while validating structural identity and exact-reference
+integrity. It is never a separate post-commit association write. An activity
+entry cannot name a missing native fact or association. A later journal write is
+insufficient because a crash between commits could lose observation of an
+already committed transition. Evaluation-start metadata and its exact
+predecessor reference commit together before work admission; terminal
+Supervision outcome and Resolution keyed-population records retain their
+separate typed owner ports under fenced writer authority. This coordination does
+not transfer semantic ownership to History or Supervision.
 
 | Boundary | Required read-side outcome |
 | --- | --- |
-| Native publication/acceptance/attempt-ending and its index commit | Both commit or neither does, under the existing transition's storage-failure policy. Never report a successful transition solely from an activity entry. |
-| Start-record commit before work admission | If recording fails, do not admit that evaluation. Surface the storage failure. |
+| Native publication/acceptance/reuse/adoption, E-to-reference association, and its index commit | The native fact, owner-authored scoped association, and activity entry commit together or none do, under the existing transition's storage-failure policy. Never report a successful transition solely from an activity entry. |
+| Start-record and predecessor capture before work admission | The stable evaluation ID, exact scope, and predecessor reference commit together before work. If recording fails, do not admit that evaluation; surface the storage failure. |
+| Association insertion or integrity validation fails | Roll back the native publication/acceptance/reuse/adoption and activity entry under the existing storage-failure policy. Never leave a committed native value that exact-E reads conceal behind the old predecessor. |
 | Failure/terminal-evidence recording fails | Preserve the original execution error and report persistence failure separately. Durable evaluation remains unresolved; do not synthesize a terminal status. |
 | Source snapshot publishes before Definition keying and Resolution population recording | Snapshot remains available, but member population/closure is unknown. No member dispatch or closure is inferred from snapshot presence. |
-| Native publication/acceptance commits before overall evaluation-return record | Show the committed snapshot/verification alongside unresolved evaluation completion. The reader must not fabricate a terminal run outcome. |
+| Native publication/acceptance commits before overall evaluation-return record | `readCurrent(E)` shows the exact associated snapshot/verification; it must not fall back to E's predecessor. Show unresolved evaluation completion separately; the reader must not fabricate a terminal run outcome. |
 | Observation-index eviction | Only disposable activity is evicted. Current error, exact result, native attempts, acceptances, owner metadata and population facts remain governed by their own retention rules. |
 
 Abandonment may fail while preserving an original author error. It is not
@@ -458,11 +474,11 @@ change.
 | Case | Proposed read or lifecycle assertion | Bounded proof |
 | --- | --- | --- |
 | A-16a — Value and failure | Zero, empty and selected undefined are available values; absence is separate. Failure keeps stale prior value plus current error, or unavailable plus error. Verified reads do not accept stale fallback. | Read-only exact selected-read tests, with and without a prior reference; wrapped/selected undefined remains within existing result-root boundary. |
-| A-16b — Mixed freshness | Current A and stale B coexist. Equal-data successful verification clears B's stale status; key rediscovery alone does not. Display freshness does not fabricate source/downstream acceptance or graph success. Overlapping evaluations remain isolated: another evaluation's failure cannot stale the selected one or its publication replace that selection without explicit owner adoption. | Distinct owner evidence fixtures for publish/reuse/identity-only discovery and equal data; A/B overlap race (A starts from P, B publishes Q, A fails); rejecting mutation/dispatch ports. |
+| A-16b — Mixed freshness | Current A and stale B coexist. Equal-data successful verification clears B's stale status; key rediscovery alone does not. Display freshness does not fabricate source/downstream acceptance or graph success. Overlapping evaluations remain isolated: another evaluation's failure cannot stale the selected one or its publication replace that selection without explicit owner adoption. | Distinct owner evidence fixtures for publish/reuse/identity-only discovery and equal data; A/B overlap race (A starts from P, B publishes Q, A fails); verify equal-value reuse creates the exact E association atomically; reject foreign adoption; rejecting mutation/dispatch ports. |
 | A-16c — Thin push and recent recovery | A→failure→equal-valued B remains queryable in commit order despite one coalesced unit signal; current read returns B and recent read retains failure then success under stated coverage. | Different processes, attachment after changes, bounded retention boundary and truncation/gap metadata; signals contain no business state. |
 | A-16d — Independent observation and client state | Observation reads after run finish/stop; closing it never cancels execution. Channel detach leaves client state alone. Selected-value handle close is separate and deterministic. | Stop/completion, detach/reconnect, observation close with retained handle, handle close with escaped child view, no durable server session. |
 | A-16e — Sustained and trailing signal | Controlled sustained changes yield periodic thin invalidations and a trailing invalidation after settling, including equal data with changed freshness metadata. | Controlled timers/barriers; sampling failure is visible health state, not a signal payload; no claim renewal or execution. |
-| A-16f — Read-only exact projection | Separate inspection process has no analysis callbacks or write/claim/source/dispatch ports. It can enumerate stable IDs from exact scope and read an exact selected evaluation; concurrent evaluations never merge through a global pointer. Reads use exact references, selected fields and no synthetic acceptance/activity. | Missing-store open creates nothing; unsupported schema does not migrate; fresh-process enumeration after diagnostic eviction; ambiguous/multiple matches, page continuation and legacy identity-unavailable cases; concurrent writer snapshot checks; selected-load counters reject unrelated payload loads. |
+| A-16f — Read-only exact projection | Separate inspection process has no analysis callbacks or write/claim/source/dispatch ports. It can enumerate stable IDs from exact scope and read an exact selected evaluation; concurrent evaluations never merge through a global pointer. Reads use exact references, selected fields and no synthetic acceptance/activity. | Missing-store open creates nothing; unsupported schema does not migrate; fresh-process enumeration after diagnostic eviction; ambiguous/multiple matches, page continuation and legacy identity-unavailable cases; association insertion failure rolls back native fact and index; after a successful native commit but before terminal evaluation return, exact E read exposes its associated value; equal reuse association and foreign adoption cases; concurrent writer snapshot checks; selected-load counters reject unrelated payload loads. |
 | A-16g — Aggregate membership | Replacement at same key counts once; established removal disappears; unfinished discovery retains old members as unconfirmed and incomplete, including members seen in a prior accepted open snapshot. Failed/cancelled discovery cannot remove them; a fresh run's retained display is not its current-population proof. | Open/closed/empty populations, explicit predecessor correspondence, binding mismatch, failed/cancelled discovery, unavailable member, selection budget/truncation and no unrelated loads. |
 
 Guarded read tests must prove the selected-evaluation race explicitly: A starts
@@ -474,19 +490,24 @@ reference. B cannot replace A's selected value without an explicit native owner
 adoption/correspondence fact. Enumeration discovers B as a separate evaluation;
 there is no implicit global merge or callback-order selection.
 
-Fault injection must cover each native transition/index atomicity boundary,
-terminal evidence write failure, and the publication-to-overall-evaluation
-completion window. It must also cover source publication-to-keyed-population
-recording; the expected crash result there is snapshot present with population
-unknown. Controlled clocks confirm that commit order does not derive from wall
-time. Include supported long keys and large populations to prove observation
-does not impose new identity/population limits or duplicate them in index rows.
+Fault injection must reject the evaluation-to-reference association insert and
+prove the native transition and activity-index row roll back together. A
+successful native publication or reuse followed by process death before the
+separate overall terminal-return fact must still let a fresh reader select the
+newly associated exact value while reporting terminal completion as unknown.
+Test a same-value reuse association and a foreign-evaluation adoption attempt.
+Also cover every other native transition/index atomicity boundary, terminal
+evidence write failure, and the publication-to-overall-evaluation completion
+window. Source publication-to-keyed-population recording still has the distinct
+expected crash result: snapshot present with population unknown. Controlled
+clocks confirm commit order does not derive from wall time. Include supported
+long keys and large populations to prove observation does not impose new
+identity/population limits or duplicate them in index rows.
 
-## Ordered child handoffs (proposed, not filed)
+## Ordered child handoffs (proposed)
 
-These bounded children are a proposed delivery sequence, subject to independent
-review and supervisor issue creation. A later child must not be presented as
-ready before its dependency is accepted.
+These bounded children are a proposed delivery sequence. A later child must not
+be presented as ready before its dependency is accepted.
 
 1. **Read-only History foundation and activity transaction seam.** Define the
    typed commit group/revision, bounded compact index, consistent `asOfRevision`
@@ -536,6 +557,5 @@ inspection; no test without a first stated failing outcome; no runtime
 implementation or full acceptance claim in this documentation change. Before
 code starts, the supervisor should record which proposed selections are
 accepted, split/refine the ordered work as needed, and assign isolated child
-issues. Component gates do not close #165. Closure requires independent review
-and the cross-cutting scenarios above; a scheduled or requested review is not
-completed review evidence.
+issues. Component gates do not close #165; closure requires the cross-cutting
+scenarios above.

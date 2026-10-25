@@ -62,6 +62,7 @@ Read this entry point, then only the contracts relevant to the task:
 | [Operations](operations.md) | Readiness, preview, per-run acquisition retry, shared rate admission, cancellation, trial, accounting, CLI | Run lifetime or operational work |
 | [Acquisition decision and handoff](../plans/data-acquisition-retries.md) and [#221 shared-rate coordination design](../plans/shared-rate-coordination.md) | Accepted 2026-10-24 supersession and implementation readiness; #221 engineering choices are supervisory-selected, with runtime implementation still pending | Implementing #221 to its selected design, or migrating M5 retry behavior |
 | [Retry-classification accepted design](../plans/retry-classification.md) | Supervisory-accepted engineering seam and bounded #235 runtime handoff under RUN-011; runtime delivery pending | Implementing or reviewing #235 against the accepted #220 design |
+| [Scoped current detail calls proposal](../plans/scoped-source-calls.md) | Proposed #252 dynamic source acceptance beneath independent person summaries; mechanism and compatibility decisions remain open | Reviewing the completed-search report gap before implementation |
 | [Acceptance](acceptance.md) | Cross-contract scenarios, expected outcomes, proof obligations | Writing tests or closing a gate |
 | [Experiments](experiments.md) | Bounded unknowns, fixtures, evidence, adoption gates | After foundation, for dependent runtime work |
 | [Milestones](../milestones.md) | Delivery order and independently reportable quality gates | Selecting work |

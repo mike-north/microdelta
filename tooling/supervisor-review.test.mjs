@@ -57,6 +57,8 @@ function scenario(overrides = {}) {
       submitted: true,
     }],
     pendingReviewRequests: [],
+    immediateMergeOnEnable: false,
+    statusReadbackOverride: undefined,
     ...overrides,
   };
   let readPullRequestCount = 0;
@@ -77,17 +79,22 @@ function scenario(overrides = {}) {
     async createReviewRecord(record) { calls.push(['createReviewRecord', record]); return `${state.pullRequest.url}#issuecomment-123`; },
     async setCommitStatus(status) {
       calls.push(['setCommitStatus', status]);
+      if (status.state === 'success') state.successStatusPublished = true;
       return { sha: status.sha, context: status.context, state: status.state };
     },
     async readCommitStatus(sha, context) {
       calls.push(['readCommitStatus', sha, context]);
-      return { sha, context, state: 'success' };
+      const result = state.statusReadbackOverride ?? { sha, context, state: 'success' };
+      if (result.sha === sha && result.context === context && result.state === 'success') state.successStatusReadBack = true;
+      return result;
     },
     async enableAutoMerge(request) {
       calls.push(['enableAutoMerge', request]);
       if (state.changeHeadOnEnable) state.pullRequest.headRefOid = 'b'.repeat(40);
       if (state.pullRequest.headRefOid !== request.expectedHeadOid) throw new Error('head changed at auto-merge boundary');
       state.pullRequest.autoMergeEnabled = true;
+      state.successStatusVerifiedWhenAutoMergeEnabled = state.successStatusReadBack === true;
+      if (state.immediateMergeOnEnable) state.pullRequest.merged = true;
       return { enabled: true, expectedHeadOid: request.expectedHeadOid };
     },
     async readOutcome(number) {
@@ -117,9 +124,30 @@ test('arms auto-merge for the reviewed head while required CI is still pending',
   assert.ok(calls.some(([name, sha, context]) => name === 'readCommitStatus' && sha === reviewedHead && context === REQUIRED_STATUS_CONTEXT));
   const arm = calls.find(([name]) => name === 'enableAutoMerge')?.[1];
   assert.deepEqual(arm, { pullRequestNumber: prNumber, expectedHeadOid: reviewedHead });
-  assert.ok(calls.findIndex(([name, status]) => name === 'setCommitStatus' && status.state === 'success') > calls.findIndex(([name]) => name === 'enableAutoMerge'));
+  assert.ok(calls.findIndex(([name, status]) => name === 'setCommitStatus' && status.state === 'success') < calls.findIndex(([name]) => name === 'enableAutoMerge'));
+  assert.ok(calls.findIndex(([name]) => name === 'readCommitStatus') < calls.findIndex(([name]) => name === 'enableAutoMerge'));
   assert.match(calls.find(([name]) => name === 'createReviewRecord')[1].body, /issue 34 acceptance/u);
 });
+
+test('verified exact-head success precedes auto-merge even when GitHub could merge immediately', async () => {
+  const { api, state, request } = scenario({ immediateMergeOnEnable: true });
+  const result = await runSupervisorReview(request, api);
+  assert.equal(state.successStatusVerifiedWhenAutoMergeEnabled, true);
+  assert.equal(result.outcome, 'merged');
+});
+
+for (const [name, readback, changes] of [
+  ['pending status', { sha: reviewedHead, context: REQUIRED_STATUS_CONTEXT, state: 'pending' }, {}],
+  ['wrong head', { sha: 'b'.repeat(40), context: REQUIRED_STATUS_CONTEXT, state: 'success' }, {}],
+  ['moved pull request head', undefined, { changeHeadOnRead: 3 }],
+]) {
+  test(`does not enable auto-merge after ${name} at the final review gate`, async () => {
+    const { api, calls, state, request } = scenario({ statusReadbackOverride: readback, ...changes });
+    await assert.rejects(runSupervisorReview(request, api), /status readback|head changed/u);
+    assert.equal(calls.some(([name]) => name === 'enableAutoMerge'), false);
+    assert.equal(state.pullRequest.autoMergeEnabled, false);
+  });
+}
 
 for (const [name, overrides, requestOverrides = {}] of [
   ['changed head at preflight', { pullRequest: { number: prNumber, state: 'OPEN', isDraft: false, baseRefName: 'main', headRefOid: 'b'.repeat(40), url: 'https://github.com/mike-north/microdelta/pull/34', unresolvedThreads: 0, autoMergeEnabled: false } }],
@@ -215,11 +243,12 @@ test('a head change after pending status but before arming leaves no success or 
   assert.equal(calls.some(([name]) => name === 'enableAutoMerge'), false);
 });
 
-test('the expected-head API guard rejects a push in the arming race without releasing review', async () => {
+test('the expected-head API guard refuses arming after a push races with final verification', async () => {
   const { api, calls, request, state } = scenario({ changeHeadOnEnable: true });
   await assert.rejects(runSupervisorReview(request, api), /head changed at auto-merge boundary/u);
   const statuses = calls.filter(([name]) => name === 'setCommitStatus').map(([, status]) => status.state);
-  assert.deepEqual(statuses, ['pending']);
+  assert.deepEqual(statuses, ['pending', 'success']);
+  assert.equal(calls.filter(([name]) => name === 'setCommitStatus').at(-1)[1].sha, reviewedHead);
   assert.equal(state.pullRequest.autoMergeEnabled, false);
 });
 
@@ -413,6 +442,7 @@ test('all GitHub adapter operations use the injected runner with their original 
     assert.deepEqual(await api.readRepository(), { nameWithOwner: 'mike-north/microdelta', defaultBranch: 'main' });
     assert.deepEqual(await api.readProtection('main'), {
       branch: 'main', requiresPullRequest: true, strict: true, enforceAdmins: true,
+      ordinaryStrict: true,
       resolveConversations: true, requiredContexts: ['sample CI'], checkSources: { 'sample CI': 'github-actions' },
     });
     assert.deepEqual(await api.readPullRequest(prNumber), {
@@ -527,9 +557,15 @@ function protectionRunner({ legacy = 'not-protected', rules = rulesetRules(), ru
     if (args[1] === RULES_PATH) return rules;
     const detail = /rulesets\/(\d+)$/u.exec(args[1] ?? '');
     if (detail) {
-      const ruleset = { [RULESET_ID]: { enforcement: 'active', bypass_actors: [] }, ...rulesets }[detail[1]];
-      if (!ruleset) throw new Error('GitHub CLI failed: Not Found (HTTP 404)');
-      return ruleset;
+      const id = Number(detail[1]);
+      const override = rulesets[id];
+      if (id !== RULESET_ID && !override) throw new Error('GitHub CLI failed: Not Found (HTTP 404)');
+      return {
+        enforcement: 'active',
+        bypass_actors: [],
+        rules: rules.filter(rule => rule.ruleset_id === id).map(({ type, parameters }) => ({ type, parameters })),
+        ...override,
+      };
     }
     throw new Error(`Unexpected GitHub command: ${args.join(' ')}`);
   };
@@ -557,6 +593,118 @@ const legacyProtection = {
 };
 
 const alwaysBypass = { actor_id: 5, actor_type: 'RepositoryRole', bypass_mode: 'always' };
+const pullRequestBypass = { actor_id: 5, actor_type: 'RepositoryRole', bypass_mode: 'pull_request' };
+
+test('an administrator-only Supervisor review ruleset is accepted when ordinary protection is separately enforced', async () => {
+  const supervisorRulesetId = 25825587;
+  const rules = [
+    ...rulesetRules({ contexts: REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: 15368 })) })
+      .map(rule => ({ ...rule, ruleset_id: RULESET_ID })),
+    {
+      type: 'required_status_checks',
+      ruleset_id: supervisorRulesetId,
+      parameters: {
+        strict_required_status_checks_policy: false,
+        required_status_checks: [{ context: REQUIRED_STATUS_CONTEXT, integration_id: null }],
+      },
+    },
+  ];
+  const { protection } = await readRuleProtection({
+    rules,
+    rulesets: { [supervisorRulesetId]: { enforcement: 'active', bypass_actors: [alwaysBypass] } },
+  });
+  assert.equal(protection.enforceAdmins, true);
+  validateProtection(protection, 'main');
+});
+
+test('the owner can bypass only Supervisor review during pull requests under a dedicated ruleset', async () => {
+  const supervisorRulesetId = 25825587;
+  const rules = [
+    ...rulesetRules({ contexts: REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: 15368 })) })
+      .map(rule => ({ ...rule, ruleset_id: RULESET_ID })),
+    {
+      type: 'required_status_checks',
+      ruleset_id: supervisorRulesetId,
+      parameters: {
+        strict_required_status_checks_policy: false,
+        required_status_checks: [{ context: REQUIRED_STATUS_CONTEXT, integration_id: null }],
+      },
+    },
+  ];
+  const { protection } = await readRuleProtection({
+    rules,
+    rulesets: { [supervisorRulesetId]: { enforcement: 'active', bypass_actors: [pullRequestBypass] } },
+  });
+  assert.deepEqual([...protection.requiredContexts].sort(), [...REQUIRED_BRANCH_CHECKS, REQUIRED_STATUS_CONTEXT].sort());
+  assert.equal(protection.enforceAdmins, true);
+  validateProtection(protection, 'main');
+});
+
+test('a bypass source is rejected when its fetched full ruleset hides another protection outside the branch slice', async () => {
+  const supervisorRulesetId = 25825587;
+  const rules = [
+    ...rulesetRules({ contexts: REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: 15368 })) })
+      .map(rule => ({ ...rule, ruleset_id: RULESET_ID })),
+    {
+      type: 'required_status_checks',
+      ruleset_id: supervisorRulesetId,
+      parameters: { required_status_checks: [{ context: REQUIRED_STATUS_CONTEXT, integration_id: null }] },
+    },
+  ];
+  const { protection } = await readRuleProtection({
+    rules,
+    rulesets: {
+      [supervisorRulesetId]: {
+        enforcement: 'active',
+        bypass_actors: [alwaysBypass],
+        rules: [
+          { type: 'required_status_checks', parameters: { required_status_checks: [{ context: REQUIRED_STATUS_CONTEXT, integration_id: null }] } },
+          { type: 'deletion' },
+        ],
+      },
+    },
+  });
+  assert.throws(() => validateProtection(protection, 'main'), /does not apply to administrators/u);
+});
+
+test('legacy administrator enforcement cannot be masked by an owner-bypass-only Supervisor ruleset', async () => {
+  const supervisorRulesetId = 25825587;
+  const rules = [
+    {
+      type: 'required_status_checks',
+      ruleset_id: supervisorRulesetId,
+      parameters: { strict_required_status_checks_policy: false, required_status_checks: [{ context: REQUIRED_STATUS_CONTEXT, integration_id: null }] },
+    },
+  ];
+  const { protection } = await readRuleProtection({
+    legacy: {
+      ...legacyProtection,
+      required_status_checks: { ...legacyProtection.required_status_checks, strict: true },
+      enforce_admins: { enabled: false },
+    },
+    rules,
+    rulesets: { [supervisorRulesetId]: { enforcement: 'active', bypass_actors: [alwaysBypass] } },
+  });
+  assert.throws(() => validateProtection(protection, 'main'), /does not apply to administrators/u);
+});
+
+test('the Supervisor-only ruleset cannot supply ordinary up-to-date-base enforcement', async () => {
+  const supervisorRulesetId = 25825587;
+  const rules = [
+    ...rulesetRules({ checks: { strict_required_status_checks_policy: false } }).map(rule => ({ ...rule, ruleset_id: RULESET_ID })),
+    {
+      type: 'required_status_checks',
+      ruleset_id: supervisorRulesetId,
+      parameters: { strict_required_status_checks_policy: true, required_status_checks: [{ context: REQUIRED_STATUS_CONTEXT, integration_id: null }] },
+    },
+  ];
+  const { protection } = await readRuleProtection({
+    rules,
+    rulesets: { [supervisorRulesetId]: { enforcement: 'active', bypass_actors: [alwaysBypass] } },
+  });
+  assert.equal(protection.strict, true);
+  assert.throws(() => validateProtection(protection, 'main'), /does not require an up-to-date base/u);
+});
 
 test('ruleset 24154977 alone yields a protection object that passes validateProtection', async () => {
   const { protection, calls } = await readRuleProtection();
@@ -649,6 +797,43 @@ for (const [name, fixtures, expected] of [
   ['a disabled ruleset', { rulesets: { [RULESET_ID]: { enforcement: 'disabled', bypass_actors: [] } } }, /does not require pull requests/u],
   ['a bypass actor', { rulesets: { [RULESET_ID]: { enforcement: 'active', bypass_actors: [alwaysBypass] } } }, /does not apply to administrators/u],
   ['a pull-request-only bypass actor', { rulesets: { [RULESET_ID]: { enforcement: 'active', bypass_actors: [{ ...alwaysBypass, bypass_mode: 'pull_request' }] } } }, /does not apply to administrators/u],
+  ['an unsupported bypass mode on a Supervisor-only ruleset', {
+    rules: [
+      ...rulesetRules({ contexts: REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: 15368 })) }).map(rule => ({ ...rule, ruleset_id: RULESET_ID })),
+      { type: 'required_status_checks', ruleset_id: 99, parameters: { required_status_checks: [{ context: REQUIRED_STATUS_CONTEXT, integration_id: null }] } },
+    ],
+    rulesets: { 99: { enforcement: 'active', bypass_actors: [{ ...alwaysBypass, bypass_mode: 'unknown' }] } },
+  }, /does not apply to administrators/u],
+  ['a user bypass actor on a Supervisor-only ruleset', {
+    rules: [
+      ...rulesetRules().map(rule => ({ ...rule, ruleset_id: RULESET_ID })),
+      { type: 'required_status_checks', ruleset_id: 99, parameters: { required_status_checks: [{ context: REQUIRED_STATUS_CONTEXT, integration_id: null }] } },
+    ],
+    rulesets: { 99: { enforcement: 'active', bypass_actors: [{ actor_id: 5, actor_type: 'User', bypass_mode: 'always' }] } },
+  }, /does not apply to administrators/u],
+  ['a different repository role bypass actor on a Supervisor-only ruleset', {
+    rules: [
+      ...rulesetRules().map(rule => ({ ...rule, ruleset_id: RULESET_ID })),
+      { type: 'required_status_checks', ruleset_id: 99, parameters: { required_status_checks: [{ context: REQUIRED_STATUS_CONTEXT, integration_id: null }] } },
+    ],
+    rulesets: { 99: { enforcement: 'active', bypass_actors: [{ ...alwaysBypass, actor_id: 4 }] } },
+  }, /does not apply to administrators/u],
+  ['an administrator bypass on a ruleset that also protects CI', {
+    rules: [
+      ...rulesetRules().map(rule => ({ ...rule, ruleset_id: RULESET_ID })),
+      { type: 'required_status_checks', ruleset_id: 99, parameters: { required_status_checks: [
+        { context: REQUIRED_STATUS_CONTEXT, integration_id: null }, { context: 'core (24)', integration_id: 15368 },
+      ] } },
+    ],
+    rulesets: { 99: { enforcement: 'active', bypass_actors: [alwaysBypass] } },
+  }, /does not apply to administrators/u],
+  ['an inactive Supervisor-only ruleset', {
+    rules: [
+      ...rulesetRules({ contexts: REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: 15368 })) }).map(rule => ({ ...rule, ruleset_id: RULESET_ID })),
+      { type: 'required_status_checks', ruleset_id: 99, parameters: { required_status_checks: [{ context: REQUIRED_STATUS_CONTEXT, integration_id: null }] } },
+    ],
+    rulesets: { 99: { enforcement: 'evaluate', bypass_actors: [alwaysBypass] } },
+  }, /missing required checks: Supervisor review/u],
   ['a second contributing ruleset with a bypass actor', {
     rules: [...rulesetRules(), { type: 'deletion', ruleset_id: 99 }],
     rulesets: { 99: { enforcement: 'active', bypass_actors: [alwaysBypass] } },

@@ -97,12 +97,17 @@ The three Actions checks retain their GitHub Actions source restrictions; the
 supervisor status is an additional exact-head review gate. Each of the two core
 jobs runs `npm ci`, `npm run check`, `npm test`, and `npm run build`.
 Require a pull request, passing required checks on an up-to-date base, resolved
-review conversations, and administrator enforcement without bypass entries.
+review conversations, and administrator enforcement for ordinary protections.
+The repository owner may bypass only the dedicated Supervisor review status
+ruleset; agents always follow the normal protected review and merge path and never
+request administrator bypass. The checker verifies that the bypass scope contains
+only that status, regardless of ruleset name or ID.
 `main` is governed by repository ruleset 24154977 rather than legacy branch
 protection. The supervisor-review command reads both sources read-only: a
-requirement holds if either enforces it, and administrator enforcement requires
-every contributing ruleset to be `active` with no bypass actors. The ruleset's
-Copilot review does not re-review on push, by design: the gate is a completed
+requirement holds if either enforces it, while each source for ordinary protection
+must be active and apply to administrators. Only the separate Supervisor review
+status source may carry the repository owner's dedicated always or pull-request-only
+bypass actor. The ruleset's Copilot review does not re-review on push, by design: the gate is a completed
 Copilot review on some commit in the pull request (step 9). These settings are not evidence by themselves
 that live protection is configured; the supervisor reads back the live rule,
 recording the result or a specific platform limitation in the governing issue

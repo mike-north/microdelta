@@ -1,13 +1,13 @@
 # Scoped current detail calls for completed contribution searches
 
-**Standing: #252 supervisory-selected source-callable direction; detailed contract
-and API representation remain proposed. No runtime delivery claimed.**
+**Standing: #252 supervisory-selected bounded engineering contract. Public API
+spelling remains proposed. No runtime delivery or runtime acceptance claimed.**
 This gap-fill supports the first usable contribution report under #170/#240 and
 its owner-selected 24-hour target. That target is not an implementation estimate.
-Independent adversarial review and resolution of the decisions below precede
-implementation. The supervisor selected the distinct source-capable dynamic
-callable direction after review of candidate `b6c39d01`; this selection does not
-accept API spelling or settle persistence and shared-subject questions.
+The supervisor selected the distinct source-capable dynamic callable direction
+after review of candidate `b6c39d01`, then selected the identity and compatibility
+boundaries below after independent code assessment. Final independent review
+precedes implementation readiness; these selections do not accept public spelling.
 
 ## Purpose and governing boundaries
 
@@ -54,9 +54,9 @@ supplied source declaration. Preserve supplied memo steps unchanged. Reuse the
 existing person template and its summary memo; declare a possible detail-call edge
 once, instantiate dynamic calls while consuming the completed search. No runtime
 topology factory and no nested collection API are needed for this bounded shape.
-The detailed contract remains subject to the decisions below and adversarial review.
+The selected engineering boundaries below remain subject to final independent review.
 
-## Proposed contract
+## Selected bounded contract
 
 **SCD-1 — Declaration and identity.** Definition & Binding owns a source-slot
 kind, its parameter/result types, composition binding and author subject function.
@@ -71,9 +71,16 @@ It computes assessment subjects separately, so source and assessment never colli
 The structural witness locates the callable; the author subject names its scoped
 history. Neither observation revision, page number, array index, display label nor
 source response version becomes part of stable PR identity. A person's membership
-of a PR is not source freshness. Shared source subjects across people must obey the
-existing scoped-subject and unique-current-binding rules; accidental incompatible
-bindings are rejected rather than silently namespaced or merged.
+of a PR is not source freshness. The same uniquely supplied slot and author subject may be called beneath two
+people. Preserve existing supplied-call semantics: request-local sharing keys the
+current callable slot, scoped subject, version and digest of current argument values,
+not the parent member or forwarded origin. Different arguments get separate current
+resolutions; persisted reuse compares actually consumed argument/input facts.
+Differences the body never consumed do not automatically forbid reuse. Two occupants
+of one slot still reject as ambiguous; replacing the unique implementation between
+compositions invalidates its candidates normally. Distinct slots with equal dynamic
+subject text rely on stored slot correspondence to prevent cross-slot reuse; this
+cut adds no dynamic-subject exclusivity checker or hidden person prefix.
 
 **SCD-2 — Arguments and capabilities.** Both source `run` and `finality` receive
 tracked positional argument views, current applicable source inputs, and the
@@ -95,9 +102,13 @@ A policy input revision requests reconsideration; it is not proof of provider ch
 or an invented conditional-request validator. With no validator or justified
 finality, a current refresh can require a full fetch.
 
-**SCD-4 — Durable parent validation.** Persist the source-call kind, current
-structural slot correspondence, author subject basis, argument recipes, call order,
-exact child result and parent's consumed output facts using CMP-6/7 witnesses.
+**SCD-4 — Durable parent validation.** Preserve current structural slot
+correspondence, author subject basis, argument recipes, call order, exact child
+result and parent's consumed output facts using CMP-6/7 witnesses. Existing v2
+parent witnesses and call records have no persisted source/memo discriminator;
+retain their wire shapes. Current declared slot/edge kind plus the child's own
+persisted provenance kind determine source versus memo semantics. A memo/source
+mismatch rejects before source finality, never by interpreting memo data as source.
 Across a fresh process, validate the summary's own implementation and consumed
 non-child member/input facts first. Then resolve the completed-search child under
 current source policy at its recorded call position, and compare its consumed
@@ -218,53 +229,75 @@ bodies, assessment/summary bodies, exact references and admission events.
 | Same ID, changed detail | Revision changes; identical search IDs; mutable 101 refreshes beneath cached Ada; consuming assessment/summary change. Zero detail execution plus stale Ada is failure (SCD-3/4). |
 | Equal refreshed detail | Finality false; full fetch yields equal payload and new source reference; equal consumed facts retain assessor and summary exact references, with refresh work recorded (SCD-4). |
 | Unconsumed detail change | Refresh changes only a detail field the assessor does not read; new source reference, assessor and person summary retain exact references. Passing/copying all detail through the parent is failure (SCD-2/4). |
-| Shared PR across people | Both people select the same qualified ID; verify compatible binding/current arguments and restart correspondence, reject incompatible bindings, and exercise differing policy inputs under the selected sharing contract. Hook deduplication across the whole report is not implied (SCD-1/3). |
+| Shared PR across people | Same slot/subject/equal argument values share within one request and retain correctly after restart. Differing consumed argument/policy facts force current validation; unconsumed differences alone need not invalidate. Ambiguous occupants and stored wrong-slot/kind candidates never bypass correspondence. No global once-per-report hook guarantee (SCD-1/3). |
 | Added/removed/reordered IDs | Changed membership reruns Ada; survivors reuse; removed child is not refreshed; reordered search is interpreted according to the application's observed ordering; stable identity never follows index (SCD-1/5). |
 | Unaffected person | Grace retains her exact summary while Ada changes; no global fold identity/failure or closure barrier invalidates Grace (SCD-5/6). |
 | Pending/failed/empty search | No detail before completion; failed/truncated/pending is not empty; certified empty enables zero-detail summary (SCD-5). |
 | Required child wait/fail/stop | Hold or fail Ada 101; no successful current Ada summary; Grace completes; strict outer report remains incomplete; stop admits no new work and restart preserves completed children (SCD-6). |
-| Correspondence/arguments | Missing/ambiguous/kind-mismatched slots reject; changed argument basis cannot reuse old child; unjustified recipes cause ordinary miss; fresh-process reordered registration reconnects correct IDs (SCD-1/2/4). |
+| Correspondence/arguments | Missing/ambiguous/kind-mismatched slots reject; changed consumed argument basis cannot reuse old child; unjustified recipes cause ordinary miss; fresh-process reordered registration reconnects correct IDs (SCD-1/2/4). |
 | Policy/implementation changes | Changed retrieval implementation cannot be excused by true finality; changed prompt reruns assessment despite accepted terminal detail; stored finality true never bypasses current hook (SCD-3). |
 
-Proposed bounded sequence after acceptance:
+## Selected compatibility and bounded implementation handoff
 
-1. Definition/Binding and generated facade: tsd negative cases for source/memo slot
-   mismatch, arguments, previous and outcomes; runtime mint/bind/freeze tests, then
-   declarations and intentional alpha API reports. Preserve existing supplied steps.
-2. Resolution and History seam: failing source-call restart/currentness fixtures,
-   then source invocation lowering and CMP-7 reconstruction. Inspect invocation
-   discriminants, witness codecs, provenance and schema readers explicitly. Reuse
-   existing source outcomes and publication; do not silently reinterpret memo records.
-   If witness encoding changes, version it and specify old records as readable but
-   unsupported for this reuse path, or select an explicit migration with tests.
-   Do not silently change the operation journal or tracking semantics generation.
-3. Supervision integration: failing local failure/wait/stop and strictness tests,
-   then connect source dispatch to existing admission, retry/rate and accounting.
-   No new scheduling or inspection framework.
-4. Generated-facade two-person controlled fixture: all cases above with fresh
-   processes and no paid/live calls. Then adapt the first report consumer and narrow
-   CLI start/progress path in separately scoped work. Run strict compiler/lint,
-   Jest/tsd, API Extractor and package boundary checks for each affected cut; no
-   casts/private aliases to evade a missing public contract.
+The supervisor selected these engineering boundaries after code assessment, not
+as evidence that current runtime already supports callable sources:
 
-## Decisions required before implementation
+- Preserve v2 nested witness `{version, parent, child, index, arguments}`, parent
+  call records and existing derived/forwarded/unreconstructible recipes. Existing
+  v1 argument-free sibling witnesses remain unchanged. Extend current declaration,
+  token and edge checks in Definition's `composition.ts`/`invocation.ts` to dispatch
+  a distinct supplied-source call carrying binding, author subject and arguments.
+- Extend Resolution's v1 `kind: 'source'`, `children: []` result provenance reader
+  to accept a callable descriptor in the **source branch only**. Ordinary memo
+  provenance keeps its step-only descriptor restriction; supplied memo provenance
+  retains its existing form. The new reader preserves every supported old source,
+  memo and supplied record. This is an additive descriptor extension, not a witness
+  version change or permission to reinterpret existing memo records.
+- No older-binary downgrade/forward-read guarantee is added. Old Resolution readers
+  may classify new callable-source records as malformed and surface integrity
+  errors. Do not promise a graceful old-reader miss or migration. History's opaque
+  exact reads remain separate from Resolution parsing. Do not change the operation
+  journal, SQLite schema or Tracking semantics generation for this extension.
+- Extend source candidate lookup/eligibility with current author subject, version,
+  callable correspondence, implementation and source-versus-memo provenance checks
+  **before finality**. Source own-fact providers must resolve tracked `argument`
+  paths as well as existing inputs; both hook and run receive current argument views.
+- Source request sharing and execution intent/attempt identity must be call-keyed:
+  slot/binding, scoped subject, version and current argument identity, together with
+  applicable implementation/policy evidence. A source `stepKey` alone must never
+  alias different PR calls. Inspect `resolveSource` sharing, `freshSuppliedIdentity`,
+  `intent.ts` callable dependencies/supplied intent branches, ordered replay and live
+  dispatch; deliberately route the new kind through source acceptance and supervised
+  acquisition rather than the memo execution branch.
 
-- **Mechanism selected; prove its representation:** the supervisor selected the
-  distinct source-capable dynamic callable direction. Existing derived/forwarded
-  argument recipes are the proposed basis; implementation readiness still requires
-  independent inspection of their lowering through source dispatch and restart.
-  API spelling remains open; this is not a new recipe category.
-- **Confirm shared-subject scope:** source subject is PR evidence independent of
-  person membership. Confirm how the current registry admits the same compatible
-  callable invocation from two person instances without conflicting bindings; if
-  unsupported, specify a bounded fix or explicit author-scoped duplication. Do not
-  hide person prefixes in framework identity. The two-person disjoint fixture alone
-  cannot settle this shared-PR case.
-- **Select compatibility encoding:** inventory actual stored witness/dispatch forms
-  before choosing additive record extension, versioned rejection or migration.
-  Historical exact reads and journal recovery remain protected.
+One bounded end-to-end implementation issue can own this contract. The following
+are internal test-first milestones, not four mandatory serial PRs; split delivery
+only where a genuine independent review/acceptance boundary warrants it:
 
-Acceptance of this proposal would establish only the bounded engineering contract.
-It would not establish runtime readiness, a public stable API, close #250/#170, or
-complete M7. Record supervisory selection and any required revisions here before
-implementation issues claim readiness.
+1. Generated Definition/facade tsd negatives for source/memo slot mismatch,
+   arguments, previous and outcomes; runtime mint/bind/freeze tests, then declarations
+   and intentional alpha API reports. Preserve existing supplied memo behavior.
+2. Failing Resolution/History source-call restart/currentness and codec fixtures,
+   then callable-source dispatch, argument facts, candidate order, call-keyed sharing
+   and execution identity. Assert old source/memo/supplied records still parse,
+   v2 source-call parent witnesses round-trip unchanged, malformed descriptors reject,
+   source/memo mismatches never reach finality, new-reader old-history restart and
+   exact historical reads survive. Keep memo descriptor restrictions tested.
+3. Failing Supervision local failure/wait/stop and strictness cases, then connect
+   existing admission, retry/rate and accounting. No new scheduling/inspection system.
+4. The generated-facade two-person controlled fixture covers the full test map,
+   including shared IDs, changed consumed arguments, changed unconsumed detail and
+   fresh processes, with no live/paid calls. Strict compiler/lint, Jest/tsd, API
+   Extractor and package-boundary checks apply throughout; no casts or private aliases
+   may conceal a missing contract. Adapt the first report consumer and narrow CLI
+   start/progress in separately scoped delivery work.
+
+Public authoring spelling and ordinary implementation encodings remain open within
+these selected semantics. A demonstrated conflict with current machinery returns
+to supervisory review; it does not authorize inventing sharing/migration policy or
+silently broadening this issue into nested collections.
+
+This selection establishes only the bounded engineering contract.
+It does not establish runtime readiness, a public stable API, close #250/#170, or
+complete M7. Record final independent review and any required revisions before the
+implementation issue claims readiness.

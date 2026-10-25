@@ -14,10 +14,10 @@ of either assembly is recorded here.
 
 The following are **accepted requirements** owned by
 [TEST-3/4](../spec/acceptance.md#weekly-roster-workflow),
-[RUN-003–005](../spec/operations.md#run-003-readiness-is-scoped-to-the-consuming-calculation),
-[RUN-010–015](../spec/operations.md#run-010-strict-and-outcome-folds-have-different-contracts),
+[RUN-003–005](../spec/operations.md#run-003--readiness-is-scoped-to-the-consuming-calculation),
+[RUN-010–015](../spec/operations.md#run-010--strict-and-outcome-folds-have-different-contracts),
 [RUN-016–019](../spec/operations.md#trials-and-environment-protection),
-[CMP-1–9](../spec/composition.md), [REUSE-002–005](../spec/execution.md#reuse-002-current-finality-hooks-are-authoritative), and [M7](../milestones.md#m7-full-roster-workflow-and-scale-acceptance): readiness is scoped to required consumers; a member may proceed while discovery remains open; complete folds wait for truthful closure; stable identity and current source acceptance govern reuse; abstract topology is declared before data; required retry rejection gracefully stops the whole analysis; and the full roster plus CLI and scale checks remain distinct gates.
+[CMP-1–9](../spec/composition.md), [REUSE-002–005](../spec/execution.md#reuse-002--current-finality-hooks-are-authoritative), and [M7](../milestones.md#m7--full-roster-workflow-and-scale-acceptance): readiness is scoped to required consumers; a member may proceed while discovery remains open; complete folds wait for truthful closure; stable identity and current source acceptance govern reuse; abstract topology is declared before data; required retry rejection gracefully stops the whole analysis; and the full roster plus CLI and scale checks remain distinct gates.
 
 **Inspected support** is narrower. Collection results already distinguish open
 and complete membership, and one request resolves one immutable source result
@@ -71,7 +71,7 @@ This model answers the required consumer questions directly:
   source acceptance and child provenance remain visible while ordinary nested
   validation may retain the exact parent summary reference.
 
-See [RUN-003–005](../spec/operations.md#run-003-readiness-is-scoped-to-the-consuming-calculation), [CMP-1–9](../spec/composition.md), and [REUSE-002–005](../spec/execution.md#reuse-002-current-finality-hooks-are-authoritative) for the normative outcomes and ownership.
+See [RUN-003–005](../spec/operations.md#run-003--readiness-is-scoped-to-the-consuming-calculation), [CMP-1–9](../spec/composition.md), and [REUSE-002–005](../spec/execution.md#reuse-002--current-finality-hooks-are-authoritative) for the normative outcomes and ownership.
 
 ## Controlled adapter contract
 
@@ -326,7 +326,7 @@ release changes and package publication are outside this plan.
 The active requirements are in [SPEC-1 and the reading map](../spec/README.md),
 [ARC-001/005/006/008](../spec/architecture.md), [CMP-1–9](../spec/composition.md),
 [RUN-003–005 and RUN-010–019](../spec/operations.md), [REUSE-002–005](../spec/execution.md),
-[TEST-3/4](../spec/acceptance.md#weekly-roster-workflow), and [M7](../milestones.md#m7-full-roster-workflow-and-scale-acceptance).
+[TEST-3/4](../spec/acceptance.md#weekly-roster-workflow), and [M7](../milestones.md#m7--full-roster-workflow-and-scale-acceptance).
 Issue-specific CR-2/4/5 outcomes are recorded in [issue #170](https://github.com/mike-north/microdelta/issues/170).
 
 Repository support observations are pinned to baseline commit

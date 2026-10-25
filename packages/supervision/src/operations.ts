@@ -26,6 +26,7 @@
 import type { IAdmissionRequest } from '@microdelta/resolution';
 
 import type { IAbortSignal } from './control.js';
+import type { IRunContext } from './contracts.js';
 
 /**
  * A scoped subject and compatibility group, as Resolution presents admitted
@@ -62,6 +63,94 @@ export interface IOperationUsage {
   readonly quantities: readonly IOperationQuantity[];
 }
 
+/** A reusable, non-secret identity for the adapter and access context that interprets failures. @alpha */
+export interface IRetrySourceScope {
+  /** Adapter family, independent of a step or result identifier. */
+  readonly source: string;
+  /** Logical remote service, not an inferred hostname. */
+  readonly service: string;
+  /** Configured access context identity; never a credential or token. */
+  readonly connection: string;
+}
+
+/** Small adapter-extracted provider facts that may inform a source policy. @alpha */
+export interface IRetryFacts {
+  /** Provider's HTTP status, when one exists. */
+  readonly httpStatus?: number;
+  /** Bounded provider code, without response payload or headers. */
+  readonly providerCode?: string;
+  /** Bounded, adapter-defined contextual conditions. */
+  readonly conditions?: readonly string[];
+}
+
+/** One complete source decision; policy has no allowance or dispatch authority. @alpha */
+export type IRetryDecision =
+  | { readonly kind: 'retry-now' }
+  | { readonly kind: 'retry-after'; readonly delayMilliseconds: number }
+  | { readonly kind: 'stop' };
+
+/** Normalized provider outcome supplied to a source retry policy. @alpha */
+export type IRetryOutcome =
+  | { readonly kind: 'failed'; readonly transient: boolean }
+  | { readonly kind: 'rate-limited' }
+  | { readonly kind: 'unknown' };
+
+/** One bounded prior sent-attempt summary for the same logical operation and run. @alpha */
+export interface IRetryAttemptSummary {
+  /** Identity of this actual network attempt. */
+  readonly requestAttempt: string;
+  /** Normalized outcome recorded for this attempt. */
+  readonly status: 'failed' | 'rate-limited' | 'unknown';
+  /** Actual usage acknowledgment, where known; absence remains unknown. */
+  readonly usage: IAttemptUsage;
+  /** A previously accepted decision, when one exists. */
+  readonly decision?: IRetryDecision;
+}
+
+/** Bounded current-run history; `sentAttempts` is authoritative despite truncation. @alpha */
+export interface IRetryHistory {
+  /** Actual sent attempts for this operation in the current private run instance. */
+  readonly sentAttempts: number;
+  /** Latest eight eligible prior attempts, oldest first. */
+  readonly prior: readonly IRetryAttemptSummary[];
+  /** Earlier eligible prior attempts omitted from `prior`. */
+  readonly omittedPriorAttempts: number;
+  /** Most recent accepted retry delay, not elapsed time or provider not-before. */
+  readonly previousDelayMilliseconds?: number;
+}
+
+/** Readonly evidence for one retry choice; it grants no supervised execution capability. @alpha */
+export interface IRetryDecisionInput {
+  /** Current run attribution and analysis/environment scope. */
+  readonly context: IRunContext;
+  /** Exact source registration selected for this operation. */
+  readonly source: IRetrySourceScope;
+  /** Stable logical operation identity. */
+  readonly operation: string;
+  /** The sent request attempt whose response is being classified. */
+  readonly requestAttempt: string;
+  /** Adapter-normalized outcome, separate from provider facts. */
+  readonly outcome: IRetryOutcome;
+  /** Detached, bounded facts extracted by the adapter. */
+  readonly facts: IRetryFacts;
+  /** Strongest known independent provider/durable not-before floor. */
+  readonly knownNotBefore?: number;
+  /** Bounded actual history for this operation and run. */
+  readonly history: IRetryHistory;
+  /** Aborted when this classification wait is cancelled by run control. */
+  readonly signal: IAbortSignal;
+}
+
+/** Exact scoped callback reused by a source adapter across matching operations. @alpha */
+export interface ISourceRetryPolicy {
+  /** Unique, non-secret registration identifier. */
+  readonly id: string;
+  /** Exact source/service/connection tuple selected by the adapter. */
+  readonly scope: IRetrySourceScope;
+  /** Make one complete retry decision for the supplied bounded observation. */
+  decide(input: IRetryDecisionInput): IRetryDecision | Promise<IRetryDecision>;
+}
+
 /**
  * How an adapter classifies one request attempt's response. Only the adapter
  * knows its provider's meaning; Supervision applies the retry policy to it.
@@ -83,9 +172,9 @@ export interface IOperationUsage {
  */
 export type IOperationResponse<T> =
   | { readonly kind: 'succeeded'; readonly value: T; readonly usage?: IOperationUsage }
-  | { readonly kind: 'failed'; readonly transient: boolean; readonly error?: unknown; readonly usage?: IOperationUsage }
-  | { readonly kind: 'rate-limited'; readonly retryAt?: number; readonly usage?: IOperationUsage }
-  | { readonly kind: 'unknown'; readonly usage?: IOperationUsage };
+  | { readonly kind: 'failed'; readonly transient: boolean; readonly error?: unknown; readonly usage?: IOperationUsage; readonly retryFacts?: IRetryFacts; readonly notBefore?: number }
+  | { readonly kind: 'rate-limited'; readonly retryAt?: number; readonly usage?: IOperationUsage; readonly retryFacts?: IRetryFacts; readonly notBefore?: number }
+  | { readonly kind: 'unknown'; readonly usage?: IOperationUsage; readonly retryFacts?: IRetryFacts; readonly notBefore?: number };
 
 /**
  * What one request attempt's `perform` receives: the abort signal a hard stop
@@ -169,6 +258,8 @@ export interface IOperationRequest<T> {
   readonly providerIdempotency?: boolean;
   /** The author's retry policy. */
   readonly retry?: IOperationRetryPolicy;
+  /** Exact adapter/service/access identity used to select a reusable source retry policy. */
+  readonly retrySource?: IRetrySourceScope;
   /** Send one request attempt and classify its response. A rejection is an unknown outcome. */
   perform(send: IOperationSend): Promise<IOperationResponse<T>>;
   /**
@@ -329,14 +420,17 @@ export type IOperationSettlement =
  * Why a step's work is blocked by an unsettled external operation: deferred
  * until `notBefore`, a known recoverable refusal exhausted this run's
  * allowance, or an unknown outcome whose current run's finite policy is
- * exhausted. `unrecorded` means a lost writer lease could not settle the
- * outcome (EXP-8 ruling R). `not-repeat-safe` remains in the alpha union for
+ * exhausted. A source-classification block preserves a known provider
+ * response while its one live callback waits, or reports that no live owner
+ * can finish the pending decision. `unrecorded` means a lost writer lease
+ * could not settle the outcome (EXP-8 ruling R). `not-repeat-safe` remains in the alpha union for
  * old consumers but is not emitted for acquisition by the current engine.
  * @alpha
  */
 export type IOperationBlock =
   | { readonly kind: 'deferred'; readonly operation: string; readonly notBefore: number }
   | { readonly kind: 'policy-exhausted'; readonly operation: string }
+  | { readonly kind: 'classification'; readonly operation: string; readonly reason: 'waiting' | 'interrupted' }
   | { readonly kind: 'unknown-outcome'; readonly operation: string; readonly reason: 'not-repeat-safe' | 'policy-exhausted' | 'unrecorded' };
 
 /**
@@ -524,7 +618,9 @@ export type IOperationPhase =
  * `lost-response` an unknown outcome; `policy-exhausted` why the current
  * run cannot retry it (`not-repeat-safe` remains for alpha compatibility);
  * `not-before` a
- * deferral; `stopped` stop intent; `lease-lost` a commit the writer lease no
+ * deferral; `classification-waiting` or `classification-interrupted` a known
+ * response awaiting a live decision or left without authorized ownership;
+ * `stopped` stop intent; `lease-lost` a commit the writer lease no
  * longer authorizes; `recovered-after-crash` an attempt a dead run left in
  * flight; `unrecorded` a usage write that issued no acknowledgment;
  * `conflict` a redelivered report that disagreed with the recorded one;
@@ -539,6 +635,8 @@ export type IOperationReason =
   | 'not-repeat-safe'
   | 'policy-exhausted'
   | 'not-before'
+  | 'classification-waiting'
+  | 'classification-interrupted'
   | 'stopped'
   | 'lease-lost'
   | 'recovered-after-crash'
@@ -642,7 +740,7 @@ export const blocksFormat = 'microdelta.supervision.blocks';
  */
 export const operationJournalDeclaration: { readonly formats: readonly { readonly format: string; readonly versions: readonly number[] }[] } = Object.freeze({
   formats: Object.freeze([
-    Object.freeze({ format: operationFormat, versions: Object.freeze([1, 2, 3]) }),
+    Object.freeze({ format: operationFormat, versions: Object.freeze([1, 2, 3, 4]) }),
     Object.freeze({ format: blocksFormat, versions: Object.freeze([1]) }),
   ]),
 });

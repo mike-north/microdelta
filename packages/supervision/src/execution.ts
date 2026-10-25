@@ -181,6 +181,10 @@ export function pendingError(signal: IPendingSignal): SupervisionError {
       return new SupervisionError('operation-deferred', `Operation ${signal.operation} is deferred until ${String(signal.notBefore)}; nothing is sent before then`);
     case 'policy-exhausted':
       return new SupervisionError('operation-exhausted', `Operation ${signal.operation} exhausted this run's finite retry allowance; its required input remains pending`);
+    case 'classification':
+      return new SupervisionError('operation-classification-incomplete', signal.reason === 'waiting'
+        ? `Operation ${signal.operation} is waiting for its one live source classification; its required input remains pending`
+        : `Operation ${signal.operation} has an interrupted source classification; only an explicit new run may retry its required input`);
     case 'unknown-outcome':
       return new SupervisionError('operation-unknown', `Operation ${signal.operation} has an unknown outcome (${signal.reason}); this attempt cannot send again`);
     default: {

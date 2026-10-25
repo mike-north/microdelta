@@ -361,7 +361,14 @@ describe('intent before send (ACC-007)', () => {
       expect.objectContaining({ requestAttempt: `${firstOperation}/1`, status: 'pending' }),
     ]);
     expect(journal.operation(firstOperation)).toEqual(expect.objectContaining({
-      status: 'unknown', attempts: [expect.objectContaining({ requestAttempt: `${firstOperation}/1`, status: 'unknown' })],
+      status: 'deferred', notBefore: T0 + 2_000,
+      classification: expect.objectContaining({
+        kind: 'accepted', decision: { kind: 'retry-after', delayMilliseconds: 2_000 }, notBefore: T0 + 2_000,
+      }),
+      attempts: [expect.objectContaining({
+        requestAttempt: `${firstOperation}/1`, status: 'unknown', usage: 'none',
+        decision: { kind: 'retry-after', delayMilliseconds: 2_000 },
+      })],
     }));
   });
 
@@ -601,7 +608,7 @@ describe('operator actions are run operations (CMP-9)', () => {
 });
 
 describe('records written before the intent mark existed', () => {
-  test('a v1 unknown attempt remains historical through a v3 rewrite and never acquires a fabricated run instance', () => {
+  test('a v1 unknown attempt remains historical through a v4 rewrite and never acquires a fabricated run instance', () => {
     const legacy = {
       format: 'microdelta.supervision.operation',
       formatVersion: 1,
@@ -615,7 +622,7 @@ describe('records written before the intent mark existed', () => {
     const restored = decodeOperation(legacy);
     expect(restored.attempts[0]?.runInstance).toBeUndefined();
     const rewritten = encodeOperation(restored);
-    expect(rewritten.formatVersion).toBe(3);
+    expect(rewritten.formatVersion).toBe(4);
     expect(rewritten.content).toEqual(expect.objectContaining({ attempts: [expect.objectContaining({ runInstance: null })] }));
     expect(decodeOperation(rewritten).attempts).toEqual(restored.attempts);
     const malformed = { ...rewritten, content: { ...legacy.content, attempts: [{ ...legacy.content.attempts[0], runInstance: 7 }] } };
@@ -638,13 +645,82 @@ describe('records written before the intent mark existed', () => {
     expect(decodeOperation(valid)).toEqual(expect.objectContaining({ status: 'retry-exhausted', attempts: [expect.objectContaining({
       run: 'run:reused', runInstance: 'run-instance-0123456789abcdef0123456789abcdef', status: 'failed',
     })] }));
-    expect(operationJournalDeclaration.formats.find((format) => format.format === 'microdelta.supervision.operation')?.versions).toEqual([1, 2, 3]);
+    expect(operationJournalDeclaration.formats.find((format) => format.format === 'microdelta.supervision.operation')?.versions).toEqual([1, 2, 3, 4]);
 
     expect(() => decodeOperation({ ...valid, formatVersion: 1 })).toThrow(SupervisionError);
     expect(() => decodeOperation({ ...valid, formatVersion: 2 })).toThrow(SupervisionError);
     expect(() => decodeOperation({ ...valid, content: { ...content, attempts: [{ ...content.attempts[0], runInstance: null }] } })).toThrow(SupervisionError);
     expect(() => decodeOperation({ ...valid, content: { ...content, attempts: [{ ...content.attempts[0], runInstance: 'run:reused' }] } })).toThrow(SupervisionError);
     expect(() => decodeOperation({ ...valid, content: { ...content, attempts: [{ ...content.attempts[0], status: 'unknown' }] } })).toThrow(SupervisionError);
+  });
+
+  test('a v2 attempt preserves private identity or an explicit upgraded-v1 null, but rejects a missing field', () => {
+    const runInstance = 'run-instance-0123456789abcdef0123456789abcdef';
+    const content = {
+      operation: firstOperation, subject: 'assess', version: 1, member: 'pr-1', name: 'assess', binding: 'sha256:binding',
+      safety: 'none', maxAttempts: 3, rateLimitRetries: 5, status: 'unknown', unrecorded: 0, notBefore: null,
+      attempts: [{ requestAttempt: `${firstOperation}/1`, run: 'run:public-label', runInstance, stepAttempt: '3', status: 'unknown', remote: null, usage: 'none', intent: null }],
+      settlement: null, resolution: null,
+    };
+    const valid = { format: 'microdelta.supervision.operation', formatVersion: 2, content };
+    const restored = decodeOperation(valid);
+    expect(restored.attempts[0]?.runInstance).toBe(runInstance);
+    expect(decodeOperation(encodeOperation(restored)).attempts[0]?.runInstance).toBe(runInstance);
+    const upgradedV1 = { ...valid, content: { ...content, attempts: [{ ...content.attempts[0], runInstance: null }] } };
+    const historical = decodeOperation(upgradedV1);
+    expect(historical.attempts[0]?.runInstance).toBeUndefined();
+    expect(decodeOperation(encodeOperation(historical)).attempts[0]?.runInstance).toBeUndefined();
+    expect(() => decodeOperation({ ...valid, content: { ...content, attempts: [{ ...content.attempts[0], runInstance: undefined }] } })).toThrow(SupervisionError);
+  });
+
+  test('v4 keeps an exhausted unknown response incomplete under the private run identity', () => {
+    const runInstance = 'run-instance-0123456789abcdef0123456789abcdef';
+    const record = {
+      format: 'microdelta.supervision.operation', formatVersion: 4,
+      content: {
+        operation: firstOperation, subject: 'assess', version: 1, member: 'pr-1', name: 'assess', binding: 'sha256:binding',
+        safety: 'none', maxAttempts: 1, rateLimitRetries: 5, status: 'retry-exhausted', unrecorded: 0, notBefore: null,
+        previousDelayMilliseconds: null, retryExhaustedRunInstance: runInstance, classification: { kind: 'no-retry', runInstance, code: 'policy-exhausted' },
+        attempts: [{ requestAttempt: `${firstOperation}/1`, run: 'run:current', runInstance, stepAttempt: '3', status: 'unknown', remote: null, usage: 'unrecorded', intent: null, decision: null }],
+        settlement: null, resolution: null,
+      },
+    };
+    expect(decodeOperation(record)).toEqual(expect.objectContaining({
+      status: 'retry-exhausted',
+      attempts: [expect.objectContaining({ status: 'unknown', usage: 'unrecorded' })],
+    }));
+  });
+
+  test('v4 retains bounded pending classification while malformed source metadata fails integrity', () => {
+    const content = {
+      operation: firstOperation, subject: 'assess', version: 1, member: 'pr-1', name: 'assess', binding: 'sha256:binding',
+      safety: 'none', maxAttempts: 3, rateLimitRetries: 1, status: 'pending', unrecorded: 0, notBefore: null,
+      retryExhaustedRunInstance: null,
+      attempts: [{ requestAttempt: `${firstOperation}/1`, run: 'run:current', runInstance: 'run-instance-0123456789abcdef0123456789abcdef', stepAttempt: '3', status: 'failed', remote: null, usage: 'none', intent: null }],
+      settlement: null,
+      classification: {
+        kind: 'pending',
+        runInstance: 'run-instance-0123456789abcdef0123456789abcdef',
+        requestAttempt: `${firstOperation}/1`,
+        source: { source: 'catalog', service: 'catalog-api', connection: 'org-a-read' },
+        outcome: { kind: 'failed', transient: false },
+        facts: { httpStatus: 404, conditions: ['resource-expected-later'] },
+        generation: 'decision-1',
+      },
+    };
+    const valid = { format: 'microdelta.supervision.operation', formatVersion: 4, content };
+    const restored = decodeOperation(valid);
+    expect(Reflect.get(restored, 'classification')).toEqual(content.classification);
+    expect(() => decodeOperation({ ...valid, content: { ...content, classification: { ...content.classification, facts: { headers: { authorization: 'secret' } } } } })).toThrow(SupervisionError);
+    for (const classification of [
+      { ...content.classification, runInstance: 'run:public-label' },
+      { kind: 'failed', runInstance: 'run:public-label', code: 'policy-error' },
+      { kind: 'cancelled', runInstance: 'run:public-label', code: 'stopped' },
+      { kind: 'no-retry', runInstance: 'run:public-label', code: 'policy-exhausted' },
+    ]) {
+      expect(() => decodeOperation({ ...valid, content: { ...content, classification } })).toThrow(SupervisionError);
+    }
+    expect(() => decodeOperation({ ...valid, content: { ...content, previousDelayMilliseconds: -1 } })).toThrow(SupervisionError);
   });
 
   test('a current invocation can retry a v1 unknown record even when the public runId repeats', async () => {
@@ -746,6 +822,21 @@ describe('records written before the superseded resolution existed', () => {
 });
 
 describe('malformed requests, options and records', () => {
+  test('a throwing retry-source getter is a bounded request error before send', async () => {
+    const journal = memoryJournal();
+    const sent = { count: 0 };
+    const outcome = await runOne(journal, memoryAccounting(), () => {
+      const request = operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent);
+      // Untyped callers can supply accessors even though the declaration is readonly.
+      Object.defineProperty(request, 'retrySource', { get() { throw new Error('private request credential'); } });
+      return request;
+    });
+    expect(outcome.code).toBe('invalid-request');
+    expect(outcome.diagnostics.join(' ')).not.toContain('private request credential');
+    expect(journal.commits).toBe(0);
+    expect(sent.count).toBe(0);
+  });
+
   test.each([
     ['a name that is not an identifier', { name: 'Assess Now' }],
     ['an empty binding', { binding: '' }],

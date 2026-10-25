@@ -25,7 +25,7 @@
 import { declarations } from '@microdelta/definition';
 import type { IFoldEntry, IMemberBuilder, IOutcomeEntry } from '@microdelta/definition';
 import { SupervisionError } from '@microdelta/supervision';
-import type { IOperationRetryPolicy, ISupervision } from '@microdelta/supervision';
+import type { IOperationRetryPolicy, IRetrySourceScope, ISupervision } from '@microdelta/supervision';
 
 import { sourceOutcome } from '../../src/index.js';
 import type { IAuthoring, IAuthoringFamily, IComposition, ISourceOutcome, IStepDescriptor, ITrackedView } from '../../src/index.js';
@@ -75,6 +75,8 @@ export interface IOperationOptions {
   readonly safeToRepeat?: boolean;
   readonly providerIdempotency?: boolean;
   readonly retry?: IOperationRetryPolicy;
+  /** Exact source scope used by tests of reusable retry-policy selection. */
+  readonly retrySource?: IRetrySourceScope;
 }
 
 /** The mutable fixture world one test installs. */
@@ -292,8 +294,8 @@ export function assessmentSubject(key: string): string {
   return `assessment:${key}`;
 }
 
-/** Compose the fixture with fresh allocations, standing in for a new process. */
-export function composeOperations(): IOperationsFixture {
+/** Compose fresh allocations in one analysis namespace, as a new process would. */
+export function composeOperations(scope: string = analysis): IOperationsFixture {
   const builders: IAuthoring<IInputs, IHelpers> = declarations<IAuthoringFamily<IInputs, IHelpers>>();
   const { source, memo, template, fold, outcomeFold, compose } = builders;
   const prs = source<IRoster>({
@@ -322,7 +324,7 @@ export function composeOperations(): IOperationsFixture {
   });
   const tallied = outcomeFold({ subject: 'tally:acme/widget', over: { template: pr, step: 'assess' }, run: ({ members, helpers }) => helpers.tally(members) });
   const composition = compose({
-    scope: analysis,
+    scope,
     inputs: [],
     helpers: [
       { slot: 'roster', helper: roster },
@@ -344,9 +346,9 @@ export function composeOperations(): IOperationsFixture {
   return {
     builders,
     composition,
-    report: Object.freeze({ scope: analysis, role: 'step', slot: 'report' }),
-    tally: Object.freeze({ scope: analysis, role: 'step', slot: 'tally' }),
-    parent: Object.freeze({ scope: analysis, role: 'step', slot: 'parent' }),
-    instance: (memberKey) => Object.freeze({ scope: analysis, role: 'step', slot: 'assess', template: 'pr', collection: 'prs', memberKey }),
+    report: Object.freeze({ scope, role: 'step', slot: 'report' }),
+    tally: Object.freeze({ scope, role: 'step', slot: 'tally' }),
+    parent: Object.freeze({ scope, role: 'step', slot: 'parent' }),
+    instance: (memberKey) => Object.freeze({ scope, role: 'step', slot: 'assess', template: 'pr', collection: 'prs', memberKey }),
   };
 }

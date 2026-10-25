@@ -21,6 +21,8 @@ import type { IWriterAttempt } from './contracts.js';
  *   step attempt it belonged to can no longer publish; its body may let this propagate. It also ends a
  *   normal request's wait for the writer lease, before that request has done anything.
  * - `operation-failed`: an external operation settled as a permanent provider refusal (RUN-011). The step attempt may still handle it.
+ * - `operation-classification-failed`: a source retry callback or its return value was invalid; provider evidence stays recorded and no fallback retry is permitted (RUN-011).
+ * - `operation-classification-incomplete`: a known provider response awaits its one live source decision, or its decision lost authority and requires an explicit new run (RUN-011/012).
  * - `operation-deferred`: an external operation is deferred until a later time (RUN-011). Nothing was sent before that
  *   time; the step attempt can no longer publish or send, and its work stays pending.
  * - `operation-unknown`: an acquisition's outcome is unknown and this run's finite allowance is spent (RUN-012).
@@ -46,6 +48,8 @@ export type ISupervisionErrorCode =
   | 'invalid-request'
   | 'stopped'
   | 'operation-failed'
+  | 'operation-classification-failed'
+  | 'operation-classification-incomplete'
   | 'operation-deferred'
   | 'operation-unknown'
   | 'operation-exhausted'

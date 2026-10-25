@@ -3,7 +3,8 @@
  * RUN-014, ACC-003, ACC-005, ACC-007; EXP-8 mechanisms 3 to 7, supervisor
  * resolutions 1 to 8 and ruling R).
  *
- * It owns the meaning of Supervision's operation records and applies, in this
+ * It composes pure retry-policy interpretation while retaining journal,
+ * callback-lifecycle, fencing, allowance and send authority. It applies, in this
  * order for every request attempt:
  *
  * 1. **Address.** An operation is addressed by its step attempt's subject, its
@@ -52,7 +53,8 @@
 import type { IAdmissionDecision, IAdmissionRequest } from '@microdelta/resolution';
 
 import type { IRunContext, IRunEvent, IRunLease } from './contracts.js';
-import type { IRunTimer } from './control.js';
+import { createAbortSource } from './control.js';
+import type { IRunTimer, IStopController } from './control.js';
 import type { IRunRandom } from './operations.js';
 import { SupervisionError } from './errors.js';
 import { descriptorKey, pendingError } from './execution.js';
@@ -67,15 +69,34 @@ import type {
   IOperationReason,
   IOperationRemoteState,
   IOperationRequest,
+  IOperationRetryPolicy,
   IOperationResponse,
   IOperationSettlement,
   IOperationStatus,
   IOperationSubject,
   IOperationUsage,
   IOperationView,
+  IRetryDecision,
+  IRetryDecisionInput,
+  IRetryFacts,
+  IRetrySourceScope,
+  ISourceRetryPolicy,
   IRequestAttemptStatus,
   IRunOperationPorts,
 } from './operations.js';
+import {
+  builtInRetryDecision,
+  defaultRetryDelay,
+  retryFacts,
+  retryFloor,
+  retryHistory,
+  retryOutcome,
+  sameRetrySource,
+  selectRetryPolicy,
+  validatedRetryDecision,
+  validatedRetryPolicies,
+  validatedRetrySource,
+} from './retry-classification.js';
 import {
   decodeBlocks,
   decodeOperation,
@@ -88,7 +109,7 @@ import {
   unknownRetry,
   viewOf,
 } from './records.js';
-import type { IAttemptRecord, IBlockEntry, IOperationRecord, ISafetyBasis } from './records.js';
+import type { IAttemptRecord, IBlockEntry, IClassificationRecord, IOperationRecord, ISafetyBasis } from './records.js';
 
 /**
  * The identifier rule of operation names, operator identities and the usage
@@ -102,15 +123,6 @@ const defaultRateLimitRetries = 5;
 
 /** The ordinary acquisition allowance counts all actual sends, including rate refusals. */
 const defaultMaxAttempts = 3;
-
-/** Bounded deterministic direct-path backoff; providers' later not-before times still win. */
-const defaultRetryBackoff = Object.freeze({ initialMilliseconds: 2_000, capMilliseconds: 60_000 });
-
-/** Default wait after one or more sent attempts of this invocation. */
-function defaultRetryDelay(spent: number): number {
-  const doublings = Math.max(0, spent - 1);
-  return doublings >= 5 ? defaultRetryBackoff.capMilliseconds : Math.min(defaultRetryBackoff.capMilliseconds, defaultRetryBackoff.initialMilliseconds * 2 ** doublings);
-}
 
 /**
  * The backoff after an intent that could not be made durable (Accounting
@@ -177,6 +189,8 @@ interface IValidatedRequest<T> {
   /** An author-specified fixed delay; absent uses the bounded increasing default. */
   readonly backoff: number | undefined;
   readonly rateLimitRetries: number;
+  /** Detached exact source tuple; absent means built-in classification. */
+  readonly retrySource: IRetrySourceScope | undefined;
   readonly providerIdempotency: boolean;
   readonly perform: IOperationRequest<T>['perform'];
   readonly cancel: (() => Promise<'cancelled' | 'running'>) | undefined;
@@ -184,7 +198,15 @@ interface IValidatedRequest<T> {
 
 /** Read and validate an operation request. */
 function validated<T>(request: IOperationRequest<T>): IValidatedRequest<T> {
-  const read = (field: string): unknown => typeof request === 'object' && request !== null ? Reflect.get(request, field) : undefined;
+  const read = <K extends keyof IOperationRequest<T>>(field: K): IOperationRequest<T>[K] => {
+    try {
+      return request[field];
+    } catch {
+      // A request accessor is untrusted author input; neither its exception
+      // nor a partial declaration can become a provider send or diagnostic.
+      throw new SupervisionError('invalid-request', 'An operation request has a malformed field');
+    }
+  };
   const name = read('name');
   const binding = read('binding');
   const perform = read('perform');
@@ -192,6 +214,7 @@ function validated<T>(request: IOperationRequest<T>): IValidatedRequest<T> {
   const safeToRepeat = read('safeToRepeat');
   const providerIdempotency = read('providerIdempotency');
   const retry = read('retry');
+  const rawRetrySource = read('retrySource');
   if (!isIdentifier(name)) {
     throw new SupervisionError('invalid-request', 'An operation needs an identifier name');
   }
@@ -202,8 +225,18 @@ function validated<T>(request: IOperationRequest<T>): IValidatedRequest<T> {
     || (retry !== undefined && (typeof retry !== 'object' || retry === null))) {
     throw new SupervisionError('invalid-request', `Operation ${name} has a malformed safety declaration or retry policy`);
   }
-  const policy = (field: string): unknown => typeof retry === 'object' && retry !== null ? Reflect.get(retry, field) : undefined;
+  const policy = (field: keyof IOperationRetryPolicy): unknown => {
+    if (retry === undefined) {
+      return undefined;
+    }
+    try {
+      return retry[field];
+    } catch {
+      throw new SupervisionError('invalid-request', 'An operation retry policy has a malformed field');
+    }
+  };
   const declaredBackoff = policy('backoffMilliseconds');
+  const retrySource = rawRetrySource === undefined ? undefined : validatedRetrySource(rawRetrySource, 'retrySource');
   return {
     name,
     binding,
@@ -211,10 +244,11 @@ function validated<T>(request: IOperationRequest<T>): IValidatedRequest<T> {
     maxAttempts: count(policy('maxAttempts'), defaultMaxAttempts, 'maxAttempts', 1),
     backoff: declaredBackoff === undefined ? undefined : count(declaredBackoff, 0, 'backoffMilliseconds', 0),
     rateLimitRetries: count(policy('rateLimitRetries'), defaultRateLimitRetries, 'rateLimitRetries', 0),
+    retrySource,
     providerIdempotency: providerIdempotency === true,
     // Validated just above; the request's own declared types describe these members.
-    perform: request.perform.bind(request),
-    cancel: request.cancel?.bind(request),
+    perform: perform.bind(request),
+    cancel: cancel?.bind(request),
   };
 }
 
@@ -240,9 +274,9 @@ function usageOf(value: unknown): IOperationUsage | undefined {
 /** An adapter's classification of one response, read defensively: anything unrecognized is an unknown outcome. */
 type IClassified<T> =
   | { readonly kind: 'succeeded'; readonly value: T; readonly usage: IOperationUsage | undefined }
-  | { readonly kind: 'failed'; readonly transient: boolean; readonly error: unknown; readonly usage: IOperationUsage | undefined }
-  | { readonly kind: 'rate-limited'; readonly retryAt: number | undefined; readonly usage: IOperationUsage | undefined }
-  | { readonly kind: 'unknown'; readonly usage: IOperationUsage | undefined };
+  | { readonly kind: 'failed'; readonly transient: boolean; readonly error: unknown; readonly usage: IOperationUsage | undefined; readonly facts: IRetryFacts; readonly notBefore: number | undefined }
+  | { readonly kind: 'rate-limited'; readonly retryAt: number | undefined; readonly usage: IOperationUsage | undefined; readonly facts: IRetryFacts; readonly notBefore: number | undefined }
+  | { readonly kind: 'unknown'; readonly usage: IOperationUsage | undefined; readonly facts: IRetryFacts; readonly notBefore: number | undefined };
 
 /**
  * Classify a transmission's settled response. A rejected `perform`, and a
@@ -251,24 +285,26 @@ type IClassified<T> =
  */
 function classify<T>(sent: Extract<ITransmitted<IOperationResponse<T>>, { readonly kind: 'returned' | 'threw' }>): IClassified<T> {
   if (sent.kind === 'threw') {
-    return { kind: 'unknown', usage: undefined };
+    return { kind: 'unknown', usage: undefined, facts: Object.freeze({}), notBefore: undefined };
   }
   const response: unknown = sent.value;
   if (typeof response !== 'object' || response === null) {
-    return { kind: 'unknown', usage: undefined };
+    return { kind: 'unknown', usage: undefined, facts: Object.freeze({}), notBefore: undefined };
   }
   const usage = usageOf(Reflect.get(response, 'usage'));
   const answer = sent.value;
+  const facts = retryFacts(Reflect.get(response, 'retryFacts'));
+  const notBefore = retryFloor(Reflect.get(response, 'notBefore'));
   switch (answer.kind) {
     case 'succeeded':
       return { kind: 'succeeded', value: answer.value, usage };
     case 'failed':
-      return { kind: 'failed', transient: answer.transient === true, error: answer.error, usage };
+      return { kind: 'failed', transient: answer.transient === true, error: answer.error, usage, facts, notBefore };
     case 'rate-limited':
-      return { kind: 'rate-limited', retryAt: typeof answer.retryAt === 'number' && Number.isSafeInteger(answer.retryAt) ? answer.retryAt : undefined, usage };
+      return { kind: 'rate-limited', retryAt: typeof answer.retryAt === 'number' && Number.isSafeInteger(answer.retryAt) ? answer.retryAt : undefined, usage, facts, notBefore };
     default:
       // An `unknown` answer, or a kind no adapter may answer.
-      return { kind: 'unknown', usage };
+      return { kind: 'unknown', usage, facts, notBefore };
   }
 }
 
@@ -288,12 +324,18 @@ export interface IOperationEngineContext {
   readonly context: IRunContext;
   readonly ports: IRunOperationPorts;
   readonly timer: IRunTimer;
+  /** Source registrations are captured once for this invocation. */
+  readonly retryPolicies?: readonly ISourceRetryPolicy[];
+  /** Stop intent bounds classifier waits as well as sends and backoff. */
+  readonly stop: IStopController;
   /** The host's random identifier source, which makes operation identities and idempotency keys globally unique. */
   readonly random: IRunRandom;
   /** Offer an event to observers; a failure becomes a diagnostic. */
   report(event: IRunEvent, position: string): void;
   /** Record a run diagnostic; it names codes and identifiers only. */
   diagnose(message: string): void;
+  /** Invoke a source callback in a run scope with no live author attempt or request authority. */
+  runPolicy<T>(work: () => T): T;
 }
 
 /** A run's external operations: the call path, admission's check, inspection and operator settlement. */
@@ -318,6 +360,7 @@ export interface IOperationEngine extends IRunOperations {
  */
 export function createOperationEngine(engine: IOperationEngineContext): IOperationEngine {
   const { context, ports, timer, random } = engine;
+  const retryPolicies = validatedRetryPolicies(engine.retryPolicies);
   /**
    * Lazy so a new operation keeps the first random operation identity stable
    * for existing deterministic callers. Once minted it belongs to this run
@@ -350,6 +393,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     const knownUnsent = record.attempts.filter((attempt) => attempt.runInstance === instance && attempt.status !== 'not-sent' && neverDispatched.has(attempt.requestAttempt)).length;
     return durable - knownUnsent;
   }
+
   /**
    * Addresses with a call in progress in this run. A second call at an
    * address while one is in progress, even one started in the same turn, is
@@ -359,6 +403,39 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
   const inProgress = new Set<string>();
   const namespace = { analysis: context.analysis, environment: context.environment };
   const now = (): number => timer.currentEpochMilliseconds();
+  /**
+   * One live policy wait per operation in this invocation. Durable pending
+   * records outlive this map; the map only distinguishes a callback still
+   * authorized to answer from an orphaned decision after failure or takeover.
+   */
+  const activeClassifications = new Map<string, {
+    readonly generation: string;
+    readonly requestAttempt: string;
+    readonly runInstance: string;
+    readonly source: IRetrySourceScope;
+    readonly revision: number;
+    readonly fence: number | undefined;
+    readonly lease: IRunLease;
+    readonly attempt: IAttemptFrame;
+  }>();
+
+  /** Observe a known response without mistaking it for an unknown send. */
+  function classificationBlock(stored: IStored): IOperationBlock {
+    const pending = stored.record.classification;
+    const active = activeClassifications.get(stored.record.operation);
+    const waiting = pending?.kind === 'pending' && active !== undefined
+      && pending.runInstance === currentRunInstance()
+      && active.runInstance === pending.runInstance
+      && active.generation === pending.generation
+      && active.requestAttempt === pending.requestAttempt
+      && sameRetrySource(active.source, pending.source)
+      && stored.record.attempts.at(-1)?.requestAttempt === pending.requestAttempt
+      && stored.revision === active.revision && stored.fence === active.fence
+      && active.lease.fence === stored.fence && now() < active.lease.expiresAt
+      && !active.attempt.ended && active.attempt.pending === undefined
+      && engine.stop.state.level === 'none';
+    return { kind: 'classification', operation: stored.record.operation, reason: waiting ? 'waiting' : 'interrupted' };
+  }
 
   /** The stored operation of one identity, if any. */
   function readOperation(operation: string): IStored | undefined {
@@ -476,10 +553,13 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
   function blockOf(record: IOperationRecord): IOperationBlock | undefined {
     if (record.status === 'retry-exhausted') {
       if (record.retryExhaustedRunInstance === currentRunInstance()) {
-        return { kind: 'policy-exhausted', operation: record.operation };
+        return record.attempts.at(-1)?.status === 'unknown'
+          ? { kind: 'unknown-outcome', operation: record.operation, reason: 'policy-exhausted' }
+          : { kind: 'policy-exhausted', operation: record.operation };
       }
     }
-    if ((record.status === 'retry-exhausted' || record.status === 'deferred' || record.status === 'unknown') && isBeforeProviderFloor(record)) {
+    if ((record.status === 'retry-exhausted' || record.status === 'deferred' || record.status === 'unknown'
+      || (record.status === 'pending' && record.classification?.kind === 'pending')) && isBeforeProviderFloor(record)) {
       return { kind: 'deferred', operation: record.operation, notBefore: record.notBefore };
     }
     if (record.status === 'unknown') {
@@ -487,6 +567,20 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       return decision === 'retry' ? undefined : { kind: 'unknown-outcome', operation: record.operation, reason: decision };
     }
     return undefined;
+  }
+
+  /** Translate a closed incomplete-input state to its event reason without exposing policy content. */
+  function blockReason(block: IOperationBlock): IOperationReason {
+    switch (block.kind) {
+      case 'deferred': return 'not-before';
+      case 'policy-exhausted': return 'policy-exhausted';
+      case 'classification': return block.reason === 'waiting' ? 'classification-waiting' : 'classification-interrupted';
+      case 'unknown-outcome': return block.reason;
+      default: {
+        const exhaustive: never = block;
+        return exhaustive;
+      }
+    }
   }
 
   /** Note that a step stays pending because of `block`, for its pass's report and the run's wait. */
@@ -565,6 +659,13 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     }
     const address = JSON.stringify([subjectKey(attempt.subject), request.name, request.binding]);
     if (inProgress.has(address)) {
+      const existing = locate(attempt.subject, request.name, request.binding);
+      if (existing?.record.classification?.kind === 'pending'
+        && existing.record.classification.runInstance === currentRunInstance()) {
+        const block = classificationBlock(existing);
+        emit('blocked', existing.record, { stepAttempt: String(attempt.attemptId), status: 'pending', reason: blockReason(block) });
+        return pend(attempt, scope, block);
+      }
       throw new SupervisionError('invalid-request', `Operation ${request.name} is already being called at this address in this run`);
     }
     inProgress.add(address);
@@ -596,18 +697,50 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       throw new SupervisionError('operation-resolved', `Operation ${stored.record.operation} was resolved as succeeded by an operator; it is not sent again`);
     }
     if (stored !== undefined && stored.record.status === 'pending') {
-      if (!leftByEarlierWriter(stored, lease)) {
-        throw new SupervisionError('invalid-request', `Operation ${stored.record.operation} is already in flight in this run`);
+      if (stored.record.classification?.kind === 'pending') {
+        if (stored.record.classification.runInstance === currentRunInstance()) {
+          const block = classificationBlock(stored);
+          emit('blocked', stored.record, { stepAttempt, status: 'pending', reason: blockReason(block) });
+          return pend(attempt, scope, block);
+        }
+        // A fresh ordinary run may retry the known refusal without changing
+        // its response or reclassifying a decision that never committed.
+      } else {
+        if (!leftByEarlierWriter(stored, lease)) {
+          throw new SupervisionError('invalid-request', `Operation ${stored.record.operation} is already in flight in this run`);
+        }
+        stored = recover(stored, lease);
       }
-      stored = recover(stored, lease);
     }
     let retry = false;
     if (stored !== undefined) {
+      const selection = stored.record.sourceSelection;
+      if (selection?.runInstance === currentRunInstance() && !sameRetrySource(selection.scope, request.retrySource)) {
+        // One run cannot switch the selected adapter/access tuple at an
+        // existing operation address to escape its current retry decision.
+        throw new SupervisionError('invalid-request', `Operation ${stored.record.operation} changed its retry source within this run`);
+      }
+      // A local policy failure and a source-selected stop are retained
+      // decisions about this exact address. Repeating an author call in the
+      // same run reports that decision, rather than relabeling it as finite
+      // allowance exhaustion or minting another operation.
+      const classification = stored.record.classification;
+      if (classification?.runInstance === currentRunInstance()) {
+        if (classification.kind === 'failed') {
+          throw new SupervisionError('operation-classification-failed', `Operation ${stored.record.operation} source policy failed`);
+        }
+        if (classification.kind === 'accepted' && classification.decision.kind === 'stop') {
+          throw new SupervisionError('operation-failed', `Operation ${stored.record.operation} source policy stopped retrying`);
+        }
+      }
       // The current declaration governs a call's own retry decision.
-      const current: IOperationRecord = { ...stored.record, safety: request.safety, maxAttempts: request.maxAttempts, rateLimitRetries: request.rateLimitRetries };
+      const current: IOperationRecord = {
+        ...stored.record, safety: request.safety, maxAttempts: request.maxAttempts, rateLimitRetries: request.rateLimitRetries,
+        sourceSelection: { runInstance: currentRunInstance(), scope: request.retrySource },
+      };
       const block = blockOf(current);
       if (block !== undefined) {
-        emit('blocked', current, { stepAttempt, status: current.status, reason: block.kind === 'deferred' ? 'not-before' : block.kind === 'policy-exhausted' ? 'policy-exhausted' : block.reason, notBefore: block.kind === 'deferred' ? block.notBefore : undefined });
+        emit('blocked', current, { stepAttempt, status: current.status, reason: blockReason(block), notBefore: block.kind === 'deferred' ? block.notBefore : undefined });
         return pend(attempt, scope, block);
       }
       stored = { ...stored, record: current };
@@ -628,6 +761,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
         maxAttempts: request.maxAttempts,
         rateLimitRetries: request.rateLimitRetries,
         status: 'pending',
+        sourceSelection: { runInstance: currentRunInstance(), scope: request.retrySource },
         notBefore: undefined,
         attempts: [],
         settlement: undefined,
@@ -712,6 +846,13 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
         ...before.record,
         status: 'pending',
         notBefore: undefined,
+        // A duration describes accepted retry history in one private run.
+        // Historical attempts retain their own decisions, but a new run's
+        // first send must not inherit its predecessor's backoff seed.
+        previousDelayMilliseconds: last?.runInstance === currentRunInstance() ? before.record.previousDelayMilliseconds : undefined,
+        // A new send supersedes an undecided old response; accepted and
+        // failed decisions remain durable evidence of their earlier attempt.
+        classification: before.record.classification?.kind === 'pending' ? undefined : before.record.classification,
         unrecorded: before.record.unrecorded,
         attempts: [...earlier, { requestAttempt, run: attribution.run, runInstance: currentRunInstance(), stepAttempt: attribution.stepAttempt, status: 'pending', remote: undefined, usage: undefined, intent: undefined }],
       };
@@ -788,7 +929,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     }
     const response = classify(sent);
     const usage = acknowledge(current.record, requestAttempt, stepAttempt, response.usage);
-    return settleResponse(current, response, usage, { stepAttempt, requestAttempt, request, lease });
+    return settleResponse(current, response, usage, { stepAttempt, requestAttempt, request, lease, attempt });
   }
 
   /**
@@ -810,9 +951,9 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     current: IStored,
     response: IClassified<T>,
     usage: IAttemptUsage,
-    where: { readonly stepAttempt: string; readonly requestAttempt: string; readonly request: IValidatedRequest<T>; readonly lease: IRunLease },
+    where: { readonly stepAttempt: string; readonly requestAttempt: string; readonly request: IValidatedRequest<T>; readonly lease: IRunLease; readonly attempt: IAttemptFrame },
   ): Promise<{ readonly stored: IStored; readonly outcome: IAttemptOutcome<T> }> {
-    const { stepAttempt, requestAttempt, request, lease } = where;
+    const { stepAttempt, requestAttempt, request, lease, attempt } = where;
     const operation = current.record.operation;
     const settledAs = (attemptStatus: IRequestAttemptStatus, status: IOperationStatus, notBefore?: number): IOperationRecord => ({
       ...withLast(current.record, { status: attemptStatus, usage }),
@@ -825,103 +966,212 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     const commit = (next: IOperationRecord, reason: IOperationReason | undefined): IStored | undefined => {
       const written = settle(current, next, lease);
       if (written.record.status === 'pending') {
-        emit('request-settled', next, { stepAttempt, requestAttempt, status: 'unknown', reason: 'lease-lost' });
+        // The provider's known nonsuccess was already published with its
+        // response commit. A refused later decision cannot revise that fact
+        // or publish a second, fabricated unknown provider settlement.
+        if (response.kind === 'succeeded') {
+          emit('request-settled', next, { stepAttempt, requestAttempt, status: 'unknown', reason: 'lease-lost' });
+        }
         return undefined;
       }
-      emit('request-settled', next, { stepAttempt, requestAttempt, status: next.attempts.at(-1)?.status, reason });
+      // Non-success responses were already reported after their durable
+      // response write, before classification. Its later decision is not a
+      // second provider settlement.
+      if (response.kind === 'succeeded') {
+        emit('request-settled', next, { stepAttempt, requestAttempt, status: next.attempts.at(-1)?.status, reason });
+      }
       return written;
     };
     /** The outcome could not be recorded under the pass's lease: it is unknown, and the attempt ends pending. */
     const leaseLost = (): { readonly stored: IStored; readonly outcome: IAttemptOutcome<T> } => ({
       stored: current,
-      outcome: { kind: 'pending', block: { kind: 'unknown-outcome', operation, reason: 'unrecorded' } },
+      outcome: { kind: 'pending', block: current.record.classification?.kind === 'pending'
+        ? { kind: 'classification', operation, reason: 'interrupted' }
+        : { kind: 'unknown-outcome', operation, reason: 'unrecorded' } },
     });
-    switch (response.kind) {
-      case 'succeeded': {
-        const written = commit(settledAs('succeeded', 'succeeded'), undefined);
-        return written === undefined ? leaseLost() : { stored: written, outcome: { kind: 'value', value: response.value } };
+    if (response.kind === 'succeeded') {
+      const written = commit(settledAs('succeeded', 'succeeded'), undefined);
+      return written === undefined ? leaseLost() : { stored: written, outcome: { kind: 'value', value: response.value } };
+    }
+
+    const runInstance = currentRunInstance();
+    const attemptStatus: IRequestAttemptStatus = response.kind === 'rate-limited'
+      ? 'rate-limited'
+      : response.kind === 'failed' ? 'failed' : 'unknown';
+    const outcome = retryOutcome(response);
+    const rateRefusalCount = response.kind === 'rate-limited' ? rateLimited(withLast(current.record, { status: attemptStatus, usage }), runInstance) : 0;
+    const knownFloors = [current.record.notBefore, response.notBefore, response.kind === 'rate-limited' ? response.retryAt : undefined]
+      .filter((floor): floor is number => floor !== undefined);
+    const knownNotBefore = knownFloors.length === 0 ? undefined : Math.max(...knownFloors);
+    const selectedPolicy = selectRetryPolicy(retryPolicies, request.retrySource);
+    const generation = selectedPolicy === undefined ? undefined : random.randomIdentifier();
+    if (generation !== undefined && !randomRule.test(generation)) {
+      throw new SupervisionError('invalid-request', 'The random identifier source returned a malformed classification generation');
+    }
+    const responseRecord: IOperationRecord = {
+      ...withLast(current.record, { status: attemptStatus, usage, source: request.retrySource, outcome, facts: response.facts }),
+      status: 'pending',
+      notBefore: knownNotBefore,
+      ...(selectedPolicy === undefined || generation === undefined ? {} : {
+        classification: {
+          kind: 'pending' as const, runInstance, requestAttempt, source: selectedPolicy.scope,
+          outcome, facts: response.facts, generation: `decision-${generation}`,
+        },
+      }),
+    };
+    try {
+      current = write(lease, responseRecord, current.revision);
+    } catch {
+      engine.diagnose(`lease-lost: operation ${operation} response could not be recorded before classification`);
+      return leaseLost();
+    }
+    emit('request-settled', responseRecord, { stepAttempt, requestAttempt, status: attemptStatus,
+      reason: response.kind === 'unknown' ? 'lost-response' : response.kind === 'rate-limited' ? 'rate-limited' : response.transient ? 'transient' : 'permanent' });
+
+    const eligible = spentInRun(responseRecord) < request.maxAttempts
+      && (response.kind !== 'rate-limited' || rateRefusalCount <= request.rateLimitRetries)
+      && engine.stop.state.level === 'none';
+    const keepNoRetry = (classification: IClassificationRecord): IOperationRecord => ({
+      ...responseRecord,
+      // Unknown effects retain the longstanding operator-resolution path.
+      // The classification still records why this invocation cannot send.
+      status: response.kind === 'unknown' ? 'unknown' : 'retry-exhausted',
+      retryExhaustedRunInstance: response.kind === 'unknown' ? undefined : runInstance,
+      classification,
+    });
+    if (!eligible) {
+      const whyStopped = engine.stop.state.level !== 'none';
+      const stopped: IOperationRecord = keepNoRetry(whyStopped
+        ? { kind: 'cancelled', runInstance, code: 'stopped' }
+        : { kind: 'no-retry', runInstance, code: 'policy-exhausted' });
+      const written = commit(stopped, whyStopped ? 'stopped' : 'policy-exhausted');
+      if (written !== undefined && !whyStopped && response.kind !== 'unknown') {
+        emit('retry-exhausted', stopped, { stepAttempt, requestAttempt, status: 'retry-exhausted', reason: 'policy-exhausted' });
       }
-      case 'rate-limited':
-      case 'failed': {
-        const rateLimitedWithTime = response.kind === 'rate-limited' && response.retryAt !== undefined;
-        if (rateLimitedWithTime) {
-          const refused = settledAs('rate-limited', 'deferred');
-          const notBefore = Math.max(response.retryAt ?? now(), now() + retryDelay(refused));
-          const next: IOperationRecord = { ...refused, notBefore };
-          if (spentInRun(next) >= request.maxAttempts || rateLimited(next, currentRunInstance()) > request.rateLimitRetries) {
-            const exhausted: IOperationRecord = { ...next, status: 'retry-exhausted', retryExhaustedRunInstance: currentRunInstance() };
-            const written = commit(exhausted, 'rate-limited');
-            if (written === undefined) {
-              return leaseLost();
-            }
-            emit('retry-exhausted', exhausted, { stepAttempt, status: 'retry-exhausted', reason: 'policy-exhausted', notBefore });
-            return { stored: written, outcome: { kind: 'pending', block: { kind: 'policy-exhausted', operation } } };
-          }
-          const written = commit(next, 'rate-limited');
-          if (written === undefined) {
-            return leaseLost();
-          }
-          emit('retry-scheduled', next, { stepAttempt, status: 'deferred', reason: 'rate-limited', notBefore });
-          return { stored: written, outcome: { kind: 'pending', block: { kind: 'deferred', operation, notBefore } } };
+      return written === undefined ? leaseLost() : {
+        stored: written,
+        outcome: whyStopped
+          ? { kind: 'error', error: new SupervisionError('stopped', `Operation ${operation} cannot retry after stop intent`) }
+          : { kind: 'pending', block: response.kind === 'unknown'
+            ? { kind: 'unknown-outcome', operation, reason: 'policy-exhausted' }
+            : { kind: 'policy-exhausted', operation } },
+      };
+    }
+
+    let decision: IRetryDecision;
+    if (selectedPolicy === undefined) {
+      decision = builtInRetryDecision(outcome, retryDelay(responseRecord));
+    } else {
+      const localAbort = createAbortSource(() => engine.diagnose(`retry-policy-listener-failure: operation ${operation}`));
+      let unsubscribe = (): void => undefined;
+      let stopResolve: (() => void) | undefined;
+      const stopped = new Promise<'stopped'>((resolve) => {
+        stopResolve = () => resolve('stopped');
+      });
+      unsubscribe = engine.stop.subscribe((state) => {
+        if (state.level !== 'none') {
+          localAbort.abort();
+          stopResolve?.();
         }
-        // A permanent failure, or a transient one (including a rate limit without a retry time).
-        const transient = response.kind === 'rate-limited' || response.transient;
-        const attemptStatus = response.kind === 'rate-limited' ? 'rate-limited' : 'failed';
-        const failed = settledAs(attemptStatus, 'failed');
-        const retryable = transient && spentInRun(failed) < request.maxAttempts;
-        if (!retryable) {
-          const exhausted: IOperationRecord = transient
-            ? { ...failed, status: 'retry-exhausted', retryExhaustedRunInstance: currentRunInstance() }
-            : failed;
-          const written = commit(exhausted, transient ? (response.kind === 'rate-limited' ? 'rate-limited' : 'transient') : 'permanent');
-          if (written === undefined) {
-            return leaseLost();
-          }
-          if (transient) {
-            emit('retry-exhausted', exhausted, { stepAttempt, status: 'retry-exhausted', reason: 'policy-exhausted' });
-            return { stored: written, outcome: { kind: 'pending', block: { kind: 'policy-exhausted', operation } } };
-          }
-          const cause = response.kind === 'failed' ? response.error : undefined;
-          return { stored: written, outcome: { kind: 'error', error: new SupervisionError('operation-failed', `Operation ${operation} was refused permanently`, cause) } };
+      });
+      const input: IRetryDecisionInput = Object.freeze({
+        context,
+        source: selectedPolicy.scope,
+        operation,
+        requestAttempt,
+        outcome,
+        facts: response.facts,
+        ...(knownNotBefore === undefined ? {} : { knownNotBefore }),
+        history: retryHistory(responseRecord, requestAttempt, runInstance, spentInRun(responseRecord)),
+        signal: localAbort.signal,
+      });
+      const active = { generation: `decision-${generation}`, requestAttempt, runInstance, source: selectedPolicy.scope,
+        revision: current.revision, fence: current.fence, lease, attempt };
+      activeClassifications.set(operation, active);
+      const callback = Promise.resolve().then(() => engine.runPolicy(() => selectedPolicy.decide(input))).then(
+        (answer: unknown) => ({ kind: 'answer' as const, answer }),
+        () => ({ kind: 'error' as const }),
+      );
+      const selected = await Promise.race([callback, stopped.then(() => ({ kind: 'stopped' as const }))]).finally(() => {
+        unsubscribe();
+        if (activeClassifications.get(operation) === active) {
+          activeClassifications.delete(operation);
         }
-        // A short durable deferral covers the backoff, so a crash during it leaves a time a later run honors.
-        const delay = retryDelay(failed);
-        const notBefore = now() + delay;
-        const waiting = settledAs(attemptStatus, 'deferred', notBefore);
-        const written = commit(waiting, response.kind === 'rate-limited' ? 'rate-limited' : 'transient');
-        if (written === undefined) {
-          return leaseLost();
-        }
-        emit('retry-scheduled', waiting, { stepAttempt, status: 'deferred', reason: 'transient', notBefore });
-        // A timed retry is a durable pass deferral: it releases the request
-        // lane and, when only deferred work remains, the writer lease.
-        return { stored: written, outcome: delay > 0
-          ? { kind: 'pending', block: { kind: 'deferred', operation, notBefore } }
-          : { kind: 'retry' } };
+      });
+      // Only the exact response generation this callback saw may accept its
+      // answer. A newer writer or attempt can preserve or supersede the row;
+      // its revision/fence must not inherit this callback's authority.
+      const latest = readOperation(operation);
+      const pending = latest?.record.classification;
+      if (latest?.revision !== current.revision || latest.fence !== lease.fence
+        || pending?.kind !== 'pending' || pending.generation !== active.generation
+        || pending.runInstance !== runInstance || pending.requestAttempt !== requestAttempt
+        || !sameRetrySource(pending.source, selectedPolicy.scope)
+        || latest.record.attempts.at(-1)?.requestAttempt !== requestAttempt) {
+        return leaseLost();
       }
-      case 'unknown': {
-        const unknown = settledAs('unknown', 'unknown');
-        const decision = unknownRetry(request, spentInRun(unknown));
-        const delay = decision === 'retry' ? retryDelay(unknown) : 0;
-        const notBefore = decision === 'retry' ? now() + delay : undefined;
-        const scheduled: IOperationRecord = { ...unknown, notBefore };
-        const written = commit(scheduled, 'lost-response');
-        if (written === undefined) {
-          return leaseLost();
-        }
-        if (decision === 'retry') {
-          emit('retry-scheduled', scheduled, { stepAttempt, status: 'unknown', reason: 'lost-response', notBefore });
-          return { stored: written, outcome: delay > 0 && notBefore !== undefined
-            ? { kind: 'pending', block: { kind: 'deferred', operation, notBefore } }
-            : { kind: 'retry' } };
-        }
-        return { stored: written, outcome: { kind: 'pending', block: { kind: 'unknown-outcome', operation, reason: decision } } };
+      // A stop that races a completed promise still wins before accepting a
+      // retry decision; the callback has no independent send authority.
+      if (engine.stop.state.level !== 'none' && selected.kind !== 'stopped') {
+        localAbort.abort();
+        const cancelled: IOperationRecord = keepNoRetry({ kind: 'cancelled', runInstance, code: 'stopped' });
+        const written = commit(cancelled, 'stopped');
+        return written === undefined ? leaseLost() : { stored: written, outcome: { kind: 'error', error: new SupervisionError('stopped', `Operation ${operation} classification was cancelled`) } };
       }
-      default: {
-        const exhaustive: never = response;
-        return exhaustive;
+      if (selected.kind === 'stopped') {
+        const cancelled: IOperationRecord = keepNoRetry({ kind: 'cancelled', runInstance, code: 'stopped' });
+        const written = commit(cancelled, 'stopped');
+        return written === undefined ? leaseLost() : { stored: written, outcome: { kind: 'error', error: new SupervisionError('stopped', `Operation ${operation} classification was cancelled`) } };
+      }
+      if (attempt.ended || attempt.pending !== undefined) {
+        return leaseLost();
+      }
+      if (selected.kind === 'error') {
+        const failed: IOperationRecord = keepNoRetry({ kind: 'failed', runInstance, code: 'policy-error' });
+        const written = commit(failed, undefined);
+        return written === undefined ? leaseLost() : { stored: written, outcome: { kind: 'error', error: new SupervisionError('operation-classification-failed', `Operation ${operation} source policy failed`) } };
+      }
+      try {
+        decision = validatedRetryDecision(selected.answer);
+      } catch {
+        const failed: IOperationRecord = keepNoRetry({ kind: 'failed', runInstance, code: 'policy-error' });
+        const written = commit(failed, undefined);
+        return written === undefined ? leaseLost() : { stored: written, outcome: { kind: 'error', error: new SupervisionError('operation-classification-failed', `Operation ${operation} source policy returned an invalid decision`) } };
       }
     }
+
+    const delay = decision.kind === 'retry-after' ? decision.delayMilliseconds : 0;
+    const acceptedAt = now();
+    const timed = acceptedAt + delay;
+    if (!Number.isSafeInteger(timed)) {
+      const failed: IOperationRecord = keepNoRetry({ kind: 'failed', runInstance, code: 'policy-error' });
+      const written = commit(failed, undefined);
+      return written === undefined ? leaseLost() : { stored: written, outcome: { kind: 'error', error: new SupervisionError('operation-classification-failed', `Operation ${operation} source policy returned invalid timing`) } };
+    }
+    const notBefore = Math.max(timed, knownNotBefore ?? timed);
+    const acceptedClassification: IClassificationRecord = { kind: 'accepted', runInstance, decision, delayMilliseconds: delay, notBefore };
+    const acceptedStatus: IOperationStatus = decision.kind === 'stop' ? 'retry-exhausted' : 'deferred';
+    const accepted: IOperationRecord = {
+      ...withLast(responseRecord, { decision }),
+      status: acceptedStatus,
+      notBefore,
+      classification: acceptedClassification,
+      ...(decision.kind === 'stop' ? { retryExhaustedRunInstance: runInstance } : { previousDelayMilliseconds: delay }),
+    };
+    const written = commit(accepted, response.kind === 'unknown' ? 'lost-response' : response.kind === 'rate-limited' ? 'rate-limited' : response.transient ? 'transient' : 'permanent');
+    if (written === undefined) {
+      return leaseLost();
+    }
+    if (decision.kind === 'stop') {
+      emit('retry-exhausted', accepted, { stepAttempt, requestAttempt, status: 'retry-exhausted', reason: 'policy-exhausted' });
+      return { stored: written, outcome: { kind: 'error', error: new SupervisionError('operation-failed', `Operation ${operation} source policy stopped retrying`) } };
+    }
+    if (notBefore > now()) {
+      emit('retry-scheduled', accepted, { stepAttempt, status: 'deferred', reason: response.kind === 'unknown' ? 'lost-response' : response.kind === 'rate-limited' ? 'rate-limited' : 'transient', notBefore });
+      return { stored: written, outcome: { kind: 'pending', block: { kind: 'deferred', operation, notBefore } } };
+    }
+    emit('retry-scheduled', accepted, { stepAttempt, status: response.kind === 'unknown' ? 'unknown' : response.kind === 'rate-limited' ? 'rate-limited' : 'failed', reason: response.kind === 'unknown' ? 'lost-response' : response.kind === 'rate-limited' ? 'rate-limited' : 'transient', notBefore });
+    return { stored: written, outcome: { kind: 'retry' } };
   }
 
   return Object.freeze({
@@ -940,17 +1190,29 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
           continue;
         }
         if (stored.record.status === 'pending') {
-          if (!leftByEarlierWriter(stored, scope?.lease)) {
-            return Object.freeze({ kind: 'denied', reason: `operation ${stored.record.operation} is in flight in this run` });
+          if (stored.record.classification?.kind === 'pending') {
+            if (stored.record.classification.runInstance === currentRunInstance()) {
+              const block = classificationBlock(stored);
+              noteBlock(scope, request.step, block);
+              return Object.freeze({ kind: 'denied', reason: pendingError(block).message });
+            }
+            // A new invocation can continue after the known response without
+            // recasting its committed provider evidence as an unknown send.
+            // A future provider restriction still gates this ordinary new
+            // run even though the old policy answer never committed.
+          } else {
+            if (!leftByEarlierWriter(stored, scope?.lease)) {
+              return Object.freeze({ kind: 'denied', reason: `operation ${stored.record.operation} is in flight in this run` });
+            }
+            stored = recover(stored, scope?.lease);
           }
-          stored = recover(stored, scope?.lease);
         }
         const block = blockOf(stored.record);
         if (block === undefined) {
           resumable = true;
           continue;
         }
-        emit('blocked', stored.record, { status: stored.record.status, reason: block.kind === 'deferred' ? 'not-before' : block.kind === 'policy-exhausted' ? 'policy-exhausted' : block.reason, notBefore: block.kind === 'deferred' ? block.notBefore : undefined });
+        emit('blocked', stored.record, { status: stored.record.status, reason: blockReason(block), notBefore: block.kind === 'deferred' ? block.notBefore : undefined });
         noteBlock(scope, request.step, block);
         return Object.freeze({ kind: 'denied', reason: pendingError(block).message });
       }

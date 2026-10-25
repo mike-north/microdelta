@@ -25,6 +25,9 @@ import type {
   IOperationSettlement,
   IOperationView,
   IOperationStatus,
+  IRetryAttemptSummary,
+  IRetryDecisionInput,
+  IRetryOutcome,
   ISupervisionErrorCode,
   IRun,
   IRunEvent,
@@ -38,6 +41,13 @@ declare const execution: IRunExecution;
 declare const run: IRun;
 declare const event: IOperationEvent;
 declare const result: IRunResult<string>;
+declare const sourceDecision: IRetryDecisionInput;
+declare const priorAttempt: IRetryAttemptSummary;
+
+// Generated alpha declarations name each bounded piece a source policy sees.
+expectType<IRetryOutcome>(sourceDecision.outcome);
+expectType<IRetryAttemptSummary>(priorAttempt);
+expectType<IRetryAttemptSummary | undefined>(sourceDecision.history.prior[0]);
 
 // An operation keeps its result type.
 const request: IOperationRequest<{ readonly verdict: string }> = {

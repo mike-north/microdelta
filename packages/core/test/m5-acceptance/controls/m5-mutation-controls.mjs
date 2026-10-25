@@ -123,13 +123,13 @@ const controls = [
     replacement: "const settledRemotely = sent.remote === 'cancelled'; if (settledRemotely || !settledRemotely) { return { stored: current, outcome: { kind: 'error', error: new SupervisionError('stopped', 'aborted') } }; }",
     breaks: ['soft-then-hard-stop'],
   },
-  // Deferral (RUN-011): "not before T" is durable, holds no permit or lane, releases the lease, and keeps its identity.
+  // Deferral (RUN-011): "not before T" remains durable across #214 exhaustion, holds no permit or lane, releases the lease, and keeps its identity.
   {
     guard: 'deferral',
     name: 'a deferral is not honored before its time',
     target: 'engine',
-    anchor: "if ((record.status === 'deferred' || record.status === 'unknown') && record.notBefore !== undefined && now() < record.notBefore) {",
-    replacement: 'if (false) {',
+    anchor: 'return record.notBefore !== undefined && now() < record.notBefore',
+    replacement: 'return false',
     breaks: ['durable-quota-deferral'],
   },
   {

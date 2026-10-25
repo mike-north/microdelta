@@ -27,10 +27,13 @@
  *   timed wait holding no permit and lending its member's lane, so with one
  *   permit and one lane its siblings are sent meanwhile; the retry keeps the
  *   operation identity.
- * - Exhaustion: an explicit rate-only subcap may end rate retries sooner
- *   than the total-send allowance; transient retries also honor that total.
- *   Either fails only its own member, with the closed `policy-exhausted`
- *   reason, under one operation identity throughout.
+ * - Known-refusal exhaustion: an explicit rate-only subcap may end rate
+ *   retries sooner than the total-send allowance; transient retries also
+ *   honor that total. Both members remain pending on a policy-exhausted block,
+ *   with retained operation identity and no fabricated input.
+ * - Exhaustion ends the current invocation even when the provider's retained
+ *   floor is later; a distinct invocation still sends nothing before that
+ *   floor and resumes the same operation once it is reached.
  *
  * @see ../../../../docs/spec/operations.md (RUN-011)
  * @see ../../../../docs/plans/m5-operations.md (Outcomes: quota response with a retry time 3h ahead)
@@ -149,19 +152,18 @@ describe('durable-quota-deferral (A-11, A-12, RUN-011)', () => {
     expect(statuses(run)).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
   });
 
-  test('known-refusal exhaustion: a restrictive rate subcap and smaller total cap fail only their own members', () => {
-    // Known-refusal status remains the companion #214 scope. Both members
-    // send twice: pr-1 exhausts its total cap, pr-2 its rate-only subcap.
+  test('known-refusal exhaustion: a restrictive rate subcap and smaller total cap leave only their own members pending', () => {
+    // Both members send twice: pr-1 exhausts its total cap, pr-2 its rate-only subcap.
     const s = freshScenario(baseWorld({
       script: { 'pr-1': [{ kind: 'transient' }, { kind: 'transient' }], 'pr-2': Array.from({ length: 6 }, () => ({ kind: 'rate-limit', retryMs: 200 }) as const) },
       declarations: { 'pr-1': { maxAttempts: 2 }, 'pr-2': { rateLimitRetries: 1 } },
     }));
     const run = clean(s.run({ kind: 'members' }, { window: 1, permits: 1, deferral: 'sleep' }));
-    expect(statuses(run)).toEqual({ 'pr-1': 'failed', 'pr-2': 'failed', 'pr-3': 'succeeded' });
-    expect(run.result.members['pr-1']).toMatchObject({ cause: 'operation-failed' });
-    expect(run.result.members['pr-2']).toMatchObject({ cause: 'operation-failed' });
-    expect(run.operations).toContain('retry-exhausted:failed:policy-exhausted@pr-1');
-    expect(run.operations).toContain('retry-exhausted:failed:policy-exhausted@pr-2');
+    expect(statuses(run)).toEqual({ 'pr-1': 'pending', 'pr-2': 'pending', 'pr-3': 'succeeded' });
+    expect(run.result.members['pr-1']).toMatchObject({ blocked: { kind: 'policy-exhausted' } });
+    expect(run.result.members['pr-2']).toMatchObject({ blocked: { kind: 'policy-exhausted' } });
+    expect(run.operations).toContain('retry-exhausted:retry-exhausted:policy-exhausted@pr-1');
+    expect(run.operations).toContain('retry-exhausted:retry-exhausted:policy-exhausted@pr-2');
     // The rate-only cap restricts pr-2 below its three-total default.
     const pr2 = s.ledger().filter((entry) => entry.kind === 'received' && entry.key === 'pr-2');
     expect(pr2).toHaveLength(2);
@@ -169,6 +171,33 @@ describe('durable-quota-deferral (A-11, A-12, RUN-011)', () => {
     expect(s.keys('received').filter((key) => key === 'pr-1')).toHaveLength(2);
     // Four refusals report one request each; pr-3's answer reports 100 tokens.
     expect(usageOf(run.result.usage)).toEqual({ status: 'complete', observed: [{ unit: 'requests', amount: 4 }, { unit: 'tokens', amount: 100 }], unknown: 0, operations: 3, reports: 5, requestAttempts: 5 });
+  });
+
+  test('an exhausted invocation completes before its provider floor; later processes still honor and then resume at the floor', () => {
+    const s = freshScenario(baseWorld({
+      script: { 'pr-1': [{ kind: 'rate-limit', retryMs: 60_000 }] },
+      declarations: { 'pr-1': { maxAttempts: 1 } },
+    }));
+    const first = clean(s.run({ kind: 'members' }, { deferral: 'exit' }));
+    const [refused] = s.ledger().filter((entry) => entry.kind === 'received' && entry.key === 'pr-1');
+    if (refused === undefined) {
+      throw new Error('pr-1 was never sent');
+    }
+    expect(first.result.members['pr-1']?.blocked).toEqual({ kind: 'policy-exhausted', operation: refused.operation });
+    expect(first.result.waitingUntil).toBeNull();
+
+    const early = clean(s.run({ kind: 'members' }, { deferral: 'exit', clockOffsetMs: 30_000 }));
+    expect(s.ledger().filter((entry) => entry.kind === 'received' && entry.key === 'pr-1')).toHaveLength(1);
+    expect(early.result.members['pr-1']?.blocked).toEqual({ kind: 'deferred', operation: refused.operation, notBefore: refused.at + 60_000 });
+    expect(early.operations).toContain('blocked:retry-exhausted:not-before@pr-1');
+
+    const later = clean(s.run({ kind: 'members' }, { deferral: 'exit', clockOffsetMs: 60_000 }));
+    const sends = s.ledger().filter((entry) => entry.kind === 'received' && entry.key === 'pr-1');
+    expect(sends).toHaveLength(2);
+    expect(sends[1]?.operation).toBe(refused.operation);
+    expect(sends[1]?.requestAttempt).not.toBe(refused.requestAttempt);
+    expect(sends[1]?.at).toBeGreaterThanOrEqual(refused.at + 60_000);
+    expect(later.result.members['pr-1']?.status).toBe('succeeded');
   });
 
   // Regression (#147): the `resumed` wait event once reported a literal `released: false` for a wait whose lease the run

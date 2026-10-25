@@ -28,52 +28,24 @@
  * @see ../../../../docs/validation/m5-concurrency-2026-09-30.md
  */
 import { afterEach, describe, expect, test } from '@jest/globals';
-import { fork } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 
 import type { IWriterLease } from '@microdelta/history';
 
 import { cleanup } from '../durable-history/support.js';
 import { settleC1Loser } from './c1-acquisition.js';
 import type { IC1AcquireRequest } from './c1-acquisition.js';
+import { withIndependentWriteLock } from './contention-lock.js';
 import { expectRefused, freshStore, leaseFrom, locatorFrom, measureConcurrency, reopenForReading, snapshot, startWorker, stopWorkers } from './driver.js';
 import type { IConcurrencyMeasure, IDurableState, IWorkerHandle } from './driver.js';
 import { attemptRequest, concurrencyStore, subject } from './fixture.js';
 import { hostMonotonicMilliseconds, parseContentionLog, parseWaitContention, parseWaitStatus } from './protocol.js';
 import type { IContentionEvent, IHarnessCommand, IHarnessReply, IWaitContentionEvent, IWaitStatus } from './protocol.js';
 
-const sqliteLockWorker = fileURLToPath(new URL('./history-busy-lock.js', import.meta.url));
-
-/** Establishes the lock in a separate process before the callback runs and releases it on every callback outcome. */
-async function withIndependentWriteLock<T>(location: string, operation: () => Promise<T>): Promise<T> {
-  const lock = fork(sqliteLockWorker, [location], { stdio: ['ignore', 'ignore', 'pipe', 'ipc'] });
-  let diagnostic = '';
-  lock.stderr?.setEncoding('utf8').on('data', (chunk: string) => { diagnostic += chunk; });
-  await new Promise<void>((resolve, reject) => {
-    const timer = setTimeout(() => reject(new Error(`SQLite lock did not start: ${diagnostic}`)), 10_000);
-    lock.once('message', (message: unknown) => {
-      clearTimeout(timer);
-      if (typeof message === 'object' && message !== null && 'kind' in message && message.kind === 'locked') { resolve(); }
-      else { reject(new Error(`SQLite lock reported ${String(message)}`)); }
-    });
-    lock.once('exit', (code, signal) => {
-      clearTimeout(timer);
-      reject(new Error(`SQLite lock ended before readiness: ${String(code)}/${String(signal)} ${diagnostic}`));
-    });
-  });
-  try {
-    return await operation();
-  } finally {
-    await new Promise<void>((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error(`SQLite lock did not release: ${diagnostic}`)), 10_000);
-      lock.once('exit', (code, signal) => {
-        clearTimeout(timer);
-        if (code === 0 && signal === null) { resolve(); }
-        else { reject(new Error(`SQLite lock ended ${String(code)}/${String(signal)} ${diagnostic}`)); }
-      });
-      lock.send({ kind: 'release' });
-    });
-  }
+/** Every durable fence issued in a fresh C3 store must appear as one observed grant. */
+function expectCompleteC3GrantAccounting(durableLastFence: number, events: readonly { readonly kind: string; readonly fence?: number }[]): void {
+  const observedFences = events.flatMap((event) => event.kind === 'granted' && event.fence !== undefined ? [event.fence] : [])
+    .sort((left, right) => left - right);
+  expect(observedFences).toEqual(Array.from({ length: durableLastFence }, (_unused, index) => index + 1));
 }
 
 afterEach(async () => {
@@ -84,7 +56,15 @@ afterEach(async () => {
 test('C3 records the supervised grant before independently locked allocation and reports rollback by phase', async () => {
   const location = freshStore();
   const worker = await startWorker('postgrant-contention', { location, store: concurrencyStore, clock: 'controlled' });
+  const priorStarted = await worker.step({
+    op: 'wait-start', at: 900, holder: 'prior-granted-holder', leaseMilliseconds: 10_000,
+    pollMilliseconds: 5, key: 'postgrant:prior-success',
+  });
+  const priorOutcome = parseWaitStatus(valueOf(worker, priorStarted)).outcome;
+  expect(priorOutcome.kind).toBe('acquired');
+  if (priorOutcome.kind !== 'acquired') { throw new Error('the positive control did not publish'); }
   const initial = snapshot(location);
+  await worker.step({ op: 'wait-finish', at: 901 });
   const started = await worker.step({
     op: 'wait-start', at: 1_000, holder: 'postgrant-holder', leaseMilliseconds: 10_000,
     pollMilliseconds: 5, key: 'postgrant:allocation', grantBarrier: true,
@@ -92,21 +72,32 @@ test('C3 records the supervised grant before independently locked allocation and
   const granted = parseWaitStatus(valueOf(worker, started));
   expect(granted.attempts.map((attempt) => attempt.kind)).toEqual(['acquired']);
   expect(granted.outcome).toEqual({ kind: 'pending' });
-  expect(snapshot(location).writer).toMatchObject({ holder: 'postgrant-holder', lastFence: 1 });
+  expect(snapshot(location).writer).toMatchObject({ holder: 'postgrant-holder', lastFence: priorOutcome.fence + 1 });
 
   const refused = await withIndependentWriteLock(location, async () => {
     const reply = await worker.step({ op: 'wait-barrier-release' });
     return parseWaitStatus(valueOf(worker, reply));
   });
-  expect(refused.outcome).toEqual({ kind: 'storage-busy', phase: 'allocate', fence: 1, error: 'HistoryBusyError' });
-  expect(refused.attempts.map((attempt) => attempt.fence)).toEqual([1]);
+  expect(refused.outcome).toEqual({ kind: 'storage-busy', phase: 'allocate', fence: priorOutcome.fence + 1, error: 'HistoryBusyError' });
+  expect(refused.attempts.map((attempt) => attempt.fence)).toEqual([priorOutcome.fence + 1]);
   const after = snapshot(location);
-  expect(after.writer).toMatchObject({ holder: 'postgrant-holder', lastFence: 1 });
+  expect(after.writer).toMatchObject({ holder: 'postgrant-holder', lastFence: priorOutcome.fence + 1 });
   expect(after.sequences).toEqual(initial.sequences);
   expect(after.attempts).toEqual(initial.attempts);
   expect(after.results).toEqual(initial.results);
   expect(after.current).toEqual(initial.current);
   expect(after.acceptances).toEqual(initial.acceptances);
+
+  const realGrantEvents = [
+    { kind: 'granted', fence: priorOutcome.fence },
+    { kind: 'granted', fence: refused.attempts[0]?.fence ?? 0 },
+  ];
+  expectCompleteC3GrantAccounting(after.writer.lastFence, realGrantEvents);
+  // This models the original defect: hide the real final grant as busy while
+  // naming a previously granted live holder. C3 must compare every observed
+  // grant with History's durable final fence to reject this weakened record.
+  const finalGrantHiddenAsBusy = [realGrantEvents[0]!, { kind: 'busy', holder: priorOutcome.holder }];
+  expect(() => expectCompleteC3GrantAccounting(after.writer.lastFence, finalGrantHiddenAsBusy)).toThrow();
   await worker.step({ op: 'wait-finish', at: 1_001 });
   await worker.close();
 });
@@ -471,13 +462,15 @@ describe('real waiters contending for the lease with operator deadlines (C3)', (
 
     const state = snapshot(location);
     expectFenceOrderedStorage(state);
+    expectCompleteC3GrantAccounting(state.writer.lastFence, events.map(({ event }) => event));
     // Every successful publication belongs to its grant; a typed post-grant refusal retains the grant without inventing a result.
     const publishedFences = grants.filter((grant) => grant.published !== null).map((grant) => grant.fence).sort((left, right) => left - right);
     expect(state.results.map((result) => result.publishedFence)).toEqual(publishedFences);
     for (const grant of grants) {
       if (grant.postGrantFailure !== undefined) {
         expect(grant.published).toBeNull();
-        expect(grant.postGrantFailure.error).toBe(grant.postGrantFailure.kind === 'storage-busy' ? 'HistoryBusyError' : 'StaleWriterError');
+        expect(grant.postGrantFailure.kind).toBe('storage-busy');
+        expect(grant.postGrantFailure.error).toBe('HistoryBusyError');
       }
     }
     // The forced phase guarantees a grant after a refused try and a deadline outcome; these union assertions are

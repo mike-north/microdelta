@@ -1123,13 +1123,41 @@ unchanged. The supervising run then closes normally and releases the lease.
 This proves rollback for allocation under a real independent SQLite lock.
 
 **C3 outcome contract.** A tenure's grant/fence is counted independently from
-its post-grant work. Successful work records its published locator. Typed
-`HistoryBusyError` and `StaleWriterError` records name the operation and retain
-the grant while recording no publication. Unknown exceptions remain failures.
-The shared classifier is covered for allocation, staging, and publication;
-the lock reproduction uses allocation as the representative SQLite boundary.
-Aggregate storage checks require all granted fences to be accounted for and
-require stored publications to match only grants that reported publication.
+its post-grant work. Successful work records its published locator. Only an
+actual `HistoryBusyError` after a grant is accepted as typed storage
+contention; it names the operation, retains the grant, and records no
+publication. `StaleWriterError`, raw errors, and errors that only imitate the
+`HistoryBusyError` name remain failures. The shared classifier is covered for
+allocation, staging, and publication; the lock reproduction uses allocation
+as the representative SQLite boundary. Aggregate storage checks require the
+complete grant sequence to match History's durable final fence and require
+stored publications to match only grants that reported publication. A
+negative control hides the real final grant as a `busy` event while naming a
+previous holder; the reconciliation assertion rejects that record.
+
+**Lock-helper cleanup.** The separate-process lock helper bounds readiness
+and release, then kills and reaps its child on startup timeout, unexpected
+readiness, early exit, release timeout, and callback failure. Dedicated
+failure-path tests assert that no helper child remains active and that a
+callback error is preserved when a holder ignores release.
+
+**Repair test chronology.** These three review repairs were already present as
+uncommitted source and tests when work resumed in a new agent context. The
+resumed agent cannot verify that the repair assertions were run red before
+their implementation, so that is not claimed as a test-first receipt. The
+bounded post-implementation negative control replaced the cleanup path with a
+non-reaping mutant; the startup-timeout test failed because the active-child
+count was 1 instead of 0. Its fixture exits naturally after 350 ms, and the
+normal helper was restored immediately. Two additional post-implementation
+mutants confirm that the new controls detect the review gaps: removing the
+durable-final-fence comparison made the hidden-grant test fail because the
+weakened check did not throw; restoring stale-error acceptance made the typed
+stale negative fail because the classifier did not throw. Both mutants were
+restored before the final passing run. The passing classifier also rejects
+unrelated errors and a plain error spoofing the `HistoryBusyError` name. The
+original test-first evidence for the initial allocation barrier remains as
+recorded above and in the implementation handoff, separate from these review
+repairs.
 
 **Test-first and commands.** The new barrier test was added before its protocol
 and worker implementation. Its first compile failed because `grantBarrier`
@@ -1149,10 +1177,11 @@ Final local validation on the issue branch:
 | Command | Result |
 | --- | --- |
 | `npm run check` | Exit 0; package and workspace checks passed. |
-| `npm test` | Exit 0; facade 91 suites / 1,074 tests passed, tooling 368/368, Accounting 54/54, Definition 283/283, History 44/44, Machine Node 85/85, Materialization 34/34, Resolution 60/60, Supervision 207/207, Tracking 134/134, all experiment suites, and 17 examples passed. |
+| `npm test` | Exit 0; facade 92 suites / 1,079 tests passed, tooling 368/368, Accounting 54/54, Definition 283/283, History 44/44, Machine Node 85/85, Materialization 34/34, Resolution 60/60, Supervision 207/207, Tracking 134/134, all experiment suites, and 17 examples passed. |
 | `npm run build` | Exit 0; packages, declaration fixtures, experiments, and examples built. |
 | `npm run test:controls --workspace microdelta` | Exit 0; 36/36 control/tooling checks passed, including the C3 mutation-control runner. |
-| `node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand .test-build/test/concurrency` (from `packages/core`) | Exit 0; 8 suites / 182 tests passed. |
+| `node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand .test-build/test/concurrency` (from `packages/core`) | Exit 0; 9 suites / 187 tests passed. |
+| Focused C3 tests (`contention.test.js`, `contention-failure.test.js`, and `contention-lock.test.js`) after `npx tsc -p packages/core/tsconfig.test.json` | Exit 0; 3 suites / 13 tests passed, including durable-fence reconciliation, typed-error negatives, and helper cleanup failures. |
 | `node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand --runTestsByPath .test-build/test/concurrency/contention.test.js` with the temporary generic-catch mutant (from `packages/core`) | Expected exit 1 at the deterministic outcome assertion; actual lock acquisition and History timeout completed, but the restored generic catch reported `failed` instead of the grant-preserving phase outcome. |
 | `tsc -p packages/core/tsconfig.test.json && node --experimental-vm-modules node_modules/jest/bin/jest.js --config packages/core/jest.config.mjs --runInBand --runTestsByPath packages/core/.test-build/test/concurrency/contention.test.js packages/core/.test-build/test/concurrency/contention-failure.test.js` | Exit 0 after restoring the implementation; 2 suites / 8 tests passed. |
 

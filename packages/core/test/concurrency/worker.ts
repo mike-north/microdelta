@@ -26,7 +26,7 @@ import { writeSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 
 import type { IBindingDescriptor } from '@microdelta/definition';
-import { HistoryBusyError, StaleWriterError } from '@microdelta/history';
+import { HistoryBusyError } from '@microdelta/history';
 import type { IAttemptRecord, IClockCapability, IDurableHistory, IWriterLease } from '@microdelta/history';
 import { createNodeClock, createNodeMachine, createNodeTimer } from '@microdelta/machine-node';
 import type { ICheckOutcome, IRecoveryResult, IResolution, IResolutionOutcome, IResolveRequest } from '@microdelta/resolution';
@@ -424,7 +424,7 @@ function startWait(command: Extract<IWaitCommand, { readonly op: 'wait-start' }>
       }
       wait.outcome = { kind: 'acquired', holder: granted.holder, fence: granted.fence, expiresAt: granted.expiresAt, published };
     } catch (error: unknown) {
-      if (granted !== undefined && (error instanceof HistoryBusyError || error instanceof StaleWriterError)) {
+      if (granted !== undefined && error instanceof HistoryBusyError) {
         const classified = classifyGrantedWorkFailure(wait.phase, granted.fence, error);
         wait.outcome = { kind: classified.kind, phase: classified.phase, fence: classified.fence, error: classified.errorName };
       } else {
@@ -506,7 +506,7 @@ async function contendWaiting(command: Extract<IWaitCommand, { readonly op: 'wai
       }
       events.push({ kind: 'granted', fence: granted.fence, tries: counter.tries, published });
     } catch (error: unknown) {
-      if (granted !== undefined && (error instanceof HistoryBusyError || error instanceof StaleWriterError)) {
+      if (granted !== undefined && error instanceof HistoryBusyError) {
         const failure = classifyGrantedWorkFailure(phase, granted.fence, error);
         events.push({ kind: 'granted', fence: granted.fence, tries: counter.tries, published: null, postGrantFailure: { kind: failure.kind, phase: failure.phase, error: failure.errorName } });
         await holdFor(command.restMilliseconds);

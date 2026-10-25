@@ -4,11 +4,11 @@
  * carries the operation and granted fence that authorize the attempted work.
  * @packageDocumentation
  */
-import { HistoryBusyError, StaleWriterError } from '@microdelta/history';
+import { HistoryBusyError } from '@microdelta/history';
 
 /** A typed History refusal while using authority that was already granted. */
 export interface IGrantedWorkFailure {
-  readonly kind: 'storage-busy' | 'stale-writer';
+  readonly kind: 'storage-busy';
   readonly phase: 'allocate' | 'stage' | 'publish';
   readonly fence: number;
   readonly errorName: string;
@@ -22,9 +22,6 @@ export function classifyGrantedWorkFailure(
 ): IGrantedWorkFailure {
   if (error instanceof HistoryBusyError) {
     return { kind: 'storage-busy', phase, fence, errorName: error.name };
-  }
-  if (error instanceof StaleWriterError) {
-    return { kind: 'stale-writer', phase, fence, errorName: error.name };
   }
   throw new Error(`Unexpected post-grant History failure: ${error instanceof Error ? error.name : String(error)}`, { cause: error });
 }

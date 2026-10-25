@@ -130,7 +130,6 @@ export type IWaitOutcome =
   | { readonly kind: 'acquired'; readonly holder: string; readonly fence: number; readonly expiresAt: number; readonly published: string }
   | { readonly kind: 'busy'; readonly error: string; readonly holder: string | null; readonly expiresAt: number | null; readonly deadline: number; readonly contended: boolean; readonly message: string }
   | { readonly kind: 'storage-busy'; readonly phase: 'allocate' | 'stage' | 'publish'; readonly fence: number; readonly error: string }
-  | { readonly kind: 'stale-writer'; readonly phase: 'allocate' | 'stage' | 'publish'; readonly fence: number; readonly error: string }
   | { readonly kind: 'stopped'; readonly message: string }
   | { readonly kind: 'failed'; readonly error: string; readonly message: string };
 
@@ -152,7 +151,7 @@ export interface IWaitStatus {
  * `busy` event describes acquisition only; unexpected failures remain errors.
  */
 export type IWaitContentionEvent =
-  | { readonly kind: 'granted'; readonly fence: number; readonly tries: number; readonly published: string | null; readonly postGrantFailure?: { readonly kind: 'storage-busy' | 'stale-writer'; readonly phase: 'allocate' | 'stage' | 'publish'; readonly error: string } }
+  | { readonly kind: 'granted'; readonly fence: number; readonly tries: number; readonly published: string | null; readonly postGrantFailure?: { readonly kind: 'storage-busy'; readonly phase: 'allocate' | 'stage' | 'publish'; readonly error: string } }
   | { readonly kind: 'busy'; readonly holder: string | null; readonly contended: boolean; readonly tries: number }
   | { readonly kind: 'failed'; readonly error: string; readonly message: string; readonly tries: number };
 
@@ -481,8 +480,7 @@ function parseWaitOutcome(value: unknown): IWaitOutcome {
         contended: booleanField(value, 'contended'),
         message: stringField(value, 'message'),
       };
-    case 'storage-busy':
-    case 'stale-writer': {
+    case 'storage-busy': {
       const phase = value.phase;
       if (phase !== 'allocate' && phase !== 'stage' && phase !== 'publish') {
         throw new TypeError(`unsupported post-grant phase ${String(phase)}`);
@@ -528,12 +526,12 @@ export function parseWaitContention(value: unknown): readonly IWaitContentionEve
           if (!isRecord(entry.postGrantFailure)) { throw new TypeError('post-grant failure must be an object'); }
           const failureKind = stringField(entry.postGrantFailure, 'kind');
           const phase = stringField(entry.postGrantFailure, 'phase');
-          if ((failureKind !== 'storage-busy' && failureKind !== 'stale-writer') || (phase !== 'allocate' && phase !== 'stage' && phase !== 'publish')) {
+          if (failureKind !== 'storage-busy' || (phase !== 'allocate' && phase !== 'stage' && phase !== 'publish')) {
             throw new TypeError('unsupported post-grant failure');
           }
           const published = nullableString(entry, 'published');
           const error = stringField(entry.postGrantFailure, 'error');
-          if (published !== null || error !== (failureKind === 'storage-busy' ? 'HistoryBusyError' : 'StaleWriterError')) {
+          if (published !== null || error !== 'HistoryBusyError') {
             throw new TypeError('post-grant failure cannot claim publication and must name its typed History error');
           }
           return { kind, fence: numberField(entry, 'fence'), tries, published, postGrantFailure: { kind: failureKind, phase, error } };

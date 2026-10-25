@@ -32,12 +32,13 @@ test('C3 keeps a granted fence when a named post-grant History operation is stor
   expect(classifyGrantedWorkFailure('allocate', 7, historyBusy)).toEqual({
     kind: 'storage-busy', phase: 'allocate', fence: 7, errorName: 'HistoryBusyError',
   });
-  expect(classifyGrantedWorkFailure('stage', 7, new StaleWriterError('stale'))).toEqual({
-    kind: 'stale-writer', phase: 'stage', fence: 7, errorName: 'StaleWriterError',
-  });
+  expect(() => classifyGrantedWorkFailure('stage', 7, new StaleWriterError('stale')))
+    .toThrow('Unexpected post-grant History failure');
   expect(classifyGrantedWorkFailure('stage', 7, historyBusy)).toMatchObject({ kind: 'storage-busy', phase: 'stage', fence: 7 });
   expect(classifyGrantedWorkFailure('publish', 7, historyBusy)).toMatchObject({ kind: 'storage-busy', phase: 'publish', fence: 7 });
   expect(() => classifyGrantedWorkFailure('publish', 7, Object.assign(new Error('raw busy'), { name: 'HistoryBusyError' })))
+    .toThrow('Unexpected post-grant History failure');
+  expect(() => classifyGrantedWorkFailure('allocate', 7, new Error('unrelated failure')))
     .toThrow('Unexpected post-grant History failure');
 });
 

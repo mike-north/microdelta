@@ -10,10 +10,12 @@
  *    name and its binding. The subject's block index names the operations at
  *    its addresses that are still unsettled; a call at such an address reuses
  *    that operation's identity, otherwise it mints a new one.
- * 2. **Taint guard.** An attempt that met a deferral or exhausted unknown
- *    outcome rethrows that signal without sending; a deferral is never sent
- *    before its time. A distinct admitted attempt may retry under this run's
- *    finite allowance without an effect-safety declaration.
+ * 2. **Taint guard.** An attempt that met a deferral or exhausted unknown or
+ *    known retry allowance rethrows that signal without sending. The known
+ *    provider floor still gates a later invocation, while exhaustion in the
+ *    current invocation is final and must not make that run wait pointlessly.
+ *    A distinct admitted attempt may retry under this run's finite allowance
+ *    without an effect-safety declaration.
  * 3. **Intent before send.** Once the permit is held and stop intent
  *    rechecked, one journal commit records the operation as `pending` with
  *    the new request attempt, then Accounting records the usage intent, and
@@ -465,9 +467,19 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     return stored.record.status === 'pending' && lease !== undefined && stored.fence !== lease.fence;
   }
 
+  /** Whether an unsettled record's provider floor still forbids a send. */
+  function isBeforeProviderFloor(record: IOperationRecord): record is IOperationRecord & { readonly notBefore: number } {
+    return record.notBefore !== undefined && now() < record.notBefore;
+  }
+
   /** The block an unsettled record imposes now, or undefined when it may be resumed. */
   function blockOf(record: IOperationRecord): IOperationBlock | undefined {
-    if ((record.status === 'deferred' || record.status === 'unknown') && record.notBefore !== undefined && now() < record.notBefore) {
+    if (record.status === 'retry-exhausted') {
+      if (record.retryExhaustedRunInstance === currentRunInstance()) {
+        return { kind: 'policy-exhausted', operation: record.operation };
+      }
+    }
+    if ((record.status === 'retry-exhausted' || record.status === 'deferred' || record.status === 'unknown') && isBeforeProviderFloor(record)) {
       return { kind: 'deferred', operation: record.operation, notBefore: record.notBefore };
     }
     if (record.status === 'unknown') {
@@ -595,7 +607,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       const current: IOperationRecord = { ...stored.record, safety: request.safety, maxAttempts: request.maxAttempts, rateLimitRetries: request.rateLimitRetries };
       const block = blockOf(current);
       if (block !== undefined) {
-        emit('blocked', current, { stepAttempt, status: current.status, reason: block.kind === 'deferred' ? 'not-before' : block.reason, notBefore: block.kind === 'deferred' ? block.notBefore : undefined });
+        emit('blocked', current, { stepAttempt, status: current.status, reason: block.kind === 'deferred' ? 'not-before' : block.kind === 'policy-exhausted' ? 'policy-exhausted' : block.reason, notBefore: block.kind === 'deferred' ? block.notBefore : undefined });
         return pend(attempt, scope, block);
       }
       stored = { ...stored, record: current };
@@ -837,13 +849,13 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
           const notBefore = Math.max(response.retryAt ?? now(), now() + retryDelay(refused));
           const next: IOperationRecord = { ...refused, notBefore };
           if (spentInRun(next) >= request.maxAttempts || rateLimited(next, currentRunInstance()) > request.rateLimitRetries) {
-            const exhausted: IOperationRecord = { ...next, status: 'failed', notBefore: undefined };
+            const exhausted: IOperationRecord = { ...next, status: 'retry-exhausted', retryExhaustedRunInstance: currentRunInstance() };
             const written = commit(exhausted, 'rate-limited');
             if (written === undefined) {
               return leaseLost();
             }
-            emit('retry-exhausted', exhausted, { stepAttempt, status: 'failed', reason: 'policy-exhausted' });
-            return { stored: written, outcome: { kind: 'error', error: new SupervisionError('operation-failed', `Operation ${operation} is still rate limited after exhausting its finite retry allowance`) } };
+            emit('retry-exhausted', exhausted, { stepAttempt, status: 'retry-exhausted', reason: 'policy-exhausted', notBefore });
+            return { stored: written, outcome: { kind: 'pending', block: { kind: 'policy-exhausted', operation } } };
           }
           const written = commit(next, 'rate-limited');
           if (written === undefined) {
@@ -854,23 +866,28 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
         }
         // A permanent failure, or a transient one (including a rate limit without a retry time).
         const transient = response.kind === 'rate-limited' || response.transient;
-        const failed = settledAs('failed', 'failed');
+        const attemptStatus = response.kind === 'rate-limited' ? 'rate-limited' : 'failed';
+        const failed = settledAs(attemptStatus, 'failed');
         const retryable = transient && spentInRun(failed) < request.maxAttempts;
         if (!retryable) {
-          const written = commit(failed, transient ? (response.kind === 'rate-limited' ? 'rate-limited' : 'transient') : 'permanent');
+          const exhausted: IOperationRecord = transient
+            ? { ...failed, status: 'retry-exhausted', retryExhaustedRunInstance: currentRunInstance() }
+            : failed;
+          const written = commit(exhausted, transient ? (response.kind === 'rate-limited' ? 'rate-limited' : 'transient') : 'permanent');
           if (written === undefined) {
             return leaseLost();
           }
           if (transient) {
-            emit('retry-exhausted', failed, { stepAttempt, status: 'failed', reason: 'policy-exhausted' });
+            emit('retry-exhausted', exhausted, { stepAttempt, status: 'retry-exhausted', reason: 'policy-exhausted' });
+            return { stored: written, outcome: { kind: 'pending', block: { kind: 'policy-exhausted', operation } } };
           }
           const cause = response.kind === 'failed' ? response.error : undefined;
-          return { stored: written, outcome: { kind: 'error', error: new SupervisionError('operation-failed', `Operation ${operation} failed${transient ? ' after its retry policy was exhausted' : ''}`, cause) } };
+          return { stored: written, outcome: { kind: 'error', error: new SupervisionError('operation-failed', `Operation ${operation} was refused permanently`, cause) } };
         }
         // A short durable deferral covers the backoff, so a crash during it leaves a time a later run honors.
         const delay = retryDelay(failed);
         const notBefore = now() + delay;
-        const waiting = settledAs('failed', 'deferred', notBefore);
+        const waiting = settledAs(attemptStatus, 'deferred', notBefore);
         const written = commit(waiting, response.kind === 'rate-limited' ? 'rate-limited' : 'transient');
         if (written === undefined) {
           return leaseLost();
@@ -933,7 +950,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
           resumable = true;
           continue;
         }
-        emit('blocked', stored.record, { status: stored.record.status, reason: block.kind === 'deferred' ? 'not-before' : block.reason, notBefore: block.kind === 'deferred' ? block.notBefore : undefined });
+        emit('blocked', stored.record, { status: stored.record.status, reason: block.kind === 'deferred' ? 'not-before' : block.kind === 'policy-exhausted' ? 'policy-exhausted' : block.reason, notBefore: block.kind === 'deferred' ? block.notBefore : undefined });
         noteBlock(scope, request.step, block);
         return Object.freeze({ kind: 'denied', reason: pendingError(block).message });
       }

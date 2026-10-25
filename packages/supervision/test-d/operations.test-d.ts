@@ -24,6 +24,8 @@ import type {
   IOperationResponse,
   IOperationSettlement,
   IOperationView,
+  IOperationStatus,
+  ISupervisionErrorCode,
   IRun,
   IRunEvent,
   IRunExecution,
@@ -82,8 +84,11 @@ expectError(wait.value);
 declare const member: Extract<IMemberOutcome, { readonly status: 'pending' | 'cancelled' }>;
 expectType<IOperationBlock | undefined>(member.blocked);
 expectAssignable<IOperationBlock>({ kind: 'deferred', operation: 'op-1-1', notBefore: 1 });
+expectAssignable<IOperationBlock>({ kind: 'policy-exhausted', operation: 'op-1-1' });
 expectAssignable<IOperationBlock>({ kind: 'unknown-outcome', operation: 'op-1-1', reason: 'not-repeat-safe' });
 expectNotAssignable<IOperationBlock>({ kind: 'unknown-outcome', operation: 'op-1-1', reason: 'other' });
+expectAssignable<IOperationStatus>('retry-exhausted');
+expectAssignable<ISupervisionErrorCode>('operation-exhausted');
 
 // The run reports the time it waits until.
 expectType<number | undefined>(result.waitingUntil);

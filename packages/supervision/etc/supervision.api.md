@@ -173,6 +173,9 @@ export type IOperationBlock = {
     readonly operation: string;
     readonly notBefore: number;
 } | {
+    readonly kind: 'policy-exhausted';
+    readonly operation: string;
+} | {
     readonly kind: 'unknown-outcome';
     readonly operation: string;
     readonly reason: 'not-repeat-safe' | 'policy-exhausted' | 'unrecorded';
@@ -298,7 +301,7 @@ export interface IOperationSettlementRecord {
 }
 
 // @alpha
-export type IOperationStatus = 'pending' | 'succeeded' | 'failed' | 'deferred' | 'unknown' | 'cancelled' | 'resolved' | 'abandoned';
+export type IOperationStatus = 'pending' | 'succeeded' | 'failed' | 'deferred' | 'unknown' | 'cancelled' | 'resolved' | 'abandoned' | 'retry-exhausted';
 
 // @alpha
 export type IOperationSubject = IAdmissionRequest['subject'];
@@ -663,7 +666,7 @@ export interface ISupervision {
 }
 
 // @alpha
-export type ISupervisionErrorCode = 'outside-run' | 'run-closed' | 'composition-phase' | 'observer-failure' | 'writer-busy' | 'invalid-request' | 'stopped' | 'operation-failed' | 'operation-deferred' | 'operation-unknown' | 'operation-unrecorded' | 'operation-resolved' | 'integrity' | 'undeclared-call';
+export type ISupervisionErrorCode = 'outside-run' | 'run-closed' | 'composition-phase' | 'observer-failure' | 'writer-busy' | 'invalid-request' | 'stopped' | 'operation-failed' | 'operation-deferred' | 'operation-unknown' | 'operation-exhausted' | 'operation-unrecorded' | 'operation-resolved' | 'integrity' | 'undeclared-call';
 
 // @alpha
 export interface ISupervisionOptions {

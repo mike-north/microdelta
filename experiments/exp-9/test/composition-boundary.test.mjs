@@ -90,8 +90,20 @@ test('known unsupported behavior: same-ID changed detail keeps stale result; sel
     assert.equal(empty.fold.status, 'succeeded');
     assert.deepEqual(empty.report.required, []);
 
+    const emptyAdaPath = path.join(path.dirname(store), 'empty-ada-search.json');
+    writeFileSync(emptyAdaPath, JSON.stringify({ ...original, revision: original.revision + 3, emptySearches: [ada] }));
+    const emptyAda = runFixture(emptyAdaPath, path.join(path.dirname(store), 'empty-ada-history.sqlite'));
+    assert.deepEqual(emptyAda.discovery, [ada, ben, cy]);
+    assert.deepEqual(emptyAda.searches, { [ada]: [], [ben]: [201, 202], [cy]: [301] });
+    assert.deepEqual(emptyAda.executions, { contributors: 1, search: 3, pullRequestDetail: 3, assessor: 3, summary: 3, report: 1 });
+    assert.equal(emptyAda.summaries[ada].authored, 0);
+    assert.equal(emptyAda.summaries[ada].score, 0);
+    assert.equal(emptyAda.members[ada].status, 'succeeded');
+    assert.equal(emptyAda.fold.status, 'succeeded');
+    assert.ok(emptyAda.report.required.some((entry) => entry.key === ada && entry.score === 0));
+
     const failedPath = path.join(path.dirname(store), 'failed-ada-search.json');
-    writeFileSync(failedPath, JSON.stringify({ ...original, revision: original.revision + 3, searchFailures: [ada] }));
+    writeFileSync(failedPath, JSON.stringify({ ...original, revision: original.revision + 4, searchFailures: [ada] }));
     const failed = runFixture(failedPath, path.join(path.dirname(store), 'failed-history.sqlite'));
     assert.deepEqual(failed.discovery, [ada, ben, cy]);
     assert.equal(failed.members[ada].status, 'failed');

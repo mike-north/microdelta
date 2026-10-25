@@ -57,7 +57,9 @@ export function selectActivity(key: string, config: Pick<IConfig, 'repository' |
   if (fixture.searchFailures?.includes(key) === true) {
     throw new Error(`fixture search failure for ${key}`);
   }
-  const pullRequestIds = authoredInWindow(fixture, key, config.window).map((pull) => pull.number);
+  const pullRequestIds = fixture.emptySearches?.includes(key) === true
+    ? []
+    : authoredInWindow(fixture, key, config.window).map((pull) => pull.number);
   selectedSearches[key] = pullRequestIds;
   return {
     revision: fixture.revision,

@@ -63,6 +63,8 @@ export interface IFixture {
   readonly reviews: readonly IFixtureReview[];
   /** Local failure injection for a selected contributor search; discovery ignores it. */
   readonly searchFailures?: readonly string[];
+  /** A completed selected PR-ID query returning no matches; discovery uses the underlying activity data. */
+  readonly emptySearches?: readonly string[];
 }
 
 

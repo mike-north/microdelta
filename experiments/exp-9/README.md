@@ -52,6 +52,11 @@ behaviors:
   failed, no Ada summary or strict report is published, and discovery still
   reports the complete roster. A valid empty roster is separately observed as
   a successful closed empty report.
+- A completed Ada PR-ID search can also be certified empty while the valid
+  roster remains Ada, Ben and Cy. Ada receives a successful zero-PR summary;
+  only Ben's and Cy's three PR details and assessments execute, and the strict
+  report succeeds. The injected empty result affects the selected PR search;
+  contributor discovery continues to inspect the underlying fixture activity.
 
 The standalone candidate's same-ID current-detail assertion fails. After the fixture revision changes
 and PR 101 changes from merged to unmerged, all three activity checks execute,
@@ -110,5 +115,6 @@ observations reproduced, not that current same-ID detail freshness passed.
 ## Limits
 
 This fixture proves the fixed Ada/Ben/Cy composition and process restart over
-local SQLite. It does not prove live provider pagination, count caps, provider
+local SQLite, including distinct empty and failed Ada search outcomes. It does
+not prove live provider pagination, count caps, provider
 consistency, rate controls, retry integration, CLI delivery scope, or M7 scale.

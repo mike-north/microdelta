@@ -519,8 +519,8 @@ const REPO_PREFIX = 'repos/mike-north/microdelta';
 const LEGACY_PATH = `${REPO_PREFIX}/branches/main/protection`;
 const RULES_PATH = `${REPO_PREFIX}/rules/branches/main?per_page=100`;
 
-/** Rule payloads shaped like the rules-for-branch response: type, parameters, and owning ruleset. */
-/** Model required status rules without making latest-main freshness part of the accepted contract. */
+/** Model branch-rule payloads with their type, parameters, and owning ruleset.
+ * Required status checks do not make latest-main freshness part of the accepted contract. */
 function rulesetRules({ rulesetId = RULESET_ID, pullRequest = {}, checks = {}, omit = [], contexts } = {}) {
   const requiredContexts = contexts ?? [
     ...REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: 15368 })),

@@ -27,6 +27,11 @@ export function createNodeRandom(): IRandomIdentifierCapability;
 // @alpha
 export function createNodeSqlite(): ISqliteCapability;
 
+// Warning: (ae-forgotten-export) The symbol "ISqliteReadCapability" needs to be exported by the entry point index.d.ts
+//
+// @alpha
+export function createNodeSqliteReader(): ISqliteReadCapability;
+
 // Warning: (ae-forgotten-export) The symbol "ITimerCapability" needs to be exported by the entry point index.d.ts
 //
 // @alpha

@@ -11,8 +11,9 @@ contract. See the [operations contract](../../docs/spec/operations.md)
 
 It consumes only `@microdelta/machine` (the SQLite capability) and
 `@microdelta/value` (canonical encoding of estimate bases). It never imports
-Node, History or Supervision, and it never decides retry, budgets or deletion
-(ACC-008).
+Node, History or Supervision, and it never decides execution retry, budgets or
+deletion of usage/History evidence (ACC-008). Separate raw resource-state reports
+have Accounting-owned expiry and physical eviction.
 
 ## Facts
 
@@ -121,3 +122,49 @@ The manifest carries the same publication metadata as its siblings but is
 marked `private` until `@microdelta/accounting` is registered for npm trusted
 publishing (see [releasing](../../docs/releasing.md#adding-a-new-first-party-package)).
 Until then the release graph excludes it.
+
+
+## Time-qualified raw resource reports
+
+`openResourceReports` opens a **separate file** using injected SQLite and timer
+capabilities. Its `record` port accepts an environment, stable report identity,
+original observation time, explicit nullable qualifiers and allowed/remaining
+quantities. It needs no usage intent or paid operation. A report is evidence of
+what a source said, never a guaranteed current balance or permission to run.
+
+Explicit `validUntil` takes precedence. Without it (`null`), local retention is
+one hour from `observedAt`; `localRetentionMilliseconds` is optional. The
+returned inspection record preserves `expiresAt` and its provider/default/override
+basis. A retained identical identity is a durable duplicate; conflicting contents
+throw. An expired original redelivery is refused. Identities must not be reused
+or retimed after eviction; there is no permanent deduplication tombstone.
+
+Writers remove expired rows on open, successful intake, explicit `maintain`, and
+scheduled maintenance. The injected timer schedules the earlier of the next
+known expiry and a one-minute poll, including while idle. Storage failures reach
+`onMaintenanceError` and retry one minute later when timer allocation succeeds.
+If allocation also fails, both errors are reported without claiming a future
+timer; explicit maintenance, intake or reopen can restore cleanup after recovery.
+Errors thrown by that observer are contained. Persistent storage failure can delay physical removal; it cannot
+make expired reports appear in queries. `close` cancels scheduling, and timers
+do not keep an otherwise finished process alive.
+
+`openResourceReportReader` accepts only the separate read-only SQLite capability
+and a clock. `query(environment)` returns qualified retained reports in identity
+order; that ordering makes no claim about provider source order. It never sums
+balances, infers usage, fills usage gaps, refreshes a provider or writes storage.
+Missing, empty, foreign or wrong-store files are refused without initialization.
+
+The report file uses DELETE rollback journaling with FULL synchronous commits,
+so read-only opening creates no WAL sidecars. Existing Machine storage defaults
+remain WAL. Inspection and DELETE opening refuse existing WAL files before
+mutation. Readers see committed evidence while the writer remains open, but
+rollback-journal contention can return the host's typed busy error. Cooperative owners
+must preserve pathname and journal layout from preflight through driver open and
+throughout handle lifetime; hot-journal recovery belongs
+to a writable open. No result is substituted for a failed read.
+
+See the [bounded design and lifecycle](../../docs/validation/resource-report-design.md)
+and [acceptance tests](../core/test/accounting/resource-reports.test.ts). This is
+an Accounting port; it does not assemble a CLI, provider adapter or latest-balance
+product.

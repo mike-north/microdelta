@@ -20,7 +20,7 @@
  * "Accounting write authority").
  *
  * Accounting never invents usage, never counts an estimate as observed, and
- * never decides execution policy such as retry, budgets or deletion (ACC-005,
+ * never decides execution policy such as retry, budgets or deletion of usage/History evidence (ACC-005,
  * ACC-006, ACC-008). External operations and their request attempts are Run
  * Supervision's: it mints and owns their identities, and Accounting records
  * usage expected from and reported for them as opaque identifiers. Accounting

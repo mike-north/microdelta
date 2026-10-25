@@ -15,9 +15,9 @@
  * - an operator deadline or a hard stop escalates: sends, permit waits and
  *   waits for a time are aborted, the attempt ends interrupted, the remote
  *   state is recorded, and returned but uncommitted output is discarded;
- * - a drain that outlives the writer lease cannot publish, a successor's
- *   lease is untouched, and the request ends with a typed `lease-lost`
- *   denial rather than History's raw stale-writer error.
+ *
+ * The lease-loss drain cases retain this same facade path in
+ * `lease-drain.test.ts`, with controlled wall-clock readings.
  *
  * @see ../../../../docs/spec/operations.md (RUN-002, RUN-014, RUN-015)
  * @see ../../../../docs/spec/acceptance.md (A-13)
@@ -25,14 +25,13 @@
  * @see ../../../../experiments/exp-8/decision.md (ruling R)
  */
 import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
-import { createNodeClock } from '@microdelta/machine-node';
 
 import { createStopController } from '../../src/index.js';
 import type { IRunEvent } from '../../src/index.js';
-import { cleanup, openHistory } from '../durable-history/support.js';
+import { cleanup } from '../durable-history/support.js';
 import { createWorld, installWorld } from './fixture.js';
 import type { IWorld } from './fixture.js';
-import { controlEvents, freshKey, logicalStore, openStopSession, runIn, runMembers, statuses } from './session.js';
+import { controlEvents, freshKey, openStopSession, runIn, runMembers, statuses } from './session.js';
 import { attemptsAt, elapse, publishedSubjects, tempStore, turns, until } from './support.js';
 import type { ITempStore } from './support.js';
 
@@ -357,37 +356,6 @@ describe('deadline and hard stop (RUN-014, RUN-015)', () => {
       expect(statuses(result.value)).toEqual({ 'item:1': 'cancelled' });
       expect(publishedSubjects(store.location)).not.toContain(workSubject('item:1'));
       expect(attemptsAt(store.location).find((row) => row.subject === workSubject('item:1'))).toMatchObject({ state: 'interrupted', ending: 'stopped' });
-    } finally {
-      session.close();
-    }
-  });
-});
-
-describe('a drain that outlives the writer lease cannot publish (ruling R)', () => {
-  test.each(['a successor takes the lease over', 'the lease simply expires'] as const)('%s: the late completion publishes nothing and the request is denied lease-lost', async (situation) => {
-    world.keys = ['item:1'];
-    const leaseMilliseconds = 150;
-    const session = openStopSession(store.location, { leaseMilliseconds });
-    const stop = createStopController();
-    try {
-      const running = runIn(session, { stop }, (run) => run.resolve(session.fixture.instance('item:1'), { requestKey: freshKey() }));
-      await until(() => world.provider.received.includes('item:1'), 'the member is sending');
-      stop.request({ level: 'soft' });
-      await elapse(leaseMilliseconds + 150);
-      const probe = openHistory({ location: store.location, store: logicalStore, clock: createNodeClock() });
-      const successor = situation === 'a successor takes the lease over' ? probe.acquireWriter({ holder: 'successor', leaseMilliseconds: 60_000 }) : undefined;
-      if (successor !== undefined) {
-        expect(successor.kind).toBe('acquired');
-      }
-      world.provider.release('item:1');
-      const result = await running;
-      expect(result.value).toMatchObject({ kind: 'refused', reason: 'lease-lost', disposition: 'denied' });
-      expect(publishedSubjects(store.location)).not.toContain(workSubject('item:1'));
-      if (successor?.kind === 'acquired') {
-        expect(probe.currentWriter()).toEqual(successor.lease);
-      }
-      // The late completion made no durable write: its attempt stays incomplete and recoverable.
-      expect(attemptsAt(store.location).find((row) => row.subject === workSubject('item:1'))).toMatchObject({ state: 'allocated' });
     } finally {
       session.close();
     }

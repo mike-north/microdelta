@@ -27,11 +27,11 @@ facade adds no authority merely by presenting their evidence together.
 
 Keep three capabilities distinct:
 
-* A **finite reader** answers bounded queries over retained state and has a
+- A **finite reader** answers bounded queries over retained state and has a
   closeable local lifetime.
-* An **observation** attaches to changes, prompts rereads, and can outlive a run;
+- An **observation** attaches to changes, prompts rereads, and can outlive a run;
   its thin signals are not result events or proof of currentness.
-* **Run control** requests execution effects through Supervision. A reader or
+- **Run control** requests execution effects through Supervision. A reader or
   observation alone never grants this capability.
 
 Do not add an inspection mode to `IWorkspace.run`: that composition exists for

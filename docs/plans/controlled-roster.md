@@ -356,7 +356,7 @@ does not file or claim them:
    not implement or claim them as first-report prerequisites. This does not
    close full A-12j/l or RUN-019.
 4. Roster application assembly: prove the numbered first-delivery outcomes plus
-   CR-2/4/5 below. #220 generic classification alone is not CR-2 evidence.
+   CR-2/4/5 matrix above. #220 generic classification alone is not CR-2 evidence.
    The first CLI requires #167's run-start/progress scope; full TEST-4.9 history
    and resource inspection remains open.
 5. Independent adversarial review, repository checks, then the normal supervisor

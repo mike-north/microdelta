@@ -1,5 +1,32 @@
 # @microdelta/resolution
 
+## 0.3.1
+### Patch Changes
+
+- d782565: Expose the owning Tracking observer's narrow `hasOwn` capability in alpha workspace author callbacks. Preserve own-presence precision and capture semantics, reject non-string keys before coercion, and make native-reflection diagnostics point to the supported callback route.
+- dbdfee8: Bound fan-out scheduling state to the run's active window while retaining canonical member reports, stop handling, and lane lending.
+- 0af7f74: Revalidate tracked explicit subtree output against the current declared input, keyed member, or forwarded argument at its recorded address. Identical supported output now retains its exact result across process restarts, while changed MDS1 shape still invalidates reuse.
+- c20f01e: Wrap author-thrown errors from source checks, supplied steps, strict folds and outcome folds in safe execution failures while preserving the exact thrown value as the cause. Keep framework-originated output, observer and member failures classified at their owning boundaries.
+- f23d2a1: Wrap author-created ResolutionError failures from memo bodies in a safe execution failure while preserving the original object as the cause. Keep recorded declared-child failures classified by their runtime outcome.
+- 33213fb: Confine supplied argument lists to their owning capture and invocation, reject returned lists with an actionable detachment cause, and return undefined without observations for unsafe integer keys.
+- Updated dependencies [d782565]
+- Updated dependencies [8b4283e]
+- Updated dependencies [bac83f7]
+- Updated dependencies [4853f0e]
+- Updated dependencies [5c9436c]
+- Updated dependencies [b6d7862]
+- Updated dependencies [6513afe]
+- Updated dependencies [77715af]
+- Updated dependencies [5e345a9]
+- Updated dependencies [8692f2a]
+- Updated dependencies [47bea75]
+- Updated dependencies [33213fb]
+- Updated dependencies [0271b4e]
+  - @microdelta/tracking@0.2.2
+  - @microdelta/history@0.3.0
+  - @microdelta/definition@0.3.1
+  - @microdelta/materialization@0.1.3
+
 ## 0.3.0
 ### Minor Changes
 

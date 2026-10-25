@@ -1,5 +1,15 @@
 # @microdelta/machine
 
+## 0.3.0
+### Minor Changes
+
+- 0d7ad9a: Add the alpha `IElapsedClockCapability` contract and Node factory for measuring whole milliseconds from Node's process-local performance time origin. These readings have no UTC meaning and cannot be ordered across process restarts; epoch clock behavior remains separate.
+- 47bea75: Add separate durable raw resource reports with qualified expiry, read-only inspection, and scheduled physical eviction. Add rollback-journal SQLite selection and side-effect-free existing-file readers while preserving WAL defaults; carry the new open-options type through History's existing compatibility exports.
+
+### Patch Changes
+
+- 5010548: Document the `IAsyncContext` completed-entry retention contract and update the Node adapter so repeated fresh entries do not accumulate distinct host contexts in a continuing caller on the validated Node 24 and 26 runtimes. Callback results, caller context, and inherited asynchronous work retain their existing semantics. The Node 22 host-retention diagnostic remains unresolved.
+
 ## 0.2.0
 ### Minor Changes
 

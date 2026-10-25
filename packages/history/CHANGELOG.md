@@ -1,5 +1,26 @@
 # @microdelta/history
 
+## 0.3.0
+### Minor Changes
+
+- 6513afe: Reject insert conflict replacement of immutable durable History records, including secondary unique keys and SQLite row identity aliases. Composite-key immutable tables no longer expose hidden row IDs. New stores use schema version 3; existing version 1 and version 2 durable History files are explicitly rejected without migration. The legacy Store format is unchanged.
+- 47bea75: Add separate durable raw resource reports with qualified expiry, read-only inspection, and scheduled physical eviction. Add rollback-journal SQLite selection and side-effect-free existing-file readers while preserving WAL defaults; carry the new open-options type through History's existing compatibility exports.
+
+### Patch Changes
+
+- 8b4283e: Value now owns a detached prepared snapshot for repeated exact observations, so History builds selected addresses without rescanning each ancestor array. Existing Value rejection rules and exact selected facts remain intact.
+- 4853f0e: Read back only the exact acceptance inserted by `recordAcceptance`, including its result and environment, while keeping full immutable acceptance inspection. Acknowledgements reject mismatched identity, fence, or evidence and roll back instead of returning speculative completion.
+- b6d7862: Expose History's alpha `HistoryBusyError` for exhausted SQLite contention in durable operations, retaining the exact Machine error as its cause. The facade re-exports the class for workspace callers.
+- 5e345a9: Keep promotion-aware candidate discovery on an exact-subject access path when unrelated results share the analysis.
+- 0271b4e: Bound selected-subtree traversal to parent-keyed edge lookups so large retained results do not rescan every edge for each recursive node.
+- Updated dependencies [8b4283e]
+- Updated dependencies [5010548]
+- Updated dependencies [77715af]
+- Updated dependencies [0d7ad9a]
+- Updated dependencies [47bea75]
+  - @microdelta/value@0.2.0
+  - @microdelta/machine@0.3.0
+
 ## 0.2.0
 ### Minor Changes
 

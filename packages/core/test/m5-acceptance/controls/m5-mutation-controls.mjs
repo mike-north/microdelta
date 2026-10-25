@@ -128,8 +128,8 @@ const controls = [
     guard: 'deferral',
     name: 'a deferral is not honored before its time',
     target: 'engine',
-    anchor: "if ((record.status === 'deferred' || record.status === 'unknown' || record.status === 'retry-exhausted') && record.notBefore !== undefined && now() < record.notBefore) {",
-    replacement: 'if (false) {',
+    anchor: 'return record.notBefore !== undefined && now() < record.notBefore',
+    replacement: 'return false',
     breaks: ['durable-quota-deferral'],
   },
   {

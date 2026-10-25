@@ -31,6 +31,9 @@
  *   retries sooner than the total-send allowance; transient retries also
  *   honor that total. Both members remain pending on a policy-exhausted block,
  *   with retained operation identity and no fabricated input.
+ * - Exhaustion ends the current invocation even when the provider's retained
+ *   floor is later; a distinct invocation still sends nothing before that
+ *   floor and resumes the same operation once it is reached.
  *
  * @see ../../../../docs/spec/operations.md (RUN-011)
  * @see ../../../../docs/plans/m5-operations.md (Outcomes: quota response with a retry time 3h ahead)
@@ -168,6 +171,33 @@ describe('durable-quota-deferral (A-11, A-12, RUN-011)', () => {
     expect(s.keys('received').filter((key) => key === 'pr-1')).toHaveLength(2);
     // Four refusals report one request each; pr-3's answer reports 100 tokens.
     expect(usageOf(run.result.usage)).toEqual({ status: 'complete', observed: [{ unit: 'requests', amount: 4 }, { unit: 'tokens', amount: 100 }], unknown: 0, operations: 3, reports: 5, requestAttempts: 5 });
+  });
+
+  test('an exhausted invocation completes before its provider floor; later processes still honor and then resume at the floor', () => {
+    const s = freshScenario(baseWorld({
+      script: { 'pr-1': [{ kind: 'rate-limit', retryMs: 60_000 }] },
+      declarations: { 'pr-1': { maxAttempts: 1 } },
+    }));
+    const first = clean(s.run({ kind: 'members' }, { deferral: 'exit' }));
+    const [refused] = s.ledger().filter((entry) => entry.kind === 'received' && entry.key === 'pr-1');
+    if (refused === undefined) {
+      throw new Error('pr-1 was never sent');
+    }
+    expect(first.result.members['pr-1']?.blocked).toEqual({ kind: 'policy-exhausted', operation: refused.operation });
+    expect(first.result.waitingUntil).toBeNull();
+
+    const early = clean(s.run({ kind: 'members' }, { deferral: 'exit', clockOffsetMs: 30_000 }));
+    expect(s.ledger().filter((entry) => entry.kind === 'received' && entry.key === 'pr-1')).toHaveLength(1);
+    expect(early.result.members['pr-1']?.blocked).toEqual({ kind: 'deferred', operation: refused.operation, notBefore: refused.at + 60_000 });
+    expect(early.operations).toContain('blocked:retry-exhausted:not-before@pr-1');
+
+    const later = clean(s.run({ kind: 'members' }, { deferral: 'exit', clockOffsetMs: 60_000 }));
+    const sends = s.ledger().filter((entry) => entry.kind === 'received' && entry.key === 'pr-1');
+    expect(sends).toHaveLength(2);
+    expect(sends[1]?.operation).toBe(refused.operation);
+    expect(sends[1]?.requestAttempt).not.toBe(refused.requestAttempt);
+    expect(sends[1]?.at).toBeGreaterThanOrEqual(refused.at + 60_000);
+    expect(later.result.members['pr-1']?.status).toBe('succeeded');
   });
 
   // Regression (#147): the `resumed` wait event once reported a literal `released: false` for a wait whose lease the run

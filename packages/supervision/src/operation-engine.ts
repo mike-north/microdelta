@@ -10,10 +10,12 @@
  *    name and its binding. The subject's block index names the operations at
  *    its addresses that are still unsettled; a call at such an address reuses
  *    that operation's identity, otherwise it mints a new one.
- * 2. **Taint guard.** An attempt that met a deferral or exhausted unknown
- *    outcome rethrows that signal without sending; a deferral is never sent
- *    before its time. A distinct admitted attempt may retry under this run's
- *    finite allowance without an effect-safety declaration.
+ * 2. **Taint guard.** An attempt that met a deferral or exhausted unknown or
+ *    known retry allowance rethrows that signal without sending. The known
+ *    provider floor still gates a later invocation, while exhaustion in the
+ *    current invocation is final and must not make that run wait pointlessly.
+ *    A distinct admitted attempt may retry under this run's finite allowance
+ *    without an effect-safety declaration.
  * 3. **Intent before send.** Once the permit is held and stop intent
  *    rechecked, one journal commit records the operation as `pending` with
  *    the new request attempt, then Accounting records the usage intent, and
@@ -467,13 +469,16 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
 
   /** The block an unsettled record imposes now, or undefined when it may be resumed. */
   function blockOf(record: IOperationRecord): IOperationBlock | undefined {
-    if ((record.status === 'deferred' || record.status === 'unknown' || record.status === 'retry-exhausted') && record.notBefore !== undefined && now() < record.notBefore) {
-      return { kind: 'deferred', operation: record.operation, notBefore: record.notBefore };
-    }
     if (record.status === 'retry-exhausted') {
-      return record.retryExhaustedRunInstance === currentRunInstance()
-        ? { kind: 'policy-exhausted', operation: record.operation }
+      if (record.retryExhaustedRunInstance === currentRunInstance()) {
+        return { kind: 'policy-exhausted', operation: record.operation };
+      }
+      return record.notBefore !== undefined && now() < record.notBefore
+        ? { kind: 'deferred', operation: record.operation, notBefore: record.notBefore }
         : undefined;
+    }
+    if ((record.status === 'deferred' || record.status === 'unknown') && record.notBefore !== undefined && now() < record.notBefore) {
+      return { kind: 'deferred', operation: record.operation, notBefore: record.notBefore };
     }
     if (record.status === 'unknown') {
       const decision = unknownRetry(record, spentInRun(record));

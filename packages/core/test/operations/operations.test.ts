@@ -19,6 +19,8 @@
  *   deferred work remains the run releases the writer lease and either
  *   sleeps until T and resumes, or exits reporting "waiting until T"; later
  *   runs admit nothing before T and retry under the same operation identity.
+ *   A known exhausted operation blocks its own invocation immediately even
+ *   when a later provider floor remains binding for a future invocation.
  *
  * @see ../../../../docs/spec/operations.md (RUN-011, RUN-012, RUN-013, ACC-003, ACC-005, ACC-007 owner decisions)
  * @see ../../../../docs/spec/acceptance.md (A-11, A-12, A-14)
@@ -286,6 +288,37 @@ describe('the finite acquisition retry policy (RUN-011)', () => {
       expect(memberOf(result.value, 'pr-2').status).toBe('succeeded');
       expect(received('pr-2')).toHaveLength(2);
       expect(new Set(received('pr-1').map((request) => request.operation)).size).toBe(1);
+      expect(session.usage().reports).toBe(4);
+    } finally {
+      session.close();
+    }
+  });
+
+  test('an exhausted member does not hold a completed sibling behind its provider floor', async () => {
+    world.options['pr-1'] = { retry: { maxAttempts: 1 } };
+    world.options['pr-2'] = { retry: { backoffMilliseconds: 0 } };
+    world.provider.script('assess', 'pr-1', ['rate-limit:60000', 'ok']);
+    world.provider.script('assess', 'pr-2', ['rate-limit:1000', 'ok']);
+    const session = openSession(stores, timer);
+    try {
+      const started = members(session, { deferral: 'sleep', runId: 'run:mixed-exhaustion-floor' });
+      await until(() => timer.pending().includes(T0 + 1_000), 'the sibling provider floor');
+      timer.advanceTo(T0 + 1_000);
+      let done = false;
+      void started.done.then(() => { done = true; }, () => { done = true; });
+      await until(() => done || timer.pending().includes(T0 + 60_000), 'the run completes or incorrectly waits for the exhausted floor');
+
+      expect(done).toBe(true);
+      const result = await started.done;
+      expect(memberOf(result.value, 'pr-1')).toEqual(expect.objectContaining({
+        status: 'pending',
+        blocked: expect.objectContaining({ kind: 'policy-exhausted' }),
+      }));
+      expect(memberOf(result.value, 'pr-2').status).toBe('succeeded');
+      expect(received('pr-1')).toHaveLength(1);
+      expect(received('pr-2')).toHaveLength(2);
+      expect(timer.pending()).not.toContain(T0 + 60_000);
+
       expect(session.usage().reports).toBe(4);
     } finally {
       session.close();

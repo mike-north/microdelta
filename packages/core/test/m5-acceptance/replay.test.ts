@@ -76,6 +76,32 @@ describe('run-bounded acquisition retry (A-12, RUN-012)', () => {
     expect(usageOf(later.result.usage).unknown).toBe(1);
   });
 
+  test('another request pass in one run cannot replenish an exhausted unknown operation allowance', () => {
+    const s = freshScenario(baseWorld({ script: { 'pr-2': [{ kind: 'lost' }, { kind: 'ok' }] }, declarations: { 'pr-2': { maxAttempts: 1 } } }));
+    const sameRun = clean(s.run({ kind: 'members-twice' }, { window: 1 }));
+    const operation = operationOf(sameRun, 'pr-2');
+    expect(sameRun.result.memberPasses).toHaveLength(2);
+    for (const pass of sameRun.result.memberPasses ?? []) {
+      expect(pass['pr-2']).toMatchObject({ status: 'pending', blocked: { kind: 'unknown-outcome', operation, reason: 'policy-exhausted' } });
+    }
+    const sends = s.ledger().filter((entry) => entry.kind === 'received' && entry.key === 'pr-2');
+    expect(sends).toHaveLength(1);
+    expect(sends[0]?.operation).toBe(operation);
+    expect(sameRun.assessed.filter((key) => key === 'pr-2')).toEqual(['pr-2']);
+    expect(sameRun.result.operations.filter((view) => view.operation === operation)).toEqual([
+      expect.objectContaining({ attempts: [expect.objectContaining({ status: 'unknown' })] }),
+    ]);
+    expect(usageOf(sameRun.result.usage).unknown).toBe(1);
+
+    const nextRun = clean(s.run({ kind: 'members' }, { window: 1 }));
+    const after = s.ledger().filter((entry) => entry.kind === 'received' && entry.key === 'pr-2');
+    expect(after).toHaveLength(2);
+    expect(after[1]?.operation).toBe(operation);
+    expect(after[1]?.requestAttempt).not.toBe(after[0]?.requestAttempt);
+    expect(nextRun.result.members['pr-2']).toMatchObject({ status: 'succeeded' });
+    expect(usageOf(nextRun.result.usage).unknown).toBe(1);
+  });
+
   test('after a lost response the step attempt is tainted: a different fallback operation the author makes instead sends nothing', () => {
     const s = freshScenario(baseWorld({ script: { 'pr-2': [{ kind: 'lost' }] }, declarations: { 'pr-2': { maxAttempts: 1, catchAndFallback: true } } }));
     const run = clean(s.run({ kind: 'members' }, { window: 1 }));

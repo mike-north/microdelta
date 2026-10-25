@@ -20,12 +20,13 @@ import type { IWriterAttempt } from './contracts.js';
  * - `stopped`: stop intent refused or aborted a send, a permit wait or a wait for a time (RUN-014). The
  *   step attempt it belonged to can no longer publish; its body may let this propagate. It also ends a
  *   normal request's wait for the writer lease, before that request has done anything.
- * - `operation-failed`: an external operation settled as failed: its provider refused it permanently, or its retry
- *   policy is exhausted (RUN-011). The step attempt may still handle it.
+ * - `operation-failed`: an external operation settled as a permanent provider refusal (RUN-011). The step attempt may still handle it.
  * - `operation-deferred`: an external operation is deferred until a later time (RUN-011). Nothing was sent before that
  *   time; the step attempt can no longer publish or send, and its work stays pending.
  * - `operation-unknown`: an acquisition's outcome is unknown and this run's finite allowance is spent (RUN-012).
  *   The step attempt can no longer publish or send; its work stays pending, while a new run may retry it.
+ * - `operation-exhausted`: a known recoverable refusal exhausted this run's allowance (RUN-011). Its required input
+ *   stays pending, its address is retained, and only a new run may retry it after any known provider floor.
  * - `operation-unrecorded`: usage an operator supplied could not be made durable, so nothing was settled (ACC-007). An
  *   operation's own intent that cannot be made durable instead leaves its step pending on a short deferral.
  * - `operation-resolved`: an operator resolved the operation at this address as succeeded, so its effect happened and it
@@ -47,6 +48,7 @@ export type ISupervisionErrorCode =
   | 'operation-failed'
   | 'operation-deferred'
   | 'operation-unknown'
+  | 'operation-exhausted'
   | 'operation-unrecorded'
   | 'operation-resolved'
   | 'integrity'

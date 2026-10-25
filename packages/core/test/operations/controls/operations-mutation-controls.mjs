@@ -61,7 +61,7 @@ const controls = [
   {
     name: 'a deferral is not honored before its time',
     directory: supervision, file: 'operation-engine.js',
-    anchor: "if ((record.status === 'deferred' || record.status === 'unknown') && record.notBefore !== undefined && now() < record.notBefore) {", replacement: 'if (false) {',
+    anchor: "if ((record.status === 'deferred' || record.status === 'unknown' || record.status === 'retry-exhausted') && record.notBefore !== undefined && now() < record.notBefore) {", replacement: 'if (false) {',
   },
   {
     name: 'the writer lease is kept while only deferred work remains',

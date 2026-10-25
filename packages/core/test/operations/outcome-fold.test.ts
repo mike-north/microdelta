@@ -70,4 +70,37 @@ describe('an unknown operation counts as unsettled for outcome folds (owner ruli
       session.close();
     }
   });
+
+  test('a known transient refusal at policy exhaustion is pending, incomplete and distinct from an unknown outcome', async () => {
+    world.options['pr-2'] = { retry: { maxAttempts: 2, backoffMilliseconds: 0 } };
+    world.provider.script('assess', 'pr-2', ['transient', 'transient', 'transient', 'transient', 'ok']);
+    const session = openSession(stores, timer);
+    try {
+      const first = await outcomeFold(session).done;
+      expect(statuses(first.value.members)).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'pending', 'pr-3': 'succeeded' });
+      const operation = received('pr-2')[0]?.operation;
+      const pr2 = memberOf(first.value, 'pr-2');
+      expect(pr2.status === 'pending' ? pr2.blocked : undefined).toEqual({ kind: 'policy-exhausted', operation });
+      expect(first.value.outcome).toEqual({
+        status: 'waiting',
+        coverage: { succeeded: ['pr-1', 'pr-3'], skipped: [], failed: [], cancelled: [], pending: ['pr-2'], openDiscovery: false, complete: false },
+      });
+      expect(world.log.filter((line) => line.startsWith('tally:'))).toEqual([]);
+      expect(session.history.readCurrent({ analysis, environment: production, subject: 'tally:acme/widget' })).toBeUndefined();
+
+      const again = await outcomeFold(session).done;
+      expect(again.value.outcome.status).toBe('waiting');
+      expect(received('pr-2')).toHaveLength(4);
+      expect(received('pr-2').slice(0, 2).map((request) => request.operation)).toEqual([operation, operation]);
+      expect(received('pr-2').slice(2).map((request) => request.operation)).toEqual([operation, operation]);
+      expect(world.log.filter((line) => line.startsWith('tally:'))).toEqual([]);
+
+      const settled = await outcomeFold(session).done;
+      expect(statuses(settled.value.members)).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
+      expect(settled.value.outcome).toEqual({ status: 'folded', outcome: expect.objectContaining({ kind: 'published' }) });
+      expect(world.log.filter((line) => line.startsWith('tally:'))).toEqual(['tally:pr-1=succeeded,pr-2=succeeded,pr-3=succeeded']);
+    } finally {
+      session.close();
+    }
+  });
 });

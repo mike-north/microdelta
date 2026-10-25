@@ -12,9 +12,9 @@
  *   operator settlement;
  * - **blocks** (`microdelta.supervision.blocks`), keyed by subject: the
  *   operations holding that subject's addresses: those still unsettled
- *   (`pending`, `deferred` or `unknown`), and those an operator resolved as
+ *   (`pending`, `deferred`, `unknown` or invocation-scoped `retry-exhausted`), and those an operator resolved as
  *   succeeded, whose address stays consumed. Admission reads it to honor a
- *   deferral or an unknown outcome whose current run allowance is spent
+ *   deferral, an exhausted invocation or an unknown outcome whose current run allowance is spent
  *   before any claim; a call reads it to reuse an unsettled operation's
  *   identity or to refuse a resolved address.
  *   An operation leaves it, in the same commit, exactly when it settles any
@@ -76,6 +76,8 @@ export interface IOperationRecord {
   /** Consecutive intents of this operation that could not be made durable; it sets the intent retry backoff. */
   readonly unrecorded: number;
   readonly notBefore: number | undefined;
+  /** The private invocation whose known refusal exhausted allowance; only v3 can carry this authority. */
+  readonly retryExhaustedRunInstance?: string | undefined;
   readonly attempts: readonly IAttemptRecord[];
   readonly settlement: IOperationSettlementRecord | undefined;
   /**
@@ -94,9 +96,9 @@ export interface IBlockEntry {
 }
 
 /** The statuses that keep an operation in its subject's block index. */
-const unsettled: ReadonlySet<IOperationStatus> = new Set<IOperationStatus>(['pending', 'deferred', 'unknown']);
+const unsettled: ReadonlySet<IOperationStatus> = new Set<IOperationStatus>(['pending', 'deferred', 'unknown', 'retry-exhausted']);
 
-/** Whether an operation status is unsettled: pending, deferred or unknown. */
+/** Whether an operation status is unsettled, including known exhaustion awaiting a new run. */
 export function isUnsettled(status: IOperationStatus): boolean {
   return unsettled.has(status);
 }
@@ -135,11 +137,11 @@ export function unknownRetry(record: Pick<IOperationRecord, 'maxAttempts'>, spen
   return spent < record.maxAttempts ? 'retry' : 'policy-exhausted';
 }
 
-/** Encode current operation records as v2 Value data while carrying v1 attempts without invented run identity. */
+/** Encode v3 operation records while carrying legacy attempts without inventing invocation identity. */
 export function encodeOperation(record: IOperationRecord): IJournalRecordValue {
   return {
     format: operationFormat,
-    formatVersion: 2,
+    formatVersion: 3,
     content: {
       operation: record.operation,
       subject: record.subject,
@@ -153,6 +155,7 @@ export function encodeOperation(record: IOperationRecord): IJournalRecordValue {
       status: record.status,
       unrecorded: record.unrecorded,
       notBefore: record.notBefore ?? null,
+      retryExhaustedRunInstance: record.status === 'retry-exhausted' ? record.retryExhaustedRunInstance ?? null : null,
       attempts: record.attempts.map((attempt) => ({
         requestAttempt: attempt.requestAttempt,
         run: attempt.run,
@@ -259,7 +262,7 @@ function optionalOneOf<T extends string>(value: unknown, name: string, allowed: 
   return field(value, name) === null ? undefined : oneOf(value, name, allowed, what);
 }
 
-const statuses: readonly IOperationStatus[] = ['pending', 'succeeded', 'failed', 'deferred', 'unknown', 'cancelled', 'resolved', 'abandoned'];
+const statuses: readonly IOperationStatus[] = ['pending', 'succeeded', 'failed', 'deferred', 'unknown', 'cancelled', 'resolved', 'abandoned', 'retry-exhausted'];
 const attemptStatuses: readonly IRequestAttemptStatus[] = ['pending', 'succeeded', 'failed', 'rate-limited', 'unknown', 'cancelled', 'not-sent'];
 const remoteStates: readonly IOperationRemoteState[] = ['cancelled', 'running', 'unknown'];
 const usages: readonly IAttemptUsage[] = ['acknowledged', 'unrecorded', 'none'];
@@ -273,10 +276,10 @@ function requireFormat(record: IJournalRecordValue, format: string, what: string
   return record.content;
 }
 
-/** Decode v1 and v2 operation records; missing v2 run identity is damage rather than a new allowance. */
+/** Decode legacy records and v3 invocation-scoped exhaustion without inferring authority from public run labels. */
 export function decodeOperation(record: IJournalRecordValue): IOperationRecord {
   const what = 'operation record';
-  if (record.format !== operationFormat || (record.formatVersion !== 1 && record.formatVersion !== 2)) {
+  if (record.format !== operationFormat || (record.formatVersion !== 1 && record.formatVersion !== 2 && record.formatVersion !== 3)) {
     damaged(what);
   }
   const content = record.content;
@@ -284,6 +287,34 @@ export function decodeOperation(record: IJournalRecordValue): IOperationRecord {
   const settlement: unknown = field(content, 'settlement');
   const resolution: unknown = field(content, 'resolution');
   if (!Array.isArray(attempts)) {
+    return damaged(what);
+  }
+  const status = oneOf(content, 'status', statuses, what);
+  const retryExhaustedRunInstance = record.formatVersion === 3
+    ? decodedRunInstance({ runInstance: field(content, 'retryExhaustedRunInstance') }, what)
+    : undefined;
+  const decodedAttempts = attempts.map((attempt: unknown): IAttemptRecord => ({
+    requestAttempt: text(attempt, 'requestAttempt', what),
+    run: text(attempt, 'run', what),
+    runInstance: record.formatVersion === 1 ? undefined : decodedRunInstance(attempt, what),
+    stepAttempt: text(attempt, 'stepAttempt', what),
+    status: oneOf(attempt, 'status', attemptStatuses, what),
+    remote: optionalOneOf(attempt, 'remote', remoteStates, what),
+    usage: optionalOneOf(attempt, 'usage', usages, what),
+    // Earlier records lack this field; a not-sent attempt remains conservatively unconfirmed.
+    intent: field(attempt, 'intent') === undefined
+      ? (field(attempt, 'status') === 'not-sent' ? 'unconfirmed' : undefined)
+      : optionalOneOf(attempt, 'intent', ['unconfirmed'], what),
+  }));
+  if (record.formatVersion < 3 && status === 'retry-exhausted') {
+    return damaged(what);
+  }
+  if (status === 'retry-exhausted') {
+    const last = decodedAttempts.at(-1);
+    if (retryExhaustedRunInstance === undefined || last?.runInstance !== retryExhaustedRunInstance || (last.status !== 'failed' && last.status !== 'rate-limited')) {
+      return damaged(what);
+    }
+  } else if (retryExhaustedRunInstance !== undefined) {
     return damaged(what);
   }
   return {
@@ -297,22 +328,10 @@ export function decodeOperation(record: IJournalRecordValue): IOperationRecord {
     maxAttempts: whole(content, 'maxAttempts', what),
     rateLimitRetries: whole(content, 'rateLimitRetries', what),
     unrecorded: whole(content, 'unrecorded', what),
-    status: oneOf(content, 'status', statuses, what),
+    status,
     notBefore: field(content, 'notBefore') === null ? undefined : whole(content, 'notBefore', what),
-    attempts: attempts.map((attempt: unknown): IAttemptRecord => ({
-      requestAttempt: text(attempt, 'requestAttempt', what),
-      run: text(attempt, 'run', what),
-      runInstance: record.formatVersion === 1 ? undefined : decodedRunInstance(attempt, what),
-      stepAttempt: text(attempt, 'stepAttempt', what),
-      status: oneOf(attempt, 'status', attemptStatuses, what),
-      remote: optionalOneOf(attempt, 'remote', remoteStates, what),
-      usage: optionalOneOf(attempt, 'usage', usages, what),
-      // Absent in records written before the field existed: a not-sent attempt is conservatively read as unconfirmed,
-      // as those records were written, so a retry restates its intent and accounting stays complete.
-      intent: field(attempt, 'intent') === undefined
-        ? (field(attempt, 'status') === 'not-sent' ? 'unconfirmed' : undefined)
-        : optionalOneOf(attempt, 'intent', ['unconfirmed'], what),
-    })),
+    retryExhaustedRunInstance,
+    attempts: decodedAttempts,
     settlement: settlement === null ? undefined : decodeSettlement(settlement, what),
     // Absent in records written before the field existed: no abandonment could then supersede a resolution, so none is kept.
     resolution: resolution === undefined || resolution === null ? undefined : decodeSettlement(resolution, what),

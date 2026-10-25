@@ -20,8 +20,6 @@
  * @see ../../../../docs/plans/m5-operations.md (planned evidence `no-blind-replay`)
  */
 import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
-import { ResolutionError } from '@microdelta/resolution';
-import { SupervisionError } from '@microdelta/supervision';
 
 import { createWorld, installWorld } from './fixture.js';
 import type { IWorld } from './fixture.js';
@@ -152,14 +150,8 @@ describe('run-scoped acquisition retries (RUN-011, A-12a/c/i)', () => {
       const requests = received('pr-1');
       expect(requests).toHaveLength(sends);
       const member = memberOf(result.value, 'pr-1');
-      if (member.status !== 'failed' || !(member.error instanceof ResolutionError)
-          || !(member.error.cause instanceof SupervisionError)) {
-        throw new Error('expected a member failure caused by operation exhaustion');
-      }
-      expect(member.error.cause.code).toBe('operation-failed');
-      expect(member.error.cause.message).toBe(
-        `Operation ${String(requests[0]?.operation)} is still rate limited after exhausting its finite retry allowance`,
-      );
+      expect(member.status).toBe('pending');
+      expect(member.status === 'pending' ? member.blocked : undefined).toEqual({ kind: 'policy-exhausted', operation: requests[0]?.operation });
     } finally {
       session.close();
     }

@@ -467,8 +467,13 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
 
   /** The block an unsettled record imposes now, or undefined when it may be resumed. */
   function blockOf(record: IOperationRecord): IOperationBlock | undefined {
-    if ((record.status === 'deferred' || record.status === 'unknown') && record.notBefore !== undefined && now() < record.notBefore) {
+    if ((record.status === 'deferred' || record.status === 'unknown' || record.status === 'retry-exhausted') && record.notBefore !== undefined && now() < record.notBefore) {
       return { kind: 'deferred', operation: record.operation, notBefore: record.notBefore };
+    }
+    if (record.status === 'retry-exhausted') {
+      return record.retryExhaustedRunInstance === currentRunInstance()
+        ? { kind: 'policy-exhausted', operation: record.operation }
+        : undefined;
     }
     if (record.status === 'unknown') {
       const decision = unknownRetry(record, spentInRun(record));
@@ -595,7 +600,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       const current: IOperationRecord = { ...stored.record, safety: request.safety, maxAttempts: request.maxAttempts, rateLimitRetries: request.rateLimitRetries };
       const block = blockOf(current);
       if (block !== undefined) {
-        emit('blocked', current, { stepAttempt, status: current.status, reason: block.kind === 'deferred' ? 'not-before' : block.reason, notBefore: block.kind === 'deferred' ? block.notBefore : undefined });
+        emit('blocked', current, { stepAttempt, status: current.status, reason: block.kind === 'deferred' ? 'not-before' : block.kind === 'policy-exhausted' ? 'policy-exhausted' : block.reason, notBefore: block.kind === 'deferred' ? block.notBefore : undefined });
         return pend(attempt, scope, block);
       }
       stored = { ...stored, record: current };
@@ -837,13 +842,13 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
           const notBefore = Math.max(response.retryAt ?? now(), now() + retryDelay(refused));
           const next: IOperationRecord = { ...refused, notBefore };
           if (spentInRun(next) >= request.maxAttempts || rateLimited(next, currentRunInstance()) > request.rateLimitRetries) {
-            const exhausted: IOperationRecord = { ...next, status: 'failed', notBefore: undefined };
+            const exhausted: IOperationRecord = { ...next, status: 'retry-exhausted', retryExhaustedRunInstance: currentRunInstance() };
             const written = commit(exhausted, 'rate-limited');
             if (written === undefined) {
               return leaseLost();
             }
-            emit('retry-exhausted', exhausted, { stepAttempt, status: 'failed', reason: 'policy-exhausted' });
-            return { stored: written, outcome: { kind: 'error', error: new SupervisionError('operation-failed', `Operation ${operation} is still rate limited after exhausting its finite retry allowance`) } };
+            emit('retry-exhausted', exhausted, { stepAttempt, status: 'retry-exhausted', reason: 'policy-exhausted', notBefore });
+            return { stored: written, outcome: { kind: 'pending', block: { kind: 'policy-exhausted', operation } } };
           }
           const written = commit(next, 'rate-limited');
           if (written === undefined) {
@@ -854,23 +859,28 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
         }
         // A permanent failure, or a transient one (including a rate limit without a retry time).
         const transient = response.kind === 'rate-limited' || response.transient;
-        const failed = settledAs('failed', 'failed');
+        const attemptStatus = response.kind === 'rate-limited' ? 'rate-limited' : 'failed';
+        const failed = settledAs(attemptStatus, 'failed');
         const retryable = transient && spentInRun(failed) < request.maxAttempts;
         if (!retryable) {
-          const written = commit(failed, transient ? (response.kind === 'rate-limited' ? 'rate-limited' : 'transient') : 'permanent');
+          const exhausted: IOperationRecord = transient
+            ? { ...failed, status: 'retry-exhausted', retryExhaustedRunInstance: currentRunInstance() }
+            : failed;
+          const written = commit(exhausted, transient ? (response.kind === 'rate-limited' ? 'rate-limited' : 'transient') : 'permanent');
           if (written === undefined) {
             return leaseLost();
           }
           if (transient) {
-            emit('retry-exhausted', failed, { stepAttempt, status: 'failed', reason: 'policy-exhausted' });
+            emit('retry-exhausted', exhausted, { stepAttempt, status: 'retry-exhausted', reason: 'policy-exhausted' });
+            return { stored: written, outcome: { kind: 'pending', block: { kind: 'policy-exhausted', operation } } };
           }
           const cause = response.kind === 'failed' ? response.error : undefined;
-          return { stored: written, outcome: { kind: 'error', error: new SupervisionError('operation-failed', `Operation ${operation} failed${transient ? ' after its retry policy was exhausted' : ''}`, cause) } };
+          return { stored: written, outcome: { kind: 'error', error: new SupervisionError('operation-failed', `Operation ${operation} was refused permanently`, cause) } };
         }
         // A short durable deferral covers the backoff, so a crash during it leaves a time a later run honors.
         const delay = retryDelay(failed);
         const notBefore = now() + delay;
-        const waiting = settledAs('failed', 'deferred', notBefore);
+        const waiting = settledAs(attemptStatus, 'deferred', notBefore);
         const written = commit(waiting, response.kind === 'rate-limited' ? 'rate-limited' : 'transient');
         if (written === undefined) {
           return leaseLost();
@@ -933,7 +943,7 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
           resumable = true;
           continue;
         }
-        emit('blocked', stored.record, { status: stored.record.status, reason: block.kind === 'deferred' ? 'not-before' : block.reason, notBefore: block.kind === 'deferred' ? block.notBefore : undefined });
+        emit('blocked', stored.record, { status: stored.record.status, reason: block.kind === 'deferred' ? 'not-before' : block.kind === 'policy-exhausted' ? 'policy-exhausted' : block.reason, notBefore: block.kind === 'deferred' ? block.notBefore : undefined });
         noteBlock(scope, request.step, block);
         return Object.freeze({ kind: 'denied', reason: pendingError(block).message });
       }

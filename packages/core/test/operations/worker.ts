@@ -75,6 +75,8 @@ export interface IWorkerScript {
 /** What one worker reports. */
 export interface IWorkerReport {
   readonly statuses?: Readonly<Record<string, string>>;
+  /** Exact reusable references for successful members, used to prove sibling reuse across runs. */
+  readonly references?: Readonly<Record<string, unknown>>;
   readonly blocked?: Readonly<Record<string, unknown>>;
   readonly waitingUntil?: number | null;
   readonly diagnostics?: readonly string[];
@@ -217,6 +219,7 @@ if (script.action === 'members') {
   const operations = (await session.start({ runId: `${script.runId}:inspect`, environment }, (run) => run.inspectOperations()).done).value;
   report = {
     statuses: Object.fromEntries(result.value.members.map((member) => [member.key, member.status])),
+    references: Object.fromEntries(result.value.members.flatMap((member) => member.status === 'succeeded' ? [[member.key, member.outcome.reference]] : [])),
     blocked: Object.fromEntries(result.value.members.flatMap((member) => member.status === 'pending' && member.blocked !== undefined ? [[member.key, member.blocked]] : [])),
     waitingUntil: result.waitingUntil ?? null,
     diagnostics: result.diagnostics,

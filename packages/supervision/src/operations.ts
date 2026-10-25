@@ -185,12 +185,14 @@ export interface IOperationRequest<T> {
  * outcome is not known; `succeeded`, `failed` and `cancelled` (a provider
  * confirmed cancellation after a hard stop) are settled; `resolved` and
  * `abandoned` record an operator's settlement of an unknown operation (a
- * resolution as succeeded keeps its address consumed).
- * `pending`, `deferred` and `unknown` are unsettled: they keep their step's
- * work pending.
+ * resolution as succeeded keeps its address consumed). `retry-exhausted`
+ * records a known recoverable refusal that spent this invocation's allowance;
+ * its address remains held for a later run.
+ * `pending`, `deferred`, `unknown` and `retry-exhausted` are unsettled: they
+ * keep their required work pending.
  * @alpha
  */
-export type IOperationStatus = 'pending' | 'succeeded' | 'failed' | 'deferred' | 'unknown' | 'cancelled' | 'resolved' | 'abandoned';
+export type IOperationStatus = 'pending' | 'succeeded' | 'failed' | 'deferred' | 'unknown' | 'cancelled' | 'resolved' | 'abandoned' | 'retry-exhausted';
 
 /**
  * One request attempt's durable status. `not-sent` means stop intent or a
@@ -325,14 +327,16 @@ export type IOperationSettlement =
 
 /**
  * Why a step's work is blocked by an unsettled external operation: deferred
- * until `notBefore`, or an unknown outcome whose current run's finite policy
- * is exhausted. `unrecorded` means a lost writer lease could not settle the
+ * until `notBefore`, a known recoverable refusal exhausted this run's
+ * allowance, or an unknown outcome whose current run's finite policy is
+ * exhausted. `unrecorded` means a lost writer lease could not settle the
  * outcome (EXP-8 ruling R). `not-repeat-safe` remains in the alpha union for
  * old consumers but is not emitted for acquisition by the current engine.
  * @alpha
  */
 export type IOperationBlock =
   | { readonly kind: 'deferred'; readonly operation: string; readonly notBefore: number }
+  | { readonly kind: 'policy-exhausted'; readonly operation: string }
   | { readonly kind: 'unknown-outcome'; readonly operation: string; readonly reason: 'not-repeat-safe' | 'policy-exhausted' | 'unrecorded' };
 
 /**
@@ -638,7 +642,7 @@ export const blocksFormat = 'microdelta.supervision.blocks';
  */
 export const operationJournalDeclaration: { readonly formats: readonly { readonly format: string; readonly versions: readonly number[] }[] } = Object.freeze({
   formats: Object.freeze([
-    Object.freeze({ format: operationFormat, versions: Object.freeze([1, 2]) }),
+    Object.freeze({ format: operationFormat, versions: Object.freeze([1, 2, 3]) }),
     Object.freeze({ format: blocksFormat, versions: Object.freeze([1]) }),
   ]),
 });

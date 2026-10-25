@@ -18,7 +18,7 @@
 import { describe, expect, test } from '@jest/globals';
 import type { IResolution, IResolutionOutcome } from '@microdelta/resolution';
 
-import { SupervisionError, createStopController, createSupervision, operationsCollection } from '../src/index.js';
+import { SupervisionError, createStopController, createSupervision, operationJournalDeclaration, operationsCollection } from '../src/index.js';
 import { decodeOperation, encodeOperation } from '../src/records.js';
 import type {
   IJournalEntry,
@@ -601,7 +601,7 @@ describe('operator actions are run operations (CMP-9)', () => {
 });
 
 describe('records written before the intent mark existed', () => {
-  test('a v1 unknown attempt remains historical through a v2 rewrite and never acquires a fabricated run instance', () => {
+  test('a v1 unknown attempt remains historical through a v3 rewrite and never acquires a fabricated run instance', () => {
     const legacy = {
       format: 'microdelta.supervision.operation',
       formatVersion: 1,
@@ -615,7 +615,7 @@ describe('records written before the intent mark existed', () => {
     const restored = decodeOperation(legacy);
     expect(restored.attempts[0]?.runInstance).toBeUndefined();
     const rewritten = encodeOperation(restored);
-    expect(rewritten.formatVersion).toBe(2);
+    expect(rewritten.formatVersion).toBe(3);
     expect(rewritten.content).toEqual(expect.objectContaining({ attempts: [expect.objectContaining({ runInstance: null })] }));
     expect(decodeOperation(rewritten).attempts).toEqual(restored.attempts);
     const malformed = { ...rewritten, content: { ...legacy.content, attempts: [{ ...legacy.content.attempts[0], runInstance: 7 }] } };
@@ -624,6 +624,27 @@ describe('records written before the intent mark existed', () => {
     expect(() => decodeOperation(missing)).toThrow(SupervisionError);
     const invalidIdentity = { ...rewritten, content: { ...legacy.content, attempts: [{ ...legacy.content.attempts[0], runInstance: 'run:public-label' }] } };
     expect(() => decodeOperation(invalidIdentity)).toThrow(SupervisionError);
+  });
+
+  test('known policy exhaustion is a v3 invocation-scoped state, not a v1/v2 or public-run-label inference', () => {
+    const content = {
+      operation: firstOperation, subject: 'assess', version: 1, member: 'pr-1', name: 'assess', binding: 'sha256:binding',
+      safety: 'none', maxAttempts: 1, rateLimitRetries: 5, status: 'retry-exhausted', unrecorded: 0, notBefore: null,
+      retryExhaustedRunInstance: 'run-instance-0123456789abcdef0123456789abcdef',
+      attempts: [{ requestAttempt: `${firstOperation}/1`, run: 'run:reused', runInstance: 'run-instance-0123456789abcdef0123456789abcdef', stepAttempt: '3', status: 'failed', remote: null, usage: 'acknowledged', intent: null }],
+      settlement: null,
+    };
+    const valid = { format: 'microdelta.supervision.operation', formatVersion: 3, content };
+    expect(decodeOperation(valid)).toEqual(expect.objectContaining({ status: 'retry-exhausted', attempts: [expect.objectContaining({
+      run: 'run:reused', runInstance: 'run-instance-0123456789abcdef0123456789abcdef', status: 'failed',
+    })] }));
+    expect(operationJournalDeclaration.formats.find((format) => format.format === 'microdelta.supervision.operation')?.versions).toEqual([1, 2, 3]);
+
+    expect(() => decodeOperation({ ...valid, formatVersion: 1 })).toThrow(SupervisionError);
+    expect(() => decodeOperation({ ...valid, formatVersion: 2 })).toThrow(SupervisionError);
+    expect(() => decodeOperation({ ...valid, content: { ...content, attempts: [{ ...content.attempts[0], runInstance: null }] } })).toThrow(SupervisionError);
+    expect(() => decodeOperation({ ...valid, content: { ...content, attempts: [{ ...content.attempts[0], runInstance: 'run:reused' }] } })).toThrow(SupervisionError);
+    expect(() => decodeOperation({ ...valid, content: { ...content, attempts: [{ ...content.attempts[0], status: 'unknown' }] } })).toThrow(SupervisionError);
   });
 
   test('a current invocation can retry a v1 unknown record even when the public runId repeats', async () => {

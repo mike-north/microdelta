@@ -176,9 +176,18 @@ export interface IRunOperations {
 
 /** The error an attempt's pending signal is rethrown as, without sending. */
 export function pendingError(signal: IPendingSignal): SupervisionError {
-  return signal.kind === 'deferred'
-    ? new SupervisionError('operation-deferred', `Operation ${signal.operation} is deferred until ${String(signal.notBefore)}; nothing is sent before then`)
-    : new SupervisionError('operation-unknown', `Operation ${signal.operation} has an unknown outcome (${signal.reason}); this attempt cannot send again`);
+  switch (signal.kind) {
+    case 'deferred':
+      return new SupervisionError('operation-deferred', `Operation ${signal.operation} is deferred until ${String(signal.notBefore)}; nothing is sent before then`);
+    case 'policy-exhausted':
+      return new SupervisionError('operation-exhausted', `Operation ${signal.operation} exhausted this run's finite retry allowance; its required input remains pending`);
+    case 'unknown-outcome':
+      return new SupervisionError('operation-unknown', `Operation ${signal.operation} has an unknown outcome (${signal.reason}); this attempt cannot send again`);
+    default: {
+      const exhaustive: never = signal;
+      return exhaustive;
+    }
+  }
 }
 
 /**

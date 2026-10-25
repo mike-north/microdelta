@@ -22,6 +22,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, test } from 'node:test';
 
 import { anchorProblems, checkAnchorsFlag, countAnchor, reportAnchorCheck } from './anchor-check.mjs';
+import { selectOperationControls } from '../../operations/controls/select-control.mjs';
 
 const testRoot = fileURLToPath(new URL('../../', import.meta.url));
 
@@ -76,6 +77,30 @@ describe('anchor counting', () => {
       assert.equal(reportAnchorCheck(['ANCHOR 0x in f.js: c'], 3), 1);
     } finally {
       console.log = log;
+    }
+  });
+});
+
+describe('targeted operation control selection', () => {
+  const controls = [{ name: 'unknown usage' }, { name: 'rate cap' }, { name: 'unknown recovery' }];
+
+  test('the default and anchor check retain the complete control set', () => {
+    assert.deepEqual(selectOperationControls([], controls), { selected: controls, only: undefined, checkAnchors: false });
+    assert.deepEqual(selectOperationControls(['--check-anchors'], controls), { selected: controls, only: undefined, checkAnchors: true });
+  });
+
+  test('a nonempty selector runs exactly one named control', () => {
+    assert.deepEqual(selectOperationControls(['--only', 'rate cap'], controls), {
+      selected: [controls[1]], only: 'rate cap', checkAnchors: false,
+    });
+  });
+
+  test('missing, empty, unknown, ambiguous and unsupported options fail before a control runs', () => {
+    for (const args of [
+      ['--only'], ['--only', ''], ['--only', 'missing'], ['--only', 'unknown'],
+      ['--bogus'], ['--check-anchors', '--only', 'rate cap'], ['--only', 'rate cap', '--bogus'],
+    ]) {
+      assert.throws(() => selectOperationControls(args, controls), /control selector|unsupported control option/u);
     }
   });
 });

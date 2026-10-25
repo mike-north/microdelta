@@ -25,7 +25,7 @@
 import { declarations } from '@microdelta/definition';
 import type { IFoldEntry, IMemberBuilder, IOutcomeEntry } from '@microdelta/definition';
 import { SupervisionError } from '@microdelta/supervision';
-import type { IOperationRetryPolicy, ISupervision } from '@microdelta/supervision';
+import type { IOperationRetryPolicy, IRetrySourceScope, ISupervision } from '@microdelta/supervision';
 
 import { sourceOutcome } from '../../src/index.js';
 import type { IAuthoring, IAuthoringFamily, IComposition, ISourceOutcome, IStepDescriptor, ITrackedView } from '../../src/index.js';
@@ -57,6 +57,10 @@ export interface IRoster {
  *   return a fallback;
  * - `two-ops`: call `assess`, catch its failure, then call a second
  *   operation `polish` (a tainted attempt must send nothing more);
+ * - `polish-first`: use a different operation address before the prior one,
+ *   to prove a retained classifier cannot be bypassed on a later pass;
+ * - `return-value`: attempt to publish a value without revisiting the prior
+ *   operation, proving a retained terminal classifier blocks the author body;
  * - `concurrent`: start `assess`, wait for the `<key>:second` gate while it is
  *   in flight, then call `assess` again at the same address; both outcomes
  *   are noted;
@@ -68,13 +72,15 @@ export interface IRoster {
  *   message carries the planted value (author text that no framework message,
  *   event or diagnostic may repeat).
  */
-export type IPlan = 'single' | 'catch-retry' | 'two-ops' | 'concurrent' | 'detached' | 'twin' | 'author-throws';
+export type IPlan = 'single' | 'catch-retry' | 'two-ops' | 'polish-first' | 'return-value' | 'concurrent' | 'detached' | 'twin' | 'author-throws';
 
 /** Per-member operation declarations a test chooses. */
 export interface IOperationOptions {
   readonly safeToRepeat?: boolean;
   readonly providerIdempotency?: boolean;
   readonly retry?: IOperationRetryPolicy;
+  /** Exact source scope used by tests of reusable retry-policy selection. */
+  readonly retrySource?: IRetrySourceScope;
 }
 
 /** The mutable fixture world one test installs. */
@@ -201,6 +207,12 @@ async function assess(key: string): Promise<IAssessment> {
       }
       return { key, verdict: 'fallback' };
     }
+    case 'polish-first':
+      world.log.push(`entered-polish-first:${key}`);
+      return operation('polish', key);
+    case 'return-value':
+      world.log.push(`entered-return-value:${key}`);
+      return { key, verdict: 'fabricated' };
     case 'two-ops': {
       try {
         await operation('assess', key);
@@ -292,8 +304,8 @@ export function assessmentSubject(key: string): string {
   return `assessment:${key}`;
 }
 
-/** Compose the fixture with fresh allocations, standing in for a new process. */
-export function composeOperations(): IOperationsFixture {
+/** Compose fresh allocations in one analysis namespace, as a new process would. */
+export function composeOperations(scope: string = analysis): IOperationsFixture {
   const builders: IAuthoring<IInputs, IHelpers> = declarations<IAuthoringFamily<IInputs, IHelpers>>();
   const { source, memo, template, fold, outcomeFold, compose } = builders;
   const prs = source<IRoster>({
@@ -322,7 +334,7 @@ export function composeOperations(): IOperationsFixture {
   });
   const tallied = outcomeFold({ subject: 'tally:acme/widget', over: { template: pr, step: 'assess' }, run: ({ members, helpers }) => helpers.tally(members) });
   const composition = compose({
-    scope: analysis,
+    scope,
     inputs: [],
     helpers: [
       { slot: 'roster', helper: roster },
@@ -344,9 +356,9 @@ export function composeOperations(): IOperationsFixture {
   return {
     builders,
     composition,
-    report: Object.freeze({ scope: analysis, role: 'step', slot: 'report' }),
-    tally: Object.freeze({ scope: analysis, role: 'step', slot: 'tally' }),
-    parent: Object.freeze({ scope: analysis, role: 'step', slot: 'parent' }),
-    instance: (memberKey) => Object.freeze({ scope: analysis, role: 'step', slot: 'assess', template: 'pr', collection: 'prs', memberKey }),
+    report: Object.freeze({ scope, role: 'step', slot: 'report' }),
+    tally: Object.freeze({ scope, role: 'step', slot: 'tally' }),
+    parent: Object.freeze({ scope, role: 'step', slot: 'parent' }),
+    instance: (memberKey) => Object.freeze({ scope, role: 'step', slot: 'assess', template: 'pr', collection: 'prs', memberKey }),
   };
 }

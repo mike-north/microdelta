@@ -17,10 +17,13 @@ import type { IWriterAttempt } from './contracts.js';
  *   while another process held it, or while storage stayed too busy to decide (RUN-002 owner decision). It is
  *   always a {@link WriterBusyError}, which names the holder.
  * - `invalid-request`: a run or request was malformed, for example an empty environment or ordinary-work label.
+ * - `invalid-response`: a sent source response had malformed bounded retry evidence; no retry decision or fallback may use it.
  * - `stopped`: stop intent refused or aborted a send, a permit wait or a wait for a time (RUN-014). The
  *   step attempt it belonged to can no longer publish; its body may let this propagate. It also ends a
  *   normal request's wait for the writer lease, before that request has done anything.
  * - `operation-failed`: an external operation settled as a permanent provider refusal (RUN-011). The step attempt may still handle it.
+ * - `operation-classification-failed`: a source retry callback or its return value was invalid; provider evidence stays recorded and no fallback retry is permitted (RUN-011).
+ * - `operation-classification-incomplete`: a known provider response awaits its one live source decision, or its decision lost authority and requires an explicit new run (RUN-011/012).
  * - `operation-deferred`: an external operation is deferred until a later time (RUN-011). Nothing was sent before that
  *   time; the step attempt can no longer publish or send, and its work stays pending.
  * - `operation-unknown`: an acquisition's outcome is unknown and this run's finite allowance is spent (RUN-012).
@@ -44,8 +47,11 @@ export type ISupervisionErrorCode =
   | 'observer-failure'
   | 'writer-busy'
   | 'invalid-request'
+  | 'invalid-response'
   | 'stopped'
   | 'operation-failed'
+  | 'operation-classification-failed'
+  | 'operation-classification-incomplete'
   | 'operation-deferred'
   | 'operation-unknown'
   | 'operation-exhausted'

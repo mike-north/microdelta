@@ -52,6 +52,8 @@ import type { IKeyingDiagnostic as IKeyingDiagnostic_2 } from '@microdelta/defin
 import type { IKeyingFailure as IKeyingFailure_2 } from '@microdelta/definition';
 import type { ILifecycleEvent as ILifecycleEvent_2 } from '@microdelta/resolution';
 import type { ILifecyclePhase as ILifecyclePhase_2 } from '@microdelta/resolution';
+import type { IMaterialization } from '@microdelta/materialization';
+import type { IMaterializedView } from '@microdelta/materialization';
 import type { IMemberBinding as IMemberBinding_2 } from '@microdelta/definition';
 import type { IMemberBuilder as IMemberBuilder_2 } from '@microdelta/definition';
 import type { IMemberOutcome as IMemberOutcome_2 } from '@microdelta/supervision';
@@ -147,6 +149,9 @@ export function authoring<TInputs extends object, THelpers extends object>(): IA
 
 // @public
 export function createMemoryStore(options?: MemoryStoreOptions): Store;
+
+// @alpha
+export function createPreviewProjection(materialization: Pick<IMaterialization, 'materializeView'>): IPreviewProjection;
 
 // @alpha
 export function createStopController(): IStopController;
@@ -385,6 +390,58 @@ export type IOutcomeFoldRunOutcome = IOutcomeFoldRunOutcome_2;
 
 // @alpha
 export type IPathInput = IPathInput_2;
+
+// @alpha
+export type IPreview<T extends object> = {
+    readonly availability: 'unavailable';
+    readonly scope: IPreviewScope;
+    readonly refresh: IPreviewRefresh;
+} | {
+    readonly availability: 'available';
+    readonly scope: IPreviewScope;
+    readonly refresh: IPreviewRefresh;
+    readonly freshness: 'current' | 'stale';
+    readonly reference: ICompletedResultReference_2;
+    readonly value: IMaterializedView<T>;
+};
+
+// @alpha
+export type IPreviewEvaluation = {
+    readonly kind: 'returned';
+    readonly scope: IPreviewScope;
+    readonly outcome: IResolutionOutcome_2;
+} | {
+    readonly kind: 'threw';
+    readonly scope: IPreviewScope;
+    readonly error: unknown;
+};
+
+// @alpha
+export interface IPreviewProjection {
+    project<T extends object>(request: IPreviewRequest): IPreview<T>;
+}
+
+// @alpha
+export type IPreviewRefresh = {
+    readonly kind: 'none';
+} | {
+    readonly kind: 'failed';
+    readonly error: unknown;
+};
+
+// @alpha
+export interface IPreviewRequest {
+    readonly evaluation?: IPreviewEvaluation;
+    readonly reference?: ICompletedResultReference_2;
+    readonly scope: IPreviewScope;
+}
+
+// @alpha
+export interface IPreviewScope {
+    readonly context: IRunContext_2;
+    readonly requestKey: string;
+    readonly step: IBindingDescriptor;
+}
 
 // @alpha
 export type IPreviousResult<T> = IPreviousResult_2<T>;

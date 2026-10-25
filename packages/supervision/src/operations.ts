@@ -486,7 +486,9 @@ export interface IRunOperationPorts {
 /**
  * Positions of one external operation, as run observers see them:
  *
- * - `request-started`: the intent is durable and the request attempt is sent;
+ * - `request-started`: the intent is durable and the provider callback has
+ *   been invoked for this request attempt; a stop observed after the intent
+ *   but before that invocation instead leaves a not-sent attempt;
  * - `request-settled`: the attempt settled with a status (and remote state
  *   after a hard stop);
  * - `usage-acknowledged` / `usage-unrecorded`: its usage report reached

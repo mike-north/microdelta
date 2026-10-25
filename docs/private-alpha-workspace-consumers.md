@@ -19,7 +19,12 @@ node --test fixtures/declarations/consumer-alpha/alpha-consumer.test.mjs
 The checked-in consumer fixture lives beside the package directories under
 `fixtures/declarations/consumer-alpha`. It imports only `authoring` from
 `microdelta`; the TypeScript configuration maps that facade and its reached
-owner declarations to generated alpha rollups:
+owner declarations to generated alpha rollups. The preview projection's alpha
+signatures name Materialization's existing read capability and lazy view type,
+so Materialization belongs to this declaration closure even when a consumer
+imports only `authoring`. The positive consumer compile fails if that mapping
+is omitted; the facade-only negative fixture still rejects an incomplete
+closure:
 
 ```json
 {
@@ -33,6 +38,7 @@ owner declarations to generated alpha rollups:
       "microdelta": ["packages/core/dist/api/microdelta.alpha.d.ts"],
       "@microdelta/definition": ["packages/definition/dist/api/definition.alpha.d.ts"],
       "@microdelta/history": ["packages/history/dist/api/history.alpha.d.ts"],
+      "@microdelta/materialization": ["packages/materialization/dist/api/materialization.alpha.d.ts"],
       "@microdelta/resolution": ["packages/resolution/dist/api/resolution.alpha.d.ts"],
       "@microdelta/supervision": ["packages/supervision/dist/api/supervision.alpha.d.ts"],
       "@microdelta/tracking": ["packages/tracking/dist/api/tracking.alpha.d.ts"]
@@ -81,6 +87,7 @@ alpha mappings relative to the two sibling directories:
       "microdelta": ["packages/core/dist/api/microdelta.alpha.d.ts"],
       "@microdelta/definition": ["packages/definition/dist/api/definition.alpha.d.ts"],
       "@microdelta/history": ["packages/history/dist/api/history.alpha.d.ts"],
+      "@microdelta/materialization": ["packages/materialization/dist/api/materialization.alpha.d.ts"],
       "@microdelta/resolution": ["packages/resolution/dist/api/resolution.alpha.d.ts"],
       "@microdelta/supervision": ["packages/supervision/dist/api/supervision.alpha.d.ts"],
       "@microdelta/tracking": ["packages/tracking/dist/api/tracking.alpha.d.ts"]

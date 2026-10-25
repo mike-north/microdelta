@@ -267,6 +267,11 @@ export function openRaw(location: string): ISqliteConnection {
 /** Raw connections opened by a test. */
 const rawConnections: ISqliteConnection[] = [];
 
+/** Number of raw inspection readers still owned by the test cleanup scope. */
+export function rawReaderCount(): number {
+  return rawConnections.length;
+}
+
 /** Close everything a test opened and remove its temporary files. */
 export function cleanup(): void {
   for (const history of opened.splice(0)) {

@@ -213,6 +213,157 @@ function phases(events: readonly IRunEvent[]): string[] {
 }
 
 describe('intent before send (ACC-007)', () => {
+  test('a hard stop from send-begin after durable intents records no provider call or sent operation attempt', async () => {
+    const journal = memoryJournal();
+    const accounting = memoryAccounting();
+    const stop = createStopController();
+    const sent = { count: 0 };
+    const supervision = createSupervision({ context: nodeScopes, timer: fakeTimer() });
+    let code: string | undefined;
+    const double = executing(async () => {
+      code = await codeOf(supervision.execution().operation(operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent)));
+    });
+    const events: IRunEvent[] = [];
+    const result = await supervision.run({
+      analysis: 'analysis:test', environment: 'env:test', runId: 'run:test', deferral: 'exit',
+      resolution: double.factory, writer: grantingWriter,
+      operations: { journal, accounting, random: countingRandom() }, stop,
+      observers: [{ observe: (event) => {
+        events.push(event);
+        if (event.kind === 'send' && event.phase === 'begin' && event.label === 'assess') {
+          stop.request({ level: 'hard' });
+        }
+      } }],
+    }, (run) => run.resolve(stepOf('assess', 'pr-1'), { requestKey: 'request:1' }));
+    expect(code).toBe('stopped');
+    expect(sent.count).toBe(0);
+    expect(accounting.intents).toEqual([`${firstOperation}/1`]);
+    expect(accounting.reports).toEqual([]);
+    expect(journal.operation(firstOperation)).toEqual(expect.objectContaining({
+      status: 'deferred', attempts: [expect.objectContaining({ requestAttempt: `${firstOperation}/1`, status: 'not-sent' })],
+    }));
+    expect(result.value.kind).toBe('refused');
+    expect(result.interruptions).toEqual([]);
+    expect(phases(events)).not.toContain('request-started');
+    expect(events.filter((event) => event.kind === 'send').map((event) => event.phase)).toEqual(['begin', 'refused']);
+  });
+
+  test('a hard stop from the Accounting intent callback is rechecked before send-begin', async () => {
+    const journal = memoryJournal();
+    const accounting = memoryAccounting();
+    const recordIntent = accounting.recordUsageIntent.bind(accounting);
+    const stop = createStopController();
+    accounting.recordUsageIntent = (intent) => {
+      const outcome = recordIntent(intent);
+      stop.request({ level: 'hard' });
+      return outcome;
+    };
+    const sent = { count: 0 };
+    const supervision = createSupervision({ context: nodeScopes, timer: fakeTimer() });
+    let code: string | undefined;
+    const double = executing(async () => {
+      code = await codeOf(supervision.execution().operation(operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent)));
+    });
+    const events: IRunEvent[] = [];
+    const result = await supervision.run({
+      analysis: 'analysis:test', environment: 'env:test', runId: 'run:test', deferral: 'exit',
+      resolution: double.factory, writer: grantingWriter,
+      operations: { journal, accounting, random: countingRandom() }, stop,
+      observers: [{ observe: (event) => events.push(event) }],
+    }, (run) => run.resolve(stepOf('assess', 'pr-1'), { requestKey: 'request:1' }));
+    expect(code).toBe('stopped');
+    expect(sent.count).toBe(0);
+    expect(accounting.intents).toEqual([`${firstOperation}/1`]);
+    expect(journal.operation(firstOperation)).toEqual(expect.objectContaining({
+      status: 'deferred', attempts: [expect.objectContaining({ status: 'not-sent' })],
+    }));
+    expect(result.interruptions).toEqual([]);
+    expect(events.filter((event) => event.kind === 'send').map((event) => event.phase)).toEqual(['refused']);
+    expect(phases(events)).not.toContain('request-started');
+  });
+
+  test('failed restoration after pre-dispatch stop leaves the pending journal row conservative', async () => {
+    const journal = memoryJournal();
+    journal.failFrom = 2;
+    const accounting = memoryAccounting();
+    const stop = createStopController();
+    const sent = { count: 0 };
+    const supervision = createSupervision({ context: nodeScopes, timer: fakeTimer() });
+    let code: string | undefined;
+    const double = executing(async () => {
+      code = await codeOf(supervision.execution().operation(operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent)));
+    });
+    const events: IRunEvent[] = [];
+    const result = await supervision.run({
+      analysis: 'analysis:test', environment: 'env:test', runId: 'run:test', deferral: 'exit',
+      resolution: double.factory, writer: grantingWriter,
+      operations: { journal, accounting, random: countingRandom() }, stop,
+      observers: [{ observe: (event) => {
+        events.push(event);
+        if (event.kind === 'send' && event.phase === 'begin') {
+          stop.request({ level: 'hard' });
+        }
+      } }],
+    }, (run) => run.resolve(stepOf('assess', 'pr-1'), { requestKey: 'request:1' }));
+    expect(code).toBe('stopped');
+    expect(sent.count).toBe(0);
+    expect(journal.operation(firstOperation)).toEqual(expect.objectContaining({
+      status: 'pending', attempts: [expect.objectContaining({ status: 'pending' })],
+    }));
+    expect(accounting.intents).toEqual([`${firstOperation}/1`]);
+    expect(result.interruptions).toEqual([]);
+    expect(result.diagnostics).toContainEqual(expect.stringContaining('stays pending after pre-dispatch stop'));
+    expect(phases(events)).not.toContain('request-started');
+  });
+
+  test('a hard stop from request-started follows the post-dispatch remote-unknown path', async () => {
+    const journal = memoryJournal();
+    const accounting = memoryAccounting();
+    const stop = createStopController();
+    const sent = { count: 0 };
+    const supervision = createSupervision({ context: nodeScopes, timer: fakeTimer() });
+    let code: string | undefined;
+    const double = executing(async () => {
+      code = await codeOf(supervision.execution().operation(operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent)));
+    });
+    const events: IRunEvent[] = [];
+    const result = await supervision.run({
+      analysis: 'analysis:test', environment: 'env:test', runId: 'run:test', deferral: 'exit',
+      resolution: double.factory, writer: grantingWriter,
+      operations: { journal, accounting, random: countingRandom() }, stop,
+      observers: [{ observe: (event) => {
+        events.push(event);
+        if (event.kind === 'operation' && event.phase === 'request-started') {
+          stop.request({ level: 'hard' });
+        }
+      } }],
+    }, (run) => run.resolve(stepOf('assess', 'pr-1'), { requestKey: 'request:1' }));
+    expect(code).toBe('stopped');
+    expect(sent.count).toBe(1);
+    expect(journal.operation(firstOperation)).toEqual(expect.objectContaining({
+      status: 'unknown', attempts: [expect.objectContaining({ status: 'unknown', remote: 'unknown' })],
+    }));
+    expect(result.interruptions).toEqual([{ label: 'assess', remote: 'unknown' }]);
+    expect(events.filter((event) => event.kind === 'operation' && event.phase === 'request-started')).toEqual([
+      expect.objectContaining({ requestAttempt: `${firstOperation}/1`, status: 'pending' }),
+    ]);
+  });
+
+  test('a synchronous provider throw still emits one request-started event for the invoked attempt', async () => {
+    const journal = memoryJournal();
+    const sent = { count: 0 };
+    const outcome = await runOne(journal, memoryAccounting(), () => operation(() => {
+      throw new Error('provider synchronously refused');
+    }, sent));
+    expect(sent.count).toBe(1);
+    expect(outcome.events.filter((event) => event.kind === 'operation' && event.phase === 'request-started')).toEqual([
+      expect.objectContaining({ requestAttempt: `${firstOperation}/1`, status: 'pending' }),
+    ]);
+    expect(journal.operation(firstOperation)).toEqual(expect.objectContaining({
+      status: 'unknown', attempts: [expect.objectContaining({ requestAttempt: `${firstOperation}/1`, status: 'unknown' })],
+    }));
+  });
+
   test('an intent the journal refuses sends nothing and leaves the attempt pending on a short deferral, never failed', async () => {
     const journal = memoryJournal();
     journal.failFrom = 1;

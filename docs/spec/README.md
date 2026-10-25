@@ -169,3 +169,11 @@ records the final milestone decision and the documentation delivery result. The
 [M0.5 acceptance record](../validation/foundation-2026-09-26.md) and
 [M1 evidence record](../validation/m1-2026-09-26.md) retain their bounded evidence;
 [historical validation](../validation.md) remains dated evidence, not a fresh run.
+
+## Accepted resource-state direction
+
+The [resource-state plan](../plans/resource-state-observation.md) records accepted
+2026-10-24 report visibility and bounded retention decisions for issue 166.
+ACC-004 and A-14a–f own the target; the plan separates the narrow durable report
+intake/query/eviction handoff from optional selected-balance and quota products.
+This is not a claim that the existing additive Accounting runtime implements it.

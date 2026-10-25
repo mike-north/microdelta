@@ -41,7 +41,7 @@ export interface ISnapshotCapability {
 
 // @alpha
 export interface ISqliteCapability {
-    openSqlite(location: string): ISqliteConnection;
+    openSqlite(location: string, options?: ISqliteOpenOptions): ISqliteConnection;
 }
 
 // @alpha
@@ -50,6 +50,28 @@ export interface ISqliteConnection {
     exec(sql: string): void;
     prepare(sql: string): ISqliteStatement;
     transaction<T>(operation: () => T & ISqliteSynchronousResult<T>): T;
+}
+
+// @alpha
+export interface ISqliteOpenOptions {
+    readonly journalMode: 'wal' | 'delete';
+}
+
+// @alpha
+export interface ISqliteReadCapability {
+    openSqliteReader(location: string): ISqliteReader;
+}
+
+// @alpha
+export interface ISqliteReader {
+    close(): void;
+    prepare(sql: string): ISqliteReadStatement;
+}
+
+// @alpha
+export interface ISqliteReadStatement {
+    all(...values: readonly ISqliteValue[]): readonly ISqliteRow[];
+    get(...values: readonly ISqliteValue[]): ISqliteRow | undefined;
 }
 
 // @alpha

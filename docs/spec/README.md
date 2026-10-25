@@ -6,6 +6,10 @@ supersede M5's external-write replay gate for current analysis acquisition.
 RUN-011/012/014/019 and A-12 now specify finite per-run allowance, source retry
 classification and shared single-process rate admission. Existing M5 runtime and
 evidence have not been retroactively changed. Manual result recovery is deferred.
+The supervisory-selected engineering design for #221 is recorded in the
+[shared-rate coordination design](../plans/shared-rate-coordination.md). It
+specifies implementation details under those accepted contracts; runtime
+behavior remains undelivered, and the design does not establish a public API.
 
 **Status as of 2026-10-07: consolidated design baseline; M0.5 accepted;
 M1 bounded experiment decisions are recorded; final acceptance follows the
@@ -56,7 +60,8 @@ Read this entry point, then only the contracts relevant to the task:
 | [Composition](composition.md) | Fixed step graph, dynamic result instances, higher-order binding | Graphs, nesting, fanout |
 | [Execution](execution.md) | Current validation, exact references, retention, publication | Reuse, persistence, recovery |
 | [Operations](operations.md) | Readiness, preview, per-run acquisition retry, shared rate admission, cancellation, trial, accounting, CLI | Run lifetime or operational work |
-| [Acquisition decision and handoff](../plans/data-acquisition-retries.md) | Accepted 2026-10-24 supersession, deferred proposals, source/service distinction and implementation readiness | Migrating M5 retry behavior or selecting follow-up work |
+| [Acquisition decision and handoff](../plans/data-acquisition-retries.md) and [#221 shared-rate coordination design](../plans/shared-rate-coordination.md) | Accepted 2026-10-24 supersession and implementation readiness; #221 engineering choices are supervisory-selected, with runtime implementation still pending | Implementing #221 to its selected design, or migrating M5 retry behavior |
+| [Retry-classification design candidate](../plans/retry-classification.md) | Proposed engineering seam and bounded runtime handoff under accepted RUN-011; not delivered behavior | Reviewing #220 or preparing its separately accepted implementation follow-up |
 | [Acceptance](acceptance.md) | Cross-contract scenarios, expected outcomes, proof obligations | Writing tests or closing a gate |
 | [Experiments](experiments.md) | Bounded unknowns, fixtures, evidence, adoption gates | After foundation, for dependent runtime work |
 | [Milestones](../milestones.md) | Delivery order and independently reportable quality gates | Selecting work |

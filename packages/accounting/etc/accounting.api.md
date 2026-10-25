@@ -116,6 +116,64 @@ export interface IRecordedReport {
 }
 
 // @alpha
+export interface IResourceReport {
+    readonly account: string | null;
+    readonly allowed: number | null;
+    readonly environment: string;
+    readonly localRetentionMilliseconds?: number | null;
+    readonly observedAt: number;
+    readonly pool: string | null;
+    readonly provider: string | null;
+    readonly remaining: number | null;
+    readonly report: string;
+    readonly resource: string | null;
+    readonly service: string | null;
+    readonly unit: string | null;
+    readonly validUntil: number | null;
+    readonly window: string | null;
+}
+
+// @alpha
+export interface IResourceReportReader {
+    close(): void;
+    query(environment: string): readonly IRetainedResourceReport[];
+}
+
+// @alpha
+export interface IResourceReportReaderOptions {
+    // Warning: (ae-forgotten-export) The symbol "IClockCapability" needs to be exported by the entry point index.d.ts
+    readonly clock: IClockCapability;
+    readonly location: string;
+    readonly logicalStore: string;
+    // Warning: (ae-forgotten-export) The symbol "ISqliteReadCapability" needs to be exported by the entry point index.d.ts
+    readonly sqlite: ISqliteReadCapability;
+}
+
+// @alpha
+export interface IResourceReports {
+    close(): void;
+    maintain(): number;
+    record(report: IResourceReport): 'recorded' | 'duplicate';
+}
+
+// @alpha
+export interface IResourceReportsOptions {
+    readonly location: string;
+    readonly logicalStore: string;
+    readonly onMaintenanceError: (error: unknown) => void;
+    readonly sqlite: ISqliteCapability;
+    // Warning: (ae-forgotten-export) The symbol "ITimerCapability" needs to be exported by the entry point index.d.ts
+    readonly timer: ITimerCapability;
+}
+
+// @alpha
+export interface IRetainedResourceReport extends IResourceReport {
+    readonly expiresAt: number;
+    readonly localRetentionMilliseconds: number | null;
+    readonly retentionBasis: 'provider' | 'local-default' | 'local-override';
+}
+
+// @alpha
 export type IUnattributableReason = 'unknown-operation' | 'unknown-request-attempt' | 'request-attempt-of-another-operation';
 
 // @alpha
@@ -194,6 +252,12 @@ export interface IUsageSummaryBase {
 
 // @alpha
 export function openDurableAccounting(options: IDurableAccountingOptions): IDurableAccounting;
+
+// @alpha
+export function openResourceReportReader(options: IResourceReportReaderOptions): IResourceReportReader;
+
+// @alpha
+export function openResourceReports(options: IResourceReportsOptions): IResourceReports;
 
 // @alpha
 export class UnattributableUsageError extends Error {

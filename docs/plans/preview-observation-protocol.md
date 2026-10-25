@@ -67,7 +67,7 @@ The following responsibilities should stay with their existing owners:
 | Materialization | Exact selected value loading and explicitly owned value handles | Freshness policy, member identity or observation-session closure |
 | Tracking & Observation | Capture/read semantics for selected fields and structural observations | Storage, source freshness, claims, retries or execution |
 | Resource Accounting | Usage intents/reports and unknown-usage summaries | Preview status or scheduling authority |
-| Machine | Injected read-only SQLite/snapshot, timer, clock and identity capabilities | Domain policy, storage schema or retry policy |
+| Machine | Injected read-only SQLite reader, timer, clock and identity capabilities; a consistent multi-query snapshot capability remains to be designed | Domain policy, storage schema or retry policy |
 | Observation composition | Combine owner-authored read facts, freshness metadata, recent activity and thin change signals | Running author callbacks, deriving unowned facts or writing acceptance |
 
 Definition validates the declared structure, keying rules and source completion
@@ -307,17 +307,24 @@ their current meaning.
 ### Opening and snapshot ownership
 
 Inspection in a fresh process must use a narrowly scoped Machine capability for
-read-only SQLite access and consistent read snapshots. History owns schema
+read-only SQLite access and a separately established consistent-read boundary.
+History owns schema
 validation, query SQL and result decoding. Opening or reading must not create a
 file, initialize a schema, run migrations, take a write transaction, perform
 maintenance, acquire/renew/release a lease, or dispatch author/source work.
 If the file is missing or the schema unsupported, return a typed read
 limitation without creating it. Do not treat “the caller ignored writer
 methods” as read-only support: current `openDurableHistory` initializes/validates
-and returns a read/write alpha authority; Machine does not currently declare a
-read-only opener or snapshot transaction. Read-only WAL behavior with an active
-writer requires separate-process filesystem proof; immutable-file mode is not
-a substitute.
+and returns a read/write alpha authority. Machine now declares
+`ISqliteReadCapability.openSqliteReader`, and the Node adapter provides
+`createNodeSqliteReader`; this capability exposes read-only prepared statements
+but no multi-query snapshot transaction. Its Node implementation refuses WAL
+files before opening SQLite, while existing History stores default to WAL.
+Therefore this new seam cannot directly inspect the existing History store, and
+it does not establish a consistent snapshot across reads. Reusing or extending
+the capability for History requires a compatible read-only journal strategy and
+separate-process proof of snapshot behavior with an active writer; immutable-file
+mode is not a substitute.
 
 One current query and one recent query each see a consistent snapshot and
 return their own `asOfRevision`. Selected value reads use exact references from
@@ -517,9 +524,10 @@ be presented as ready before its dependency is accepted.
 1. **Read-only History foundation and activity transaction seam.** Define the
    typed commit group/revision, bounded compact index, consistent `asOfRevision`
    reads, retention/truncation coverage, and a separate no-write/no-init
-   inspection open. Add Machine read-only SQLite and snapshot capability. Prove
-   native publication/acceptance/attempt-ending atomicity and process open under
-   active writer. No owner event API, signal or new projection yet.
+   inspection open. Reuse or extend the existing Machine read-only SQLite reader
+   with History-compatible journal handling and a proven snapshot boundary.
+   Prove native publication/acceptance/attempt-ending atomicity and process open
+   under an active writer. No owner event API, signal or new projection yet.
 2. **Owner facts and population handoff.** Add Supervision's durable
    evaluation-start/terminal metadata and Resolution's durable keyed-population
    metadata through narrow typed ports. Preserve the split: Definition validates

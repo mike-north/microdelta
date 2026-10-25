@@ -11,7 +11,9 @@
  * control, the writer-wait deadline, the deferral mode, environments with
  * recorded promotion, usage summaries through the caller's injected
  * Accounting port, and the privacy-restricted run events. Context
- * code may use owner contracts directly, never this assembly facade.
+ * code may use owner contracts directly, never this assembly facade. Read-only
+ * preview composition joins scoped native outcomes with exact Materialization
+ * views without acquiring execution or persistence authority.
  * @packageDocumentation
  */
 import { createMemoryStore as createHistoryMemoryStore } from '@microdelta/history';
@@ -194,3 +196,13 @@ export {
   type IWorkspaceRunOptions,
   type IWriterWaitOptions,
 } from './workspace.js';
+
+export {
+  createPreviewProjection,
+  type IPreview,
+  type IPreviewEvaluation,
+  type IPreviewProjection,
+  type IPreviewRefresh,
+  type IPreviewRequest,
+  type IPreviewScope,
+} from './preview.js';

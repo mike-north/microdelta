@@ -128,7 +128,11 @@ This is not a claim of delivered behavior or whole-issue implementation readines
 
 ## Proposed issue plans
 
-The [controlled roster plan](../plans/controlled-roster.md) records a proposed issue #170 adapter and same-run snapshot bridge, with the separate scoped-composition prerequisite and evidence still outstanding. It elaborates TEST-3/4; it is not an accepted requirement or delivery record.
+The [controlled roster plan](../plans/controlled-roster.md) records a proposed issue
+#170 adapter and same-run snapshot bridge, with the separate scoped-composition
+prerequisite and evidence still outstanding. It elaborates TEST-3/4 and
+issue-specific CR-2/4/5 application outcomes; it is not an accepted library
+requirement or delivery record.
 
 ## Current checkout
 

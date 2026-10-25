@@ -1,8 +1,8 @@
 # Controlled roster plan
 
-**Standing:** proposed engineering direction for issue #170, pending independent
-adversarial review and supervisory selection. This plan elaborates the accepted
-TEST-3/4 outcomes; it does not amend their requirements or claim their delivery.
+**Standing:** proposed engineering direction for issue #170, not an accepted
+requirement or delivery claim. This plan elaborates TEST-3/4 and the application
+outcomes recorded in issue #170; it does not amend normative library requirements.
 
 **Scope:** one example-owned deterministic provider adapter and a bounded bridge
 from its page advances to immutable collection snapshots. The bridge uses multiple
@@ -33,8 +33,8 @@ are not promises of assembled behavior.
 immutable membership-and-coverage snapshots installed between serialized consumer
 passes; page-advance acquisition may remain pending during a pass; and a fixed,
 two-level scoped-composition capability is a separate prerequisite to the full
-roster. The proposed tradeoff is application-managed snapshot passes in one run; a native
-streaming source contract and multiple analysis runs are not selected.
+roster. The proposed tradeoff is application-managed snapshot passes in one run;
+a native streaming source contract and multiple analysis runs are not selected.
 
 **Unexecuted proof:** synthetic adapter negatives, held-page same-run behavior,
 capacity controls, restart/reuse, cross-person nested fanout, trial/environment
@@ -86,12 +86,17 @@ lifetime; History owns exact results and publication; Accounting owns reported
 usage; Machine supplies host capabilities. The adapter does not own any of those
 framework authorities.
 
-The fake provider exposes a frozen manifest revision: for a query naming provider,
-account/repository, employee, interval, filters, and revision, the fixture service
-guarantees one fixed qualifying set. That manifest is the oracle for completeness.
-An application-generated enumeration ID, unchanged cursor, total alone, page
-ordinal, or quiet time is not a source-consistency guarantee. This is a synthetic
-provider contract and says nothing about real GitHub's snapshot consistency.
+The synthetic service guarantees a fixed qualifying set for a query naming
+provider, account/repository, employee, interval, filters, and frozen revision.
+The adapter can observe only page responses and the selected consistency metadata
+exposed by that contract, such as query/revision identity, continuation or terminal
+evidence, and a promised total when the provider supplies one. It has no access to
+the fixture manifest or another complete-set oracle. The independent test harness
+holds that manifest privately and compares it with the adapter's reported members
+and coverage. An application-generated enumeration ID, unchanged cursor, total
+alone, page ordinal, or quiet time is not a source-consistency guarantee. This is
+a synthetic provider contract and says nothing about real GitHub's snapshot
+consistency; a provider lie outside the stated guarantee is outside this claim.
 
 Each PR uses an opaque stable provider ID qualified by provider and repository.
 Employee identity comes from the validated HR ID. Time interval, range, cursor,
@@ -105,8 +110,9 @@ A minimum interval that remains capped is unresolved coverage: refuse closure.
 Never treat a truncated parent page as an exhausted leaf. Every uncapped leaf
 must have validated query/revision identity, bounded well-formed pages, explicit
 continuation and terminal evidence, and consistent expected coverage. Closure
-requires every planned leaf to terminate and the distinct stable IDs/counts to
-match the fixture manifest under its guarantee.
+requires every planned leaf to terminate and distinct IDs/counts to satisfy the
+adapter-visible provider contract. Only the independent harness compares the
+reported set and coverage against the hidden fixture manifest.
 
 The adapter must preserve these negative distinctions:
 
@@ -257,6 +263,26 @@ Do not label observational partial display as an accepted completed fold. A caug
 failure cannot clear taint or make full success. Strict folds await closure and
 accepted outcomes; explicit partial reporting preserves failure and coverage.
 
+## Additional issue #170 application outcomes
+
+TEST-3/4 do not subsume the separate provider timing and source-finality criteria
+in [issue #170](https://github.com/mike-north/microdelta/issues/170). Keep CR-2,
+CR-4 and CR-5 visible in the application evidence matrix; the proposed adapter
+and application handoff must not be considered complete after TEST-3/4 rows alone.
+These remain controlled, application-specific acceptance outcomes, not universal
+retry or finality rules for the library.
+
+| Issue criterion | Required controlled evidence |
+| --- | --- |
+| CR-2 provider rate backoff | Through the existing Supervision operation identity, classify a retryable 429 or selected rate-classified 403, while authentication, non-rate failure and ambiguous transport outcomes do not become rate retries. Under a fake clock normalize Retry-After seconds and HTTP dates; send no earlier than the maximum applicable provider not-before and selected local backoff (including reset evidence when the provider contract supplies it). If delay exceeds chosen delay/attempt/total-wait budgets, preserve a truthful deferred/failed outcome; never shorten the provider minimum. Prove same-operation persistence through close/reopen, lease release during the wait, cancellation preventing a later send, zero sends just before threshold and a permitted retry at threshold, plus structured timing and truthful usage gaps without raw private headers/bodies. #220 generic classification does not prove this provider-specific timing/application evidence. |
+| CR-4 observation and cutoff | Same observation, source revision and cutoff may resume eligible evidence without refetch. Reusing an observation identity with a changed cutoff must reject or explicitly invalidate; it cannot relabel prior evidence. Advancing observation refreshes provisional sources. A future close/merge cannot make an item terminal at the earlier cutoff, and an item created after cutoff cannot enter historical coverage. Include equal refreshed child output with current acceptance/provenance retained and parent body/reference reuse when its consumed output is unchanged. Keep observation identity, cutoff, Tracking observation and read-only preview distinct. |
+| CR-5 independent settling policies | In one controlled report, a quiet-period source and daily source can become final at different times under their own current policy. Quiet-period finality requires terminal state, complete relevant coverage and no relevant activity within its selected interval; open items, recent comments/reviews, future activity and incomplete coverage stay provisional. Daily evidence uses an explicit inclusive closed-day boundary and clips closed/provisional coverage to report bounds. Advance observation to reveal late arrivals. Revise one source's settling policy and prove its affected old finality is revoked while unrelated source evidence remains independently eligible. No global lag or elapsed quiet time substitutes for provider exhaustion. |
+
+These rows are acceptance targets from issue #170's CR-2/4/5, not results. Their
+explicit tests, source-hook counts, send times, coverage and reuse outcomes belong
+in the final application assembly evidence. The current library mechanisms and
+#220 do not establish these provider-specific application outcomes by themselves.
+
 ## Dependencies, exclusions, and handoff candidates
 
 Current dependencies are separate: #213 allowance work and #220 classification
@@ -282,8 +308,9 @@ does not file or claim them:
    Resolution, and Supervision owner seams; two-person fixed structure, restart,
    independent closure, trial/adequacy boundaries, cross-person failure/wait, and
    equal-output cutoff. No public DSL or arbitrary recursive graph scope.
-4. Roster application assembly: consume landed retry work, prove all TEST-3/4
-   rows, and include #214 exhaustion behavior. Full CLI evidence waits for #167.
+4. Roster application assembly: consume landed retry work and prove TEST-3/4
+   plus CR-2/4/5 above, including #214 exhaustion behavior. #220 classification
+   alone is not CR-2 evidence. Full CLI evidence waits for #167.
 5. Independent adversarial review, repository checks, then the normal supervisor
    and Copilot review gates. These are later actions, not plan acceptance or merge
    authority.
@@ -294,19 +321,29 @@ small synthetic evidence proves no bounded-memory or O(1) claim. Real-provider
 consistency, paid traffic, provider credentials, manual recovery, another host,
 release changes and package publication are outside this plan.
 
-## Evidence reviewed and remaining
+## Evidence basis and limits
 
-Reviewed active contracts: [spec entry](../spec/README.md),
-[architecture](../spec/architecture.md#arc-001-six-contexts-one-owner-per-invariant),
-[composition](../spec/composition.md), [operations](../spec/operations.md),
-[execution](../spec/execution.md), [acceptance](../spec/acceptance.md#weekly-roster-workflow),
-and [M7](../milestones.md#m7-full-roster-workflow-and-scale-acceptance). Read
-`/tmp/issue170-domain-consult.md` and `/tmp/issue170-readiness-current.md` as
-supervisory inputs. Live issue context was not independently refreshed in this
-authoring pass; the readiness note reports its 2026-10-24/25 inspection. Its
-standing remains read-only evidence, not acceptance.
+The active requirements are in [SPEC-1 and the reading map](../spec/README.md),
+[ARC-001/005/006/008](../spec/architecture.md), [CMP-1–9](../spec/composition.md),
+[RUN-003–005 and RUN-010–019](../spec/operations.md), [REUSE-002–005](../spec/execution.md),
+[TEST-3/4](../spec/acceptance.md#weekly-roster-workflow), and [M7](../milestones.md#m7-full-roster-workflow-and-scale-acceptance).
+Issue-specific CR-2/4/5 outcomes are recorded in [issue #170](https://github.com/mike-north/microdelta/issues/170).
 
-No adapter, bridge, nested-composition, application, CLI, or scale execution was
-run for this plan. Independent adversarial review and supervisory selection are
-pending. A passing documentation/link check, if completed, would establish only
-internal consistency of this candidate.
+Repository support observations are pinned to baseline commit
+`5353ff3112379d48edfa5f9cdcdb0bbc6a978fb2`. The relevant implementation paths
+are [collection source shape](../../packages/definition/src/collection.ts),
+[request-local population resolution](../../packages/resolution/src/resolution.ts),
+[concurrent request/writer scopes](../../packages/supervision/src/supervision.ts),
+[workspace run lifetime](../../packages/core/src/workspace.ts),
+[admitted operation attempts](../../packages/supervision/src/operation-engine.ts),
+[flat template declarations](../../packages/definition/src/template.ts), and
+[composition-level folds](../../packages/definition/src/fold.ts). Existing
+support controls include [writer-wait tests](../../packages/supervision/test/writer-wait.test.ts)
+and [workspace lifetime tests](../../packages/core/test/workspace/scope.test.ts);
+they do not execute the proposed page/member bridge. These paths describe inspected
+support at the pinned baseline, not current acceptance or assembled proof.
+
+No adapter, bridge, nested-composition, application, CLI, or scale execution is
+claimed. The provider manifest remains hidden test-oracle data, not adapter input;
+no real-provider snapshot-consistency claim is made. Proposed status and every
+unexecuted proof boundary remain explicit.

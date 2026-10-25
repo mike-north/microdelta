@@ -548,10 +548,11 @@ issue-216 projection was absent. Current main at PR222 merge
 projection fed by caller-supplied evaluation scope/outcome and an optional exact
 result reference. It supports read-only selected display for that supplied
 context; it does not discover evaluations or establish durable associations.
-The broader issue-165 requirements remain undelivered and proposed: no separate
-read-only History opener/snapshot capability; no attempt/evaluation enumeration
-or common observation commit index; no durable run/request/structural failure
-scope mapping; no cross-process change feed; no durable rolling activity with
+The broader issue-165 requirements remain undelivered. Their proposed mechanisms
+remain unselected; missing capabilities include: no separate read-only History
+opener/snapshot capability; no attempt/evaluation enumeration or common
+observation commit index; no durable run/request/structural failure scope
+mapping; no cross-process change feed; no durable rolling activity with
 coverage/gap metadata; no independently owned observation reader; no explicit
 value-handle lifetime beyond Tracking capture; no durable Resolution population
 projection for read-side membership; and no retained-union finite aggregate

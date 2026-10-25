@@ -64,13 +64,15 @@ A proposal or source inspection cannot close those gates.
 A **discovery traversal** is a fresh attempt to establish a selected person's
 current PR population. Cursor and range state is temporary traversal progress.
 A **discovered member** is a PR identified by stable provider/repository-qualified
-identity and validated against the selected query. A **collection snapshot** is
-an immutable membership view paired with coverage evidence for one pass. A
-**closed person corpus** means the adapter has evidence that the selected query
-is exhausted; it does not mean only that known members finished. A **consumer
-pass** resolves members against one pinned snapshot. Multiple passes can use the
-same run and its retry authority. An **assessment input** is evidence that can
-change expensive assessment output; traversal progress is not such an input.
+identity and validated against the selected query. A **closed person corpus**
+means the adapter has evidence that the selected query is exhausted; it does not
+mean only that known members finished. For the first delivery, this closure is
+established by completing search before detail fanout. The full target may
+represent membership as an immutable **collection snapshot** paired with coverage
+evidence and resolve it in one or more **consumer passes**; those terms describe
+target semantics and do not require the first delivery to implement a pinned
+snapshot or multi-pass bridge. An **assessment input** is evidence that can change
+expensive assessment output; traversal progress is not such an input.
 
 This model answers the required consumer questions directly:
 
@@ -186,12 +188,13 @@ This is a bounded fixed composition, not a generic recursive graph API.
 
 ## Separate scoped-composition prerequisite
 
-The full workflow needs a fixed declared employee template containing completed
-PR search, PR detail fanout, and a strict person fold. The organization/team
+The first report workflow uses a fixed declared employee template containing
+completed PR search, PR detail fanout, and a strict person fold. The organization/team
 consumer depends on declared person outcomes. Factories run once against symbolic
 members; HR data instantiates only declared result scopes and never creates
-operations. The first delivery does not require page-streaming readiness across
-the detail fanout.
+operations. Completing search before detail fanout is the selected first-delivery
+scope. Full-target RUN-005 streaming readiness remains future work; it does not
+make page-streaming a prerequisite for this delivery.
 
 This is a **bounded two-level prerequisite**, not an assertion that current flat
 composition supports nested fanout. Its design must specify:
@@ -260,8 +263,11 @@ contracts.
    expensive work for excluded people and cannot contaminate production scope.
    The executable exposes separately permissionable run-start and read-only
    progress observation. Observation cannot start/retry/cancel/claim/write or run
-   author callbacks. Failure, wait, cancellation, coverage, and usage remain
-   visible; no strict success or zero corpus is fabricated.
+   author callbacks. It reports read-only progress and terminal state; exact
+   progress fields and output framing remain to be selected. Runtime outcomes and
+   acceptance evidence preserve truthful failure, wait, cancellation, coverage,
+   and usage, without requiring detailed usage display in the first CLI. Full
+   TEST-4.9 inspection remains open; no strict success or zero corpus is fabricated.
 6. **Application-specific CR outcomes:** retain CR-2 provider timing/budget/auth
    negatives, CR-4 observation/cutoff/revision cases, and CR-5 independent
    settling policies in the matrix below. These remain in first-report acceptance;

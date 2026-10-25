@@ -1,5 +1,18 @@
 # @microdelta/value
 
+## 0.2.0
+### Minor Changes
+
+- 8b4283e: Value now owns a detached prepared snapshot for repeated exact observations, so History builds selected addresses without rescanning each ancestor array. Existing Value rejection rules and exact selected facts remain intact.
+
+### Patch Changes
+
+- 77715af: Preserve own-property and inherited-membership observations for intrinsic property names on supported plain records. Presence captures boolean facts without selecting unsupported intrinsic values, including during current-fact comparison.
+- Updated dependencies [5010548]
+- Updated dependencies [0d7ad9a]
+- Updated dependencies [47bea75]
+  - @microdelta/machine@0.3.0
+
 ## 0.1.1
 ### Patch Changes
 

@@ -1,5 +1,27 @@
 # @microdelta/supervision
 
+## 0.4.0
+### Minor Changes
+
+- 29fbb5b: Keep known recoverable acquisition refusals pending when a run exhausts its finite allowance, preserve the operation address and any provider not-before floor, and permit only a new run to retry. Write operation journal version 3 with private invocation evidence for exhausted state while continuing truthful version-1 and version-2 reads.
+- d16a156: Allow finite acquisition retries per run invocation, with three total sent attempts by default and a fresh allowance for a new run. Preserve prior request-attempt history and unknown usage when a response is lost. Record private run-instance identity in version-2 operation journals while continuing to read version-1 records without inventing that identity.
+
+### Patch Changes
+
+- dbdfee8: Bound fan-out scheduling state to the run's active window while retaining canonical member reports, stop handling, and lane lending.
+- 7076381: Refuse sends when a hard stop or deadline lands in a synchronous pre-dispatch callback, without calling the provider or treating an unsent operation as remotely aborted. Preserve durable intent and unknown Accounting usage evidence for operations stopped after intent.
+- Updated dependencies [d782565]
+- Updated dependencies [bac83f7]
+- Updated dependencies [dbdfee8]
+- Updated dependencies [0af7f74]
+- Updated dependencies [5c9436c]
+- Updated dependencies [8692f2a]
+- Updated dependencies [c20f01e]
+- Updated dependencies [f23d2a1]
+- Updated dependencies [33213fb]
+  - @microdelta/resolution@0.3.1
+  - @microdelta/definition@0.3.1
+
 ## 0.3.0
 ### Minor Changes
 

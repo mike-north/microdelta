@@ -128,11 +128,18 @@ This is not a claim of delivered behavior or whole-issue implementation readines
 
 ## Proposed issue plans
 
-The [controlled roster plan](../plans/controlled-roster.md) records a proposed issue
-#170 adapter and same-run snapshot bridge, with the separate scoped-composition
-prerequisite and evidence still outstanding. It elaborates TEST-3/4 and
-issue-specific CR-2/4/5 application outcomes; it is not an accepted library
-requirement or delivery record.
+The [controlled roster plan](../plans/controlled-roster.md) records the owner-
+selected first contribution-report scope for issue #170: complete each selected
+employee's paginated search to count and stable PR IDs before detail fanout; use
+fixed shared limits, provider cooldowns, retry ceilings and cancellation; and
+provide separately permissionable CLI run-start and progress observation. The
+24-hour delivery target is not a guarantee or milestone exit. The plan preserves
+full TEST-3/4 and TEST-5/6 as separate qualification gates, including the full
+historical CLI inspection criterion. Page-streaming, advanced adaptive rate policy
+and sophisticated discovery-order fairness remain deferred mechanisms, not
+accepted first-delivery requirements; this scope does not claim full A-12j/l,
+RUN-019, CLI-001–004, M6, or M7 delivery. The normative full-target contracts
+remain unchanged and their evidence gates remain open.
 
 ## Current checkout
 

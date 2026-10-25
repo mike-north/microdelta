@@ -4,11 +4,13 @@
 requirement or delivery claim. This plan elaborates TEST-3/4 and the application
 outcomes recorded in issue #170; it does not amend normative library requirements.
 
-**Scope:** one example-owned deterministic provider adapter and a bounded bridge
-from its page advances to immutable collection snapshots. The bridge uses multiple
-normal consumer requests in one `workspace.run`. The full per-person nested
-fanout/fold requires a separate scoped-composition prerequisite. No runtime proof
-of either assembly is recorded here.
+**Scope:** a first usable controlled contribution report, targeted for delivery
+within 24 hours of the owner's direction. That is a target, not a delivery claim
+or permission to weaken correctness. One example-owned deterministic adapter
+completes each person's paginated search and returns its count and stable PR IDs;
+only then does the application fan out detail retrieval and assessment. The full
+TEST-3/4 workflow and TEST-5/6 qualification remain separate, larger gates. No
+runtime proof of the first delivery or full M7 assembly is recorded here.
 
 ## Requirements, support, proposal, and proof
 
@@ -17,7 +19,7 @@ The following are **accepted requirements** owned by
 [RUN-003–005](../spec/operations.md#run-003--readiness-is-scoped-to-the-consuming-calculation),
 [RUN-010–015](../spec/operations.md#run-010--strict-and-outcome-folds-have-different-contracts),
 [RUN-016–019](../spec/operations.md#trials-and-environment-protection),
-[CMP-1–9](../spec/composition.md), [REUSE-002–005](../spec/execution.md#reuse-002--current-finality-hooks-are-authoritative), and [M7](../milestones.md#m7--full-roster-workflow-and-scale-acceptance): readiness is scoped to required consumers; a member may proceed while discovery remains open; complete folds wait for truthful closure; stable identity and current source acceptance govern reuse; abstract topology is declared before data; required retry rejection gracefully stops the whole analysis; and the full roster plus CLI and scale checks remain distinct gates.
+[CMP-1–9](../spec/composition.md), [REUSE-002–005](../spec/execution.md#reuse-002--current-finality-hooks-are-authoritative), and [M7](../milestones.md#m7--full-roster-workflow-and-scale-acceptance): readiness is scoped to required consumers; a member may proceed while discovery remains open in the full target; complete folds wait for truthful closure; stable identity and current source acceptance govern reuse; abstract topology is declared before data; required retry rejection gracefully stops the whole analysis; and the full roster plus CLI and scale checks remain distinct gates. For this first delivery, each employee's search completes before detail fanout. This sequencing choice does not amend the full RUN-003–005 requirements.
 
 **Inspected support** is narrower. Collection results already distinguish open
 and complete membership, and one request resolves one immutable source result
@@ -25,22 +27,37 @@ before keying it. A later request can select a newer snapshot. Normal concurrent
 requests share writer acquisition with separate request/pass scopes, and started
 operations keep one run alive until they settle. These facts support feasibility;
 existing tests use a fake resolution port or exercise lifecycle, not the proposed
-page/member bridge. Current templates and folds are flat at the composition
-level; there is no declared per-person nested collection/fold. These observations
-are not promises of assembled behavior.
+completed-search/detail composition. Current templates and folds are flat at the
+composition level; there is no declared per-person nested collection/fold. These
+observations are not promises of assembled behavior.
 
-**Proposed direction for review:** one controlled example adapter; cumulative
-immutable membership-and-coverage snapshots installed between serialized consumer
-passes; page-advance acquisition may remain pending during a pass; and a fixed,
-two-level scoped-composition capability is a separate prerequisite to the full
-roster. The proposed tradeoff is application-managed snapshot passes in one run;
-a native streaming source contract and multiple analysis runs are not selected.
+**Accepted first-delivery choices:** search/discovery is one completed step that
+returns a count and stable PR IDs; detail retrieval starts after that step closes.
+Provider pagination remains internal to search. Page-by-page downstream streaming
+is not required for the first delivery. Use fixed shared limits and provider
+cooldowns with cancellation and bounded retry ceilings. The advanced adaptive
+policy and sophisticated discovery-order fairness recorded for future work in
+#239/#238 are deferred from this delivery; this does not satisfy full A-12l or
+the former full RUN-019 target.
 
-**Unexecuted proof:** synthetic adapter negatives, held-page same-run behavior,
-capacity controls, restart/reuse, cross-person nested fanout, trial/environment
-behavior, crash/retry cases, CLI inspection, and M7 scale qualification remain
-to be implemented and evidenced. A proposal or source inspection cannot close
-those gates.
+**Proposed engineering direction:** keep the adapter and application example-owned.
+The first integration requires a fixed two-level composition: completed per-person
+search result to PR detail fanout to a strict person summary. The exact library
+seam remains to prove and select. Do not introduce a generic paginator, dynamic
+graph, page-triggered readiness bridge, or a new persistence authority.
+
+**Decision basis and unexecuted proof:** first-delivery scope follows the owner
+comments on [#167](https://github.com/mike-north/microdelta/issues/167#issuecomment-6404318056),
+[#170](https://github.com/mike-north/microdelta/issues/170#issuecomment-6404529235),
+and the M7 priority record
+([#170](https://github.com/mike-north/microdelta/issues/170#issuecomment-6404360409));
+the advanced-rate deferral is recorded in
+[#239](https://github.com/mike-north/microdelta/issues/239). Synthetic adapter
+negatives, completed-search/detail composition, restart/reuse, cross-person
+nested fanout, trial/environment behavior, crash/retry cases, narrow CLI, and
+full M7 scale qualification remain unimplemented and unevidenced. Held-page
+same-run behavior is a full-target streaming question, not first-delivery proof.
+A proposal or source inspection cannot close those gates.
 
 ## Meanings and consumer answers
 
@@ -57,11 +74,10 @@ change expensive assessment output; traversal progress is not such an input.
 
 This model answers the required consumer questions directly:
 
-- PR A can be assessed when its own accepted evidence is ready, even while page
-  two is pending. A strict person summary still waits for that person's closed
-  corpus and accepted member outcomes.
-- Person A's strict summary can complete while person B's discovery stays open,
-  provided A's scope is closed and settled. A team summary requiring both waits.
+- The first delivery completes each person's search before starting its PR detail
+  fanout. Person A's strict summary may complete while person B's search stays
+  open, provided A's search and required details are closed and settled. A team
+  summary requiring both waits.
 - A certified closed empty corpus may produce no contributions with no model
   send. Failed, capped, or open discovery cannot be presented as empty success.
 - After a failed page, an authorized new run rediscovers from the root; current
@@ -135,80 +151,47 @@ the root with fresh observation and volatile cursor state. It revalidates curren
 membership; retained results are candidates for ordinary resolution, never a union
 that makes yesterday's rows today's complete population.
 
-## Same-run snapshot bridge
+## Completed search and detail fanout
 
-Declare separate page-advancement and collection-snapshot source slots before
-execution. A page advance returns one validated page receipt through an admitted
-source attempt; it does not claim a complete person corpus. The run coordinator
-verifies that receipt and installs a new immutable cumulative snapshot containing
-both membership and coverage. The collection source for a consumer pass returns
-that selected snapshot immediately; it does not await the page source's pending
-promise.
+For each selected employee, the adapter owns a fresh paginated search. The search
+step either returns a complete result containing the count and stable, qualified
+PR IDs, or returns an explicit failed/incomplete outcome. No detail request starts
+from an individual page. After successful search completion, the application
+fans out current detail hydration and assessment by stable PR identity, then
+builds a strict summary from the complete required set. The composition must not
+turn a capped, failed, or still-open search into a successful empty corpus.
 
-The bounded schedule is:
+Provider cursors, page ordinals, and range splits are traversal state, never PR
+identity or assessment input. A new traversal begins at its root. Stable PR
+subjects and consumed evidence determine reuse across a fresh process and changed
+page boundaries/ID sets. A fresh search that changes IDs updates membership;
+old rows or cursors cannot establish today's closure. An explicitly certified
+empty search may produce a no-contributions result without detail or model work.
 
-1. Start one fresh `workspace.run`; initialize one traversal coordinator per
-   selected person. All provider sends use the existing supervised operation
-   protocol and eventual #213/#227 acquisition contract.
-2. Await and validate the first page receipt. Install snapshot S1, then start the
-   next admitted page request and allow it to remain pending.
-3. Resolve a consumer pass against S1. PR A's assessment publishes while the
-   page-two release latch remains closed. The person's strict summary does not
-   enter its body or publish while coverage is open.
-4. When a page completes, queue the receipt. Do not mutate a snapshot already
-   selected by a pass. Install S2 only between passes, then start the next pass.
-   For the first proof, serialize consumer passes to avoid duplicate assessment
-   of one PR; fanout work inside a pass still follows Supervision.
-5. When one person's coverage closes and its outcomes settle, its strict summary
-   may proceed independently. A team requiring another still-open person waits.
-   A failed page never installs a complete snapshot.
+This boundary removes the first-delivery need for page receipt publication,
+page-triggered downstream admission, and held-page same-run snapshot coordination.
+It does not remove truthful closure, stable identity, retry/stop/fence, usage, or
+strict-fold requirements. The richer live streaming behavior remains a future
+capability and must not be represented as delivered by this report.
 
-This is one live application invocation and one `workspace.run`, with distinct
-admitted page requests and multiple ordinary resolution requests. It is not one
-collection-source invocation streaming multiple results. The application pins
-each pass to one immutable membership-and-coverage epoch; ordinary parallel
-request writers may still participate in the same run. Bound held-page tests:
-the store's writer lease is not continuously renewed during one slow request.
-
-**Required identity proof, not existing-support claim:** against the landed
-acquisition contract, show that retrying page P retains P's logical operation
-binding and consumes its finite same-run allowance, while advancing P to Q creates
-a distinct logical acquisition. Both occur with the same frozen composition and
-without putting cursor/page progress into expensive member inputs. Request overlap
-alone does not prove this mapping; #213/#227 integration must establish it.
-A new consumer pass or deferral pass remains in the same run and cannot replenish
-allowance; only an explicitly new analysis run starts fresh allowance. Unknown
-usage remains unknown.
-
-Membership and stable PR fields form member inputs. Cursor, page ordinal,
-snapshot generation and traversal progress stay in source metadata and coverage
-evidence, not in assessment bindings. A new source snapshot can therefore preserve
-eligible expensive references when the member's consumed evidence is unchanged.
-Use ordinary source acceptance and nested validation; do not create synthetic
-inputs to invalidate work whenever pagination changes.
-
-Provision enough configured send permits and member lanes for the held-page
-positive control: the pending page must not occupy the only send permit and block
-PR A's assessment. Include a one-permit waiting control to demonstrate truthful
-capacity behavior. Do not bypass supervised sends. A known Retry-After wait uses
-Supervision deferral; it must not hold a network request permit or be simulated by
-an unresolved promise. A person-local failure may be represented in explicit
-coverage/error reporting and independent people may continue when Supervision
-allows. Catching failure cannot clear execution taint, override stop policy, or
-turn partial display into a completed strict fold. Pending acquisitions must be
-tracked and settled through Supervision.
-
-On page failure, a fresh authorized run starts discovery at the root; it does not
-restore a JavaScript continuation. It rediscovers A and normal current resolution
-may retain A's eligible exact result. A pass cannot reset same-run retry authority.
+The minimum composition proof is two employees with two PR IDs each: complete
+search returns count and IDs, details fan out only after completion, and each
+strict person summary sees exactly its complete accepted set. Then restart in a
+fresh process with unchanged inputs and prove exact eligible reuse; change the ID
+set/page boundaries and prove valid keyed work is retained while new/removed
+members update the summary. A failed search followed by a fresh authorized search
+may reuse work retained from an earlier successful traversal; the failed search
+itself never authorizes detail fanout or counts as empty.
+This is a bounded fixed composition, not a generic recursive graph API.
 
 ## Separate scoped-composition prerequisite
 
-The full workflow needs a fixed declared employee template containing the PR
-collection/template and a strict person fold. The employee population can close
-while a given person's PR population remains open. The organization/team consumer
-depends on declared person outcomes. Factories run once against symbolic members;
-HR data instantiates only declared result scopes and never creates operations.
+The full workflow needs a fixed declared employee template containing completed
+PR search, PR detail fanout, and a strict person fold. The organization/team
+consumer depends on declared person outcomes. Factories run once against symbolic
+members; HR data instantiates only declared result scopes and never creates
+operations. The first delivery does not require page-streaming readiness across
+the detail fanout.
 
 This is a **bounded two-level prerequisite**, not an assertion that current flat
 composition supports nested fanout. Its design must specify:
@@ -230,13 +213,70 @@ composition supports nested fanout. Its design must specify:
 - Decide the narrow relationship to M5's composition-level outcome fold. Do not
   silently convert that existing step kind into a member or child fold.
 
-Begin evidence with two symbolic employees and two PRs, changed registration
+Begin evidence with two symbolic employees and two PRs each, changed registration
 order after restart, renamed-binding miss, independent closure, cross-person
 failure/wait, and equal-child cutoff. A tiny fixed structure is enough; no generic
 recursive graph API is implied. Do not dynamically build graph topology from HR
 results. Do not use `run.read` plus copied values as a substitute for nested
 dependency capture. Do not adopt #176's public DSL or use its experimental
-surface as an established authoring contract.
+surface as an established authoring contract. Page-triggered downstream execution
+is explicitly outside first-delivery acceptance; full M7 must still map any
+remaining RUN-003–005 obligations honestly.
+
+## First-delivery acceptance outcomes
+
+These numbered outcomes define the owner-selected first report slice. They do
+not claim full TEST-3/4, full M6 inspection, or M7 completion. Runtime work must
+write behavioral tests first against these outcomes and the unchanged governing
+contracts.
+
+1. **Completed search and strict summary:** for each selected employee, a fresh
+   paginated search returns a truthful count and stable, qualified PR IDs before
+   any detail request starts. Detail fanout covers that completed set; the strict
+   summary runs only after all required details settle. Certified closed-empty
+   search yields no contributions; failed, capped, repeated-cursor, or incomplete
+   search cannot yield a successful empty report.
+2. **Identity, change, and restart:** a fresh process with unchanged source data
+   runs current source checks and reuses exact eligible assessment/summary
+   references. Changed page boundaries preserve eligible work by stable PR ID;
+   changed membership adds/removes the right report members; changed consumed
+   evidence reexecutes only affected work. A failed traversal followed by a fresh
+   authorized search may reuse results from an earlier successful traversal,
+   never treat the failed traversal as complete.
+3. **Nested composition and closure:** two employees each have a complete search
+   returning multiple PR IDs, detail fanout, and a strict person fold. A's settled
+   summary can finish while B's search is open; a team fold requiring B cannot
+   complete. Prove this fixed two-level composition on the actual runtime, not a
+   test-only resolver or SDK hand assembly.
+4. **Provider controls:** fixed configured shared limits apply to the selected
+   logical service scope; contextual provider cooldown is a floor for later sends;
+   finite retry ceilings and cancellation while waiting prevent further sends.
+   Exercise exhausted required acquisition and rejected further retries through
+   #214's applicable soft-stop/drain boundary; no fabricated result or unapproved
+   send is allowed. Preserve current stop, durable-intent, fence, possible-send,
+   and unknown-usage rules. No adaptive regrouping, inferred quota, or
+   cross-process coordination is part of this slice.
+5. **Trial, CLI, and truthful outcomes:** explicit trial selection performs no
+   expensive work for excluded people and cannot contaminate production scope.
+   The executable exposes separately permissionable run-start and read-only
+   progress observation. Observation cannot start/retry/cancel/claim/write or run
+   author callbacks. Failure, wait, cancellation, coverage, and usage remain
+   visible; no strict success or zero corpus is fabricated.
+6. **Application-specific CR outcomes:** retain CR-2 provider timing/budget/auth
+   negatives, CR-4 observation/cutoff/revision cases, and CR-5 independent
+   settling policies in the matrix below. These remain in first-report acceptance;
+   generic retry classification does not prove them.
+
+The completed-search decision removes page publication and page-triggered detail
+admission from first delivery. It does not amend full-target RUN-003–005 or claim
+page-streaming behavior is implemented. Progress-only CLI observation does not
+satisfy the full historical TEST-4.9 inspection requirement.
+
+These are first-delivery sequencing boundaries only. The normative page-two
+readiness requirements in RUN-005, shared-rate fairness/adaptive requirements in
+RUN-019 and A-12j/l, and broad CLI-001–004 contracts remain unchanged and open
+for their full target. This proposal neither replaces those contracts nor claims
+their acceptance evidence.
 
 ## TEST-3/4 evidence map
 
@@ -256,7 +296,7 @@ This map makes no completion claim.
 | TEST-4.6 independent people | Keep B discovery open while A closes; A executes or retains exact prior summary while team requiring both waits. Combine another person's source failure with B's quota wait and successful A; partial display marks coverage/errors and never claims strict full success. |
 | TEST-4.7 trial | Widen explicit selection; reuse eligible independent members only under allowed environment/store policy; change aggregate membership; prevent accidental production reuse or trial contamination. Cross-environment reuse requires recorded promotion. Include no-staff and single-point adequacy limits from RUN-018. |
 | TEST-4.8 cancel/crash | Stop/kill after A commits and B remains incomplete; completed results stay readable, incomplete body has no reusable partial result, usage stays unknown when unreported; a new run restarts discovery and reuses eligible children. |
-| TEST-4.9 CLI | After #167, inspect held page, wait, failure, success and restart with rejecting dispatch ports; show status, exact references, explanations/history and resource observations without starting work. #165/#166 apply only to surfaces actually consumed. |
+| TEST-4.9 CLI | Full historical test: inspect execution, references, waits, history and resources without work. First-delivery CLI is narrower: separately permissioned run-start and read-only progress observation. It does not satisfy this full row; #165/#166 apply to consumed surfaces. |
 | TEST-4.10 retry/unknown usage | Consume #213/#227 allowance and #220/#224 classification once delivered, plus #214 recoverable-exhaustion work. Lost response may retry within the same run; exhaustion supplies no result and preserves incomplete coverage. Exhaustion alone is distinct from rejection: rejecting further retries for required input invokes whole-analysis soft stop/drain under RUN-014, without fabricated summary or extra sends. A new run has fresh allowance and ordinary reuse. Unknown usage remains unknown. #152 is not a prerequisite. |
 
 Do not label observational partial display as an accepted completed fold. A caught
@@ -285,39 +325,43 @@ in the final application assembly evidence. The current library mechanisms and
 
 ## Dependencies, exclusions, and handoff candidates
 
-Current dependencies are separate: #213 allowance work and #220 classification
-work are in flight; #214 owns recoverable exhaustion; #167 CLI remains required
-for the full M7 inspection gate; #213/#220 alone do not prove exhaustion or
-rejection handling. #152 manual result recovery is not a prerequisite. #165/#166
-remain separate observation gates only if the application consumes those
-surfaces. #176/#178 do not establish an adopted public authoring API. Do not copy
-retry policy into the adapter or treat neighboring work as delivered.
+Current dependencies remain separate: #213 allowance work, #220 classification,
+#214 recoverable exhaustion, and #167 CLI are not made complete by this plan.
+#152 manual result recovery is not a prerequisite. #165/#166 remain observation
+gates only for surfaces the application consumes. #176/#178 do not establish an
+adopted public authoring API. Do not copy retry policy into the adapter or treat
+neighboring work as delivered.
 
 The supervisory owner may turn these into bounded issues after review; this plan
 does not file or claim them:
 
-1. Example-only synthetic adapter: frozen revision manifest; range cap bisection;
-   stable qualified IDs; closure and all listed pagination/duplicate/conflict
+1. Example-only synthetic adapter: completed search result with count and stable
+   qualified IDs; range cap bisection; closure and pagination/duplicate/conflict
    negatives; fresh-root recovery. No core changes or real-provider guarantee.
-2. Existing-API one-collection bridge: tests first; held page two in one run,
-   member result before release, strict fold blocked, capacity-positive and
-   one-permit controls, concurrent normal requests through the real facade,
-   retry-P identity versus advance-to-Q identity, failure/new-run reuse and generation pinning. This does not
-   close full #170.
-3. Scoped-composition contract and contained component implementation: Definition,
-   Resolution, and Supervision owner seams; two-person fixed structure, restart,
-   independent closure, trial/adequacy boundaries, cross-person failure/wait, and
-   equal-output cutoff. No public DSL or arbitrary recursive graph scope.
-4. Roster application assembly: consume landed retry work and prove TEST-3/4
-   plus CR-2/4/5 above, including #214 exhaustion behavior. #220 classification
-   alone is not CR-2 evidence. Full CLI evidence waits for #167.
+2. Fixed two-level composition: tests first for completed search → detail fanout
+   → strict person fold, with two people, restart, changed IDs, independent
+   closure, cross-person failure/wait, trial boundaries, and equal-output cutoff.
+   No page-triggered readiness bridge, public DSL, or arbitrary recursive graph.
+3. Fixed shared admission/application integration: bounded configured limits,
+   provider cooldown floors, finite retries and cancellation through existing
+   Supervision/History/Accounting ownership. Align #238/#240 handoffs to this
+   owner-selected first scope. Keep advanced async/adaptive rate regrouping and
+   sophisticated discovery-order fairness in their existing issue records; do
+   not implement or claim them as first-report prerequisites. This does not
+   close full A-12j/l or RUN-019.
+4. Roster application assembly: prove the numbered first-delivery outcomes plus
+   CR-2/4/5 below. #220 generic classification alone is not CR-2 evidence.
+   The first CLI requires #167's run-start/progress scope; full TEST-4.9 history
+   and resource inspection remains open.
 5. Independent adversarial review, repository checks, then the normal supervisor
    and Copilot review gates. These are later actions, not plan acceptance or merge
    authority.
 
 TEST-5/6 scale and memory qualification remains a separate M7 gate. Measure
-repeated cumulative snapshots, keying/serialization and source reads honestly;
-small synthetic evidence proves no bounded-memory or O(1) claim. Real-provider
+the 150,000-subject target, selected payload loads, fingerprint CPU/I/O, storage
+contention and in-flight work; also prove narrow-consumer and changed-projection
+outcomes. A first-slice workload sample is preliminary and does not satisfy these
+criteria. Small synthetic evidence proves no bounded-memory or O(1) claim. Real-provider
 consistency, paid traffic, provider credentials, manual recovery, another host,
 release changes and package publication are outside this plan.
 
@@ -340,8 +384,9 @@ are [collection source shape](../../packages/definition/src/collection.ts),
 [composition-level folds](../../packages/definition/src/fold.ts). Existing
 support controls include [writer-wait tests](../../packages/supervision/test/writer-wait.test.ts)
 and [workspace lifetime tests](../../packages/core/test/workspace/scope.test.ts);
-they do not execute the proposed page/member bridge. These paths describe inspected
-support at the pinned baseline, not current acceptance or assembled proof.
+they do not execute the proposed completed-search/detail composition. These
+paths describe inspected support at the pinned baseline, not current acceptance
+or assembled proof.
 
 No adapter, bridge, nested-composition, application, CLI, or scale execution is
 claimed. The provider manifest remains hidden test-oracle data, not adapter input;

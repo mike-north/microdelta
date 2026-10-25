@@ -178,3 +178,11 @@ The [resource-state plan](../plans/resource-state-observation.md) records accept
 ACC-004 and A-14a–f own the target; the plan separates the narrow durable report
 intake/query/eviction handoff from optional selected-balance and quota products.
 This is not a claim that the existing additive Accounting runtime implements it.
+
+## Proposed standalone inspection direction
+
+The [standalone inspection proposal](../plans/standalone-inspection.md) develops
+a candidate composition and evidence model for issue 167 under CLI-001–004,
+A-16 and M6. Its standing is proposed: command, output, stream, exit, public
+reader and lifetime choices remain unresolved, and the document does not claim
+runtime implementation or full checkpoint acceptance.

@@ -65,7 +65,8 @@ export interface ISha256Capability {
  * Value Semantics and other context contracts. Durable SQLite storage, the
  * clock and the timer are separate capabilities, injected only where a
  * consumer needs them, so existing Machine consumers and test hosts are
- * unaffected by them.
+ * unaffected by them. Epoch and elapsed clocks remain separately injected
+ * capabilities because they represent different time domains.
  * @alpha
  */
 export interface IMachine extends IAsyncContextCapability, ISnapshotCapability, ISha256Capability {}
@@ -228,6 +229,20 @@ export interface ISqliteCapability {
 export interface IClockCapability {
   /** Return the current UTC epoch time in whole milliseconds, or throw if the host cannot provide one. */
   currentEpochMilliseconds(): number;
+}
+
+/**
+ * Measures elapsed process-local time without assigning a UTC epoch meaning.
+ * Readings are supported safe whole milliseconds and never decrease during
+ * this process lifetime. The origin is arbitrary and readings must not be
+ * persisted or ordered against readings from another process. This separate
+ * capability lets consumers measure durations without interpreting wall-clock
+ * corrections reported unchanged by {@link IClockCapability}.
+ * @alpha
+ */
+export interface IElapsedClockCapability {
+  /** Return nondecreasing elapsed milliseconds from this process-local origin, or throw if the host cannot provide one. */
+  currentElapsedMilliseconds(): number;
 }
 
 /**

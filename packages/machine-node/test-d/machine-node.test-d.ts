@@ -1,11 +1,13 @@
 import { expectError, expectType } from 'tsd';
 
-import { canonicalNodeLocation, createNodeClock, createNodeMachine, createNodeRandom, createNodeSqlite, createNodeTimer } from '../dist/src/index.js';
-import type { IClockCapability, IMachine, IRandomIdentifierCapability, ISqliteCapability, ITimerCapability } from '@microdelta/machine';
+import { canonicalNodeLocation, createNodeClock, createNodeElapsedClock, createNodeMachine, createNodeRandom, createNodeSqlite, createNodeTimer } from '../dist/src/index.js';
+import type { IClockCapability, IElapsedClockCapability, IMachine, IRandomIdentifierCapability, ISqliteCapability, ITimerCapability } from '@microdelta/machine';
 
 expectType<IMachine>(createNodeMachine());
 expectType<ISqliteCapability>(createNodeSqlite());
 expectType<IClockCapability>(createNodeClock());
+expectType<IElapsedClockCapability>(createNodeElapsedClock());
+expectType<number>(createNodeElapsedClock().currentElapsedMilliseconds());
 expectType<ITimerCapability>(createNodeTimer());
 // The timer is also a clock, so one capability serves deadlines and readings.
 expectType<number>(createNodeTimer().currentEpochMilliseconds());

@@ -1,5 +1,15 @@
 # @microdelta/definition
 
+## 0.3.1
+### Patch Changes
+
+- bac83f7: Accept asynchronously completed trusted fresh and retain outcomes in direct and template-member source callback declarations. Runtime source supervision and outcome policy are unchanged.
+- 5c9436c: Allow keyed templates to use supported collection-shaped source results without a designated identity when the template provides an explicit custom string key.
+- 8692f2a: Restrict alpha source and awaited memo results to record or array roots in authoring types, including template member steps. Scalar atoms remain supported inside wrapped results; runtime result validation is unchanged.
+- Updated dependencies [8b4283e]
+- Updated dependencies [77715af]
+  - @microdelta/value@0.2.0
+
 ## 0.3.0
 ### Minor Changes
 

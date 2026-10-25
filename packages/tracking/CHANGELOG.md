@@ -1,5 +1,19 @@
 # @microdelta/tracking
 
+## 0.2.2
+### Patch Changes
+
+- d782565: Expose the owning Tracking observer's narrow `hasOwn` capability in alpha workspace author callbacks. Preserve own-presence precision and capture semantics, reject non-string keys before coercion, and make native-reflection diagnostics point to the supported callback route.
+- 77715af: Preserve own-property and inherited-membership observations for intrinsic property names on supported plain records. Presence captures boolean facts without selecting unsupported intrinsic values, including during current-fact comparison.
+- 33213fb: Confine supplied argument lists to their owning capture and invocation, reject returned lists with an actionable detachment cause, and return undefined without observations for unsafe integer keys.
+- Updated dependencies [8b4283e]
+- Updated dependencies [5010548]
+- Updated dependencies [77715af]
+- Updated dependencies [0d7ad9a]
+- Updated dependencies [47bea75]
+  - @microdelta/value@0.2.0
+  - @microdelta/machine@0.3.0
+
 ## 0.2.1
 ### Patch Changes
 

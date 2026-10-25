@@ -36,11 +36,13 @@ import type { ICompletedResultReference, IDurableHistory } from '@microdelta/his
 import type { IResolutionHistory } from '@microdelta/resolution';
 
 import { faultySqlite } from '../accounting/support.js';
-import { analysis, createWorld, installWorld } from './fixture.js';
+import { cleanup, rawReaderCount } from '../durable-history/support.js';
+import { analysis, assessmentSubject, createWorld, installWorld } from './fixture.js';
 import type { IWorld } from './fixture.js';
 import { T0, fakeTimer, freshKey, hour, openSession, production, statuses, tempStores, until } from './harness.js';
 import type { IFakeTimer, IOperationStores } from './harness.js';
 import { applied, driveUntilSettled, failureCode, fold, journalContents, memberOf, members, received } from './support.js';
+import { attemptsAt, publishedSubjects } from '../stop/support.js';
 
 let stores: IOperationStores;
 let timer: IFakeTimer;
@@ -53,7 +55,14 @@ beforeEach(() => {
 });
 
 afterEach(() => {
-  stores.remove();
+  try {
+    // Readers opened by History inspection must be closed before their store
+    // is removed, including on platforms that lock open SQLite files.
+    cleanup();
+    expect(rawReaderCount()).toBe(0);
+  } finally {
+    stores.remove();
+  }
 });
 
 /** A fresh world over the same persisted provider ledger, standing in for a new process. */
@@ -68,6 +77,46 @@ function codeOf(pending: Promise<unknown>): Promise<string> {
 }
 
 describe('stop intent and resumed deferrals (RUN-014)', () => {
+  test('hard stop at send-begin leaves durable intent and an unknown usage gap, but sends and publishes nothing', async () => {
+    world.keys = ['pr-1'];
+    const stop = createStopController();
+    const session = openSession(stores, timer);
+    try {
+      const started = members(session, { stop, deferral: 'exit', observe: (event) => {
+        if (event.kind === 'send' && event.phase === 'begin' && event.label === 'assess') {
+          stop.request({ level: 'hard' });
+        }
+      } });
+      const result = await started.done;
+      expect(received('pr-1')).toHaveLength(0);
+      expect(applied('pr-1')).toHaveLength(0);
+      expect(memberOf(result.value, 'pr-1').status).toBe('cancelled');
+      expect(publishedSubjects(stores.history)).not.toContain(assessmentSubject('pr-1'));
+      expect(attemptsAt(stores.history).find((row) => row.subject === assessmentSubject('pr-1'))).toMatchObject({ state: 'interrupted', ending: 'stopped' });
+      expect(result.interruptions).toEqual([]);
+      expect(journalContents(session)).toEqual([expect.objectContaining({
+        status: 'deferred', attempts: [expect.objectContaining({ status: 'not-sent' })],
+      })]);
+      expect(session.usage()).toEqual(expect.objectContaining({
+        status: 'incomplete', requestAttempts: 1, reports: 0, observed: [], unknown: [expect.any(Object)],
+      }));
+      // A later run may acquire the still-missing result with a new request
+      // attempt; its report does not turn the earlier intent's gap into zero.
+      const resumed = await members(session, { deferral: 'exit' }).done;
+      expect(memberOf(resumed.value, 'pr-1').status).toBe('succeeded');
+      expect(received('pr-1')).toHaveLength(1);
+      expect(journalContents(session)).toEqual([expect.objectContaining({ attempts: [
+        expect.objectContaining({ status: 'not-sent' }),
+        expect.objectContaining({ status: 'succeeded' }),
+      ] })]);
+      expect(session.usage()).toEqual(expect.objectContaining({
+        status: 'incomplete', requestAttempts: 2, reports: 1, unknown: [expect.any(Object)],
+      }));
+    } finally {
+      session.close();
+    }
+  });
+
   test('a stop refuses a resumable deferral at admission, even for the child of a draining step, so the resumed body never runs', async () => {
     world.gates.open('parent');
     world.provider.script('paid', 'parent', ['rate-limit:3600000']);

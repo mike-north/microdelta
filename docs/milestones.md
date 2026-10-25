@@ -184,8 +184,13 @@ writer and publication models against the production protocol (PUB-004) and maps
 them to code and named tests. The [acceptance record](validation/m5-acceptance-2026-10-01.md)
 maps each exit criterion to independent-process tests (#122). M5 keeps one fenced
 writer per store. Multi-writer parallelism and scale remain M7 measurement
-topics; lease-wait fairness and eventual grant are unproven. Result-carrying operator
-resolution and the CLI are M6.
+topics; lease-wait fairness and eventual grant are unproven. The accepted
+[2026-10-24 acquisition target](plans/data-acquisition-retries.md) supersedes M5's
+external-write replay policy without rewriting this historical acceptance.
+Result-carrying manual operator recovery is deferred, not an M6 or controlled-roster
+prerequisite. The CLI remains M6. New-run retry allowance, source classification
+and shared single-process static rate admission need their own implementation
+proof before the changed operational target is called delivered.
 
 ## M6 — Usable CLI and inspection checkpoint
 
@@ -204,7 +209,10 @@ activity from viewing. The CLI is a named deliverable, not incidental scenario g
 Assemble fresh paginated discovery, per-person corpus closure, bounded nested fanout,
 strict/explicit partial folds, author-defined trial selection and environment
 adapters into [TEST-3/4](spec/acceptance.md). Use the real runtime and CLI with
-controlled adapters first. Measure TEST-5/6; distinguish CPU, I/O and data volume
+controlled adapters first. The [acquisition handoff](plans/data-acquisition-retries.md)
+removes manual result recovery as a prerequisite; it does not accept preview,
+resource-state observation, inspection or full roster proposals wholesale. Their
+own decisions and evidence gates remain. Measure TEST-5/6; distinguish CPU, I/O and data volume
 before choosing more elaborate worker policy.
 
 **Exit:** complete cold/restart/change/failure/wait/cancel/trial variants; precise

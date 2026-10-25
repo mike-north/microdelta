@@ -78,7 +78,9 @@ composes the owners and adds no policy of its own:
   Resource Accounting port (`IWorkspaceAccounting`, which Accounting's durable
   adapter satisfies structurally; the facade never imports Accounting). With
   it, the workspace builds History's operation journal and Node's random
-  source and gives every run Supervision's operation ports:
+  source and gives every run Supervision's operation ports. The following is
+  legacy M5 behavior, not the new [acquisition retry target](../../docs/plans/data-acquisition-retries.md);
+  compatibility and runtime updates are still required:
   `currentExecution().operation(request)` performs one declared external
   operation (intent before send, usage counted once, no blind replay), and the
   run offers `inspectOperations()`, `settleOperation(settlement)` and

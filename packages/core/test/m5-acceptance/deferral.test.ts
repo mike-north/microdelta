@@ -27,9 +27,8 @@
  *   timed wait holding no permit and lending its member's lane, so with one
  *   permit and one lane its siblings are sent meanwhile; the retry keeps the
  *   operation identity.
- * - Exhaustion: a rate limit with a retry time is retried at most 5 times by
- *   default, so its sixth refusal fails the operation as exhausted; a
- *   transient failure is retried only within the author's `maxAttempts`.
+ * - Exhaustion: an explicit rate-only subcap may end rate retries sooner
+ *   than the total-send allowance; transient retries also honor that total.
  *   Either fails only its own member, with the closed `policy-exhausted`
  *   reason, under one operation identity throughout.
  *
@@ -100,7 +99,7 @@ describe('durable-quota-deferral (A-11, A-12, RUN-011)', () => {
     expect(s.publications(assessmentSubject('pr-2'))).toHaveLength(1);
   });
 
-  test('sleep mode releases the writer lease while it waits, lets a sibling finish meanwhile, and resumes under the same identity at T', async () => {
+  test('sleep mode releases the writer lease while it waits, lets a sibling finish meanwhile, and resumes under the same identity at the default backoff floor', async () => {
     const delay = 1_500;
     const s = freshScenario(baseWorld({ script: { 'pr-2': [{ kind: 'rate-limit', retryMs: delay }] } }));
     const started = s.start({ kind: 'fold' }, { deferral: 'sleep', window: 1, permits: 1 });
@@ -113,8 +112,15 @@ describe('durable-quota-deferral (A-11, A-12, RUN-011)', () => {
     if (refusal === undefined || retry === undefined) {
       throw new Error(`pr-2 was not retried: ${JSON.stringify(sends)}`);
     }
-    const T = refusal.at + delay;
-    expect(run.events.filter((event) => event['kind'] === 'wait').map((event) => [event['phase'], event['until']])).toEqual([['sleeping', T], ['resumed', T]]);
+    // The direct-path first retry waits at least two seconds even when a
+    // provider's lower bound is earlier.
+    const T = refusal.at + 2_000;
+    const waits = run.events.filter((event) => event['kind'] === 'wait');
+    expect(waits.map((event) => event['phase'])).toEqual(['sleeping', 'resumed']);
+    // The provider receipt and the durable retry decision may straddle a
+    // clock tick; the recorded floor must be no earlier than the receipt.
+    expect(waits[0]?.['until']).toBeGreaterThanOrEqual(T);
+    expect(waits[1]?.['until']).toBe(waits[0]?.['until']);
     expect(run.events.find((event) => event['kind'] === 'wait' && event['phase'] === 'sleeping')?.['released']).toBe(true);
     // pr-3 was sent while pr-2 waited: the deferral held neither the one permit nor the one lane.
     expect(s.keys('received')).toEqual(['pr-1', 'pr-2', 'pr-3', 'pr-2']);
@@ -143,11 +149,12 @@ describe('durable-quota-deferral (A-11, A-12, RUN-011)', () => {
     expect(statuses(run)).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
   });
 
-  test('exhaustion: a rate limit beyond the default cap of five deferred retries, and a transient failure beyond the author\'s attempts, fail only their own members', () => {
-    // pr-1 is refused transiently twice under maxAttempts 2; pr-2 is rate-limited six times, 200 ms each, under the default cap.
+  test('known-refusal exhaustion: a restrictive rate subcap and smaller total cap fail only their own members', () => {
+    // Known-refusal status remains the companion #214 scope. Both members
+    // send twice: pr-1 exhausts its total cap, pr-2 its rate-only subcap.
     const s = freshScenario(baseWorld({
       script: { 'pr-1': [{ kind: 'transient' }, { kind: 'transient' }], 'pr-2': Array.from({ length: 6 }, () => ({ kind: 'rate-limit', retryMs: 200 }) as const) },
-      declarations: { 'pr-1': { maxAttempts: 2 } },
+      declarations: { 'pr-1': { maxAttempts: 2 }, 'pr-2': { rateLimitRetries: 1 } },
     }));
     const run = clean(s.run({ kind: 'members' }, { window: 1, permits: 1, deferral: 'sleep' }));
     expect(statuses(run)).toEqual({ 'pr-1': 'failed', 'pr-2': 'failed', 'pr-3': 'succeeded' });
@@ -155,13 +162,13 @@ describe('durable-quota-deferral (A-11, A-12, RUN-011)', () => {
     expect(run.result.members['pr-2']).toMatchObject({ cause: 'operation-failed' });
     expect(run.operations).toContain('retry-exhausted:failed:policy-exhausted@pr-1');
     expect(run.operations).toContain('retry-exhausted:failed:policy-exhausted@pr-2');
-    // One first request and five deferred retries of pr-2, all under one operation; two requests of pr-1.
+    // The rate-only cap restricts pr-2 below its three-total default.
     const pr2 = s.ledger().filter((entry) => entry.kind === 'received' && entry.key === 'pr-2');
-    expect(pr2).toHaveLength(6);
+    expect(pr2).toHaveLength(2);
     expect(new Set(pr2.map((entry) => entry.operation)).size).toBe(1);
     expect(s.keys('received').filter((key) => key === 'pr-1')).toHaveLength(2);
-    // Eight refusals report 1 request each; pr-3's answer reports 100 tokens.
-    expect(usageOf(run.result.usage)).toEqual({ status: 'complete', observed: [{ unit: 'requests', amount: 8 }, { unit: 'tokens', amount: 100 }], unknown: 0, operations: 3, reports: 9, requestAttempts: 9 });
+    // Four refusals report one request each; pr-3's answer reports 100 tokens.
+    expect(usageOf(run.result.usage)).toEqual({ status: 'complete', observed: [{ unit: 'requests', amount: 4 }, { unit: 'tokens', amount: 100 }], unknown: 0, operations: 3, reports: 5, requestAttempts: 5 });
   });
 
   // Regression (#147): the `resumed` wait event once reported a literal `released: false` for a wait whose lease the run

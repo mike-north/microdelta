@@ -60,6 +60,9 @@ describe('event-privacy (RUN-013)', () => {
     // Success, a lost response, a refusal, a sleeping rate limit and a hard-stopped stall.
     const mixed = keep(s.run({ kind: 'tally' }, { window: 5, permits: 2, deferral: 'sleep', stops: [{ on: { received: 'pr-5' }, level: 'hard', afterMs: 600 }] }));
     expect(Object.fromEntries(Object.entries(mixed.result.members).map(([key, member]) => [key, member.status]))).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'pending', 'pr-3': 'failed', 'pr-4': 'pending', 'pr-5': 'cancelled' });
+    // Settle the lost acquisition while it is still unknown. A later run
+    // would otherwise be allowed to retry it and may receive a value.
+    keep(s.run({ kind: 'settle', operation: operationOf(mixed, 'pr-2'), action: 'abandon' }));
     // A killed process mid-request, then its recovery by the next writer.
     const killed = keep(s.run({ kind: 'members' }, { window: 1, leaseMilliseconds: 1_000, kill: { at: 'after-send', key: 'pr-3' } }));
     expect(killed.signal).toBe('SIGKILL');
@@ -67,7 +70,7 @@ describe('event-privacy (RUN-013)', () => {
     // The recovering run also meets an acknowledgment that recorded nothing and an observer that throws after a commit: both become diagnostics.
     const recovered = keep(s.run({ kind: 'tally' }, { window: 1, ackFault: { key: 'pr-4', kind: 'unrecorded' }, throwObserverAt: { phase: 'publish', key: 'pr-4' } }));
     // Operator settlement of every unknown operation, then the folds again.
-    for (const key of ['pr-2', 'pr-3', 'pr-5']) {
+    for (const key of ['pr-3', 'pr-5']) {
       if (recovered.result.operations.some((view) => view.member === key && view.status === 'unknown')) {
         keep(s.run({ kind: 'settle', operation: operationOf(recovered, key), action: 'abandon' }));
       }

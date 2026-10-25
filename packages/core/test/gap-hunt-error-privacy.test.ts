@@ -47,6 +47,9 @@ for (const mode of ['failed-response', 'rejected-perform'] as const) {
     const stores = tempStores();
     const timer = fakeTimer();
     const world = installWorld(createWorld(() => timer.currentEpochMilliseconds(), ['pr-1', 'pr-2']));
+    // The privacy oracle needs one opaque failure, without advancing this
+    // controlled clock through the default acquisition retry schedule.
+    world.options['pr-1'] = { retry: { maxAttempts: 1 } };
     const opaque = sentinel(kind);
     const original = world.provider;
     const calls: string[] = [];

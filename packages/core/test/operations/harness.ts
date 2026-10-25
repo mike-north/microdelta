@@ -168,6 +168,8 @@ export interface ISessionOptions {
   readonly leaseMilliseconds?: number;
   /** Wrap the Accounting port Supervision receives, for fault injection around the real adapter. */
   readonly wrapAccounting?: (accounting: IOperationAccounting) => IOperationAccounting;
+  /** Wrap the operation journal port to inject a failure at a specific durable write. */
+  readonly wrapJournal?: (journal: IOperationJournal) => IOperationJournal;
   /** Wrap the History port Resolution receives, to present damaged evidence at the port boundary. */
   readonly wrapHistory?: (history: IDurableHistory) => IResolutionHistory;
   /** The SQLite capability Accounting's adapter opens its file with; Node's real one when absent. */
@@ -210,7 +212,7 @@ export function openSession(stores: Pick<IOperationStores, 'history' | 'accounti
             runOptions.observe?.(event);
           },
         }],
-        ...(runOptions.operations === false ? {} : { operations: { journal, accounting: options.wrapAccounting?.(accounting) ?? accounting, random } }),
+        ...(runOptions.operations === false ? {} : { operations: { journal: options.wrapJournal?.(journal) ?? journal, accounting: options.wrapAccounting?.(accounting) ?? accounting, random } }),
         ...(runOptions.deferral === undefined ? {} : { deferral: runOptions.deferral }),
         ...(runOptions.stop === undefined ? {} : { stop: runOptions.stop }),
         ...(runOptions.permits === undefined ? {} : { permits: runOptions.permits }),

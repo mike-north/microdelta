@@ -1019,16 +1019,58 @@ legacy operator-reported usage as `operator:<report>`, so the two can never
 collide. This historical namespace remains evidence/compatibility data; it does
 not require the deferred manual result-recovery workflow.
 
-### ACC-004 — Resource state is not additive consumption
+### ACC-004 — Resource-state reports are time-qualified, not consumption
 
-Remaining quota, reset time, and similar current resource-state observations MUST
-remain distinct from consumption increments. Combining observations across quota
-pools or windows MUST NOT invent a shared remaining balance. Reporting a reset
-time does not itself schedule a retry; Run Supervision applies the chosen policy.
+Reported allowed/remaining limits, reset times and similar resource state MUST be
+readable by consumers that want that evidence, separately from consumption
+increments. Combining reports across pools or windows MUST NOT invent a shared
+remaining balance. A report is not guaranteed current capacity; missing state is
+not reported zero. Recording or expiring it does not schedule work or grant
+admission/retry authority (ACC-008).
 
-**Validation:** two responses reporting remaining quota are shown as state
-observations, not summed as consumed or remaining units. Separate provider/account
-pools remain separate without exposing raw credentials as identifiers.
+**Accepted owner decisions (2026-10-24).** Persist time-qualified reports across
+analysis/process restarts while relevant. Prefer explicit provider/source reset
+or validity information. Without it, retain a report for **one hour from its
+observation**, with an optional local-retention override; do not require every
+adapter/user to configure expiry. The fallback is local retention, not an inferred
+provider window, reset, replenishment or permission to send. Preserve observation
+time and the retention basis; restarting or redelivering the same report must not
+silently extend its age. A retained report still only says what was reported.
+
+Evict reports promptly once irrelevant/expired so state does not accumulate as an
+unbounded history. This expiry MUST NOT delete or rewrite durable consumption,
+usage-gap, request-attempt or result evidence. Read-only queries do not perform
+cleanup writes: the persistence/maintenance owner must supply the eviction path,
+including handling expired records after a long absence. Do not expose expired
+reports as applicable state while awaiting physical cleanup.
+
+**Smallest read contract.** Qualified reports are sufficient; no authoritative
+latest-balance reducer or provider source-order protocol is required. Preserve
+available provider/account/pool/resource/unit/window and timing qualifications,
+with missing information explicit and without raw credentials. Receipt order or
+a lower balance is not proof of provider source order. State is never summed as
+consumption, deducted twice, or used to fill missing usage. A dedicated
+remaining-limit notification system or complete quota-management product is not required.
+
+Resource Accounting owns recording, durable evidence, queries and state retention;
+its adapters implement those ports. Apply ACC-007 acknowledgment guarantees.
+Run Supervision retains execution policy. Built-in adaptive quota/reserve management
+is outside this report capability; pluggable coordination policies may consume
+evidence through their own contracts without transferring admission authority to
+Accounting. Consumer caching/persistence and preview transport remain separate.
+
+**Validation:** [A-14a–f](acceptance.md#resource-state-report-cases) cover retained
+raw reports versus additive consumption, restart before/after expiry, explicit
+reset versus one-hour fallback/override, prompt physical cleanup and read-only
+inspection with rejecting execution/write ports. [The decision plan](../plans/resource-state-observation.md)
+records rationale and implementation handoff. These are new target requirements,
+not claims that the existing additive M5 implementation already supplies them.
+
+**Implementation choices:** record/query representation, observation-time mapping,
+exact expiry comparison, identity/duplicate/conflict behavior, malformed validity
+handling and cleanup trigger/cadence. Document and test these within the accepted
+outcomes before implementation; no additional owner decision is needed for routine
+encoding. A future selected-current-balance feature needs its own ordering contract.
 
 ### ACC-005 — Unknown usage is not zero and observed totals are not a bill
 

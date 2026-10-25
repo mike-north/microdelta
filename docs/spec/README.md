@@ -57,6 +57,7 @@ Read this entry point, then only the contracts relevant to the task:
 | [Execution](execution.md) | Current validation, exact references, retention, publication | Reuse, persistence, recovery |
 | [Operations](operations.md) | Readiness, preview, per-run acquisition retry, shared rate admission, cancellation, trial, accounting, CLI | Run lifetime or operational work |
 | [Acquisition decision and handoff](../plans/data-acquisition-retries.md) | Accepted 2026-10-24 supersession, deferred proposals, source/service distinction and implementation readiness | Migrating M5 retry behavior or selecting follow-up work |
+| [Retry-classification design candidate](../plans/retry-classification.md) | Proposed engineering seam and bounded runtime handoff under accepted RUN-011; not delivered behavior | Reviewing #220 or preparing its separately accepted implementation follow-up |
 | [Acceptance](acceptance.md) | Cross-contract scenarios, expected outcomes, proof obligations | Writing tests or closing a gate |
 | [Experiments](experiments.md) | Bounded unknowns, fixtures, evidence, adoption gates | After foundation, for dependent runtime work |
 | [Milestones](../milestones.md) | Delivery order and independently reportable quality gates | Selecting work |

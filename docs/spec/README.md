@@ -126,6 +126,10 @@ cache policy. RUN-007/008 own requirements; the plan identifies remaining API,
 retention, disposal and aggregate choices and bounded readiness recommendations.
 This is not a claim of delivered behavior or whole-issue implementation readiness.
 
+## Proposed issue plans
+
+The [controlled roster plan](../plans/controlled-roster.md) records a proposed issue #170 adapter and same-run snapshot bridge, with the separate scoped-composition prerequisite and evidence still outstanding. It elaborates TEST-3/4; it is not an accepted requirement or delivery record.
+
 ## Current checkout
 
 The `microdelta` facade preserves its public History Store API. The checked-out

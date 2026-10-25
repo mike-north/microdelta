@@ -467,17 +467,19 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     return stored.record.status === 'pending' && lease !== undefined && stored.fence !== lease.fence;
   }
 
+  /** Whether an unsettled record's provider floor still forbids a send. */
+  function isBeforeProviderFloor(record: IOperationRecord): record is IOperationRecord & { readonly notBefore: number } {
+    return record.notBefore !== undefined && now() < record.notBefore;
+  }
+
   /** The block an unsettled record imposes now, or undefined when it may be resumed. */
   function blockOf(record: IOperationRecord): IOperationBlock | undefined {
     if (record.status === 'retry-exhausted') {
       if (record.retryExhaustedRunInstance === currentRunInstance()) {
         return { kind: 'policy-exhausted', operation: record.operation };
       }
-      return record.notBefore !== undefined && now() < record.notBefore
-        ? { kind: 'deferred', operation: record.operation, notBefore: record.notBefore }
-        : undefined;
     }
-    if ((record.status === 'deferred' || record.status === 'unknown') && record.notBefore !== undefined && now() < record.notBefore) {
+    if ((record.status === 'retry-exhausted' || record.status === 'deferred' || record.status === 'unknown') && isBeforeProviderFloor(record)) {
       return { kind: 'deferred', operation: record.operation, notBefore: record.notBefore };
     }
     if (record.status === 'unknown') {

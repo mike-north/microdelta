@@ -76,6 +76,9 @@ export type IHarnessCommand = (
  *   waits; it must neither need nor wait for the lease.
  * - `wait-status` reports the waiting run's state without moving any clock,
  *   so the parent can follow a wait on the host clock as it progresses.
+ * - `wait-barrier-release` resumes a Resolution that has already received its
+ *   real lease, allowing the parent to establish independent SQLite
+ *   contention between the grant and History data work.
  * - `wait-finish` lets the run close at `at`, which releases any lease it holds.
  * - `wait-contend` repeats whole waits on the host clock and Node's real timer
  *   until the duration elapses: each tenure waits up to `waitMilliseconds`,
@@ -84,11 +87,12 @@ export type IHarnessCommand = (
  *   tenure, so a releasing worker does not simply take the lease straight back.
  */
 export type IWaitCommand =
-  | { readonly op: 'wait-start'; readonly at: number; readonly holder: string; readonly leaseMilliseconds: number; readonly pollMilliseconds: number; readonly deadline?: number; readonly key: string }
+  | { readonly op: 'wait-start'; readonly at: number; readonly holder: string; readonly leaseMilliseconds: number; readonly pollMilliseconds: number; readonly deadline?: number; readonly key: string; readonly grantBarrier?: boolean }
   | { readonly op: 'wait-advance'; readonly at: number }
   | { readonly op: 'wait-stop'; readonly level: 'soft' | 'hard' }
   | { readonly op: 'wait-check' }
   | { readonly op: 'wait-status' }
+  | { readonly op: 'wait-barrier-release' }
   | { readonly op: 'wait-finish'; readonly at: number }
   | {
       readonly op: 'wait-contend';
@@ -116,15 +120,16 @@ export interface IWaitAttempt {
 }
 
 /**
- * How a waiting run's normal request has settled so far: still `pending`;
- * `acquired` with the lease it received and the result it then published
- * under that lease; the typed `busy` outcome; `stopped`; or any other failure,
- * by class name.
+ * How a waiting run's normal request settled: acquisition `busy` is distinct
+ * from a granted fence whose later allocate/stage/publish operation met typed
+ * History contention. A post-grant refusal retains its fence and names its
+ * phase; only a successful publish carries a locator.
  */
 export type IWaitOutcome =
   | { readonly kind: 'pending' }
   | { readonly kind: 'acquired'; readonly holder: string; readonly fence: number; readonly expiresAt: number; readonly published: string }
   | { readonly kind: 'busy'; readonly error: string; readonly holder: string | null; readonly expiresAt: number | null; readonly deadline: number; readonly contended: boolean; readonly message: string }
+  | { readonly kind: 'storage-busy'; readonly phase: 'allocate' | 'stage' | 'publish'; readonly fence: number; readonly error: string }
   | { readonly kind: 'stopped'; readonly message: string }
   | { readonly kind: 'failed'; readonly error: string; readonly message: string };
 
@@ -141,12 +146,12 @@ export interface IWaitStatus {
 }
 
 /**
- * One tenure of a `wait-contend` loop: a grant with the fence received, the
- * number of tries it took and the result published under it; or the typed
- * busy outcome with the holder it named; or any other failure, by class name.
+ * One tenure of a `wait-contend` loop: a grant retains its fence independently
+ * from successful publication or a named typed post-grant refusal. A writer
+ * `busy` event describes acquisition only; unexpected failures remain errors.
  */
 export type IWaitContentionEvent =
-  | { readonly kind: 'granted'; readonly fence: number; readonly tries: number; readonly published: string }
+  | { readonly kind: 'granted'; readonly fence: number; readonly tries: number; readonly published: string | null; readonly postGrantFailure?: { readonly kind: 'storage-busy'; readonly phase: 'allocate' | 'stage' | 'publish'; readonly error: string } }
   | { readonly kind: 'busy'; readonly holder: string | null; readonly contended: boolean; readonly tries: number }
   | { readonly kind: 'failed'; readonly error: string; readonly message: string; readonly tries: number };
 
@@ -315,6 +320,7 @@ export function parseCommand(value: unknown): IHarnessCommand {
         leaseMilliseconds: numberField(value, 'leaseMilliseconds'),
         pollMilliseconds: numberField(value, 'pollMilliseconds'),
         key: stringField(value, 'key'),
+        ...(value.grantBarrier === true ? { grantBarrier: true } : {}),
       };
       return withBarrier(deadline === undefined ? start : { ...start, deadline }, notBefore);
     }
@@ -330,6 +336,7 @@ export function parseCommand(value: unknown): IHarnessCommand {
     }
     case 'wait-check':
     case 'wait-status':
+    case 'wait-barrier-release':
     case 'die':
       return withBarrier({ op }, notBefore);
     case 'wait-contend':
@@ -473,6 +480,13 @@ function parseWaitOutcome(value: unknown): IWaitOutcome {
         contended: booleanField(value, 'contended'),
         message: stringField(value, 'message'),
       };
+    case 'storage-busy': {
+      const phase = value.phase;
+      if (phase !== 'allocate' && phase !== 'stage' && phase !== 'publish') {
+        throw new TypeError(`unsupported post-grant phase ${String(phase)}`);
+      }
+      return { kind, phase, fence: numberField(value, 'fence'), error: stringField(value, 'error') };
+    }
     case 'stopped':
       return { kind, message: stringField(value, 'message') };
     case 'failed':
@@ -508,7 +522,23 @@ export function parseWaitContention(value: unknown): readonly IWaitContentionEve
     const tries = numberField(entry, 'tries');
     switch (kind) {
       case 'granted':
-        return { kind, fence: numberField(entry, 'fence'), tries, published: stringField(entry, 'published') };
+        if (entry.postGrantFailure !== undefined) {
+          if (!isRecord(entry.postGrantFailure)) { throw new TypeError('post-grant failure must be an object'); }
+          const failureKind = stringField(entry.postGrantFailure, 'kind');
+          const phase = stringField(entry.postGrantFailure, 'phase');
+          if (failureKind !== 'storage-busy' || (phase !== 'allocate' && phase !== 'stage' && phase !== 'publish')) {
+            throw new TypeError('unsupported post-grant failure');
+          }
+          const published = nullableString(entry, 'published');
+          const error = stringField(entry.postGrantFailure, 'error');
+          if (published !== null || error !== 'HistoryBusyError') {
+            throw new TypeError('post-grant failure cannot claim publication and must name its typed History error');
+          }
+          return { kind, fence: numberField(entry, 'fence'), tries, published, postGrantFailure: { kind: failureKind, phase, error } };
+        }
+        const published = nullableString(entry, 'published');
+        if (published === null) { throw new TypeError('granted event without publication must identify its typed post-grant failure'); }
+        return { kind, fence: numberField(entry, 'fence'), tries, published };
       case 'busy':
         return { kind, holder: nullableString(entry, 'holder'), contended: booleanField(entry, 'contended'), tries };
       case 'failed':

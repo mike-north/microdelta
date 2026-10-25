@@ -17,7 +17,8 @@
  * - A usage report acknowledged before a crash is counted once, however many
  *   later processes run (ACC-003, ACC-007).
  * - An operation a dead run left in flight is recorded unknown by the next
- *   writer and is never replayed without a safety basis (RUN-012).
+ *   writer. A new run may acquire the value under fresh finite allowance,
+ *   while retaining the dead attempt's unknown usage (RUN-011/012).
  * - A lost acknowledgment whose commit landed is still counted once; one
  *   whose commit did not land leaves that attempt's usage unknown. Neither
  *   changes the operation's committed outcome.
@@ -40,7 +41,7 @@ removeScenarios();
 /** A killed process's writer lease, short so the next process takes over soon after the kill. */
 const killedLease = 1_000;
 
-/** One kill point and the usage Accounting holds afterwards, then after the next process answers pr-3. */
+/** One kill point and Accounting's usage before and after a new run retries the acquisition. */
 interface IKillCase {
   readonly at: IKillPlan['at'];
   /** Whether the provider applied pr-2's assessment before the kill. */
@@ -55,26 +56,26 @@ const killCases: readonly IKillCase[] = [
     at: 'before-send',
     applied: false,
     afterKill: { status: 'incomplete', observed: [{ unit: 'tokens', amount: 100 }], unknown: 1, operations: 2, reports: 1, requestAttempts: 2 },
-    afterResume: { status: 'incomplete', observed: [{ unit: 'tokens', amount: 200 }], unknown: 1, operations: 3, reports: 2, requestAttempts: 3 },
+    afterResume: { status: 'incomplete', observed: [{ unit: 'tokens', amount: 300 }], unknown: 1, operations: 3, reports: 3, requestAttempts: 4 },
   },
   {
     // The provider applied pr-2's assessment, but its response and usage never reached the dead process.
     at: 'after-send',
     applied: true,
     afterKill: { status: 'incomplete', observed: [{ unit: 'tokens', amount: 100 }], unknown: 1, operations: 2, reports: 1, requestAttempts: 2 },
-    afterResume: { status: 'incomplete', observed: [{ unit: 'tokens', amount: 200 }], unknown: 1, operations: 3, reports: 2, requestAttempts: 3 },
+    afterResume: { status: 'incomplete', observed: [{ unit: 'tokens', amount: 300 }], unknown: 1, operations: 3, reports: 3, requestAttempts: 4 },
   },
   {
     // pr-2's usage was acknowledged durably before the kill; only its outcome was lost.
     at: 'after-usage',
     applied: true,
     afterKill: { status: 'complete', observed: [{ unit: 'tokens', amount: 200 }], unknown: 0, operations: 2, reports: 2, requestAttempts: 2 },
-    afterResume: { status: 'complete', observed: [{ unit: 'tokens', amount: 300 }], unknown: 0, operations: 3, reports: 3, requestAttempts: 3 },
+    afterResume: { status: 'complete', observed: [{ unit: 'tokens', amount: 400 }], unknown: 0, operations: 3, reports: 4, requestAttempts: 4 },
   },
 ];
 
 describe('usage-exactly-once (A-14, ACC-003, ACC-005, ACC-007)', () => {
-  test.each(killCases)('a SIGKILL $at of pr-2: known usage survives once, unknown usage stays unknown, and the in-flight operation is never replayed', async ({ at, applied, afterKill, afterResume }) => {
+  test.each(killCases)('a SIGKILL $at of pr-2: recorded usage survives once and a later run attributes its retry separately', async ({ at, applied, afterKill, afterResume }) => {
     const s = freshScenario();
     const killed = s.run({ kind: 'members' }, { window: 1, leaseMilliseconds: killedLease, kill: { at, key: 'pr-2' } });
     expect(killed.signal).toBe('SIGKILL');
@@ -85,17 +86,20 @@ describe('usage-exactly-once (A-14, ACC-003, ACC-005, ACC-007)', () => {
 
     await s.outlastLease();
     const resumed = clean(s.run({ kind: 'members' }, { window: 1 }));
-    // The next writer records the dead run's in-flight operation unknown and never sends it again.
+    // The next writer recovers the dead attempt as unknown, then a new run
+    // retries the same acquisition without erasing its earlier usage state.
     expect(resumed.operations).toContain('recovered:unknown:recovered-after-crash@pr-2');
-    expect(statuses(resumed)).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'pending', 'pr-3': 'succeeded' });
-    expect(resumed.result.members['pr-2']?.blocked).toEqual({ kind: 'unknown-outcome', operation: operationOf(resumed, 'pr-2'), reason: 'not-repeat-safe' });
-    expect(s.keys('received')).toEqual(at === 'before-send' ? ['pr-1', 'pr-3'] : ['pr-1', 'pr-2', 'pr-3']);
+    expect(statuses(resumed)).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
+    const sends = s.ledger().filter((entry) => entry.kind === 'received' && entry.key === 'pr-2');
+    expect(sends).toHaveLength(at === 'before-send' ? 1 : 2);
+    expect(sends.map((entry) => entry.operation)).toEqual(Array.from({ length: sends.length }, () => operationOf(resumed, 'pr-2')));
     expect(usageOf(resumed.result.usage)).toEqual(afterResume);
 
-    // Another process changes nothing: no request, no report counted twice, unknown still unknown.
+    // A later read reuses the completed member without another send or
+    // duplicate report; any genuinely missing earlier report stays unknown.
     const again = clean(s.run({ kind: 'members' }, { window: 1 }));
     expect(again.assessed).toEqual([]);
-    expect(s.keys('received')).toEqual(at === 'before-send' ? ['pr-1', 'pr-3'] : ['pr-1', 'pr-2', 'pr-3']);
+    expect(s.ledger().filter((entry) => entry.kind === 'received' && entry.key === 'pr-2')).toHaveLength(sends.length);
     expect(usageOf(again.result.usage)).toEqual(afterResume);
   });
 
@@ -121,7 +125,8 @@ describe('usage-exactly-once (A-14, ACC-003, ACC-005, ACC-007)', () => {
   });
 
   test('a report redelivered after a crash is counted once; the retry that only redelivered it has unknown usage of its own', async () => {
-    // pr-2's provider deduplicates by idempotency key, which is also a safety basis for retrying its unknown outcome.
+    // pr-2's provider deduplicates by idempotency key. The key helps avoid a
+    // second effect, but the new run's finite allowance grants the retry.
     const s = freshScenario(baseWorld({ declarations: { 'pr-2': { providerIdempotency: true, maxAttempts: 2 } } }));
     const killed = s.run({ kind: 'members' }, { window: 1, leaseMilliseconds: killedLease, kill: { at: 'after-usage', key: 'pr-2' } });
     expect(killed.signal).toBe('SIGKILL');

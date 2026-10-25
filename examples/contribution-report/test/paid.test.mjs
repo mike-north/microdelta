@@ -29,8 +29,9 @@
  *   including its remaining first requests; a hard stop aborts the in-flight
  *   send, records its remote state, and publishes nothing partial (RUN-014).
  * - Usage is counted exactly once per report; an attempt whose process died
- *   before its report is unknown, never zero; a lost response is unknown and
- *   never replayed until the operator settles it (ACC-005, ACC-007, RUN-012).
+ *   before its report is unknown, never zero. A later run has fresh finite
+ *   acquisition allowance while preserving that earlier unknown evidence
+ *   (ACC-005, ACC-007, RUN-011/012).
  * - Environments are namespaced within one store; trial results satisfy
  *   production only through a recorded promotion (RUN-017).
  * - The outcome fold reports every settled status with coverage, never
@@ -293,7 +294,7 @@ test('soft-then-hard-stop: a soft stop admits nothing new while the admitted ste
   });
 });
 
-test('usage-exactly-once: SIGKILL mid-request leaves that usage unknown, never zero and never replayed; reruns count every report once; the operator abandons the unknown', () => {
+test('usage-exactly-once: SIGKILL mid-request leaves that usage unknown, and a later run reacquires the value without counting a report twice', () => {
   return withStore(async (store) => {
     // With a window of one, Ada's three assessments complete before Ben's 201, which stalls; the process is then killed.
     // Its one-second writer lease lets the next process take over soon after (a dead holder's lease must expire first).
@@ -309,30 +310,24 @@ test('usage-exactly-once: SIGKILL mid-request leaves that usage unknown, never z
     assert.deepEqual(usageOf(afterKill), { status: 'incomplete', observed: [{ unit: 'tokens', amount: 300 }], unknown: 1, operations: 4, reports: 3, requestAttempts: 4 });
     assert.deepEqual(operationOf(store, afterKill, 201).map((view) => view.status), ['pending']);
 
-    // The next run records the in-flight operation unknown and never replays it; Cy's 301 is answered.
+    // The next run records the in-flight attempt unknown, then retries its
+    // unsettled operation with a distinct request attempt before Cy's 301.
     const second = cli('run', '--store', store, '--rubric', 'P');
     assert.ok(trace(second).includes(`recovered:unknown:recovered-after-crash@${ben}`), JSON.stringify(trace(second)));
-    assert.equal(second.members[ben].status, 'pending');
-    assert.deepEqual(second.members[ben].blocked, { kind: 'unknown-outcome', operation: operationOf(store, afterKill, 201)[0].operation, reason: 'not-repeat-safe' });
-    assert.deepEqual(numbers(store, 'received'), [101, 102, 103, 201, 301]);
-    assert.deepEqual(usageOf(second), { status: 'incomplete', observed: [{ unit: 'tokens', amount: 400 }], unknown: 1, operations: 5, reports: 4, requestAttempts: 5 });
+    assert.equal(second.members[ben].status, 'succeeded');
+    assert.equal(second.text, coldText);
+    assert.deepEqual(numbers(store, 'received').slice(0, 4), [101, 102, 103, 201]);
+    assert.deepEqual(numbers(store, 'received').slice(4).sort((a, b) => a - b), [201, 202, 301]);
+    assert.deepEqual(usageOf(second), { status: 'incomplete', observed: [{ unit: 'tokens', amount: 600 }], unknown: 1, operations: 6, reports: 6, requestAttempts: 7 });
+    const resumed201 = operationOf(store, cli('operations', '--store', store), 201)[0];
+    assert.equal(resumed201.operation, operationOf(store, afterKill, 201)[0].operation);
+    assert.deepEqual(resumed201.attempts.map((attempt) => attempt.status), ['unknown', 'succeeded']);
 
     // Another run changes nothing: no request is sent and no report is counted twice.
     const third = cli('run', '--store', store, '--rubric', 'P');
-    assert.deepEqual(numbers(store, 'received'), [101, 102, 103, 201, 301]);
+    assert.deepEqual(numbers(store, 'received').slice(0, 4), [101, 102, 103, 201]);
+    assert.deepEqual(numbers(store, 'received').slice(4).sort((a, b) => a - b), [201, 202, 301]);
     assert.deepEqual(usageOf(third), usageOf(second));
-
-    // The operator abandons the unknown operation: its usage stays unknown, and the address is free again.
-    const unknown = operationOf(store, cli('operations', '--store', store), 201)[0].operation;
-    const settled = cli('settle', '--store', store, '--operation', unknown, '--abandon', '--operator', 'operator.ada');
-    assert.equal(settled.operation.status, 'abandoned');
-    const repaired = cli('run', '--store', store, '--rubric', 'P');
-    assert.equal(repaired.text, coldText);
-    const requests201 = ledger(store).filter((entry) => entry.kind === 'received' && entry.pullRequest === 201);
-    assert.equal(requests201.length, 2);
-    assert.notEqual(requests201[1].operation, requests201[0].operation);
-    // Six answered assessments are 600 tokens; the killed attempt is still unknown, so the total is incomplete.
-    assert.deepEqual(usageOf(repaired), { status: 'incomplete', observed: [{ unit: 'tokens', amount: 600 }], unknown: 1, operations: 7, reports: 6, requestAttempts: 7 });
   });
 });
 
@@ -375,16 +370,16 @@ test('trial-production-isolation: a trial run, then a recorded promotion, then p
 
 test('outcome-fold-coverage: the status report never claims completeness while a member is unsettled, reports a failure with coverage, and reconsiders after repair', () => {
   return withStore((store) => {
-    // 201's response is lost (unknown, never replayed); 301 is refused twice, then answered.
-    script(store, { 201: ['lost'], 301: ['refuse', 'refuse', 'ok'] });
+    // All three of 201's responses are lost in one run; 301 is refused twice, then answered.
+    script(store, { 201: ['lost', 'lost', 'lost'], 301: ['refuse', 'refuse', 'ok'] });
     const waiting = cli('status', '--store', store, '--rubric', 'P');
     assert.deepEqual(waiting.outcome, {
       status: 'waiting',
-      coverage: { succeeded: [ada], skipped: [], failed: [cy], cancelled: [], pending: [ben], openDiscovery: false, complete: false },
+      coverage: { succeeded: [ada], skipped: [], failed: [], cancelled: [], pending: [ben, cy], openDiscovery: false, complete: false },
     });
     assert.equal(waiting.text, [
-      'Contributor status waiting: pending person:ben',
-      'Coverage so far: 1 succeeded, 0 skipped, 1 failed, 0 cancelled, 1 pending; discovery closed',
+      'Contributor status waiting: pending person:ben, person:cy',
+      'Coverage so far: 1 succeeded, 0 skipped, 0 failed, 0 cancelled, 2 pending; discovery closed',
     ].join('\n'));
 
     // The operator abandons the lost response's operation; Ben is answered on the next run, Cy is refused again.
@@ -414,8 +409,9 @@ test('outcome-fold-coverage: the status report never claims completeness while a
 
 test('operator-resolves-unknown: resolving a lost response as succeeded keeps its address consumed, failing the member with operation-resolved and sending nothing, until the operator abandons it', () => {
   return withStore((store) => {
-    // 201's response is lost: the provider performed the assessment, and the outcome is unknown.
-    script(store, { 201: ['lost'] });
+    // All three of 201's responses are lost: acquisition allowance is spent,
+    // so the provider effect remains unknown for operator settlement.
+    script(store, { 201: ['lost', 'lost', 'lost'] });
     const lost = cli('run', '--store', store, '--rubric', 'P');
     assert.equal(lost.members[ben].status, 'pending');
     const unknown = operationOf(store, cli('operations', '--store', store), 201)[0];
@@ -433,7 +429,7 @@ test('operator-resolves-unknown: resolving a lost response as succeeded keeps it
       assert.equal(failing.members[ben].cause, 'operation-resolved');
       assert.equal(failing.fold.status, 'failed');
       assert.deepEqual(failing.fold.failed, [ben]);
-      assert.deepEqual(numbers(store, 'received').filter((number) => number === 201), [201]);
+      assert.deepEqual(numbers(store, 'received').filter((number) => number === 201), [201, 201, 201]);
     }
 
     // Abandoning it is the operator's explicit authorization of a possible second effect: the member is retried and succeeds.
@@ -442,8 +438,9 @@ test('operator-resolves-unknown: resolving a lost response as succeeded keeps it
     const repaired = cli('run', '--store', store, '--rubric', 'P');
     assert.equal(repaired.text, coldText);
     const requests201 = ledger(store).filter((entry) => entry.kind === 'received' && entry.pullRequest === 201);
-    assert.equal(requests201.length, 2);
-    assert.notEqual(requests201[1].operation, unknown.operation);
+    assert.equal(requests201.length, 4);
+    assert.deepEqual(requests201.slice(0, 3).map((request) => request.operation), [unknown.operation, unknown.operation, unknown.operation]);
+    assert.notEqual(requests201[3].operation, unknown.operation);
   });
 });
 

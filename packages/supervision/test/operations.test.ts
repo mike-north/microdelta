@@ -19,6 +19,7 @@ import { describe, expect, test } from '@jest/globals';
 import type { IResolution, IResolutionOutcome } from '@microdelta/resolution';
 
 import { SupervisionError, createStopController, createSupervision, operationsCollection } from '../src/index.js';
+import { decodeOperation, encodeOperation } from '../src/records.js';
 import type {
   IJournalEntry,
   IJournalLocation,
@@ -600,6 +601,50 @@ describe('operator actions are run operations (CMP-9)', () => {
 });
 
 describe('records written before the intent mark existed', () => {
+  test('a v1 unknown attempt remains historical through a v2 rewrite and never acquires a fabricated run instance', () => {
+    const legacy = {
+      format: 'microdelta.supervision.operation',
+      formatVersion: 1,
+      content: {
+        operation: firstOperation, subject: 'assess', version: 1, member: 'pr-1', name: 'assess', binding: 'sha256:binding',
+        safety: 'none', maxAttempts: 1, rateLimitRetries: 5, status: 'unknown', unrecorded: 0, notBefore: null,
+        attempts: [{ requestAttempt: `${firstOperation}/1`, run: 'run:reused', stepAttempt: '3', status: 'unknown', remote: null, usage: null, intent: null }],
+        settlement: null,
+      },
+    };
+    const restored = decodeOperation(legacy);
+    expect(restored.attempts[0]?.runInstance).toBeUndefined();
+    const rewritten = encodeOperation(restored);
+    expect(rewritten.formatVersion).toBe(2);
+    expect(rewritten.content).toEqual(expect.objectContaining({ attempts: [expect.objectContaining({ runInstance: null })] }));
+    expect(decodeOperation(rewritten).attempts).toEqual(restored.attempts);
+    const malformed = { ...rewritten, content: { ...legacy.content, attempts: [{ ...legacy.content.attempts[0], runInstance: 7 }] } };
+    expect(() => decodeOperation(malformed)).toThrow(SupervisionError);
+    const missing = { ...rewritten, content: { ...legacy.content, attempts: [legacy.content.attempts[0]] } };
+    expect(() => decodeOperation(missing)).toThrow(SupervisionError);
+    const invalidIdentity = { ...rewritten, content: { ...legacy.content, attempts: [{ ...legacy.content.attempts[0], runInstance: 'run:public-label' }] } };
+    expect(() => decodeOperation(invalidIdentity)).toThrow(SupervisionError);
+  });
+
+  test('a current invocation can retry a v1 unknown record even when the public runId repeats', async () => {
+    const journal = memoryJournal();
+    journal.put(operationsCollection, firstOperation, {
+      operation: firstOperation, subject: 'assess', version: 1, member: 'pr-1', name: 'assess', binding: 'sha256:binding',
+      safety: 'none', maxAttempts: 1, rateLimitRetries: 5, status: 'unknown', unrecorded: 0, notBefore: null,
+      attempts: [{ requestAttempt: `${firstOperation}/1`, run: 'run:test', stepAttempt: '3', status: 'unknown', remote: null, usage: null, intent: null }],
+      settlement: null,
+    }, 'microdelta.supervision.operation');
+    journal.put('microdelta.supervision.blocks', JSON.stringify(['assess', 1]), { subject: 'assess', version: 1, operations: [{ operation: firstOperation, name: 'assess', binding: 'sha256:binding' }] });
+    const sent = { count: 0 };
+    const outcome = await runOne(journal, memoryAccounting(), () => operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent));
+    expect(outcome.code).toBeUndefined();
+    expect(sent.count).toBe(1);
+    expect(journal.operation(firstOperation)).toEqual(expect.objectContaining({ status: 'succeeded', attempts: [
+      expect.objectContaining({ requestAttempt: `${firstOperation}/1`, run: 'run:test', status: 'unknown', runInstance: null }),
+      expect.objectContaining({ requestAttempt: `${firstOperation}/2`, run: 'run:test', status: 'succeeded', runInstance: expect.any(String) }),
+    ] }));
+  });
+
   test('a not-sent attempt without the field is read as unconfirmed: its retry reuses it with its first attribution, keeping accounting complete', async () => {
     const journal = memoryJournal();
     const accounting = memoryAccounting();

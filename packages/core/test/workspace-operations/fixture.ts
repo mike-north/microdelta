@@ -20,7 +20,7 @@
  * @see ../../../../docs/spec/operations.md (RUN-011, RUN-012, RUN-013, RUN-017)
  */
 import { authoring, currentExecution, sourceOutcome } from '../../src/index.js';
-import type { IAuthoring, IComposition, IFoldEntry, IMemberBuilder, IOutcomeEntry, ISourceOutcome, IStepDescriptor, ITrackedView } from '../../src/index.js';
+import type { IAuthoring, IComposition, IFoldEntry, IMemberBuilder, IOperationRetryPolicy, IOutcomeEntry, ISourceOutcome, IStepDescriptor, ITrackedView } from '../../src/index.js';
 import { fakeProvider } from '../operations/provider.js';
 import type { IAssessment, IFakeProvider } from '../operations/provider.js';
 
@@ -44,6 +44,8 @@ export interface IWorld {
   readonly keys: readonly string[];
   /** The provider every operation reaches. */
   readonly provider: IFakeProvider;
+  /** Per-member retry declarations for tests of one-run and new-run outcomes. */
+  readonly retries: Record<string, IOperationRetryPolicy>;
 }
 
 /** The world the helpers read; each test installs its own. */
@@ -51,7 +53,7 @@ let world: IWorld = createWorld(() => 0);
 
 /** A fresh world over `keys`, whose provider reads `now` for rate-limit retry times. */
 export function createWorld(now: () => number, keys: readonly string[] = ['pr-1', 'pr-2', 'pr-3']): IWorld {
-  return { keys, provider: fakeProvider(now) };
+  return { keys, provider: fakeProvider(now), retries: {} };
 }
 
 /** Install a world for the next runs. */
@@ -91,6 +93,7 @@ function assess(key: string): Promise<IAssessment> {
   return currentExecution().operation<IAssessment>({
     name: 'assess',
     binding: `sha256:assess:${key}`,
+    ...(world.retries[key] === undefined ? {} : { retry: world.retries[key] }),
     perform: (send) => world.provider.perform('assess', key, send),
   });
 }

@@ -11,10 +11,10 @@
  *   before each paid call, and usage is acknowledged keyed by (operation,
  *   report), so it is counted exactly once; a missing report is unknown,
  *   never zero;
- * - rate and quota responses with a retry time are deferred durably and
- *   retried by default, at most 5 times unless the author overrides it; other
- *   transient failures retry only under an author policy, waiting with no
- *   permit and no window lane;
+ * - rate and quota responses with a retry time are deferred durably, with
+ *   the provider's time as a lower bound. Classified retries share the
+ *   finite total-send allowance, three by default; a legacy rate-only cap
+ *   may restrict it further. Timed waits hold no permit or window lane;
  * - a deferral holds no permit and no lane, so siblings finish; once only
  *   deferred work remains the run releases the writer lease and either
  *   sleeps until T and resumes, or exits reporting "waiting until T"; later
@@ -119,19 +119,18 @@ describe('intent before send and usage exactly once (ACC-003, ACC-005, ACC-007)'
   });
 });
 
-describe('the retry policy (RUN-011, EXP-8 resolution 6)', () => {
-  test('a transient failure is final without an author policy', async () => {
-    world.provider.script('assess', 'pr-1', ['transient']);
+describe('the finite acquisition retry policy (RUN-011)', () => {
+  test('a transient refusal uses the built-in delayed retry without an author policy', async () => {
+    world.provider.script('assess', 'pr-1', ['transient', 'ok']);
     const session = openSession(stores, timer);
     try {
-      const result = await members(session).done;
+      const result = await driveUntilSettled(timer, members(session));
       const pr1 = memberOf(result.value, 'pr-1');
-      expect(pr1.status).toBe('failed');
-      expect(failureCode(pr1)).toBe('operation-failed');
-      expect(received('pr-1')).toHaveLength(1);
-      expect(journalContents(session)).toContainEqual(expect.objectContaining({ member: 'pr-1', status: 'failed' }));
+      expect(pr1.status).toBe('succeeded');
+      expect(received('pr-1')).toHaveLength(2);
+      expect(journalContents(session)).toContainEqual(expect.objectContaining({ member: 'pr-1', status: 'succeeded' }));
       // The refusal's own usage report is still counted.
-      expect(session.usage().observed).toEqual([{ unit: 'requests', amount: 1 }, { unit: 'tokens', amount: 200 }]);
+      expect(session.usage().observed).toEqual([{ unit: 'requests', amount: 1 }, { unit: 'tokens', amount: 300 }]);
     } finally {
       session.close();
     }
@@ -179,15 +178,15 @@ describe('the retry policy (RUN-011, EXP-8 resolution 6)', () => {
     }
   });
 
-  test('a rate limit with a retry time is retried by default, at most 5 times', async () => {
+  test('the old default rate-only cap cannot raise the three-total-attempt default', async () => {
     world.provider.script('assess', 'pr-1', ['rate-limit:60000', 'rate-limit:60000', 'rate-limit:60000', 'rate-limit:60000', 'rate-limit:60000', 'rate-limit:60000', 'ok']);
     const session = openSession(stores, timer);
     try {
       const started = members(session);
       const result = await driveUntilSettled(timer, started);
       const pr1 = memberOf(result.value, 'pr-1');
-      // One first attempt and five deferred retries, all refused: the sixth refusal exhausts the default.
-      expect(received('pr-1')).toHaveLength(6);
+      // The third sent refusal exhausts the total ceiling despite the legacy rate subcap of five retries.
+      expect(received('pr-1')).toHaveLength(3);
       expect(new Set(received('pr-1').map((request) => request.operation)).size).toBe(1);
       expect(failureCode(pr1)).toBe('operation-failed');
       expect(operationTrace(started.events)).toContain('assess@pr-1:retry-exhausted:failed:policy-exhausted');
@@ -396,6 +395,7 @@ describe('declaring an operation', () => {
   });
 
   test('the subject of a member assessment is the operation owner an operator sees', async () => {
+    world.options['pr-1'] = { retry: { maxAttempts: 1 } };
     world.provider.script('assess', 'pr-1', ['lost']);
     const session = openSession(stores, timer);
     try {

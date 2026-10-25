@@ -2,7 +2,7 @@
  * The assessor implementations the composition can supply to the summary's
  * `assessor` step slot. Each rubric assesses one authored pull request: the PR
  * number arrives as a derived argument and the PR record as a view forwarded
- * from the member's activity. Scores are a fixture rubric, not a measure of
+ * from that ID's separately retained detail result. Scores are a fixture rubric, not a measure of
  * contribution quality.
  *
  * - Rubric A scores a merged PR 2 and an unmerged PR 1, and explains why.

@@ -13,10 +13,11 @@
  *   key `id`). Its tracked gate requires a member when its authored count
  *   reaches `config.minimumAuthored`; gated-out members are skipped instances.
  * - Each member instance has an `activity` source that reads its member's
- *   `key` through the member binding, and a `summary` memo that calls
- *   `activity`, then the supplied `assessor` slot once per authored PR with the
- *   PR number as a derived argument and the PR record forwarded from the
- *   activity result. The summary consumes each assessment's `score` only.
+ *   `key` through the member binding. Its result is a completed ID-only
+ *   search. The `summary` memo calls it, retrieves each PR through a separate
+ *   supplied detail slot, then calls the supplied `assessor` slot with the PR
+ *   number and the exact detail result forwarded as evidence. The summary
+ *   consumes merged status from detail and each assessment's `score` only.
  * - `report` is a strict fold over every member's summary: it runs only once
  *   discovery is closed and every required member succeeded.
  * - `status` is an outcome (tolerant) fold over the same summaries: once
@@ -44,7 +45,7 @@ import type {
   ITrackedView,
 } from 'microdelta';
 
-import { checkActivity, isFinal } from './activity.js';
+import { checkActivity, isFinal, retrievePullRequestDetail } from './activity.js';
 import type { IActivity, IPullRequest } from './activity.js';
 import { assessRubricA, assessRubricB, assessRubricC, assessRubricP } from './assessment.js';
 import type { IAssessment, IAssessorParameters, IRubric } from './assessment.js';
@@ -133,27 +134,30 @@ export interface IHelpers {
   readonly isDiscoveryFinal: (previous: IPreviousResult<IContributors>) => boolean;
   readonly checkActivity: (outcome: ISourceOutcomes, config: ITrackedView<IConfig>, key: string) => ISourceOutcome<IActivity>;
   readonly isFinal: (previous: IPreviousResult<IActivity>) => boolean;
+  /** Retrieve one detail record selected by the completed activity ID search. */
+  readonly retrievePullRequestDetail: typeof retrievePullRequestDetail;
   readonly assessRubricA: typeof assessRubricA;
   readonly assessRubricB: typeof assessRubricB;
   readonly assessRubricC: typeof assessRubricC;
   readonly assessRubricP: typeof assessRubricP;
-  readonly summarize: (activity: IResultView<IActivity>, scores: readonly number[], format: ITrackedView<IFormat>) => ISummary;
+  readonly summarize: (activity: IResultView<IActivity>, details: readonly IResultView<IPullRequest>[], scores: readonly number[], format: ITrackedView<IFormat>) => ISummary;
   readonly format: IFormat;
   readonly render: (members: ISummaryEntries, config: ITrackedView<IConfig>) => IReport;
   readonly renderStatus: (members: IStatusEntries, config: ITrackedView<IConfig>) => IStatusReport;
 }
 
 /**
- * Count one contributor's statistics with indexed loops over the exact
- * retained activity, total the consumed assessment scores and render the
- * sentence. Reads the profile name, each PR's merged status and the number
- * of PRs and reviews; never labels, avatar, profile identity or revision.
+ * Count one contributor's statistics over the exact
+ * retained search and detail results, total the consumed assessment scores
+ * and render the sentence. Reads the profile name, searched-ID count, each
+ * separately retained PR's merged status, and the review count; never labels,
+ * avatar, profile identity or fixture revision.
  */
-function summarize(activity: IResultView<IActivity>, scores: readonly number[], format: ITrackedView<IFormat>): ISummary {
-  const authored = activity.pullRequests.length;
+function summarize(activity: IResultView<IActivity>, details: readonly IResultView<IPullRequest>[], scores: readonly number[], format: ITrackedView<IFormat>): ISummary {
+  const authored = activity.pullRequestIds.length;
   let merged = 0;
-  for (let index = 0; index < authored; index += 1) {
-    if (activity.pullRequests[index]?.merged === true) {
+  for (const detail of details) {
+    if (detail.merged === true) {
       merged += 1;
     }
   }
@@ -249,6 +253,15 @@ function ordered<T>(items: readonly T[], variation: IVariation): readonly T[] {
   return variation.reverse ? [...items].reverse() : items;
 }
 
+/** A retrieved detail result's stable address comes from the completed search ID alone. */
+const detailSubject: ISlotSubject<readonly [number]> = (derived) => {
+  const number = derived[0];
+  if (number === undefined) {
+    throw new Error('a detail subject needs the searched pull request number');
+  }
+  return `pull-request:acme/widget:${String(number)}`;
+};
+
 /** The complete history subject of one PR's assessment, from its derived PR number only. */
 const assessmentSubject: ISlotSubject<IAssessorParameters> = (derived) => {
   const number = derived[0];
@@ -266,6 +279,7 @@ const assessmentSubject: ISlotSubject<IAssessorParameters> = (derived) => {
 export function composeAnalysis(variation: IVariation = defaultVariation): IAnalysis {
   const builders = authoring<IInputs, IHelpers>();
   const { source, template, fold, outcomeFold, stepSlot, suppliedStep, supply, forward, compose } = builders;
+  const pullRequestDetail = stepSlot<readonly [number], IPullRequest>({ slot: 'pullRequestDetail' });
   const assessor = stepSlot<IAssessorParameters, IAssessment>({ slot: 'assessor' });
 
   const contributors = source<IContributors>({
@@ -287,21 +301,24 @@ export function composeAnalysis(variation: IVariation = defaultVariation): IAnal
     const summary = member.memo({
       subject: member.subject('summary:acme/widget:2026-Q1'),
       label: 'contributor summary',
-      children: { activity, assess: assessor },
+      children: { activity, detail: pullRequestDetail, assess: assessor },
       run: async ({ calls, helpers }) => {
         const selected = await calls.activity();
+        const details: IResultView<IPullRequest>[] = [];
         const scores: number[] = [];
-        const count = selected.data.pullRequests.length;
+        const count = selected.data.pullRequestIds.length;
         for (let index = 0; index < count; index += 1) {
-          const pullRequest = selected.data.pullRequests[index];
-          if (pullRequest === undefined) {
+          const number = selected.data.pullRequestIds[index];
+          if (number === undefined) {
             continue;
           }
-          // The PR number is a derived scalar; the PR record is forwarded from the activity result.
-          const assessed = await calls.assess(pullRequest.number, forward.child<IPullRequest>(selected, ['pullRequests', index]));
+          // Search supplies only IDs. The detail call has its own stable memo address before assessment consumes it.
+          const pullRequest = await calls.detail(number);
+          const assessed = await calls.assess(number, forward.child<IPullRequest>(pullRequest, []));
+          details.push(pullRequest.data);
           scores.push(assessed.data.score);
         }
-        return helpers.summarize(selected.data, scores, helpers.format);
+        return helpers.summarize(selected.data, details, scores, helpers.format);
       },
     });
     return { activity, summary };
@@ -343,6 +360,12 @@ export function composeAnalysis(variation: IVariation = defaultVariation): IAnal
     P: suppliedStep<IAssessorParameters, IAssessment>({ label: 'rubric P (paid-like)', run: ({ args, helpers }) => helpers.assessRubricP(args[0], args[1]) }),
   };
 
+  /** Retrieve a complete PR record only after a completed search names its stable ID. */
+  const pullRequestDetailStep = suppliedStep<readonly [number], IPullRequest>({
+    label: 'pull request detail',
+    run: ({ args, helpers }) => helpers.retrievePullRequestDetail(args[0], 'acme/widget'),
+  });
+
   const composition = compose({
     scope: analysisScope,
     inputs: [{ slot: 'config', value: { ...baseConfig, minimumAuthored: variation.minimumAuthored } }],
@@ -351,6 +374,7 @@ export function composeAnalysis(variation: IVariation = defaultVariation): IAnal
       { slot: 'isDiscoveryFinal', helper: isDiscoveryFinal },
       { slot: 'checkActivity', helper: checkActivity },
       { slot: 'isFinal', helper: isFinal },
+      { slot: 'retrievePullRequestDetail', helper: retrievePullRequestDetail },
       { slot: 'assessRubricA', helper: assessRubricA },
       { slot: 'assessRubricB', helper: assessRubricB },
       { slot: 'assessRubricC', helper: assessRubricC },
@@ -362,7 +386,10 @@ export function composeAnalysis(variation: IVariation = defaultVariation): IAnal
     ], variation),
     steps: ordered([{ slot: collectionSlot, declaration: contributors }, { slot: 'report', declaration: report }, { slot: 'status', declaration: status }], variation),
     templates: [contributor],
-    supplied: [supply({ slot: assessor, declaration: rubricSteps[variation.rubric], subject: assessmentSubject })],
+    supplied: [
+      supply({ slot: pullRequestDetail, declaration: pullRequestDetailStep, subject: detailSubject }),
+      supply({ slot: assessor, declaration: rubricSteps[variation.rubric], subject: assessmentSubject }),
+    ],
   });
 
   return {

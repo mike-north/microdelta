@@ -11,9 +11,10 @@
  * - their reviews are the unique reviews they submitted in the window; pending
  *   reviews are excluded.
  *
- * The selected record keeps nested profile data, per-PR labels and the
- * fixture revision. The summary reads none of them except the profile name;
- * only the assessor reads a PR's labels, and only under rubric C.
+ * The selected record keeps a completed list of stable PR identifiers,
+ * profile data, review identifiers and the fixture revision. It deliberately
+ * does not include PR details: each detail is retrieved and retained through
+ * its own supplied-step call after this search completes.
  */
 import { currentRun } from 'microdelta';
 import type { IPreviousResult, ISourceOutcome, ISourceOutcomes, ITrackedView } from 'microdelta';
@@ -21,7 +22,7 @@ import type { IPreviousResult, ISourceOutcome, ISourceOutcomes, ITrackedView } f
 import { authoredInWindow, environments, isEnvironment, readFixture, readFixtureFor, submittedInWindow } from './fixture.js';
 import type { IConfig } from './fixture.js';
 
-/** One authored pull request as a member's activity holds it. */
+/** One complete pull request record returned by the separate detail adapter. */
 export interface IPullRequest {
   readonly number: number;
   readonly merged: boolean;
@@ -35,13 +36,13 @@ export interface IActivity {
   readonly revision: number;
   /** Mutable upstream profile; only `name` is read by the summary. */
   readonly profile: { readonly id: string; readonly name: string; readonly avatarUrl: string };
-  /** Authored PRs in window, ordered by PR number. */
-  readonly pullRequests: readonly IPullRequest[];
+  /** Stable identifiers of authored PRs in the window, ordered by number. */
+  readonly pullRequestIds: readonly number[];
   /** Submitted reviews in window, ordered by review id. */
   readonly reviews: readonly { readonly id: string }[];
 }
 
-/** Select one contributor's activity from the fixture under the attribution rules. */
+/** Select one contributor's profile, review identifiers and completed PR-ID search result. */
 export function selectActivity(key: string, config: Pick<IConfig, 'repository' | 'window'>): IActivity {
   const fixture = readFixtureFor(config.repository);
   const profile = fixture.profiles.find((candidate) => candidate.key === key);
@@ -51,9 +52,25 @@ export function selectActivity(key: string, config: Pick<IConfig, 'repository' |
   return {
     revision: fixture.revision,
     profile: { id: profile.id, name: profile.name, avatarUrl: profile.avatarUrl },
-    pullRequests: authoredInWindow(fixture, key, config.window).map((pull) => ({ number: pull.number, merged: pull.merged, labels: [...pull.labels] })),
+    pullRequestIds: authoredInWindow(fixture, key, config.window).map((pull) => pull.number),
     reviews: submittedInWindow(fixture, key, config.window).map((review) => ({ id: review.id })),
   };
+}
+
+/** Retrieve one PR's detail after a completed ID search; missing IDs are adapter failures. */
+export function retrievePullRequestDetail(number: number | undefined, repository: string): IPullRequest {
+  if (number === undefined) {
+    throw new Error('a pull request detail needs its searched ID');
+  }
+  const { environment } = currentRun();
+  if (!isEnvironment(environment)) {
+    throw new Error(`the fixture adapter serves the ${environments.join(', ')} environments, not ${environment}`);
+  }
+  const pull = readFixtureFor(repository).pullRequests.find((candidate) => candidate.number === number);
+  if (pull === undefined) {
+    throw new Error(`fixture error: no pull request ${String(number)}`);
+  }
+  return { number: pull.number, merged: pull.merged, labels: [...pull.labels] };
 }
 
 /**

@@ -28,6 +28,8 @@
  * @see ../../../../docs/validation/m5-concurrency-2026-09-30.md
  */
 import { afterEach, describe, expect, test } from '@jest/globals';
+import { fork } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 import type { IWriterLease } from '@microdelta/history';
 
@@ -40,9 +42,73 @@ import { attemptRequest, concurrencyStore, subject } from './fixture.js';
 import { hostMonotonicMilliseconds, parseContentionLog, parseWaitContention, parseWaitStatus } from './protocol.js';
 import type { IContentionEvent, IHarnessCommand, IHarnessReply, IWaitContentionEvent, IWaitStatus } from './protocol.js';
 
+const sqliteLockWorker = fileURLToPath(new URL('./history-busy-lock.js', import.meta.url));
+
+/** Establishes the lock in a separate process before the callback runs and releases it on every callback outcome. */
+async function withIndependentWriteLock<T>(location: string, operation: () => Promise<T>): Promise<T> {
+  const lock = fork(sqliteLockWorker, [location], { stdio: ['ignore', 'ignore', 'pipe', 'ipc'] });
+  let diagnostic = '';
+  lock.stderr?.setEncoding('utf8').on('data', (chunk: string) => { diagnostic += chunk; });
+  await new Promise<void>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`SQLite lock did not start: ${diagnostic}`)), 10_000);
+    lock.once('message', (message: unknown) => {
+      clearTimeout(timer);
+      if (typeof message === 'object' && message !== null && 'kind' in message && message.kind === 'locked') { resolve(); }
+      else { reject(new Error(`SQLite lock reported ${String(message)}`)); }
+    });
+    lock.once('exit', (code, signal) => {
+      clearTimeout(timer);
+      reject(new Error(`SQLite lock ended before readiness: ${String(code)}/${String(signal)} ${diagnostic}`));
+    });
+  });
+  try {
+    return await operation();
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(`SQLite lock did not release: ${diagnostic}`)), 10_000);
+      lock.once('exit', (code, signal) => {
+        clearTimeout(timer);
+        if (code === 0 && signal === null) { resolve(); }
+        else { reject(new Error(`SQLite lock ended ${String(code)}/${String(signal)} ${diagnostic}`)); }
+      });
+      lock.send({ kind: 'release' });
+    });
+  }
+}
+
 afterEach(async () => {
   await stopWorkers();
   cleanup();
+});
+
+test('C3 records the supervised grant before independently locked allocation and reports rollback by phase', async () => {
+  const location = freshStore();
+  const worker = await startWorker('postgrant-contention', { location, store: concurrencyStore, clock: 'controlled' });
+  const initial = snapshot(location);
+  const started = await worker.step({
+    op: 'wait-start', at: 1_000, holder: 'postgrant-holder', leaseMilliseconds: 10_000,
+    pollMilliseconds: 5, key: 'postgrant:allocation', grantBarrier: true,
+  });
+  const granted = parseWaitStatus(valueOf(worker, started));
+  expect(granted.attempts.map((attempt) => attempt.kind)).toEqual(['acquired']);
+  expect(granted.outcome).toEqual({ kind: 'pending' });
+  expect(snapshot(location).writer).toMatchObject({ holder: 'postgrant-holder', lastFence: 1 });
+
+  const refused = await withIndependentWriteLock(location, async () => {
+    const reply = await worker.step({ op: 'wait-barrier-release' });
+    return parseWaitStatus(valueOf(worker, reply));
+  });
+  expect(refused.outcome).toEqual({ kind: 'storage-busy', phase: 'allocate', fence: 1, error: 'HistoryBusyError' });
+  expect(refused.attempts.map((attempt) => attempt.fence)).toEqual([1]);
+  const after = snapshot(location);
+  expect(after.writer).toMatchObject({ holder: 'postgrant-holder', lastFence: 1 });
+  expect(after.sequences).toEqual(initial.sequences);
+  expect(after.attempts).toEqual(initial.attempts);
+  expect(after.results).toEqual(initial.results);
+  expect(after.current).toEqual(initial.current);
+  expect(after.acceptances).toEqual(initial.acceptances);
+  await worker.step({ op: 'wait-finish', at: 1_001 });
+  await worker.close();
 });
 
 /** An instant shortly ahead on the host monotonic clock, at which every worker starts the next command together. */
@@ -201,6 +267,7 @@ describe('free-running contention with the host clock (C2)', () => {
 
     const state = snapshot(location);
     expectFenceOrderedStorage(state);
+    expect(state.writer.lastFence).toBe(fences.at(-1));
     for (const attempt of state.attempts) {
       expect(grantee.get(attempt.allocatedFence)).toBe(attempt.key.split(':')[0]);
       // Attempts presented for publication only with an outlived lease are never published.
@@ -404,8 +471,15 @@ describe('real waiters contending for the lease with operator deadlines (C3)', (
 
     const state = snapshot(location);
     expectFenceOrderedStorage(state);
-    // Every grant published exactly once under its own fence, in fence order.
-    expect(state.results.map((result) => result.publishedFence)).toEqual(fences);
+    // Every successful publication belongs to its grant; a typed post-grant refusal retains the grant without inventing a result.
+    const publishedFences = grants.filter((grant) => grant.published !== null).map((grant) => grant.fence).sort((left, right) => left - right);
+    expect(state.results.map((result) => result.publishedFence)).toEqual(publishedFences);
+    for (const grant of grants) {
+      if (grant.postGrantFailure !== undefined) {
+        expect(grant.published).toBeNull();
+        expect(grant.postGrantFailure.error).toBe(grant.postGrantFailure.kind === 'storage-busy' ? 'HistoryBusyError' : 'StaleWriterError');
+      }
+    }
     // The forced phase guarantees a grant after a refused try and a deadline outcome; these union assertions are
     // regression guards and do not require the free-running phase to produce either.
     expect(grants.length).toBeGreaterThanOrEqual(2);

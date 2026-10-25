@@ -1102,3 +1102,63 @@ So raising C3's leases removes no coverage.
 - The forced handover proves each interleaving at least once per run. How often free-running waiters see them still depends on the host.
 - Fairness is still not claimed.
 - Local evidence is from macOS arm64 on Node 24 and 20. CI covers Linux on Node 20, 22 and 24.
+
+## Addendum: C3 separates lease grant from post-grant storage outcome (issue #233)
+
+**Historical observation.** PR #227's Node 24 CI log recorded `HistoryBusyError`
+after one writer try, but did not record whether allocation, staging, or
+publication raised it. Source control flow shows those operations ran after
+the supervised lease grant. The historical event therefore remains an
+unattributed post-grant failure; this addendum does not infer which operation
+failed in that run.
+
+**Deterministic reproduction.** C3's worker can now pause its real
+Run-Supervision request after the facade writer port grants a lease. The test
+reads the acquired attempt and durable writer row before a separate process
+begins `BEGIN IMMEDIATE`; only then does it release the worker to allocate.
+The resulting event retains fence 1 and names `allocate` plus
+`HistoryBusyError`. The durable snapshot has no allocated attempt, staged
+payload, result, current-pointer change, or acceptance; sequence counters are
+unchanged. The supervising run then closes normally and releases the lease.
+This proves rollback for allocation under a real independent SQLite lock.
+
+**C3 outcome contract.** A tenure's grant/fence is counted independently from
+its post-grant work. Successful work records its published locator. Typed
+`HistoryBusyError` and `StaleWriterError` records name the operation and retain
+the grant while recording no publication. Unknown exceptions remain failures.
+The shared classifier is covered for allocation, staging, and publication;
+the lock reproduction uses allocation as the representative SQLite boundary.
+Aggregate storage checks require all granted fences to be accounted for and
+require stored publications to match only grants that reported publication.
+
+**Test-first and commands.** The new barrier test was added before its protocol
+and worker implementation. Its first compile failed because `grantBarrier`
+and `wait-barrier-release` were absent from the harness command contract. The
+classifier assertion initially failed compilation because its module was not
+yet present. After implementation, a temporary mutant restored the original
+generic catch for a granted tenure. The deterministic test reached the locked
+allocation and failed at the intended outcome assertion: expected
+`storage-busy/allocate/fence 1`, received generic `failed` with the 594 ms
+`HistoryBusyError` message. The mutation was then removed, and the focused
+suite passed again. This is a post-implementation negative control; it is not
+claimed as an observation from the original pre-change checkout and does not
+identify the original CI mutation.
+
+Final local validation on the issue branch:
+
+| Command | Result |
+| --- | --- |
+| `npm run check` | Exit 0; package and workspace checks passed. |
+| `npm test` | Exit 0; facade 91 suites / 1,074 tests passed, tooling 368/368, Accounting 54/54, Definition 283/283, History 44/44, Machine Node 85/85, Materialization 34/34, Resolution 60/60, Supervision 207/207, Tracking 134/134, all experiment suites, and 17 examples passed. |
+| `npm run build` | Exit 0; packages, declaration fixtures, experiments, and examples built. |
+| `npm run test:controls --workspace microdelta` | Exit 0; 36/36 control/tooling checks passed, including the C3 mutation-control runner. |
+| `node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand .test-build/test/concurrency` (from `packages/core`) | Exit 0; 8 suites / 182 tests passed. |
+| `node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand --runTestsByPath .test-build/test/concurrency/contention.test.js` with the temporary generic-catch mutant (from `packages/core`) | Expected exit 1 at the deterministic outcome assertion; actual lock acquisition and History timeout completed, but the restored generic catch reported `failed` instead of the grant-preserving phase outcome. |
+| `tsc -p packages/core/tsconfig.test.json && node --experimental-vm-modules node_modules/jest/bin/jest.js --config packages/core/jest.config.mjs --runInBand --runTestsByPath packages/core/.test-build/test/concurrency/contention.test.js packages/core/.test-build/test/concurrency/contention-failure.test.js` | Exit 0 after restoring the implementation; 2 suites / 8 tests passed. |
+
+**Limits.** The deterministic lock scenario exercises allocation rollback.
+Staging and publication phase attribution are exercised by the shared
+classifier assertions, while existing publication and fencing scenarios
+continue to cover successful publication. No runtime History, writer, or
+Supervision behavior changes. This evidence does not establish that the
+original CI failure occurred during allocation.

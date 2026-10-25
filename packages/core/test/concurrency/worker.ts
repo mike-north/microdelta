@@ -26,6 +26,7 @@ import { writeSync } from 'node:fs';
 import { performance } from 'node:perf_hooks';
 
 import type { IBindingDescriptor } from '@microdelta/definition';
+import { HistoryBusyError, StaleWriterError } from '@microdelta/history';
 import type { IAttemptRecord, IClockCapability, IDurableHistory, IWriterLease } from '@microdelta/history';
 import { createNodeClock, createNodeMachine, createNodeTimer } from '@microdelta/machine-node';
 import type { ICheckOutcome, IRecoveryResult, IResolution, IResolutionOutcome, IResolveRequest } from '@microdelta/resolution';
@@ -34,6 +35,7 @@ import type { IRun, IRunTimer, IRunWriter, IStopController, ISupervision, IWrite
 
 import { writerFor } from '../../src/writer.js';
 import { classifyContentionFailure } from './contention-failure.js';
+import { classifyGrantedWorkFailure } from './granted-work-failure.js';
 import { controlledClock, observedSqlite, openHistory } from '../durable-history/support.js';
 import { attemptRequest, evidence, labelAddress, lastPartAddress, payload, provenance, subject } from './fixture.js';
 import { hostMonotonicMilliseconds, lifecyclePrefix, parseCommand, parseLaunch } from './protocol.js';
@@ -249,20 +251,35 @@ function holdFor(milliseconds: number): Promise<void> {
 /**
  * A Resolution double whose normal request does real History work with the
  * lease Supervision handed it: it allocates, stages and publishes `key`, so a
- * granted lease is shown to be current authority with its own fence. The
+ * granted lease is shown to be current authority with its own fence. An
+ * optional parent-controlled barrier pauses after grant and before allocation,
+ * giving deterministic contention tests a precise seam. The
  * lease becomes this worker's lease object, so later commands can present it
  * after it goes stale. Check and recovery count requests and touch nothing.
  */
-function waiterResolution(key: string, granted: (lease: IWriterLease, published: string) => void, checked: () => void): IResolution {
+function waiterResolution(
+  key: string,
+  granted: (lease: IWriterLease) => void,
+  published: (locator: string) => void,
+  checked: () => void,
+  barrier: Promise<void> = Promise.resolve(),
+  setPhase: (phase: 'allocate' | 'stage' | 'publish') => void = () => undefined,
+): IResolution {
   const unused = (): Promise<never> => Promise.reject(new Error('not used by the waiting worker'));
   return {
     resolve(request: IResolveRequest): Promise<IResolutionOutcome> {
       lease = request.lease;
-      allocate(key);
-      stage(key, key);
-      const reference = history.publishAttempt(request.lease, requireAttempt(key));
-      granted(request.lease, reference.locator);
-      return Promise.resolve(Object.freeze({ kind: 'published', step: request.step, reference, attemptId: requireAttempt(key), misses: [], trace: [], diagnostics: [] }));
+      granted(request.lease);
+      return barrier.then(() => {
+        setPhase('allocate');
+        allocate(key);
+        setPhase('stage');
+        stage(key, key);
+        setPhase('publish');
+        const reference = history.publishAttempt(request.lease, requireAttempt(key));
+        published(reference.locator);
+        return Object.freeze({ kind: 'published', step: request.step, reference, attemptId: requireAttempt(key), misses: [], trace: [], diagnostics: [] });
+      });
     },
     resolveMembers: unused,
     resolveFold: unused,
@@ -329,6 +346,9 @@ interface IActiveWait {
   live: IRun | undefined;
   /** Lets the run's body return, so the run closes and releases its lease. */
   readonly finish: () => void;
+  /** Resumes post-grant data work after the parent has established its lock. */
+  readonly releaseBarrier: () => void;
+  phase: 'allocate' | 'stage' | 'publish';
   /** Settles when the run has closed; set once the run has started. */
   closed: Promise<unknown>;
 }
@@ -363,14 +383,19 @@ function startWait(command: Extract<IWaitCommand, { readonly op: 'wait-start' }>
     finish = resolve;
   });
   const stop = createStopController({ timer: runTimer });
+  let releaseBarrier: () => void = () => undefined;
+  const barrier = command.grantBarrier === true ? new Promise<void>((resolve) => { releaseBarrier = resolve; }) : Promise.resolve();
   const attempts: IWaitAttempt[] = [];
-  let granted: { readonly lease: IWriterLease; readonly published: string } | undefined;
+  let granted: IWriterLease | undefined;
+  let published = '';
   const wait: IActiveWait = {
     attempts,
     outcome: { kind: 'pending' },
     checks: 0,
     stop,
     live: undefined,
+    releaseBarrier: () => releaseBarrier(),
+    phase: 'allocate',
     finish: () => {
       finish();
     },
@@ -383,11 +408,13 @@ function startWait(command: Extract<IWaitCommand, { readonly op: 'wait-start' }>
     writer: observedWriter(writerFor(history, command.holder, command.leaseMilliseconds), attempts),
     writerWait: command.deadline === undefined ? { pollMilliseconds: command.pollMilliseconds } : { deadline: command.deadline, pollMilliseconds: command.pollMilliseconds },
     stop,
-    resolution: () => waiterResolution(command.key, (grantedLease, published) => {
-      granted = { lease: grantedLease, published };
+    resolution: () => waiterResolution(command.key, (grantedLease) => {
+      granted = grantedLease;
+    }, (locator) => {
+      published = locator;
     }, () => {
       wait.checks += 1;
-    }),
+    }, barrier, (phase) => { wait.phase = phase; }),
   }, async (live) => {
     wait.live = live;
     try {
@@ -395,9 +422,14 @@ function startWait(command: Extract<IWaitCommand, { readonly op: 'wait-start' }>
       if (granted === undefined) {
         throw new Error('the request settled without a grant');
       }
-      wait.outcome = { kind: 'acquired', holder: granted.lease.holder, fence: granted.lease.fence, expiresAt: granted.lease.expiresAt, published: granted.published };
+      wait.outcome = { kind: 'acquired', holder: granted.holder, fence: granted.fence, expiresAt: granted.expiresAt, published };
     } catch (error: unknown) {
-      wait.outcome = failureOutcome(error);
+      if (granted !== undefined && (error instanceof HistoryBusyError || error instanceof StaleWriterError)) {
+        const classified = classifyGrantedWorkFailure(wait.phase, granted.fence, error);
+        wait.outcome = { kind: classified.kind, phase: classified.phase, fence: classified.fence, error: classified.errorName };
+      } else {
+        wait.outcome = failureOutcome(error);
+      }
     }
     await finished;
   });
@@ -452,7 +484,9 @@ async function contendWaiting(command: Extract<IWaitCommand, { readonly op: 'wai
         port.release();
       },
     };
-    let granted: { readonly lease: IWriterLease; readonly published: string } | undefined;
+    let granted: IWriterLease | undefined;
+    let published = '';
+    let phase: 'allocate' | 'stage' | 'publish' = 'allocate';
     try {
       await supervision.run({
         analysis: subject.analysis,
@@ -460,9 +494,9 @@ async function contendWaiting(command: Extract<IWaitCommand, { readonly op: 'wai
         runId: key,
         writer: counted,
         writerWait: { deadline: Date.now() + command.waitMilliseconds, pollMilliseconds: command.pollMilliseconds },
-        resolution: () => waiterResolution(key, (grantedLease, published) => {
-          granted = { lease: grantedLease, published };
-        }, () => undefined),
+        resolution: () => waiterResolution(key, (grantedLease) => {
+          granted = grantedLease;
+        }, (locator) => { published = locator; }, () => undefined, Promise.resolve(), (nextPhase) => { phase = nextPhase; }),
       }, async (live) => {
         await live.resolve(waiterStep, { requestKey: `request:${key}` });
         await holdFor(command.holdMilliseconds);
@@ -470,8 +504,14 @@ async function contendWaiting(command: Extract<IWaitCommand, { readonly op: 'wai
       if (granted === undefined) {
         throw new Error('the tenure settled without a grant');
       }
-      events.push({ kind: 'granted', fence: granted.lease.fence, tries: counter.tries, published: granted.published });
+      events.push({ kind: 'granted', fence: granted.fence, tries: counter.tries, published });
     } catch (error: unknown) {
+      if (granted !== undefined && (error instanceof HistoryBusyError || error instanceof StaleWriterError)) {
+        const failure = classifyGrantedWorkFailure(phase, granted.fence, error);
+        events.push({ kind: 'granted', fence: granted.fence, tries: counter.tries, published: null, postGrantFailure: { kind: failure.kind, phase: failure.phase, error: failure.errorName } });
+        await holdFor(command.restMilliseconds);
+        continue;
+      }
       const outcome = failureOutcome(error);
       events.push(outcome.kind === 'busy'
         ? { kind: 'busy', holder: outcome.holder, contended: outcome.contended, tries: counter.tries }
@@ -510,6 +550,12 @@ async function performWait(command: IWaitCommand): Promise<unknown> {
     }
     case 'wait-status':
       return waitStatus();
+    case 'wait-barrier-release': {
+      requireWait().releaseBarrier();
+      await settleTurn();
+      await settleTurn();
+      return waitStatus();
+    }
     case 'wait-finish': {
       const wait = requireWait();
       controlled.set(command.at);

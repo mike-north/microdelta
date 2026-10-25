@@ -24,7 +24,6 @@ function scenario(overrides = {}) {
     protection: {
       branch: 'main',
       requiresPullRequest: true,
-      strict: true,
       enforceAdmins: true,
       resolveConversations: true,
       requiredContexts: [...REQUIRED_BRANCH_CHECKS, REQUIRED_STATUS_CONTEXT],
@@ -194,17 +193,17 @@ for (const [name, overrides, requestOverrides = {}] of [
   ['Copilot requested but not submitted', { pendingReviewRequests: ['copilot-pull-request-reviewer[bot]'] }],
   ['Copilot requested changes', { copilotReviews: [{ authorLogin: 'copilot-pull-request-reviewer[bot]', authorType: 'Bot', commitOid: reviewedHead, state: 'CHANGES_REQUESTED', submitted: true }] }],
   ['supervisor review is not required by protection', { protection: {
-    branch: 'main', requiresPullRequest: true, strict: true, enforceAdmins: true,
+    branch: 'main', requiresPullRequest: true, enforceAdmins: true,
     resolveConversations: true, requiredContexts: [...REQUIRED_BRANCH_CHECKS],
   } }],
   ['required review protection is absent', { protection: {
-    branch: 'main', requiresPullRequest: true, strict: true, enforceAdmins: true,
+    branch: 'main', requiresPullRequest: true, enforceAdmins: true,
     resolveConversations: true,
     requiredContexts: [...REQUIRED_BRANCH_CHECKS],
     checkSources: Object.fromEntries(REQUIRED_BRANCH_CHECKS.map(name => [name, 'github-actions'])),
   } }],
   ['an existing GitHub Actions source restriction is missing', { protection: {
-    branch: 'main', requiresPullRequest: true, strict: true, enforceAdmins: true,
+    branch: 'main', requiresPullRequest: true, enforceAdmins: true,
     resolveConversations: true,
     requiredContexts: [...REQUIRED_BRANCH_CHECKS, REQUIRED_STATUS_CONTEXT],
     checkSources: { ...Object.fromEntries(REQUIRED_BRANCH_CHECKS.map(name => [name, 'github-actions'])), 'core (22)': null },
@@ -441,8 +440,7 @@ test('all GitHub adapter operations use the injected runner with their original 
   try {
     assert.deepEqual(await api.readRepository(), { nameWithOwner: 'mike-north/microdelta', defaultBranch: 'main' });
     assert.deepEqual(await api.readProtection('main'), {
-      branch: 'main', requiresPullRequest: true, strict: true, enforceAdmins: true,
-      ordinaryStrict: true,
+      branch: 'main', requiresPullRequest: true, enforceAdmins: true,
       resolveConversations: true, requiredContexts: ['sample CI'], checkSources: { 'sample CI': 'github-actions' },
     });
     assert.deepEqual(await api.readPullRequest(prNumber), {
@@ -522,6 +520,7 @@ const LEGACY_PATH = `${REPO_PREFIX}/branches/main/protection`;
 const RULES_PATH = `${REPO_PREFIX}/rules/branches/main?per_page=100`;
 
 /** Rule payloads shaped like the rules-for-branch response: type, parameters, and owning ruleset. */
+/** Model required status rules without making latest-main freshness part of the accepted contract. */
 function rulesetRules({ rulesetId = RULESET_ID, pullRequest = {}, checks = {}, omit = [], contexts } = {}) {
   const requiredContexts = contexts ?? [
     ...REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: 15368 })),
@@ -533,7 +532,7 @@ function rulesetRules({ rulesetId = RULESET_ID, pullRequest = {}, checks = {}, o
     {
       type: 'required_status_checks',
       ruleset_id: rulesetId,
-      parameters: { strict_required_status_checks_policy: true, required_status_checks: requiredContexts, ...checks },
+      parameters: { strict_required_status_checks_policy: false, required_status_checks: requiredContexts, ...checks },
     },
     {
       type: 'pull_request',
@@ -581,7 +580,7 @@ const readRuleProtection = async fixtures => {
 const legacyProtection = {
   required_pull_request_reviews: {},
   required_status_checks: {
-    strict: true,
+    strict: false,
     contexts: [],
     checks: [
       ...REQUIRED_BRANCH_CHECKS.map(context => ({ context, app_id: 15368 })),
@@ -640,6 +639,29 @@ test('the owner can bypass only Supervisor review during pull requests under a d
   validateProtection(protection, 'main');
 });
 
+test('passing protected checks do not require the PR branch to include the latest main', async () => {
+  const supervisorRulesetId = 25825587;
+  const rules = [
+    ...rulesetRules({ checks: { strict_required_status_checks_policy: false }, contexts: REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: 15368 })) })
+      .map(rule => ({ ...rule, ruleset_id: RULESET_ID })),
+    {
+      type: 'required_status_checks',
+      ruleset_id: supervisorRulesetId,
+      parameters: {
+        strict_required_status_checks_policy: false,
+        required_status_checks: [{ context: REQUIRED_STATUS_CONTEXT, integration_id: null }],
+      },
+    },
+  ];
+  const { protection } = await readRuleProtection({
+    rules,
+    rulesets: { [supervisorRulesetId]: { enforcement: 'active', bypass_actors: [pullRequestBypass] } },
+  });
+  assert.equal(protection.enforceAdmins, true);
+  assert.deepEqual([...protection.requiredContexts].sort(), [...REQUIRED_BRANCH_CHECKS, REQUIRED_STATUS_CONTEXT].sort());
+  assert.doesNotThrow(() => validateProtection(protection, 'main'));
+});
+
 test('a bypass source is rejected when its fetched full ruleset hides another protection outside the branch slice', async () => {
   const supervisorRulesetId = 25825587;
   const rules = [
@@ -688,30 +710,11 @@ test('legacy administrator enforcement cannot be masked by an owner-bypass-only 
   assert.throws(() => validateProtection(protection, 'main'), /does not apply to administrators/u);
 });
 
-test('the Supervisor-only ruleset cannot supply ordinary up-to-date-base enforcement', async () => {
-  const supervisorRulesetId = 25825587;
-  const rules = [
-    ...rulesetRules({ checks: { strict_required_status_checks_policy: false } }).map(rule => ({ ...rule, ruleset_id: RULESET_ID })),
-    {
-      type: 'required_status_checks',
-      ruleset_id: supervisorRulesetId,
-      parameters: { strict_required_status_checks_policy: true, required_status_checks: [{ context: REQUIRED_STATUS_CONTEXT, integration_id: null }] },
-    },
-  ];
-  const { protection } = await readRuleProtection({
-    rules,
-    rulesets: { [supervisorRulesetId]: { enforcement: 'active', bypass_actors: [alwaysBypass] } },
-  });
-  assert.equal(protection.strict, true);
-  assert.throws(() => validateProtection(protection, 'main'), /does not require an up-to-date base/u);
-});
-
 test('ruleset 24154977 alone yields a protection object that passes validateProtection', async () => {
   const { protection, calls } = await readRuleProtection();
   assert.equal(protection.branch, 'main');
   assert.equal(protection.requiresPullRequest, true); // pull_request rule present
   assert.equal(protection.resolveConversations, true); // required_review_thread_resolution: true
-  assert.equal(protection.strict, true); // strict_required_status_checks_policy: true
   assert.equal(protection.enforceAdmins, true); // active ruleset, no bypass actors
   assert.deepEqual([...protection.requiredContexts].sort(), [...REQUIRED_BRANCH_CHECKS, REQUIRED_STATUS_CONTEXT].sort());
   assert.deepEqual(protection.checkSources, {
@@ -735,12 +738,11 @@ test('legacy protection alone still produces the previously normalized object', 
 });
 
 test('a requirement is satisfied when either legacy protection or a ruleset enforces it', async () => {
-  const legacyWithoutStrict = { ...legacyProtection, required_status_checks: { ...legacyProtection.required_status_checks, strict: false } };
+  const legacyWithoutStrictness = { ...legacyProtection, required_status_checks: { ...legacyProtection.required_status_checks, strict: false } };
   const { protection } = await readRuleProtection({
-    legacy: legacyWithoutStrict,
+    legacy: legacyWithoutStrictness,
     rules: rulesetRules({ omit: ['pull_request'], checks: { required_status_checks: [] } }),
   });
-  assert.equal(protection.strict, true); // ruleset supplies strict
   assert.equal(protection.requiresPullRequest, true); // legacy supplies PRs
   validateProtection(protection, 'main');
 });
@@ -857,8 +859,7 @@ for (const [name, fixtures, expected] of [
   ] }) }, /source restriction is missing for: PR metadata/u],
   ['a missing pull_request rule', { rules: rulesetRules({ omit: ['pull_request'] }) }, /does not require pull requests/u],
   ['a missing thread-resolution requirement', { rules: rulesetRules({ pullRequest: { required_review_thread_resolution: false } }) }, /does not require resolved conversations/u],
-  ['a non-strict status policy', { rules: rulesetRules({ checks: { strict_required_status_checks_policy: false } }) }, /does not require an up-to-date base/u],
-  ['a missing required_status_checks rule', { rules: rulesetRules({ omit: ['required_status_checks'] }) }, /does not require an up-to-date base/u],
+  ['a missing required_status_checks rule', { rules: rulesetRules({ omit: ['required_status_checks'] }) }, /missing required checks: PR metadata/u],
 ]) {
   test(`ruleset protection fails validation with a specific message for ${name}`, async () => {
     const { protection } = await readRuleProtection(fixtures);

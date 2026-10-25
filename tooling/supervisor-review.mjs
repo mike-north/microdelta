@@ -60,12 +60,11 @@ export function validateRequest(request) {
   }
 }
 
-/** Fail closed unless the current main-branch rule contains the complete review and CI gate. */
+/** Require review, administrator, conversation, and source-pinned CI gates; base freshness is not a merge condition. */
 export function validateProtection(protection, defaultBranch) {
   if (protection.branch !== defaultBranch) throw new Error('Protection readback did not match the repository default branch.');
   if (!protection.requiresPullRequest) throw new Error('Main branch protection does not require pull requests.');
   if (!protection.enforceAdmins) throw new Error('Main branch protection does not apply to administrators.');
-  if (!(protection.ordinaryStrict ?? protection.strict)) throw new Error('Main branch protection does not require an up-to-date base.');
   if (!protection.resolveConversations) throw new Error('Main branch protection does not require resolved conversations.');
 
   const contexts = new Set(protection.requiredContexts);
@@ -293,7 +292,6 @@ const RULES_PAGE_SIZE = 100;
 /** The absent-source shape: no requirement is enforced by a source that does not exist. */
 const NO_PROTECTION = Object.freeze({
   requiresPullRequest: false,
-  strict: false,
   enforceAdmins: false,
   resolveConversations: false,
   requiredContexts: Object.freeze([]),
@@ -318,8 +316,6 @@ function mergeProtections(branch, ...sources) {
   return {
     branch,
     requiresPullRequest: sources.some(source => source.requiresPullRequest),
-    strict: sources.some(source => source.strict),
-    ordinaryStrict: sources.some(source => source.ordinaryStrict ?? source.strict),
     enforceAdmins: sources.filter(source => source.contributesProtection).every(source => source.enforceAdmins)
       && sources.some(source => source.contributesProtection),
     resolveConversations: sources.some(source => source.resolveConversations),
@@ -340,8 +336,6 @@ function normalizeLegacyProtection(rule) {
   ]));
   return {
     requiresPullRequest: rule.required_pull_request_reviews != null,
-    strict: checks?.strict === true,
-    ordinaryStrict: checks?.strict === true && rule.enforce_admins?.enabled === true,
     enforceAdmins: rule.enforce_admins?.enabled === true,
     contributesProtection: Object.keys(rule).some(key => key !== 'enforce_admins'),
     resolveConversations: rule.required_conversation_resolution?.enabled === true,
@@ -358,7 +352,6 @@ function normalizeLegacyProtection(rule) {
 function normalizeRulesetProtection(rules, rulesetsById) {
   const protection = {
     requiresPullRequest: false,
-    strict: false,
     resolveConversations: false,
     requiredContexts: [],
     checkSources: {},
@@ -373,14 +366,13 @@ function normalizeRulesetProtection(rules, rulesetsById) {
       protection.requiresPullRequest = true;
       if (rule.parameters?.required_review_thread_resolution === true) protection.resolveConversations = true;
     } else if (rule.type === 'required_status_checks') {
-      if (rule.parameters?.strict_required_status_checks_policy === true) protection.strict = true;
       for (const check of rule.parameters?.required_status_checks ?? []) {
         protection.requiredContexts.push(check.context);
         protection.checkSources = mergeCheckSources(protection.checkSources, { [check.context]: checkSourceForApp(check.integration_id) });
       }
     }
   }
-  const contributors = [...rulesByRuleset].map(([id, ownedRules]) => {
+  const contributors = [...rulesByRuleset].filter(([id]) => rulesetsById.get(id).enforcement === 'active').map(([id, ownedRules]) => {
     const ruleset = rulesetsById.get(id);
     const bypassActors = ruleset.bypass_actors;
     /** Match both GitHub's branch slice and full ruleset detail, so hidden broader rules refuse the exception. */
@@ -392,6 +384,8 @@ function normalizeRulesetProtection(rules, rulesetsById) {
       && candidateRules[0].parameters.required_status_checks[0].integration_id == null;
     const branchOnly = onlySupervisorStatus(ownedRules);
     const detailOnly = onlySupervisorStatus(ruleset.rules);
+    // Compare the raw policy field only to ensure both GitHub views describe the same rule;
+    // branch freshness is not a merge gate.
     const sameStatusRule = branchOnly && detailOnly
       && ownedRules[0].parameters.strict_required_status_checks_policy === ruleset.rules[0].parameters.strict_required_status_checks_policy
       && ownedRules[0].parameters.required_status_checks[0].integration_id === ruleset.rules[0].parameters.required_status_checks[0].integration_id;
@@ -403,16 +397,11 @@ function normalizeRulesetProtection(rules, rulesetsById) {
       && OWNER_REVIEW_BYPASS_MODES.has(bypassActors[0]?.bypass_mode);
     const noBypass = Array.isArray(bypassActors) && bypassActors.length === 0;
     return {
-      active: ruleset.enforcement === 'active',
       enforceAdmins: noBypass || ownerOverride,
-      strict: ownedRules.some(rule => rule.type === 'required_status_checks' && rule.parameters?.strict_required_status_checks_policy === true),
-      ordinaryStrict: ownedRules.some(rule => rule.type === 'required_status_checks' && rule.parameters?.strict_required_status_checks_policy === true)
-        && (noBypass || !ownerOverride),
     };
-  }).filter(source => source.active);
+  });
   const enforceAdmins = contributors.length > 0 && contributors.every(source => source.enforceAdmins);
-  const ordinaryStrict = contributors.some(source => source.active && source.ordinaryStrict);
-  return { ...protection, enforceAdmins, ordinaryStrict, contributesProtection: contributors.length > 0 };
+  return { ...protection, enforceAdmins, contributesProtection: contributors.length > 0 };
 }
 
 /**

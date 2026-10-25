@@ -57,10 +57,19 @@ priority, and progress. Repository issues contain the implementation contract;
 10. Only the supervisor merges accepted work. Merge authority is delegated by the
    repository owner; it does not authorize bypassing checks, force-pushing the
    default branch, publishing packages, or changing secrets and visibility.
-11. After merge, verify the default-branch result, close fully satisfied issues,
-    release claims, update project fields, and unblock only dependencies actually met.
-    Pass, reject, or inconclusive experiment results must state their evidence and
-    the next decision; an inconclusive mechanism is not an adopted implementation.
+11. Passing PR checks do not require merging the latest `main` first. After a
+    merge, verify the default-branch integration build (`npm run check`,
+    `npm test`, and `npm run build`) and repair failures with tests-first changes
+    and independent review. Retain the merged-branch worktree until this
+    verification is complete so it can be used for repairs. A pending default-
+    branch run does not block starting the next ready issue: use a separate
+    worktree, and return to repair only if integration fails. A merged
+    prerequisite may unblock its dependent issues while this build is pending;
+    next ready work uses a separate worktree. Close fully satisfied issues,
+    release claims, update project fields, and unblock only dependencies actually
+    met. Pass, reject, or inconclusive experiment results
+    must state their evidence and the next decision; an inconclusive mechanism is
+    not an adopted implementation.
 
 Use lower-cost agents for contained coding and test work. Keep architecture,
 normative specification changes, evidence assessment, and merge decisions with
@@ -96,8 +105,10 @@ The exact intended required contexts on `main` are **PR metadata**, **core (22)*
 The three Actions checks retain their GitHub Actions source restrictions; the
 supervisor status is an additional exact-head review gate. Each of the two core
 jobs runs `npm ci`, `npm run check`, `npm test`, and `npm run build`.
-Require a pull request, passing required checks on an up-to-date base, resolved
-review conversations, and administrator enforcement for ordinary protections.
+Require a pull request, passing required checks, resolved review conversations,
+and administrator enforcement for ordinary protections. Branch freshness is
+intentionally not a merge requirement; the default-branch integration build is
+verified and repaired after merge.
 The repository owner may bypass only the dedicated Supervisor review status
 ruleset; agents always follow the normal protected review and merge path and never
 request administrator bypass. The checker verifies that the bypass scope contains
@@ -136,7 +147,7 @@ Implementers continue to stop at PR-open.
 
 When retiring a CI matrix job, first verify that both legacy protection and every
 active contributing ruleset no longer require its context while all retained
-contexts, source restrictions, strictness, PR/review rules and administrator
+contexts, source restrictions, PR/review rules and administrator
 enforcement remain in force. Remove only that obsolete requirement while the
 old job still runs, then read protection back before merging the workflow change.
 If the obsolete context remains required, stop: removing its job would leave a

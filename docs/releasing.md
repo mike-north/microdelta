@@ -86,7 +86,10 @@ the PR manually. The repository owner's narrow override applies only to the
 dedicated Supervisor review status; it does not waive release checks, Copilot
 review, human confirmation, or the manual release decision. Agents never request
 administrator bypass. This workflow does not change the repository's checks or
-protections.
+protections. A release PR with passing required checks may merge without first
+incorporating the latest `main`; after merge, the default-branch integration
+build is verified and any failures are repaired under the normal tests-first
+and independent-review process.
 
 The repository setting **Allow GitHub Actions to create and approve pull
 requests** must be enabled for Changesets to create the PR. The `version` job

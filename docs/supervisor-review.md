@@ -3,8 +3,10 @@
 Issue #34 adds one protected status, **Supervisor review**, so a substantive
 supervisory decision applies only to the commit that was reviewed. Each new head
 starts without that successful status. The three existing Actions checks remain
-independent requirements, as do pull-request-only changes, an up-to-date `main`,
-administrator enforcement, and resolved review conversations.
+independent requirements, as do pull-request-only changes, administrator
+enforcement, and resolved review conversations. Passing checks do not require
+the PR branch to include the latest `main`; branch freshness is intentionally
+not a merge requirement.
 
 ## Procedure
 
@@ -45,8 +47,8 @@ node tooling/supervisor-review.mjs \
 
 The command is fixed to `mike-north/microdelta`. Before it writes, it reads back
 the repository's current `main` protection and verifies that it requires PRs,
-strict up-to-date checks, administrator enforcement, resolved conversations, all
-three existing checks, and **Supervisor review**. It verifies that each existing
+administrator enforcement, resolved conversations, all three existing checks,
+and **Supervisor review**. It verifies that each existing
 check remains restricted to the GitHub Actions app. If any part of the review
 gate is absent, the command fails before writing a comment or status. The root
 supervisor must install and independently verify this protection before first use.
@@ -59,9 +61,8 @@ enforces it; a requirement absent from both fails.
   branch has none and is not an error; any other failure stops the command.
 - **Active rulesets** (`GET rules/branches/main`, then `GET rulesets/{id}` for each
   contributing ruleset). A `pull_request` rule requires PRs;
-  `required_review_thread_resolution: true` requires resolved conversations;
-  `strict_required_status_checks_policy: true` is the up-to-date base. Each
-  required status check is read with its `integration_id`: 15368 is the GitHub
+  `required_review_thread_resolution: true` requires resolved conversations.
+  Each required status check is read with its `integration_id`: 15368 is the GitHub
   Actions app, and **Supervisor review** stays an unscoped status. Administrator
   enforcement is assessed per contributing source before requirements are combined:
   ordinary protections must apply to administrators in every source that supplies
@@ -69,8 +70,8 @@ enforces it; a requirement absent from both fails.
   branch protection is the **Supervisor review** status and whose sole bypass actor
   is RepositoryRole ID 5 with `always` or pull-request-only (`pull_request`) mode.
   The narrower pull-request-only mode supports the same owner override without
-  widening it. That exception cannot supply ordinary strictness, PR requirements,
-  conversation resolution, or CI checks. The checker
+  widening it. That exception cannot supply ordinary protections, PR
+  requirements, conversation resolution, or CI checks. The checker
   derives this from the returned branch rules, each full ruleset's rule details,
   and actor data; it refuses the exception if full details are absent or broader
   than the branch slice. It does not trust a ruleset name or ID. An `evaluate` or
@@ -109,6 +110,15 @@ The status prevents a stale review on an older SHA from satisfying the new
 commit's review gate. Agents share one GitHub identity, so this procedural gate
 does not prove distinct identity or protect against another actor with the same
 credentials.
+
+Once all required PR, review, and status gates pass, the branch need not
+incorporate the latest `main` before merge. After merge, retain the
+merged-branch worktree and verify the
+default-branch integration build with `npm run check`, `npm test`, and
+`npm run build`; repair integration failures with tests-first changes and
+independent review. This post-merge acceptance work is asynchronous: a pending
+default-branch run does not block starting another ready issue in a separate
+worktree. Return to the retained worktree if integration fails.
 
 If more code changes are requested after review, the supervisor first disables
 auto-merge and invalidates the old review status as appropriate. The implementation

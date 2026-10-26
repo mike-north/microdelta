@@ -6,11 +6,12 @@ import { spawnSync } from 'node:child_process';
 import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
 import { summarizeRetainedSubjectRows } from './.test-build/fixtures/contribution-report/workload-harness.js';
+import { qualificationPhaseTimeoutMilliseconds } from './.test-build/fixtures/contribution-report/workload-budget.js';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
 const worker = join(root, 'fixtures/contribution-report/.test-build/fixtures/contribution-report/workload-worker.js');
 const directory = mkdtempSync(join(tmpdir(), 'issue260-controlled-workload-'));
-const timeout = 12 * 60 * 60 * 1_000;
+const timeout = qualificationPhaseTimeoutMilliseconds;
 const smoke = process.argv.includes('--smoke');
 const personCount = smoke ? 2 : 300;
 const requiredPulls = smoke ? 500 : 150_000;

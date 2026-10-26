@@ -33,3 +33,13 @@ cold and independent-process restart qualification. `-- --smoke` selects only a
 500-PR harness smoke; it does not satisfy the workload gate. The workload driver
 retains compact measured receipts beneath its printed temporary directory.
 No fixture reaches a live provider or reads credentials.
+
+Each qualification phase is one supervised fold request with a parent process
+deadline of 12 hours. Its isolated workspace explicitly budgets a writer lease
+of 12 hours and 60 seconds, including a bounded shutdown allowance. The existing writer
+contract renews at request boundaries, not during one request. This harness
+configuration accepts correspondingly long recovery after a killed holder;
+it changes no production default, fencing, heartbeat, admission window, retry
+policy or performance requirement. The controlled-clock worker regression
+crosses the default30-second lease within that phase budget, while a separate
+nine-person/two-slot test pins normal bounded-window completion.

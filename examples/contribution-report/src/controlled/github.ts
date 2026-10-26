@@ -19,6 +19,9 @@ export function searchUrl(query: ISearchQuery, page = 1): string {
 }
 /** Refuse every incomplete population before detail admission. @internal */
 export async function discoverAuthored(query: ISearchQuery, transport: IRestTransport): Promise<ICompletedSearch> {
+  // Request construction, response validation and reported identities use one scalar binding across every await.
+  const selected: ISearchQuery = { repository: query.repository, login: query.login, start: query.start, end: query.end, perPage: query.perPage };
+  searchUrl(selected);
   /** Provider IDs and qualified numbers must form one correspondence throughout every accepted leaf. */
   const byProvider = new Map<number, number>();
   const byNode = new Map<string, number>();
@@ -70,8 +73,8 @@ export async function discoverAuthored(query: ISearchQuery, transport: IRestTran
       ordinal += 1;
     }
   }
-  const found = await traverse(query);
-  return { count: found.size, ids: [...found.keys()].sort((left, right) => left - right).map(number => `${query.repository}#${String(number)}`) };
+  const found = await traverse(selected);
+  return { count: found.size, ids: [...found.keys()].sort((left, right) => left - right).map(number => `${selected.repository}#${String(number)}`) };
 }
 
 /** Untrusted JSON must narrow before any provider field can become domain evidence. @internal */

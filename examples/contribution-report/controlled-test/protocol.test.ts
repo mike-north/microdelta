@@ -20,6 +20,18 @@ function page(total: number, items: readonly unknown[], link?: string): IRestRes
 }
 
 describe('fixed backing dataset REST-shaped controlled search', () => {
+  test.each([true, false])('caller query mutation cannot change identity validation/result binding; original response=%s', async original => {
+    const mutable = { ...query };
+    const transport: IRestTransport = async () => {
+      await Promise.resolve();
+      mutable.repository = 'other/repo';
+      const selected = item(101);
+      return page(1, [original ? selected : { ...selected, repository_url: 'https://api.github.com/repos/other/repo', pull_request: { url: 'https://api.github.com/repos/other/repo/pulls/101' } }]);
+    };
+    const result = discoverAuthored(mutable, transport);
+    if (original) { await expect(result).resolves.toEqual({ count: 1, ids: ['acme/widget#101'] }); }
+    else { await expect(result).rejects.toThrow('coverage'); }
+  });
   test('a literal equivalent Link with reordered unique parameters is followed', async () => {
     const literal = 'https://api.github.com/search/issues?page=2&order=asc&per_page=2&sort=created&q=is%3Apr+repo%3Aacme%2Fwidget+author%3Aada+created%3A2026-01-01T00%3A00%3A00.000Z..2026-01-01T00%3A00%3A01.000Z';
     const fake = script([page(2, [item(101)], `<${literal}>; rel="next"`), page(2, [item(102)])]);

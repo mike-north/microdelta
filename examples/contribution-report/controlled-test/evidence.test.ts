@@ -19,6 +19,35 @@ function scripted(responses: readonly IRestResponse[]): { readonly transport: IR
 function ok(body: unknown, link?: string): IRestResponse { return { status: 200, headers: link === undefined ? {} : { link }, body }; }
 
 describe('required PR evidence', () => {
+  test('discussion cutoff mutation cannot admit later creations under the original temporal basis', async () => {
+    const mutable = { ...scope, start: 100, end: 2000, cutoff: 1000 };
+    let requests = 0;
+    const transport: IRestTransport = async () => {
+      requests += 1; await Promise.resolve(); mutable.cutoff = 1500;
+      return ok(requests === 2 ? [{ id: 1, body: 'Post-cutoff', user: { login: 'commenter' }, created_at: new Date(1200 * 1000).toISOString(), updated_at: new Date(1200 * 1000).toISOString() }] : []);
+    };
+    await expect(loadDiscussion('acme/widget#101', mutable, transport, { kind: 'controlled-as-of', scenario: 'fixed-a', cutoff: 1000 })).resolves.toMatchObject({ comments: [], latestActivity: 1200, contentBasis: { cutoff: 1000 } });
+  });
+  test('configured numeric repository identity cannot change during traversal', async () => {
+    const repositoryIds = { 'acme/widget': 123 };
+    const next = 'https://api.github.com/repositories/999/pulls/101/reviews?page=2&per_page=100';
+    let requests = 0;
+    const transport: IRestTransport = async () => { requests += 1; await Promise.resolve(); repositoryIds['acme/widget'] = 999; return requests === 1 ? ok([], `<${next}>; rel="next"`) : ok([]); };
+    await expect(loadDiscussion('acme/widget#101', { ...scope, repositoryIds }, transport)).rejects.toThrow('coverage');
+    expect(requests).toBe(1);
+  });
+  test('PR cutoff and consumed wire scalars are captured before later transport can mutate their owners', async () => {
+    const mutableScope = { ...scope };
+    const representation = { id: 71, number: 101, base: { repo: { full_name: 'acme/widget' } }, title: 'Original title', body: 'Original body', state: 'closed', created_at: '2026-01-01T12:00:00Z', updated_at: '2026-01-01T13:00:00Z', closed_at: '2026-01-04T00:00:00Z', merged_at: '2026-01-04T00:00:00Z', labels: [] };
+    let requests = 0;
+    const transport: IRestTransport = async () => {
+      requests += 1; await Promise.resolve();
+      if (requests === 1) { mutableScope.cutoff = Date.parse('2026-01-05T00:00:00Z') / 1000; return ok(representation); }
+      representation.title = 'Changed after JSON receipt'; representation.body = 'Changed body';
+      return ok('diff');
+    };
+    await expect(loadPull('acme/widget#101', mutableScope, transport)).resolves.toMatchObject({ title: 'Original title', body: 'Original body', merged: false, terminalAt: null });
+  });
   test('a caller cannot change a validated controlled temporal basis while endpoint awaits are in progress', async () => {
     const basis = { kind: 'controlled-as-of', scenario: 'fixed-a', cutoff: scope.cutoff } as const;
     let requests = 0;

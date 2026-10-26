@@ -15,6 +15,7 @@ export interface IDiscussionEntry { readonly id: number; readonly body: string; 
 export interface IDiscussion { readonly id: string; readonly reviews: readonly IDiscussionEntry[]; readonly comments: readonly IDiscussionEntry[]; readonly inlineComments: readonly IDiscussionEntry[]; readonly latestActivity: number; readonly complete: boolean; readonly contentBasis: IContentBasis }
 /** Fetch the JSON and diff representations needed by the assessment. @internal */
 export async function loadPull(id: string, scope: IProviderScope, transport: IRestTransport): Promise<IPullDetail> {
+  const { start, end, cutoff } = captureBounds(scope);
   const { repository, number, url } = pullAddress(id, scope);
   const response = await transport(url);
   const value = response.body;
@@ -23,25 +24,32 @@ export async function loadPull(id: string, scope: IProviderScope, transport: IRe
     || (value.state !== 'closed' && value.state !== 'open') || !Array.isArray(value.labels)) { return incomplete(); }
   const created = timestamp(value.created_at);
   const updated = timestamp(value.updated_at);
-  if (created < scope.start || created >= Math.min(scope.end, scope.cutoff) || updated > scope.cutoff) { return incomplete(); }
+  if (created < start || created >= Math.min(end, cutoff) || updated > cutoff) { return incomplete(); }
   const merged = value.merged_at === null ? null : timestamp(value.merged_at);
   const closed = value.closed_at === null ? null : timestamp(value.closed_at);
   const labels = value.labels.map((label: unknown) => { if (!isRecord(label) || typeof label.name !== 'string') { return incomplete(); } return label.name; });
+  const title = value.title;
+  const body = value.body ?? '';
+  const state = value.state;
   const diff = await transport(url, 'application/vnd.github.diff');
   if (diff.status !== 200 || typeof diff.body !== 'string') { return incomplete(); }
-  const terminalAt = value.state === 'closed' && closed !== null && closed <= scope.cutoff ? closed : null;
-  return { id, title: value.title, body: value.body ?? '', diff: diff.body, merged: merged !== null && merged <= scope.cutoff, terminalAt,
+  const terminalAt = state === 'closed' && closed !== null && closed <= cutoff ? closed : null;
+  return { id, title, body, diff: diff.body, merged: merged !== null && merged <= cutoff, terminalAt,
     latestActivity: Math.max(created, updated, closed ?? 0, merged ?? 0), complete: true, labels };
 }
 /** Finish reviews, conversation comments and inline comments separately. @internal */
 export async function loadDiscussion(id: string, scope: IProviderScope, transport: IRestTransport, basis: IContentBasis = { kind: 'unverified' }): Promise<IDiscussion> {
+  const { start, end, cutoff } = captureBounds(scope);
   // Capture once before transport can run caller code; readonly annotations do not freeze caller-owned objects.
   const contentBasis: IContentBasis = basis.kind === 'controlled-as-of'
     ? Object.freeze({ kind: 'controlled-as-of', scenario: basis.scenario, cutoff: basis.cutoff }) : Object.freeze({ kind: 'unverified' });
-  if (contentBasis.kind === 'controlled-as-of' && (contentBasis.cutoff !== scope.cutoff || !Number.isSafeInteger(contentBasis.cutoff) || contentBasis.cutoff < 0
+  if (contentBasis.kind === 'controlled-as-of' && (contentBasis.cutoff !== cutoff || !Number.isSafeInteger(contentBasis.cutoff) || contentBasis.cutoff < 0
     || contentBasis.scenario.length > 128 || !/^[a-zA-Z0-9_.:-]+$/u.test(contentBasis.scenario))) { return incomplete(); }
   const { repository, number, url } = pullAddress(id, scope);
-  let latestActivity = scope.start;
+  // Only this repository's configured numeric alias is consumed; never materialize the whole tracked mapping.
+  const repositoryId = scope.repositoryIds?.[repository];
+  if (repositoryId !== undefined && (!Number.isSafeInteger(repositoryId) || repositoryId < 1)) { return incomplete(); }
+  let latestActivity = start;
   /** Every endpoint traverses its own Link chain; search closure conveys no list coverage. */
   async function entries(endpoint: string, review: boolean): Promise<readonly IDiscussionEntry[]> {
     let ordinal = 1;
@@ -70,15 +78,13 @@ export async function loadDiscussion(id: string, scope: IProviderScope, transpor
         if (updated < at) { return incomplete(); }
         // Relevant activity and displayed creation-window membership are different questions.
         latestActivity = Math.max(latestActivity, at, updated);
-        if (at >= Math.min(scope.end, scope.cutoff) || at < scope.start) { continue; }
+        if (at >= Math.min(end, cutoff) || at < start) { continue; }
         // Current edited bodies do not reconstruct arbitrary historical text.
-        if (!review && updated > scope.cutoff) { return incomplete(); }
+        if (!review && updated > cutoff) { return incomplete(); }
         included.push({ id: value.id, body: value.body, author: value.user.login, at });
       }
       const next = nextLink(response.headers.link);
       if (next === undefined) { return included.sort((left, right) => left.id - right.id); }
-      const repositoryId = scope.repositoryIds?.[repository];
-      if (repositoryId !== undefined && (!Number.isSafeInteger(repositoryId) || repositoryId < 1)) { return incomplete(); }
       requestUrl = continuationUrl(next, root, ordinal + 1, repositoryId === undefined ? undefined : { name: repository, id: repositoryId });
       ordinal += 1;
     }
@@ -87,6 +93,15 @@ export async function loadDiscussion(id: string, scope: IProviderScope, transpor
   const comments = await entries(`https://api.github.com/repos/${repository}/issues/${String(number)}/comments`, false);
   const inlineComments = await entries(`${url}/comments`, false);
   return { id, reviews, comments, inlineComments, latestActivity, complete: true, contentBasis };
+}
+
+/** Scalar report bounds form one operation binding; transport cannot relabel it by mutating caller-owned input. */
+function captureBounds(scope: IProviderScope): { readonly start: number; readonly end: number; readonly cutoff: number } {
+  const start = scope.start;
+  const end = scope.end;
+  const cutoff = scope.cutoff;
+  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || !Number.isSafeInteger(cutoff) || start < 0 || end <= start || cutoff <= start) { return incomplete(); }
+  return { start, end, cutoff };
 }
 
 /** Qualified IDs select only explicitly configured repositories, never an arbitrary response URL. */

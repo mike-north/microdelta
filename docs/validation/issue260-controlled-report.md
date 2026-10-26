@@ -271,8 +271,11 @@ Independent pre-run and post-run read-only checks verify all 74 named inputs,
 the complete 76 generated fixture artifacts, 527 tracked package files and
 255 package-dist artifacts across 11 packages, nine alpha declaration entries
 and all 11 normal public Node resolutions. Exact HEAD stayed clean at `e3278b7`.
-Package/application/lock/root-script objects match baseline `b4773c2`; package
-source/build aggregates, public metadata/entry hashes and alpha declarations
+The `examples/contribution-report/src/controlled` tree, `packages` tree,
+`package-lock.json` and root `package.json` objects match the accepted `b4773c2`
+baseline. Qualification harness and loader scripts changed only through the
+separately reviewed repairs. Package source/build aggregates, public
+metadata/entry hashes and alpha declarations
 match the preserved post-baseline `9cc` manifest. Generated application JS and
 declarations match independent baseline receipts. This verifies byte continuity;
 it does not claim a fresh rebuild, reproducible build or repeated package tests.

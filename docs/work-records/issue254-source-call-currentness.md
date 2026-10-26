@@ -1,11 +1,14 @@
 # Issue 254: current source calls within completed-search person summaries
 
-Local implementation candidate on `codex/issue-254-source-call-currentness`.
+Implementation branch: `codex/issue-254-source-call-currentness`; published as
+[PR #259](https://github.com/mike-north/microdelta/pull/259).
 Governing issue: <https://github.com/mike-north/microdelta/issues/254>.
 Selected contract: [scoped-source-calls](../plans/scoped-source-calls.md), reviewed
 at `615e0bfa9085dbca07df03c22a3635767fc2950e` in PR #253. Implementation and
-acceptance are separate: independent source review and root evidence review
-are complete; no push, PR, merge, release or paid/provider execution is claimed.
+acceptance are separate: the published feature completed independent source
+review and root evidence review. The local Copilot diagnostic follow-up below
+awaits its own independent review before push. No merge, release or paid/provider
+execution is claimed.
 
 ## Ownership and change
 
@@ -131,6 +134,38 @@ The same different reviewer completed repaired-source review **PASS** at
 `8eda90881520f1cdc28acf8d8b10cc48d7432a19`; root reviewed the evidence-only
 successor and verified the successful receipts. Publication and merge remain
 subject to the normal PR CI, completed Copilot review and supervisor gates.
+
+## Copilot diagnostic follow-up
+
+Root accepted Copilot review comment `4373214548` in PR #259 as one bounded
+diagnostic correction against published head
+`b18897e9d5ac8eb8b0ae94615270df33a0cc9466`. The wrong-kind branch formerly
+said the slot was not occupied by a supplied step even when it held an
+implementation of the other kind. Its message now names the slot, expected
+`supplied-source`/`supplied-step` kind and actual occupied kind. No argument
+values enter that diagnostic. Definition's `missing-slot` code and Resolution's
+`unbound-step` wrapper remain unchanged; the separate missing-occupancy message,
+per-edge kind checks, and matching-alias behavior are untouched.
+
+Tests were extended first in both mixed-order outcomes to assert the exact
+safe cause message, `missing-slot` cause code, and enclosing `unbound-step`
+message/code. They failed against the previous diagnostic (2 RED), while both
+matching-kind alias controls remained GREEN. After the one-literal repair all
+four pass, including the existing zero-author-code and zero-publication proofs.
+
+Affected verification passed: Definition and core type/lint checks (including
+strict generated-alpha consumer), Definition runtime 287 assertions and tsd,
+all source-call/nested runtime 107 assertions across 8 suites, core tsd,
+declaration tiers and import boundaries. Definition's build passed with no API
+report change. `/tmp/issue254-diagnostic-checks.exit` is 0; RED/GREEN and complete
+check output are in the corresponding diagnostic logs. No broad full suite is
+repeated for this diagnostic-only change: the throwing branch, codes, binding
+and execution behavior are unchanged. The feature Changeset already covers it;
+no new API or Changeset is introduced.
+
+This local follow-up requires different-agent review and root authorization
+before push or any GitHub reply/resolve action. Normal PR CI/Copilot/supervisor
+gates continue to govern merge.
 
 ## Validation state and limits
 

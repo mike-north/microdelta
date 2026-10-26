@@ -443,7 +443,7 @@ export function openInvocationIn<TFamily extends IBindingFamily>(
     // declared edge. A cached target permits matching aliases, never an edge
     // of the other kind merely because an earlier edge used the same name.
     if ((target.declaration.kind === 'supplied-source') !== edge.source) {
-      return reject('missing-slot', `Supplied step slot ${edge.slot} is not occupied by a supplied step.`);
+      return reject('missing-slot', `Callable slot ${edge.slot} expects ${edge.source ? 'supplied-source' : 'supplied-step'} but is occupied by ${target.declaration.kind}.`);
     }
   }
   /** The parent invocation's call order: the next dispatched call's position. */

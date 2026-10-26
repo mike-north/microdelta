@@ -61,7 +61,12 @@ describe('callable source/memo kind correspondence', () => {
         ? api.supplySource({ slot: source, declaration: sourceImplementation, subject })
         : api.supply({ slot: memo, declaration: memoImplementation, subject });
       const composition = api.compose({ scope, helpers: [{ slot: 'hit', helper: (boundary: string): void => { events.push(boundary); } }], steps: [{ slot: 'parent', declaration: parent }], supplied: [supplied] });
-      await expect(workspace.run({ authoring: api, composition, environment, observers: [{ observe: event => { if (event.kind === 'step') { phases.push(event.event.phase); } } }] }, run => run.resolve({ scope, role: 'step', slot: 'parent' }, { requestKey: `wrong-kind:${bound}` }))).rejects.toMatchObject({ code: 'unbound-step' });
+      const expectedKind = bound === 'source' ? 'supplied-step' : 'supplied-source';
+      const actualKind = bound === 'source' ? 'supplied-source' : 'supplied-step';
+      const diagnostic = `Callable slot same expects ${expectedKind} but is occupied by ${actualKind}.`;
+      await expect(workspace.run({ authoring: api, composition, environment, observers: [{ observe: event => { if (event.kind === 'step') { phases.push(event.event.phase); } } }] }, run => run.resolve({ scope, role: 'step', slot: 'parent' }, { requestKey: `wrong-kind:${bound}` }))).rejects.toMatchObject({
+        code: 'unbound-step', message: expect.stringContaining(diagnostic), cause: { code: 'missing-slot', message: diagnostic },
+      });
       expect(events).toEqual([]);
       expect(phases).not.toContain('publish');
       expect(publishedSubjects(location)).toEqual([]);

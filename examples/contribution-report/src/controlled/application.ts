@@ -21,6 +21,8 @@ export interface IAssessmentRequest { readonly id: string; readonly title: strin
 /** Host hashing/clock, configured rate association and remote effects are injected at assembly. @internal */
 export interface IReportServices {
   readonly githubRate: IOperationSharedRate;
+  /** Search can name a narrower authoritative cooldown while still carrying every mandatory API gate. */
+  readonly githubSearchRate?: IOperationSharedRate;
   readonly assessmentRate: IOperationSharedRate;
   readonly connection: string;
   readonly retry: { readonly maxAttempts: number; readonly backoffMilliseconds: number };
@@ -77,7 +79,7 @@ export function composeReport(inputs: IReportInputs, services: IReportServices):
   /** Every HTTP representation, including continuation pages, uses the runtime's existing operation authority. */
   const transport = (url: string, accept?: 'application/vnd.github.diff'): Promise<IRestResponse> => currentExecution().operation<IRestResponse>({
     name: url.includes('/search/issues?') ? 'github-search' : 'github-detail', binding: services.digest(JSON.stringify([url, accept ?? 'json'])),
-    sharedRate: services.githubRate, retry: services.retry,
+    sharedRate: url.includes('/search/issues?') ? services.githubSearchRate ?? services.githubRate : services.githubRate, retry: services.retry,
     retrySource: { source: 'controlled-github-rest', service: 'controlled', connection: services.connection },
     perform: async send => normalizeGithub(await services.github(url, accept, send), services.now()),
   });

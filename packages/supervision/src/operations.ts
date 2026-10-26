@@ -26,6 +26,7 @@
 import type { IAdmissionRequest } from '@microdelta/resolution';
 
 import type { IAbortSignal } from './control.js';
+import type { IOperationSharedRate } from './shared-rate-dispatch.js';
 import type { IRunContext } from './contracts.js';
 
 /**
@@ -260,6 +261,8 @@ export interface IOperationRequest<T> {
   readonly retry?: IOperationRetryPolicy;
   /** Exact adapter/service/access identity used to select a reusable source retry policy. */
   readonly retrySource?: IRetrySourceScope;
+  /** Explicit registered surface and known cooldown attribution; admission still checks every gate. */
+  readonly sharedRate?: IOperationSharedRate;
   /** Send one request attempt and classify its response. A rejection is an unknown outcome. */
   perform(send: IOperationSend): Promise<IOperationResponse<T>>;
   /**

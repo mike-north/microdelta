@@ -25,7 +25,7 @@
 import { declarations } from '@microdelta/definition';
 import type { IFoldEntry, IMemberBuilder, IOutcomeEntry } from '@microdelta/definition';
 import { SupervisionError } from '@microdelta/supervision';
-import type { IOperationRetryPolicy, IRetrySourceScope, ISupervision } from '@microdelta/supervision';
+import type { IOperationRetryPolicy, IOperationSharedRate, IRetrySourceScope, ISupervision } from '@microdelta/supervision';
 
 import { sourceOutcome } from '../../src/index.js';
 import type { IAuthoring, IAuthoringFamily, IComposition, ISourceOutcome, IStepDescriptor, ITrackedView } from '../../src/index.js';
@@ -81,6 +81,8 @@ export interface IOperationOptions {
   readonly retry?: IOperationRetryPolicy;
   /** Exact source scope used by tests of reusable retry-policy selection. */
   readonly retrySource?: IRetrySourceScope;
+  /** Explicit configured surface for fixed shared admission tests. */
+  readonly sharedRate?: IOperationSharedRate;
 }
 
 /** The mutable fixture world one test installs. */

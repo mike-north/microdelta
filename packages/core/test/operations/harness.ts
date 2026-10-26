@@ -29,7 +29,7 @@ import { createNodeMachine, createNodeRandom, createNodeSqlite } from '@microdel
 import { createResolution } from '@microdelta/resolution';
 import type { IResolutionHistory } from '@microdelta/resolution';
 import { createSupervision, operationJournalDeclaration } from '@microdelta/supervision';
-import type { IDeferralMode, IOperationAccounting, IRunRandom, IRun, IRunEvent, IRunResult, IRunTimer, ISourceRetryPolicy, IStopController, ISupervision, IWriterWaitOptions } from '@microdelta/supervision';
+import type { IDeferralMode, IOperationAccounting, IRunRandom, IRun, IRunEvent, IRunResult, IRunTimer, ISourceRetryPolicy, IStopController, ISupervision, ISharedRateDispatchOptions, IWriterWaitOptions } from '@microdelta/supervision';
 import { createTrackingObserver } from '@microdelta/tracking';
 
 import { writerFor } from '../../src/writer.js';
@@ -166,6 +166,8 @@ export function freshKey(): { readonly requestKey: string } {
 
 /** Options of a session. */
 export interface ISessionOptions {
+  /** One assembly-owned rate ledger and its duration clock, shared explicitly across sessions. */
+  readonly sharedRates?: ISharedRateDispatchOptions;
   /** Analysis namespace selected by the fixture composition; default is the operations analysis. */
   readonly analysis?: string;
   /** The writer lease duration on the controlled clock; one day when absent. */
@@ -188,7 +190,7 @@ export function openSession(stores: Pick<IOperationStores, 'history' | 'accounti
   const history = openDurableHistory({ sqlite: createNodeSqlite(), clock: { currentEpochMilliseconds: () => timer.currentEpochMilliseconds() }, sha256: machine, location: stores.history, logicalStore });
   const accounting = openDurableAccounting({ sqlite: options.accountingSqlite ?? createNodeSqlite(), location: stores.accounting, logicalStore });
   const journal = history.openJournal(operationJournalDeclaration);
-  const supervision = createSupervision({ context: machine, timer });
+  const supervision = createSupervision({ context: machine, timer, ...(options.sharedRates === undefined ? {} : { sharedRates: options.sharedRates }) });
   const random = options.random ?? createNodeRandom();
   const fixture = composeOperations(options.analysis);
   useSupervision(supervision);

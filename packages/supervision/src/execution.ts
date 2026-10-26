@@ -164,7 +164,9 @@ export interface ISendFields<T> {
  * rechecks stop after the hook and observer callbacks before `perform`.
  */
 export interface IOperationTransport {
-  transmit<T>(fields: ISendFields<T>, beforePerform: () => void): Promise<ITransmitted<T>>;
+  transmit<T>(fields: ISendFields<T>, beforePerform: () => void, authorize?: () => (() => void) | undefined): Promise<ITransmitted<T>>;
+  /** A rate wait preserves admitted first-attempt soft drain, holding no network permit. */
+  waitForSend(epochMilliseconds: number, retry: boolean): Promise<void>;
   sleepUntil(epochMilliseconds: number): Promise<void>;
 }
 
@@ -672,10 +674,11 @@ export function runControls(frame: IRunFrame): IRunExecution {
    * One permit-guarded transmission. `beforePerform` commits an external
    * operation's intent after the permit and initial stop check. It and the
    * begin observer can re-enter run control synchronously, so stop authority
-   * is rechecked after each before the provider callback. A refusal releases
+   * is rechecked after each and after fenced authorization, before the
+   * rate commit and provider callback. A refusal releases
    * the permit without treating an uncalled provider as remotely aborted.
    */
-  async function transmit<T>(fields: ISendFields<T>, beforePerform: () => void): Promise<ITransmitted<T>> {
+  async function transmit<T>(fields: ISendFields<T>, beforePerform: () => void, authorize: () => (() => void) | undefined = () => undefined): Promise<ITransmitted<T>> {
     const { label, retry, perform, cancel } = fields;
     const before = sendRefusal(retry);
     if (before !== undefined) {
@@ -701,10 +704,27 @@ export function runControls(frame: IRunFrame): IRunExecution {
       return refuse(label, afterIntent);
     }
     sendEvent(label, 'begin');
+    let commitPossibleSend: (() => void) | undefined;
+    try {
+      // Fenced authorization may re-enter run control through its ports.
+      // Its returned commit reads the injected timing/coordinator ports,
+      // rechecks floors/gates and stamps the possible-send debit. It offers
+      // no author or observer hook after this final stop boundary.
+      commitPossibleSend = authorize();
+    } catch (error: unknown) {
+      permit.release();
+      return { kind: 'unrecorded', error };
+    }
     const beforeDispatch = sendRefusal(retry);
     if (beforeDispatch !== undefined) {
       permit.release();
       return refuse(label, beforeDispatch);
+    }
+    try {
+      commitPossibleSend?.();
+    } catch (error: unknown) {
+      permit.release();
+      return { kind: 'unrecorded', error };
     }
     // The send's own signal: it aborts when the run's hard signal does, and is
     // detached from the run as soon as the send settles. An adapter listener
@@ -766,9 +786,9 @@ export function runControls(frame: IRunFrame): IRunExecution {
     }
   }
 
-  async function sleep(epochMilliseconds: number, timer: IRunTimer): Promise<void> {
+  async function sleep(epochMilliseconds: number, timer: IRunTimer, retry?: boolean): Promise<void> {
     const level = observedLevel(run);
-    const before = attempt?.taint ?? (level === 'none' ? undefined : `a ${level} stop refuses the wait`);
+    const before = retry === undefined ? attempt?.taint ?? (level === 'none' ? undefined : `a ${level} stop refuses the wait`) : sendRefusal(retry);
     if (before !== undefined) {
       taint(attempt, before);
       throw new SupervisionError('stopped', `The wait was refused: ${before}`);
@@ -778,7 +798,8 @@ export function runControls(frame: IRunFrame): IRunExecution {
     try {
       await new Promise<void>((resolve, reject) => {
         let cancelTimer: () => void = () => undefined;
-        const remove = run.stopped.signal.onAbort(() => {
+        const signal = retry === false && attempt !== undefined ? run.hard.signal : run.stopped.signal;
+        const remove = signal.onAbort(() => {
           cancelTimer();
           const reason = `a ${observedLevel(run)} stop ended the wait`;
           taint(attempt, reason);
@@ -837,6 +858,7 @@ export function runControls(frame: IRunFrame): IRunExecution {
       }
       const transport: IOperationTransport = Object.freeze({
         transmit,
+        waitForSend: (epochMilliseconds: number, retry: boolean) => sleep(epochMilliseconds, timer, retry),
         sleepUntil: (epochMilliseconds: number) => sleep(epochMilliseconds, timer),
       });
       return run.track(() => operations.call(frame, transport, request));

@@ -18,8 +18,9 @@
 import { describe, expect, test } from '@jest/globals';
 import type { IResolution, IResolutionOutcome } from '@microdelta/resolution';
 
-import { SupervisionError, createStopController, createSupervision, operationJournalDeclaration, operationsCollection } from '../src/index.js';
+import { SupervisionError, createSharedRateCoordinator, createStopController, createSupervision, operationJournalDeclaration, operationsCollection } from '../src/index.js';
 import { decodeOperation, encodeOperation } from '../src/records.js';
+import { _inspectSharedRateDebits } from '../src/shared-rate-coordinator.js';
 import type {
   IJournalEntry,
   IJournalLocation,
@@ -33,9 +34,10 @@ import type {
   IRunOptions,
   IRunRandom,
   IStopController,
+  ISupervision,
   IWaitEvent,
 } from '../src/index.js';
-import { T0, admissionFor, codeOf, fakeTimer, grantingWriter, nodeScopes, stepOf } from './support.js';
+import { T0, admissionFor, codeOf, fakeTimer, grantingWriter, nodeScopes, settle, stepOf } from './support.js';
 
 /** An in-memory journal port with failure injection. */
 interface IMemoryJournal extends IOperationJournalPort {
@@ -43,7 +45,7 @@ interface IMemoryJournal extends IOperationJournalPort {
   failFrom: number | undefined;
   readonly commits: number;
   /** Store a raw record, as damage or an earlier process would. */
-  put(collection: string, key: string, content: unknown, format?: string): void;
+  put(collection: string, key: string, content: unknown, format?: string, formatVersion?: number): void;
   /** The current content of one operation record. */
   operation(key: string): unknown;
 }
@@ -76,8 +78,8 @@ function memoryJournal(): IMemoryJournal {
     },
     read: (address) => records.get(id(address)),
     list: (query) => [...records.entries()].filter(([key]) => key.startsWith(JSON.stringify([query.environment, query.collection]).slice(0, -1))).map(([, entry]) => entry),
-    put(collection, key, content, format = 'microdelta.supervision.blocks') {
-      records.set(id({ environment: 'env:test', collection, key }), { key, revision: 1, fence: 1, record: { format, formatVersion: 1, content } });
+    put(collection, key, content, format = 'microdelta.supervision.blocks', formatVersion = 1) {
+      records.set(id({ environment: 'env:test', collection, key }), { key, revision: 1, fence: 1, record: { format, formatVersion, content } });
     },
     operation: (key) => records.get(id({ environment: 'env:test', collection: operationsCollection, key }))?.record.content,
   };
@@ -889,4 +891,424 @@ describe('malformed requests, options and records', () => {
       expect(failure instanceof SupervisionError ? failure.code : failure).toBe('integrity');
     });
   });
+});
+
+/**
+ * Fixed shared dispatch crosses run-local allowance and transport authority.
+ * These assertions derive from #238's bounded handoff, RUN-019 and A-12e/h/k;
+ * they do not claim the deferred fair-round or serial-recovery requirements.
+ */
+describe('fixed shared dispatch (#238)', () => {
+  /** A process owner with independent, controlled epoch and duration readings. */
+  function owner() {
+    const timer = fakeTimer();
+    let elapsed = 0;
+    const elapsedClock = { currentElapsedMilliseconds: () => elapsed };
+    const coordinator = createSharedRateCoordinator({ epochClock: timer, elapsedClock });
+    const sharedRates = { coordinator, elapsedClock };
+    const supervision = createSupervision({ context: nodeScopes, timer, ...{ sharedRates } });
+    const surface = (account = 'account:a', numeric = false) => coordinator.registerSurface({
+      environment: 'env:test', service: 'service:catalog', accessContext: account, surface: 'catalog',
+      gates: [{ id: 'api', ...(numeric ? { limit: { units: 1, intervalMilliseconds: 100, costBasis: 'requests' as const } } : {}) }],
+    });
+    const random = countingRandom();
+    /** Each run has separate durable state, like two stores sharing a remote account. */
+    function start(request: IOperationRequest<number>, extra: Partial<IRunOptions> = {}, setup: (journal: IMemoryJournal, accounting: IMemoryAccounting) => void = () => undefined, selected: ISupervision = supervision) {
+      const journal = memoryJournal();
+      const accounting = memoryAccounting();
+      setup(journal, accounting);
+      let code: string | undefined;
+      const double = executing(async () => { code = await codeOf(selected.execution().operation(request)); });
+      const events: IRunEvent[] = [];
+      const done = selected.run({
+        analysis: 'analysis:test', environment: 'env:test', deferral: 'exit', resolution: double.factory,
+        writer: grantingWriter, operations: { journal, accounting, random }, observers: [{ observe: (event) => events.push(event) }], ...extra,
+      }, (run) => run.resolve(stepOf('assess', 'pr-1'), { requestKey: 'request:1' }));
+      return { done, journal, accounting, events, code: () => code };
+    }
+    return { coordinator, sharedRates, supervision, timer, surface, start, advance(milliseconds: number): void { elapsed += milliseconds; timer.advance(milliseconds); }, setElapsed(value: number): void { elapsed = value; } };
+  }
+
+  test('two paths and new runs share a fixed gate while an independent account progresses without holding the waiting permit or intent', async () => {
+    const world = owner();
+    const sharedRate = { surface: world.surface('account:a', true), cooldownGateId: 'api' };
+    const sent = { count: 0 };
+    await world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), ...{ sharedRate } }).done;
+    const waiting = world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 2 }), sent), name: 'detail', ...{ sharedRate }, retry: { maxAttempts: 1 } });
+    await settle();
+    expect(sent.count).toBe(1);
+    expect(waiting.accounting.intents).toEqual([]);
+    expect(waiting.events.filter((event) => event.kind === 'operation' && event.phase === 'request-started')).toEqual([]);
+    const independent = { surface: world.surface('account:b', true), cooldownGateId: 'api' };
+    const other = world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 3 }), sent), ...{ sharedRate: independent } });
+    await settle();
+    expect(sent.count).toBe(2);
+    await other.done;
+    world.advance(99);
+    await settle();
+    expect(sent.count).toBe(2);
+    world.advance(1);
+    await waiting.done;
+    expect(sent.count).toBe(3);
+    expect(waiting.code()).toBeUndefined();
+  });
+
+  test('a known normalized cooldown is published before async classification, without numeric configuration or retrySource', async () => {
+    const world = owner();
+    const sharedRate = { surface: world.surface(), cooldownGateId: 'api' };
+    const sent = { count: 0 };
+    const first = world.start({ ...operation(() => Promise.resolve({ kind: 'rate-limited', retryAt: T0 + 100 }), sent), ...{ sharedRate }, retry: { maxAttempts: 1 } });
+    await first.done;
+    const next = world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 2 }), sent), ...{ sharedRate } });
+    await settle();
+    expect(sent.count).toBe(1);
+    expect(next.accounting.intents).toEqual([]);
+    world.advance(100);
+    await next.done;
+    expect(sent.count).toBe(2);
+  });
+
+  test('generic notBefore never becomes a shared cooldown, and an unassociated rate refusal cannot guess a surface', async () => {
+    const world = owner();
+    const sharedRate = { surface: world.surface(), cooldownGateId: 'api' };
+    const sent = { count: 0 };
+    await world.start({ ...operation(() => Promise.resolve({ kind: 'failed', transient: true, error: 'later', notBefore: T0 + 100 }), sent), ...{ sharedRate }, retry: { maxAttempts: 1 } }).done;
+    await world.start({ ...operation(() => Promise.resolve({ kind: 'rate-limited', retryAt: T0 + 200 }), sent), retry: { maxAttempts: 1 } }).done;
+    await world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 2 }), sent), ...{ sharedRate } }).done;
+    expect(sent.count).toBe(3);
+  });
+
+  test.each(['foreign owner', 'environment', 'gate', 'retry service', 'retry connection'] as const)('an invalid %s association fails closed before intent', async (conflict) => {
+    const world = owner();
+    const foreign = owner();
+    const surface = conflict === 'foreign owner' ? foreign.surface() : conflict === 'environment'
+      ? world.coordinator.registerSurface({ environment: 'env:other', service: 'service:catalog', accessContext: 'account:a', surface: 'catalog', gates: [{ id: 'api' }] }) : world.surface();
+    const sharedRate = { surface, cooldownGateId: conflict === 'gate' ? 'unknown' : 'api' };
+    const sent = { count: 0 };
+    const result = world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), ...{ sharedRate },
+      ...(conflict === 'retry service' || conflict === 'retry connection' ? { retrySource: { source: 'adapter', service: conflict === 'retry service' ? 'service:other' : 'service:catalog', connection: conflict === 'retry connection' ? 'account:other' : 'account:a' } } : {}),
+    });
+    await result.done;
+    expect(sent.count).toBe(0);
+    expect(result.accounting.intents).toEqual([]);
+    expect(result.code()).toBe('invalid-request');
+  });
+
+  test('a gate becoming blocked in the begin observer is rechecked before transport, with an unsent intent while waiting', async () => {
+    const world = owner();
+    const sharedRate = { surface: world.surface('account:a', true), cooldownGateId: 'api' };
+    const sent = { count: 0 };
+    let blocked = false;
+    const call = world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), ...{ sharedRate }, retry: { maxAttempts: 1 } }, {
+      observers: [{ observe(event) {
+        if (!blocked && event.kind === 'send' && event.phase === 'begin') {
+          blocked = true;
+          world.coordinator.observeCooldown(sharedRate.surface, 'api', T0 + 100);
+        }
+      } }],
+    });
+    await settle();
+    expect(sent.count).toBe(0);
+    const records = call.journal.list({ analysis: 'analysis:test', environment: 'env:test', collection: operationsCollection });
+    expect(records.map((row) => decodeOperation(row.record).attempts.map((attempt) => attempt.status))).toEqual([['not-sent']]);
+    world.advance(100);
+    await call.done;
+    expect(sent.count).toBe(1);
+    expect(call.code()).toBeUndefined();
+  });
+
+  test.each(['hard', 'soft'] as const)('%s stop while a retry waits prevents a later send and spends no waiting intent', async (level) => {
+    const world = owner();
+    const sharedRate = { surface: world.surface(), cooldownGateId: 'api' };
+    world.coordinator.observeCooldown(sharedRate.surface, 'api', T0 + 100);
+    const stop = createStopController();
+    const sent = { count: 0 };
+    const call = world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), ...{ sharedRate } }, { stop });
+    await settle();
+    // A soft stop drains an admitted first send; hard stop withdraws it.
+    stop.request({ level });
+    if (level === 'soft') { world.advance(100); }
+    await call.done;
+    expect(sent.count).toBe(level === 'soft' ? 1 : 0);
+    if (level === 'hard') { expect(call.accounting.intents).toEqual([]); }
+  });
+
+  test('possible transport failure keeps the fixed debit rather than refunding unknown remote work', async () => {
+    const world = owner();
+    const sharedRate = { surface: world.surface('account:a', true), cooldownGateId: 'api' };
+    const sent = { count: 0 };
+    await world.start({ ...operation(() => Promise.reject(new Error('response lost')), sent), ...{ sharedRate }, retry: { maxAttempts: 1 } }).done;
+    const next = world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), ...{ sharedRate } });
+    await settle();
+    expect(sent.count).toBe(1);
+    expect(next.accounting.intents).toEqual([]);
+    world.advance(100);
+    await next.done;
+    expect(sent.count).toBe(2);
+  });
+
+  test.each(['intent', 'begin'] as const)('a synchronous hard stop at %s leaves no shared debit or provider call', async (position) => {
+    const world = owner();
+    const sharedRate = { surface: world.surface('account:a', true), cooldownGateId: 'api' };
+    const stop = createStopController();
+    const sent = { count: 0 };
+    const call = world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), sharedRate }, {
+      stop, observers: [{ observe(event) { if (position === 'begin' && event.kind === 'send' && event.phase === 'begin') { stop.request({ level: 'hard' }); } } }],
+    }, (_journal, accounting) => {
+      if (position === 'intent') {
+        const record = accounting.recordUsageIntent.bind(accounting);
+        accounting.recordUsageIntent = (intent) => { const answer = record(intent); stop.request({ level: 'hard' }); return answer; };
+      }
+    });
+    const result = await call.done;
+    expect(sent.count).toBe(0);
+    expect(call.code()).toBe('stopped');
+    expect(result.value).toMatchObject({ kind: 'refused' });
+    expect(world.coordinator.admit({ surface: sharedRate.surface, run: 'next' }).kind).toBe('admitted');
+    expect(call.journal.list({ analysis: 'analysis:test', environment: 'env:test', collection: operationsCollection }).map((row) => decodeOperation(row.record).attempts.map((attempt) => attempt.status))).toEqual([['not-sent']]);
+  });
+
+  test('a begin observer that invalidates the fence prevents provider work and successful author completion', async () => {
+    const world = owner();
+    const sharedRate = { surface: world.surface('account:a', true), cooldownGateId: 'api' };
+    const sent = { count: 0 };
+    let journal: IMemoryJournal | undefined;
+    const call = world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), sharedRate }, {
+      observers: [{ observe(event) { if (event.kind === 'send' && event.phase === 'begin' && journal !== undefined) { journal.failFrom = journal.commits + 1; } } }],
+    }, (port) => { journal = port; });
+    const result = await call.done;
+    expect(sent.count).toBe(0);
+    expect(result.value).toMatchObject({ kind: 'refused', reason: 'unsettled' });
+    expect(call.accounting.reports).toEqual([]);
+    expect(world.coordinator.admit({ surface: sharedRate.surface, run: 'next' }).kind).toBe('admitted');
+  });
+
+  test('allowance changed by the begin observer is re-read before possible send', async () => {
+    const world = owner();
+    const sharedRate = { surface: world.surface(), cooldownGateId: 'api' };
+    const sent = { count: 0 };
+    let journal: IMemoryJournal | undefined;
+    const call = world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), sharedRate, retry: { maxAttempts: 1 } }, {
+      observers: [{ observe(event) {
+        if (event.kind === 'send' && event.phase === 'begin' && journal !== undefined) {
+          const row = journal.list({ analysis: 'analysis:test', environment: 'env:test', collection: operationsCollection })[0];
+          if (row === undefined) { throw new Error('intent missing'); }
+          const record = decodeOperation(row.record);
+          const pending = record.attempts.at(-1);
+          if (pending === undefined) { throw new Error('request attempt missing'); }
+          const changed = { ...record, attempts: [{ ...pending, requestAttempt: 'prior/1', status: 'failed' as const }, pending] };
+          journal.put(operationsCollection, row.key, encodeOperation(changed).content, 'microdelta.supervision.operation', 4);
+        }
+      } }],
+    }, (port) => { journal = port; });
+    const result = await call.done;
+    expect(sent.count).toBe(0);
+    expect(result.value).toMatchObject({ kind: 'refused', reason: 'unsettled' });
+    expect(call.accounting.reports).toEqual([]);
+  });
+
+  test('a usage intent without explicit durability confirmation cannot authorize transport', async () => {
+    const world = owner();
+    const sharedRate = { surface: world.surface(), cooldownGateId: 'api' };
+    const sent = { count: 0 };
+    const call = world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), sharedRate }, {}, (_journal, accounting) => {
+      Reflect.set(accounting, 'recordUsageIntent', () => undefined);
+    });
+    const result = await call.done;
+    expect(sent.count).toBe(0);
+    expect(result.value).toMatchObject({ kind: 'refused', reason: 'unsettled' });
+    expect(call.accounting.reports).toEqual([]);
+  });
+
+  test('a soft-stop deadline withdraws an admitted first request before a later cooldown wake', async () => {
+    const world = owner();
+    const sharedRate = { surface: world.surface(), cooldownGateId: 'api' };
+    world.coordinator.observeCooldown(sharedRate.surface, 'api', T0 + 100);
+    const stop = createStopController({ timer: world.timer });
+    const sent = { count: 0 };
+    const call = world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), sharedRate }, { stop });
+    await settle();
+    stop.request({ level: 'soft', deadline: T0 + 50 });
+    world.advance(50);
+    await call.done;
+    world.advance(100);
+    await settle();
+    expect(sent.count).toBe(0);
+    expect(call.accounting.intents).toEqual([]);
+    expect(call.code()).toBe('stopped');
+  });
+
+  test('an early epoch wake cannot expire a monotonic window and a backward correction cannot create capacity', async () => {
+    const world = owner();
+    const sharedRate = { surface: world.surface('account:a', true), cooldownGateId: 'api' };
+    const sent = { count: 0 };
+    await world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), sharedRate }).done;
+    const call = world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), sharedRate });
+    await settle();
+    world.timer.advance(1_000);
+    await settle();
+    expect(sent.count).toBe(1);
+    expect(call.accounting.intents).toEqual([]);
+    world.timer.advance(-500);
+    world.setElapsed(99);
+    world.timer.advance(600);
+    await settle();
+    expect(sent.count).toBe(1);
+    world.setElapsed(100);
+    world.timer.advance(1);
+    await call.done;
+    expect(sent.count).toBe(2);
+  });
+
+  test('a hard stop re-entering the final fenced journal callback is checked before the rate debit and transport', async () => {
+    const world = owner();
+    const sharedRate = { surface: world.surface('account:a', true), cooldownGateId: 'api' };
+    const stop = createStopController();
+    const sent = { count: 0 };
+    const call = world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), sharedRate }, { stop }, (journal) => {
+      const commit = journal.commit.bind(journal);
+      journal.commit = (lease, request) => {
+        const answer = commit(lease, request);
+        if (journal.commits === 2) { stop.request({ level: 'hard' }); }
+        return answer;
+      };
+    });
+    await call.done;
+    expect(sent.count).toBe(0);
+    expect(call.code()).toBe('stopped');
+    expect(world.coordinator.admit({ surface: sharedRate.surface, run: 'next' }).kind).toBe('admitted');
+  });
+
+  test('a failed unsent restoration after a final gate refusal cannot let a catching author publish success', async () => {
+    const world = owner();
+    const sharedRate = { surface: world.surface(), cooldownGateId: 'api' };
+    const sent = { count: 0 };
+    let journal: IMemoryJournal | undefined;
+    const call = world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), sharedRate }, {
+      observers: [{ observe(event) {
+        if (event.kind === 'send' && event.phase === 'begin' && journal !== undefined) {
+          world.coordinator.observeCooldown(sharedRate.surface, 'api', T0 + 100);
+          journal.failFrom = journal.commits + 2;
+        }
+      } }],
+    }, (port) => { journal = port; });
+    const result = await call.done;
+    expect(sent.count).toBe(0);
+    expect(result.value).toMatchObject({ kind: 'refused', reason: 'unsettled' });
+    expect(call.accounting.reports).toEqual([]);
+  });
+
+  test.each([undefined, 0, 1.5, 3] as const)('a quantity gate refuses missing or unsupported conservative cost %s before intent', async (quantityCost) => {
+    const world = owner();
+    const surface = world.coordinator.registerSurface({ environment: 'env:test', service: 'service:quantity', accessContext: 'account:a', surface: 'detail',
+      gates: [{ id: 'quantity', limit: { units: 2, intervalMilliseconds: 100, costBasis: 'quantity' } }],
+    });
+    const sharedRate = { surface, cooldownGateId: 'quantity', ...(quantityCost === undefined ? {} : { quantityCost }) };
+    const sent = { count: 0 };
+    const call = world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), sharedRate });
+    await call.done;
+    expect(sent.count).toBe(0);
+    expect(call.accounting.intents).toEqual([]);
+    expect(call.code()).toBe('invalid-request');
+  });
+
+  test('no retryAt means no invented shared cooldown, even if a generic local floor exists', async () => {
+    const world = owner();
+    const sharedRate = { surface: world.surface(), cooldownGateId: 'api' };
+    const sent = { count: 0 };
+    await world.start({ ...operation(() => Promise.resolve({ kind: 'rate-limited', notBefore: T0 + 100 }), sent), sharedRate, retry: { maxAttempts: 1 } }).done;
+    expect(world.coordinator.admit({ surface: sharedRate.surface, run: 'another-path' }).kind).toBe('admitted');
+  });
+
+  test('a continuing operation address cannot change its explicit association within one run', async () => {
+    const world = owner();
+    const sharedRate = { surface: world.surface(), cooldownGateId: 'api' };
+    const other = { surface: world.surface('account:b'), cooldownGateId: 'api' };
+    const sent = { count: 0 };
+    let changed: string | undefined;
+    const double = executing(async () => {
+      const request = { ...operation(() => Promise.resolve({ kind: 'failed' as const, transient: false, error: 'permanent' }), sent), sharedRate };
+      await codeOf(world.supervision.execution().operation(request));
+      changed = await codeOf(world.supervision.execution().operation({ ...request, sharedRate: other }));
+    });
+    await world.supervision.run({ analysis: 'analysis:test', environment: 'env:test', deferral: 'exit', resolution: double.factory, writer: grantingWriter,
+      operations: { journal: memoryJournal(), accounting: memoryAccounting(), random: countingRandom() },
+    }, (run) => run.resolve(stepOf('assess', 'pr-1'), { requestKey: 'association-test' }));
+    expect(changed).toBe('invalid-request');
+    expect(sent.count).toBe(1);
+  });
+
+  test('independent supervisors share admission only when explicitly composed with the same coordinator owner', async () => {
+    const world = owner();
+    const sharedRate = { surface: world.surface('account:a', true), cooldownGateId: 'api' };
+    const sent = { count: 0 };
+    await world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), sharedRate }).done;
+    const peer = createSupervision({ context: nodeScopes, timer: world.timer, sharedRates: world.sharedRates });
+    const next = world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), sharedRate }, {}, () => undefined, peer);
+    await settle();
+    expect(sent.count).toBe(1);
+    expect(next.accounting.intents).toEqual([]);
+    world.advance(100);
+    await next.done;
+    expect(sent.count).toBe(2);
+    const unowned = createSupervision({ context: nodeScopes, timer: world.timer });
+    const refused = world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), sharedRate }, {}, () => undefined, unowned);
+    await refused.done;
+    expect(refused.code()).toBe('invalid-request');
+    expect(sent.count).toBe(2);
+  });
+
+  test.each(['negative', 'decreasing', 'throwing'] as const)('a %s clock failure retains its typed dispatch error, redacts host detail and spends no intent or rate debit', async (failure) => {
+    const world = owner();
+    const sharedRate = { surface: world.surface('account:a', true), cooldownGateId: 'api' };
+    if (failure === 'decreasing') {
+      world.setElapsed(10);
+      world.coordinator.admit({ surface: sharedRate.surface, run: 'preview' });
+      world.setElapsed(9);
+    } else if (failure === 'throwing') {
+      Reflect.set(world.sharedRates.elapsedClock, 'currentElapsedMilliseconds', () => { throw new Error('PRIVATE-CLOCK-DETAIL'); });
+    } else { world.setElapsed(-1); }
+    const sent = { count: 0 };
+    const call = world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), sharedRate });
+    const result = await call.done;
+    expect(call.code()).toBe('rate-timing-failed');
+    expect(sent.count).toBe(0);
+    expect(call.accounting.intents).toEqual([]);
+    expect(_inspectSharedRateDebits(world.coordinator, sharedRate.surface, 'api')).toEqual([]);
+    expect(JSON.stringify({ result, events: call.events })).not.toContain('PRIVATE-CLOCK-DETAIL');
+  });
+
+  test('a clock failure after durable intent preserves the typed failure and records a definite unsent attempt', async () => {
+    const world = owner();
+    const sharedRate = { surface: world.surface('account:a', true), cooldownGateId: 'api' };
+    const sent = { count: 0 };
+    const call = world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), sharedRate }, {
+      observers: [{ observe(event) { if (event.kind === 'send' && event.phase === 'begin') { world.setElapsed(-1); } } }],
+    });
+    const result = await call.done;
+    expect(call.code()).toBe('rate-timing-failed');
+    expect(sent.count).toBe(0);
+    expect(call.accounting.intents).toHaveLength(1);
+    expect(call.accounting.reports).toEqual([]);
+    expect(_inspectSharedRateDebits(world.coordinator, sharedRate.surface, 'api')).toEqual([]);
+    expect(call.journal.list({ analysis: 'analysis:test', environment: 'env:test', collection: operationsCollection }).map((row) => decodeOperation(row.record).attempts.map((attempt) => attempt.status))).toEqual([['not-sent']]);
+    expect(result.value).toMatchObject({ kind: 'refused', reason: 'interrupted' });
+  });
+
+  test('assembly configuration mutation cannot replace the coordinator owner between its runs', async () => {
+    const world = owner();
+    const sharedRate = { surface: world.surface('account:a', true), cooldownGateId: 'api' };
+    const sent = { count: 0 };
+    await world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), sharedRate }).done;
+    world.sharedRates.coordinator = owner().coordinator;
+    const call = world.start({ ...operation(() => Promise.resolve({ kind: 'succeeded', value: 1 }), sent), sharedRate });
+    await settle();
+    expect(sent.count).toBe(1);
+    expect(call.code()).toBeUndefined();
+    expect(call.accounting.intents).toEqual([]);
+    world.advance(100);
+    await call.done;
+    expect(sent.count).toBe(2);
+  });
+
 });

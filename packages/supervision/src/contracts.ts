@@ -39,6 +39,7 @@ import type {
 } from '@microdelta/resolution';
 
 import type { IAbortSignal, IRunTimer, IStopController, IStopLevel, IStopState } from './control.js';
+import type { ISharedRateDispatchOptions } from './shared-rate-dispatch.js';
 import type {
   IDeferralMode,
   IOperationBlock,
@@ -78,6 +79,8 @@ export interface IRunScopeCapability {
 
 /** Construction options of Run Supervision. @alpha */
 export interface ISupervisionOptions {
+  /** Assembly-owned fixed admission shared by this supervisor's runs and composed peers. */
+  readonly sharedRates?: ISharedRateDispatchOptions;
   /** The structurally injected scope capability. */
   readonly context: IRunScopeCapability;
   /**

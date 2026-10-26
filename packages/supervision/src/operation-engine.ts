@@ -110,6 +110,9 @@ import {
   viewOf,
 } from './records.js';
 import type { IAttemptRecord, IBlockEntry, IClassificationRecord, IOperationRecord, ISafetyBasis } from './records.js';
+import type { ISharedRateAdmission, ISharedRateReservation } from './shared-rate-coordinator.js';
+import { capturedSharedRate, sameSharedRate, SharedRateWait } from './shared-rate-dispatch.js';
+import type { IOperationSharedRate, ISharedRateDispatchOptions } from './shared-rate-dispatch.js';
 
 /**
  * The identifier rule of operation names, operator identities and the usage
@@ -191,6 +194,8 @@ interface IValidatedRequest<T> {
   readonly rateLimitRetries: number;
   /** Detached exact source tuple; absent means built-in classification. */
   readonly retrySource: IRetrySourceScope | undefined;
+  /** Explicit adapter attribution, detached from mutable request declarations. */
+  readonly sharedRate: IOperationSharedRate | undefined;
   readonly providerIdempotency: boolean;
   readonly perform: IOperationRequest<T>['perform'];
   readonly cancel: (() => Promise<'cancelled' | 'running'>) | undefined;
@@ -215,6 +220,7 @@ function validated<T>(request: IOperationRequest<T>): IValidatedRequest<T> {
   const providerIdempotency = read('providerIdempotency');
   const retry = read('retry');
   const rawRetrySource = read('retrySource');
+  const sharedRate = capturedSharedRate(read('sharedRate'));
   if (!isIdentifier(name)) {
     throw new SupervisionError('invalid-request', 'An operation needs an identifier name');
   }
@@ -245,6 +251,7 @@ function validated<T>(request: IOperationRequest<T>): IValidatedRequest<T> {
     backoff: declaredBackoff === undefined ? undefined : count(declaredBackoff, 0, 'backoffMilliseconds', 0),
     rateLimitRetries: count(policy('rateLimitRetries'), defaultRateLimitRetries, 'rateLimitRetries', 0),
     retrySource,
+    sharedRate,
     providerIdempotency: providerIdempotency === true,
     // Validated just above; the request's own declared types describe these members.
     perform: perform.bind(request),
@@ -330,6 +337,8 @@ interface IStored {
 
 /** What the engine needs of its run. */
 export interface IOperationEngineContext {
+  /** Fixed shared admission supplied by the assembly, never recreated per run. */
+  readonly sharedRates?: ISharedRateDispatchOptions;
   readonly context: IRunContext;
   readonly ports: IRunOperationPorts;
   readonly timer: IRunTimer;
@@ -412,6 +421,13 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
    * operations and send it twice.
    */
   const inProgress = new Set<string>();
+  /** A continuing operation address cannot relabel its shared scope within this private run. */
+  const rateAssociations = new Map<string, IOperationSharedRate | undefined>();
+  /** Accepted retry duration companions are volatile and anchored with their durable epoch floor. */
+  const liveRetryFloors = new Map<string, number>();
+  /** Retain a duration contract violation rather than trusting a later corrected sample. */
+  let rateClockFailed = false;
+  let lastRateElapsed: number | undefined;
   const namespace = { analysis: context.analysis, environment: context.environment };
   const now = (): number => timer.currentEpochMilliseconds();
   /**
@@ -687,7 +703,24 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     if (attempt.ended) {
       throw new SupervisionError('invalid-request', `Operation ${request.name} was called after its step attempt ended; nothing was sent`);
     }
+    if (request.sharedRate !== undefined) {
+      try {
+        if (engine.sharedRates === undefined) {
+          throw new Error('No coordinator owner');
+        }
+        engine.sharedRates.coordinator.validateAssociation(request.sharedRate.surface, {
+          environment: context.environment, cooldownGateId: request.sharedRate.cooldownGateId,
+          ...(request.retrySource === undefined ? {} : { service: request.retrySource.service, accessContext: request.retrySource.connection }),
+        });
+      } catch {
+        throw new SupervisionError('invalid-request', 'Operation shared-rate association does not match its assembly or run context');
+      }
+    }
     const address = JSON.stringify([subjectKey(attempt.subject), request.name, request.binding]);
+    if (rateAssociations.has(address) && !sameSharedRate(rateAssociations.get(address), request.sharedRate)) {
+      throw new SupervisionError('invalid-request', 'Operation shared-rate association changed within this run');
+    }
+    rateAssociations.set(address, request.sharedRate);
     if (inProgress.has(address)) {
       const existing = locate(attempt.subject, request.name, request.binding);
       if (existing?.record.classification?.kind === 'pending'
@@ -701,6 +734,11 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     inProgress.add(address);
     try {
       return await callAt(attempt, scope, transport, request);
+    } catch (error: unknown) {
+      if (error instanceof SupervisionError && error.code === 'rate-timing-failed') {
+        attempt.taint ??= 'shared rate timing could not authorize dispatch';
+      }
+      throw error;
     } finally {
       inProgress.delete(address);
     }
@@ -805,6 +843,9 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       if (outcome.kind === 'value') {
         return outcome.value;
       }
+      if (outcome.kind === 'unsent') {
+        continue;
+      }
       if (outcome.kind === 'retry') {
         retry = true;
         continue;
@@ -820,8 +861,67 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
   type IAttemptOutcome<T> =
     | { readonly kind: 'value'; readonly value: T }
     | { readonly kind: 'retry' }
+    | { readonly kind: 'unsent' }
     | { readonly kind: 'pending'; readonly block: IOperationBlock }
     | { readonly kind: 'error'; readonly error: SupervisionError };
+
+  /** Read a duration sample without inventing an epoch meaning or exposing host errors. */
+  function elapsedNow(): number {
+    let value: number | undefined;
+    try { value = engine.sharedRates?.elapsedClock.currentElapsedMilliseconds(); } catch { /* Fail closed below. */ }
+    if (rateClockFailed || value === undefined || !Number.isSafeInteger(value) || value < 0 || (lastRateElapsed !== undefined && value < lastRateElapsed)) {
+      rateClockFailed = true;
+      throw new SupervisionError('rate-timing-failed', 'Shared admission cannot trust its elapsed clock');
+    }
+    lastRateElapsed = value;
+    return value;
+  }
+
+  /** Absolute clock corrections are valid; unsupported readings and host failures are not. */
+  function rateEpochNow(): number {
+    let value: number | undefined;
+    try { value = now(); } catch { /* Host exception text never becomes a diagnostic or cause. */ }
+    if (value === undefined || !Number.isSafeInteger(value)) {
+      throw new SupervisionError('rate-timing-failed', 'Shared admission cannot trust its epoch clock');
+    }
+    return value;
+  }
+
+  /** Compute a timer estimate; waking always returns to independent clock checks. */
+  function wakeAt(admission: Extract<ISharedRateAdmission, { readonly kind: 'wait' }>): number {
+    const epoch = rateEpochNow();
+    const remaining = admission.retryAtElapsed === undefined ? 0 : Math.max(0, admission.retryAtElapsed - elapsedNow());
+    const mapped = epoch + remaining;
+    const wake = Math.max(mapped, admission.notBefore ?? mapped);
+    if (!Number.isSafeInteger(wake)) {
+      throw new SupervisionError('rate-timing-failed', 'Shared admission wake time is outside supported clock bounds');
+    }
+    return wake;
+  }
+
+  /** Retry duration and absolute provider/operation floors remain independent conditions. */
+  function admissionFor(request: IValidatedRequest<unknown>, record: IOperationRecord): ISharedRateAdmission | undefined {
+    const liveFloor = liveRetryFloors.get(record.operation);
+    if (liveFloor !== undefined && elapsedNow() < liveFloor) {
+      return { kind: 'wait', retryAtElapsed: liveFloor, ...(record.notBefore === undefined ? {} : { notBefore: record.notBefore }) };
+    }
+    if (request.sharedRate === undefined) { return undefined; }
+    const owner = engine.sharedRates;
+    if (owner === undefined) { throw new SupervisionError('invalid-request', 'Shared admission requires its assembly owner'); }
+    return owner.coordinator.admit({ surface: request.sharedRate.surface, run: currentRunInstance(),
+      ...(request.sharedRate.quantityCost === undefined ? {} : { quantityCost: request.sharedRate.quantityCost }),
+      ...(record.notBefore === undefined ? {} : { acceptedNotBefore: record.notBefore }),
+    });
+  }
+
+  /** Refused/timing outcomes cannot fall back to unconstrained transport. */
+  function admitted(result: ISharedRateAdmission | undefined): ISharedRateReservation | undefined {
+    if (result === undefined) { return undefined; }
+    if (result.kind === 'admitted') { return result; }
+    if (result.kind === 'wait') { throw new SharedRateWait(result); }
+    if (result.kind === 'timing-failure') { throw new SupervisionError('rate-timing-failed', 'Shared admission cannot trust its timing capabilities'); }
+    throw new SupervisionError('invalid-request', 'Shared admission refused the operation');
+  }
 
   /** Send one request attempt of an operation: intent, send, usage, outcome. */
   async function sendOnce<T>(
@@ -846,6 +946,17 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     const requestAttempt = unsent?.requestAttempt ?? `${operation}/${String(earlier.length + 1)}`;
     const attribution = { run: unsent?.run ?? context.runId, stepAttempt: unsent?.stepAttempt ?? stepAttempt };
     let current = before;
+    let reservation: ISharedRateReservation | undefined;
+    for (;;) {
+      const admission = admissionFor(request, before.record);
+      if (admission?.kind === 'wait') {
+        await transport.waitForSend(wakeAt(admission), retry);
+        continue;
+      }
+      reservation = admitted(admission);
+      break;
+    }
+    let confirmedIntent = false;
     const sent = await transport.transmit<IOperationResponse<T>>({
       label: request.name,
       retry,
@@ -863,6 +974,11 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       },
       cancel: request.cancel,
     }, () => {
+      // Capacity may have changed while this call queued for a permit. This
+      // preview still places no debit, but avoids an unnecessary durable
+      // intent when another send already consumed the available window.
+      reservation?.rollbackBeforeSend();
+      reservation = admitted(admissionFor(request, before.record));
       if (attempt.ended) {
         throw new EndedAttemptError('the step attempt ended before the send');
       }
@@ -883,12 +999,16 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       };
       current = write(lease, intent, before.revision);
       try {
-        ports.accounting.recordUsageIntent({
+        const confirmation = ports.accounting.recordUsageIntent({
           environment: context.environment,
           operation,
           requestAttempt,
           attribution: { run: attribution.run, member: before.record.member ?? null, stepAttempt: attribution.stepAttempt },
         });
+        if (confirmation !== 'recorded' && confirmation !== 'duplicate') {
+          throw new Error('Accounting did not confirm its usage intent');
+        }
+        confirmedIntent = true;
         // The intent is durable: the consecutive non-durable count resets.
         if (intent.unrecorded !== 0) {
           current = write(lease, { ...intent, unrecorded: 0 }, current.revision);
@@ -912,8 +1032,69 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
         }
         throw error;
       }
+    }, () => {
+      if (request.sharedRate === undefined && !liveRetryFloors.has(operation)) { return; }
+      const latest = readOperation(operation);
+      if (!confirmedIntent || attempt.ended || attempt.pending !== undefined || attempt.taint !== undefined
+        || latest?.revision !== current.revision || latest.fence !== lease.fence
+        || latest.record.binding !== request.binding || latest.record.status !== 'pending'
+        || latest.record.attempts.at(-1)?.requestAttempt !== requestAttempt
+        || spentInRun(latest.record) > request.maxAttempts) {
+        throw new SupervisionError('invalid-request', 'Operation lost final dispatch authority');
+      }
+      // A synchronous fenced write verifies the lease is still current after
+      // Accounting and observers. A read alone cannot validate an expired holder.
+      current = write(lease, latest.record, latest.revision);
+      return () => {
+        const liveFloor = liveRetryFloors.get(operation);
+        if (liveFloor !== undefined && elapsedNow() < liveFloor) {
+          throw new SharedRateWait({ kind: 'wait', retryAtElapsed: liveFloor });
+        }
+        if (before.record.notBefore !== undefined && rateEpochNow() < before.record.notBefore) {
+          throw new SharedRateWait({ kind: 'wait', notBefore: before.record.notBefore });
+        }
+        if (reservation !== undefined) {
+          const result = reservation.commitPossibleSend();
+          if (result.kind === 'wait') { throw new SharedRateWait(result); }
+          if (result.kind === 'timing-failure') { throw new SupervisionError('rate-timing-failed', 'Shared admission cannot trust final dispatch timing'); }
+          if (result.kind !== 'committed') { throw new SupervisionError('invalid-request', 'Shared admission refused final dispatch'); }
+        }
+      };
     });
+    reservation?.rollbackBeforeSend();
+    if ((sent.kind === 'unrecorded' || sent.kind === 'refused') && current.record.attempts.at(-1)?.requestAttempt === requestAttempt) {
+      // Local knowledge survives a failed fenced restoration without
+      // weakening the conservative durable pending/unknown interpretation.
+      neverDispatched.add(requestAttempt);
+    }
+    if (sent.kind === 'unrecorded' && sent.error instanceof SharedRateWait) {
+      // A callback installed a newer gate while the permit was held. The
+      // durable intent remains an honest usage gap, but this attempt is unsent.
+      if (current.revision !== before.revision && current.record.attempts.at(-1)?.status === 'pending') {
+        const unsentRecord: IOperationRecord = { ...withLast(current.record, { status: 'not-sent' }), status: 'deferred', notBefore: before.record.notBefore ?? now() };
+        try {
+          current = write(lease, unsentRecord, current.revision);
+        } catch {
+          engine.diagnose(`lease-lost: operation ${operation} request attempt ${requestAttempt} stays pending after shared admission changed`);
+          return { stored: current, outcome: { kind: 'pending', block: { kind: 'unknown-outcome', operation, reason: 'unrecorded' } } };
+        }
+      }
+      await transport.waitForSend(wakeAt(sent.error.admission), retry);
+      return { stored: current, outcome: { kind: 'unsent' } };
+    }
     if (sent.kind === 'unrecorded') {
+      if (sent.error instanceof SupervisionError && sent.error.code === 'rate-timing-failed') {
+        if (confirmedIntent && current.record.attempts.at(-1)?.status === 'pending') {
+          // A clock failure is not a sent request or a provider response.
+          // Retain durable no-send evidence when the fence still permits it.
+          try {
+            current = write(lease, { ...withLast(current.record, { status: 'not-sent' }), status: 'deferred', notBefore: before.record.notBefore }, current.revision);
+          } catch {
+            engine.diagnose(`lease-lost: operation ${operation} request attempt ${requestAttempt} stays pending after a timing failure`);
+          }
+        }
+        return { stored: current, outcome: { kind: 'error', error: sent.error } };
+      }
       if (sent.error instanceof EndedAttemptError) {
         return { stored: current, outcome: { kind: 'error', error: new SupervisionError('invalid-request', `Operation ${operation} was called after its step attempt ended; nothing was sent`) } };
       }
@@ -953,6 +1134,9 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
       return { stored: current, outcome: { kind: 'error', error: new SupervisionError('stopped', `Operation ${operation} was aborted: ${sent.reason}`) } };
     }
     const response = classify(sent);
+    if (response.kind === 'rate-limited' && response.retryAt !== undefined && request.sharedRate !== undefined) {
+      engine.sharedRates?.coordinator.observeCooldown(request.sharedRate.surface, request.sharedRate.cooldownGateId, response.retryAt);
+    }
     const usage = acknowledge(current.record, requestAttempt, stepAttempt, response.usage);
     return settleResponse(current, response, usage, { stepAttempt, requestAttempt, request, lease, attempt });
   }
@@ -1173,9 +1357,11 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     }
 
     const delay = decision.kind === 'retry-after' ? decision.delayMilliseconds : 0;
-    const acceptedAt = now();
+    const acceptedAt = engine.sharedRates === undefined ? now() : rateEpochNow();
+    const acceptedElapsed = engine.sharedRates === undefined ? undefined : elapsedNow();
+    const liveNotBefore = acceptedElapsed === undefined ? undefined : acceptedElapsed + delay;
     const timed = acceptedAt + delay;
-    if (!Number.isSafeInteger(timed)) {
+    if (!Number.isSafeInteger(timed) || (liveNotBefore !== undefined && !Number.isSafeInteger(liveNotBefore))) {
       const failed: IOperationRecord = keepNoRetry({ kind: 'failed', runInstance, code: 'policy-error' });
       const written = commit(failed, undefined);
       return written === undefined ? leaseLost() : { stored: written, outcome: { kind: 'error', error: new SupervisionError('operation-classification-failed', `Operation ${operation} source policy returned invalid timing`) } };
@@ -1197,6 +1383,9 @@ export function createOperationEngine(engine: IOperationEngineContext): IOperati
     const written = commit(accepted, response.kind === 'unknown' ? 'lost-response' : response.kind === 'rate-limited' ? 'rate-limited' : response.transient ? 'transient' : 'permanent');
     if (written === undefined) {
       return leaseLost();
+    }
+    if (liveNotBefore !== undefined && delay > 0 && decision.kind !== 'stop') {
+      liveRetryFloors.set(operation, liveNotBefore);
     }
     if (decision.kind === 'stop') {
       emit('retry-exhausted', accepted, { stepAttempt, requestAttempt, status: 'retry-exhausted', reason: 'policy-exhausted' });

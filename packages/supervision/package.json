@@ -29,10 +29,11 @@
     "check": "concurrently --success all --names types,lint \"npm run check:types\" \"npm run check:lint\"",
     "check:types": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.portable.json",
     "check:lint": "eslint .",
-    "test": "npm run test:unit && npm run test:types && npm run test:public",
+    "test": "npm run test:unit && npm run test:types && npm run test:public && npm run test:controls",
     "test:unit": "tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand",
     "test:types": "tsd",
-    "test:public": "tsc --noEmit -p tsconfig.public-consumer.json"
+    "test:public": "tsc --noEmit -p tsconfig.public-consumer.json",
+    "test:controls": "node test/controls/shared-rate-mutation-controls.mjs --check-anchors"
   },
   "tsd": {
     "directory": "test-d"

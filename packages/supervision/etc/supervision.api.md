@@ -250,6 +250,7 @@ export interface IOperationRequest<T> {
     readonly retry?: IOperationRetryPolicy;
     readonly retrySource?: IRetrySourceScope;
     readonly safeToRepeat?: boolean;
+    readonly sharedRate?: IOperationSharedRate;
 }
 
 // @alpha
@@ -312,6 +313,13 @@ export interface IOperationSettlementRecord {
     readonly operator: string;
     readonly outcome: 'succeeded' | 'failed' | undefined;
     readonly report: string | undefined;
+}
+
+// @alpha
+export interface IOperationSharedRate {
+    readonly cooldownGateId: string;
+    readonly quantityCost?: number;
+    readonly surface: ISharedRateSurface;
 }
 
 // @alpha
@@ -728,12 +736,24 @@ export interface ISharedRateCoordinator {
     }): ISharedRateAdmission;
     observeCooldown(surface: ISharedRateSurface, gateId: string, epochFloor: number): void;
     registerSurface(declaration: ISharedRateSurfaceDeclaration): ISharedRateSurface;
+    validateAssociation(surface: ISharedRateSurface, association: {
+        readonly environment: string;
+        readonly service?: string;
+        readonly accessContext?: string;
+        readonly cooldownGateId: string;
+    }): void;
 }
 
 // @alpha
 export interface ISharedRateCoordinatorOptions {
     readonly elapsedClock: IRunElapsedClock;
     readonly epochClock: IRunEpochClock;
+}
+
+// @alpha
+export interface ISharedRateDispatchOptions {
+    readonly coordinator: ISharedRateCoordinator;
+    readonly elapsedClock: IRunElapsedClock;
 }
 
 // @alpha
@@ -845,11 +865,12 @@ export interface ISupervision {
 }
 
 // @alpha
-export type ISupervisionErrorCode = 'outside-run' | 'run-closed' | 'composition-phase' | 'observer-failure' | 'writer-busy' | 'invalid-request' | 'invalid-response' | 'stopped' | 'operation-failed' | 'operation-classification-failed' | 'operation-classification-incomplete' | 'operation-deferred' | 'operation-unknown' | 'operation-exhausted' | 'operation-unrecorded' | 'operation-resolved' | 'integrity' | 'undeclared-call';
+export type ISupervisionErrorCode = 'outside-run' | 'run-closed' | 'composition-phase' | 'observer-failure' | 'writer-busy' | 'invalid-request' | 'invalid-response' | 'rate-timing-failed' | 'stopped' | 'operation-failed' | 'operation-classification-failed' | 'operation-classification-incomplete' | 'operation-deferred' | 'operation-unknown' | 'operation-exhausted' | 'operation-unrecorded' | 'operation-resolved' | 'integrity' | 'undeclared-call';
 
 // @alpha
 export interface ISupervisionOptions {
     readonly context: IRunScopeCapability;
+    readonly sharedRates?: ISharedRateDispatchOptions;
     readonly timer?: IRunTimer;
 }
 

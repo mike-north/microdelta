@@ -17,6 +17,7 @@ import type { IWriterAttempt } from './contracts.js';
  *   while another process held it, or while storage stayed too busy to decide (RUN-002 owner decision). It is
  *   always a {@link WriterBusyError}, which names the holder.
  * - `invalid-request`: a run or request was malformed, for example an empty environment or ordinary-work label.
+ * - `rate-timing-failed`: shared admission could not trust an epoch/elapsed clock or wake mapping; no affected send or publication is authorized and host exception details are not exposed.
  * - `invalid-response`: a sent source response had malformed bounded retry evidence; no retry decision or fallback may use it.
  * - `stopped`: stop intent refused or aborted a send, a permit wait or a wait for a time (RUN-014). The
  *   step attempt it belonged to can no longer publish; its body may let this propagate. It also ends a
@@ -48,6 +49,7 @@ export type ISupervisionErrorCode =
   | 'writer-busy'
   | 'invalid-request'
   | 'invalid-response'
+  | 'rate-timing-failed'
   | 'stopped'
   | 'operation-failed'
   | 'operation-classification-failed'

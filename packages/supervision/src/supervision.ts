@@ -383,6 +383,9 @@ function outcomeFoldReport(resolved: IOutcomeFoldResolution, scope: IRequestScop
 export function createSupervision(options: ISupervisionOptions): ISupervision {
   const scope: IRunScope<IRunFrame> = options.context.createAsyncContext<IRunFrame>();
   const timer = options.timer;
+  const rateOptions = options.sharedRates;
+  /** Capture the composition owner once; later option mutation cannot reset its ledger between runs. */
+  const sharedRates: ISupervisionOptions['sharedRates'] = rateOptions === undefined ? undefined : Object.freeze({ coordinator: rateOptions.coordinator, elapsedClock: rateOptions.elapsedClock });
   /** Process-local counter for generated run identifiers (volatile metadata). */
   let generated = 0;
 
@@ -482,6 +485,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
      */
     const engine: IOperationEngine | undefined = operationPorts === undefined || timer === undefined || random === undefined ? undefined : createOperationEngine({
       context,
+      ...(sharedRates === undefined ? {} : { sharedRates }),
       ports: operationPorts,
       random,
       timer,

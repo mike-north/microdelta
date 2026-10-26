@@ -74,6 +74,7 @@ import type { IOperationRetryPolicy as IOperationRetryPolicy_2 } from '@microdel
 import type { IOperationSend as IOperationSend_2 } from '@microdelta/supervision';
 import type { IOperationSettlement as IOperationSettlement_2 } from '@microdelta/supervision';
 import type { IOperationSettlementRecord as IOperationSettlementRecord_2 } from '@microdelta/supervision';
+import type { IOperationSharedRate as IOperationSharedRate_2 } from '@microdelta/supervision';
 import type { IOperationStatus as IOperationStatus_2 } from '@microdelta/supervision';
 import type { IOperationSubject as IOperationSubject_2 } from '@microdelta/supervision';
 import type { IOperationUsage as IOperationUsage_2 } from '@microdelta/supervision';
@@ -116,6 +117,8 @@ import type { IRunResult as IRunResult_2 } from '@microdelta/supervision';
 import type { ISendInterruption as ISendInterruption_2 } from '@microdelta/supervision';
 import type { ISendPhase as ISendPhase_2 } from '@microdelta/supervision';
 import type { ISendRequest as ISendRequest_2 } from '@microdelta/supervision';
+import type { ISharedRateSurface as ISharedRateSurface_2 } from '@microdelta/supervision';
+import type { ISharedRateSurfaceDeclaration as ISharedRateSurfaceDeclaration_2 } from '@microdelta/supervision';
 import type { ISkippedEntry as ISkippedEntry_2 } from '@microdelta/definition';
 import type { ISlotSubject as ISlotSubject_2 } from '@microdelta/definition';
 import type { ISourceOutcome as ISourceOutcome_2 } from '@microdelta/resolution';
@@ -364,6 +367,9 @@ export type IOperationSettlement = IOperationSettlement_2;
 export type IOperationSettlementRecord = IOperationSettlementRecord_2;
 
 // @alpha
+export type IOperationSharedRate = IOperationSharedRate_2;
+
+// @alpha
 export type IOperationStatus = IOperationStatus_2;
 
 // @alpha
@@ -536,6 +542,12 @@ export type ISendPhase = ISendPhase_2;
 export type ISendRequest<T> = ISendRequest_2<T>;
 
 // @alpha
+export type ISharedRateSurface = ISharedRateSurface_2;
+
+// @alpha
+export type ISharedRateSurfaceDeclaration = ISharedRateSurfaceDeclaration_2;
+
+// @alpha
 export type ISkippedEntry = ISkippedEntry_2;
 
 // @alpha
@@ -706,6 +718,9 @@ export { Outcome }
 export { Path }
 
 export { RecordedRead }
+
+// @alpha
+export function registerSharedRateSurface(declaration: ISharedRateSurfaceDeclaration): ISharedRateSurface;
 
 // @alpha
 export const ResolutionError: typeof ResolutionError_2;

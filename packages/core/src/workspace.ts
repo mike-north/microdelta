@@ -38,11 +38,12 @@ import type {
 } from '@microdelta/resolution';
 import { openDurableHistory } from '@microdelta/history';
 import type { ICompletedResultReference as IHistoryReference } from '@microdelta/history';
-import { canonicalNodeLocation, createNodeClock, createNodeSqlite, createNodeTimer } from '@microdelta/machine-node';
+import { canonicalNodeLocation, createNodeClock, createNodeElapsedClock, createNodeSqlite, createNodeTimer } from '@microdelta/machine-node';
 import { ResolutionError as ResolutionErrorClass, createResolution } from '@microdelta/resolution';
 import {
   SupervisionError as SupervisionErrorClass,
   WriterBusyError as WriterBusyErrorClass,
+  createSharedRateCoordinator,
   createStopController as createSupervisionStopController,
   createSupervision,
   operationJournalDeclaration,
@@ -54,6 +55,9 @@ import type {
   IAttemptUsage as ISupervisionAttemptUsage,
   IDeferralMode as ISupervisionDeferralMode,
   IOperationAccounting as ISupervisionOperationAccounting,
+  IOperationSharedRate as ISupervisionOperationSharedRate,
+  ISharedRateSurface as ISupervisionSharedRateSurface,
+  ISharedRateSurfaceDeclaration as ISupervisionSharedRateSurfaceDeclaration,
   IOperationAttribution as ISupervisionOperationAttribution,
   IOperationBlock as ISupervisionOperationBlock,
   IOperationEvent as ISupervisionOperationEvent,
@@ -314,6 +318,15 @@ export type IRunExecution = ISupervisionRunExecution;
  * @alpha
  */
 export type IOperationRequest<T> = ISupervisionOperationRequest<T>;
+
+/** Explicit source attribution for one registered shared gate. @alpha */
+export type IOperationSharedRate = ISupervisionOperationSharedRate;
+
+/** Opaque reference issued by the facade assembly's coordinator. @alpha */
+export type ISharedRateSurface = ISupervisionSharedRateSurface;
+
+/** Non-secret logical surface and immutable mandatory gates. @alpha */
+export type ISharedRateSurfaceDeclaration = ISupervisionSharedRateSurfaceDeclaration;
 
 /** What one request attempt's send receives: the operation and attempt identities, the idempotency key when declared, and the abort signal. @alpha */
 export type IOperationSend = ISupervisionOperationSend;
@@ -731,13 +744,35 @@ const defaultLeaseMilliseconds = 30_000;
 /** Node's timer, which arms stop deadlines, waits for a time and paces waits for the writer lease. */
 const timer = createNodeTimer();
 
+/** Node's monotonic duration capability ages rate debits independently of wall-clock corrections. */
+const elapsedClock = createNodeElapsedClock();
+
+/** One facade assembly owns the ledger independently of workspace/run lifetimes. */
+const sharedRateCoordinator = createSharedRateCoordinator({ epochClock: timer, elapsedClock });
+
 /**
  * The facade's one Run Supervision, over the Node Machine's asynchronous
- * context and timer supplied structurally. `currentRun()`,
- * `currentExecution()` and every workspace run share it, so author code finds
- * whichever run is live in its asynchronous execution.
+ * context, timer and shared admission owner. currentRun(), currentExecution()
+ * and every workspace run share this composition's asynchronous scope.
  */
-const supervision = createSupervision({ context: machine, timer });
+const supervision = createSupervision({ context: machine, timer, sharedRates: { coordinator: sharedRateCoordinator, elapsedClock } });
+
+/**
+ * Intern a non-secret logical API surface in this facade assembly. All its
+ * openWorkspace instances and runs share registered environment/service/access
+ * gates; opening a workspace does not create another coordinator owner.
+ * Independent Supervision compositions share only when explicitly given the
+ * same coordinator; foreign handles are refused. Other facade copies/workers
+ * and processes are outside this assembly's sharing guarantee.
+ * Registration adds no implicit numeric limit. A source attaches the handle
+ * and its known cooldown gate to each associated external operation.
+ * @param declaration - Exact environment/service/access/surface identity and immutable gates.
+ * @returns The interned opaque surface handle.
+ * @alpha
+ */
+export function registerSharedRateSurface(declaration: ISharedRateSurfaceDeclaration): ISharedRateSurface {
+  return sharedRateCoordinator.registerSurface(declaration);
+}
 
 /** Where one live workspace run stands: the store it writes and the run it was started inside, if any. */
 interface ILiveRun {

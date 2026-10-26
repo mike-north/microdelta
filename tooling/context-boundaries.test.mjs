@@ -79,6 +79,17 @@ test('Value Semantics consumes only the portable Machine hashing capability', as
   assert.deepEqual(reverse.map(message => message.ruleId), [rule]);
 });
 
+test('Supervision uses portable Machine contracts while only its host tests assemble Node adapters', async () => {
+  for (const [owner, source, allowed] of [
+    ['packages/supervision', "import type { ISqliteReadCapability } from '@microdelta/machine';", true],
+    ['packages/supervision', "import { createNodeSqliteReader } from '@microdelta/machine-node';", false],
+    ['packages/supervision/test', "import { createNodeSqliteReader } from '@microdelta/machine-node';", true],
+  ]) {
+    const messages = await diagnostics(owner, source);
+    assert.deepEqual(messages.map(message => message.ruleId), allowed ? [] : [rule], `${owner}: ${source}: ${JSON.stringify(messages)}`);
+  }
+});
+
 test('source, deep, re-export, facade, and unknown-path bypasses fail closed', async () => {
   for (const [owner, source] of [
     ['packages/core', "import { createMemoryStore } from '@microdelta/history/src/store/memory/index.js';"],

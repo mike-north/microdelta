@@ -7,8 +7,10 @@
 import type { IAdmissionRequest } from '@microdelta/resolution';
 import type { IBindingDescriptor } from '@microdelta/definition';
 import type { ICheckOutcome } from '@microdelta/resolution';
+import type { IClockCapability } from '@microdelta/machine';
 import type { ICompleteOutcomeFoldCoverage } from '@microdelta/resolution';
 import type { IDiscoveryOutcome } from '@microdelta/resolution';
+import type { IElapsedClockCapability } from '@microdelta/machine';
 import type { IExecutionAdmission } from '@microdelta/resolution';
 import type { IExecutionSupervision } from '@microdelta/resolution';
 import type { IFoldOutcome } from '@microdelta/resolution';
@@ -17,10 +19,14 @@ import type { IIncompleteOutcomeFoldCoverage } from '@microdelta/resolution';
 import type { ILifecycleEvent } from '@microdelta/resolution';
 import type { ILifecycleObserver } from '@microdelta/resolution';
 import type { IOutcomeFoldOutcome } from '@microdelta/resolution';
+import type { IRandomIdentifierCapability } from '@microdelta/machine';
 import type { IRecoveryResult } from '@microdelta/resolution';
 import type { IResolution } from '@microdelta/resolution';
 import type { IResolutionOutcome } from '@microdelta/resolution';
 import type { IResolveRequest } from '@microdelta/resolution';
+import type { ISqliteCapability } from '@microdelta/machine';
+import type { ISqliteReadCapability } from '@microdelta/machine';
+import type { ITimerCapability } from '@microdelta/machine';
 import type { ResolutionError } from '@microdelta/resolution';
 
 // @alpha
@@ -45,6 +51,22 @@ export interface IAbortSignal {
 }
 
 // @alpha
+export type IApplicationStatement = {
+    readonly kind: 'not-classified';
+} | {
+    readonly kind: 'incomplete';
+    readonly reasons: readonly ('required-work' | 'coverage' | 'publication' | 'other')[];
+} | {
+    readonly kind: 'confirmed';
+    readonly deliverable: string;
+};
+
+// @alpha
+export interface IApplicationStatementSubmission {
+    submit(statement: IApplicationStatement): void;
+}
+
+// @alpha
 export type IAttemptUsage = 'acknowledged' | 'unrecorded' | 'none';
 
 // @alpha
@@ -58,6 +80,115 @@ export type IDiscoveryReport = Extract<IDiscoveryOutcome, {
     readonly collection: IBindingDescriptor;
     readonly refused: IBindingDescriptor;
     readonly reason: string;
+};
+
+// @alpha
+export interface IExecutionObservation {
+    // (undocumented)
+    readonly application?: IApplicationStatement;
+    // (undocumented)
+    readonly body?: 'not-entered' | 'returned' | 'threw';
+    readonly context: IRunContext;
+    readonly diagnostics?: {
+        readonly present: boolean;
+        readonly count: number;
+        readonly lowerBound: boolean;
+    };
+    // (undocumented)
+    readonly eventCounts: IExecutionObservationEventCounts;
+    readonly executionFailure?: {
+        readonly kind: 'supervision';
+        readonly code: ISupervisionErrorCode;
+    } | {
+        readonly kind: 'other';
+    };
+    // (undocumented)
+    readonly executionId: string;
+    readonly interruptions?: {
+        readonly cancelled: number;
+        readonly running: number;
+        readonly unknown: number;
+        readonly lowerBound: boolean;
+    };
+    readonly observationFaults?: IExecutionObservationFaultCount;
+    // (undocumented)
+    readonly phase: 'prepared' | 'running' | 'draining' | 'closed';
+    readonly revision: number;
+    readonly sampledAt: number;
+    readonly stop?: IStopState;
+    readonly waitingUntil?: number;
+}
+
+// @alpha
+export interface IExecutionObservationEventCounts {
+    // (undocumented)
+    readonly lowerBound: boolean;
+    // (undocumented)
+    readonly operation: number;
+    // (undocumented)
+    readonly ordinary: number;
+    // (undocumented)
+    readonly promotion: number;
+    // (undocumented)
+    readonly send: number;
+    // (undocumented)
+    readonly step: number;
+    // (undocumented)
+    readonly stop: number;
+    // (undocumented)
+    readonly wait: number;
+}
+
+// @alpha
+export interface IExecutionObservationFaultCount {
+    readonly count: number;
+    readonly lowerBound: boolean;
+}
+
+// @alpha
+export interface IExecutionObservationHost {
+    // (undocumented)
+    readonly clock: IClockCapability;
+    // (undocumented)
+    readonly elapsedClock: IElapsedClockCapability;
+    // (undocumented)
+    readonly random: IRandomIdentifierCapability;
+    // (undocumented)
+    readonly reader: ISqliteReadCapability;
+    // (undocumented)
+    readonly sqlite: ISqliteCapability;
+    // (undocumented)
+    readonly timer: ITimerCapability;
+}
+
+// @alpha
+export interface IExecutionObservationLocator {
+    // (undocumented)
+    readonly executionId: string;
+    // (undocumented)
+    readonly location: string;
+}
+
+// @alpha
+export interface IExecutionObservationReader {
+    close(): void;
+    read(): IExecutionObservationReadResult;
+}
+
+// @alpha
+export interface IExecutionObservationReadResult {
+    // (undocumented)
+    readonly result: IExecutionObservationReadState;
+    // (undocumented)
+    readonly version: 1;
+}
+
+// @alpha
+export type IExecutionObservationReadState = {
+    readonly kind: 'observed';
+    readonly observation: IExecutionObservation;
+} | {
+    readonly kind: 'absent' | 'identity-mismatch' | 'unsupported' | 'corrupt' | 'busy' | 'unavailable' | 'recovery-required';
 };
 
 // @alpha
@@ -142,6 +273,28 @@ export interface IMembersReport {
 export interface IMembersTarget {
     readonly step: string;
     readonly template: string;
+}
+
+// @alpha
+export type IObservationAcknowledgment = {
+    readonly kind: 'acknowledged';
+    readonly revision: number;
+    readonly observationFaults?: IExecutionObservationFaultCount;
+} | {
+    readonly kind: 'uncertain';
+    readonly observationFaults?: IExecutionObservationFaultCount;
+} | {
+    readonly kind: 'unprepared';
+};
+
+// @alpha
+export interface IObservedRun<T> {
+    // (undocumented)
+    readonly acknowledgment: Promise<IObservationAcknowledgment>;
+    // (undocumented)
+    readonly locator: IExecutionObservationLocator;
+    // (undocumented)
+    readonly result: Promise<IRunResult<T>>;
 }
 
 // @alpha
@@ -862,6 +1015,9 @@ export interface ISupervision {
     current(): IRunContext;
     execution(): IRunExecution;
     run<T>(options: IRunOptions, body: (run: IRun) => T | Promise<T>): Promise<IRunResult<Awaited<T>>>;
+    startObserved<T>(options: IRunOptions & {
+        readonly observationLocation: string;
+    }, body: (run: IRun, application: IApplicationStatementSubmission) => T | Promise<T>): IObservedRun<Awaited<T>>;
 }
 
 // @alpha
@@ -870,6 +1026,7 @@ export type ISupervisionErrorCode = 'outside-run' | 'run-closed' | 'composition-
 // @alpha
 export interface ISupervisionOptions {
     readonly context: IRunScopeCapability;
+    readonly observation?: IExecutionObservationHost;
     readonly sharedRates?: ISharedRateDispatchOptions;
     readonly timer?: IRunTimer;
 }
@@ -909,6 +1066,9 @@ export interface IWriterWaitOptions {
     readonly deadline?: number;
     readonly pollMilliseconds?: number;
 }
+
+// @alpha
+export function openExecutionObservationReader(host: ISqliteReadCapability, locator: IExecutionObservationLocator): IExecutionObservationReader;
 
 // @alpha
 export const operationFormat = "microdelta.supervision.operation";

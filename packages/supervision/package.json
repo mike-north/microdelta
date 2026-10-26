@@ -40,6 +40,7 @@
   },
   "dependencies": {
     "@microdelta/definition": "0.3.1",
+    "@microdelta/machine": "0.3.0",
     "@microdelta/resolution": "0.3.1"
   },
   "publishConfig": {

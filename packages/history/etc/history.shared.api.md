@@ -462,6 +462,7 @@ export interface ISqliteConnection {
 
 // @alpha
 export interface ISqliteOpenOptions {
+    readonly creation?: 'exclusive';
     readonly journalMode: 'wal' | 'delete';
 }
 

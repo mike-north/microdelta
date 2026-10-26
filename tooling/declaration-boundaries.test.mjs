@@ -374,7 +374,8 @@ test('inherited paths and invented aliases cannot expose sibling source or untri
  * its assembly tests also consume Value's alpha entry for independent oracles
  * and the Definition, Materialization and Resolution alpha entries that
  * compose Resolution over real History, plus Supervision's alpha entry for the
- * workspace run path and Accounting's alpha entry for its durable SQLite port
+ * workspace run path, Machine's portable alpha capabilities for the observed
+ * execution reader, and Accounting's alpha entry for its durable SQLite port
  * over the real Node host. The M3 acceptance harness imports the facade's own built
  * package, which own-package tests resolve through its untrimmed rollup
  * (PKG-004), reached through the workspace's installed package link.
@@ -387,6 +388,7 @@ test('facade compiler maps each approved owner import, including both History en
     '@microdelta/definition': ['../definition/dist/api/definition.alpha.d.ts'],
     '@microdelta/history': ['../history/dist/api/history.alpha.d.ts'],
     '@microdelta/history/conformance/store': ['../history/dist/api/history.conformance.store.alpha.d.ts'],
+    '@microdelta/machine': ['../machine/dist/api/machine.alpha.d.ts'],
     '@microdelta/machine-node': ['../machine-node/dist/api/machine-node.alpha.d.ts'],
     '@microdelta/materialization': ['../materialization/dist/api/materialization.alpha.d.ts'],
     '@microdelta/resolution': ['../resolution/dist/api/resolution.alpha.d.ts'],
@@ -490,6 +492,38 @@ test('a context may map only the alpha declaration closure of its approved produ
   } finally {
     await rm(directory, { recursive: true, force: true });
   }
+});
+
+/** Supervision's durable owner tests need Node, while its production declaration graph stays portable. */
+test('Supervision permits the Machine Node alpha alias only in its owner test config', async () => {
+  const gate = path.join(root, 'tooling/check-producer-declarations.mjs');
+  const directory = await mkdtemp(path.join(os.tmpdir(), 'microdelta-supervision-test-edge-'));
+  const target = path.join(root, 'packages/machine-node/dist/api/machine-node.alpha.d.ts');
+  try {
+    const packageDir = path.join(directory, 'packages', 'supervision');
+    await mkdir(packageDir, { recursive: true });
+    const check = async (name, declaration) => {
+      const config = path.join(packageDir, name);
+      await mkdir(path.dirname(config), { recursive: true });
+      await writeFile(config, JSON.stringify({ compilerOptions: { paths: { '@microdelta/machine-node': [declaration] } }, files: [] }));
+      return spawnSync(process.execPath, [gate, '--config', config], { cwd: root, encoding: 'utf8' });
+    };
+    const ownerTest = await check('tsconfig.test.json', target);
+    assert.equal(ownerTest.status, 0, `Owner tests should use only Machine Node's alpha declarations: ${ownerTest.stdout}${ownerTest.stderr}`);
+    const eslintTest = await check('test/tsconfig.json', target);
+    assert.equal(eslintTest.status, 0, `The nearest lint project for owner tests needs the same alpha surface: ${eslintTest.stdout}${eslintTest.stderr}`);
+    const production = await check('tsconfig.json', target);
+    assert.notEqual(production.status, 0, 'The owner-test edge must not become a production package edge');
+    assert.match(production.stdout + production.stderr, /unapproved.*alias or tier/iu);
+    const wrongTier = await check('tsconfig.test.json', path.join(root, 'packages/machine-node/dist/api/machine-node.untrimmed.d.ts'));
+    assert.notEqual(wrongTier.status, 0, 'Owner tests must not consume Machine Node internals');
+    assert.match(wrongTier.stdout + wrongTier.stderr, /unapproved.*alias or tier/iu);
+    const inherited = path.join(packageDir, 'tsconfig.production.json');
+    await writeFile(inherited, JSON.stringify({ extends: './tsconfig.test.json', files: [] }));
+    const inheritedResult = spawnSync(process.execPath, [gate, '--config', inherited], { cwd: root, encoding: 'utf8' });
+    assert.notEqual(inheritedResult.status, 0, 'A production config cannot inherit the owner-test host alias');
+    assert.match(inheritedResult.stdout + inheritedResult.stderr, /unapproved.*alias or tier/iu);
+  } finally { await rm(directory, { recursive: true, force: true }); }
 });
 
 /**

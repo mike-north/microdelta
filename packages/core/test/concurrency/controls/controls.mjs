@@ -227,8 +227,8 @@ export const controls = Object.freeze([
     target: runTestTarget,
     group: 'supervision',
     edits: [{
-      anchor: 'function leaseForPass() {\n            return writerLease();\n        }',
-      replacement: "function leaseForPass() {\n            const tried = writer.tryLease();\n            if (tried.kind !== 'acquired') {\n                throw new SupervisionError('writer-busy', 'single try without waiting');\n            }\n            return Promise.resolve(tried.lease);\n        }",
+      anchor: 'function leaseForPass() {\n                return writerLease();\n            }',
+      replacement: "function leaseForPass() {\n                const tried = writer.tryLease();\n                if (tried.kind !== 'acquired') {\n                    throw new SupervisionError('writer-busy', 'single try without waiting');\n                }\n                return Promise.resolve(tried.lease);\n            }",
     }],
   },
   {

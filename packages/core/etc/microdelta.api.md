@@ -17,6 +17,8 @@ import type { IAbortSignal as IAbortSignal_2 } from '@microdelta/supervision';
 import type { IAdmissionDecision as IAdmissionDecision_2 } from '@microdelta/resolution';
 import type { IAdmissionRequest as IAdmissionRequest_2 } from '@microdelta/resolution';
 import type { IAnyTemplateDeclaration as IAnyTemplateDeclaration_2 } from '@microdelta/definition';
+import type { IApplicationStatement as IApplicationStatement_2 } from '@microdelta/supervision';
+import type { IApplicationStatementSubmission as IApplicationStatementSubmission_2 } from '@microdelta/supervision';
 import type { IAttemptUsage as IAttemptUsage_2 } from '@microdelta/supervision';
 import type { IBindingDescriptor } from '@microdelta/definition';
 import type { ICancelledEntry as ICancelledEntry_2 } from '@microdelta/definition';
@@ -35,6 +37,13 @@ import { Identity } from '@microdelta/history';
 import type { IDerivedArguments as IDerivedArguments_2 } from '@microdelta/definition';
 import type { IDiscoveryReport as IDiscoveryReport_2 } from '@microdelta/supervision';
 import type { IExecutionAdmission } from '@microdelta/resolution';
+import type { IExecutionObservation as IExecutionObservation_2 } from '@microdelta/supervision';
+import type { IExecutionObservationEventCounts as IExecutionObservationEventCounts_2 } from '@microdelta/supervision';
+import type { IExecutionObservationFaultCount as IExecutionObservationFaultCount_2 } from '@microdelta/supervision';
+import type { IExecutionObservationLocator as IExecutionObservationLocator_2 } from '@microdelta/supervision';
+import type { IExecutionObservationReader as IExecutionObservationReader_2 } from '@microdelta/supervision';
+import type { IExecutionObservationReadResult as IExecutionObservationReadResult_2 } from '@microdelta/supervision';
+import type { IExecutionObservationReadState as IExecutionObservationReadState_2 } from '@microdelta/supervision';
 import type { IFailedEntry as IFailedEntry_2 } from '@microdelta/definition';
 import type { IFoldCoverage as IFoldCoverage_2 } from '@microdelta/resolution';
 import type { IFoldDeclaration as IFoldDeclaration_2 } from '@microdelta/definition';
@@ -60,6 +69,8 @@ import type { IMemberOutcome as IMemberOutcome_2 } from '@microdelta/supervision
 import type { IMembersReport as IMembersReport_2 } from '@microdelta/supervision';
 import type { IMembersTarget as IMembersTarget_2 } from '@microdelta/supervision';
 import { InvalidStorePatchError } from '@microdelta/history';
+import type { IObservationAcknowledgment as IObservationAcknowledgment_2 } from '@microdelta/supervision';
+import type { IObservedRun as IObservedRun_2 } from '@microdelta/supervision';
 import type { IOperationAccounting as IOperationAccounting_2 } from '@microdelta/supervision';
 import type { IOperationAttribution as IOperationAttribution_2 } from '@microdelta/supervision';
 import type { IOperationBlock as IOperationBlock_2 } from '@microdelta/supervision';
@@ -210,6 +221,12 @@ export type IAdmissionRequest = IAdmissionRequest_2;
 export type IAnyTemplateDeclaration<TInputs extends object, THelpers extends object> = IAnyTemplateDeclaration_2<IAuthoringFamily<TInputs, THelpers>>;
 
 // @alpha
+export type IApplicationStatement = IApplicationStatement_2;
+
+// @alpha
+export type IApplicationStatementSubmission = IApplicationStatementSubmission_2;
+
+// @alpha
 export type IAttemptUsage = IAttemptUsage_2;
 
 // @alpha
@@ -258,6 +275,27 @@ export type IDerivedArguments<TParameters extends readonly unknown[]> = IDerived
 
 // @alpha
 export type IDiscoveryReport = IDiscoveryReport_2;
+
+// @alpha
+export type IExecutionObservation = IExecutionObservation_2;
+
+// @alpha
+export type IExecutionObservationEventCounts = IExecutionObservationEventCounts_2;
+
+// @alpha
+export type IExecutionObservationFaultCount = IExecutionObservationFaultCount_2;
+
+// @alpha
+export type IExecutionObservationLocator = IExecutionObservationLocator_2;
+
+// @alpha
+export type IExecutionObservationReader = IExecutionObservationReader_2;
+
+// @alpha
+export type IExecutionObservationReadResult = IExecutionObservationReadResult_2;
+
+// @alpha
+export type IExecutionObservationReadState = IExecutionObservationReadState_2;
 
 // @alpha
 export type IFailedEntry = IFailedEntry_2;
@@ -326,6 +364,12 @@ export type IMembersReport = IMembersReport_2;
 export type IMembersTarget = IMembersTarget_2;
 
 export { InvalidStorePatchError }
+
+// @alpha
+export type IObservationAcknowledgment = IObservationAcknowledgment_2;
+
+// @alpha
+export type IObservedRun<T> = IObservedRun_2<T>;
 
 // @alpha
 export type IOperationAccounting = IOperationAccounting_2;
@@ -675,6 +719,9 @@ export interface IWorkspace {
     close(): void;
     readonly logicalStore: string;
     run<TInputs extends object, THelpers extends object, T>(options: IWorkspaceRunOptions<TInputs, THelpers>, body: (run: IWorkspaceRun) => T | Promise<T>): Promise<IRunResult<Awaited<T>>>;
+    startObserved<TInputs extends object, THelpers extends object, T>(options: IWorkspaceRunOptions<TInputs, THelpers> & {
+        readonly observationLocation: string;
+    }, body: (run: IWorkspaceRun, application: IApplicationStatementSubmission) => T | Promise<T>): IObservedRun<Awaited<T>>;
 }
 
 // @alpha
@@ -718,6 +765,9 @@ export type IWriterWaitOptions = IWriterWaitOptions_2;
 export { MemoryStoreOptions }
 
 export { MissingRowError }
+
+// @alpha
+export function openExecutionObservationReader(locator: IExecutionObservationLocator): IExecutionObservationReader;
 
 // @alpha
 export function openWorkspace(options: IWorkspaceOptions): IWorkspace;

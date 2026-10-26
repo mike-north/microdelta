@@ -14,9 +14,14 @@
  * @see ../../../docs/plans/m3-contribution-analysis.md (Supervision and actual consumer path)
  */
 import { AsyncLocalStorage } from 'node:async_hooks';
+import { spawnSync } from 'node:child_process';
+import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 import { describe, expect, test } from '@jest/globals';
 import { declarations } from '@microdelta/definition';
+import { createNodeClock, createNodeElapsedClock, createNodeRandom, createNodeSqlite, createNodeSqliteReader, createNodeTimer } from '@microdelta/machine-node';
 import type { IBindingDescriptor, IBindingFamily } from '@microdelta/definition';
 import { ResolutionError } from '@microdelta/resolution';
 import type {
@@ -41,7 +46,8 @@ import type {
   IResolveRequest,
 } from '@microdelta/resolution';
 
-import { SupervisionError, createSupervision, ordinaryLifecycle, stepLifecycle } from '../src/index.js';
+import { SupervisionError, createStopController, createSupervision, openExecutionObservationReader, ordinaryLifecycle, stepLifecycle } from '../src/index.js';
+import { _incrementObservationEventCounts, _incrementObservationFaults } from '../src/observation.js';
 import type {
   IFoldReport,
   IMemberOutcome,
@@ -55,8 +61,22 @@ import type {
   IRunScope,
   IRunScopeCapability,
   ISupervision,
+  IExecutionObservationEventCounts,
   IWriterAttempt,
 } from '../src/index.js';
+
+/** Use a separate Node process to prove a locator survives observer restart. */
+function readInFreshProcess(locator: { readonly location: string; readonly executionId: string }): unknown {
+  const source = `import { createNodeSqliteReader } from '@microdelta/machine-node';
+import { openExecutionObservationReader } from ${JSON.stringify(new URL('../src/index.js', import.meta.url).href)};
+const reader = openExecutionObservationReader(createNodeSqliteReader(), JSON.parse(process.argv[1]));
+process.stdout.write(JSON.stringify(reader.read()));
+reader.close();`;
+  const child = spawnSync(process.execPath, ['--input-type=module', '-e', source, JSON.stringify(locator)], { cwd: process.cwd(), encoding: 'utf8', timeout: 10_000 });
+  expect(child.status).toBe(0);
+  expect(child.stderr).toBe('');
+  return JSON.parse(child.stdout) as unknown;
+}
 
 /** Node's real asynchronous context, supplied structurally as a host would. */
 const nodeScopes: IRunScopeCapability = {
@@ -473,6 +493,35 @@ describe('scoped run context (RUN-001, DOM-2)', () => {
     if (started !== undefined) {
       await expectSupervisionError(started, 'composition-phase');
     }
+  });
+
+  test('an observed run invoked during composition remains unprepared after the proxy returns', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      const { source, compose } = declarations<IBindingFamily & { readonly source: object; readonly memo: object }>();
+      const activity = source<{ readonly value: string }>({ subject: 'activity:ada', run: () => ({ value: 'ada' }) });
+      const location = join(directory, 'during-composition.sqlite');
+      let observed: ReturnType<typeof supervisor.startObserved> | undefined;
+      let bodies = 0;
+      const members = new Proxy([{ key: 'person:ada', steps: [{ slot: 'activity', declaration: activity }] }], {
+        get(target, key, receiver): unknown {
+          if (key === '0' && observed === undefined) {
+            observed = supervisor.startObserved({ ...runOptions().options, observationLocation: location }, () => { bodies += 1; return 'ran'; });
+          }
+          return Reflect.get(target, key, receiver);
+        },
+      });
+      compose({ scope: 'analysis:test', members });
+      expect(observed).toBeDefined();
+      if (observed !== undefined) {
+        await expectSupervisionError(observed.result, 'composition-phase');
+        expect(await observed.acknowledgment).toEqual({ kind: 'unprepared' });
+      }
+      expect(bodies).toBe(0);
+      expect(existsSync(location)).toBe(false);
+    } finally { rmSync(directory, { recursive: true, force: true }); }
   });
 
   test('malformed run options are rejected before a run starts', async () => {
@@ -1234,3 +1283,1013 @@ describe('closure boundary (RUN-001)', () => {
 function settled_<T>(promise: Promise<T>): Promise<{ readonly value?: T; readonly error?: unknown }> {
   return promise.then((value: T) => ({ value }), (error: unknown) => ({ error }));
 }
+
+
+/** CLI-005's first owner path uses a real rollback-journal artifact and a deliberately inert body. */
+describe('exact execution observation preparation (A-21a/b/c)', () => {
+  test.each(['delete', 'wal'] as const)('an existing foreign %s SQLite artifact remains byte-for-byte unchanged', async (journalMode) => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
+      const location = join(directory, 'foreign.sqlite');
+      const foreign = host.sqlite.openSqlite(location, { journalMode });
+      foreign.exec("CREATE TABLE foreign_marker (value TEXT NOT NULL); INSERT INTO foreign_marker (value) VALUES ('retained')");
+      foreign.close();
+      const original = readFileSync(location);
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      let factories = 0;
+      const { options } = runOptions({ resolution: () => { factories += 1; throw new Error('foreign artifact must not start Resolution'); } });
+      let bodies = 0;
+      const observed = supervisor.startObserved({ ...options, observationLocation: location }, () => { bodies += 1; return 'ran'; });
+      await expect(observed.result).rejects.toThrow();
+      expect(await observed.acknowledgment).toEqual({ kind: 'unprepared' });
+      expect(factories).toBe(0);
+      expect(bodies).toBe(0);
+      expect(readFileSync(location)).toEqual(original);
+      if (journalMode === 'delete') {
+        const reader = host.reader.openSqliteReader(location);
+        expect(reader.prepare('SELECT value FROM foreign_marker').get()).toEqual({ value: 'retained' });
+        expect(reader.prepare("SELECT name FROM sqlite_master WHERE name = 'microdelta_execution_observation'").get()).toBeUndefined();
+        reader.close();
+      }
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  test.each([
+    ['runId', { runId: 'r'.repeat(257) }],
+    ['analysis', { analysis: 'a'.repeat(257) }],
+    ['environment', { environment: 'e'.repeat(257) }],
+  ] as const)('oversized %s cannot create an unreadable prepared artifact or start analysis', async (_field, override) => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      let factories = 0;
+      let bodies = 0;
+      const { options } = runOptions({ ...override, resolution: () => { factories += 1; throw new Error('factory must not run'); } });
+      const location = join(directory, 'oversized.sqlite');
+      const observed = supervisor.startObserved({ ...options, observationLocation: location }, () => { bodies += 1; return 1; });
+      await expect(observed.result).rejects.toThrow();
+      expect(await observed.acknowledgment).toEqual({ kind: 'unprepared' });
+      expect(factories).toBe(0);
+      expect(bodies).toBe(0);
+      expect(existsSync(location)).toBe(false);
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  test('an exact maximum context name is readable and an oversized locator grants no preparation', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      const { options } = runOptions({ runId: 'r'.repeat(256) });
+      const valid = supervisor.startObserved({ ...options, observationLocation: join(directory, 'maximum.sqlite') }, () => 'accepted');
+      expect((await valid.result).value).toBe('accepted');
+      const reader = openExecutionObservationReader(host.reader, valid.locator);
+      expect(reader.read()).toMatchObject({ result: { kind: 'observed', observation: { context: { runId: 'r'.repeat(256) } } } });
+      reader.close();
+      let factories = 0;
+      const invalid = supervisor.startObserved({ ...options, resolution: () => { factories += 1; throw new Error('not reached'); }, observationLocation: 'x'.repeat(4097) }, () => 'not reached');
+      await expect(invalid.result).rejects.toThrow();
+      expect(await invalid.acknowledgment).toEqual({ kind: 'unprepared' });
+      expect(factories).toBe(0);
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  test('a failed initial publication starts neither Resolution nor the body and reports unprepared separately', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      let factories = 0;
+      let bodies = 0;
+      const supervisor = createSupervision({
+        context: nodeScopes,
+        observation: {
+          sqlite: { openSqlite: () => { throw new Error('initial store unavailable'); } },
+          reader: createNodeSqliteReader(),
+          random: createNodeRandom(),
+          clock: createNodeClock(),
+          elapsedClock: createNodeElapsedClock(),
+          timer: createNodeTimer(),
+        },
+      });
+      const { options } = runOptions({ resolution: () => { factories += 1; throw new Error('factory must not run'); } });
+      const observed = supervisor.startObserved({ ...options, observationLocation: join(directory, 'first.sqlite') }, () => {
+        bodies += 1;
+        return 'impossible';
+      });
+      await expect(observed.result).rejects.toThrow('initial store unavailable');
+      expect(await observed.acknowledgment).toEqual({ kind: 'unprepared' });
+      expect(factories).toBe(0);
+      expect(bodies).toBe(0);
+      expect(observed.locator.executionId).toMatch(/^[0-9a-f]{32}$/u);
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+
+  test('prepared is readable before entry, and no-event return closes without confirming an application result', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const host = {
+        sqlite: createNodeSqlite(),
+        reader: createNodeSqliteReader(),
+        random: createNodeRandom(),
+        clock: createNodeClock(),
+        elapsedClock: createNodeElapsedClock(),
+        timer: createNodeTimer(),
+      };
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      const { options } = runOptions({ runId: 'weekly' });
+      const location = join(directory, 'first.sqlite');
+      const observed = supervisor.startObserved({ ...options, observationLocation: location }, () => {
+        const reader = openExecutionObservationReader(host.reader, observed.locator);
+        const atEntry = reader.read();
+        reader.close();
+        expect(atEntry.result.kind).toBe('observed');
+        if (atEntry.result.kind === 'observed') {
+          expect(atEntry.result.observation.phase).toBe('prepared');
+          expect(atEntry.result.observation.revision).toBe(1);
+        }
+        return { filename: 'report.json' };
+      });
+      const result = await observed.result;
+      expect(result.value).toEqual({ filename: 'report.json' });
+      expect(await observed.acknowledgment).toEqual({ kind: 'acknowledged', revision: 2 });
+      const reader = openExecutionObservationReader(host.reader, observed.locator);
+      const final = reader.read();
+      expect(final.version).toBe(1);
+      expect(final.result.kind).toBe('observed');
+      if (final.result.kind === 'observed') {
+        expect(final.result.observation).toMatchObject({ phase: 'closed', body: 'returned', application: { kind: 'not-classified' }, revision: 2, context: { analysis: 'analysis:test', environment: 'env:test', runId: 'weekly' } });
+        expect(JSON.stringify(final)).not.toContain('report.json');
+      }
+      reader.close();
+    } finally {
+      rmSync(directory, { recursive: true, force: true });
+    }
+  });
+});
+
+/** A-21f observes the same exact artifact from independent, short-lived processes. */
+describe('separate-process exact observation (A-21f/h)', () => {
+  test('fresh processes read coherent active and closed revisions without affecting the run', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      const { options } = runOptions();
+      let release: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      let entered: () => void = () => undefined;
+      const began = new Promise<void>((resolve) => { entered = resolve; });
+      const observed = supervisor.startObserved({ ...options, observationLocation: join(directory, 'live.sqlite') }, async () => {
+        entered();
+        await gate;
+        return 'body value';
+      });
+      await began;
+      const active = readInFreshProcess(observed.locator);
+      expect(active).toMatchObject({ version: 1, result: { kind: 'observed', observation: { phase: 'prepared', revision: 1 } } });
+      release();
+      expect((await observed.result).value).toBe('body value');
+      expect(await observed.acknowledgment).toEqual({ kind: 'acknowledged', revision: 2 });
+      const closed = readInFreshProcess(observed.locator);
+      expect(closed).toMatchObject({ version: 1, result: { kind: 'observed', observation: { phase: 'closed', revision: 2, body: 'returned' } } });
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  test('a process killed inside its body leaves prepared evidence without inventing closure', () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const location = join(directory, 'interrupted.sqlite');
+      const locatorFile = join(directory, 'locator.json');
+      const source = `import { AsyncLocalStorage } from 'node:async_hooks';
+import { writeFileSync } from 'node:fs';
+import { createNodeClock, createNodeElapsedClock, createNodeRandom, createNodeSqlite, createNodeSqliteReader, createNodeTimer } from '@microdelta/machine-node';
+import { createSupervision } from ${JSON.stringify(new URL('../src/index.js', import.meta.url).href)};
+const supervisor = createSupervision({ context: { createAsyncContext: () => new AsyncLocalStorage() }, observation: { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() } });
+const observed = supervisor.startObserved({ analysis: 'analysis:test', environment: 'env:test', runId: 'weekly', resolution: () => ({}), writer: { tryLease: () => ({ kind: 'unavailable' }), release: () => {} }, observationLocation: process.argv[1] }, () => { writeFileSync(process.argv[2], JSON.stringify(observed.locator)); process.kill(process.pid, 'SIGKILL'); });
+await observed.result;`;
+      const child = spawnSync(process.execPath, ['--input-type=module', '-e', source, location, locatorFile], { cwd: process.cwd(), encoding: 'utf8', timeout: 10_000 });
+      expect(child.signal).toBe('SIGKILL');
+      const locator = JSON.parse(readFileSync(locatorFile, 'utf8')) as { readonly location: string; readonly executionId: string };
+      expect(readInFreshProcess(locator)).toMatchObject({ version: 1, result: { kind: 'observed', observation: { phase: 'prepared', revision: 1, context: { runId: 'weekly' } } } });
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+});
+
+/** These cases protect the exact-identity and body/closure distinctions of CLI-005. */
+describe('observed execution identity and closure (A-21a/b/c/g)', () => {
+  test('two starts competing for one new artifact grant exactly one owner', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      const { options } = runOptions();
+      const location = join(directory, 'contended.sqlite');
+      let bodies = 0;
+      const first = supervisor.startObserved({ ...options, observationLocation: location }, () => { bodies += 1; return 'first'; });
+      const second = supervisor.startObserved({ ...options, observationLocation: location }, () => { bodies += 1; return 'second'; });
+      const outcomes = await Promise.allSettled([first.result, second.result]);
+      expect(outcomes.map((outcome) => outcome.status)).toEqual(['fulfilled', 'rejected']);
+      expect(bodies).toBe(1);
+      expect(await first.acknowledgment).toMatchObject({ kind: 'acknowledged' });
+      expect(await second.acknowledgment).toEqual({ kind: 'unprepared' });
+      const reader = openExecutionObservationReader(host.reader, first.locator);
+      expect(reader.read()).toMatchObject({ result: { kind: 'observed', observation: { phase: 'closed', body: 'returned' } } });
+      reader.close();
+      const wrong = openExecutionObservationReader(host.reader, second.locator);
+      expect(wrong.read().result.kind).toBe('identity-mismatch');
+      wrong.close();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  test('reusing public runId still mints distinct exact identities, and a path collision preserves its first record', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      const { options } = runOptions({ runId: 'weekly' });
+      const first = supervisor.startObserved({ ...options, observationLocation: join(directory, 'one.sqlite') }, () => 1);
+      expect((await first.result).value).toBe(1);
+      expect(await first.acknowledgment).toMatchObject({ kind: 'acknowledged' });
+      const second = supervisor.startObserved({ ...options, observationLocation: join(directory, 'two.sqlite') }, () => 2);
+      expect((await second.result).value).toBe(2);
+      expect(first.locator.executionId).not.toBe(second.locator.executionId);
+      const firstReader = openExecutionObservationReader(host.reader, first.locator);
+      const firstDocument = firstReader.read();
+      expect(firstDocument.result.kind).toBe('observed');
+      const collided = supervisor.startObserved({ ...options, observationLocation: first.locator.location }, () => 3);
+      const disposition = await collided.result.then(() => 'resolved', () => 'rejected');
+      expect({ disposition, first: firstDocument.result.kind, after: firstReader.read().result.kind }).toEqual({ disposition: 'rejected', first: 'observed', after: 'observed' });
+      expect(await collided.acknowledgment).toEqual({ kind: 'unprepared' });
+      expect(firstReader.read()).toEqual(firstDocument);
+      firstReader.close();
+      const wrong = openExecutionObservationReader(host.reader, { location: first.locator.location, executionId: second.locator.executionId });
+      expect(wrong.read().result.kind).toBe('identity-mismatch');
+      wrong.close();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  test('a post-prepared setup failure closes as not-entered without calling the body', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      const failure = new Error('resolution setup failed');
+      let bodies = 0;
+      const { options } = runOptions({ resolution: () => { throw failure; } });
+      const observed = supervisor.startObserved({ ...options, observationLocation: join(directory, 'setup.sqlite') }, () => { bodies += 1; return 1; });
+      await expect(observed.result).rejects.toBe(failure);
+      expect(bodies).toBe(0);
+      const reader = openExecutionObservationReader(host.reader, observed.locator);
+      const document = reader.read();
+      expect(document.result.kind).toBe('observed');
+      if (document.result.kind === 'observed') {
+        expect(document.result.observation).toMatchObject({ phase: 'closed', body: 'not-entered', application: { kind: 'not-classified' } });
+      }
+      expect(await observed.acknowledgment).toMatchObject({ kind: 'acknowledged' });
+      reader.close();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  test('a setup writer-release failure is a bounded diagnostic beside the original setup rejection', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      const failure = new Error('original setup error');
+      const writer = recordingWriter({ releaseThrows: true });
+      let bodies = 0;
+      const { options } = runOptions({ writer: writer.writer, resolution: () => { throw failure; } });
+      const observed = supervisor.startObserved({ ...options, observationLocation: join(directory, 'setup-release.sqlite') }, () => { bodies += 1; return 1; });
+      await expect(observed.result).rejects.toBe(failure);
+      expect(bodies).toBe(0);
+      expect(writer.releases.count).toBe(1);
+      expect(await observed.acknowledgment).toMatchObject({ kind: 'acknowledged' });
+      const reader = openExecutionObservationReader(host.reader, observed.locator);
+      const document = reader.read();
+      expect(document).toMatchObject({ result: { kind: 'observed', observation: { body: 'not-entered', diagnostics: { present: true, count: 1, lowerBound: false } } } });
+      expect(JSON.stringify(document)).not.toContain('storage closed underneath the run');
+      reader.close();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  test('partial setup drains a tracked send and retains observer and unsubscribe diagnostics', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      const failure = new Error('setup failed after tracked work began');
+      const controller = createStopController();
+      let unsubscribes = 0;
+      const stop = Object.freeze({
+        get state() { return controller.state; },
+        signal: controller.signal,
+        request: controller.request,
+        subscribe(listener: Parameters<typeof controller.subscribe>[0]) {
+          const remove = controller.subscribe(listener);
+          return (): void => { remove(); unsubscribes += 1; throw new Error('private unsubscribe detail'); };
+        },
+      });
+      let release: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      let enter: () => void = () => undefined;
+      const began = new Promise<void>((resolve) => { enter = resolve; });
+      let bodies = 0;
+      const { options } = runOptions({ stop, observers: [{ observe(event) {
+        if (event.kind === 'send' && event.phase === 'end') { throw new Error('private observer detail'); }
+      } }], resolution: (ports) => {
+        void ports.execution.execute(step, async () => supervisor.execution().send({
+          label: 'setup-send',
+          perform: async () => { enter(); await gate; return 'sent'; },
+        }));
+        throw failure;
+      } });
+      const observed = supervisor.startObserved({ ...options, observationLocation: join(directory, 'partial-setup.sqlite') }, () => { bodies += 1; return 1; });
+      await began;
+      const reader = openExecutionObservationReader(host.reader, observed.locator);
+      expect(reader.read()).toMatchObject({ result: { kind: 'observed', observation: { phase: 'prepared', revision: 1 } } });
+      let finished = false;
+      void observed.result.finally(() => { finished = true; }).catch(() => undefined);
+      await Promise.resolve();
+      expect(finished).toBe(false);
+      release();
+      await expect(observed.result).rejects.toBe(failure);
+      expect(bodies).toBe(0);
+      expect(unsubscribes).toBe(1);
+      expect(await observed.acknowledgment).toMatchObject({ kind: 'acknowledged' });
+      const document = reader.read();
+      expect(document).toMatchObject({ result: { kind: 'observed', observation: { phase: 'closed', body: 'not-entered', eventCounts: { send: 2 }, diagnostics: { present: true, count: 2, lowerBound: false } } } });
+      expect(JSON.stringify(document)).not.toContain('private unsubscribe detail');
+      reader.close();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  test('a no-event body throw is recorded as threw while preserving the original rejection', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      const failure = new Error('application failed');
+      const { options } = runOptions();
+      const observed = supervisor.startObserved({ ...options, observationLocation: join(directory, 'threw.sqlite') }, () => { throw failure; });
+      await expect(observed.result).rejects.toBe(failure);
+      expect(await observed.acknowledgment).toMatchObject({ kind: 'acknowledged' });
+      const reader = openExecutionObservationReader(host.reader, observed.locator);
+      const document = reader.read();
+      expect(document.result.kind).toBe('observed');
+      if (document.result.kind === 'observed') {
+        expect(document.result.observation).toMatchObject({ phase: 'closed', body: 'threw', application: { kind: 'not-classified' } });
+      }
+      reader.close();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  test('an early application statement cannot close tracked ordinary work, and conflicting or late statements fail', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      const { options } = runOptions();
+      let release: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      let entered: () => void = () => undefined;
+      const began = new Promise<void>((resolve) => { entered = resolve; });
+      let submission: { submit(statement: { kind: 'confirmed'; deliverable: string }): void } | undefined;
+      const observed = supervisor.startObserved({ ...options, observationLocation: join(directory, 'held.sqlite') }, (run, app) => {
+        submission = app;
+        void run.ordinary('held', async () => { entered(); await gate; });
+        app.submit({ kind: 'confirmed', deliverable: 'report:one' });
+        app.submit({ kind: 'confirmed', deliverable: 'report:one' });
+        expect(() => app.submit({ kind: 'confirmed', deliverable: 'report:two' })).toThrow();
+        return 'body returned';
+      });
+      await began;
+      const reader = openExecutionObservationReader(host.reader, observed.locator);
+      const during = reader.read();
+      expect(during.result.kind).toBe('observed');
+      if (during.result.kind === 'observed') { expect(during.result.observation.phase).not.toBe('closed'); }
+      release();
+      expect((await observed.result).value).toBe('body returned');
+      expect(await observed.acknowledgment).toMatchObject({ kind: 'acknowledged' });
+      const after = reader.read();
+      expect(after.result.kind).toBe('observed');
+      if (after.result.kind === 'observed') { expect(after.result.observation).toMatchObject({ phase: 'closed', application: { kind: 'confirmed', deliverable: 'report:one' } }); }
+      expect(() => submission?.submit({ kind: 'confirmed', deliverable: 'report:one' })).toThrow();
+      reader.close();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  test('a confirmed statement needs a bounded deliverable locator and mutable incomplete reasons are copied canonically', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      const { options } = runOptions();
+      const reasons: ('required-work' | 'coverage' | 'publication' | 'other')[] = ['publication', 'coverage', 'publication'];
+      const observed = supervisor.startObserved({ ...options, observationLocation: join(directory, 'statement.sqlite') }, (_run, application) => {
+        for (const forged of [
+          { kind: 'confirmed', deliverable: '' },
+          { kind: 'confirmed', deliverable: 'x'.repeat(257) },
+          { kind: 'incomplete', reasons: [] },
+          { kind: 'incomplete', reasons: ['private-reason'] },
+          { kind: 'secret-outcome', authorPayload: 'private-content' },
+        ]) {
+          expect((): void => { Reflect.apply(application.submit, application, [forged]); }).toThrow(TypeError);
+        }
+        application.submit({ kind: 'incomplete', reasons });
+        reasons.push('other');
+        application.submit({ kind: 'incomplete', reasons: ['coverage', 'publication'] });
+        return 'body returned';
+      });
+      expect((await observed.result).value).toBe('body returned');
+      expect(await observed.acknowledgment).toMatchObject({ kind: 'acknowledged' });
+      const reader = openExecutionObservationReader(host.reader, observed.locator);
+      const document = reader.read();
+      expect(document).toMatchObject({ result: { kind: 'observed', observation: { body: 'returned', application: { kind: 'incomplete', reasons: ['coverage', 'publication'] } } } });
+      expect(JSON.stringify(document)).not.toContain('private-content');
+      reader.close();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  test('a confirmed assertion survives a later unrelated body error without claiming success', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      const { options } = runOptions();
+      const failure = new Error('unrelated callback failure private details');
+      const observed = supervisor.startObserved({ ...options, observationLocation: join(directory, 'confirmed-then-error.sqlite') }, (_run, application) => {
+        application.submit({ kind: 'confirmed', deliverable: 'report:sealed' });
+        throw failure;
+      });
+      await expect(observed.result).rejects.toBe(failure);
+      expect(await observed.acknowledgment).toMatchObject({ kind: 'acknowledged' });
+      const reader = openExecutionObservationReader(host.reader, observed.locator);
+      const document = reader.read();
+      expect(document).toMatchObject({ result: { kind: 'observed', observation: { phase: 'closed', body: 'threw', application: { kind: 'confirmed', deliverable: 'report:sealed' }, executionFailure: { kind: 'other' } } } });
+      expect(JSON.stringify(document)).not.toContain('private details');
+      reader.close();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+});
+
+/** Controlled elapsed and wall readings separate pacing from displayed sample time. */
+describe('bounded observed event sampling (A-21d/e)', () => {
+  test('observation fault count reports exact maximum and a lower bound after attempted overflow', () => {
+    const before = { count: Number.MAX_SAFE_INTEGER - 1, lowerBound: false };
+    const exactMaximum = _incrementObservationFaults(before);
+    expect(exactMaximum).toEqual({ count: Number.MAX_SAFE_INTEGER, lowerBound: false });
+    expect(_incrementObservationFaults(exactMaximum)).toEqual({ count: Number.MAX_SAFE_INTEGER, lowerBound: true });
+    expect(before.count).toBe(Number.MAX_SAFE_INTEGER - 1);
+  });
+
+  test('an event counter saturates at the safe-integer boundary and marks later values as lower bounds', () => {
+    const before: IExecutionObservationEventCounts = { step: Number.MAX_SAFE_INTEGER - 1, ordinary: 2, operation: 0, send: 0, wait: 0, promotion: 0, stop: 0, lowerBound: false };
+    const exactMaximum = _incrementObservationEventCounts(before, 'step');
+    expect(exactMaximum).toEqual({ ...before, step: Number.MAX_SAFE_INTEGER });
+    const saturated = _incrementObservationEventCounts(exactMaximum, 'step');
+    expect(saturated).toEqual({ ...before, step: Number.MAX_SAFE_INTEGER, lowerBound: true });
+    expect(_incrementObservationEventCounts(saturated, 'ordinary')).toEqual({ ...saturated, ordinary: 3 });
+    expect(before.step).toBe(Number.MAX_SAFE_INTEGER - 1);
+  });
+
+  test('high-volume step, ordinary, send, promotion and stop routes retain only exact bounded counts', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
+      const controller = createStopController();
+      const events: IRunEvent[] = [];
+      const supervisor = createSupervision({ context: nodeScopes, timer: host.timer, observation: host });
+      const { options } = runOptions({
+        stop: controller,
+        observers: [{ observe: (event) => { events.push(event); } }],
+        promotion: {
+          promoteResults(_lease, request) { return { promotionId: 1, target: request.target, references: request.references, evidence: request.evidence, fence: 1 }; },
+          readPromotions: () => [],
+        },
+      });
+      const observed = supervisor.startObserved({ ...options, observationLocation: join(directory, 'mixed.sqlite') }, async (run) => {
+        await run.resolve(step, { requestKey: 'request:one' });
+        for (let index = 0; index < 200; index += 1) { await run.ordinary('secret-ordinary-label', () => index); }
+        await supervisor.execution().send({ label: 'secret-send-label', perform: async () => 'sent' });
+        await run.promote({ into: 'env:production', references: [], evidence: { format: 'test', formatVersion: 1, content: 'secret-evidence' } });
+        controller.request({ level: 'soft' });
+        return 'finished';
+      });
+      expect((await observed.result).value).toBe('finished');
+      expect(await observed.acknowledgment).toMatchObject({ kind: 'acknowledged' });
+      const reader = openExecutionObservationReader(host.reader, observed.locator);
+      const document = reader.read();
+      expect(document.result.kind).toBe('observed');
+      if (document.result.kind === 'observed') {
+        expect(document.result.observation.eventCounts).toEqual({ step: 5, ordinary: 400, operation: 0, send: 2, wait: 0, promotion: 1, stop: 1, lowerBound: false });
+      }
+      expect(events.map((event) => event.kind).filter((kind) => kind === 'step')).toHaveLength(5);
+      expect(events.map((event) => event.kind).filter((kind) => kind === 'ordinary')).toHaveLength(400);
+      expect(JSON.stringify(document)).not.toMatch(/secret-|secret-evidence/u);
+      reader.close();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  test('many ordinary events coalesce to one newest pending revision and terminal supersedes it', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      let wall = 1000;
+      let elapsed = 0;
+      let observationUpdates = 0;
+      const scheduled: { at: number; callback: () => void; cancelled: boolean }[] = [];
+      const clock = { currentEpochMilliseconds: () => wall };
+      const real = createNodeSqlite();
+      const sqlite = {
+        openSqlite(location: string, configuration?: { journalMode: 'wal' | 'delete'; creation?: 'exclusive' }) {
+          const connection = real.openSqlite(location, configuration);
+          return {
+            ...connection,
+            prepare(sql: string) {
+              const statement = connection.prepare(sql);
+              if (!sql.startsWith('UPDATE microdelta_execution_observation')) { return statement; }
+              return { ...statement, run: (...values: readonly (string | number | null | Uint8Array)[]) => {
+                observationUpdates += 1;
+                return statement.run(...values);
+              } };
+            },
+          };
+        },
+      };
+      const timer = {
+        currentEpochMilliseconds: () => wall,
+        schedule(at: number, callback: () => void): () => void {
+          const slot = { at, callback, cancelled: false };
+          scheduled.push(slot);
+          return () => { slot.cancelled = true; };
+        },
+      };
+      const host = { sqlite, reader: createNodeSqliteReader(), random: createNodeRandom(), clock, elapsedClock: { currentElapsedMilliseconds: () => elapsed }, timer };
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      const { options } = runOptions();
+      let release: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      let entered: () => void = () => undefined;
+      const began = new Promise<void>((resolve) => { entered = resolve; });
+      const observed = supervisor.startObserved({ ...options, observationLocation: join(directory, 'events.sqlite') }, async (run) => {
+        for (let count = 0; count < 5; count += 1) { await run.ordinary('secret-member-label', () => count); }
+        entered();
+        await gate;
+        return 'done';
+      });
+      await began;
+      const reader = openExecutionObservationReader(host.reader, observed.locator);
+      const before = reader.read();
+      expect(before.result.kind).toBe('observed');
+      if (before.result.kind === 'observed') { expect(before.result.observation.revision).toBe(1); }
+      expect(scheduled.length).toBe(1);
+      const early = scheduled[0];
+      expect(early).toBeDefined();
+      wall = 100;
+      elapsed = 500;
+      early?.callback();
+      if (early !== undefined) { early.cancelled = true; }
+      expect(observationUpdates).toBe(0);
+      expect(reader.read()).toEqual(before);
+      expect(scheduled.filter((slot) => !slot.cancelled)).toHaveLength(1);
+      wall = 10_000;
+      elapsed = 1000;
+      for (const slot of scheduled.filter((candidate) => !candidate.cancelled && candidate.at <= wall)) { slot.callback(); }
+      expect(observationUpdates).toBe(1);
+      await Promise.resolve();
+      const sampled = reader.read();
+      expect(sampled.result.kind).toBe('observed');
+      if (sampled.result.kind === 'observed') {
+        expect(sampled.result.observation.revision).toBe(2);
+        expect(sampled.result.observation.eventCounts.ordinary).toBe(10);
+      }
+      expect(JSON.stringify(sampled)).not.toContain('secret-member-label');
+      release();
+      expect((await observed.result).value).toBe('done');
+      const final = reader.read();
+      expect(final.result.kind).toBe('observed');
+      if (final.result.kind === 'observed') {
+        expect(final.result.observation).toMatchObject({ phase: 'closed', revision: 3, eventCounts: { ordinary: 10 } });
+      }
+      expect(observationUpdates).toBe(2);
+      for (const slot of scheduled) { slot.callback(); }
+      expect(observationUpdates).toBe(2);
+      expect(reader.read()).toEqual(final);
+      reader.close();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+});
+
+/** Observation faults must remain a separate finite fact after a successful run. */
+describe('observation acknowledgment and containment (A-21e/h)', () => {
+  test('a publish-position observation fault cannot change Resolution or writer outcomes', async () => {
+    /** A committed publish event is observed privately before user observer diagnostics. */
+    async function scenario(faulted: boolean) {
+      const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+      try {
+        const real = createNodeSqlite();
+        let failedWrites = 0;
+        const sqlite = {
+          openSqlite(location: string, configuration?: { journalMode: 'wal' | 'delete'; creation?: 'exclusive' }) {
+            const connection = real.openSqlite(location, configuration);
+            return { ...connection, prepare(sql: string) {
+              const statement = connection.prepare(sql);
+              if (!sql.startsWith('UPDATE microdelta_execution_observation')) { return statement; }
+              return { ...statement, run: (...values: readonly (string | number | null | Uint8Array)[]) => {
+                if (faulted && failedWrites === 0) { failedWrites += 1; throw new Error('observation write failed at publish'); }
+                return statement.run(...values);
+              } };
+            } };
+          },
+        };
+        let elapsed = 0;
+        let callback: (() => void) | undefined;
+        const host = {
+          sqlite, reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(),
+          elapsedClock: { currentElapsedMilliseconds: () => elapsed },
+          timer: { currentEpochMilliseconds: () => Date.now(), schedule(_at: number, next: () => void) { callback = next; return () => { callback = undefined; }; } },
+        };
+        const supervisor = createSupervision({ context: nodeScopes, observation: host });
+        const events: IRunEvent[] = [];
+        let publishCallbacks = 0;
+        const { options, double, writer } = runOptions({ observers: [{ observe(event) {
+          events.push(event);
+          if (event.kind === 'step' && event.event.phase === 'publish') {
+            publishCallbacks += 1;
+            elapsed = 1000;
+            callback?.();
+            if (faulted) { throw new Error('user publish observer failed'); }
+          }
+        } }] });
+        const observed = supervisor.startObserved({ ...options, observationLocation: join(directory, 'publish.sqlite') }, (run) => run.resolve(step, { requestKey: 'request:one' }));
+        const result = await observed.result;
+        const receipt = await observed.acknowledgment;
+        const reader = openExecutionObservationReader(host.reader, observed.locator);
+        const document = reader.read();
+        reader.close();
+        return {
+          policy: { kind: result.value.kind, decisions: double.decisions, calls: double.calls, releases: writer.releases.count },
+          receipt, document, failedWrites, publishCallbacks, steps: events.filter((event) => event.kind === 'step').length,
+        };
+      } finally { rmSync(directory, { recursive: true, force: true }); }
+    }
+    const control = await scenario(false);
+    const faulted = await scenario(true);
+    expect(control.policy).toEqual(faulted.policy);
+    expect(control.policy.kind).toBe('published');
+    expect(control.publishCallbacks).toBe(1);
+    expect(faulted.publishCallbacks).toBe(1);
+    expect(faulted.failedWrites).toBe(1);
+    expect(control.receipt).toMatchObject({ kind: 'acknowledged' });
+    expect(faulted.receipt).toMatchObject({ kind: 'acknowledged', observationFaults: { count: 1, lowerBound: false } });
+    expect(faulted.document).toMatchObject({ result: { kind: 'observed', observation: { phase: 'closed', eventCounts: { step: faulted.steps }, diagnostics: { present: true }, observationFaults: { count: 1, lowerBound: false } } } });
+  });
+
+  test('a hard stop aborts an active send synchronously without flushing observation SQL', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      let updates = 0;
+      let timerFaults = 0;
+      const real = createNodeSqlite();
+      const sqlite = {
+        openSqlite(location: string, configuration?: { journalMode: 'wal' | 'delete'; creation?: 'exclusive' }) {
+          const connection = real.openSqlite(location, configuration);
+          return { ...connection, prepare(sql: string) {
+            const statement = connection.prepare(sql);
+            if (!sql.startsWith('UPDATE microdelta_execution_observation')) { return statement; }
+            return { ...statement, run: (...values: readonly (string | number | null | Uint8Array)[]) => { updates += 1; return statement.run(...values); } };
+          } };
+        },
+      };
+      const realTimer = createNodeTimer();
+      const observationTimer = {
+        ...realTimer,
+        schedule(at: number, callback: () => void) {
+          if (timerFaults === 0) { timerFaults += 1; throw new Error('observation timer unavailable'); }
+          return realTimer.schedule(at, callback);
+        },
+      };
+      const host = { sqlite, reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: observationTimer };
+      const controller = createStopController();
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      let entered: () => void = () => undefined;
+      const began = new Promise<void>((resolve) => { entered = resolve; });
+      let aborted = false;
+      let sent = 0;
+      const { options } = runOptions({ stop: controller, observers: [{ observe(event) { if (event.kind === 'stop') { throw new Error('user observer failed'); } } }] });
+      const observed = supervisor.startObserved({ ...options, observationLocation: join(directory, 'stop-no-flush.sqlite') }, async () => {
+        return supervisor.execution().send({
+          label: 'active-send',
+          perform(signal) { sent += 1; return new Promise<string>((_resolve, reject) => { signal.onAbort(() => { aborted = true; reject(new Error('aborted provider')); }); entered(); }); },
+          cancel: async () => 'cancelled',
+        }).then(() => 'unexpected', (error: unknown) => error instanceof SupervisionError ? error.code : 'other');
+      });
+      await began;
+      const before = updates;
+      controller.request({ level: 'hard' });
+      expect(aborted).toBe(true);
+      expect(updates).toBe(before);
+      expect(sent).toBe(1);
+      expect((await observed.result).value).toBe('stopped');
+      expect(await observed.acknowledgment).toMatchObject({ kind: 'acknowledged', observationFaults: { count: 1, lowerBound: false } });
+      const reader = openExecutionObservationReader(host.reader, observed.locator);
+      const document = reader.read();
+      expect(document).toMatchObject({ result: { kind: 'observed', observation: { stop: { level: 'hard' }, eventCounts: { stop: 1 }, diagnostics: { present: true, count: 1 }, observationFaults: { count: 1, lowerBound: false } } } });
+      reader.close();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  test('a lost terminal write acknowledgment preserves the body outcome and exact sealed contents for readback', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const real = createNodeSqlite();
+      let committed = 0;
+      const sqlite = {
+        openSqlite(location: string, configuration?: { journalMode: 'wal' | 'delete' }) {
+          const connection = real.openSqlite(location, configuration);
+          return {
+            ...connection,
+            prepare(sql: string) {
+              const statement = connection.prepare(sql);
+              if (!sql.startsWith('UPDATE microdelta_execution_observation')) { return statement; }
+              return { ...statement, run: (...values: readonly (string | number | null | Uint8Array)[]) => {
+                statement.run(...values);
+                committed += 1;
+                throw new Error('terminal acknowledgment lost');
+              } };
+            },
+          };
+        },
+      };
+      const host = { sqlite, reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      const { options } = runOptions();
+      let bodies = 0;
+      const observed = supervisor.startObserved({ ...options, observationLocation: join(directory, 'lost.sqlite') }, (_run, app) => {
+        bodies += 1;
+        app.submit({ kind: 'confirmed', deliverable: 'report:exact' });
+        return 'kept result';
+      });
+      expect((await observed.result).value).toBe('kept result');
+      expect(await observed.acknowledgment).toEqual({ kind: 'uncertain' });
+      const reader = openExecutionObservationReader(host.reader, observed.locator);
+      const first = reader.read();
+      expect(first).toMatchObject({ version: 1, result: { kind: 'observed', observation: { revision: 2, phase: 'closed', body: 'returned', application: { kind: 'confirmed', deliverable: 'report:exact' } } } });
+      expect(reader.read()).toEqual(first);
+      expect(committed).toBe(1);
+      expect(bodies).toBe(1);
+      reader.close();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  test('validation failure settles an unprepared receipt without calling any analysis factory', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      let factories = 0;
+      const { options } = runOptions({ environment: '', resolution: () => { factories += 1; throw new Error('must not run'); } });
+      const observed = supervisor.startObserved({ ...options, observationLocation: join(directory, 'invalid.sqlite') }, () => 1);
+      await expect(observed.result).rejects.toThrow();
+      const acknowledgment = await Promise.race([observed.acknowledgment, new Promise<'still-pending'>((resolve) => setTimeout(() => resolve('still-pending'), 50))]);
+      expect(acknowledgment).toEqual({ kind: 'unprepared' });
+      expect(factories).toBe(0);
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  test('an ordinary storage fault remains visible when the terminal commit later succeeds', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      let wall = 1000;
+      let elapsed = 0;
+      let failNextUpdate = true;
+      const scheduled: { at: number; callback: () => void; cancelled: boolean }[] = [];
+      const real = createNodeSqlite();
+      const sqlite = {
+        openSqlite(location: string, configuration?: { journalMode: 'wal' | 'delete' }) {
+          const connection = real.openSqlite(location, configuration);
+          return {
+            ...connection,
+            prepare(sql: string) {
+              const statement = connection.prepare(sql);
+              if (!sql.startsWith('UPDATE microdelta_execution_observation')) { return statement; }
+              return { ...statement, run: (...values: readonly (string | number | null | Uint8Array)[]) => {
+                if (failNextUpdate) { failNextUpdate = false; throw new Error('one observation write failed'); }
+                return statement.run(...values);
+              } };
+            },
+          };
+        },
+      };
+      const timer = {
+        currentEpochMilliseconds: () => wall,
+        schedule(at: number, callback: () => void): () => void {
+          const slot = { at, callback, cancelled: false };
+          scheduled.push(slot);
+          return () => { slot.cancelled = true; };
+        },
+      };
+      const host = { sqlite, reader: createNodeSqliteReader(), random: createNodeRandom(), clock: { currentEpochMilliseconds: () => wall }, elapsedClock: { currentElapsedMilliseconds: () => elapsed }, timer };
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      const { options } = runOptions();
+      let release: () => void = () => undefined;
+      const gate = new Promise<void>((resolve) => { release = resolve; });
+      let entered: () => void = () => undefined;
+      const began = new Promise<void>((resolve) => { entered = resolve; });
+      const observed = supervisor.startObserved({ ...options, observationLocation: join(directory, 'fault.sqlite') }, async (run) => {
+        await run.ordinary('work', () => 1);
+        entered();
+        await gate;
+        return 'original value';
+      });
+      await began;
+      wall = 2000;
+      elapsed = 1000;
+      for (const slot of scheduled.filter((candidate) => !candidate.cancelled && candidate.at <= wall)) { slot.callback(); }
+      release();
+      expect((await observed.result).value).toBe('original value');
+      expect(await observed.acknowledgment).toMatchObject({ kind: 'acknowledged', observationFaults: { count: 1, lowerBound: false } });
+      const reader = openExecutionObservationReader(host.reader, observed.locator);
+      const terminal = reader.read();
+      expect(terminal.result.kind).toBe('observed');
+      if (terminal.result.kind === 'observed') { expect(terminal.result.observation).toMatchObject({ phase: 'closed', observationFaults: { count: 1, lowerBound: false } }); }
+      reader.close();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  test('terminal clock failure cannot replace an original body value or rejection and settles uncertain', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      let clockFails = false;
+      const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: { currentEpochMilliseconds: () => { if (clockFails) { throw new Error('terminal clock failed'); } return 1000; } }, elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      const { options } = runOptions();
+      const successful = supervisor.startObserved({ ...options, observationLocation: join(directory, 'return.sqlite') }, () => { clockFails = true; return 'kept'; });
+      expect((await successful.result).value).toBe('kept');
+      expect(await successful.acknowledgment).toEqual({ kind: 'uncertain' });
+      clockFails = false;
+      const failure = new Error('body failed');
+      const rejected = supervisor.startObserved({ ...options, observationLocation: join(directory, 'throw.sqlite') }, () => { clockFails = true; throw failure; });
+      await expect(rejected.result).rejects.toBe(failure);
+      expect(await rejected.acknowledgment).toEqual({ kind: 'uncertain' });
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+});
+
+/** Loss of the prepared-write acknowledgment cannot authorize body entry. */
+describe('initial observation commit uncertainty (A-21a/h)', () => {
+  test('a committed prepared row followed by a lost acknowledgment starts zero analysis and promises no terminal', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const real = createNodeSqlite();
+      const host = {
+        sqlite: {
+          openSqlite(location: string, configuration?: { journalMode: 'wal' | 'delete' }) {
+            const connection = real.openSqlite(location, configuration);
+            return {
+              ...connection,
+              prepare(sql: string) {
+                const statement = connection.prepare(sql);
+                if (!sql.startsWith('INSERT INTO microdelta_execution_observation')) { return statement; }
+                return { ...statement, run: (...values: readonly (string | number | null | Uint8Array)[]) => {
+                  statement.run(...values);
+                  throw new Error('prepared acknowledgment lost');
+                } };
+              },
+            };
+          },
+        },
+        reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer(),
+      };
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      let factories = 0;
+      let bodies = 0;
+      const { options } = runOptions({ resolution: () => { factories += 1; throw new Error('factory must not run'); } });
+      const observed = supervisor.startObserved({ ...options, observationLocation: join(directory, 'prepared.sqlite') }, () => { bodies += 1; return 1; });
+      await expect(observed.result).rejects.toThrow('prepared acknowledgment lost');
+      expect(await observed.acknowledgment).toEqual({ kind: 'unprepared' });
+      expect(factories).toBe(0);
+      expect(bodies).toBe(0);
+      const reader = openExecutionObservationReader(host.reader, observed.locator);
+      const document = reader.read();
+      expect(document.result.kind).toBe('observed');
+      if (document.result.kind === 'observed') { expect(document.result.observation).toMatchObject({ phase: 'prepared', revision: 1 }); }
+      reader.close();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+});
+
+/** Terminal facts come from the closing run, not from later mutable controls. */
+describe('authoritative terminal execution facts (A-21c)', () => {
+  test('an untyped foreign SupervisionError code stays an other failure without corrupting the artifact', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      const { options } = runOptions();
+      // Untyped consumers can construct a real class instance with a code outside the closed declaration union.
+      const failure: unknown = Reflect.construct(SupervisionError, ['PRIVATE_PROVIDER_CODE', 'private provider detail']);
+      const observed = supervisor.startObserved({ ...options, observationLocation: join(directory, 'foreign-code.sqlite') }, () => { throw failure; });
+      await expect(observed.result).rejects.toBe(failure);
+      expect(await observed.acknowledgment).toMatchObject({ kind: 'acknowledged' });
+      const reader = openExecutionObservationReader(host.reader, observed.locator);
+      const document = reader.read();
+      expect(document).toMatchObject({ result: { kind: 'observed', observation: { phase: 'closed', body: 'threw', executionFailure: { kind: 'other' } } } });
+      expect(JSON.stringify(document)).not.toContain('PRIVATE_PROVIDER_CODE');
+      expect(JSON.stringify(document)).not.toContain('private provider detail');
+      reader.close();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  test.each([
+    ['cancelled', async (): Promise<'cancelled' | 'running'> => 'cancelled', 'cancelled'],
+    ['running', async (): Promise<'cancelled' | 'running'> => 'running', 'running'],
+    ['unknown', async (): Promise<'cancelled' | 'running'> => Promise.reject(new Error('private provider failure')), 'unknown'],
+  ] as const)('hard stop records only the %s remote-state count and frozen stop', async (_label, cancel, remote) => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
+      const controller = createStopController();
+      const supervisor = createSupervision({ context: nodeScopes, timer: host.timer, observation: host });
+      const events: IRunEvent[] = [];
+      const { options } = runOptions({ stop: controller, observers: [{ observe: (event) => { events.push(event); } }] });
+      let enter: () => void = () => undefined;
+      const began = new Promise<void>((resolve) => { enter = resolve; });
+      const observed = supervisor.startObserved({ ...options, observationLocation: join(directory, `${remote}.sqlite`) }, async () => {
+        const sending = supervisor.execution().send({
+          label: 'private-provider-label',
+          perform(signal) {
+            return new Promise<string>((_resolve, reject) => {
+              signal.onAbort(() => reject(new Error('private provider rejection')));
+              enter();
+            });
+          },
+          cancel,
+        });
+        await began;
+        controller.request({ level: 'hard' });
+        return sending.then(() => 'sent', (error: unknown) => error instanceof SupervisionError ? error.code : 'other');
+      });
+      expect((await observed.result).value).toBe('stopped');
+      expect(await observed.acknowledgment).toMatchObject({ kind: 'acknowledged' });
+      controller.request({ level: 'hard' });
+      const reader = openExecutionObservationReader(host.reader, observed.locator);
+      const document = reader.read();
+      expect(document.result.kind).toBe('observed');
+      expect(events.filter((event) => event.kind === 'send').map((event) => event.kind === 'send' ? event.phase : undefined)).toEqual(['begin', 'aborted', 'cancel-requested', 'remote-state']);
+      if (document.result.kind === 'observed') {
+        expect(document.result.observation.stop).toMatchObject({ level: 'hard', cause: 'operator' });
+        expect(document.result.observation.interruptions).toEqual({ cancelled: remote === 'cancelled' ? 1 : 0, running: remote === 'running' ? 1 : 0, unknown: remote === 'unknown' ? 1 : 0, lowerBound: false });
+        expect(document.result.observation.eventCounts.send).toBe(4);
+        expect(document.result.observation.eventCounts.stop).toBe(1);
+      }
+      expect(JSON.stringify(document)).not.toContain('private-provider-label');
+      expect(JSON.stringify(document)).not.toContain('private provider rejection');
+      reader.close();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  test('closing stop and bounded diagnostics are frozen independently of later controller changes', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
+      const controller = createStopController();
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      const { options } = runOptions({ stop: controller, observers: [{ observe: (event) => { if (event.kind === 'ordinary' && event.phase === 'end') { throw new Error('observer diagnostic'); } } }] });
+      const observed = supervisor.startObserved({ ...options, observationLocation: join(directory, 'stop.sqlite') }, async (run) => {
+        await run.ordinary('work', () => 1);
+        controller.request({ level: 'soft' });
+        return 'done';
+      });
+      expect((await observed.result).value).toBe('done');
+      controller.request({ level: 'hard' });
+      const reader = openExecutionObservationReader(host.reader, observed.locator);
+      const document = reader.read();
+      expect(document.result.kind).toBe('observed');
+      if (document.result.kind === 'observed') {
+        expect(document.result.observation).toMatchObject({ phase: 'closed', stop: { level: 'soft', cause: 'operator' }, diagnostics: { present: true, count: 1 } });
+      }
+      reader.close();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  test('a thrown arbitrary body error is typed only as other and never serialized', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      const { options } = runOptions();
+      const failure = new Error('secret arbitrary error payload');
+      const observed = supervisor.startObserved({ ...options, observationLocation: join(directory, 'failure.sqlite') }, () => { throw failure; });
+      await expect(observed.result).rejects.toBe(failure);
+      const reader = openExecutionObservationReader(host.reader, observed.locator);
+      const document = reader.read();
+      expect(document.result.kind).toBe('observed');
+      if (document.result.kind === 'observed') { expect(document.result.observation).toMatchObject({ phase: 'closed', body: 'threw', executionFailure: { kind: 'other' } }); }
+      expect(JSON.stringify(document)).not.toContain('secret arbitrary error payload');
+      reader.close();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+});

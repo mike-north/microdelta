@@ -59,6 +59,7 @@ export interface ISqliteConnection {
 
 // @alpha
 export interface ISqliteOpenOptions {
+    readonly creation?: 'exclusive';
     readonly journalMode: 'wal' | 'delete';
 }
 
@@ -118,6 +119,12 @@ export interface ITimerOptions {
 export class SqliteBusyError extends Error {
     constructor(message: string, waitedMilliseconds: number, options?: ErrorOptions);
     readonly waitedMilliseconds: number;
+}
+
+// @alpha
+export class SqliteReadError extends Error {
+    constructor(code: SqliteReadError['code'], message: string, options?: ErrorOptions);
+    readonly code: 'absent' | 'unsupported' | 'corrupt' | 'recovery-required';
 }
 
 ```

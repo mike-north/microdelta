@@ -203,13 +203,32 @@ export class SqliteBusyError extends Error {
 }
 
 /**
+ * A host-proven finite refusal of side-effect-free SQLite inspection. Domain
+ * owners interpret the result; this class carries no schema or run meaning.
+ * @alpha
+ */
+export class SqliteReadError extends Error {
+  /** Why the host could not perform a read without changing the file. */
+  public readonly code: 'absent' | 'unsupported' | 'corrupt' | 'recovery-required';
+
+  /** Preserve the host cause for diagnostics without exposing it in a reader protocol. */
+  public constructor(code: SqliteReadError['code'], message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'SqliteReadError';
+    this.code = code;
+  }
+}
+
+/**
  * Opens persistent local SQLite databases for a consumer that owns its own
  * SQL and schema, such as History's durable authority. Opening fails for a
  * directory, a missing parent directory, a file that is not a SQLite database,
  * or a location that cannot hold a persistent write-ahead-logged database,
  * including `:memory:` and the empty path. Opening never silently weakens the
- * host's durable configuration. Processes that open one new store at the same
- * time all succeed within the bounded busy wait or fail with `SqliteBusyError`.
+ * host's durable configuration. In the default open-or-create mode, processes
+ * opening one new store at the same time all succeed within the bounded busy
+ * wait or fail with `SqliteBusyError`. Exclusive creation instead refuses an
+ * existing pathname before the driver can touch its bytes or journal.
  * @alpha
  */
 export interface ISqliteCapability {
@@ -337,4 +356,12 @@ export interface ISqliteOpenOptions {
    * preflight through opening and for the lifetime of every handle.
    */
   readonly journalMode: 'wal' | 'delete';
+  /**
+   * Reserve a new pathname atomically before SQLite can open or configure it.
+   * An existing artifact, including another owner's SQLite file, is refused
+   * without mutation. If later initialization fails, the empty reserved file
+   * remains for its caller to manage rather than risking deletion of a
+   * pathname another process may have replaced.
+   */
+  readonly creation?: 'exclusive';
 }

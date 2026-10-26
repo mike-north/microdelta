@@ -11,13 +11,15 @@
  * the fan-out window, and the operator's stop intent as it reaches admission,
  * bodies, sends, waits and the publication commit. It does not decide reuse
  * (Reuse Resolution), own claims or publication (Result History), or read the
- * host directly: the asynchronous scope and the timer are structurally
- * injected capabilities, so this package has no Machine import and ordinary
- * author helpers receive no context parameter. A run is not a retained
+ * host directly: the asynchronous scope and timer are structurally injected;
+ * optional exact observation takes Machine's storage, clocks and reader only
+ * through an assembly-supplied port. Ordinary author helpers receive no
+ * context parameter. A run is not a retained
  * result; its identifier is volatile metadata and never participates in reuse
  * evidence.
  */
 import type { IBindingDescriptor } from '@microdelta/definition';
+import type { IApplicationStatementSubmission, IExecutionObservationHost, IObservedRun } from './observation.js';
 import type { ISourceRetryPolicy } from './operations.js';
 import type {
   ICheckOutcome,
@@ -79,6 +81,8 @@ export interface IRunScopeCapability {
 
 /** Construction options of Run Supervision. @alpha */
 export interface ISupervisionOptions {
+  /** Host capabilities for opt-in exact execution observation. */
+  readonly observation?: IExecutionObservationHost;
   /** Assembly-owned fixed admission shared by this supervisor's runs and composed peers. */
   readonly sharedRates?: ISharedRateDispatchOptions;
   /** The structurally injected scope capability. */
@@ -927,6 +931,14 @@ export interface IRunExecution {
  * @alpha
  */
 export interface ISupervision {
+  /**
+   * Start an observed run and return its exact locator, result and independent
+   * durability receipt before it settles. A missing observation host refuses
+   * synchronously with `invalid-request`, before a handle or execution identity
+   * exists. After a handle is returned, run-path failures reject `result` and
+   * the separate acknowledgment reports what is known about durable evidence.
+   */
+  startObserved<T>(options: IRunOptions & { readonly observationLocation: string }, body: (run: IRun, application: IApplicationStatementSubmission) => T | Promise<T>): IObservedRun<Awaited<T>>;
   /**
    * The live run's context in the current asynchronous execution. Fails with
    * `outside-run`, `run-closed` or `composition-phase` rather than guessing.

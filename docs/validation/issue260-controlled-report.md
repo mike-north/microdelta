@@ -1,222 +1,290 @@
 # Controlled report acceptance evidence
 
-Issue260 is **not yet accepted**. The standalone150000-distinct-PR cold
-qualification at `9cc9bcd` failed when the default writer lease expired inside
-one fold request; no full restart ran. Independent whole-head audit verified
-AC1–7 for the selected controlled application; AC8 and final acceptance remain
-unmet. The full combined baseline passed at `b4773c2`; loader-policy repair
-passed at `9cc9bcd`. The bounded lease repair independently passed at `ce3bc7a`;
-review of the separate failure-receipt repair at `e3dc64a` required one parent
-protocol correction. Its bounded repair now awaits independent recheck.
-Parent240 retains all six criteria, including its
-separately permissioned executable/progress criterion. CLI projection,
-installation, launcher/lifetime decisions, full TEST-3/4 and TEST-5/6 remain
-separate gates.
+The full controlled qualification passed at frozen revision
+`e3278b76271659a25e239489e7ca6b4d8a7cc391`: cold and independent-process restart
+both returned all 300 selected people and 150,000 distinct qualified PRs. All
+300 person-summary references stayed equal, and restart made no new assessments.
+Independent final AC8 and whole-head reviews passed all eight behavioral
+criteria against the actual receipt and frozen provenance. Review of this
+corrected delivery record and final supervisory acceptance remain separate.
+
+The first full cold attempt at `9cc9bcd` failed when its default writer lease
+expired inside one fold request. Its log and partial store remain preserved.
+Reviewed harness repairs preceded a separately authorized new qualification in
+a fresh directory. This successful run does not erase the earlier failure.
+
+Parent #240 retains all six criteria, including its separately permissioned
+executable/progress criterion. CLI projection, installation, process lifetime,
+full TEST-3/4, TEST-5/6 and M7 remain separate gates. This evidence grants no
+publication, merge, parent-issue closure or release authority.
 
 ## Scope and frozen source
 
-The report covers explicitly selected current HR employees' **authored PRs**,
-with submitted reviews, conversation comments and inline comments attached as
+The report covers explicitly selected current HR employees' **authored PRs**.
+Submitted reviews, conversation comments and inline comments are attached
 assessment evidence. The [controlled application contract](../../examples/contribution-report/CONTROLLED_CONTRACT.md)
 records the concrete REST subset, fixed backing dataset assumption outside the
-wire protocol, explicit exact-cutoff historical content guarantee, and
-unverified mutable-live-population limitation. Neither endpoint exhaustion nor a
-local observation identity invents a provider snapshot or historical text.
+wire protocol and explicit exact-cutoff historical-content premise. Endpoint
+exhaustion and a local observation identity do not establish a real GitHub
+snapshot or historical editable text. Mutable live populations and reviewer-only
+contribution coverage remain unverified.
 
-The concrete application source is frozen at
-`da858fc0e071cfadfdffba13ff15c50b0207c56f`; the independently reviewed workload
-branch is `363018b0458d2c1bd0aeaaa1bd22e4f9b75d5414`. Their normal integration is
-`0901ee6202f77c67802d576382fe5843754fd3dd`. The fixture relocation changes test
-ownership and verification paths while preserving that application source. The
-combined runtime candidate `b4773c2f488c0d61d421453f769e67df6ac8980c` passed all
-repository check/test/build gates. The loader-policy repair at
-`9cc9bcdcba9e71e0c0963df8828cb16c55f29418` changes only fixture import policy,
-tooling tests and documentation. The later harness-only repairs are
-`ce3bc7a499550f29e0954eec5f5e612a72411309` (qualification lease) and
-`e3dc64a3cfa4bc1d31e15e29a57fe0e133eed09f` (bounded failure receipts).
-Application and package runtime source, lockfile, population, permits/window,
-fencing, retry and stop contracts remain unchanged. The final successful
-workload receipt must identify the actual combined revision used, and the
-final artifact manifest must fingerprint the generated declarations and runtime
-inputs after the final build.
+The application source last changed at
+`da858fc0e071cfadfdffba13ff15c50b0207c56f`. Reviewed workload branch
+`363018b0458d2c1bd0aeaaa1bd22e4f9b75d5414` was integrated at
+`0901ee6202f77c67802d576382fe5843754fd3dd`. Combined revision
+`b4773c2f488c0d61d421453f769e67df6ac8980c` passed the full repository
+check/test/build baseline. Later changes concern fixture import enforcement,
+qualification lease configuration, bounded receipts and documentation. They
+preserve application/package runtime source, the dependency lock, population,
+permits/window, fencing, retry and stop contracts.
 
 The [independent fixture role](../../fixtures/contribution-report/README.md)
 owns synthetic providers, History/Accounting oracles, fresh-process workers,
-workload measurements and generated declaration tests. Strict compilation maps
-public owner roots only to generated alpha declarations; workers load public
-package entries. Type-aware lint and import checks include the fixture. New
-mechanical tests reject deep packages, owner source, aliases, encoded source
-escapes and nonliteral module edges. The executable example's facade-only rule
-is unchanged and its existing positive/negative controls remain passing.
-The fixture role also excludes `node:module`/`module` access and explicit
-`createRequire` dot/literal-computed access or destructuring, including the
-demonstrated `process.getBuiltinModule` extraction. It enforces supported module
-edge conventions, not a host sandbox or arbitrary runtime dataflow analysis.
+workload measurements and generated declaration tests. It uses generated public
+owner declarations and normal public runtime entries. Type-aware lint and
+mechanical import checks reject owner source/deep imports, undeclared aliases,
+encoded escapes, nonliteral module edges and the reviewed Node loader-factory
+paths. The executable example's facade-only rule remains unchanged. These
+checks enforce supported module-edge conventions, not a host sandbox or
+arbitrary runtime dataflow analysis.
 
-## Current acceptance map
+## Acceptance map
 
-Test filenames below are relative to `fixtures/contribution-report`.
+Test filenames are relative to `fixtures/contribution-report`.
 
-| Issue260 criterion; parent240 overlap | Concrete evidence and current result |
+| Issue #260 criterion; parent overlap | Named evidence and verified behavior |
 | --- | --- |
-| 1 completed search, roster/schema/closure;240.1/4 | `protocol.test.ts`, `model.test.ts`, `evidence.test.ts`, and application completed-search/empty-population cases PASS. Independent exact counts precede details; positive1001-PR cap bisection, invalid/capped/nonterminal/continuation/identity failures, current HR selection, explicit empty trial and strict malformed assessment refusal are covered. The hidden manifest is outside the adapter. |
-| 2 currentness/restart;240.2 | Application and `restart.test.ts` cases PASS: current hooks and exact source/assessment/person references across full process exit; repagination, added/removed membership, consumed versus unread change, equal refreshed child, prompt/model/helper inputs and compatible versus differing consumed person context. Failed traversal cannot close membership; a fresh root traversal reuses eligible older work. Prior source provenance remains readable. |
-| 3 actual source/rate assembly;240.3 | Actual generated-facade search/discussion/detail/assessment operations PASS. Cold four-PR fixture sends24 GitHub requests plus4 assessments, observes4 acknowledged usage reports/40 tokens, and retains24 unknown GitHub usage attempts. Settled restart executes8 source hooks,4 search sends (2 when repaged),0 assessments and exact person references. Actual shared request/quantity gates, mandatory API+search union, independent access and same-process new-run shared cost are asserted. |
-| 4 trial/failure/stop;240.4/2 | `restart.test.ts`, application handoff and `settling-failure.test.ts` PASS. Empty trial sends nothing; excluded Grace has no expensive body; widening retains eligible Ada only within trial; production does not import trial state. SIGKILL after Ada publication retains Ada and executes Grace's2 assessments on restart. Malformed model output publishes no Ada assessment/summary but preserves acknowledged billing and successful Grace. Lost model response exhausts finite allowance, leaves earlier Ada readable and usage unknown; a fresh run completes missing Ada work. |
-| 5 CR-2;240.6/3 | `retry.test.ts`33 cases and `provider-controls.test.ts`22 actual-facade cases PASS. Seconds/HTTP-date/reset normalization, receipt-relative RFC850 century, safe integer timing, local/provider maximum, early timer wake, threshold, slow classifier publication and decision acceptance, cumulative wait, finite attempts, same-operation close/reopen, cancellation, deferred-only writer release/reacquisition, explicit operator soft/hard/deadline rejection, final stop/fence and definite-unsent rollback are covered. Source classifier stop remains distinct from operator rejection. Independent provider review PASS is accepted at `da858fc`. |
-| 6 CR-4;240.6/2 | Evidence/model/application/restart cases PASS. Changed cutoff cannot relabel mismatched temporal basis. Future terminal events cannot establish earlier closure. Advanced observation refreshes provisional evidence; equal refreshed children record new source provenance while eligible exact parent/assessment references remain. |
-| 7 CR-5;240.6/2 | `settling-failure.test.ts` independently final quiet/daily sources, advanced observation, per-policy changes, late arrival, open/recent/future activity; model clipped inclusive closed-day boundaries; temporal-basis negatives PASS. Advanced observation refreshes only the provisional source. Late relevant comment refreshes PR101 detail/assessment, retains unrelated detail and exact equal-score Ada summary, and leaves prior provenance immutable. No global finality follows. |
-| 8 workload/privacy;240.2–4/6 | Public events/identities/progress/diagnostics/report versus synthetic credentials, headers, raw wire/model bodies, cursor and private assessment context PASS. Missing billing remains unknown. Workload fixture/measurement/tail/harness tests PASS, including required prolific-author capped-search behavior. **FAILED / qualification pending:** the150000-PR cold attempt at `9cc9bcd` expired its request writer lease; no full restart ran. Harness lease and partial-evidence repairs do not establish the required actual full people/subjects/evidence/payload/operation/send/memory/in-flight measurements. The500-PR smoke is not acceptance. |
-| CLI handoff;240.5 remains open | `composeReport`, `evaluateReport`, `IReportRunOutcome` and generated declaration/tsd negatives PASS. Strict complete requires a succeeded framework fold; fulfilled incomplete execution has no report. No CLI framing or lifetime choice is selected. |
+| 1. Completed population, roster and schema; #240.1/4 | `protocol.test.ts`, `model.test.ts`, `evidence.test.ts` and application cases verify current selected HR IDs, explicit empty selection, completed search before details, positive 1,001-PR cap bisection, qualified identity consistency and required evidence/schema. Capped, incomplete, nonterminal, continuation, identity and malformed-model negatives cannot publish a complete report. The hidden identity oracle remains outside the adapter. |
+| 2. Currentness and restart; #240.2 | `application.test.ts` and `restart.test.ts` verify current hooks and exact references across independent processes, repagination, changed membership, consumed versus unread changes, tracked prompt/model/helper/context inputs and immutable older provenance. Failed discovery cannot close membership. The full qualification adds exact equality of all 300 person references after a fresh-process restart. |
+| 3. Actual source/rate assembly; #240.3 | Generated-facade search, discussion, detail and assessment operations use existing supervised dispatch and shared rates. The four-PR fixture records 24 GitHub sends and four assessments; settled restart records eight current hooks and no assessments. `provider-controls.test.ts` verifies mandatory API/search gate unions, quantity costs, independent access, per-run allowance and same-process shared cost. |
+| 4. Trial, failure and stop; #240.4/2 | `restart.test.ts`, typed handoff and `settling-failure.test.ts` verify empty/single/widened trial selection, production isolation, SIGKILL after committed Ada work, strict incomplete outcomes, malformed output, finite lost-response allowance and fresh-run recovery. Both lost model attempt identities remain individually unknown before and after recovery. |
+| 5. CR-2 provider behavior; #240.6/3 | `retry.test.ts` has 33 cases; `provider-controls.test.ts` has 22 actual-facade cases. They cover strict safe timing, receipt-relative RFC 850 century selection, local/provider floors, budgets, early wakes, slow-classifier timing, close/reopen, cancellation, deferred writer release/reacquisition, operator stop, final fence authority and definite-unsent rollback. Classifier stop remains distinct from operator rejection. |
+| 6. CR-4 temporal/currentness behavior; #240.6/2 | Evidence, application and restart cases reject relabeling a mismatched historical-content basis, future closure/activity and false finality. Advanced observation refreshes provisional sources; equal refreshed children retain exact eligible parent/assessment references while recording new source provenance. |
+| 7. CR-5 independent settling; #240.6/2 | `settling-failure.test.ts` verifies quiet/daily independence, policy changes, late arrival and open/recent/future activity. Positive cases require current strict success and current-fold references. Affected sources record new provenance; unrelated work is currently accepted or exactly reused. A late relevant comment refreshes PR 101 detail/assessment without invalidating unrelated detail or equal-score person results. |
+| 8. Workload and privacy; #240.2–4/6 | The full 150,000-PR cold/restart qualification passed with actual cardinality, routes, retained records, usage, payload and resource observations below. Semantic cases also cover credentials, headers, raw wire/model bodies, cursor/parameter data, malformed shapes, thrown transport errors, private context and sanitized public evidence. Missing billing remains unknown. |
+| Later CLI handoff; #240.5 stays open | `composeReport`, `evaluateReport`, `IReportRunOutcome` and generated declaration/tsd negatives verify the concrete typed handoff. Complete requires a succeeded framework fold; fulfilled incomplete execution carries no report. No CLI framing, progress projection or lifetime choice is selected here. |
 
-## Commands and receipts
+## Verification and review provenance
 
-Local receipts are retained under `/private/tmp` for supervisory inspection;
-checked-in named tests and commands reproduce their behavioral expectations.
+The full baseline, later focused checks and actual qualification have separate
+provenance. The later harness changes use their recorded affected checks and
+independent reviews; the full package baseline remains attributed to `b4773c2`.
 
-| Command / exact scope | Observed evidence |
+| Exact scope | Observed result and local receipt |
 | --- | --- |
-| `npm run test:controlled-report` after relocation and CR-5 precision repair |157 Jest tests/12 suites plus generated declaration/tsd PASS; `issue260-combined-repaired-tests.log`. |
-| `npm run check:imports` | Actual example and fixture boundary PASS; `issue260-combined-fixture-imports.log`. |
-| `npm run check:fixtures` | Existing declaration-consumer checks plus strict fixture compile and type-aware lint PASS; `issue260-combined-fixture-check.log`. |
-| `npm run test:tooling` after loader-policy repair |376 tooling cases PASS, including existing example controls, generated alpha paths, repository-gate/type-aware-lint enforcement and both loader regressions; `issue260-green-fixture-loader-repair.log`. |
-| Loader-policy affected import/fixture/example checks | Actual `check:imports`, `check:fixtures`, `check:examples` and diff check PASS; `issue260-loader-repair-imports.log`, `issue260-loader-repair-fixtures.log`, `issue260-loader-repair-examples.log`. |
-| Provider frozen `da858fc` focused tests |55 Jest cases plus strict example compile/lint PASS; author `issue260-green-rfc850-century.log`, `issue260-rfc850-check.log`; independent `issue260-provider-century-repair-review.md`. |
-| Repaired `settling-failure.test.ts` |15 actual-facade cases PASS, plus strict fixture/import checks; `issue260-green-cr5-policy-outcome.log`, `issue260-cr5-repair-check.log`, `issue260-cr5-repair-imports.log`. |
-| `npm run test:controlled-report:workload -- --smoke` after relocation |500 distinct PRs/2 people cold and fresh-process restart PASS,4.0s/3.7s measured locally; `issue260-combined-workload-smoke.log`. Cold3006 actual sends, restart1506 additional sends,0 restart assessments. This only verifies the bounded integration and measurement paths. |
-| First full `npm run check` before relocation | Architectural RED:12 harness imports fell beneath the example facade-only rule; all other package/workspace checks passed. Preserved `issue260-full-check.log`; resolved by explicit fixture ownership and enforcement, not by weakening the example rule. |
-| Combined `npm run check`, `npm test`, explicit `npm run build` | **PASS** at exact runtime candidate `b4773c2`; `issue260-final-check.log`, `issue260-final-test.log`, `issue260-final-build.log`. Source is unchanged by loader repair `9cc9bcd`; subsequent harness repairs have separately attributed checks. No repeated full baseline is claimed. |
-| `npm run test:controlled-report:workload` at `9cc9bcd` | **FAILED** during cold phase; session20227, `issue260-full-workload-9cc9bcd.log`. No restart, retry or final receipt. Full cold+fresh-process qualification remains **PENDING**. |
-| Actual-worker lease and bounded failure regressions |7 tests/2 suites PASS at `e3dc64a`; `issue260-green-workload-failure-receipt.log`. Strict fixture emit, type-aware lint, imports, syntax and diff checks PASS. Bounded tests do not qualify scale. |
-| Current `npm run test:controlled-report` after harness repairs |164 Jest tests/14 suites plus generated declaration/tsd PASS; `issue260-harness-repair-controlled.log`. Current `check:examples` and `check:fixtures` PASS; `issue260-harness-repair-examples.log`, `issue260-harness-repair-fixtures.log`. Package baselines were not repeated. |
-| Parent protocol correction after `e3dc64a` review | Actual-driver exit0 malformed/empty/null/wrong-shape regressions first failed4 artifact assertions, while nonzero control passed; `issue260-red-workload-driver-protocol.log`. Targeted driver/failure/lease tests then PASS12/3 suites; `issue260-green-workload-driver-protocol.log`. Strict emit/lint/import/syntax/diff checks PASS. |
-| Actual success protocol after correction | One500-PR/2-person cold+fresh-process smoke PASS,4.06s/3.52s,3006 cold sends/1506 additional restart sends/0 restart assessments; `issue260-workload-driver-protocol-smoke.log`. Receipt: `/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/issue260-controlled-workload-pr6IZR/receipt.json`. This checks driver/parser integration, not scale. |
+| Full baseline at `b4773c2` | `npm run check`, `npm test` and explicit `npm run build` passed; controlled tests included 157 cases in 12 suites plus generated tsd. `issue260-final-check.log`, `issue260-final-test.log`, `issue260-final-build.log`. |
+| Loader repair at `9cc9bcd` | All 376 tooling cases and affected import/fixture/example checks passed. `issue260-green-fixture-loader-repair.log`, `issue260-loader-repair-{imports,fixtures,examples}.log`. |
+| Lease/failure projection before final parent-protocol correction | `npm run test:controlled-report` passed 164 tests in 14 suites plus tsd; `check:examples` and `check:fixtures` passed. `issue260-harness-repair-{controlled,examples,fixtures}.log`. |
+| Final parent-protocol correction | Actual-driver, failure and lease tests passed 12 cases in three suites, plus strict emit, type-aware lint, imports, syntax and diff checks. `issue260-green-workload-driver-protocol.log`, `issue260-workload-driver-protocol-{lint,imports}.log`. Independent recheck also passed these 12 cases. |
+| Final success-envelope smoke | One 500-PR cold/restart smoke passed: 3,006 cold sends, 1,506 additional restart sends, no restart assessments. `issue260-workload-driver-protocol-smoke.log`. This checked parser/driver integration, not scale. |
+| Full qualification at `e3278b7` | `npm run test:controlled-report:workload`, without `--smoke`, completed cold and fresh-process restart; session 28986 exited 0. `issue260-full-workload-e3278b7.log` and the final receipt below. |
 
-## Restored negative controls
+The initial full import check found 12 harness imports incorrectly beneath the
+example's facade-only rule. Moving the oracles into an explicit, mechanically
+checked fixture role resolved that architectural failure without weakening the
+example rule. Later review found `createRequire` and `process.getBuiltinModule`
+loader paths; two observed REDs preceded their bounded restrictions. Caller
+function parameters named `require` remain ordinary calls.
 
-Each mutation compiled before the named test failed its intended outcome
-assertion; none was detected merely by setup/compiler failure. Exact source
-bytes were restored after every control. The original receipts
-`issue260-negative-*.log` and outcome summary `issue260-negative-controls.json`
-remain available; all six relocated combined controls independently failed
-their outcome assertions, then exact source restoration passed the combined
-suite. Separate `issue260-combined-negative-*` receipts preserve that repetition.
-The repaired combined suite at `b4773c2` passed157 tests plus generated tsd.
+Test-first RED evidence also covers protocol closure, roster/schema/evidence,
+actual assembly/currentness, strict handoff, temporal basis, scalar capture,
+retry/search association, safe timing and RFC 850 behavior. Independent review
+superseded the initial provider PASS after missing timing boundaries were
+reproduced; the repaired provider at `da858fc` passed independent review.
 
-| Planted contract violation | Targeted outcome detection |
-| --- | --- |
-| `github.ts`: allow `incomplete_results:true` to close | Application `certified empty yields...`: expected failed strict fold, mutant succeeded. |
-| `application.ts`: accept complete detail despite provisional quiet policy | Application `provisional current refresh...`: expected4 current detail bodies, mutant ran0. |
-| `application.ts`: parent reads otherwise unread `fetched.data.labels[0]` | Same provisional-refresh test: changed unread label replaced exact person references. |
-| `application.ts`: omit shared admission on GitHub source operations | Application `one configured fixed request gate`: a send violated the asserted minimum interval. |
-| `application.ts`: label incomplete fold complete with fabricated empty report | Application `concrete execution handoff...`: expected incomplete, mutant complete. |
-| `application.ts`: erase unknown usage and label it complete | Settling/failure `synthetic credentials...`: expected24 unknown attempts, mutant reported0. |
-| Lost-model fixture: acknowledge fabricated zero usage for both lost model attempts while old GitHub gaps remain | `lost model responses...`: exact captured request-attempt identities were missing from unknown usage despite a still-positive unrelated total; `issue260-red-lost-model-specific-unknown.log`. Test bytes were restored before the157-case GREEN run. |
+Six restored mutations compiled and then failed their intended assertions:
+false closure, bypassed current acceptance, an unnecessary parent observation,
+bypassed shared admission, fabricated completion and erased unknown usage.
+A separate forged-zero control requires both lost model attempt identities to
+remain unknown even while unrelated GitHub usage gaps remain. Exact source
+restoration passed before the recorded combined GREEN run.
 
-Independent CR-5 review also planted a late required-source failure after the
-actual quiet/daily fetch for PR102/202. The former two policy tests still passed
-while their current reports were incomplete. Strengthened assertions first
-failed exactly at expected complete versus actual incomplete
-(`issue260-red-cr5-policy-outcome.log`), then passed after exact application
-restoration. All positive CR-5 runs now assert current strict success and
-current-fold person references. Policy changes also require new affected-source
-provenance and unrelated current acceptance/reuse; readable old History alone
-cannot satisfy them. Lost-response assertions name both individual model
-attempts before and after resume, independently from earlier GitHub usage gaps.
+CR-5 review also found that two policy tests passed despite incomplete reports
+after a planted late required-source failure. Strengthened tests first failed
+at complete versus incomplete, then passed after exact application restoration.
+They now require current strict success, current-fold references, new affected
+source provenance and unrelated current acceptance/reuse. Receipts include
+`issue260-red-cr5-policy-outcome.log` and
+`issue260-red-lost-model-specific-unknown.log`.
 
-## Test-first and scoped review provenance
+The workload author's earlier draft-before-observed-RED exception remains a
+historical process exception. Later actual tail/raw-byte REDs preceded repair;
+this record does not rewrite that chronology. Accepted adapter, application,
+provider, workload, CR-5/privacy, fixture integration and harness reviews remain
+separately scoped. Final workload and whole-head reviews now pass all eight behavioral criteria
+at `e3278b7`; the documentation-only delivery reconciliation receives a
+separate review.
 
-Outcome RED receipts precede runtime changes for protocol closure, roster/schema,
-required evidence, actual facade assembly, currentness/context, strict handoff,
-temporal basis, retry budgets/search association, scalar capture and provider
-boundary repairs. The fixture-role tests observed3 forbidden-edge RED failures
-before enforcement, then existing example controls plus new fixture tests passed.
-The first full-check architectural RED remains preserved separately.
+## Preserved failed attempt and reviewed harness repairs
 
-Independent adapter review PASS at `07d2372` and application/restart PASS at
-`8a8cef1` remain scoped evidence. Provider `b223a4f` initially passed review, then
-that disposition was explicitly superseded when three missing boundaries were
-reproduced: zero `retry-after`, permissive JavaScript dates, and unsafe numeric
-timing. `b057950` repaired them; review found the remaining RFC850 century pivot.
-The receipt-relative correction at `da858fc` passed independent55-case review
-and additional calendar/timezone/century probes. The workload branch
-`363018b` passed its separate bounded repair review. CR-5/failure/privacy,
-combined relocation/integration, full workload and final whole-head acceptance
-remain separate supervisory review boundaries.
-
-Combined review found that lexical `require` exemption admitted a Node
-`createRequire` loader under named/aliased factory imports. A first intended RED
-preceded excluding the factory's `node:module`/`module` entry through named,
-aliased, namespace, default, dynamic, re-export, import-type and CommonJS edges.
-A direct author probe then demonstrated the same capability through
-`process.getBuiltinModule`. A second intended RED preceded the explicit
-dot/literal-computed property and object-pattern/destructuring restriction.
-Caller-supplied `require` parameters and plain payload keys remain allowed.
-Receipts `issue260-red-fixture-create-require.log` and
-`issue260-red-fixture-builtin-loader.log` preserve the failures; all376 tooling
-tests and affected actual import/fixture/example checks pass after the bounded
-repair. Its independent recheck passed at `9cc9bcd`; no universal bypass-proof
-claim is made. The subsequent whole-head audit verified AC1–7 at that revision
-while recording AC8 as failed/pending after the full attempt.
-
-## Failed qualification and bounded harness repairs
-
-The single full attempt used clean `9cc9bcd` and its historical postbuild
-manifest `issue260-artifact-manifest-9cc9bcd.json` (SHA-256
-`e4380a444c44b847ef86f2997a53f55b963c9554ad9712dfb7ac08320f591d62`).
-The preserved tee log is `/private/tmp/issue260-full-workload-9cc9bcd.log`;
-the failed durable directory is
+The first full cold attempt used clean
+`9cc9bcdcba9e71e0c0963df8828cb16c55f29418`. Log:
+`/private/tmp/issue260-full-workload-9cc9bcd.log`. Partial durable directory:
 `/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/issue260-controlled-workload-V1o1mN`.
-Neither was repaired, resumed or removed. The root failure record is
+Neither was resumed, repaired or removed. The failure record is
 `/private/tmp/issue260-full-workload-failure.md`.
 
-Discovery closed over300 selected keys, with8 succeeded/292 pending and
-`employee-009` first pending. Eight summary diagnostics directly identify the
-request's writer lease as no longer current. Read-only partial Accounting
-contains17136 operations/request attempts and2848 usage reports. History
-contains2848 subjects each for assessment/detail/discussion,16 searches and8
-summaries. The exact observed PR-ID set, route counters, phase elapsed and
-RSS/heap receipt were not emitted and remain unavailable. These counts are
-partial progress, not successful qualification.
+Discovery completed for 300 keys; eight members succeeded and 292 remained
+pending, starting at `employee-009`. Eight summary diagnostics directly identify
+a stale request writer lease. Partial stores contain 17,136 operations/request
+attempts, 2,848 usage reports, 2,848 subjects each for assessment/detail/discussion,
+16 searches and eight summaries. The exact observed PR-ID set, route counters,
+phase elapsed and memory receipt were unavailable. These remain partial facts.
 
-The default30000ms lease expired inside one long fold request. Existing writer
-guidance requires a lease exceeding the slowest request and renews at request
-boundaries. `ce3bc7a` explicitly budgets the isolated qualification lease for
-the existing12-hour parent timeout plus60000ms cleanup; longer dead-holder
-recovery is accepted only for this store. A real worker regression crosses the
-default lease after durable search publication and completes250 assessments.
-Removing the actual workspace option compiles but fails at complete versus
-waiting/`lease-lost`; exact restoration passes. A separate nine-person/window2
-test completes one fold, confirming that the window bounds concurrency.
-Valid RED/restored receipts are `issue260-red-qualification-lease.log`,
-`issue260-red-qualification-lease-wiring-mutation.log` and
-`issue260-green-qualification-lease-restored.log`. Independent lease review
-PASS is recorded in `issue260-qualification-lease-review.md`.
+The default 30,000 ms lease expired inside one fold request. Existing writer
+semantics renew at request boundaries and require the caller to budget for its
+slowest request. The qualification-only repair at
+`ce3bc7a499550f29e0954eec5f5e612a72411309` explicitly covers the existing 12-hour
+parent timeout plus 60 seconds of cleanup. It accepts longer killed-holder
+recovery for this isolated store; production defaults and fencing are unchanged.
+The real-worker regression crosses the default lease after durable search
+publication and completes 250 assessments. Removing the actual workspace option
+compiles but fails at complete versus waiting/`lease-lost`; exact restoration
+passes. A separate nine-person/window-two case completes one fold.
 
-`e3dc64a` replaces the whole-run failure dump with counts, one bounded first
-pending key/reason and diagnostic, stop/floor state and actual route, payload,
-concurrency and memory observations explicitly marked partial through return.
-Parent failure artifacts retain measured elapsed/exit status and bounded child
-evidence; missing child receipts remain `null` with a bounded stderr tail.
-Both captured process streams have a1MiB limit. The actual worker still fails
-under explicit lease expiry. Test-first RED receipts are
-`issue260-red-workload-failure-receipt.log` (three intended outcomes) and
-`issue260-red-workload-parent-receipt.log` (two). GREEN7-case and strict checks
-are `issue260-green-workload-failure-receipt.log`,
-`issue260-workload-failure-lint.log` and `issue260-workload-failure-imports.log`.
-Independent failure-repair review at `e3dc64a` passed the projection, lease,
-cleanup, process-exit capture and concrete buffer sizing, but found F1: exit0
-malformed/empty/null output bypassed artifact capture. The correction now
-parses and checks the worker's minimal success envelope inside the same phase
-failure capture. The actual parent is copied unchanged for regression tests;
-only the child is replaced with no-workload output in isolated temporary
-directories. Four exit0 protocol failures now retain actual elapsed/exit0,
-bounded protocol reason and unavailable child evidence; a nonzero control still
-passes. An actual500-PR cold/restart smoke preserves the success path.
-Independent correction recheck remains pending. No new full150k run is
-authorized by these repairs or their bounded tests.
+Projection repair `e3dc64a3cfa4bc1d31e15e29a57fe0e133eed09f` replaces full failure
+arrays with counts, one bounded pending reason/diagnostic, stop/floor state and
+actual resource observations explicitly marked partial. It retains real lease
+fencing. Parent capture preserves actual elapsed/exit status and explicit nulls
+for missing child evidence, with bounded stderr/error text and a 1 MiB stream
+limit. Valid REDs are `issue260-red-workload-failure-receipt.log` (three) and
+`issue260-red-workload-parent-receipt.log` (two).
 
-No live/paid provider execution, credential inspection, external publication,
-GitHub mutation, core API expansion, new persistence/retry authority or release
-configuration is included. Examples and private test infrastructure require no
-package release changeset.
+Review required one parent correction: exit-zero malformed/empty/null output
+bypassed artifact capture. Actual-driver tests first failed four missing-artifact
+assertions while a nonzero control passed. Repair at `e3278b7` validates the
+worker's basic success envelope within the same failure path, retaining actual
+exit status 0, elapsed time, a bounded protocol reason and unavailable child
+measurements. The unchanged actual driver is copied into isolated test trees;
+only its no-workload child is substituted. Independent recheck passed at
+`e3278b7`, as recorded in `issue260-failure-receipt-repair-review.md`. The
+supervisor then separately authorized the new full qualification.
+
+## Successful full qualification
+
+The run used exactly `e3278b76271659a25e239489e7ca6b4d8a7cc391` on Node 24.14.0,
+darwin/arm64, with source and generated artifacts frozen. Cold and restart were
+distinct fresh OS processes reopening the same new store. Log:
+`/private/tmp/issue260-full-workload-e3278b7.log`. Final receipt:
+`/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/issue260-controlled-workload-mQOaRb/receipt.json`.
+Receipt SHA-256:
+`07e51835fbab0bcbdba149dc8cb36ec64563fe07815d3028821f2617a637d521`.
+A later evidence-only commit is not the executed run revision.
+
+The independent fixture expects 150 people with 250 PRs, 100 with 500, 40 with
+1,000 and 10 with 2,250: 300 people and 150,000 distinct qualified PRs. Before
+emitting success, each worker checks the hidden expected/observed qualified-ID
+set and every selected person's key/count/status. The disjoint PR ranges cover
+`acme/widget#1` through `acme/widget#150000`; compact receipts do not export that
+full ID array. Each phase loads 150,000 reviews, 300,000 conversation comments
+and 150,000 inline comments as attached evidence.
+
+| Actual measurement | Cold | Fresh-process restart |
+| --- | ---: | ---: |
+| Selected / successful people | 300 / 300 | 300 / 300 |
+| Distinct qualified PRs / report PRs | 150,000 / 150,000 | 150,000 / 150,000 |
+| Report score | 300,000 | 300,000 |
+| Assessment sends | 150,000 | 0 |
+| Complete current person searches | 300 | 300 |
+| Search page sends | 1,620 | 1,620 |
+| Review / conversation / inline endpoint sends | 150,000 each | 150,000 each |
+| Detail JSON / diff sends | 150,000 each | 0 each |
+| Additional attempts / logical operations | 901,620 / 901,620 | 451,620 / 451,620 |
+| Cumulative attempts / distinct operations | 901,620 / 901,620 | 1,353,240 / 1,353,240 |
+| Acknowledged model reports, cumulative | 150,000 | 150,000 |
+| Unknown HTTP usage attempts, cumulative | 751,620 | 1,203,240 |
+| Retained result / acceptance records | 450,602 / 0 | 600,902 / 300,302 |
+| Selected hydrated JSON body bytes | 247,791,929 | 151,130,728 |
+| All counted GitHub body bytes | 312,849,999 | 193,116,563 |
+| Observed maximum in-flight GitHub / model | 1 / 1 | 1 / 0 |
+| Parent-measured child elapsed, ms | 2,583,146.35075 | 2,069,904.88525 |
+
+All 300 person-summary references match exactly. Cold writes 150,000 results
+each for assessment/detail/discussion, 300 searches, 300 summaries, one roster
+and one report. Restart retains assessment/detail results with 150,000 current
+acceptances each, adds 150,000 discussion results and 300 searches, and accepts
+300 summaries plus the roster/report. Discussion has 300,000 cumulative results
+and no acceptances; search has 600 results. Subjects, result records and
+acceptance records remain distinct. The reviewed parent reads retained and
+Accounting counts after each child closes its writers; the independent reviewer
+checked those receipt measurements without separately querying the databases.
+
+Cold runs one roster body and 150,000 discussion/detail bodies each. Restart
+runs one roster hook and 150,000 discussion/detail hooks each, refreshes 150,000
+discussion bodies, and runs no roster/detail body or new assessment. Both phases
+repeat complete current searches. Each observes 360 ranges, 30 capped splits,
+330 terminal leaves and 1,590 terminal-page requests. The cohort-specific search
+counts are 3/5/10/27 per 250/500/1,000/2,250-PR author; they are not a universal
+provider request formula. All route retry counts are zero, with logical
+operations equal to sends. Scale-run zero retries do not replace the accepted
+retry/floor/stop semantic tests.
+
+GitHub quantity usage remains unknown because these synthetic HTTP operations
+acknowledge no quantity reports: 751,620 cold attempts plus 451,620 restart
+attempts. The 150,000 model reports remain acknowledged. Unknown HTTP usage is
+neither a report failure nor known zero, and observed quantities are not a bill.
+Token quantity is not serialized in this compact scale receipt and is not
+claimed as a separately measured field.
+
+Selected hydrated JSON bytes count review/conversation/inline/detail families.
+Cold additionally counts 23,072,235 diff bytes and 41,985,835 search JSON bytes;
+restart counts the same search bytes. These are serialized controlled body
+observations, not real network/compression/header measurements. The model
+route's responseBytes value of zero means its body is unmeasured. Independent
+review checks the route/count and byte-sum arithmetic, not a regenerated byte
+oracle for every payload.
+
+## Resource observations and limits
+
+| Actual observation | Cold | Fresh-process restart |
+| --- | ---: | ---: |
+| RSS baseline bytes | 64,618,496 | 64,684,032 |
+| Peak sampled RSS bytes | 3,887,185,920 | 4,796,710,912 |
+| Peak sampled heap-used bytes | 2,730,925,448 | 3,568,707,168 |
+| Node raw process maxRSS, KiB | 3,820,864 | 4,700,912 |
+| Converted process maxRSS bytes | 3,912,564,736 | 4,813,733,888 |
+| Timer / dispatch / final sample counts | 0 / 20,955 / 1 | 0 / 14,550 / 1 |
+| Maximum observed sample gap, ms | 5,658.360791 | 31,109.069584 |
+
+The 100 ms target interval produced no timer callbacks in either busy phase.
+Dispatch samples are rate-limited; restart's 31.109-second gap means sampled
+RSS/heap peaks can miss intervening values. Node maxRSS is a process RSS
+high-water mark, with KiB converted to bytes; it does not supply a continuous
+heap maximum. Durations are local observations, not an SLA or forecast.
+
+Configured permits/window are eight, while actual synthetic dispatch peaks are
+only 1/1 and 1/0. Qualification proves the selected full population and restart
+behavior. It does not establish eight-way concurrency, a throughput threshold,
+constant-memory behavior, or arbitrary live-provider consistency/history.
+
+## Exact artifacts and final review
+
+The pre-run main manifest is
+`/private/tmp/issue260-artifact-manifest-e3278b7.json`, SHA-256
+`424388ebd7f89b1a1fa9b1512adbfd676563cff40db8c9200b0771f5612703cd`.
+The generated-fixture companion is
+`/private/tmp/issue260-generated-fixture-artifacts-e3278b7.json`, SHA-256
+`0b499404efd6126b6aa51c8282a476884f3a0f1e26ddd205f1b8a6c22d12862b`.
+
+Independent pre-run and post-run read-only checks verify all 74 named inputs,
+the complete 76 generated fixture artifacts, 527 tracked package files and
+255 package-dist artifacts across 11 packages, nine alpha declaration entries
+and all 11 normal public Node resolutions. Exact HEAD stayed clean at `e3278b7`.
+Package/application/lock/root-script objects match baseline `b4773c2`; package
+source/build aggregates, public metadata/entry hashes and alpha declarations
+match the preserved post-baseline `9cc` manifest. Generated application JS and
+declarations match independent baseline receipts. This verifies byte continuity;
+it does not claim a fresh rebuild, reproducible build or repeated package tests.
+
+Provenance details are in `issue260-independent-provenance-review.md` and
+`issue260-independent-provenance-verification.json`. The final actual workload
+review is `issue260-full-workload-acceptance-review.md`; it records AC8 PASS at
+`e3278b7`. The whole-head report is `issue260-whole-head-acceptance-review.md`;
+it records PASS for all eight behavioral criteria at `e3278b7`. Review and
+supervisory acceptance of the corrected delivery record remain separate.
+
+No live/paid provider calls, credentials, external publication, GitHub mutation,
+core API expansion, new persistence/retry owner or release configuration change
+is included. Examples and private fixture infrastructure require no package
+release changeset. Parent #240/#170, CLI/M6, full TEST-5/6 and M7 stay open.

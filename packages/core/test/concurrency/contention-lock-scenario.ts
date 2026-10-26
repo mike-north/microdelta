@@ -5,7 +5,10 @@ const location = process.argv[2];
 const scenario = process.argv[3];
 if (location === undefined || scenario === undefined) { throw new Error('lock scenario requires a location and case'); }
 
-if (scenario === 'exit-before-ready') {
+if (scenario === 'delayed-unexpected-ready') {
+  // Exercise whether the parent preserves its protocol assertion after worker startup is slow.
+  setTimeout(() => process.send?.({ kind: 'not-locked' }), 300);
+} else if (scenario === 'exit-before-ready') {
   process.exit(17);
 }
 
@@ -25,7 +28,7 @@ if (scenario === 'unexpected-ready') {
     if (scenario === 'exit-nonzero-after-release') { process.exit(1); }
     process.kill(process.pid, 'SIGTERM');
   });
-} else if (scenario !== 'no-ready') {
+} else if (scenario !== 'no-ready' && scenario !== 'delayed-unexpected-ready') {
   throw new Error(`unknown lock scenario ${scenario}`);
 }
 

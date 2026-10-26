@@ -147,12 +147,14 @@ accepted first-delivery requirements; this scope does not claim full A-12j/l,
 RUN-019, CLI-001–004, M6, or M7 delivery. The normative full-target contracts
 remain unchanged and their evidence gates remain open.
 
-The [standalone inspection proposal](../plans/standalone-inspection.md) records
-the more specific exact-execution progress and terminal observation design for
-that selected CLI slice, while preserving full M6 inspection as deferred work.
-Its storage mechanism, ARC-003 clarification, foreground/detached lifetime,
-interrupts and output framing remain proposed or unresolved; it claims no runtime
-delivery or full issue-167 readiness.
+The supervisor-selected bounded exact-execution observation candidate is in
+[CLI-005](operations.md#cli-005--bounded-exact-execution-observation) with
+[A-21](acceptance.md#exact-execution-observation-cases); it is pending different
+adversarial review and is not implementation-readiness evidence. The
+[standalone inspection proposal](../plans/standalone-inspection.md) remains the
+home for the broader CLI alternatives and full M6 work. Foreground/detached
+lifetime and interrupt choices remain unresolved; neither the narrow candidate
+nor this milestone update claims runtime delivery or full issue-167 readiness.
 
 ## Current checkout
 

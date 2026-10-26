@@ -44,6 +44,7 @@ and rename display labels. Nothing depends on surviving closures/tags.
 | A-19 Admission/middleware | Budget refusal, cached hit, throwing observer, check-only miss | Hits served, misses refused before claims, committed success preserved | M3/M5 |
 | A-18 Context lifecycle | Concurrent scopes, thrown nested frame, detached callback after close, repeated standalone fresh captures in a continuing caller | No cross-run leakage; late use fails clearly; completed captures do not retain a distinct host context per entry after observers/results become unreachable | M2/M5 and host lifecycle regression |
 | A-20 Machine boundary | Direct Node built-in import/global in runtime outside Node Machine; new capability used by a context; unsupported/failing host operation; repeated host-context entry | Source check rejects bypass but allows tests/tooling; Node implementation passes capability conformance and injected-context fixture, preserves caller context and exact callback result while bounding completed-entry retention; History/Accounting port ownership remains intact | M0.5 and each added capability |
+| A-21 Exact-execution observation | Reused public runId; start/setup/body/rejection/drain/closure; sampled event/wait/stop facts; failed store/read and lost acknowledgment; strict and incomplete application outcomes | Distinct exact locators; prepared-before-analysis; only private producer controls lifecycle facts; bounded sampled counters and no false completion; closure after drain; failure containment and zero reader writes/callbacks/recovery; terminal report assertion remains separate from execution outcome | CLI-005 candidate; review and implementation proof required |
 
 The A-18/A-20 heap-instance diagnostic is bounded to Node 24 and 26, where the
 same synthetic standalone capture workload distinguishes per-entry growth from
@@ -57,6 +58,25 @@ universal platform instance count or elapsed-time limit is specified.
 Language-neutral [restart cases](artifacts/reuse-cases.json) define concrete
 inputs and expected semantic outcomes for A-02/A-04/A-05. They are fixture data,
 not executable tests or a selected stored record shape.
+
+## Exact-execution observation cases
+
+These are expected outcomes for the selected bounded CLI-005 candidate, not
+recorded passing tests. Start with outcome-based failures before implementation;
+use an isolated store, controlled barriers/clocks and separate-process readers.
+They test the common observation contract, not the concrete contribution-report
+classifier's truth or full M6/scale acceptance.
+
+| Case | Controlled input | Required assertions and limits |
+| --- | --- | --- |
+| A-21a — Identity and prepared boundary | Two invocations use the same public `runId`; inject identity collision and initial durable-create failure | Invocations have distinct exact locators; collision never overwrites; wrong identity is explicit. Analysis/environment and bounded public runId are correlated with monotonic committed revisions and sample times; sample time is not liveness. `prepared` is durable before body entry; initial store failure starts zero analysis. |
+| A-21b — Lifecycle authority and closure | Attempt application submissions with forged phase/revision/stop/closure; early confirmed statement while tracked work remains; body return, rejection, and post-close submission | App capability cannot write framework facts or force terminal. Both return and throw drain before close. Missing statement becomes `not-classified`; exact duplicate is idempotent, conflicting replacement and post-close writes reject; statement cannot finish early. |
+| A-21c — Terminal runtime facts | Soft/hard stop then mutate shared controller; return and rejection leave deferred work and interruptions with cancelled/running/unknown remote states | Closed record preserves the frozen stop, exact earliest `waitingUntil`, and bounded remote-state counts on both paths. No inferred cancellation or successful report; terminal evidence does not change later. |
+| A-21d — Bounded sampled evidence | High-volume mixed event stream, multiple simultaneous waits, counts at safe-integer limit | At most one newest pending ordinary snapshot and one ordinary commit per second; forced initial/terminal records; terminal supersedes pending ordinary state. Counters saturate with lower-bound indicator. No arrays/raw errors/provider payloads/PR denominator or percentage; latest wait does not claim a census. |
+| A-21e — Noninterference and observer failure | User observer throws; inject failures at stop, send, retry and persistence points | Private producer still observes lifecycle independently; abort propagation is not blocked. Observation failures do not change dispatch, admission, retry, stop or publication policy. Midrun and terminal observation failures remain separate from run/report outcome and never rerun analysis. |
+| A-21f — Read-only exact locator | Fresh process reads coherent, missing, mismatched, unsupported, corrupt, busy, unavailable and hot-journal records with rejecting callbacks/control/write ports | Only exact locator is read; coherent monotonic revision or explicit finite state is returned. A stale nonterminal sample does not imply liveness. No callbacks, writes, initialization, sidecars, cleanup or hot-journal recovery. A recorded failure is a successful read of failure evidence. |
+| A-21g — Strict application completion | Generic body values, pending/failed/cancelled/open-discovery fixtures, unacknowledged output, and confirmed strict empty report; later unrelated cleanup error | None can confirm through a generic return, path or lifecycle event. Concrete assembly proves required work/coverage/publication. Failure/incomplete runs may close without success. Confirmed report plus unrelated later error preserves both facts only when strict obligations were established. |
+| A-21h — Commit uncertainty | Report publication precedes observation terminal commit; crash before terminal; lost terminal acknowledgment then exact readback/retry | A report commit may coexist with stale nonterminal evidence, never early false terminal success. Lost acknowledgment resolves without rerun or changed sealed contents. Hot-journal observation reads remain recovery-required without repair. |
 
 ## Acquisition retry and rate admission cases
 

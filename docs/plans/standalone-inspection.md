@@ -1,151 +1,23 @@
 # Standalone inspection and CLI checkpoint proposal
 
-**Standing: proposed.** This document preserves the full issue-167 inspection
-proposal and adds a narrower first-delivery proposal under
-[CLI-001–004](../spec/operations.md#cli-and-read-side-delivery), [A-16](../spec/acceptance.md#preview-observation-cases), and
-[M6](../milestones.md#m6--usable-cli-and-inspection-checkpoint). The first
-delivery is not adopted here as a runtime contract or as full issue-167/M6
-readiness. The owner-selected product scope and the engineering mechanisms below
-have different standing: scope is recorded by the linked owner decision, while
-the storage and execution details remain a proposal for review.
+**Standing:** the owner-selected first product slice is run-start plus
+separately permissionable read-only observation for the concrete contribution
+report workflow. The supervisor-selected exact-execution observation candidate
+is specified in [CLI-005](../spec/operations.md#cli-005--bounded-exact-execution-observation)
+and [A-21](../spec/acceptance.md#exact-execution-observation-cases); its
+mechanisms are not attributed to the owner's product-scope decision. It requires
+different adversarial review before implementation readiness. This plan remains
+the proposal home for the broader standalone inspection and full CLI-001–004/M6
+checkpoint. Its remaining alternatives and open decisions do not override the
+narrow CLI-005 candidate or select starter lifetime and interrupt behavior.
 
-## First delivery: exact-execution progress and terminal observation
+The owner-selected scope is recorded by the [#167 owner decision](https://github.com/mike-north/microdelta/issues/167#issuecomment-6404318056). The concrete workflow and GitHub adapter belong to #240. The owner clarification preserves the historical workload of roughly 150,000 pull requests and their review/comment payloads, without reducing scale or defining a fixed API-request count ([#240 clarification](https://github.com/mike-north/microdelta/issues/240#issuecomment-6405525087)). Generic TEST-5's synthetic-subject qualification remains a separate gate. The first CLI introduces no reusable pagination framework.
 
-The owner selected one executable that starts the first concrete contribution
-report workflow and provides separately permissionable read-only progress and
-terminal observation ([#167 owner decision](https://github.com/mike-north/microdelta/issues/167#issuecomment-6404318056)). The concrete workflow and GitHub adapter belong to #240. The latest owner clarification preserves the historical workload of roughly 150,000 pull requests and their review/comment payloads; this means neither 150,000 people nor a fixed API-request count, and it accepts no scale reduction ([#240 clarification](https://github.com/mike-north/microdelta/issues/240#issuecomment-6405525087)). Generic TEST-5's 150,000 synthetic-subject target remains a separate full qualification gate. The first CLI does not introduce a reusable pagination framework.
-
-Rich history, preview, dependency/reuse explanation, resource browsing, and the
-broader command family below remain deferred full-checkpoint work. Realistic
-report scale remains in scope. Foreground-versus-detached lifetime and interrupt
-behavior remain explicit human choices. This proposal therefore does not imply
-that every CLI choice is settled, that #240 is implementation-ready, or that
-issue 167/M6 is complete.
-
-### Meaning and ownership
-
-Supervision owns execution identity, run-progress meaning, transition ordering,
-and the narrow publisher/reader contracts. The concrete report assembly owns
-strict report classification: generic fulfillment of an author body or a
-framework run result is not itself report success. Only the assembly may classify
-the required search, detail, and summary outcomes as a strict report result.
-Machine supplies existing host storage capabilities and owns no report or run
-semantics. No seventh owner and no generic History operation-journal reader are
-introduced.
-
-The current ARC-003 rule says persistence adapters implement ports owned by
-History or Accounting. This bounded Supervision-owned observational projection
-requires an explicit architectural clarification: ARC-003 should allow a narrow
-Supervision progress-store adapter for this read-only observation purpose, while
-the progress meaning and invariants remain with Supervision. That clarification
-is proposed, not already accepted; the existing six contexts and all their
-invariants remain in force. See [ARC-003](../spec/architecture.md#arc-003--contract-dependency-direction).
-
-### Record and storage proposal
-
-Use a dedicated per-execution progress file containing one bounded latest
-snapshot, with an explicit locator returned for that execution. The observation
-identity is freshly allocated and distinct from public `runId`, which may repeat
-across executions. Creation must be unique and must fail or retry on collision;
-it must never overwrite another execution's record. One file is created per
-execution, not per PR, and it retains no per-event or per-PR ledger. The record
-contains only bounded framework lifecycle/progress facts and the concrete
-assembly's strict terminal classification; it excludes author values, arbitrary
-error objects, and unbounded event detail.
-
-The selected-execution question requires no recent-run enumeration or global
-index, and no governing requirement currently requires TTL, a row cap, or
-automatic cleanup. These are owner-managed output artifacts with no automatic
-deletion; readers never clean up. If a future concrete contract requires TTL or
-bounded aggregate capacity, it must identify the requirement and show the conflict
-with owner-managed artifact lifetime before adding those policies. One artifact
-per execution is not one per PR and is independent of the full workload scale.
-
-The selected host path is the existing Machine SQLite capability opened in
-DELETE-journal mode for publication and the existing read-only SQLite opener for
-inspection. Each read returns one coherent latest snapshot. Do not reuse History's
-WAL operation journal: it has no current write-free reader, and adding a generic
-WAL reader is unnecessary for this selected-run query. Do not open writable
-History as a read fallback. Machine's pathname and journal-lifetime contract
-continues to apply. A hot journal that requires recovery is explicitly
-unavailable/recovery-required to a read-only caller; the reader never recovers,
-falls back to writable access, or reports fabricated liveness.
-
-### Publication, ordering, and failure behavior
-
-The initial record is durably published before analysis starts; failure to
-establish it prevents start. Ordinary updates are sampled/coalesced in memory,
-with a proposed maximum of one write per second; initial and terminal snapshots
-are forced. Keep at most one newest pending ordinary snapshot, never an event
-backlog. Mid-run observation failures are contained and cannot alter dispatch,
-retry, admission, or report outcomes. They must be surfaced to the starter as
-observation degradation. Terminal persistence uncertainty is reported separately
-from report failure and never causes automatic re-execution.
-
-Each update is bound to the exact execution identity. Stale revisions, updates
-after terminal closure, terminal-to-nonterminal regressions, and late updates
-after explicit artifact removal are rejected; a new execution gets a new
-identity. Reads distinguish missing, corrupt/unsupported, recovery-required or
-otherwise unavailable, recorded nonterminal, and recorded terminal states. A
-nonterminal record is only the latest persisted observation; its timestamp does
-not prove a process is alive, and process disappearance does not turn it into a
-terminal result.
-
-Supervision publishes terminal execution state only after execution has drained
-and closed. A failed, pending, cancelled, or otherwise incomplete execution may
-therefore have a terminal execution classification without a successful report.
-Strict report success is a stronger classification: it requires the concrete
-report assembly to establish all required report outcomes and their durable
-publication before recording report success in the terminal projection. An
-incomplete or failed report is never represented as successful publication. The
-report and observation projection are separate commits: report success with
-uncertain progress finalization remains report success plus
-observation-finalization uncertainty. A lost acknowledgment may leave a committed
-terminal snapshot; exact readback or idempotent terminal retry may resolve that
-uncertainty without rerunning the report.
-
-The read-only executable accepts only the explicit locator and observation
-permission. It loads no analysis callbacks and exposes no start, dispatch, retry,
-claim, cancellation, schema-initialization, mutation, or cleanup capability.
-Its structured output must carry only the bounded snapshot and explicit read
-state; final field names and framing remain to be selected. Viewing cannot change
-execution. Foreground display may consume the live observer in the starter, but
-independent read-only observation still uses this persisted exact-execution
-projection. Detached lifetime and interrupt semantics remain pending human
-decisions.
-
-### Required implementation proof
-
-Before implementation, add behavioral tests from this proposal and observe RED.
-At minimum, the tests must prove:
-
-1. Repeated public `runId` values produce distinct execution locators; duplicate
-   creation cannot overwrite; stale and post-terminal updates cannot change the
-   latest record.
-2. Initial publication failure starts zero analysis work. Ordinary update
-   failures do not alter retry, dispatch, or admission. A final write uncertainty
-   is distinct from strict report failure and does not reexecute the report.
-3. Fresh-process readers observe a coherent whole snapshot, invoke no author or
-   control callbacks, perform zero writes, create no files or sidecars, and never
-   fall back to writable storage. Missing, corrupt/unsupported, busy/unavailable,
-   recovery-required, nonterminal, and terminal results remain distinct.
-4. Generic fulfilled execution with a failed, pending, cancelled, or incomplete
-   required report stage cannot become strict report success; a completed empty
-   search remains distinct from failed or open discovery.
-5. Ordinary writes remain bounded by the sampling interval and one latest
-   pending snapshot regardless of event/PR count; initial and terminal snapshots
-   are forced. No retained record or pending queue grows with per-PR event count.
-6. Terminal execution publication follows drain and closure for all outcomes,
-   including failed, pending, cancelled, or incomplete runs. Strict report
-   success additionally requires all required outcomes and durable report
-   publication. A crash before terminal publication leaves nonterminal/unknown
-   state; a hot-journal reader reports unavailable without attempting recovery.
-
-These tests establish only the selected exact-execution observation path and
-strict first-report outcome; they do not establish the full M6 read-side family,
-plan inspection, historical activity, interrupt/control delivery, or M7 scale
-qualification. Preserve realistic workload and bounded-memory/restart evidence
-in the #240 acceptance path as separately governed.
+Rich history, preview, dependency/reuse explanation, resource browsing and the
+broader command family remain deferred full-checkpoint work. Foreground-versus-
+detached lifetime and interrupt behavior remain explicit human choices. The
+selected observation slice does not imply #240 implementation readiness, full
+issue-167 completion, M6 acceptance, or realistic-scale qualification.
 
 ## Purpose and boundary
 

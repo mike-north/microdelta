@@ -55,8 +55,11 @@ node examples/contribution-report/dist/main.js run --store .test-build/readme-de
 ```
 
 Each `node` command starts a fresh process and opens the same SQLite-backed store.
-These commands belong to the **example's CLI**; the general-purpose microdelta CLI
-and inspection checkpoint are still planned.
+These commands belong to the **example's CLI**. The selected first general-purpose
+CLI slice is separately permissionable run-start plus exact-execution observation
+([CLI-005](docs/spec/operations.md#cli-005--bounded-exact-execution-observation));
+it is a contract candidate, not an implemented CLI. The broader inspection
+checkpoint remains planned.
 
 The JSON includes the report, each member's outcome and exact result reference,
 body execution counts (`executions`), and source-policy checks (`finality`). The
@@ -122,8 +125,8 @@ computation evidence and may recompute prior work; exact historical results and
 operation journals remain readable. See the
 [tracking evidence compatibility boundary](docs/spec/execution.md#reuse-001--reuse-is-a-current-contextual-decision).
 Do not treat the example or accepted checkpoints as a guarantee that arbitrary
-analyses are safe. General CLI inspection, full workflow/scale acceptance, and
-real-provider acceptance remain undelivered.
+analyses are safe. The general CLI observation slice, full inspection,
+workflow/scale acceptance, and real-provider acceptance remain undelivered.
 
 Supported structured data is deliberately constrained. Plain records and arrays
 are the current result-root shapes; unsupported values such as cyclic/shared

@@ -14,7 +14,7 @@ export const baseInputs: IReportInputs = {
   contentBasis: { kind: 'controlled-as-of', scenario: 'fixture-base', cutoff: 1_767_398_400 },
 };
 /** Wire mutation controls live only in the remote harness, independently from assessment expectations. */
-export interface IFixtureOptions { readonly ids?: Readonly<Record<string, readonly number[]>>; readonly merged?: readonly number[]; readonly label?: string; readonly diff?: string; readonly searchPageSize?: number; readonly access?: string; readonly environment?: string; readonly requestLimit?: number; readonly intervalMilliseconds?: number; readonly github?: (url: string, send: IOperationSend) => Promise<IRestResponse | undefined>; readonly assess?: (request: IAssessmentRequest, send: IOperationSend) => Promise<unknown> }
+export interface IFixtureOptions { readonly ids?: Readonly<Record<string, readonly number[]>>; readonly merged?: readonly number[]; readonly label?: string; readonly diff?: string; readonly diffs?: Readonly<Record<string, string>>; readonly reviews?: Readonly<Record<string, string>>; readonly searchPageSize?: number; readonly access?: string; readonly environment?: string; readonly requestLimit?: number; readonly intervalMilliseconds?: number; readonly github?: (url: string, send: IOperationSend) => Promise<IRestResponse | undefined>; readonly assess?: (request: IAssessmentRequest, send: IOperationSend) => Promise<unknown> }
 /** Independent request, operation and source/body evidence. */
 export interface IFixture { readonly services: IReportServices; readonly trace: string[]; readonly requests: { readonly url: string; readonly operation: string; readonly attempt: string; readonly at: number }[]; readonly assessments: IAssessmentRequest[] }
 /** Unique access domains keep one test's configured shared ledger independent from another. */
@@ -46,9 +46,9 @@ export function fixture(options: IFixtureOptions = {}): IFixture {
         return { status: 200, headers: page * size >= ids.length ? {} : { link: `<${following.toString()}>; rel="next"` }, body: { total_count: ids.length, incomplete_results: false, items: selected.map(number => ({ id: 10_000 + number, node_id: `issue-${String(number)}`, number, repository_url: 'https://api.github.com/repos/acme/widget', created_at: '2026-01-01T12:00:00Z', user: { login }, pull_request: { url: `https://api.github.com/repos/acme/widget/pulls/${String(number)}` } })) } };
       }
       const number = Number(/\/(?:pulls|issues)\/([0-9]+)/u.exec(url.pathname)?.[1]);
-      if (url.pathname.endsWith('/reviews')) { return { status: 200, headers: {}, body: [{ id: number, body: 'Review evidence', state: 'APPROVED', submitted_at: '2026-01-01T14:00:00Z', user: { login: 'reviewer' }, commit_id: 'abc' }] }; }
+      if (url.pathname.endsWith('/reviews')) { return { status: 200, headers: {}, body: [{ id: number, body: options.reviews?.[String(number)] ?? 'Review evidence', state: 'APPROVED', submitted_at: '2026-01-01T14:00:00Z', user: { login: 'reviewer' }, commit_id: 'abc' }] }; }
       if (url.pathname.endsWith('/comments')) { return { status: 200, headers: {}, body: [{ id: number, body: 'Comment evidence', created_at: '2026-01-01T15:00:00Z', updated_at: '2026-01-01T15:00:00Z', user: { login: 'commenter' } }] }; }
-      if (accept === 'application/vnd.github.diff') { return { status: 200, headers: {}, body: options.diff ?? '+ widget fix' }; }
+      if (accept === 'application/vnd.github.diff') { return { status: 200, headers: {}, body: options.diffs?.[String(number)] ?? options.diff ?? '+ widget fix' }; }
       const merged = options.merged?.includes(number) ?? true;
       return { status: 200, headers: {}, body: { id: number + 20_000, number, base: { repo: { full_name: 'acme/widget' } }, title: `PR ${String(number)}`, body: 'Description', state: merged ? 'closed' : 'open', created_at: '2026-01-01T12:00:00Z', updated_at: '2026-01-01T13:00:00Z', closed_at: merged ? '2026-01-01T13:00:00Z' : null, merged_at: merged ? '2026-01-01T13:00:00Z' : null, labels: [{ name: options.label ?? 'unread' }] } };
     },

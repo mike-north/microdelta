@@ -71,6 +71,20 @@ controller. Likewise an unconfirmed usage-intent write's durable backoff remains
 binding; reservation rollback is proven using an independent new source address
 on the same shared gate, rather than bypassing that retained not-before time.
 
+Independent provider review of `b223a4f` was superseded to repair required when
+the author exposed three uncovered boundaries: zero selected delay must produce
+`retry-now`, malformed JavaScript date strings must not establish rate evidence,
+and unsafe seconds/conversion/addition must not produce a provider floor.
+The corrected tranche has27 direct normalization/budget tests and22 actual-facade
+provider tests passing, plus strict example compile/lint. Additional test-first
+date cases reject calendar rollover, weekday mismatch and hour24, and preserve
+supported obsolete HTTP forms with an explicit GMT interpretation. Direct429
+status and independently valid reset evidence survive an invalid Retry-After.
+The actual facade also proves an early timer wake cannot send early, cooldown is
+published before a slow classifier returns, accepted local delay begins at the
+decision boundary, and cumulative-budget refusal retains the provider floor.
+These scoped repairs await independent re-review at their frozen revision.
+
 Reproduce after building prerequisite packages:
 
 ```sh

@@ -10,6 +10,31 @@ function input(overrides: Partial<IRetryDecisionInput> = {}): IRetryDecisionInpu
 }
 
 describe('GitHub retry facts and explicit application budgets', () => {
+  test('zero selected delay uses retry-now rather than an invalid zero-duration retry-after', async () => {
+    const policy = githubRetryPolicy('fixture-a', { backoffMilliseconds: 0, maximumDelayMilliseconds: 0, maximumTotalWaitMilliseconds: 0 }, () => 1000);
+    await expect(policy.decide(input({ knownNotBefore: 1000 }))).resolves.toEqual({ kind: 'retry-now' });
+  });
+  test.each(['1.5', '999999999999999999999999', 'garbage'])('malformed Retry-After%s cannot make a non-rate403 retryable', retryAfter => {
+    expect(normalizeGithub({ status: 403, headers: { 'retry-after': retryAfter }, body: {} }, 1000)).toMatchObject({ kind: 'failed', transient: false });
+  });
+  test.each(['Fri, 31 Feb 2026 00:00:00 GMT', 'Fri, 01 Jan 1970 00:00:04 GMT', 'Thu, 01 Jan 1970 24:00:00 GMT', 'Thursday, 31-Feb-26 00:00:00 GMT', 'Thu Feb 31 00:00:00 2026'])('invalid HTTP date components %s cannot establish a rate403', retryAfter => {
+    expect(normalizeGithub({ status: 403, headers: { 'retry-after': retryAfter }, body: {} }, 1000)).toMatchObject({ kind: 'failed', transient: false });
+  });
+  test.each(['Thursday, 01-Jan-70 00:00:04 GMT', 'Thu Jan  1 00:00:04 1970'])('supported obsolete HTTP date %s preserves its valid floor', retryAfter => {
+    expect(normalizeGithub({ status: 403, headers: { 'retry-after': retryAfter }, body: {} }, 1000)).toMatchObject({ kind: 'rate-limited', retryAt: 4000 });
+  });
+  test.each([
+    [{ 'retry-after': '9007199254740992' }, 1000],
+    [{ 'retry-after': '9007199254741' }, 1000],
+    [{ 'retry-after': '1' }, Number.MAX_SAFE_INTEGER - 500],
+    [{ 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '9007199254740992' }, 1000],
+  ])('unsafe seconds, millisecond conversion or epoch addition cannot establish rate403', (headers, now) => {
+    expect(normalizeGithub({ status: 403, headers, body: {} }, now)).toMatchObject({ kind: 'failed', transient: false });
+  });
+  test('invalid timing preserves429 rate status and independently valid reset evidence for403', () => {
+    expect(normalizeGithub({ status: 429, headers: { 'retry-after': '1.5' }, body: {} }, 1000)).toMatchObject({ kind: 'rate-limited', retryAt: 1000 });
+    expect(normalizeGithub({ status: 403, headers: { 'retry-after': '1.5', 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': '5' }, body: {} }, 1000)).toMatchObject({ kind: 'rate-limited', retryAt: 5000 });
+  });
   test.each([
     [429, { 'retry-after': '2' }, 3000],
     [403, { 'retry-after': 'Thu, 01 Jan 1970 00:00:04 GMT' }, 4000],

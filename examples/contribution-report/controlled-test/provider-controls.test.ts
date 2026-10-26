@@ -11,7 +11,7 @@ import type { IDurableHistory } from '@microdelta/history';
 import { createNodeClock, createNodeMachine, createNodeSqlite } from '@microdelta/machine-node';
 import { createStopController, openWorkspace, registerSharedRateSurface } from 'microdelta';
 import type { IRunEvent, ISourceRetryPolicy, IWorkspace, IWorkspaceAccounting, IWorkspaceRunOptions } from 'microdelta';
-import { composeReport } from '../src/controlled/application.js';
+import { composeReport, evaluateReport } from '../src/controlled/application.js';
 import type { IReportHelpers, IReportInputs, IReportServices } from '../src/controlled/application.js';
 import { githubRetryPolicy } from '../src/controlled/github-retry.js';
 import { baseInputs, fixture } from './fixture.js';
@@ -132,6 +132,7 @@ describe('CR-2 actual report source operations', () => {
     [403, { 'retry-after': new Date(origin + 1000).toUTCString() }],
     [403, { 'x-ratelimit-remaining': '0', 'x-ratelimit-reset': String((origin + 1000) / 1000) }],
   ])('rate status%s honors max(provider floor, local backoff), releases deferred-only writer and resumes same operation', async (status, headers) => {
+    const timeouts = jest.spyOn(globalThis, 'setTimeout');
     let refused = false;
     const fake = fixture({ ids: { ada: [101] }, github: async url => { if (!refused && url.includes('/search/issues')) { refused = true; return { status, headers, body: { private: 'PRIVATE_RESPONSE' } }; } return undefined; } });
     const active = start(fake, { retryPolicies: [policy(fake, 1500)] });
@@ -139,6 +140,13 @@ describe('CR-2 actual report source operations', () => {
     expect(searches(fake)).toHaveLength(1);
     expect(accounting.summarizeUsage({ environment: 'production' }).requestAttempts).toBe(1);
     expect(history.currentWriter()).toBeUndefined();
+    const earlyWake = timeouts.mock.calls.find(call => call[1] === 1500)?.[0];
+    expect(typeof earlyWake).toBe('function');
+    if (typeof earlyWake === 'function') { earlyWake(); }
+    for (let turn = 0; turn < 5; turn += 1) { await new Promise<void>(resolve => setImmediate(resolve)); }
+    expect(searches(fake)).toHaveLength(1);
+    expect(accounting.summarizeUsage({ environment: 'production' }).requestAttempts).toBe(1);
+    expect(jest.getTimerCount()).toBeGreaterThan(0);
     const probe = history.acquireWriter({ holder: 'deferred-probe', leaseMilliseconds: 10_000 });
     expect(probe.kind).toBe('acquired'); if (probe.kind === 'acquired') { history.releaseWriter(probe.lease); }
     await advance(1499);
@@ -151,6 +159,54 @@ describe('CR-2 actual report source operations', () => {
     expect(new Set(searches(fake).map(request => request.attempt)).size).toBe(2);
     expect(result.value.usage.unknown.length).toBeGreaterThan(0);
     expect(JSON.stringify(active.events)).not.toMatch(/PRIVATE_RESPONSE|retry-after|x-ratelimit-reset/u);
+  });
+  test('authoritative cooldown is published before slow classification and accepted delay starts at decision acceptance', async () => {
+    let refused = false;
+    const fake = fixture({ ids: { ada: [101] }, github: async url => { if (!refused && url.includes('/search/issues')) { refused = true; return { status: 429, headers: { 'retry-after': '1' }, body: {} }; } return undefined; } });
+    let deciding = false;
+    let release: (() => void) | undefined;
+    const barrier = new Promise<void>(resolve => { release = resolve; });
+    const selected = policy(fake, 1500);
+    const slow: ISourceRetryPolicy = { ...selected, decide: async input => { deciding = true; await barrier; return selected.decide(input); } };
+    const stop = createStopController();
+    const active = start(fake, { stop, retryPolicies: [slow] });
+    const independent = openWorkspace({ location: join(directory, 'same-account.sqlite'), logicalStore: 'same-account-history', accounting });
+    try {
+      await until(() => deciding, 'normalized refusal reaches the one slow classifier');
+      expect(history.currentWriter()).toBeDefined();
+      const other = fixture({ ids: { ada: [] } });
+      const otherServices = { ...other.services, githubRate: fake.services.githubRate, assessmentRate: fake.services.assessmentRate, connection: fake.services.connection };
+      const application = composeReport(one, otherServices);
+      const second = evaluateReport(independent, application, { environment: 'production', requestKey: 'same-account-during-classification' });
+      await until(() => jest.getTimerCount() > 0, 'matching initial request sees published cooldown');
+      expect(other.requests).toHaveLength(0);
+      await advance(999); expect(other.requests).toHaveLength(0);
+      await advance(1);
+      expect((await second).value.status).toBe('complete'); expect(other.requests).toHaveLength(1);
+      expect(searches(fake)).toHaveLength(1);
+      release?.();
+      await until(() => active.events.some(event => event.kind === 'wait' && event.phase === 'sleeping' && event.until === origin + 2500), 'local delay anchored at accepted decision');
+      await advance(1499); expect(searches(fake)).toHaveLength(1);
+      await advance(1);
+      expect((await active.done).value.fold.outcome.status).toBe('succeeded');
+      expect(searches(fake).map(request => request.at)).toEqual([origin, origin + 2500]);
+    } finally { release?.(); stop.request({ level: 'hard' }); await active.done.catch(() => undefined); independent.close(); }
+  });
+  test('recorded cumulative wait budget prevents a third rate retry without rewriting its required provider floor', async () => {
+    let refusals = 0;
+    const original = fixture({ ids: { ada: [101] }, github: async url => { if (url.includes('/search/issues') && refusals < 2) { refusals += 1; return { status: 429, headers: { 'retry-after': '1' }, body: {} }; } return undefined; } });
+    const fake = { ...original, services: { ...original.services, retry: { maxAttempts: 3, backoffMilliseconds: 0 } } };
+    const active = start(fake, { retryPolicies: [policy(fake, 0, 1000, 1500)] });
+    await until(() => active.events.some(event => event.kind === 'wait' && event.phase === 'sleeping'), 'first allowed rate wait');
+    await advance(1000);
+    const stopped = await active.done;
+    expect(searches(fake)).toHaveLength(2);
+    expect(stopped.value.fold.outcome.status).not.toBe('succeeded');
+    expect(stopped.value.operations).toContainEqual(expect.objectContaining({ status: 'retry-exhausted', notBefore: origin + 2000 }));
+    await advance(999); expect(searches(fake)).toHaveLength(2);
+    await advance(1);
+    expect((await start(fake, { retryPolicies: [policy(fake, 0, 1000, 1500)] }).done).value.fold.outcome.status).toBe('succeeded');
+    expect(searches(fake)).toHaveLength(3);
   });
   test('same-operation durable floor survives close/reopen; a new run sends nothing just before the floor', async () => {
     let refused = false;

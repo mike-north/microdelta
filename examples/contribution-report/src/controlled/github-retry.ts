@@ -17,6 +17,6 @@ export function githubRetryPolicy(connection: string, budgets: IGithubRetryBudge
     for (const previous of input.history.prior) { if (previous.decision?.kind === 'retry-after') { acceptedWait += previous.decision.delayMilliseconds; } }
     // Bounded recorded history is the authority; unavailable older decisions cannot justify a fabricated remaining budget.
     if (!Number.isSafeInteger(at) || !Number.isSafeInteger(delay) || !Number.isSafeInteger(acceptedWait + delay) || delay > maximumDelay || acceptedWait + delay > maximumTotalWait) { return { kind: 'stop' }; }
-    return { kind: 'retry-after', delayMilliseconds: delay };
+    return delay === 0 ? { kind: 'retry-now' } : { kind: 'retry-after', delayMilliseconds: delay };
   } };
 }

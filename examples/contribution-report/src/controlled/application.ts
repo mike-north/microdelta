@@ -189,11 +189,38 @@ function bodies(values: ITrackedView<readonly IDiscussionEntry[]>): string[] {
 export function normalizeGithub(response: IRestResponse, now: number): IOperationResponse<IRestResponse> {
   if (response.status === 200) { return { kind: 'succeeded', value: response }; }
   const retryAfter = response.headers['retry-after'];
-  const seconds = retryAfter !== undefined && /^\d+$/u.test(retryAfter) ? Number(retryAfter) : undefined;
-  const date = retryAfter !== undefined && seconds === undefined ? Date.parse(retryAfter) : NaN;
-  const reset = response.headers['x-ratelimit-remaining'] === '0' ? Number(response.headers['x-ratelimit-reset']) * 1_000 : NaN;
+  const delta = retryAfter !== undefined && /^\d+$/u.test(retryAfter) ? Number(retryAfter) : NaN;
+  const seconds = Number.isSafeInteger(delta) && Number.isSafeInteger(delta * 1_000) && Number.isSafeInteger(now + delta * 1_000) ? delta : undefined;
+  const date = retryAfter === undefined ? NaN : httpDateEpoch(retryAfter);
+  const resetHeader = response.headers['x-ratelimit-reset'];
+  const reset = response.headers['x-ratelimit-remaining'] === '0' && resetHeader !== undefined && /^\d+$/u.test(resetHeader) ? Number(resetHeader) * 1_000 : NaN;
   const floor = Math.max(now, seconds === undefined ? Number.isFinite(date) ? date : now : now + seconds * 1_000, Number.isSafeInteger(reset) ? reset : now);
   const rate = response.status === 429 || (response.status === 403 && (retryAfter !== undefined && (seconds !== undefined || Number.isFinite(date)) || response.headers['x-ratelimit-remaining'] === '0' && Number.isSafeInteger(reset)));
   if (rate) { return { kind: 'rate-limited', retryAt: floor, retryFacts: { httpStatus: response.status, providerCode: 'rate-refusal' } }; }
   return { kind: 'failed', transient: response.status >= 500 && response.status < 600, retryFacts: { httpStatus: response.status, providerCode: response.status === 401 || response.status === 403 ? 'access-refusal' : 'http-failure' } };
+}
+
+/** HTTP dates have a defined lexical grammar; permissive JavaScript dates such as "1.5" are not provider timing evidence. */
+const httpDatePattern = /^(?:[A-Z][a-z]{2}, [0-9]{2} [A-Z][a-z]{2} [0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2} GMT|[A-Z][a-z]+, [0-9]{2}-[A-Z][a-z]{2}-[0-9]{2} [0-9]{2}:[0-9]{2}:[0-9]{2} GMT|[A-Z][a-z]{2} [A-Z][a-z]{2} [ 0-9][0-9] [0-9]{2}:[0-9]{2}:[0-9]{2} [0-9]{4})$/u;
+/** Calendar names are fixed by HTTP syntax, independently of the host locale or time zone. */
+const httpWeekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'] as const;
+/** HTTP's English month vocabulary is part of provider protocol validation. */
+const httpMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const;
+/** Round-trip every supported HTTP date component so JavaScript rollover and local-zone parsing cannot fabricate timing evidence. */
+function httpDateEpoch(value: string): number {
+  if (!httpDatePattern.test(value)) { return NaN; }
+  // The obsolete asctime form omits a zone lexically but still means GMT on the HTTP wire.
+  const epoch = Date.parse(value.endsWith('GMT') ? value : `${value} GMT`);
+  if (!Number.isSafeInteger(epoch)) { return NaN; }
+  const instant = new Date(epoch);
+  const weekday = httpWeekdays[instant.getUTCDay()];
+  const month = httpMonths[instant.getUTCMonth()];
+  if (weekday === undefined || month === undefined) { return NaN; }
+  const day = String(instant.getUTCDate()).padStart(2, '0');
+  const year = String(instant.getUTCFullYear()).padStart(4, '0');
+  const time = [instant.getUTCHours(), instant.getUTCMinutes(), instant.getUTCSeconds()].map(part => String(part).padStart(2, '0')).join(':');
+  const imf = `${weekday.slice(0, 3)}, ${day} ${month} ${year} ${time} GMT`;
+  const rfc850 = `${weekday}, ${day}-${month}-${year.slice(-2)} ${time} GMT`;
+  const asctime = `${weekday.slice(0, 3)} ${month} ${String(instant.getUTCDate()).padStart(2, ' ')} ${time} ${year}`;
+  return value === imf || value === rfc850 || value === asctime ? epoch : NaN;
 }

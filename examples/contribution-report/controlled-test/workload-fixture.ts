@@ -39,6 +39,9 @@ const GROUPS = [
   { people: 10, pullsPerPerson: 2_250 },
 ] as const;
 
+/** Latest updates and quiet finality need 14,400 + 3,600 seconds before the shared cutoff. */
+const REQUIRED_TEMPORAL_TAIL_SECONDS = 18_001;
+
 /** Frozen report period supplies stable second-precision creation timestamps for controlled search. */
 export const workloadInputs: IReportInputs = workloadInputsFor();
 
@@ -94,7 +97,7 @@ export function workloadPull(person: IWorkloadPerson, ordinal: number): IWorkloa
   }
   const number = person.firstNumber + ordinal;
   const start = workloadInputs.scope.start;
-  const span = workloadInputs.scope.end - start - 2;
+  const span = workloadInputs.scope.end - start - REQUIRED_TEMPORAL_TAIL_SECONDS;
   const createdAt = start + 1 + Math.floor((ordinal * span) / person.pullRequests);
   const variable = number % 8;
   return {

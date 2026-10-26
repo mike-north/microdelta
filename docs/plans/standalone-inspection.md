@@ -13,7 +13,7 @@ the storage and execution details remain a proposal for review.
 
 The owner selected one executable that starts the first concrete contribution
 report workflow and provides separately permissionable read-only progress and
-terminal observation ([#167 owner decision](https://github.com/mike-north/microdelta/issues/167#issuecomment-6404318056)). The concrete workflow and GitHub adapter belong to #240. The latest owner clarification preserves realistic contribution-report scale and does not accept a scale reduction ([#240 clarification](https://github.com/mike-north/microdelta/issues/240#issuecomment-6405525087)). The first CLI does not introduce a reusable pagination framework.
+terminal observation ([#167 owner decision](https://github.com/mike-north/microdelta/issues/167#issuecomment-6404318056)). The concrete workflow and GitHub adapter belong to #240. The latest owner clarification preserves the historical workload of roughly 150,000 pull requests and their review/comment payloads; this means neither 150,000 people nor a fixed API-request count, and it accepts no scale reduction ([#240 clarification](https://github.com/mike-north/microdelta/issues/240#issuecomment-6405525087)). Generic TEST-5's 150,000 synthetic-subject target remains a separate full qualification gate. The first CLI does not introduce a reusable pagination framework.
 
 Rich history, preview, dependency/reuse explanation, resource browsing, and the
 broader command family below remain deferred full-checkpoint work. Realistic

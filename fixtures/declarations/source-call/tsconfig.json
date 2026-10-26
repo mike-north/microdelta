@@ -41,6 +41,7 @@
   "include": [
     "../../../packages/core/test/source-call/fixture.ts",
     "../../../packages/core/test/source-call/protocol.ts",
-    "../../../packages/core/test/source-call/worker.ts"
+    "../../../packages/core/test/source-call/worker.ts",
+    "../../../packages/core/test/source-call/kind-correspondence.test.ts"
   ]
 }

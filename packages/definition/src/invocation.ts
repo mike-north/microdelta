@@ -427,14 +427,23 @@ export function openInvocationIn<TFamily extends IBindingFamily>(
   /** Each declared supplied slot's current implementation, resolved once before any body runs. */
   const slotTargets = new Map<string, ISuppliedStepTarget<TFamily> | ISuppliedSourceTarget<TFamily>>();
   for (const edge of memoRecord.children.values()) {
-    if (edge.kind === 'slot' && !slotTargets.has(edge.slot)) {
+    if (edge.kind !== 'slot') { continue; }
+    let target = slotTargets.get(edge.slot);
+    if (target === undefined) {
       const slotOccupants = state.registrations.get(descriptorKey(slotDescriptor(frozenParent.scope, edge.slot))) ?? [];
       checkSlotOccupancy(edge.slot, slotOccupants);
       const [occupant] = slotOccupants;
-      if (occupant?.target.role !== 'callable' || (occupant.target.kind !== 'supplied-step' && occupant.target.kind !== 'supplied-source') || (occupant.target.declaration.kind === 'supplied-source') !== edge.source) {
+      if (occupant?.target.role !== 'callable' || (occupant.target.kind !== 'supplied-step' && occupant.target.kind !== 'supplied-source')) {
         return reject('missing-slot', `Supplied step slot ${edge.slot} is not occupied by a supplied step.`);
       }
-      slotTargets.set(edge.slot, occupant.target);
+      target = occupant.target;
+      slotTargets.set(edge.slot, target);
+    }
+    // Occupancy belongs to the slot, but source/memo meaning belongs to each
+    // declared edge. A cached target permits matching aliases, never an edge
+    // of the other kind merely because an earlier edge used the same name.
+    if ((target.declaration.kind === 'supplied-source') !== edge.source) {
+      return reject('missing-slot', `Supplied step slot ${edge.slot} is not occupied by a supplied step.`);
     }
   }
   /** The parent invocation's call order: the next dispatched call's position. */

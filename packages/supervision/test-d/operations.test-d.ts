@@ -99,6 +99,7 @@ expectAssignable<IOperationBlock>({ kind: 'unknown-outcome', operation: 'op-1-1'
 expectNotAssignable<IOperationBlock>({ kind: 'unknown-outcome', operation: 'op-1-1', reason: 'other' });
 expectAssignable<IOperationStatus>('retry-exhausted');
 expectAssignable<ISupervisionErrorCode>('operation-exhausted');
+expectAssignable<ISupervisionErrorCode>('rate-timing-failed');
 
 // The run reports the time it waits until.
 expectType<number | undefined>(result.waitingUntil);

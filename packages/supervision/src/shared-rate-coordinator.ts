@@ -88,7 +88,7 @@ export interface ISharedRateSurface {
 export interface ISharedRateReservation {
   /** Release this uncommitted preview while transport is known not to have started; the token never authorizes sending. */
   rollbackBeforeSend(): void;
-  /** Recheck current coordinator state and stamp possible-send evidence; #238 must bind this to its synchronous transport boundary. */
+  /** Recheck current coordinator state and stamp possible-send evidence at the synchronous transport boundary after final run authority. */
   commitPossibleSend(): ISharedRateCommitResult;
 }
 
@@ -110,13 +110,20 @@ export type ISharedRateAdmission =
 export interface ISharedRateCoordinator {
   /** Intern a non-secret environment/service/access/surface tuple and its immutable memberships. */
   registerSurface(declaration: ISharedRateSurfaceDeclaration): ISharedRateSurface;
+  /** Verify explicit request attribution without publishing a cooldown or reserving capacity. */
+  validateAssociation(surface: ISharedRateSurface, association: {
+    readonly environment: string;
+    readonly service?: string;
+    readonly accessContext?: string;
+    readonly cooldownGateId: string;
+  }): void;
   /** Preview eligibility against the full coordinator-derived gate union; no gate subset is caller-controlled. */
   admit(request: {
     readonly surface: ISharedRateSurface;
     readonly run: string;
     /** Exact or conservative pre-send application quantity, never post-send billed usage. Required when any gate uses quantity units. */
     readonly quantityCost?: number;
-    /** Immutable snapshot of an already accepted absolute floor; #238 must re-read current operation state at final send composition. */
+    /** Immutable snapshot of an already accepted absolute floor; the transport owner also re-reads current operation authority before committing. */
     readonly acceptedNotBefore?: number;
   }): ISharedRateAdmission;
   /** Merge an authoritative absolute epoch floor into a registered mandatory gate. */
@@ -489,6 +496,16 @@ export function createSharedRateCoordinator(options: ISharedRateCoordinatorOptio
       surfacesByIdentity.set(identity, state);
       statesByHandle.set(handle, state);
       return handle;
+    },
+
+    validateAssociation(surface, association): void {
+      const state = stateFor(surface);
+      if (state.scope[0] !== association.environment
+        || (association.service !== undefined && state.scope[1] !== association.service)
+        || (association.accessContext !== undefined && state.scope[2] !== association.accessContext)
+        || !state.gateKeys.has(tupleKey([...state.scope, association.cooldownGateId]))) {
+        throw new SharedRateCoordinatorError('unknown-association', 'Request context or cooldown gate does not match its registered surface');
+      }
     },
 
     admit(request): ISharedRateAdmission {

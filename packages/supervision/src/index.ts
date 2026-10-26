@@ -138,3 +138,5 @@ export type {
   IRunResultReference,
 } from './promotion.js';
 export { createSupervision } from './supervision.js';
+
+export type { IOperationSharedRate, ISharedRateDispatchOptions } from './shared-rate-dispatch.js';

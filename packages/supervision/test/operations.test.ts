@@ -20,7 +20,8 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createNodeClock, createNodeElapsedClock, createNodeRandom, createNodeSqlite, createNodeSqliteReader, createNodeTimer } from '@microdelta/machine-node';
-import type { IResolution, IResolutionOutcome } from '@microdelta/resolution';
+import { ResolutionError } from '@microdelta/resolution';
+import type { IFoldResolution, IResolution, IResolutionOutcome } from '@microdelta/resolution';
 
 import { SupervisionError, createSharedRateCoordinator, createStopController, createSupervision, openExecutionObservationReader, operationJournalDeclaration, operationsCollection } from '../src/index.js';
 import { decodeOperation, encodeOperation } from '../src/records.js';
@@ -218,6 +219,74 @@ async function runOne(journal: IMemoryJournal, accounting: IMemoryAccounting, re
 function phases(events: readonly IRunEvent[]): string[] {
   return events.flatMap((event) => event.kind === 'operation' ? [`${event.phase}${event.reason === undefined ? '' : `:${event.reason}`}`] : []);
 }
+
+/**
+ * A large receipt array is an owner-boundary probe, not an application scale
+ * workload. Repeated guarded admissions of one genuinely retained operation
+ * contribute real deferral samples through the normal operation port without
+ * constructing thousands of graph members, providers or durable stores.
+ */
+describe('terminal deferred receipts have no JavaScript argument-count ceiling (RUN-010/011)', () => {
+  test('a failed request reduces 200000 genuine guarded deferral samples without losing its typed outcome', async () => {
+    const timer = fakeTimer();
+    const supervision = createSupervision({ context: nodeScopes, timer });
+    const journal = memoryJournal();
+    const accounting = memoryAccounting();
+    const sent = { count: 0 };
+    const floor = T0 + 10_000;
+    const deferredStep = stepOf('assess', 'pr-1');
+    const failedStep = stepOf('independent', 'pr-2');
+    const foldStep = stepOf('report');
+    let passes = 0;
+    let denied = 0;
+    const double = executing(async () => {
+      await supervision.execution().operation({
+        ...operation(() => Promise.resolve({ kind: 'rate-limited', retryAt: floor }), sent),
+        retry: { maxAttempts: 2 },
+      }).catch(() => undefined);
+    });
+    const factory: IRunOptions['resolution'] = (ports): IResolution => {
+      const delegate = double.factory(ports);
+      return {
+        ...delegate,
+        async resolveFold(request): Promise<IFoldResolution> {
+          passes += 1;
+          const pending = await delegate.resolve({ ...request, step: deferredStep });
+          // Each admission consults the actual retained block and records its
+          // floor through Operation Engine, rather than injecting a scope array.
+          for (let index = 0; index < 200_000; index += 1) {
+            const decision = await ports.admission.admit(admissionFor(deferredStep));
+            if (decision.kind === 'denied') { denied += 1; }
+          }
+          const evidence = { misses: [], trace: [], diagnostics: [] };
+          return {
+            over: stepOf('assess'),
+            discovery: { kind: 'keyed', collection: stepOf('prs'), reference: { kind: 'completed-result', locator: 'mdh1:test:roster' }, completion: 'complete', keys: ['pr-1', 'pr-2'] },
+            members: [
+              { key: 'pr-1', step: deferredStep, gate: { selected: 'required', observations: [] }, outcome: pending },
+              { key: 'pr-2', step: failedStep, gate: { selected: 'required', observations: [] }, outcome: { kind: 'failed', error: new ResolutionError('execution-failure', 'independent member failed') } },
+            ],
+            outcome: { ...evidence, step: request.step, kind: 'failed', failed: ['pr-2'], cancelled: [], pending: ['pr-1'], openDiscovery: false, diagnostic: 'required member failed' },
+            diagnostics: [],
+          };
+        },
+      };
+    };
+    const events: IRunEvent[] = [];
+    const result = await supervision.run({
+      analysis: 'analysis:test', environment: 'env:test', resolution: factory, writer: grantingWriter,
+      operations: { journal, accounting, random: countingRandom() },
+      observers: [{ observe: (event) => { if (event.kind === 'wait') { events.push(event); } } }],
+    }, (run) => run.resolveFold(foldStep, { requestKey: 'request:large-receipt' }));
+    expect(result.value.outcome).toMatchObject({ status: 'failed', failed: ['pr-2'], pending: ['pr-1'] });
+    expect(result.value.members.find((member) => member.key === 'pr-1')).toMatchObject({ status: 'pending', blocked: { kind: 'deferred', operation: firstOperation, notBefore: floor } });
+    expect(result.waitingUntil).toBe(floor);
+    expect({ passes, denied, sent: sent.count, intents: accounting.intents.length }).toEqual({ passes: 1, denied: 200_000, sent: 1, intents: 1 });
+    expect(events).toEqual([]);
+    expect(timer.currentEpochMilliseconds()).toBe(T0);
+    expect(timer.scheduled.map((entry) => entry.at)).not.toContain(floor);
+  }, 30_000);
+});
 
 describe('observed external operations and deferred waits (A-21c/d)', () => {
   test('two deferred required works retain the earliest wait, with exact operation and wait route counts', async () => {

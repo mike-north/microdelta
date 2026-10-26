@@ -28,7 +28,7 @@ export interface IReactiveCostJob {
   readonly memberIterations: number; readonly foldIterations: number; readonly leaseMilliseconds: number;
   readonly suppressCachedRead: boolean;
 }
-/** Counts arise at actual body entry; active tracks executing author bodies, not configured permits. @internal */
+/** Counts arise at actual body entry. Observed active author attempts span public execute through terminal lifecycle events, including publication work; they do not measure simultaneous physical body CPU or configured permits. @internal */
 export interface ICostBodies { expensive: number; leaf: number; parent: number; fold: number; roster: number; active: number; maximumActive: number; kernelCpuMicroseconds: number; memberKernelCpuMicroseconds: number; foldKernelCpuMicroseconds: number; kernelSink: number }
 /** Complete only for this declared fixture analysis/environment/subject/version manifest. @internal */
 export interface ICostCensus { readonly manifest: readonly IVersionedSubject[]; readonly results: number; readonly acceptances: number; readonly snapshots: readonly { readonly reference: ICompletedResultReference; readonly fingerprint: unknown; readonly envelope: unknown }[] }

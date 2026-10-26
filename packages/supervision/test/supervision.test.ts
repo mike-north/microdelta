@@ -1553,18 +1553,53 @@ describe('observed execution identity and closure (A-21a/b/c/g)', () => {
     } finally { rmSync(directory, { recursive: true, force: true }); }
   });
 
-  test('partial setup drains a tracked send before sealing not-entered', async () => {
+  test('a setup writer-release failure is a bounded diagnostic beside the original setup rejection', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
+    try {
+      const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
+      const supervisor = createSupervision({ context: nodeScopes, observation: host });
+      const failure = new Error('original setup error');
+      const writer = recordingWriter({ releaseThrows: true });
+      let bodies = 0;
+      const { options } = runOptions({ writer: writer.writer, resolution: () => { throw failure; } });
+      const observed = supervisor.startObserved({ ...options, observationLocation: join(directory, 'setup-release.sqlite') }, () => { bodies += 1; return 1; });
+      await expect(observed.result).rejects.toBe(failure);
+      expect(bodies).toBe(0);
+      expect(writer.releases.count).toBe(1);
+      expect(await observed.acknowledgment).toMatchObject({ kind: 'acknowledged' });
+      const reader = openExecutionObservationReader(host.reader, observed.locator);
+      const document = reader.read();
+      expect(document).toMatchObject({ result: { kind: 'observed', observation: { body: 'not-entered', diagnostics: { present: true, count: 1, lowerBound: false } } } });
+      expect(JSON.stringify(document)).not.toContain('storage closed underneath the run');
+      reader.close();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  test('partial setup drains a tracked send and retains observer and unsubscribe diagnostics', async () => {
     const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
     try {
       const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
       const supervisor = createSupervision({ context: nodeScopes, observation: host });
       const failure = new Error('setup failed after tracked work began');
+      const controller = createStopController();
+      let unsubscribes = 0;
+      const stop = Object.freeze({
+        get state() { return controller.state; },
+        signal: controller.signal,
+        request: controller.request,
+        subscribe(listener: Parameters<typeof controller.subscribe>[0]) {
+          const remove = controller.subscribe(listener);
+          return (): void => { remove(); unsubscribes += 1; throw new Error('private unsubscribe detail'); };
+        },
+      });
       let release: () => void = () => undefined;
       const gate = new Promise<void>((resolve) => { release = resolve; });
       let enter: () => void = () => undefined;
       const began = new Promise<void>((resolve) => { enter = resolve; });
       let bodies = 0;
-      const { options } = runOptions({ resolution: (ports) => {
+      const { options } = runOptions({ stop, observers: [{ observe(event) {
+        if (event.kind === 'send' && event.phase === 'end') { throw new Error('private observer detail'); }
+      } }], resolution: (ports) => {
         void ports.execution.execute(step, async () => supervisor.execution().send({
           label: 'setup-send',
           perform: async () => { enter(); await gate; return 'sent'; },
@@ -1582,8 +1617,11 @@ describe('observed execution identity and closure (A-21a/b/c/g)', () => {
       release();
       await expect(observed.result).rejects.toBe(failure);
       expect(bodies).toBe(0);
+      expect(unsubscribes).toBe(1);
       expect(await observed.acknowledgment).toMatchObject({ kind: 'acknowledged' });
-      expect(reader.read()).toMatchObject({ result: { kind: 'observed', observation: { phase: 'closed', body: 'not-entered', eventCounts: { send: 2 } } } });
+      const document = reader.read();
+      expect(document).toMatchObject({ result: { kind: 'observed', observation: { phase: 'closed', body: 'not-entered', eventCounts: { send: 2 }, diagnostics: { present: true, count: 2, lowerBound: false } } } });
+      expect(JSON.stringify(document)).not.toContain('private unsubscribe detail');
       reader.close();
     } finally { rmSync(directory, { recursive: true, force: true }); }
   });
@@ -1643,7 +1681,7 @@ describe('observed execution identity and closure (A-21a/b/c/g)', () => {
     } finally { rmSync(directory, { recursive: true, force: true }); }
   });
 
-  test('a forged confirmed-empty assertion is refused and mutable incomplete reasons are copied canonically', async () => {
+  test('a confirmed statement needs a bounded deliverable locator and mutable incomplete reasons are copied canonically', async () => {
     const directory = mkdtempSync(join(tmpdir(), 'microdelta-observation-'));
     try {
       const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };

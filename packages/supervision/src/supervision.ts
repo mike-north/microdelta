@@ -465,12 +465,13 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     let setupState: ISupervisedRun | undefined;
     let setupStarted: Set<Promise<unknown>> | undefined;
     let setupUnsubscribe: (() => void) | undefined;
+    /** Setup-started work can diagnose during drain even when the body never begins. */
+    const diagnostics: string[] = [];
     try {
     const observers = captureObservers(runOptions.observers);
     const policy = runOptions.admission ?? admitAll;
     const writer = runOptions.writer;
     const writerPolicy = writerWaitPolicy(runOptions.writerWait);
-    const diagnostics: string[] = [];
     /** The stop intent in force when the run closed; captured in the turn that closes it. */
     let closingStop: IStopState = controller.state;
     /** Where a failing listener of one of the run's abort signals is reported: a diagnostic, never a failure of the stop. */
@@ -1102,9 +1103,15 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         }
         if (setupState !== undefined) { setupState.open = false; }
         producer?.seal();
-        try { setupUnsubscribe?.(); } catch { /* Setup failure remains authoritative. */ }
-        try { runOptions.writer.release(); } catch { /* Setup failure remains authoritative. */ }
-        producer?.close('not-entered', { stop: runOptions.stop?.state ?? { level: 'none', cause: undefined, deadline: undefined }, diagnostics: 0, interruptions: setupState?.interruptions ?? [], failure: error });
+        try { setupUnsubscribe?.(); } catch {
+          // A failed local detach is diagnostic; it cannot replace the original setup failure.
+          diagnostics.push(`Run ${context.runId} could not end its stop subscription`);
+        }
+        try { runOptions.writer.release(); } catch (releaseError: unknown) {
+          // Releasing a setup-owned writer may fail; record its health without replacing the setup rejection.
+          diagnostics.push(`Run ${context.runId} could not release its writer: ${frameworkDetail(releaseError)}`);
+        }
+        producer?.close('not-entered', { stop: runOptions.stop?.state ?? { level: 'none', cause: undefined, deadline: undefined }, diagnostics: diagnostics.length, interruptions: setupState?.interruptions ?? [], failure: error });
       }
       throw error;
     }

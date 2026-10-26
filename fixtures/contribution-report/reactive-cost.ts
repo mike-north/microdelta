@@ -292,10 +292,12 @@ function isSubject(value: unknown): value is IVersionedSubject { return record(v
 function isCensus(value: unknown): value is ICostCensus { return record(value) && numericFields(value, ['results', 'acceptances']) && Array.isArray(value['manifest']) && value['manifest'].every(isSubject) && Array.isArray(value['snapshots']) && value['snapshots'].every((snapshot: unknown) => record(snapshot) && reference(snapshot['reference']) && 'fingerprint' in snapshot && 'envelope' in snapshot); }
 /** Filter verification includes both endpoints and every exact local view. */
 function isFilter(value: unknown): value is ICostFilter { return record(value) && numericFields(value, ['requestsBefore', 'requestsAfter']) && isCensus(value['before']) && isCensus(value['after']) && isBodies(value['bodiesBefore']) && isBodies(value['bodiesAfter']) && isMeasurement(value['measurement']) && Array.isArray(value['views']) && value['views'].every((view: unknown) => Array.isArray(view) && view.every(isMember)); }
+/** Every advertised request timing is finite and nonnegative; the three measured requests remain required. */
+function isRequestTimings(value: unknown): value is Readonly<Record<string, number>> { return record(value) && numericFields(value, Object.keys(value)) && numericFields(value, ['expensive-members', 'aggregate', 'parents']); }
 /** A complete phase is accepted only after its nested data has been structurally narrowed. */
 function isReceipt(value: unknown): value is IReactiveCostReceipt {
-  return record(value) && ['cold', 'restart', 'parent-only', 'unread-child', 'consumed-child', 'unread-input', 'membership'].includes(String(value['phase'])) && numericFields(value, ['pid'])
+  return record(value) && typeof value['phase'] === 'string' && ['cold', 'restart', 'parent-only', 'unread-child', 'consumed-child', 'unread-input', 'membership'].includes(value['phase']) && numericFields(value, ['pid'])
     && Array.isArray(value['members']) && value['members'].every(isMember) && Array.isArray(value['parents']) && value['parents'].every((parent: unknown) => record(parent) && typeof parent['key'] === 'string' && reference(parent['reference']) && numericFields(parent['value'], ['selected']))
-    && record(value['aggregate']) && reference(value['aggregate']['reference']) && numericFields(value['aggregate']['value'], ['total', 'count']) && numericFields(value['requestWallMilliseconds'], ['expensive-members', 'aggregate', 'parents']) && isBodies(value['bodies']) && isMeasurement(value['measurement'])
+    && record(value['aggregate']) && reference(value['aggregate']['reference']) && numericFields(value['aggregate']['value'], ['total', 'count']) && isRequestTimings(value['requestWallMilliseconds']) && isBodies(value['bodies']) && isMeasurement(value['measurement'])
     && Array.isArray(value['refreshedView']) && value['refreshedView'].every(isMember) && (value['filter'] === undefined || isFilter(value['filter']));
 }

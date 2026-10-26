@@ -66,3 +66,29 @@ test('frozen cost budgets retain the observed expensive kernels and bound each O
   const { reactiveCostBudgets } = await import('./reactive-cost-qualification.js');
   expect(reactiveCostBudgets).toEqual({ memberIterations: 50_000_000, foldIterations: 500_000_000, leaseMilliseconds: 300_000, phaseTimeoutMilliseconds: 180_000 });
 });
+
+test('receipt parser rejects coercible non-string phases before narrowing', async () => {
+  const receipts = await scenario();
+  const cold = receipts[0];
+  if (cold === undefined) { throw new Error('missing valid receipt for parser counterexamples'); }
+  for (const phase of [['cold'], [['cold']], { toString: 'cold' }, true, 1, null]) {
+    expect(() => parseReactiveCostReceipts(JSON.stringify([{ ...cold, phase }]))).toThrow('receipt');
+  }
+  expect(parseReactiveCostReceipts(JSON.stringify(receipts))).toEqual(receipts);
+}, 200_000);
+
+test('receipt parser rejects nonnumeric extra request timings while allowing additional numeric timings', async () => {
+  const receipts = await scenario();
+  const cold = receipts[0];
+  if (cold === undefined) { throw new Error('missing valid receipt for timing counterexample'); }
+  for (const extra of ['oops', null, true, {}, [], -1]) {
+    const malformed = { ...cold, requestWallMilliseconds: { ...cold.requestWallMilliseconds, extra } };
+    expect(() => parseReactiveCostReceipts(JSON.stringify([malformed]))).toThrow('receipt');
+  }
+  const overflow = JSON.stringify([{ ...cold, requestWallMilliseconds: { ...cold.requestWallMilliseconds, extra: 1 } }]).replace('\"extra\":1', '\"extra\":1e400');
+  expect(() => parseReactiveCostReceipts(overflow)).toThrow('receipt');
+  const missing = { ...cold, requestWallMilliseconds: { aggregate: 1, parents: 1 } };
+  expect(() => parseReactiveCostReceipts(JSON.stringify([missing]))).toThrow('receipt');
+  const additional = { ...cold, requestWallMilliseconds: { ...cold.requestWallMilliseconds, extra: 1 } };
+  expect(parseReactiveCostReceipts(JSON.stringify([additional]))).toEqual([additional]);
+}, 200_000);

@@ -11,9 +11,31 @@ export interface IProcessJob { readonly directory: string; readonly requestKey: 
 /** One committed public lifecycle position ties this run and step identity to an exact result reference. */
 export interface IProcessStepReceipt { readonly runId: string; readonly step: IStepDescriptor; readonly phase: 'publish' | 'accept'; readonly reference: ICompletedResultReference }
 /** Runtime module identities prove independent helper graphs use the same public package entries. */
-export interface IProcessRuntimeResolution { readonly application: string; readonly microdelta: string; readonly history: string; readonly accounting: string; readonly machine: string }
+export interface IProcessRuntimeResolution {
+  readonly application: string;
+  /** Content hash binds helper-tracking assertions to the exact emitted application module loaded by this process. */
+  readonly applicationSourceHash: string;
+  readonly microdelta: string;
+  readonly history: string;
+  readonly accounting: string;
+  /** The concrete Node host package is the runtime entry used by this fixture worker. */
+  readonly machineNode: string;
+}
 /** Workers report person boundaries independently of strict aggregate completion. */
-export interface IProcessReport { readonly status: 'complete' | 'incomplete'; readonly foldStatus: 'succeeded' | 'waiting' | 'failed' | 'pending' | 'cancelled'; readonly people: readonly { readonly key: string; readonly status: string; readonly reference?: ICompletedResultReference }[]; readonly trace: readonly string[]; readonly requests: number; readonly assessments: number; readonly usage: { readonly attempts: number; readonly reports: number; readonly unknown: number; readonly tokens: number }; readonly receipts: readonly IProcessStepReceipt[]; readonly runtime: IProcessRuntimeResolution; readonly report?: IControlledReport }
+export interface IProcessReport {
+  readonly status: 'complete' | 'incomplete';
+  readonly foldStatus: 'succeeded' | 'waiting' | 'failed' | 'pending' | 'cancelled';
+  readonly people: readonly { readonly key: string; readonly status: string; readonly reference?: ICompletedResultReference }[];
+  readonly trace: readonly string[];
+  readonly requests: number;
+  readonly assessments: number;
+  readonly usage: { readonly attempts: number; readonly reports: number; readonly unknown: number; readonly tokens: number };
+  readonly receipts: readonly IProcessStepReceipt[];
+  readonly runtime: IProcessRuntimeResolution;
+  /** Exact report result named by this successful fold, never recovered from a candidate listing. */
+  readonly reportReference?: ICompletedResultReference;
+  readonly report?: IControlledReport;
+}
 /** Arrays crossing JSON carry only their declared scalar domain. */
 function strings(value: unknown): value is readonly string[] { return Array.isArray(value) && value.every((entry: unknown) => typeof entry === 'string'); }
 /** Keep narrowed object identity stable across the field-check callback. */
@@ -54,7 +76,7 @@ function receipts(value: unknown): value is readonly IProcessStepReceipt[] {
 }
 /** Runtime proof is limited to the worker's static application import and public package entry resolution. */
 function runtime(value: unknown): value is IProcessRuntimeResolution {
-  return isRecord(value) && ['application', 'microdelta', 'history', 'accounting', 'machine'].every(key => typeof value[key] === 'string');
+  return isRecord(value) && ['application', 'applicationSourceHash', 'microdelta', 'history', 'accounting', 'machineNode'].every(key => typeof value[key] === 'string');
 }
 /** Successful report payloads preserve their concrete fixed-scenario population. */
 function report(value: unknown): value is IControlledReport {
@@ -68,5 +90,7 @@ export function isProcessReport(value: unknown): value is IProcessReport {
     && numericFields(value.usage, ['attempts', 'reports', 'unknown', 'tokens'])
     && Array.isArray(value.people) && value.people.every((person: unknown) => isRecord(person) && typeof person.key === 'string' && typeof person.status === 'string' && (person.reference === undefined || reference(person.reference)))
     && receipts(value.receipts) && runtime(value.runtime)
+    && (value.reportReference === undefined || reference(value.reportReference))
+    && (value.status !== 'complete' || value.foldStatus === 'succeeded' && value.reportReference !== undefined)
     && (value.report === undefined || report(value.report));
 }

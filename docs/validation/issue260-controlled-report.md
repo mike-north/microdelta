@@ -18,6 +18,11 @@ executable/progress criterion. CLI projection, installation, process lifetime,
 full TEST-3/4, TEST-5/6 and M7 remain separate gates. This evidence grants no
 publication, merge, parent-issue closure or release authority.
 
+Issue #265's later, bounded consumed-text/helper/HR variations are recorded in
+[their supplemental evidence map](issue265-report-variations.md). That child
+adds only its named fixture outcomes; it does not expand this record's scope or
+close the broader acceptance gates above.
+
 ## Scope and frozen source
 
 The report covers explicitly selected current HR employees' **authored PRs**.

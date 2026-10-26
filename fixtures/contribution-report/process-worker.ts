@@ -1,6 +1,8 @@
 /** Independent production-facade report process; only durable History/Accounting and controlled JSON survive exit. */
-import { appendFileSync, writeFileSync } from 'node:fs';
+import { appendFileSync, readFileSync, writeFileSync } from 'node:fs';
+import { createHash } from 'node:crypto';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { openDurableAccounting } from '@microdelta/accounting';
 import { createNodeSqlite } from '@microdelta/machine-node';
 import { openWorkspace } from 'microdelta';
@@ -40,10 +42,17 @@ function observe(event: IRunEvent): void {
 }
 try {
   const result = await evaluateReport(workspace, application, { environment: job.environment ?? 'production', requestKey: job.requestKey, permits: 2, window: 2, observers: [{ observe }] });
+  /** Resolve the same static application edge the worker imported, so copied graphs cannot be confused by labels. */
+  const applicationUrl = import.meta.resolve('../../examples/contribution-report/src/controlled/application.js');
+  /** The bytes behind that path are the tracking evidence whose intentional helper variation is under test. */
+  const applicationSourceHash = createHash('sha256').update(readFileSync(fileURLToPath(applicationUrl))).digest('hex');
+  /** A successful strict fold owns the exact report reference returned through its typed outcome. */
+  const reportReference = result.value.fold.outcome.status === 'succeeded' ? result.value.fold.outcome.outcome.reference : undefined;
   const value: IProcessReport = { status: result.value.status, foldStatus: result.value.fold.outcome.status, people: result.value.fold.members.map(person => ({ key: person.key, status: person.status, ...(person.status === 'succeeded' ? { reference: person.outcome.reference } : {}) })),
     trace: fake.trace, requests: fake.requests.length, assessments: fake.assessments.length,
     usage: { attempts: result.value.usage.requestAttempts, reports: result.value.usage.reports, unknown: result.value.usage.unknown.length, tokens: result.value.usage.observed.find(quantity => quantity.unit === 'tokens')?.amount ?? 0 },
-    receipts, runtime: { application: import.meta.resolve('../../examples/contribution-report/src/controlled/application.js'), microdelta: import.meta.resolve('microdelta'), history: import.meta.resolve('@microdelta/history'), accounting: import.meta.resolve('@microdelta/accounting'), machine: import.meta.resolve('@microdelta/machine-node') },
+    receipts, runtime: { application: applicationUrl, applicationSourceHash, microdelta: import.meta.resolve('microdelta'), history: import.meta.resolve('@microdelta/history'), accounting: import.meta.resolve('@microdelta/accounting'), machineNode: import.meta.resolve('@microdelta/machine-node') },
+    ...(reportReference === undefined ? {} : { reportReference }),
     ...(result.value.status === 'complete' ? { report: result.value.report } : {}) };
   process.stdout.write(`${JSON.stringify(value)}\n`);
 } finally { workspace.close(); accounting.close(); }

@@ -38,7 +38,7 @@ retain their complete subject text and compatible sharing across people.
   suite passes 41 assertions, including every supported older provenance form.
 - Generated-alpha consumer RED: the four initial completed-search assertions
   failed against the prior runtime (failed cold report, no detail execution).
-  Source-call runtime suites now pass 48 assertions.
+  Source-call runtime suites passed 48 original assertions; the repaired suite adds four kind-correspondence assertions.
 - Facade type RED: `npm run test:types --workspace microdelta` failed for missing
   source aliases and widened registration kind. Current core and Definition tsd
   suites pass, with source/memo kinds and previous/outcomes kept precise.
@@ -71,7 +71,7 @@ was weakened or exception added.
 | 9. Codec/witness compatibility, mismatches, honest recipe misses, exact reads | Resolution `evidence.test.ts`; `restart.test.ts`: source v1/parent v2 wire, wrong source/memo kind, wrong slot, untracked/opaque recipe parent misses, immutable exact History reads; full existing recovery suite remains required |
 | 10. Real supervised acquisition authority | `supervised.test.ts`: confirmed intent before send, unconfirmed intent no-send/pending, unknown usage, finite retry on controlled clock, dispatch/in-flight stop, successor fencing, completed-child preservation |
 | 11. Discriminating negative controls | `source-call/controls/source-call-mutation-controls.mjs`: baseline/restored 14/14 pass; skip-current-policy fails Ada total expected 3/actual 2; flattened forwarded detail fails unconsumed exact person-reference retention. Isolated copied packages, load-path and artifact-hash checks, exact title inventory and targeted assertion diffs |
-| 12. Required checks and build | `npm run check` passed including the final generated-alpha fixture gate; `check:declarations`, `check:imports`, core/Definition tsd and all 48 affected runtime assertions pass. The baseline full `npm test` and separate `npm run build` subsequently passed with explicit exit receipts. Fresh full check/test/build for the kind-correspondence repair are pending at the repair source freeze; see review and validation below. |
+| 12. Required checks and build | `npm run check` passed including the final generated-alpha fixture gate; `check:declarations`, `check:imports`, core/Definition tsd and all 48 affected runtime assertions pass. The baseline full `npm test` and separate `npm run build` subsequently passed with explicit exit receipts. Fresh repair full check and separate build passed; the broad full test passed for the repaired production and initial regression fixture. The corrected frozen fixture and all affected suites passed separately; see exact provenance below. |
 
 ## Independent review and scoped repair
 
@@ -97,14 +97,37 @@ memo or parent body execution, no publish phase, and no parent/child candidates
 in real History. Positive aliases publish the expected value 146 with one child
 execution. The facade assertion uses Resolution's existing `unbound-step` error
 wrapper; Definition continues to reject with its existing `missing-slot` code.
-The strict generated-alpha fixture gate includes this new typed consumer. The first repair full check caught a closed-over kind selector in the test callback; the fixture now selects its two declarations outside author callbacks. Existing tracked-capture enforcement remains unchanged and the check is rerun.
+The strict generated-alpha fixture gate includes this new typed consumer. The first repair full check caught a closed-over kind selector in the test callback; the fixture now selects its two declarations outside author callbacks. Existing tracked-capture enforcement remains unchanged; the final full check passed including this correction.
 
 The baseline required gates completed after its initial source freeze:
 full `npm test` and separate `npm run build` both exited 0, confirmed by
 `/tmp/issue254-test-recovery.exit` and `/tmp/issue254-build-final.exit`.
-These validate the baseline only. Fresh repair check/test/build run with separate
-exit receipts is pending at this repair freeze. Re-review by the same different
-reviewer and successful fresh required gates remain prerequisites to publication.
+These validate the baseline only. Repaired source is frozen at
+`8eda90881520f1cdc28acf8d8b10cc48d7432a19`. Its final full `npm run check`
+passed, including the corrected generated-alpha consumer and unchanged lint.
+The repair full `npm test` and separate final `npm run build` both exited 0.
+The full test compiled the initial regression fixture before its lint-only
+assembly correction, so that run is broader repaired-production evidence rather
+than evidence for the final fixture. Every production and other tested blob is
+identical between that initial repair and the frozen source; only this record
+and the regression fixture changed. The final separate build used the frozen
+production sources.
+
+The corrected fixture was then recompiled at the frozen SHA and separately
+verified: Definition 287 assertions and tsd; generated-alpha consumer; all
+source-call and nested runtime tests (8 suites, 107 assertions, including all
+four new kind-correspondence cases); core tsd; and both discriminating controls
+(baseline/restored 14/14). All passed. The broader full test passed 1,268 core
+assertions across 101 suites, every package/experiment suite, and 17 executable
+example assertions. No production source changed during these checks.
+
+Explicit terminal receipts are all 0:
+`/tmp/issue254-repair-check-final.exit`, `/tmp/issue254-repair-test.exit`,
+`/tmp/issue254-repair-build.exit`, and `/tmp/issue254-repair-focused.exit`.
+Corresponding `.log` files preserve the commands and outputs. The earlier
+`repair-check.exit=1` records the caught fixture capture and is not hidden.
+This evidence-only update changes no tested source or generated API report.
+Re-review by the same different reviewer remains required before publication.
 
 ## Validation state and limits
 

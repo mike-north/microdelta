@@ -1,0 +1,93 @@
+/** Concrete required PR representations and three independent discussion traversals. */
+import { isRecord, nextLink } from './github.js';
+import type { IRestTransport } from './github.js';
+import type { IReportScope } from './model.js';
+
+/** Current PR content and timestamp-qualified lifecycle facts, separately retained by stable ID. @internal */
+export interface IPullDetail { readonly id: string; readonly title: string; readonly body: string; readonly diff: string; readonly merged: boolean; readonly terminalAt: number | null; readonly latestActivity: number; readonly complete: boolean; readonly labels: readonly string[] }
+/** Submitted activity retains its provider identity and consumed text, never a page identity. @internal */
+export interface IDiscussionEntry { readonly id: number; readonly body: string; readonly author: string; readonly at: number }
+/** Each endpoint must terminate before this required input is complete. @internal */
+export interface IDiscussion { readonly id: string; readonly reviews: readonly IDiscussionEntry[]; readonly comments: readonly IDiscussionEntry[]; readonly inlineComments: readonly IDiscussionEntry[]; readonly latestActivity: number; readonly complete: boolean }
+/** Fetch the JSON and diff representations needed by the assessment. @internal */
+export async function loadPull(id: string, scope: IReportScope, transport: IRestTransport): Promise<IPullDetail> {
+  const { repository, number, url } = pullAddress(id, scope);
+  const response = await transport(url);
+  const value = response.body;
+  if (response.status !== 200 || !isRecord(value) || value.number !== number || !isRecord(value.base) || !isRecord(value.base.repo) || value.base.repo.full_name !== repository
+    || typeof value.id !== 'number' || !Number.isSafeInteger(value.id) || typeof value.title !== 'string' || (typeof value.body !== 'string' && value.body !== null)
+    || (value.state !== 'closed' && value.state !== 'open') || !Array.isArray(value.labels)) { return incomplete(); }
+  const created = timestamp(value.created_at);
+  const updated = timestamp(value.updated_at);
+  if (created < scope.start || created >= Math.min(scope.end, scope.cutoff) || updated > scope.cutoff) { return incomplete(); }
+  const merged = value.merged_at === null ? null : timestamp(value.merged_at);
+  const closed = value.closed_at === null ? null : timestamp(value.closed_at);
+  const labels = value.labels.map((label: unknown) => { if (!isRecord(label) || typeof label.name !== 'string') { return incomplete(); } return label.name; });
+  const diff = await transport(url, 'application/vnd.github.diff');
+  if (diff.status !== 200 || typeof diff.body !== 'string') { return incomplete(); }
+  const terminalAt = value.state === 'closed' && closed !== null && closed <= scope.cutoff ? closed : null;
+  return { id, title: value.title, body: value.body ?? '', diff: diff.body, merged: merged !== null && merged <= scope.cutoff, terminalAt,
+    latestActivity: Math.max(created, updated, closed ?? 0, merged ?? 0), complete: true, labels };
+}
+/** Finish reviews, conversation comments and inline comments separately. @internal */
+export async function loadDiscussion(id: string, scope: IReportScope, transport: IRestTransport): Promise<IDiscussion> {
+  const { repository, number, url } = pullAddress(id, scope);
+  let latestActivity = scope.start;
+  /** Every endpoint traverses its own Link chain; search closure conveys no list coverage. */
+  async function entries(endpoint: string, review: boolean): Promise<readonly IDiscussionEntry[]> {
+    let ordinal = 1;
+    const pages = new Set<string>();
+    const records = new Map<number, string>();
+    const included: IDiscussionEntry[] = [];
+    for (;;) {
+      const response = await transport(`${endpoint}?per_page=100&page=${String(ordinal)}`);
+      if (response.status !== 200 || !Array.isArray(response.body) || response.body.length > 100) { return incomplete(); }
+      const signature = JSON.stringify(response.body);
+      if (pages.has(signature)) { return incomplete(); }
+      pages.add(signature);
+      for (const value of response.body) {
+        if (!isRecord(value) || typeof value.id !== 'number' || !Number.isSafeInteger(value.id) || value.id < 1 || typeof value.body !== 'string'
+          || !isRecord(value.user) || typeof value.user.login !== 'string') { return incomplete(); }
+        const fingerprint = JSON.stringify(value);
+        const prior = records.get(value.id);
+        if (prior !== undefined) { if (prior !== fingerprint) { return incomplete(); } continue; }
+        records.set(value.id, fingerprint);
+        if (review && value.state === 'PENDING' && value.submitted_at === null) { continue; }
+        if (review && (typeof value.state !== 'string' || !['APPROVED', 'CHANGES_REQUESTED', 'COMMENTED', 'DISMISSED'].includes(value.state) || typeof value.commit_id !== 'string')) { return incomplete(); }
+        const at = timestamp(review ? value.submitted_at : value.created_at);
+        latestActivity = Math.max(latestActivity, at);
+        if (at >= Math.min(scope.end, scope.cutoff) || at < scope.start) { continue; }
+        // Current edited bodies do not reconstruct arbitrary historical text.
+        if (!review && timestamp(value.updated_at) > scope.cutoff) { return incomplete(); }
+        included.push({ id: value.id, body: value.body, author: value.user.login, at });
+      }
+      const next = nextLink(response.headers.link);
+      if (next === undefined) { return included.sort((left, right) => left.id - right.id); }
+      if (next !== `${endpoint}?per_page=100&page=${String(ordinal + 1)}` || !Number.isSafeInteger(ordinal + 1)) { return incomplete(); }
+      ordinal += 1;
+    }
+  }
+  const reviews = await entries(`${url}/reviews`, true);
+  const comments = await entries(`https://api.github.com/repos/${repository}/issues/${String(number)}/comments`, false);
+  const inlineComments = await entries(`${url}/comments`, false);
+  return { id, reviews, comments, inlineComments, latestActivity, complete: true };
+}
+
+/** Qualified IDs select only explicitly configured repositories, never an arbitrary response URL. */
+function pullAddress(id: string, scope: IReportScope): { readonly repository: string; readonly number: number; readonly url: string } {
+  const match = /^([a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+)#([1-9][0-9]*)$/u.exec(id);
+  const repository = match?.[1];
+  const number = Number(match?.[2]);
+  if (repository === undefined || !scope.repositories.includes(repository) || !Number.isSafeInteger(number)) { return incomplete(); }
+  return { repository, number, url: `https://api.github.com/repos/${repository}/pulls/${String(number)}` };
+}
+
+/** Second precision is explicit throughout report bounds and provider event filtering. */
+function timestamp(value: unknown): number {
+  const seconds = typeof value === 'string' ? Date.parse(value) / 1_000 : NaN;
+  if (!Number.isSafeInteger(seconds) || seconds < 0) { return incomplete(); }
+  return seconds;
+}
+
+/** Private provider content never appears in this diagnostic classification. */
+function incomplete(): never { throw new Error('incomplete GitHub coverage'); }

@@ -19,6 +19,18 @@ function scripted(responses: readonly IRestResponse[]): { readonly transport: IR
 function ok(body: unknown, link?: string): IRestResponse { return { status: 200, headers: link === undefined ? {} : { link }, body }; }
 
 describe('required PR evidence', () => {
+  test('a caller cannot change a validated controlled temporal basis while endpoint awaits are in progress', async () => {
+    const basis = { kind: 'controlled-as-of', scenario: 'fixed-a', cutoff: scope.cutoff } as const;
+    let requests = 0;
+    const transport: IRestTransport = async () => {
+      requests += 1;
+      await Promise.resolve();
+      if (requests === 1) { Reflect.set(basis, 'scenario', 'fixed-b'); Reflect.set(basis, 'cutoff', scope.cutoff + 1); }
+      return ok([]);
+    };
+    await expect(loadDiscussion('acme/widget#101', scope, transport, basis)).resolves.toMatchObject({ contentBasis: { kind: 'controlled-as-of', scenario: 'fixed-a', cutoff: scope.cutoff } });
+    expect(requests).toBe(3);
+  });
   test.each(['issue', 'inline'])('%s recent and pre-window comment edits remain relevant activity before display filtering', async kind => {
     const earlyScope = { ...scope, start: 100, end: 1000, cutoff: 1000 };
     for (const created of [50, 110]) {

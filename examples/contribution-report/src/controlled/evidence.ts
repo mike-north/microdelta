@@ -35,7 +35,11 @@ export async function loadPull(id: string, scope: IProviderScope, transport: IRe
 }
 /** Finish reviews, conversation comments and inline comments separately. @internal */
 export async function loadDiscussion(id: string, scope: IProviderScope, transport: IRestTransport, basis: IContentBasis = { kind: 'unverified' }): Promise<IDiscussion> {
-  if (basis.kind === 'controlled-as-of' && (basis.cutoff !== scope.cutoff || !/^[a-zA-Z0-9_.:-]+$/u.test(basis.scenario))) { return incomplete(); }
+  // Capture once before transport can run caller code; readonly annotations do not freeze caller-owned objects.
+  const contentBasis: IContentBasis = basis.kind === 'controlled-as-of'
+    ? Object.freeze({ kind: 'controlled-as-of', scenario: basis.scenario, cutoff: basis.cutoff }) : Object.freeze({ kind: 'unverified' });
+  if (contentBasis.kind === 'controlled-as-of' && (contentBasis.cutoff !== scope.cutoff || !Number.isSafeInteger(contentBasis.cutoff) || contentBasis.cutoff < 0
+    || contentBasis.scenario.length > 128 || !/^[a-zA-Z0-9_.:-]+$/u.test(contentBasis.scenario))) { return incomplete(); }
   const { repository, number, url } = pullAddress(id, scope);
   let latestActivity = scope.start;
   /** Every endpoint traverses its own Link chain; search closure conveys no list coverage. */
@@ -82,7 +86,7 @@ export async function loadDiscussion(id: string, scope: IProviderScope, transpor
   const reviews = await entries(`${url}/reviews`, true);
   const comments = await entries(`https://api.github.com/repos/${repository}/issues/${String(number)}/comments`, false);
   const inlineComments = await entries(`${url}/comments`, false);
-  return { id, reviews, comments, inlineComments, latestActivity, complete: true, contentBasis: basis.kind === 'controlled-as-of' ? { kind: 'controlled-as-of', scenario: basis.scenario, cutoff: basis.cutoff } : { kind: 'unverified' } };
+  return { id, reviews, comments, inlineComments, latestActivity, complete: true, contentBasis };
 }
 
 /** Qualified IDs select only explicitly configured repositories, never an arbitrary response URL. */

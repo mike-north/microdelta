@@ -19,15 +19,18 @@ export function searchUrl(query: ISearchQuery, page = 1): string {
 }
 /** Refuse every incomplete population before detail admission. @internal */
 export async function discoverAuthored(query: ISearchQuery, transport: IRestTransport): Promise<ICompletedSearch> {
+  /** Provider IDs and qualified numbers must form one correspondence throughout every accepted leaf. */
+  const byProvider = new Map<number, number>();
+  const byNode = new Map<string, number>();
   /** Each recursive leaf has fresh cursor state; parent partial membership is discarded. */
   async function traverse(range: ISearchQuery): Promise<Map<number, string>> {
     const members = new Map<number, string>();
     const pages = new Set<string>();
     let expected: number | undefined;
     let ordinal = 1;
+    let requestUrl = searchUrl(range);
     for (;;) {
-      let response: IRestResponse;
-      try { response = await transport(searchUrl(range, ordinal)); } catch { return refuse(); }
+      const response = await transport(requestUrl);
       const body = response.body;
       if (response.status !== 200 || !isRecord(body) || !Number.isSafeInteger(body.total_count) || typeof body.total_count !== 'number' || body.total_count < 0
         || body.incomplete_results !== false || !Array.isArray(body.items) || body.items.length > range.perPage) { return refuse(); }
@@ -55,12 +58,15 @@ export async function discoverAuthored(query: ISearchQuery, transport: IRestTran
         if (!Number.isSafeInteger(created) || created < range.start || created >= range.end) { return refuse(); }
         const evidence = JSON.stringify([value.id, value.node_id, value.created_at, value.user.login]);
         const prior = members.get(value.number);
-        if (prior !== undefined && prior !== evidence) { return refuse(); }
+        if (prior !== undefined && prior !== evidence || byProvider.has(value.id) && byProvider.get(value.id) !== value.number || byNode.has(value.node_id) && byNode.get(value.node_id) !== value.number) { return refuse(); }
+        byProvider.set(value.id, value.number);
+        byNode.set(value.node_id, value.number);
         members.set(value.number, evidence);
       }
       const next = nextLink(response.headers.link);
       if (next === undefined) { if (members.size !== expected) { return refuse(); } return members; }
-      if (next !== searchUrl(range, ordinal + 1) || ordinal >= 1_000) { return refuse(); }
+      if (ordinal >= 1_000) { return refuse(); }
+      requestUrl = continuationUrl(next, searchUrl(range), ordinal + 1);
       ordinal += 1;
     }
   }
@@ -84,4 +90,24 @@ export function nextLink(header: string | undefined): string | undefined {
     if (match[2] === 'next') { if (next !== undefined || match[1] === undefined) { return refuse(); } next = match[1]; }
   }
   return next;
+}
+
+/** Validate semantic request binding while preserving equivalent REST query serialization and established repository aliases. @internal */
+export function continuationUrl(link: string, root: string, nextPage: number, repository?: { readonly name: string; readonly id: number }): string {
+  let candidate: URL;
+  let expected: URL;
+  try { candidate = new URL(link); expected = new URL(root); } catch { return refuse(); }
+  if (candidate.origin !== 'https://api.github.com' || candidate.origin !== expected.origin || candidate.username.length > 0 || candidate.password.length > 0 || candidate.hash.length > 0) { return refuse(); }
+  const numericPrefix = repository === undefined ? undefined : `/repositories/${String(repository.id)}/`;
+  const path = numericPrefix !== undefined && candidate.pathname.startsWith(numericPrefix) && repository !== undefined
+    ? `/repos/${repository.name}/${candidate.pathname.slice(numericPrefix.length)}` : candidate.pathname;
+  if (path !== expected.pathname) { return refuse(); }
+  const seen = new Set<string>();
+  for (const [key, value] of candidate.searchParams) {
+    if (seen.has(key)) { return refuse(); }
+    seen.add(key);
+    if (key === 'page' ? value !== String(nextPage) : expected.searchParams.get(key) !== value) { return refuse(); }
+  }
+  if (seen.size !== [...expected.searchParams].length || !seen.has('page') || !Number.isSafeInteger(nextPage) || nextPage < 2) { return refuse(); }
+  return candidate.toString();
 }

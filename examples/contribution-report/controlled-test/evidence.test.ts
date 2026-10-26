@@ -19,6 +19,34 @@ function scripted(responses: readonly IRestResponse[]): { readonly transport: IR
 function ok(body: unknown, link?: string): IRestResponse { return { status: 200, headers: link === undefined ? {} : { link }, body }; }
 
 describe('required PR evidence', () => {
+  test.each(['issue', 'inline'])('%s recent and pre-window comment edits remain relevant activity before display filtering', async kind => {
+    const earlyScope = { ...scope, start: 100, end: 1000, cutoff: 1000 };
+    for (const created of [50, 110]) {
+      const comment = { id: 2, body: 'Edited current text', user: { login: 'commenter' }, created_at: new Date(created * 1_000).toISOString(), updated_at: new Date(990 * 1_000).toISOString() };
+      const fake = scripted([ok([]), ok(kind === 'issue' ? [comment] : []), ok(kind === 'inline' ? [comment] : [])]);
+      await expect(loadDiscussion('acme/widget#101', earlyScope, fake.transport)).resolves.toMatchObject({ complete: true, latestActivity: 990 });
+    }
+    const futureEdit = { id: 2, body: 'Unconsumed future-edited text', user: { login: 'commenter' }, created_at: new Date(50 * 1_000).toISOString(), updated_at: new Date(1100 * 1_000).toISOString() };
+    const future = scripted([ok([]), ok(kind === 'issue' ? [futureEdit] : []), ok(kind === 'inline' ? [futureEdit] : [])]);
+    await expect(loadDiscussion('acme/widget#101', earlyScope, future.transport)).resolves.toMatchObject({ latestActivity: 1100, comments: [], inlineComments: [] });
+  });
+  test('literal reordered and explicitly bound numeric-repository discussion Links remain valid', async () => {
+    const next = 'https://api.github.com/repositories/123/pulls/101/reviews?page=2&per_page=100';
+    const fake = scripted([ok([], `<${next}>; rel="next"`), ok([{ id: 1, body: 'Review', user: { login: 'reviewer' }, state: 'APPROVED', submitted_at: '2026-01-01T14:00:00Z', commit_id: 'abc' }]), ok([]), ok([])]);
+    await expect(loadDiscussion('acme/widget#101', { ...scope, repositoryIds: { 'acme/widget': 123 } }, fake.transport)).resolves.toMatchObject({ reviews: [{ id: 1 }] });
+    expect(fake.requests[1]).toBe(`${next}:json`);
+    const unbound = scripted([ok([], `<${next}>; rel="next"`)]);
+    await expect(loadDiscussion('acme/widget#101', scope, unbound.transport)).rejects.toThrow('coverage');
+  });
+  test('submitted review timestamp alone leaves historical content/activity basis unverified', async () => {
+    const review = { id: 1, body: 'Current editable review text', user: { login: 'reviewer' }, state: 'APPROVED', submitted_at: '2026-01-01T14:00:00Z', commit_id: 'abc' };
+    const fake = scripted([ok([review]), ok([]), ok([])]);
+    await expect(loadDiscussion('acme/widget#101', scope, fake.transport)).resolves.toMatchObject({ complete: true, contentBasis: { kind: 'unverified' } });
+    const controlled = scripted([ok([review]), ok([]), ok([])]);
+    await expect(loadDiscussion('acme/widget#101', scope, controlled.transport, { kind: 'controlled-as-of', scenario: 'fixed-a', cutoff: scope.cutoff })).resolves.toMatchObject({ contentBasis: { kind: 'controlled-as-of', scenario: 'fixed-a', cutoff: scope.cutoff } });
+    const wrongCutoff = scripted([ok([review]), ok([]), ok([])]);
+    await expect(loadDiscussion('acme/widget#101', scope, wrongCutoff.transport, { kind: 'controlled-as-of', scenario: 'fixed-a', cutoff: scope.cutoff + 1 })).rejects.toThrow('coverage');
+  });
   test('detail and diff representations preserve qualified identity and cutoff-effective terminal facts', async () => {
     const fake = scripted([ok(pull()), ok('diff --git a/widget b/widget\n+fix')]);
     const detail = await loadPull('acme/widget#101', scope, fake.transport);

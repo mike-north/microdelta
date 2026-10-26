@@ -20,6 +20,39 @@ function page(total: number, items: readonly unknown[], link?: string): IRestRes
 }
 
 describe('fixed backing dataset REST-shaped controlled search', () => {
+  test('a literal equivalent Link with reordered unique parameters is followed', async () => {
+    const literal = 'https://api.github.com/search/issues?page=2&order=asc&per_page=2&sort=created&q=is%3Apr+repo%3Aacme%2Fwidget+author%3Aada+created%3A2026-01-01T00%3A00%3A00.000Z..2026-01-01T00%3A00%3A01.000Z';
+    const fake = script([page(2, [item(101)], `<${literal}>; rel="next"`), page(2, [item(102)])]);
+    await expect(discoverAuthored(query, fake.transport)).resolves.toEqual({ count: 2, ids: ['acme/widget#101', 'acme/widget#102'] });
+    expect(fake.requests[1]).toBe(literal);
+  });
+  test.each(['provider-id', 'node-id'])('reverse %s conflicts across pages refuse two counted members', async mode => {
+    const first = item(101);
+    const second = { ...item(102), ...(mode === 'provider-id' ? { id: first.id } : { node_id: first.node_id }) };
+    const fake = script([page(2, [first], `<${searchUrl(query, 2)}>; rel="next"`), page(2, [second])]);
+    await expect(discoverAuthored(query, fake.transport)).rejects.toThrow('coverage');
+  });
+  test('1001 independent distinct PRs exhaust valid cap-split leaves; cross-leaf provider alias refuses closure', async () => {
+    const expected = Array.from({ length: 1001 }, (_unused, index) => index + 1);
+    const population = expected.map(number => item(number, query.start + (number > 501 ? 1 : 0)));
+    const invoke = async (conflict: boolean) => discoverAuthored({ ...query, perPage: 100 }, async url => {
+      const request = new URL(url);
+      const bounds = /created:([^ ]+)\.\.([^ ]+)/u.exec(request.searchParams.get('q') ?? '');
+      const lower = Date.parse(bounds?.[1] ?? '');
+      const upper = Date.parse(bounds?.[2] ?? '');
+      const filtered = population.filter(value => Date.parse(value.created_at) >= lower && Date.parse(value.created_at) <= upper);
+      const ordinal = Number(request.searchParams.get('page'));
+      const selected = filtered.slice((ordinal - 1) * 100, ordinal * 100).map(value => conflict && value.number === 1001 ? { ...value, id: population[0]?.id } : value);
+      const next = new URL(url); next.searchParams.set('page', String(ordinal + 1));
+      return page(filtered.length, filtered.length > 1000 ? [] : selected, filtered.length <= 1000 && ordinal * 100 < filtered.length ? `<${next.toString()}>; rel="next"` : undefined);
+    });
+    await expect(invoke(false)).resolves.toEqual({ count: 1001, ids: expected.map(number => `acme/widget#${String(number)}`) });
+    await expect(invoke(true)).rejects.toThrow('coverage');
+  });
+  test('duplicate semantic query parameters refuse continuation', async () => {
+    const next = `${searchUrl(query, 2)}&page=2`;
+    await expect(discoverAuthored(query, script([page(2, [item(101)], `<${next}>; rel="next"`)]).transport)).rejects.toThrow('coverage');
+  });
   test('returns qualified IDs only after every page terminates; an empty continuing page stays open', async () => {
     const next = searchUrl(query, 2);
     const fake = script([page(2, [], `<${next}>; rel="next"`), page(2, [item(102), item(101)])]);

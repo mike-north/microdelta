@@ -1,16 +1,20 @@
 /** Concrete required PR representations and three independent discussion traversals. */
-import { isRecord, nextLink } from './github.js';
+import { continuationUrl, isRecord, nextLink } from './github.js';
 import type { IRestTransport } from './github.js';
-import type { IReportScope } from './model.js';
+
+/** Provider scope accepts indexed tracked arrays without forcing a whole-value materialization. @internal */
+export interface IProviderScope { readonly repositories: { readonly length: number; readonly [index: number]: string }; readonly start: number; readonly end: number; readonly cutoff: number; readonly repositoryIds?: Readonly<Record<string, number>> }
+/** This explicit harness guarantee is outside REST; absence never establishes historical review content or inactivity. @internal */
+export type IContentBasis = { readonly kind: 'unverified' } | { readonly kind: 'controlled-as-of'; readonly scenario: string; readonly cutoff: number };
 
 /** Current PR content and timestamp-qualified lifecycle facts, separately retained by stable ID. @internal */
 export interface IPullDetail { readonly id: string; readonly title: string; readonly body: string; readonly diff: string; readonly merged: boolean; readonly terminalAt: number | null; readonly latestActivity: number; readonly complete: boolean; readonly labels: readonly string[] }
 /** Submitted activity retains its provider identity and consumed text, never a page identity. @internal */
 export interface IDiscussionEntry { readonly id: number; readonly body: string; readonly author: string; readonly at: number }
 /** Each endpoint must terminate before this required input is complete. @internal */
-export interface IDiscussion { readonly id: string; readonly reviews: readonly IDiscussionEntry[]; readonly comments: readonly IDiscussionEntry[]; readonly inlineComments: readonly IDiscussionEntry[]; readonly latestActivity: number; readonly complete: boolean }
+export interface IDiscussion { readonly id: string; readonly reviews: readonly IDiscussionEntry[]; readonly comments: readonly IDiscussionEntry[]; readonly inlineComments: readonly IDiscussionEntry[]; readonly latestActivity: number; readonly complete: boolean; readonly contentBasis: IContentBasis }
 /** Fetch the JSON and diff representations needed by the assessment. @internal */
-export async function loadPull(id: string, scope: IReportScope, transport: IRestTransport): Promise<IPullDetail> {
+export async function loadPull(id: string, scope: IProviderScope, transport: IRestTransport): Promise<IPullDetail> {
   const { repository, number, url } = pullAddress(id, scope);
   const response = await transport(url);
   const value = response.body;
@@ -30,17 +34,20 @@ export async function loadPull(id: string, scope: IReportScope, transport: IRest
     latestActivity: Math.max(created, updated, closed ?? 0, merged ?? 0), complete: true, labels };
 }
 /** Finish reviews, conversation comments and inline comments separately. @internal */
-export async function loadDiscussion(id: string, scope: IReportScope, transport: IRestTransport): Promise<IDiscussion> {
+export async function loadDiscussion(id: string, scope: IProviderScope, transport: IRestTransport, basis: IContentBasis = { kind: 'unverified' }): Promise<IDiscussion> {
+  if (basis.kind === 'controlled-as-of' && (basis.cutoff !== scope.cutoff || !/^[a-zA-Z0-9_.:-]+$/u.test(basis.scenario))) { return incomplete(); }
   const { repository, number, url } = pullAddress(id, scope);
   let latestActivity = scope.start;
   /** Every endpoint traverses its own Link chain; search closure conveys no list coverage. */
   async function entries(endpoint: string, review: boolean): Promise<readonly IDiscussionEntry[]> {
     let ordinal = 1;
+    const root = `${endpoint}?per_page=100&page=1`;
+    let requestUrl = root;
     const pages = new Set<string>();
     const records = new Map<number, string>();
     const included: IDiscussionEntry[] = [];
     for (;;) {
-      const response = await transport(`${endpoint}?per_page=100&page=${String(ordinal)}`);
+      const response = await transport(requestUrl);
       if (response.status !== 200 || !Array.isArray(response.body) || response.body.length > 100) { return incomplete(); }
       const signature = JSON.stringify(response.body);
       if (pages.has(signature)) { return incomplete(); }
@@ -55,30 +62,37 @@ export async function loadDiscussion(id: string, scope: IReportScope, transport:
         if (review && value.state === 'PENDING' && value.submitted_at === null) { continue; }
         if (review && (typeof value.state !== 'string' || !['APPROVED', 'CHANGES_REQUESTED', 'COMMENTED', 'DISMISSED'].includes(value.state) || typeof value.commit_id !== 'string')) { return incomplete(); }
         const at = timestamp(review ? value.submitted_at : value.created_at);
-        latestActivity = Math.max(latestActivity, at);
+        const updated = review ? at : timestamp(value.updated_at);
+        if (updated < at) { return incomplete(); }
+        // Relevant activity and displayed creation-window membership are different questions.
+        latestActivity = Math.max(latestActivity, at, updated);
         if (at >= Math.min(scope.end, scope.cutoff) || at < scope.start) { continue; }
         // Current edited bodies do not reconstruct arbitrary historical text.
-        if (!review && timestamp(value.updated_at) > scope.cutoff) { return incomplete(); }
+        if (!review && updated > scope.cutoff) { return incomplete(); }
         included.push({ id: value.id, body: value.body, author: value.user.login, at });
       }
       const next = nextLink(response.headers.link);
       if (next === undefined) { return included.sort((left, right) => left.id - right.id); }
-      if (next !== `${endpoint}?per_page=100&page=${String(ordinal + 1)}` || !Number.isSafeInteger(ordinal + 1)) { return incomplete(); }
+      const repositoryId = scope.repositoryIds?.[repository];
+      if (repositoryId !== undefined && (!Number.isSafeInteger(repositoryId) || repositoryId < 1)) { return incomplete(); }
+      requestUrl = continuationUrl(next, root, ordinal + 1, repositoryId === undefined ? undefined : { name: repository, id: repositoryId });
       ordinal += 1;
     }
   }
   const reviews = await entries(`${url}/reviews`, true);
   const comments = await entries(`https://api.github.com/repos/${repository}/issues/${String(number)}/comments`, false);
   const inlineComments = await entries(`${url}/comments`, false);
-  return { id, reviews, comments, inlineComments, latestActivity, complete: true };
+  return { id, reviews, comments, inlineComments, latestActivity, complete: true, contentBasis: basis.kind === 'controlled-as-of' ? { kind: 'controlled-as-of', scenario: basis.scenario, cutoff: basis.cutoff } : { kind: 'unverified' } };
 }
 
 /** Qualified IDs select only explicitly configured repositories, never an arbitrary response URL. */
-function pullAddress(id: string, scope: IReportScope): { readonly repository: string; readonly number: number; readonly url: string } {
+function pullAddress(id: string, scope: IProviderScope): { readonly repository: string; readonly number: number; readonly url: string } {
   const match = /^([a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+)#([1-9][0-9]*)$/u.exec(id);
   const repository = match?.[1];
   const number = Number(match?.[2]);
-  if (repository === undefined || !scope.repositories.includes(repository) || !Number.isSafeInteger(number)) { return incomplete(); }
+  let allowed = false;
+  for (let index = 0; index < scope.repositories.length; index += 1) { if (scope.repositories[index] === repository) { allowed = true; } }
+  if (repository === undefined || !allowed || !Number.isSafeInteger(number)) { return incomplete(); }
   return { repository, number, url: `https://api.github.com/repos/${repository}/pulls/${String(number)}` };
 }
 

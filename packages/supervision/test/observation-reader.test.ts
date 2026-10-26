@@ -27,6 +27,24 @@ function sample(executionId: string, revision = 1): string {
   return JSON.stringify({ version: 1, result: { kind: 'observed', observation: { executionId, revision, sampledAt: 1000, context: { runId: 'weekly', analysis: 'analysis:test', environment: 'env:test' }, phase: 'prepared', eventCounts: { step: 0, ordinary: 0, operation: 0, send: 0, wait: 0, promotion: 0, stop: 0, lowerBound: false } } } });
 }
 
+/** A short-lived reader process has no producer, workspace or author-module authority. */
+function freshRead(location: string, executionId: string, mode: 'physical' | 'busy' | 'unavailable' = 'physical'): unknown {
+  const source = `import { SqliteBusyError } from '@microdelta/machine';
+import { createNodeSqliteReader } from '@microdelta/machine-node';
+import { openExecutionObservationReader } from ${JSON.stringify(new URL('../src/index.js', import.meta.url).href)};
+const mode = process.argv[3];
+const host = mode === 'busy' ? { openSqliteReader: () => { throw new SqliteBusyError('busy', 5); } }
+  : mode === 'unavailable' ? { openSqliteReader: () => { throw new Error('host unavailable'); } }
+    : createNodeSqliteReader();
+const reader = openExecutionObservationReader(host, { location: process.argv[1], executionId: process.argv[2] });
+process.stdout.write(JSON.stringify(reader.read()));
+reader.close();`;
+  const child = spawnSync(process.execPath, ['--input-type=module', '-e', source, location, executionId, mode], { cwd: process.cwd(), encoding: 'utf8', timeout: 10_000 });
+  expect(child.status).toBe(0);
+  expect(child.stderr).toBe('');
+  return JSON.parse(child.stdout) as unknown;
+}
+
 describe('finite exact execution reader (A-21f)', () => {
   test('missing is absent, while schema-missing and unsupported versions are explicit', () => {
     const directory = mkdtempSync(join(tmpdir(), 'microdelta-read-'));
@@ -34,6 +52,7 @@ describe('finite exact execution reader (A-21f)', () => {
       const id = 'a'.repeat(32);
       const absent = openExecutionObservationReader(createNodeSqliteReader(), { location: join(directory, 'missing.sqlite'), executionId: id });
       expect(absent.read().result.kind).toBe('absent');
+      expect(freshRead(join(directory, 'missing.sqlite'), id)).toEqual({ version: 1, result: { kind: 'absent' } });
       absent.close();
       const unrelated = join(directory, 'unrelated.sqlite');
       const connection = createNodeSqlite().openSqlite(unrelated, { journalMode: 'delete' });
@@ -41,11 +60,13 @@ describe('finite exact execution reader (A-21f)', () => {
       connection.close();
       const unsupported = openExecutionObservationReader(createNodeSqliteReader(), { location: unrelated, executionId: id });
       expect(unsupported.read().result.kind).toBe('unsupported');
+      expect(freshRead(unrelated, id)).toEqual({ version: 1, result: { kind: 'unsupported' } });
       unsupported.close();
       const future = join(directory, 'future.sqlite');
       seed(future, id, 1, JSON.stringify({ version: 2, result: { kind: 'observed', observation: {} } }));
       const futureReader = openExecutionObservationReader(createNodeSqliteReader(), { location: future, executionId: id });
       expect(futureReader.read().result.kind).toBe('unsupported');
+      expect(freshRead(future, id)).toEqual({ version: 1, result: { kind: 'unsupported' } });
       futureReader.close();
       expect(readdirSync(directory).sort()).toEqual(['future.sqlite', 'unrelated.sqlite']);
     } finally { rmSync(directory, { recursive: true, force: true }); }
@@ -73,6 +94,7 @@ describe('finite exact execution reader (A-21f)', () => {
       expect(() => reader.read()).toThrow(/closed/u);
       const other = openExecutionObservationReader(createNodeSqliteReader(), { location: firstLocation, executionId: firstId });
       expect(other.read().result.kind).toBe('observed');
+      expect(freshRead(firstLocation, secondId)).toEqual({ version: 1, result: { kind: 'identity-mismatch' } });
       other.close();
     } finally { rmSync(directory, { recursive: true, force: true }); }
   });
@@ -85,6 +107,7 @@ describe('finite exact execution reader (A-21f)', () => {
       seed(malformed, id, 1, '{invalid-json');
       const malformedReader = openExecutionObservationReader(createNodeSqliteReader(), { location: malformed, executionId: id });
       expect(malformedReader.read().result.kind).toBe('corrupt');
+      expect(freshRead(malformed, id)).toEqual({ version: 1, result: { kind: 'corrupt' } });
       malformedReader.close();
       const payload = join(directory, 'payload.sqlite');
       seed(payload, id, 1, JSON.stringify({ version: 1, result: { kind: 'observed', observation: { executionId: id, revision: 1, sampledAt: 'now', context: { runId: 'weekly', analysis: 'analysis:test', environment: 'env:test' }, phase: 'prepared', rawProviderPayload: { secret: 'x' } } } }));
@@ -92,6 +115,11 @@ describe('finite exact execution reader (A-21f)', () => {
       expect(payloadReader.read().result.kind).toBe('corrupt');
       expect(JSON.stringify(payloadReader.read())).not.toContain('secret');
       payloadReader.close();
+      const staleFaultCount = join(directory, 'stale-fault-count.sqlite');
+      const legacy = JSON.parse(sample(id)) as { result: { observation: Record<string, unknown> } };
+      legacy.result.observation.observationFaults = 1;
+      seed(staleFaultCount, id, 1, JSON.stringify(legacy));
+      expect(freshRead(staleFaultCount, id)).toEqual({ version: 1, result: { kind: 'corrupt' } });
     } finally { rmSync(directory, { recursive: true, force: true }); }
   });
 
@@ -121,6 +149,8 @@ describe('finite exact execution reader (A-21f)', () => {
     expect(busy.read().result.kind).toBe('busy');
     const unavailable = openExecutionObservationReader({ openSqliteReader: () => { throw new Error('unknown host fault'); } }, locator);
     expect(unavailable.read().result.kind).toBe('unavailable');
+    expect(freshRead(locator.location, locator.executionId, 'busy')).toEqual({ version: 1, result: { kind: 'busy' } });
+    expect(freshRead(locator.location, locator.executionId, 'unavailable')).toEqual({ version: 1, result: { kind: 'unavailable' } });
   });
 });
 
@@ -192,6 +222,7 @@ process.kill(process.pid, 'SIGKILL');`;
       const databaseBefore = readFileSync(location);
       const reader = openExecutionObservationReader(createNodeSqliteReader(), { location, executionId: id });
       expect(reader.read().result.kind).toBe('recovery-required');
+      expect(freshRead(location, id)).toEqual({ version: 1, result: { kind: 'recovery-required' } });
       reader.close();
       expect(readdirSync(directory).sort()).toEqual(before);
       expect(readFileSync(`${location}-journal`)).toEqual(journalBefore);

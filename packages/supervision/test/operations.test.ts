@@ -16,9 +16,13 @@
  * @see ../../../experiments/exp-8/decision.md (mechanism 4, ruling R)
  */
 import { describe, expect, test } from '@jest/globals';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import { createNodeClock, createNodeElapsedClock, createNodeRandom, createNodeSqlite, createNodeSqliteReader, createNodeTimer } from '@microdelta/machine-node';
 import type { IResolution, IResolutionOutcome } from '@microdelta/resolution';
 
-import { SupervisionError, createSharedRateCoordinator, createStopController, createSupervision, operationJournalDeclaration, operationsCollection } from '../src/index.js';
+import { SupervisionError, createSharedRateCoordinator, createStopController, createSupervision, openExecutionObservationReader, operationJournalDeclaration, operationsCollection } from '../src/index.js';
 import { decodeOperation, encodeOperation } from '../src/records.js';
 import { _inspectSharedRateDebits } from '../src/shared-rate-coordinator.js';
 import type {
@@ -214,6 +218,158 @@ async function runOne(journal: IMemoryJournal, accounting: IMemoryAccounting, re
 function phases(events: readonly IRunEvent[]): string[] {
   return events.flatMap((event) => event.kind === 'operation' ? [`${event.phase}${event.reason === undefined ? '' : `:${event.reason}`}`] : []);
 }
+
+describe('observed external operations and deferred waits (A-21c/d)', () => {
+  test('two deferred required works retain the earliest wait, with exact operation and wait route counts', async () => {
+    const directory = mkdtempSync(join(tmpdir(), 'microdelta-observed-operation-'));
+    try {
+      const timer = fakeTimer();
+      const host = { sqlite: createNodeSqlite(), reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(), elapsedClock: createNodeElapsedClock(), timer: createNodeTimer() };
+      const supervision = createSupervision({ context: nodeScopes, timer, observation: host });
+      const journal = memoryJournal();
+      const accounting = memoryAccounting();
+      const sent = { count: 0 };
+      const delays = [T0 + 30_000, T0 + 10_000];
+      let next = 0;
+      const factory: IRunOptions['resolution'] = (ports): IResolution => {
+        const unused = (): Promise<never> => Promise.reject(new Error('unused'));
+        return {
+          async resolve(request): Promise<IResolutionOutcome> {
+            const admission = admissionFor(request.step);
+            const decision = await ports.admission.admit(admission);
+            if (decision.kind !== 'admitted') { throw new Error('required work was not admitted'); }
+            const executed = await ports.execution.execute(request.step, async () => {
+              const position = next;
+              const until = delays[position];
+              next += 1;
+              if (until === undefined) { throw new Error('unexpected resolution pass'); }
+              await codeOf(supervision.execution().operation({
+                ...operation(() => Promise.resolve({ kind: 'rate-limited', retryAt: until }), sent),
+                name: `assess:${String(position)}`,
+                binding: `sha256:binding:${String(position)}`,
+                retry: { maxAttempts: 2 },
+              }));
+            }, { subject: admission.subject, attemptId: next + 1 });
+            if (executed.kind === 'threw') { throw executed.error; }
+            return { kind: 'refused', refused: request.step, reason: executed.kind, disposition: executed.kind === 'unsettled' ? 'denied' : 'cancelled', step: request.step, misses: [], trace: [], diagnostics: [] };
+          },
+          resolveMembers: unused, resolveFold: unused, resolveOutcomeFold: unused, check: unused,
+          recover: (): never => { throw new Error('unused'); },
+        };
+      };
+      const events: IRunEvent[] = [];
+      const observed = supervision.startObserved({
+        analysis: 'analysis:test', environment: 'env:test', deferral: 'exit',
+        resolution: factory, writer: grantingWriter,
+        operations: { journal, accounting, random: countingRandom() },
+        observers: [{ observe: (event) => { events.push(event); } }],
+        observationLocation: join(directory, 'deferred.sqlite'),
+      }, async (run) => {
+        await run.resolve(stepOf('first'), { requestKey: 'request:first' });
+        await run.resolve(stepOf('second'), { requestKey: 'request:second' });
+        return 'pending';
+      });
+      const result = await observed.result;
+      expect({ sent: sent.count, bodyCalls: next, waits: events.filter((event) => event.kind === 'wait').map((event) => event.kind === 'wait' ? event.until : undefined), until: result.waitingUntil }).toEqual({ sent: 2, bodyCalls: 2, waits: [T0 + 30_000, T0 + 10_000], until: T0 + 10_000 });
+      expect(await observed.acknowledgment).toMatchObject({ kind: 'acknowledged' });
+      const reader = openExecutionObservationReader(host.reader, observed.locator);
+      const document = reader.read();
+      expect(document.result.kind).toBe('observed');
+      const operationEvents = events.filter((event) => event.kind === 'operation');
+      const waits = events.filter((event) => event.kind === 'wait');
+      expect(operationEvents.length).toBeGreaterThan(0);
+      expect(waits.map((event) => event.kind === 'wait' ? event.until : undefined)).toEqual([T0 + 30_000, T0 + 10_000]);
+      if (document.result.kind === 'observed') {
+        expect(document.result.observation.waitingUntil).toBe(T0 + 10_000);
+        expect(document.result.observation.eventCounts.operation).toBe(operationEvents.length);
+        expect(document.result.observation.eventCounts.wait).toBe(2);
+        expect(document.result.observation.eventCounts.lowerBound).toBe(false);
+      }
+      expect(JSON.stringify(document)).not.toContain('request:first');
+      reader.close();
+    } finally { rmSync(directory, { recursive: true, force: true }); }
+  });
+
+  test('a retry-position observation write fault and throwing send observer preserve dispatch, journal and deferral policy', async () => {
+    /** Two equivalent runs differ only in their observation-only fault injection. */
+    async function scenario(faulted: boolean) {
+      const directory = mkdtempSync(join(tmpdir(), 'microdelta-observed-retry-'));
+      try {
+        const real = createNodeSqlite();
+        let faultedWrites = 0;
+        const sqlite = {
+          openSqlite(location: string, configuration?: { journalMode: 'wal' | 'delete'; creation?: 'exclusive' }) {
+            const connection = real.openSqlite(location, configuration);
+            return { ...connection, prepare(sql: string) {
+              const statement = connection.prepare(sql);
+              if (!sql.startsWith('UPDATE microdelta_execution_observation')) { return statement; }
+              return { ...statement, run: (...values: readonly (string | number | null | Uint8Array)[]) => {
+                if (faulted && faultedWrites === 0) { faultedWrites += 1; throw new Error('observation write unavailable'); }
+                return statement.run(...values);
+              } };
+            } };
+          },
+        };
+        let elapsed = 0;
+        let ordinaryCallback: (() => void) | undefined;
+        const host = {
+          sqlite, reader: createNodeSqliteReader(), random: createNodeRandom(), clock: createNodeClock(),
+          elapsedClock: { currentElapsedMilliseconds: () => elapsed },
+          timer: { currentEpochMilliseconds: () => T0, schedule(_at: number, callback: () => void) { ordinaryCallback = callback; return () => { ordinaryCallback = undefined; }; } },
+        };
+        const supervision = createSupervision({ context: nodeScopes, timer: fakeTimer(), observation: host });
+        const journal = memoryJournal();
+        const accounting = memoryAccounting();
+        const sent = { count: 0 };
+        const double = executing(async () => {
+          await codeOf(supervision.execution().operation({
+            ...operation(() => Promise.resolve({ kind: 'rate-limited', retryAt: T0 + 10_000 }), sent),
+            retry: { maxAttempts: 2 },
+          }));
+        });
+        const events: IRunEvent[] = [];
+        let injectedAtRetry = 0;
+        const observed = supervision.startObserved({
+          analysis: 'analysis:test', environment: 'env:test', runId: 'run:test', deferral: 'exit',
+          resolution: double.factory, writer: grantingWriter,
+          operations: { journal, accounting, random: countingRandom() },
+          observationLocation: join(directory, 'retry.sqlite'),
+          observers: [{ observe(event) {
+            events.push(event);
+            if (event.kind === 'send' && event.phase === 'begin' && faulted) { throw new Error('user observer failed'); }
+            if (event.kind === 'operation' && event.phase === 'retry-scheduled') {
+              injectedAtRetry += 1;
+              elapsed = 1000;
+              ordinaryCallback?.();
+            }
+          } }],
+        }, (run) => run.resolve(stepOf('assess', 'pr-1'), { requestKey: 'request:one' }));
+        const result = await observed.result;
+        const receipt = await observed.acknowledgment;
+        const reader = openExecutionObservationReader(host.reader, observed.locator);
+        const document = reader.read();
+        reader.close();
+        return {
+          policy: { sent: sent.count, intents: [...accounting.intents], journal: journal.operation(firstOperation), waitingUntil: result.waitingUntil, outcome: result.value.kind, phases: phases(events) },
+          receipt, document, injectedAtRetry, faultedWrites,
+          sendEvents: events.filter((event) => event.kind === 'send').length,
+          operationEvents: events.filter((event) => event.kind === 'operation').length,
+        };
+      } finally { rmSync(directory, { recursive: true, force: true }); }
+    }
+    const control = await scenario(false);
+    const faulted = await scenario(true);
+    expect(control.policy).toEqual(faulted.policy);
+    expect(control.policy.sent).toBe(1);
+    expect(control.policy.waitingUntil).toBe(T0 + 10_000);
+    expect(control.injectedAtRetry).toBe(1);
+    expect(faulted.injectedAtRetry).toBe(1);
+    expect(faulted.faultedWrites).toBe(1);
+    expect(control.receipt).toMatchObject({ kind: 'acknowledged' });
+    expect(faulted.receipt).toMatchObject({ kind: 'acknowledged', observationFaults: { count: 1, lowerBound: false } });
+    expect(faulted.document).toMatchObject({ result: { kind: 'observed', observation: { eventCounts: { send: faulted.sendEvents, operation: faulted.operationEvents }, observationFaults: { count: 1, lowerBound: false } } } });
+  });
+});
 
 describe('intent before send (ACC-007)', () => {
   test('a hard stop from send-begin after durable intents records no provider call or sent operation attempt', async () => {

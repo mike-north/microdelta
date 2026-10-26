@@ -22,13 +22,22 @@ export interface IExecutionObservationHost {
   readonly timer: ITimerCapability;
 }
 
-/** A durable artifact and the execution identity it must contain. @alpha */
+/**
+ * The exact address of one owner-managed artifact. `location` is a nonempty
+ * bounded path (at most 4096 UTF-16 code units); `executionId` is a freshly
+ * minted 32-character lowercase hex identity. Reusing a public runId never
+ * grants ownership of this locator or another execution's file. @alpha
+ */
 export interface IExecutionObservationLocator {
   readonly location: string;
   readonly executionId: string;
 }
 
-/** The application-owned assertion, separate from execution outcome. @alpha */
+/**
+ * The application's bounded final assertion about its deliverable. A generic
+ * body return, lifecycle event or terminal execution status cannot establish
+ * confirmation; the application must submit its own strict evidence. @alpha
+ */
 export type IApplicationStatement =
   | { readonly kind: 'not-classified' }
   | { readonly kind: 'incomplete'; readonly reasons: readonly ('required-work' | 'coverage' | 'publication' | 'other')[] }
@@ -36,6 +45,7 @@ export type IApplicationStatement =
 
 /** Submit exactly one bounded final application assertion while the run is open. @alpha */
 export interface IApplicationStatementSubmission {
+  /** Duplicate identical assertions are idempotent; conflicts and post-close submissions reject. */
   submit(statement: IApplicationStatement): void;
 }
 
@@ -51,16 +61,32 @@ export interface IExecutionObservationEventCounts {
   readonly lowerBound: boolean;
 }
 
+/**
+ * Observation-only failures seen by one producer. The count is exact through
+ * the safe-integer maximum; `lowerBound` marks any further faults that could
+ * not be counted precisely. It never changes execution or application status.
+ * @alpha
+ */
+export interface IExecutionObservationFaultCount {
+  /** Exact number of observed faults until saturation, then the safe maximum. */
+  readonly count: number;
+  /** True once one or more faults exceeded the exactly countable maximum. */
+  readonly lowerBound: boolean;
+}
+
 /** The bounded latest facts about one exact execution. @alpha */
 export interface IExecutionObservation {
   readonly executionId: string;
+  /** Advances only with committed rows for this exact execution, never with pending samples. */
   readonly revision: number;
+  /** Wall-clock date of these sampled facts; neither a heartbeat nor proof the process is still alive. */
   readonly sampledAt: number;
+  /** Bounded public correlation names, independent of the exact execution identity. */
   readonly context: IRunContext;
   readonly phase: 'prepared' | 'running' | 'draining' | 'closed';
   readonly eventCounts: IExecutionObservationEventCounts;
   /** Observation-only storage/timer/clock faults retained even if terminal publication later succeeds. */
-  readonly observationFaults?: number;
+  readonly observationFaults?: IExecutionObservationFaultCount;
   /** Closing stop state, frozen at the actual run latch. */
   readonly stop?: IStopState;
   /** Earliest deferral left waiting when the run closed. */
@@ -86,13 +112,17 @@ export interface IExecutionObservationReadResult {
   readonly result: IExecutionObservationReadState;
 }
 
-/** Terminal durability knowledge, independent of the body's result. @alpha */
+/**
+ * Terminal durability knowledge, independent of the body's result. `uncertain`
+ * requires exact-locator readback before claiming a terminal record; it never
+ * authorizes rerunning analysis. `unprepared` means no analysis began. @alpha
+ */
 export type IObservationAcknowledgment =
-  | { readonly kind: 'acknowledged'; readonly revision: number; readonly observationFaults?: number }
-  | { readonly kind: 'uncertain'; readonly observationFaults?: number }
+  | { readonly kind: 'acknowledged'; readonly revision: number; readonly observationFaults?: IExecutionObservationFaultCount }
+  | { readonly kind: 'uncertain'; readonly observationFaults?: IExecutionObservationFaultCount }
   | { readonly kind: 'unprepared' };
 
-/** A started execution and its independent observation receipt. @alpha */
+/** A started execution and its independent observation receipt; either promise may settle first. @alpha */
 export interface IObservedRun<T> {
   readonly locator: IExecutionObservationLocator;
   readonly result: Promise<IRunResult<T>>;
@@ -101,7 +131,9 @@ export interface IObservedRun<T> {
 
 /** Only finite read and local handle release belong to an observer. @alpha */
 export interface IExecutionObservationReader {
+  /** Return one coherent versioned document or a finite refusal, without waiting or changing the artifact. */
   read(): IExecutionObservationReadResult;
+  /** Idempotently release the local reader; later reads reject and execution continues independently. */
   close(): void;
 }
 
@@ -137,6 +169,24 @@ export interface IExecutionObservationTerminalFacts {
 /** Saturate a count instead of allowing an unsafe integer to claim precision. */
 function countBounded(value: number): { readonly count: number; readonly lowerBound: boolean } {
   return { count: Math.min(Number.MAX_SAFE_INTEGER, value), lowerBound: value >= Number.MAX_SAFE_INTEGER };
+}
+
+/**
+ * Advance one fixed event route without claiming unsafe precision. The exact
+ * maximum remains a count; an attempted step beyond it makes every later
+ * snapshot a lower bound, even when another route is still exactly countable.
+ * @internal
+ */
+export function _incrementObservationEventCounts(current: IExecutionObservationEventCounts, kind: IRunEvent['kind']): IExecutionObservationEventCounts {
+  const previous = current[kind];
+  const saturated = previous >= Number.MAX_SAFE_INTEGER;
+  return Object.freeze({ ...current, [kind]: saturated ? previous : previous + 1, lowerBound: current.lowerBound || saturated });
+}
+
+/** Keep observation fault arithmetic truthful at the chosen counter boundary. @internal */
+export function _incrementObservationFaults(current: IExecutionObservationFaultCount): IExecutionObservationFaultCount {
+  const saturated = current.count >= Number.MAX_SAFE_INTEGER;
+  return Object.freeze({ count: saturated ? current.count : current.count + 1, lowerBound: current.lowerBound || saturated });
 }
 
 /** Copy only closed remote-state categories, never interruption labels. */
@@ -175,7 +225,7 @@ export function _createExecutionObservationProducer(host: IExecutionObservationH
   let pending = false;
   let nextOrdinaryElapsed = 0;
   let cancelTimer: (() => void) | undefined;
-  let observationFaults = 0;
+  let observationFaults: IExecutionObservationFaultCount = Object.freeze({ count: 0, lowerBound: false });
   /** Settle durability once, so a later error cannot revise the receipt. */
   const settle = (ack: IObservationAcknowledgment): void => {
     if (!settled) {
@@ -184,7 +234,7 @@ export function _createExecutionObservationProducer(host: IExecutionObservationH
     }
   };
   /** Observation-only faults never propagate to execution, even from a host callback. */
-  const fault = (): void => { observationFaults = Math.min(Number.MAX_SAFE_INTEGER, observationFaults + 1); };
+  const fault = (): void => { observationFaults = _incrementObservationFaults(observationFaults); };
   /** Cancel the one pending ordinary sample; terminal publication supersedes it. */
   const cancelPending = (): void => {
     const cancel = cancelTimer;
@@ -225,11 +275,15 @@ export function _createExecutionObservationProducer(host: IExecutionObservationH
     locator,
     acknowledgment,
     settleIfNeeded(): void {
-      if (!settled) { settle(snapshot === undefined ? { kind: 'unprepared' } : { kind: 'uncertain', ...(observationFaults === 0 ? {} : { observationFaults }) }); }
+      if (!settled) { settle(snapshot === undefined ? { kind: 'unprepared' } : { kind: 'uncertain', ...(observationFaults.count === 0 ? {} : { observationFaults }) }); }
     },
     prepare(context: IRunContext): void {
       try {
-        connection = host.sqlite.openSqlite(location, { journalMode: 'delete' });
+        if (!boundedText(location, 4096) || !boundedText(context.runId, 256)
+          || !boundedText(context.analysis, 256) || !boundedText(context.environment, 256)) {
+          throw new TypeError('Execution observation needs bounded locator and context identifiers');
+        }
+        connection = host.sqlite.openSqlite(location, { journalMode: 'delete', creation: 'exclusive' });
         connection.exec(createTable);
         const prepared: IExecutionObservation = Object.freeze({
           executionId,
@@ -258,9 +312,7 @@ export function _createExecutionObservationProducer(host: IExecutionObservationH
     observe(event: IRunEvent): void {
       if (sealed || snapshot === undefined) { return; }
       try {
-        const current = eventCounts[event.kind];
-        const saturated = current >= Number.MAX_SAFE_INTEGER;
-        eventCounts = Object.freeze({ ...eventCounts, [event.kind]: saturated ? current : current + 1, lowerBound: eventCounts.lowerBound || saturated });
+        eventCounts = _incrementObservationEventCounts(eventCounts, event.kind);
         changed();
       } catch { fault(); }
     },
@@ -283,9 +335,7 @@ export function _createExecutionObservationProducer(host: IExecutionObservationH
       try {
         const executionFailure: IExecutionObservation['executionFailure'] | undefined = body === 'returned' || facts?.failure === undefined
           ? undefined
-          : facts.failure instanceof SupervisionError
-            ? { kind: 'supervision', code: facts.failure.code }
-            : { kind: 'other' };
+          : closedExecutionFailure(facts.failure);
         const terminal: IExecutionObservation = Object.freeze({
           ...snapshot,
           revision: snapshot.revision + 1,
@@ -294,7 +344,7 @@ export function _createExecutionObservationProducer(host: IExecutionObservationH
           eventCounts,
           body,
           application: application ?? Object.freeze({ kind: 'not-classified' }),
-          ...(observationFaults === 0 ? {} : { observationFaults }),
+          ...(observationFaults.count === 0 ? {} : { observationFaults }),
           ...(facts === undefined ? {} : {
             stop: Object.freeze({ level: facts.stop.level, cause: facts.stop.cause, deadline: facts.stop.deadline }),
             ...(facts.waitingUntil === undefined ? {} : { waitingUntil: facts.waitingUntil }),
@@ -305,9 +355,9 @@ export function _createExecutionObservationProducer(host: IExecutionObservationH
         });
         const document = JSON.stringify({ version: 1, result: { kind: 'observed', observation: terminal } });
         const written = connection.prepare(`UPDATE ${observationTable} SET revision = ?, document = ? WHERE slot = 1 AND execution_id = ? AND revision = ?`).run(terminal.revision, document, executionId, snapshot.revision);
-        settle(written.changes === 1 ? { kind: 'acknowledged', revision: terminal.revision, ...(observationFaults === 0 ? {} : { observationFaults }) } : { kind: 'uncertain', ...(observationFaults === 0 ? {} : { observationFaults }) });
+        settle(written.changes === 1 ? { kind: 'acknowledged', revision: terminal.revision, ...(observationFaults.count === 0 ? {} : { observationFaults }) } : { kind: 'uncertain', ...(observationFaults.count === 0 ? {} : { observationFaults }) });
       } catch {
-        settle({ kind: 'uncertain', ...(observationFaults === 0 ? {} : { observationFaults }) });
+        settle({ kind: 'uncertain', ...(observationFaults.count === 0 ? {} : { observationFaults }) });
       } finally {
         try { connection.close(); } catch { /* Observation health stays separate from execution outcome. */ }
       }
@@ -420,6 +470,17 @@ function knownSupervisionFailureCode(value: unknown): value is ISupervisionError
   return typeof value === 'string' && Object.hasOwn(supervisionFailureCodes, value);
 }
 
+/** Class identity alone cannot make a caller-created error code part of the closed observation vocabulary. */
+function closedExecutionFailure(failure: unknown): NonNullable<IExecutionObservation['executionFailure']> {
+  try {
+    if (failure instanceof SupervisionError) {
+      const code: unknown = failure.code;
+      if (knownSupervisionFailureCode(code)) { return { kind: 'supervision', code }; }
+    }
+  } catch { /* An untrusted error accessor cannot enlarge the stored failure vocabulary. */ }
+  return { kind: 'other' };
+}
+
 /** Parse only the finite schema the producer owns; foreign content is corrupt. */
 function parseDocument(value: unknown, locator: IExecutionObservationLocator, revision: number): IExecutionObservationReadResult {
   if (typeof value !== 'string') { return { version: 1, result: { kind: 'corrupt' } }; }
@@ -441,8 +502,12 @@ function parseDocument(value: unknown, locator: IExecutionObservationLocator, re
     return { version: 1, result: { kind: 'corrupt' } };
   }
   const context: IRunContext = { runId: raw.context.runId, analysis: raw.context.analysis, environment: raw.context.environment };
-  if ('observationFaults' in raw && (typeof raw.observationFaults !== 'number' || !Number.isSafeInteger(raw.observationFaults) || raw.observationFaults < 1)) { return { version: 1, result: { kind: 'corrupt' } }; }
-  const health = typeof raw.observationFaults === 'number' ? { observationFaults: raw.observationFaults } : {};
+  if ('observationFaults' in raw && (!record(raw.observationFaults) || !exactFields(raw.observationFaults, ['count', 'lowerBound'])
+    || typeof raw.observationFaults.count !== 'number' || !Number.isSafeInteger(raw.observationFaults.count) || raw.observationFaults.count < 1
+    || typeof raw.observationFaults.lowerBound !== 'boolean')) { return { version: 1, result: { kind: 'corrupt' } }; }
+  const health = record(raw.observationFaults)
+    ? { observationFaults: { count: Number(raw.observationFaults.count), lowerBound: raw.observationFaults.lowerBound === true } }
+    : {};
   let terminalFacts: Pick<IExecutionObservation, 'stop' | 'waitingUntil' | 'diagnostics' | 'interruptions' | 'executionFailure'> = {};
   if (raw.phase === 'closed') {
     if (!record(raw.stop) || !exactFields(raw.stop, ['level', 'cause', 'deadline']) || (raw.stop.level !== 'none' && raw.stop.level !== 'soft' && raw.stop.level !== 'hard')

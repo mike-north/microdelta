@@ -225,8 +225,10 @@ export class SqliteReadError extends Error {
  * directory, a missing parent directory, a file that is not a SQLite database,
  * or a location that cannot hold a persistent write-ahead-logged database,
  * including `:memory:` and the empty path. Opening never silently weakens the
- * host's durable configuration. Processes that open one new store at the same
- * time all succeed within the bounded busy wait or fail with `SqliteBusyError`.
+ * host's durable configuration. In the default open-or-create mode, processes
+ * opening one new store at the same time all succeed within the bounded busy
+ * wait or fail with `SqliteBusyError`. Exclusive creation instead refuses an
+ * existing pathname before the driver can touch its bytes or journal.
  * @alpha
  */
 export interface ISqliteCapability {
@@ -354,4 +356,12 @@ export interface ISqliteOpenOptions {
    * preflight through opening and for the lifetime of every handle.
    */
   readonly journalMode: 'wal' | 'delete';
+  /**
+   * Reserve a new pathname atomically before SQLite can open or configure it.
+   * An existing artifact, including another owner's SQLite file, is refused
+   * without mutation. If later initialization fails, the empty reserved file
+   * remains for its caller to manage rather than risking deletion of a
+   * pathname another process may have replaced.
+   */
+  readonly creation?: 'exclusive';
 }

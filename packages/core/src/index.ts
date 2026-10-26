@@ -192,6 +192,7 @@ export {
   type IApplicationStatementSubmission,
   type IExecutionObservation,
   type IExecutionObservationEventCounts,
+  type IExecutionObservationFaultCount,
   type IExecutionObservationLocator,
   type IExecutionObservationReader,
   type IExecutionObservationReadResult,

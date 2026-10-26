@@ -114,6 +114,7 @@ import type {
   IApplicationStatementSubmission as ISupervisionApplicationStatementSubmission,
   IExecutionObservation as ISupervisionExecutionObservation,
   IExecutionObservationEventCounts as ISupervisionExecutionObservationEventCounts,
+  IExecutionObservationFaultCount as ISupervisionExecutionObservationFaultCount,
   IExecutionObservationLocator as ISupervisionExecutionObservationLocator,
   IExecutionObservationReader as ISupervisionExecutionObservationReader,
   IExecutionObservationReadResult as ISupervisionExecutionObservationReadResult,
@@ -183,6 +184,9 @@ export type IApplicationStatementSubmission = ISupervisionApplicationStatementSu
 
 /** Bounded counts of lifecycle positions observed during one execution. @alpha */
 export type IExecutionObservationEventCounts = ISupervisionExecutionObservationEventCounts;
+
+/** Exact or saturating lower-bound count of observation-only faults. @alpha */
+export type IExecutionObservationFaultCount = ISupervisionExecutionObservationFaultCount;
 
 /** Committed latest facts for the exact execution, without author payloads. @alpha */
 export type IExecutionObservation = ISupervisionExecutionObservation;

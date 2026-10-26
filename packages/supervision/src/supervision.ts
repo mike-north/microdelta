@@ -1121,9 +1121,16 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     if (host === undefined) {
       throw new SupervisionError('invalid-request', 'This supervisor has no observation host');
     }
+    // Composition authority belongs to the invocation turn, before the observed run's deferred preparation.
+    const invokedDuringComposition = isComposing();
     const producer = _createExecutionObservationProducer(host, runOptions.observationLocation);
     const application: IApplicationStatementSubmission = Object.freeze({ submit(statement: IApplicationStatement): void { producer.submit(statement); } });
-    const result = Promise.resolve().then(() => runInternal(runOptions, (live) => body(live, application), producer));
+    const result = Promise.resolve().then(() => {
+      if (invokedDuringComposition) {
+        throw new SupervisionError('composition-phase', 'A run cannot start while a composition is being constructed');
+      }
+      return runInternal(runOptions, (live) => body(live, application), producer);
+    });
     void result.then(() => producer.settleIfNeeded(), () => producer.settleIfNeeded());
     return Object.freeze({ locator: producer.locator, result, acknowledgment: producer.acknowledgment });
   }

@@ -147,11 +147,13 @@ function retryWhileBusy(startedAt: number, step: () => void): void {
 }
 
 /**
- * Open and configure one database file. Processes may open the same new store
- * at once: configuration is retried within the busy budget, and a spent budget
- * fails with {@link SqliteBusyError}, never a raw driver error. A failure after the driver opened the
- * file closes that handle before rethrowing; files themselves are never
- * removed, because an existing file may hold another owner's data.
+ * Open and configure one database file. Default open-or-create callers may
+ * open the same new store at once: configuration is retried within the busy
+ * budget, and a spent budget fails with {@link SqliteBusyError}. Exclusive-new
+ * callers atomically reserve the pathname before SQLite can inspect or repair
+ * a foreign file; an existing pathname fails without native open or pragmas.
+ * A failure after creation closes the handle but leaves the owned pathname for
+ * caller-managed cleanup, because another process may have replaced it.
  */
 function openConnection(location: string, options?: ISqliteOpenOptions): ISqliteConnection {
   if (nonPersistentLocations.has(location)) {
@@ -159,7 +161,12 @@ function openConnection(location: string, options?: ISqliteOpenOptions): ISqlite
   }
   const journalMode = options?.journalMode ?? 'wal';
   if (journalMode !== 'wal' && journalMode !== 'delete') { throw new TypeError('Unsupported SQLite journal mode'); }
-  if (journalMode === 'delete') { refuseWal(location, true); }
+  if (options?.creation !== undefined && options.creation !== 'exclusive') { throw new TypeError('Unsupported SQLite creation mode'); }
+  if (options?.creation === 'exclusive') {
+    // Reserve ownership before the native driver or journal configuration can touch an existing artifact.
+    const descriptor = openSync(location, 'wx', 0o600);
+    closeSync(descriptor);
+  } else if (journalMode === 'delete') { refuseWal(location, true); }
   const startedAt = Date.now();
   const driver = _typedBusy(() => new Database(location, { timeout: busyTimeoutMilliseconds }));
   try {

@@ -4,6 +4,7 @@ import { expectError, expectType } from 'tsd';
 import { openExecutionObservationReader } from '../dist/api/microdelta.alpha.js';
 import type {
   IExecutionObservationReadResult,
+  IExecutionObservationFaultCount,
   IObservationAcknowledgment,
   IRunResult,
   IWorkspace,
@@ -24,6 +25,9 @@ const synchronous = workspace.startObserved({ ...options, observationLocation: '
 });
 expectType<Promise<IRunResult<number>>>(synchronous.result);
 expectType<Promise<IObservationAcknowledgment>>(synchronous.acknowledgment);
+declare const faultCount: IExecutionObservationFaultCount;
+expectType<number>(faultCount.count);
+expectType<boolean>(faultCount.lowerBound);
 
 const asynchronous = workspace.startObserved({ ...options, observationLocation: 'observation.sqlite' }, async () => 'value');
 expectType<Promise<IRunResult<string>>>(asynchronous.result);

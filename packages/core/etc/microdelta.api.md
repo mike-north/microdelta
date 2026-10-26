@@ -39,6 +39,7 @@ import type { IDiscoveryReport as IDiscoveryReport_2 } from '@microdelta/supervi
 import type { IExecutionAdmission } from '@microdelta/resolution';
 import type { IExecutionObservation as IExecutionObservation_2 } from '@microdelta/supervision';
 import type { IExecutionObservationEventCounts as IExecutionObservationEventCounts_2 } from '@microdelta/supervision';
+import type { IExecutionObservationFaultCount as IExecutionObservationFaultCount_2 } from '@microdelta/supervision';
 import type { IExecutionObservationLocator as IExecutionObservationLocator_2 } from '@microdelta/supervision';
 import type { IExecutionObservationReader as IExecutionObservationReader_2 } from '@microdelta/supervision';
 import type { IExecutionObservationReadResult as IExecutionObservationReadResult_2 } from '@microdelta/supervision';
@@ -280,6 +281,9 @@ export type IExecutionObservation = IExecutionObservation_2;
 
 // @alpha
 export type IExecutionObservationEventCounts = IExecutionObservationEventCounts_2;
+
+// @alpha
+export type IExecutionObservationFaultCount = IExecutionObservationFaultCount_2;
 
 // @alpha
 export type IExecutionObservationLocator = IExecutionObservationLocator_2;

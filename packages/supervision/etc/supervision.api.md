@@ -63,7 +63,6 @@ export type IApplicationStatement = {
 
 // @alpha
 export interface IApplicationStatementSubmission {
-    // (undocumented)
     submit(statement: IApplicationStatement): void;
 }
 
@@ -89,7 +88,6 @@ export interface IExecutionObservation {
     readonly application?: IApplicationStatement;
     // (undocumented)
     readonly body?: 'not-entered' | 'returned' | 'threw';
-    // (undocumented)
     readonly context: IRunContext;
     readonly diagnostics?: {
         readonly present: boolean;
@@ -112,12 +110,10 @@ export interface IExecutionObservation {
         readonly unknown: number;
         readonly lowerBound: boolean;
     };
-    readonly observationFaults?: number;
+    readonly observationFaults?: IExecutionObservationFaultCount;
     // (undocumented)
     readonly phase: 'prepared' | 'running' | 'draining' | 'closed';
-    // (undocumented)
     readonly revision: number;
-    // (undocumented)
     readonly sampledAt: number;
     readonly stop?: IStopState;
     readonly waitingUntil?: number;
@@ -141,6 +137,12 @@ export interface IExecutionObservationEventCounts {
     readonly stop: number;
     // (undocumented)
     readonly wait: number;
+}
+
+// @alpha
+export interface IExecutionObservationFaultCount {
+    readonly count: number;
+    readonly lowerBound: boolean;
 }
 
 // @alpha
@@ -169,9 +171,7 @@ export interface IExecutionObservationLocator {
 
 // @alpha
 export interface IExecutionObservationReader {
-    // (undocumented)
     close(): void;
-    // (undocumented)
     read(): IExecutionObservationReadResult;
 }
 
@@ -279,10 +279,10 @@ export interface IMembersTarget {
 export type IObservationAcknowledgment = {
     readonly kind: 'acknowledged';
     readonly revision: number;
-    readonly observationFaults?: number;
+    readonly observationFaults?: IExecutionObservationFaultCount;
 } | {
     readonly kind: 'uncertain';
-    readonly observationFaults?: number;
+    readonly observationFaults?: IExecutionObservationFaultCount;
 } | {
     readonly kind: 'unprepared';
 };

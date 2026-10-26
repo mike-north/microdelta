@@ -142,4 +142,4 @@ export { createSupervision } from './supervision.js';
 export type { IOperationSharedRate, ISharedRateDispatchOptions } from './shared-rate-dispatch.js';
 
 export { openExecutionObservationReader } from './observation.js';
-export type { IApplicationStatement, IApplicationStatementSubmission, IExecutionObservation, IExecutionObservationHost, IExecutionObservationEventCounts, IExecutionObservationLocator, IExecutionObservationReadResult, IExecutionObservationReadState, IExecutionObservationReader, IObservationAcknowledgment, IObservedRun } from './observation.js';
+export type { IApplicationStatement, IApplicationStatementSubmission, IExecutionObservation, IExecutionObservationHost, IExecutionObservationEventCounts, IExecutionObservationFaultCount, IExecutionObservationLocator, IExecutionObservationReadResult, IExecutionObservationReadState, IExecutionObservationReader, IObservationAcknowledgment, IObservedRun } from './observation.js';

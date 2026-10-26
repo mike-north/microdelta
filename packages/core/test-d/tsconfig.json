@@ -7,6 +7,7 @@
       "@microdelta/accounting": ["../../accounting/dist/api/accounting.alpha.d.ts"],
       "@microdelta/definition": ["../../definition/dist/api/definition.alpha.d.ts"],
       "@microdelta/history": ["../../history/dist/api/history.alpha.d.ts"],
+      "@microdelta/machine": ["../../machine/dist/api/machine.alpha.d.ts"],
       "@microdelta/machine-node": ["../../machine-node/dist/api/machine-node.alpha.d.ts"],
       "@microdelta/materialization": ["../../materialization/dist/api/materialization.alpha.d.ts"],
       "@microdelta/resolution": ["../../resolution/dist/api/resolution.alpha.d.ts"],

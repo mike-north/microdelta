@@ -27,6 +27,11 @@ export interface IWorkloadStats {
   readonly hydratedPayloadBytes: number;
 }
 
+/** Aggregate one authoritative durable row per retained subject without conflating records or acceptances. */
+export interface IRetainedSubjectRow { readonly subject: string; readonly results: number; readonly acceptances: number }
+/** The store reports subject identities, result records and accepted results as separate quantities. */
+export interface IRetainedSubjectCounts { readonly subjects: number; readonly results: number; readonly acceptances: number }
+
 /** Mutable counters remain private to one process and are snapshotted only after report completion. */
 interface IRouteCounter { sends: number; responseBytes: number; readonly operations: Map<string, number> }
 
@@ -42,6 +47,23 @@ export interface IWorkloadHarness {
 export function maxRssBytesFromKibibytes(value: number): number {
   if (!Number.isSafeInteger(value) || value < 0) { throw new RangeError('Node maxRSS must be a non-negative integer in kibibytes'); }
   return value * 1_024;
+}
+
+/** Group already-aggregated durable store rows by their declared source/step subject prefix. */
+export function summarizeRetainedSubjectRows(rows: readonly IRetainedSubjectRow[]): Readonly<Record<string, IRetainedSubjectCounts>> {
+  const result: Record<string, { subjects: number; results: number; acceptances: number }> = {};
+  for (const row of rows) {
+    if (row.subject.length === 0 || !Number.isSafeInteger(row.results) || row.results < 0
+      || !Number.isSafeInteger(row.acceptances) || row.acceptances < 0) { throw new RangeError('retained subject rows must contain a subject and non-negative integer counts'); }
+    const separator = row.subject.indexOf(':');
+    const kind = separator < 0 ? row.subject : row.subject.slice(0, separator);
+    const counts = result[kind] ?? { subjects: 0, results: 0, acceptances: 0 };
+    counts.subjects += 1;
+    counts.results += row.results;
+    counts.acceptances += row.acceptances;
+    result[kind] = counts;
+  }
+  return result;
 }
 
 /** Build one fixed scenario without materializing detail or discussion payloads until the app requests them. */

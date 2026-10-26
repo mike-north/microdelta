@@ -3,7 +3,9 @@ import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
+import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
+import { summarizeRetainedSubjectRows } from '../.test-build/controlled-test/workload-harness.js';
 
 const root = fileURLToPath(new URL('../../..', import.meta.url));
 const worker = join(root, 'examples/contribution-report/.test-build/controlled-test/workload-worker.js');
@@ -31,19 +33,91 @@ function run(phase) {
   return { receipt, elapsedMilliseconds };
 }
 
+/** Read subject/version and acceptance rows after each process has closed its writers. */
+function readRetainedState() {
+  const history = new DatabaseSync(join(directory, 'history.sqlite'), { readOnly: true });
+  const accounting = new DatabaseSync(join(directory, 'usage.sqlite'), { readOnly: true });
+  try {
+    const subjectRows = history.prepare(`SELECT r.subject AS subject, COUNT(DISTINCT r.result_id) AS results,
+      COUNT(DISTINCT a.acceptance_id) AS acceptances FROM history_results r
+      LEFT JOIN history_acceptances a ON a.result_id = r.result_id GROUP BY r.subject ORDER BY r.subject`).all();
+    const counts = summarizeRetainedSubjectRows(subjectRows);
+    const retainedResults = history.prepare('SELECT COUNT(*) AS count FROM history_results').get().count;
+    const retainedAcceptances = history.prepare('SELECT COUNT(*) AS count FROM history_acceptances').get().count;
+    const operationLedger = accounting.prepare(`SELECT COUNT(DISTINCT operation) AS operations,
+      COUNT(*) AS requestAttempts FROM accounting_request_attempts`).get();
+    const usageReports = accounting.prepare('SELECT COUNT(*) AS reports FROM accounting_reports').get().reports;
+    return { history: { retainedResults, retainedAcceptances, subjectsByKind: counts }, accounting: { ...operationLedger, reports: usageReports } };
+  } finally { history.close(); accounting.close(); }
+}
+
 /** The harness checks exact report counts and identities out of band before emitting each compact receipt. */
 const cold = run('cold');
+cold.receipt.retained = readRetainedState();
 const restart = run('restart');
+restart.receipt.retained = readRetainedState();
 if (cold.receipt.report.pullRequests !== requiredPulls || restart.receipt.report.pullRequests !== requiredPulls) {
   throw new Error(`workload did not assess the expected ${String(requiredPulls)} unique PR population`);
 }
 if (JSON.stringify(cold.receipt.references) !== JSON.stringify(restart.receipt.references)) {
   throw new Error('fresh-process report references changed under unchanged workload inputs');
 }
+function assertRetainedState(phase, expected) {
+  const actual = phase.receipt.retained;
+  for (const [kind, counts] of Object.entries(expected)) {
+    const measured = actual.history.subjectsByKind[kind] ?? { subjects: 0, results: 0, acceptances: 0 };
+    if (JSON.stringify(measured) !== JSON.stringify(counts)) {
+      throw new Error(`${phase.receipt.phase} retained ${kind} subjects/results/acceptances differed from its store oracle: ${JSON.stringify(measured)}`);
+    }
+  }
+  const totals = Object.values(expected).reduce((sum, value) => ({ subjects: sum.subjects + value.subjects,
+    results: sum.results + value.results, acceptances: sum.acceptances + value.acceptances }), { subjects: 0, results: 0, acceptances: 0 });
+  if (actual.history.retainedResults !== totals.results || actual.history.retainedAcceptances !== totals.acceptances) {
+    throw new Error(`${phase.receipt.phase} durable history table totals differed from grouped subject measurements`);
+  }
+}
+const peopleCount = cold.receipt.fixture.people;
+const pullCountForStore = cold.receipt.fixture.pullRequests;
+assertRetainedState(cold, {
+  assessment: { subjects: pullCountForStore, results: pullCountForStore, acceptances: 0 },
+  detail: { subjects: pullCountForStore, results: pullCountForStore, acceptances: 0 },
+  discussion: { subjects: pullCountForStore, results: pullCountForStore, acceptances: 0 },
+  search: { subjects: peopleCount, results: peopleCount, acceptances: 0 },
+  report: { subjects: 1, results: 1, acceptances: 0 },
+  'selected-people': { subjects: 1, results: 1, acceptances: 0 },
+  summary: { subjects: peopleCount, results: peopleCount, acceptances: 0 },
+});
+assertRetainedState(restart, {
+  assessment: { subjects: pullCountForStore, results: pullCountForStore, acceptances: pullCountForStore },
+  detail: { subjects: pullCountForStore, results: pullCountForStore, acceptances: pullCountForStore },
+  discussion: { subjects: pullCountForStore, results: pullCountForStore * 2, acceptances: 0 },
+  search: { subjects: peopleCount, results: peopleCount * 2, acceptances: 0 },
+  report: { subjects: 1, results: 1, acceptances: 1 },
+  'selected-people': { subjects: 1, results: 1, acceptances: 1 },
+  summary: { subjects: peopleCount, results: peopleCount, acceptances: peopleCount },
+});
+for (const phase of [cold, restart]) {
+  const history = phase.receipt.retained.history;
+  const accounting = phase.receipt.retained.accounting;
+  const sends = Object.values(phase.receipt.observed.routes).reduce((total, route) => total + route.sends, 0);
+  const logicalOperations = Object.values(phase.receipt.observed.routes).reduce((total, route) => total + route.logicalOperations, 0);
+  const previousAttempts = phase === cold ? 0 : cold.receipt.retained.accounting.requestAttempts;
+  if (accounting.operations !== accounting.requestAttempts || logicalOperations !== sends
+    || accounting.requestAttempts - previousAttempts !== sends) {
+    throw new Error(`${phase.receipt.phase} actual operations, attempts and route sends diverged`);
+  }
+  if (history.retainedResults < history.retainedAcceptances) { throw new Error('accepted results exceeded retained history results'); }
+}
 for (const phase of [cold, restart]) {
   if (phase.receipt.report.selectedPeople !== personCount || phase.receipt.report.successfulPeople !== personCount
     || phase.receipt.currentSource.searchStarts !== personCount || phase.receipt.currentSource.completedSearches !== personCount) {
     throw new Error(`${phase.receipt.phase} workload omitted a selected person or complete source search`);
+  }
+  const memory = phase.receipt.memory;
+  if (memory.sampleCounts.total < 2 || memory.sampleCounts.dispatch < 1 || memory.timing.firstSampleElapsedMilliseconds === null
+    || memory.timing.lastSampleElapsedMilliseconds === null || memory.timing.maxGapMilliseconds < 0
+    || memory.peakSampledRssBytes < memory.baselineRssBytes || memory.maxRssBytes < memory.peakSampledRssBytes) {
+    throw new Error(`${phase.receipt.phase} workload memory measurement lacks observed samples or a consistent high-water mark`);
   }
 }
 const pullCount = cold.receipt.fixture.pullRequests;

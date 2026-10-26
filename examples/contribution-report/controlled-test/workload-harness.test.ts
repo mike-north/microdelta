@@ -1,7 +1,7 @@
 /** Small focused acceptance assertions define REST-shaped workload behavior before its harness. */
 import { describe, expect, test } from '@jest/globals';
 import { searchUrl } from '../src/controlled/github.js';
-import { createWorkloadHarness, maxRssBytesFromKibibytes } from './workload-harness.js';
+import { createWorkloadHarness, maxRssBytesFromKibibytes, summarizeRetainedSubjectRows } from './workload-harness.js';
 import { workloadInputs, workloadPerson } from './workload-fixture.js';
 
 const send = { signal: { aborted: false, onAbort: () => () => undefined }, operation: 'workload-test-operation', requestAttempt: 'workload-test-attempt', idempotencyKey: undefined };
@@ -14,6 +14,20 @@ describe('controlled workload REST harness', () => {
 
   test('converts Node maxRSS kibibytes into byte measurements exactly', () => {
     expect(maxRssBytesFromKibibytes(294_928)).toBe(302_006_272);
+  });
+
+  test('keeps retained subject counts, result records and acceptances separate by subject kind', () => {
+    expect(summarizeRetainedSubjectRows([
+      { subject: 'discussion:acme/widget#1', results: 2, acceptances: 2 },
+      { subject: 'detail:acme/widget#1', results: 1, acceptances: 1 },
+      { subject: 'assessment:acme/widget#1', results: 1, acceptances: 1 },
+      { subject: 'report', results: 1, acceptances: 1 },
+    ])).toEqual({
+      assessment: { subjects: 1, results: 1, acceptances: 1 },
+      detail: { subjects: 1, results: 1, acceptances: 1 },
+      discussion: { subjects: 1, results: 2, acceptances: 2 },
+      report: { subjects: 1, results: 1, acceptances: 1 },
+    });
   });
 
   test('search returns a real paginated corpus page while retaining the complete set only out of band', async () => {

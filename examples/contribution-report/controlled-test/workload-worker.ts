@@ -8,6 +8,8 @@ import { composeReport, evaluateReport } from '../src/controlled/application.js'
 import type { IReportServices } from '../src/controlled/application.js';
 import { workloadCardinality, workloadInputsFor, workloadPeople } from './workload-fixture.js';
 import { assertWorkloadMembership, createWorkloadHarness, maxRssBytesFromKibibytes } from './workload-harness.js';
+import { createWorkloadMemorySampler } from './workload-measurement.js';
+import type { IWorkloadMemorySnapshot } from './workload-measurement.js';
 import type { IWorkloadStats } from './workload-harness.js';
 
 /** Worker phases reopen identical durable files in distinct processes. */
@@ -22,7 +24,7 @@ interface IWorkloadReceipt {
   readonly usage: { readonly requestAttempts: number; readonly reports: number; readonly unknown: number };
   readonly fixture: ReturnType<typeof workloadCardinality>;
   readonly observed: IWorkloadStats;
-  readonly memory: { readonly baselineRssBytes: number; readonly peakSampledRssBytes: number; readonly peakSampledHeapUsedBytes: number; readonly sampleIntervalMilliseconds: number; readonly rawMaxRss: number; readonly maxRssUnit: 'kibibytes'; readonly maxRssBytes: number };
+  readonly memory: IWorkloadMemorySnapshot & { readonly samplingLimitation: string; readonly rawMaxRss: number; readonly maxRssUnit: 'kibibytes'; readonly maxRssBytes: number };
 };
 
 const decoded: unknown = JSON.parse(process.argv[2] ?? 'null');
@@ -30,23 +32,25 @@ if (!isJob(decoded)) { throw new Error('invalid standalone workload job'); }
 const job = decoded;
 mkdirSync(job.directory, { recursive: true });
 // Retry attribution accepts stable opaque connection identifiers, not local paths or other location-bearing values.
+const sampler = createWorkloadMemorySampler({ intervalMilliseconds: 100 });
 const harness = createWorkloadHarness('workload:issue-260', job.personCount);
 const traceCounts = new Map<string, number>();
-const services: IReportServices = { ...harness.services, trace(event) { const category = event.split(':', 1)[0] ?? 'unknown'; traceCounts.set(category, (traceCounts.get(category) ?? 0) + 1); } };
+const services: IReportServices = { ...harness.services,
+  async github(url, accept, send) {
+    sampler.sampleDispatchBoundary();
+    try { return await harness.services.github(url, accept, send); }
+    finally { sampler.sampleDispatchBoundary(); }
+  },
+  async assess(request, send) {
+    sampler.sampleDispatchBoundary();
+    try { return await harness.services.assess(request, send); }
+    finally { sampler.sampleDispatchBoundary(); }
+  },
+  trace(event) { const category = event.split(':', 1)[0] ?? 'unknown'; traceCounts.set(category, (traceCounts.get(category) ?? 0) + 1); } };
 const accounting = openDurableAccounting({ sqlite: createNodeSqlite(), location: join(job.directory, 'usage.sqlite'), logicalStore: 'controlled-workload-usage' });
 const workspace = openWorkspace({ location: join(job.directory, 'history.sqlite'), logicalStore: 'controlled-workload-history', accounting });
 const inputs = workloadInputsFor(job.personCount);
 const application = composeReport(inputs, services);
-const baseline = process.memoryUsage();
-let peakSampledRssBytes = baseline.rss;
-let peakSampledHeapUsedBytes = baseline.heapUsed;
-const sampleIntervalMilliseconds = 100;
-const sampler = setInterval(() => {
-  const reading = process.memoryUsage();
-  peakSampledRssBytes = Math.max(peakSampledRssBytes, reading.rss);
-  peakSampledHeapUsedBytes = Math.max(peakSampledHeapUsedBytes, reading.heapUsed);
-}, sampleIntervalMilliseconds);
-
 try {
   const result = await evaluateReport(workspace, application, { environment: 'production', requestKey: job.requestKey, permits: 8, window: 8 });
   if (result.value.status !== 'complete') {
@@ -84,6 +88,7 @@ try {
   // Node documents maxRSS in kibibytes (https://nodejs.org/api/process.html#processresourceusage); sampled memoryUsage values are already bytes.
   const maxRssUnit = 'kibibytes';
   const maxRssBytes = maxRssBytesFromKibibytes(rawMaxRss);
+  const memorySnapshot = sampler.snapshot();
   const receipt: IWorkloadReceipt = {
     phase: job.phase,
     report: { selectedPeople: report.selected.length, successfulPeople: report.people.length, pullRequests: reportedPulls, score },
@@ -95,11 +100,11 @@ try {
     usage: { requestAttempts: result.value.usage.requestAttempts, reports: result.value.usage.reports, unknown: result.value.usage.unknown.length },
     fixture: cardinality,
     observed: harness.stats(),
-    memory: { baselineRssBytes: baseline.rss, peakSampledRssBytes, peakSampledHeapUsedBytes, sampleIntervalMilliseconds, rawMaxRss, maxRssUnit, maxRssBytes },
+    memory: { ...memorySnapshot, samplingLimitation: 'Timer callbacks can be delayed by event-loop activity; dispatch-boundary samples are rate-limited, and maxRSS is the process high-water mark.', rawMaxRss, maxRssUnit, maxRssBytes },
   };
   process.stdout.write(`${JSON.stringify(receipt)}\n`);
 } finally {
-  clearInterval(sampler);
+  sampler.close();
   workspace.close();
   accounting.close();
 }

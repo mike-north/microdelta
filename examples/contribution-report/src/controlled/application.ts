@@ -191,7 +191,7 @@ export function normalizeGithub(response: IRestResponse, now: number): IOperatio
   const retryAfter = response.headers['retry-after'];
   const delta = retryAfter !== undefined && /^\d+$/u.test(retryAfter) ? Number(retryAfter) : NaN;
   const seconds = Number.isSafeInteger(delta) && Number.isSafeInteger(delta * 1_000) && Number.isSafeInteger(now + delta * 1_000) ? delta : undefined;
-  const date = retryAfter === undefined ? NaN : httpDateEpoch(retryAfter);
+  const date = retryAfter === undefined ? NaN : httpDateEpoch(retryAfter, now);
   const resetHeader = response.headers['x-ratelimit-reset'];
   const reset = response.headers['x-ratelimit-remaining'] === '0' && resetHeader !== undefined && /^\d+$/u.test(resetHeader) ? Number(resetHeader) * 1_000 : NaN;
   const floor = Math.max(now, seconds === undefined ? Number.isFinite(date) ? date : now : now + seconds * 1_000, Number.isSafeInteger(reset) ? reset : now);
@@ -207,12 +207,26 @@ const httpWeekdays = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'F
 /** HTTP's English month vocabulary is part of provider protocol validation. */
 const httpMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'] as const;
 /** Round-trip every supported HTTP date component so JavaScript rollover and local-zone parsing cannot fabricate timing evidence. */
-function httpDateEpoch(value: string): number {
+function httpDateEpoch(value: string, now: number): number {
   if (!httpDatePattern.test(value)) { return NaN; }
   // The obsolete asctime form omits a zone lexically but still means GMT on the HTTP wire.
-  const epoch = Date.parse(value.endsWith('GMT') ? value : `${value} GMT`);
+  let epoch = Date.parse(value.endsWith('GMT') ? value : `${value} GMT`);
   if (!Number.isSafeInteger(epoch)) { return NaN; }
   const instant = new Date(epoch);
+  const shortYear = /-([0-9]{2}) /u.exec(value)?.[1];
+  if (shortYear !== undefined) {
+    // RFC850's century is relative to receipt, not JavaScript's fixed 1950 pivot.
+    // Choose the latest matching year no more than fifty calendar years ahead,
+    // then validate the original weekday/calendar text against that interpretation.
+    const latest = new Date(now);
+    if (!Number.isFinite(latest.getTime())) { return NaN; }
+    latest.setUTCFullYear(latest.getUTCFullYear() + 50);
+    const year = Math.floor((latest.getUTCFullYear() - Number(shortYear)) / 100) * 100 + Number(shortYear);
+    instant.setUTCFullYear(year);
+    if (instant.getTime() > latest.getTime()) { instant.setUTCFullYear(year - 100); }
+    epoch = instant.getTime();
+    if (!Number.isSafeInteger(epoch)) { return NaN; }
+  }
   const weekday = httpWeekdays[instant.getUTCDay()];
   const month = httpMonths[instant.getUTCMonth()];
   if (weekday === undefined || month === undefined) { return NaN; }

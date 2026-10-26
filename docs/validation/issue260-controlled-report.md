@@ -85,6 +85,15 @@ published before a slow classifier returns, accepted local delay begins at the
 decision boundary, and cumulative-budget refusal retains the provider floor.
 These scoped repairs await independent re-review at their frozen revision.
 
+The original three repairs passed independent review, which then exposed a
+fourth boundary: RFC850 two-digit years must use receipt-relative fifty-year
+interpretation rather than JavaScript's fixed1950 pivot. Five new intended RED
+assertions preceded the correction. The parser now chooses the matching century
+before calendar/weekday round-trip, accepts the exact fifty-calendar-year limit,
+and moves a value one second beyond that limit to the preceding century.
+The33 direct retry tests and22 actual-facade provider tests pass together, with
+strict example compile/lint. This fourth repair awaits its separate frozen review.
+
 ## Restored negative controls
 
 Each control below compiled before running the named test; every mutant then

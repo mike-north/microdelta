@@ -24,6 +24,18 @@ describe('GitHub retry facts and explicit application budgets', () => {
     expect(normalizeGithub({ status: 403, headers: { 'retry-after': retryAfter }, body: {} }, 1000)).toMatchObject({ kind: 'rate-limited', retryAt: 4000 });
   });
   test.each([
+    [Date.UTC(1970, 0, 1), 'Friday, 01-Jan-26 00:00:00 GMT', Date.UTC(1970, 0, 1)],
+    [Date.UTC(2030, 0, 1), 'Saturday, 01-Jan-50 00:00:00 GMT', Date.UTC(2050, 0, 1)],
+    [Date.UTC(1976, 0, 1), 'Thursday, 01-Jan-26 00:00:00 GMT', Date.UTC(2026, 0, 1)],
+    [Date.UTC(1976, 0, 1) - 1000, 'Friday, 01-Jan-26 00:00:00 GMT', Date.UTC(1976, 0, 1) - 1000],
+    [Date.UTC(2080, 0, 1), 'Saturday, 01-Jan-50 00:00:00 GMT', Date.UTC(2080, 0, 1)],
+  ])('RFC850 century uses receipt-relative fifty-year bound now%s header%s', (now, retryAfter, retryAt) => {
+    expect(normalizeGithub({ status: 403, headers: { 'retry-after': retryAfter }, body: {} }, now)).toMatchObject({ kind: 'rate-limited', retryAt });
+  });
+  test('RFC850 weekday is checked after century correction, preventing a spurious fifty-six-year provider floor', () => {
+    expect(normalizeGithub({ status: 403, headers: { 'retry-after': 'Thursday, 01-Jan-26 00:00:00 GMT' }, body: {} }, Date.UTC(1970, 0, 1))).toMatchObject({ kind: 'failed', transient: false });
+  });
+  test.each([
     [{ 'retry-after': '9007199254740992' }, 1000],
     [{ 'retry-after': '9007199254741' }, 1000],
     [{ 'retry-after': '1' }, Number.MAX_SAFE_INTEGER - 500],

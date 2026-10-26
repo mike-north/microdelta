@@ -31,7 +31,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json && api-extractor run --config api-extractor.json && api-extractor run --config api-extractor-conformance.json && node ../../tooling/trim-declaration-imports.mjs dist/api/microdelta.beta.d.ts dist/api/microdelta.public.d.ts",
     "check": "concurrently --success all --names types,lint \"npm run check:types\" \"npm run check:lint\"",
-    "check:types": "tsc --noEmit -p tsconfig.json",
+    "check:types": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p ../../fixtures/declarations/source-call/tsconfig.json",
     "check:lint": "eslint .",
     "test": "npm run test:unit && npm run test:types && npm run test:controls",
     "test:unit": "tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand",

@@ -109,8 +109,10 @@ export function intentDigest<TInputs extends object, THelpers extends object>(op
       .filter((edge) => edge.child.role === 'callable')
       .map((edge) => {
         const resolution = options.composition.resolve(edge.child);
-        return resolution.status === 'bound' && resolution.target.role === 'callable' && resolution.target.kind === 'supplied-step'
-          ? [edge.child.slot, resolution.target.declaration.version, sourceText(resolution.target.declaration.run)]
+        return resolution.status === 'bound' && resolution.target.role === 'callable' && (resolution.target.kind === 'supplied-step' || resolution.target.kind === 'supplied-source')
+          ? resolution.target.declaration.kind === 'supplied-source'
+            ? [edge.child.slot, 'supplied-source', resolution.target.declaration.version, sourceText(resolution.target.declaration.run), sourceText(resolution.target.declaration.finality)]
+            : [edge.child.slot, resolution.target.declaration.version, sourceText(resolution.target.declaration.run)]
           : [edge.child.slot, resolution.status];
       })
     : [];
@@ -159,7 +161,9 @@ function descriptorKey(descriptor: IBindingDescriptor): string {
  * The complete current intent of one supplied step call: History scope, the
  * callable slot, its call's subject and compatibility version, the argument
  * digest, the source text of the implementation currently supplied and the
- * current input and helper bindings.
+ * current input and helper bindings. Callable source intent also names its
+ * source kind and current finality hook. The memo tuple stays byte-compatible
+ * with existing saved requests; source metadata extends only source calls.
  */
 export function suppliedIntentDigest(options: {
   readonly host: ISha256Capability;
@@ -170,6 +174,7 @@ export function suppliedIntentDigest(options: {
   readonly subject: string;
   readonly version: number;
   readonly arguments: string;
+  readonly source?: { readonly finality: unknown };
   readonly run: unknown;
   readonly slots: ICurrentSlots;
 }): string {
@@ -179,11 +184,12 @@ export function suppliedIntentDigest(options: {
     options.scope,
     options.environment,
     structural(options.slot),
-    'supplied',
+    options.source === undefined ? 'supplied' : 'source',
     options.subject,
     options.version,
     options.arguments,
     sourceText(options.run),
+    ...(options.source === undefined ? [] : [sourceText(options.source.finality)]),
     ...currentBindings(options.validation, options.slots),
   ];
   return `mdi1:${options.host.sha256(JSON.stringify(intent))}`;

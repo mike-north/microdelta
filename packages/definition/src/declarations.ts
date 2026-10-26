@@ -1,6 +1,7 @@
 /**
  * Family-bound builders. A facade calls `declarations<TFamily>()` once and
  * shares the instance with authors (source, memo, stepSlot, suppliedStep,
+ * sourceSlot, suppliedSource, supplySource,
  * supply, forward, template, fold, outcomeFold, compose) and Resolution (openInvocation,
  * gateOf). The instance privately owns the records of the steps, templates and
  * compositions it minted; that ownership is also what lets `openInvocation`
@@ -20,6 +21,7 @@ import {
   type ISourceDeclaration,
   type ISourceOptions,
 } from './declaration.js';
+import { declareSourceSlot, declareSuppliedSource, declareSupplySource, type ISourceSlot, type ISuppliedSourceDeclaration, type ISuppliedSourceOptions, type ISupplySourceOptions, type ISuppliedSourceRegistration } from './source-slot.js';
 import { forward, type IForward } from './arguments.js';
 import { composeIn, type IComposition, type ICompositionOptions, type ICompositionState } from './composition.js';
 import type { IBindingFamily } from './family.js';
@@ -70,6 +72,12 @@ export interface IDeclarations<TFamily extends IBindingFamily> {
   ): ISuppliedStepDeclaration<TFamily, TParameters, TResult>;
   /** Bind a supplied step and its subject function to a slot, for `compose`. */
   supply<TParameters extends readonly unknown[], TResult>(options: ISupplyOptions<TFamily, TParameters, TResult>): ISuppliedStepRegistration<TFamily>;
+  /** Declare a dynamic source edge with its positional call signature. */
+  sourceSlot<TParameters extends readonly unknown[] = readonly [], TResult extends object = object>(options: IStepSlotOptions): ISourceSlot<TFamily, TParameters, TResult>;
+  /** Declare current source policy without a subject or child edges. */
+  suppliedSource<TParameters extends readonly unknown[] = readonly [], TResult extends object = object>(options: ISuppliedSourceOptions<TFamily, TParameters, TResult>): ISuppliedSourceDeclaration<TFamily, TParameters, TResult>;
+  /** Bind a source implementation and its author subject function to a source slot. */
+  supplySource<TParameters extends readonly unknown[], TResult>(options: ISupplySourceOptions<TFamily, TParameters, TResult>): ISuppliedSourceRegistration<TFamily>;
   /** Mint forwarded argument origins for argument-bearing calls. */
   readonly forward: IForward;
   /** Declare a fanout template over a keyed collection source, running its factory exactly once. */
@@ -120,6 +128,9 @@ export function declarations<TFamily extends IBindingFamily>(): IDeclarations<TF
     suppliedStep: <TParameters extends readonly unknown[] = readonly [], TResult = unknown>(options: ISuppliedStepOptions<TFamily, TParameters, TResult>) =>
       declareSuppliedStep(records, options),
     supply: <TParameters extends readonly unknown[], TResult>(options: ISupplyOptions<TFamily, TParameters, TResult>) => declareSupply(records, options),
+    sourceSlot: <TParameters extends readonly unknown[] = readonly [], TResult extends object = object>(options: IStepSlotOptions) => declareSourceSlot<TFamily, TParameters, TResult>(options),
+    suppliedSource: <TParameters extends readonly unknown[] = readonly [], TResult extends object = object>(options: ISuppliedSourceOptions<TFamily, TParameters, TResult>) => declareSuppliedSource(records, options),
+    supplySource: <TParameters extends readonly unknown[], TResult>(options: ISupplySourceOptions<TFamily, TParameters, TResult>) => declareSupplySource(records, options),
     forward,
     template: <TCollection extends IAnySourceDeclaration<TFamily>, TSteps extends ITemplateSteps<TFamily>>(
       options: ITemplateOptions<TFamily, TCollection, TSteps>,

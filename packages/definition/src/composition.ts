@@ -37,6 +37,7 @@ import { reject } from './declaration.js';
 import type { DefinitionError } from './errors.js';
 import type { IBindingFamily } from './family.js';
 import type { IFoldTopology } from './fold.js';
+import type { IAnySuppliedSourceDeclaration, ISuppliedSourceRegistration } from './source-slot.js';
 import type { IAnySuppliedStepDeclaration, ISuppliedStepRegistration } from './slot.js';
 import { slotSubject, supplyState } from './slot.js';
 import { bindTemplates, instancePrefixOf, isMemberStep, type IAnyTemplateDeclaration, type IBoundTemplates, type ITemplateRecords, type ITemplateTopology } from './template.js';
@@ -105,8 +106,8 @@ export interface ICompositionOptions<TFamily extends IBindingFamily> {
   readonly steps?: readonly IStepRegistration<TFamily>[];
   /** Explicitly keyed members. */
   readonly members?: readonly IMemberRegistration<TFamily>[];
-  /** Supplied step implementations bound to callable step slots, made by `supply`. */
-  readonly supplied?: readonly ISuppliedStepRegistration<TFamily>[];
+  /** Memo or source implementations bound to their matching callable slots by `supply` or `supplySource`. */
+  readonly supplied?: readonly (ISuppliedStepRegistration<TFamily> | ISuppliedSourceRegistration<TFamily>)[];
   /** Fanout templates, each bound to a keyed collection source among the composition-level steps. */
   readonly templates?: readonly IAnyTemplateDeclaration<TFamily>[];
 }
@@ -159,6 +160,23 @@ export interface ISuppliedStepTarget<TFamily extends IBindingFamily> {
   subjectFor(arguments_: IInvocationArguments): IScopedSubject;
 }
 
+/** A current source slot binding keeps source policy distinct from memo semantics. @alpha */
+export interface ISuppliedSourceTarget<TFamily extends IBindingFamily> {
+  /** Supplied step slots share the callable slot namespace with helpers. */
+  readonly role: 'callable';
+  /** Keeps current source policy distinct from a helper or a memo implementation. */
+  readonly kind: 'supplied-source';
+  /** The supplied implementation, with its callback context erased. */
+  readonly declaration: IAnySuppliedSourceDeclaration<TFamily>;
+  /**
+   * The scoped history subject of one call through this slot, computed by the
+   * bound subject function from the recipes' derived values only. It runs the
+   * author's subject function and rejects with `invalid-subject` unless that
+   * returns a complete nonempty string.
+   */
+  subjectFor(arguments_: IInvocationArguments): IScopedSubject;
+}
+
 /** The current declaration bound to a step slot; invoke it through `openInvocation`. @alpha */
 export interface IStepTarget<TFamily extends IBindingFamily> {
   readonly role: 'step';
@@ -169,7 +187,7 @@ export interface IStepTarget<TFamily extends IBindingFamily> {
 }
 
 /** Whatever a uniquely occupied slot currently denotes. @alpha */
-export type IBindingTarget<TFamily extends IBindingFamily> = IInputTarget | ICallableTarget | ISuppliedStepTarget<TFamily> | IStepTarget<TFamily>;
+export type IBindingTarget<TFamily extends IBindingFamily> = IInputTarget | ICallableTarget | ISuppliedStepTarget<TFamily> | ISuppliedSourceTarget<TFamily> | IStepTarget<TFamily>;
 
 /**
  * Outcome of resolving one descriptor against the current composition.
@@ -226,7 +244,7 @@ export type IWitnessResolution<TFamily extends IBindingFamily> =
   | {
     readonly status: 'bound';
     readonly parent: IStepTarget<TFamily>;
-    readonly child: IStepTarget<TFamily> | ISuppliedStepTarget<TFamily>;
+    readonly child: IStepTarget<TFamily> | ISuppliedStepTarget<TFamily> | ISuppliedSourceTarget<TFamily>;
     readonly witness: IInvocationWitness;
   }
   | { readonly status: 'missing'; readonly descriptor: IBindingDescriptor }
@@ -410,7 +428,7 @@ export function composeIn<TFamily extends IBindingFamily>(
         if (record === undefined) {
           return reject('forged-declaration', `Step ${slot} holds a declaration this family did not mint.`);
         }
-        if (record.kind === 'supplied-step') {
+        if (record.kind === 'supplied-step' || record.kind === 'supplied-source') {
           return reject('illegal-edge', `Step ${slot} holds a supplied step; supplied steps occupy step slots only through supply.`);
         }
         if (isMemberStep(record.declaration)) {
@@ -469,15 +487,12 @@ export function composeIn<TFamily extends IBindingFamily>(
     for (const supplied of listOf(optionFields.get('supplied'), 'supplied', true)) {
       const state = supplyState(supplied);
       const record = state === undefined ? undefined : records.get(state.declaration);
-      if (state === undefined || record?.kind !== 'supplied-step') {
+      if (state === undefined || (record?.kind !== 'supplied-step' && record?.kind !== 'supplied-source')) {
         return reject('forged-declaration', 'A supplied registration must be made by supply from this family instance.');
       }
       suppliedSlots.add(state.slot);
       const subject = state.subject;
-      const target: ISuppliedStepTarget<TFamily> = {
-        role: 'callable',
-        kind: 'supplied-step',
-        declaration: record.declaration,
+      const subjectBinding = {
         subjectFor(arguments_: IInvocationArguments): IScopedSubject {
           if (isComposing()) {
             reject('composition-phase', 'Slot subjects cannot be computed while composing.');
@@ -494,6 +509,9 @@ export function composeIn<TFamily extends IBindingFamily>(
           return scoped;
         },
       };
+      const target: ISuppliedStepTarget<TFamily> | ISuppliedSourceTarget<TFamily> = record.kind === 'supplied-source'
+        ? { ...subjectBinding, role: 'callable', kind: 'supplied-source', declaration: record.declaration }
+        : { ...subjectBinding, role: 'callable', kind: 'supplied-step', declaration: record.declaration };
       register(slotDescriptor(scope, state.slot), { target: Object.freeze(target), record });
     }
     const boundTemplates = bindTemplates(
@@ -594,7 +612,11 @@ export function composeIn<TFamily extends IBindingFamily>(
             ? { status: 'bound', parent: parentTarget, child: childTarget, witness: parsed.witness }
             : { status: 'unsupported', reason: 'argument-form' };
         }
-        if (childTarget.role !== 'callable' || childTarget.kind !== 'supplied-step') {
+        if (childTarget.role !== 'callable' || (childTarget.kind !== 'supplied-step' && childTarget.kind !== 'supplied-source')) {
+          return { status: 'undeclared-edge' };
+        }
+        const parentRecord = records.get(parentTarget.declaration);
+        if (parentRecord?.kind !== 'memo' || ![...parentRecord.children.values()].some(edge => edge.kind === 'slot' && edge.slot === child.slot && edge.source === (childTarget.declaration.kind === 'supplied-source'))) {
           return { status: 'undeclared-edge' };
         }
         if (!isTemplateDescriptor(parent) && !('form' in recipes) && recipes.some(recipe => recipe.form === 'forwarded' && recipe.origin.binding === 'member')) {

@@ -557,9 +557,21 @@ function descriptor(value: unknown): IBindingDescriptor {
 }
 
 /**
- * A stored version-2 step descriptor: a memo's step slot, or a supplied
- * step's composition-wide callable slot (which never carries a member key).
+ * A source result may name its ordinary step or a composition-wide callable
+ * source slot. Only this source branch extends provenance v1; old source,
+ * memo and supplied records retain their meanings. Older binaries may reject
+ * callable-source records as malformed; no downgrade/forward-read guarantee
+ * follows from retaining the version number.
  */
+function sourceDescriptor(value: unknown): IBindingDescriptor {
+  if (field(value, 'role') !== 'callable') { return descriptor(value); }
+  const scope = text(field(value, 'scope'), 'source slot scope');
+  const slot = text(field(value, 'slot'), 'source slot name');
+  if (scope.length === 0 || slot.length === 0 || field(value, 'memberKey') !== undefined || field(value, 'template') !== undefined || field(value, 'collection') !== undefined) { return malformed('callable source descriptor'); }
+  return Object.freeze({ scope, role: 'callable', slot });
+}
+
+/** A supplied memo retains its existing version-2 descriptor restrictions. */
 function nestedDescriptor(value: unknown, kind: 'memo' | 'supplied'): IBindingDescriptor {
   if (kind === 'memo') {
     return descriptor(value);
@@ -636,7 +648,7 @@ function readDirect(content: unknown): IProvenanceReading {
     provenance: Object.freeze({
       version: formatVersion,
       kind,
-      step: descriptor(field(content, 'step')),
+      step: kind === 'source' ? sourceDescriptor(field(content, 'step')) : descriptor(field(content, 'step')),
       observations,
       children: Object.freeze(children),
     }),

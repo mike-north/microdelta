@@ -38,6 +38,29 @@ Definition's `declarations()`. Callbacks receive:
   records the read, and any derived argument a memo passes afterwards is
   recorded unjustified, as is any forwarded path chosen afterwards.
 
+## Current callable sources
+
+Callable sources follow the same current-policy, admission, supervised-operation,
+retention and publication path as ordinary sources. Their stable author subject
+locates candidate history; the exact callable slot, implementation and actually
+consumed argument/input facts must remain compatible before previous data reaches
+the current finality hook. Request sharing and attempt identity also include the
+call subject and argument digest, so one slot cannot collapse distinct PR IDs.
+
+Ordered parent validation first compares its own facts, then resolves the current
+completed search and compares consumed count/ID facts, before replaying justified
+later calls. Forwarding an exact detail carrier does not make the parent consume
+all detail fields. Equal refreshed or unconsumed detail can therefore preserve
+assessment and person references while recording the real source work.
+
+Source-result provenance retains format version 1 and accepts a callable descriptor
+only in its source branch. Ordinary memo descriptors, supplied memo provenance,
+parent call records and v2 witnesses retain their existing wire meanings. New
+readers preserve supported older records. Older binaries may classify callable
+source records as malformed; no downgrade or older-binary forward-read guarantee
+is made. This extension changes no History journal, SQLite schema or Tracking
+semantics generation. See the [selected contract](../../docs/plans/scoped-source-calls.md).
+
 ## Resolution order
 
 `createResolution(options).resolve({ step, requestKey, lease })`:

@@ -774,6 +774,11 @@ export interface IWorkspace {
    * Start the same supervised workspace path with a separate rollback-journal
    * observation artifact. The body receives only application-statement
    * submission; its return and statement do not assert report completeness.
+   * A closed workspace, a same-store enclosing run, or an invalid caller run ID
+   * refuses synchronously with `invalid-request`, before an observed handle,
+   * execution identity or artifact exists. Once a handle is returned, failures
+   * in its run path reject `result`; its separate acknowledgment reports the
+   * durability knowledge without replacing the body's result or error.
    */
   startObserved<TInputs extends object, THelpers extends object, T>(
     options: IWorkspaceRunOptions<TInputs, THelpers> & { readonly observationLocation: string },

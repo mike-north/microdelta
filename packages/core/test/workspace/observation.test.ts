@@ -5,13 +5,13 @@
  * body results and terminal execution facts.
  * @see ../../../../docs/spec/acceptance.md (A-21a, A-21b, A-21c, A-21f, A-21g)
  */
-import { mkdtempSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 import { describe, expect, test } from '@jest/globals';
 
-import { openExecutionObservationReader } from '../../src/index.js';
+import { SupervisionError, openExecutionObservationReader } from '../../src/index.js';
 import { resetWorld } from './fixture.js';
 import { environment, freshRequestKey, openSession, tempStore } from './support.js';
 
@@ -113,6 +113,113 @@ describe('observed workspace assembly (A-21a/b/f/g)', () => {
       }
       expect(JSON.stringify(document)).not.toContain(failure.message);
       reader.close();
+    } finally {
+      session.close();
+      store.remove();
+      rmSync(observationDirectory, { recursive: true, force: true });
+    }
+  });
+});
+
+/** Launch preconditions refuse calls before they acquire an exact execution identity. */
+describe('observed workspace launch preconditions', () => {
+  test('a closed workspace refuses synchronously before a body or artifact exists', () => {
+    const store = tempStore();
+    const observationDirectory = mkdtempSync(join(tmpdir(), 'microdelta-facade-closed-'));
+    resetWorld();
+    const session = openSession(store.location);
+    const observationLocation = join(observationDirectory, 'closed.sqlite');
+    let bodyCalls = 0;
+    try {
+      session.close();
+      let refusal: unknown;
+      try {
+        session.workspace.startObserved({
+          authoring: session.contributors.authoring,
+          composition: session.contributors.composition,
+          environment,
+          runId: 'closed-observed',
+          observationLocation,
+        }, () => { bodyCalls += 1; });
+      } catch (error: unknown) {
+        refusal = error;
+      }
+      expect(refusal).toBeInstanceOf(SupervisionError);
+      expect(refusal instanceof SupervisionError ? refusal.code : undefined).toBe('invalid-request');
+      expect(bodyCalls).toBe(0);
+      expect(existsSync(observationLocation)).toBe(false);
+    } finally {
+      session.close();
+      store.remove();
+      rmSync(observationDirectory, { recursive: true, force: true });
+    }
+  });
+
+  test('a same-store nested launch refuses synchronously while the outer run remains usable', async () => {
+    const store = tempStore();
+    const observationDirectory = mkdtempSync(join(tmpdir(), 'microdelta-facade-nested-'));
+    resetWorld();
+    const session = openSession(store.location);
+    const observationLocation = join(observationDirectory, 'nested.sqlite');
+    let bodyCalls = 0;
+    try {
+      const outer = await session.workspace.run({
+        authoring: session.contributors.authoring,
+        composition: session.contributors.composition,
+        environment,
+        runId: 'outer-observed-boundary',
+      }, async (run) => {
+        let refusal: unknown;
+        try {
+          session.workspace.startObserved({
+            authoring: session.contributors.authoring,
+            composition: session.contributors.composition,
+            environment,
+            runId: 'nested-observed',
+            observationLocation,
+          }, () => { bodyCalls += 1; });
+        } catch (error: unknown) {
+          refusal = error;
+        }
+        expect(refusal).toBeInstanceOf(SupervisionError);
+        expect(refusal instanceof SupervisionError ? refusal.code : undefined).toBe('invalid-request');
+        expect(bodyCalls).toBe(0);
+        expect(existsSync(observationLocation)).toBe(false);
+        return run.ordinary('outer-after-observed-refusal', () => 'outer-still-usable');
+      });
+      expect(outer.value).toBe('outer-still-usable');
+      expect(existsSync(observationLocation)).toBe(false);
+    } finally {
+      session.close();
+      store.remove();
+      rmSync(observationDirectory, { recursive: true, force: true });
+    }
+  });
+
+  test('an invalid caller runId refuses synchronously before a body or artifact exists', () => {
+    const store = tempStore();
+    const observationDirectory = mkdtempSync(join(tmpdir(), 'microdelta-facade-invalid-id-'));
+    resetWorld();
+    const session = openSession(store.location);
+    const observationLocation = join(observationDirectory, 'invalid-id.sqlite');
+    let bodyCalls = 0;
+    try {
+      let refusal: unknown;
+      try {
+        session.workspace.startObserved({
+          authoring: session.contributors.authoring,
+          composition: session.contributors.composition,
+          environment,
+          runId: 'INVALID CALLER ID',
+          observationLocation,
+        }, () => { bodyCalls += 1; });
+      } catch (error: unknown) {
+        refusal = error;
+      }
+      expect(refusal).toBeInstanceOf(SupervisionError);
+      expect(refusal instanceof SupervisionError ? refusal.code : undefined).toBe('invalid-request');
+      expect(bodyCalls).toBe(0);
+      expect(existsSync(observationLocation)).toBe(false);
     } finally {
       session.close();
       store.remove();

@@ -931,7 +931,13 @@ export interface IRunExecution {
  * @alpha
  */
 export interface ISupervision {
-  /** Start an observed run and return its locator and independent durability receipt before it settles. */
+  /**
+   * Start an observed run and return its exact locator, result and independent
+   * durability receipt before it settles. A missing observation host refuses
+   * synchronously with `invalid-request`, before a handle or execution identity
+   * exists. After a handle is returned, run-path failures reject `result` and
+   * the separate acknowledgment reports what is known about durable evidence.
+   */
   startObserved<T>(options: IRunOptions & { readonly observationLocation: string }, body: (run: IRun, application: IApplicationStatementSubmission) => T | Promise<T>): IObservedRun<Awaited<T>>;
   /**
    * The live run's context in the current asynchronous execution. Fails with

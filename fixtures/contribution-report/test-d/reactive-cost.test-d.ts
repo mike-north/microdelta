@@ -10,6 +10,6 @@ expectType<readonly IReactiveCostReceipt[]>(parseReactiveCostReceipts('[]'));
 expectError(runReactiveCost({ ...job, phase: 'live-provider' }));
 expectError(runReactiveCost({ ...job, memberIterations: 'expensive' }));
 declare const receipt: IReactiveCostReceipt;
-expectError(receipt.members.push({}));
+expectError(receipt.members.length = 0);
 expectError(receipt.aggregate.value.total = 0);
 expectType<'completed-result'>(receipt.aggregate.reference.kind);

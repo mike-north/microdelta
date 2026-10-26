@@ -28,7 +28,7 @@ edge checks do not claim a host sandbox or arbitrary runtime dataflow analysis.
 generated type contracts. `npm run check:fixtures`, `npm run check:imports`,
 `npm run build:fixtures` and the root check/test/build gates include this role.
 
-`npm run test:controlled-report:workload` runs the standalone150000-distinct-PR
+`npm run test:controlled-report:workload` runs the standalone 150,000-distinct-PR
 cold and independent-process restart qualification. `-- --smoke` selects only a
 500-PR harness smoke; it does not satisfy the workload gate. The workload driver
 retains compact measured receipts beneath its printed temporary directory.
@@ -41,7 +41,7 @@ contract renews at request boundaries, not during one request. This harness
 configuration accepts correspondingly long recovery after a killed holder;
 it changes no production default, fencing, heartbeat, admission window, retry
 policy or performance requirement. The controlled-clock worker regression
-crosses the default30-second lease within that phase budget, while a separate
+crosses the default 30-second lease within that phase budget, while a separate
 nine-person/two-slot test pins normal bounded-window completion.
 
 An incomplete worker emits a compact failure receipt with member-status and
@@ -54,5 +54,5 @@ exit status, preserving that child evidence. If the worker exits without a
 receipt, child measurements remain unavailable (`null`), with only a bounded
 stderr tail retained. Exit-zero output still has to parse as this worker's
 basic success envelope; empty, malformed and wrong-shape output writes the
-same failure artifact with actual exitStatus0 and a bounded protocol reason.
+same failure artifact with actual `exitStatus` 0 and a bounded protocol reason.
 Failure evidence never satisfies the qualification gate.

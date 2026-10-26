@@ -16,13 +16,13 @@ revision field, or invented remote snapshot token reaches the adapter.
 
 | Required evidence | Wire basis and closure |
 | --- | --- |
-| Authored PR population | `GET /search/issues`, `is:pr`, explicit `repo:`, `author:`, inclusive `created:` second range ending at `end-1`; `sort=created`, `order=asc`, `per_page` at most100, positive advancing `page`; `total_count`, `incomplete_results`, `items`, PR marker and qualified identity. |
+| Authored PR population | `GET /search/issues`, `is:pr`, explicit `repo:`, `author:`, inclusive `created:` second range ending at `end-1`; `sort=created`, `order=asc`, `per_page` at most 100, positive advancing `page`; `total_count`, `incomplete_results`, `items`, PR marker and qualified identity. |
 | PR representation | `GET /repos/{owner}/{repo}/pulls/{number}`, repository and number correspondence, title/body, lifecycle timestamps and labels; a separate diff media representation is required. |
 | Submitted reviews | Independently exhausted `/pulls/{number}/reviews`; pending reviews do not become submitted activity. |
 | Conversation comments | Independently exhausted `/issues/{number}/comments`; preserve actual creation and edit activity independently from displayed creation-window membership. |
 | Inline review comments | Independently exhausted `/pulls/{number}/comments`, separate from review summary bodies and conversation comments. |
 
-Search's documented1000-result cap requires strict interior bisection of whole
+Search's documented 1,000-result cap requires strict interior bisection of whole
 second creation intervals. Capped parent membership is discarded; every child
 leaf must exhaust, and the distinct child union must agree with the parent total.
 A capped one-second leaf refuses coverage. Successful search returns the count

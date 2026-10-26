@@ -37,7 +37,8 @@
  *   with that work pending; once only deferred work remains the run releases
  *   the writer lease and, in sleep mode, waits for the earliest time (any
  *   stop ends the wait) and runs another pass, or in exit mode returns,
- *   reporting the time it waits until.
+ *   reporting the time it waits until. A terminal request failure returns
+ *   without waiting, preserving the time of deferred siblings left behind.
  *
  * Supervision never decides reuse, touches History rows or reads the host
  * itself; it persists operations only through its journal and accounting
@@ -814,7 +815,9 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
      * releases the lease once only deferred work remains, waits for the
      * earliest time and runs another pass, in which the deferred work is
      * admitted again under the same operation identities. Each pass admits
-     * its executions under its own request key (see {@link passKey}).
+     * its executions under its own request key (see {@link passKey}). A
+     * terminal request still leaves deferred siblings pending: report their
+     * earliest time without sleeping or starting another pass.
      */
     async function inPasses<P, R>(requestKey: string, request: IPasses<P, R>): Promise<R> {
       const callerKey: unknown = requestKey;
@@ -853,12 +856,18 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
           }
         }
         const reported = request.report(result, requestScope, previous);
-        if (requestScope.deferrals.length === 0 || request.final(reported)) {
+        if (requestScope.deferrals.length === 0) {
+          return reported;
+        }
+        const until = Math.min(...requestScope.deferrals);
+        if (request.final(reported)) {
+          // Finality ends this request, not its deferred siblings. Preserve only work left behind;
+          // a deferral that sleep mode later resumes must not become a stale run-level receipt.
+          waitingUntil = Math.min(waitingUntil ?? until, until);
           return reported;
         }
         previous = reported;
         settled = new Set([...settled, ...request.settled(reported)]);
-        const until = Math.min(...requestScope.deferrals);
         if (deferral === 'exit' || timer === undefined || state.stopped.signal.aborted) {
           waitingUntil = Math.min(waitingUntil ?? until, until);
           waitEvent(deferral === 'exit' || timer === undefined ? 'exiting' : 'stopped', until, releaseIfOnlyDeferred());

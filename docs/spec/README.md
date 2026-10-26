@@ -181,8 +181,10 @@ This is not a claim that the existing additive Accounting runtime implements it.
 
 ## Proposed standalone inspection direction
 
-The [standalone inspection proposal](../plans/standalone-inspection.md) develops
-a candidate composition and evidence model for issue 167 under CLI-001–004,
-A-16 and M6. Its standing is proposed: command, output, stream, exit, public
-reader and lifetime choices remain unresolved, and the document does not claim
-runtime implementation or full checkpoint acceptance.
+The [standalone inspection proposal](../plans/standalone-inspection.md) preserves
+the full candidate inspection composition for issue 167 under CLI-001–004, A-16
+and M6, and records a narrower proposed first delivery for exact-execution
+progress and terminal observation. The owner-selected scope does not adopt the
+proposal's engineering mechanisms or settle foreground/detached lifetime,
+interrupt, and output choices. Neither the first delivery nor the broader plan
+claims runtime implementation or full checkpoint acceptance.

@@ -93,6 +93,16 @@ and CLI consume read/status interfaces and explicit run-control commands.
 Inspection alone must never invoke computation. No consumer may bypass a port by
 importing another context's private source, rows or mutable state.
 
+**Proposed bounded clarification, not yet accepted:** ARC-003 may permit a
+Supervision-owned progress contract to use a narrow observational-store adapter
+for the exact-execution progress projection described in the
+[first CLI delivery proposal](../plans/standalone-inspection.md#first-delivery-exact-execution-progress-and-terminal-observation).
+Supervision continues to own progress meaning, execution identity, transition
+ordering, and publisher/reader contracts; Machine supplies host storage
+mechanics. This does not make Machine a domain owner, add a seventh context, or
+move History or Accounting invariants. Until accepted, the current ARC-003
+History/Accounting adapter allowance remains the normative rule.
+
 ## ARC-004 — Tracking remains independently usable
 
 The unified `tracked()` object/function surface does not require a store, run,

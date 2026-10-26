@@ -203,6 +203,23 @@ export class SqliteBusyError extends Error {
 }
 
 /**
+ * A host-proven finite refusal of side-effect-free SQLite inspection. Domain
+ * owners interpret the result; this class carries no schema or run meaning.
+ * @alpha
+ */
+export class SqliteReadError extends Error {
+  /** Why the host could not perform a read without changing the file. */
+  public readonly code: 'absent' | 'unsupported' | 'corrupt' | 'recovery-required';
+
+  /** Preserve the host cause for diagnostics without exposing it in a reader protocol. */
+  public constructor(code: SqliteReadError['code'], message: string, options?: ErrorOptions) {
+    super(message, options);
+    this.name = 'SqliteReadError';
+    this.code = code;
+  }
+}
+
+/**
  * Opens persistent local SQLite databases for a consumer that owns its own
  * SQL and schema, such as History's durable authority. Opening fails for a
  * directory, a missing parent directory, a file that is not a SQLite database,

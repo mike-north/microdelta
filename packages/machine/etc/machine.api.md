@@ -120,4 +120,10 @@ export class SqliteBusyError extends Error {
     readonly waitedMilliseconds: number;
 }
 
+// @alpha
+export class SqliteReadError extends Error {
+    constructor(code: SqliteReadError['code'], message: string, options?: ErrorOptions);
+    readonly code: 'absent' | 'unsupported' | 'corrupt' | 'recovery-required';
+}
+
 ```

@@ -18,7 +18,7 @@ import { types } from 'node:util';
 
 import Database from 'better-sqlite3';
 
-import { SqliteBusyError } from '@microdelta/machine';
+import { SqliteBusyError, SqliteReadError } from '@microdelta/machine';
 import type { ISqliteOpenOptions, ISqliteReadCapability, ISqliteReader, ISqliteReadStatement, ISqliteCapability, ISqliteConnection, ISqliteRow, ISqliteRunResult, ISqliteStatement, ISqliteSynchronousResult, ISqliteValue } from '@microdelta/machine';
 
 /** The bounded wait, in milliseconds, before a locked database fails with SQLITE_BUSY. */
@@ -407,22 +407,42 @@ export function _createNodeSqliteReaderImplementation(): ISqliteReadCapability {
       if (nonPersistentLocations.has(location)) {
         throw new TypeError('SQLite inspection requires an existing persistent file');
       }
-      refuseWal(location, false);
-      const driver = _typedBusy(() => new Database(location, { readonly: true, fileMustExist: true, timeout: busyTimeoutMilliseconds }));
+      readHost(() => refuseWal(location, false));
+      const driver = readHost(() => _typedBusy(() => new Database(location, { readonly: true, fileMustExist: true, timeout: busyTimeoutMilliseconds })));
       const connection = createConnection(driver);
       return Object.freeze({
         prepare(sql: string): ISqliteReadStatement {
-          const statement = _typedBusy(() => driver.prepare(sql));
+          const statement = readHost(() => _typedBusy(() => driver.prepare(sql)));
           if (!statement.reader || !statement.readonly) {
             throw new TypeError('SQLite inspection refuses mutation statements');
           }
           const read = connection.prepare(sql);
-          return Object.freeze({ get: read.get, all: read.all });
+          return Object.freeze({
+            get: (...values: readonly ISqliteValue[]) => readHost(() => read.get(...values)),
+            all: (...values: readonly ISqliteValue[]) => readHost(() => read.all(...values)),
+          });
         },
         close: connection.close,
       });
     },
   });
+}
+
+
+/**
+ * Normalize only host-evidenced read failures. Unknown causes remain unknown
+ * to the owner and are never reinterpreted from message text.
+ */
+function readHost<T>(operation: () => T): T {
+  try { return operation(); }
+  catch (error: unknown) {
+    if (typeof error === 'object' && error !== null && 'code' in error) {
+      if (error.code === 'ENOENT') { throw new SqliteReadError('absent', 'SQLite file is absent', { cause: error }); }
+      if (error.code === 'SQLITE_READONLY_ROLLBACK') { throw new SqliteReadError('recovery-required', 'SQLite rollback recovery would write', { cause: error }); }
+      if (error.code === 'SQLITE_NOTADB' || error.code === 'SQLITE_CORRUPT') { throw new SqliteReadError('corrupt', 'SQLite file is corrupt', { cause: error }); }
+    }
+    throw error;
+  }
 }
 
 /**
@@ -443,7 +463,9 @@ function refuseWal(location: string, allowMissing: boolean): void {
     const header = new Uint8Array(20);
     const count = readSync(descriptor, header, 0, header.length, 0);
     if (count === header.length && (header[18] === 2 || header[19] === 2)) {
-      throw new TypeError('SQLite WAL files cannot be opened through rollback-journal or side-effect-free inspection capabilities');
+      throw allowMissing
+        ? new TypeError('SQLite WAL files cannot be opened through rollback-journal or side-effect-free inspection capabilities')
+        : new SqliteReadError('unsupported', 'SQLite WAL layout is unsupported by side-effect-free inspection');
     }
   } finally { closeSync(descriptor); }
 }

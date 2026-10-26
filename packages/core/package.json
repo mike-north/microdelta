@@ -51,6 +51,9 @@
         "@microdelta/history": [
           "../history/dist/api/history.alpha.d.ts"
         ],
+        "@microdelta/machine": [
+          "../machine/dist/api/machine.alpha.d.ts"
+        ],
         "@microdelta/machine-node": [
           "../machine-node/dist/api/machine-node.alpha.d.ts"
         ],

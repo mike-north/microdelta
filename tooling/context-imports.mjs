@@ -160,6 +160,12 @@ export const contextImports = {
       if (owner.role === 'facade' && specifier === '@microdelta/history/conformance/store') {
         return;
       }
+      // Supervision's owner tests need the real Node adapter to prove durable
+      // exact observation across processes. Production Supervision consumes
+      // only portable Machine contracts; this grants no runtime package edge.
+      if (owner.role === 'supervision' && owner.isTestFile && specifier === '@microdelta/machine-node') {
+        return;
+      }
       if (specifier === 'microdelta' || specifier.startsWith('microdelta/') || specifier.startsWith('@microdelta/')) {
         // A portable experiment is not a seventh context. It may consume
         // declared package entries without granting deep or unknown imports.

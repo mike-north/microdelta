@@ -18,6 +18,9 @@
       "@microdelta/history/conformance/store": [
         "../../../packages/history/dist/api/history.conformance.store.alpha.d.ts"
       ],
+      "@microdelta/machine": [
+        "../../../packages/machine/dist/api/machine.alpha.d.ts"
+      ],
       "@microdelta/machine-node": [
         "../../../packages/machine-node/dist/api/machine-node.alpha.d.ts"
       ],

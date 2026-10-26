@@ -87,6 +87,8 @@ import type {
   ISupervision,
   ISupervisionOptions,
 } from './contracts.js';
+import { _createExecutionObservationProducer } from './observation.js';
+import type { IApplicationStatement, IApplicationStatementSubmission, IExecutionObservationProducer, IObservedRun } from './observation.js';
 import { createAbortSource, createStopController } from './control.js';
 import type { IRunTimer, IStopLevel, IStopState } from './control.js';
 import { SupervisionError } from './errors.js';
@@ -415,7 +417,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     return runControls(liveFrame());
   }
 
-  async function run<T>(runOptions: IRunOptions, body: (run: IRun) => T | Promise<T>): Promise<IRunResult<Awaited<T>>> {
+  async function runInternal<T>(runOptions: IRunOptions, body: (run: IRun) => T | Promise<T>, producer?: IExecutionObservationProducer): Promise<IRunResult<Awaited<T>>> {
     if (isComposing()) {
       throw new SupervisionError('composition-phase', 'A run cannot start while a composition is being constructed');
     }
@@ -458,6 +460,12 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       analysis: runOptions.analysis,
       environment: runOptions.environment,
     });
+    producer?.prepare(context);
+    let enteredBody = false;
+    let setupState: ISupervisedRun | undefined;
+    let setupStarted: Set<Promise<unknown>> | undefined;
+    let setupUnsubscribe: (() => void) | undefined;
+    try {
     const observers = captureObservers(runOptions.observers);
     const policy = runOptions.admission ?? admitAll;
     const writer = runOptions.writer;
@@ -477,6 +485,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
      * empty after its body settled.
      */
     const started = new Set<Promise<unknown>>();
+    setupStarted = started;
 
     /**
      * The run's external operations, over the ports assembly supplied. Its
@@ -516,6 +525,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         diagnostics.push(message);
       },
       report(event: IRunEvent, position: string): void {
+        producer?.observe(event);
         try {
           notify(observers, event);
         } catch {
@@ -540,6 +550,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         return state.hard.signal.aborted ? 'a hard stop took effect before the publication commit' : undefined;
       },
     };
+    setupState = state;
     const frame: IRunFrame = Object.freeze({ run: state, attempt: undefined, lane: undefined, request: undefined });
     /** Access to this run's frames in the shared scope; a frame of another run is not this run's. */
     const frames: IFrameAccess = Object.freeze({
@@ -571,6 +582,7 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       state.stopped.abort();
     };
     const unsubscribe = controller.subscribe(observeStop);
+    setupUnsubscribe = unsubscribe;
     observeStop(controller.state);
 
     /** The denial for work presented to, or decided after, a closed run. */
@@ -665,7 +677,9 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     /** Supervision's observer position for Resolution's lifecycle events. */
     const observer: ILifecycleObserver = Object.freeze({
       observe(event: ILifecycleEvent): void {
-        notify(observers, Object.freeze({ kind: 'step', runId: context.runId, event }));
+        const runEvent: IRunEvent = Object.freeze({ kind: 'step', runId: context.runId, event });
+        producer?.observe(runEvent);
+        notify(observers, runEvent);
       },
     });
     const resolution: IResolution = runOptions.resolution(Object.freeze({ admission, observer, execution: supervisedExecution(state, frames, (subject) => engine?.terminalClassificationError(subject)) }));
@@ -721,7 +735,8 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         await Promise.all([...started]);
       }
       state.open = false;
-      closingStop = controller.state;
+      producer?.seal();
+      closingStop = Object.freeze({ level: controller.state.level, cause: controller.state.cause, deadline: controller.state.deadline });
       unsubscribe();
     }
 
@@ -905,7 +920,9 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     /** Offer a post-work ordinary event; a failure there is a diagnostic. */
     function afterOrdinary(label: string, phase: IOrdinaryPhase): void {
       try {
-        notify(observers, Object.freeze({ kind: 'ordinary', runId: context.runId, label, phase }));
+        const event: IRunEvent = Object.freeze({ kind: 'ordinary', runId: context.runId, label, phase });
+        producer?.observe(event);
+        notify(observers, event);
       } catch (error: unknown) {
         diagnostics.push(`Run observer failed at ${phase} of ordinary work ${label}`);
       }
@@ -979,7 +996,9 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
             throw new SupervisionError('invalid-request', 'Ordinary work needs a nonempty label');
           }
           try {
-            notify(observers, Object.freeze({ kind: 'ordinary', runId: context.runId, label, phase: 'begin' }));
+            const event: IRunEvent = Object.freeze({ kind: 'ordinary', runId: context.runId, label, phase: 'begin' });
+            producer?.observe(event);
+            notify(observers, event);
           } catch (error: unknown) {
             throw new SupervisionError('observer-failure', `Run observer failed before ordinary work ${label}`, error);
           }
@@ -1047,16 +1066,26 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
     });
 
     let value: Awaited<T>;
+    let bodyDisposition: 'returned' | 'threw' = 'returned';
+    let bodyFailure: unknown;
+    enteredBody = true;
+    producer?.phase('running');
     try {
       value = await scope.run(frame, async () => body(live));
+    } catch (error: unknown) {
+      bodyDisposition = 'threw';
+      bodyFailure = error;
+      throw error;
     } finally {
       // The body's outcome is kept; work it already started still belongs to the run.
+      producer?.phase('draining');
       await drainAndClose();
       try {
         writer.release();
       } catch (error: unknown) {
         diagnostics.push(`Run ${context.runId} could not release its writer: ${frameworkDetail(error)}`);
       }
+      producer?.close(bodyDisposition, { stop: closingStop, ...(waitingUntil === undefined ? {} : { waitingUntil }), diagnostics: diagnostics.length, interruptions: state.interruptions, failure: bodyFailure });
     }
     return Object.freeze({
       context,
@@ -1066,7 +1095,38 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
       interruptions: Object.freeze([...state.interruptions]),
       waitingUntil,
     });
+    } catch (error: unknown) {
+      if (!enteredBody) {
+        if (setupStarted !== undefined) {
+          while (setupStarted.size > 0) { await Promise.all([...setupStarted]); }
+        }
+        if (setupState !== undefined) { setupState.open = false; }
+        producer?.seal();
+        try { setupUnsubscribe?.(); } catch { /* Setup failure remains authoritative. */ }
+        try { runOptions.writer.release(); } catch { /* Setup failure remains authoritative. */ }
+        producer?.close('not-entered', { stop: runOptions.stop?.state ?? { level: 'none', cause: undefined, deadline: undefined }, diagnostics: 0, interruptions: setupState?.interruptions ?? [], failure: error });
+      }
+      throw error;
+    }
   }
 
-  return Object.freeze({ current, execution, run });
+  /** Existing unobserved run behavior retains its original result and rejection contract. */
+  function run<T>(runOptions: IRunOptions, body: (run: IRun) => T | Promise<T>): Promise<IRunResult<Awaited<T>>> {
+    return runInternal(runOptions, body);
+  }
+
+  /** Allocate the exact handle before the asynchronously scheduled prepared boundary. */
+  function startObserved<T>(runOptions: IRunOptions & { readonly observationLocation: string }, body: (run: IRun, application: IApplicationStatementSubmission) => T | Promise<T>): IObservedRun<Awaited<T>> {
+    const host = options.observation;
+    if (host === undefined) {
+      throw new SupervisionError('invalid-request', 'This supervisor has no observation host');
+    }
+    const producer = _createExecutionObservationProducer(host, runOptions.observationLocation);
+    const application: IApplicationStatementSubmission = Object.freeze({ submit(statement: IApplicationStatement): void { producer.submit(statement); } });
+    const result = Promise.resolve().then(() => runInternal(runOptions, (live) => body(live, application), producer));
+    void result.then(() => producer.settleIfNeeded(), () => producer.settleIfNeeded());
+    return Object.freeze({ locator: producer.locator, result, acknowledgment: producer.acknowledgment });
+  }
+
+  return Object.freeze({ current, execution, run, startObserved });
 }

@@ -15,6 +15,15 @@ nonliteral module edges. Root type-aware lint includes all fixture TypeScript;
 the existing example facade-only rule remains unchanged. Tooling tests exercise
 both roles together, including URL-encoded source escapes.
 
+This fixture role excludes `node:module`/`module`: no provider oracle needs a
+Node module-loader factory, and `createRequire` would conceal private package
+imports behind local function calls. Named, aliased, namespace, dynamic and
+re-export access share that restriction. A caller-supplied function parameter
+named `require` remains an ordinary call.
+Explicit `createRequire` property access/destructuring is excluded as well,
+including extraction through `process.getBuiltinModule`. These supported module
+edge checks do not claim a host sandbox or arbitrary runtime dataflow analysis.
+
 `npm run test:controlled-report` compiles and runs runtime, fresh-process and
 generated type contracts. `npm run check:fixtures`, `npm run check:imports`,
 `npm run build:fixtures` and the root check/test/build gates include this role.

@@ -2,8 +2,10 @@
 
 Issue260 is **not yet accepted**. The combined controlled application and
 independent fixture checks pass; the mandatory standalone150000-distinct-PR cold
-and independent-process restart, final combined baseline and final whole-head
-review remain pending. Parent240 retains all six criteria, including its
+and independent-process restart and final whole-head review remain pending.
+The full combined baseline passed at `b4773c2`; the subsequent fixture-only
+loader-policy repair passed its affected checks and awaits independent review.
+Parent240 retains all six criteria, including its
 separately permissioned executable/progress criterion. CLI projection,
 installation, launcher/lifetime decisions, full TEST-3/4 and TEST-5/6 remain
 separate gates.
@@ -23,6 +25,10 @@ The concrete application source is frozen at
 branch is `363018b0458d2c1bd0aeaaa1bd22e4f9b75d5414`. Their normal integration is
 `0901ee6202f77c67802d576382fe5843754fd3dd`. The fixture relocation changes test
 ownership and verification paths while preserving that application source. The
+combined runtime candidate `b4773c2f488c0d61d421453f769e67df6ac8980c` passed all
+repository check/test/build gates. The subsequent changes affect only fixture
+import policy, tooling tests and documentation, preserving the runtime source.
+The
 final workload receipt must identify the actual combined revision used, and the
 final artifact manifest must fingerprint the generated declarations and runtime
 inputs after the final build.
@@ -35,6 +41,10 @@ package entries. Type-aware lint and import checks include the fixture. New
 mechanical tests reject deep packages, owner source, aliases, encoded source
 escapes and nonliteral module edges. The executable example's facade-only rule
 is unchanged and its existing positive/negative controls remain passing.
+The fixture role also excludes `node:module`/`module` access and explicit
+`createRequire` dot/literal-computed access or destructuring, including the
+demonstrated `process.getBuiltinModule` extraction. It enforces supported module
+edge conventions, not a host sandbox or arbitrary runtime dataflow analysis.
 
 ## Current acceptance map
 
@@ -62,13 +72,13 @@ checked-in named tests and commands reproduce their behavioral expectations.
 | `npm run test:controlled-report` after relocation and CR-5 precision repair |157 Jest tests/12 suites plus generated declaration/tsd PASS; `issue260-combined-repaired-tests.log`. |
 | `npm run check:imports` | Actual example and fixture boundary PASS; `issue260-combined-fixture-imports.log`. |
 | `npm run check:fixtures` | Existing declaration-consumer checks plus strict fixture compile and type-aware lint PASS; `issue260-combined-fixture-check.log`. |
-| `node --test tooling/report-fixture-imports.test.mjs tooling/example-source-imports.test.mjs` |8 tooling cases PASS, including generated alpha path and repository-gate/type-aware-lint enforcement; `issue260-combined-fixture-role.log`. |
+| `npm run test:tooling` after loader-policy repair |376 tooling cases PASS, including existing example controls, generated alpha paths, repository-gate/type-aware-lint enforcement and both loader regressions; `issue260-green-fixture-loader-repair.log`. |
+| Loader-policy affected import/fixture/example checks | Actual `check:imports`, `check:fixtures`, `check:examples` and diff check PASS; `issue260-loader-repair-imports.log`, `issue260-loader-repair-fixtures.log`, `issue260-loader-repair-examples.log`. |
 | Provider frozen `da858fc` focused tests |55 Jest cases plus strict example compile/lint PASS; author `issue260-green-rfc850-century.log`, `issue260-rfc850-check.log`; independent `issue260-provider-century-repair-review.md`. |
 | Repaired `settling-failure.test.ts` |15 actual-facade cases PASS, plus strict fixture/import checks; `issue260-green-cr5-policy-outcome.log`, `issue260-cr5-repair-check.log`, `issue260-cr5-repair-imports.log`. |
 | `npm run test:controlled-report:workload -- --smoke` after relocation |500 distinct PRs/2 people cold and fresh-process restart PASS,4.0s/3.7s measured locally; `issue260-combined-workload-smoke.log`. Cold3006 actual sends, restart1506 additional sends,0 restart assessments. This only verifies the bounded integration and measurement paths. |
-| Full `npm test`, then explicit `npm run build`, before final RFC850/relocation/workload integration |PASS at the earlier candidate; `issue260-full-test.log`, `issue260-full-build.log`. This is earlier baseline evidence, not final combined qualification. |
 | First full `npm run check` before relocation | Architectural RED:12 harness imports fell beneath the example facade-only rule; all other package/workspace checks passed. Preserved `issue260-full-check.log`; resolved by explicit fixture ownership and enforcement, not by weakening the example rule. |
-| Final combined `npm run check`, `npm test`, `npm run build` | **PENDING** after the frozen combined candidate. |
+| Combined `npm run check`, `npm test`, explicit `npm run build` | **PASS** at exact runtime candidate `b4773c2`; `issue260-final-check.log`, `issue260-final-test.log`, `issue260-final-build.log`. Runtime/application/workload source is unchanged by the subsequent fixture import-policy repair. |
 | `npm run test:controlled-report:workload` | **PENDING** standalone150000-PR qualification after combined review. `-- --smoke` is a separate non-acceptance harness exercise. |
 
 ## Restored negative controls
@@ -122,6 +132,20 @@ and additional calendar/timezone/century probes. The workload branch
 `363018b` passed its separate bounded repair review. CR-5/failure/privacy,
 combined relocation/integration, full workload and final whole-head acceptance
 remain separate supervisory review boundaries.
+
+Combined review found that lexical `require` exemption admitted a Node
+`createRequire` loader under named/aliased factory imports. A first intended RED
+preceded excluding the factory's `node:module`/`module` entry through named,
+aliased, namespace, default, dynamic, re-export, import-type and CommonJS edges.
+A direct author probe then demonstrated the same capability through
+`process.getBuiltinModule`. A second intended RED preceded the explicit
+dot/literal-computed property and object-pattern/destructuring restriction.
+Caller-supplied `require` parameters and plain payload keys remain allowed.
+Receipts `issue260-red-fixture-create-require.log` and
+`issue260-red-fixture-builtin-loader.log` preserve the failures; all376 tooling
+tests and affected actual import/fixture/example checks pass after the bounded
+repair. Its independent recheck remains pending; no universal bypass-proof
+claim is made.
 
 No live/paid provider execution, credential inspection, external publication,
 GitHub mutation, core API expansion, new persistence/retry authority or release

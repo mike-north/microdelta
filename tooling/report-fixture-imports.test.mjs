@@ -52,6 +52,39 @@ test('nonliteral module edges are forbidden; lexical require parameters remain o
   assert.deepEqual(await errors('function use(require: (value: string) => string): string { return require(selected); }'), []);
 });
 
+test('the fixture role cannot obtain createRequire loaders through named, aliased, namespace or dynamic module access', async () => {
+  const loaders = [
+    "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url); require('../../packages/history/dist/src/index.js');",
+    "import { createRequire as makeLoader } from 'node:module'; const load = makeLoader(import.meta.url); load('../../packages/history/src/index.js');",
+    "import * as modules from 'node:module'; const load = modules.createRequire(import.meta.url); load('../../packages/history/src/index.js');",
+    "import modules from 'node:module'; const load = modules.createRequire(import.meta.url); load('../../packages/history/src/index.js');",
+    "const modules = await import('node:module'); const load = modules.createRequire(import.meta.url); load('../../packages/history/src/index.js');",
+    "const { createRequire: makeLoader } = await import('node:module'); const load = makeLoader(import.meta.url); load('../../packages/history/src/index.js');",
+    "const modules = require('node:module'); const load = modules.createRequire(import.meta.url); load('../../packages/history/src/index.js');",
+    "export { createRequire as makeLoader } from 'node:module';",
+    "export * from 'node:module';",
+    "type Loader = import('node:module').createRequire;",
+    "import modules = require('node:module');",
+  ];
+  for (const source of loaders) { assert.ok((await errors(source)).some(message => message.messageId === 'loader'), source); }
+  // This is an ordinary caller capability, not a module factory provided by Node.
+  assert.deepEqual(await errors('function use(require: (value: string) => string): string { return require(selected); }'), []);
+});
+
+test('explicit createRequire property access and destructuring are excluded even through the builtin getter', async () => {
+  const loaders = [
+    "const load = process.getBuiltinModule('module').createRequire(import.meta.url); load('../../packages/history/dist/src/index.js');",
+    "const { createRequire: factory } = process.getBuiltinModule('module'); const load = factory(import.meta.url); load('../../packages/history/dist/src/index.js');",
+    "const { createRequire } = process.getBuiltinModule('module'); const load = createRequire(import.meta.url); load('../../packages/history/src/index.js');",
+    "const factory = process.getBuiltinModule('node:module')['createRequire']; const load = factory(import.meta.url); load('../../packages/history/src/index.js');",
+    "const { 'createRequire': factory } = process.getBuiltinModule('module'); const load = factory(import.meta.url); load('../../packages/history/src/index.js');",
+    "const { ['createRequire']: factory } = process.getBuiltinModule('module'); const load = factory(import.meta.url); load('../../packages/history/src/index.js');",
+  ];
+  for (const source of loaders) { assert.ok((await errors(source)).some(message => message.messageId === 'loader'), source); }
+  assert.deepEqual(await errors("const payload = { createRequire: 'documentation text' };"), []);
+  assert.deepEqual(await errors('function use(require: (value: string) => string): string { return require(selected); }'), []);
+});
+
 test('the executable example keeps its facade-only boundary despite the independent fixture role', async () => {
   const [result] = await eslint.lintText("import { openDurableHistory } from '@microdelta/history'; import { createNodeMachine } from '@microdelta/machine-node';", { filePath: 'examples/contribution-report/src/probe.ts' });
   assert.ok(result);

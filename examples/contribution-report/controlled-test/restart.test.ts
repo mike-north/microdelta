@@ -102,8 +102,11 @@ describe('controlled report fresh-process acceptance', () => {
     expect(restarted.report?.people.map(person => person.score)).toEqual([4, 4]);
   });
   test('explicit trial widening reuses only its environment and never supplies production without promotion', () => {
+    const empty = run({}, { ...baseInputs, selected: [] }, 'normal', 'trial');
+    expect(empty.status).toBe('complete'); expect(empty.report?.selected).toEqual([]); expect(empty.requests).toBe(0); expect(empty.assessments).toBe(0);
     const trial = run({}, { ...baseInputs, selected: ['ada'] }, 'normal', 'trial');
     expect(trial.report?.selected).toEqual(['ada']); expect(trial.assessments).toBe(2);
+    expect(trial.trace.some(event => /(?:summary-body:grace|#20[12])/u.test(event))).toBe(false);
     const widened = run({}, baseInputs, 'normal', 'trial');
     expect(widened.assessments).toBe(2); expect(references(widened).ada).toBe(references(trial).ada);
     const production = run();

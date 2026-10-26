@@ -859,7 +859,12 @@ export function createSupervision(options: ISupervisionOptions): ISupervision {
         if (requestScope.deferrals.length === 0) {
           return reported;
         }
-        const until = Math.min(...requestScope.deferrals);
+        // The member window bounds concurrent lanes, not this pass's total deferred work.
+        // Reduce scalar floors without turning an unbounded population into call arguments.
+        let until = Number.POSITIVE_INFINITY;
+        for (const notBefore of requestScope.deferrals) {
+          until = Math.min(until, notBefore);
+        }
         if (request.final(reported)) {
           // Finality ends this request, not its deferred siblings. Preserve only work left behind;
           // a deferral that sleep mode later resumes must not become a stale run-level receipt.

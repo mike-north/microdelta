@@ -18,8 +18,9 @@ changeset records the Supervision behavior correction.
 
 ## Acceptance map
 
-All named cases below are in
-`packages/core/test/operations/wait-receipt.test.ts`.
+The primary nine cases below are in
+`packages/core/test/operations/wait-receipt.test.ts`. A separate lightweight
+Supervision owner regression covers the receipt array's argument-limit boundary.
 
 | Criterion | Executable outcome |
 | --- | --- |
@@ -29,7 +30,7 @@ All named cases below are in
 | 4. Negative controls | `a terminal failed fold without deferred work has no waiting floor` returns undefined. `a purely pending exit request still reports its real floor without publishing` preserves its actual exit event and T. `successful default sleep resumes the deferred work and leaves no stale waiting floor` cannot send before T, resumes the same operation at T, succeeds, and returns undefined rather than retaining the encountered floor. |
 | 5. Fresh invocation before T | `a fresh run before the retained floor sends and claims no deferred member work` closes the first session, reopens the same durable stores before T, and preserves pr-2's exact operation/floor with no additional send, claim, execution or publication for that member. The independent failed sibling has a separately scripted refusal for its legitimate new-run reattempt; that extra request is explicitly counted. |
 
-The tests live in the core assembly suite because the primary oracle needs a
+The primary tests live in the core assembly suite because their oracle needs a
 real strict fold, real member outcomes and actual publication gating. The
 existing operations harness supplies the real Supervision, Resolution, History,
 Tracking and Accounting owners through their generated package entries, with a
@@ -59,6 +60,39 @@ the corrected RED output and the focused GREEN output.
 Only afterward was the common `inPasses` terminal-return boundary corrected.
 The focused suite then passed all nine cases.
 
+## Independent review repair: bounded receipt reduction
+
+Independent adversarial review of the first candidate found that moving
+`Math.min(...requestScope.deferrals)` into the terminal failed-request path also
+exposed that path to JavaScript's argument-count limit. The active member window
+bounds concurrent lanes, not the total population or its deferred samples. A
+large receipt array could therefore throw `RangeError` instead of returning the
+failed typed outcome and its real earliest floor.
+
+Before changing that computation, the Supervision owner case
+`a failed request reduces 200000 genuine guarded deferral samples without losing
+its typed outcome` in `packages/supervision/test/operations.test.ts` reproduced
+that exact `RangeError` through actual `inPasses`. Its first compile diagnosed a
+plain `Error` where the Resolution port requires `ResolutionError`; that test
+setup was corrected before the behavioral RED and is not credited as runtime
+failure evidence.
+
+The lightweight probe performs one controlled quota-deferred operation, then
+consults its actual retained block through 200,000 guarded admission calls.
+Operation Engine accumulates the genuine floors in its normal request scope;
+the test never injects or reads that private array. Resolution's owner port double
+supplies the typed terminal failed request, while actual Supervision must retain
+the pending operation/T, return one pass, make one send and usage intent, and
+emit no wait event or deferred-floor timer. This is a receipt-boundary probe,
+not a many-member application workload or database/scale qualification; the
+primary nine real graph cases retain the independent publication/status oracle.
+
+Only after that behavioral RED was the unbounded argument spread replaced by a
+scalar minimum loop over the same actual floors. The focused owner regression
+then passed. The primary nine cases continue to cover selection among different
+floors, merging with an earlier request, and successful sleep without stale
+receipts. No scheduling or API policy changed.
+
 ## Validation and remaining gates
 
 Completed locally for this candidate:
@@ -69,7 +103,8 @@ Completed locally for this candidate:
 - `tsc -p packages/core/tsconfig.test.json`: passed.
 - Dedicated emitted Jest `wait-receipt.test.js`: nine cases passed.
 - `npm run test --workspace @microdelta/supervision`: seven owner suites,
-  317 tests passed, followed by tsd, public-consumer compilation and mutation
+  318 tests passed, including the new owner receipt-boundary regression,
+  followed by tsd, public-consumer compilation and mutation
   anchor checks, all passed.
 - Core emitted Jest selection
   `operations/|workspace/observation|m5-acceptance/deferral|m5-acceptance/outcome-fold`:
@@ -79,7 +114,12 @@ Completed locally for this candidate:
   `npm run check --workspace microdelta`: strict types and type-aware lint passed.
 - Changed-file context import enforcement and `git diff --check`: passed.
 
-Different-agent adversarial review and final same-SHA repository
+The first candidate's full `npm run check` passed. Its subsequent `npm test`
+was deliberately interrupted for the independent review repair, and its explicit
+final build had not started. Neither incomplete stage is credited. Their original
+outputs remain preserved separately from the test-first failure logs.
+
+Different-agent re-review of the repaired candidate and fresh same-SHA repository
 `npm run check`, `npm test`, and `npm run build` remain required before
 publication. #266's separately saved, unweakened assembled report regression
 must pass after this dependency is integrated; it was not edited or run here.
@@ -88,5 +128,6 @@ CLI, scale run or parent gate. No push, PR, merge or paid execution occurred.
 
 Attribution: a delegated Codex implementer authored the tests and correction
 under the supervisor's issue scope. The supervisor assessed the reproduced gap
-and read the test-first evidence; independent final review and acceptance remain
-pending. No human implementation or review is claimed.
+and read the test-first evidence. A different Codex agent performed adversarial
+review and identified the argument-limit repair; exact repaired-candidate review
+and final acceptance remain pending. No human implementation or review is claimed.

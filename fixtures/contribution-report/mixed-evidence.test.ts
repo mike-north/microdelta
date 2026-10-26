@@ -205,16 +205,51 @@ describe('actual strict report with success, quota wait and isolated source fail
       expect(active.events.some(event => event.kind === 'step' && event.event.step.slot === 'report' && ['execute', 'publish', 'accept'].includes(event.event.phase))).toBe(false);
       expect(result.value.usage).toMatchObject({ requestAttempts: 9, reports: 1, observed: [{ unit: 'tokens', amount: 10 }] });
       const firstPartial = JSON.stringify(result.value.fold);
-      const immediate = await begin(fake, inputs, 'exit').result;
+      const grace = result.value.fold.members.find(member => member.key === 'grace');
+      if (grace?.status !== 'pending' || grace.blocked?.kind !== 'deferred') { throw new Error('Expected the actual quota-deferred Grace operation'); }
+      const block = grace.blocked;
+      const firstGraceSend = fake.requests.find(request => new URL(request.url).searchParams.get('q')?.includes('author:grace ') === true);
+      expect(block.operation).toBe(firstGraceSend?.operation);
+      // These checks revisit the same durable block. Fresh Ada/Cy searches
+      // would correctly wait at the shared search gate while this clock is held.
+      const graceOnly: IReportInputs = { ...inputs, selected: ['grace'] };
+      const immediateRun = begin(fake, graceOnly, 'exit');
+      const immediate = await immediateRun.result;
       expect(immediate.value.status).toBe('incomplete');
       expect(immediate.waitingUntil).toBe(origin + 1_000);
+      expect(immediate.value.fold.discovery).toMatchObject({ kind: 'keyed', completion: 'complete', keys: ['grace'] });
+      expect(immediate.value.fold.outcome).toEqual({ status: 'waiting', pending: ['grace'], openDiscovery: false });
+      expect(immediate.value.fold.members.map(member => [member.key, member.status])).toEqual([['grace', 'pending']]);
+      expect(immediate.value.fold.members[0]).toMatchObject({ blocked: block });
+      expect(providerCount(fake, 'grace', [201])).toBe(1);
+      expect(providerCount(fake, 'ada', [101])).toBe(6);
+      expect(providerCount(fake, 'cy', [301])).toBe(1);
       expect(fake.requests).toHaveLength(8);
+      expect(fake.assessments.map(request => request.id)).toEqual(['acme/widget#101']);
+      expect(fake.trace.filter(event => /^(?:detail|discussion|assessment)-body:acme\/widget#(?:201|301)$/u.test(event) || /^summary-body:(?:grace|cy)$/u.test(event))).toEqual([]);
+      expect(immediateRun.events.filter(event => event.kind === 'step' && ['ada', 'cy'].includes(event.event.step.memberKey ?? '') && ['admit', 'claim', 'execute', 'publish', 'accept'].includes(event.event.phase))).toEqual([]);
+      // The pending summary callback enters to demand its declared search;
+      // the block prevents child execution and summary helper completion.
+      expect(immediateRun.events.flatMap(event => event.kind === 'step' && event.event.step.memberKey === 'grace' && event.event.phase === 'execute' ? [event.event.step.slot] : [])).toEqual(['summary']);
+      expect(immediateRun.events.filter(event => event.kind === 'step' && event.event.step.memberKey === 'grace' && ['publish', 'accept'].includes(event.event.phase))).toEqual([]);
       await jest.advanceTimersByTimeAsync(999);
-      const early = await begin(fake, inputs, 'exit').result;
+      const earlyRun = begin(fake, graceOnly, 'exit');
+      const early = await earlyRun.result;
       expect(early.value.status).toBe('incomplete');
       expect(early.waitingUntil).toBe(origin + 1_000);
+      expect(early.value.fold.discovery).toMatchObject({ kind: 'keyed', completion: 'complete', keys: ['grace'] });
+      expect(early.value.fold.outcome).toEqual({ status: 'waiting', pending: ['grace'], openDiscovery: false });
+      expect(early.value.fold.members.map(member => [member.key, member.status])).toEqual([['grace', 'pending']]);
+      expect(early.value.fold.members[0]).toMatchObject({ blocked: block });
+      expect(providerCount(fake, 'grace', [201])).toBe(1);
+      expect(providerCount(fake, 'ada', [101])).toBe(6);
+      expect(providerCount(fake, 'cy', [301])).toBe(1);
       expect(fake.requests).toHaveLength(8);
       expect(fake.assessments).toHaveLength(1);
+      expect(fake.trace.filter(event => /^(?:detail|discussion|assessment)-body:acme\/widget#(?:201|301)$/u.test(event) || /^summary-body:(?:grace|cy)$/u.test(event))).toEqual([]);
+      expect(earlyRun.events.filter(event => event.kind === 'step' && ['ada', 'cy'].includes(event.event.step.memberKey ?? '') && ['admit', 'claim', 'execute', 'publish', 'accept'].includes(event.event.phase))).toEqual([]);
+      expect(earlyRun.events.flatMap(event => event.kind === 'step' && event.event.step.memberKey === 'grace' && event.event.phase === 'execute' ? [event.event.step.slot] : [])).toEqual(['summary']);
+      expect(earlyRun.events.filter(event => event.kind === 'step' && event.event.step.memberKey === 'grace' && ['publish', 'accept'].includes(event.event.phase))).toEqual([]);
       await jest.advanceTimersByTimeAsync(1);
       const resumed = await begin(fake, inputs, 'exit').result;
       expect(resumed.value.status).toBe('incomplete');
@@ -222,6 +257,10 @@ describe('actual strict report with success, quota wait and isolated source fail
       expect(resumed.value.fold.members.find(member => member.key === 'grace')?.status).toBe('succeeded');
       expect(resumed.value.fold.members.find(member => member.key === 'ada')).toMatchObject({ status: 'succeeded', outcome: { kind: 'reused', reference: a } });
       expect(fake.assessments.map(request => request.id)).toEqual(['acme/widget#101', 'acme/widget#201']);
+      const graceSearches = fake.requests.filter(request => new URL(request.url).searchParams.get('q')?.includes('author:grace ') === true);
+      expect(graceSearches.map(request => request.operation)).toEqual([block.operation, block.operation]);
+      expect(graceSearches[1]?.at).toBeGreaterThanOrEqual(origin + 1_000);
+      expect(providerCount(fake, 'cy', [301])).toBe(2);
       expect(JSON.stringify(result.value.fold)).toBe(firstPartial);
       expect({ envelope: history.readEnvelope(a), data: history.reader.readSubtree(a, []) }).toEqual(immutableA);
     } finally {

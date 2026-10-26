@@ -1,6 +1,6 @@
 /** Fixed contribution-report composition: provider evidence remains source-owned and assessment is independently retained. */
 import { authoring, currentExecution } from 'microdelta';
-import type { IAuthoring, IComposition, IFoldEntry, IFoldReport, IOperationResponse, IOperationSend, IOperationSharedRate, IResultView, IRunResult, IStepDescriptor, ITrackedView, IUsageSummary, IWorkspace, IWorkspaceRunOptions } from 'microdelta';
+import type { IApplicationStatementSubmission, IAuthoring, IComposition, IFoldEntry, IFoldReport, IObservedRun, IOperationResponse, IOperationSend, IOperationSharedRate, IResultView, IRunResult, IStepDescriptor, ITrackedView, IUsageSummary, IWorkspace, IWorkspaceRun, IWorkspaceRunOptions } from 'microdelta';
 import { loadDiscussion, loadPull } from './evidence.js';
 import type { IContentBasis, IDiscussion, IDiscussionEntry, IPullDetail } from './evidence.js';
 import { discoverAuthored } from './github.js';
@@ -61,14 +61,56 @@ export type IReportRunOutcome =
   | { readonly status: 'incomplete'; readonly fold: IFoldReport; readonly usage: IUsageSummary };
 /** Existing runtime options remain caller-selected; this function makes no executable/lifetime decision. @internal */
 export type IReportExecutionOptions = Omit<IWorkspaceRunOptions<IReportInputs, IReportHelpers>, 'authoring' | 'composition'> & { readonly requestKey: string };
+/** An observed launch also needs one owner-managed artifact address, independent of the History store. @internal */
+export type IObservedReportExecutionOptions = IReportExecutionOptions & { readonly observationLocation: string };
+/** The existing common carrier accepts at most this many UTF-16 code units of opaque deliverable identity. */
+const maxObservedDeliverableCodeUnits = 256;
+
+/**
+ * The framework's typed strict outcome, not the outer body return, supplies the
+ * bounded reason flags. Details stay in the original fold and usage result.
+ */
+function incompleteReasons(outcome: Exclude<IFoldReport['outcome'], { readonly status: 'succeeded' }>): readonly ('required-work' | 'coverage' | 'publication' | 'other')[] {
+  if ('refused' in outcome) { return ['publication']; }
+  const required = outcome.pending.length > 0 || (outcome.status === 'failed' && (outcome.failed.length > 0 || outcome.cancelled.length > 0));
+  const coverage = outcome.openDiscovery || (outcome.status === 'failed' && !required);
+  const reasons: ('required-work' | 'coverage')[] = [];
+  if (required) { reasons.push('required-work'); }
+  if (coverage) { reasons.push('coverage'); }
+  return reasons.length > 0 ? reasons : ['other'];
+}
+
+/**
+ * Both entries execute this one strict report body. The observed entry asserts
+ * only framework-established current work and exact publication, before a
+ * later read or usage failure can hide an already retained deliverable.
+ */
+async function reportBody(run: IWorkspaceRun, application: IReportApplication, requestKey: string, submission?: IApplicationStatementSubmission): Promise<IReportRunOutcome> {
+  const fold = await run.resolveFold(application.report, { requestKey });
+  if (fold.outcome.status === 'succeeded') {
+    const reference = fold.outcome.outcome.reference;
+    // The reference is opaque History data. Observe only its actual string bound;
+    // neither its encoding nor future result-identity growth is application policy.
+    if (submission !== undefined && reference.locator.length > 0 && reference.locator.length <= maxObservedDeliverableCodeUnits) {
+      submission.submit({ kind: 'confirmed', deliverable: reference.locator });
+    }
+    return { status: 'complete', report: run.read<IControlledReport>(reference), fold, usage: run.usage() };
+  }
+  submission?.submit({ kind: 'incomplete', reasons: incompleteReasons(fold.outcome) });
+  return { status: 'incomplete', fold, usage: run.usage() };
+}
+
 /** Execute the fixed report and preserve strict completion, source failures and usage gaps as distinct facts. @internal */
 export function evaluateReport(workspace: IWorkspace, application: IReportApplication, options: IReportExecutionOptions): Promise<IRunResult<IReportRunOutcome>> {
   const { requestKey, ...runOptions } = options;
-  return workspace.run({ ...runOptions, authoring: application.authoring, composition: application.composition }, async run => {
-    const fold = await run.resolveFold(application.report, { requestKey });
-    return fold.outcome.status === 'succeeded' ? { status: 'complete', report: run.read<IControlledReport>(fold.outcome.outcome.reference), fold, usage: run.usage() }
-      : { status: 'incomplete', fold, usage: run.usage() };
-  });
+  return workspace.run({ ...runOptions, authoring: application.authoring, composition: application.composition }, run => reportBody(run, application, requestKey));
+}
+
+/** Start one observed report through the production workspace facade, retaining separate result and durability receipt. @internal */
+export function evaluateObservedReport(workspace: IWorkspace, application: IReportApplication, options: IObservedReportExecutionOptions): IObservedRun<IReportRunOutcome> {
+  const { requestKey, ...runOptions } = options;
+  return workspace.startObserved({ ...runOptions, authoring: application.authoring, composition: application.composition },
+    (run, submission) => reportBody(run, application, requestKey, submission));
 }
 /** Stable analysis identity is independent of input observation, pagination or filesystem location. @internal */
 export const reportAnalysis = 'controlled-contribution-report';

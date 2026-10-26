@@ -32,7 +32,6 @@ function scenario(overrides = {}) {
     protection: {
       branch: 'main',
       requiresPullRequest: true,
-      strict: true,
       enforceAdmins: true,
       resolveConversations: true,
       requiredContexts: [...REQUIRED_BRANCH_CHECKS, REQUIRED_STATUS_CONTEXT],
@@ -137,6 +136,14 @@ test('records exact-head release review status without arming auto-merge or merg
   assert.match(confirmations[0], /e{40}/u);
   assert.match(confirmations[0], /publishes to npm/u);
   assert.ok(calls.some(([name, sha]) => name === 'readCommitStatus' && sha === releaseHead));
+});
+
+test('a human release review does not require the PR to include latest main', async () => {
+  const { api, calls, request, state } = scenario();
+  const result = await runReleaseReview(request, api);
+  assert.equal(result.outcome, 'awaiting-manual-merge');
+  assert.ok(calls.some(([name]) => name === 'readProtection'));
+  assert.ok(!calls.some(([name]) => name === 'enableAutoMerge'));
 });
 
 test('a release cannot complete when Node 24 is pending even if Node 22 passed', async () => {

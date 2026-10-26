@@ -24,6 +24,11 @@ export const REQUIRED_BRANCH_CHECKS = Object.freeze([
 /** This required status is the exact-head review decision that resets on each commit. */
 export const REQUIRED_STATUS_CONTEXT = 'Supervisor review';
 
+/** The repository administrator may override only the standalone exact-head review status. */
+const OWNER_REVIEW_BYPASS_ACTOR = Object.freeze({ actor_id: 5, actor_type: 'RepositoryRole' });
+/** GitHub's pull-request-only mode is narrower than, and serves the same owner review purpose as, always mode. */
+const OWNER_REVIEW_BYPASS_MODES = new Set(['always', 'pull_request']);
+
 /** GitHub Actions owns the existing CI contexts; the supervisor status remains separate. */
 const REQUIRED_CHECK_SOURCE = 'github-actions';
 
@@ -55,11 +60,10 @@ export function validateRequest(request) {
   }
 }
 
-/** Fail closed unless the current main-branch rule contains the complete review and CI gate. */
+/** Require review, administrator, conversation, and source-pinned CI gates; base freshness is not a merge condition. */
 export function validateProtection(protection, defaultBranch) {
   if (protection.branch !== defaultBranch) throw new Error('Protection readback did not match the repository default branch.');
   if (!protection.requiresPullRequest) throw new Error('Main branch protection does not require pull requests.');
-  if (!protection.strict) throw new Error('Main branch protection does not require an up-to-date base.');
   if (!protection.enforceAdmins) throw new Error('Main branch protection does not apply to administrators.');
   if (!protection.resolveConversations) throw new Error('Main branch protection does not require resolved conversations.');
 
@@ -212,19 +216,8 @@ export async function runSupervisorReview(request, api) {
     throw new Error('Pull request head changed during supervisor review.');
   }
 
-  await api.enableAutoMerge({
-    pullRequestNumber: request.pullRequestNumber,
-    expectedHeadOid: request.expectedHeadOid,
-  });
-
-  const outcomeBeforeApproval = await api.readOutcome(request.pullRequestNumber);
-  if (outcomeBeforeApproval.headRefOid !== request.expectedHeadOid) {
-    throw new Error('Pull request head changed at the auto-merge boundary.');
-  }
-  if (!outcomeBeforeApproval.autoMergeEnabled && !outcomeBeforeApproval.merged) {
-    throw new Error('GitHub did not confirm the auto-merge request.');
-  }
-
+  // Verify the exact-head decision before arming auto-merge; shared owner credentials must not
+  // let this agentic workflow rely on the repository owner's separate status bypass.
   const success = await api.setCommitStatus({
     sha: request.expectedHeadOid,
     context: REQUIRED_STATUS_CONTEXT,
@@ -241,10 +234,22 @@ export async function runSupervisorReview(request, api) {
     throw new Error('Supervisor status readback did not confirm success on the reviewed head.');
   }
 
+  // Status publication can race with a push, rule edit, or new review conversation; re-read every
+  // gate after the readback and before asking GitHub to merge this head.
+  const finalGates = await verifyCurrentState(request, api);
+  if (finalGates.pullRequest.headRefOid !== request.expectedHeadOid) {
+    throw new Error('Pull request head changed after supervisor status publication.');
+  }
+
+  await api.enableAutoMerge({
+    pullRequestNumber: request.pullRequestNumber,
+    expectedHeadOid: request.expectedHeadOid,
+  });
+
   const outcome = await api.readOutcome(request.pullRequestNumber);
   if (outcome.headRefOid !== request.expectedHeadOid) throw new Error('Pull request head changed after supervisor status publication.');
   if (!outcome.autoMergeEnabled && !outcome.merged) throw new Error('Auto-merge request is absent after supervisor status publication.');
-  const hasPendingChecks = REQUIRED_BRANCH_CHECKS.some(name => current.checks.find(check => check.name === name)?.bucket === 'pending');
+  const hasPendingChecks = REQUIRED_BRANCH_CHECKS.some(name => finalGates.checks.find(check => check.name === name)?.bucket === 'pending');
   return {
     expectedHeadOid: request.expectedHeadOid,
     reviewComment,
@@ -287,7 +292,6 @@ const RULES_PAGE_SIZE = 100;
 /** The absent-source shape: no requirement is enforced by a source that does not exist. */
 const NO_PROTECTION = Object.freeze({
   requiresPullRequest: false,
-  strict: false,
   enforceAdmins: false,
   resolveConversations: false,
   requiredContexts: Object.freeze([]),
@@ -307,13 +311,13 @@ function mergeCheckSources(...sourceMaps) {
   return merged;
 }
 
-/** Combine sources by union of enforced requirements; the branch name comes from the caller. */
+/** Combine requirements by union while requiring administrator coverage from every protection source. */
 function mergeProtections(branch, ...sources) {
   return {
     branch,
     requiresPullRequest: sources.some(source => source.requiresPullRequest),
-    strict: sources.some(source => source.strict),
-    enforceAdmins: sources.some(source => source.enforceAdmins),
+    enforceAdmins: sources.filter(source => source.contributesProtection).every(source => source.enforceAdmins)
+      && sources.some(source => source.contributesProtection),
     resolveConversations: sources.some(source => source.resolveConversations),
     requiredContexts: [...new Set(sources.flatMap(source => source.requiredContexts))],
     checkSources: mergeCheckSources(...sources.map(source => source.checkSources)),
@@ -332,8 +336,8 @@ function normalizeLegacyProtection(rule) {
   ]));
   return {
     requiresPullRequest: rule.required_pull_request_reviews != null,
-    strict: checks?.strict === true,
     enforceAdmins: rule.enforce_admins?.enabled === true,
+    contributesProtection: Object.keys(rule).some(key => key !== 'enforce_admins'),
     resolveConversations: rule.required_conversation_resolution?.enabled === true,
     requiredContexts: [...requiredContexts],
     checkSources,
@@ -341,36 +345,63 @@ function normalizeLegacyProtection(rule) {
 }
 
 /**
- * Normalize the rules GitHub reports as active for a branch, plus the owning rulesets' own
- * enforcement and bypass lists. Rules of a ruleset that is not `active` enforce nothing and are
- * ignored. Administrators are covered only when at least one ruleset contributes and every
- * contributing ruleset is active with no bypass actor of any kind.
+ * Normalize active branch rules together with each owning ruleset's enforcement and bypass list.
+ * A repository administrator may bypass only a ruleset that contributes exactly the standalone
+ * Supervisor review status; every ruleset with any other protection must cover administrators.
  */
 function normalizeRulesetProtection(rules, rulesetsById) {
   const protection = {
     requiresPullRequest: false,
-    strict: false,
     resolveConversations: false,
     requiredContexts: [],
     checkSources: {},
   };
+  const rulesByRuleset = new Map();
   for (const rule of rules) {
+    const ownedRules = rulesByRuleset.get(rule.ruleset_id) ?? [];
+    ownedRules.push(rule);
+    rulesByRuleset.set(rule.ruleset_id, ownedRules);
     if (rulesetsById.get(rule.ruleset_id).enforcement !== 'active') continue;
     if (rule.type === 'pull_request') {
       protection.requiresPullRequest = true;
       if (rule.parameters?.required_review_thread_resolution === true) protection.resolveConversations = true;
     } else if (rule.type === 'required_status_checks') {
-      if (rule.parameters?.strict_required_status_checks_policy === true) protection.strict = true;
       for (const check of rule.parameters?.required_status_checks ?? []) {
         protection.requiredContexts.push(check.context);
         protection.checkSources = mergeCheckSources(protection.checkSources, { [check.context]: checkSourceForApp(check.integration_id) });
       }
     }
   }
-  const contributing = [...rulesetsById.values()];
-  const enforceAdmins = contributing.length > 0
-    && contributing.every(ruleset => ruleset.enforcement === 'active' && (ruleset.bypass_actors ?? []).length === 0);
-  return { ...protection, enforceAdmins };
+  const contributors = [...rulesByRuleset].filter(([id]) => rulesetsById.get(id).enforcement === 'active').map(([id, ownedRules]) => {
+    const ruleset = rulesetsById.get(id);
+    const bypassActors = ruleset.bypass_actors;
+    /** Match both GitHub's branch slice and full ruleset detail, so hidden broader rules refuse the exception. */
+    const onlySupervisorStatus = candidateRules => Array.isArray(candidateRules)
+      && candidateRules.length === 1
+      && candidateRules[0].type === 'required_status_checks'
+      && candidateRules[0].parameters?.required_status_checks?.length === 1
+      && candidateRules[0].parameters.required_status_checks[0].context === REQUIRED_STATUS_CONTEXT
+      && candidateRules[0].parameters.required_status_checks[0].integration_id == null;
+    const branchOnly = onlySupervisorStatus(ownedRules);
+    const detailOnly = onlySupervisorStatus(ruleset.rules);
+    // Compare the raw policy field only to ensure both GitHub views describe the same rule;
+    // branch freshness is not a merge gate.
+    const sameStatusRule = branchOnly && detailOnly
+      && ownedRules[0].parameters.strict_required_status_checks_policy === ruleset.rules[0].parameters.strict_required_status_checks_policy
+      && ownedRules[0].parameters.required_status_checks[0].integration_id === ruleset.rules[0].parameters.required_status_checks[0].integration_id;
+    const ownerOverride = ruleset.enforcement === 'active'
+      && sameStatusRule
+      && Array.isArray(bypassActors)
+      && bypassActors.length === 1
+      && Object.keys(OWNER_REVIEW_BYPASS_ACTOR).every(key => bypassActors[0]?.[key] === OWNER_REVIEW_BYPASS_ACTOR[key])
+      && OWNER_REVIEW_BYPASS_MODES.has(bypassActors[0]?.bypass_mode);
+    const noBypass = Array.isArray(bypassActors) && bypassActors.length === 0;
+    return {
+      enforceAdmins: noBypass || ownerOverride,
+    };
+  });
+  const enforceAdmins = contributors.length > 0 && contributors.every(source => source.enforceAdmins);
+  return { ...protection, enforceAdmins, contributesProtection: contributors.length > 0 };
 }
 
 /**

@@ -3,8 +3,10 @@
 Issue #34 adds one protected status, **Supervisor review**, so a substantive
 supervisory decision applies only to the commit that was reviewed. Each new head
 starts without that successful status. The three existing Actions checks remain
-independent requirements, as do pull-request-only changes, an up-to-date `main`,
-administrator enforcement, and resolved review conversations.
+independent requirements, as do pull-request-only changes, administrator
+enforcement, and resolved review conversations. Passing checks do not require
+the PR branch to include the latest `main`; branch freshness is intentionally
+not a merge requirement.
 
 ## Procedure
 
@@ -45,8 +47,8 @@ node tooling/supervisor-review.mjs \
 
 The command is fixed to `mike-north/microdelta`. Before it writes, it reads back
 the repository's current `main` protection and verifies that it requires PRs,
-strict up-to-date checks, administrator enforcement, resolved conversations, all
-three existing checks, and **Supervisor review**. It verifies that each existing
+administrator enforcement, resolved conversations, all three existing checks,
+and **Supervisor review**. It verifies that each existing
 check remains restricted to the GitHub Actions app. If any part of the review
 gate is absent, the command fails before writing a comment or status. The root
 supervisor must install and independently verify this protection before first use.
@@ -59,16 +61,28 @@ enforces it; a requirement absent from both fails.
   branch has none and is not an error; any other failure stops the command.
 - **Active rulesets** (`GET rules/branches/main`, then `GET rulesets/{id}` for each
   contributing ruleset). A `pull_request` rule requires PRs;
-  `required_review_thread_resolution: true` requires resolved conversations;
-  `strict_required_status_checks_policy: true` is the up-to-date base. Each
-  required status check is read with its `integration_id`: 15368 is the GitHub
-  Actions app, and **Supervisor review** stays an unscoped status. "Applies to
-  administrators" holds only when every contributing ruleset is `active` and has
-  no bypass actor of any mode; an `evaluate` or `disabled` ruleset enforces
-  nothing. A branch-rules response large enough to be truncated is refused.
+  `required_review_thread_resolution: true` requires resolved conversations.
+  Each required status check is read with its `integration_id`: 15368 is the GitHub
+  Actions app, and **Supervisor review** stays an unscoped status. Administrator
+  enforcement is assessed per contributing source before requirements are combined:
+  ordinary protections must apply to administrators in every source that supplies
+  them. The repository owner may bypass only a separate active ruleset whose sole
+  branch protection is the **Supervisor review** status and whose sole bypass actor
+  is RepositoryRole ID 5 with `always` or pull-request-only (`pull_request`) mode.
+  The narrower pull-request-only mode supports the same owner override without
+  widening it. That exception cannot supply ordinary protections, PR
+  requirements, conversation resolution, or CI checks. The checker
+  derives this from the returned branch rules, each full ruleset's rule details,
+  and actor data; it refuses the exception if full details are absent or broader
+  than the branch slice. It does not trust a ruleset name or ID. An `evaluate` or
+  `disabled` ruleset enforces nothing. A branch-rules response large enough to be
+  truncated is refused.
 
 The command never edits protection or rulesets and has no flag that relaxes this
-check. The ruleset's Copilot code review does not re-review on push, by
+check. This owner-only exception records the repository owner's authority; agents
+must use the normal protected workflow and never request administrator bypass.
+Agents and the owner may share GitHub credentials, so this is an execution rule,
+not identity isolation. The ruleset's Copilot code review does not re-review on push, by
 design: the Copilot gate below requires a completed Copilot review on some
 commit in the pull request, not on each head.
 
@@ -81,18 +95,30 @@ replacement for their GitHub results.
 
 The command records scope and evidence in a PR comment, publishes a pending
 **Supervisor review** status on the expected SHA, and rechecks the head and gates.
-It asks GitHub to enable auto-merge with the same expected head OID, then publishes
-success only on that SHA and reads back both the status and auto-merge outcome. The
-result distinguishes a merged PR, one awaiting required checks, and one whose
-checks are already complete. It never requests administrator bypass. If a write or
-readback fails, treat the run as incomplete and inspect the PR comment, exact-head
-status, and auto-merge state before continuing; do not infer success from partial
-output.
+It then publishes success only on that SHA and reads the status back. Before asking
+GitHub to enable auto-merge, it reads the repository protection, PR head, review
+conversations, required CI and Copilot state again; an absent or mismatched
+readback, moved head, or changed gate stops before auto-merge. It enables
+auto-merge with the same expected head OID and reads back the resulting status
+and merge outcome. The result distinguishes a merged PR, one awaiting required
+checks, and one whose checks are already complete. The agent workflow never
+requests administrator bypass. If a write or readback fails, treat the run as
+incomplete and inspect the PR comment, exact-head status, and auto-merge state
+before continuing; do not infer success from partial output.
 
 The status prevents a stale review on an older SHA from satisfying the new
 commit's review gate. Agents share one GitHub identity, so this procedural gate
 does not prove distinct identity or protect against another actor with the same
 credentials.
+
+Once all required PR, review, and status gates pass, the branch need not
+incorporate the latest `main` before merge. After merge, retain the
+merged-branch worktree and verify the
+default-branch integration build with `npm run check`, `npm test`, and
+`npm run build`; repair integration failures with tests-first changes and
+independent review. This post-merge acceptance work is asynchronous: a pending
+default-branch run does not block starting another ready issue in a separate
+worktree. Return to the retained worktree if integration fails.
 
 If more code changes are requested after review, the supervisor first disables
 auto-merge and invalidates the old review status as appropriate. The implementation
@@ -144,9 +170,11 @@ the Copilot `Bot` of the pull request with no outstanding Copilot request. It ad
 It then writes the review comment and a pending status, re-reads every gate, and
 publishes success on that exact SHA with a read-back. It never approves, arms
 auto-merge, or merges; if it finds auto-merge enabled afterwards it reports an
-error. The maintainer then merges manually under the same protection, with no
-administrator bypass. A new commit on the release branch needs a new release
-review. Implemented and tested for issue #64. It was applied once, to PR #49 at
+error. The maintainer then merges manually under the same protection. The command
+never invokes administrator bypass; the repository owner's narrow Supervisor
+status override does not waive any other release gate or human release decision.
+A new commit on the release branch needs a new release review. Implemented and
+tested for issue #64. It was applied once, to PR #49 at
 `c92f2f60be759314c6acc01ce1c998c4bc999a1f` (see the
 [first-release record](validation/first-release-2026-09-28.md)); that use does
 not relax the procedure, and every future release PR needs its own exact-head

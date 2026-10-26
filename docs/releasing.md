@@ -82,8 +82,14 @@ to release, a human maintainer reviews the PR and records that status with the
 (`tooling/release-review.mjs`). It requires completed passing checks and a
 submitted Copilot review on the exact head, records scope, evidence and fresh
 verification, and never merges or arms auto-merge. The maintainer then merges
-the PR manually; there is no administrator bypass. This workflow does not change
-the repository's checks or protections.
+the PR manually. The repository owner's narrow override applies only to the
+dedicated Supervisor review status; it does not waive release checks, Copilot
+review, human confirmation, or the manual release decision. Agents never request
+administrator bypass. This workflow does not change the repository's checks or
+protections. A release PR with passing required checks may merge without first
+incorporating the latest `main`; after merge, the default-branch integration
+build is verified and any failures are repaired under the normal tests-first
+and independent-review process.
 
 The repository setting **Allow GitHub Actions to create and approve pull
 requests** must be enabled for Changesets to create the PR. The `version` job
@@ -262,8 +268,10 @@ this repository or its secrets.
 
 Standing policy for every future release: fresh owner authorization for that
 release, exact-head required checks and the exact-head release review, human
-confirmation of the head, and a manual merge under branch protection without
-bypass. The Copilot review gate applies as usual; no waiver is standing.
+confirmation of the head, and a manual merge under branch protection. The owner's
+dedicated Supervisor-status override does not bypass these other release gates.
+Agents never invoke it. The Copilot review gate applies as usual; no waiver is
+standing.
 
 History, not precedent: the owner specifically authorized the release of PR #49
 at head `c92f2f60be75`, and the release review procedure was applied once to

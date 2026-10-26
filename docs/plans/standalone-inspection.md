@@ -5,8 +5,9 @@ separately permissionable read-only observation for the concrete contribution
 report workflow. The supervisor-selected exact-execution observation candidate
 is specified in [CLI-005](../spec/operations.md#cli-005--bounded-exact-execution-observation)
 and [A-21](../spec/acceptance.md#exact-execution-observation-cases); its
-mechanisms are not attributed to the owner's product-scope decision. It requires
-different adversarial review before implementation readiness. This plan remains
+mechanisms are not attributed to the owner's product-scope decision. Scoped
+repairs have been made after adversarial review; same-reviewer recheck remains
+required before implementation readiness. This plan remains
 the proposal home for the broader standalone inspection and full CLI-001–004/M6
 checkpoint. Its remaining alternatives and open decisions do not override the
 narrow CLI-005 candidate or select starter lifetime and interrupt behavior.
@@ -95,7 +96,11 @@ follow mode is explicitly incremental. Whether the output is human-readable
 with stable JSON or human-only is unanswered. If stable JSON is selected, its
 versioned envelope must preserve absent versus present-undefined values; framing
 (JSON document or JSON Lines), exact schema and exit numbers remain open. A
-prose format must not be advertised as a stable machine protocol.
+prose format must not be advertised as a stable machine protocol. These
+output-format and stream alternatives apply to the deferred full inspection
+command family. The selected CLI-005 finite exact-locator reader returns one
+versioned JSON document with no banners or prose framing; exact field spellings
+remain implementation choices.
 
 Proposed exit principle: success means the requested evidence was read and
 reported successfully, even when its domain answer is failure, mixed, pending,
@@ -117,15 +122,17 @@ refresh, author policy or generic incremental query engine is implied.
 
 ## Read lifetime, plan evidence and alternatives
 
-The proposed finite opener accesses existing storage, checks supported schema
-and logical identity, and closes idempotently. It does not create or initialize
-stores, migrate schemas, acquire/renew/release claims, recover work, sweep,
-evict, accept results, publish, dispatch or retry. Queries after close fail
+The broader proposed finite opener accesses existing storage, checks supported
+schema and logical identity, and closes idempotently. It does not create or
+initialize stores, migrate schemas, acquire/renew/release claims, recover work,
+sweep, evict, accept results, publish, dispatch or retry. Queries after close fail
 clearly. Closing observation ends local queries and signals but does not cancel
-execution or erase consumer-owned state. The chosen #165 lifetime must govern
-escaped or lazy values; finite CLI formatting may finish selected reads before
-closing, but that implementation pattern does not settle library lazy-view
-semantics.
+execution or erase consumer-owned state. The open output and lifetime alternatives
+in this plan apply to the deferred full inspector and #165 preview semantics.
+They do not qualify CLI-005: that selected finite reader exposes only `read` and
+idempotent `close`, rejects reads after close, and closing it neither stops
+execution nor deletes its owner-managed per-execution artifact. The chosen #165
+lifetime still governs escaped or lazy preview values.
 
 Plan inspection is mandatory for the full CLI-002 checkpoint. A recorded
 Definition descriptor/read seam is needed to inspect safely in a fresh process

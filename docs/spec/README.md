@@ -149,8 +149,8 @@ remain unchanged and their evidence gates remain open.
 
 The supervisor-selected bounded exact-execution observation candidate is in
 [CLI-005](operations.md#cli-005--bounded-exact-execution-observation) with
-[A-21](acceptance.md#exact-execution-observation-cases); it is pending different
-adversarial review and is not implementation-readiness evidence. The
+[A-21](acceptance.md#exact-execution-observation-cases); scoped repairs have
+been made after adversarial review and its same-reviewer recheck is pending. The
 [standalone inspection proposal](../plans/standalone-inspection.md) remains the
 home for the broader CLI alternatives and full M6 work. Foreground/detached
 lifetime and interrupt choices remain unresolved; neither the narrow candidate

@@ -873,8 +873,9 @@ invariants; they select no universal cap, credentials DSL or paid strategy.
 
 ### CLI-005 — Bounded exact-execution observation
 
-**Status:** supervisor-selected contract candidate for different adversarial review;
-not yet an accepted requirement or implementation-readiness decision.
+**Status:** supervisor-selected contract candidate. A scoped adversarial review
+found bounded repairs; the same-reviewer recheck is pending. This is not yet an
+accepted requirement or implementation-readiness decision.
 
 The first contribution-report CLI slice MUST start one workflow execution and
 allow a separately permissionable, read-only reader to inspect that exact
@@ -900,20 +901,35 @@ one coherent revision, or an explicit absent, identity-mismatch,
 unsupported, corrupt, busy, unavailable or recovery-required result. It has no
 write, initialization, recovery, execution, claim, retry, cancellation, callback
 or control capability. A read that faithfully reports a recorded failure is a
-successful read. A nonterminal record and its sample time do not prove that the
-execution is still alive; process disappearance does not manufacture terminal
-state.
+successful read. Each finite read terminates with one closed, versioned JSON
+document for the requested locator, with the bounded observation or explicit
+read-state discriminant. It does not wait for execution completion, subscribe to
+updates or follow subsequent revisions. It emits no banners or prose framing and
+provides no generic author serializer; semantic fields and discriminants are
+fixed while field spellings remain an implementation choice. The local reader has only `read` and `close` authority.
+`close` is idempotent; later reads reject clearly. The reader may be opened during
+or after execution; closing it does not stop or mutate execution and does not
+delete the owner-managed artifact. A nonterminal record and its sample time do
+not prove that the execution is still alive; process disappearance does not
+manufacture terminal state.
 
 **Private producer and lifecycle.** A private Supervision producer mints the
 revision and sample time and records only actual `prepared`, `running`,
 `draining` and `closed` transitions. It MUST durably publish `prepared` before
-analysis starts; failure prevents analysis. A setup failure before body entry is
-not body completion. Only actual body settlement, tracked-work drain and closure
-permit terminal publication. Body return is not strict report success. The
-producer records authoritative stop state and closure facts on both fulfillment
-and rejection paths, including the frozen closing stop state, earliest deferred
-`waitingUntil` left behind, and bounded remote-state interruption counts. A later
-mutation of shared stop control cannot rewrite a closed observation.
+analysis starts; failure prevents analysis and makes no promise of a durable
+terminal record. After acknowledged preparation, a pre-entry setup failure may
+close with body disposition `not-entered` once all actual tracked work and other
+execution resources have drained and closed. A body that entered closes only
+after it returned or threw and its tracked work/resources have drained. The
+terminal body-disposition union is exactly `not-entered`, `returned`, or `threw`;
+body return is not strict report success. Terminal records preserve bounded typed
+execution failure reasons and diagnostic presence/count, never arbitrary error
+messages, stacks, body values or provider payloads. The producer also records
+authoritative stop and closure facts on all three paths, including the frozen
+closing stop state, earliest deferred `waitingUntil` left behind, and bounded
+remote-state interruption counts. A later mutation of shared stop control cannot
+rewrite a closed observation. An application statement alone cannot cause early
+closure.
 
 The application receives only a bounded completion-submission capability. Its
 closed statement is `not-classified`, `incomplete` with finite reason flags, or
@@ -933,9 +949,10 @@ were actually established; both facts remain visible.
 **Bounded content and sampling.** The record MUST be bounded independently of
 corpus size. It may retain fixed counters for the existing lifecycle, step,
 operation, send, deferred-wait and promotion event groups; a bounded latest event;
-typed finite failure reasons and diagnostic presence/count; actual stop facts; a
-bounded latest deferred-wait observation; terminal execution facts; and the
-application statement. Event counts describe sampled events only: they are not unique operations, current in-flight work, PR
+typed finite event and execution failure reasons and diagnostic presence/count;
+body disposition; actual stop facts; a bounded latest deferred-wait observation;
+terminal execution facts; and the application statement. Event counts describe
+sampled events only: they are not unique operations, current in-flight work, PR
 counts, completion, or percentages. Counters saturate at `Number.MAX_SAFE_INTEGER`
 and expose a saturation/lower-bound flag. Do not retain member/key/label arrays,
 raw errors, provider payloads, arbitrary author values, or generic numeric-string

@@ -95,7 +95,7 @@ explicit run-control commands. Inspection alone must never invoke computation.
 No consumer may bypass a port by importing another context's private source,
 rows or mutable state.
 
-**Selected candidate exception, pending different adversarial review:** the
+**Selected candidate exception, pending same-reviewer recheck:** the
 exact-execution observation adapter persists one
 bounded latest observation owned by Supervision. Supervision owns its meaning,
 identity, transition ordering and publisher/reader contracts; Machine supplies

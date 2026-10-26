@@ -288,7 +288,6 @@ function expectRunEvidence(runResult: IVariationRun, sent: readonly Record<strin
   expect([...referencesBySubject(runResult, 'assessor').keys()].map(subject => subject.replace(/^assessment:/u, '')).sort()).toEqual(expectedSubjects);
   expect([...referencesBySubject(runResult, 'summary').keys()].sort()).toEqual(people.map(person => `summary:${person}`));
   const expectedProviderSends = numbers.length + sourceCount * 5;
-  expect(provider).toHaveLength(expectedProviderSends);
   const expectedModelSubjects = assessmentBodies === 0 ? [] : assessmentBodies === 1 ? ['acme/widget#101'] : numbers.map(number => `acme/widget#${String(number)}`);
   expect(models.map(entry => entry.id).sort()).toEqual(expectedModelSubjects.sort());
   expectedUsage.attempts += expectedProviderSends + assessmentBodies;

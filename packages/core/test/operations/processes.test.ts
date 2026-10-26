@@ -1,7 +1,8 @@
 /**
  * Separate-process evidence for external operations on the real packages:
  * crashes on either side of a send and of the usage acknowledgment, the
- * quota deferral across three processes with correlated identities, durable
+ * quota deferral across three processes with correlated identities, known
+ * exhaustion resumable only by a new run, durable
  * remote state after a hard stop, and privacy of every process's output
  * (RUN-011 to RUN-014, ACC-005, ACC-007; EXP-8 process stages).
  *
@@ -15,6 +16,9 @@
  * - a kill after the usage acknowledgment keeps exactly one usage record;
  * - an operation is retried by the next process under the same identity
  *   without an effect-safety prerequisite; provider idempotency may dedupe;
+ * - known exhausted work retains its address across process death; only an
+ *   explicit new run gets fresh allowance, honors provider floors and reuses
+ *   already completed sibling references;
  * - a quota deferral is honored by a process before T and retried by one
  *   after T under the same operation identity, with new request attempt,
  *   step attempt and run identities;
@@ -42,12 +46,13 @@ import { fileURLToPath } from 'node:url';
 
 import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
 
-import { T0, hour, tempStores } from './harness.js';
+import { T0, fakeTimer, hour, openSession, tempStores } from './harness.js';
 import type { IOperationStores } from './harness.js';
 import { planted } from './provider.js';
 import type { ILedgerEntry } from './provider.js';
 import type { IWorkerReport, IWorkerScript } from './worker.js';
 import { fakeProvider } from './provider.js';
+import { journalContents } from './support.js';
 
 /** The emitted worker module beside this suite. */
 const workerPath = join(dirname(fileURLToPath(import.meta.url)), 'worker.js');
@@ -113,6 +118,16 @@ function usageOf(report: IWorkerReport): { readonly status: unknown; readonly ob
     observed: typeof usage === 'object' && usage !== null ? Reflect.get(usage, 'observed') : undefined,
     unknown: typeof usage === 'object' && usage !== null ? Reflect.get(usage, 'unknown') : undefined,
   };
+}
+
+/** Read committed operation content through a newly opened History owner. */
+function committedOperations(now: number): readonly unknown[] {
+  const session = openSession(stores, fakeTimer(now));
+  try {
+    return journalContents(session);
+  } finally {
+    session.close();
+  }
 }
 
 /** The operation events of a report, as `name@member:phase:status:reason` strings. */
@@ -210,6 +225,119 @@ describe('the quota deferral across processes, with correlated identities (RUN-0
     // Three successes reported 100 tokens each, and the quota refusal one request.
     expect(usageOf(c)).toEqual({ status: 'complete', observed: [{ unit: 'requests', amount: 1 }, { unit: 'tokens', amount: 300 }], unknown: [] });
     expect(ledger('received')).toHaveLength(2);
+  });
+
+  test('known transient exhaustion is new-run resumable across processes while completed siblings retain their exact references', () => {
+    const options = { 'pr-1': { retry: { maxAttempts: 1 } } };
+    const a = clean({
+      now: T0,
+      runId: 'run:exhausted',
+      action: 'members',
+      options,
+      scripts: [{ name: 'assess', key: 'pr-1', entries: ['transient'] }],
+    });
+    expect(a.statuses).toEqual({ 'pr-1': 'pending', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
+    expect(pr1Operations(a)).toEqual([expect.objectContaining({ status: 'retry-exhausted', attempts: [expect.objectContaining({ status: 'failed' })] })]);
+    const before = fakeProvider(() => 0, stores.ledger).ledger().filter((entry) => entry.kind === 'received');
+    expect(before.map((request) => request.key)).toEqual(['pr-1', 'pr-2', 'pr-3']);
+
+    const b = clean({ now: T0 + 10_000, runId: 'run:resumed', action: 'members', options });
+    expect(b.statuses).toEqual({ 'pr-1': 'succeeded', 'pr-2': 'succeeded', 'pr-3': 'succeeded' });
+    expect(ledger('received')).toHaveLength(2);
+    expect(ledger('received')[1]?.operation).toBe(ledger('received')[0]?.operation);
+    expect(ledger('received')[1]?.requestAttempt).not.toBe(ledger('received')[0]?.requestAttempt);
+    expect(b.references?.['pr-2']).toEqual(a.references?.['pr-2']);
+    expect(b.references?.['pr-3']).toEqual(a.references?.['pr-3']);
+    expect(usageOf(b)).toEqual({ status: 'complete', observed: [{ unit: 'requests', amount: 1 }, { unit: 'tokens', amount: 300 }], unknown: [] });
+  });
+
+  test('a known provider floor survives exhaustion and a process restart, without spending the new run allowance early', () => {
+    const options = { 'pr-1': { retry: { maxAttempts: 1 } } };
+    const first = clean({
+      now: T0,
+      runId: 'run:floor-exhausted',
+      action: 'members',
+      options,
+      scripts: [{ name: 'assess', key: 'pr-1', entries: ['rate-limit:60000'] }],
+    });
+    expect(first.statuses?.['pr-1']).toBe('pending');
+    expect(first.waitingUntil).toBeNull();
+    expect(pr1Operations(first)).toEqual([expect.objectContaining({ status: 'retry-exhausted', notBefore: T0 + 60_000 })]);
+
+    const beforeFloor = clean({ now: T0 + 30_000, runId: 'run:floor-before', action: 'members', options });
+    expect(beforeFloor.statuses?.['pr-1']).toBe('pending');
+    expect(beforeFloor.waitingUntil).toBe(T0 + 60_000);
+    expect(trace(beforeFloor)).toEqual(['assess@pr-1:blocked:retry-exhausted:not-before']);
+    expect(ledger('received')).toHaveLength(1);
+
+    const afterFloor = clean({ now: T0 + 60_000, runId: 'run:floor-after', action: 'members', options });
+    expect(afterFloor.statuses?.['pr-1']).toBe('succeeded');
+    const firstAttempt = first.events.find((event) => event.kind === 'operation' && event.phase === 'request-started' && event.member === 'pr-1');
+    const resumedAttempt = afterFloor.events.find((event) => event.kind === 'operation' && event.phase === 'request-started' && event.member === 'pr-1');
+    expect(resumedAttempt?.kind === 'operation' ? resumedAttempt.operation : undefined).toBe(firstAttempt?.kind === 'operation' ? firstAttempt.operation : undefined);
+    expect(resumedAttempt?.kind === 'operation' ? resumedAttempt.requestAttempt : undefined).not.toBe(firstAttempt?.kind === 'operation' ? firstAttempt.requestAttempt : undefined);
+    expect(ledger('received')).toHaveLength(2);
+  });
+});
+
+describe('source retry classification across process lifetimes (A-12d/f/g/i)', () => {
+  /** One adapter identity shared by the author wrapper and its run registration. */
+  const source = { source: 'catalog', service: 'catalog-api', connection: 'org-a-read' };
+  /** The same intended request is retried in each stage; only its run changes. */
+  const options = { 'pr-1': { retrySource: source } };
+
+  test('an accepted delay survives exit and reopen without sliding or reclassifying', () => {
+    const first = clean({ now: T0, runId: 'run:classified', action: 'members', options,
+      retryPolicy: 'delay-10000', scripts: [{ name: 'assess', key: 'pr-1', entries: ['contextual-404'] }] });
+    expect(first.statuses?.['pr-1']).toBe('pending');
+    expect(first.waitingUntil).toBe(T0 + 10_000);
+    expect(first.classifierCalls).toBe(1);
+    expect(pr1Operations(first)).toEqual([expect.objectContaining({ status: 'deferred', notBefore: T0 + 10_000 })]);
+    expect(committedOperations(T0 + 1_000)).toContainEqual(expect.objectContaining({
+      status: 'deferred', notBefore: T0 + 10_000,
+      classification: expect.objectContaining({ kind: 'accepted', notBefore: T0 + 10_000,
+        decision: { kind: 'retry-after', delayMilliseconds: 10_000 } }),
+    }));
+
+    const before = clean({ now: T0 + 5_000, runId: 'run:before-floor', action: 'members', options, retryPolicy: 'retry-now' });
+    expect(before.statuses?.['pr-1']).toBe('pending');
+    expect(before.waitingUntil).toBe(T0 + 10_000);
+    expect(before.classifierCalls).toBe(0);
+    expect(ledger('received')).toHaveLength(1);
+
+    const after = clean({ now: T0 + 10_000, runId: 'run:after-floor', action: 'members', options, retryPolicy: 'retry-now' });
+    expect(after.statuses?.['pr-1']).toBe('succeeded');
+    expect(after.classifierCalls).toBe(0);
+    expect(ledger('received')).toHaveLength(2);
+    expect(ledger('received')[1]?.operation).toBe(ledger('received')[0]?.operation);
+    expect(ledger('received')[1]?.requestAttempt).not.toBe(ledger('received')[0]?.requestAttempt);
+    expect(usageOf(after)).toEqual({ status: 'complete', observed: [{ unit: 'requests', amount: 1 }, { unit: 'tokens', amount: 300 }], unknown: [] });
+  });
+
+  test('death in a pending classifier preserves its known response and address without replaying that decision', () => {
+    const killed = stage({ now: T0, runId: 'run:pending', action: 'members', options,
+      retryPolicy: 'kill-while-pending', scripts: [{ name: 'assess', key: 'pr-1', entries: ['contextual-404'] }] });
+    expect(killed.signal).toBe('SIGKILL');
+    expect(ledger('received')).toHaveLength(1);
+    const recorded = clean({ now: T0 + 5_000, runId: 'run:read-pending', action: 'inspect' });
+    expect(pr1Operations(recorded)).toEqual([expect.objectContaining({ status: 'pending', attempts: [expect.objectContaining({ status: 'failed' })] })]);
+    expect(committedOperations(T0 + 5_000)).toContainEqual(expect.objectContaining({
+      operation: ledger('received')[0]?.operation,
+      status: 'pending', classification: expect.objectContaining({ kind: 'pending',
+        outcome: { kind: 'failed', transient: false }, facts: { httpStatus: 404, conditions: ['resource-expected-later'] } }),
+      attempts: [expect.objectContaining({ requestAttempt: ledger('received')[0]?.requestAttempt,
+        status: 'failed', usage: 'acknowledged', outcome: { kind: 'failed', transient: false },
+        facts: { httpStatus: 404, conditions: ['resource-expected-later'] } })],
+    }));
+    expect(usageOf(recorded)).toEqual({ status: 'complete', observed: [{ unit: 'requests', amount: 1 }], unknown: [] });
+
+    const resumed = clean({ now: T0 + 10_000, runId: 'run:after-pending', action: 'members', options, retryPolicy: 'retry-now' });
+    expect(resumed.statuses?.['pr-1']).toBe('succeeded');
+    expect(resumed.classifierCalls).toBe(0);
+    expect(ledger('received')).toHaveLength(2);
+    expect(ledger('received')[1]?.operation).toBe(ledger('received')[0]?.operation);
+    expect(ledger('received')[1]?.requestAttempt).not.toBe(ledger('received')[0]?.requestAttempt);
+    expect(usageOf(resumed)).toEqual({ status: 'complete', observed: [{ unit: 'requests', amount: 1 }, { unit: 'tokens', amount: 300 }], unknown: [] });
   });
 });
 

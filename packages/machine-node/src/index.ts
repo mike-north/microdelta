@@ -7,9 +7,10 @@
  * can recognize two handles over one file without reading the host itself.
  * @packageDocumentation
  */
-import type { IClockCapability, IMachine, IRandomIdentifierCapability, ISqliteReadCapability, ISqliteCapability, ITimerCapability } from '@microdelta/machine';
+import type { IClockCapability, IElapsedClockCapability, IMachine, IRandomIdentifierCapability, ISqliteReadCapability, ISqliteCapability, ITimerCapability } from '@microdelta/machine';
 
 import { _createNodeClockImplementation } from './node/clock.js';
+import { _createNodeElapsedClockImplementation } from './node/elapsed-clock.js';
 import { _canonicalNodeLocationImplementation } from './node/location.js';
 import { _createNodeMachineImplementation } from './node/index.js';
 import { _createNodeRandomImplementation } from './node/random.js';
@@ -42,6 +43,15 @@ export function createNodeSqlite(): ISqliteCapability {
  */
 export function createNodeClock(): IClockCapability {
   return _createNodeClockImplementation();
+}
+
+/**
+ * Create Node's process-local elapsed clock, which measures nondecreasing
+ * whole milliseconds from an arbitrary origin using the monotonic host timer.
+ * @alpha
+ */
+export function createNodeElapsedClock(): IElapsedClockCapability {
+  return _createNodeElapsedClockImplementation();
 }
 
 /**

@@ -204,16 +204,27 @@ starts computation; execution commands express operator intent explicitly.
 states and captured outputs. Verify a separate inspection process and no body/claim
 activity from viewing. The CLI is a named deliverable, not incidental scenario glue.
 
+The owner-selected early executable slice for the contribution-report workflow is
+narrower: separately permissionable run-start and read-only progress observation.
+Delivering that slice does not satisfy this milestone's full historical inspection
+exit or TEST-4.9's reference/history/resource browsing requirements.
+
 ## M7 — Full roster workflow and scale acceptance
 
-Assemble fresh paginated discovery, per-person corpus closure, bounded nested fanout,
-strict/explicit partial folds, author-defined trial selection and environment
-adapters into [TEST-3/4](spec/acceptance.md). Use the real runtime and CLI with
-controlled adapters first. The [acquisition handoff](plans/data-acquisition-retries.md)
+The owner prioritized a first usable controlled contribution-report slice for a
+24-hour delivery target. That is a target, not a guarantee or the M7 exit. Follow
+the [controlled roster plan](plans/controlled-roster.md): complete each selected
+employee's paginated search to count and stable PR IDs before admitting detail
+fanout; prove the fixed two-level composition, truthful closure, stable identity,
+restart/change reuse, fixed shared limits, provider cooldowns, retry ceilings,
+cancellation, trial selection and narrow run/progress CLI. Use deterministic
+adapters first. Advanced adaptive rate regrouping and sophisticated discovery-order
+fairness remain deferred mechanisms tracked in their existing issues, not first-
+report prerequisites. The [acquisition handoff](plans/data-acquisition-retries.md)
 removes manual result recovery as a prerequisite; it does not accept preview,
-resource-state observation, inspection or full roster proposals wholesale. Their
-own decisions and evidence gates remain. Measure TEST-5/6; distinguish CPU, I/O and data volume
-before choosing more elaborate worker policy.
+resource-state observation, full inspection or full roster proposals wholesale.
+Their own decisions and evidence gates remain. Measure TEST-5/6; distinguish CPU,
+I/O and data volume before choosing more elaborate worker policy.
 
 **Exit:** complete cold/restart/change/failure/wait/cancel/trial variants; precise
 references and invocation counts; truthful coverage/usage; bounded-memory evidence.

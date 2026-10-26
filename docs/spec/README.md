@@ -61,7 +61,8 @@ Read this entry point, then only the contracts relevant to the task:
 | [Execution](execution.md) | Current validation, exact references, retention, publication | Reuse, persistence, recovery |
 | [Operations](operations.md) | Readiness, preview, per-run acquisition retry, shared rate admission, cancellation, trial, accounting, CLI | Run lifetime or operational work |
 | [Acquisition decision and handoff](../plans/data-acquisition-retries.md) and [#221 shared-rate coordination design](../plans/shared-rate-coordination.md) | Accepted 2026-10-24 supersession and implementation readiness; #221 engineering choices are supervisory-selected, with runtime implementation still pending | Implementing #221 to its selected design, or migrating M5 retry behavior |
-| [Retry-classification design candidate](../plans/retry-classification.md) | Proposed engineering seam and bounded runtime handoff under accepted RUN-011; not delivered behavior | Reviewing #220 or preparing its separately accepted implementation follow-up |
+| [Retry-classification accepted design](../plans/retry-classification.md) | Supervisory-accepted engineering seam and bounded #235 runtime handoff under RUN-011; runtime delivery pending | Implementing or reviewing #235 against the accepted #220 design |
+| [Scoped current detail calls proposal](../plans/scoped-source-calls.md) | Supervisory-selected #252 bounded source-callable contract beneath independent person summaries; public spelling proposed and runtime undelivered | Reviewing the completed-search report gap before implementation |
 | [Acceptance](acceptance.md) | Cross-contract scenarios, expected outcomes, proof obligations | Writing tests or closing a gate |
 | [Experiments](experiments.md) | Bounded unknowns, fixtures, evidence, adoption gates | After foundation, for dependent runtime work |
 | [Milestones](../milestones.md) | Delivery order and independently reportable quality gates | Selecting work |
@@ -130,6 +131,28 @@ independent observation lifetime, current/stale preview meaning and consumer-own
 cache policy. RUN-007/008 own requirements; the plan identifies remaining API,
 retention, disposal and aggregate choices and bounded readiness recommendations.
 This is not a claim of delivered behavior or whole-issue implementation readiness.
+
+## Proposed issue plans
+
+The [controlled roster plan](../plans/controlled-roster.md) records the owner-
+selected first contribution-report scope for issue #170: complete each selected
+employee's paginated search to count and stable PR IDs before detail fanout; use
+fixed shared limits, provider cooldowns, retry ceilings and cancellation; and
+provide separately permissionable CLI run-start and progress observation. The
+24-hour delivery target is not a guarantee or milestone exit. The plan preserves
+full TEST-3/4 and TEST-5/6 as separate qualification gates, including the full
+historical CLI inspection criterion. Page-streaming, advanced adaptive rate policy
+and sophisticated discovery-order fairness remain deferred mechanisms, not
+accepted first-delivery requirements; this scope does not claim full A-12j/l,
+RUN-019, CLI-001–004, M6, or M7 delivery. The normative full-target contracts
+remain unchanged and their evidence gates remain open.
+
+The [standalone inspection proposal](../plans/standalone-inspection.md) records
+the more specific exact-execution progress and terminal observation design for
+that selected CLI slice, while preserving full M6 inspection as deferred work.
+Its storage mechanism, ARC-003 clarification, foreground/detached lifetime,
+interrupts and output framing remain proposed or unresolved; it claims no runtime
+delivery or full issue-167 readiness.
 
 ## Current checkout
 

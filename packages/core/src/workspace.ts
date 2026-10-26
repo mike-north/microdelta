@@ -64,6 +64,14 @@ import type {
   IOperationRequest as ISupervisionOperationRequest,
   IOperationResponse as ISupervisionOperationResponse,
   IOperationRetryPolicy as ISupervisionOperationRetryPolicy,
+  IRetryDecision as ISupervisionRetryDecision,
+  IRetryDecisionInput as ISupervisionRetryDecisionInput,
+  IRetryAttemptSummary as ISupervisionRetryAttemptSummary,
+  IRetryFacts as ISupervisionRetryFacts,
+  IRetryHistory as ISupervisionRetryHistory,
+  IRetryOutcome as ISupervisionRetryOutcome,
+  IRetrySourceScope as ISupervisionRetrySourceScope,
+  ISourceRetryPolicy as ISupervisionSourceRetryPolicy,
   IOperationSend as ISupervisionOperationSend,
   IOperationSettlement as ISupervisionOperationSettlement,
   IOperationSettlementRecord as ISupervisionOperationSettlementRecord,
@@ -321,6 +329,22 @@ export type IOperationQuantity = ISupervisionOperationQuantity;
 
 /** An author's retry policy for one operation: transient attempts, backoff and the rate-limit retry cap. @alpha */
 export type IOperationRetryPolicy = ISupervisionOperationRetryPolicy;
+/** One source retry classification result exposed by the assembled facade. @alpha */
+export type IRetryDecision = ISupervisionRetryDecision;
+/** Bounded input supplied to a source retry policy. @alpha */
+export type IRetryDecisionInput = ISupervisionRetryDecisionInput;
+/** One prior sent-attempt summary surfaced to a facade source policy. @alpha */
+export type IRetryAttemptSummary = ISupervisionRetryAttemptSummary;
+/** Adapter-extracted source facts. @alpha */
+export type IRetryFacts = ISupervisionRetryFacts;
+/** Bounded current-run attempt history. @alpha */
+export type IRetryHistory = ISupervisionRetryHistory;
+/** Normalized refusal category supplied to facade source policies. @alpha */
+export type IRetryOutcome = ISupervisionRetryOutcome;
+/** Reusable source/service/connection identity. @alpha */
+export type IRetrySourceScope = ISupervisionRetrySourceScope;
+/** Exact-scoped reusable source retry policy. @alpha */
+export type ISourceRetryPolicy = ISupervisionSourceRetryPolicy;
 
 /** The status of one external operation as the journal records it. @alpha */
 export type IOperationStatus = ISupervisionOperationStatus;
@@ -627,6 +651,8 @@ export interface IWorkspaceRunOptions<TInputs extends object, THelpers extends o
    * report that time as the result's `waitingUntil`.
    */
   readonly deferral?: IDeferralMode;
+  /** Exact-scoped source classifiers forwarded to Run Supervision. */
+  readonly retryPolicies?: readonly ISourceRetryPolicy[];
 }
 
 /**
@@ -852,6 +878,7 @@ export function openWorkspace(options: IWorkspaceOptions): IWorkspace {
         ...(runOptions.window === undefined ? {} : { window: runOptions.window }),
         ...(runOptions.writerWait === undefined ? {} : { writerWait: runOptions.writerWait }),
         ...(runOptions.deferral === undefined ? {} : { deferral: runOptions.deferral }),
+        ...(runOptions.retryPolicies === undefined ? {} : { retryPolicies: runOptions.retryPolicies }),
         ...(operations === undefined ? {} : { operations }),
         // History's durable store is Supervision's structural promotion port.
         promotion: history,

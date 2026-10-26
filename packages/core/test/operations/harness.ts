@@ -29,7 +29,7 @@ import { createNodeMachine, createNodeRandom, createNodeSqlite } from '@microdel
 import { createResolution } from '@microdelta/resolution';
 import type { IResolutionHistory } from '@microdelta/resolution';
 import { createSupervision, operationJournalDeclaration } from '@microdelta/supervision';
-import type { IDeferralMode, IOperationAccounting, IRunRandom, IRun, IRunEvent, IRunResult, IRunTimer, IStopController, ISupervision, IWriterWaitOptions } from '@microdelta/supervision';
+import type { IDeferralMode, IOperationAccounting, IRunRandom, IRun, IRunEvent, IRunResult, IRunTimer, ISourceRetryPolicy, IStopController, ISupervision, IWriterWaitOptions } from '@microdelta/supervision';
 import { createTrackingObserver } from '@microdelta/tracking';
 
 import { writerFor } from '../../src/writer.js';
@@ -120,6 +120,8 @@ export interface IOperationRunOptions {
   /** The run identifier; generated when absent. */
   readonly runId?: string;
   readonly deferral?: IDeferralMode;
+  /** Source registrations offered to the assembled operation engine. */
+  readonly retryPolicies?: readonly ISourceRetryPolicy[];
   readonly stop?: IStopController;
   readonly permits?: number;
   readonly window?: number;
@@ -164,6 +166,8 @@ export function freshKey(): { readonly requestKey: string } {
 
 /** Options of a session. */
 export interface ISessionOptions {
+  /** Analysis namespace selected by the fixture composition; default is the operations analysis. */
+  readonly analysis?: string;
   /** The writer lease duration on the controlled clock; one day when absent. */
   readonly leaseMilliseconds?: number;
   /** Wrap the Accounting port Supervision receives, for fault injection around the real adapter. */
@@ -186,7 +190,7 @@ export function openSession(stores: Pick<IOperationStores, 'history' | 'accounti
   const journal = history.openJournal(operationJournalDeclaration);
   const supervision = createSupervision({ context: machine, timer });
   const random = options.random ?? createNodeRandom();
-  const fixture = composeOperations();
+  const fixture = composeOperations(options.analysis);
   useSupervision(supervision);
   const leaseMilliseconds = options.leaseMilliseconds ?? 24 * hour;
   return {
@@ -214,6 +218,7 @@ export function openSession(stores: Pick<IOperationStores, 'history' | 'accounti
         }],
         ...(runOptions.operations === false ? {} : { operations: { journal: options.wrapJournal?.(journal) ?? journal, accounting: options.wrapAccounting?.(accounting) ?? accounting, random } }),
         ...(runOptions.deferral === undefined ? {} : { deferral: runOptions.deferral }),
+        ...(runOptions.retryPolicies === undefined ? {} : { retryPolicies: runOptions.retryPolicies }),
         ...(runOptions.stop === undefined ? {} : { stop: runOptions.stop }),
         ...(runOptions.permits === undefined ? {} : { permits: runOptions.permits }),
         ...(runOptions.window === undefined ? {} : { window: runOptions.window }),

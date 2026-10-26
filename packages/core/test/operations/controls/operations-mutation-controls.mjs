@@ -19,15 +19,18 @@
  *
  * `--check-anchors` verifies that every anchor matches exactly once in the
  * current builds and exits without running any suite; `npm test` runs it for
- * every runner (anchor-check.test.mjs) so drift fails early.
+ * every runner (anchor-check.test.mjs) so drift fails early. `--only <text>`
+ * runs one uniquely named control for diagnosis; it is not the full evidence
+ * run.
  */
 import { spawn } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
-import { anchorCheckRequested, anchorProblems, reportAnchorCheck } from '../../durable-history/controls/anchor-check.mjs';
+import { anchorProblems, reportAnchorCheck } from '../../durable-history/controls/anchor-check.mjs';
 import { judgeRun } from '../../durable-history/controls/control-outcome.mjs';
+import { selectOperationControls } from './select-control.mjs';
 
 const root = new URL('../../../../../', import.meta.url).pathname;
 const core = join(root, 'packages/core');
@@ -61,7 +64,7 @@ const controls = [
   {
     name: 'a deferral is not honored before its time',
     directory: supervision, file: 'operation-engine.js',
-    anchor: "if ((record.status === 'deferred' || record.status === 'unknown') && record.notBefore !== undefined && now() < record.notBefore) {", replacement: 'if (false) {',
+    anchor: 'return record.notBefore !== undefined && now() < record.notBefore', replacement: 'return false',
   },
   {
     name: 'the writer lease is kept while only deferred work remains',
@@ -77,8 +80,8 @@ const controls = [
   {
     name: 'an unknown outcome is reported as zero usage',
     directory: supervision, file: 'operation-engine.js',
-    anchor: "const unknown = settledAs('unknown', 'unknown');",
-    replacement: "ports.accounting.acknowledgeUsage({ environment: context.environment, operation, requestAttempt, report: 'provider:zero', quantities: [] }); const unknown = settledAs('unknown', 'unknown');",
+    anchor: 'const outcome = retryOutcome(response);',
+    replacement: "if (response.kind === 'unknown') { ports.accounting.acknowledgeUsage({ environment: context.environment, operation, requestAttempt, report: 'provider:zero', quantities: [] }); } const outcome = retryOutcome(response);",
   },
   {
     name: 'operation events carry the request binding',
@@ -292,11 +295,14 @@ const controls = [
   },
 ];
 
+/** Resolve diagnostic selection before any emitted build is read or changed. */
+const selection = selectOperationControls(process.argv.slice(2), controls);
+
 /** Emitted files a control may plant into, with their original bytes. */
 const originals = new Map([...new Set(controls.map((control) => join(control.directory, control.file)))].map((path) => [path, readFileSync(path, 'utf8')]));
 
 // Drift guard: `--check-anchors` verifies every anchor against the current builds and runs no suite.
-if (anchorCheckRequested()) {
+if (selection.checkAnchors) {
   const plants = controls.flatMap((control) => {
     const path = join(control.directory, control.file);
     return (control.edits ?? [{ anchor: control.anchor }]).map((edit) => ({ control: control.name, file: path, text: originals.get(path), anchor: edit.anchor }));
@@ -356,7 +362,7 @@ try {
   if (baseline.failed.length > 0) {
     throw new Error('the unmodified build must pass every test before controls run');
   }
-  for (const control of controls) {
+  for (const control of selection.selected) {
     const path = join(control.directory, control.file);
     const original = originals.get(path);
     // A control plants one edit, or several edits that together remove one behavior.
@@ -395,5 +401,5 @@ for (const [path, content] of originals) {
     failures += 1;
   }
 }
-console.log(`\n${failures === 0 ? 'PASS' : 'FAIL'}: ${String(controls.length)} controls`);
+console.log(`\n${failures === 0 ? 'PASS' : 'FAIL'}: ${String(selection.selected.length)} controls${selection.only === undefined ? '' : ` (limited to "${selection.only}")`}`);
 process.exit(failures > 0 ? 1 : 0);

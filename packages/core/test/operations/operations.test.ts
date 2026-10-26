@@ -19,6 +19,8 @@
  *   deferred work remains the run releases the writer lease and either
  *   sleeps until T and resumes, or exits reporting "waiting until T"; later
  *   runs admit nothing before T and retry under the same operation identity.
+ *   A known exhausted operation blocks its own invocation immediately even
+ *   when a later provider floor remains binding for a future invocation.
  *
  * @see ../../../../docs/spec/operations.md (RUN-011, RUN-012, RUN-013, ACC-003, ACC-005, ACC-007 owner decisions)
  * @see ../../../../docs/spec/acceptance.md (A-11, A-12, A-14)
@@ -27,12 +29,13 @@
  */
 import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
 import { SupervisionError, createStopController } from '@microdelta/supervision';
+import type { IRetryDecisionInput, ISourceRetryPolicy } from '@microdelta/supervision';
 
 import { assessmentSubject, createWorld, installWorld } from './fixture.js';
 import type { IWorld } from './fixture.js';
 import { T0, fakeTimer, freshKey, hour, openSession, operationTrace, statuses, tempStores, until } from './harness.js';
 import type { IFakeTimer, IOperationStores } from './harness.js';
-import { driveUntilSettled, failureCode, journalContents, memberOf, members, received } from './support.js';
+import { applied, driveUntilSettled, failureCode, inspect, journalContents, memberOf, members, received } from './support.js';
 
 let stores: IOperationStores;
 let timer: IFakeTimer;
@@ -162,7 +165,7 @@ describe('the finite acquisition retry policy (RUN-011)', () => {
     }
   });
 
-  test('a transient retry stops when the author policy is exhausted', async () => {
+  test('a transient refusal exhausts only this run and leaves its required input pending', async () => {
     world.provider.script('assess', 'pr-1', ['transient', 'transient', 'ok']);
     world.options['pr-1'] = { retry: { maxAttempts: 2 } };
     const session = openSession(stores, timer);
@@ -170,9 +173,16 @@ describe('the finite acquisition retry policy (RUN-011)', () => {
       const started = members(session);
       const result = await driveUntilSettled(timer, started);
       const pr1 = memberOf(result.value, 'pr-1');
-      expect(failureCode(pr1)).toBe('operation-failed');
+      expect(pr1.status).toBe('pending');
+      const operation = received('pr-1')[0]?.operation;
+      expect(pr1.status === 'pending' ? pr1.blocked : undefined).toEqual({ kind: 'policy-exhausted', operation });
       expect(received('pr-1')).toHaveLength(2);
-      expect(operationTrace(started.events)).toContain('assess@pr-1:retry-exhausted:failed:policy-exhausted');
+      expect(operationTrace(started.events)).toContain('assess@pr-1:retry-exhausted:retry-exhausted:policy-exhausted');
+      expect(journalContents(session)).toContainEqual(expect.objectContaining({ operation, status: 'retry-exhausted' }));
+      const [view] = await inspect(session);
+      expect(view).toEqual(expect.objectContaining({ operation, status: 'retry-exhausted' }));
+      expect(view?.attempts.map((attempt) => attempt.status)).toEqual(['failed', 'failed']);
+      expect(session.usage().reports).toBe(4);
     } finally {
       session.close();
     }
@@ -188,8 +198,12 @@ describe('the finite acquisition retry policy (RUN-011)', () => {
       // The third sent refusal exhausts the total ceiling despite the legacy rate subcap of five retries.
       expect(received('pr-1')).toHaveLength(3);
       expect(new Set(received('pr-1').map((request) => request.operation)).size).toBe(1);
-      expect(failureCode(pr1)).toBe('operation-failed');
-      expect(operationTrace(started.events)).toContain('assess@pr-1:retry-exhausted:failed:policy-exhausted');
+      expect(pr1.status).toBe('pending');
+      const operation = received('pr-1')[0]?.operation;
+      expect(pr1.status === 'pending' ? pr1.blocked : undefined).toEqual({ kind: 'policy-exhausted', operation });
+      expect(operationTrace(started.events)).toContain('assess@pr-1:retry-exhausted:retry-exhausted:policy-exhausted');
+      expect(journalContents(session)).toContainEqual(expect.objectContaining({ operation, status: 'retry-exhausted', notBefore: T0 + 180_000 }));
+      expect((await inspect(session))[0]).toEqual(expect.objectContaining({ operation, status: 'retry-exhausted', notBefore: T0 + 180_000 }));
     } finally {
       session.close();
     }
@@ -202,7 +216,158 @@ describe('the finite acquisition retry policy (RUN-011)', () => {
     try {
       const result = await driveUntilSettled(timer, members(session));
       expect(received('pr-1')).toHaveLength(2);
-      expect(failureCode(memberOf(result.value, 'pr-1'))).toBe('operation-failed');
+      const pr1 = memberOf(result.value, 'pr-1');
+      expect(pr1.status).toBe('pending');
+      expect(pr1.status === 'pending' ? pr1.blocked?.kind : undefined).toBe('policy-exhausted');
+    } finally {
+      session.close();
+    }
+  });
+
+  test('the rate-only subcap applies to untimed normalized rate refusals', async () => {
+    world.provider.script('assess', 'pr-1', ['rate-limit', 'rate-limit', 'rate-limit', 'ok']);
+    world.options['pr-1'] = { retry: { maxAttempts: 5, rateLimitRetries: 1 } };
+    const session = openSession(stores, timer);
+    try {
+      const result = await driveUntilSettled(timer, members(session));
+      expect(received('pr-1')).toHaveLength(2);
+      const pr1 = memberOf(result.value, 'pr-1');
+      expect(pr1.status).toBe('pending');
+      expect(pr1.status === 'pending' ? pr1.blocked?.kind : undefined).toBe('policy-exhausted');
+      expect(session.usage().reports).toBeGreaterThanOrEqual(2);
+    } finally {
+      session.close();
+    }
+  });
+
+  test('an exact source policy can retry a contextual 404 before the conservative default stop', async () => {
+    world.provider.script('assess', 'pr-1', ['contextual-404', 'ok']);
+    const source = { source: 'catalog', service: 'catalog-api', connection: 'org-a-read' } as const;
+    world.options['pr-1'] = { retrySource: source };
+    const observed: IRetryDecisionInput[] = [];
+    const policy: ISourceRetryPolicy = {
+      id: 'catalog-policy',
+      scope: source,
+      decide(input) {
+        observed.push(input);
+        return { kind: 'retry-after', delayMilliseconds: 5_000 };
+      },
+    };
+    const session = openSession(stores, timer);
+    try {
+      const started = members(session, { retryPolicies: [policy] });
+      let settled = false;
+      void started.done.then(() => { settled = true; }, () => { settled = true; });
+      await until(() => timer.pending().includes(T0 + 5_000) || settled, 'the source decision schedules its delay or the member settles');
+      expect(observed).toHaveLength(1);
+      expect(observed[0]?.facts).toEqual({ httpStatus: 404, conditions: ['resource-expected-later'] });
+      expect(observed[0]?.outcome).toEqual({ kind: 'failed', transient: false });
+      const result = await driveUntilSettled(timer, started);
+      expect(memberOf(result.value, 'pr-1').status).toBe('succeeded');
+      expect(received('pr-1')).toHaveLength(2);
+      expect(new Set(received('pr-1').map((request) => request.operation)).size).toBe(1);
+    } finally {
+      session.close();
+    }
+  });
+
+  test('current-run exhaustion is visible before a provider floor; a new run waits at that floor then resumes the same acquisition', async () => {
+    world.options['pr-1'] = { retry: { maxAttempts: 1 } };
+    world.provider.script('assess', 'pr-1', ['rate-limit:60000', 'ok']);
+    const session = openSession(stores, timer);
+    try {
+      const first = await members(session).done;
+      const firstRequest = received('pr-1')[0];
+      expect(firstRequest).toBeDefined();
+      expect(received('pr-1')).toHaveLength(1);
+      expect(memberOf(first.value, 'pr-1').status).toBe('pending');
+      expect(journalContents(session)).toContainEqual(expect.objectContaining({
+        operation: firstRequest?.operation,
+        status: 'retry-exhausted',
+        notBefore: T0 + 60_000,
+        attempts: [expect.objectContaining({ status: 'rate-limited' })],
+      }));
+
+      const beforeFloor = await members(session, { deferral: 'exit' }).done;
+      expect(beforeFloor.waitingUntil).toBe(T0 + 60_000);
+      expect(memberOf(beforeFloor.value, 'pr-1').status).toBe('pending');
+      const beforeFloorMember = memberOf(beforeFloor.value, 'pr-1');
+      expect(beforeFloorMember.status === 'pending' ? beforeFloorMember.blocked?.kind : undefined).toBe('deferred');
+      expect(received('pr-1')).toHaveLength(1);
+
+      timer.advanceTo(T0 + 60_000);
+      const afterFloor = await members(session).done;
+      expect(memberOf(afterFloor.value, 'pr-1').status).toBe('succeeded');
+      const requests = received('pr-1');
+      expect(requests).toHaveLength(2);
+      expect(requests[1]?.operation).toBe(firstRequest?.operation);
+      expect(requests[1]?.requestAttempt).not.toBe(firstRequest?.requestAttempt);
+      expect(session.usage().reports).toBe(4);
+    } finally {
+      session.close();
+    }
+  });
+
+  test('a caught exhaustion cannot replenish sends in the same step attempt', async () => {
+    world.options['pr-1'] = { retry: { maxAttempts: 1, backoffMilliseconds: 0 } };
+    world.plans['pr-1'] = 'catch-retry';
+    world.provider.script('assess', 'pr-1', ['transient', 'ok', 'ok']);
+    const session = openSession(stores, timer);
+    try {
+      const result = await members(session).done;
+      expect(received('pr-1')).toHaveLength(1);
+      expect(applied('pr-1')).toHaveLength(0);
+      expect(world.log).toEqual(['caught:pr-1:operation-exhausted', 'caught:pr-1:operation-exhausted', 'caught:pr-1:operation-exhausted']);
+      expect(memberOf(result.value, 'pr-1').status).toBe('pending');
+    } finally {
+      session.close();
+    }
+  });
+
+  test('a later sleep-mode pass in the same run cannot replenish an exhausted member while a sibling waits', async () => {
+    world.options['pr-1'] = { retry: { maxAttempts: 1 } };
+    world.provider.script('assess', 'pr-1', ['transient', 'ok']);
+    world.provider.script('assess', 'pr-2', ['rate-limit:60000', 'ok']);
+    const session = openSession(stores, timer);
+    try {
+      const result = await driveUntilSettled(timer, members(session, { deferral: 'sleep', runId: 'run:one-pass-owner' }));
+      expect(received('pr-1')).toHaveLength(1);
+      expect(memberOf(result.value, 'pr-1').status).toBe('pending');
+      expect(memberOf(result.value, 'pr-2').status).toBe('succeeded');
+      expect(received('pr-2')).toHaveLength(2);
+      expect(new Set(received('pr-1').map((request) => request.operation)).size).toBe(1);
+      expect(session.usage().reports).toBe(4);
+    } finally {
+      session.close();
+    }
+  });
+
+  test('an exhausted member does not hold a completed sibling behind its provider floor', async () => {
+    world.options['pr-1'] = { retry: { maxAttempts: 1 } };
+    world.options['pr-2'] = { retry: { backoffMilliseconds: 0 } };
+    world.provider.script('assess', 'pr-1', ['rate-limit:60000', 'ok']);
+    world.provider.script('assess', 'pr-2', ['rate-limit:1000', 'ok']);
+    const session = openSession(stores, timer);
+    try {
+      const started = members(session, { deferral: 'sleep', runId: 'run:mixed-exhaustion-floor' });
+      await until(() => timer.pending().includes(T0 + 1_000), 'the sibling provider floor');
+      timer.advanceTo(T0 + 1_000);
+      let done = false;
+      void started.done.then(() => { done = true; }, () => { done = true; });
+      await until(() => done || timer.pending().includes(T0 + 60_000), 'the run completes or incorrectly waits for the exhausted floor');
+
+      expect(done).toBe(true);
+      const result = await started.done;
+      expect(memberOf(result.value, 'pr-1')).toEqual(expect.objectContaining({
+        status: 'pending',
+        blocked: expect.objectContaining({ kind: 'policy-exhausted' }),
+      }));
+      expect(memberOf(result.value, 'pr-2').status).toBe('succeeded');
+      expect(received('pr-1')).toHaveLength(1);
+      expect(received('pr-2')).toHaveLength(2);
+      expect(timer.pending()).not.toContain(T0 + 60_000);
+
+      expect(session.usage().reports).toBe(4);
     } finally {
       session.close();
     }

@@ -36,7 +36,7 @@ import { fileURLToPath } from 'node:url';
 
 import { createNodeTimer } from '@microdelta/machine-node';
 import { createStopController } from '@microdelta/supervision';
-import type { IDeferralMode, IOperationAccounting, IRunEvent } from '@microdelta/supervision';
+import type { IDeferralMode, IOperationAccounting, IRunEvent, ISourceRetryPolicy } from '@microdelta/supervision';
 
 import { createWorld, installWorld } from './fixture.js';
 import type { IOperationOptions, IPlan } from './fixture.js';
@@ -56,6 +56,8 @@ export interface IWorkerScript {
   readonly deferral?: IDeferralMode;
   readonly scripts?: readonly { readonly name: string; readonly key: string; readonly entries: readonly IScriptEntry[] }[];
   readonly options?: Readonly<Record<string, IOperationOptions>>;
+  /** Deterministic source policy used only by classifier process-boundary proofs. */
+  readonly retryPolicy?: 'delay-10000' | 'retry-now' | 'kill-while-pending';
   readonly cancel?: 'cancelled' | 'running';
   readonly action: 'members' | 'inspect';
   readonly kill?: 'before-send' | 'after-send' | 'after-usage';
@@ -75,6 +77,8 @@ export interface IWorkerScript {
 /** What one worker reports. */
 export interface IWorkerReport {
   readonly statuses?: Readonly<Record<string, string>>;
+  /** Exact reusable references for successful members, used to prove sibling reuse across runs. */
+  readonly references?: Readonly<Record<string, unknown>>;
   readonly blocked?: Readonly<Record<string, unknown>>;
   readonly waitingUntil?: number | null;
   readonly diagnostics?: readonly string[];
@@ -82,6 +86,8 @@ export interface IWorkerReport {
   readonly failures?: Readonly<Record<string, { readonly code: string; readonly message: string }>>;
   /** Each pending or cancelled member's reason. */
   readonly reasons?: Readonly<Record<string, string>>;
+  /** Invocations made by this process, excluding decisions retained by prior processes. */
+  readonly classifierCalls?: number;
   /** The successor stage's report, when this worker drained past its lease. */
   readonly successor?: IWorkerReport;
   readonly events: readonly IRunEvent[];
@@ -125,6 +131,24 @@ Object.assign(world.plans, script.plans ?? {});
 world.cancel = script.cancel;
 const stop = createStopController();
 const target = script.target ?? 'pr-1';
+let classifierCalls = 0;
+
+/** The fixed adapter registration used by the process classification cases. */
+const sourcePolicy: ISourceRetryPolicy | undefined = script.retryPolicy === undefined ? undefined : {
+  id: 'process-catalog',
+  scope: { source: 'catalog', service: 'catalog-api', connection: 'org-a-read' },
+  decide() {
+    classifierCalls += 1;
+    if (script.retryPolicy === 'kill-while-pending') {
+      // Callback invocation follows the fenced response/usage commit, so this
+      // kill tests exactly that durable boundary without an in-memory shim.
+      die();
+    }
+    return script.retryPolicy === 'delay-10000'
+      ? { kind: 'retry-after', delayMilliseconds: 10_000 }
+      : { kind: 'retry-now' };
+  },
+};
 
 /** Die at once, as a crash would. */
 function die(): never {
@@ -212,16 +236,19 @@ if (script.action === 'members') {
       stop.request({ level: 'hard' });
     }
   };
-  const started = session.start({ runId: script.runId, environment, deferral: script.deferral ?? 'exit', stop, permits: 1, window: 1, observe }, (run) => run.resolveMembers({ template: 'pr', step: 'assess' }, { requestKey: `${script.runId}:${String(script.now)}:members` }));
+  const started = session.start({ runId: script.runId, environment, deferral: script.deferral ?? 'exit', stop, permits: 1, window: 1, observe,
+    ...(sourcePolicy === undefined ? {} : { retryPolicies: [sourcePolicy] }) }, (run) => run.resolveMembers({ template: 'pr', step: 'assess' }, { requestKey: `${script.runId}:${String(script.now)}:members` }));
   const result = await started.done;
   const operations = (await session.start({ runId: `${script.runId}:inspect`, environment }, (run) => run.inspectOperations()).done).value;
   report = {
     statuses: Object.fromEntries(result.value.members.map((member) => [member.key, member.status])),
+    references: Object.fromEntries(result.value.members.flatMap((member) => member.status === 'succeeded' ? [[member.key, member.outcome.reference]] : [])),
     blocked: Object.fromEntries(result.value.members.flatMap((member) => member.status === 'pending' && member.blocked !== undefined ? [[member.key, member.blocked]] : [])),
     waitingUntil: result.waitingUntil ?? null,
     diagnostics: result.diagnostics,
     failures: Object.fromEntries(result.value.members.flatMap((member) => member.status === 'failed' ? [[member.key, { code: member.error.code, message: member.error.message }]] : [])),
     reasons: Object.fromEntries(result.value.members.flatMap((member) => member.status === 'pending' || member.status === 'cancelled' ? [[member.key, member.reason]] : [])),
+    classifierCalls,
     ...(successor === undefined ? {} : { successor }),
     events: started.events,
     operations,

@@ -76,7 +76,7 @@ for (const mode of ['failed-response', 'rejected-perform'] as const) {
         expect(originalCause(failed.error)).toBe(opaque.value);
       }
       const views = await inspect(session);
-      expect(views.map(view => view.status).sort()).toEqual([mode === 'failed-response' ? 'failed' : 'unknown', 'succeeded'].sort());
+      expect(views.map(view => view.status).sort()).toEqual([mode === 'failed-response' ? 'retry-exhausted' : 'unknown', 'succeeded'].sort());
       const presentation = result.value.members.map(member => member.status === 'failed' ? member.error.message : member.status === 'pending' || member.status === 'cancelled' ? member.reason : member.status);
       expect(JSON.stringify([started.events, result.diagnostics, presentation, views, journalContents(session)])).not.toContain(marker);
       // Include actual SQLite/WAL and Accounting bytes, not only the display view.

@@ -21,6 +21,11 @@ export interface IClockCapability {
 }
 
 // @alpha
+export interface IElapsedClockCapability {
+    currentElapsedMilliseconds(): number;
+}
+
+// @alpha
 export interface IMachine extends IAsyncContextCapability, ISnapshotCapability, ISha256Capability {
 }
 

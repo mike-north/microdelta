@@ -24,6 +24,11 @@ import type {
   IOperationResponse,
   IOperationSettlement,
   IOperationView,
+  IOperationStatus,
+  IRetryAttemptSummary,
+  IRetryDecisionInput,
+  IRetryOutcome,
+  ISupervisionErrorCode,
   IRun,
   IRunEvent,
   IRunExecution,
@@ -36,6 +41,13 @@ declare const execution: IRunExecution;
 declare const run: IRun;
 declare const event: IOperationEvent;
 declare const result: IRunResult<string>;
+declare const sourceDecision: IRetryDecisionInput;
+declare const priorAttempt: IRetryAttemptSummary;
+
+// Generated alpha declarations name each bounded piece a source policy sees.
+expectType<IRetryOutcome>(sourceDecision.outcome);
+expectType<IRetryAttemptSummary>(priorAttempt);
+expectType<IRetryAttemptSummary | undefined>(sourceDecision.history.prior[0]);
 
 // An operation keeps its result type.
 const request: IOperationRequest<{ readonly verdict: string }> = {
@@ -82,8 +94,11 @@ expectError(wait.value);
 declare const member: Extract<IMemberOutcome, { readonly status: 'pending' | 'cancelled' }>;
 expectType<IOperationBlock | undefined>(member.blocked);
 expectAssignable<IOperationBlock>({ kind: 'deferred', operation: 'op-1-1', notBefore: 1 });
+expectAssignable<IOperationBlock>({ kind: 'policy-exhausted', operation: 'op-1-1' });
 expectAssignable<IOperationBlock>({ kind: 'unknown-outcome', operation: 'op-1-1', reason: 'not-repeat-safe' });
 expectNotAssignable<IOperationBlock>({ kind: 'unknown-outcome', operation: 'op-1-1', reason: 'other' });
+expectAssignable<IOperationStatus>('retry-exhausted');
+expectAssignable<ISupervisionErrorCode>('operation-exhausted');
 
 // The run reports the time it waits until.
 expectType<number | undefined>(result.waitingUntil);

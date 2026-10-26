@@ -18,6 +18,7 @@
  * evidence.
  */
 import type { IBindingDescriptor } from '@microdelta/definition';
+import type { ISourceRetryPolicy } from './operations.js';
 import type {
   ICheckOutcome,
   IDiscoveryOutcome,
@@ -352,6 +353,8 @@ export interface IRunOptions {
    * consults no operation records. They need the Supervision's timer.
    */
   readonly operations?: IRunOperationPorts;
+  /** Exact-scoped reusable source classifiers; matches replace defaults but never grant retries. */
+  readonly retryPolicies?: readonly ISourceRetryPolicy[];
   /**
    * How the run treats work deferred until a later time once only deferred
    * work remains: `sleep` (the default) releases the writer lease, waits and
@@ -892,7 +895,10 @@ export interface IRunExecution {
    * It resolves the provider's value once the operation succeeds. Otherwise
    * it rejects with a `SupervisionError`:
    *
-   * - `operation-failed`: a permanent refusal, or an exhausted policy;
+   * - `operation-failed`: a permanent refusal;
+   * - `operation-exhausted`: a known recoverable refusal exhausted this
+   *   invocation's allowance; required input stays pending until a new run
+   *   retries it, honoring any known provider floor;
    * - `operation-deferred`: a rate or quota limit deferred it until a time,
    *   or its intent could not be made durable (Accounting busy, or a commit
    *   it could not confirm), so nothing was sent and it is retried after a
@@ -906,9 +912,9 @@ export interface IRunExecution {
    *   is in progress, or a run without operation ports, a timer or a random
    *   identifier source.
    *
-   * A deferral or an unknown outcome taints the step attempt: every later
-   * operation or send it makes rethrows that signal without sending, and its
-   * work ends pending, never published.
+   * A deferral, unknown outcome or known exhaustion taints the step attempt:
+   * every later operation or send it makes rethrows that signal without
+   * sending, and its work ends pending, never published.
    */
   operation<T>(request: IOperationRequest<T>): Promise<T>;
 }

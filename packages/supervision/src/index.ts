@@ -68,6 +68,22 @@ export type {
 } from './contracts.js';
 export { ordinaryLifecycle, stepLifecycle, type IStepLifecycle } from './lifecycle.js';
 export {
+  createSharedRateCoordinator,
+  type IRunElapsedClock,
+  type IRunEpochClock,
+  type ISharedRateAdmission,
+  type ISharedRateCommitResult,
+  type ISharedRateCoordinator,
+  type ISharedRateCoordinatorOptions,
+  type ISharedRateErrorCode,
+  type ISharedRateGateDeclaration,
+  type ISharedRateLimit,
+  type ISharedRateReservation,
+  type ISharedRateSurface,
+  type ISharedRateSurfaceDeclaration,
+  SharedRateCoordinatorError,
+} from './shared-rate-coordinator.js';
+export {
   blocksCollection,
   blocksFormat,
   operationFormat,
@@ -97,6 +113,14 @@ export {
   type IOperationStatus,
   type IOperationSubject,
   type IOperationUsage,
+  type IRetryDecision,
+  type IRetryDecisionInput,
+  type IRetryAttemptSummary,
+  type IRetryFacts,
+  type IRetryHistory,
+  type IRetryOutcome,
+  type IRetrySourceScope,
+  type ISourceRetryPolicy,
   type IOperationView,
   type IRequestAttemptStatus,
   type IRequestAttemptView,

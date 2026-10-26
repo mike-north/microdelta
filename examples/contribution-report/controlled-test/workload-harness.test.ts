@@ -1,8 +1,9 @@
 /** Small focused acceptance assertions define REST-shaped workload behavior before its harness. */
 import { describe, expect, test } from '@jest/globals';
 import { searchUrl } from '../src/controlled/github.js';
+import { discoverAuthored } from '../src/controlled/github.js';
 import { createWorkloadHarness, maxRssBytesFromKibibytes, summarizeRetainedSubjectRows } from './workload-harness.js';
-import { workloadInputs, workloadPerson } from './workload-fixture.js';
+import { workloadInputs, workloadPerson, workloadPull } from './workload-fixture.js';
 
 const send = { signal: { aborted: false, onAbort: () => () => undefined }, operation: 'workload-test-operation', requestAttempt: 'workload-test-attempt', idempotencyKey: undefined };
 
@@ -42,6 +43,19 @@ describe('controlled workload REST harness', () => {
     expect(harness.observedPulls.size).toBe(100);
   });
 
+  test('one prolific 2,250-PR author traverses the cap split and every actual search leaf', async () => {
+    const harness = createWorkloadHarness('workload-prolific-test');
+    const person = workloadPerson(299);
+    const result = await discoverAuthored({ repository: 'acme/widget', login: person.login, start: workloadInputs.scope.start,
+      end: workloadInputs.scope.end, perPage: 100 }, url => harness.services.github(url, undefined, send));
+    const expected = new Set(Array.from({ length: person.pullRequests }, (_, ordinal) => `acme/widget#${String(workloadPull(person, ordinal).number)}`));
+    expect(result.count).toBe(2_250);
+    expect(new Set(result.ids)).toEqual(expected);
+    expect(harness.observedPulls).toEqual(expected);
+    expect(harness.stats().searchRanges).toEqual({ rangeRequests: 7, splitRanges: 3, terminalRanges: 4, pageRequestsOnTerminalRanges: 24 });
+    expect(harness.stats().routes['search-page']?.sends).toBe(27);
+  });
+
   test('all four evidence routes expose distinct records and count hydrated payloads at dispatch', async () => {
     const harness = createWorkloadHarness('workload-routes-test');
     const base = 'https://api.github.com/repos/acme/widget';
@@ -57,5 +71,7 @@ describe('controlled workload REST harness', () => {
     expect(inline.body).toHaveLength(1);
     expect(harness.stats()).toMatchObject({ loadedReviewEntries: 1, loadedCommentEntries: 2, loadedInlineEntries: 1 });
     expect(harness.stats().hydratedPayloadBytes).toBeGreaterThan(0);
+    expect(harness.stats().routes['pull-diff']?.responseBytes).toBe(Buffer.byteLength(String(diff.body), 'utf8'));
+    expect(harness.stats().routes['pull-detail']?.responseBytes).toBe(Buffer.byteLength(JSON.stringify(detail.body), 'utf8'));
   });
 });

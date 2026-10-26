@@ -112,10 +112,10 @@ try {
 /** JSON arguments are untrusted process input, narrowed before file paths or request identity are used. */
 function isJob(value: unknown): value is IWorkloadJob {
   if (typeof value !== 'object' || value === null || Array.isArray(value)) { return false; }
-  const directory = Reflect.get(value, 'directory');
-  const phase = Reflect.get(value, 'phase');
-  const requestKey = Reflect.get(value, 'requestKey');
-  const personCount = Reflect.get(value, 'personCount');
+  const directory: unknown = Reflect.get(value, 'directory');
+  const phase: unknown = Reflect.get(value, 'phase');
+  const requestKey: unknown = Reflect.get(value, 'requestKey');
+  const personCount: unknown = Reflect.get(value, 'personCount');
   return typeof directory === 'string' && (phase === 'cold' || phase === 'restart') && typeof requestKey === 'string'
     && typeof personCount === 'number' && Number.isSafeInteger(personCount) && personCount > 0 && personCount <= 300;
 }

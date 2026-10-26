@@ -25,6 +25,7 @@ export interface IWorkloadStats {
   readonly loadedCommentEntries: number;
   readonly loadedInlineEntries: number;
   readonly hydratedPayloadBytes: number;
+  readonly searchRanges: { readonly rangeRequests: number; readonly splitRanges: number; readonly terminalRanges: number; readonly pageRequestsOnTerminalRanges: number };
 }
 
 /** Aggregate one authoritative durable row per retained subject without conflating records or acceptances. */
@@ -34,6 +35,8 @@ export interface IRetainedSubjectCounts { readonly subjects: number; readonly re
 
 /** Mutable counters remain private to one process and are snapshotted only after report completion. */
 interface IRouteCounter { sends: number; responseBytes: number; readonly operations: Map<string, number> }
+/** Search range counters prove where the production adapter split oversized result sets. */
+interface ISearchRangeCounter { readonly totalCount: number; pageRequests: number }
 
 /** The adapter answers REST requests; the separate expected-ID set is only readable by the harness. */
 export interface IWorkloadHarness {
@@ -82,6 +85,7 @@ export function createWorkloadHarness(access: string, personCount = 300): IWorkl
   }
   const observedPulls = new Set<string>();
   const counters = new Map<string, IRouteCounter>();
+  const searchRangeCounters = new Map<string, ISearchRangeCounter>();
   let inFlightGithub = 0;
   let maxInFlightGithub = 0;
   let inFlightAssessments = 0;
@@ -113,7 +117,9 @@ export function createWorkloadHarness(access: string, personCount = 300): IWorkl
       counter.operations.set(send.operation, (counter.operations.get(send.operation) ?? 0) + 1);
       try {
         const body = serve(url, accept, byLogin, byNumber, observedPulls);
-        const bytes = Buffer.byteLength(JSON.stringify(body));
+        const bytes = accept === 'application/vnd.github.diff' && typeof body === 'string'
+          ? Buffer.byteLength(body, 'utf8') : Buffer.byteLength(JSON.stringify(body), 'utf8');
+        recordSearchRange(url, body, searchRangeCounters);
         counter.responseBytes += bytes;
         hydratedPayloadBytes += route === 'pull-detail' || route === 'review-list' || route === 'conversation-comments' || route === 'inline-comments' ? bytes : 0;
         if (route === 'review-list' && Array.isArray(body)) { loadedReviewEntries += body.length; }
@@ -148,8 +154,12 @@ export function createWorkloadHarness(access: string, personCount = 300): IWorkl
         for (const attempts of counter.operations.values()) { retrySends += Math.max(0, attempts - 1); }
         routes[name] = { sends: counter.sends, logicalOperations: counter.operations.size, retrySends, responseBytes: counter.responseBytes };
       }
+      const searchRanges = [...searchRangeCounters.values()];
       return { routes, observedPulls: observedPulls.size, observedAssessmentRequests, maxInFlightGithub, maxInFlightAssessments,
-        loadedReviewEntries, loadedCommentEntries, loadedInlineEntries, hydratedPayloadBytes };
+        loadedReviewEntries, loadedCommentEntries, loadedInlineEntries, hydratedPayloadBytes,
+        searchRanges: { rangeRequests: searchRanges.length, splitRanges: searchRanges.filter(range => range.totalCount > 1_000).length,
+          terminalRanges: searchRanges.filter(range => range.totalCount <= 1_000).length,
+          pageRequestsOnTerminalRanges: searchRanges.filter(range => range.totalCount <= 1_000).reduce((sum, range) => sum + range.pageRequests, 0) } };
     },
   };
 }
@@ -237,6 +247,22 @@ function counterFor(counters: Map<string, IRouteCounter>, route: string): IRoute
   let counter = counters.get(route);
   if (counter === undefined) { counter = { sends: 0, responseBytes: 0, operations: new Map() }; counters.set(route, counter); }
   return counter;
+}
+
+/** Count each actual requested range once and its real provider page requests, including recursive leaves. */
+function recordSearchRange(url: string, body: unknown, counters: Map<string, ISearchRangeCounter>): void {
+  const address = new URL(url);
+  if (address.pathname !== '/search/issues' || typeof body !== 'object' || body === null || !('total_count' in body)
+    || typeof body.total_count !== 'number') { return; }
+  const query = address.searchParams.get('q') ?? '';
+  const author = /(?:^| )author:([^ ]+)/u.exec(query)?.[1];
+  const created = /(?:^| )created:(\S+)\.\.(\S+)/u.exec(query);
+  if (author === undefined || created?.[1] === undefined || created[2] === undefined) { throw new Error('malformed workload search range'); }
+  const key = `${author}:${created[1]}..${created[2]}`;
+  const existing = counters.get(key);
+  if (existing !== undefined && existing.totalCount !== body.total_count) { throw new Error('workload search range total changed between pages'); }
+  if (existing === undefined) { counters.set(key, { totalCount: body.total_count, pageRequests: 1 }); }
+  else { existing.pageRequests += 1; }
 }
 
 /** Binary search preserves exact ordered range selection without scanning unrelated PR payloads. */

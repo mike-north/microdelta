@@ -4,8 +4,8 @@ Local implementation candidate on `codex/issue-254-source-call-currentness`.
 Governing issue: <https://github.com/mike-north/microdelta/issues/254>.
 Selected contract: [scoped-source-calls](../plans/scoped-source-calls.md), reviewed
 at `615e0bfa9085dbca07df03c22a3635767fc2950e` in PR #253. Implementation and
-acceptance are separate: this record requests a different adversarial review;
-no push, PR, merge, release or paid/provider execution is claimed.
+acceptance are separate: independent source review and root evidence review
+are complete; no push, PR, merge, release or paid/provider execution is claimed.
 
 ## Ownership and change
 
@@ -127,7 +127,10 @@ Explicit terminal receipts are all 0:
 Corresponding `.log` files preserve the commands and outputs. The earlier
 `repair-check.exit=1` records the caught fixture capture and is not hidden.
 This evidence-only update changes no tested source or generated API report.
-Re-review by the same different reviewer remains required before publication.
+The same different reviewer completed repaired-source review **PASS** at
+`8eda90881520f1cdc28acf8d8b10cc48d7432a19`; root reviewed the evidence-only
+successor and verified the successful receipts. Publication and merge remain
+subject to the normal PR CI, completed Copilot review and supervisor gates.
 
 ## Validation state and limits
 
@@ -141,9 +144,10 @@ all affected anchors match exactly once. The two new required controls pass afte
 No provider transport, pagination, live request, CLI, performance/scale, fairness,
 nested collection framework, full M7 completion or stable API promise is included.
 The runtime tests use the real owner graph, SQLite and controlled fake adapters;
-they do not prove a production provider's pagination/exhaustion contract. A
-separate adversarial review must pass before the supervisor authorizes publication. Shared-rate dispatch composition with #238 is not yet proved here. Its assembly seam is `supervised-support.session`: inject one coordinator through `createSupervision` and annotate the existing `supervision.execution().operation` requests with the selected surface/gate. No new source acquisition API is needed or claimed.
+they do not prove a production provider's pagination/exhaustion contract. Shared-rate dispatch composition with #238 is not yet proved here. Its assembly seam is `supervised-support.session`: inject one coordinator through `createSupervision` and annotate the existing `supervision.execution().operation` requests with the selected surface/gate. No new source acquisition API is needed or claimed.
 
 Implementer: Codex subagent `/root/source_call_impl254`.
 Agent assistance: root supervised scope and acceptance; no implementation subagent
-or Claude session was spawned. The baseline different review found the kind-correspondence defect above; scoped repair re-review is pending.
+or Claude session was spawned. The baseline different review found the
+kind-correspondence defect above; the same different reviewer completed repaired
+source review PASS, and root reviewed the evidence-only successor.

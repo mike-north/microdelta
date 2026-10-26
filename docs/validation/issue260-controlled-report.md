@@ -1,133 +1,129 @@
-# Issue 260 controlled report evidence
+# Controlled report acceptance evidence
 
-This work record maps the concrete report to issue260 and parent240. It is not
-full issue acceptance: the realistic150000-PR workload, import-boundary harness
-placement, full baseline checks and final independent review remain pending
-below. Parent240 retains its separately permissioned
-executable/progress criterion and all six criteria; CLI projection, installation,
-launcher/lifetime choices, full TEST-3/4 and TEST-5/6 remain separate gates.
+Issue260 is **not yet accepted**. The combined controlled application and
+independent fixture checks pass; the mandatory standalone150000-distinct-PR cold
+and independent-process restart, final combined baseline and final whole-head
+review remain pending. Parent240 retains all six criteria, including its
+separately permissioned executable/progress criterion. CLI projection,
+installation, launcher/lifetime decisions, full TEST-3/4 and TEST-5/6 remain
+separate gates.
 
-The implementation starts from prerequisite-containing commit
-`1dc9c401510c4c6e686bd43b91fcb4e23d4cdb24`. Every new source imports the generated
-`microdelta.alpha.d.ts` facade and built package exports through the example's
-strict compiler configuration. Type tests import the emitted application
-declarations, never a private sibling source alias. Generated artifact hashes
-and the final exact revision belong in the final acceptance record.
+## Scope and frozen source
 
-The [controlled application contract](../../examples/contribution-report/CONTROLLED_CONTRACT.md)
-specifies the concrete REST field mapping, authored-PR population, fixed backing
-dataset assumption, default unverified historical content, explicit controlled
-scenario/cutoff guarantee and undetectable mutable-live-population limitation.
-The fixture-base scenario independently specifies four PRs101/102/201/202 split
-evenly between Ada and Grace; each has one submitted review, one conversation
-comment and one inline comment, with known unedited content/activity before the
-selected cutoff. This explicit harness assumption supplies temporal basis;
-traversal completion and `submitted_at` do not infer it.
+The report covers explicitly selected current HR employees' **authored PRs**,
+with submitted reviews, conversation comments and inline comments attached as
+assessment evidence. The [controlled application contract](../../examples/contribution-report/CONTROLLED_CONTRACT.md)
+records the concrete REST subset, fixed backing dataset assumption outside the
+wire protocol, explicit exact-cutoff historical content guarantee, and
+unverified mutable-live-population limitation. Neither endpoint exhaustion nor a
+local observation identity invents a provider snapshot or historical text.
 
-## Acceptance map
+The concrete application source is frozen at
+`da858fc0e071cfadfdffba13ff15c50b0207c56f`; the independently reviewed workload
+branch is `363018b0458d2c1bd0aeaaa1bd22e4f9b75d5414`. Their normal integration is
+`0901ee6202f77c67802d576382fe5843754fd3dd`. The fixture relocation changes test
+ownership and verification paths while preserving that application source. The
+final workload receipt must identify the actual combined revision used, and the
+final artifact manifest must fingerprint the generated declarations and runtime
+inputs after the final build.
 
-| Issue260 criterion; parent240 overlap | Actual application tests/artifacts | Current evidence |
-| --- | --- | --- |
-| 1 completed search, roster/schema/closure;240.1/4 | `protocol.test.ts`, `model.test.ts`, `evidence.test.ts`; application `two fresh paginated searches complete before each person details and assessments`, `certified empty yields no contributions` | PASS in current local tranche. Positive1001-PR cap bisection, observable closure/identity/continuation negatives and hidden-oracle live-mutation limitation are explicit. |
-| 2 currentness/restart;240.2 | `application.test.ts` current source hooks, provisional refresh, membership, prompt/model/helper and shared-context tests; `restart.test.ts` complete process exit, exact source/assessment/person references, consumed versus unread change, failed traversal/root recovery | PASS for named cases. A changed consumed PR101 value reruns one assessment and Ada only; unread changes refresh source but retain exact assess/person references. Remaining targeted controls and broader criterion accounting remain pending. |
-| 3 actual source/rate assembly;240.3 | Application `search, discussion, detail and assessment all consume one configured fixed request gate`; `provider-controls.test.ts` narrow search/core union, independent access, new-run shared cost, quantity cost, final stop/fence/intent | Cold four-PR run:24 GitHub requests +4 assessment sends,4 acknowledged reports/40 observed tokens; absent GitHub usage reports remain gaps. Settled restart:8 source hooks,4 search sends (2 when repaged),0 assessments and exact person refs. Controlled-clock actual facade proves provider floors, full mandatory gate union and definite-unsent reservation rollback. Final restored negative controls remain pending. |
-| 4 trial/failure/stop;240.4/2 | `restart.test.ts` empty/single/widened trial, exclusion and environment isolation; SIGKILL after committed Ada/pending Grace; `settling-failure.test.ts` malformed model output and lost model response; application typed handoff | Named cases PASS. Empty trial sends nothing; excluded Grace has no expensive body. SIGKILL restart retains Ada and executes Grace's2 assessments. Malformed assessment publishes no reusable Ada assessment/summary but preserves acknowledged billing and successful Grace. Lost response exhausts finite allowance, leaves previous Ada readable and usage unknown; fresh allowance completes only missing Ada work. |
-| 5 CR-2;240.6/3 | `retry.test.ts`11 normalization/budget cases; `provider-controls.test.ts`20 actual facade cases, including Retry-After seconds/date/reset, provider/local maximum, threshold/reopen/cancel, finite allowance, explicit operator rejection and deferred-only lease release | Focused31 tests PASS. Source-policy `stop` is explicitly distinct from operator rejection. Budget excess keeps the provider floor; explicit operator soft stop drains the admitted sibling JSON/diff body, while hard stop/immediate deadline prevents the remaining send and partial publication. Focused independent review and final controls pending. |
-| 6 CR-4;240.6/2 | Evidence future closure/merge and post-cutoff-content negatives; application changed-cutoff guarantee refusal; restart equal child/exact parent evidence | Named cases PASS. Same observation cannot relabel a prior mismatched temporal guarantee. Application observation remains distinct from a provider snapshot and Tracking observation. Remaining coverage/accounting pending. |
-| 7 CR-5;240.6/2 | `settling-failure.test.ts` independently final quiet/daily sources, advanced observation, per-policy change, late arrival, open/recent/future activity; model clipping/closed-day boundaries; temporal-basis negatives | Named cases PASS. Advanced observation refreshes only the provisional source. Late comment refreshes affected PR101 detail and assessment, retains unaffected detail and exact equal-score Ada summary, and leaves historical provenance readable. Changing only quiet/daily policy leaves the unrelated source exact; no global finality follows. |
-| 8 workload/privacy;240.2–4/6 | `settling-failure.test.ts` public events/identities/diagnostics/report versus synthetic credential/header/model/context secrets | Privacy case PASS; absent GitHub billing remains24 unknown attempts. PENDING mandatory standalone150000 distinct qualified PR cold+independent-process restart and measured people/subjects/evidence/payload/operations/sends/memory/in-flight facts. Tiny fixtures do not replace this gate. |
-| CLI handoff;240.5 remains open | `composeReport`, typed `evaluateReport`, `IReportRunOutcome`, generated declaration/tsd negatives | Concrete inputs/outcomes only. Strict `complete` requires succeeded framework fold; fulfilled incomplete body has no report. No CLI fields/framing or launch/lifetime decision. |
+The [independent fixture role](../../fixtures/contribution-report/README.md)
+owns synthetic providers, History/Accounting oracles, fresh-process workers,
+workload measurements and generated declaration tests. Strict compilation maps
+public owner roots only to generated alpha declarations; workers load public
+package entries. Type-aware lint and import checks include the fixture. New
+mechanical tests reject deep packages, owner source, aliases, encoded source
+escapes and nonliteral module edges. The executable example's facade-only rule
+is unchanged and its existing positive/negative controls remain passing.
 
-## Test-first and independent review record
+## Current acceptance map
 
-Outcome tests were observed RED before the corresponding runtime behavior:
-empty adapter stub20 failures; malformed roster/schema/settling outcomes;
-required PR/review/comment evidence; concrete facade assembly4 failures;
-per-person consumed context; typed strict executor; unverified temporal basis;
-independent review's edit-time, semantic-Link, reverse-ID and temporal-basis
-mutation cases. The parent's private local receipts retain the exact RED logs;
-the named checked-in tests reproduce the expectations independently.
+Test filenames below are relative to `fixtures/contribution-report`.
 
-Initial protocol tranche `87b0c9e` was independently reviewed at its immutable
-commit. Repairs `de057d0`, `fb3c91f` and `07d2372` preserve actual edit activity,
-semantic Link binding, identity bijection, separate temporal basis and captured
-per-operation scalar identity across awaits. Follow-up independent review is
-pending. This preliminary review does not accept the final report/scale scope.
+| Issue260 criterion; parent240 overlap | Concrete evidence and current result |
+| --- | --- |
+| 1 completed search, roster/schema/closure;240.1/4 | `protocol.test.ts`, `model.test.ts`, `evidence.test.ts`, and application completed-search/empty-population cases PASS. Independent exact counts precede details; positive1001-PR cap bisection, invalid/capped/nonterminal/continuation/identity failures, current HR selection, explicit empty trial and strict malformed assessment refusal are covered. The hidden manifest is outside the adapter. |
+| 2 currentness/restart;240.2 | Application and `restart.test.ts` cases PASS: current hooks and exact source/assessment/person references across full process exit; repagination, added/removed membership, consumed versus unread change, equal refreshed child, prompt/model/helper inputs and compatible versus differing consumed person context. Failed traversal cannot close membership; a fresh root traversal reuses eligible older work. Prior source provenance remains readable. |
+| 3 actual source/rate assembly;240.3 | Actual generated-facade search/discussion/detail/assessment operations PASS. Cold four-PR fixture sends24 GitHub requests plus4 assessments, observes4 acknowledged usage reports/40 tokens, and retains24 unknown GitHub usage attempts. Settled restart executes8 source hooks,4 search sends (2 when repaged),0 assessments and exact person references. Actual shared request/quantity gates, mandatory API+search union, independent access and same-process new-run shared cost are asserted. |
+| 4 trial/failure/stop;240.4/2 | `restart.test.ts`, application handoff and `settling-failure.test.ts` PASS. Empty trial sends nothing; excluded Grace has no expensive body; widening retains eligible Ada only within trial; production does not import trial state. SIGKILL after Ada publication retains Ada and executes Grace's2 assessments on restart. Malformed model output publishes no Ada assessment/summary but preserves acknowledged billing and successful Grace. Lost model response exhausts finite allowance, leaves earlier Ada readable and usage unknown; a fresh run completes missing Ada work. |
+| 5 CR-2;240.6/3 | `retry.test.ts`33 cases and `provider-controls.test.ts`22 actual-facade cases PASS. Seconds/HTTP-date/reset normalization, receipt-relative RFC850 century, safe integer timing, local/provider maximum, early timer wake, threshold, slow classifier publication and decision acceptance, cumulative wait, finite attempts, same-operation close/reopen, cancellation, deferred-only writer release/reacquisition, explicit operator soft/hard/deadline rejection, final stop/fence and definite-unsent rollback are covered. Source classifier stop remains distinct from operator rejection. Independent provider review PASS is accepted at `da858fc`. |
+| 6 CR-4;240.6/2 | Evidence/model/application/restart cases PASS. Changed cutoff cannot relabel mismatched temporal basis. Future terminal events cannot establish earlier closure. Advanced observation refreshes provisional evidence; equal refreshed children record new source provenance while eligible exact parent/assessment references remain. |
+| 7 CR-5;240.6/2 | `settling-failure.test.ts` independently final quiet/daily sources, advanced observation, per-policy changes, late arrival, open/recent/future activity; model clipped inclusive closed-day boundaries; temporal-basis negatives PASS. Advanced observation refreshes only the provisional source. Late relevant comment refreshes PR101 detail/assessment, retains unrelated detail and exact equal-score Ada summary, and leaves prior provenance immutable. No global finality follows. |
+| 8 workload/privacy;240.2–4/6 | Public events/identities/progress/diagnostics/report versus synthetic credentials, headers, raw wire/model bodies, cursor and private assessment context PASS. Missing billing remains unknown. Workload fixture/measurement/tail/harness tests PASS, including required prolific-author capped-search behavior. **PENDING** standalone150000 distinct qualified PR cold+independent-process restart and its actual people/subjects/evidence/payload/operation/send/memory/in-flight measurements. The500-PR smoke is not acceptance. |
+| CLI handoff;240.5 remains open | `composeReport`, `evaluateReport`, `IReportRunOutcome` and generated declaration/tsd negatives PASS. Strict complete requires a succeeded framework fold; fulfilled incomplete execution has no report. No CLI framing or lifetime choice is selected. |
 
-The frozen actual-facade checkpoint passed5 suites/74 tests, including
-fresh-process tests; generated application/facade tsd assertions passed. The
-subsequent provider tranche adds31 focused cases, all passing locally.
-Protocol-only repaired tranche passes58 tests with type-aware lint. Final counts,
-full baseline checks, changed imports/declarations, meaningful restored negative
-controls, exact output references and measured workload must be recorded before
-issue acceptance or PR publication.
+## Commands and receipts
 
-The first provider test draft incorrectly expected a source classifier's `stop`
-decision to itself request whole-analysis soft stop. The owning retry contract
-explicitly separates source classification from operator rejection. Those
-expectations were corrected without a runtime change, then the separate accepted
-soft/hard/deadline rejection boundary was exercised through the existing stop
-controller. Likewise an unconfirmed usage-intent write's durable backoff remains
-binding; reservation rollback is proven using an independent new source address
-on the same shared gate, rather than bypassing that retained not-before time.
+Local receipts are retained under `/private/tmp` for supervisory inspection;
+checked-in named tests and commands reproduce their behavioral expectations.
 
-Independent provider review of `b223a4f` was superseded to repair required when
-the author exposed three uncovered boundaries: zero selected delay must produce
-`retry-now`, malformed JavaScript date strings must not establish rate evidence,
-and unsafe seconds/conversion/addition must not produce a provider floor.
-The corrected tranche has27 direct normalization/budget tests and22 actual-facade
-provider tests passing, plus strict example compile/lint. Additional test-first
-date cases reject calendar rollover, weekday mismatch and hour24, and preserve
-supported obsolete HTTP forms with an explicit GMT interpretation. Direct429
-status and independently valid reset evidence survive an invalid Retry-After.
-The actual facade also proves an early timer wake cannot send early, cooldown is
-published before a slow classifier returns, accepted local delay begins at the
-decision boundary, and cumulative-budget refusal retains the provider floor.
-These scoped repairs await independent re-review at their frozen revision.
-
-The original three repairs passed independent review, which then exposed a
-fourth boundary: RFC850 two-digit years must use receipt-relative fifty-year
-interpretation rather than JavaScript's fixed1950 pivot. Five new intended RED
-assertions preceded the correction. The parser now chooses the matching century
-before calendar/weekday round-trip, accepts the exact fifty-calendar-year limit,
-and moves a value one second beyond that limit to the preceding century.
-The33 direct retry tests and22 actual-facade provider tests pass together, with
-strict example compile/lint. This fourth repair awaits its separate frozen review.
+| Command / exact scope | Observed evidence |
+| --- | --- |
+| `npm run test:controlled-report` after relocation and CR-5 precision repair |157 Jest tests/12 suites plus generated declaration/tsd PASS; `issue260-combined-repaired-tests.log`. |
+| `npm run check:imports` | Actual example and fixture boundary PASS; `issue260-combined-fixture-imports.log`. |
+| `npm run check:fixtures` | Existing declaration-consumer checks plus strict fixture compile and type-aware lint PASS; `issue260-combined-fixture-check.log`. |
+| `node --test tooling/report-fixture-imports.test.mjs tooling/example-source-imports.test.mjs` |8 tooling cases PASS, including generated alpha path and repository-gate/type-aware-lint enforcement; `issue260-combined-fixture-role.log`. |
+| Provider frozen `da858fc` focused tests |55 Jest cases plus strict example compile/lint PASS; author `issue260-green-rfc850-century.log`, `issue260-rfc850-check.log`; independent `issue260-provider-century-repair-review.md`. |
+| Repaired `settling-failure.test.ts` |15 actual-facade cases PASS, plus strict fixture/import checks; `issue260-green-cr5-policy-outcome.log`, `issue260-cr5-repair-check.log`, `issue260-cr5-repair-imports.log`. |
+| `npm run test:controlled-report:workload -- --smoke` after relocation |500 distinct PRs/2 people cold and fresh-process restart PASS,4.0s/3.7s measured locally; `issue260-combined-workload-smoke.log`. Cold3006 actual sends, restart1506 additional sends,0 restart assessments. This only verifies the bounded integration and measurement paths. |
+| Full `npm test`, then explicit `npm run build`, before final RFC850/relocation/workload integration |PASS at the earlier candidate; `issue260-full-test.log`, `issue260-full-build.log`. This is earlier baseline evidence, not final combined qualification. |
+| First full `npm run check` before relocation | Architectural RED:12 harness imports fell beneath the example facade-only rule; all other package/workspace checks passed. Preserved `issue260-full-check.log`; resolved by explicit fixture ownership and enforcement, not by weakening the example rule. |
+| Final combined `npm run check`, `npm test`, `npm run build` | **PENDING** after the frozen combined candidate. |
+| `npm run test:controlled-report:workload` | **PENDING** standalone150000-PR qualification after combined review. `-- --smoke` is a separate non-acceptance harness exercise. |
 
 ## Restored negative controls
 
-Each control below compiled before running the named test; every mutant then
-failed its intended outcome assertion. Exact source bytes were restored after
-each control, and all134 controlled Jest tests plus generated declaration/tsd
-passed after restoration. These are behavioral detections, not compiler/setup
-failures. Source paths below are relative to this example's controlled sources.
+Each mutation compiled before the named test failed its intended outcome
+assertion; none was detected merely by setup/compiler failure. Exact source
+bytes were restored after every control. The original receipts
+`issue260-negative-*.log` and outcome summary `issue260-negative-controls.json`
+remain available; all six relocated combined controls independently failed
+their outcome assertions, then exact source restoration passed the combined
+suite. Separate `issue260-combined-negative-*` receipts preserve that repetition.
+The final repaired combined suite passes157 tests plus generated tsd.
 
-| Planted violation | Targeted test and observed detection |
+| Planted contract violation | Targeted outcome detection |
 | --- | --- |
 | `github.ts`: allow `incomplete_results:true` to close | Application `certified empty yields...`: expected failed strict fold, mutant succeeded. |
 | `application.ts`: accept complete detail despite provisional quiet policy | Application `provisional current refresh...`: expected4 current detail bodies, mutant ran0. |
 | `application.ts`: parent reads otherwise unread `fetched.data.labels[0]` | Same provisional-refresh test: changed unread label replaced exact person references. |
-| `application.ts`: omit shared admission on GitHub source operations | Application `one configured fixed request gate`: a send arrived5ms after its predecessor against the asserted minimum7ms. |
-| `application.ts`: label an incomplete fold complete with a fabricated empty report | Application `concrete execution handoff...`: expected incomplete, mutant complete. |
+| `application.ts`: omit shared admission on GitHub source operations | Application `one configured fixed request gate`: a send violated the asserted minimum interval. |
+| `application.ts`: label incomplete fold complete with fabricated empty report | Application `concrete execution handoff...`: expected incomplete, mutant complete. |
 | `application.ts`: erase unknown usage and label it complete | Settling/failure `synthetic credentials...`: expected24 unknown attempts, mutant reported0. |
+| Lost-model fixture: acknowledge fabricated zero usage for both lost model attempts while old GitHub gaps remain | `lost model responses...`: exact captured request-attempt identities were missing from unknown usage despite a still-positive unrelated total; `issue260-red-lost-model-specific-unknown.log`. Test bytes were restored before the157-case GREEN run. |
 
-The controlled-suite restored result is134 tests/8 suites plus generated tsd.
-The first full `npm run check` discovered12 import-boundary violations solely in
-the independent harness: History/Node oracle imports currently fall beneath the
-example's facade-only rule. All other package/workspace checks passed. The
-governing facade-only rule remains intact; the proper harness role/placement is
-being resolved before repeating that gate. Repository test/build gates continue
-separately; this record makes no passing baseline claim yet.
+Independent CR-5 review also planted a late required-source failure after the
+actual quiet/daily fetch for PR102/202. The former two policy tests still passed
+while their current reports were incomplete. Strengthened assertions first
+failed exactly at expected complete versus actual incomplete
+(`issue260-red-cr5-policy-outcome.log`), then passed after exact application
+restoration. All positive CR-5 runs now assert current strict success and
+current-fold person references. Policy changes also require new affected-source
+provenance and unrelated current acceptance/reuse; readable old History alone
+cannot satisfy them. Lost-response assertions name both individual model
+attempts before and after resume, independently from earlier GitHub usage gaps.
 
-Reproduce after building prerequisite packages:
+## Test-first and scoped review provenance
 
-```sh
-npm run build:packages
-npm run test:controlled-report
-npm run check:examples
-```
+Outcome RED receipts precede runtime changes for protocol closure, roster/schema,
+required evidence, actual facade assembly, currentness/context, strict handoff,
+temporal basis, retry budgets/search association, scalar capture and provider
+boundary repairs. The fixture-role tests observed3 forbidden-edge RED failures
+before enforcement, then existing example controls plus new fixture tests passed.
+The first full-check architectural RED remains preserved separately.
 
-No live provider, paid execution, credential inspection, external publication,
-GitHub mutation, core API expansion or new persistence/retry authority is part of
-this work. Examples and private workspace test wiring require no package release
-changeset.
+Independent adapter review PASS at `07d2372` and application/restart PASS at
+`8a8cef1` remain scoped evidence. Provider `b223a4f` initially passed review, then
+that disposition was explicitly superseded when three missing boundaries were
+reproduced: zero `retry-after`, permissive JavaScript dates, and unsafe numeric
+timing. `b057950` repaired them; review found the remaining RFC850 century pivot.
+The receipt-relative correction at `da858fc` passed independent55-case review
+and additional calendar/timezone/century probes. The workload branch
+`363018b` passed its separate bounded repair review. CR-5/failure/privacy,
+combined relocation/integration, full workload and final whole-head acceptance
+remain separate supervisory review boundaries.
+
+No live/paid provider execution, credential inspection, external publication,
+GitHub mutation, core API expansion, new persistence/retry authority or release
+configuration is included. Examples and private test infrastructure require no
+package release changeset.

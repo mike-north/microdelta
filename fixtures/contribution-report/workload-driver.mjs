@@ -5,10 +5,10 @@ import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
-import { summarizeRetainedSubjectRows } from '../.test-build/controlled-test/workload-harness.js';
+import { summarizeRetainedSubjectRows } from './.test-build/fixtures/contribution-report/workload-harness.js';
 
-const root = fileURLToPath(new URL('../../..', import.meta.url));
-const worker = join(root, 'examples/contribution-report/.test-build/controlled-test/workload-worker.js');
+const root = fileURLToPath(new URL('../..', import.meta.url));
+const worker = join(root, 'fixtures/contribution-report/.test-build/fixtures/contribution-report/workload-worker.js');
 const directory = mkdtempSync(join(tmpdir(), 'issue260-controlled-workload-'));
 const timeout = 12 * 60 * 60 * 1_000;
 const smoke = process.argv.includes('--smoke');

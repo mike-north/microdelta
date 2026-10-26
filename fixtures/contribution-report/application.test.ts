@@ -8,8 +8,8 @@ import type { IDurableAccounting } from '@microdelta/accounting';
 import { createNodeSqlite } from '@microdelta/machine-node';
 import { openWorkspace } from 'microdelta';
 import type { ICompletedResultReference, IWorkspace } from 'microdelta';
-import { composeReport, evaluateReport } from '../src/controlled/application.js';
-import type { IControlledReport, IReportInputs } from '../src/controlled/application.js';
+import { composeReport, evaluateReport } from '../../examples/contribution-report/src/controlled/application.js';
+import type { IControlledReport, IReportInputs } from '../../examples/contribution-report/src/controlled/application.js';
 import { baseInputs, fixture } from './fixture.js';
 import type { IFixture } from './fixture.js';
 

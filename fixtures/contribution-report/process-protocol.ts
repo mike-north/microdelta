@@ -1,7 +1,7 @@
 /** Checked transport for complete process exits; no callback or coordinator state crosses this boundary. */
 import type { ICompletedResultReference } from 'microdelta';
-import type { IControlledReport, IReportInputs } from '../src/controlled/application.js';
-import { isRecord } from '../src/controlled/github.js';
+import type { IControlledReport, IReportInputs } from '../../examples/contribution-report/src/controlled/application.js';
+import { isRecord } from '../../examples/contribution-report/src/controlled/github.js';
 import type { IFixtureOptions } from './fixture.js';
 
 /** Serializable provider variations change only independently controlled wire/content data. */

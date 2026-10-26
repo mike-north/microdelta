@@ -3,6 +3,7 @@ import tseslint from 'typescript-eslint';
 
 import { contextImports } from './context-imports.mjs';
 import { exampleSourceImports } from './example-source-imports.mjs';
+import { reportFixtureImports } from './report-fixture-imports.mjs';
 
 export default [
   { ignores: ['**/dist/**', '**/.test-build/**', '**/node_modules/**'] },
@@ -12,6 +13,15 @@ export default [
     linterOptions: { noInlineConfig: true },
     plugins: { microdelta: { rules: { 'context-imports': contextImports } } },
     rules: { 'microdelta/context-imports': 'error' },
+  },
+  {
+    // Independent public-port oracles are test infrastructure. Their broader
+    // inspection role grants no owner-source or deep-package import authority.
+    files: ['fixtures/contribution-report/**/*.ts', 'fixtures/contribution-report/**/*.mjs'],
+    languageOptions: { parser: tseslint.parser },
+    linterOptions: { noInlineConfig: true },
+    plugins: { microdelta: { rules: { 'report-fixture-imports': reportFixtureImports } } },
+    rules: { 'microdelta/report-fixture-imports': 'error' },
   },
   {
     // The executable example is an external consumer of the facade: it may use

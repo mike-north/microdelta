@@ -11,9 +11,9 @@ import type { IDurableHistory } from '@microdelta/history';
 import { createNodeClock, createNodeMachine, createNodeSqlite } from '@microdelta/machine-node';
 import { createStopController, openWorkspace, registerSharedRateSurface } from 'microdelta';
 import type { IRunEvent, ISourceRetryPolicy, IWorkspace, IWorkspaceAccounting, IWorkspaceRunOptions } from 'microdelta';
-import { composeReport, evaluateReport } from '../src/controlled/application.js';
-import type { IReportHelpers, IReportInputs, IReportServices } from '../src/controlled/application.js';
-import { githubRetryPolicy } from '../src/controlled/github-retry.js';
+import { composeReport, evaluateReport } from '../../examples/contribution-report/src/controlled/application.js';
+import type { IReportHelpers, IReportInputs, IReportServices } from '../../examples/contribution-report/src/controlled/application.js';
+import { githubRetryPolicy } from '../../examples/contribution-report/src/controlled/github-retry.js';
 import { baseInputs, fixture } from './fixture.js';
 import type { IFixture } from './fixture.js';
 

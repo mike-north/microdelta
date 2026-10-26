@@ -2,9 +2,9 @@
 import { expectError, expectType } from 'tsd';
 import { authoring } from 'microdelta';
 import type { IOperationSend, ITrackedView, IWorkspace } from 'microdelta';
-import { composeReport, evaluateReport } from '../.test-build/src/controlled/application.js';
-import type { IAssessmentRequest, IReportApplication, IReportInputs, IReportRunOutcome, IReportServices } from '../.test-build/src/controlled/application.js';
-import type { IPullDetail } from '../.test-build/src/controlled/evidence.js';
+import { composeReport, evaluateReport } from '../.test-build/examples/contribution-report/src/controlled/application.js';
+import type { IAssessmentRequest, IReportApplication, IReportInputs, IReportRunOutcome, IReportServices } from '../.test-build/examples/contribution-report/src/controlled/application.js';
+import type { IPullDetail } from '../.test-build/examples/contribution-report/src/controlled/evidence.js';
 
 declare const inputs: IReportInputs;
 declare const services: IReportServices;

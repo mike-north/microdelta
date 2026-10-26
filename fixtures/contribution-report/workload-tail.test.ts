@@ -1,8 +1,8 @@
 /** Every cohort tail must remain cutoff-valid and quiet through the actual REST adapter. */
 import { describe, expect, test } from '@jest/globals';
 import type { IOperationSend } from 'microdelta';
-import { loadDiscussion, loadPull } from '../src/controlled/evidence.js';
-import { quietFinal } from '../src/controlled/model.js';
+import { loadDiscussion, loadPull } from '../../examples/contribution-report/src/controlled/evidence.js';
+import { quietFinal } from '../../examples/contribution-report/src/controlled/model.js';
 import { createWorkloadHarness } from './workload-harness.js';
 import { workloadInputs, workloadPerson, workloadPull } from './workload-fixture.js';
 

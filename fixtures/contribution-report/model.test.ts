@@ -1,6 +1,6 @@
 /** Explicit report input and settling outcomes follow TEST-3 and CR-4/5. */
 import { describe, expect, test } from '@jest/globals';
-import { dailyCoverage, parseRoster, quietFinal, selectPeople, validateAssessment, validateScope } from '../src/controlled/model.js';
+import { dailyCoverage, parseRoster, quietFinal, selectPeople, validateAssessment, validateScope } from '../../examples/contribution-report/src/controlled/model.js';
 
 /** Current HR records include a quoted comma and an employee explicitly inactive. */
 const csv = 'employee_id,github_login,name,active\r\nada,ada,"Lovelace, Ada",true\r\ngrace,grace,Grace Hopper,true\r\nretired,retired,Retired,false\r\n';

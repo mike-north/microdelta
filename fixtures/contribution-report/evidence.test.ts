@@ -1,8 +1,8 @@
 /** Search success cannot stand in for complete, temporally justified PR/review/comment evidence. */
 import { describe, expect, test } from '@jest/globals';
-import { loadDiscussion, loadPull } from '../src/controlled/evidence.js';
-import type { IRestResponse, IRestTransport } from '../src/controlled/github.js';
-import type { IReportScope } from '../src/controlled/model.js';
+import { loadDiscussion, loadPull } from '../../examples/contribution-report/src/controlled/evidence.js';
+import type { IRestResponse, IRestTransport } from '../../examples/contribution-report/src/controlled/github.js';
+import type { IReportScope } from '../../examples/contribution-report/src/controlled/model.js';
 
 /** The cutoff excludes post-cutoff creations and unsupported edited historical content. */
 const scope: IReportScope = { repositories: ['acme/widget'], start: 1_767_225_600, end: 1_767_398_400, cutoff: 1_767_398_400, observation: 'observation-a' };

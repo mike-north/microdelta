@@ -1,7 +1,7 @@
 /** Small focused acceptance assertions define REST-shaped workload behavior before its harness. */
 import { describe, expect, test } from '@jest/globals';
-import { searchUrl } from '../src/controlled/github.js';
-import { discoverAuthored } from '../src/controlled/github.js';
+import { searchUrl } from '../../examples/contribution-report/src/controlled/github.js';
+import { discoverAuthored } from '../../examples/contribution-report/src/controlled/github.js';
 import { createWorkloadHarness, maxRssBytesFromKibibytes, summarizeRetainedSubjectRows } from './workload-harness.js';
 import { workloadInputs, workloadPerson, workloadPull } from './workload-fixture.js';
 

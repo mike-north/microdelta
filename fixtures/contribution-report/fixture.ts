@@ -1,9 +1,9 @@
 /** Harness-only fixed dataset and transport ledger. The application sees only REST responses, never this backing set. */
-import { createNodeMachine } from '@microdelta/machine-node';
+import { createHash } from 'node:crypto';
 import { registerSharedRateSurface } from 'microdelta';
 import type { IOperationSend, ISharedRateSurfaceDeclaration } from 'microdelta';
-import type { IAssessmentRequest, IReportInputs, IReportServices } from '../src/controlled/application.js';
-import type { IRestResponse } from '../src/controlled/github.js';
+import type { IAssessmentRequest, IReportInputs, IReportServices } from '../../examples/contribution-report/src/controlled/application.js';
+import type { IRestResponse } from '../../examples/contribution-report/src/controlled/github.js';
 
 /** Four independently expected PRs split evenly across two selected people. */
 export const baseInputs: IReportInputs = {
@@ -26,12 +26,11 @@ export function fixture(options: IFixtureOptions = {}): IFixture {
   const trace: string[] = [];
   const requests: IFixture['requests'] = [];
   const assessments: IAssessmentRequest[] = [];
-  const machine = createNodeMachine();
   const gates: ISharedRateSurfaceDeclaration['gates'] = [{ id: 'api', ...(options.requestLimit === undefined ? {} : { limit: { units: options.requestLimit, intervalMilliseconds: options.intervalMilliseconds ?? 25, costBasis: 'requests' } }) }];
   const shared = registerSharedRateSurface({ environment: options.environment ?? 'production', service: 'controlled', accessContext: access, surface: 'github-and-assessment', gates });
   const services: IReportServices = {
     githubRate: { surface: shared, cooldownGateId: 'api' }, assessmentRate: { surface: shared, cooldownGateId: 'api' }, connection: access,
-    retry: { maxAttempts: 2, backoffMilliseconds: 0 }, digest: value => machine.sha256(value), now: () => Date.now(), trace: event => trace.push(event),
+    retry: { maxAttempts: 2, backoffMilliseconds: 0 }, digest: value => createHash('sha256').update(value).digest('hex'), now: () => Date.now(), trace: event => trace.push(event),
     async github(value, accept, send) {
       requests.push({ url: value, operation: send.operation, attempt: send.requestAttempt, at: Date.now() });
       const scripted = await options.github?.(value, send); if (scripted !== undefined) { return scripted; }

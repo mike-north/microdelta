@@ -2,7 +2,7 @@
 import { createNodeMachine } from '@microdelta/machine-node';
 import { registerSharedRateSurface } from 'microdelta';
 import type { IOperationSend, ISharedRateSurfaceDeclaration } from 'microdelta';
-import type { IAssessmentRequest, IReportServices } from '../src/controlled/application.js';
+import type { IAssessmentRequest, IReportServices } from '../../examples/contribution-report/src/controlled/application.js';
 import { workloadCardinality, workloadPeople, workloadPull } from './workload-fixture.js';
 import type { IWorkloadPerson } from './workload-fixture.js';
 

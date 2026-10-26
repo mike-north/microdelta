@@ -1,5 +1,5 @@
 /** Fixed, synthetic authored-PR population for the standalone report scale acceptance run. */
-import type { IReportInputs } from '../src/controlled/application.js';
+import type { IReportInputs } from '../../examples/contribution-report/src/controlled/application.js';
 
 /** A selected author owns one deterministic, varied-size segment of the fixture population. */
 export interface IWorkloadPerson {

@@ -1,8 +1,8 @@
 /** CR-2 normalization/budget expectations are provider-specific; request attempts remain supervised runtime authority. */
 import { describe, expect, test } from '@jest/globals';
 import type { IRetryDecisionInput } from 'microdelta';
-import { normalizeGithub } from '../src/controlled/application.js';
-import { githubRetryPolicy } from '../src/controlled/github-retry.js';
+import { normalizeGithub } from '../../examples/contribution-report/src/controlled/application.js';
+import { githubRetryPolicy } from '../../examples/contribution-report/src/controlled/github-retry.js';
 
 /** The selected callback receives only normalized bounded facts and recorded attempt history. */
 function input(overrides: Partial<IRetryDecisionInput> = {}): IRetryDecisionInput {

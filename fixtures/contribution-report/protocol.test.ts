@@ -1,7 +1,7 @@
 /** Independent REST fixtures challenge controlled closure without exposing a complete-set oracle. */
 import { describe, expect, test } from '@jest/globals';
-import { discoverAuthored, searchUrl } from '../src/controlled/github.js';
-import type { IRestResponse, IRestTransport, ISearchQuery } from '../src/controlled/github.js';
+import { discoverAuthored, searchUrl } from '../../examples/contribution-report/src/controlled/github.js';
+import type { IRestResponse, IRestTransport, ISearchQuery } from '../../examples/contribution-report/src/controlled/github.js';
 
 /** Two-second creation scope permits an independently asserted cap split. */
 const query: ISearchQuery = { repository: 'acme/widget', login: 'ada', start: 1_767_225_600, end: 1_767_225_602, perPage: 2 };

@@ -1,0 +1,18 @@
+{
+  "smoke-16-identity.json": "891621081de2f70cff6d2e9a6ad5241796d6954be3aa73ea5f271a9b2ac4f3d7",
+  "smoke-16-qualification.json": "eb08e8d98f0154319396223875af56b4102c22ca26e16152903e6471afa45980",
+  "smoke-16-receipts.json.gz": {
+    "gzipSha256": "82a5c6e0376693d8f19abd7da1f01c3823469c37fb502dabe00d713689b1215a",
+    "rawSha256": "2164d12d639589e060ac390cfb037574a24b5ae56c5e6284dffc3cef6531b3b7",
+    "rawBytes": 206074,
+    "gzipBytes": 26793
+  },
+  "qualification-512-identity.json": "c401cc8abf1a30877cb24177622ff7b5f98a5c40b7f786d974fb5f6c984a2dd0",
+  "qualification-512-qualification.json": "d0b1eb7e23b3b0df02c04fd073a71c18428b81229a78a21ee6c5718e33e36659",
+  "qualification-512-receipts.json.gz": {
+    "gzipSha256": "ccdcbb653b167f9c0ed6261bde613aabf6d45002d74ea7be73cf897eb2a7c60b",
+    "rawSha256": "a3b2e998af6300742b2dd7d4d6a03d73420e498041d333ca3b25eebd2805d38a",
+    "rawBytes": 7103020,
+    "gzipBytes": 882270
+  }
+}

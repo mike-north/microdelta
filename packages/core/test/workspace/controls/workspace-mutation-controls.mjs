@@ -6,6 +6,9 @@
  * suites import, or the example's `dist`. It then runs the unchanged
  * suites — Supervision's owner suite, the facade's workspace assembly suites
  * and the example's CLI verification — and records which named tests fail.
+ * The missed-release control uses the Supervision owner suite alone: its
+ * release-count assertion discriminates that defect directly, while the
+ * example's real lease-expiry waits only delay the same conclusion.
  * A control whose anchor does not match exactly once, or that no test
  * rejects, fails the run. Jest runs are judged fail-closed by the facade's
  * shared `control-outcome.mjs`; the example's `node --test` run is judged by
@@ -47,22 +50,22 @@ const targets = Object.freeze({
 const controls = [
   { name: 'context lookup ignores the composition phase', target: 'supervision', anchor: "if (isComposing()) {\n            throw new SupervisionError('composition-phase', 'Runtime context", replacement: "if (false) {\n            throw new SupervisionError('composition-phase', 'Runtime context" },
   { name: "a closed run still answers context lookups", target: 'supervision', anchor: "if (!frame.run.open) {\n            throw new SupervisionError('run-closed', `Run ${frame.run.context.runId} has closed; its context", replacement: "if (false) {\n            throw new SupervisionError('run-closed', `Run ${frame.run.context.runId} has closed; its context" },
-  { name: "a closed run still accepts new work", target: 'supervision', anchor: "if (!state.open) {\n                    return Promise.reject(new SupervisionError('run-closed', `Run ${context.runId} has closed and accepts", replacement: "if (false) {\n                    return Promise.reject(new SupervisionError('run-closed', `Run ${context.runId} has closed and accepts" },
-  { name: "work presented after close is admitted", target: 'supervision', anchor: "async admit(request) {\n                if (!state.open) {\n                    return closedDenial();", replacement: "async admit(request) {\n                if (false) {\n                    return closedDenial();" },
-  { name: "an admission decided after actual closure is not denied", target: 'supervision', anchor: "if (!state.open) {\n                    return closedDenial();\n                }\n                const after = stopRefusal(demandedBy);", replacement: "if (false) {\n                    return closedDenial();\n                }\n                const after = stopRefusal(demandedBy);" },
+  { name: "a closed run still accepts new work", target: 'supervision', anchor: "if (!state.open) {\n                        return Promise.reject(new SupervisionError('run-closed', `Run ${context.runId} has closed and accepts", replacement: "if (false) {\n                        return Promise.reject(new SupervisionError('run-closed', `Run ${context.runId} has closed and accepts" },
+  { name: "work presented after close is admitted", target: 'supervision', anchor: "async admit(request) {\n                    if (!state.open) {\n                        return closedDenial();", replacement: "async admit(request) {\n                    if (false) {\n                        return closedDenial();" },
+  { name: "an admission decided after actual closure is not denied", target: 'supervision', anchor: "if (!state.open) {\n                        return closedDenial();\n                    }\n                    const after = stopRefusal(demandedBy);", replacement: "if (false) {\n                        return closedDenial();\n                    }\n                    const after = stopRefusal(demandedBy);" },
   { name: "the run closes without waiting for operations it started", target: 'supervision', anchor: "await drainAndClose();", replacement: "state.open = false; closingStop = controller.state; unsubscribe();" },
-  { name: "the run yields between its final empty check and closing", target: 'supervision', anchor: "            }\n            state.open = false;\n            closingStop = controller.state;", replacement: "            }\n            await Promise.resolve();\n            state.open = false;\n            closingStop = controller.state;" },
+  { name: "the run yields between its final empty check and closing", target: 'supervision', anchor: "                }\n                state.open = false;", replacement: "                }\n                await Promise.resolve();\n                state.open = false;" },
   { name: 'started operations are not accounted to the run', target: 'supervision', anchor: 'started.add(settled);', replacement: 'void settled;' },
   { name: "the caller admission policy is ignored", target: 'supervision', anchor: "const decided = await raceAbort(Promise.resolve(policy.admit(request)), state.hard.signal);", replacement: "const decided = { aborted: false, value: Object.freeze({ kind: 'admitted' }) };" },
   { name: 'recovery takes the writer lease', target: 'supervision', anchor: "return within(() => resolution.recover({ step, requestKey: request.requestKey }), 'recover');", replacement: "return within(() => { writer.tryLease(); return resolution.recover({ step, requestKey: request.requestKey }); }, 'recover');" },
-  { name: "the writer lease is never released", target: 'supervision', anchor: "try {\n                writer.release();\n            }\n            catch (error) {\n                diagnostics.push(`Run ${context.runId} could not release its writer: ", replacement: "try {\n                void writer;\n            }\n            catch (error) {\n                diagnostics.push(`Run ${context.runId} could not release its writer: " },
+  { name: "the writer lease is never released", target: 'supervision', anchor: "try {\n                    writer.release();\n                }\n                catch (error) {\n                    diagnostics.push(`Run ${context.runId} could not release its writer: ", replacement: "try {\n                    void writer;\n                }\n                catch (error) {\n                    diagnostics.push(`Run ${context.runId} could not release its writer: " },
   { name: 'observer failures are swallowed', target: 'supervision', anchor: 'throw failure.error;', replacement: 'void failure;' },
   { name: 'observers are read live instead of captured at start', target: 'supervision', anchor: 'Reflect.apply(observe, observer, [event]);', replacement: "Reflect.apply(Reflect.get(observer, 'observe'), observer, [event]);" },
   { name: 'a failing begin observer does not stop ordinary work', target: 'supervision', anchor: "throw new SupervisionError('observer-failure', `Run observer failed before ordinary work", replacement: "void new SupervisionError('observer-failure', `Run observer failed before ordinary work" },
   { name: 'ordinary completion is not observed', target: 'supervision', anchor: "afterOrdinary(label, 'end');", replacement: 'void label;' },
   { name: 'request diagnostics are not collected by the run', target: 'supervision', anchor: 'diagnostics.push(...outcome.diagnostics);', replacement: 'void outcome;' },
-  { name: 'Resolution uses a fixed environment instead of the selected one', target: 'workspace', anchor: "                    environment: runOptions.environment,\n                    history,", replacement: "                    environment: 'env:fixture',\n                    history," },
-  { name: 'a closed run can still read results', target: 'workspace', anchor: "exactly Supervision's lifetime of it.\n                        if (!live.open) {", replacement: "exactly Supervision's lifetime of it.\n                        if (false) {" },
+  { name: 'Resolution uses a fixed environment instead of the selected one', target: 'workspace', anchor: "                environment: runOptions.environment,\n                history,", replacement: "                environment: 'env:fixture',\n                history," },
+  { name: 'a closed run can still read results', target: 'workspace', anchor: "exactly Supervision's lifetime of it.\n                    if (!live.open) {", replacement: "exactly Supervision's lifetime of it.\n                    if (false) {" },
   { name: 'an expired writer lease is kept instead of re-acquired', target: 'writer', anchor: 'if (!(error instanceof StaleWriterError)) {\n                        throw error;\n                    }\n                    held = undefined;', replacement: 'if (true) {\n                        throw error;\n                    }\n                    held = undefined;' },
   { name: 'releasing an expired lease is reported as a failure', target: 'writer', anchor: 'if (!(error instanceof StaleWriterError)) {\n                        throw error;\n                    }\n                }\n            }', replacement: 'if (true) {\n                        throw error;\n                    }\n                }\n            }' },
   { name: 'every run of a workspace uses the same writer holder name', target: 'workspace', anchor: 'writer: writerFor(history, `microdelta-run:${runId}`, leaseMilliseconds),', replacement: 'writer: writerFor(history, `microdelta-run:${composition.scope}`, leaseMilliseconds),' },
@@ -217,10 +220,27 @@ try {
       writeFileSync(file, originals.get(file).replace(control.anchor, control.replacement));
     }
     try {
-      const { failed } = await runAll(baseline.titles);
+      // The release-count owner assertion directly detects a missed release. Running the
+      // whole example under this mutant also waits for real lease expiry, which adds no
+      // evidence about that assertion and can make this control needlessly long.
+      const releaseControl = control.name === 'the writer lease is never released';
+      const releaseResult = releaseControl
+        ? await runJest(join(root, 'packages/supervision/jest.config.mjs'), '.test-build/test', ['supervision.test.js'], baseline.titles.supervision)
+        : undefined;
+      const failed = releaseResult === undefined
+        ? (await runAll(baseline.titles)).failed
+        : releaseResult.failed.map((title) => `supervision: ${title}`);
       console.log(`\n## ${control.name}: ${String(failed.length)} failing`);
       for (const name of failed) console.log(`- ${name}`);
       if (failed.length === 0) failures += 1;
+      if (releaseResult !== undefined) {
+        const title = 'writer ownership only normal requests take the writer lease, which is released once when the run closes';
+        const message = releaseResult.failureMessages.get(title);
+        console.log(`release-count assertion: ${message ?? 'missing'}`);
+        if (message === undefined || !/^[ \t]*Expected:[ \t]*1[ \t]*$/mu.test(message) || !/^[ \t]*Received:[ \t]*0[ \t]*$/mu.test(message)) {
+          failures += 1;
+        }
+      }
     } finally {
       for (const file of files) {
         writeFileSync(file, originals.get(file));

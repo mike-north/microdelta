@@ -112,7 +112,7 @@ const controls = [
     name: 'a stop does not end a deferral sleep',
     target: 'supervision',
     // Re-anchored after #148, which arms the timer first and registers the stop listener after it.
-    anchor: 'remove = state.stopped.signal.onAbort(() => {\n                    cancel();\n                    resolve(false);\n                });',
+    anchor: 'remove = state.stopped.signal.onAbort(() => {\n                        cancel();\n                        resolve(false);\n                    });',
     replacement: 'remove = () => undefined;',
     breaks: ['soft-then-hard-stop'],
   },

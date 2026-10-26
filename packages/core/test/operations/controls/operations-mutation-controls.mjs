@@ -164,7 +164,7 @@ const controls = [
     name: 'a woken pass with a deadline fails busy at once instead of waiting up to the deadline',
     directory: supervision, file: 'supervision.js',
     edits: [
-      { anchor: 'function leaseForPass() {\n            return writerLease();\n        }', replacement: "function leaseForPass(number) {\n            if (number > 1 && writerPolicy.deadline !== undefined) {\n                const attempt = writer.tryLease();\n                if (attempt.kind !== 'acquired') {\n                    throw new SupervisionError('writer-busy', 'woken pass gave up');\n                }\n                return Promise.resolve(attempt.lease);\n            }\n            return writerLease();\n        }" },
+      { anchor: 'function leaseForPass() {\n                return writerLease();\n            }', replacement: "function leaseForPass(number) {\n                if (number > 1 && writerPolicy.deadline !== undefined) {\n                    const attempt = writer.tryLease();\n                    if (attempt.kind !== 'acquired') {\n                        throw new SupervisionError('writer-busy', 'woken pass gave up');\n                    }\n                    return Promise.resolve(attempt.lease);\n                }\n                return writerLease();\n            }" },
       { anchor: 'lease = await leaseForPass();', replacement: 'lease = await leaseForPass(number);' },
     ],
   },
@@ -173,7 +173,7 @@ const controls = [
     name: 'a woken pass without a deadline returns waiting instead of waiting for the lease',
     directory: supervision, file: 'supervision.js',
     edits: [
-      { anchor: 'function leaseForPass() {\n            return writerLease();\n        }', replacement: "function leaseForPass(number) {\n            if (number > 1 && writerPolicy.deadline === undefined) {\n                const attempt = writer.tryLease();\n                return Promise.resolve(attempt.kind === 'acquired' ? attempt.lease : undefined);\n            }\n            return writerLease();\n        }" },
+      { anchor: 'function leaseForPass() {\n                return writerLease();\n            }', replacement: "function leaseForPass(number) {\n                if (number > 1 && writerPolicy.deadline === undefined) {\n                    const attempt = writer.tryLease();\n                    return Promise.resolve(attempt.kind === 'acquired' ? attempt.lease : undefined);\n                }\n                return writerLease();\n            }" },
       { anchor: 'lease = await leaseForPass();', replacement: "lease = await leaseForPass(number);\n                    if (lease === undefined) {\n                        return previous;\n                    }" },
     ],
   },
@@ -255,8 +255,8 @@ const controls = [
     // The original race: a stop already in force ran the listener before `cancel` was assigned, so the timer stayed armed.
     name: 'a stop that lands as the deferral sleep begins still arms its keep-alive timer',
     directory: supervision, file: 'supervision.js',
-    anchor: "if (state.stopped.signal.aborted) {\n                return Promise.resolve(false);\n            }\n            return new Promise((resolve) => {\n                let remove = () => undefined;\n                const cancel = clock.schedule(until, () => {\n                    remove();\n                    resolve(true);\n                }, { keepAlive: true });\n                remove = state.stopped.signal.onAbort(() => {\n                    cancel();\n                    resolve(false);\n                });\n            });",
-    replacement: "return new Promise((resolve) => {\n                let cancel = () => undefined;\n                const remove = state.stopped.signal.onAbort(() => {\n                    cancel();\n                    resolve(false);\n                });\n                cancel = clock.schedule(until, () => {\n                    remove();\n                    resolve(true);\n                }, { keepAlive: true });\n            });",
+    anchor: "if (state.stopped.signal.aborted) {\n                    return Promise.resolve(false);\n                }\n                return new Promise((resolve) => {\n                    let remove = () => undefined;\n                    const cancel = clock.schedule(until, () => {\n                        remove();\n                        resolve(true);\n                    }, { keepAlive: true });\n                    remove = state.stopped.signal.onAbort(() => {\n                        cancel();\n                        resolve(false);\n                    });\n                });",
+    replacement: "return new Promise((resolve) => {\n                    let cancel = () => undefined;\n                    const remove = state.stopped.signal.onAbort(() => {\n                        cancel();\n                        resolve(false);\n                    });\n                    cancel = clock.schedule(until, () => {\n                        remove();\n                        resolve(true);\n                    }, { keepAlive: true });\n                });",
   },
   {
     name: 'the resumed wait event reports the lease kept',
@@ -266,7 +266,7 @@ const controls = [
   {
     name: 'a release made while a request sleeps is not recorded for its wait',
     directory: supervision, file: 'supervision.js',
-    anchor: 'for (const sleeper of sleepers) {\n                    sleeper.released = true;\n                }', replacement: 'void sleepers;',
+    anchor: 'for (const sleeper of sleepers) {\n                        sleeper.released = true;\n                    }', replacement: 'void sleepers;',
   },
   {
     name: "a body failure's message repeats the author's error text",

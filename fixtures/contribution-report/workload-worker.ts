@@ -11,9 +11,10 @@ import type { IReportServices } from '../../examples/contribution-report/src/con
 import { workloadCardinality, workloadInputsFor, workloadPeople } from './workload-fixture.js';
 import { assertWorkloadMembership, createWorkloadHarness, maxRssBytesFromKibibytes } from './workload-harness.js';
 import { createWorkloadMemorySampler } from './workload-measurement.js';
-import type { IWorkloadMemorySnapshot } from './workload-measurement.js';
 import type { IWorkloadStats } from './workload-harness.js';
 import { qualificationWriterLeaseMilliseconds } from './workload-budget.js';
+import { summarizeWorkloadFailure, WorkloadIncompleteError } from './workload-failure.js';
+import type { IWorkloadMemoryReceipt } from './workload-failure.js';
 
 /** Worker phases reopen identical durable files in distinct processes. */
 export interface IWorkloadJob { readonly directory: string; readonly phase: 'cold' | 'restart'; readonly requestKey: string; readonly personCount: number }
@@ -27,7 +28,7 @@ export interface IWorkloadReceipt {
   readonly usage: { readonly requestAttempts: number; readonly reports: number; readonly unknown: number };
   readonly fixture: ReturnType<typeof workloadCardinality>;
   readonly observed: IWorkloadStats;
-  readonly memory: IWorkloadMemorySnapshot & { readonly samplingLimitation: string; readonly rawMaxRss: number; readonly maxRssUnit: 'kibibytes'; readonly maxRssBytes: number };
+  readonly memory: IWorkloadMemoryReceipt;
 };
 
 /** Internal fixture seam executes exactly the standalone worker's phase; observers make lease-clock regressions bounded without another scheduler. */
@@ -55,15 +56,18 @@ export async function runWorkloadPhase(job: IWorkloadJob, observers: readonly IR
   const workspace = openWorkspace({ location: join(job.directory, 'history.sqlite'), logicalStore: 'controlled-workload-history', accounting, leaseMilliseconds: qualificationWriterLeaseMilliseconds });
   const inputs = workloadInputsFor(job.personCount);
   const application = composeReport(inputs, services);
+  /** Read actual process observations on either exit path; no completed-workload claim follows from a partial sample. */
+  const measuredMemory = (): IWorkloadMemoryReceipt => {
+    const rawMaxRss = process.resourceUsage().maxRSS;
+    // Node documents maxRSS in kibibytes (https://nodejs.org/api/process.html#processresourceusage); memoryUsage values are bytes.
+    return { ...sampler.snapshot(), samplingLimitation: 'Timer callbacks can be delayed by event-loop activity; dispatch-boundary samples are rate-limited, and maxRSS is the process high-water mark.',
+      rawMaxRss, maxRssUnit: 'kibibytes', maxRssBytes: maxRssBytesFromKibibytes(rawMaxRss) };
+  };
   try {
     const result = await evaluateReport(workspace, application, { environment: 'production', requestKey: job.requestKey, permits: 8, window: 8, observers });
     if (result.value.status !== 'complete') {
-      const { fold, usage } = result.value;
-      const memberStatuses = fold.members.reduce<Record<string, number>>((counts, member) => {
-        counts[member.status] = (counts[member.status] ?? 0) + 1;
-        return counts;
-      }, {});
-      throw new Error(`workload ${job.phase} report did not complete: ${JSON.stringify({ outcome: fold.outcome, discovery: fold.discovery, memberStatuses, members: fold.members.slice(0, 5), usage, traces: Object.fromEntries(traceCounts) })}`);
+      throw new WorkloadIncompleteError({ ...summarizeWorkloadFailure({ ...result.value, diagnostics: result.diagnostics, stop: result.stop, waitingUntil: result.waitingUntil }),
+        phase: job.phase, status: 'incomplete', measurementScope: 'partial-through-run-return', observed: harness.stats(), memory: measuredMemory() });
     }
     assertWorkloadMembership(harness.expectedPulls, harness.observedPulls, job.personCount);
     const report = result.value.report;
@@ -88,11 +92,6 @@ export async function runWorkloadPhase(job: IWorkloadJob, observers: readonly IR
       throw new Error(`workload report or assessments omitted PRs: ${String(reportedPulls)}/${String(harness.stats().observedAssessmentRequests)}`);
     }
     const references = Object.fromEntries(result.value.fold.members.flatMap(member => member.status === 'succeeded' ? [[member.key, member.outcome.reference.locator]] : []));
-    const rawMaxRss = process.resourceUsage().maxRSS;
-    // Node documents maxRSS in kibibytes (https://nodejs.org/api/process.html#processresourceusage); sampled memoryUsage values are already bytes.
-    const maxRssUnit = 'kibibytes';
-    const maxRssBytes = maxRssBytesFromKibibytes(rawMaxRss);
-    const memorySnapshot = sampler.snapshot();
     const receipt: IWorkloadReceipt = {
       phase: job.phase,
       report: { selectedPeople: report.selected.length, successfulPeople: report.people.length, pullRequests: reportedPulls, score },
@@ -104,7 +103,7 @@ export async function runWorkloadPhase(job: IWorkloadJob, observers: readonly IR
       usage: { requestAttempts: result.value.usage.requestAttempts, reports: result.value.usage.reports, unknown: result.value.usage.unknown.length },
       fixture: cardinality,
       observed: harness.stats(),
-      memory: { ...memorySnapshot, samplingLimitation: 'Timer callbacks can be delayed by event-loop activity; dispatch-boundary samples are rate-limited, and maxRSS is the process high-water mark.', rawMaxRss, maxRssUnit, maxRssBytes },
+      memory: measuredMemory(),
     };
     return receipt;
   } finally {
@@ -129,8 +128,14 @@ function isJob(value: unknown): value is IWorkloadJob {
 async function main(): Promise<void> {
   const decoded: unknown = JSON.parse(process.argv[2] ?? 'null');
   if (!isJob(decoded)) { throw new Error('invalid standalone workload job'); }
-  const receipt = await runWorkloadPhase(decoded);
-  process.stdout.write(`${JSON.stringify(receipt)}\n`);
+  try {
+    const receipt = await runWorkloadPhase(decoded);
+    process.stdout.write(`${JSON.stringify(receipt)}\n`);
+  } catch (error) {
+    if (!(error instanceof WorkloadIncompleteError)) { throw error; }
+    process.stderr.write(`${JSON.stringify(error.receipt)}\n`);
+    process.exitCode = 1;
+  }
 }
 
 if (process.argv[1] !== undefined && import.meta.url === pathToFileURL(process.argv[1]).href) { await main(); }

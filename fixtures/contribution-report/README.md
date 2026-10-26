@@ -43,3 +43,13 @@ it changes no production default, fencing, heartbeat, admission window, retry
 policy or performance requirement. The controlled-clock worker regression
 crosses the default30-second lease within that phase budget, while a separate
 nine-person/two-slot test pins normal bounded-window completion.
+
+An incomplete worker emits a compact failure receipt with member-status and
+usage counts, the first pending key/reason, one bounded diagnostic and its
+total count, stop state and any observed retry floor. Actual route, payload,
+concurrency and memory observations are explicitly partial through the run's
+return. Whole membership, diagnostic and usage arrays stay out of the receipt.
+The parent writes `<phase>-failure.json` with its measured elapsed time and
+exit status, preserving that child evidence. If the worker exits without a
+receipt, child measurements remain unavailable (`null`), with only a bounded
+stderr tail retained. Failure evidence never satisfies the qualification gate.

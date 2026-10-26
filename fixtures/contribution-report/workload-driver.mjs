@@ -7,6 +7,7 @@ import { DatabaseSync } from 'node:sqlite';
 import { fileURLToPath } from 'node:url';
 import { summarizeRetainedSubjectRows } from './.test-build/fixtures/contribution-report/workload-harness.js';
 import { qualificationPhaseTimeoutMilliseconds } from './.test-build/fixtures/contribution-report/workload-budget.js';
+import { captureWorkloadProcessFailure } from './.test-build/fixtures/contribution-report/workload-failure.js';
 
 const root = fileURLToPath(new URL('../..', import.meta.url));
 const worker = join(root, 'fixtures/contribution-report/.test-build/fixtures/contribution-report/workload-worker.js');
@@ -21,11 +22,17 @@ function run(phase) {
   process.stdout.write(`Starting ${phase} ${String(requiredPulls)}-PR ${smoke ? 'smoke' : 'acceptance'} in fresh process; durable directory ${directory}\n`);
   const started = process.hrtime.bigint();
   const child = spawnSync(process.execPath, [worker, JSON.stringify({ directory, phase, requestKey: `workload:${phase}`, personCount })], {
-    cwd: root, encoding: 'utf8', timeout, maxBuffer: 32 * 1024 * 1024,
+    // Receipts contain at most the selected cohort's references, never per-PR evidence or usage arrays.
+    // Bound both captured streams; an exceeded buffer is a process failure with unavailable child evidence.
+    cwd: root, encoding: 'utf8', timeout, maxBuffer: 1024 * 1024,
   });
   const elapsedMilliseconds = Number(process.hrtime.bigint() - started) / 1_000_000;
-  if (child.error !== undefined) { throw new Error(`${phase} workload process failed: ${child.error.message}`); }
-  if (child.status !== 0) { throw new Error(`${phase} workload process exited ${String(child.status)}: ${child.stderr}`); }
+  if (child.error !== undefined || child.status !== 0) {
+    const failure = captureWorkloadProcessFailure(phase, elapsedMilliseconds, child.status, child.stderr ?? '', child.error?.message);
+    const failurePath = join(directory, `${phase}-failure.json`);
+    writeFileSync(failurePath, `${JSON.stringify(failure, null, 2)}\n`, { flag: 'wx' });
+    throw new Error(`${phase} workload process failed; bounded partial evidence: ${failurePath}`);
+  }
   const lines = child.stdout.trim().split('\n');
   const last = lines.at(-1);
   if (last === undefined) { throw new Error(`${phase} workload process did not write a receipt`); }

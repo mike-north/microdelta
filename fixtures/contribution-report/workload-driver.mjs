@@ -17,6 +17,26 @@ const smoke = process.argv.includes('--smoke');
 const personCount = smoke ? 2 : 300;
 const requiredPulls = smoke ? 500 : 150_000;
 
+/** Accept only this worker's basic success envelope before parent code reads or prints its fields. */
+function readReceipt(stdout, phase) {
+  const line = stdout.trim().split('\n').at(-1);
+  if (line === undefined || line.length === 0) { throw new Error('missing success receipt'); }
+  let receipt;
+  try { receipt = JSON.parse(line); }
+  catch { throw new Error('malformed success receipt JSON'); }
+  const record = value => typeof value === 'object' && value !== null && !Array.isArray(value);
+  if (!record(receipt) || receipt.phase !== phase
+    || !['report', 'references', 'currentSource', 'usage', 'fixture', 'observed', 'memory'].every(key => record(receipt[key]))
+    || !['selectedPeople', 'successfulPeople', 'pullRequests', 'score'].every(key => Number.isSafeInteger(receipt.report[key]))
+    || !Object.values(receipt.references).every(value => typeof value === 'string')
+    || !Number.isSafeInteger(receipt.fixture.people) || !Number.isSafeInteger(receipt.fixture.pullRequests)
+    || !record(receipt.currentSource.hooksBySource) || !record(receipt.currentSource.bodiesBySource)
+    || !record(receipt.observed.routes) || !record(receipt.memory.sampleCounts) || !record(receipt.memory.timing)) {
+    throw new Error('unexpected success receipt shape');
+  }
+  return receipt;
+}
+
 /** A worker is one fresh OS process; no service closure or coordinator state crosses the restart boundary. */
 function run(phase) {
   process.stdout.write(`Starting ${phase} ${String(requiredPulls)}-PR ${smoke ? 'smoke' : 'acceptance'} in fresh process; durable directory ${directory}\n`);
@@ -27,16 +47,17 @@ function run(phase) {
     cwd: root, encoding: 'utf8', timeout, maxBuffer: 1024 * 1024,
   });
   const elapsedMilliseconds = Number(process.hrtime.bigint() - started) / 1_000_000;
-  if (child.error !== undefined || child.status !== 0) {
-    const failure = captureWorkloadProcessFailure(phase, elapsedMilliseconds, child.status, child.stderr ?? '', child.error?.message);
+  /** Process exits and receipt-protocol failures preserve identical actual phase facts. */
+  function failPhase(message) {
+    const failure = captureWorkloadProcessFailure(phase, elapsedMilliseconds, child.status, child.stderr ?? '', message);
     const failurePath = join(directory, `${phase}-failure.json`);
     writeFileSync(failurePath, `${JSON.stringify(failure, null, 2)}\n`, { flag: 'wx' });
     throw new Error(`${phase} workload process failed; bounded partial evidence: ${failurePath}`);
   }
-  const lines = child.stdout.trim().split('\n');
-  const last = lines.at(-1);
-  if (last === undefined) { throw new Error(`${phase} workload process did not write a receipt`); }
-  const receipt = JSON.parse(last);
+  if (child.error !== undefined || child.status !== 0) { failPhase(child.error?.message); }
+  let receipt;
+  try { receipt = readReceipt(child.stdout, phase); }
+  catch (error) { failPhase(`worker receipt protocol: ${error instanceof Error ? error.message : 'invalid success receipt'}`); }
   process.stdout.write(`${JSON.stringify({ phase, elapsedMilliseconds, report: receipt.report, fixture: receipt.fixture, currentSource: receipt.currentSource, usage: receipt.usage, observed: receipt.observed, memory: receipt.memory })}\n`);
   return { receipt, elapsedMilliseconds };
 }

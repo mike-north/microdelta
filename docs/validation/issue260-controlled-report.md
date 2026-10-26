@@ -6,7 +6,8 @@ one fold request; no full restart ran. Independent whole-head audit verified
 AC1–7 for the selected controlled application; AC8 and final acceptance remain
 unmet. The full combined baseline passed at `b4773c2`; loader-policy repair
 passed at `9cc9bcd`. The bounded lease repair independently passed at `ce3bc7a`;
-the separate failure-receipt repair at `e3dc64a` awaits independent review.
+review of the separate failure-receipt repair at `e3dc64a` required one parent
+protocol correction. Its bounded repair now awaits independent recheck.
 Parent240 retains all six criteria, including its
 separately permissioned executable/progress criterion. CLI projection,
 installation, launcher/lifetime decisions, full TEST-3/4 and TEST-5/6 remain
@@ -88,6 +89,8 @@ checked-in named tests and commands reproduce their behavioral expectations.
 | `npm run test:controlled-report:workload` at `9cc9bcd` | **FAILED** during cold phase; session20227, `issue260-full-workload-9cc9bcd.log`. No restart, retry or final receipt. Full cold+fresh-process qualification remains **PENDING**. |
 | Actual-worker lease and bounded failure regressions |7 tests/2 suites PASS at `e3dc64a`; `issue260-green-workload-failure-receipt.log`. Strict fixture emit, type-aware lint, imports, syntax and diff checks PASS. Bounded tests do not qualify scale. |
 | Current `npm run test:controlled-report` after harness repairs |164 Jest tests/14 suites plus generated declaration/tsd PASS; `issue260-harness-repair-controlled.log`. Current `check:examples` and `check:fixtures` PASS; `issue260-harness-repair-examples.log`, `issue260-harness-repair-fixtures.log`. Package baselines were not repeated. |
+| Parent protocol correction after `e3dc64a` review | Actual-driver exit0 malformed/empty/null/wrong-shape regressions first failed4 artifact assertions, while nonzero control passed; `issue260-red-workload-driver-protocol.log`. Targeted driver/failure/lease tests then PASS12/3 suites; `issue260-green-workload-driver-protocol.log`. Strict emit/lint/import/syntax/diff checks PASS. |
+| Actual success protocol after correction | One500-PR/2-person cold+fresh-process smoke PASS,4.06s/3.52s,3006 cold sends/1506 additional restart sends/0 restart assessments; `issue260-workload-driver-protocol-smoke.log`. Receipt: `/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/issue260-controlled-workload-pr6IZR/receipt.json`. This checks driver/parser integration, not scale. |
 
 ## Restored negative controls
 
@@ -201,7 +204,16 @@ under explicit lease expiry. Test-first RED receipts are
 `issue260-red-workload-parent-receipt.log` (two). GREEN7-case and strict checks
 are `issue260-green-workload-failure-receipt.log`,
 `issue260-workload-failure-lint.log` and `issue260-workload-failure-imports.log`.
-Independent failure-repair review remains pending. No new full150k run is
+Independent failure-repair review at `e3dc64a` passed the projection, lease,
+cleanup, process-exit capture and concrete buffer sizing, but found F1: exit0
+malformed/empty/null output bypassed artifact capture. The correction now
+parses and checks the worker's minimal success envelope inside the same phase
+failure capture. The actual parent is copied unchanged for regression tests;
+only the child is replaced with no-workload output in isolated temporary
+directories. Four exit0 protocol failures now retain actual elapsed/exit0,
+bounded protocol reason and unavailable child evidence; a nonzero control still
+passes. An actual500-PR cold/restart smoke preserves the success path.
+Independent correction recheck remains pending. No new full150k run is
 authorized by these repairs or their bounded tests.
 
 No live/paid provider execution, credential inspection, external publication,

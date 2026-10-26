@@ -52,4 +52,7 @@ return. Whole membership, diagnostic and usage arrays stay out of the receipt.
 The parent writes `<phase>-failure.json` with its measured elapsed time and
 exit status, preserving that child evidence. If the worker exits without a
 receipt, child measurements remain unavailable (`null`), with only a bounded
-stderr tail retained. Failure evidence never satisfies the qualification gate.
+stderr tail retained. Exit-zero output still has to parse as this worker's
+basic success envelope; empty, malformed and wrong-shape output writes the
+same failure artifact with actual exitStatus0 and a bounded protocol reason.
+Failure evidence never satisfies the qualification gate.

@@ -1,0 +1,47 @@
+{
+  "extends": "../../../packages/core/tsconfig.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "paths": {
+      "microdelta": [
+        "../../../packages/core/dist/api/microdelta.alpha.d.ts"
+      ],
+      "@microdelta/accounting": [
+        "../../../packages/accounting/dist/api/accounting.alpha.d.ts"
+      ],
+      "@microdelta/definition": [
+        "../../../packages/definition/dist/api/definition.alpha.d.ts"
+      ],
+      "@microdelta/history": [
+        "../../../packages/history/dist/api/history.alpha.d.ts"
+      ],
+      "@microdelta/history/conformance/store": [
+        "../../../packages/history/dist/api/history.conformance.store.alpha.d.ts"
+      ],
+      "@microdelta/machine-node": [
+        "../../../packages/machine-node/dist/api/machine-node.alpha.d.ts"
+      ],
+      "@microdelta/materialization": [
+        "../../../packages/materialization/dist/api/materialization.alpha.d.ts"
+      ],
+      "@microdelta/resolution": [
+        "../../../packages/resolution/dist/api/resolution.alpha.d.ts"
+      ],
+      "@microdelta/supervision": [
+        "../../../packages/supervision/dist/api/supervision.alpha.d.ts"
+      ],
+      "@microdelta/tracking": [
+        "../../../packages/tracking/dist/api/tracking.alpha.d.ts"
+      ],
+      "@microdelta/value": [
+        "../../../packages/value/dist/api/value.alpha.d.ts"
+      ]
+    }
+  },
+  "include": [
+    "../../../packages/core/test/source-call/fixture.ts",
+    "../../../packages/core/test/source-call/protocol.ts",
+    "../../../packages/core/test/source-call/worker.ts",
+    "../../../packages/core/test/source-call/kind-correspondence.test.ts"
+  ]
+}

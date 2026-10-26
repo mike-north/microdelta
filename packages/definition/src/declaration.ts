@@ -34,6 +34,7 @@ import type {
   IInvocationScope,
 } from './invocation.js';
 import type { IAnyStepSlot, IStepSlot, ISuppliedStepRecord } from './slot.js';
+import { sourceSlotName, type IAnySourceSlot, type ISourceSlot, type ISuppliedSourceRecord } from './source-slot.js';
 import { stepSlotName } from './slot.js';
 import type { IBindingDescriptor } from './descriptor.js';
 import type { IMemberSupplier } from './template.js';
@@ -125,7 +126,7 @@ export type IResultOf<TFamily extends IBindingFamily, TDeclaration> =
   TDeclaration extends ISourceDeclaration<TFamily, infer TResult> ? TResult
     // A member source's callbacks take the member binding; a `never` member accepts any member type.
     : TDeclaration extends ISourceDeclaration<TFamily, infer TResult, { readonly member: never }> ? TResult
-    : TDeclaration extends IStepSlot<TFamily, readonly unknown[], infer TResult> ? TResult
+    : TDeclaration extends IStepSlot<TFamily, readonly unknown[], infer TResult> | ISourceSlot<TFamily, readonly unknown[], infer TResult> ? TResult
       : TDeclaration extends { readonly kind: 'memo'; readonly run: (context: never) => infer TResult } ? Awaited<TResult>
         : never;
 
@@ -135,7 +136,7 @@ export type IResultOf<TFamily extends IBindingFamily, TDeclaration> =
  * a supplied step slot bound at composition.
  * @alpha
  */
-export type IChildDeclaration<TFamily extends IBindingFamily> = IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily> | IAnyStepSlot<TFamily>;
+export type IChildDeclaration<TFamily extends IBindingFamily> = IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily> | IAnyStepSlot<TFamily> | IAnySourceSlot<TFamily>;
 
 /**
  * A memo's children: each key is a call name. For a sibling declaration the
@@ -152,7 +153,7 @@ export type IChildDeclarations<TFamily extends IBindingFamily> = { readonly [cal
  * @alpha
  */
 export type ICallOf<TFamily extends IBindingFamily, TChild> =
-  TChild extends IStepSlot<TFamily, infer TParameters, infer TResult> ? IDeclaredCallHandle<IApply<TFamily['views'], TResult>, TParameters>
+  TChild extends IStepSlot<TFamily, infer TParameters, infer TResult> | ISourceSlot<TFamily, infer TParameters, infer TResult> ? IDeclaredCallHandle<IApply<TFamily['views'], TResult>, TParameters>
     : IDeclaredCallHandle<IApply<TFamily['views'], IResultOf<TFamily, TChild>>>;
 
 /**
@@ -322,7 +323,7 @@ export interface ISourceRecord<TFamily extends IBindingFamily> {
 /** One pinned child edge of a memo: a sibling step declaration, or a supplied step slot by name. */
 export type IChildEdge<TFamily extends IBindingFamily> =
   | { readonly kind: 'sibling'; readonly declaration: IAnySourceDeclaration<TFamily> | IAnyMemoDeclaration<TFamily> }
-  | { readonly kind: 'slot'; readonly slot: string };
+  | { readonly kind: 'slot'; readonly slot: string; readonly source: boolean };
 
 /** A memo step's record: its erased declaration, pinned children and typed invocation closure. */
 export interface IMemoRecord<TFamily extends IBindingFamily> {
@@ -357,7 +358,7 @@ export interface IMemoRecord<TFamily extends IBindingFamily> {
 }
 
 /** Any record a builder instance keeps: a step's, a strict or outcome fold's, or a supplied step implementation's. */
-export type IStepRecord<TFamily extends IBindingFamily> = ISourceRecord<TFamily> | IMemoRecord<TFamily> | IFoldRecord<TFamily> | IOutcomeFoldRecord<TFamily> | ISuppliedStepRecord<TFamily>;
+export type IStepRecord<TFamily extends IBindingFamily> = ISourceRecord<TFamily> | IMemoRecord<TFamily> | IFoldRecord<TFamily> | IOutcomeFoldRecord<TFamily> | ISuppliedStepRecord<TFamily> | ISuppliedSourceRecord<TFamily>;
 
 /** One builder instance's records, keyed by the declarations it minted. */
 export type IDeclarationRecords<TFamily extends IBindingFamily> = WeakMap<object, IStepRecord<TFamily>>;
@@ -508,16 +509,17 @@ export function declareMemoWith<TFamily extends IBindingFamily, TChildren extend
     if (slot === '') {
       reject('illegal-edge', 'A child slot name must be nonempty.');
     }
-    const suppliedSlot = stepSlotName(child);
+    const sourceSlot = sourceSlotName(child);
+    const suppliedSlot = sourceSlot ?? stepSlotName(child);
     if (suppliedSlot !== undefined) {
-      entries.push([slot, { kind: 'slot', slot: suppliedSlot }]);
+      entries.push([slot, { kind: 'slot', slot: suppliedSlot, source: sourceSlot !== undefined }]);
       continue;
     }
     const childRecord = records.get(child);
     if (childRecord === undefined) {
       reject('forged-declaration', `Child ${slot} is not a declaration or step slot this family minted.`);
     }
-    if (childRecord.kind === 'supplied-step') {
+    if (childRecord.kind === 'supplied-step' || childRecord.kind === 'supplied-source') {
       reject('illegal-edge', `Child ${slot} is a supplied step; name its step slot instead, and bind the step at composition.`);
     }
     if (childRecord.kind === 'fold' || childRecord.kind === 'outcome-fold') {
@@ -739,7 +741,7 @@ export function checkBindings(bindings: object, reserved: 'previous' | 'calls' |
  * data property. Its data is passed through unread; the exact eligible result
  * it stands for stays with Resolution.
  */
-function checkCarrier<TCarrier>(carrier: TCarrier): TCarrier {
+export function checkCarrier<TCarrier>(carrier: TCarrier): TCarrier {
   if (typeof carrier !== 'object' || carrier === null || !Object.isFrozen(carrier)) {
     reject('invalid-previous', 'A previous-result carrier must be a frozen record.');
   }

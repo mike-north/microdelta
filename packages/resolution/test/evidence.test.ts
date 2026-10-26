@@ -55,3 +55,20 @@ describe.each(cases)('tracking generation for $kind version $version', (provenan
     expect(readProvenance(envelope({ ...record, content }))).toMatchObject({ status: 'unsupported' });
   });
 });
+
+/** SCD-4 extends only source provenance, leaving memo descriptors step-only. */
+describe('callable source provenance compatibility', () => {
+  const callable = { scope: 'test', role: 'callable', slot: 'detail' } as const;
+  test('round-trips the callable source in source v1 without changing old formats', () => {
+    const provenance: IProvenance = { version: 1, kind: 'source', step: callable, observations, children: [] };
+    expect(readProvenance(envelope(provenanceRecord(provenance)))).toEqual({ status: 'supported', provenance });
+  });
+  test('ordinary memo provenance still rejects a callable descriptor', () => {
+    const provenance: IProvenance = { version: 1, kind: 'memo', step: callable, observations, children: [] };
+    expect(() => readProvenance(envelope(provenanceRecord(provenance)))).toThrow('Stored Resolution provenance is malformed');
+  });
+  test.each([{ ...callable, memberKey: 'ada' }, { ...callable, template: 'people', collection: 'roster' }, { ...callable, slot: '' }])('rejects malformed callable descriptor %j', malformed => {
+    const record = provenanceRecord({ version: 1, kind: 'source', step, observations, children: [] });
+    expect(() => readProvenance(envelope({ ...record, content: { trackingSemantics: 2, kind: 'source', step: malformed, observations, children: [] } }))).toThrow('Stored Resolution provenance is malformed');
+  });
+});

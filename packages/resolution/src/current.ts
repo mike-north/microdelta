@@ -14,7 +14,7 @@
  * supported MDS1 output operation. A recorded read whose current path no longer
  * navigates the same container shape is incompatible, never equal.
  *
- * A supplied step's arguments are current facts of the same kind: the values
+ * A supplied memo or source's arguments are current facts of the same kind: the values
  * a nested call passes now (forwarded values rebuilt from current bindings,
  * derived values decoded from their recorded encodings), selected through the
  * same validation observer at the `argument` binding, position by position.

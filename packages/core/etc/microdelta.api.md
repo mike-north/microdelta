@@ -124,6 +124,7 @@ import type { ISlotSubject as ISlotSubject_2 } from '@microdelta/definition';
 import type { ISourceOutcome as ISourceOutcome_2 } from '@microdelta/resolution';
 import type { ISourceOutcomes as ISourceOutcomes_2 } from '@microdelta/resolution';
 import type { ISourceRetryPolicy as ISourceRetryPolicy_2 } from '@microdelta/supervision';
+import type { ISourceSlot as ISourceSlot_2 } from '@microdelta/definition';
 import type { IStepSlot as IStepSlot_2 } from '@microdelta/definition';
 import type { IStopCause as IStopCause_2 } from '@microdelta/supervision';
 import type { IStopController as IStopController_2 } from '@microdelta/supervision';
@@ -133,6 +134,8 @@ import type { IStopState as IStopState_2 } from '@microdelta/supervision';
 import type { IStrictFoldOutcome as IStrictFoldOutcome_2 } from '@microdelta/supervision';
 import type { ISucceededEntry as ISucceededEntry_2 } from '@microdelta/definition';
 import type { ISupervisionErrorCode as ISupervisionErrorCode_2 } from '@microdelta/supervision';
+import type { ISuppliedSourceDeclaration as ISuppliedSourceDeclaration_2 } from '@microdelta/definition';
+import type { ISuppliedSourceRegistration as ISuppliedSourceRegistration_2 } from '@microdelta/definition';
 import type { ISuppliedStepDeclaration as ISuppliedStepDeclaration_2 } from '@microdelta/definition';
 import type { ISuppliedStepRegistration as ISuppliedStepRegistration_2 } from '@microdelta/definition';
 import type { ITrackedHelpers as ITrackedHelpers_2 } from '@microdelta/resolution';
@@ -563,6 +566,9 @@ export type ISourceOutcomes = ISourceOutcomes_2;
 export type ISourceRetryPolicy = ISourceRetryPolicy_2;
 
 // @alpha
+export type ISourceSlot<TInputs extends object, THelpers extends object, TParameters extends readonly unknown[], TResult> = ISourceSlot_2<IAuthoringFamily<TInputs, THelpers>, TParameters, TResult>;
+
+// @alpha
 export type IStepDescriptor = IBindingDescriptor;
 
 // @alpha
@@ -591,6 +597,12 @@ export type ISucceededEntry<T> = ISucceededEntry_2<T>;
 
 // @alpha
 export type ISupervisionErrorCode = ISupervisionErrorCode_2;
+
+// @alpha
+export type ISuppliedSourceDeclaration<TInputs extends object, THelpers extends object, TParameters extends readonly unknown[], TResult> = ISuppliedSourceDeclaration_2<IAuthoringFamily<TInputs, THelpers>, TParameters, TResult>;
+
+// @alpha
+export type ISuppliedSourceRegistration<TInputs extends object, THelpers extends object> = ISuppliedSourceRegistration_2<IAuthoringFamily<TInputs, THelpers>>;
 
 // @alpha
 export type ISuppliedStepDeclaration<TInputs extends object, THelpers extends object, TParameters extends readonly unknown[], TResult> = ISuppliedStepDeclaration_2<IAuthoringFamily<TInputs, THelpers>, TParameters, TResult>;

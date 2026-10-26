@@ -48,6 +48,7 @@ export {
   type ISourceRunContext,
   type IStepDeclaration,
 } from './declaration.js';
+export type { ISourceSlotBrand, IAnySourceSlot, ISourceSlot, IAnySuppliedSourceDeclaration, ISuppliedSourceDeclaration, ISuppliedSourceOptions, ISupplySourceOptions, ISuppliedSourceRegistration, ISuppliedSourceRunContext, ISuppliedSourceFinalityContext, ISourceArgumentSupplier, ISourcePreviousSupplier } from './source-slot.js';
 export { declarations, type IDeclarations } from './declarations.js';
 export {
   gateOutcome,
@@ -112,6 +113,7 @@ export {
   type IStepRegistration,
   type IStepTarget,
   type ISuppliedStepTarget,
+  type ISuppliedSourceTarget,
   type ITopology,
   type IWitnessResolution,
   isComposing,
@@ -217,3 +219,5 @@ export function nameOf(fn: Function, override?: string): string | undefined {
     return undefined;
   }
 }
+
+export type { ISuppliedSourceInvocation, ISuppliedSourceCallRequest } from './invocation.js';

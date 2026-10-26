@@ -7,7 +7,8 @@
  * author callback with the context Definition assembles: the facade's bindings
  * plus Definition-minted calls (memo), the previous carrier Resolution
  * selected (source), or the argument views Resolution reconstructed (supplied
- * step). A template instance's source or memo is applied with Resolution's
+ * step), including tracked arguments plus previous/outcome bindings for a
+ * callable source. A template instance's source or memo is applied with Resolution's
  * member supplier, and its context gains the member binding; every other step
  * has none and rejects one. The pair goes to Resolution's rank-2 invoker,
  * which tracks and captures it. Definition never selects previous results, materializes data,
@@ -25,7 +26,7 @@
  * dispatch (CMP-9).
  */
 import { recordArguments, registerCarrier, type IArgumentContext, type IHandleArguments } from './arguments.js';
-import type { IComposition, ICompositionState, IScopedSubject, ISuppliedStepTarget } from './composition.js';
+import type { IComposition, ICompositionState, IScopedSubject, ISuppliedStepTarget, ISuppliedSourceTarget } from './composition.js';
 import { descriptorKey, isComposing, ownedDescriptor } from './composition.js';
 import type {
   IAnyMemoDeclaration,
@@ -42,6 +43,7 @@ import { DefinitionError } from './errors.js';
 import type { IApply, IBindingFamily } from './family.js';
 import type { IFoldInvocation } from './fold.js';
 import type { IOutcomeFoldInvocation } from './outcome-fold.js';
+import type { IAnySuppliedSourceDeclaration, ISourceArgumentSupplier, ISourcePreviousSupplier } from './source-slot.js';
 import type { IAnySuppliedStepDeclaration, IArgumentSupplier } from './slot.js';
 import type { IMemberSupplier } from './template.js';
 import type {
@@ -145,13 +147,24 @@ export interface ISuppliedCallRequest<TFamily extends IBindingFamily> {
 }
 
 /**
- * One dispatch from a genuine handle to the invocation port.
+ * A source-capable slot dispatch. Current binding and author subject travel
+ * beside the unchanged v2 witness; source/memo semantics never enter its wire.
  * @alpha
  */
+export interface ISuppliedSourceCallRequest<TFamily extends IBindingFamily> {
+  readonly kind: 'supplied-source';
+  readonly scope: IInvocationScope;
+  readonly witness: INestedInvocationWitness;
+  readonly child: IAnySuppliedSourceDeclaration<TFamily>;
+  readonly subject: IScopedSubject;
+}
+
+/** One current dispatch, with source policy distinct from memo semantics. @alpha */
 export type IDeclaredInvocationRequest<TFamily extends IBindingFamily, TResult> =
   | ISourceCallRequest<TFamily, TResult>
   | IMemoCallRequest<TFamily>
-  | ISuppliedCallRequest<TFamily>;
+  | ISuppliedCallRequest<TFamily>
+  | ISuppliedSourceCallRequest<TFamily>;
 
 /**
  * The injected port implemented by Resolution and the run context. It is
@@ -236,13 +249,24 @@ export interface ISuppliedInvocation<TFamily extends IBindingFamily> extends IIn
 }
 
 /**
- * A live invocation of any step kind.
+ * A source policy invocation under one current callable binding. Definition
+ * assembles its typed arguments and previous carrier; Resolution owns eligibility,
+ * hook evaluation, outcomes, and the lifetime of their tracked observations.
  * @alpha
  */
+export interface ISuppliedSourceInvocation<TFamily extends IBindingFamily> extends IInvocationScope {
+  readonly kind: 'supplied-source';
+  readonly hasFinality: boolean;
+  apply<TOutcome>(bindings: TFamily['source'], previous: ISourcePreviousSupplier<TFamily> | undefined, args: ISourceArgumentSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>): TOutcome;
+  applyFinality<TOutcome>(bindings: TFamily['source'], previous: ISourcePreviousSupplier<TFamily>, args: ISourceArgumentSupplier<TFamily>, invoke: IAuthorInvoker<TOutcome>): TOutcome;
+}
+
+/** A current invocation keeps source and memo callback contracts distinct. @alpha */
 export type IInvocation<TFamily extends IBindingFamily> =
   | IMemoInvocation<TFamily>
   | ISourceInvocation<TFamily>
   | ISuppliedInvocation<TFamily>
+  | ISuppliedSourceInvocation<TFamily>
   | IFoldInvocation<TFamily>
   | IOutcomeFoldInvocation<TFamily>;
 
@@ -369,6 +393,18 @@ export function openInvocationIn<TFamily extends IBindingFamily>(
     };
     return Object.freeze(outcomeFold);
   }
+  if (record.kind === 'supplied-source') {
+    const sourceRecord = record;
+    const invocation: ISuppliedSourceInvocation<TFamily> = {
+      kind: 'supplied-source', parent: frozenParent,
+      get open(): boolean { return open; },
+      close(): void { open = false; },
+      hasFinality: sourceRecord.declaration.finality !== undefined,
+      apply: (bindings, previous, args, invoke) => { assertApplicable(); return sourceRecord.apply(bindings, previous, args, invoke); },
+      applyFinality: (bindings, previous, args, invoke) => { assertApplicable(); return sourceRecord.applyFinality(bindings, previous, args, invoke); },
+    };
+    return Object.freeze(invocation);
+  }
   if (record.kind === 'supplied-step') {
     const suppliedRecord = record;
     const invocation: ISuppliedInvocation<TFamily> = {
@@ -389,16 +425,25 @@ export function openInvocationIn<TFamily extends IBindingFamily>(
   }
   const memoRecord = record;
   /** Each declared supplied slot's current implementation, resolved once before any body runs. */
-  const slotTargets = new Map<string, ISuppliedStepTarget<TFamily>>();
+  const slotTargets = new Map<string, ISuppliedStepTarget<TFamily> | ISuppliedSourceTarget<TFamily>>();
   for (const edge of memoRecord.children.values()) {
-    if (edge.kind === 'slot' && !slotTargets.has(edge.slot)) {
+    if (edge.kind !== 'slot') { continue; }
+    let target = slotTargets.get(edge.slot);
+    if (target === undefined) {
       const slotOccupants = state.registrations.get(descriptorKey(slotDescriptor(frozenParent.scope, edge.slot))) ?? [];
       checkSlotOccupancy(edge.slot, slotOccupants);
       const [occupant] = slotOccupants;
-      if (occupant?.target.role !== 'callable' || occupant.target.kind !== 'supplied-step') {
+      if (occupant?.target.role !== 'callable' || (occupant.target.kind !== 'supplied-step' && occupant.target.kind !== 'supplied-source')) {
         return reject('missing-slot', `Supplied step slot ${edge.slot} is not occupied by a supplied step.`);
       }
-      slotTargets.set(edge.slot, occupant.target);
+      target = occupant.target;
+      slotTargets.set(edge.slot, target);
+    }
+    // Occupancy belongs to the slot, but source/memo meaning belongs to each
+    // declared edge. A cached target permits matching aliases, never an edge
+    // of the other kind merely because an earlier edge used the same name.
+    if ((target.declaration.kind === 'supplied-source') !== edge.source) {
+      return reject('missing-slot', `Callable slot ${edge.slot} expects ${edge.source ? 'supplied-source' : 'supplied-step'} but is occupied by ${target.declaration.kind}.`);
     }
   }
   /** The parent invocation's call order: the next dispatched call's position. */
@@ -437,7 +482,10 @@ export function openInvocationIn<TFamily extends IBindingFamily>(
       const target = slotTargets.get(edge.slot) ?? reject('missing-slot', `Supplied step slot ${edge.slot} is not supplied.`);
       return args => {
         const subject = target.subjectFor(args);
-        return witness => port.dispatch(Object.freeze({ kind: 'supplied', scope: invocation, witness: nestedWitness(witness), child: target.declaration, subject }));
+        const declaration = target.declaration;
+        return declaration.kind === 'supplied-source'
+          ? witness => port.dispatch(Object.freeze({ kind: 'supplied-source', scope: invocation, witness: nestedWitness(witness), child: declaration, subject }))
+          : witness => port.dispatch(Object.freeze({ kind: 'supplied', scope: invocation, witness: nestedWitness(witness), child: declaration, subject }));
       };
     }
     const childRecord = records.get(edge.declaration);
@@ -499,7 +547,7 @@ export function openInvocationIn<TFamily extends IBindingFamily>(
  * helper) keeps the M3 `unresolved-parent` outcome when opened.
  */
 function isStepSlot(declaredSlots: readonly string[], slot: string, occupants: readonly { readonly target: { readonly role: string; readonly kind?: string } }[]): boolean {
-  return declaredSlots.includes(slot) || occupants.some(occupant => occupant.target.kind === 'supplied-step');
+  return declaredSlots.includes(slot) || occupants.some(occupant => (occupant.target.kind === 'supplied-step' || occupant.target.kind === 'supplied-source'));
 }
 
 /** A supplied slot's occupancy must be exactly one; missing and ambiguous stay distinct. */

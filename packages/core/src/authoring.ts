@@ -46,6 +46,9 @@ import type {
   ISkippedEntry as IDefinitionSkippedEntry,
   ISlotSubject as IDefinitionSlotSubject,
   IStepSlot as IDefinitionStepSlot,
+  ISourceSlot as IDefinitionSourceSlot,
+  ISuppliedSourceDeclaration as IDefinitionSuppliedSourceDeclaration,
+  ISuppliedSourceRegistration as IDefinitionSuppliedSourceRegistration,
   ISucceededEntry as IDefinitionSucceededEntry,
   ISuppliedStepDeclaration as IDefinitionSuppliedStepDeclaration,
   ISuppliedStepRegistration as IDefinitionSuppliedStepRegistration,
@@ -72,7 +75,8 @@ export type IAuthoringFamily<TInputs extends object, THelpers extends object> = 
 
 /**
  * Builders bound to one analysis's declared inputs and helpers: `source`,
- * `memo`, `template`, `fold`, `outcomeFold`, `stepSlot`, `suppliedStep`, `supply`, the
+ * `memo`, `template`, `fold`, `outcomeFold`, `stepSlot`, `suppliedStep`, `supply`,
+ * `sourceSlot`, `suppliedSource`, `supplySource`, the
  * canonical `forward` origins, `compose`, and the invocation bridge the
  * workspace uses.
  * @alpha
@@ -176,6 +180,15 @@ export type IAnyTemplateDeclaration<TInputs extends object, THelpers extends obj
  * @alpha
  */
 export type IStepSlot<TInputs extends object, THelpers extends object, TParameters extends readonly unknown[], TResult> = IDefinitionStepSlot<IAuthoringFamily<TInputs, THelpers>, TParameters, TResult>;
+
+/** A declared source call edge, with source policy distinct from memoized computation. @alpha */
+export type ISourceSlot<TInputs extends object, THelpers extends object, TParameters extends readonly unknown[], TResult> = IDefinitionSourceSlot<IAuthoringFamily<TInputs, THelpers>, TParameters, TResult>;
+
+/** A dynamic source implementation receives tracked arguments and the eligible previous carrier. @alpha */
+export type ISuppliedSourceDeclaration<TInputs extends object, THelpers extends object, TParameters extends readonly unknown[], TResult> = IDefinitionSuppliedSourceDeclaration<IAuthoringFamily<TInputs, THelpers>, TParameters, TResult>;
+
+/** A source implementation bound to a source slot with an author subject function. @alpha */
+export type ISuppliedSourceRegistration<TInputs extends object, THelpers extends object> = IDefinitionSuppliedSourceRegistration<IAuthoringFamily<TInputs, THelpers>>;
 
 /** A supplied step implementation, receiving its arguments as views. @alpha */
 export type ISuppliedStepDeclaration<TInputs extends object, THelpers extends object, TParameters extends readonly unknown[], TResult> = IDefinitionSuppliedStepDeclaration<IAuthoringFamily<TInputs, THelpers>, TParameters, TResult>;

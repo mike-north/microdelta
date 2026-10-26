@@ -1,5 +1,7 @@
 /**
- * Supplied callable step slots.
+ * Callable slot subjects and registrations, plus memoized supplied steps.
+ * Source-capable declarations in source-slot compose the same binding registry
+ * and argument reconstruction without adopting memoized source acceptance.
  *
  * A step slot is a structural, composition-wide place (for example `assessor`)
  * where a supplied step implementation belongs. A parent memo names the slot
@@ -20,6 +22,7 @@
  */
 import { decodeSnapshot } from '@microdelta/value';
 
+import type { IAnySuppliedSourceDeclaration } from './source-slot.js';
 import type { IScopedSubject } from './composition.js';
 import type { IAuthorInvoker, IDeclarationBrand, IDeclarationRecords } from './declaration.js';
 import { checkBindings, checkCallback, labelOption, mint, readOptions, reject, versionOption } from './declaration.js';
@@ -235,7 +238,7 @@ export function supplyState(value: unknown): ISupplyState | undefined {
 }
 
 /** Whether a value can be called as an author subject function. */
-function isSubjectCallback(value: unknown): value is ISubjectCallback {
+export function isSubjectCallback(value: unknown): value is ISubjectCallback {
   return typeof value === 'function';
 }
 
@@ -277,7 +280,7 @@ export function declareStepSlot<TFamily extends IBindingFamily, TParameters exte
  * under. Runtime can only prove it is a function; its parameter and result
  * types are the author's own declaration, exactly as when read from `options`.
  */
-function isRunOf<TContext, TResult>(value: unknown): value is (context: TContext) => TResult {
+export function isRunOf<TContext, TResult>(value: unknown): value is (context: TContext) => TResult {
   return typeof value === 'function';
 }
 
@@ -363,6 +366,14 @@ export function declareSupply<TFamily extends IBindingFamily, TParameters extend
   supplies.set(registration, Object.freeze({ slot, declaration: record.declaration, subject }));
   // The brand is type-level only; this module is its sole minting authority.
   return registration as ISuppliedStepRegistration<TFamily>;
+}
+
+/** Register a validated source or memo binding with the same composition registry. */
+export function registerSupply<TFamily extends IBindingFamily, TDeclaration extends IAnySuppliedStepDeclaration<TFamily> | IAnySuppliedSourceDeclaration<TFamily>>(slot: string, declaration: TDeclaration, subject: ISubjectCallback): ISuppliedStepRegistrationBrand<TFamily> & { readonly slot: string; readonly declaration: TDeclaration } {
+  const registration = Object.freeze({ slot, declaration });
+  supplies.set(registration, Object.freeze({ slot, declaration, subject }));
+  // This registry is the sole authority for the type-only registration brand.
+  return registration as ISuppliedStepRegistrationBrand<TFamily> & { readonly slot: string; readonly declaration: TDeclaration };
 }
 
 /**

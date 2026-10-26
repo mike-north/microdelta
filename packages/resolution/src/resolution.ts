@@ -31,7 +31,10 @@
  * its own validation or normal admission; and compare only the facts the
  * parent consumed from that call. The first failing call ends validation with
  * a distinct miss; later calls are not reached. A supplied step validates its
- * own implementation, bindings and the argument facts it observed.
+ * own implementation, bindings and the argument facts it observed. A callable
+ * source validates the same argument facts before its current source policy;
+ * its author subject and argument digest distinguish both shared resolutions
+ * and supervised execution intents beneath an otherwise retained parent.
  *
  * Work that validation could not avoid is admitted before any claim, attempt
  * or body (REUSE-009). Every admitted body and current-policy hook runs
@@ -105,6 +108,11 @@ import type {
   IAnyOutcomeFoldDeclaration,
   IAnySourceDeclaration,
   IAnySuppliedStepDeclaration,
+  IAnySuppliedSourceDeclaration,
+  ISourceArgumentSupplier,
+  ISourcePreviousSupplier,
+  ISuppliedSourceDeclaration,
+  ISuppliedSourceInvocation,
   IApply,
   IArgumentRecipe,
   IArgumentSupplier,
@@ -511,13 +519,19 @@ interface IMemoReturn {
  * implementation currently supplied to it, the call's subject from the slot's
  * subject function, the argument values rebuilt for this call and their digest.
  */
-interface ISuppliedCall<TFamily extends IResolutionFamily<object, object>> {
+interface ISuppliedCall<TFamily extends IResolutionFamily<object, object>, TDeclaration extends IAnySuppliedStepDeclaration<TFamily> | IAnySuppliedSourceDeclaration<TFamily> = IAnySuppliedStepDeclaration<TFamily>> {
   readonly slot: IBindingDescriptor;
-  readonly declaration: IAnySuppliedStepDeclaration<TFamily>;
+  readonly declaration: TDeclaration;
   readonly subject: IScopedSubject;
   readonly values: readonly IArgumentValue[];
   readonly digest: string;
 }
+
+/** Source calls share author subject/argument identity without adopting memo reuse. */
+type ISuppliedSourceCall<TFamily extends IResolutionFamily<object, object>> = ISuppliedCall<TFamily, IAnySuppliedSourceDeclaration<TFamily>>;
+
+/** Common identity fields used by source and memo callable attempts. */
+type ICallableCall<TFamily extends IResolutionFamily<object, object>> = ISuppliedCall<TFamily, IAnySuppliedStepDeclaration<TFamily> | IAnySuppliedSourceDeclaration<TFamily>>;
 
 /** A nested call's arguments rebuilt now, or the distinct reason they cannot be. */
 type IRebuiltArguments =
@@ -956,6 +970,11 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
     return childService.resolve({ kind: 'supplied', step: call.slot, subject: call.subject.subject }, () => resolveSuppliedShared(request, call));
   }
 
+  /** Resolve a source call under ordinary source policy, sharing only this exact invocation. */
+  function currentSuppliedSourceChild(request: IRequestContext, call: ISuppliedSourceCall<IFamily>): Promise<IResolvedStep> {
+    return childService.resolve({ kind: 'source', step: call.slot, subject: call.subject.subject }, () => resolveSourceShared(request, call.slot, call.declaration, call));
+  }
+
   const port: IInvocationPort<IFamily> = Object.freeze({
     active: (): IInvocationScope | undefined => active.getStore(),
     // The child view travels inside a plain `{ data }` carrier across every
@@ -996,7 +1015,7 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
   }
 
   /** The scoped subject and compatibility group of one supplied slot call. */
-  function suppliedSubject(call: ISuppliedCall<IFamily>): IVersionedSubject {
+  function suppliedSubject(call: ICallableCall<IFamily>): IVersionedSubject {
     if (call.subject.scope !== analysis) {
       throw new ResolutionError('invalid-request', `Slot ${call.slot.slot} computed a subject in scope ${call.subject.scope}, not ${analysis}`);
     }
@@ -1189,9 +1208,9 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
   }
 
   /** Open the unique current invocation of a step. */
-  function openSource(step: IBindingDescriptor): ISourceInvocation<IFamily> {
+  function openSource(step: IBindingDescriptor): ISourceInvocation<IFamily> | ISuppliedSourceInvocation<IFamily> {
     const invocation = options.declarations.openInvocation(composition, step, port);
-    if (invocation.kind !== 'source') {
+    if (invocation.kind !== 'source' && invocation.kind !== 'supplied-source') {
       invocation.close();
       throw new ResolutionError('unbound-step', `Step ${stepKey(step)} is not a source`);
     }
@@ -1242,13 +1261,38 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
   /** Invoke a source's finality hook or check under capture, with its previous carrier. */
   function callSource<TFinished>(
     request: IRequestContext,
-    invocation: ISourceInvocation<IFamily>,
+    invocation: ISourceInvocation<IFamily> | ISuppliedSourceInvocation<IFamily>,
     which: 'run' | 'finality',
     carrier: object | undefined,
     finish: (value: unknown) => TFinished,
+    call?: ISuppliedSourceCall<IFamily>,
   ): Promise<IObservationCapture<TFinished>> {
     const shared = authorBindings(request);
     const bindings: IFamily['source'] = Object.freeze({ ...shared, outcome: sourceOutcome });
+    if (invocation.kind === 'supplied-source') {
+      if (call === undefined) { throw new ResolutionError('invalid-request', 'A callable source needs reconstructed arguments'); }
+      const arguments_ = argumentViews(call.values, invocation);
+      const argumentsSupplier: ISourceArgumentSupplier<IFamily> = Object.freeze({
+        views: <TParameters extends readonly unknown[], TResult>(declaration: ISuppliedSourceDeclaration<IFamily, TParameters, TResult>): IArgumentViews<IFamily, TParameters> => {
+          void declaration;
+          return trusted<IArgumentViews<IFamily, TParameters>>(arguments_.views);
+        },
+      });
+      const previous: ISourcePreviousSupplier<IFamily> | undefined = carrier === undefined ? undefined : Object.freeze({
+        carrier: <TResult>(declaration: ISuppliedSourceDeclaration<IFamily, never, TResult>): IApply<IFamily['previous'], TResult> => {
+          void declaration;
+          return trusted<IApply<IFamily['previous'], TResult>>(carrier);
+        },
+      });
+      const invoke = invoker((value: unknown) => arguments_.finishWith(value, finish), arguments_.arm, which === 'run');
+      return active.run(invocation, () => {
+        if (which === 'finality') {
+          if (previous === undefined) { throw new ResolutionError('invalid-request', 'Finality needs an eligible previous result'); }
+          return invocation.applyFinality(bindings, previous, argumentsSupplier, invoke);
+        }
+        return invocation.apply(bindings, previous, argumentsSupplier, invoke);
+      });
+    }
     const supplier: IPreviousSupplier<IFamily> | undefined = carrier === undefined ? undefined : Object.freeze({
       carrier: <TResult>(declaration: ISourceDeclaration<IFamily, TResult, never>): IApply<IFamily['previous'], TResult> => {
         void declaration;
@@ -1352,7 +1396,7 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
   }
 
   /** The execution identity of one supplied slot call, checked unused as {@link freshIdentity} is. */
-  function freshSuppliedIdentity(request: IRequestContext, call: ISuppliedCall<IFamily>): IExecutionIdentity {
+  function freshSuppliedIdentity(request: IRequestContext, call: ICallableCall<IFamily>): IExecutionIdentity {
     const requestKey = requestKeyOfRequest(request);
     const subject = suppliedSubject(call);
     return unusedIdentity(requestKey, call.slot, {
@@ -1361,6 +1405,7 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
       intentDigest: suppliedIntentDigest({
         host, validation, scope: analysis, environment, slot: call.slot, subject: subject.subject, version: subject.version,
         arguments: call.digest, run: call.declaration.run, slots: request.slots,
+        ...(call.declaration.kind === 'supplied-source' ? { source: { finality: call.declaration.finality } } : {}),
       }),
     });
   }
@@ -1473,24 +1518,31 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
     return { kind: 'reused', basis, reference, acceptance };
   }
 
-  /** Resolve a direct source invocation once per top-level request. */
-  function resolveSourceShared(request: IRequestContext, step: IBindingDescriptor, declaration: IAnySourceDeclaration<IFamily>): Promise<IResolvedStep> {
-    const key = stepKey(step);
+  /**
+   * Share a current source resolution within this request. Ordinary sources use
+   * their structural invocation; callable sources also require the author
+   * subject, version and argument digest, so distinct PR IDs never collapse.
+   */
+  function resolveSourceShared(request: IRequestContext, step: IBindingDescriptor, declaration: IAnySourceDeclaration<IFamily> | IAnySuppliedSourceDeclaration<IFamily>, call?: ISuppliedSourceCall<IFamily>): Promise<IResolvedStep> {
+    const key = call === undefined ? stepKey(step) : JSON.stringify([stepKey(step), call.subject.scope, call.subject.subject, declaration.version, call.digest]);
     const existing = request.sources.get(key);
     if (existing !== undefined) {
       return existing;
     }
-    const pending = withLeaseAuthority(request, step, resolveSource(request, step, declaration));
+    const pending = withLeaseAuthority(request, step, resolveSource(request, step, declaration, call));
     request.sources.set(key, pending);
     return pending;
   }
 
   /** Resolve one source step under current policy. */
-  async function resolveSource(request: IRequestContext, step: IBindingDescriptor, declaration: IAnySourceDeclaration<IFamily>): Promise<IResolvedStep> {
+  async function resolveSource(request: IRequestContext, step: IBindingDescriptor, declaration: IAnySourceDeclaration<IFamily> | IAnySuppliedSourceDeclaration<IFamily>, call?: ISuppliedSourceCall<IFamily>): Promise<IResolvedStep> {
     const evidence = newEvidence(request);
     const done = (result: IStepResult): IResolvedStep => ({ step, result, evidence });
     emit(request, evidence, step, 'verify');
-    const candidates = integrity(() => history.findCandidates(versioned(declaration)));
+    if (declaration.kind === 'supplied-source' && call === undefined) { throw new ResolutionError('invalid-request', 'A source call needs its author subject and arguments'); }
+    const subject = declaration.kind === 'source' ? versioned(declaration) : call === undefined ? undefined : suppliedSubject(call);
+    if (subject === undefined) { throw new ResolutionError('invalid-request', 'A source call has no current subject'); }
+    const candidates = integrity(() => history.findCandidates(subject));
     let eligible: ICompletedEnvelope | undefined;
     for (const candidate of candidates) {
       const reading = integrity(() => readProvenance(candidate));
@@ -1502,13 +1554,16 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
         evidence.misses.push(miss(candidate.reference, 'unsupported-evidence', `provenance was recorded for a ${describeKind(reading.provenance.kind)}`));
         continue;
       }
-      if (changedCorrespondence(reading.provenance.step, step)) {
+      // An ordinary source keeps subject-based M3 correspondence. A callable
+      // source also belongs to its exact declared slot; equal subject text in
+      // another slot cannot offer its history to this slot's current policy.
+      if (changedCorrespondence(reading.provenance.step, step) || (call !== undefined && stepKey(reading.provenance.step) !== stepKey(step))) {
         evidence.misses.push(correspondenceMiss(candidate.reference, reading.provenance.step, step));
         continue;
       }
       // The previous result a check read is its history, not a current input.
       const own = reading.provenance.observations.filter((item) => !isPreviousObservation(item.binding));
-      const comparison = compare(own, ownFactProvider({ validation, slots: request.slots, self: declaration.run, member: memberRecord(request, step) }));
+      const comparison = compare(own, ownFactProvider({ validation, slots: request.slots, self: declaration.run, member: memberRecord(request, step), ...(call === undefined ? {} : { arguments: call.values }) }));
       if (comparison.kind === 'equal') {
         eligible = candidate;
         break;
@@ -1522,7 +1577,7 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
       if (eligible !== undefined && invocation.hasFinality) {
         emit(request, evidence, step, 'finality');
         // A check-only request starts no work, so its policy evaluation is not supervised.
-        const run = (): ReturnType<typeof callSource<unknown>> => callSource(request, invocation, 'finality', carrier, (value) => value);
+        const run = (): ReturnType<typeof callSource<unknown>> => callSource(request, invocation, 'finality', carrier, (value) => value, call);
         const evaluated = await (request.mode === 'check' ? executeUnsupervised(step, run) : supervision.execute(step, run));
         if (evaluated.kind === 'interrupted' || evaluated.kind === 'unsettled') {
           // A policy hook claims no attempt; an unsettled operation there leaves the step pending.
@@ -1546,8 +1601,9 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
         return done({ kind: 'uncertain', boundary: step });
       }
       authorBindings(request);
-      const identity = freshIdentity(request, step, declaration);
-      const refusal = await admit(request, evidence, step, 'source', versioned(declaration), eligible !== undefined ? 'source-policy' : candidates.length > 0 ? 'invalid' : 'cold');
+      const identity = declaration.kind === 'source' ? freshIdentity(request, step, declaration) : call === undefined ? undefined : freshSuppliedIdentity(request, call);
+      if (identity === undefined) { throw new ResolutionError('invalid-request', 'A source call has no execution identity'); }
+      const refusal = await admit(request, evidence, step, 'source', subject, eligible !== undefined ? 'source-policy' : candidates.length > 0 ? 'invalid' : 'cold');
       if (refusal !== undefined) {
         return done({ kind: 'refused', refused: step, reason: refusal.reason, disposition: refusal.disposition });
       }
@@ -1565,7 +1621,7 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
           } catch (error: unknown) {
             return { minted, data: undefined, detachError: error };
           }
-        }), { subject: versioned(declaration), attemptId });
+        }, call), { subject, attemptId });
       } catch (error: unknown) {
         executed = { kind: 'threw', error };
       }
@@ -1793,7 +1849,10 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
           }
           throw error;
         }
-        resolved = await currentSuppliedChild(request, { slot: witness.child, declaration: child.declaration, subject, values: rebuilt.values, digest: argumentDigest(rebuilt.values) });
+        const current = { slot: witness.child, subject, values: rebuilt.values, digest: argumentDigest(rebuilt.values) };
+        resolved = child.declaration.kind === 'supplied-source'
+          ? await currentSuppliedSourceChild(request, { ...current, declaration: child.declaration })
+          : await currentSuppliedChild(request, { ...current, declaration: child.declaration });
       }
       switch (resolved.result.kind) {
         case 'reused':
@@ -2075,7 +2134,7 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
    * A Proxy is not structured-cloneable, so `structuredClone(args)` raises
    * `DataCloneError`; copy the list before cloning it.
    */
-  function argumentViews(values: readonly IArgumentValue[], invocation: ISuppliedInvocation<IFamily>): { readonly views: readonly unknown[]; readonly arm: () => void; readonly finish: (value: unknown) => IMemoReturn } {
+  function argumentViews(values: readonly IArgumentValue[], invocation: ISuppliedInvocation<IFamily> | ISuppliedSourceInvocation<IFamily>): { readonly views: readonly unknown[]; readonly arm: () => void; readonly finish: (value: unknown) => IMemoReturn; readonly finishWith: <T>(value: unknown, detach: (value: unknown) => T) => T } {
     const whole = tracking.tracked(argumentList(values), { path: bindingPaths.argument });
     let armed = false;
     let assertFrame: (() => void) | undefined;
@@ -2157,6 +2216,7 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
     return {
       views,
       arm: (): void => { assertFrame = tracking.currentCaptureAssertion(); armed = true; },
+      finishWith: <T>(value: unknown, detach: (value: unknown) => T): T => { finishing = true; return detach(value); },
       finish: (value: unknown): IMemoReturn => {
         // The existing detacher owns this rejection and preserves its safe outer failure.
         finishing = true;
@@ -2564,13 +2624,17 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
         case 'memo':
           resolved = await currentMemoChild(frame.request, siblingStep(frame.step, witness.child.slot), request.child);
           break;
+        case 'supplied-source':
         case 'supplied': {
           const outputs = new Map([...frame.calls].map(([index, call]) => [index, call.reference]));
           const rebuilt = rebuildArguments(frame.request, frame.step, witness.index, witness.arguments, outputs, false);
           if (rebuilt.status !== 'rebuilt') {
             throw new ResolutionError('execution-failure', `Call ${String(witness.index)} of ${stepKey(frame.step)} cannot be made: ${rebuilt.detail}`);
           }
-          resolved = await currentSuppliedChild(frame.request, { slot: witness.child, declaration: request.child, subject: request.subject, values: rebuilt.values, digest: argumentDigest(rebuilt.values) });
+          const current = { slot: witness.child, subject: request.subject, values: rebuilt.values, digest: argumentDigest(rebuilt.values) };
+          resolved = request.kind === 'supplied-source'
+            ? await currentSuppliedSourceChild(frame.request, { ...current, declaration: request.child })
+            : await currentSuppliedChild(frame.request, { ...current, declaration: request.child });
           break;
         }
         default: {

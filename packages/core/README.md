@@ -41,7 +41,9 @@ composes the owners and adds no policy of its own:
   key and tracked gate; member steps read their member through the `member`
   binding), `fold` (a strict fold over one template step), `outcomeFold` (an
   outcome fold over every member's settled status), `stepSlot`,
-  `suppliedStep` and `supply` (callable step slots bound at composition),
+  `suppliedStep` and `supply` (memoized callable slots bound at composition),
+  and `sourceSlot`, `suppliedSource`, `supplySource` (separately addressed
+  current source calls with tracked arguments and explicit source outcomes),
   the canonical `forward` argument origins, and `compose`. Step callbacks also
   receive `hasOwn(value, key)` for own-member presence and the observed
   `untracked` read.

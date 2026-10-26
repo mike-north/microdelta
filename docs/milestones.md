@@ -206,7 +206,7 @@ activity from viewing. The CLI is a named deliverable, not incidental scenario g
 
 The owner-selected early executable slice for the contribution-report workflow is
 narrower: separately permissionable run-start and read-only progress observation.
-Its exact-execution contract candidate is CLI-005/A-21. Delivering that slice does
+Its accepted exact-execution contract is CLI-005/A-21. Delivering that slice does
 not satisfy this milestone's full historical inspection exit or TEST-4.9's
 reference/history/resource browsing requirements. Foreground/detached lifetime and
 interrupt choices remain open; realistic report-scale qualification remains separate.

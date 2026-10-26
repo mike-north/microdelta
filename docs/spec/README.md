@@ -147,14 +147,14 @@ accepted first-delivery requirements; this scope does not claim full A-12j/l,
 RUN-019, CLI-001–004, M6, or M7 delivery. The normative full-target contracts
 remain unchanged and their evidence gates remain open.
 
-The supervisor-selected bounded exact-execution observation candidate is in
-[CLI-005](operations.md#cli-005--bounded-exact-execution-observation) with
-[A-21](acceptance.md#exact-execution-observation-cases); scoped repairs have
-been made after adversarial review and its same-reviewer recheck is pending. The
+The bounded exact-execution observation engineering contract is accepted under
+supervisory authority in [CLI-005](operations.md#cli-005--bounded-exact-execution-observation)
+and [A-21](acceptance.md#exact-execution-observation-cases). This records a
+supervisor-selected engineering design, not human selection of its mechanisms;
+runtime delivery and full issue-167 readiness remain unclaimed. The
 [standalone inspection proposal](../plans/standalone-inspection.md) remains the
 home for the broader CLI alternatives and full M6 work. Foreground/detached
-lifetime and interrupt choices remain unresolved; neither the narrow candidate
-nor this milestone update claims runtime delivery or full issue-167 readiness.
+lifetime and interrupt choices remain unresolved.
 
 ## Current checkout
 

@@ -873,18 +873,21 @@ invariants; they select no universal cap, credentials DSL or paid strategy.
 
 ### CLI-005 — Bounded exact-execution observation
 
-**Status:** supervisor-selected contract candidate. A scoped adversarial review
-found bounded repairs; the same-reviewer recheck is pending. This is not yet an
-accepted requirement or implementation-readiness decision.
+**Status:** accepted common engineering contract under root supervisory selection
+on 2026-10-25 after independent adversarial review. This does not attribute
+engineering-mechanism selection to the product owner and does not claim runtime
+delivery, full CLI-001–004, or M6/M7 acceptance. Implementation may begin after
+this contract is merged and its supervisor-owned child issue is issued.
 
 The first contribution-report CLI slice MUST start one workflow execution and
 allow a separately permissionable, read-only reader to inspect that exact
 execution. This slice supplies only exact-execution progress and terminal
 observation; it does not satisfy the broader CLI-001–004 read-side family or M6.
-The selected product scope is recorded by the #167 owner decision; the bounded
-engineering contract below is the supervisor-selected candidate for review, not
-a claim that the owner selected these mechanisms. The concrete workflow and
-report classification belong to the application assembly (#240).
+The selected product scope is recorded by the #167 owner decision. Root accepted
+the bounded engineering contract below as supervisory architecture selection
+under ENG after independent review; this does not claim that the owner selected
+these mechanisms. The concrete workflow and report classification belong to the
+application assembly (#240).
 
 **Identity and storage.** Supervision MUST mint a fresh bounded execution identity for every invocation,
 independent of a reusable public `runId`, and return an explicit locator. The record identifies the analysis and environment, may retain
@@ -979,8 +982,7 @@ the last recorded deferred-wait event says `sleeping` while another wait is acti
 the reader reports that event as the latest observation, not as the full wait
 state. Required outcomes are in [A-21](acceptance.md#exact-execution-observation-cases).
 The record schema may choose field spellings, but its discriminants and these
-semantics are fixed. This contract is a selected candidate pending different
-adversarial review; it is not implementation or M6 acceptance evidence.
+semantics are fixed. This accepted contract is not implementation or M6 acceptance evidence.
 
 ### CLI-001 — Read-only inspection is an explicit delivery checkpoint
 

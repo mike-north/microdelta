@@ -44,7 +44,7 @@ and rename display labels. Nothing depends on surviving closures/tags.
 | A-19 Admission/middleware | Budget refusal, cached hit, throwing observer, check-only miss | Hits served, misses refused before claims, committed success preserved | M3/M5 |
 | A-18 Context lifecycle | Concurrent scopes, thrown nested frame, detached callback after close, repeated standalone fresh captures in a continuing caller | No cross-run leakage; late use fails clearly; completed captures do not retain a distinct host context per entry after observers/results become unreachable | M2/M5 and host lifecycle regression |
 | A-20 Machine boundary | Direct Node built-in import/global in runtime outside Node Machine; new capability used by a context; unsupported/failing host operation; repeated host-context entry | Source check rejects bypass but allows tests/tooling; Node implementation passes capability conformance and injected-context fixture, preserves caller context and exact callback result while bounding completed-entry retention; History/Accounting port ownership remains intact | M0.5 and each added capability |
-| A-21 Exact-execution observation | Reused public runId; start/setup/body/rejection/drain/closure; sampled event/wait/stop facts; failed store/read and lost acknowledgment; strict and incomplete application outcomes | Distinct exact locators; prepared-before-analysis; only private producer controls lifecycle facts; bounded sampled counters and no false completion; closure after drain; failure containment and zero reader writes/callbacks/recovery; terminal report assertion remains separate from execution outcome | CLI-005 candidate; review and implementation proof required |
+| A-21 Exact-execution observation | Reused public runId; start/setup/body/rejection/drain/closure; sampled event/wait/stop facts; failed store/read and lost acknowledgment; strict and incomplete application outcomes | Distinct exact locators; prepared-before-analysis; only private producer controls lifecycle facts; bounded sampled counters and no false completion; closure after drain; failure containment and zero reader writes/callbacks/recovery; terminal report assertion remains separate from execution outcome | Accepted CLI-005 contract; implementation proof required |
 
 The A-18/A-20 heap-instance diagnostic is bounded to Node 24 and 26, where the
 same synthetic standalone capture workload distinguishes per-entry growth from
@@ -61,7 +61,7 @@ not executable tests or a selected stored record shape.
 
 ## Exact-execution observation cases
 
-These are expected outcomes for the selected bounded CLI-005 candidate, not
+These are expected outcomes for the accepted bounded CLI-005 contract, not
 recorded passing tests. Start with outcome-based failures before implementation;
 use an isolated store, controlled barriers/clocks and separate-process readers.
 They test the common observation contract, not the concrete contribution-report

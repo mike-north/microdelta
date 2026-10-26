@@ -58,8 +58,8 @@ Each `node` command starts a fresh process and opens the same SQLite-backed stor
 These commands belong to the **example's CLI**. The selected first general-purpose
 CLI slice is separately permissionable run-start plus exact-execution observation
 ([CLI-005](docs/spec/operations.md#cli-005--bounded-exact-execution-observation));
-it is a contract candidate, not an implemented CLI. The broader inspection
-checkpoint remains planned.
+its common engineering contract is accepted, but the CLI is not implemented. The
+broader inspection checkpoint remains planned.
 
 The JSON includes the report, each member's outcome and exact result reference,
 body execution counts (`executions`), and source-policy checks (`finality`). The

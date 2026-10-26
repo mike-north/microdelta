@@ -2,15 +2,16 @@
 
 **Standing:** the owner-selected first product slice is run-start plus
 separately permissionable read-only observation for the concrete contribution
-report workflow. The supervisor-selected exact-execution observation candidate
-is specified in [CLI-005](../spec/operations.md#cli-005--bounded-exact-execution-observation)
-and [A-21](../spec/acceptance.md#exact-execution-observation-cases); its
-mechanisms are not attributed to the owner's product-scope decision. Scoped
-repairs have been made after adversarial review; same-reviewer recheck remains
-required before implementation readiness. This plan remains
-the proposal home for the broader standalone inspection and full CLI-001–004/M6
-checkpoint. Its remaining alternatives and open decisions do not override the
-narrow CLI-005 candidate or select starter lifetime and interrupt behavior.
+report workflow. The common engineering contract is accepted under root's
+supervisory selection in [CLI-005](../spec/operations.md#cli-005--bounded-exact-execution-observation)
+and [A-21](../spec/acceptance.md#exact-execution-observation-cases). Its
+mechanisms are not attributed to the owner's product-scope decision. The accepted
+contract can be implemented after it is merged and its supervisor-owned child
+issue is issued; this is not runtime delivery or full issue-167/M6 readiness.
+This plan remains the proposal home for the broader standalone inspection and
+full CLI-001–004/M6 checkpoint. Its remaining alternatives and open decisions do
+not override the accepted CLI-005 contract or select starter lifetime and
+interrupt behavior.
 
 The owner-selected scope is recorded by the [#167 owner decision](https://github.com/mike-north/microdelta/issues/167#issuecomment-6404318056). The concrete workflow and GitHub adapter belong to #240. The owner clarification preserves the historical workload of roughly 150,000 pull requests and their review/comment payloads, without reducing scale or defining a fixed API-request count ([#240 clarification](https://github.com/mike-north/microdelta/issues/240#issuecomment-6405525087)). Generic TEST-5's synthetic-subject qualification remains a separate gate. The first CLI introduces no reusable pagination framework.
 

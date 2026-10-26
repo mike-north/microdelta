@@ -1,10 +1,12 @@
 # Controlled report acceptance evidence
 
-Issue260 is **not yet accepted**. The combined controlled application and
-independent fixture checks pass; the mandatory standalone150000-distinct-PR cold
-and independent-process restart and final whole-head review remain pending.
-The full combined baseline passed at `b4773c2`; the subsequent fixture-only
-loader-policy repair passed its affected checks and awaits independent review.
+Issue260 is **not yet accepted**. The standalone150000-distinct-PR cold
+qualification at `9cc9bcd` failed when the default writer lease expired inside
+one fold request; no full restart ran. Independent whole-head audit verified
+AC1–7 for the selected controlled application; AC8 and final acceptance remain
+unmet. The full combined baseline passed at `b4773c2`; loader-policy repair
+passed at `9cc9bcd`. The bounded lease repair independently passed at `ce3bc7a`;
+the separate failure-receipt repair at `e3dc64a` awaits independent review.
 Parent240 retains all six criteria, including its
 separately permissioned executable/progress criterion. CLI projection,
 installation, launcher/lifetime decisions, full TEST-3/4 and TEST-5/6 remain
@@ -26,10 +28,14 @@ branch is `363018b0458d2c1bd0aeaaa1bd22e4f9b75d5414`. Their normal integration i
 `0901ee6202f77c67802d576382fe5843754fd3dd`. The fixture relocation changes test
 ownership and verification paths while preserving that application source. The
 combined runtime candidate `b4773c2f488c0d61d421453f769e67df6ac8980c` passed all
-repository check/test/build gates. The subsequent changes affect only fixture
-import policy, tooling tests and documentation, preserving the runtime source.
-The
-final workload receipt must identify the actual combined revision used, and the
+repository check/test/build gates. The loader-policy repair at
+`9cc9bcdcba9e71e0c0963df8828cb16c55f29418` changes only fixture import policy,
+tooling tests and documentation. The later harness-only repairs are
+`ce3bc7a499550f29e0954eec5f5e612a72411309` (qualification lease) and
+`e3dc64a3cfa4bc1d31e15e29a57fe0e133eed09f` (bounded failure receipts).
+Application and package runtime source, lockfile, population, permits/window,
+fencing, retry and stop contracts remain unchanged. The final successful
+workload receipt must identify the actual combined revision used, and the
 final artifact manifest must fingerprint the generated declarations and runtime
 inputs after the final build.
 
@@ -59,7 +65,7 @@ Test filenames below are relative to `fixtures/contribution-report`.
 | 5 CR-2;240.6/3 | `retry.test.ts`33 cases and `provider-controls.test.ts`22 actual-facade cases PASS. Seconds/HTTP-date/reset normalization, receipt-relative RFC850 century, safe integer timing, local/provider maximum, early timer wake, threshold, slow classifier publication and decision acceptance, cumulative wait, finite attempts, same-operation close/reopen, cancellation, deferred-only writer release/reacquisition, explicit operator soft/hard/deadline rejection, final stop/fence and definite-unsent rollback are covered. Source classifier stop remains distinct from operator rejection. Independent provider review PASS is accepted at `da858fc`. |
 | 6 CR-4;240.6/2 | Evidence/model/application/restart cases PASS. Changed cutoff cannot relabel mismatched temporal basis. Future terminal events cannot establish earlier closure. Advanced observation refreshes provisional evidence; equal refreshed children record new source provenance while eligible exact parent/assessment references remain. |
 | 7 CR-5;240.6/2 | `settling-failure.test.ts` independently final quiet/daily sources, advanced observation, per-policy changes, late arrival, open/recent/future activity; model clipped inclusive closed-day boundaries; temporal-basis negatives PASS. Advanced observation refreshes only the provisional source. Late relevant comment refreshes PR101 detail/assessment, retains unrelated detail and exact equal-score Ada summary, and leaves prior provenance immutable. No global finality follows. |
-| 8 workload/privacy;240.2–4/6 | Public events/identities/progress/diagnostics/report versus synthetic credentials, headers, raw wire/model bodies, cursor and private assessment context PASS. Missing billing remains unknown. Workload fixture/measurement/tail/harness tests PASS, including required prolific-author capped-search behavior. **PENDING** standalone150000 distinct qualified PR cold+independent-process restart and its actual people/subjects/evidence/payload/operation/send/memory/in-flight measurements. The500-PR smoke is not acceptance. |
+| 8 workload/privacy;240.2–4/6 | Public events/identities/progress/diagnostics/report versus synthetic credentials, headers, raw wire/model bodies, cursor and private assessment context PASS. Missing billing remains unknown. Workload fixture/measurement/tail/harness tests PASS, including required prolific-author capped-search behavior. **FAILED / qualification pending:** the150000-PR cold attempt at `9cc9bcd` expired its request writer lease; no full restart ran. Harness lease and partial-evidence repairs do not establish the required actual full people/subjects/evidence/payload/operation/send/memory/in-flight measurements. The500-PR smoke is not acceptance. |
 | CLI handoff;240.5 remains open | `composeReport`, `evaluateReport`, `IReportRunOutcome` and generated declaration/tsd negatives PASS. Strict complete requires a succeeded framework fold; fulfilled incomplete execution has no report. No CLI framing or lifetime choice is selected. |
 
 ## Commands and receipts
@@ -78,8 +84,10 @@ checked-in named tests and commands reproduce their behavioral expectations.
 | Repaired `settling-failure.test.ts` |15 actual-facade cases PASS, plus strict fixture/import checks; `issue260-green-cr5-policy-outcome.log`, `issue260-cr5-repair-check.log`, `issue260-cr5-repair-imports.log`. |
 | `npm run test:controlled-report:workload -- --smoke` after relocation |500 distinct PRs/2 people cold and fresh-process restart PASS,4.0s/3.7s measured locally; `issue260-combined-workload-smoke.log`. Cold3006 actual sends, restart1506 additional sends,0 restart assessments. This only verifies the bounded integration and measurement paths. |
 | First full `npm run check` before relocation | Architectural RED:12 harness imports fell beneath the example facade-only rule; all other package/workspace checks passed. Preserved `issue260-full-check.log`; resolved by explicit fixture ownership and enforcement, not by weakening the example rule. |
-| Combined `npm run check`, `npm test`, explicit `npm run build` | **PASS** at exact runtime candidate `b4773c2`; `issue260-final-check.log`, `issue260-final-test.log`, `issue260-final-build.log`. Runtime/application/workload source is unchanged by the subsequent fixture import-policy repair. |
-| `npm run test:controlled-report:workload` | **PENDING** standalone150000-PR qualification after combined review. `-- --smoke` is a separate non-acceptance harness exercise. |
+| Combined `npm run check`, `npm test`, explicit `npm run build` | **PASS** at exact runtime candidate `b4773c2`; `issue260-final-check.log`, `issue260-final-test.log`, `issue260-final-build.log`. Source is unchanged by loader repair `9cc9bcd`; subsequent harness repairs have separately attributed checks. No repeated full baseline is claimed. |
+| `npm run test:controlled-report:workload` at `9cc9bcd` | **FAILED** during cold phase; session20227, `issue260-full-workload-9cc9bcd.log`. No restart, retry or final receipt. Full cold+fresh-process qualification remains **PENDING**. |
+| Actual-worker lease and bounded failure regressions |7 tests/2 suites PASS at `e3dc64a`; `issue260-green-workload-failure-receipt.log`. Strict fixture emit, type-aware lint, imports, syntax and diff checks PASS. Bounded tests do not qualify scale. |
+| Current `npm run test:controlled-report` after harness repairs |164 Jest tests/14 suites plus generated declaration/tsd PASS; `issue260-harness-repair-controlled.log`. Current `check:examples` and `check:fixtures` PASS; `issue260-harness-repair-examples.log`, `issue260-harness-repair-fixtures.log`. Package baselines were not repeated. |
 
 ## Restored negative controls
 
@@ -90,7 +98,7 @@ bytes were restored after every control. The original receipts
 remain available; all six relocated combined controls independently failed
 their outcome assertions, then exact source restoration passed the combined
 suite. Separate `issue260-combined-negative-*` receipts preserve that repetition.
-The final repaired combined suite passes157 tests plus generated tsd.
+The repaired combined suite at `b4773c2` passed157 tests plus generated tsd.
 
 | Planted contract violation | Targeted outcome detection |
 | --- | --- |
@@ -144,8 +152,57 @@ Caller-supplied `require` parameters and plain payload keys remain allowed.
 Receipts `issue260-red-fixture-create-require.log` and
 `issue260-red-fixture-builtin-loader.log` preserve the failures; all376 tooling
 tests and affected actual import/fixture/example checks pass after the bounded
-repair. Its independent recheck remains pending; no universal bypass-proof
-claim is made.
+repair. Its independent recheck passed at `9cc9bcd`; no universal bypass-proof
+claim is made. The subsequent whole-head audit verified AC1–7 at that revision
+while recording AC8 as failed/pending after the full attempt.
+
+## Failed qualification and bounded harness repairs
+
+The single full attempt used clean `9cc9bcd` and its historical postbuild
+manifest `issue260-artifact-manifest-9cc9bcd.json` (SHA-256
+`e4380a444c44b847ef86f2997a53f55b963c9554ad9712dfb7ac08320f591d62`).
+The preserved tee log is `/private/tmp/issue260-full-workload-9cc9bcd.log`;
+the failed durable directory is
+`/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/issue260-controlled-workload-V1o1mN`.
+Neither was repaired, resumed or removed. The root failure record is
+`/private/tmp/issue260-full-workload-failure.md`.
+
+Discovery closed over300 selected keys, with8 succeeded/292 pending and
+`employee-009` first pending. Eight summary diagnostics directly identify the
+request's writer lease as no longer current. Read-only partial Accounting
+contains17136 operations/request attempts and2848 usage reports. History
+contains2848 subjects each for assessment/detail/discussion,16 searches and8
+summaries. The exact observed PR-ID set, route counters, phase elapsed and
+RSS/heap receipt were not emitted and remain unavailable. These counts are
+partial progress, not successful qualification.
+
+The default30000ms lease expired inside one long fold request. Existing writer
+guidance requires a lease exceeding the slowest request and renews at request
+boundaries. `ce3bc7a` explicitly budgets the isolated qualification lease for
+the existing12-hour parent timeout plus60000ms cleanup; longer dead-holder
+recovery is accepted only for this store. A real worker regression crosses the
+default lease after durable search publication and completes250 assessments.
+Removing the actual workspace option compiles but fails at complete versus
+waiting/`lease-lost`; exact restoration passes. A separate nine-person/window2
+test completes one fold, confirming that the window bounds concurrency.
+Valid RED/restored receipts are `issue260-red-qualification-lease.log`,
+`issue260-red-qualification-lease-wiring-mutation.log` and
+`issue260-green-qualification-lease-restored.log`. Independent lease review
+PASS is recorded in `issue260-qualification-lease-review.md`.
+
+`e3dc64a` replaces the whole-run failure dump with counts, one bounded first
+pending key/reason and diagnostic, stop/floor state and actual route, payload,
+concurrency and memory observations explicitly marked partial through return.
+Parent failure artifacts retain measured elapsed/exit status and bounded child
+evidence; missing child receipts remain `null` with a bounded stderr tail.
+Both captured process streams have a1MiB limit. The actual worker still fails
+under explicit lease expiry. Test-first RED receipts are
+`issue260-red-workload-failure-receipt.log` (three intended outcomes) and
+`issue260-red-workload-parent-receipt.log` (two). GREEN7-case and strict checks
+are `issue260-green-workload-failure-receipt.log`,
+`issue260-workload-failure-lint.log` and `issue260-workload-failure-imports.log`.
+Independent failure-repair review remains pending. No new full150k run is
+authorized by these repairs or their bounded tests.
 
 No live/paid provider execution, credential inspection, external publication,
 GitHub mutation, core API expansion, new persistence/retry authority or release

@@ -3,7 +3,6 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
-import Database from 'better-sqlite3';
 import { openDurableAccounting } from '@microdelta/accounting';
 import type { IDurableAccounting } from '@microdelta/accounting';
 import { openDurableHistory } from '@microdelta/history';
@@ -63,7 +62,7 @@ function observed(fake: IFixture, inputs: IReportInputs = baseInputs, options: {
 
 /** Fault only an already prepared observation artifact, discovered without assuming its private table spelling. */
 function refuseObservationUpdates(location: string): void {
-  const database = new Database(location);
+  const database = createNodeSqlite().openSqlite(location, { journalMode: 'delete' });
   try {
     const rows: unknown = database.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").all();
     if (!Array.isArray(rows) || rows.length !== 1 || typeof rows[0] !== 'object' || rows[0] === null) { throw new Error('Expected one prepared observation table'); }

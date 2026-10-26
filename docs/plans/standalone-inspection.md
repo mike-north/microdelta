@@ -13,14 +13,14 @@ the storage and execution details remain a proposal for review.
 
 The owner selected one executable that starts the first concrete contribution
 report workflow and provides separately permissionable read-only progress and
-terminal observation. The concrete workflow and GitHub adapter belong to #240;
-the first CLI does not introduce a reusable pagination framework. Rich history,
-preview, dependency/reuse explanation, resource browsing, and the broader command
-family below remain deferred full-checkpoint work. The realistic contribution
-report scale remains in scope; no reduction follows from this proposal. The
-foreground-versus-detached lifetime and interrupt behavior remain explicit human
-choices. This proposal therefore does not imply that every CLI choice is settled,
-that #240 is implementation-ready, or that issue 167/M6 is complete.
+terminal observation ([#167 owner decision](https://github.com/mike-north/microdelta/issues/167#issuecomment-6404318056)). The concrete workflow and GitHub adapter belong to #240. The latest owner clarification preserves realistic contribution-report scale and does not accept a scale reduction ([#240 clarification](https://github.com/mike-north/microdelta/issues/240#issuecomment-6405525087)). The first CLI does not introduce a reusable pagination framework.
+
+Rich history, preview, dependency/reuse explanation, resource browsing, and the
+broader command family below remain deferred full-checkpoint work. Realistic
+report scale remains in scope. Foreground-versus-detached lifetime and interrupt
+behavior remain explicit human choices. This proposal therefore does not imply
+that every CLI choice is settled, that #240 is implementation-ready, or that
+issue 167/M6 is complete.
 
 ### Meaning and ownership
 
@@ -53,15 +53,13 @@ contains only bounded framework lifecycle/progress facts and the concrete
 assembly's strict terminal classification; it excludes author values, arbitrary
 error objects, and unbounded event detail.
 
-This replaces the consultant's proposed global many-run catalog with TTL, row
-budgets, capacity rejection, and cleanup service. The accepted selected-execution
-question requires no recent-run enumeration or global index, and no governing
-requirement currently requires TTL, a row cap, or automatic cleanup. These
-owner-managed output artifacts have no automatic deletion; readers never clean
-up. If a future concrete contract requires TTL or bounded aggregate capacity, it
-must identify the requirement and show the conflict with owner-managed artifact
-lifetime before adding those policies. One artifact per execution is not one per
-PR and is independent of the full workload scale.
+The selected-execution question requires no recent-run enumeration or global
+index, and no governing requirement currently requires TTL, a row cap, or
+automatic cleanup. These are owner-managed output artifacts with no automatic
+deletion; readers never clean up. If a future concrete contract requires TTL or
+bounded aggregate capacity, it must identify the requirement and show the conflict
+with owner-managed artifact lifetime before adding those policies. One artifact
+per execution is not one per PR and is independent of the full workload scale.
 
 The selected host path is the existing Machine SQLite capability opened in
 DELETE-journal mode for publication and the existing read-only SQLite opener for
@@ -93,13 +91,18 @@ nonterminal record is only the latest persisted observation; its timestamp does
 not prove a process is alive, and process disappearance does not turn it into a
 terminal result.
 
-Supervision publishes terminal state only after execution has drained and the
-concrete report assembly has completed required durable report publication and
-strictly classified its result. The report and observation projection are
-separate commits: report success with uncertain progress finalization remains
-report success plus observation-finalization uncertainty. A lost acknowledgment
-may leave a committed terminal snapshot; exact readback or idempotent terminal
-retry may resolve that uncertainty without rerunning the report.
+Supervision publishes terminal execution state only after execution has drained
+and closed. A failed, pending, cancelled, or otherwise incomplete execution may
+therefore have a terminal execution classification without a successful report.
+Strict report success is a stronger classification: it requires the concrete
+report assembly to establish all required report outcomes and their durable
+publication before recording report success in the terminal projection. An
+incomplete or failed report is never represented as successful publication. The
+report and observation projection are separate commits: report success with
+uncertain progress finalization remains report success plus
+observation-finalization uncertainty. A lost acknowledgment may leave a committed
+terminal snapshot; exact readback or idempotent terminal retry may resolve that
+uncertainty without rerunning the report.
 
 The read-only executable accepts only the explicit locator and observation
 permission. It loads no analysis callbacks and exposes no start, dispatch, retry,
@@ -114,9 +117,7 @@ decisions.
 ### Required implementation proof
 
 Before implementation, add behavioral tests from this proposal and observe RED.
-The bounded child issue draft is at `/tmp/first-cli-progress-implementation-issue.md`;
-it is not filed, claimed, or an authorization to implement. At minimum, the
-tests must prove:
+At minimum, the tests must prove:
 
 1. Repeated public `runId` values produce distinct execution locators; duplicate
    creation cannot overwrite; stale and post-terminal updates cannot change the
@@ -134,9 +135,11 @@ tests must prove:
 5. Ordinary writes remain bounded by the sampling interval and one latest
    pending snapshot regardless of event/PR count; initial and terminal snapshots
    are forced. No retained record or pending queue grows with per-PR event count.
-6. Terminal publication follows drain and required report publication. A crash
-   before terminal publication leaves nonterminal/unknown state; a hot-journal
-   reader reports unavailable without attempting recovery.
+6. Terminal execution publication follows drain and closure for all outcomes,
+   including failed, pending, cancelled, or incomplete runs. Strict report
+   success additionally requires all required outcomes and durable report
+   publication. A crash before terminal publication leaves nonterminal/unknown
+   state; a hot-journal reader reports unavailable without attempting recovery.
 
 These tests establish only the selected exact-execution observation path and
 strict first-report outcome; they do not establish the full M6 read-side family,
@@ -262,8 +265,9 @@ from those owner-supplied facts; its progress records do not replace the selecte
 population evidence. The facade composes these distinct facts without selecting
 a persistence mechanism or a retained-member policy.
 If descriptor evidence is absent, report that gap as an unmet capability rather
-than fabricating a plan from History rows. Do not narrow the issue to only the
-easier finite query slice or silently defer plan inspection.
+than fabricating a plan from History rows. This requirement remains part of the
+full CLI-002 checkpoint; the owner-selected first delivery does not claim plan
+inspection or satisfy that checkpoint.
 
 Credible alternatives were considered. Exposing every context reader directly
 to CLI code may be smaller, but makes each client reconstruct scope, freshness,
@@ -298,8 +302,9 @@ finite query uses local interruption too. The display should state that
 inspection stopped and no run stop was requested. These local cleanup intents
 do not fulfill RUN-014's soft/hard execution-stop requirement.
 
-M6 requires both run supervision and inspection. A-13/M6 acceptance requires a
-separately explicit run-control composition: first signal requests soft stop,
+The full M6 checkpoint requires both run supervision and inspection. A-13/M6
+acceptance for that checkpoint requires a separately explicit run-control
+composition: first signal requests soft stop,
 second requests hard stop, while a separate inspection process can still read
 the run afterward. Requested, delivered, local stopping, provider cancellation
 requested/confirmed and remote unknown remain distinct. Process exit alone

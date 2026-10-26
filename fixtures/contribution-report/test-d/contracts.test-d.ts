@@ -1,8 +1,8 @@
 /** Generated application declarations preserve concrete inputs, strict outcomes and the production facade's source-call boundary. */
 import { expectError, expectType } from 'tsd';
 import { authoring } from 'microdelta';
-import type { IOperationSend, ITrackedView, IWorkspace } from 'microdelta';
-import { composeReport, evaluateReport } from '../.test-build/examples/contribution-report/src/controlled/application.js';
+import type { IObservedRun, IOperationSend, ITrackedView, IWorkspace } from 'microdelta';
+import { composeReport, evaluateObservedReport, evaluateReport } from '../.test-build/examples/contribution-report/src/controlled/application.js';
 import type { IAssessmentRequest, IReportApplication, IReportInputs, IReportRunOutcome, IReportServices } from '../.test-build/examples/contribution-report/src/controlled/application.js';
 import type { IPullDetail } from '../.test-build/examples/contribution-report/src/controlled/evidence.js';
 
@@ -20,6 +20,16 @@ expectType<IReportRunOutcome>(result.value);
 if (result.value.status === 'complete') { expectType<'authored-prs'>(result.value.report.population); }
 else { expectError(result.value.report); }
 expectError(evaluateReport(workspace, composeReport(inputs, services), { requestKey: 'missing-environment' }));
+/** The observed adapter retains concrete report narrowing and its separate exact-location receipt. */
+const observed = evaluateObservedReport(workspace, composeReport(inputs, services), { environment: 'production', requestKey: 'observed-contract', observationLocation: '/tmp/observed-contract.sqlite' });
+expectType<IObservedRun<IReportRunOutcome>>(observed);
+const observedResult = await observed.result;
+expectType<IReportRunOutcome>(observedResult.value);
+if (observedResult.value.status === 'complete') { expectType<'authored-prs'>(observedResult.value.report.population); }
+else { expectError(observedResult.value.report); }
+expectType<string>(observed.locator.executionId);
+expectError(observed.submit);
+expectError(evaluateObservedReport(workspace, composeReport(inputs, services), { environment: 'production', requestKey: 'missing-location' }));
 
 const api = authoring<Record<never, never>, Record<never, never>>();
 const detail = api.sourceSlot<readonly [string], IPullDetail>({ slot: 'detail' });

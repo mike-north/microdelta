@@ -63,7 +63,7 @@ export function attemptKey(host: ISha256Capability, requestKey: string, step: IB
  * canonical output encoding (MDS1). The validation observer's capture holds
  * only this framework selection; no author capture is involved.
  */
-function inputContent(validation: ITrackingObserver, slots: ICurrentSlots): string {
+export function inputContent(validation: ITrackingObserver, slots: ICurrentSlots): string {
   // Slot order is declaration layout, not intent: fingerprint the record in slot-name order.
   const record = Object.fromEntries(Object.entries(inputRecord(slots)).sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0));
   const view = validation.tracked(record, { path: bindingPaths.inputs });
@@ -85,6 +85,8 @@ export function intentDigest<TInputs extends object, THelpers extends object>(op
   readonly step: IBindingDescriptor;
   readonly declaration: IStepDeclaration<IResolutionFamily<TInputs, THelpers>>;
   readonly slots: ICurrentSlots;
+  /** A request may provide the same complete fact after its first lazy derivation. */
+  readonly preparedInputContent?: () => string;
 }): string {
   const { declaration } = options;
   const children = declaration.kind === 'memo'
@@ -129,7 +131,7 @@ export function intentDigest<TInputs extends object, THelpers extends object>(op
     sourceText(declaration.run),
     declaration.kind === 'source' ? sourceText(declaration.finality) : null,
     children,
-    ...currentBindings(options.validation, options.slots),
+    ...currentBindings(options.validation, options.slots, options.preparedInputContent),
     // Appended only for nested parents, so every M3 intent digest is unchanged.
     ...(slotChildren.length === 0 ? [] : [slotChildren]),
     // Appended only for strict and outcome folds: the template step whose members the fold consumes.
@@ -139,11 +141,11 @@ export function intentDigest<TInputs extends object, THelpers extends object>(op
 }
 
 /** The declared input slot states, the current input content and the helper slots with their source text. */
-function currentBindings(validation: ITrackingObserver, slots: ICurrentSlots): readonly unknown[] {
+function currentBindings(validation: ITrackingObserver, slots: ICurrentSlots, preparedInputContent?: () => string): readonly unknown[] {
   const inputs = [...slots.inputs].sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0).map(([slot, state]) => [slot, state.status]);
   const helpers = [...slots.helpers].sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0)
     .map(([slot, state]) => [slot, state.status, state.status === 'bound' ? sourceText(state.value) : null]);
-  return [inputs, inputContent(validation, slots), helpers];
+  return [inputs, preparedInputContent === undefined ? inputContent(validation, slots) : preparedInputContent(), helpers];
 }
 
 /** The structural tuple of the template step a fold consumes, or null when the composition declares no such fold. */
@@ -177,6 +179,8 @@ export function suppliedIntentDigest(options: {
   readonly source?: { readonly finality: unknown };
   readonly run: unknown;
   readonly slots: ICurrentSlots;
+  /** A request may provide the same complete fact after its first lazy derivation. */
+  readonly preparedInputContent?: () => string;
 }): string {
   const intent = [
     'microdelta.resolution.intent',
@@ -190,7 +194,7 @@ export function suppliedIntentDigest(options: {
     options.arguments,
     sourceText(options.run),
     ...(options.source === undefined ? [] : [sourceText(options.source.finality)]),
-    ...currentBindings(options.validation, options.slots),
+    ...currentBindings(options.validation, options.slots, options.preparedInputContent),
   ];
   return `mdi1:${options.host.sha256(JSON.stringify(intent))}`;
 }

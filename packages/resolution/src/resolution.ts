@@ -164,6 +164,7 @@ import type {
   ICurrentComparison,
   ICurrentFactProvider,
   IObservationCapture,
+  ITracked,
   ITrackingObservation,
 } from '@microdelta/tracking';
 
@@ -226,7 +227,7 @@ import type {
   IProvenance,
 } from './evidence.js';
 import type { IResolutionFamily } from './family.js';
-import { attemptKey, intentDigest, suppliedIntentDigest } from './intent.js';
+import { attemptKey, inputContent, intentDigest, suppliedIntentDigest } from './intent.js';
 import { mintedOutcome, sourceOutcome } from './outcome.js';
 import type { IMintedOutcome } from './outcome.js';
 
@@ -406,6 +407,15 @@ interface IRequestContext {
   readonly requestKey: string | undefined;
   readonly lease: IWriterLease | undefined;
   readonly slots: ICurrentSlots;
+  /**
+   * Immutable complete input preparations live only for this top-level
+   * request. Author and validation Tracking owners remain separate; this
+   * shares their input fact and view, never invocation identities or captures.
+   */
+  readonly inputPreparation: {
+    authorInputs: ITracked<object> | undefined;
+    contentFact: string | undefined;
+  };
   /** Request-local shared current results of direct source invocations. */
   readonly sources: Map<string, Promise<IResolvedStep>>;
   /** Request-local shared current results of memo invocations. */
@@ -1107,6 +1117,7 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
       requestKey,
       lease,
       slots: reconnectSlots(composition, bindingSlots),
+      inputPreparation: { authorInputs: undefined, contentFact: undefined },
       sources: new Map(),
       memos: new Map(),
       supplied: new Map(),
@@ -1166,7 +1177,13 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
         throw new ResolutionError('unbound-step', `Declared binding slot ${slot} is ${state.status} in the current composition`);
       }
     }
-    const inputs = tracking.tracked(inputRecord(request.slots), { path: bindingPaths.inputs });
+    let inputs = request.inputPreparation.authorInputs;
+    if (inputs === undefined) {
+      // This immutable view is common to callbacks in one request. Helper
+      // wrappers and author captures are still created at their own call sites.
+      inputs = tracking.tracked(inputRecord(request.slots), { path: bindingPaths.inputs });
+      request.inputPreparation.authorInputs = inputs;
+    }
     const helpers = Object.create(null) as Record<string, unknown>;
     for (const [slot, state] of request.slots.helpers) {
       if (state.status === 'bound') {
@@ -1391,8 +1408,22 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
     return unusedIdentity(requestKey, step, {
       ...versioned(declaration),
       attemptKey: attemptKey(host, requestKey, step),
-      intentDigest: intentDigest({ host, validation, composition, environment, step, declaration, slots: request.slots }),
+      intentDigest: intentDigest({ host, validation, composition, environment, step, declaration, slots: request.slots, preparedInputContent: () => currentInputContent(request) }),
     });
+  }
+
+  /**
+   * The framework's complete input-content fact is shared lazily only within
+   * one request. Recovery calls {@link intentDigest} directly from freshly
+   * reconnected slots, so an earlier request can never supply its fact.
+   */
+  function currentInputContent(request: IRequestContext): string {
+    let fact = request.inputPreparation.contentFact;
+    if (fact === undefined) {
+      fact = inputContent(validation, request.slots);
+      request.inputPreparation.contentFact = fact;
+    }
+    return fact;
   }
 
   /** The execution identity of one supplied slot call, checked unused as {@link freshIdentity} is. */
@@ -1404,7 +1435,7 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
       attemptKey: attemptKey(host, requestKey, call.slot, { subject: subject.subject, arguments: call.digest }),
       intentDigest: suppliedIntentDigest({
         host, validation, scope: analysis, environment, slot: call.slot, subject: subject.subject, version: subject.version,
-        arguments: call.digest, run: call.declaration.run, slots: request.slots,
+        arguments: call.digest, run: call.declaration.run, slots: request.slots, preparedInputContent: () => currentInputContent(request),
         ...(call.declaration.kind === 'supplied-source' ? { source: { finality: call.declaration.finality } } : {}),
       }),
     });

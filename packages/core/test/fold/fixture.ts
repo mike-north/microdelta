@@ -20,7 +20,9 @@
  * - `report` is a strict fold over `contributor.summary`. Its body consumes
  *   each succeeded entry's `score` only, never `label`. The default body lists
  *   every member, skipped ones as excluded by the gate; the `omits-skipped`
- *   body lists only succeeded members (so the framework's coverage, not the
+ *   body lists only succeeded members, and the `first-only` body consumes
+ *   only the first included member's score to expose historical integrity
+ *   obligations for unconsumed members (so the framework's coverage, not the
  *   body, must report exclusions); the `reads-skipped` body reads a skipped
  *   entry's data, which strict fold entries forbid; the `throws` body throws
  *   the author's own error, whose message carries {@link foldSecret}.
@@ -113,6 +115,8 @@ export interface IHelpers {
   readonly summarize: (login: string, score: number) => ISummary;
   readonly render: (entries: ISummaryEntries) => IReport;
   readonly renderIncluded: (entries: ISummaryEntries) => IReport;
+  /** Consume only the first included member, leaving the rest as integrity-only obligations. */
+  readonly renderFirst: (entries: ISummaryEntries) => IReport;
   readonly renderReadingSkipped: (entries: ISummaryEntries) => IReport;
   readonly renderThrowing: (entries: ISummaryEntries) => IReport;
 }
@@ -234,6 +238,13 @@ function renderIncluded(entries: ISummaryEntries): IReport {
   return { lines: entries.flatMap((entry) => entry.status === 'succeeded' ? [entry.key] : []), total: included.reduce((sum, score) => sum + score, 0) };
 }
 
+/** A sparse consumer still depends on the complete framework membership fact. */
+function renderFirst(entries: ISummaryEntries): IReport {
+  logEntries(entries);
+  const first = entries.find((entry) => entry.status === 'succeeded');
+  return { lines: first === undefined ? [] : [first.key], total: first?.data.score ?? 0 };
+}
+
 /** A report body that reads a skipped entry's data, as untyped author code can. */
 function renderReadingSkipped(entries: ISummaryEntries): IReport {
   logEntries(entries);
@@ -256,7 +267,7 @@ function renderThrowing(entries: ISummaryEntries): IReport {
 }
 
 /** Which fold body a build declares. */
-export type IReportBody = 'lists-skipped' | 'omits-skipped' | 'reads-skipped' | 'throws';
+export type IReportBody = 'lists-skipped' | 'omits-skipped' | 'first-only' | 'reads-skipped' | 'throws';
 
 /** Author-visible variations of one fixture build. */
 export interface IVariation {
@@ -333,7 +344,9 @@ export function composeFold(variation: IVariation = {}): IFoldFixture {
   });
 
   const over = { template: contributor, step: slots.step };
-  const report = variation.report === 'omits-skipped'
+  const report = variation.report === 'first-only'
+    ? fold({ subject: reportSubject, over, run: ({ members, helpers }) => helpers.renderFirst(members) })
+    : variation.report === 'omits-skipped'
     ? fold({ subject: reportSubject, over, run: ({ members, helpers }) => helpers.renderIncluded(members) })
     : variation.report === 'reads-skipped'
       ? fold({ subject: reportSubject, over, run: ({ members, helpers }) => helpers.renderReadingSkipped(members) })
@@ -349,6 +362,7 @@ export function composeFold(variation: IVariation = {}): IFoldFixture {
     { slot: 'summarize', helper: summarize },
     { slot: 'render', helper: render },
     { slot: 'renderIncluded', helper: renderIncluded },
+    { slot: 'renderFirst', helper: renderFirst },
     { slot: 'renderReadingSkipped', helper: renderReadingSkipped },
     { slot: 'renderThrowing', helper: renderThrowing },
   ], variation);

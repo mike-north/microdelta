@@ -858,11 +858,19 @@ function plainWitness(witness: INestedInvocationWitness): Record<string, unknown
   };
 }
 
-/** Exact references in first-use order, without repeats. */
+/**
+ * Exact references in first-use order, retaining the original representative.
+ * Locators stay opaque: equality uses the complete string, independently of
+ * object identity or payload equality. The membership index lives only for
+ * this ordered deduplication; History continues owning reference integrity.
+ */
 function uniqueReferences(references: readonly ICompletedResultReference[]): readonly ICompletedResultReference[] {
   const unique: ICompletedResultReference[] = [];
+  const locators = new Set<string>();
   for (const reference of references) {
-    if (!unique.some((existing) => existing.locator === reference.locator)) {
+    const locator = reference.locator;
+    if (!locators.has(locator)) {
+      locators.add(locator);
       unique.push(reference);
     }
   }
@@ -3369,12 +3377,17 @@ export function _createResolutionWithChildService<TInputs extends object, THelpe
     if (change !== undefined) {
       return missed('changed-membership', change);
     }
+    // This candidate-local index answers exact membership only, after every
+    // earlier miss guard. Each included historical member still receives its
+    // ordered integrity read and scope check, even without consumed facts; a
+    // current member reference never substitutes for that historical evidence.
+    const dependencyLocators = new Set(candidate.dependencies.map((dependency) => dependency.locator));
     const recordedMembership: readonly IOutcomeMembershipEntry[] = recorded.membership;
     for (const entry of recordedMembership) {
       if (entry.status !== 'included') {
         continue;
       }
-      if (!candidate.dependencies.some((dependency) => dependency.locator === entry.reference.locator)) {
+      if (!dependencyLocators.has(entry.reference.locator)) {
         throw new ResolutionError('integrity', `Recorded member ${entry.key} of ${candidate.reference.locator} is not among its exact dependencies`);
       }
       const historical = integrity(() => history.readEnvelope(entry.reference));

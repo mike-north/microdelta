@@ -6,7 +6,6 @@
  */
 import type { IAsyncContextCapability, ISha256Capability } from '@microdelta/machine';
 import {
-  decodeSnapshot,
   encodeProjectionFact,
   encodeSelectedFact,
   encodeSnapshot,
@@ -15,10 +14,14 @@ import {
   normalizeSelectedFact,
   normalizeSelectedNode,
   observe,
+  observePrepared,
+  prepareValue,
+  preparedRoot,
 } from '@microdelta/value';
 import type {
   IAddressSegment,
   IOperation,
+  IPreparedValue,
   ISelectedFact,
   ISelectedNode,
   IValueProjectionDescriptor,
@@ -688,6 +691,12 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
   const local = createTracking(machine);
   const captures = machine.createAsyncContext<ICaptureFrame>();
   const ownership = new WeakMap<object, IProxyRecord>();
+  /**
+   * Value authenticates complete validation of each newly owned data snapshot.
+   * Descendant wrappers share its root proof; binding equality and caller object
+   * identity never grant preparation authority. Callable roots stay separate.
+   */
+  const preparedRoots = new WeakMap<object, IPreparedValue>();
 
   /** Record one consumed fact while rejecting reads that outlive their capture frame. */
   function recordFact(binding: IBindingRecord, root: object, address: readonly IAddressSegment[], operation: IOperation): ISelectedFact {
@@ -712,9 +721,14 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
     return selected;
   }
 
-  /** Select a fact from the wrapper's detached root; correspondence is used only for later comparison. */
+  /**
+   * Select from an owned immutable root using Value's authenticated validation
+   * proof. Revisit only the selected path, never revalidate an entire population
+   * per property read. Callable roots retain ordinary Value rejection semantics.
+   */
   function observeAt(root: object, address: readonly IAddressSegment[], operation: IOperation): ISelectedFact {
-    return observe(root, address, operation);
+    const prepared = preparedRoots.get(root);
+    return prepared === undefined ? observe(root, address, operation) : observePrepared(prepared, address, operation);
   }
 
   /** Record actual-called code separately from serializable selected data facts. */
@@ -862,7 +876,7 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
           segment = { kind: 'property', key };
         }
         const nextAddress = [...address, segment];
-        const selected = observe(value, [segment], 'value').fact;
+        const selected = observeAt(root, nextAddress, 'value').fact;
         if (typeof selected === 'function') {
           throw new TypeError('Functions as data fields are unsupported; wrap a callable binding directly');
         }
@@ -1235,12 +1249,13 @@ export function createTrackingObserver(machine: ITrackingObserverHost): ITrackin
       if (typeof value === 'function') {
         snapshot = value;
       } else {
-        const encoded = encodeSnapshot(value);
-        const decoded: unknown = decodeSnapshot(encoded);
+        const prepared = prepareValue(value);
+        const decoded: unknown = preparedRoot(prepared);
         if (decoded === null || typeof decoded !== 'object') {
           throw new TypeError('Supported tracked data must decode as an object or array');
         }
         snapshot = decoded;
+        preparedRoots.set(snapshot, prepared);
       }
       const wrapped = typeof snapshot === 'function'
         ? wrapFunction(copied, snapshot, snapshot, [])

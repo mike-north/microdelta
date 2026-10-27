@@ -229,7 +229,7 @@ describe('read and unread facts, called and uncalled helpers', () => {
     const cold = await coldReport(location);
     await withSession(location, async (session) => {
       const envelope = session.history.readEnvelope({ kind: 'completed-result', locator: cold.summaries['person:ada'] });
-      const content = envelope.provenance.content as { readonly observations: readonly { readonly binding: { readonly path: readonly string[] } }[]; readonly children: readonly { readonly witness: unknown; readonly reference: ICompletedResultReference; readonly binding: unknown }[] };
+      const content = envelope.provenance.content as { readonly children: readonly { readonly witness: unknown; readonly reference: ICompletedResultReference; readonly binding: unknown }[] };
       const paths = new Set(inspectProvenanceObservations(content).map((observation) => JSON.stringify(observation.binding.path)));
       expect([...paths].sort()).toEqual([
         JSON.stringify(['callable', 'format']),
@@ -276,7 +276,7 @@ describe('async child delivery', () => {
   /** Whether any recorded observation of a result addresses a `then` member. */
   function readsThen(session: ISession, locator: string): boolean {
     const envelope = session.history.readEnvelope({ kind: 'completed-result', locator });
-    const content = envelope.provenance.content as { readonly observations: readonly { readonly address: readonly { readonly key?: string }[] }[] };
+    const content = envelope.provenance.content;
     return inspectProvenanceObservations(content).some((item) => item.address.some((segment) => segment.key === 'then'));
   }
 

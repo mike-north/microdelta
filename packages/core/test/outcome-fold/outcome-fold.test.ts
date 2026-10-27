@@ -218,7 +218,7 @@ describe('settled statuses with coverage (acceptance 1, 3)', () => {
     expect(stored.formatVersion).toBe(5);
     expect(stored.content).toHaveProperty('semanticVersion', 4);
     // Outcome semantic variant 4 keeps membership plain while observations use wire-5 tuples.
-    const content = stored.content as { readonly kind: string; readonly over: unknown; readonly membership: unknown; readonly observations: readonly { readonly binding: { readonly path: readonly string[] } }[] };
+    const content = stored.content as { readonly kind: string; readonly over: unknown; readonly membership: unknown };
     expect(content.kind).toBe('outcome-fold');
     expect(content.over).toEqual({ scope: analysis, role: 'step', slot: 'summary', template: 'contributor', collection: 'contributors' });
     expect(content.membership).toEqual([

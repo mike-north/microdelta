@@ -50,6 +50,15 @@ assertions remain unchanged. The narrow test-only inspection helper observed fou
 failures before implementation, then four passes. Updated runtime suites passed
 190 tests in eleven suites, including unchanged #279 reference-index ceilings and
 historical missing-dependency error/read-vector order.
+The first full repository test pass at production commit `be22eb17` exposed four
+more object-observation fixture assumptions in `keyed/members.test.ts` and
+`gap-hunt-contracts-resolution-144.test.ts` (four failures/1341 passes in the core
+unit stage). Their inspection/removal helpers now use the same independent tuple
+view; gate/acceptance object evidence and all original semantic assertions remain
+unchanged. Focused verification of these files and the related view-type cleanup
+passed 68 tests in four suites with strict compilation and type-aware lint. The
+original failed full-suite log is retained; full delivery gates restart at the
+updated committed head.
 
 `packages/core/test/resolution/provenance-upgrade.test.ts` adds ordinary fresh-file
 History integration, not retained-lineage diagnostics. Its sessions close/reopen

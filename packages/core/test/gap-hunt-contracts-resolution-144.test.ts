@@ -6,6 +6,7 @@
  * @see ../../../docs/spec/composition.md (CMP-5, CMP-8)
  * @see ../../../docs/spec/execution.md (RES-003, REUSE-008, PUB-004)
  */
+import { inspectProvenanceObservations } from './provenance-wire-inspection.js';
 import { afterEach, describe, expect, test } from '@jest/globals';
 import { createNodeMachine } from '@microdelta/machine-node';
 import { createResolution } from '@microdelta/resolution';
@@ -27,13 +28,8 @@ function record(value: unknown): Record<string, unknown> {
 /** Remove just the required own implementation fact; all other evidence remains unchanged. */
 function withoutOwn(content: unknown): Record<string, unknown> {
   const stored = record(content);
-  const observations: unknown = stored.observations;
-  if (!Array.isArray(observations)) { throw new Error('Expected observations'); }
-  const selected = observations.filter((item: unknown) => {
-    const observation = record(item);
-    const path: unknown = record(observation.binding).path;
-    return !(observation.kind === 'implementation' && Array.isArray(path) && path.length === 1 && path[0] === 'self');
-  });
+  const observations = inspectProvenanceObservations(stored);
+  const selected = observations.filter((item) => !(item.kind === 'implementation' && item.binding.path.length === 1 && item.binding.path[0] === 'self')).map((item) => item.tuple);
   expect(selected.length).toBe(observations.length - 1);
   return { ...stored, observations: selected };
 }

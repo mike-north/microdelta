@@ -9,6 +9,6 @@ expectType<readonly string[]>(command.arguments);
 expectType<void>(command.writeStdout('one complete command document'));
 expectType<void>(command.writeStderr('command diagnostic'));
 expectType<void>(command.setExitCode(1));
-expectError(command.arguments.push('new argument'));
+expectError(command.arguments.push);
 expectError(command.setExitCode('failed'));
-expectError(command.exit());
+expectError(command.exit);

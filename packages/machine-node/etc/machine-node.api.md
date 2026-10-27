@@ -12,6 +12,11 @@ export function canonicalNodeLocation(location: string): string;
 // @alpha
 export function createNodeClock(): IClockCapability;
 
+// Warning: (ae-forgotten-export) The symbol "ICommandProcessCapability" needs to be exported by the entry point index.d.ts
+//
+// @alpha
+export function createNodeCommandProcess(): ICommandProcessCapability;
+
 // Warning: (ae-forgotten-export) The symbol "IElapsedClockCapability" needs to be exported by the entry point index.d.ts
 //
 // @alpha

@@ -20,6 +20,29 @@ describes how the project-private Node SQLite workspace canonicalizes existing
 store paths and why distinct hard-linked names must not be used concurrently
 for one WAL database. This does not change the public memory `Store` API.
 
+## Finite execution observation
+
+The package installs the `microdelta` executable. Read one exact execution with
+its caller-retained observation locator:
+
+```sh
+microdelta observe --location /path/to/observation.sqlite --execution-id 0123456789abcdef0123456789abcdef
+```
+
+Each invocation emits exactly one version-1 JSON document and releases its reader.
+Use the existing `workspace.startObserved` alpha library path to obtain a locator.
+The command reads the dedicated observation artifact through the existing finite
+read-only boundary; it takes no workload module or History/Accounting store.
+
+Exit status is **0** when the result is `observed`, including a record describing
+an execution failure; **1** for `absent`, `identity-mismatch`, `unsupported`,
+`corrupt`, `busy`, `unavailable` or `recovery-required`; and **2** for invalid or
+incomplete arguments, with a usage diagnostic only on stderr. The JSON result
+supplies each read-refusal reason. A sampled nonterminal record is neither a
+heartbeat nor proof of process liveness, and event counters are not completion
+percentages. The command performs one read rather than waiting for completion.
+Run-start and broader inspection remain separate delivery work.
+
 ## Project-private workspace path (alpha)
 
 External pnpm ESM consumers evaluating the published `microdelta@0.2.0`

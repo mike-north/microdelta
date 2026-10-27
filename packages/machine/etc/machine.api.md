@@ -21,6 +21,14 @@ export interface IClockCapability {
 }
 
 // @alpha
+export interface ICommandProcessCapability {
+    readonly arguments: readonly string[];
+    setExitCode(code: number): void;
+    writeStderr(text: string): void;
+    writeStdout(text: string): void;
+}
+
+// @alpha
 export interface IElapsedClockCapability {
     currentElapsedMilliseconds(): number;
 }

@@ -365,3 +365,22 @@ export interface ISqliteOpenOptions {
    */
   readonly creation?: 'exclusive';
 }
+
+/**
+ * One command process's argument snapshot and byte-stream/status mechanics.
+ * Consumers own argument grammar, document framing and status meanings. Writing
+ * completes the supplied text or throws; selecting a status does not terminate
+ * the process or bypass its remaining cleanup. No command or domain dispatch
+ * capability is implied by this host port.
+ * @alpha
+ */
+export interface ICommandProcessCapability {
+  /** Detached arguments after the executable and entrypoint, in their original order. */
+  readonly arguments: readonly string[];
+  /** Write all supplied text to the command's standard output. */
+  writeStdout(text: string): void;
+  /** Write all supplied text to the command's standard diagnostic stream. */
+  writeStderr(text: string): void;
+  /** Select a whole exit status from 0 through 255 for natural process termination. */
+  setExitCode(code: number): void;
+}

@@ -363,6 +363,57 @@ describe('attempts, staging and atomic publication', () => {
     expect(history.reader.readSelected(reference, { operation: 'value', address: path('profile', 'name') }).fact).toBe('Ada');
   });
 
+  test('unsupported provenance content leaves publication unchanged and retains its allocated attempt', () => {
+    const location = freshLocation();
+    const history = openHistory({ location });
+    const lease = acquire(history);
+    const dependency = publish(history, lease, adaActivity(), { key: 'dependency', request: { subject: 'activity:ada' } });
+    const previous = publish(history, lease, adaActivity(), { key: 'previous', dependencies: [dependency] });
+    const previousEnvelope = history.readEnvelope(previous);
+    const request = attempt('unsupported-provenance');
+    const allocated = history.allocateAttempt(lease, request);
+    const raw = openRaw(location);
+    const completedBefore = raw.prepare('SELECT * FROM history_results ORDER BY result_id').all();
+    const currentBefore = raw.prepare('SELECT * FROM history_current ORDER BY analysis, environment, subject').all();
+    const dependenciesBefore = raw.prepare('SELECT * FROM history_dependencies ORDER BY attempt_id, position').all();
+    expect(dependenciesBefore.length).toBeGreaterThan(0);
+
+    // Valid payload and record tags isolate rejection of the opaque provenance
+    // content. Encoding failure must not expose a partial publication or edge.
+    expect(() => history.stageAttempt(lease, {
+      attemptId: allocated.attemptId,
+      payload: adaActivity(),
+      provenance: { format: 'test.resolution.provenance', formatVersion: 1, content: { unsupported: 1n } },
+      dependencies: [previous],
+    })).toThrow(TypeError);
+    expect(raw.prepare('SELECT * FROM history_results ORDER BY result_id').all()).toEqual(completedBefore);
+    expect(raw.prepare('SELECT * FROM history_current ORDER BY analysis, environment, subject').all()).toEqual(currentBefore);
+    expect(raw.prepare('SELECT * FROM history_dependencies ORDER BY attempt_id, position').all()).toEqual(dependenciesBefore);
+    expect(raw.prepare('SELECT state, staged_payload, staged_provenance FROM history_attempts WHERE attempt_id = ?').get(allocated.attemptId))
+      .toEqual({ state: 'allocated', staged_payload: null, staged_provenance: null });
+    expect(history.recoverAttempt(request)).toMatchObject({ kind: 'incomplete', attempt: allocated });
+    expect(history.allocateAttempt(lease, request)).toEqual(allocated);
+    expect(history.readCurrent({ ...scope, subject: summarySubject })).toEqual(previous);
+    expect(history.readEnvelope(previous)).toEqual(previousEnvelope);
+    expect(history.reader.readSubtree(previous, [])).toEqual(adaActivity());
+
+    // A distinct valid execution must still stage and publish normally, using
+    // a new identity rather than recycling the failed attempt's allocation.
+    const valid = history.allocateAttempt(lease, attempt('valid-provenance'));
+    expect(valid.attemptId).toBeGreaterThan(allocated.attemptId);
+    expect(history.stageAttempt(lease, {
+      attemptId: valid.attemptId, payload: adaActivity(), provenance: provenance('valid'), dependencies: [dependency],
+    }).state).toBe('staged');
+    const published = history.publishAttempt(lease, valid.attemptId);
+    expect(published).not.toEqual(previous);
+    expect(history.readCurrent({ ...scope, subject: summarySubject })).toEqual(published);
+    expect(history.readEnvelope(published)).toMatchObject({ provenance: provenance('valid'), dependencies: [dependency] });
+    expect(history.recoverAttempt(request)).toMatchObject({ kind: 'incomplete', attempt: allocated });
+    expect(raw.prepare('SELECT COUNT(*) AS count FROM history_results WHERE result_id = ?').get(allocated.attemptId)).toEqual({ count: 0 });
+    expect(history.readEnvelope(previous)).toEqual(previousEnvelope);
+    expect(history.reader.readSubtree(previous, [])).toEqual(adaActivity());
+  });
+
   test('dependencies must be exact completed results in the same store and scope', () => {
     const history = openHistory({ location: freshLocation() });
     const lease = acquire(history);

@@ -34,5 +34,14 @@ function main(): void {
   const result = _coldWorker(text, { workerSha256, codecSha256 }, Number(budgetText));
   writeFileSync(output, result, { flag: 'wx' });
 }
+/** Test-host lifecycle stays owner-local; Resolution never imports an assembly experiment. */
+function waitForParentRelease(): void {
+  if (process.send === undefined || !process.connected) { throw new Error('cold worker requires owned IPC'); }
+  // All work and the synchronous fresh output write precede ready. Release is
+  // direct synchronous exit, with no further application work or async flush.
+  process.on('message', (message: unknown) => { process.exit(message === 'tuple-release' ? 0 : 1); });
+  process.on('disconnect', () => { process.exit(1); });
+  process.send('tuple-ready');
+}
 // Importing the worker in owner tests never starts a process or writes an artifact.
-if (process.argv[1] !== undefined && pathToFileURL(process.argv[1]).href === import.meta.url) { main(); }
+if (process.argv[1] !== undefined && pathToFileURL(process.argv[1]).href === import.meta.url) { main(); waitForParentRelease(); }

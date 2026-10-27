@@ -8,6 +8,7 @@ import { consumeColdWorker } from './cold-bridge.js';
 import { coldProvenance } from './guards.js';
 import { tupleCapacity, tupleLedger } from './tuple-accounting.js';
 import { artifactInventory } from './tuple-driver.js';
+import { waitForParentRelease } from './tuple-lifecycle.js';
 import { readRetentionPlan, retainedInputPath, retainedInventory, validateRetainedInputs, writeRetainedArtifact } from './tuple-retention.js';
 import type { IRetentionPlan } from './tuple-retention.js';
 
@@ -23,9 +24,9 @@ export function cohortPopulations(cohort: ICohort): readonly number[] { return c
 /** Hashing exact files binds source, emitted implementation, generated Value and inputs. */
 function digest(data: string | Buffer): string { return createHash('sha256').update(data).digest('hex'); }
 /** One immutable identity entry; source contents are never copied into diagnostic output. */
-interface IFileIdentity { readonly path: string; readonly bytes: number; readonly sha256: string }
+export interface IFileIdentity { readonly path: string; readonly bytes: number; readonly sha256: string }
 /** Record all relevant source/generated files instead of relying on an entrypoint hash alone. */
-function sourceIdentities(): readonly IFileIdentity[] {
+export function tupleSourceIdentities(): readonly IFileIdentity[] {
   const result: IFileIdentity[] = [];
   const visit = (relative: string): void => {
     const path = join(root, relative); const stat = lstatSync(path);
@@ -34,12 +35,12 @@ function sourceIdentities(): readonly IFileIdentity[] {
     else if (stat.isFile()) { result.push({ path: relative, bytes: stat.size, sha256: digest(readFileSync(path)) }); }
     else { throw new Error('diagnostic source surface'); }
   };
-  for (const path of ['packages/value/src', 'packages/value/dist', 'packages/resolution/src/provenance-wire.ts', 'packages/resolution/test/provenance-cold-channel.ts', 'packages/resolution/test/provenance-cold-worker.ts', 'packages/resolution/.test-build/src/provenance-wire.js', 'packages/resolution/.test-build/test/provenance-cold-channel.js', 'packages/resolution/.test-build/test/provenance-cold-worker.js', 'experiments/provenance-capacity/src', '.test-build/experiments/provenance-capacity/src']) { visit(path); }
+  for (const path of ['packages/value/src', 'packages/value/dist', 'packages/resolution/src/provenance-wire.ts', 'packages/resolution/src/errors.ts', 'packages/resolution/test/provenance-cold-channel.ts', 'packages/resolution/test/provenance-cold-worker.ts', 'packages/resolution/.test-build/src/provenance-wire.js', 'packages/resolution/.test-build/src/errors.js', 'packages/resolution/.test-build/test/provenance-cold-channel.js', 'packages/resolution/.test-build/test/provenance-cold-worker.js', 'experiments/provenance-capacity/src', '.test-build/experiments/provenance-capacity/src']) { visit(path); }
   return result;
 }
 /** Expected manifest is reconstructed from bounded independent input and current real files. */
 function expectedManifest(directory: string, cohort: ICohort): { readonly cohort: ICohort; readonly retention: IRetentionPlan; readonly implementationDigest: string; readonly runtime: { readonly node: string; readonly v8: string; readonly executable: string; readonly maximumStringLength: number; readonly valueEntry: string }; readonly identities: readonly IFileIdentity[]; readonly workerSha256: string; readonly codecSha256: string; readonly inputs: readonly { readonly population: number; readonly inputSha256: string }[] } {
-  return { cohort, retention: readRetentionPlan(directory), implementationDigest, runtime: { node: process.version, v8: process.versions.v8, executable: process.execPath, maximumStringLength: bufferConstants.MAX_STRING_LENGTH, valueEntry: realpathSync(fileURLToPath(import.meta.resolve('@microdelta/value'))) }, identities: sourceIdentities(),
+  return { cohort, retention: readRetentionPlan(directory), implementationDigest, runtime: { node: process.version, v8: process.versions.v8, executable: process.execPath, maximumStringLength: bufferConstants.MAX_STRING_LENGTH, valueEntry: realpathSync(fileURLToPath(import.meta.resolve('@microdelta/value'))) }, identities: tupleSourceIdentities(),
     workerSha256: digest(readFileSync(join(root, 'packages/resolution/.test-build/test/provenance-cold-worker.js'))), codecSha256: digest(readFileSync(join(root, 'packages/resolution/.test-build/src/provenance-wire.js'))),
     inputs: cohortPopulations(cohort).map((population) => ({ population, inputSha256: digest(inputText(population)) })) };
 }
@@ -86,4 +87,4 @@ function main(): void {
   else if (mode === 'analyze') { analyzeTupleOutputs(directory, cohort); }
   else { throw new Error('diagnostic child mode'); }
 }
-if (process.argv[1] !== undefined && pathToFileURL(process.argv[1]).href === import.meta.url) { main(); }
+if (process.argv[1] !== undefined && pathToFileURL(process.argv[1]).href === import.meta.url) { main(); waitForParentRelease(); }

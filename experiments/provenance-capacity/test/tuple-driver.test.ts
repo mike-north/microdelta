@@ -6,6 +6,9 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test } from '@jest/globals';
 import { artifactInventory, readOwnedRss, runTupleChild, writeTupleArtifact } from '../src/tuple-driver.js';
+import { consumeColdWorker } from '../src/cold-bridge.js';
+import { coldProvenance } from '../src/guards.js';
+import { createHeldoutRetentionPlan, readHeldoutRetentionPlan } from '../src/tuple-heldout-retention.js';
 import { createRetentionPlan, inventoryFingerprint, readRetentionPlan } from '../src/tuple-retention.js';
 import { classifyRssProbe, probeOwnedRss } from '../src/tuple-rss.js';
 
@@ -97,7 +100,7 @@ test('kernel-confirmed ended child with an initial positive sample awaits actual
     execFileSync(process.execPath, ['-e', 'setTimeout(() => undefined, 180)'], { timeout: 1000, maxBuffer: 1024 });
     return readOwnedRss(pid);
   };
-  const result = await runTupleChild({ kind: 'control', mode: 'normal' }, { timeoutMs: 2000, rssBytes: 2147483648 }, sample);
+  const result = await runTupleChild({ kind: 'control', mode: 'uncoordinated-normal' }, { timeoutMs: 2000, rssBytes: 2147483648 }, sample);
   expect(positive).toBe(true);
   expect(result).toMatchObject({ outcome: 'completed', exitCode: 0, signal: null, reaped: true, terminalNoLongerRunningObserved: true, terminalWitness: 'owned-zombie-rss-zero' });
   expect(result.samples).toBeGreaterThan(0); expect(() => process.kill(result.pid, 0)).toThrow();
@@ -149,5 +152,78 @@ test('owner three-root preflight refuses second-root overflow and mutation befor
     rmSync(join(second, 'failure.json')); writeTupleArtifact(second, 'failure.json', 'changed');
     await expect(runTupleChild({ ...task, outputBudget: 1 }, { timeoutMs: 1000, rssBytes: 2147483648 }, sample)).rejects.toThrow();
     expect(samples).toBe(0); expect(() => readFileSync(task.output)).toThrow();
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+/** Actual normal children retain a live positive final sample, then close after confirmed release. */
+test('post-work ready requires a final OS RSS sample and successful release before normal close', async () => {
+  const result = await runTupleChild({ kind: 'control', mode: 'normal' }, { timeoutMs: 2000, rssBytes: 2147483648 });
+  expect(result).toMatchObject({ outcome: 'completed', exitCode: 0, reaped: true, terminalNoLongerRunningObserved: false, terminalWitness: 'none', protocol: { ready: true, releaseDispatched: true, releaseConfirmed: true, failure: null } });
+  expect(result.protocol.finalRssBytes).toBeGreaterThan(0); expect(result.protocol.finalRssBytes).toBeLessThanOrEqual(2147483648);
+  expect(result.rssTrace.last?.classification).toBe('observed'); expect(() => process.kill(result.pid, 0)).toThrow();
+});
+test('a ready child with unavailable zero invalid or excessive final RSS is killed and reaped', async () => {
+  for (const reading of [undefined, 0, Number.NaN, 2147483649]) {
+    const result = await runTupleChild({ kind: 'control', mode: 'normal' }, { timeoutMs: 2000, rssBytes: 2147483648 }, (pid, phase) => phase === 'final' ? reading : readOwnedRss(pid));
+    expect(result).toMatchObject({ outcome: 'rss-unavailable', reaped: true, signal: 'SIGKILL', protocol: { ready: true, releaseDispatched: false, releaseConfirmed: false, failure: 'invalid-final-rss' } });
+    expect(() => process.kill(result.pid, 0)).toThrow();
+  }
+});
+test('released child that hangs still reaches deadline SIGKILL and actual reap without an OS-terminal waiver', async () => {
+  const result = await runTupleChild({ kind: 'control', mode: 'released-hang' }, { timeoutMs: 250, rssBytes: 2147483648 });
+  expect(result).toMatchObject({ outcome: 'deadline', reaped: true, signal: 'SIGKILL', terminalNoLongerRunningObserved: false, terminalWitness: 'none', protocol: { ready: true, releaseDispatched: true, releaseConfirmed: true } });
+  expect(() => process.kill(result.pid, 0)).toThrow();
+});
+test('no ready malformed ready or duplicate ready fails closed before success can be recorded', async () => {
+  for (const mode of ['early-close', 'malformed-ready', 'duplicate-ready'] as const) {
+    // Isolate the missing-ready guard from an independent ending RSS refusal.
+    // This seam cannot bypass the separate actual final OS probe or accept close.
+    const result = await runTupleChild({ kind: 'control', mode }, { timeoutMs: 2000, rssBytes: 2147483648 }, mode === 'early-close' ? () => 1024 : undefined);
+    expect(result).toMatchObject({ outcome: 'failed', reaped: true, protocol: { failure: mode === 'early-close' ? 'closed-before-release' : 'invalid-or-duplicate-ready' } });
+    expect(() => process.kill(result.pid, 0)).toThrow();
+  }
+});
+
+test('output enforcement remains armed during the termination-only phase after release', async () => {
+  const result = await runTupleChild({ kind: 'control', mode: 'released-output' }, { timeoutMs: 2000, rssBytes: 2147483648 });
+  expect(result).toMatchObject({ outcome: 'output-limit', reaped: true, signal: 'SIGKILL', terminalWitness: 'none', protocol: { ready: true, releaseDispatched: true, releaseConfirmed: true } });
+  expect(result.stdoutBytes).toBeGreaterThan(65536); expect(() => process.kill(result.pid, 0)).toThrow();
+});
+
+test('fresh held-out admission reads only sealed C and counts A B C D before a worker can start', async () => {
+  const parent = mkdtempSync(join(tmpdir(), 'tuple-four-owner-test-')); const a = join(parent, 'a'); const b = join(parent, 'b'); const c = join(parent, 'c'); const d = join(parent, 'd');
+  try {
+    for (const directory of [a, b, c, d]) { mkdirSync(directory); }
+    writeTupleArtifact(a, 'input-3.json', '{}'); writeTupleArtifact(b, 'failure.json', 'b'.repeat(300000));
+    for (const population of [3, 9, 17, 64]) { writeTupleArtifact(c, `input-${String(population)}.json`, JSON.stringify({ population, input: coldProvenance(population, 'a'.repeat(64)) })); }
+    const pin = (directory: string): { readonly directory: string; readonly fingerprint: string } => ({ directory, fingerprint: inventoryFingerprint(artifactInventory(directory)) });
+    createHeldoutRetentionPlan(d, pin(a), pin(b), pin(c), { sourceCommit: 'a'.repeat(40), manifestSha256: 'b'.repeat(64), analysisSha256: 'c'.repeat(64), batchSha256: 'd'.repeat(64), workerPrefixSha256: 'e'.repeat(64), errorsSourceSha256: 'f'.repeat(64) });
+    const heldoutRetention = readHeldoutRetentionPlan(d);
+    const task = { kind: 'owner', input: join(c, 'input-3.json'), output: join(d, 'output-3.json'), inputSha256: createHash('sha256').update(readFileSync(join(c, 'input-3.json'))).digest('hex'), workerSha256: 'b'.repeat(64), codecSha256: 'c'.repeat(64), outputBudget: 1, heldoutRetention } as const;
+    // Wrong executable hashes stop the admitted actual child before codec work.
+    const admitted = await runTupleChild(task, { timeoutMs: 2000, rssBytes: 2147483648 }); expect(admitted.reaped).toBe(true); expect(admitted.outcome).toBe('failed');
+    let samples = 0; const sample = (): number => { samples++; return 1024; };
+    await expect(runTupleChild({ ...task, outputBudget: 800000 }, { timeoutMs: 1000, rssBytes: 2147483648 }, sample)).rejects.toThrow();
+    await expect(runTupleChild({ ...task, input: join(a, 'input-3.json') }, { timeoutMs: 1000, rssBytes: 2147483648 }, sample)).rejects.toThrow();
+    await expect(runTupleChild({ ...task, heldoutRetention: { ...heldoutRetention, externalEvidenceAllowanceBytes: 0 } }, { timeoutMs: 1000, rssBytes: 2147483648 }, sample)).rejects.toThrow();
+    rmSync(join(c, 'input-3.json')); writeTupleArtifact(c, 'input-3.json', 'changed');
+    await expect(runTupleChild(task, { timeoutMs: 1000, rssBytes: 2147483648 }, sample)).rejects.toThrow(); expect(samples).toBe(0);
+  } finally { rmSync(parent, { recursive: true, force: true }); }
+});
+
+/** A tiny unit fixture exercises the real owner-local CLI handler and actual-output bridge. */
+test('actual owner output reaches Value after owner-local ready final RSS release and close', async () => {
+  const parent = mkdtempSync(join(tmpdir(), 'tuple-owned-release-test-')); const a = join(parent, 'a'); const b = join(parent, 'b'); const c = join(parent, 'c'); const d = join(parent, 'd');
+  try {
+    for (const directory of [a, b, c, d]) { mkdirSync(directory); }
+    for (const population of [3, 9, 17, 64]) { writeTupleArtifact(c, `input-${String(population)}.json`, JSON.stringify({ population, input: coldProvenance(population, 'a'.repeat(64)) })); }
+    const pin = (directory: string): { readonly directory: string; readonly fingerprint: string } => ({ directory, fingerprint: inventoryFingerprint(artifactInventory(directory)) });
+    createHeldoutRetentionPlan(d, pin(a), pin(b), pin(c), { sourceCommit: 'a'.repeat(40), manifestSha256: 'b'.repeat(64), analysisSha256: 'c'.repeat(64), batchSha256: 'd'.repeat(64), workerPrefixSha256: 'e'.repeat(64), errorsSourceSha256: 'f'.repeat(64) });
+    const hashFile = (path: string): string => createHash('sha256').update(readFileSync(path)).digest('hex');
+    const workerSha256 = hashFile('packages/resolution/.test-build/test/provenance-cold-worker.js'); const codecSha256 = hashFile('packages/resolution/.test-build/src/provenance-wire.js'); const inputSha256 = hashFile(join(c, 'input-3.json'));
+    const result = await runTupleChild({ kind: 'owner', input: join(c, 'input-3.json'), output: join(d, 'output-3.json'), inputSha256, workerSha256, codecSha256, outputBudget: 10000, heldoutRetention: readHeldoutRetentionPlan(d) }, { timeoutMs: 2000, rssBytes: 2147483648 });
+    expect(result).toMatchObject({ outcome: 'completed', exitCode: 0, reaped: true, protocol: { ready: true, releaseDispatched: true, releaseConfirmed: true, failure: null } });
+    expect(result.protocol.finalRssBytes).toBeGreaterThan(0); expect(() => process.kill(result.pid, 0)).toThrow();
+    expect(consumeColdWorker(readFileSync(join(d, 'output-3.json'), 'utf8'), { population: 3, inputSha256, workerSha256, codecSha256, implementationDigest: 'a'.repeat(64) })).toMatchObject({ population: 3, utf16: 7043, utf8: 7043 });
   } finally { rmSync(parent, { recursive: true, force: true }); }
 });

@@ -71,12 +71,21 @@ function kernelState(pid: number): IKernelLookup {
 /** @internal Execute only the fixed bounded ps query for one owned PID. */
 export function probeOwnedRss(pid: number, parent: number): { readonly reading: IRssReading; readonly observation: IRssObservation } {
   const result = spawnSync('/bin/ps', ['-o', 'pid=,ppid=,stat=,rss=', '-p', String(pid)], { encoding: 'utf8', timeout: 1000, maxBuffer: 1024 });
-  const code = field(result.error, 'code');
-  return classifyRssProbe(pid, parent, { status: result.status, signal: result.signal, code: typeof code === 'string' ? code : null, stdout: result.stdout, stderr: result.stderr }, () => kernelState(pid));
+  return classifyRssProbe(pid, parent, normalizePsCompletion(result), () => kernelState(pid));
 }
 /** @internal Keep bounded diagnosis slots across normal probes and terminal-marker confirmation. */
 export function retainRssObservation(trace: IRssTrace, observation: IRssObservation): IRssTrace {
   const next: IRssTrace = { probes: trace.probes + 1, first: trace.first ?? observation, last: observation, failing: observation.classification === 'unavailable' ? observation : trace.failing };
   if (!Number.isSafeInteger(next.probes) || Buffer.byteLength(JSON.stringify(next)) > 4096) { throw new Error('RSS trace evidence budget'); }
   return next;
+}
+
+/** @internal Normalize the host's optional failure streams before evidence classification. */
+export function normalizePsCompletion(raw: { readonly status: unknown; readonly signal: unknown; readonly error?: unknown; readonly stdout?: unknown; readonly stderr?: unknown }): IPsCompletion {
+  const code = field(raw.error, 'code');
+  // An absent stream is not an empty stream: only exact empty successful
+  // no-match output may reach the independent kernel-absence check.
+  return { status: typeof raw.status === 'number' && Number.isSafeInteger(raw.status) ? raw.status : null,
+    signal: typeof raw.signal === 'string' ? raw.signal : null, code: typeof code === 'string' ? code : null,
+    stdout: typeof raw.stdout === 'string' ? raw.stdout : null, stderr: typeof raw.stderr === 'string' ? raw.stderr : null };
 }

@@ -38,8 +38,8 @@ text, including the empty string. Structural tuple slots are dense; admitted
 semantic vectors preserve occupied slots and holes.
 
 The reader first checks format/wire generation, then Tracking semantics, then
-semantic version. Unknown wire/Tracking generations and positive future semantic
-variants return unsupported before body interpretation. A missing, invalid or
+semantic version. Unknown wire/Tracking generations and positive safe-integer semantic
+versions outside 1–4 return unsupported before body interpretation. A missing, invalid or
 nonpositive semantic version in a known generation is integrity damage; malformed
 known tuples also throw the existing integrity classification. The existing
 semantic reader then owns full provenance validation. The private codec does not
@@ -104,97 +104,173 @@ ledger originally wrote 369 for the implementation observation even though its
 enumerated terms `15+20+8+26+9+22+12+85+72` sum to 269. Its provisional B = 1340
 therefore had a 100-unit arithmetic error. That original record remains preserved;
 this explicit correction gives B = 1240 without fitting population differences or
-changing the implementation. Independent held-out corroboration remains pending.
+changing the implementation. The later independent retained checker corroborated this corrected ledger.
 
-## Bounded cohorts
+## Bounded execution and preserved failures
 
-`tuple-launcher.ts` invokes only named preparation, owner and analysis children.
-Author populations are 1/2/8/12/32/100; reviewer held-outs are 3/9/17/64. The fresh
-cohorts share one output directory, and both sealed failed directories remain
-immutable. All three directories and a 48 KiB allowance for outside forensic/review/
-status evidence count against the same cumulative 1 MiB cap. Every artifact is
-individually bounded; writes preflight the remaining shared allowance. Author
-worker outputs reserve 384 KiB for later held-outs/analysis/receipts, and held-out
-worker outputs reserve 32 KiB for final analysis/receipts. All failed files are
-checked against their independently pinned inventory before writes and afterward.
-Only the six regular failed-attempt input JSONs are reused read-only, after exact
-hashes and complete current expected cold-corpus bytes are validated. Every owner
-worker runs again, including N1; old output or process receipts confer no success.
-Held-out inputs are new. Root/entry symlinks, canonical root aliasing, overwrite,
-traversal, incompatible input/output paths and input digest changes refuse before
-launch/emission. The fixed three-root adaptation does not reset the artifact allowance.
+Four cumulative roots remain immutable after their attempts:
 
-Each cohort carries a single 120-second budget across sequential children. The
-parent samples only its live owned child PID, stops on unavailable RSS or sampled
-RSS above 2 GiB, and waits for child close before the next child. A positive
-terminal witness distinguishes an exact owned PID/parent PID in zombie state
-with RSS 0, or `ps` no-match plus kernel ESRCH, from a missing live measurement.
-The OS state is independently rechecked, a prior positive sample is mandatory,
-the deadline remains armed, and actual exit/close still decides completion. A
-supplied marker or merely a later normal exit cannot waive unavailable live RSS.
-Fixed children
-create no descendants. Retained controls exercise actual normal completion,
-deadline, a lowered RSS stop and unavailable sampling, including kill/reap.
-Sampled RSS and process high-water RSS are separate evidence; true transient heap
-peak and physical I/O are not measured. Compiler/repository checks are separate.
+| Root | Role | Files | Bytes |
+| --- | --- | ---: | ---: |
+| A, `issue283-tuple-diagnostics-IW4P6n` | rejected author attempt; six reusable inputs | 9 | 377255 |
+| B, `issue283-tuple-fresh-h9TCds` | rejected second author attempt | 4 | 12192 |
+| C, `issue283-tuple-complete-C1` | six accepted author outputs plus rejected partial held-outs | 19 | 454865 |
+| D, `issue283-heldout-complete-D1` | four accepted fresh held-out outputs | 9 | 140821 |
+| Outside forensic/review/status allowance | includes checker receipt | — | 49152 |
+| **Charged total** | cap 1048576; remaining 14291 | **41** | **1034285** |
 
-Focused preparation uses this tree's own dependency install and generated
-package outputs. Compile Resolution owner tests and the experiment test project,
-then run their Jest configurations and type-aware lint for changed TypeScript.
-The emitted `tuple-launcher.js` takes a fresh empty local directory, `author`,
-the original failed directory and its exact inventory fingerprint, then the second
-failed directory and its exact inventory fingerprint. Omission refuses before any
-plan or worker. Historical single-seal plans remain readable for preserving old
-evidence; they do not authorize a fresh author CLI invocation. Only after
-review run that executable with the fresh directory and `heldout`. A failed
-cohort retains its closed-child receipt and is not resumed or retried implicitly.
+A/B stopped at N1 with unavailable RSS. Both children exited 0 and were reaped,
+but their exact failing `ps` states were not retained; those causes remain unknown.
+A separate 4624-byte forensic invocation completed with a positive sample,
+independently confirmed owned zombie/RSS 0 and actual close. It gives no cohort or
+capacity credit. C held-out default-sandbox failure retained only sampler-threw,
+without its raw failing probe. A separate bounded same-sandbox probe demonstrated
+current `ps` EPERM/undefined-stream behavior; the exact failed run cause remains
+unproved. Its explicit escalated retry also failed; exclusive failure-file creation
+masked the second primary trace, so that cause also remains unknown. C partial outputs 3/9 give no credit. All rejected files remain charged.
+D reads only C's four validated cold inputs and creates four fresh owner outputs.
 
-Both original author attempts stopped operationally at N1 with unavailable RSS.
-Their children exited 0 and were reaped, but neither receipt preserved the exact
-failing `ps` state, so both original causes remain unknown. A separate bounded process test
-then demonstrated the owned-zombie/exit-pending state; the tests-first correction
-preserves live-missing failure controls. Both failed attempts remain rejected and immutable. One separately released N1
-forensic invocation completed with a positive RSS sample followed by independently
-confirmed owned zombie/RSS 0 and actual exit/close. Its 4624 retained bytes count
-within the same external allowance; it confers no cohort or capacity credit.
-The narrow three-root adaptation preserves telemetry and classification. Fresh
-author/held-out execution remains subject to independent review and separate
-supervisory release.
+Fixed retention modules validate complete sealed inventories, current input bytes,
+canonical roots, regular files, source identities and remaining allowance before
+every write and owner launch. Aliases, symlinks, traversal, overwrite, substituted
+plans and cumulative overflow refuse. The author A+B+C and held-out A+B+C+D
+compositions share the original 1 MiB cap. D's prelaunch upper bound was 1044836
+bytes, including output upper 109516 and metadata upper 41856. Outside allowance
+covers 45018 observed/reserved bytes before the checker, 1955 future report-growth
+bytes and up to 2048 checker-receipt bytes (49021 total within 49152).
 
-## Current author evidence
+Each cohort has one 120-second deadline across sequential children and a 2 GiB
+sampled owned-child RSS ceiling. Children create no descendants. Missing/invalid
+live RSS fails and kills/reaps. Host-boundary normalization preserves missing
+streams as null, distinct from actual empty streams. Bounded raw first/last/failing
+probes retain status, signal, error code, PID/PPID/state/RSS and kernel lookup.
+Uncoordinated terminal controls require independently confirmed owned zombie/RSS 0
+or exact no-match plus ESRCH, a prior positive sample and actual close.
 
-The separately released fresh author cohort completed preparation, four expected
-resource controls, all six fresh owner workers and analysis. Every child closed
-and was reaped; all owner workers had positive RSS samples and exited 0. Actual
-worker output passed complete independent shape comparison, generated Value and
-the independent grammar counter at each size:
+Current prepare/owner/analyze children finish all application work and writes,
+install a release handler, send ready and stay alive. Parent independently obtains
+positive final OS RSS below the ceiling, dispatches release and pauses periodic
+RSS for a bounded termination-only interval. Send backpressure is not success:
+callback success and actual normal close are both required, in either order.
+Deadline/output guards remain armed through close/reap. Release handlers exit
+synchronously without further application work. This interval is unmeasured;
+release is not an OS terminal witness or proof of zero Node internal allocation.
+Released hangs, send errors, early close, malformed/duplicate ready, missing final
+RSS and post-release output remain tested failures. Sampled RSS and process
+high-water RSS differ; true transient heap peak and physical I/O are unavailable.
 
-| N | Actual complete MDS1 UTF-16 and UTF-8 units |
-| ---: | ---: |
-| 1 | 3175 |
-| 2 | 5109 |
-| 8 | 16713 |
-| 12 | 24480 |
-| 32 | 63440 |
-| 100 | 195907 |
+## Actual ten-output evidence and provenance
 
-Node 24.14.0 reported `MAX_STRING_LENGTH=536870888`. Conditional arithmetic for
-N150000 gives body 299045711 and complete MDS1 299045716, leaving respective
-positive margins 237825177 and 237825172. No N150000 tree or canonical string was
-constructed. Parent high-water RSS was 85426176 bytes; elapsed 647.696291 ms. These
-are bounded experiment measurements, not qualification or performance evidence.
+C completed 12 phases: preparation, four expected resource controls, six fresh
+owner workers and analysis. Accepted owner workers had positive RSS, exit 0 and
+reap. Its elapsed time was 647.696291 ms and parent high-water RSS 85426176 bytes.
+D completed six phases with positive final RSS, confirmed release, exit 0 and reap.
+Its elapsed time was 339.497875 ms, parent high-water RSS 80642048 bytes and
+analysis high-water RSS 76136448 bytes. D final RSS in prepare/3/9/17/64/analyze
+order was 70991872/58818560/60391424/60506112/69599232/76333056 bytes.
 
-The author retained eleven files totaling 210355 bytes. Both failed roots plus
-that directory and the unchanged 49152-byte external allowance total 648954 bytes.
-All 44 source/generated identities were verified again after completion. The
-actual author manifest SHA256 is
-`7c7b5ffae165c6d249b7e3a8b9c2c4d2732e38f56bcbc264687433c036d79255`;
-analysis SHA256 is
-`9cf8bfda4d7b4ab21187f11352d12087423247f3cf9e5f4e72eff283d6d9f066`;
-batch receipt SHA256 is
-`cb9746d0037dc80a8b1b414d1f0949fe45ed960a535620a8938a5a903454e282`.
+The independent checker reconstructed each complete semantic input, tuple,
+canonical MDS1 value and digest without importing or executing owner/codec/Value.
+It corroborated original actual Value results, the component ledger and decimal
+arithmetic. ASCII cold fixtures make UTF-16 code-unit counts and UTF-8 byte counts
+numerically equal; the columns preserve their different meanings. Digests identify
+complete canonical MDS1 strings, not worker envelopes or tuple JSON.
 
-Independent held-outs, the separate checker, final clean revision and whole
-first-gate acceptance remain pending. Production dispatch remains unchanged.
-No qualification representability, performance or successful 150000 execution is
-claimed by this document.
+| Cohort | N | UTF-16 code units | UTF-8 bytes | Canonical SHA256 |
+| --- | ---: | ---: | ---: | --- |
+| C | 1 | 3175 | 3175 | `bc436edb15fcdaf4c35c885fb8904baa3d1f22a7cdb54fc8ecbe0fe676190c3c` |
+| C | 2 | 5109 | 5109 | `c79acf5d4e247da56669b328f19049009a22f003c00f82efba727758052304a8` |
+| C | 8 | 16713 | 16713 | `6be3142b95223430404d38adbd243e9509c936bf7a408a74dfff9ed9d8249d02` |
+| C | 12 | 24480 | 24480 | `20cac64817f2b08032dcd2c23dd876a206c56e9183ca537804d2ee98267f6666` |
+| C | 32 | 63440 | 63440 | `7dffcb0b61ceae39a62c43eee57184f291a1fc0e9707f21c66688aa4c53b62a5` |
+| C | 100 | 195907 | 195907 | `f0a1dddb2a584dda66989f94ded5739cd168954c4e07dd0148be655ff0595b6c` |
+| D | 3 | 7043 | 7043 | `879658a10f806ca82b6923932937a0a954b1ece5b10d21674df2cad925fba3e2` |
+| D | 9 | 18647 | 18647 | `078c113c71475aaceb915166a2a60d1123e9d472f9a34ecef650d34e61561e5e` |
+| D | 17 | 34220 | 34220 | `28257775465fddc80928c1155f3900d0a679898de1dcb8d84f272b07a4dd07b5` |
+| D | 64 | 125776 | 125776 | `0eeaa6d656e2633430b7b040846a53ce5564240088f997112628c9665f8b6ece` |
+
+Original C source is committed as `7b1accbc4fb0797e4226ff990b538e8a4c8d71c8`.
+Its manifest pinned 44 source/emitted identities but omitted already imported
+`errors.ts` and `errors.js`. The original emitted errors-module hash is unavailable.
+This is qualified original Value-execution evidence, not a complete historical
+runtime-closure or fully frozen reproduction claim. All 16 original tracked source
+pins match that commit. Current errors source matches original source SHA256
+`4f2850418b7f5cfc4b413855b145a1add0abb41f437ce41f6433f0a5f1ca8b2e`.
+The worker computation prefix is unchanged; current changes add an owner-local
+release handler after computation. Old results are not attributed retroactively
+to the repaired harness.
+
+D pins the complete current 52-entry source/emitted set, including both preexisting
+errors dependencies. Compared with the old 44, 30 capacity authorities remain
+exact, ten harness entries changed, six harness entries were added and two
+preexisting errors entries were newly pinned. Ordered current identity aggregate
+SHA256 is `0991036824be1fb0adc33bf03065ad8b217656e328b427a4487eefe007cdcff2`.
+All 52 identities and all A/B/C/D inventories remained unchanged across D and the
+checker. Complete independent reconstruction corroborates the qualified original
+six canonical values and fully pinned current four.
+
+Node 24.14.0 reports `MAX_STRING_LENGTH=536870888`. Conditional N150000 arithmetic
+gives body 299045711 and complete MDS1 299045716, with positive respective margins
+237825177 and 237825172. This proves conditional representability under the exact
+cold-corpus/schema assumptions and pinned Value grammar. No N150000 tree/string
+was constructed or run. Full qualification, speedup, performance, TEST-5 and M7
+acceptance remain unproved.
+
+The separate checker completed once: exit 0/reaped, 0.07736 seconds, three positive
+samples, initial RSS 16711680, final/peak sampled RSS 21954560, child high-water RSS
+24166400 and parent high-water RSS 17727488 bytes. Release-to-reap was 0.582708 ms;
+termination-only execution remained unmeasured. Its 1364-byte PASS receipt is
+charged within the unchanged outside allowance.
+
+## Receipts and reproduction
+
+Artifacts are retained in the named `/private/tmp` roots. Hashes identify original
+evidence; these machine-local paths are not portable prerequisites. Grammar,
+ledger, bridge, watchdog and tests are tracked in this revision.
+
+| Artifact | SHA256 |
+| --- | --- |
+| C `manifest-author.json` | `7c7b5ffae165c6d249b7e3a8b9c2c4d2732e38f56bcbc264687433c036d79255` |
+| C `analysis-author.json` | `9cf8bfda4d7b4ab21187f11352d12087423247f3cf9e5f4e72eff283d6d9f066` |
+| C `batch-author.json` | `cb9746d0037dc80a8b1b414d1f0949fe45ed960a535620a8938a5a903454e282` |
+| D `manifest-heldout.json` | `19d27bfb1e408ea2db596d186f8f03cea299b30ee2c0fe5acf887c2ab915245d` |
+| D `analysis-heldout.json` | `832d6fdc80a1153c17280d2069ea830be96548a93e67ad170f13a787537978ed` |
+| D `batch-heldout.json` | `ae5330a77ec926229128fab33a468661d99c2c1c107f1d6a46de32704464dd6b` |
+| Independent checker source | `9a1b37665092d0e2cdaab2b1c42c35d79d964784ed6c632b45efc96a51d5fe8b` |
+| Independent PASS receipt | `52ee27bc3951d24b50190b8d9097ab5d2b862b5d50d22b35d7b94b6e1d609c37` |
+| Independent canonical digest set | `1fe095eec477940d1d8e427d6c329dc063b240b41a8b5541288f6088806c5298` |
+
+Behavior changes used explicit-outcome tests with observed RED/GREEN. Expanded
+characterization checks already satisfied by the implementation were recorded as
+passing, without manufactured RED. Final affected experiment checks passed strict owner/root
+compilation, 13 Jest suites/91 tests and type-aware lint of all 13 affected files.
+Owner codec/channel/worker tests separately cover semantic variants, sparse end
+states, negative-zero/channel boundaries, generation precedence and actual output.
+Full repository gates belong to the later integrated head.
+
+From this checkout with its own installed dependencies and generated sibling
+declarations, tracked focused checks use Node 24.14.0:
+
+```sh
+node_modules/.bin/tsc -p packages/resolution/tsconfig.test.json
+node_modules/.bin/tsc -p experiments/provenance-capacity/tsconfig.test.json
+NODE_OPTIONS=--experimental-vm-modules node_modules/.bin/jest --config experiments/provenance-capacity/jest.config.mjs --runInBand
+```
+
+`tuple-accounting.test.ts`, `cold-bridge.test.ts`, owner `provenance-wire.test.ts`
+and `provenance-cold-channel.test.ts` hold literal/negative semantic and accounting
+controls. `tuple-driver.test.ts`, `tuple-rss.test.ts`, `tuple-lifecycle.test.ts` and
+both retention/composition suites specify resource and preservation contracts.
+Actual diagnostic reproduction remains gated: emitted
+`tuple-launcher.js FRESH_C author A A_SHA B B_SHA` creates an author composition;
+`tuple-heldout.js FRESH_D A A_SHA B B_SHA C C_SHA` creates a held-out composition.
+Entries live under `.test-build/experiments/provenance-capacity/src/`. They require
+exact seals, current source/emitted pins, positive host `ps` access, fresh paths,
+explicit per-attempt supervisory release and the same cumulative cap. Do not
+replay or overwrite retained roots. The independent checker is separately authored
+reviewer evidence, not a tracked production dependency.
+
+This is the private first-gate review candidate. Whole-gate independent acceptance
+and a separate supervisory production release remain distinct steps. Production
+provenance dispatch, semantic readers, shared acceptance/ending formats, History
+and qualification execution remain unchanged.

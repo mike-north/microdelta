@@ -1,6 +1,6 @@
 /** Tests-first precise refusals/terminal evidence and byte/count caps; no acceptance relaxation. */
 import { expect, test } from '@jest/globals';
-import { classifyRssProbe, retainRssObservation } from '../src/tuple-rss.js';
+import { classifyRssProbe, normalizePsCompletion, retainRssObservation } from '../src/tuple-rss.js';
 import type { IPsCompletion, IRssTrace } from '../src/tuple-rss.js';
 
 /** Every raw fixture is independent of the implementation's classifier/formatter. */
@@ -43,4 +43,18 @@ test('first last failing trace preserves exact relevant observations and cannot 
   expect(huge.ps.stdoutTruncated).toBe(true); expect(huge.ps.stdoutBytes).toBe(1024);
   expect(huge.ps.stderrTruncated).toBe(true); expect(huge.ps.stderrBytes).toBe(1024);
   expect(Buffer.byteLength(JSON.stringify(huge))).toBeLessThanOrEqual(1024);
+});
+
+/** Node can omit both streams on spawn EPERM despite its static encoding overload. */
+test('host completion normalizes missing streams to null without turning them into empty no-match evidence', () => {
+  const denied = normalizePsCompletion({ status: null, signal: null, error: { code: 'EPERM' }, stdout: undefined, stderr: undefined });
+  expect(denied).toEqual({ status: null, signal: null, code: 'EPERM', stdout: null, stderr: null });
+  const result = classifyRssProbe(17, 11, denied, () => 'ESRCH');
+  expect(result.reading).toBeUndefined();
+  expect(result.observation).toMatchObject({ ps: { status: null, code: 'EPERM', stdout: null, stdoutBytes: null, stderr: null, stderrBytes: null }, classification: 'unavailable', reason: 'ps-failed', kernelLookup: 'not-attempted' });
+  const missing = classifyRssProbe(17, 11, normalizePsCompletion({ status: 1, signal: null }), () => 'ESRCH');
+  expect(missing.reading).toBeUndefined(); expect(missing.observation.kernelLookup).toBe('not-attempted');
+  const empty = classifyRssProbe(17, 11, normalizePsCompletion({ status: 1, signal: null, stdout: '', stderr: '' }), () => 'ESRCH');
+  expect(empty.reading).toBe('not-running'); expect(empty.observation.ps.stdout).toBe('');
+  expect(normalizePsCompletion({ status: 0, signal: null, stdout: normal.stdout, stderr: '' })).toEqual(normal);
 });

@@ -72,6 +72,31 @@ test('absent context roles use the same allowed-edge policy', async () => {
   }
 });
 
+test('only the Node command host may dynamically load one caller-selected module', async () => {
+  const eslint = new ESLint({ cwd: root, overrideConfigFile: checkerConfig });
+  const source = 'export async function load(path: string): Promise<unknown> { return import(path); }';
+  const [commandHost] = await eslint.lintText(source, { filePath: path.join(root, 'packages/machine-node/src/node/command-process.ts') });
+  const [otherHost] = await eslint.lintText(source, { filePath: path.join(root, 'packages/machine-node/src/node/clock.ts') });
+  assert.ok(commandHost);
+  assert.ok(otherHost);
+  assert.deepEqual(commandHost.messages.map(message => message.ruleId), []);
+  assert.deepEqual(otherHost.messages.map(message => message.ruleId), [rule]);
+});
+
+test('the caller-module exception preserves static package boundaries and exact host ownership', async () => {
+  const eslint = new ESLint({ cwd: root, overrideConfigFile: checkerConfig });
+  for (const [file, source] of [
+    ['command-process.ts', "void import('@microdelta/history');"],
+    ['command-process.ts', "void import('@microdelta/machine/dist/src/index.js');"],
+    ['command-process.ts', "void import('/tmp/packages/history/src/index.js');"],
+    ['other/command-process.ts', 'void import(selectedPath);'],
+  ]) {
+    const [result] = await eslint.lintText(source, { filePath: path.join(root, 'packages/machine-node/src/node', file) });
+    assert.ok(result);
+    assert.deepEqual(result.messages.map(message => message.ruleId), [rule], `${file}: ${source}`);
+  }
+});
+
 test('Value Semantics consumes only the portable Machine hashing capability', async () => {
   const allowed = await diagnostics('packages/value', "import type { ISha256Capability } from '@microdelta/machine'; export type IHash = ISha256Capability;");
   assert.deepEqual(allowed.map(message => message.ruleId), []);

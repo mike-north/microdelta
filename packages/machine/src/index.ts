@@ -383,4 +383,12 @@ export interface ICommandProcessCapability {
   writeStderr(text: string): void;
   /** Select a whole exit status from 0 through 255 for natural process termination. */
   setExitCode(code: number): void;
+  /** Resolve caller-selected local paths from the process working directory. */
+  resolvePath(path: string): string;
+  /** Load exactly one explicitly selected compiled local JavaScript module. */
+  loadModule(path: string): Promise<unknown>;
+  /** Keep the process alive until the returned release function is called. */
+  keepAlive(): () => void;
+  /** Subscribe to one process signal and return an idempotent unsubscribe function. */
+  onSignal(signal: 'SIGINT' | 'SIGTERM', listener: () => void): () => void;
 }

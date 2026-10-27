@@ -201,7 +201,15 @@ test('fresh held-out admission reads only sealed C and counts A B C D before a w
     const heldoutRetention = readHeldoutRetentionPlan(d);
     const task = { kind: 'owner', input: join(c, 'input-3.json'), output: join(d, 'output-3.json'), inputSha256: createHash('sha256').update(readFileSync(join(c, 'input-3.json'))).digest('hex'), workerSha256: 'b'.repeat(64), codecSha256: 'c'.repeat(64), outputBudget: 1, heldoutRetention } as const;
     // Wrong executable hashes stop the admitted actual child before codec work.
-    const admitted = await runTupleChild(task, { timeoutMs: 2000, rssBytes: 2147483648 }); expect(admitted.reaped).toBe(true); expect(admitted.outcome).toBe('failed');
+    // Isolate admission/identity refusal from an independent ending RSS refusal:
+    // synthetic periodic samples prove this path only, never resource evidence.
+    // Successful-worker tests still require actual periodic and final OS probes.
+    let admittedSamples = 0;
+    const admitted = await runTupleChild(task, { timeoutMs: 2000, rssBytes: 2147483648 }, () => { admittedSamples++; return 1024; });
+    expect(admittedSamples).toBeGreaterThan(0);
+    // Nonzero owner exit is the failure; no ready message entered the release gate.
+    expect(admitted).toMatchObject({ outcome: 'failed', exitCode: 1, signal: null, reaped: true, protocol: { ready: false, finalRssBytes: null, releaseDispatched: false, releaseConfirmed: false, failure: null } });
+    expect(() => process.kill(admitted.pid, 0)).toThrow(); expect(() => readFileSync(task.output)).toThrow();
     let samples = 0; const sample = (): number => { samples++; return 1024; };
     await expect(runTupleChild({ ...task, outputBudget: 800000 }, { timeoutMs: 1000, rssBytes: 2147483648 }, sample)).rejects.toThrow();
     await expect(runTupleChild({ ...task, input: join(a, 'input-3.json') }, { timeoutMs: 1000, rssBytes: 2147483648 }, sample)).rejects.toThrow();

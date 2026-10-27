@@ -187,6 +187,9 @@ export function currentExecution(): IRunExecution;
 // @alpha
 export function currentRun(): IRunContext;
 
+// @alpha
+export function defineCliWorkload<TInputs extends object, THelpers extends object, TResult>(factory: ICliWorkload<TInputs, THelpers, TResult>['prepare']): ICliWorkload<TInputs, THelpers, TResult>;
+
 export { Divergence }
 
 export { DuplicateRowError }
@@ -246,6 +249,21 @@ export type ICheckOutcome = ICheckOutcome_2;
 
 // @alpha
 export type IChildResult<T> = IChildResult_2<T>;
+
+// @alpha
+export interface ICliWorkload<TInputs extends object, THelpers extends object, TResult> {
+    readonly prepare: (applicationArguments: readonly string[]) => ICliWorkloadPreparation<TInputs, THelpers, TResult> | Promise<ICliWorkloadPreparation<TInputs, THelpers, TResult>>;
+}
+
+// @alpha
+export interface ICliWorkloadPreparation<TInputs extends object, THelpers extends object, TResult> {
+    readonly body: (run: IWorkspaceRun, application: IApplicationStatementSubmission) => TResult | Promise<TResult>;
+    readonly dispose: () => void | Promise<void>;
+    readonly options: Omit<IWorkspaceRunOptions<TInputs, THelpers>, 'stop'> & {
+        readonly stop?: never;
+    };
+    readonly workspace: IWorkspace;
+}
 
 // @alpha
 export type ICollectionResult<TMember> = ICollectionResult_2<TMember>;

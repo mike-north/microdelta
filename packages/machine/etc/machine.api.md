@@ -23,6 +23,10 @@ export interface IClockCapability {
 // @alpha
 export interface ICommandProcessCapability {
     readonly arguments: readonly string[];
+    keepAlive(): () => void;
+    loadModule(path: string): Promise<unknown>;
+    onSignal(signal: 'SIGINT' | 'SIGTERM', listener: () => void): () => void;
+    resolvePath(path: string): string;
     setExitCode(code: number): void;
     writeStderr(text: string): void;
     writeStdout(text: string): void;

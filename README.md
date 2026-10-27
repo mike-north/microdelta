@@ -55,11 +55,12 @@ node examples/contribution-report/dist/main.js run --store .test-build/readme-de
 ```
 
 Each `node` command starts a fresh process and opens the same SQLite-backed store.
-These commands belong to the **example's CLI**. The selected first general-purpose
-CLI slice is separately permissionable run-start plus exact-execution observation
-([CLI-005](docs/spec/operations.md#cli-005--bounded-exact-execution-observation));
-its common engineering contract is accepted, but the CLI is not implemented. The
-broader inspection checkpoint remains planned.
+These commands belong to the **example's CLI**. The installed `microdelta`
+executable separately provides caller-owned foreground run-start and exact
+execution observation. Its bounded module contract and receipt meanings are
+described in [private alpha workspace consumers](docs/private-alpha-workspace-consumers.md)
+and [CLI-005](docs/spec/operations.md#cli-005--bounded-exact-execution-observation).
+The broader inspection checkpoint remains planned.
 
 The JSON includes the report, each member's outcome and exact result reference,
 body execution counts (`executions`), and source-policy checks (`finality`). The

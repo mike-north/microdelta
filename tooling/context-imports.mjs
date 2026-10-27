@@ -285,7 +285,15 @@ export const contextImports = {
       ImportDeclaration(node) { check(node, node.source.value); },
       ExportNamedDeclaration(node) { if (node.source) { check(node, node.source.value); } },
       ExportAllDeclaration(node) { check(node, node.source.value); },
-      ImportExpression(node) { check(node, node.source.value); },
+      ImportExpression(node) {
+        // Loading the selected local workload is a Node command-host service;
+        // computed module paths remain forbidden throughout other packages.
+        if (owner.nodeAdapterSource
+          && path.relative(owner.root, context.filename) === path.join('src', 'node', 'command-process.ts')
+          && node.source.type !== 'Literal'
+          && (node.source.type !== 'TemplateLiteral' || node.source.expressions.length > 0)) { return; }
+        check(node, node.source.value);
+      },
       TSImportType(node) { check(node, node.argument.value); },
       TSImportEqualsDeclaration(node) {
         if (node.moduleReference.type === 'TSExternalModuleReference') {

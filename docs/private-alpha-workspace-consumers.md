@@ -149,3 +149,97 @@ default public package view normally. A separately selected beta package may
 opt in to its beta declarations; that does not expose alpha. These mappings
 are local development configuration only and do not widen publication or
 release surfaces.
+
+## Installed foreground run-start
+
+The same installed package supplies a foreground `start` command and the
+separately permissionable finite reader:
+
+```sh
+microdelta start --module ./dist/workload.js --observation ./observations/run.sqlite -- opaque-app-arg
+microdelta observe --location /absolute/path/observations/run.sqlite --execution-id <32-lowercase-hex-digits>
+```
+
+The compiled local module default-exports `defineCliWorkload(factory)`. Its
+factory receives a frozen readonly array of opaque arguments and returns a
+preparation containing its workspace, run options without `stop`, body, and
+exactly-once disposer. Import and preparation must not start a run. The CLI
+injects its stop controller and the absolute observation location when it
+starts the prepared body. The generic helper and its preparation types are
+project-private alpha declarations; they are not a published alpha channel.
+Compatible physical package copies recognize the same helper handoff, so a
+caller module can use its ordinary local package import with a separately
+installed command. This does not promise compatibility between arbitrary alpha
+versions; the caller must satisfy the installed command's preparation contract.
+
+Start writes a version-1 locator receipt as soon as the observed handle is
+returned, then a bounded terminal receipt after both the runtime result and
+observation acknowledgment settle and disposal completes. Receipts never
+contain application arguments, body values, arbitrary errors, or provider
+configuration. A locator receipt proves allocation only; an acknowledged
+terminal record still does not prove that an application report is complete.
+The application's own bounded statement remains a separate observation fact.
+
+The module path must name an explicit local `.js`, `.mjs`, or `.cjs` file.
+There is no package lookup, remote loader, TypeScript compilation, or discovery.
+Tool flags may appear in either order exactly once. Unknown/missing/repeated
+flags fail before import; only arguments after `--` reach the factory. Module
+and observation paths are at most 4,096 UTF-16 code units before and after
+absolute resolution. At most 256 application arguments are accepted, each at
+most 4,096 code units. Absolute observation locations are passed into the
+runtime before allocation, so a second process can use the locator from any
+working directory.
+
+Stdout is reserved for CLI JSON lines; caller diagnostics belong on stderr.
+This is trusted caller JavaScript: the helper neither sandboxes module side
+effects nor intercepts global console output. Import and factory preparation
+must leave analysis/provider work unstarted. A factory that fails before
+handover owns cleanup of its resources. After a valid preparation is returned,
+the CLI owns its disposer, including after synchronous start refusal.
+
+The fixed version-1 records use these fields:
+
+| Record | Fields and meaning |
+| --- | --- |
+| Locator | `version: 1`, `type: "locator"`, `locator: { location, executionId }`. Allocation/return only; preparation, body entry and liveness are separate facts. |
+| Terminal | `version: 1`, `type: "terminal"`, optional allocated `locator`, `runtime: "returned" / "failed" / "not-started"`, `failures`, `stop`, optional `acknowledgment`, `cleanup`, `transport`. |
+| Independent failures | `failures` is a finite, duplicate-free array drawn from `module`, `preparation`, `runtime`, `observation`, `cleanup`, `transport`. Concurrent runtime/observation/cleanup failures remain distinct, including under a signal exit. |
+| Stop intent | `stop: "none" / "soft" / "hard"` is the final CLI controller intent, rather than evidence of provider cancellation. |
+| Observation settlement | A fulfilled acknowledgment retains its existing `kind` (`acknowledged`, `uncertain`, `unprepared`), `revision` when acknowledged, and optional bounded `observationFaults`. A rejected acknowledgment is `{ kind: "rejected" }`; absent means no observed handle was obtained. |
+| Cleanup | `cleanup: "not-handed-over" / "disposed" / "failed"`. `disposed` means the handed-over disposer fulfilled once after any obtained run promises settled. |
+| Transport | `transport: "available" / "failed"` describes the locator write. A terminal-write failure cannot promise a delivered receipt and makes an otherwise successful command fail. |
+
+Each receipt has one bounded locator (location at most 4,096 code units and
+execution identity of 32 lowercase hexadecimal digits), fixed discriminants,
+and bounded runtime acknowledgment values. No body return, error/stack,
+application argument or credential-bearing configuration enters these records.
+A locator-write failure retains both promise settlements and drain/disposal
+ownership. No failed output write forces an early process exit.
+
+Signal handling is installed before module import/preparation. First SIGINT
+requests soft stop with no default deadline: no new admissions, with admitted
+work draining under the existing runtime policy. Further SIGINT and SIGTERM
+request hard stop through the same controller. A signal during setup causes
+zero starts and disposal after preparation settles. Uncooperative JavaScript
+has no forced-termination guarantee. One cancellable Node keep-alive covers
+setup, drain, acknowledgment and disposal; it is released with signal
+subscriptions at final cleanup and performs no lease renewal or observation
+heartbeat.
+
+| Exit | Meaning after actual drain and cleanup |
+| --- | --- |
+| `0` | Runtime fulfilled, observation acknowledged, cleanup succeeded, no stop or transport failure. Application completeness is still independent. |
+| `1` | Preparation/runtime/observation/cleanup/transport failure or uncertain observation. |
+| `2` | Invalid invocation or module contract/load failure. Invalid flags emit only a fixed stderr usage diagnostic, with no stdout; valid invocations emit a terminal receipt when stdout remains available. |
+| `130` / `143` | Handled SIGINT / SIGTERM. Independent failure facts remain in the terminal receipt when writable. |
+
+An uncertain or rejected acknowledgment never authorizes an automatic second
+invocation or restart. Use the existing exact locator reader to inspect evidence;
+another explicit invocation is a separate caller decision.
+
+The default workspace lease is 30,000 ms and renews at request/pass boundaries,
+not during a pass or each HTTP send. A caller should choose a lease longer than
+its actual longest uninterrupted pass; a long lease also delays crash takeover.
+There is no CLI heartbeat or 11–12 hour endurance guarantee, and the operation
+journal is not a raw-response cache. Useful acquired data must pass through the
+normal declared source and result boundaries.

@@ -1,5 +1,7 @@
 /** Node command-process mechanics; argument grammar and exit-status policy belong to the CLI consumer. @packageDocumentation */
 import { writeSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 import type { ICommandProcessCapability } from '@microdelta/machine';
 
@@ -24,6 +26,23 @@ export function _createNodeCommandProcessImplementation(): ICommandProcessCapabi
     setExitCode(code: number): void {
       if (!Number.isInteger(code) || code < 0 || code > 255) { throw new RangeError('Command exit status must be a whole byte'); }
       process.exitCode = code;
+    },
+    resolvePath(path: string): string {
+      return resolve(process.cwd(), path);
+    },
+    loadModule(path: string): Promise<unknown> {
+      return import(pathToFileURL(path).href);
+    },
+    keepAlive(): () => void {
+      // A ref'ed interval keeps Node alive while tracked promises and cleanup settle.
+      const timer = setInterval(() => undefined, 2_147_000_000);
+      let released = false;
+      return (): void => { if (!released) { released = true; clearInterval(timer); } };
+    },
+    onSignal(signal: 'SIGINT' | 'SIGTERM', listener: () => void): () => void {
+      process.on(signal, listener);
+      let subscribed = true;
+      return (): void => { if (subscribed) { subscribed = false; process.off(signal, listener); } };
     },
   });
 }

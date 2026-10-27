@@ -4,6 +4,7 @@
  * their identity vectors use explicit protocol tuples, public MDS1 encoding and
  * host SHA rather than Resolution's private intent helpers or candidate output.
  */
+import { inspectProvenanceObservations } from '../provenance-wire-inspection.js';
 import { afterEach, describe, expect, test } from '@jest/globals';
 import type { IComposition, IDeclarations } from '@microdelta/definition';
 import type { IAttemptRequest, IDurableHistory, IWriterLease } from '@microdelta/history';
@@ -74,13 +75,8 @@ function record(value: unknown): Record<string, unknown> {
 /** Return only this body's declared-input facts; other facts retain their own bindings. */
 function inputFacts(history: IDurableHistory, reference: { readonly kind: 'completed-result'; readonly locator: string }): readonly unknown[] {
   const content = record(history.readEnvelope(reference).provenance.content);
-  const observations: unknown = content.observations;
-  if (!Array.isArray(observations)) { throw new Error('Expected retained observations'); }
-  const values: readonly unknown[] = observations;
-  return values.map(record).filter((observation) => {
-    const binding = record(observation.binding);
-    return JSON.stringify(binding.path) === JSON.stringify(['inputs']);
-  }).map((observation) => ({ kind: observation.kind, operation: observation.operation, address: observation.address }));
+  return inspectProvenanceObservations(content).filter((observation) => JSON.stringify(observation.binding.path) === JSON.stringify(['inputs']))
+    .map((observation) => ({ kind: observation.kind, operation: observation.operation, address: observation.address }));
 }
 
 describe('complete input preparation contracts', () => {

@@ -3,6 +3,7 @@
  * acceptance. Tests inject narrowly selected contractual History-port faults
  * around genuine stored envelopes; ordinary calls still reach durable History.
  */
+import { inspectProvenanceObservations } from '../provenance-wire-inspection.js';
 import { afterEach, expect, test } from '@jest/globals';
 import { HistoryIntegrityError } from '@microdelta/history';
 import type { IAcceptanceRequest, ICompletedEnvelope, ICompletedResultReference, IDurableHistory, IStageRequest } from '@microdelta/history';
@@ -97,9 +98,7 @@ test('a sparse fold checks every included historical envelope although only the 
     const reference = success(await proof.run('cold'), 'published');
     const refs = dependencies(proof);
     const candidate = proof.candidate();
-    const observations: unknown = record(candidate.provenance.content).observations;
-    if (!Array.isArray(observations)) { throw new Error('Expected observations'); }
-    const bindings = observations.map((value: unknown) => record(record(value).binding).path);
+    const bindings = inspectProvenanceObservations(candidate.provenance.content).map((value) => value.binding.path);
     expect(bindings.filter((path) => Array.isArray(path) && path[0] === 'entry')).toEqual([['entry', 'person:ada']]);
     expect(success(await proof.run('warm'), 'reused')).toEqual(reference);
     expect(proof.reads).toEqual(refs.map((entry) => entry.locator));
@@ -161,7 +160,7 @@ test.each(['unsupported', 'kind', 'over', 'own-fact', 'membership'] as const)('%
     const candidate = proof.candidate();
     let changed = candidate;
     if (guard === 'unsupported') { changed = { ...candidate, provenance: { ...candidate.provenance, formatVersion: 9 } }; }
-    if (guard === 'kind') { changed = content({ ...candidate, provenance: { ...candidate.provenance, formatVersion: 1 } }, (value) => ({ trackingSemantics: value.trackingSemantics, kind: 'source', step: value.step, observations: value.observations, children: [] })); }
+    if (guard === 'kind') { changed = content(candidate, (value) => ({ trackingSemantics: value.trackingSemantics, semanticVersion: 1, kind: 'source', step: value.step, observations: value.observations, children: [] })); }
     if (guard === 'over') { changed = content(candidate, (value) => ({ ...value, over: { ...record(value.over), slot: 'other' } })); }
     if (guard === 'own-fact') { proof.differentBody(); }
     if (guard === 'membership') { changed = content(candidate, (value) => {
@@ -267,7 +266,7 @@ test('ordinary publication keeps the first equal-locator object in canonical chi
     expect(first).toEqual(at(published, 1));
     expect(first).not.toBe(at(published, 1));
     const stage = at(stages, 2);
-    expect(stage.provenance.formatVersion).toBe(1);
+    expect(stage.provenance.formatVersion).toBe(5);
     expect(stage.dependencies.map((reference) => reference.locator)).toEqual([first.locator, at(published, 0).locator]);
     expect(stage.dependencies[0]).toBe(first);
     expect(stage.dependencies[1]).toBe(published[0]);

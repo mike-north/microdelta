@@ -15,6 +15,7 @@
  * @see ../../../../docs/plans/m4-composition.md ("Templates, keys and gates")
  * @see ../../../../experiments/exp-4/decision.md
  */
+import { inspectProvenanceObservations } from '../provenance-wire-inspection.js';
 import { randomUUID } from 'node:crypto';
 
 import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
@@ -69,7 +70,7 @@ async function expectResolutionError(action: Promise<unknown>, code: ResolutionE
   return caught;
 }
 
-/** Stored provenance observations as these tests read them. */
+/** Named assertion views of the new writer tuples; gate observations remain semantic objects. */
 interface IStoredObservation {
   readonly binding: { readonly path: readonly string[] };
   readonly address: readonly { readonly key?: string; readonly index?: number }[];
@@ -80,9 +81,7 @@ function provenanceObservations(location: string, locator: string): readonly ISt
   const history = openHistory({ location, store: logicalStore });
   try {
     const content = history.readEnvelope({ kind: 'completed-result', locator }).provenance.content;
-    const observations: unknown = typeof content === 'object' && content !== null ? Reflect.get(content, 'observations') : undefined;
-    // Resolution's provenance stores its observations as a plain list of this shape.
-    return observations as readonly IStoredObservation[];
+    return inspectProvenanceObservations(content);
   } finally {
     history.close();
   }

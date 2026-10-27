@@ -138,12 +138,12 @@ describe('source-call fresh-process durability', () => {
     expect(exact('detail:repo#101').candidates).toEqual(candidates);
   });
 
-  test('new source provenance stays v1 and parent witnesses stay exactly v2', () => {
+  test('wire5 preserves source semantic1 and parent witnesses stay exactly v2', () => {
     run();
     const source = exact('detail:repo#101');
-    expect(source.envelope.provenance).toMatchObject({ formatVersion: 1, content: { kind: 'source', step: { scope, role: 'callable', slot: 'detail' }, children: [] } });
+    expect(source.envelope.provenance).toMatchObject({ formatVersion: 5, content: { semanticVersion: 1, kind: 'source', step: { scope, role: 'callable', slot: 'detail' }, children: [] } });
     const summary = exact('summary:ada');
-    expect(summary.envelope.provenance).toMatchObject({ formatVersion: 2, content: { kind: 'memo', calls: expect.arrayContaining([expect.objectContaining({ witness: expect.objectContaining({ version: 2, child: { scope, role: 'callable', slot: 'detail' } }) })]) } });
+    expect(summary.envelope.provenance).toMatchObject({ formatVersion: 5, content: { semanticVersion: 2, kind: 'memo', calls: expect.arrayContaining([expect.objectContaining({ witness: expect.objectContaining({ version: 2, child: { scope, role: 'callable', slot: 'detail' } }) })]) } });
     const content: unknown = summary.envelope.provenance.content;
     if (typeof content !== 'object' || content === null || !('calls' in content) || !Array.isArray(content.calls)) { throw new Error('Missing nested calls'); }
     const calls: readonly unknown[] = content.calls;
@@ -151,9 +151,9 @@ describe('source-call fresh-process durability', () => {
       if (typeof call !== 'object' || call === null || !('witness' in call) || typeof call.witness !== 'object' || call.witness === null) { throw new Error('Invalid nested call'); }
       expect(Object.keys(call.witness).sort()).toEqual(['arguments', 'child', 'index', 'parent', 'version']);
     }
-    // The older ordinary source and supplied memo forms still resolve on this new reader.
-    expect(exact('selected-people').envelope.provenance).toMatchObject({ formatVersion: 1, content: { kind: 'source', step: { role: 'step' } } });
-    expect(exact('assessment:repo#101').envelope.provenance).toMatchObject({ formatVersion: 2, content: { kind: 'supplied', step: { role: 'callable' } } });
+    // Ordinary source semantic1 and supplied semantic2 remain independent of wire5 and witness versions.
+    expect(exact('selected-people').envelope.provenance).toMatchObject({ formatVersion: 5, content: { semanticVersion: 1, kind: 'source', step: { role: 'step' } } });
+    expect(exact('assessment:repo#101').envelope.provenance).toMatchObject({ formatVersion: 5, content: { semanticVersion: 2, kind: 'supplied', step: { role: 'callable' } } });
     expect(run(accepted()).status).toBe('succeeded');
   });
 });

@@ -270,7 +270,10 @@ explicit per-attempt supervisory release and the same cumulative cap. Do not
 replay or overwrite retained roots. The independent checker is separately authored
 reviewer evidence, not a tracked production dependency.
 
-This is the private first-gate review candidate. Whole-gate independent acceptance
-and a separate supervisory production release remain distinct steps. Production
-provenance dispatch, semantic readers, shared acceptance/ending formats, History
-and qualification execution remain unchanged.
+The supervisor accepted this private first gate at clean revision
+`4d2aeda97a7b055b29b9b49a87b9b219552b62bf` after the different-agent bounded PASS
+(report SHA256 `afc7d19e6960d860287cb636e6d48b83043fbe8a5008cbb0ed77202acd3fd3c4`).
+That acceptance covers the conditional representation proof and its stated limits.
+Production integration was separately released afterward; its independent
+[production evidence](issue283-provenance-production.md) does not relabel these
+historical source identities, runs or qualified original results.

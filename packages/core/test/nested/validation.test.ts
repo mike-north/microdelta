@@ -25,6 +25,7 @@
  * @see ../../../../docs/plans/m4-composition.md ("Nested invocation evidence", planned evidence names)
  * @see ../../../../experiments/exp-4/decision.md
  */
+import { inspectProvenanceObservations } from '../provenance-wire-inspection.js';
 import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
 import type { ICompletedResultReference } from '@microdelta/history';
 import { ResolutionError } from '@microdelta/resolution';
@@ -76,7 +77,7 @@ function callsOf(session: INestedSession, locator: string): readonly IStoredCall
 
 /** The observations a provenance records. */
 function observationsOf(session: INestedSession, locator: string): readonly IStoredObservation[] {
-  return provenanceOf(session, locator).content['observations'] as readonly IStoredObservation[];
+  return inspectProvenanceObservations(provenanceOf(session, locator).content);
 }
 
 /** Every lifecycle event of one member's summary step, as phases. */
@@ -156,7 +157,8 @@ describe('provenance v2 and cold execution', () => {
       expect(payloadOf(session.history, cold['person:ben'])).toEqual({ initial: 'B', total: 3, assessed: 2 });
       const provenance = provenanceOf(session, cold['person:ada']);
       expect(provenance.format).toBe('microdelta.resolution.provenance');
-      expect(provenance.formatVersion).toBe(2);
+      expect(provenance.formatVersion).toBe(5);
+      expect(provenance.content['semanticVersion']).toBe(2);
       expect(provenance.content['kind']).toBe('memo');
       const calls = callsOf(session, cold['person:ada']);
       const parent = { scope: analysis, role: 'step', slot: 'summary', memberKey: 'person:ada' };
@@ -191,19 +193,21 @@ describe('provenance v2 and cold execution', () => {
     });
   });
 
-  test('an M3-shaped parent keeps provenance v1, and a supplied child records v2 with argument observations under its slot subject', async () => {
+  test('an M3-shaped parent keeps semantic1, and a supplied child records semantic2 with argument observations under its slot subject', async () => {
     const location = freshLocation();
     const cold = await coldRun(location);
     await withNestedSession(location, {}, async (session) => {
       const calls = callsOf(session, cold['person:ada']);
       const initial = provenanceOf(session, calls[1]?.reference.locator ?? '');
-      expect(initial.formatVersion).toBe(1);
+      expect(initial.formatVersion).toBe(5);
+      expect(initial.content['semanticVersion']).toBe(1);
       expect(initial.content['children']).toEqual([expect.objectContaining({ slot: 'activity', witness: expect.objectContaining({ version: 1 }) })]);
       // The child history subject comes from the slot's subject function over the derived PR number.
       const [assessment] = session.history.findCandidates(assessmentVersioned(assessmentSubject(101)));
       expect(assessment?.reference.locator).toBe(calls[2]?.reference.locator);
       const supplied = provenanceOf(session, calls[2]?.reference.locator ?? '');
-      expect(supplied.formatVersion).toBe(2);
+      expect(supplied.formatVersion).toBe(5);
+      expect(supplied.content['semanticVersion']).toBe(2);
       expect(supplied.content['kind']).toBe('supplied');
       expect(supplied.content['step']).toEqual({ scope: analysis, role: 'callable', slot: 'assessor' });
       expect(supplied.content['calls']).toEqual([]);
@@ -494,7 +498,7 @@ describe('honest misses', () => {
       const content = JSON.parse(JSON.stringify(original.provenance.content)) as { readonly calls: IStoredCall[] } & Record<string, unknown>;
       const crafted = { ...content, calls: content.calls.map((call) => call.index === 3 ? { ...call, witness: { ...call.witness, version: 9 } } : call) };
       const attempt = session.history.allocateAttempt(session.lease, { analysis: original.analysis, environment: original.environment, subject: original.subject, version: original.version, attemptKey: 'crafted-late-witness', intentDigest: 'crafted:late-witness' });
-      session.history.stageAttempt(session.lease, { attemptId: attempt.attemptId, payload: payloadOf(session.history, cold['person:ada']), provenance: { format: original.provenance.format, formatVersion: 2, content: crafted }, dependencies: original.dependencies });
+      session.history.stageAttempt(session.lease, { attemptId: attempt.attemptId, payload: payloadOf(session.history, cold['person:ada']), provenance: { format: original.provenance.format, formatVersion: original.provenance.formatVersion, content: crafted }, dependencies: original.dependencies });
       session.history.publishAttempt(session.lease, attempt.attemptId);
     });
     resetCounts();
@@ -520,7 +524,7 @@ describe('honest misses', () => {
       const content = JSON.parse(JSON.stringify(initialCandidate.provenance.content)) as { readonly children: { readonly witness: Record<string, unknown> }[] } & Record<string, unknown>;
       const children = content.children.map((child) => ({ ...child, witness: { ...child.witness, version: 2, index: 0 } }));
       const attempt = session.history.allocateAttempt(session.lease, { analysis: initialCandidate.analysis, environment: initialCandidate.environment, subject: initialCandidate.subject, version: initialCandidate.version, attemptKey: 'crafted-v1-witness', intentDigest: 'crafted:v1-witness' });
-      session.history.stageAttempt(session.lease, { attemptId: attempt.attemptId, payload: payloadOf(session.history, initialCandidate.reference.locator), provenance: { format: initialCandidate.provenance.format, formatVersion: 1, content: { ...content, children } }, dependencies: initialCandidate.dependencies });
+      session.history.stageAttempt(session.lease, { attemptId: attempt.attemptId, payload: payloadOf(session.history, initialCandidate.reference.locator), provenance: { format: initialCandidate.provenance.format, formatVersion: initialCandidate.provenance.formatVersion, content: { ...content, children } }, dependencies: initialCandidate.dependencies });
       return { crafted: session.history.publishAttempt(session.lease, attempt.attemptId).locator, original: initialCandidate.reference.locator };
     });
     resetCounts();
@@ -598,7 +602,7 @@ describe('honest misses', () => {
       };
       const content = JSON.parse(JSON.stringify(original.provenance.content)) as { readonly calls: IStoredCall[] } & Record<string, unknown>;
       const unknownWitness = { ...content, calls: content.calls.map((call) => call.index === 2 ? { ...call, witness: { ...call.witness, version: 9 } } : call) };
-      const witnessLocator = publish('crafted-witness', { format: original.provenance.format, formatVersion: 2, content: unknownWitness });
+      const witnessLocator = publish('crafted-witness', { format: original.provenance.format, formatVersion: original.provenance.formatVersion, content: unknownWitness });
       const versionLocator = publish('crafted-version', { format: original.provenance.format, formatVersion: 9, content });
       return { witnessLocator, versionLocator };
     });

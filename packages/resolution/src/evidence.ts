@@ -33,10 +33,12 @@
  *     and `cancelled` members, neither with a reference. A separate version
  *     keeps the two contracts apart: neither fold ever accepts the other's
  *     result, and an older reader sees an unsupported record, an honest miss.
- *   A new execution writes version 2 exactly when version 1 cannot express it:
- *   a memo whose calls carry version-2 witnesses, or a supplied step; version
- *   3 exactly for a strict fold; and version 4 exactly for an outcome fold.
- *   Sources and M3-shaped memos keep writing version 1.
+ *   Every new provenance record uses wire generation 5, whose explicit
+ *   semanticVersion preserves these variants independently of Tracking
+ *   generation. Legacy wire generations 1–4 retain their existing interpretation
+ *   and exact stored content; reading never migrates them. Sources and M3 memos
+ *   remain semantic variant 1, nested/supplied executions variant 2, strict
+ *   folds variant 3 and outcome folds variant 4.
  * - **Acceptance** (`microdelta.resolution.acceptance`) records a current
  *   verification of an existing result: its basis and the current work or
  *   children it followed (version 1), the current result of each recorded
@@ -58,6 +60,7 @@ import type { ICompletedResultReference, ICompletedEnvelope, IVersionedRecord } 
 import type { IAddressSegment, ICurrentFactRequest, ITrackingBinding, ITrackingObservation } from '@microdelta/tracking';
 
 import { ResolutionError } from './errors.js';
+import { _encodeProvenanceContent, _readCandidateProvenance } from './provenance-wire.js';
 
 /** The provenance format identity. */
 export const provenanceFormat = 'microdelta.resolution.provenance';
@@ -69,17 +72,19 @@ export const provenanceFormat = 'microdelta.resolution.provenance';
  * boundary belongs to Resolution, independently of History's schema versions.
  */
 const trackingSemantics = 2;
+/** Provenance-only tuple generation; parsed semantic variants and other owner formats remain independent. */
+const provenanceWireFormatVersion = 5;
 /** The acceptance format identity. */
 export const acceptanceFormat = 'microdelta.resolution.acceptance';
 /** The attempt-ending format identity. */
 export const endingFormat = 'microdelta.resolution.attempt-ending';
-/** The M3 version of every Resolution record format; the only attempt-ending version. */
+/** Direct-source/memo semantic variant and legacy provenance wire; current acceptance and ending wire version. */
 export const formatVersion = 1;
-/** The version of provenance and acceptance records that carry ordered nested calls. */
+/** Nested-call semantic variant and legacy provenance wire; current nested acceptance wire version. */
 export const nestedFormatVersion = 2;
-/** The version of provenance and acceptance records of a strict fold; outcome folds also write version-3 acceptance. */
+/** Strict-fold semantic variant and legacy provenance wire; both folds retain this acceptance wire version. */
 export const foldFormatVersion = 3;
-/** The version of provenance records of an outcome (tolerant) fold. */
+/** Outcome-fold semantic variant and legacy provenance wire, independent of the new provenance-only tuple generation. */
 export const outcomeFoldFormatVersion = 4;
 
 /**
@@ -214,47 +219,53 @@ export type IProvenanceReading =
   | { readonly status: 'supported'; readonly provenance: IProvenance }
   | { readonly status: 'unsupported'; readonly detail: string };
 
-/** Build the stored provenance record of one execution, in the version its parsed form names. */
+/**
+ * Store new provenance in the lossless tuple generation while retaining its
+ * semantic variant. This boundary is provenance-only: acceptance and endings
+ * retain their original plain-observation spelling and independent versions.
+ */
 export function provenanceRecord(provenance: IProvenance): IVersionedRecord {
+  return {
+    format: provenanceFormat,
+    formatVersion: provenanceWireFormatVersion,
+    content: _encodeProvenanceContent(plainProvenanceContent(provenance), provenance.version),
+  };
+}
+
+/**
+ * Copy semantic child/call/member surfaces without changing their meaning.
+ * Observations enter the tuple codec directly: its own-slot copying preserves
+ * admitted sparse vectors, while the shared acceptance copier deliberately
+ * retains its existing behavior. This content is never stored as new legacy wire.
+ */
+function plainProvenanceContent(provenance: IProvenance): Record<string, unknown> {
   if (provenance.version === foldFormatVersion || provenance.version === outcomeFoldFormatVersion) {
     return {
-      format: provenanceFormat,
-      formatVersion: provenance.version,
-      content: {
-        trackingSemantics,
-        kind: provenance.kind,
-        step: plainDescriptor(provenance.step),
-        over: plainDescriptor(provenance.over),
-        observations: provenance.observations.map(plainObservation),
-        membership: provenance.membership.map((entry: IOutcomeMembershipEntry) => entry.status === 'included'
-          ? { key: entry.key, status: entry.status, reference: plainReference(entry.reference) }
-          : { key: entry.key, status: entry.status }),
-      },
+      trackingSemantics,
+      kind: provenance.kind,
+      step: plainDescriptor(provenance.step),
+      over: plainDescriptor(provenance.over),
+      observations: provenance.observations,
+      membership: provenance.membership.map((entry: IOutcomeMembershipEntry) => entry.status === 'included'
+        ? { key: entry.key, status: entry.status, reference: plainReference(entry.reference) }
+        : { key: entry.key, status: entry.status }),
     };
   }
   if (provenance.version === nestedFormatVersion) {
     return {
-      format: provenanceFormat,
-      formatVersion: nestedFormatVersion,
-      content: {
-        trackingSemantics,
-        kind: provenance.kind,
-        step: plainDescriptor(provenance.step),
-        observations: provenance.observations.map(plainObservation),
-        calls: provenance.calls.map((call) => ({ index: call.index, witness: call.witness, reference: plainReference(call.reference), binding: { path: [...call.binding.path] } })),
-      },
-    };
-  }
-  return {
-    format: provenanceFormat,
-    formatVersion,
-    content: {
       trackingSemantics,
       kind: provenance.kind,
       step: plainDescriptor(provenance.step),
-      observations: provenance.observations.map(plainObservation),
-      children: provenance.children.map((child) => ({ slot: child.slot, witness: child.witness, reference: plainReference(child.reference), binding: { path: [...child.binding.path] } })),
-    },
+      observations: provenance.observations,
+      calls: provenance.calls.map((call) => ({ index: call.index, witness: call.witness, reference: plainReference(call.reference), binding: { path: [...call.binding.path] } })),
+    };
+  }
+  return {
+    trackingSemantics,
+    kind: provenance.kind,
+    step: plainDescriptor(provenance.step),
+    observations: provenance.observations,
+    children: provenance.children.map((child) => ({ slot: child.slot, witness: child.witness, reference: plainReference(child.reference), binding: { path: [...child.binding.path] } })),
   };
 }
 
@@ -598,6 +609,18 @@ export function readProvenance(envelope: ICompletedEnvelope): IProvenanceReading
       return { status: 'unsupported', detail: 'provenance tracking semantics are not supported' };
     }
     switch (record.formatVersion) {
+      case provenanceWireFormatVersion: {
+        // Tuple validation grants no semantic authority. Existing readers still
+        // own own-implementation, descriptor, child/call and membership rules.
+        const decoded = _readCandidateProvenance(record);
+        if (decoded.status === 'unsupported') { return decoded; }
+        switch (decoded.semanticVersion) {
+          case 1: return readDirect(decoded.content);
+          case 2: return readNested(decoded.content);
+          case 3: return readFold(decoded.content);
+          case 4: return readOutcomeFold(decoded.content);
+        }
+      }
       case formatVersion:
         return readDirect(record.content);
       case nestedFormatVersion:

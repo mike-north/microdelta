@@ -13,6 +13,7 @@
  * @see ../../../../docs/spec/composition.md (CMP-5, CMP-6, CMP-7)
  * @see ../../../../docs/plans/m3-contribution-analysis.md (Planned evidence names; concrete fixture decisions)
  */
+import { inspectProvenanceObservations } from '../provenance-wire-inspection.js';
 import { afterEach, beforeEach, describe, expect, test } from '@jest/globals';
 import type { ICompletedResultReference, IDurableHistory, IWriterLease } from '@microdelta/history';
 import { ResolutionError } from '@microdelta/resolution';
@@ -229,7 +230,7 @@ describe('read and unread facts, called and uncalled helpers', () => {
     await withSession(location, async (session) => {
       const envelope = session.history.readEnvelope({ kind: 'completed-result', locator: cold.summaries['person:ada'] });
       const content = envelope.provenance.content as { readonly observations: readonly { readonly binding: { readonly path: readonly string[] } }[]; readonly children: readonly { readonly witness: unknown; readonly reference: ICompletedResultReference; readonly binding: unknown }[] };
-      const paths = new Set(content.observations.map((observation) => JSON.stringify(observation.binding.path)));
+      const paths = new Set(inspectProvenanceObservations(content).map((observation) => JSON.stringify(observation.binding.path)));
       expect([...paths].sort()).toEqual([
         JSON.stringify(['callable', 'format']),
         JSON.stringify(['callable', 'summarize']),
@@ -276,7 +277,7 @@ describe('async child delivery', () => {
   function readsThen(session: ISession, locator: string): boolean {
     const envelope = session.history.readEnvelope({ kind: 'completed-result', locator });
     const content = envelope.provenance.content as { readonly observations: readonly { readonly address: readonly { readonly key?: string }[] }[] };
-    return content.observations.some((item) => item.address.some((segment) => segment.key === 'then'));
+    return inspectProvenanceObservations(content).some((item) => item.address.some((segment) => segment.key === 'then'));
   }
 
   test('delivering a child records no Promise-assimilation read; an unread then field change retains the summary', async () => {
@@ -533,7 +534,7 @@ describe('correspondence, witnesses and historical integrity', () => {
     await withSession(location, async (session) => {
       publishCrafted(session.history, session.lease, cold.summaries['person:ada'], (content) => ({
         ...content,
-        observations: (content.observations as { readonly binding: { readonly path: readonly string[] } }[]).filter((item) => item.binding.path[0] !== 'self'),
+        observations: inspectProvenanceObservations(content).filter((item) => item.binding.path[0] !== 'self').map((item) => item.tuple),
       }), 'crafted-no-self');
     });
     resetCounts();

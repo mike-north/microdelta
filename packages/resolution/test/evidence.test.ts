@@ -4,6 +4,7 @@ import type { ICompletedEnvelope, IVersionedRecord } from '@microdelta/history';
 import type { ITrackingObservation } from '@microdelta/tracking';
 import type { IProvenance } from '../src/evidence.js';
 import { provenanceRecord, readProvenance } from '../src/evidence.js';
+import { ResolutionError } from '../src/errors.js';
 
 /** Every execution records its own callback, even when it consumes no data. */
 const ownImplementation: ITrackingObservation = {
@@ -44,7 +45,7 @@ describe.each(cases)('tracking generation for $kind version $version', (provenan
   test('current generation still rejects malformed evidence as integrity damage', () => {
     const record = provenanceRecord(provenance);
     expect(() => readProvenance(envelope({ ...record, content: { kind: provenance.kind, trackingSemantics: 2 } })))
-      .toThrow('Stored Resolution provenance is malformed');
+      .toThrow(ResolutionError);
   });
 
   test.each([undefined, 1, 3, '2'])('generation %s is an honest unsupported miss', (generation) => {
@@ -65,10 +66,10 @@ describe('callable source provenance compatibility', () => {
   });
   test('ordinary memo provenance still rejects a callable descriptor', () => {
     const provenance: IProvenance = { version: 1, kind: 'memo', step: callable, observations, children: [] };
-    expect(() => readProvenance(envelope(provenanceRecord(provenance)))).toThrow('Stored Resolution provenance is malformed');
+    expect(() => readProvenance(envelope(provenanceRecord(provenance)))).toThrow(ResolutionError);
   });
   test.each([{ ...callable, memberKey: 'ada' }, { ...callable, template: 'people', collection: 'roster' }, { ...callable, slot: '' }])('rejects malformed callable descriptor %j', malformed => {
     const record = provenanceRecord({ version: 1, kind: 'source', step, observations, children: [] });
-    expect(() => readProvenance(envelope({ ...record, content: { trackingSemantics: 2, kind: 'source', step: malformed, observations, children: [] } }))).toThrow('Stored Resolution provenance is malformed');
+    expect(() => readProvenance(envelope({ ...record, formatVersion: 1, content: { trackingSemantics: 2, kind: 'source', step: malformed, observations, children: [] } }))).toThrow(ResolutionError);
   });
 });

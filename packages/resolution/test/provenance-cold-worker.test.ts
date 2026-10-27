@@ -40,7 +40,7 @@ test('worker rejects wrong corpus, request identity/surface/population and cap b
   expect(() => _coldWorker(JSON.stringify({ population: 1, input: input() }), { ...identity, codecSha256: 'bad' })).toThrow();
 });
 
-test('worker refuses the parents remaining cumulative allowance before returning emitted output', () => {
+test('worker refuses the parent\'s remaining cumulative allowance before returning emitted output', () => {
   const text = JSON.stringify({ population: 1, input: input() });
   expect(() => _coldWorker(text, identity, 1)).toThrow();
 });

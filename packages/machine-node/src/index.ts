@@ -7,8 +7,9 @@
  * can recognize two handles over one file without reading the host itself.
  * @packageDocumentation
  */
-import type { IClockCapability, IElapsedClockCapability, IMachine, IRandomIdentifierCapability, ISqliteReadCapability, ISqliteCapability, ITimerCapability } from '@microdelta/machine';
+import type { ICommandProcessCapability, IClockCapability, IElapsedClockCapability, IMachine, IRandomIdentifierCapability, ISqliteReadCapability, ISqliteCapability, ITimerCapability } from '@microdelta/machine';
 
+import { _createNodeCommandProcessImplementation } from './node/command-process.js';
 import { _createNodeClockImplementation } from './node/clock.js';
 import { _createNodeElapsedClockImplementation } from './node/elapsed-clock.js';
 import { _canonicalNodeLocationImplementation } from './node/location.js';
@@ -95,4 +96,14 @@ export function createNodeRandom(): IRandomIdentifierCapability {
  */
 export function createNodeSqliteReader(): ISqliteReadCapability {
   return _createNodeSqliteReaderImplementation();
+}
+
+/**
+ * Bind the current command process's detached arguments, complete UTF-8 writes
+ * and natural exit status. The caller owns command grammar and status meanings;
+ * this capability never dispatches commands or forces process termination.
+ * @alpha
+ */
+export function createNodeCommandProcess(): ICommandProcessCapability {
+  return _createNodeCommandProcessImplementation();
 }

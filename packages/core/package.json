@@ -13,6 +13,9 @@
     "node": ">=20"
   },
   "main": "./dist/src/index.js",
+  "bin": {
+    "microdelta": "./dist/src/cli.js"
+  },
   "types": "./dist/api/microdelta.public.d.ts",
   "exports": {
     ".": {

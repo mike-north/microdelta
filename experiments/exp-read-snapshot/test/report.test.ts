@@ -98,3 +98,8 @@ test('a later infrastructure failure cannot erase an already recorded candidate 
       records: [{ role: 'coordinator', line: '{"kind":"reader-exit-failed"}' }], sourceImages: observations.sourceImages } };
   expect(validateQualificationReport(report)).toMatchObject({ kind: 'invalid', problems: expect.arrayContaining(['verdict-mismatch']) });
 });
+test('an unresolved owned child cannot be represented as ordinary completed evidence', () => {
+  const report = { ...rejectedModel(), cleanup: [{ index: 0, pid: 123, role: 'reader' as const, kind: 'unresolved' as const,
+    failures: [{ origin: 'infrastructure' as const, stage: 'cleanup', code: null, message: 'Owned child exit deadline exceeded' }] }] };
+  expect(validateQualificationReport(report)).toMatchObject({ kind: 'invalid', problems: expect.arrayContaining(['owned-cleanup-incomplete']) });
+});

@@ -105,6 +105,7 @@ function eligibleWitness(report: IQualificationReport): boolean {
 /** Refuse counterfeit ordinary completion while keeping measured preparation failure explicitly inconclusive. @internal */
 export function validateQualificationReport(report: IQualificationReport): IReportValidation {
   const problems = new Set<IReportProblem>();
+  if (report.cleanup?.some(outcome => outcome.kind === 'unresolved' || outcome.exit === undefined)) { problems.add('owned-cleanup-incomplete'); }
   if (report.verdict !== classifyCandidate(report.cases)) { problems.add('verdict-mismatch'); }
   if (report.harness === 'infrastructure-inconclusive') {
     if (report.preparation.failure.origin !== 'infrastructure' || report.preparation.failure.message.length === 0

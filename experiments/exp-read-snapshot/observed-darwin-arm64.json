@@ -4,10 +4,10 @@
   "candidateVerdict": "REJECT",
   "harness": "completed",
   "interpretation": "Reject this readonly/DEFERRED candidate under the stronger no-source-effects hypothesis; no production/M6 adoption.",
-  "artifactDirectory": "/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/microdelta-read-snapshot-f9kgJz",
-  "reportSha256": "583e90796290bf590be60891dcba082bae0bd8d0f7cc92da2cee8f23d862191a",
-  "executionPinsSha256": "ac1d83a959ceb79fd5b41b7a4048038c321c7302c213b73be7358f36888bb7ac",
-  "preservationManifestSha256": "b3ff116e71673d8b6bdfb119a465bb1f678bdb55528473eb2bc88e7e211301f3",
+  "artifactDirectory": "/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/microdelta-read-snapshot-Vmlthi",
+  "reportSha256": "3911bd12b63c3ffeafbbdd3e28737fd3e085dd817a5d7f2999aaee813079d398",
+  "executionPinsSha256": "794393f463a4d907bb6a452925d5ff46faa8c2c3b30800d28cd59a21dab446da",
+  "preservationManifestSha256": "69f856140faf47a79e6cbfa4e8a7cc7d223e288e2b7de4ee266b6e4a997debd7",
   "runtime": {
     "node": "v24.14.0",
     "driver": "12.9.0",
@@ -80,8 +80,8 @@
   "sourcePins": [
     {
       "path": "experiments/exp-read-snapshot/src/protocol.ts",
-      "bytes": 7337,
-      "sha256": "847f51bf2bbe18c29eb34bfda4b133e47919ed9994b917de67de905c3b6c9ab3"
+      "bytes": 7871,
+      "sha256": "9758c24ffeab500bf2566af0fa9a9944777bde7ad0874e097e1307b97e460fb7"
     },
     {
       "path": ".test-build/experiments/exp-read-snapshot/src/protocol.js",
@@ -90,23 +90,23 @@
     },
     {
       "path": "experiments/exp-read-snapshot/src/evidence.ts",
-      "bytes": 8854,
-      "sha256": "20d08c5986b4a266a5aa8d0094d2cfabd7e7aadcf985b6d606c53d573c6891c6"
+      "bytes": 9000,
+      "sha256": "809aa57130ce35776742e5bd825ba5ca275082b8c4d368779c8eec9d4cbd139c"
     },
     {
       "path": ".test-build/experiments/exp-read-snapshot/src/evidence.js",
-      "bytes": 8520,
-      "sha256": "1eae9257d948be9f1863803ad31ce71e9962b67a03cf325e7ae56384efd54c70"
+      "bytes": 8680,
+      "sha256": "70f0b2860ee02f9a15921152aa8746aaf0696d929dd8d01279afceaf1b133fe5"
     },
     {
       "path": "experiments/exp-read-snapshot/test/coordinator.ts",
-      "bytes": 30174,
-      "sha256": "dada7e751fbf304589065423fc5362be36cfac98a64d7ce22c6d322d6dbd310c"
+      "bytes": 36267,
+      "sha256": "d1c7bb972abddab69bd5445b180ce30e4e5dff92b9e3e6d85a2ef1b8bae7365a"
     },
     {
       "path": ".test-build/experiments/exp-read-snapshot/test/coordinator.js",
-      "bytes": 30827,
-      "sha256": "2a90e54522356a78253f4f01d534980232c5ea4b44571f32b516a29c780ede81"
+      "bytes": 35449,
+      "sha256": "0c9b873d72ab8d5d0879e3d58ca90fa5e20548af5a211f338d47498a76574d29"
     },
     {
       "path": "experiments/exp-read-snapshot/test/worker.ts",
@@ -139,6 +139,26 @@
       "sha256": "1d6337c1d9d19883c1d9446bbb0c6094d5c11e50f90b945f372a69e5836fdf1f"
     },
     {
+      "path": "experiments/exp-read-snapshot/test/peer-probe.ts",
+      "bytes": 4670,
+      "sha256": "1a4b4d7c46cc37351fb5c13396a1f49bf731fd74cfc66520b815f9ddc9acdaa7"
+    },
+    {
+      "path": ".test-build/experiments/exp-read-snapshot/test/peer-probe.js",
+      "bytes": 4951,
+      "sha256": "9b0357fd29a37ff8780599cfec5d3b85a7d28651d34ed3e3f99c3df80fce5ff7"
+    },
+    {
+      "path": "experiments/exp-read-snapshot/test/peer-fixture.ts",
+      "bytes": 1234,
+      "sha256": "7facd2dd638fa93bfa027a73fa152bd2f6bd294ee3b4de40452948280f71d173"
+    },
+    {
+      "path": ".test-build/experiments/exp-read-snapshot/test/peer-fixture.js",
+      "bytes": 1209,
+      "sha256": "267a99fe691afa4e25ba56a71cc9c7a93d6cf27c5b951041f5d50740c1a880c8"
+    },
+    {
       "path": "experiments/exp-read-snapshot/test/evidence.test.ts",
       "bytes": 6409,
       "sha256": "dfac9557965c5102c3b17ab2519f0515d8983a70ff976dd868fb845c54f2c566"
@@ -150,13 +170,13 @@
     },
     {
       "path": "experiments/exp-read-snapshot/test/report.test.ts",
-      "bytes": 9422,
-      "sha256": "8eefd253a3e4b9649c0a6e5417c6192eb9fdf1d08e3efb0b583a4c0940be6015"
+      "bytes": 9929,
+      "sha256": "9acb42462a7495b9a542f102f9b8ee0b0bdeef940e77906e4aae618fa6f51689"
     },
     {
       "path": ".test-build/experiments/exp-read-snapshot/test/report.test.js",
-      "bytes": 9420,
-      "sha256": "db7456b13aacaa6170a6c4af4818005966a166eb519d52bd38011fad31083aa9"
+      "bytes": 9916,
+      "sha256": "9e473645ec6ac19fdd24fa9c86518dcb3add730b37553a5179a39ab6c9104254"
     },
     {
       "path": "experiments/exp-read-snapshot/test/qualification.test.ts",
@@ -177,6 +197,16 @@
       "path": ".test-build/experiments/exp-read-snapshot/test/lifetime.test.js",
       "bytes": 1580,
       "sha256": "dcab1f1f14a944491ef20edccdc1e9c58b19e27fe71b22496b27cd2772a8b0e0"
+    },
+    {
+      "path": "experiments/exp-read-snapshot/test/peer.test.ts",
+      "bytes": 4322,
+      "sha256": "676dc8a7d99964ee37b3d30887a0a965c493b421388af7c164ba1c5974ea1e03"
+    },
+    {
+      "path": ".test-build/experiments/exp-read-snapshot/test/peer.test.js",
+      "bytes": 4371,
+      "sha256": "b54d098b460d8ac331a8d72299ac04f63f8471f433b6dca9ee8166f58614a7a0"
     },
     {
       "path": "package-lock.json",
@@ -433,33 +463,33 @@
       "name": "stale-snapshot",
       "execution": "observed",
       "oracleRejected": true,
-      "evidencePath": "/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/microdelta-read-snapshot-f9kgJz/controls-values/proof/values.json",
+      "evidencePath": "/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/microdelta-read-snapshot-Vmlthi/controls-values/proof/values.json",
       "limitation": "Legitimate held-old snapshot used only as a deliberately wrong current-B answer; no main-only reader."
     },
     {
       "name": "mixed-revisions",
       "execution": "observed",
       "oracleRejected": true,
-      "evidencePath": "/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/microdelta-read-snapshot-f9kgJz/controls-values/proof/values.json"
+      "evidencePath": "/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/microdelta-read-snapshot-Vmlthi/controls-values/proof/values.json"
     },
     {
       "name": "immediate",
       "execution": "observed",
       "oracleRejected": true,
-      "evidencePath": "/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/microdelta-read-snapshot-f9kgJz/control-immediate/proof/reservation.json",
+      "evidencePath": "/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/microdelta-read-snapshot-Vmlthi/control-immediate/proof/reservation.json",
       "limitation": "Shows prohibited candidate write-reservation/contention sensitivity; reservation itself is not History/domain mutation."
     },
     {
       "name": "content-and-sidecar",
       "execution": "observed",
       "oracleRejected": true,
-      "evidencePath": "/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/microdelta-read-snapshot-f9kgJz/controls-files/proof/effects.json"
+      "evidencePath": "/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/microdelta-read-snapshot-Vmlthi/controls-files/proof/effects.json"
     },
     {
       "name": "transient-restoration",
       "execution": "observed",
       "oracleRejected": false,
-      "evidencePath": "/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/microdelta-read-snapshot-f9kgJz/controls-files/proof/effects.json",
+      "evidencePath": "/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/microdelta-read-snapshot-Vmlthi/controls-files/proof/effects.json",
       "limitation": "Sampled images missed deliberate write/restore and create/remove between stages; native/mmap absence remains unproved."
     }
   ],
@@ -556,14 +586,197 @@
     "strengthenedWiringRedSha256": "92aec346d914fefa10b0991b8227c3e2c104d0c5c85ff1780f1b61a707917d23"
   },
   "focusedAssertions": {
-    "suites": 4,
-    "tests": 36,
+    "suites": 5,
+    "tests": 45,
     "command": "npm run test:read-snapshot",
-    "log": "/private/tmp/issue296-owned-cleanup-green.log"
+    "log": "/private/tmp/issue296-peer-repair-green.log"
   },
-  "earlierRecord": {
-    "artifactDirectory": "/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/microdelta-read-snapshot-ulqwmA",
-    "reportSha256": "94d868a69e5a277585c18d23ecd1b355607b8ef7fe949ee62ed143b608797cc2",
-    "meaning": "Earlier 33-assertion run before the owned-release helper; retained independently."
+  "cleanup": [
+    {
+      "index": 0,
+      "pid": 75620,
+      "role": "writer",
+      "kind": "exited",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "failures": []
+    },
+    {
+      "index": 1,
+      "pid": 75621,
+      "role": "control",
+      "kind": "exited",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "failures": []
+    },
+    {
+      "index": 2,
+      "pid": 75622,
+      "role": "writer",
+      "kind": "exited",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "failures": []
+    },
+    {
+      "index": 3,
+      "pid": 75623,
+      "role": "control",
+      "kind": "exited",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "failures": []
+    },
+    {
+      "index": 4,
+      "pid": 75624,
+      "role": "writer",
+      "kind": "exited",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "failures": []
+    },
+    {
+      "index": 5,
+      "pid": 75625,
+      "role": "reader",
+      "kind": "exited",
+      "exit": {
+        "code": 0,
+        "signal": null
+      },
+      "failures": []
+    }
+  ],
+  "earlierRecords": [
+    {
+      "artifactDirectory": "/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/microdelta-read-snapshot-ulqwmA",
+      "reportSha256": "94d868a69e5a277585c18d23ecd1b355607b8ef7fe949ee62ed143b608797cc2",
+      "meaning": "Earlier 33-assertion run before the owned-release helper; retained independently."
+    },
+    {
+      "artifactDirectory": "/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/microdelta-read-snapshot-f9kgJz",
+      "reportSha256": "583e90796290bf590be60891dcba082bae0bd8d0f7cc92da2cee8f23d862191a",
+      "meaning": "Earlier 36-assertion run before the transport artifact/exit failure repair; retained independently."
+    }
+  ],
+  "artifactFailureQualification": {
+    "artifactDirectory": "/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/microdelta-read-snapshot-peer-3eubM0",
+    "preservationManifestSha256": "1d2707d174da0a181e24ed62cb16e430be91db5a7c796df3e7cc7fda5cdd9c75",
+    "actualProbeResults": [
+      {
+        "kind": "result",
+        "mode": "bad-status",
+        "pid": 75619,
+        "ownedBeforeFault": false,
+        "constructed": true,
+        "rejected": true,
+        "primaryIdentity": false,
+        "uncaught": false,
+        "exitedSettled": true,
+        "terminated": true,
+        "retainedPrimaryIdentity": false,
+        "retainedSecondaryIdentity": false
+      },
+      {
+        "kind": "result",
+        "mode": "exit",
+        "pid": 75613,
+        "ownedBeforeFault": true,
+        "constructed": true,
+        "rejected": true,
+        "primaryIdentity": true,
+        "uncaught": false,
+        "exitedSettled": true,
+        "terminated": true,
+        "retainedPrimaryIdentity": true,
+        "retainedSecondaryIdentity": false
+      },
+      {
+        "kind": "result",
+        "mode": "failed-ack",
+        "pid": 75617,
+        "ownedBeforeFault": false,
+        "constructed": true,
+        "rejected": true,
+        "primaryIdentity": false,
+        "uncaught": false,
+        "exitedSettled": true,
+        "terminated": true,
+        "retainedPrimaryIdentity": false,
+        "retainedSecondaryIdentity": false
+      },
+      {
+        "kind": "result",
+        "mode": "primary-secondary",
+        "pid": 75615,
+        "ownedBeforeFault": true,
+        "constructed": true,
+        "rejected": true,
+        "primaryIdentity": true,
+        "uncaught": false,
+        "exitedSettled": true,
+        "terminated": true,
+        "retainedPrimaryIdentity": true,
+        "retainedSecondaryIdentity": true
+      },
+      {
+        "kind": "result",
+        "mode": "process",
+        "pid": 75607,
+        "ownedBeforeFault": true,
+        "constructed": true,
+        "rejected": true,
+        "primaryIdentity": true,
+        "uncaught": false,
+        "exitedSettled": true,
+        "terminated": true,
+        "retainedPrimaryIdentity": true,
+        "retainedSecondaryIdentity": false
+      },
+      {
+        "kind": "result",
+        "mode": "records",
+        "pid": 75609,
+        "ownedBeforeFault": true,
+        "constructed": true,
+        "rejected": true,
+        "primaryIdentity": true,
+        "uncaught": false,
+        "exitedSettled": true,
+        "terminated": true,
+        "retainedPrimaryIdentity": true,
+        "retainedSecondaryIdentity": false
+      },
+      {
+        "kind": "result",
+        "mode": "stderr",
+        "pid": 75611,
+        "ownedBeforeFault": true,
+        "constructed": true,
+        "rejected": true,
+        "primaryIdentity": true,
+        "uncaught": false,
+        "exitedSettled": true,
+        "terminated": true,
+        "retainedPrimaryIdentity": true,
+        "retainedSecondaryIdentity": false
+      }
+    ],
+    "preRepairBehaviorRedLog": "/private/tmp/issue296-peer-behavior-red.log",
+    "preRepairBehaviorRedManifest": "/private/tmp/issue296-peer-behavior-red-manifest.json",
+    "unresolvedReportRedLog": "/private/tmp/issue296-unresolved-report-red.log",
+    "limit": "Transport-only actual children; unresolved exit is a pure deadline control, not an actual unkillable native child. No additional candidate cell is qualified."
   }
 }

@@ -28,6 +28,12 @@ export interface IChildRecord { readonly role: 'writer' | 'reader' | 'coordinato
 export interface ISourceStage { readonly stage: 'before-open' | 'opened' | 'anchored' | 'queried' | 'pinned' | 'ended' | 'closed' | 'failed'; readonly image: ISourceImage }
 /** Serialized failures preserve finite native facts and distinguish infrastructure from attempted candidate behavior. @internal */
 export interface IObservedFailure { readonly origin: 'candidate' | 'infrastructure'; readonly stage: string; readonly code: string | null; readonly message: string }
+/** Actual owned-child exit remains distinct from a cleanup deadline; artifact failures cannot erase either outcome. @internal */
+export interface IChildCleanup {
+  readonly index: number; readonly pid: number | null; readonly role: 'writer' | 'reader' | 'control' | 'unavailable';
+  readonly kind: 'exited' | 'unresolved'; readonly exit?: { readonly code: number | null; readonly signal: string | null };
+  readonly failures: readonly IObservedFailure[];
+}
 /** Actual acknowledgments, closure, header, values and source images support a case's conclusions; labels alone are insufficient. @internal */
 export interface ICaseObservations {
   readonly ownerAcknowledgments: readonly ICorrelatedPair[];
@@ -70,6 +76,7 @@ interface IQualificationRecord {
   readonly cases: readonly ICaseEvidence[]; readonly controls: readonly IControlEvidence[];
   readonly limitations: readonly string[];
   readonly artifactDirectory?: string;
+  readonly cleanup?: readonly IChildCleanup[];
   readonly rejectionWitness?: { readonly caseId: ICaseId; readonly kind: 'source-effect' | 'read-failure' | 'committed-value' | 'coherence' | 'domain-mutation' };
 }
 /** Ordinary completion must contain an attempted healthy closed case; preparation failure has its own explicit inconclusive branch. @internal */
@@ -80,5 +87,5 @@ export type IQualificationReport = IQualificationRecord & (
 );
 /** Report validation prevents fabricated conclusions from hiding behind a successful harness command. @internal */
 export type IReportValidation = { readonly kind: 'valid' } | { readonly kind: 'invalid'; readonly problems: readonly (
-  'verdict-mismatch' | 'closed-layout-not-attempted' | 'closed-provenance-unverified' | 'reject-without-witness' | 'preparation-failure-unrecorded'
+  'verdict-mismatch' | 'closed-layout-not-attempted' | 'closed-provenance-unverified' | 'reject-without-witness' | 'preparation-failure-unrecorded' | 'owned-cleanup-incomplete'
 )[] };

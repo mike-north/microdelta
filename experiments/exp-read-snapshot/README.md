@@ -18,6 +18,9 @@ Jest success means the harness reported evidence honestly; **REJECT is the
 candidate's result**. Raw source-stage byte images, child commands/acknowledgments,
 exits, control values and source/emitted/runtime pins remain under that directory.
 Measurement images are never opened as databases or used as a read fallback.
+Separate finite transport-fault probes retain their own artifact directory in the
+observed record. They qualify child cleanup when proof writes or exit replies
+fail, and do not extend the native candidate's support matrix.
 
 `npm run check:experiments` includes strict compilation, the portable evidence
 boundary and type-aware lint. `npm run check:imports` covers portable source;

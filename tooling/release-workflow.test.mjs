@@ -162,3 +162,9 @@ for (const [label, mutation] of [
     refuses(mutation(workflow), /integration|publish job permissions|only the publish/u);
   });
 }
+
+for (const firstKey of ['if: false', 'continue-on-error: true']) {
+  test(`integration assertion cannot bypass its result through a sequence-first ${firstKey}`, () => {
+    refuses(once(workflow, '      - name: Wait for exact-commit main integration\n', `      - ${firstKey}\n        name: Wait for exact-commit main integration\n`), /integration.*(?:bypass|ignore)/iu);
+  });
+}

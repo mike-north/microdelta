@@ -150,8 +150,9 @@ export function auditReleaseWorkflow(text) {
   }
   // A skipped or ignored assertion would turn failure into a successful dependency.
   // Custom shells/defaults can likewise hide its exit status; this gate has no such modes.
-  if (/^\s*(?:continue-on-error|shell|defaults):/mu.test(integration) || /^ {8}if:/mu.test(integration)
-    || [...integration.matchAll(/^ {4}if:/gmu)].length !== 1) {
+  const integrationConditions = [...integration.matchAll(/^[ \t]*(?:-[ \t]+)?['"]?if['"]?:[^\n]*$/gmu)].map(match => match[0]);
+  if (/^[ \t]*(?:-[ \t]+)?['"]?(?:continue-on-error|shell|defaults)['"]?:/mu.test(integration)
+    || integrationConditions.length !== 1 || integrationConditions[0] !== `    ${releaseCondition}`) {
     problems.push('integration job and assertion must not ignore failure or conditionally bypass the proof');
   }
   const integrationEnvs = [...integration.matchAll(/^\s*env:/gmu)];

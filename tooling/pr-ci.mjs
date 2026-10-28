@@ -2,6 +2,17 @@
  * Partition the ordinary test graph for isolated PR consumers. Preparation owns
  * compilation and static checks; receipts account for every runtime obligation.
  */
+import { readFile, readdir, lstat } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { spawnSync } from 'node:child_process';
+import path from 'node:path';
+
+/** The packaged-install prerequisite and its offline CLI consumer share one isolated npm cache. */
+const installedPackageConsumerShard = 2;
+/** This copied-install fixture requires registry metadata beyond lockfile-only installation. */
+const offlineCliSuite = 'fixtures/contribution-report/cli-workload.test.ts';
+
+
 
 /** Parse the canonical, one-based identity used in artifact and job names. */
 export function shardNumber(value) {
@@ -65,11 +76,6 @@ export function validateGraph(actual, reviewed) {
   return actual;
 }
 
-import { readFile, readdir, lstat } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
-import { spawnSync } from 'node:child_process';
-import path from 'node:path';
-
 /** Canonical hashes bind reviewed inputs and generated files without trusting timestamps. */
 export function digest(value) { return createHash('sha256').update(value).digest('hex'); }
 
@@ -115,9 +121,11 @@ export async function planRepository(root) {
   for (const group of catalog.groups) {
     const tests = files.filter(file => file.startsWith(`${group.source}/`) && file.endsWith('.test.ts'));
     if (tests.length === 0) throw new Error(`No ordinary tests discovered for ${group.config}`);
-    tests.forEach((file, index) => add({ id: `jest:${file}`, kind: 'jest', group: group.config,
-      file: `${group.emitted}/${file.slice(group.source.length + 1).replace(/\.ts$/u, '.js')}`, cwd: group.cwd, output: group.output },
-    group.config === 'experiments/exp-3/jest.config.mjs' ? 3 : index % 4 + 1));
+    tests.forEach((file, index) => {
+      const shard = file === offlineCliSuite ? installedPackageConsumerShard : group.config === 'experiments/exp-3/jest.config.mjs' ? 3 : index % 4 + 1;
+      add({ id: `jest:${file}`, kind: 'jest', group: group.config,
+        file: `${group.emitted}/${file.slice(group.source.length + 1).replace(/\.ts$/u, '.js')}`, cwd: group.cwd, output: group.output }, shard);
+    });
   }
   for (const item of catalog.types) add({ ...item, kind: 'types' }, item.shard);
   for (const owner of ['accounting', 'materialization', 'resolution', 'supervision']) {
@@ -139,6 +147,18 @@ export async function planRepository(root) {
   for (const [owner, shard] of [['core', 3], ['tracking', 2], ['supervision', 4]]) {
     const script = catalog.graph.scripts[`packages/${owner}:test:controls`].replace(/^tsc -p tsconfig.test.json && /u, '').replaceAll('node --test ', 'node --test --test-concurrency=1 ');
     add({ id: `controls:${owner}`, kind: 'shell', cwd: `packages/${owner}`, script, output: `packages/${owner}/.test-build` }, shard);
+  }
+  // Offline copied-package installation needs packuments resolved by the real
+  // packaged-install tests; npm ci alone need not populate that metadata. Keep
+  // the existing prerequisite once, in the same cache, before grouped Jest runs.
+  const offlineConsumer = obligations.find(item => item.id === `jest:${offlineCliSuite}`);
+  const packagePrerequisite = obligations.find(item => item.group === 'node:tooling' && item.files.includes('tooling/release-artifacts.test.mjs'));
+  if (!offlineConsumer || !packagePrerequisite || assignments[offlineConsumer.id] !== assignments[packagePrerequisite.id]) throw new Error('Offline package consumer lost its same-shard installation prerequisite');
+  const firstFixture = obligations.findIndex(item => item.kind === 'jest' && item.group === offlineConsumer.group);
+  const prerequisiteIndex = obligations.indexOf(packagePrerequisite);
+  if (prerequisiteIndex > firstFixture) {
+    obligations.splice(prerequisiteIndex, 1);
+    obligations.splice(firstFixture, 0, packagePrerequisite);
   }
   validateExecutionOwners(catalog, obligations, files);
   const ids = obligations.map(item => item.id);
@@ -310,7 +330,7 @@ function ordinaryToolingFiles(files) { return files.filter(file => /^tooling\/[^
 
 /** Whole-file routes keep the measured compiler/package checks off the default tooling consumer. */
 export function partitionToolingFiles(files) {
-  const routes = { 'tooling/quality-gates.test.mjs': 3, 'tooling/release-artifacts.test.mjs': 2, 'tooling/declaration-boundaries.test.mjs': 1 };
+  const routes = { 'tooling/quality-gates.test.mjs': 3, 'tooling/release-artifacts.test.mjs': installedPackageConsumerShard, 'tooling/declaration-boundaries.test.mjs': 1 };
   for (const filename of Object.keys(routes)) {
     if (!files.includes(filename)) throw new Error(`Missing named tooling file: ${filename}`);
   }

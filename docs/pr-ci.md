@@ -54,7 +54,13 @@ shard 1; all remaining discovered tooling files belong to shard 4. These routes
 spread the measured compiler and package-fixture cost. Discovery and command
 ownership must cover every tooling file exactly once; a missing named route,
 duplicate, unowned new file or differing command fails before execution. The
-ordinary local tooling command is unchanged. EXP-3 retains its SQLite-capability then publication order.
+ordinary local tooling command is unchanged. The existing whole
+`release-artifacts` tooling group runs before the fixture Jest group in shard 2:
+its real packaged installs resolve registry metadata that lockfile-only `npm ci`
+does not guarantee for the later offline copied-package consumer. The CLI fixture
+stays pinned to that same shard when earlier fixture files are added. Its actual
+installed-package assertions and offline install policy remain unchanged; shared
+ambient caches cannot substitute for this ordered prerequisite. EXP-3 retains its SQLite-capability then publication order.
 Tracking's intentional mutation failures and final positive rerun remain one
 compound control obligation within one private emitted tree. Fanout retains its
 entire roster/window matrix and Jest gate; subtree retains Jest, SQL-work and

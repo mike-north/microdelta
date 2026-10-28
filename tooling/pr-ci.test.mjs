@@ -589,3 +589,31 @@ test('a newly discovered ordinary tooling file enters one real command and canno
     assert.throws(() => validateToolingGroups(discovered, omitted), /tooling/u);
   } finally { await rm(directory, { recursive: true, force: true }); }
 });
+
+test('the isolated offline CLI fixture runs after its real package-install cache prerequisite exactly once', async () => {
+  const { planRepository } = await import('./pr-ci.mjs');
+  const plan = await planRepository(root);
+  const fixture = plan.obligations.find(item => item.id === 'jest:fixtures/contribution-report/cli-workload.test.ts');
+  const prerequisite = plan.obligations.find(item => item.group === 'node:tooling' && item.files.includes('tooling/release-artifacts.test.mjs'));
+  const shard = plan.shards.find(ids => ids.includes(fixture.id));
+  assert.ok(shard.includes(prerequisite.id), 'both stages must share the same private consumer/cache');
+  const firstFixture = shard.findIndex(id => plan.obligations.find(item => item.id === id).group === 'fixtures/contribution-report/jest.config.mjs');
+  assert.ok(shard.indexOf(prerequisite.id) < firstFixture, 'registry-resolving packaged installs precede the grouped offline fixture invocation');
+  assert.equal(plan.shards.flat().filter(id => id === prerequisite.id).length, 1);
+});
+
+test('adding an earlier fixture file preserves offline CLI co-location and prerequisite order', async () => {
+  const { planRepository } = await import('./pr-ci.mjs');
+  const { directory } = await inventoryFixture();
+  try {
+    await writeFile(path.join(directory, 'fixtures/contribution-report/000-before-cli.test.ts'), 'export {};\n');
+    const plan = await planRepository(directory);
+    const fixture = plan.obligations.find(item => item.id === 'jest:fixtures/contribution-report/cli-workload.test.ts');
+    const prerequisite = plan.obligations.find(item => item.group === 'node:tooling' && item.files.includes('tooling/release-artifacts.test.mjs'));
+    assert.ok(plan.shards[1].includes(fixture.id), 'the offline package fixture stays with its shard-2 package prerequisite');
+    const firstFixture = plan.shards[1].findIndex(id => plan.obligations.find(item => item.id === id).group === 'fixtures/contribution-report/jest.config.mjs');
+    assert.ok(plan.shards[1].indexOf(prerequisite.id) < firstFixture);
+    assert.equal(plan.shards.flat().filter(id => id === fixture.id).length, 1);
+    assert.ok(plan.obligations.some(item => item.id === 'jest:fixtures/contribution-report/000-before-cli.test.ts'));
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});

@@ -58,11 +58,16 @@ node examples/contribution-report/dist/main.js run --store .test-build/readme-de
 
 Each `node` command starts a fresh process and opens the same SQLite-backed store.
 These commands belong to the **example's CLI**. The installed `microdelta`
-executable separately provides caller-owned foreground run-start and exact
-execution observation. Its bounded module contract and receipt meanings are
-described in [private alpha workspace consumers](docs/private-alpha-workspace-consumers.md)
-and [CLI-005](docs/spec/operations.md#cli-005--bounded-exact-execution-observation).
-The broader inspection checkpoint remains planned.
+executable also provides the accepted bounded foreground run-start and separately
+permissionable finite exact-execution observation. The current checkout's locally
+built command has controlled installed-command evidence; that evidence does not
+publish a new package version or expose the project-private alpha declarations.
+The command contract and receipt meanings are described in [private alpha
+workspace consumers](docs/private-alpha-workspace-consumers.md) and
+[CLI-005](docs/spec/operations.md#cli-005--bounded-exact-execution-observation).
+This run-start path does not serialize the application's report: caller code owns
+report presentation and can use `run.read(reference)` during the active run to
+read the exact immutable result. The broader inspection checkpoint remains open.
 
 The JSON includes the report, each member's outcome and exact result reference,
 body execution counts (`executions`), and source-policy checks (`finality`). The
@@ -79,6 +84,12 @@ also run again, but their scores stay equal. Their summaries consume scores rath
 than assessment explanation text, so those summaries can be retained. This is
 reuse across a complete process exit and a cutoff at unchanged consumed output,
 not merely an identical printed report.
+
+This three-contributor checkout example is the M3 walkthrough. It is separate
+from the accepted two-person controlled proof of the installed `start` and
+finite `observe` commands, recorded in [#294](https://github.com/mike-north/microdelta/issues/294#issuecomment-6462080386).
+That proof is checkout/local-build evidence; its private fixture outcome files
+are not a supported report export format or evidence of package publication.
 
 See the [example guide](examples/contribution-report/README.md) for its source,
 composition choices, recovery commands, cancellation, and spend-free operational
@@ -128,8 +139,9 @@ computation evidence and may recompute prior work; exact historical results and
 operation journals remain readable. See the
 [tracking evidence compatibility boundary](docs/spec/execution.md#reuse-001--reuse-is-a-current-contextual-decision).
 Do not treat the example or accepted checkpoints as a guarantee that arbitrary
-analyses are safe. The general CLI observation slice, full inspection,
-workflow/scale acceptance, and real-provider acceptance remain undelivered.
+analyses are safe. The bounded run-start and exact-observation slice has delivery
+evidence, while full CLI-001–004 inspection, M6, full workflow/scale acceptance
+under M7, and real-provider acceptance remain open.
 
 Supported structured data is deliberately constrained. Plain records and arrays
 are the current result-root shapes; unsupported values such as cyclic/shared

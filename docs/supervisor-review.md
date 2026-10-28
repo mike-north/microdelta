@@ -93,6 +93,23 @@ failed or been cancelled. Pending CI is allowed
 because those checks remain required by GitHub. Passing them locally is not a
 replacement for their GitHub results.
 
+Required CI readback uses the canonical
+[REST check runs](https://docs.github.com/en/rest/checks/runs#list-check-runs-for-a-git-reference)
+for the supplied exact commit in this repository, independently of GraphQL's
+status-check rollup.
+GitHub's `latest` filter selects current attempts; every returned duplicate of a
+required name is retained, so success cannot hide a pending or failed result.
+Required runs must identify that commit, the canonical repository URL, and the
+GitHub Actions app (ID 15368 and slug `github-actions`). The reader requires
+complete pages with a consistent count and distinct run IDs. It first requires
+a check-suite count below 1,000 because GitHub's commit check-run endpoint only
+considers the most recent 1,000 suites. Missing contexts, unreadable or malformed
+responses, mismatched identity, changing pages, and uncertain coverage stop the
+readback. The existing bucket policy remains: success passes; skipped and neutral
+are skipping; queued, in-progress, requested, waiting, pending, and stale are
+pending; cancellation and failure conclusions block. The stricter release gate
+below still requires every required context to pass.
+
 The command records scope and evidence in a PR comment, publishes a pending
 **Supervisor review** status on the expected SHA, and rechecks the head and gates.
 It then publishes success only on that SHA and reads the status back. Before asking

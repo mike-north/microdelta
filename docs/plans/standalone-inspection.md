@@ -165,6 +165,14 @@ refuses WAL and has no query-snapshot transaction. History currently defaults
 to WAL, so a no-write, compatible History opener and separate-process proof are
 missing. Do not change journal mode, use immutable-file mode against an active
 writer, or claim no-side-effect cross-process behavior from same-process reads.
+The supervisor-selected [#296 finite read-snapshot qualification](../../experiments/exp-read-snapshot/protocol.md)
+tests the existing binding before any production opener is selected. It separates
+useful during/after reads and domain nonmutation from the stronger candidate
+no-source-filesystem-effects hypothesis; rejection or inconclusive evidence is
+not delivery of a narrower inspector or adoption of this broader plan.
+Its [bounded observed result](../../experiments/exp-read-snapshot/result.md)
+rejects the selected candidate's stronger no-source-effects hypothesis; it
+does not adopt an alternative or weaken the required during/after inspection.
 Accounting's `openDurableAccounting` is writable/initializing; usage reads need
 a narrow owner opener separate from that authority. Existing report reading
 from #166 and preview projection from #216 are useful bounded inputs, not a

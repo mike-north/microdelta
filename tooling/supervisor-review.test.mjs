@@ -8,6 +8,7 @@ import {
   createGitHubApi,
   runSupervisorReview,
   validateProtection,
+  validateChecks,
 } from './supervisor-review.mjs';
 
 const prNumber = 34;
@@ -379,7 +380,8 @@ test('all GitHub adapter operations use the injected runner with their original 
       };
     }
     if (args[0] === 'api' && args[1] === 'repos/mike-north/microdelta/rules/branches/main?per_page=100') return [];
-    if (args[0] === 'pr') return [{ name: 'sample CI', bucket: 'pass' }];
+    if (args[0] === 'api' && args[1] === checkSuitesPath()) return checkSuites();
+    if (args[0] === 'api' && args[1] === checkRunsPath(1)) return checkPage(requiredRuns());
     if (args[0] === 'api' && args[1] === 'repos/mike-north/microdelta/issues/34/comments') {
       return { html_url: `${pullRequestUrl}#issuecomment-123` };
     }
@@ -448,7 +450,7 @@ test('all GitHub adapter operations use the injected runner with their original 
       headRepositoryNameWithOwner: 'mike-north/microdelta', headRefOid: reviewedHead, url: pullRequestUrl, nodeId: 'PR_NODE', unresolvedThreads: 1,
       autoMergeEnabled: false, merged: false, isReleaseVersion: false,
     });
-    assert.deepEqual(await api.readRequiredChecks(prNumber), [{ name: 'sample CI', bucket: 'pass' }]);
+    assert.deepEqual(await api.readRequiredChecks(prNumber, reviewedHead), REQUIRED_BRANCH_CHECKS.map(name => ({ name, bucket: 'pass' })));
     assert.deepEqual(await api.readCopilotReviews(prNumber), {
       reviews: [
         { authorLogin: 'copilot-pull-request-reviewer[bot]', authorType: 'Bot', commitOid: reviewedHead, state: 'COMMENTED', submitted: true, submittedAt: '2026-09-27T00:00:00Z', errored: true },
@@ -480,18 +482,19 @@ test('all GitHub adapter operations use the injected runner with their original 
   assert.deepEqual(calls[3].args.slice(0, 3), ['api', 'graphql', '-f']);
   assert.ok(calls[3].args.includes('after=null'));
   assert.ok(calls[4].args.includes('after=thread-cursor'));
-  assert.deepEqual(calls[5], {
-    args: ['pr', 'checks', String(prNumber), '--repo', 'mike-north/microdelta', '--required', '--json', 'name,bucket'],
-    acceptedExitCodes: [0, 8],
+  assert.deepEqual(calls[5], { args: ['api', checkSuitesPath()], acceptedExitCodes: undefined });
+  assert.deepEqual(calls[6], {
+    args: ['api', checkRunsPath(1)],
+    acceptedExitCodes: undefined,
   });
   const graphCalls = calls.filter(call => call.args[0] === 'api' && call.args[1] === 'graphql');
   assert.equal(graphCalls.length, 7);
   assert.ok(graphCalls.some(call => call.args.includes('after=review-cursor')));
-  assert.deepEqual(calls[8], {
+  assert.deepEqual(calls[9], {
     args: ['api', 'repos/mike-north/microdelta/issues/34/comments', '-X', 'POST', '-f', 'body=Reviewed.'],
     acceptedExitCodes: undefined,
   });
-  assert.deepEqual(calls[9], {
+  assert.deepEqual(calls[10], {
     args: [
       'api', `repos/mike-north/microdelta/statuses/${reviewedHead}`, '-X', 'POST',
       '-f', `state=success`, '-f', `context=${REQUIRED_STATUS_CONTEXT}`,
@@ -499,7 +502,7 @@ test('all GitHub adapter operations use the injected runner with their original 
     ],
     acceptedExitCodes: undefined,
   });
-  assert.deepEqual(calls[10], {
+  assert.deepEqual(calls[11], {
     args: ['api', `repos/mike-north/microdelta/commits/${reviewedHead}/status`],
     acceptedExitCodes: undefined,
   });
@@ -876,4 +879,168 @@ test('ruleset-derived protection blocks runSupervisorReview before any write whe
   api.readProtection = branch => ruleApi.readProtection(branch);
   await assert.rejects(runSupervisorReview(request, api), /does not apply to administrators/u);
   assert.equal(calls.some(([call]) => ['createReviewRecord', 'setCommitStatus', 'enableAutoMerge'].includes(call)), false);
+});
+
+/** REST fixtures bind CI evidence to the repository's exact commit and Actions producer. */
+function checkRun(name, id, overrides = {}) {
+  return { id, name, url: `https://api.github.com/repos/mike-north/microdelta/check-runs/${id}`, head_sha: reviewedHead, app: { id: 15368, slug: 'github-actions' },
+    status: 'completed', conclusion: 'success', ...overrides };
+}
+
+/** All independently required contexts must be present even when the rollup is unavailable. */
+function requiredRuns() { return REQUIRED_BRANCH_CHECKS.map((name, index) => checkRun(name, index + 1)); }
+
+/** GitHub selects latest attempts; every returned duplicate still matters. */
+function checkRunsPath(page) { return `repos/mike-north/microdelta/commits/${reviewedHead}/check-runs?filter=latest&per_page=100&page=${page}`; }
+
+/** GitHub's count is the completeness witness for the selected latest-run pages. */
+function checkPage(check_runs, total_count = check_runs.length) { return { total_count, check_runs }; }
+
+/** Unexpected operations fail: readback must never need a status rollup or a mutation. */
+function checksApi(pages, calls = []) {
+  return createGitHubApi('mike-north/microdelta', args => {
+    calls.push(args);
+    const page = args[0] === 'api' ? (Object.hasOwn(pages, args[1]) ? pages[args[1]] : args[1] === checkSuitesPath() ? checkSuites() : undefined) : undefined;
+    if (page === undefined) throw new Error('statusCheckRollup is null; no checks reported');
+    if (page instanceof Error) throw page;
+    return page;
+  });
+}
+
+test('canonical exact-head check runs work when GraphQL statusCheckRollup is null', async () => {
+  const calls = [];
+  const rows = await checksApi({ [checkRunsPath(1)]: checkPage(requiredRuns()) }, calls).readRequiredChecks(prNumber, reviewedHead);
+  assert.deepEqual(rows, REQUIRED_BRANCH_CHECKS.map(name => ({ name, bucket: 'pass' })));
+  assert.deepEqual(calls, [['api', checkSuitesPath()], ['api', checkRunsPath(1)]]);
+});
+
+for (const [label, status, conclusion, bucket] of [
+  ['success', 'completed', 'success', 'pass'],
+  ['skipped', 'completed', 'skipped', 'skipping'],
+  ['neutral', 'completed', 'neutral', 'skipping'],
+  ['failure', 'completed', 'failure', 'fail'],
+  ['timeout', 'completed', 'timed_out', 'fail'],
+  ['action required', 'completed', 'action_required', 'fail'],
+  ['cancelled', 'completed', 'cancelled', 'cancel'],
+  ['stale', 'completed', 'stale', 'pending'],
+  ...['queued', 'in_progress', 'requested', 'waiting', 'pending'].map(status => [status, status, null, 'pending']),
+]) {
+  test(`canonical check runs preserve the ${label} bucket`, async () => {
+    const runs = requiredRuns();
+    runs[0] = { ...runs[0], status, conclusion };
+    const checks = await checksApi({ [checkRunsPath(1)]: checkPage(runs) }).readRequiredChecks(prNumber, reviewedHead);
+    assert.deepEqual(checks[0], { name: 'PR metadata', bucket });
+    if (bucket === 'fail' || bucket === 'cancel') assert.throws(() => validateChecks(checks), /non-passing/u);
+    else assert.equal(validateChecks(checks)[0].bucket, bucket);
+  });
+}
+
+for (const [label, replacement] of [
+  ['wrong repository', { url: 'https://api.github.com/repos/other/repository/check-runs/1' }],
+  ['wrong head', { head_sha: 'b'.repeat(40) }],
+  ['wrong app ID', { app: { id: 1, slug: 'github-actions' } }],
+  ['wrong app slug', { app: { id: 15368, slug: 'imposter' } }],
+  ['missing app', { app: null }],
+  ['missing head', { head_sha: undefined }],
+  ['missing run ID', { id: undefined }],
+  ['unrecognized status', { status: 'unknown' }],
+  ['unknown conclusion', { conclusion: 'unknown' }],
+  ['array conclusion', { conclusion: ['success'] }],
+  ['missing completed conclusion', { conclusion: null }],
+  ['conclusion before completion', { status: 'queued', conclusion: 'success' }],
+]) {
+  test(`canonical check runs fail closed for ${label}`, async () => {
+    const runs = requiredRuns(); runs[0] = { ...runs[0], ...replacement };
+    await assert.rejects(checksApi({ [checkRunsPath(1)]: checkPage(runs) }).readRequiredChecks(prNumber, reviewedHead), /check.run|Actions|head/iu);
+  });
+}
+
+for (const [label, response] of [
+  ['missing required context', checkPage(requiredRuns().slice(1))],
+  ['empty evidence', checkPage([])],
+  ['null response', null],
+  ['missing array', { total_count: 3 }],
+  ['missing count', { check_runs: requiredRuns() }],
+  ['invalid count', checkPage(requiredRuns(), -1)],
+  ['underreported count', checkPage(requiredRuns(), 2)],
+  ['short incomplete page', checkPage(requiredRuns(), 4)],
+  ['malformed row', checkPage([null])],
+  ['duplicate run identity', checkPage([...requiredRuns(), requiredRuns()[0]])],
+  ['unavailable response', new Error('HTTP 503 unavailable')],
+]) {
+  test(`canonical check runs fail closed for ${label}`, async () => {
+    await assert.rejects(checksApi({ [checkRunsPath(1)]: response }).readRequiredChecks(prNumber, reviewedHead), /missing|malformed|incomplete|duplicate|503/iu);
+  });
+}
+
+test('check readback requires the caller expected head and fixed repository before a network read', async () => {
+  const calls = [];
+  const api = checksApi({}, calls);
+  for (const sha of [undefined, 'main', 'a'.repeat(39), '../other']) await assert.rejects(api.readRequiredChecks(prNumber, sha), /head/iu);
+  assert.deepEqual(calls, []);
+  await assert.rejects(createGitHubApi('someone/other', () => { throw new Error('network called'); }).readRequiredChecks(prNumber, reviewedHead), /only supports/u);
+});
+
+/** Required checks may occur on any page; unrelated named checks cannot satisfy them. */
+function fullFirstPage() { return Array.from({ length: 100 }, (_, index) => checkRun('unrelated', index + 100)); }
+
+test('canonical check readback completes pagination before returning required contexts', async () => {
+  const calls = [];
+  const api = checksApi({ [checkRunsPath(1)]: checkPage(fullFirstPage(), 103), [checkRunsPath(2)]: checkPage(requiredRuns(), 103) }, calls);
+  assert.deepEqual(await api.readRequiredChecks(prNumber, reviewedHead), REQUIRED_BRANCH_CHECKS.map(name => ({ name, bucket: 'pass' })));
+  assert.deepEqual(calls, [['api', checkSuitesPath()], ['api', checkRunsPath(1)], ['api', checkRunsPath(2)]]);
+});
+
+for (const [label, secondPage] of [
+  ['missing later page', new Error('HTTP 503 unavailable')],
+  ['empty later page', checkPage([], 103)],
+  ['changed total', checkPage(requiredRuns(), 104)],
+  ['overlapping pages', checkPage([checkRun('unrelated', 100), ...requiredRuns().slice(1)], 103)],
+]) {
+  test(`canonical check pagination fails closed for ${label}`, async () => {
+    await assert.rejects(checksApi({ [checkRunsPath(1)]: checkPage(fullFirstPage(), 103), [checkRunsPath(2)]: secondPage }).readRequiredChecks(prNumber, reviewedHead), /incomplete|duplicate|503/iu);
+  });
+}
+
+for (const [label, status, conclusion, bucket] of [
+  ['pending', 'queued', null, 'pending'], ['failed', 'completed', 'failure', 'fail'],
+]) {
+  for (const reverse of [false, true]) {
+    test(`old success cannot conceal a newer ${label} duplicate in either response order (${reverse})`, async () => {
+      const runs = [...requiredRuns(), checkRun('PR metadata', 99, { status, conclusion })];
+      if (reverse) runs.reverse();
+      const checks = await checksApi({ [checkRunsPath(1)]: checkPage(runs) }).readRequiredChecks(prNumber, reviewedHead);
+      if (bucket === 'fail') assert.throws(() => validateChecks(checks), /non-passing/u);
+      else assert.equal(validateChecks(checks)[0].bucket, 'pending');
+    });
+  }
+}
+
+/** A count below GitHub's 1,000-suite cap makes the run listing's coverage usable. */
+function checkSuitesPath() { return `repos/mike-north/microdelta/commits/${reviewedHead}/check-suites?per_page=1`; }
+function checkSuites() { return { total_count: 1, check_suites: [{ head_sha: reviewedHead }] }; }
+
+for (const [label, suites] of [
+  ['suite limit reached', { ...checkSuites(), total_count: 1000 }],
+  ['suite limit exceeded', { ...checkSuites(), total_count: 1001 }],
+  ['missing suite count', { check_suites: [] }],
+  ['missing suite array', { total_count: 1 }],
+  ['negative suite count', { total_count: -1, check_suites: [] }],
+  ['empty suite sample', { total_count: 1, check_suites: [] }],
+  ['wrong-head suite sample', { total_count: 1, check_suites: [{ head_sha: 'b'.repeat(40) }] }],
+  ['unavailable suite evidence', new Error('HTTP 503 unavailable')],
+]) {
+  test(`check-run coverage fails closed for ${label}`, async () => {
+    const calls = [];
+    await assert.rejects(checksApi({ [checkSuitesPath()]: suites }, calls).readRequiredChecks(prNumber, reviewedHead), /incomplete|malformed|503/iu);
+    assert.deepEqual(calls, [['api', checkSuitesPath()]]);
+  });
+}
+
+test('a successful rerun selected by GitHub latest semantics is accepted without reading historical attempts', async () => {
+  const calls = [];
+  const runs = requiredRuns().map(run => ({ ...run, id: run.id + 100, url: run.url.replace(/\d+$/u, String(run.id + 100)) }));
+  const checks = await checksApi({ [checkRunsPath(1)]: checkPage(runs) }, calls).readRequiredChecks(prNumber, reviewedHead);
+  assert.deepEqual(validateChecks(checks), REQUIRED_BRANCH_CHECKS.map(name => ({ name, bucket: 'pass' })));
+  assert.ok(calls.every(args => !args[1].includes('filter=all')));
 });

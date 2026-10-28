@@ -32,6 +32,22 @@ const OWNER_REVIEW_BYPASS_MODES = new Set(['always', 'pull_request']);
 /** GitHub Actions owns the existing CI contexts; the supervisor status remains separate. */
 const REQUIRED_CHECK_SOURCE = 'github-actions';
 
+/** REST's largest page lets the count prove that no intermediate page was omitted. */
+const CHECK_RUNS_PAGE_SIZE = 100;
+
+/** GitHub's commit check-run endpoint considers at most this many check suites. */
+const CHECK_SUITES_LIMIT = 1000;
+
+/** Nonterminal REST states have the same pending meaning as the existing gh buckets. */
+const PENDING_CHECK_STATES = new Set(['queued', 'in_progress', 'requested', 'waiting', 'pending']);
+
+/** Keep the gh check bucket policy, including GitHub's stale conclusion as pending. */
+const COMPLETED_CHECK_BUCKETS = Object.freeze({
+  success: 'pass', skipped: 'skipping', neutral: 'skipping',
+  failure: 'fail', timed_out: 'fail', action_required: 'fail',
+  cancelled: 'cancel', stale: 'pending',
+});
+
 /** GitHub uses this application ID for the source-pinned Actions check producer. */
 const GITHUB_ACTIONS_APP_ID = 15368;
 
@@ -494,11 +510,70 @@ export function createGitHubApi(repositoryName, runJson = ghJson) {
         isReleaseVersion: /^Version Packages/iu.test(pullRequest.title) || /^changeset-release\//iu.test(pullRequest.headRefName),
       };
     },
-    /** Read current required CI buckets while preserving gh's pending exit code as data. */
-    async readRequiredChecks(number) {
-      // gh pr checks uses exit code 8 for pending checks while still returning JSON.
-      const rows = runJson(['pr', 'checks', String(number), '--repo', repositoryName, '--required', '--json', 'name,bucket'], [0, 8]);
-      return rows.filter(row => row.name !== REQUIRED_STATUS_CONTEXT).map(row => ({ name: row.name, bucket: row.bucket }));
+    /**
+     * Read exact-commit Actions evidence without relying on GraphQL's status rollup.
+     * GitHub selects latest attempts; every returned duplicate context remains evidence,
+     * so a success never hides another current pending or failed run. No local timestamp
+     * ordering guesses which workflow/event owns a repeated name.
+     */
+    async readRequiredChecks(_number, expectedHeadOid) {
+      if (repositoryName !== TARGET_REPOSITORY) throw new Error(`This command only supports ${TARGET_REPOSITORY}.`);
+      if (typeof expectedHeadOid !== 'string' || !/^[0-9a-f]{40}$/u.test(expectedHeadOid)) {
+        throw new Error('Required check readback needs an exact full commit head OID.');
+      }
+      const commitPath = `${restPrefix}/commits/${expectedHeadOid}`;
+      // The runs endpoint silently considers only 1,000 suites. A smaller canonical
+      // suite count is required before its otherwise complete pages can prove coverage.
+      const suites = runJson(['api', `${commitPath}/check-suites?per_page=1`]);
+      if (!Number.isSafeInteger(suites?.total_count) || suites.total_count < 0
+        || !Array.isArray(suites.check_suites) || suites.check_suites.length !== Math.min(suites.total_count, 1)
+        || suites.check_suites.some(suite => suite?.head_sha !== expectedHeadOid)) {
+        throw new Error('GitHub returned malformed check-suite coverage for the expected head.');
+      }
+      if (suites.total_count >= CHECK_SUITES_LIMIT) throw new Error('Check-run evidence may be incomplete at GitHub’s check-suite limit.');
+
+      const checks = [];
+      const seenIds = new Set();
+      let total;
+      for (let pageNumber = 1; ; pageNumber += 1) {
+        const page = runJson(['api', `${commitPath}/check-runs?filter=latest&per_page=${CHECK_RUNS_PAGE_SIZE}&page=${pageNumber}`]);
+        if (!Number.isSafeInteger(page?.total_count) || page.total_count < 0 || !Array.isArray(page.check_runs)) {
+          throw new Error('GitHub returned malformed check-run evidence.');
+        }
+        total ??= page.total_count;
+        const expectedLength = Math.min(CHECK_RUNS_PAGE_SIZE, total - seenIds.size);
+        if (page.total_count !== total || page.check_runs.length !== expectedLength) {
+          throw new Error('GitHub returned incomplete or changing check-run pages.');
+        }
+        for (const run of page.check_runs) {
+          if (!Number.isSafeInteger(run?.id) || run.id < 1 || typeof run.name !== 'string' || run.name.length === 0) {
+            throw new Error('GitHub returned a malformed check-run identity.');
+          }
+          if (seenIds.has(run.id)) throw new Error('GitHub returned duplicate check-run identities across pages.');
+          seenIds.add(run.id);
+          if (run.head_sha !== expectedHeadOid) throw new Error('Check-run evidence belongs to a different head.');
+          if (!REQUIRED_BRANCH_CHECKS.includes(run.name)) continue;
+          if (run.url !== `https://api.github.com/${restPrefix}/check-runs/${run.id}`) {
+            throw new Error('Check-run evidence belongs to a different repository or has a malformed URL.');
+          }
+          if (run.app?.id !== GITHUB_ACTIONS_APP_ID || run.app.slug !== REQUIRED_CHECK_SOURCE) {
+            throw new Error('Required check-run evidence is not from GitHub Actions.');
+          }
+          let bucket;
+          if (run.status === 'completed' && typeof run.conclusion === 'string' && Object.hasOwn(COMPLETED_CHECK_BUCKETS, run.conclusion)) {
+            bucket = COMPLETED_CHECK_BUCKETS[run.conclusion];
+          } else if (PENDING_CHECK_STATES.has(run.status) && run.conclusion === null) {
+            bucket = 'pending';
+          } else {
+            throw new Error('GitHub returned a malformed or unsupported check-run state.');
+          }
+          checks.push({ name: run.name, bucket });
+        }
+        if (seenIds.size === total) break;
+      }
+      const missing = REQUIRED_BRANCH_CHECKS.filter(name => !checks.some(check => check.name === name));
+      if (missing.length > 0) throw new Error(`Required CI results are missing: ${missing.join(', ')}.`);
+      return checks;
     },
     /** Read submitted reviews and outstanding requests without confusing a request with a review. */
     async readCopilotReviews(number) {

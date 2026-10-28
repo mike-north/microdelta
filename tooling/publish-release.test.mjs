@@ -68,7 +68,7 @@ before(async () => {
       if (url.pathname.endsWith('/workflows/check.yml')) body = workflowFixture(github.url);
       else if (url.pathname.endsWith('/workflows/100/runs')) body = { total_count: state === 'missing' ? 0 : 1, workflow_runs: state === 'missing' ? [] : [run] };
       else if (url.pathname.endsWith('/runs/200')) body = run;
-      else if (url.pathname.endsWith('/runs/200/jobs')) body = { total_count: 2, jobs: jobsFixture(sha, github.url) };
+      else if (url.pathname.endsWith('/runs/200/jobs')) { const jobs = jobsFixture(sha, github.url); body = { total_count: jobs.length, jobs }; }
     }
     else if (url.pathname === `/repos/${repository}/commits/${sha}/pulls`) body = github.associated;
     else if (url.pathname === `/repos/${repository}/pulls`) {

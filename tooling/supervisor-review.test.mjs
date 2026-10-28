@@ -14,8 +14,8 @@ import {
 const prNumber = 34;
 const reviewedHead = 'a'.repeat(40);
 
-test('the protected Actions contract requires metadata and both remaining Node jobs', () => {
-  assert.deepEqual(REQUIRED_BRANCH_CHECKS, ['PR metadata', 'core (22)', 'core (24)']);
+test('the protected Actions contract requires metadata and the Node 24-only baseline', () => {
+  assert.deepEqual(REQUIRED_BRANCH_CHECKS, ['PR metadata', 'core (24)']);
 });
 
 function scenario(overrides = {}) {
@@ -45,8 +45,7 @@ function scenario(overrides = {}) {
     },
     requiredChecks: [
       { name: 'PR metadata', bucket: 'pass' },
-      { name: 'core (22)', bucket: 'pending' },
-      { name: 'core (24)', bucket: 'pass' },
+      { name: 'core (24)', bucket: 'pending' },
       { name: REQUIRED_STATUS_CONTEXT, bucket: 'pending' },
     ],
     copilotReviews: [{
@@ -159,21 +158,10 @@ for (const [name, overrides, requestOverrides = {}] of [
   ['unresolved review conversations', { pullRequest: { number: prNumber, state: 'OPEN', isDraft: false, baseRefName: 'main', headRefOid: reviewedHead, url: 'https://github.com/mike-north/microdelta/pull/34', unresolvedThreads: 1, autoMergeEnabled: false } }],
   ['missing review scope', {}, { scope: ' ' }],
   ['missing review evidence', {}, { evidence: '' }],
-  ['failed required Node 22 CI', { requiredChecks: [
-    { name: 'PR metadata', bucket: 'pass' },
-    { name: 'core (22)', bucket: 'fail' },
-    { name: 'core (24)', bucket: 'pass' },
-    { name: REQUIRED_STATUS_CONTEXT, bucket: 'pending' },
-  ] }],
   ['failed required Node 24 CI', { requiredChecks: [
     { name: 'PR metadata', bucket: 'pass' },
     { name: 'core (22)', bucket: 'pass' },
     { name: 'core (24)', bucket: 'fail' },
-    { name: REQUIRED_STATUS_CONTEXT, bucket: 'pending' },
-  ] }],
-  ['missing required Node 22 CI', { requiredChecks: [
-    { name: 'PR metadata', bucket: 'pass' },
-    { name: 'core (24)', bucket: 'pass' },
     { name: REQUIRED_STATUS_CONTEXT, bucket: 'pending' },
   ] }],
   ['missing required Node 24 CI', { requiredChecks: [
@@ -207,7 +195,7 @@ for (const [name, overrides, requestOverrides = {}] of [
     branch: 'main', requiresPullRequest: true, enforceAdmins: true,
     resolveConversations: true,
     requiredContexts: [...REQUIRED_BRANCH_CHECKS, REQUIRED_STATUS_CONTEXT],
-    checkSources: { ...Object.fromEntries(REQUIRED_BRANCH_CHECKS.map(name => [name, 'github-actions'])), 'core (22)': null },
+    checkSources: { ...Object.fromEntries(REQUIRED_BRANCH_CHECKS.map(name => [name, 'github-actions'])), 'core (24)': null },
   } }],
 ]) {
   test(`fails closed for ${name} before any review or status write`, async () => {
@@ -259,7 +247,7 @@ test('pending checks remain required and no administrator bypass is requested', 
   assert.deepEqual(Object.keys(arm).sort(), ['expectedHeadOid', 'pullRequestNumber']);
 });
 
-test('ordinary review waits for Node 24 when Node 22 already passed', async () => {
+test('ordinary review still waits for Node 24 when a retired Node 22 result passed', async () => {
   const { api, request } = scenario({ requiredChecks: [
     { name: 'PR metadata', bucket: 'pass' },
     { name: 'core (22)', bucket: 'pass' },
@@ -280,8 +268,8 @@ test('already-passing CI is still eligible for the exact-head review flow', asyn
   assert.ok(calls.some(([name]) => name === 'enableAutoMerge'));
 });
 
-for (const requiredNode of ['core (22)', 'core (24)']) {
-  const otherNode = requiredNode === 'core (22)' ? 'core (24)' : 'core (22)';
+for (const requiredNode of ['core (24)']) {
+  const otherNode = 'core (22)'; // A retired result cannot replace or hide the supported job's result.
   for (const checks of [
     [{ name: requiredNode, bucket: 'pass' }, { name: requiredNode, bucket: 'fail' }],
     [{ name: requiredNode, bucket: 'fail' }, { name: requiredNode, bucket: 'pass' }],
@@ -298,8 +286,8 @@ for (const requiredNode of ['core (22)', 'core (24)']) {
   }
 }
 
-for (const requiredNode of ['core (22)', 'core (24)']) {
-  const otherNode = requiredNode === 'core (22)' ? 'core (24)' : 'core (22)';
+for (const requiredNode of ['core (24)']) {
+  const otherNode = 'core (22)'; // A retired result cannot replace or hide the supported job's result.
   for (const duplicateChecks of [
     [{ name: requiredNode, bucket: 'pass' }, { name: requiredNode, bucket: 'pending' }],
     [{ name: requiredNode, bucket: 'pending' }, { name: requiredNode, bucket: 'pass' }],
@@ -847,15 +835,11 @@ for (const [name, fixtures, expected] of [
     { context: 'PR metadata', integration_id: 15368 },
     { context: 'core (22)', integration_id: 15368 }, { context: REQUIRED_STATUS_CONTEXT, integration_id: null },
   ] }) }, /missing required checks: core \(24\)/u],
-  ['a missing Node 22 context', { rules: rulesetRules({ contexts: [
-    { context: 'PR metadata', integration_id: 15368 },
-    { context: 'core (24)', integration_id: 15368 }, { context: REQUIRED_STATUS_CONTEXT, integration_id: null },
-  ] }) }, /missing required checks: core \(22\)/u],
   ['a missing Supervisor review context', { rules: rulesetRules({ contexts: REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: 15368 })) }) }, /missing required checks: Supervisor review/u],
   ['an Actions context without the Actions integration', { rules: rulesetRules({ contexts: [
-    ...REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: context === 'core (22)' ? null : 15368 })),
+    ...REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: context === 'core (24)' ? null : 15368 })),
     { context: REQUIRED_STATUS_CONTEXT, integration_id: null },
-  ] }) }, /source restriction is missing for: core \(22\)/u],
+  ] }) }, /source restriction is missing for: core \(24\)/u],
   ['an Actions context pinned to a different app', { rules: rulesetRules({ contexts: [
     ...REQUIRED_BRANCH_CHECKS.map(context => ({ context, integration_id: context === 'PR metadata' ? 123 : 15368 })),
     { context: REQUIRED_STATUS_CONTEXT, integration_id: null },
@@ -962,7 +946,7 @@ for (const [label, response] of [
   ['missing array', { total_count: 3 }],
   ['missing count', { check_runs: requiredRuns() }],
   ['invalid count', checkPage(requiredRuns(), -1)],
-  ['underreported count', checkPage(requiredRuns(), 2)],
+  ['underreported count', checkPage(requiredRuns(), requiredRuns().length - 1)],
   ['short incomplete page', checkPage(requiredRuns(), 4)],
   ['malformed row', checkPage([null])],
   ['duplicate run identity', checkPage([...requiredRuns(), requiredRuns()[0]])],
@@ -986,19 +970,20 @@ function fullFirstPage() { return Array.from({ length: 100 }, (_, index) => chec
 
 test('canonical check readback completes pagination before returning required contexts', async () => {
   const calls = [];
-  const api = checksApi({ [checkRunsPath(1)]: checkPage(fullFirstPage(), 103), [checkRunsPath(2)]: checkPage(requiredRuns(), 103) }, calls);
+  const total = 100 + requiredRuns().length;
+  const api = checksApi({ [checkRunsPath(1)]: checkPage(fullFirstPage(), total), [checkRunsPath(2)]: checkPage(requiredRuns(), total) }, calls);
   assert.deepEqual(await api.readRequiredChecks(prNumber, reviewedHead), REQUIRED_BRANCH_CHECKS.map(name => ({ name, bucket: 'pass' })));
   assert.deepEqual(calls, [['api', checkSuitesPath()], ['api', checkRunsPath(1)], ['api', checkRunsPath(2)]]);
 });
 
 for (const [label, secondPage] of [
   ['missing later page', new Error('HTTP 503 unavailable')],
-  ['empty later page', checkPage([], 103)],
-  ['changed total', checkPage(requiredRuns(), 104)],
-  ['overlapping pages', checkPage([checkRun('unrelated', 100), ...requiredRuns().slice(1)], 103)],
+  ['empty later page', checkPage([], 102)],
+  ['changed total', checkPage(requiredRuns(), 103)],
+  ['overlapping pages', checkPage([checkRun('unrelated', 100), ...requiredRuns().slice(1)], 102)],
 ]) {
   test(`canonical check pagination fails closed for ${label}`, async () => {
-    await assert.rejects(checksApi({ [checkRunsPath(1)]: checkPage(fullFirstPage(), 103), [checkRunsPath(2)]: secondPage }).readRequiredChecks(prNumber, reviewedHead), /incomplete|duplicate|503/iu);
+    await assert.rejects(checksApi({ [checkRunsPath(1)]: checkPage(fullFirstPage(), 102), [checkRunsPath(2)]: secondPage }).readRequiredChecks(prNumber, reviewedHead), /incomplete|duplicate|503/iu);
   });
 }
 
@@ -1043,4 +1028,16 @@ test('a successful rerun selected by GitHub latest semantics is accepted without
   const checks = await checksApi({ [checkRunsPath(1)]: checkPage(runs) }, calls).readRequiredChecks(prNumber, reviewedHead);
   assert.deepEqual(validateChecks(checks), REQUIRED_BRANCH_CHECKS.map(name => ({ name, bucket: 'pass' })));
   assert.ok(calls.every(args => !args[1].includes('filter=all')));
+});
+
+/** Retired CI cannot remain an accidental gate or substitute for the supported runtime's required result. */
+test('retired Node 22 is absent from required protection while metadata, Node 24 and supervisor status remain enforced', () => {
+  const { state } = scenario();
+  const protection = { ...state.protection, requiredContexts: ['PR metadata', 'core (24)', REQUIRED_STATUS_CONTEXT], checkSources: { 'PR metadata': 'github-actions', 'core (24)': 'github-actions' } };
+  assert.doesNotThrow(() => validateProtection(protection, 'main'));
+});
+
+test('canonical required-check readback accepts the Node 24-only protected Actions results', async () => {
+  const runs = [checkRun('PR metadata', 1), checkRun('core (24)', 2)];
+  assert.deepEqual(await checksApi({ [checkRunsPath(1)]: checkPage(runs) }).readRequiredChecks(prNumber, reviewedHead), [{ name: 'PR metadata', bucket: 'pass' }, { name: 'core (24)', bucket: 'pass' }]);
 });

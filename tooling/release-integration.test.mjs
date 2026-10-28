@@ -47,7 +47,7 @@ function scenario(overrides = {}) {
   return { state, options: { fetchImpl }, read: () => readIntegrationEvidence(env, { fetchImpl }) };
 }
 
-test('complete successful main integration records the exact workflow, current run and both command proofs', async () => {
+test('complete successful main integration records the exact workflow, current run and the supported command proof', async () => {
   const { read, state } = scenario();
   const evidence = await read();
   assert.equal(evidence.state, 'success');
@@ -56,7 +56,7 @@ test('complete successful main integration records the exact workflow, current r
   assert.deepEqual(evidence.receipt.workflow, { id: checkWorkflowId, path: '.github/workflows/check.yml' });
   assert.equal(evidence.receipt.run.id, checkRunId);
   assert.equal(evidence.receipt.run.attempt, 1);
-  assert.deepEqual(evidence.receipt.jobs.map(job => job.name), ['core (22)', 'core (24)']);
+  assert.deepEqual(evidence.receipt.jobs.map(job => job.name), ['core (24)']);
   assert.ok(evidence.receipt.jobs.every(job => job.steps.length === 4 && job.steps.every(step => step.status === 'completed' && step.conclusion === 'success')));
   assert.match(evidence.receipt.observedAt, /^\d{4}-\d{2}-\d{2}T/u);
   assert.ok(state.runReads >= 2 && state.listReads >= 2 && state.workflowReads >= 2, 'success requires before/after current selection');
@@ -146,8 +146,8 @@ test('a newer successful canonical run supersedes an earlier failure by run numb
   assert.equal((await scenario({ runs, jobs }).read()).state, 'success');
 });
 
-test('a failed-job rerun retains a successful earlier-attempt sibling in the canonical latest jobs view', async () => {
-  const jobs = jobsFixture(sha); jobs[1].run_attempt = 2;
+test('the canonical latest jobs view can retain required Node 24 success from an earlier attempt', async () => {
+  const jobs = jobsFixture(sha);
   const { read } = scenario({ runs: [runFixture(sha, { run_attempt: 2 })], jobs });
   assert.equal((await read()).state, 'success');
 });
@@ -158,10 +158,10 @@ test('the documented job shape without an attempt still proves the same canonica
 });
 
 for (const [label, mutate] of [
-  ['missing Node 24', jobs => jobs.slice(0, 1)],
+  ['missing Node 24', _jobs => []],
   ['missing command', jobs => { jobs[0].steps.pop(); return jobs; }],
   ['pending command', jobs => { Object.assign(jobs[0].steps[3], { status: 'in_progress', conclusion: null }); return jobs; }],
-  ['pending matrix member', jobs => { Object.assign(jobs[1], { status: 'queued', conclusion: null }); return jobs; }],
+  ['pending matrix member', jobs => { Object.assign(jobs[0], { status: 'queued', conclusion: null }); return jobs; }],
 ]) {
   test(`${label} waits for complete visible current results`, async () => {
     const { read } = scenario({ jobs: mutate(jobsFixture(sha)) });
@@ -330,4 +330,13 @@ test('terminal or unreadable evidence stops waiting immediately without retry', 
 test('success arriving only after the deadline cannot authorize the waiting gate', async () => {
   let clock = 0;
   await assert.rejects(waitForMainIntegration(env, { now: () => clock, read: async () => { clock = 120 * 60_000 + 1; return { state: 'success', receipt: {} }; } }), /deadline|timed out/iu);
+});
+
+/** The supported main baseline requires Node 24 and cannot borrow a retired Node 22 success. */
+test('successful Node 24-only main integration authorizes evidence without a retired Node 22 job', async () => {
+  assert.equal((await scenario({ jobs: jobsFixture(sha).filter(job => job.name === 'core (24)') }).read()).state, 'success');
+});
+
+test('retired Node 22-only integration cannot substitute for the required Node 24 result', async () => {
+  assert.equal((await scenario({ jobs: jobsFixture(sha).map(job => ({ ...job, name: 'core (22)' })) }).read()).state, 'pending');
 });

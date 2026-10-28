@@ -19,8 +19,8 @@ import { trustedPublisher } from './release-graph.mjs';
 const WORKFLOW_PATH = '.github/workflows/check.yml';
 /** Native main-push run paths may include GitHub's explicit main reference suffix. */
 const RUN_PATHS = new Set([WORKFLOW_PATH, `${WORKFLOW_PATH}@main`, `${WORKFLOW_PATH}@refs/heads/main`]);
-/** These independent matrix members must each prove all four actual commands. */
-const REQUIRED_JOBS = ['core (22)', 'core (24)'];
+/** Node 24 is the supported main baseline; a retired Node 22 result cannot supply this proof. */
+const REQUIRED_JOBS = ['core (24)'];
 /** Step names are GitHub's native labels for the unconditional Check run commands. */
 const REQUIRED_STEPS = ['Run npm ci', 'Run npm run check', 'Run npm test', 'Run npm run build'];
 /** Scheduling and nonterminal rerun states can be observed again by the waiting gate. */
@@ -160,8 +160,8 @@ function sameObservation(left, right) {
 }
 
 /**
- * GitHub's latest jobs view owns failed-job-only rerun selection. A successful
- * sibling may retain an earlier attempt, so equality with the current run's
+ * GitHub's latest jobs view owns failed-job-only rerun selection. A required
+ * successful job may retain an earlier attempt, so equality with the current run's
  * attempt is deliberately not required. Same run, source, complete commands,
  * and stable surrounding run observations remain mandatory.
  */

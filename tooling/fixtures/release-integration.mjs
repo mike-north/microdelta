@@ -26,9 +26,9 @@ export function runFixture(sha, overrides = {}, apiUrl = 'https://api.github.com
     status: 'completed', conclusion: 'success', ...overrides };
 }
 
-/** Each matrix member proves the actual required commands, with ordinal identities inside its job. */
+/** The supported matrix member proves the actual required commands, with ordinal identities inside its job. */
 export function jobsFixture(sha, apiUrl = 'https://api.github.com') {
-  return [22, 24].map((node, index) => ({
+  return [24].map((node, index) => ({
     id: 300 + index, run_id: checkRunId, run_attempt: 1, head_sha: sha, head_branch: 'main', workflow_name: 'Check',
     run_url: `${apiUrl}/repos/${integrationRepository}/actions/runs/${checkRunId}`,
     url: `${apiUrl}/repos/${integrationRepository}/actions/jobs/${300 + index}`,

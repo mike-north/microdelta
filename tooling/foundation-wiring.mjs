@@ -1,15 +1,30 @@
 /**
  * PKG-008 checks the route from clean CI commands to required foundation gates.
- * This is a wiring check, not a substitute for the compiler, API Extractor,
+ * It also keeps the supported Node floor coherent across developer, package
+ * and lockfile metadata. This is a wiring check, not a substitute for the compiler, API Extractor,
  * ESLint, or their behavioral fixtures. It catches accidental gate omission.
  */
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-/** Script references are intentionally explicit so a missing gate is reviewable. */
-export function missingFoundationGates({ workspace, packages, workflow, extractors, eslintConfig }) {
+/** The supported runtime floor is shared by development, every published package and its lock copy. */
+const SUPPORTED_NODE_ENGINE = '>=24';
+
+/** Dependency engine declarations remain upstream-owned; only workspace records implement this support policy. */
+function runtimeSupportProblems(workspace, packages, lockfile) {
   const problems = [];
+  for (const [directory, manifest] of [['', workspace], ...Object.entries(packages).map(([name, value]) => [`packages/${name}`, value])]) {
+    const label = directory || 'workspace';
+    if (manifest.engines?.node !== SUPPORTED_NODE_ENGINE) problems.push(`${label} engine must be ${SUPPORTED_NODE_ENGINE}`);
+    if (lockfile?.packages?.[directory]?.engines?.node !== SUPPORTED_NODE_ENGINE) problems.push(`${label} lock engine must be ${SUPPORTED_NODE_ENGINE}`);
+  }
+  return problems;
+}
+
+/** Script references are intentionally explicit so a missing gate is reviewable. */
+export function missingFoundationGates({ workspace, packages, lockfile, workflow, extractors, eslintConfig }) {
+  const problems = runtimeSupportProblems(workspace, packages, lockfile);
   const scripts = workspace.scripts ?? {};
   const includes = (label, command, fragment) => {
     if (!(command ?? '').includes(fragment)) {
@@ -28,8 +43,8 @@ export function missingFoundationGates({ workspace, packages, workflow, extracto
   // from documentation or another workflow line.
   const nodeMatrix = /^\s*node:\s*\[([^\]]*)\]\s*$/mu.exec(workflow)?.[1]
     ?.split(',').map(version => version.trim());
-  if (nodeMatrix?.length !== 2 || nodeMatrix[0] !== '22' || nodeMatrix[1] !== '24') {
-    problems.push('CI Node matrix must be exactly 22, 24');
+  if (nodeMatrix?.length !== 1 || nodeMatrix[0] !== '24') {
+    problems.push('CI Node matrix must be exactly 24');
   }
   for (const command of ['npm run build', 'npm run check:packages', 'npm run check:workspace']) {
     includes('check', scripts.check, command);
@@ -125,12 +140,13 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const root = fileURLToPath(new URL('../', import.meta.url));
   const readJson = async filename => JSON.parse(await readFile(path.join(root, filename), 'utf8'));
   const names = ['core', 'definition', 'tracking', 'history', 'value', 'materialization', 'resolution', 'supervision', 'accounting'];
-  const packages = Object.fromEntries(await Promise.all(names.map(async name => [name, await readJson(`packages/${name}/package.json`)])));
+  const packageDirectories = (await readdir(path.join(root, 'packages'), { withFileTypes: true })).filter(entry => entry.isDirectory()).map(entry => entry.name);
+  const packages = Object.fromEntries(await Promise.all(packageDirectories.map(async name => [name, await readJson(`packages/${name}/package.json`)])));
   const filenames = names.map(name => `packages/${name}/api-extractor.json`);
   filenames.push('packages/core/api-extractor-conformance.json', 'packages/history/api-extractor-conformance.json', 'packages/history/api-extractor-shared.json', 'fixtures/declarations/producer/api-extractor.json', 'fixtures/declarations/capture-producer/api-extractor.json', 'fixtures/declarations/forged/api-extractor.json');
   const extractors = Object.fromEntries(await Promise.all(filenames.map(async filename => [filename, await readJson(filename)])));
   const problems = missingFoundationGates({
-    workspace: await readJson('package.json'), packages, extractors,
+    workspace: await readJson('package.json'), packages, lockfile: await readJson('package-lock.json'), extractors,
     workflow: await readFile(path.join(root, '.github/workflows/check.yml'), 'utf8'),
     eslintConfig: await readFile(path.join(root, 'eslint.config.mjs'), 'utf8'),
   });

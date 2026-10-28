@@ -27,13 +27,13 @@ test('clean CI reaches build, declaration, import, lint, and consumer gates', as
   ])));
   const workflow = await readFile(path.join(root, '.github/workflows/check.yml'), 'utf8');
   const eslintConfig = await readFile(path.join(root, 'eslint.config.mjs'), 'utf8');
-  assert.deepEqual(missingFoundationGates({ workspace, packages, workflow, extractors: await extractors(), eslintConfig }), []);
+  assert.deepEqual(missingFoundationGates({ workspace, packages, lockfile: await readJson('package-lock.json'), workflow, extractors: await extractors(), eslintConfig }), []);
 });
 
-test('the Check job tests exactly Node 22 and 24 while retaining each clean gate', async () => {
+test('the Check job tests the Node 24-only baseline while retaining each clean gate', async () => {
   const workflow = await readFile(path.join(root, '.github/workflows/check.yml'), 'utf8');
   const matrix = /^\s*node:\s*\[([^\]]+)\]\s*$/mu.exec(workflow)?.[1];
-  assert.deepEqual(matrix?.split(',').map(version => version.trim()), ['22', '24']);
+  assert.deepEqual(matrix?.split(',').map(version => version.trim()), ['24']);
   for (const command of ['npm ci', 'npm run check', 'npm test', 'npm run build']) {
     assert.match(workflow, new RegExp(`^\\s+- run: ${command.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}$`, 'mu'));
   }
@@ -43,10 +43,10 @@ test('the foundation checker rejects a missing or extra Node test version', asyn
   const workflow = await readFile(path.join(root, '.github/workflows/check.yml'), 'utf8');
   const workspace = await readJson('package.json');
   const inputs = { workspace, packages: {}, extractors: {}, eslintConfig: '', workflow };
-  for (const versionList of ['[22]', '[24]', '[20, 22, 24]']) {
+  for (const versionList of ['[22]', '[22, 24]', '[20, 22, 24]']) {
     const changed = workflow.replace(/^([ \t]*node:)\s*\[[^\]]+\]$/mu, `$1 ${versionList}`);
     assert.notEqual(changed, workflow);
-    assert.match(missingFoundationGates({ ...inputs, workflow: changed }).join('\n'), /CI Node matrix must be exactly 22, 24/u);
+    assert.match(missingFoundationGates({ ...inputs, workflow: changed }).join('\n'), /CI Node matrix must be exactly 24/u);
   }
 });
 
@@ -72,6 +72,7 @@ test('Value package build, checks, declaration views, and package order are requ
   const result = missingFoundationGates({
     workspace,
     packages,
+    lockfile: await readJson('package-lock.json'),
     workflow: await readFile(path.join(root, '.github/workflows/check.yml'), 'utf8'),
     extractors: configs,
     eslintConfig: await readFile(path.join(root, 'eslint.config.mjs'), 'utf8'),

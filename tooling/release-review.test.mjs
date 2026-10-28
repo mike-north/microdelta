@@ -146,7 +146,7 @@ test('a human release review does not require the PR to include latest main', as
   assert.ok(!calls.some(([name]) => name === 'enableAutoMerge'));
 });
 
-test('a release cannot complete when Node 24 is pending even if Node 22 passed', async () => {
+test('a release cannot complete when Node 24 is pending even if a retired Node 22 result passed', async () => {
   const { api, calls, request } = scenario({ requiredChecks: [
     { name: 'PR metadata', bucket: 'pass' },
     { name: 'core (22)', bucket: 'pass' },
@@ -166,11 +166,8 @@ for (const [name, overrides, requestOverrides = {}, pattern] of [
   ['a draft release PR', { pullRequest: { ...scenario().state.pullRequest, isDraft: true } }, {}, /Draft/u],
   ['a changed head', { pullRequest: { ...scenario().state.pullRequest, headRefOid: 'f'.repeat(40) } }, {}, /head changed/u],
   ['unresolved conversations', { pullRequest: { ...scenario().state.pullRequest, unresolvedThreads: 2 } }, {}, /Resolve all review conversations/u],
-  ['pending Node 22 CI', { requiredChecks: [{ name: 'PR metadata', bucket: 'pass' }, { name: 'core (22)', bucket: 'pending' }, { name: 'core (24)', bucket: 'pass' }] }, {}, /must have completed successfully on the exact head: core \(22\)/u],
   ['skipped required CI', { requiredChecks: [{ name: 'PR metadata', bucket: 'skipping' }, { name: 'core (22)', bucket: 'pass' }, { name: 'core (24)', bucket: 'pass' }] }, {}, /must have completed successfully on the exact head: PR metadata/u],
-  ['failed Node 22 CI', { requiredChecks: [{ name: 'PR metadata', bucket: 'pass' }, { name: 'core (22)', bucket: 'fail' }, { name: 'core (24)', bucket: 'pass' }] }, {}, /non-passing results: core \(22\)/u],
   ['failed Node 24 CI', { requiredChecks: [{ name: 'PR metadata', bucket: 'pass' }, { name: 'core (22)', bucket: 'pass' }, { name: 'core (24)', bucket: 'fail' }] }, {}, /non-passing results: core \(24\)/u],
-  ['missing Node 22 CI', { requiredChecks: [{ name: 'PR metadata', bucket: 'pass' }, { name: 'core (24)', bucket: 'pass' }] }, {}, /Required CI results are missing: core \(22\)/u],
   ['missing Node 24 CI', { requiredChecks: [{ name: 'PR metadata', bucket: 'pass' }, { name: 'core (22)', bucket: 'pass' }] }, {}, /Required CI results are missing: core \(24\)/u],
   ['no Copilot review', { copilotReviews: [] }, {}, /completed Copilot COMMENTED or APPROVED review/u],
   ['only an errored Copilot run', { copilotReviews: [{ authorLogin: 'copilot-pull-request-reviewer[bot]', authorType: 'Bot', commitOid: releaseHead, state: 'COMMENTED', submitted: true, errored: true }] }, {}, /completed Copilot COMMENTED or APPROVED review/u],
@@ -242,4 +239,10 @@ test('the CLI requires every option exactly once', async () => {
   const status = await new Promise(resolve => child.on('close', resolve));
   assert.equal(status, 1);
   assert.match(stderr, /--pr, --head, --scope, --evidence, and --verification are required/u);
+});
+
+/** The human release gate uses the supported runtime contract; retired Node evidence is not required. */
+test('a release can complete with successful Node 24 and metadata when retired Node 22 is absent', async () => {
+  const { api, request } = scenario({ requiredChecks: [{ name: 'PR metadata', bucket: 'pass' }, { name: 'core (24)', bucket: 'pass' }] });
+  await assert.doesNotReject(runReleaseReview(request, api));
 });

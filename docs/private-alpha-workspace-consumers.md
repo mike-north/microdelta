@@ -4,6 +4,12 @@ The facade's alpha declarations are a **project-private workspace contract**.
 They are not a published alpha channel. The default package type entry remains
 the public surface, and no `microdelta/alpha` package subpath exists.
 
+The declaration and installed-command examples below describe checkout or
+locally built package evidence. The accepted controlled proof of `start` plus
+finite `observe` is recorded under [#294](https://github.com/mike-north/microdelta/issues/294#issuecomment-6462080386);
+it does not claim a new package publication or expose the alpha declarations
+through the published package surface.
+
 ## Build generated declarations first
 
 From a clean repository checkout, install the lockfile and build the packages
@@ -179,6 +185,17 @@ contain application arguments, body values, arbitrary errors, or provider
 configuration. A locator receipt proves allocation only; an acknowledged
 terminal record still does not prove that an application report is complete.
 The application's own bounded statement remains a separate observation fact.
+
+The CLI does not serialize the caller's report or body return value: stdout is
+reserved for its locator and terminal JSON lines. Caller code owns report
+assembly and output. During the active application run, the body can use the
+existing `run.read(reference)` operation to obtain the deeply frozen data for
+that exact completed result. The read adds no acceptance or dependency evidence,
+and a missing or wrong-store reference fails rather than retargeting. The caller
+can then present or persist the report through its own application output path.
+The read does not establish current validity or success: if current work is
+incomplete or failed, an earlier readable result is prior retained data, not a
+current completed report.
 
 The module path must name an explicit local `.js`, `.mjs`, or `.cjs` file.
 There is no package lookup, remote loader, TypeScript compilation, or discovery.

@@ -41,7 +41,24 @@ incomplete arguments, with a usage diagnostic only on stderr. The JSON result
 supplies each read-refusal reason. A sampled nonterminal record is neither a
 heartbeat nor proof of process liveness, and event counters are not completion
 percentages. The command performs one read rather than waiting for completion.
-Run-start and broader inspection remain separate delivery work.
+The finite reader is the separately permissionable read side of the accepted
+bounded CLI slice; full CLI-001–004 inspection and M6 remain open.
+
+## Foreground run-start
+
+The installed `microdelta` executable also starts one caller-prepared foreground
+run:
+
+```sh
+microdelta start --module ./dist/workload.js --observation ./observations/run.sqlite -- opaque-app-arg
+```
+
+The module preparation contract, receipts, and limits are documented in the
+[private-alpha consumer guide](../../docs/private-alpha-workspace-consumers.md).
+The controlled installed-command proof is based on locally built repository
+packages; it does not establish a new npm publication or make alpha declarations
+part of the published package surface. The bounded run-start and finite reader
+do not complete full CLI-001–004 inspection, M6, or M7.
 
 ## Project-private workspace path (alpha)
 

@@ -1,5 +1,27 @@
 # @microdelta/supervision
 
+## 0.5.0
+### Minor Changes
+
+- f6672be: Add an alpha exact-execution observation path with a bounded, read-only SQLite reader, a separate terminal acknowledgment, and a finite application completion statement. Machine and Machine Node supply read-only SQLite mechanics; Supervision owns the observation protocol, while the microdelta facade assembles the Node capabilities for observed workspace runs.
+- bbc8099: Integrate alpha fixed shared admission across composed operation paths and runs, with explicit registered surface/cooldown attribution, conservative quantity costs, stop-safe waiting, final fenced authorization and possible-send rate debits. The facade composition exposes shared surface registration; normalized authoritative provider cooldowns apply without numeric configuration. Preserve finite run allowance, acceptance-anchored retry floors and truthful unknown usage. Fair discovery scheduling, serial recovery and adaptive policy remain outside this bounded integration.
+- ec33956: Add alpha scoped source retry policies for acquisition responses, with bounded immutable facts and attempt history, durable immediate/delayed/stop decisions, and typed failures for malformed response evidence. Preserve run-local finite allowance, known timing floors, stop/fence authority, and actual usage while applying the restrictive normalized rate-refusal retry subcap to both timed and untimed responses.
+
+### Patch Changes
+
+- 4484b12: Preserve the earliest deferred-work time when a failed strict request returns with pending siblings, including its closed execution observation. The failed request still returns immediately without sleeping, retrying or publishing a strict result; successfully resumed deferrals leave no stale waiting-time receipt.
+- 6528b61: Add the alpha process-local weighted rolling rate coordinator with atomic overlapping scope checks, authoritative cooldown floors, and single-use pre-send reservations. Production dispatch, fairness, and the #238/#239 integrations remain outside this component.
+- Updated dependencies [fa02658]
+- Updated dependencies [be22eb1]
+- Updated dependencies [f6672be]
+- Updated dependencies [1ece951]
+- Updated dependencies [5f24af6]
+- Updated dependencies [b2cff8d]
+- Updated dependencies [1827d0f]
+  - @microdelta/machine@0.4.0
+  - @microdelta/resolution@0.4.0
+  - @microdelta/definition@0.4.0
+
 ## 0.4.0
 ### Minor Changes
 

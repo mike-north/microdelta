@@ -1,5 +1,13 @@
 # @microdelta/value
 
+## 0.2.1
+### Patch Changes
+
+- Updated dependencies [fa02658]
+- Updated dependencies [f6672be]
+- Updated dependencies [5f24af6]
+  - @microdelta/machine@0.4.0
+
 ## 0.2.0
 ### Minor Changes
 

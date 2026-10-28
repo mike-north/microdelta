@@ -47,8 +47,9 @@ checked-in caller against their generated alpha declarations, and invokes its
 installed `microdelta start` and separate finite `microdelta observe` processes.
 Independent owner reads establish report content/reference and durable usage.
 Fresh processes establish exact reuse and actual current incomplete work after
-an earlier success. The active-reader counter proof pauses before graph admission
-(recorded phase `prepared`); it makes no concurrent-provider claim. Byte/directory
+an earlier success. The active-reader counter proof pauses before graph admission;
+ordinary observation sampling may record `prepared` or `running` during that pause.
+It makes no concurrent-provider claim. Byte/directory
 immutability is checked only after run acknowledgment, disposal, process exit and
 independent History/Accounting oracle closure. This small proof adds no large
 qualification or endurance evidence.

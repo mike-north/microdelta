@@ -211,11 +211,15 @@ function launch(case_: ICase): ILive {
   let stdout = ''; let stderr = '';
   const ready = new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => { child.kill('SIGKILL'); reject(new Error('Controlled CLI did not reach its pre-admission barrier')); }, 20_000);
-    child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString(); if (stderr.includes('controlled-report-barrier-ready\n')) { clearTimeout(timer); resolve(); } });
+    /** Independent pipes can arrive in either order; readiness requires both the locator line and reached barrier. */
+    function reached(): void {
+      if (stdout.includes('\n') && stderr.includes('controlled-report-barrier-ready\n')) { clearTimeout(timer); resolve(); }
+    }
+    child.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString(); reached(); });
+    child.stderr.on('data', (chunk: Buffer) => { stderr += chunk.toString(); reached(); });
     child.once('error', error => { clearTimeout(timer); reject(error); });
-    child.once('close', () => { clearTimeout(timer); if (!stderr.includes('controlled-report-barrier-ready\n')) { reject(new Error(`CLI closed before barrier: ${stderr}`)); } });
+    child.once('close', () => { clearTimeout(timer); if (!stdout.includes('\n') || !stderr.includes('controlled-report-barrier-ready\n')) { reject(new Error(`CLI closed before locator and barrier: ${stderr}`)); } });
   });
-  child.stdout.on('data', (chunk: Buffer) => { stdout += chunk.toString(); });
   const closed = new Promise<number | null>((resolve, reject) => {
     const timer = setTimeout(() => { child.kill('SIGKILL'); reject(new Error('Controlled CLI exceeded its finite process deadline')); }, 40_000);
     child.once('close', code => { clearTimeout(timer); resolve(code); }); child.once('error', error => { clearTimeout(timer); reject(error); });
@@ -234,7 +238,10 @@ test('a finite installed reader is noninterfering while the actual CLI is active
     expect(count(case_, 'import')).toBe(1); expect(count(case_, 'factory')).toBe(1); expect(count(case_, 'body')).toBe(1);
     for (const kind of ['source', 'github', 'assessment', 'control', 'dispose']) { expect(count(case_, kind)).toBe(0); }
     const before = counters(case_);
-    expect(observe(case_, address)).toMatchObject({ executionId: address.executionId, phase: 'prepared', context: { analysis: reportAnalysis, environment: 'production' } });
+    const current = observe(case_, address);
+    expect(current).toMatchObject({ executionId: address.executionId, context: { analysis: reportAnalysis, environment: 'production' } });
+    // The graph is paused, while ordinary observation sampling may advance the persisted nonterminal phase.
+    expect(['prepared', 'running']).toContain(current.phase);
     expect(counters(case_)).toEqual(before); expect(running.child.exitCode).toBeNull();
     expect(existsSync(join(case_.proof, 'outcome.json'))).toBe(false);
     running.child.stdin.end('release\n');

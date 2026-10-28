@@ -59,6 +59,15 @@ full M7 scale qualification remain unimplemented and unevidenced. Held-page
 same-run behavior is a full-target streaming question, not first-delivery proof.
 A proposal or source inspection cannot close those gates.
 
+The separate [within-person discovery design](within-person-discovery.md) and
+[bounded experiment charter](within-person-discovery-experiment.md) under #297
+address the remaining full-target live page-to-PR handoff. The supervisory owner
+selected Candidate A only for the bounded flat correctness experiment, with the
+charter's fixture/resource ceilings. A separate runtime issue must obtain review
+of its actual execution plan before any probe runs; no runtime proof or full
+nested-report adoption follows this selection. It does not reopen this
+completed-search first-delivery boundary.
+
 ## Meanings and consumer answers
 
 A **discovery traversal** is a fresh attempt to establish a selected person's

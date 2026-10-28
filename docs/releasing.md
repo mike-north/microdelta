@@ -7,6 +7,8 @@ reviewed **Version Packages** PR into `main`; nothing else publishes. Release
 automation lives in [`.github/workflows/release.yml`](../.github/workflows/release.yml),
 the one workflow identity npm trusts for this repository. Its publication path
 observes the separate existing main [Check](../.github/workflows/check.yml).
+The current workspace and every first-party package declare Node.js `>=24`;
+older immutable package versions retain their originally published metadata.
 
 The first implementation release, `0.1.0` of all ten packages, was published
 on 2026-09-28 by merging Version Packages PR #49 (merge commit `546c5e6`, release
@@ -116,9 +118,10 @@ version-PR preparation remains independent:
    only after a positive release decision. It observes the existing canonical
    `.github/workflows/check.yml` run for this exact merge commit, `push` event,
    `main` branch and trusted repository. It never starts another Check run,
-   installs dependencies, builds, or obtains OIDC. Both `core (22)` and
-   `core (24)` must have completed successfully, including their actual `npm ci`,
-   `npm run check`, `npm test` and `npm run build` steps. Missing scheduling or
+   installs dependencies, builds, or obtains OIDC. The required `core (24)` job
+   must have completed successfully, including its actual `npm ci`,
+   `npm run check`, `npm test` and `npm run build` steps. Node 22 results are not
+   required and cannot substitute for Node 24. Missing scheduling or
    incomplete visible results and pending states wait at 30-second intervals
    within a 120-minute deadline; the job timeout is 125 minutes. Terminal
    unsuccessful outcomes, invalid identity, malformed, ambiguous, incomplete
@@ -171,7 +174,7 @@ version-PR preparation remains independent:
 The integration reader resolves the canonical workflow ID and selects the latest
 applicable run by validated workflow `run_number`, never a successful-only query
 or an arbitrary first result. Reruns retain that run ID and advance `run_attempt`.
-Complete `jobs?filter=latest` results may retain a successful matrix sibling from
+Complete `jobs?filter=latest` results may retain a successful required job from
 an earlier attempt after a failed-job-only rerun; every selected job must still
 belong to the same run and commit and prove its required commands. Before/after
 run identity, status, attempt, workflow and current-selection reads must agree.
@@ -242,9 +245,8 @@ Each first-party package on npmjs.com has a trusted publisher with:
 | Permissions | `npm publish` and `npm stage publish` |
 
 Renaming or moving `release.yml`, or moving the repository, breaks every
-connection. npm requires GitHub-hosted runners, npm CLI 11.5.1 or later and
-Node 22.14.0 or later for trusted publishing; the publish job uses Node 24 and
-checks the npm version. Provenance is generated automatically because the
+connection. Trusted publishing here uses GitHub-hosted runners, npm CLI 11.5.1
+or later and the project's Node 24 baseline; the publish job checks the npm version. Provenance is generated automatically because the
 repository and packages are public. See
 [npm trusted publishers](https://docs.npmjs.com/trusted-publishers).
 

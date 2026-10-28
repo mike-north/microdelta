@@ -1,14 +1,22 @@
 /** Generated application declarations preserve concrete inputs, strict outcomes and the production facade's source-call boundary. */
 import { expectError, expectType } from 'tsd';
 import { authoring } from 'microdelta';
-import type { IObservedRun, IOperationSend, ITrackedView, IWorkspace } from 'microdelta';
-import { composeReport, evaluateObservedReport, evaluateReport } from '../.test-build/examples/contribution-report/src/controlled/application.js';
+import type { IApplicationStatementSubmission, IObservedRun, IOperationSend, ITrackedView, IWorkspace, IWorkspaceRun } from 'microdelta';
+import { composeReport, evaluateObservedReport, evaluateReport, evaluateReportBody } from '../.test-build/examples/contribution-report/src/controlled/application.js';
 import type { IAssessmentRequest, IReportApplication, IReportInputs, IReportRunOutcome, IReportServices } from '../.test-build/examples/contribution-report/src/controlled/application.js';
+import controlledCli from '../.test-build/fixtures/contribution-report/cli-workload.js';
 import type { IPullDetail } from '../.test-build/examples/contribution-report/src/controlled/evidence.js';
 
 declare const inputs: IReportInputs;
 declare const services: IReportServices;
 declare const workspace: IWorkspace;
+/** The application body consumes an already active run; it does not accept workspace lifecycle authority. */
+declare const active: IWorkspaceRun;
+declare const submission: IApplicationStatementSubmission;
+expectType<Promise<IReportRunOutcome>>(evaluateReportBody(active, composeReport(inputs, services), 'body-contract', submission));
+expectType<Promise<IReportRunOutcome>>(evaluateReportBody(active, composeReport(inputs, services), 'normal-body-contract'));
+expectError(evaluateReportBody(workspace, composeReport(inputs, services), 'workspace-is-not-an-active-run'));
+expectError(evaluateReportBody(active, composeReport(inputs, services), 123));
 declare const send: IOperationSend;
 expectType<IReportApplication>(composeReport(inputs, services));
 expectError(composeReport({ ...inputs, selected: [101] }, services));
@@ -43,3 +51,8 @@ declare const calls: Parameters<typeof parent.run>[0]['calls'];
 declare const childData: Awaited<ReturnType<typeof calls.detail>>['data'];
 expectType<ITrackedView<IPullDetail>>(childData);
 expectError(calls.detail(101));
+
+/** The compiled caller preserves the concrete body outcome while accepting only opaque string arguments. */
+const cliPreparation = await controlledCli.prepare(['/tmp/state', '/tmp/proof', 'type-contract', 'normal']);
+expectType<IReportRunOutcome>(await cliPreparation.body(active, submission));
+expectError(controlledCli.prepare([123]));

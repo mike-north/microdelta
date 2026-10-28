@@ -28,6 +28,31 @@ edge checks do not claim a host sandbox or arbitrary runtime dataflow analysis.
 generated type contracts. `npm run check:fixtures`, `npm run check:imports`,
 `npm run build:fixtures` and the root check/test/build gates include this role.
 
+The compiled `cli-workload.ts` composes the actual two-person controlled report
+with the installed foreground command. Its factory prepares resources without
+starting report work; the command owns the active run and final disposal. The
+shared application body supplies current strict completion and the exact retained
+report locator. Private `outcome.json` files retain fixture fold/usage evidence;
+they are not an exported report format.
+
+After `npm ci --offline` and `npm run build`, reproduce this small executable
+composition proof with:
+
+```sh
+node --experimental-vm-modules node_modules/jest/bin/jest.js --config fixtures/contribution-report/jest.config.mjs --runInBand --runTestsByPath fixtures/contribution-report/.test-build/fixtures/contribution-report/cli-workload.test.js
+```
+
+The test installs the local packages into a disposable consumer, compiles the
+checked-in caller against their generated alpha declarations, and invokes its
+installed `microdelta start` and separate finite `microdelta observe` processes.
+Independent owner reads establish report content/reference and durable usage.
+Fresh processes establish exact reuse and actual current incomplete work after
+an earlier success. The active-reader counter proof pauses before graph admission
+(recorded phase `prepared`); it makes no concurrent-provider claim. Byte/directory
+immutability is checked only after run acknowledgment, disposal, process exit and
+independent History/Accounting oracle closure. This small proof adds no large
+qualification or endurance evidence.
+
 `npm run test:controlled-report:workload` runs the standalone 150,000-distinct-PR
 cold and independent-process restart qualification. `-- --smoke` selects only a
 500-PR harness smoke; it does not satisfy the workload gate. The workload driver

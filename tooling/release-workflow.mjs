@@ -22,6 +22,8 @@
  * `jobs:` (for example a root `env` that redirects npm's registry) would
  * otherwise be read as part of the last job and escape every root check.
  * Anything else at column zero, other than comments and blank lines, fails.
+ * The fixed integration gate additionally requires its complete canonical block
+ * shape: unsupported YAML representations cannot hide skip/failure controls.
  */
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -61,6 +63,45 @@ const expectedTriggers = 'on:\n  push:\n    branches: [main]\n  workflow_dispatc
 
 /** Condition shared by every job that exists only for an actual release. */
 const releaseCondition = "if: needs.release-decision.outputs.publish == 'true'";
+
+/**
+ * The new integration gate has one audited block representation. Matching its
+ * complete shape, rather than trying to interpret arbitrary YAML keys, refuses
+ * escaped/quoted control keys, aliases, merges and hidden failure/skip modes.
+ * Comments may vary and action pins may advance under ordinary source review;
+ * changes to this gate's structure require an intentional contract update.
+ */
+const integrationShape = [
+  '    needs: release-decision',
+  `    ${releaseCondition}`,
+  '    runs-on: ubuntu-latest',
+  '    timeout-minutes: 125',
+  '    permissions:',
+  '      actions: read',
+  '      contents: read',
+  '    steps:',
+  /^ {6}- uses: actions\/checkout@[0-9a-f]{40}$/u,
+  '        with:',
+  '          ref: ${{ github.sha }}',
+  '          persist-credentials: false',
+  /^ {6}- uses: actions\/setup-node@[0-9a-f]{40}$/u,
+  '        with:',
+  '          node-version: 24',
+  '      - name: Wait for exact-commit main integration',
+  '        run: node tooling/release-integration.mjs --wait',
+  '        env:',
+  '          GITHUB_TOKEN: ${{ github.token }}',
+];
+
+/** Only comments/blank lines are ignored; unsupported syntax never acquires authority through normalization. */
+function canonicalIntegrationShape(job) {
+  const lines = job.split('\n').map(line => line.replace(/[ \t]+#.*$/u, '').trimEnd())
+    .filter(line => line.trim() !== '' && !line.trimStart().startsWith('#'));
+  return lines.length === integrationShape.length && lines.every((line, index) => {
+    const expected = integrationShape[index];
+    return typeof expected === 'string' ? line === expected : expected.test(line);
+  });
+}
 
 /** Split the `jobs:` mapping into each job's text. */
 export function workflowJobs(text) {
@@ -148,12 +189,8 @@ export function auditReleaseWorkflow(text) {
   if (integrationRuns.length !== 1 || integrationRuns[0] !== 'node tooling/release-integration.mjs --wait') {
     problems.push('integration job must run only the bounded release-integration.mjs --wait assertion without a shell bypass');
   }
-  // A skipped or ignored assertion would turn failure into a successful dependency.
-  // Custom shells/defaults can likewise hide its exit status; this gate has no such modes.
-  const integrationConditions = [...integration.matchAll(/^[ \t]*(?:-[ \t]+)?['"]?if['"]?:[^\n]*$/gmu)].map(match => match[0]);
-  if (/^[ \t]*(?:-[ \t]+)?['"]?(?:continue-on-error|shell|defaults)['"]?:/mu.test(integration)
-    || integrationConditions.length !== 1 || integrationConditions[0] !== `    ${releaseCondition}`) {
-    problems.push('integration job and assertion must not ignore failure or conditionally bypass the proof');
+  if (!canonicalIntegrationShape(integration)) {
+    problems.push('integration job must use its audited canonical block syntax and shape; unsupported forms can bypass the proof');
   }
   const integrationEnvs = [...integration.matchAll(/^\s*env:/gmu)];
   const integrationEnv = /^ {8}env:\n((?: {10}\S.*\n)*)/mu.exec(integration)?.[1].trim();

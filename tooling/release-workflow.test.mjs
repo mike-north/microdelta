@@ -168,3 +168,14 @@ for (const firstKey of ['if: false', 'continue-on-error: true']) {
     refuses(once(workflow, '      - name: Wait for exact-commit main integration\n', `      - ${firstKey}\n        name: Wait for exact-commit main integration\n`), /integration.*(?:bypass|ignore)/iu);
   });
 }
+
+for (const firstKey of ['if : false', 'continue-on-error : true', String.raw`"i\u0066": false`]) {
+  test(`unsupported control-key syntax cannot bypass the integration assertion: ${firstKey}`, () => {
+    refuses(once(workflow, '      - name: Wait for exact-commit main integration\n', `      - ${firstKey}\n        name: Wait for exact-commit main integration\n`), /integration.*(?:syntax|bypass|ignore)/iu);
+  });
+}
+
+test('YAML merge syntax cannot hide an inherited integration control key', () => {
+  const withAnchor = workflow.replace(/(^  version:\n[\s\S]*?    steps:\n)/mu, '$1      - &skip-integration\n        if: false\n        run: echo skipped\n');
+  refuses(once(withAnchor, '      - name: Wait for exact-commit main integration\n', '      - <<: *skip-integration\n        name: Wait for exact-commit main integration\n'), /integration.*(?:syntax|bypass)/iu);
+});

@@ -198,7 +198,9 @@ stays private. `npm run check:release` runs this structural check and the
 change that would break a later release fails in its own PR. The audit also fixes
 the workflow root to `name`, `on`, `permissions` and `jobs`, in that order, and
 refuses `npm_config_*` environment overrides, so no root key added after `jobs:`
-can change what the audited jobs do.
+can change what the audited jobs do. The fixed integration gate uses an audited
+canonical block shape; alternate key spellings, escapes, aliases and merges are
+refused rather than interpreted as another way to skip or ignore its assertion.
 
 ### Integration failure and recovery
 

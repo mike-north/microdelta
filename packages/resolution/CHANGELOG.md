@@ -1,5 +1,23 @@
 # @microdelta/resolution
 
+## 0.4.0
+### Minor Changes
+
+- 1827d0f: Add project-private alpha sourceSlot, suppliedSource and supplySource declarations for current source calls beneath retained memos. Validate callable binding, implementation and consumed argument/input evidence before current source policy; preserve call-specific sharing, supervised acquisition and downstream consumed-output retention. Extend only source provenance v1 to accept callable descriptors while preserving existing parent witness v2 and older record reads; older-binary forward reading is not guaranteed.
+
+### Patch Changes
+
+- be22eb1: Store new provenance observations losslessly as compact wire-version-5 tuples while preserving semantic variants and legacy wire-version-1–4 reading and reuse. Acceptance and attempt-ending formats remain unchanged. Older Resolution readers treat new provenance as unsupported evidence and cannot reuse those new records.
+- 1ece951: Index exact reference locators during ordered deduplication and retained fold dependency validation while preserving historical integrity checks and first-use reference identity.
+- b2cff8d: Reuse immutable declared-input preparation within each resolution request while preserving complete recovery intent and separate invocation captures.
+- Updated dependencies [f6672be]
+- Updated dependencies [1827d0f]
+- Updated dependencies [c10a724]
+  - @microdelta/history@0.4.0
+  - @microdelta/definition@0.4.0
+  - @microdelta/tracking@0.2.3
+  - @microdelta/materialization@0.1.4
+
 ## 0.3.1
 ### Patch Changes
 

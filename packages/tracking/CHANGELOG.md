@@ -1,5 +1,15 @@
 # @microdelta/tracking
 
+## 0.2.3
+### Patch Changes
+
+- c10a724: Reuse Value-owned immutable validation for narrow Tracking data reads while preserving selected facts, capture ownership, and caller snapshot isolation.
+- Updated dependencies [fa02658]
+- Updated dependencies [f6672be]
+- Updated dependencies [5f24af6]
+  - @microdelta/machine@0.4.0
+  - @microdelta/value@0.2.1
+
 ## 0.2.2
 ### Patch Changes
 

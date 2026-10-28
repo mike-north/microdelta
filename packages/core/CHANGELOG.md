@@ -1,5 +1,38 @@
 # microdelta
 
+## 0.5.0
+### Minor Changes
+
+- fa02658: Add foreground `microdelta start` for typed caller-owned workload preparations, with early exact locators, cooperative signal escalation, independent runtime and observation settlement, and exactly-once resource disposal. Add alpha workload-definition helpers and Node command-host facilities for explicit local module loading, path resolution, signals, and cancellable process keep-alive; retain the public declaration tier and separate finite observation command.
+- f6672be: Add an alpha exact-execution observation path with a bounded, read-only SQLite reader, a separate terminal acknowledgment, and a finite application completion statement. Machine and Machine Node supply read-only SQLite mechanics; Supervision owns the observation protocol, while the microdelta facade assembles the Node capabilities for observed workspace runs.
+- 5f24af6: Add the finite `microdelta observe --location PATH --execution-id ID` executable with exact JSON read states and separate observation/refusal/argument exit statuses. Supply command-process mechanics through an alpha Node Machine capability while preserving existing library declaration tiers.
+- bbc8099: Integrate alpha fixed shared admission across composed operation paths and runs, with explicit registered surface/cooldown attribution, conservative quantity costs, stop-safe waiting, final fenced authorization and possible-send rate debits. The facade composition exposes shared surface registration; normalized authoritative provider cooldowns apply without numeric configuration. Preserve finite run allowance, acceptance-anchored retry floors and truthful unknown usage. Fair discovery scheduling, serial recovery and adaptive policy remain outside this bounded integration.
+- 1827d0f: Add project-private alpha sourceSlot, suppliedSource and supplySource declarations for current source calls beneath retained memos. Validate callable binding, implementation and consumed argument/input evidence before current source policy; preserve call-specific sharing, supervised acquisition and downstream consumed-output retention. Extend only source provenance v1 to accept callable descriptors while preserving existing parent witness v2 and older record reads; older-binary forward reading is not guaranteed.
+- ec33956: Add alpha scoped source retry policies for acquisition responses, with bounded immutable facts and attempt history, durable immediate/delayed/stop decisions, and typed failures for malformed response evidence. Preserve run-local finite allowance, known timing floors, stop/fence authority, and actual usage while applying the restrictive normalized rate-refusal retry subcap to both timed and untimed responses.
+
+### Patch Changes
+
+- Updated dependencies [fa02658]
+- Updated dependencies [be22eb1]
+- Updated dependencies [f6672be]
+- Updated dependencies [1ece951]
+- Updated dependencies [4484b12]
+- Updated dependencies [5f24af6]
+- Updated dependencies [bbc8099]
+- Updated dependencies [b2cff8d]
+- Updated dependencies [1827d0f]
+- Updated dependencies [ec33956]
+- Updated dependencies [6528b61]
+- Updated dependencies [c10a724]
+  - @microdelta/machine-node@0.4.0
+  - @microdelta/resolution@0.4.0
+  - @microdelta/history@0.4.0
+  - @microdelta/supervision@0.5.0
+  - @microdelta/definition@0.4.0
+  - @microdelta/tracking@0.2.3
+  - @microdelta/value@0.2.1
+  - @microdelta/materialization@0.1.4
+
 ## 0.4.0
 ### Minor Changes
 

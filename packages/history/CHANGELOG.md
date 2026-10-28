@@ -1,5 +1,18 @@
 # @microdelta/history
 
+## 0.4.0
+### Minor Changes
+
+- f6672be: Add an alpha exact-execution observation path with a bounded, read-only SQLite reader, a separate terminal acknowledgment, and a finite application completion statement. Machine and Machine Node supply read-only SQLite mechanics; Supervision owns the observation protocol, while the microdelta facade assembles the Node capabilities for observed workspace runs.
+
+### Patch Changes
+
+- Updated dependencies [fa02658]
+- Updated dependencies [f6672be]
+- Updated dependencies [5f24af6]
+  - @microdelta/machine@0.4.0
+  - @microdelta/value@0.2.1
+
 ## 0.3.0
 ### Minor Changes
 

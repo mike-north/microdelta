@@ -2,7 +2,7 @@
 
 The selected existing-file readonly/DEFERRED candidate returned the correct
 committed B value from a healthy closed WAL-mode database, but its first actual
-data-read stage created a 32KiB SHM file and an empty WAL file. This is a concrete
+data-read stage created a 32 KiB SHM file and an empty WAL file. This is a concrete
 counterexample to the separately selected **no-source-filesystem-effects**
 hypothesis. It is not a History claim or domain publication and does not show
 that useful M6 inspection is impossible. No production reader is adopted.
@@ -25,18 +25,18 @@ The observed compile-option list includes `USE_URI`; no URI workaround was used
 or qualified.
 
 The normal generated Machine writer atomically committed A and B, acknowledged
-both literal pairs, closed normally and exited0. Before inspection, the source
+both literal pairs, closed normally and exited 0. Before inspection, the source
 directory contained only a valid 12288-byte SQLite main file with WAL header
-versions2/2. No sidecar was manually removed to create this healthy layout.
+versions 2/2. No sidecar was manually removed to create this healthy layout.
 The writer and every other source modifier were closed before reader-only
 attribution began.
 
 | Reader stage | Main file | SHM | WAL | Data |
 | --- | --- | --- | --- | --- |
-| Before open | 12288bytes | absent | absent | Owner acknowledged B |
+| Before open | 12288 bytes | absent | absent | Owner acknowledged B |
 | Opened, no pin queries | unchanged | absent | absent | No data query yet |
-| Actual DEFERRED data anchor | unchanged | created32768bytes | created0bytes | revision2/current2/valueB |
-| Second actual data query | unchanged | retained | retained | revision2/current2/valueB |
+| Actual DEFERRED data anchor | unchanged | created 32768 bytes | created 0 bytes | revision 2/current 2/value B |
+| Second actual data query | unchanged | retained | retained | revision 2/current 2/value B |
 | Runtime pin queries, then end | unchanged | retained | retained | Pins recorded after data reads |
 | Close, repeated close, use-after-close check | unchanged | retained | retained | Repeated close succeeded; later read explicitly refused |
 
@@ -90,10 +90,10 @@ coverage remain unproved. There is no general concurrency/platform claim.
 
 ## Test order, checks and next decision
 
-Phase1 protocol/assertions preceded the candidate. Original strict compilation
+Phase 1 protocol/assertions preceded the candidate. Original strict compilation
 failed on two absent wiring modules; strengthened assertions retained those
 missing-module failures before implementation. These failures establish order,
-not a reproduced defect in existing SQLite/Machine behavior. Root's Phase1
+not a reproduced defect in existing SQLite/Machine behavior. Root's Phase 1
 release and independent source confirmation pin the accepted protocol hash in
 the observed record. No retrospective RED reconstruction was used.
 
@@ -139,5 +139,5 @@ Recommendation: reject this candidate under the stronger hypothesis, retain the
 counterexample and ask the supervisory/owner decision to select any next concrete
 mechanism. A permission change, copy/projection, alternate binding/VFS or relaxed
 filesystem contract would require its own explicit scope and correctness proof;
-none is selected here. Existing Machine/CLI005 guarantees and the mandatory
+none is selected here. Existing Machine/CLI-005 guarantees and the mandatory
 during/after M6 outcomes stay intact.

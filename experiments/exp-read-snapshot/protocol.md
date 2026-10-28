@@ -2,12 +2,12 @@
 
 Status: supervisor-selected EXP-0 experiment; this protocol and its assertions
 precede the candidate. Root must review these practical bounds before candidate
-execution. No result, production API or PR232 adoption is claimed here.
+execution. No result, production API or PR #232 adoption is claimed here.
 
-The governing [issue296](https://github.com/mike-north/microdelta/issues/296)
+The governing [issue #296](https://github.com/mike-north/microdelta/issues/296)
 and [EXP-0](../../docs/spec/experiments.md#common-experiment-contract) select the
-question. [CLI001/004 and RUN006–008](../../docs/spec/operations.md),
-[A16](../../docs/spec/acceptance.md#preview-observation-cases) and the
+question. [CLI-001/004 and RUN-006–008](../../docs/spec/operations.md),
+[A-16](../../docs/spec/acceptance.md#preview-observation-cases) and the
 [standalone plan](../../docs/plans/standalone-inspection.md) retain their meaning.
 
 ## Question, owners and two independent axes
@@ -26,7 +26,7 @@ currentness and retention. This experiment uses no History schema or policy.
 
 The stronger hypothesis additionally forbids source content writes, creation,
 deletion and source-directory entry changes, including existing SHM bytes.
-Existing rollback-only Machine guarantees and CLI005's DELETE observation
+Existing rollback-only Machine guarantees and CLI-005's DELETE observation
 artifact remain unchanged. This qualification does not retroactively impose
 that stronger hypothesis on every M6 mechanism. A candidate can read correct
 values while violating the stronger hypothesis; report both facts.
@@ -69,12 +69,12 @@ default-driver side effects are measured counterexamples, not hidden repairs.
 | Boundary | Maximum |
 | --- | --- |
 | Processes | Coordinator plus two owned children; one case/control fixture at a time; no detached processes |
-| Synthetic data | 72 total rows, scalar integer revisions1–4 and valuesA–D; at most64 padding rows of4096bytes for a genuine hot-journal negative |
-| Source sizes | 2MiB per source file; 8MiB per case; no unbounded table/payload scan |
-| Communication | 8192bytes per JSON line, 65536bytes total output per child, 16commands per case |
-| SQLite busy budget | 500ms, matching the existing Node Machine writer |
-| Wait/lifetime | 5s per stage, 15s per child, 20s per case, 180s total coordinator, 5s cleanup allowance |
-| Outer assertion deadline | 210s; exceeding a bound is explicit failed/incomplete harness evidence, never a synthesized candidate PASS |
+| Synthetic data | 72 total rows, scalar integer revisions 1–4 and values A–D; at most 64 padding rows of 4096 bytes for a genuine hot-journal negative |
+| Source sizes | 2 MiB per source file; 8 MiB per case; no unbounded table/payload scan |
+| Communication | 8192 bytes per JSON line, 65536 bytes total output per child, 16 commands per case |
+| SQLite busy budget | 500 ms, matching the existing Node Machine writer |
+| Wait/lifetime | 5 s per stage, 15 s per child, 20 s per case, 180 s total coordinator, 5 s cleanup allowance |
+| Outer assertion deadline | 210 s; exceeding a bound is explicit failed/incomplete harness evidence, never a synthesized candidate PASS |
 
 Every acknowledgment is a framed protocol fact. Parent deadlines terminate only
 owned children, await actual exit and retain the original failure plus cleanup
@@ -97,7 +97,7 @@ preparation, never to the inspection candidate.
 
 First qualify the finite oracles with the real controls below. Then execute
 `closed-wal-no-sidecars` first: an owner commits A and B and cleanly closes its
-normal WAL handle; verify actual exit, acknowledged B, WAL header2 and no WAL/SHM.
+normal WAL handle; verify actual exit, acknowledged B, WAL header 2 and no WAL/SHM.
 **Never manufacture this healthy state by deleting live sidecars.** Observe the
 candidate open, first data anchor, held/query/end and close phases with no other
 source modifier alive. A definite candidate-attributable effect or false read
@@ -141,7 +141,7 @@ loaded runtime pins and an honest candidate verdict/matrix.
   to reject it. This tests value-oracle sensitivity, not a main-file-only reader
   and not a SQLite defect; no unsafe main-only/immutable fallback is implemented.
 - **Torn pair:** make actual separate autocommit reads around an acknowledged
-  atomic B→C writer commit, combining revisionB with current-rowC. The same pair
+  atomic B→C writer commit, combining revision B with current-row C. The same pair
   oracle must reject it; an artificial label alone proves nothing.
 - **IMMEDIATE:** a separately tagged writable control uses the existing Machine
   IMMEDIATE reservation while the other writer attempts a bounded write. Observe
@@ -182,7 +182,7 @@ Decisive counterexample means REJECT; unproved/missing evidence means INCONCLUSI
 The returned verdict must equal the case-evidence classifier. An ordinary
 completed report must actually attempt the closed-first candidate on verified
 healthy provenance: acknowledged A/B commits, successful normal owner closure,
-WAL header2, no before-open sidecars, reader/writer records and source images.
+WAL header 2, no before-open sidecars, reader/writer records and source images.
 REJECT additionally needs a concrete eligible witness tied to that attempted
 case: recorded native refusal on verified health, incorrect returned values, an
 attributed matching source-image difference, or an actual forbidden domain

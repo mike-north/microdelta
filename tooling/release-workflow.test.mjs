@@ -34,7 +34,7 @@ function once(text, search, replacement) {
 
 test('the checked-in release workflow passes the publication audit', () => {
   assert.deepEqual(auditReleaseWorkflow(workflow), []);
-  assert.deepEqual(Object.keys(workflowJobs(workflow)), ['version', 'release-decision', 'package', 'publish']);
+  assert.deepEqual(Object.keys(workflowJobs(workflow)), ['version', 'release-decision', 'integration', 'package', 'publish']);
 });
 
 test('OIDC token permission granted to the whole workflow is refused', () => {
@@ -46,7 +46,7 @@ test('OIDC token permission in the version or package job is refused', () => {
 });
 
 test('a publish job with broader write permission is refused', () => {
-  refuses(workflow.replace(/(^  publish:\n[\s\S]*?permissions:\n)/mu, '$1      packages: write\n'), /publish job permissions must be exactly contents: read, id-token: write and pull-requests: read/u);
+  refuses(workflow.replace(/(^  publish:\n[\s\S]*?permissions:\n)/mu, '$1      packages: write\n'), /publish job permissions must be exactly actions: read, contents: read, id-token: write and pull-requests: read/u);
 });
 
 test('publication that no longer depends on the release decision is refused', () => {
@@ -54,7 +54,7 @@ test('publication that no longer depends on the release decision is refused', ()
 });
 
 test('publication that skips verified packing is refused', () => {
-  refuses(once(workflow, 'needs: [release-decision, package]', 'needs: [release-decision]'), /publish job must need release-decision and package/u);
+  refuses(once(workflow, 'needs: [release-decision, integration, package]', 'needs: [release-decision, integration]'), /publish job must need release-decision, integration and package/u);
 });
 
 test('registry secrets or long-lived tokens are refused', () => {
@@ -90,8 +90,8 @@ test('packing must verify the exact pushed commit in release mode', () => {
 // Issue #64 review finding 2: the publish job re-reads GitHub at its final
 // boundary, so it needs a read-only PR permission and the job token, and no more.
 test('publication must receive only read access for release revalidation', () => {
-  refuses(workflow.replace(/(^ {2}publish:\n[\s\S]*?) {6}pull-requests: read\n/mu, '$1'), /publish job permissions must be exactly contents: read, id-token: write and pull-requests: read/u);
-  refuses(workflow.replace(/(^ {2}publish:\n[\s\S]*?) {6}pull-requests: read\n/mu, '$1      pull-requests: write\n'), /publish job permissions must be exactly contents: read, id-token: write and pull-requests: read/u);
+  refuses(workflow.replace(/(^ {2}publish:\n[\s\S]*?) {6}pull-requests: read\n/mu, '$1'), /publish job permissions must be exactly actions: read, contents: read, id-token: write and pull-requests: read/u);
+  refuses(workflow.replace(/(^ {2}publish:\n[\s\S]*?) {6}pull-requests: read\n/mu, '$1      pull-requests: write\n'), /publish job permissions must be exactly actions: read, contents: read, id-token: write and pull-requests: read/u);
   refuses(workflow.replace(/(^ {2}publish:\n[\s\S]*?) {10}GITHUB_TOKEN: \$\{\{ github\.token \}\}\n/mu, '$1'), /publish job must pass the read-only job token for release revalidation/u);
 });
 
@@ -128,3 +128,37 @@ test('root comments and blank lines after jobs remain allowed', () => {
 test('npm configuration environment overrides are refused anywhere in the workflow', () => {
   refuses(workflow.replace(/(^ {10}GITHUB_TOKEN: \$\{\{ github\.token \}\}\n)(?![\s\S]*^ {10}GITHUB_TOKEN)/mu, '$1          NPM_CONFIG_REGISTRY: https://example.invalid\n'), /must not override npm configuration through the environment/u);
 });
+
+/** Packaging is downstream of the authoritative existing main integration, independently of version preparation. */
+test('packaging and publication cannot start before exact main integration succeeds', () => {
+  const jobs = workflowJobs(workflow);
+  assert.ok(jobs.integration, 'release must have an integration gate before packaging');
+  assert.match(jobs.integration, /^ {4}needs: release-decision$/mu);
+  assert.match(jobs.package, /^ {4}needs: \[release-decision, integration\]$/mu);
+  assert.match(jobs.publish, /^ {4}needs: \[release-decision, integration, package\]$/mu);
+  assert.doesNotMatch(jobs.version, /needs:/u);
+});
+
+for (const [label, mutation] of [
+  ['package skips integration', text => once(text, 'needs: [release-decision, integration]\n', 'needs: release-decision\n')],
+  ['publication skips integration', text => once(text, 'needs: [release-decision, integration, package]', 'needs: [release-decision, package]')],
+  ['gate loses its decision dependency', text => text.replace(/(^  integration:\n[\s\S]*?)    needs: release-decision\n/mu, '$1')],
+  ['gate is not release-only', text => text.replace(/(^  integration:\n[\s\S]*?)    if: needs\.release-decision\.outputs\.publish == 'true'\n/mu, '$1    if: always()\n')],
+  ['gate command is removed', text => once(text, 'node tooling/release-integration.mjs --wait', 'echo no integration')],
+  ['gate command failure is ignored', text => once(text, 'node tooling/release-integration.mjs --wait', 'node tooling/release-integration.mjs --wait || true')],
+  ['gate job ignores failure', text => text.replace('  integration:\n', '  integration:\n    continue-on-error: true\n')],
+  ['gate assertion ignores failure', text => once(text, '        run: node tooling/release-integration.mjs --wait', '        continue-on-error: true\n        run: node tooling/release-integration.mjs --wait')],
+  ['gate assertion can be skipped', text => once(text, '        run: node tooling/release-integration.mjs --wait', '        if: false\n        run: node tooling/release-integration.mjs --wait')],
+  ['gate has no deadline', text => once(text, '    timeout-minutes: 125\n', '')],
+  ['gate timeout is extended', text => once(text, '    timeout-minutes: 125\n', '    timeout-minutes: 999\n')],
+  ['gate requests write access', text => text.replace(/(^  integration:\n[\s\S]*?)      actions: read\n/mu, '$1      actions: write\n')],
+  ['gate requests OIDC', text => text.replace(/(^  integration:\n[\s\S]*?permissions:\n)/mu, '$1      id-token: write\n')],
+  ['gate installs packages', text => text.replace(/(^  integration:\n[\s\S]*?steps:\n)/mu, '$1      - run: npm ci\n')],
+  ['gate changes the observed SHA', text => once(text, '        run: node tooling/release-integration.mjs --wait', '        run: node tooling/release-integration.mjs --wait\n        env:\n          GITHUB_SHA: other')],
+  ['gate omits its read token', text => text.replace(/(^  integration:\n[\s\S]*?)          GITHUB_TOKEN: \$\{\{ github\.token \}\}\n/mu, '$1')],
+  ['publisher lacks Actions read', text => text.replace(/(^  publish:\n[\s\S]*?)      actions: read\n/mu, '$1')],
+]) {
+  test(`release integration audit refuses when ${label}`, () => {
+    refuses(mutation(workflow), /integration|publish job permissions|only the publish/u);
+  });
+}

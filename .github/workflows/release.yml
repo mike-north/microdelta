@@ -2,7 +2,8 @@
 # first-party package. Pushes to main and manual runs prepare the reviewable
 # Version Packages PR. Merging that PR is the human release decision: only the
 # push of its merge commit passes release-decision, after which the exact commit
-# is checked, packed and verified without publication credentials, and only the
+# must pass its existing main integration before packing without publication
+# credentials; only the
 # publish job obtains a short-lived OIDC token to publish those tarballs.
 # tooling/release-workflow.mjs audits this shape; see docs/releasing.md.
 name: Release
@@ -97,10 +98,32 @@ jobs:
         run: node tooling/release-decision.mjs
         env:
           GITHUB_TOKEN: ${{ github.token }}
+  # Observe the existing main-push matrix without starting a second Check run.
+  # Only the real release path waits; version preparation stays independent.
+  integration:
+    needs: release-decision
+    if: needs.release-decision.outputs.publish == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 125
+    permissions:
+      actions: read
+      contents: read
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: 24
+      - name: Wait for exact-commit main integration
+        run: node tooling/release-integration.mjs --wait
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
   # Builds, checks, tests, packs and install-verifies the exact release commit.
   # Dependency install scripts run here, where no OIDC token is obtainable.
   package:
-    needs: release-decision
+    needs: [release-decision, integration]
     if: needs.release-decision.outputs.publish == 'true'
     runs-on: ubuntu-latest
     permissions:
@@ -128,12 +151,13 @@ jobs:
   # The only job that can obtain an OIDC token. It installs nothing and runs no
   # package scripts; it publishes the verified tarballs in dependency order.
   # After any wait it re-reads GitHub (pull-requests: read) and publishes only
-  # while this commit is still the latest merged Version Packages PR.
+  # while this commit is still the latest release and its main Check still passes.
   publish:
-    needs: [release-decision, package]
+    needs: [release-decision, integration, package]
     if: needs.release-decision.outputs.publish == 'true'
     runs-on: ubuntu-latest
     permissions:
+      actions: read
       contents: read
       id-token: write
       pull-requests: read

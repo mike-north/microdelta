@@ -3,10 +3,10 @@
 microdelta uses Changesets to prepare version and changelog updates, and npm
 trusted publishing to publish the first-party packages after a maintainer
 decides to release. The only release decision is a maintainer merging the
-reviewed **Version Packages** PR into `main`; nothing else publishes. Every
-workflow in this document lives in
-[`.github/workflows/release.yml`](../.github/workflows/release.yml), the one
-workflow identity npm trusts for this repository.
+reviewed **Version Packages** PR into `main`; nothing else publishes. Release
+automation lives in [`.github/workflows/release.yml`](../.github/workflows/release.yml),
+the one workflow identity npm trusts for this repository. Its publication path
+observes the separate existing main [Check](../.github/workflows/check.yml).
 
 The first implementation release, `0.1.0` of all ten packages, was published
 on 2026-09-28 by merging Version Packages PR #49 (merge commit `546c5e6`, release
@@ -65,8 +65,8 @@ configured; its [version runner](https://github.com/changesets/action/blob/a45c4
 selects the CLI `version` command for Changesets 2.x. The `version` job sets
 `createGithubReleases: false` and omits `publish`; Changesets never publishes.
 
-The `version` job runs after pushes to `main` and when the workflow is started
-manually. It creates or updates one reviewable Changesets PR. Because GitHub does
+The `version` job runs independently of integration after pushes to `main` and
+when the workflow is started manually. It creates or updates one reviewable Changesets PR. Because GitHub does
 not start normal pull-request workflows for PRs created with `GITHUB_TOKEN`, the
 job explicitly dispatches the existing core and PR-metadata checks against the
 generated branch. It rewrites the PR body using the repository's required
@@ -99,8 +99,9 @@ configured.
 
 ## Publishing after the release decision
 
-The other three jobs in `release.yml` run for every push and manual run, but do
-real work only for the release decision:
+The release path keeps its original push/main commit identity. Its four jobs
+separate eligibility, existing main integration, verified packing and publication;
+version-PR preparation remains independent:
 
 1. **`release-decision`** (`contents: read`, `pull-requests: read`) runs
    [`tooling/release-decision.mjs`](../tooling/release-decision.mjs). It
@@ -110,7 +111,20 @@ real work only for the release decision:
    Version Packages PR. Manual dispatch, feature pushes, and pushes to the
    version branch output `publish=false`. Re-running an older release after a
    newer Version Packages merge fails as stale.
-2. **`package`** (`contents: read`) checks out that exact commit, runs
+2. **`integration`** (`contents: read`, `actions: read`) runs
+   [`tooling/release-integration.mjs --wait`](../tooling/release-integration.mjs)
+   only after a positive release decision. It observes the existing canonical
+   `.github/workflows/check.yml` run for this exact merge commit, `push` event,
+   `main` branch and trusted repository. It never starts another Check run,
+   installs dependencies, builds, or obtains OIDC. Both `core (22)` and
+   `core (24)` must have completed successfully, including their actual `npm ci`,
+   `npm run check`, `npm test` and `npm run build` steps. Missing scheduling or
+   incomplete visible results and pending states wait at 30-second intervals
+   within a 120-minute deadline; the job timeout is 125 minutes. Terminal
+   unsuccessful outcomes, invalid identity, malformed, ambiguous, incomplete
+   pagination or unavailable evidence refuse. Packaging cannot begin until this
+   gate succeeds.
+3. **`package`** (`contents: read`) checks out that exact commit, runs
    `npm ci`, `npm run check` and `npm test`, then
    `node tooling/release-artifacts.mjs --release --out <dir>`. That command
    validates the first-party graph, packs one tarball per package in
@@ -131,7 +145,7 @@ real work only for the release decision:
    it is not a general integration suite and changes no declaration tier. It
    uploads the tarballs and `release-manifest.json`. Dependency install scripts
    run only in this job, which cannot obtain an OIDC token.
-3. **`publish`** (`contents: read`, `id-token: write`, `pull-requests: read`) is the only job that can
+4. **`publish`** (`contents: read`, `actions: read`, `id-token: write`, `pull-requests: read`) is the only job that can
    request an OIDC token. It installs and builds nothing. It downloads the
    verified artifact and runs
    [`tooling/publish-release.mjs`](../tooling/publish-release.mjs), which
@@ -143,12 +157,36 @@ real work only for the release decision:
    for packaging or the `publish-npm` lock, or be re-run, while a newer Version
    Packages PR merges. So it re-reads GitHub with the job's read-only token and
    requires this commit to still be the latest merged Version Packages PR, both
-   before planning and before every individual publish. Missing or unreadable
+   before planning and before every individual publish. At each boundary it also
+   reads fresh exact-commit main integration with the same reader as the waiting
+   job. This assertion never waits: a current queued, failed or incomplete rerun
+   refuses publication after packaging or a publish-lock wait. The earlier gate's
+   receipt is evidence, not a reusable authorization token. Missing or unreadable
    evidence refuses. It then reads every package version, and every package's
    current `latest` tag, from the registry before any publish. It refuses a
    version below the current `latest`, which `--tag latest` would move
    backward, and publishes the absent ones in dependency order with
    `npm publish <tarball> --access public --tag latest --provenance --ignore-scripts`.
+
+The integration reader resolves the canonical workflow ID and selects the latest
+applicable run by validated workflow `run_number`, never a successful-only query
+or an arbitrary first result. Reruns retain that run ID and advance `run_attempt`.
+Complete `jobs?filter=latest` results may retain a successful matrix sibling from
+an earlier attempt after a failed-job-only rerun; every selected job must still
+belong to the same run and commit and prove its required commands. Before/after
+run identity, status, attempt, workflow and current-selection reads must agree.
+A changing observation cannot authorize publication. Each request is bounded to
+10 seconds, each observation to 60 seconds and each listing to ten 100-row pages;
+filtered run searches reaching GitHub's 1,000-result cap refuse uncertain
+coverage. See the [run listing](https://docs.github.com/en/rest/actions/workflow-runs#list-workflow-runs-for-a-workflow)
+and [current jobs view](https://docs.github.com/en/rest/actions/workflow-jobs#list-jobs-for-a-workflow-run).
+
+These reads constrain a finite observation window; they are not an atomic
+transaction with GitHub or npm. If a new rerun or later release is observed after
+one package publishes, publication stops before the next package and reports the
+already-published subset. Later ordinary main pushes do not invalidate successful
+integration of this exact commit; a later Version Packages merge still makes the
+old release stale through the separate eligibility rule.
 
 `tooling/release-graph.mjs` defines the release graph: `microdelta`, every
 non-private workspace package, and every first-party runtime dependency of
@@ -161,6 +199,17 @@ change that would break a later release fails in its own PR. The audit also fixe
 the workflow root to `name`, `on`, `permissions` and `jobs`, in that order, and
 refuses `npm_config_*` environment overrides, so no root key added after `jobs:`
 can change what the audited jobs do.
+
+### Integration failure and recovery
+
+If integration is missing beyond the deadline, fails, is cancelled or skipped, or
+cannot be established completely, no packaging or publication is authorized.
+Resolve the actual main Check first, then rerun the failed jobs of the original
+release run while that release remains eligible. The gate never automatically
+reruns Check and recovery does not create another Version Packages release. A
+rerun of only the publisher re-establishes current integration as well as latest
+release eligibility; it cannot reuse a past gate result or wait with publication
+credentials. Do not weaken the gate to recover a failed run.
 
 ### Partial and repeated publication
 

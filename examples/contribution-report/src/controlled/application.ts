@@ -81,11 +81,14 @@ function incompleteReasons(outcome: Exclude<IFoldReport['outcome'], { readonly s
 }
 
 /**
- * Both entries execute this one strict report body. The observed entry asserts
- * only framework-established current work and exact publication, before a
- * later read or usage failure can hide an already retained deliverable.
+ * Resolve the current strict report inside an already active workspace run.
+ * Optional observation asserts only framework-established work and exact
+ * publication before a later read or usage failure can hide a retained result.
+ * The original fold, report and usage result are preserved. This body owns no
+ * run start/stop, supervisor, workspace/Accounting resource or disposal lifetime.
+ * @internal
  */
-async function reportBody(run: IWorkspaceRun, application: IReportApplication, requestKey: string, submission?: IApplicationStatementSubmission): Promise<IReportRunOutcome> {
+export async function evaluateReportBody(run: IWorkspaceRun, application: IReportApplication, requestKey: string, submission?: IApplicationStatementSubmission): Promise<IReportRunOutcome> {
   const fold = await run.resolveFold(application.report, { requestKey });
   if (fold.outcome.status === 'succeeded') {
     const reference = fold.outcome.outcome.reference;
@@ -103,14 +106,14 @@ async function reportBody(run: IWorkspaceRun, application: IReportApplication, r
 /** Execute the fixed report and preserve strict completion, source failures and usage gaps as distinct facts. @internal */
 export function evaluateReport(workspace: IWorkspace, application: IReportApplication, options: IReportExecutionOptions): Promise<IRunResult<IReportRunOutcome>> {
   const { requestKey, ...runOptions } = options;
-  return workspace.run({ ...runOptions, authoring: application.authoring, composition: application.composition }, run => reportBody(run, application, requestKey));
+  return workspace.run({ ...runOptions, authoring: application.authoring, composition: application.composition }, run => evaluateReportBody(run, application, requestKey));
 }
 
 /** Start one observed report through the production workspace facade, retaining separate result and durability receipt. @internal */
 export function evaluateObservedReport(workspace: IWorkspace, application: IReportApplication, options: IObservedReportExecutionOptions): IObservedRun<IReportRunOutcome> {
   const { requestKey, ...runOptions } = options;
   return workspace.startObserved({ ...runOptions, authoring: application.authoring, composition: application.composition },
-    (run, submission) => reportBody(run, application, requestKey, submission));
+    (run, submission) => evaluateReportBody(run, application, requestKey, submission));
 }
 /** Stable analysis identity is independent of input observation, pagination or filesystem location. @internal */
 export const reportAnalysis = 'controlled-contribution-report';

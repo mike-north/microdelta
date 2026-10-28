@@ -1,0 +1,569 @@
+{
+  "schemaVersion": 1,
+  "baseCommit": "452760f6ea0e67b0803d8d7d14fa5f8e28b687fe",
+  "candidateVerdict": "REJECT",
+  "harness": "completed",
+  "interpretation": "Reject this readonly/DEFERRED candidate under the stronger no-source-effects hypothesis; no production/M6 adoption.",
+  "artifactDirectory": "/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/microdelta-read-snapshot-f9kgJz",
+  "reportSha256": "583e90796290bf590be60891dcba082bae0bd8d0f7cc92da2cee8f23d862191a",
+  "executionPinsSha256": "ac1d83a959ceb79fd5b41b7a4048038c321c7302c213b73be7358f36888bb7ac",
+  "preservationManifestSha256": "b3ff116e71673d8b6bdfb119a465bb1f678bdb55528473eb2bc88e7e211301f3",
+  "runtime": {
+    "node": "v24.14.0",
+    "driver": "12.9.0",
+    "sqlite": "3.53.0",
+    "platform": "darwin",
+    "arch": "arm64",
+    "compileOptions": [
+      "ATOMIC_INTRINSICS=1",
+      "COMPILER=clang-17.0.0",
+      "DEFAULT_AUTOVACUUM",
+      "DEFAULT_CACHE_SIZE=-16000",
+      "DEFAULT_FILE_FORMAT=4",
+      "DEFAULT_FOREIGN_KEYS",
+      "DEFAULT_JOURNAL_SIZE_LIMIT=-1",
+      "DEFAULT_MEMSTATUS=0",
+      "DEFAULT_MMAP_SIZE=0",
+      "DEFAULT_PAGE_SIZE=4096",
+      "DEFAULT_PCACHE_INITSZ=20",
+      "DEFAULT_RECURSIVE_TRIGGERS",
+      "DEFAULT_SECTOR_SIZE=4096",
+      "DEFAULT_SYNCHRONOUS=2",
+      "DEFAULT_WAL_AUTOCHECKPOINT=1000",
+      "DEFAULT_WAL_SYNCHRONOUS=1",
+      "DEFAULT_WORKER_THREADS=0",
+      "DIRECT_OVERFLOW_READ",
+      "DQS=0",
+      "ENABLE_COLUMN_METADATA",
+      "ENABLE_DBSTAT_VTAB",
+      "ENABLE_FTS3",
+      "ENABLE_FTS3_PARENTHESIS",
+      "ENABLE_FTS4",
+      "ENABLE_FTS5",
+      "ENABLE_GEOPOLY",
+      "ENABLE_MATH_FUNCTIONS",
+      "ENABLE_RTREE",
+      "ENABLE_STAT4",
+      "ENABLE_UPDATE_DELETE_LIMIT",
+      "LIKE_DOESNT_MATCH_BLOBS",
+      "MALLOC_SOFT_LIMIT=1024",
+      "MAX_ATTACHED=10",
+      "MAX_COLUMN=2000",
+      "MAX_COMPOUND_SELECT=500",
+      "MAX_DEFAULT_PAGE_SIZE=8192",
+      "MAX_EXPR_DEPTH=1000",
+      "MAX_FUNCTION_ARG=1000",
+      "MAX_LENGTH=1000000000",
+      "MAX_LIKE_PATTERN_LENGTH=50000",
+      "MAX_MMAP_SIZE=0x7fff0000",
+      "MAX_PAGE_COUNT=0xfffffffe",
+      "MAX_PAGE_SIZE=65536",
+      "MAX_SQL_LENGTH=1000000000",
+      "MAX_TRIGGER_DEPTH=1000",
+      "MAX_VARIABLE_NUMBER=32766",
+      "MAX_VDBE_OP=250000000",
+      "MAX_WORKER_THREADS=8",
+      "MUTEX_PTHREADS",
+      "OMIT_DEPRECATED",
+      "OMIT_PROGRESS_CALLBACK",
+      "OMIT_SHARED_CACHE",
+      "OMIT_TCL_VARIABLE",
+      "SOUNDEX",
+      "SYSTEM_MALLOC",
+      "TEMP_STORE=1",
+      "THREADSAFE=2",
+      "USE_URI"
+    ],
+    "sqliteSourceId": "2026-04-09 11:41:38 4525003a53a7fc63ca75c59b22c79608659ca12f0131f52c18637f829977f20b",
+    "driverEntry": "file:///Users/mnorth/.codex/worktrees/required-check-readback/perdure/node_modules/better-sqlite3/lib/index.js"
+  },
+  "sourcePins": [
+    {
+      "path": "experiments/exp-read-snapshot/src/protocol.ts",
+      "bytes": 7337,
+      "sha256": "847f51bf2bbe18c29eb34bfda4b133e47919ed9994b917de67de905c3b6c9ab3"
+    },
+    {
+      "path": ".test-build/experiments/exp-read-snapshot/src/protocol.js",
+      "bytes": 686,
+      "sha256": "3b467600f9b1b8bcc3e93babf7dca7cab3349dd3999a839b9c5f7dfcf30358e0"
+    },
+    {
+      "path": "experiments/exp-read-snapshot/src/evidence.ts",
+      "bytes": 8854,
+      "sha256": "20d08c5986b4a266a5aa8d0094d2cfabd7e7aadcf985b6d606c53d573c6891c6"
+    },
+    {
+      "path": ".test-build/experiments/exp-read-snapshot/src/evidence.js",
+      "bytes": 8520,
+      "sha256": "1eae9257d948be9f1863803ad31ce71e9962b67a03cf325e7ae56384efd54c70"
+    },
+    {
+      "path": "experiments/exp-read-snapshot/test/coordinator.ts",
+      "bytes": 30174,
+      "sha256": "dada7e751fbf304589065423fc5362be36cfac98a64d7ce22c6d322d6dbd310c"
+    },
+    {
+      "path": ".test-build/experiments/exp-read-snapshot/test/coordinator.js",
+      "bytes": 30827,
+      "sha256": "2a90e54522356a78253f4f01d534980232c5ea4b44571f32b516a29c780ede81"
+    },
+    {
+      "path": "experiments/exp-read-snapshot/test/worker.ts",
+      "bytes": 12227,
+      "sha256": "f71cbebd7fdba440cac9dc93220c5b6d3cf6ea6f0db9052089376a50cd9ea13f"
+    },
+    {
+      "path": ".test-build/experiments/exp-read-snapshot/test/worker.js",
+      "bytes": 12851,
+      "sha256": "c7a65c057fb6c67eb0945bb0319d0c118a08251f9801b5eefdb81cc7fcb9262b"
+    },
+    {
+      "path": "experiments/exp-read-snapshot/test/transport.ts",
+      "bytes": 6854,
+      "sha256": "6338509ddb485343f694473695db5f7422d3208d19daa4c8cd32533f3943452b"
+    },
+    {
+      "path": ".test-build/experiments/exp-read-snapshot/test/transport.js",
+      "bytes": 4972,
+      "sha256": "ee3a9f6529ef3a55e48a0708a7f60ab6170721d2438aea672ebd772baf19b427"
+    },
+    {
+      "path": "experiments/exp-read-snapshot/test/lifetime.ts",
+      "bytes": 873,
+      "sha256": "1396cf6aa01bb6be0e31d03bb0b36510695b2c3c08dd35bc1ca995be4dc505ce"
+    },
+    {
+      "path": ".test-build/experiments/exp-read-snapshot/test/lifetime.js",
+      "bytes": 584,
+      "sha256": "1d6337c1d9d19883c1d9446bbb0c6094d5c11e50f90b945f372a69e5836fdf1f"
+    },
+    {
+      "path": "experiments/exp-read-snapshot/test/evidence.test.ts",
+      "bytes": 6409,
+      "sha256": "dfac9557965c5102c3b17ab2519f0515d8983a70ff976dd868fb845c54f2c566"
+    },
+    {
+      "path": ".test-build/experiments/exp-read-snapshot/test/evidence.test.js",
+      "bytes": 6272,
+      "sha256": "60cd6e3369ca076d86bb95d91f4a4d1f07467855071e6a110b030f2fcd28dea5"
+    },
+    {
+      "path": "experiments/exp-read-snapshot/test/report.test.ts",
+      "bytes": 9422,
+      "sha256": "8eefd253a3e4b9649c0a6e5417c6192eb9fdf1d08e3efb0b583a4c0940be6015"
+    },
+    {
+      "path": ".test-build/experiments/exp-read-snapshot/test/report.test.js",
+      "bytes": 9420,
+      "sha256": "db7456b13aacaa6170a6c4af4818005966a166eb519d52bd38011fad31083aa9"
+    },
+    {
+      "path": "experiments/exp-read-snapshot/test/qualification.test.ts",
+      "bytes": 5578,
+      "sha256": "4d4593dee8b93526f7ad1e658805988fa2917d78e32ebc46b0fa5749eff7f1ea"
+    },
+    {
+      "path": ".test-build/experiments/exp-read-snapshot/test/qualification.test.js",
+      "bytes": 5736,
+      "sha256": "835ee65327ffac5bf6a52e879de85984a782b649f3bf765c2cdbc03566098283"
+    },
+    {
+      "path": "experiments/exp-read-snapshot/test/lifetime.test.ts",
+      "bytes": 1548,
+      "sha256": "31126fd59c20b1a48fe8f111d556a146a0bec038c69ad6606a47e3af40c5fd37"
+    },
+    {
+      "path": ".test-build/experiments/exp-read-snapshot/test/lifetime.test.js",
+      "bytes": 1580,
+      "sha256": "dcab1f1f14a944491ef20edccdc1e9c58b19e27fe71b22496b27cd2772a8b0e0"
+    },
+    {
+      "path": "package-lock.json",
+      "bytes": 321848,
+      "sha256": "a0efb6f64d79161383c2c6df04fb306f1c0e8db8c8fe4b28a07fc8282cfb21cd"
+    },
+    {
+      "path": "package.json",
+      "bytes": 9515,
+      "sha256": "5fa5b29ef701fa82e30cbc01cb19dabda1698959efb441546c0029e53c766f25"
+    },
+    {
+      "path": "experiments/exp-read-snapshot/tsconfig.json",
+      "bytes": 141,
+      "sha256": "2659ad64aa3f49834d7ac554c99be93fe623563dac7ed330cc7ef6ed7437a549"
+    },
+    {
+      "path": "experiments/exp-read-snapshot/tsconfig.test.json",
+      "bytes": 128,
+      "sha256": "28ef6e387bb9716d8c24e59c737be05f50561faa1a4f8e28931d5a866a015e08"
+    },
+    {
+      "path": "experiments/exp-read-snapshot/jest.config.mjs",
+      "bytes": 315,
+      "sha256": "b40cc400f9586c814e8f37ac2a62016a3ae1f866adc1dd9f6295467e9d0bd5b3"
+    }
+  ],
+  "bounds": {
+    "maximumChildren": 2,
+    "stageMilliseconds": 5000,
+    "childMilliseconds": 15000,
+    "caseMilliseconds": 20000,
+    "totalMilliseconds": 180000,
+    "cleanupMilliseconds": 5000,
+    "maximumRows": 72,
+    "maximumPayloadBytes": 4096,
+    "maximumSourceFileBytes": 2097152,
+    "maximumSourceBytesPerCase": 8388608,
+    "maximumProtocolLineBytes": 8192,
+    "maximumChildOutputBytes": 65536,
+    "maximumCommandsPerCase": 16
+  },
+  "closedLayout": {
+    "id": "closed-wal-no-sidecars",
+    "fixtureHealth": "verified-healthy",
+    "execution": "observed",
+    "committed": "satisfied",
+    "coherence": "satisfied",
+    "domainMutation": "none",
+    "attribution": "reader-only",
+    "sourceEffects": [
+      {
+        "kind": "created",
+        "name": "store.sqlite-shm"
+      },
+      {
+        "kind": "created",
+        "name": "store.sqlite-wal"
+      }
+    ],
+    "transientAbsence": "unproved"
+  },
+  "closedPhysicalObservations": {
+    "ownerAcknowledgments": [
+      {
+        "revision": 1,
+        "currentRevision": 1,
+        "value": "A"
+      },
+      {
+        "revision": 2,
+        "currentRevision": 2,
+        "value": "B"
+      }
+    ],
+    "ownerExit": {
+      "code": 0,
+      "signal": null
+    },
+    "header": {
+      "readVersion": 2,
+      "writeVersion": 2
+    },
+    "sourceImages": [
+      {
+        "stage": "before-open",
+        "image": {
+          "files": [
+            {
+              "name": "store.sqlite",
+              "bytes": 12288,
+              "sha256": "ddede7da01a1a50674c3a36de578664d4bba502d7ead7b8e91448f78710e7a6f"
+            }
+          ]
+        }
+      },
+      {
+        "stage": "opened",
+        "image": {
+          "files": [
+            {
+              "name": "store.sqlite",
+              "bytes": 12288,
+              "sha256": "ddede7da01a1a50674c3a36de578664d4bba502d7ead7b8e91448f78710e7a6f"
+            }
+          ]
+        }
+      },
+      {
+        "stage": "anchored",
+        "image": {
+          "files": [
+            {
+              "name": "store.sqlite",
+              "bytes": 12288,
+              "sha256": "ddede7da01a1a50674c3a36de578664d4bba502d7ead7b8e91448f78710e7a6f"
+            },
+            {
+              "name": "store.sqlite-shm",
+              "bytes": 32768,
+              "sha256": "fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb"
+            },
+            {
+              "name": "store.sqlite-wal",
+              "bytes": 0,
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          ]
+        }
+      },
+      {
+        "stage": "queried",
+        "image": {
+          "files": [
+            {
+              "name": "store.sqlite",
+              "bytes": 12288,
+              "sha256": "ddede7da01a1a50674c3a36de578664d4bba502d7ead7b8e91448f78710e7a6f"
+            },
+            {
+              "name": "store.sqlite-shm",
+              "bytes": 32768,
+              "sha256": "fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb"
+            },
+            {
+              "name": "store.sqlite-wal",
+              "bytes": 0,
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          ]
+        }
+      },
+      {
+        "stage": "pinned",
+        "image": {
+          "files": [
+            {
+              "name": "store.sqlite",
+              "bytes": 12288,
+              "sha256": "ddede7da01a1a50674c3a36de578664d4bba502d7ead7b8e91448f78710e7a6f"
+            },
+            {
+              "name": "store.sqlite-shm",
+              "bytes": 32768,
+              "sha256": "fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb"
+            },
+            {
+              "name": "store.sqlite-wal",
+              "bytes": 0,
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          ]
+        }
+      },
+      {
+        "stage": "ended",
+        "image": {
+          "files": [
+            {
+              "name": "store.sqlite",
+              "bytes": 12288,
+              "sha256": "ddede7da01a1a50674c3a36de578664d4bba502d7ead7b8e91448f78710e7a6f"
+            },
+            {
+              "name": "store.sqlite-shm",
+              "bytes": 32768,
+              "sha256": "fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb"
+            },
+            {
+              "name": "store.sqlite-wal",
+              "bytes": 0,
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          ]
+        }
+      },
+      {
+        "stage": "closed",
+        "image": {
+          "files": [
+            {
+              "name": "store.sqlite",
+              "bytes": 12288,
+              "sha256": "ddede7da01a1a50674c3a36de578664d4bba502d7ead7b8e91448f78710e7a6f"
+            },
+            {
+              "name": "store.sqlite-shm",
+              "bytes": 32768,
+              "sha256": "fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb"
+            },
+            {
+              "name": "store.sqlite-wal",
+              "bytes": 0,
+              "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            }
+          ]
+        }
+      }
+    ],
+    "reads": [
+      {
+        "expected": {
+          "revision": 2,
+          "currentRevision": 2,
+          "value": "B"
+        },
+        "actual": {
+          "revision": 2,
+          "currentRevision": 2,
+          "value": "B"
+        }
+      },
+      {
+        "expected": {
+          "revision": 2,
+          "currentRevision": 2,
+          "value": "B"
+        },
+        "actual": {
+          "revision": 2,
+          "currentRevision": 2,
+          "value": "B"
+        }
+      }
+    ],
+    "domainMutationOperations": []
+  },
+  "childRecordReferences": {
+    "writer": "closed-wal-no-sidecars/proof/writer/records.jsonl",
+    "reader": "closed-wal-no-sidecars/proof/reader/records.jsonl"
+  },
+  "controls": [
+    {
+      "name": "stale-snapshot",
+      "execution": "observed",
+      "oracleRejected": true,
+      "evidencePath": "/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/microdelta-read-snapshot-f9kgJz/controls-values/proof/values.json",
+      "limitation": "Legitimate held-old snapshot used only as a deliberately wrong current-B answer; no main-only reader."
+    },
+    {
+      "name": "mixed-revisions",
+      "execution": "observed",
+      "oracleRejected": true,
+      "evidencePath": "/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/microdelta-read-snapshot-f9kgJz/controls-values/proof/values.json"
+    },
+    {
+      "name": "immediate",
+      "execution": "observed",
+      "oracleRejected": true,
+      "evidencePath": "/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/microdelta-read-snapshot-f9kgJz/control-immediate/proof/reservation.json",
+      "limitation": "Shows prohibited candidate write-reservation/contention sensitivity; reservation itself is not History/domain mutation."
+    },
+    {
+      "name": "content-and-sidecar",
+      "execution": "observed",
+      "oracleRejected": true,
+      "evidencePath": "/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/microdelta-read-snapshot-f9kgJz/controls-files/proof/effects.json"
+    },
+    {
+      "name": "transient-restoration",
+      "execution": "observed",
+      "oracleRejected": false,
+      "evidencePath": "/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/microdelta-read-snapshot-f9kgJz/controls-files/proof/effects.json",
+      "limitation": "Sampled images missed deliberate write/restore and create/remove between stages; native/mmap absence remains unproved."
+    }
+  ],
+  "matrix": [
+    {
+      "id": "closed-wal-no-sidecars",
+      "execution": "observed",
+      "committed": "satisfied",
+      "coherence": "satisfied",
+      "domainMutation": "none",
+      "transientAbsence": "unproved"
+    },
+    {
+      "id": "active-wal",
+      "execution": "unexecuted",
+      "committed": "unproved",
+      "coherence": "unproved",
+      "domainMutation": "unproved",
+      "transientAbsence": "unproved"
+    },
+    {
+      "id": "active-readonly-sidecars",
+      "execution": "unexecuted",
+      "committed": "unproved",
+      "coherence": "unproved",
+      "domainMutation": "unproved",
+      "transientAbsence": "unproved"
+    },
+    {
+      "id": "retained-wal-missing-shm",
+      "execution": "unexecuted",
+      "committed": "unproved",
+      "coherence": "unproved",
+      "domainMutation": "unproved",
+      "transientAbsence": "unproved"
+    },
+    {
+      "id": "retained-wal-inaccessible-shm",
+      "execution": "unexecuted",
+      "committed": "unproved",
+      "coherence": "unproved",
+      "domainMutation": "unproved",
+      "transientAbsence": "unproved"
+    },
+    {
+      "id": "missing",
+      "execution": "unexecuted",
+      "committed": "unproved",
+      "coherence": "unproved",
+      "domainMutation": "unproved",
+      "transientAbsence": "unproved"
+    },
+    {
+      "id": "empty",
+      "execution": "unexecuted",
+      "committed": "unproved",
+      "coherence": "unproved",
+      "domainMutation": "unproved",
+      "transientAbsence": "unproved"
+    },
+    {
+      "id": "foreign-sqlite",
+      "execution": "unexecuted",
+      "committed": "unproved",
+      "coherence": "unproved",
+      "domainMutation": "unproved",
+      "transientAbsence": "unproved"
+    },
+    {
+      "id": "corrupt",
+      "execution": "unexecuted",
+      "committed": "unproved",
+      "coherence": "unproved",
+      "domainMutation": "unproved",
+      "transientAbsence": "unproved"
+    },
+    {
+      "id": "hot-journal",
+      "execution": "unexecuted",
+      "committed": "unproved",
+      "coherence": "unproved",
+      "domainMutation": "unproved",
+      "transientAbsence": "unproved"
+    }
+  ],
+  "limitations": [
+    "Endpoint samples do not prove absence of transient/native/mmap effects.",
+    "Stopped after the decisive closed-layout counterexample; all later candidate cells are explicitly unexecuted."
+  ],
+  "phase1": {
+    "issueClaim": "https://github.com/mike-north/microdelta/issues/296#issuecomment-6461946691",
+    "approvedProtocolSha256": "bfeff096fa88a07627174d31e575bfc3a57b7f166b4b745b05a7f7b67096e740",
+    "originalWiringRedSha256": "b6df1cb67a237c848b053866d18f34ac1cbeabd8e58fd43b8d37ae9204364d04",
+    "strengthenedWiringRedSha256": "92aec346d914fefa10b0991b8227c3e2c104d0c5c85ff1780f1b61a707917d23"
+  },
+  "focusedAssertions": {
+    "suites": 4,
+    "tests": 36,
+    "command": "npm run test:read-snapshot",
+    "log": "/private/tmp/issue296-owned-cleanup-green.log"
+  },
+  "earlierRecord": {
+    "artifactDirectory": "/var/folders/r4/j5y28vpj6258k4_0kn5f33s00000gn/T/microdelta-read-snapshot-ulqwmA",
+    "reportSha256": "94d868a69e5a277585c18d23ecd1b355607b8ef7fe949ee62ed143b608797cc2",
+    "meaning": "Earlier 33-assertion run before the owned-release helper; retained independently."
+  }
+}

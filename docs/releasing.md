@@ -71,7 +71,10 @@ The `version` job runs independently of integration after pushes to `main` and
 when the workflow is started manually. It creates or updates one reviewable Changesets PR. Because GitHub does
 not start normal pull-request workflows for PRs created with `GITHUB_TOKEN`, the
 job explicitly dispatches the existing core and PR-metadata checks against the
-generated branch. It rewrites the PR body using the repository's required
+generated branch. Check retains its no-input manual dispatch on the caller's ref
+and runs the full four-step **core (24)** path on that generated head. Ordinary
+PRs use the separate [prepared four-shard path](pr-ci.md); this does not change
+the release caller or the exact main-push integration gate. It rewrites the PR body using the repository's required
 five-section evidence format, with the actual package plan, a statement that
 merging is the release decision, and no claim that checks or review are already
 complete.

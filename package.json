@@ -50,7 +50,10 @@
     "changeset:status": "changeset status",
     "changeset:version": "changeset version && npm install --package-lock-only --ignore-scripts --no-audit --no-fund",
     "test:exp-authoring": "tsd --typings experiments/exp-authoring/src/protocol.ts --files experiments/exp-authoring/test-d/protocol.test-d.ts && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-authoring/jest.config.mjs --runInBand",
-    "test:controlled-report:workload": "tsc -p fixtures/contribution-report/tsconfig.json && node fixtures/contribution-report/workload-driver.mjs"
+    "test:controlled-report:workload": "tsc -p fixtures/contribution-report/tsconfig.json && node fixtures/contribution-report/workload-driver.mjs",
+    "build:pr-ci": "node tooling/pr-ci-runner.mjs prepare",
+    "test:pr-ci": "node tooling/pr-ci-runner.mjs shard",
+    "test:pr-ci:aggregate": "node tooling/pr-ci-runner.mjs aggregate"
   },
   "devDependencies": {
     "@changesets/cli": "2.31.1",

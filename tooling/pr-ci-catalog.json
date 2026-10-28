@@ -1,0 +1,487 @@
+{
+  "intent": "Reviewed ownership of the ordinary npm test graph. Script/config/type-input changes require review here; ordinary Jest and node:test files are discovered automatically. File-count partitioning makes no timing-balance claim.",
+  "graph": {
+    "packages": [
+      "packages/accounting",
+      "packages/core",
+      "packages/definition",
+      "packages/history",
+      "packages/machine",
+      "packages/machine-node",
+      "packages/materialization",
+      "packages/resolution",
+      "packages/supervision",
+      "packages/tracking",
+      "packages/value"
+    ],
+    "configs": {
+      "experiments/exp-1/jest.config.mjs": "6b37115254f018071dadb28a92218d7529014a2fa472491cbbb5c5fd7060e091",
+      "experiments/exp-2/jest.config.mjs": "89453a7701aefc92363562b058b743e336936c468fbe70192b05ef28e54c9741",
+      "experiments/exp-3/jest.config.mjs": "0d9fdf35d9933d8b23c9254fed5300c3795d612ab1b774d1ce96e916d8f15836",
+      "experiments/exp-4/jest.config.mjs": "e084df8aaaf6c45eebfb4025051c1cd9cbb0c8c63c565e8f79112260b41816be",
+      "experiments/exp-6/jest.config.mjs": "507eb1ff0cbcc29a7d032434273ae176d01c120a77f7aea8153a3c162f1c6769",
+      "experiments/exp-8/jest.config.mjs": "5f35eea3c9b570b78e4af181c812ad30843463aa1294b935a535973d9da1dc43",
+      "experiments/exp-authoring/jest.config.mjs": "290786adc8d368813c04408d50948bfa7b81685c8c6ba393b9377be9415c47f1",
+      "experiments/exp-nested/jest.config.mjs": "10f10a6d511dc8290d9f49fac771e58930e5927b26b10aac15dd4d247f300881",
+      "experiments/exp-read-snapshot/jest.config.mjs": "b40cc400f9586c814e8f37ac2a62016a3ae1f866adc1dd9f6295467e9d0bd5b3",
+      "experiments/provenance-capacity/jest.config.mjs": "fcb932309ecdc627f6058dd6b2cf5d6aa78a95896dcae5bd48d85dea17de97a3",
+      "fixtures/contribution-report/jest.config.mjs": "e149b7465422363ad5ae5e97465e1108d4b350efb44488bc9b6a2eeb05c181fc",
+      "packages/accounting/jest.config.mjs": "b635f482542f99f3f52278132326cac8312f0d888b7bce96e4bf4250c1b61ca4",
+      "packages/core/jest.config.mjs": "821c87204cf9848ac0d83cee77f042cd8922bcab01eb6ba2a3a0d321f1d42c0c",
+      "packages/definition/jest.config.mjs": "92bc1b7e2ba7defa48c94e03c259aa988900dcfefdb61b202a445849102ecd20",
+      "packages/history/jest.config.mjs": "92bc1b7e2ba7defa48c94e03c259aa988900dcfefdb61b202a445849102ecd20",
+      "packages/machine-node/jest.config.mjs": "aeedfe006a1b0b8731d51d6138ad61927dc63be3295cfd3d978597a4e2aef20c",
+      "packages/materialization/jest.config.mjs": "16e9214a272b510d2c3d1cde21206b0cb0a838ee5978ad69a855529e63b21fc5",
+      "packages/resolution/jest.config.mjs": "5c9c1b6ccc036eb121a53f7fb4666d6e9485b17f80d754aeb6a93706b65c4082",
+      "packages/supervision/jest.config.mjs": "4c7b15b12669f467209448b03d42030bbf7659447085a90cc90061a31a565230",
+      "packages/tracking/jest.config.mjs": "92bc1b7e2ba7defa48c94e03c259aa988900dcfefdb61b202a445849102ecd20",
+      "packages/value/jest.config.mjs": "09b914fddfd0bc897f44b769caa15cdc45d01206cd5dca799710e56ee2c92f1a",
+      "scratch/gap-hunt/scale/context-component.jest.config.mjs": "5e13bb8a858fece1d8ee297aee3b39afe4dc43dd6c424110868f6390879727f3",
+      "scratch/gap-hunt/scale/fanout-admission.jest.config.mjs": "2c22a3881b4085d8a5c46fea190c6d160d7ff9eedbe0b2c7d7091814ff1a0e69",
+      "tooling/subtree-query/jest.config.mjs": "a581004541767f212cc9ca92636fd2972a5a6a5ebd2279268e5a9b5eccfd6236"
+    },
+    "scripts": {
+      ".:test": "npm run build && npm run test:fanout-dispatch && npm run test:subtree-query && npm run test:tooling && npm run test --workspaces && npm run test:experiments && npm run test:examples",
+      ".:test:controlled-report": "tsc -p fixtures/contribution-report/tsconfig.json && node --experimental-vm-modules node_modules/jest/bin/jest.js --config fixtures/contribution-report/jest.config.mjs --runInBand && npm run test:controlled-report:types",
+      ".:test:controlled-report:types": "cd fixtures/contribution-report/test-d && tsd --typings ../.test-build/examples/contribution-report/src/controlled/application.d.ts --files contracts.test-d.ts",
+      ".:test:controlled-report:workload": "tsc -p fixtures/contribution-report/tsconfig.json && node fixtures/contribution-report/workload-driver.mjs",
+      ".:test:examples": "node --test examples/contribution-report/test/*.test.mjs && npm run test:controlled-report",
+      ".:test:exp-authoring": "tsd --typings experiments/exp-authoring/src/protocol.ts --files experiments/exp-authoring/test-d/protocol.test-d.ts && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-authoring/jest.config.mjs --runInBand",
+      ".:test:exp-nested": "tsc -p experiments/exp-nested/tsconfig.test.json && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config experiments/exp-nested/jest.config.mjs --runInBand",
+      ".:test:exp2": "tsc -p experiments/exp-2/tsconfig.json && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-2/jest.config.mjs --runInBand",
+      ".:test:exp3": "tsc -p experiments/exp-3/tsconfig.test.json && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config experiments/exp-3/jest.config.mjs --runInBand --runTestsByPath .test-build/experiments/exp-3/test/sqlite-capability.test.js && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config experiments/exp-3/jest.config.mjs --runInBand --runTestsByPath .test-build/experiments/exp-3/test/publication.test.js",
+      ".:test:exp4": "tsd --typings experiments/exp-4/src/protocol.ts --files experiments/exp-4/test-d/protocol.test-d.ts && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-4/jest.config.mjs --runInBand",
+      ".:test:exp8": "tsd --typings experiments/exp-8/src/protocol.ts --files experiments/exp-8/test-d/events.test-d.ts && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-8/jest.config.mjs --runInBand",
+      ".:test:experiments": "tsd --typings experiments/exp-1/src/protocol.ts --files experiments/exp-1/test-d/protocol.test-d.ts && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-1/jest.config.mjs --runInBand && npm run test:exp2 && npm run test:exp3 && npm run test:exp-nested && npm run test:exp4 && npm run test:exp8 && npm run test:exp-authoring && npm run test:provenance-capacity && npm run test:read-snapshot",
+      ".:test:fanout-dispatch": "GAP_HUNT_REUSE_BUILD=1 node scratch/gap-hunt/scale/repro-fanout-admission.mjs",
+      ".:test:provenance-capacity": "tsc -p experiments/provenance-capacity/tsconfig.test.json && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/provenance-capacity/jest.config.mjs --runInBand",
+      ".:test:read-snapshot": "tsc -p experiments/exp-read-snapshot/tsconfig.test.json && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-read-snapshot/jest.config.mjs --runInBand",
+      ".:test:subtree-query": "node tooling/subtree-query-gate.mjs",
+      ".:test:tooling": "node --test tooling/*.test.mjs",
+      "packages/accounting:test": "npm run test:unit && npm run test:types && npm run test:public",
+      "packages/accounting:test:public": "tsc --noEmit -p tsconfig.public-consumer.json",
+      "packages/accounting:test:types": "tsd",
+      "packages/accounting:test:unit": "tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand",
+      "packages/core:test": "npm run test:unit && npm run test:types && npm run test:controls",
+      "packages/core:test:controls": "node --test test/durable-history/controls/control-outcome.test.mjs test/acceptance/controls/paths.test.mjs test/concurrency/controls/controls.test.mjs test/durable-history/controls/anchor-check.test.mjs test/resolution/controls/resolution-mutation-controls.test.mjs",
+      "packages/core:test:types": "tsd",
+      "packages/core:test:unit": "tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand",
+      "packages/definition:test": "npm run test:unit && npm run test:types",
+      "packages/definition:test:types": "tsd",
+      "packages/definition:test:unit": "tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --runInBand",
+      "packages/history:test": "npm run test:unit && npm run test:types",
+      "packages/history:test:types": "tsd",
+      "packages/history:test:unit": "tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --runInBand",
+      "packages/machine:test": "npm run test:types",
+      "packages/machine:test:types": "tsd",
+      "packages/machine-node:test": "npm run test:unit && npm run test:types",
+      "packages/machine-node:test:types": "tsd",
+      "packages/machine-node:test:unit": "tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand",
+      "packages/materialization:test": "npm run test:unit && npm run test:types && npm run test:public",
+      "packages/materialization:test:public": "tsc --noEmit -p tsconfig.public-consumer.json",
+      "packages/materialization:test:types": "tsd",
+      "packages/materialization:test:unit": "tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand",
+      "packages/resolution:test": "npm run test:unit && npm run test:types && npm run test:public",
+      "packages/resolution:test:public": "tsc --noEmit -p tsconfig.public-consumer.json",
+      "packages/resolution:test:types": "tsd",
+      "packages/resolution:test:unit": "tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand",
+      "packages/supervision:test": "npm run test:unit && npm run test:types && npm run test:public && npm run test:controls",
+      "packages/supervision:test:controls": "node test/controls/shared-rate-mutation-controls.mjs --check-anchors",
+      "packages/supervision:test:public": "tsc --noEmit -p tsconfig.public-consumer.json",
+      "packages/supervision:test:types": "tsd",
+      "packages/supervision:test:unit": "tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand",
+      "packages/tracking:test": "npm run test:unit && npm run test:controls && npm run test:types",
+      "packages/tracking:test:controls": "tsc -p tsconfig.test.json && node --test test/controls/control-outcome.test.mjs && node test/controls/lazy-view-controls.mjs",
+      "packages/tracking:test:types": "tsd",
+      "packages/tracking:test:unit": "tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --runInBand",
+      "packages/value:test": "npm run test:unit && npm run test:types",
+      "packages/value:test:types": "tsd",
+      "packages/value:test:unit": "tsc -p tsconfig.test.json && node --experimental-vm-modules ../../node_modules/jest/bin/jest.js --config jest.config.mjs --runInBand"
+    },
+    "typeFiles": [
+      "docs/archive/pre-consolidation/exploration/context-options/authoring.test-d.ts",
+      "docs/archive/pre-consolidation/exploration/roster-example/api-options.test-d.ts",
+      "docs/archive/pre-consolidation/exploration/roster-example/authoring.test-d.ts",
+      "docs/archive/pre-consolidation/exploration/roster-example/boundary.test-d.ts",
+      "docs/archive/pre-consolidation/exploration/types/authoring-options.test-d.ts",
+      "experiments/exp-1/test-d/protocol.test-d.ts",
+      "experiments/exp-4/test-d/protocol.test-d.ts",
+      "experiments/exp-8/test-d/events.test-d.ts",
+      "experiments/exp-authoring/test-d/protocol.test-d.ts",
+      "fixtures/contribution-report/test-d/contracts.test-d.ts",
+      "fixtures/contribution-report/test-d/reactive-cost.test-d.ts",
+      "packages/accounting/test-d/accounting.test-d.ts",
+      "packages/accounting/test-d/resource-reports.test-d.ts",
+      "packages/core/test-d/async-source.test-d.ts",
+      "packages/core/test-d/cli-workload.test-d.ts",
+      "packages/core/test-d/facade.test-d.ts",
+      "packages/core/test-d/observation.test-d.ts",
+      "packages/core/test-d/operations.test-d.ts",
+      "packages/core/test-d/own-presence.test-d.ts",
+      "packages/core/test-d/preview-projection.test-d.ts",
+      "packages/core/test-d/result-roots.test-d.ts",
+      "packages/core/test-d/shared-rate-clock-port.test-d.ts",
+      "packages/core/test-d/shared-rate.test-d.ts",
+      "packages/core/test-d/source-call.test-d.ts",
+      "packages/core/test-d/workspace-run.test-d.ts",
+      "packages/definition/test-d/binding.test-d.ts",
+      "packages/definition/test-d/name.test-d.ts",
+      "packages/definition/test-d/nested.test-d.ts",
+      "packages/definition/test-d/template.test-d.ts",
+      "packages/history/test-d/completed-results.test-d.ts",
+      "packages/history/test-d/durable.test-d.ts",
+      "packages/history/test-d/host-capabilities.test-d.ts",
+      "packages/history/test-d/journal.test-d.ts",
+      "packages/history/test-d/store.test-d.ts",
+      "packages/machine-node/test-d/command-process.test-d.ts",
+      "packages/machine-node/test-d/machine-node.test-d.ts",
+      "packages/machine/test-d/host-capabilities.test-d.ts",
+      "packages/machine/test-d/machine.test-d.ts",
+      "packages/machine/test-d/sqlite-reader.test-d.ts",
+      "packages/materialization/test-d/materialization.test-d.ts",
+      "packages/resolution/test-d/resolution.test-d.ts",
+      "packages/supervision/test-d/observation.test-d.ts",
+      "packages/supervision/test-d/operations.test-d.ts",
+      "packages/supervision/test-d/shared-rate-coordinator.test-d.ts",
+      "packages/supervision/test-d/stop.test-d.ts",
+      "packages/supervision/test-d/supervision.test-d.ts",
+      "packages/supervision/test-d/writer-wait.test-d.ts",
+      "packages/tracking/test-d/observer.test-d.ts",
+      "packages/tracking/test-d/track.test-d.ts",
+      "packages/tracking/test-d/value-contract.test-d.ts",
+      "packages/value/test-d/value.test-d.ts"
+    ]
+  },
+  "excluded": {
+    "experiments/exp-6/jest.config.mjs": "Opt-in Lean differential experiment, absent from npm test.",
+    "scratch/gap-hunt/scale/context-component.jest.config.mjs": "Opt-in context scale replay, absent from npm test.",
+    ".:test:controlled-report:workload": "Opt-in full workload qualification, absent from npm test; never launched by PR CI."
+  },
+  "groups": [
+    {
+      "config": "packages/accounting/jest.config.mjs",
+      "source": "packages/accounting/test",
+      "emitted": "packages/accounting/.test-build/test",
+      "cwd": "packages/accounting",
+      "output": "packages/accounting/.test-build"
+    },
+    {
+      "config": "packages/core/jest.config.mjs",
+      "source": "packages/core/test",
+      "emitted": "packages/core/.test-build/test",
+      "cwd": "packages/core",
+      "output": "packages/core/.test-build"
+    },
+    {
+      "config": "packages/definition/jest.config.mjs",
+      "source": "packages/definition/test",
+      "emitted": "packages/definition/.test-build/test",
+      "cwd": "packages/definition",
+      "output": "packages/definition/.test-build"
+    },
+    {
+      "config": "packages/history/jest.config.mjs",
+      "source": "packages/history/test",
+      "emitted": "packages/history/.test-build/test",
+      "cwd": "packages/history",
+      "output": "packages/history/.test-build"
+    },
+    {
+      "config": "packages/machine-node/jest.config.mjs",
+      "source": "packages/machine-node/test",
+      "emitted": "packages/machine-node/.test-build/test",
+      "cwd": "packages/machine-node",
+      "output": "packages/machine-node/.test-build"
+    },
+    {
+      "config": "packages/materialization/jest.config.mjs",
+      "source": "packages/materialization/test",
+      "emitted": "packages/materialization/.test-build/test",
+      "cwd": "packages/materialization",
+      "output": "packages/materialization/.test-build"
+    },
+    {
+      "config": "packages/resolution/jest.config.mjs",
+      "source": "packages/resolution/test",
+      "emitted": "packages/resolution/.test-build/test",
+      "cwd": "packages/resolution",
+      "output": "packages/resolution/.test-build"
+    },
+    {
+      "config": "packages/supervision/jest.config.mjs",
+      "source": "packages/supervision/test",
+      "emitted": "packages/supervision/.test-build/test",
+      "cwd": "packages/supervision",
+      "output": "packages/supervision/.test-build"
+    },
+    {
+      "config": "packages/tracking/jest.config.mjs",
+      "source": "packages/tracking/test",
+      "emitted": "packages/tracking/.test-build/test",
+      "cwd": "packages/tracking",
+      "output": "packages/tracking/.test-build"
+    },
+    {
+      "config": "packages/value/jest.config.mjs",
+      "source": "packages/value/test",
+      "emitted": "packages/value/.test-build/test",
+      "cwd": "packages/value",
+      "output": "packages/value/.test-build"
+    },
+    {
+      "config": "experiments/exp-1/jest.config.mjs",
+      "source": "experiments/exp-1/test",
+      "emitted": "experiments/exp-1/.test-build/test",
+      "cwd": ".",
+      "output": "experiments/exp-1/.test-build"
+    },
+    {
+      "config": "experiments/exp-2/jest.config.mjs",
+      "source": "experiments/exp-2",
+      "emitted": "experiments/exp-2/.test-build",
+      "cwd": ".",
+      "output": "experiments/exp-2/.test-build"
+    },
+    {
+      "config": "experiments/exp-3/jest.config.mjs",
+      "source": "experiments/exp-3/test",
+      "emitted": ".test-build/experiments/exp-3/test",
+      "cwd": ".",
+      "output": ".test-build"
+    },
+    {
+      "config": "experiments/exp-4/jest.config.mjs",
+      "source": "experiments/exp-4/test",
+      "emitted": "experiments/exp-4/.test-build/test",
+      "cwd": ".",
+      "output": "experiments/exp-4/.test-build"
+    },
+    {
+      "config": "experiments/exp-8/jest.config.mjs",
+      "source": "experiments/exp-8/test",
+      "emitted": "experiments/exp-8/.test-build/test",
+      "cwd": ".",
+      "output": "experiments/exp-8/.test-build"
+    },
+    {
+      "config": "experiments/exp-authoring/jest.config.mjs",
+      "source": "experiments/exp-authoring/test",
+      "emitted": ".test-build/experiments/exp-authoring/test",
+      "cwd": ".",
+      "output": ".test-build"
+    },
+    {
+      "config": "experiments/exp-nested/jest.config.mjs",
+      "source": "experiments/exp-nested/test",
+      "emitted": ".test-build/experiments/exp-nested/test",
+      "cwd": ".",
+      "output": ".test-build"
+    },
+    {
+      "config": "experiments/exp-read-snapshot/jest.config.mjs",
+      "source": "experiments/exp-read-snapshot/test",
+      "emitted": ".test-build/experiments/exp-read-snapshot/test",
+      "cwd": ".",
+      "output": ".test-build"
+    },
+    {
+      "config": "experiments/provenance-capacity/jest.config.mjs",
+      "source": "experiments/provenance-capacity/test",
+      "emitted": ".test-build/experiments/provenance-capacity/test",
+      "cwd": ".",
+      "output": ".test-build"
+    },
+    {
+      "config": "fixtures/contribution-report/jest.config.mjs",
+      "source": "fixtures/contribution-report",
+      "emitted": "fixtures/contribution-report/.test-build/fixtures/contribution-report",
+      "cwd": ".",
+      "output": "fixtures/contribution-report/.test-build"
+    }
+  ],
+  "types": [
+    {
+      "id": "types:packages/accounting",
+      "cwd": "packages/accounting",
+      "args": [
+        "node_modules/tsd/dist/cli.js"
+      ],
+      "shard": 1
+    },
+    {
+      "id": "types:packages/core",
+      "cwd": "packages/core",
+      "args": [
+        "node_modules/tsd/dist/cli.js"
+      ],
+      "shard": 2
+    },
+    {
+      "id": "types:packages/definition",
+      "cwd": "packages/definition",
+      "args": [
+        "node_modules/tsd/dist/cli.js"
+      ],
+      "shard": 3
+    },
+    {
+      "id": "types:packages/history",
+      "cwd": "packages/history",
+      "args": [
+        "node_modules/tsd/dist/cli.js"
+      ],
+      "shard": 4
+    },
+    {
+      "id": "types:packages/machine",
+      "cwd": "packages/machine",
+      "args": [
+        "node_modules/tsd/dist/cli.js"
+      ],
+      "shard": 1
+    },
+    {
+      "id": "types:packages/machine-node",
+      "cwd": "packages/machine-node",
+      "args": [
+        "node_modules/tsd/dist/cli.js"
+      ],
+      "shard": 2
+    },
+    {
+      "id": "types:packages/materialization",
+      "cwd": "packages/materialization",
+      "args": [
+        "node_modules/tsd/dist/cli.js"
+      ],
+      "shard": 3
+    },
+    {
+      "id": "types:packages/resolution",
+      "cwd": "packages/resolution",
+      "args": [
+        "node_modules/tsd/dist/cli.js"
+      ],
+      "shard": 4
+    },
+    {
+      "id": "types:packages/supervision",
+      "cwd": "packages/supervision",
+      "args": [
+        "node_modules/tsd/dist/cli.js"
+      ],
+      "shard": 1
+    },
+    {
+      "id": "types:packages/tracking",
+      "cwd": "packages/tracking",
+      "args": [
+        "node_modules/tsd/dist/cli.js"
+      ],
+      "shard": 2
+    },
+    {
+      "id": "types:packages/value",
+      "cwd": "packages/value",
+      "args": [
+        "node_modules/tsd/dist/cli.js"
+      ],
+      "shard": 3
+    },
+    {
+      "id": "types:experiments/exp-1",
+      "cwd": ".",
+      "args": [
+        "node_modules/tsd/dist/cli.js",
+        "--typings",
+        "experiments/exp-1/src/protocol.ts",
+        "--files",
+        "experiments/exp-1/test-d/protocol.test-d.ts"
+      ],
+      "shard": 1
+    },
+    {
+      "id": "types:experiments/exp-4",
+      "cwd": ".",
+      "args": [
+        "node_modules/tsd/dist/cli.js",
+        "--typings",
+        "experiments/exp-4/src/protocol.ts",
+        "--files",
+        "experiments/exp-4/test-d/protocol.test-d.ts"
+      ],
+      "shard": 2
+    },
+    {
+      "id": "types:experiments/exp-8",
+      "cwd": ".",
+      "args": [
+        "node_modules/tsd/dist/cli.js",
+        "--typings",
+        "experiments/exp-8/src/protocol.ts",
+        "--files",
+        "experiments/exp-8/test-d/events.test-d.ts"
+      ],
+      "shard": 3
+    },
+    {
+      "id": "types:experiments/exp-authoring",
+      "cwd": ".",
+      "args": [
+        "node_modules/tsd/dist/cli.js",
+        "--typings",
+        "experiments/exp-authoring/src/protocol.ts",
+        "--files",
+        "experiments/exp-authoring/test-d/protocol.test-d.ts"
+      ],
+      "shard": 4
+    },
+    {
+      "id": "types:controlled-report",
+      "cwd": "fixtures/contribution-report/test-d",
+      "args": [
+        "node_modules/tsd/dist/cli.js",
+        "--typings",
+        "../.test-build/examples/contribution-report/src/controlled/application.d.ts",
+        "--files",
+        "contracts.test-d.ts"
+      ],
+      "shard": 1
+    }
+  ],
+  "compiles": [
+    "packages/accounting/tsconfig.test.json",
+    "packages/core/tsconfig.test.json",
+    "packages/definition/tsconfig.test.json",
+    "packages/history/tsconfig.test.json",
+    "packages/machine-node/tsconfig.test.json",
+    "packages/materialization/tsconfig.test.json",
+    "packages/resolution/tsconfig.test.json",
+    "packages/supervision/tsconfig.test.json",
+    "packages/tracking/tsconfig.test.json",
+    "packages/value/tsconfig.test.json",
+    "experiments/exp-2/tsconfig.json",
+    "experiments/exp-3/tsconfig.test.json",
+    "experiments/exp-nested/tsconfig.test.json",
+    "scratch/gap-hunt/scale/tsconfig.fanout-admission.json",
+    "tooling/subtree-query/tsconfig.json"
+  ],
+  "commonOutputs": [
+    "packages/accounting/dist",
+    "packages/core/dist",
+    "packages/definition/dist",
+    "packages/history/dist",
+    "packages/machine/dist",
+    "packages/machine-node/dist",
+    "packages/materialization/dist",
+    "packages/resolution/dist",
+    "packages/supervision/dist",
+    "packages/tracking/dist",
+    "packages/value/dist",
+    "fixtures/declarations/producer/dist",
+    "fixtures/declarations/capture-producer/dist",
+    "fixtures/declarations/forged/dist",
+    "examples/contribution-report/dist",
+    "scratch/gap-hunt/consumer-dx/dist"
+  ]
+}

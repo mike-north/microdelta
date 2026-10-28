@@ -103,7 +103,7 @@ The owner-supplied report states:
 > Both main-branch full npm test runs passed.
 
 The upstream driver declares `20.x || 22.x || 23.x || 24.x || 25.x`; the
-microdelta facade and Machine Node manifests say `>=20`. The Node 26
+microdelta facade and Machine Node manifests say `>=24`. The Node 26
 `EBADENGINE` warning expresses that metadata mismatch. The bounded macOS and
 Linux successes are observed behavior, not an amendment of the upstream
 declaration or a universal support policy. Changing engine ranges, drivers,

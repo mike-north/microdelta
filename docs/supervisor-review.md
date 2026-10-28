@@ -8,6 +8,13 @@ enforcement, and resolved review conversations. Passing checks do not require
 the PR branch to include the latest `main`; branch freshness is intentionally
 not a merge requirement.
 
+Ordinary PR **core (24)** is the [complete preparation/shard aggregate](pr-ci.md).
+Automatic feature pushes have no duplicate full run; main pushes and explicit
+manual Check runs keep the full four-step job. Recover a failed PR attempt with
+**Re-run all jobs**, because preparation and receipts bind the current attempt.
+An explicitly dispatched full Check may coexist with PR CI; every returned
+required-check result still participates in exact-head readback.
+
 ## Procedure
 
 The supervisor reviews the current GitHub PR head, implementation, issue

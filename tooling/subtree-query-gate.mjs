@@ -23,8 +23,12 @@ function run(command, args, environment = process.env) {
   }
 }
 
-run('node', ['node_modules/typescript/bin/tsc', '-p', 'tooling/subtree-query/tsconfig.json']);
-run('node', ['node_modules/eslint/bin/eslint.js', '--config', 'tooling/subtree-query/eslint.config.mjs', 'tooling/subtree-query/probe.test.ts']);
+// Only the PR runner supplies this mode after verifying the prepared bundle.
+// Default local execution still compiles and lints before the ordered gate.
+if (!process.argv.includes('--prepared')) {
+  run('node', ['node_modules/typescript/bin/tsc', '-p', 'tooling/subtree-query/tsconfig.json']);
+  run('node', ['node_modules/eslint/bin/eslint.js', '--config', 'tooling/subtree-query/eslint.config.mjs', 'tooling/subtree-query/probe.test.ts']);
+}
 run('node', ['--experimental-vm-modules', 'node_modules/jest/bin/jest.js', '--config', 'tooling/subtree-query/jest.config.mjs', '--runInBand'], { ...process.env, SUBTREE_WORK_DIR: workDir });
 run('python3', ['tooling/subtree-query/sql-work.py', join(workDir, 'production-captures.json')]);
 // Rebind a copy of the same listing to another result ID so controls cannot rely on fixture identity 1.

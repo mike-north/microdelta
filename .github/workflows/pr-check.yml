@@ -1,0 +1,121 @@
+# Ordinary PR code runs without elevated permissions or release credentials.
+name: PR Check
+on:
+  pull_request:
+permissions:
+  contents: read
+env:
+  PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+jobs:
+  prepare:
+    name: PR prepare (24)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run build:pr-ci
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pr-ci-prepared-${{ github.run_id }}-${{ github.run_attempt }}-1
+          path: .pr-ci/bundle-1/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pr-ci-prepared-${{ github.run_id }}-${{ github.run_attempt }}-2
+          path: .pr-ci/bundle-2/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pr-ci-prepared-${{ github.run_id }}-${{ github.run_attempt }}-3
+          path: .pr-ci/bundle-3/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pr-ci-prepared-${{ github.run_id }}-${{ github.run_attempt }}-4
+          path: .pr-ci/bundle-4/
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 3
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pr-ci-preparation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .pr-ci/preparation.json
+          if-no-files-found: error
+          retention-days: 3
+  tests:
+    name: PR tests (${{ matrix.shard }}/4, 24)
+    needs: prepare
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          name: pr-ci-prepared-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.shard }}
+          path: .pr-ci/restore/
+      - run: npm run test:pr-ci -- ${{ matrix.shard }} .pr-ci/restore
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: pr-ci-receipt-${{ github.run_id }}-${{ github.run_attempt }}-${{ matrix.shard }}
+          path: .pr-ci/receipt-${{ matrix.shard }}.json
+          if-no-files-found: error
+          retention-days: 3
+  core:
+    # Keep the existing protected check name while accounting for every shard.
+    name: core (24)
+    if: ${{ always() }}
+    needs: [prepare, tests]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/download-artifact@v4
+        with:
+          name: pr-ci-preparation-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .pr-ci/
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: pr-ci-receipt-${{ github.run_id }}-${{ github.run_attempt }}-*
+          path: .pr-ci/receipts/
+          merge-multiple: true
+      - run: npm run test:pr-ci:aggregate
+        env:
+          PR_PREPARE_RESULT: ${{ needs.prepare.result }}
+          PR_SHARDS_RESULT: ${{ needs.tests.result }}
+      - uses: actions/upload-artifact@v4
+        if: ${{ always() }}
+        with:
+          name: pr-ci-aggregate-${{ github.run_id }}-${{ github.run_attempt }}
+          path: .pr-ci/aggregate.json
+          if-no-files-found: error
+          retention-days: 3

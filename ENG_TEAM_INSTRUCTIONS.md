@@ -105,8 +105,13 @@ The exact intended required contexts on `main` are **PR metadata**, **core (24)*
 and the separately published **Supervisor review** commit status.
 The two Actions checks retain their GitHub Actions source restrictions; the
 supervisor status is an additional exact-head review gate. The supported Node baseline is 24 or later, declared by the root development
-engine and every workspace package. The Node 24 core job runs `npm ci`,
-`npm run check`, `npm test`, and `npm run build`.
+engine and every workspace package. Ordinary PRs prepare once and run four
+isolated serial test shards; their **core (24)** aggregate requires preparation,
+all four shards and complete current-attempt coverage receipts. Feature branches
+receive automatic coverage when their PR opens or updates, without a duplicate
+feature-push run. The main-push and manually dispatched Check job still runs
+`npm ci`, `npm run check`, `npm test`, and `npm run build`. See the
+[PR CI contract and rerun-all recovery](docs/pr-ci.md).
 For an actual Version Packages merge, release packaging and publication must wait
 for that existing main-push Check to succeed on the exact merge commit on
 Node 24, including all four command steps. Retired Node 22 evidence is neither
@@ -145,7 +150,7 @@ has moved it fails closed. The workflow never interpolates PR text into shell,
 installs dependencies, or uses `pull_request_target`. Normal `pull_request`
 execution runs the proposed checker, with no write permission; the supervisor
 must review changes to workflows and enforcement code before merging them.
-The ordinary push workflow remains unchanged and needs no PR payload.
+The main-push full Check job needs no PR payload and retains its four steps.
 
 GitHub schedules these checks asynchronously. After a body edit, wait for its
 new metadata run; do not merge against an earlier success while the replacement

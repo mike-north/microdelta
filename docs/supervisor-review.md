@@ -2,7 +2,7 @@
 
 Issue #34 adds one protected status, **Supervisor review**, so a substantive
 supervisory decision applies only to the commit that was reviewed. Each new head
-starts without that successful status. The three existing Actions checks remain
+starts without that successful status. The two existing Actions checks remain
 independent requirements, as do pull-request-only changes, administrator
 enforcement, and resolved review conversations. Passing checks do not require
 the PR branch to include the latest `main`; branch freshness is intentionally
@@ -47,8 +47,9 @@ node tooling/supervisor-review.mjs \
 
 The command is fixed to `mike-north/microdelta`. Before it writes, it reads back
 the repository's current `main` protection and verifies that it requires PRs,
-administrator enforcement, resolved conversations, all three existing checks,
-and **Supervisor review**. It verifies that each existing
+administrator enforcement, resolved conversations, both existing checks,
+and **Supervisor review**. The Actions contexts are **PR metadata** and
+**core (24)**; retired Node 22 is not required. It verifies that each existing
 check remains restricted to the GitHub Actions app. If any part of the review
 gate is absent, the command fails before writing a comment or status. The root
 supervisor must install and independently verify this protection before first use.

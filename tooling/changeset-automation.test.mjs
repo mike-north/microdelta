@@ -90,7 +90,7 @@ function run(directory, ...args) {
   });
 }
 
-test('workspace pins a Node 20-compatible Changesets CLI and names reviewable tasks', async () => {
+test('workspace pins the reviewed Changesets CLI for its Node 24 baseline and names reviewable tasks', async () => {
   const workspace = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
   assert.equal(workspace.devDependencies['@changesets/cli'], '2.31.1');
   assert.match(workspace.scripts['changeset:add'], /changeset/u);

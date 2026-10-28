@@ -10,7 +10,7 @@
   },
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "main": "./dist/src/index.js",
   "types": "./dist/api/machine.public.d.ts",

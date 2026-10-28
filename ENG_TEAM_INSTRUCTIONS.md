@@ -30,7 +30,8 @@ priority, and progress. Repository issues contain the implementation contract;
    assistance. Use `Refs #N`; the supervisor closes the issue after acceptance.
 7. Implementers stop at PR-open and report its URL to the supervisor. Further edits
    follow a scoped review request. Release/Version PRs remain under human control:
-   merging one publishes to npm, so a human maintainer records its exact-head
+   merging one initiates publication after exact main integration, so a human
+   maintainer records its exact-head
    status with the [release review](docs/supervisor-review.md#release-review-for-the-version-packages-pr)
    and merges it manually; it is never auto-merged.
 8. The supervisor reviews the current commit, checks required CI and declaration
@@ -100,11 +101,22 @@ content or untouched placeholders. It is intentionally separate from `npm run
 check`: push-only baseline CI has no PR body. Its tests are included in `npm test`.
 Local validation and hooks do not replace the required PR workflow.
 
-The exact intended required contexts on `main` are **PR metadata**, **core (22)**,
-**core (24)**, and the separately published **Supervisor review** commit status.
-The three Actions checks retain their GitHub Actions source restrictions; the
-supervisor status is an additional exact-head review gate. Each of the two core
-jobs runs `npm ci`, `npm run check`, `npm test`, and `npm run build`.
+The exact intended required contexts on `main` are **PR metadata**, **core (24)**,
+and the separately published **Supervisor review** commit status.
+The two Actions checks retain their GitHub Actions source restrictions; the
+supervisor status is an additional exact-head review gate. The supported Node baseline is 24 or later, declared by the root development
+engine and every workspace package. The Node 24 core job runs `npm ci`,
+`npm run check`, `npm test`, and `npm run build`.
+For an actual Version Packages merge, release packaging and publication must wait
+for that existing main-push Check to succeed on the exact merge commit on
+Node 24, including all four command steps. Retired Node 22 evidence is neither
+required nor a substitute for the supported job. Version-PR preparation stays
+independent. The release gate observes this Check rather than starting a duplicate
+integration run; its bounded wait and the publisher's fresh per-package assertion
+are specified in [releasing.md](docs/releasing.md#publishing-after-the-release-decision).
+Failed, invalid, unavailable or timed-out integration never authorizes release;
+resolve Check and rerun the original eligible release run instead of creating a
+synthetic release or bypassing the gate.
 Require a pull request, passing required checks, resolved review conversations,
 and administrator enforcement for ordinary protections. Branch freshness is
 intentionally not a merge requirement; the default-branch integration build is

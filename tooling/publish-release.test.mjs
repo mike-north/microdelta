@@ -23,6 +23,7 @@ import path from 'node:path';
 import test, { after, before, beforeEach } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { compareVersions } from './publish-release.mjs';
+import { jobsFixture, repositoryFixture, runFixture, workflowFixture } from './fixtures/release-integration.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const sha = 'd'.repeat(40);
@@ -48,13 +49,27 @@ const newerRelease = versionPull({ number: 80, merged_at: '2026-09-28T11:00:00Z'
  * may be replaced by a function of the list-request count to model a newer
  * release merging while this run is waiting or publishing.
  */
-const github = { url: '', associated: [], mergedPulls: [], failStatus: 0, listRequests: 0, server: undefined };
+const github = { integrationReads: 0, observedIntegration: 'success', integrationState: 'success', url: '', associated: [], mergedPulls: [], failStatus: 0, listRequests: 0, server: undefined };
 
 before(async () => {
   github.server = createServer((request, response) => {
     const url = new URL(request.url, 'http://localhost');
     let body;
     if (github.failStatus !== 0) body = undefined;
+    else if (url.pathname === `/repos/${repository}`) {
+      github.integrationReads += 1;
+      github.observedIntegration = typeof github.integrationState === 'function' ? github.integrationState(github.integrationReads) : github.integrationState;
+      body = repositoryFixture();
+    }
+    else if (url.pathname.startsWith(`/repos/${repository}/actions/`)) {
+      const state = github.observedIntegration;
+      if (state === 'unavailable') { response.writeHead(503); response.end('{}'); return; }
+      const run = runFixture(sha, state === 'pending' ? { status: 'queued', conclusion: null } : state === 'failure' ? { conclusion: 'failure' } : {}, github.url);
+      if (url.pathname.endsWith('/workflows/check.yml')) body = workflowFixture(github.url);
+      else if (url.pathname.endsWith('/workflows/100/runs')) body = { total_count: state === 'missing' ? 0 : 1, workflow_runs: state === 'missing' ? [] : [run] };
+      else if (url.pathname.endsWith('/runs/200')) body = run;
+      else if (url.pathname.endsWith('/runs/200/jobs')) { const jobs = jobsFixture(sha, github.url); body = { total_count: jobs.length, jobs }; }
+    }
     else if (url.pathname === `/repos/${repository}/commits/${sha}/pulls`) body = github.associated;
     else if (url.pathname === `/repos/${repository}/pulls`) {
       github.listRequests += 1;
@@ -72,6 +87,9 @@ after(async () => {
 });
 
 beforeEach(() => {
+  github.integrationReads = 0;
+  github.observedIntegration = 'success';
+  github.integrationState = 'success';
   github.associated = [versionPull()];
   github.mergedPulls = [versionPull()];
   github.failStatus = 0;
@@ -500,4 +518,93 @@ test('versions compare by SemVer precedence', () => {
   assert.equal(compareVersions('1.0.0-alpha.beta', '1.0.0-alpha.1'), 1);
   assert.equal(compareVersions('1.0.0+build.2', '1.0.0+build.1'), 0);
   assert.equal(compareVersions('0.0.0-bootstrap.0', '0.0.0'), -1);
+});
+
+/** Final-boundary eligibility includes the actual main Check, even after packaging or a publish-lock wait. */
+test('pending main integration cannot publish any package from an otherwise eligible release', async () => {
+  const { directory } = await releaseFixture();
+  try {
+    github.integrationState = 'pending';
+    const result = await publish(directory);
+    assert.notEqual(result.status, 0, 'pending main integration must refuse publication');
+    assert.ok(!(await npmCalls(directory)).some(call => call.args[0] === 'publish'), 'no package may publish before main integration succeeds');
+  } finally {
+    await rm(directory, { recursive: true, force: true });
+  }
+});
+
+for (const state of ['missing', 'failure', 'unavailable']) {
+  test(`${state} main integration refuses publication before the registry plan`, async () => {
+    const { directory } = await releaseFixture();
+    try {
+      github.integrationState = state;
+      const result = await publish(directory);
+      assert.notEqual(result.status, 0);
+      assert.match(result.stderr, /integration|GitHub/iu);
+      assert.ok(!(await npmCalls(directory)).some(call => ['view', 'publish'].includes(call.args[0])));
+    } finally { await rm(directory, { recursive: true, force: true }); }
+  });
+}
+
+for (const state of ['pending', 'failure']) {
+  test(`integration becoming ${state} after planning prevents the first package publication`, async () => {
+    const { directory } = await releaseFixture();
+    try {
+      github.integrationState = count => count >= 2 ? state : 'success';
+      const result = await publish(directory);
+      assert.notEqual(result.status, 0);
+      const calls = await npmCalls(directory);
+      assert.ok(calls.some(call => call.args[0] === 'view'), 'the prior successful assertion permitted the registry plan');
+      assert.ok(!calls.some(call => call.args[0] === 'publish'));
+      assert.match(result.stderr, /Already published: none/u);
+    } finally { await rm(directory, { recursive: true, force: true }); }
+  });
+  test(`integration becoming ${state} after one package stops publication of every remaining package`, async () => {
+    const { directory } = await releaseFixture();
+    try {
+      github.integrationState = count => count >= 3 ? state : 'success';
+      const result = await publish(directory);
+      assert.notEqual(result.status, 0);
+      const publishes = (await npmCalls(directory)).filter(call => call.args[0] === 'publish');
+      assert.deepEqual(publishes.map(call => path.basename(call.args[1])), ['microdelta-machine-0.1.0.tgz']);
+      assert.match(result.stderr, /Already published: @microdelta\/machine@0\.1\.0/u);
+    } finally { await rm(directory, { recursive: true, force: true }); }
+  });
+}
+
+/** Run only the evidence-wait CLI; the fixture starts successful so this test never waits on wall time. */
+async function integrationGate() {
+  const child = spawn(process.execPath, [path.join(root, 'tooling/release-integration.mjs'), '--wait'], {
+    env: { PATH: process.env.PATH, GITHUB_API_URL: github.url, GITHUB_TOKEN: 'read-only-test-token',
+      GITHUB_EVENT_NAME: 'push', GITHUB_REF: 'refs/heads/main', GITHUB_SHA: sha, GITHUB_REPOSITORY: repository },
+  });
+  let stdout = ''; let stderr = '';
+  child.stdout.on('data', chunk => { stdout += chunk; });
+  child.stderr.on('data', chunk => { stderr += chunk; });
+  return { status: await new Promise(resolve => child.on('close', resolve)), stdout, stderr };
+}
+
+test('a successful waiting receipt cannot authorize a rerun that became pending during packaging or the publish lock', async () => {
+  const { directory } = await releaseFixture();
+  try {
+    const gate = await integrationGate();
+    assert.equal(gate.status, 0, gate.stderr);
+    assert.equal(JSON.parse(gate.stdout).commit, sha);
+    github.integrationState = 'pending';
+    const result = await publish(directory);
+    assert.notEqual(result.status, 0);
+    assert.ok(!(await npmCalls(directory)).some(call => call.args[0] === 'publish'));
+  } finally { await rm(directory, { recursive: true, force: true }); }
+});
+
+test('a newer release during the integration wait remains ineligible even after that integration succeeds', async () => {
+  const { directory } = await releaseFixture();
+  try {
+    assert.equal((await integrationGate()).status, 0);
+    github.mergedPulls = [versionPull(), newerRelease];
+    const result = await publish(directory);
+    assert.notEqual(result.status, 0);
+    assert.match(result.stderr, /stale release/u);
+    assert.ok(!(await npmCalls(directory)).some(call => call.args[0] === 'publish'));
+  } finally { await rm(directory, { recursive: true, force: true }); }
 });

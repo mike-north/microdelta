@@ -52,8 +52,10 @@ an isolated-entry control. It retains the continuing caller, crosses task and GC
 boundaries, and confirms each census. Node 22.22.1 showed per-entry growth with
 both the ordinary and external-boundary controls; its host lifecycle result
 remains unresolved and this repair's bounded-lifetime proof does not cover it.
-Caller-context, isolation and late-use semantic tests still apply there. No
-universal platform instance count or elapsed-time limit is specified.
+That Node 22 observation is historical evidence, not a current Node 22 support
+commitment. Current acceptance uses the Node 24 runtime baseline; the bounded
+Node 26 diagnostic remains separate evidence. No universal platform instance
+count or elapsed-time limit is specified.
 
 Language-neutral [restart cases](artifacts/reuse-cases.json) define concrete
 inputs and expected semantic outcomes for A-02/A-04/A-05. They are fixture data,

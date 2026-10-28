@@ -4,10 +4,12 @@
  *
  * Because npm grants publication to any run of this file, its shape is a
  * security boundary: only the `publish` job may obtain an OIDC token; it runs
- * only after the release decision and verified packing, on a GitHub-hosted
+ * only after the release decision, exact main integration and verified packing, on a GitHub-hosted
  * runner, with pinned actions, no dependency installation, and no registry
  * secret. Its only other permissions are read access used to re-establish,
- * after any wait, that its commit is still the latest release decision. The
+ * after any wait, that its commit is still the latest release decision and
+ * has current successful main integration. The integration job only observes
+ * the existing Check; it cannot install, build, dispatch or obtain OIDC. The
  * package job may not suppress install scripts, because the artifact check
  * installs the native SQLite binding normally. The version job remains
  * version-only and the triggers remain push to main plus manual dispatch.
@@ -20,6 +22,8 @@
  * `jobs:` (for example a root `env` that redirects npm's registry) would
  * otherwise be read as part of the last job and escape every root check.
  * Anything else at column zero, other than comments and blank lines, fails.
+ * The fixed integration gate additionally requires its complete canonical block
+ * shape: unsupported YAML representations cannot hide skip/failure controls.
  */
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -52,13 +56,52 @@ function rootLayoutProblems(text) {
 }
 
 /** Required jobs, in their checked-in order. */
-const expectedJobs = ['version', 'release-decision', 'package', 'publish'];
+const expectedJobs = ['version', 'release-decision', 'integration', 'package', 'publish'];
 
 /** The only trigger block the trusted workflow may declare. */
 const expectedTriggers = 'on:\n  push:\n    branches: [main]\n  workflow_dispatch:\n';
 
 /** Condition shared by every job that exists only for an actual release. */
 const releaseCondition = "if: needs.release-decision.outputs.publish == 'true'";
+
+/**
+ * The new integration gate has one audited block representation. Matching its
+ * complete shape, rather than trying to interpret arbitrary YAML keys, refuses
+ * escaped/quoted control keys, aliases, merges and hidden failure/skip modes.
+ * Comments may vary and action pins may advance under ordinary source review;
+ * changes to this gate's structure require an intentional contract update.
+ */
+const integrationShape = [
+  '    needs: release-decision',
+  `    ${releaseCondition}`,
+  '    runs-on: ubuntu-latest',
+  '    timeout-minutes: 125',
+  '    permissions:',
+  '      actions: read',
+  '      contents: read',
+  '    steps:',
+  /^ {6}- uses: actions\/checkout@[0-9a-f]{40}$/u,
+  '        with:',
+  '          ref: ${{ github.sha }}',
+  '          persist-credentials: false',
+  /^ {6}- uses: actions\/setup-node@[0-9a-f]{40}$/u,
+  '        with:',
+  '          node-version: 24',
+  '      - name: Wait for exact-commit main integration',
+  '        run: node tooling/release-integration.mjs --wait',
+  '        env:',
+  '          GITHUB_TOKEN: ${{ github.token }}',
+];
+
+/** Only comments/blank lines are ignored; unsupported syntax never acquires authority through normalization. */
+function canonicalIntegrationShape(job) {
+  const lines = job.split('\n').map(line => line.replace(/[ \t]+#.*$/u, '').trimEnd())
+    .filter(line => line.trim() !== '' && !line.trimStart().startsWith('#'));
+  return lines.length === integrationShape.length && lines.every((line, index) => {
+    const expected = integrationShape[index];
+    return typeof expected === 'string' ? line === expected : expected.test(line);
+  });
+}
 
 /** Split the `jobs:` mapping into each job's text. */
 export function workflowJobs(text) {
@@ -125,9 +168,39 @@ export function auditReleaseWorkflow(text) {
   }
   if (!/node tooling\/release-decision\.mjs/u.test(decision)) problems.push('release-decision job must run tooling/release-decision.mjs');
 
+  const integration = jobs.integration ?? '';
+  if (!/^ {4}needs: release-decision$/mu.test(integration) || !integration.includes(`    ${releaseCondition}\n`)) {
+    problems.push('integration job must need release-decision and run only for its publish decision');
+  }
+  if (jobPermissions(integration)?.join(',') !== 'actions: read,contents: read') {
+    problems.push('integration job permissions must be exactly actions: read and contents: read');
+  }
+  if (!/^ {4}runs-on: ubuntu-latest$/mu.test(integration) || !/^ {4}timeout-minutes: 125$/mu.test(integration)) {
+    problems.push('integration job must use ubuntu-latest and the bounded 125-minute job timeout');
+  }
+  if (!integration.includes('          ref: ${{ github.sha }}\n') || !integration.includes('          persist-credentials: false\n')) {
+    problems.push('integration job must check out github.sha without persisted credentials');
+  }
+  const integrationActions = actionsUsed(integration);
+  if (integrationActions.length !== 2 || !integrationActions[0]?.startsWith('actions/checkout@') || !integrationActions[1]?.startsWith('actions/setup-node@')) {
+    problems.push('integration job may use only pinned checkout and setup-node actions');
+  }
+  const integrationRuns = [...integration.matchAll(/^\s*(?:- )?run:\s*([^\n]*)$/gmu)].map(match => match[1]);
+  if (integrationRuns.length !== 1 || integrationRuns[0] !== 'node tooling/release-integration.mjs --wait') {
+    problems.push('integration job must run only the bounded release-integration.mjs --wait assertion without a shell bypass');
+  }
+  if (!canonicalIntegrationShape(integration)) {
+    problems.push('integration job must use its audited canonical block syntax and shape; unsupported forms can bypass the proof');
+  }
+  const integrationEnvs = [...integration.matchAll(/^\s*env:/gmu)];
+  const integrationEnv = /^ {8}env:\n((?: {10}\S.*\n)*)/mu.exec(integration)?.[1].trim();
+  if (integrationEnvs.length !== 1 || integrationEnv !== 'GITHUB_TOKEN: ${{ github.token }}') {
+    problems.push('integration assertion must receive only the read-only job token, without source/environment overrides');
+  }
+
   const pack = jobs.package ?? '';
-  if (!/^ {4}needs: release-decision$/mu.test(pack) || !pack.includes(`    ${releaseCondition}\n`)) {
-    problems.push(`package job must need release-decision and run only when release-decision outputs publish == 'true'`);
+  if (!/^ {4}needs: \[release-decision, integration\]$/mu.test(pack) || !pack.includes(`    ${releaseCondition}\n`)) {
+    problems.push(`package job must need release-decision and integration and run only when release-decision outputs publish == 'true'`);
   }
   if (jobPermissions(pack)?.join(',') !== 'contents: read') problems.push('package job permissions must be exactly contents: read');
   if (!pack.includes('          ref: ${{ github.sha }}\n')) problems.push('package job must check out github.sha');
@@ -138,10 +211,10 @@ export function auditReleaseWorkflow(text) {
   if (/ignore[-_]scripts/iu.test(pack)) problems.push('package job must not suppress install scripts; the native SQLite check needs a normal install');
 
   const publish = jobs.publish ?? '';
-  if (!/^ {4}needs: \[release-decision, package\]$/mu.test(publish)) problems.push('publish job must need release-decision and package');
+  if (!/^ {4}needs: \[release-decision, integration, package\]$/mu.test(publish)) problems.push('publish job must need release-decision, integration and package');
   if (!publish.includes(`    ${releaseCondition}\n`)) problems.push(`publish job must run only when release-decision outputs publish == 'true'`);
-  if (jobPermissions(publish)?.join(',') !== 'contents: read,id-token: write,pull-requests: read') {
-    problems.push('publish job permissions must be exactly contents: read, id-token: write and pull-requests: read');
+  if (jobPermissions(publish)?.join(',') !== 'actions: read,contents: read,id-token: write,pull-requests: read') {
+    problems.push('publish job permissions must be exactly actions: read, contents: read, id-token: write and pull-requests: read');
   }
   if (!/node tooling\/publish-release\.mjs --manifest [^\n]*\n {8}env:\n {10}GITHUB_TOKEN: \$\{\{ github\.token \}\}\n/u.test(publish)) {
     problems.push('publish job must pass the read-only job token for release revalidation to publish-release.mjs');

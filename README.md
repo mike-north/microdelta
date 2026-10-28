@@ -5,6 +5,8 @@ process restarts. You choose which steps to memoize. The runtime retains their
 results and records the inputs and called implementations they consumed, so later
 runs can validate that evidence before deciding what to reuse.
 
+The current checkout and package versions built from it require Node.js 24 or later.
+
 Consider a report that assesses hundreds of pull requests. An assessment reads a
 pull request's title and diff, but ignores its labels. A labels-only edit should
 not require another assessment. A changed title or assessor should. If an

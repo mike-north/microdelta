@@ -173,6 +173,19 @@ not delivery of a narrower inspector or adoption of this broader plan.
 Its [bounded observed result](../../experiments/exp-read-snapshot/result.md)
 rejects the selected candidate's stronger no-source-effects hypothesis; it
 does not adopt an alternative or weaken the required during/after inspection.
+The distinct [#302 WAL-coordinated snapshot experiment](../../experiments/exp-wal-coordinated-snapshot/protocol.md)
+permits enumerated native WAL/SHM coordination while preserving main and committed
+WAL bytes in reader-only windows. It does not satisfy this broader plan's
+files-unchanged proposal, replace #296's REJECT/nine unexecuted later cells, or
+adopt a production opener. The rollback-only Machine reader and CLI-005's
+separately prepared DELETE artifact retain their existing guarantees. A green
+regression harness or bounded native result closes none of #165/#167/M6.
+Its [bounded result record](../../experiments/exp-wal-coordinated-snapshot/result.md)
+reports one corrected-candidate PASS in the measured local profile, with optional
+Q8–Q10 unsupported and both earlier invocations preserved as INCONCLUSIVE.
+Independent final disposition accepts that bounded PASS. This evidence does not
+select a History opener, adopt the broader inspector, or establish two passing
+runs of one candidate.
 Accounting's `openDurableAccounting` is writable/initializing; usage reads need
 a narrow owner opener separate from that authority. Existing report reading
 from #166 and preview projection from #216 are useful bounded inputs, not a

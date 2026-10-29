@@ -1,0 +1,668 @@
+{
+  "id": "Q13",
+  "conclusion": {
+    "id": "Q13",
+    "outcome": "unproved",
+    "pins": true,
+    "cleanup": false,
+    "measurement": false
+  },
+  "records": [
+    {
+      "stage": "W.profile",
+      "reply": {
+        "id": 1,
+        "kind": "ok",
+        "profile": {
+          "execPath": "/Users/mnorth/.nodenv/versions/24.14.0/bin/node",
+          "node": "v24.14.0",
+          "platform": "darwin",
+          "arch": "arm64",
+          "nativeByteOrder": "LE",
+          "pid": 1599,
+          "uid": 501,
+          "gid": 20,
+          "groups": [
+            20,
+            12,
+            61,
+            79,
+            80,
+            81,
+            702,
+            33,
+            98,
+            100,
+            204,
+            250,
+            395,
+            398,
+            399,
+            400
+          ],
+          "umask": 18,
+          "files": [
+            {
+              "suffix": "",
+              "stat": {
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, lstat '/private/tmp/issue302-native-replay/source/Q13/store.sqlite'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "read": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-replay/source/Q13/store.sqlite'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "readWrite": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-replay/source/Q13/store.sqlite'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              }
+            },
+            {
+              "suffix": "-wal",
+              "stat": {
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, lstat '/private/tmp/issue302-native-replay/source/Q13/store.sqlite-wal'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "read": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-replay/source/Q13/store.sqlite-wal'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "readWrite": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-replay/source/Q13/store.sqlite-wal'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              }
+            },
+            {
+              "suffix": "-shm",
+              "stat": {
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, lstat '/private/tmp/issue302-native-replay/source/Q13/store.sqlite-shm'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "read": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-replay/source/Q13/store.sqlite-shm'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "readWrite": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-replay/source/Q13/store.sqlite-shm'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              }
+            },
+            {
+              "suffix": "-journal",
+              "stat": {
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, lstat '/private/tmp/issue302-native-replay/source/Q13/store.sqlite-journal'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "read": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-replay/source/Q13/store.sqlite-journal'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "readWrite": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-replay/source/Q13/store.sqlite-journal'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              }
+            }
+          ],
+          "create": {
+            "ok": true
+          },
+          "filesystem": {
+            "type": 26,
+            "device": 16777229
+          },
+          "entry": "/Users/mnorth/.codex/worktrees/qualification-keyset-repair/perdure/.test-build/experiments/exp-wal-coordinated-snapshot/node/worker.js",
+          "entrySha256": "577902ad6a7f18cd0b83fca1ecd064ad0543888e520df2de145e30b7f3730226",
+          "bindingPackage": "/Users/mnorth/.codex/worktrees/qualification-keyset-repair/perdure/node_modules/better-sqlite3/package.json",
+          "packageSha256": "9d2524247288858cfba9fcd1636cf5540b95e87c4be0993eb61ecf9b2d0a8d14",
+          "binding": {
+            "name": "better-sqlite3",
+            "version": "12.9.0",
+            "description": "The fastest and simplest library for SQLite in Node.js.",
+            "homepage": "http://github.com/WiseLibs/better-sqlite3",
+            "author": "Joshua Wise <joshuathomaswise@gmail.com>",
+            "repository": {
+              "type": "git",
+              "url": "git://github.com/WiseLibs/better-sqlite3.git"
+            },
+            "main": "lib/index.js",
+            "files": [
+              "binding.gyp",
+              "src/**/*.[ch]pp",
+              "lib/**",
+              "deps/**"
+            ],
+            "engines": {
+              "node": "20.x || 22.x || 23.x || 24.x || 25.x"
+            },
+            "dependencies": {
+              "bindings": "^1.5.0",
+              "prebuild-install": "^7.1.1"
+            },
+            "overrides": {
+              "prebuild": {
+                "node-abi": "^4.25.0"
+              }
+            },
+            "devDependencies": {
+              "chai": "^4.3.8",
+              "cli-color": "^2.0.3",
+              "fs-extra": "^11.1.1",
+              "mocha": "^10.2.0",
+              "nodemark": "^0.3.0",
+              "prebuild": "^13.0.1",
+              "sqlite": "^5.0.1",
+              "sqlite3": "^5.1.6"
+            },
+            "scripts": {
+              "install": "prebuild-install || node-gyp rebuild --release",
+              "build-release": "node-gyp rebuild --release",
+              "build-debug": "node-gyp rebuild --debug",
+              "test": "mocha --exit --slow=75 --timeout=5000",
+              "benchmark": "node benchmark",
+              "download": "bash ./deps/download.sh"
+            },
+            "license": "MIT",
+            "keywords": [
+              "sql",
+              "sqlite",
+              "sqlite3",
+              "transactions",
+              "user-defined functions",
+              "aggregate functions",
+              "window functions",
+              "database"
+            ]
+          }
+        },
+        "facts": {
+          "open": false,
+          "inTransaction": null
+        }
+      }
+    },
+    {
+      "stage": "W.open",
+      "reply": {
+        "id": 2,
+        "kind": "ok",
+        "addon": {
+          "path": "/Users/mnorth/.codex/worktrees/qualification-keyset-repair/perdure/node_modules/better-sqlite3/build/Release/better_sqlite3.node",
+          "bytes": 1931680,
+          "sha256": "b3b473ef512e72914b7170855a8276aeee8a5868832e5cad821fe8234d04dc81"
+        },
+        "facts": {
+          "open": true,
+          "inTransaction": null
+        }
+      }
+    },
+    {
+      "stage": "W.foreign-seed",
+      "reply": {
+        "id": 3,
+        "kind": "ok",
+        "facts": {
+          "open": true,
+          "inTransaction": null
+        }
+      }
+    },
+    {
+      "stage": "W.close",
+      "reply": {
+        "id": 4,
+        "kind": "ok",
+        "cleanup": {
+          "kind": "closed",
+          "failures": []
+        },
+        "facts": {
+          "open": false,
+          "inTransaction": null
+        }
+      }
+    },
+    {
+      "stage": "W.exit",
+      "reply": {
+        "id": 5,
+        "kind": "exiting",
+        "cleanup": {
+          "kind": "closed",
+          "failures": []
+        },
+        "facts": {
+          "open": false,
+          "inTransaction": null
+        }
+      },
+      "exit": {
+        "code": 0,
+        "signal": null
+      }
+    },
+    {
+      "stage": "R.profile",
+      "reply": {
+        "id": 1,
+        "kind": "ok",
+        "profile": {
+          "execPath": "/Users/mnorth/.nodenv/versions/24.14.0/bin/node",
+          "node": "v24.14.0",
+          "platform": "darwin",
+          "arch": "arm64",
+          "nativeByteOrder": "LE",
+          "pid": 1600,
+          "uid": 501,
+          "gid": 20,
+          "groups": [
+            20,
+            12,
+            61,
+            79,
+            80,
+            81,
+            702,
+            33,
+            98,
+            100,
+            204,
+            250,
+            395,
+            398,
+            399,
+            400
+          ],
+          "umask": 18,
+          "files": [
+            {
+              "suffix": "",
+              "stat": {
+                "mode": 33188,
+                "uid": 501,
+                "gid": 0,
+                "dev": 16777229,
+                "ino": 286344285,
+                "size": 8192,
+                "regular": true
+              },
+              "read": {
+                "ok": true
+              },
+              "readWrite": {
+                "ok": true
+              }
+            },
+            {
+              "suffix": "-wal",
+              "stat": {
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, lstat '/private/tmp/issue302-native-replay/source/Q13/store.sqlite-wal'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "read": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-replay/source/Q13/store.sqlite-wal'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "readWrite": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-replay/source/Q13/store.sqlite-wal'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              }
+            },
+            {
+              "suffix": "-shm",
+              "stat": {
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, lstat '/private/tmp/issue302-native-replay/source/Q13/store.sqlite-shm'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "read": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-replay/source/Q13/store.sqlite-shm'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "readWrite": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-replay/source/Q13/store.sqlite-shm'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              }
+            },
+            {
+              "suffix": "-journal",
+              "stat": {
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, lstat '/private/tmp/issue302-native-replay/source/Q13/store.sqlite-journal'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "read": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-replay/source/Q13/store.sqlite-journal'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              },
+              "readWrite": {
+                "ok": false,
+                "error": {
+                  "type": "Error",
+                  "message": "ENOENT: no such file or directory, open '/private/tmp/issue302-native-replay/source/Q13/store.sqlite-journal'",
+                  "code": "ENOENT",
+                  "cause": null
+                }
+              }
+            }
+          ],
+          "create": {
+            "ok": true
+          },
+          "filesystem": {
+            "type": 26,
+            "device": 16777229
+          },
+          "entry": "/Users/mnorth/.codex/worktrees/qualification-keyset-repair/perdure/.test-build/experiments/exp-wal-coordinated-snapshot/node/worker.js",
+          "entrySha256": "577902ad6a7f18cd0b83fca1ecd064ad0543888e520df2de145e30b7f3730226",
+          "bindingPackage": "/Users/mnorth/.codex/worktrees/qualification-keyset-repair/perdure/node_modules/better-sqlite3/package.json",
+          "packageSha256": "9d2524247288858cfba9fcd1636cf5540b95e87c4be0993eb61ecf9b2d0a8d14",
+          "binding": {
+            "name": "better-sqlite3",
+            "version": "12.9.0",
+            "description": "The fastest and simplest library for SQLite in Node.js.",
+            "homepage": "http://github.com/WiseLibs/better-sqlite3",
+            "author": "Joshua Wise <joshuathomaswise@gmail.com>",
+            "repository": {
+              "type": "git",
+              "url": "git://github.com/WiseLibs/better-sqlite3.git"
+            },
+            "main": "lib/index.js",
+            "files": [
+              "binding.gyp",
+              "src/**/*.[ch]pp",
+              "lib/**",
+              "deps/**"
+            ],
+            "engines": {
+              "node": "20.x || 22.x || 23.x || 24.x || 25.x"
+            },
+            "dependencies": {
+              "bindings": "^1.5.0",
+              "prebuild-install": "^7.1.1"
+            },
+            "overrides": {
+              "prebuild": {
+                "node-abi": "^4.25.0"
+              }
+            },
+            "devDependencies": {
+              "chai": "^4.3.8",
+              "cli-color": "^2.0.3",
+              "fs-extra": "^11.1.1",
+              "mocha": "^10.2.0",
+              "nodemark": "^0.3.0",
+              "prebuild": "^13.0.1",
+              "sqlite": "^5.0.1",
+              "sqlite3": "^5.1.6"
+            },
+            "scripts": {
+              "install": "prebuild-install || node-gyp rebuild --release",
+              "build-release": "node-gyp rebuild --release",
+              "build-debug": "node-gyp rebuild --debug",
+              "test": "mocha --exit --slow=75 --timeout=5000",
+              "benchmark": "node benchmark",
+              "download": "bash ./deps/download.sh"
+            },
+            "license": "MIT",
+            "keywords": [
+              "sql",
+              "sqlite",
+              "sqlite3",
+              "transactions",
+              "user-defined functions",
+              "aggregate functions",
+              "window functions",
+              "database"
+            ]
+          }
+        },
+        "facts": {
+          "open": false,
+          "inTransaction": null
+        }
+      }
+    },
+    {
+      "stage": "R.open",
+      "reply": {
+        "id": 2,
+        "kind": "ok",
+        "addon": {
+          "path": "/Users/mnorth/.codex/worktrees/qualification-keyset-repair/perdure/node_modules/better-sqlite3/build/Release/better_sqlite3.node",
+          "bytes": 1931680,
+          "sha256": "b3b473ef512e72914b7170855a8276aeee8a5868832e5cad821fe8234d04dc81"
+        },
+        "facts": {
+          "state": "opened",
+          "open": true,
+          "inTransaction": false,
+          "readonly": true
+        }
+      }
+    },
+    {
+      "stage": "R.begin-if-open",
+      "reply": {
+        "id": 3,
+        "kind": "ok",
+        "facts": {
+          "state": "active",
+          "open": true,
+          "inTransaction": true,
+          "readonly": true
+        }
+      }
+    },
+    {
+      "stage": "R.anchor-if-open",
+      "reply": {
+        "id": 4,
+        "kind": "failed",
+        "failure": {
+          "type": "SqliteError",
+          "message": "no such table: snapshot_meta",
+          "code": "SQLITE_ERROR",
+          "cause": null
+        },
+        "cleanup": {
+          "kind": "closed",
+          "failures": []
+        },
+        "addon": null,
+        "facts": {
+          "state": "closed",
+          "open": false,
+          "inTransaction": false,
+          "readonly": true
+        }
+      }
+    }
+  ],
+  "images": [
+    {
+      "label": "W.exit",
+      "stages": [
+        "W.profile",
+        "W.open",
+        "W.foreign-seed",
+        "W.close",
+        "W.exit"
+      ],
+      "attribution": "owner-or-fixture",
+      "complete": true,
+      "metadata": "image-0.json"
+    },
+    {
+      "label": "R.profile",
+      "stages": [
+        "R.profile"
+      ],
+      "attribution": "reader-only",
+      "complete": true,
+      "metadata": "image-1.json"
+    },
+    {
+      "label": "R.open",
+      "stages": [
+        "R.open"
+      ],
+      "attribution": "reader-only",
+      "complete": true,
+      "metadata": "image-2.json"
+    },
+    {
+      "label": "R.begin-if-open",
+      "stages": [
+        "R.begin-if-open"
+      ],
+      "attribution": "reader-only",
+      "complete": true,
+      "metadata": "image-3.json"
+    },
+    {
+      "label": "R.anchor-if-open",
+      "stages": [
+        "R.anchor-if-open"
+      ],
+      "attribution": "reader-only",
+      "complete": true,
+      "metadata": "image-4.json"
+    }
+  ],
+  "effects": [],
+  "physicalEffects": {
+    "allowed": [],
+    "forbidden": [],
+    "unknown": [
+      {
+        "file": "store.sqlite-shm",
+        "reason": "SHM content change lacks recognized first-attacher or read-mark transition",
+        "before": null,
+        "after": {
+          "dev": 16777229,
+          "ino": 286344303,
+          "size": 32768,
+          "sha256": "fd4c9fda9cd3f9ae7c962b0ddf37232294d55580e1aa165aa06129b8549389eb"
+        },
+        "changedRanges": [
+          {
+            "start": 0,
+            "end": 32768
+          }
+        ]
+      },
+      {
+        "file": "store.sqlite-wal",
+        "reason": "empty WAL creation lacks proved healthy closed WAL stage/layout allowance",
+        "before": null,
+        "after": {
+          "dev": 16777229,
+          "ino": 286344302,
+          "size": 0,
+          "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+        },
+        "changedRanges": []
+      }
+    ]
+  },
+  "failures": [
+    {
+      "type": "Error",
+      "message": "Case/coordinator deadline exhausted"
+    }
+  ],
+  "measurementClosure": null,
+  "fixtureReady": true
+}

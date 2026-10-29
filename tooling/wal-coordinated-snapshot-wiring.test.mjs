@@ -1,0 +1,9 @@
+/** Ordinary CI must own every new regression while the native matrix remains an explicit opt-in exclusion. */
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { readFile } from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { planRepository } from './pr-ci.mjs';
+const root=fileURLToPath(new URL('../',import.meta.url));
+test('ordinary root commands cannot dispatch new native qualification',async()=>{const {scripts}=JSON.parse(await readFile(new URL('../package.json',import.meta.url),'utf8'));assert.equal(typeof scripts['test:wal-coordinated-snapshot'],'string');assert.equal(typeof scripts['test:wal-coordinated-snapshot:qualification'],'string');const visited=new Set();function visit(name){if(visited.has(name)){return;}visited.add(name);for(const match of (scripts[name]??'').matchAll(/npm run ([a-z0-9:-]+)/gu)){visit(match[1]);}}for(const name of ['build','check','test']){visit(name);}assert.equal(visited.has('test:wal-coordinated-snapshot'),true);assert.equal(visited.has('test:wal-coordinated-snapshot:qualification'),false);assert.match(scripts['test:wal-coordinated-snapshot:qualification'],/node .*\/launcher\.js$/u);});
+test('prepared PR shards retain exactly one owner for regressions/types and exclude native qualification',async()=>{const plan=await planRepository(root);const tests=plan.obligations.filter(item=>item.id.includes('exp-wal-coordinated-snapshot'));assert.ok(tests.length>=10);for(const item of tests){assert.equal(plan.shards.flat().filter(id=>id===item.id).length,1);}assert.ok(plan.catalog.excluded['.:test:wal-coordinated-snapshot:qualification']);assert.equal(plan.obligations.some(item=>JSON.stringify(item).includes('/launcher.js')||JSON.stringify(item).includes('/qualification.js')),false);assert.ok(plan.catalog.groups.some(group=>group.config==='experiments/exp-wal-coordinated-snapshot/jest.config.mjs'&&group.output==='.test-build'));});

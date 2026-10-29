@@ -36,6 +36,16 @@ function atBoundary<T>(operation: () => T): T {
   }
 }
 
+/**
+ * Reuse History's exact contention translation for individual readonly host
+ * calls. The owner operation itself must remain outside this boundary so its
+ * own thrown values cannot masquerade as SQLite contention.
+ * @internal
+ */
+export function _atHistorySqliteBoundary<T>(operation: () => T): T {
+  return atBoundary(operation);
+}
+
 /** Wrap one prepared statement, leaving bound values and returned rows unchanged. */
 function historyStatement(statement: ISqliteStatement): ISqliteStatement {
   return {

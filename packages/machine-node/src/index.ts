@@ -7,7 +7,7 @@
  * can recognize two handles over one file without reading the host itself.
  * @packageDocumentation
  */
-import type { ICommandProcessCapability, IClockCapability, IElapsedClockCapability, IMachine, IRandomIdentifierCapability, ISqliteReadCapability, ISqliteCapability, ITimerCapability } from '@microdelta/machine';
+import type { ISqliteCoordinatedReadCapability, ICommandProcessCapability, IClockCapability, IElapsedClockCapability, IMachine, IRandomIdentifierCapability, ISqliteReadCapability, ISqliteCapability, ITimerCapability } from '@microdelta/machine';
 
 import { _createNodeCommandProcessImplementation } from './node/command-process.js';
 import { _createNodeClockImplementation } from './node/clock.js';
@@ -16,6 +16,7 @@ import { _canonicalNodeLocationImplementation } from './node/location.js';
 import { _createNodeMachineImplementation } from './node/index.js';
 import { _createNodeRandomImplementation } from './node/random.js';
 import { _createNodeSqliteImplementation, _createNodeSqliteReaderImplementation } from './node/sqlite.js';
+import { _createNodeSqliteCoordinatedReaderImplementation } from './node/sqlite-coordinated-read.js';
 import { _createNodeTimerImplementation } from './node/timer.js';
 
 /**
@@ -106,4 +107,13 @@ export function createNodeSqliteReader(): ISqliteReadCapability {
  */
 export function createNodeCommandProcess(): ICommandProcessCapability {
   return _createNodeCommandProcessImplementation();
+}
+
+/**
+ * Create existing-file readonly SQLite scopes that coordinate a deferred
+ * snapshot with native WAL writers. Callers own each scope's release.
+ * @alpha
+ */
+export function createNodeSqliteCoordinatedReader(): ISqliteCoordinatedReadCapability {
+  return _createNodeSqliteCoordinatedReaderImplementation();
 }

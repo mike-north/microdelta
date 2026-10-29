@@ -245,3 +245,38 @@ This projection performs no evaluation, source verification, acceptance mutation
 or dispatch. Lazy values retain the supplied reader/Tracking lifetime. It is not
 a recent-history query, subscription or independent-reader API. See the
 [scope and evidence mapping](../../docs/plans/preview-projection.md).
+
+## Finite exact History selection (alpha)
+
+`readHistorySelection` reads one caller-selected fact or fingerprint from an
+existing History file. Use the generated alpha declarations through the
+[private-alpha consumer recipe](../../docs/private-alpha-workspace-consumers.md).
+The caller retains the exact completed-result reference from an earlier result;
+this operation performs no discovery or freshness decision.
+
+```ts
+import { readHistorySelection } from 'microdelta';
+import type { IHistorySelectionRequest } from 'microdelta';
+
+declare const reference: IHistorySelectionRequest['reference'];
+const answer = readHistorySelection(
+  { location: '/existing/history.sqlite', logicalStore: 'store:contributors' },
+  { kind: 'fact', reference, request: { operation: 'value', address: [{ kind: 'property', key: 'summary' }] } },
+);
+if (answer.kind === 'fact') {
+  console.log(answer.selected.fact);
+}
+```
+
+The synchronous call returns detached data after ending and closing its native
+read scope, including nested containers. It opens no workspace and loads no
+author module. Fingerprint requests use `kind: 'fingerprint'` and an existing
+selected-fingerprint request; their replies preserve compatible, incompatible
+and unavailable outcomes after exact-reference validation. Storage, schema,
+identity and integrity failures remain errors.
+
+This distinct coordinated readonly operation permits the selected native WAL/SHM
+coordination described in the [finite selection contract](../../docs/plans/finite-history-selection.md).
+It preserves main bytes and committed WAL without initialization, migration,
+recovery, checkpoint or writable fallback. It does not change the rollback-only
+observation reader or add a CLI command.

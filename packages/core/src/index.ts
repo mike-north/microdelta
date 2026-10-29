@@ -25,6 +25,12 @@ export { HistoryBusyError } from '@microdelta/history';
 import { machine } from './host.js';
 export { defineCliWorkload } from './cli-workload.js';
 export type { ICliWorkload, ICliWorkloadPreparation } from './cli-workload.js';
+export { readHistorySelection } from './history-selection.js';
+export type {
+  IHistorySelectionLocation,
+  IHistorySelectionRequest,
+  IHistorySelectionResult,
+} from './history-selection.js';
 
 /**
  * Create the existing non-durable memory store with Node's detached snapshot

@@ -47,6 +47,7 @@ import type {
 } from '../completed-results.js';
 import type { IResultVerification } from './contracts.js';
 import { HistoryIntegrityError } from './errors.js';
+import type { IHistoryReadPort } from './read-snapshot.js';
 
 /** Identity tag for embedded SQL; the text is passed through unchanged. */
 const sql = String.raw;
@@ -340,19 +341,17 @@ export interface ISelectedIndex {
 }
 
 /**
- * Create the index operations over an owned connection. Exact references
- * are resolved by the authority's `resolve`, which validates locator, store,
- * scope, completion and stored encoding before any index row is read.
+ * Construct only selected reads over an already-owned snapshot. No mutation or
+ * whole-payload verification statement is prepared through this narrower port.
+ * Exact-reference resolution remains the History caller's responsibility.
+ * @internal
  */
-export function createSelectedIndex(connection: ISqliteConnection, host: ISha256Capability, resolve: IResultResolver): ISelectedIndex {
+export function createSelectedIndexReader(
+  connection: IHistoryReadPort,
+  host: ISha256Capability,
+  resolve: IResultResolver,
+): ICompletedResultReader & ICompletedNavigationReader {
   const statements = {
-    insertNode: connection.prepare(sql`/* publish */ INSERT INTO history_nodes
-      (result_id, node_id, kind, scalar, array_length, own_keys, prototype, prototype_node, terminal, snapshot_fingerprint)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
-    insertEdge: connection.prepare(sql`/* publish */ INSERT INTO history_edges
-      (result_id, parent_node, edge_kind, edge_key, position, child_node) VALUES (?, ?, ?, ?, ?, ?)`),
-    insertAddress: connection.prepare(sql`/* publish */ INSERT INTO history_addresses
-      (result_id, address, node_id, own, value_fingerprint) VALUES (?, ?, ?, ?, ?)`),
     addressMetadata: connection.prepare(sql`/* node-metadata */ SELECT a.node_id, a.own, a.value_fingerprint, n.kind, n.array_length, n.own_keys, n.terminal
       FROM history_addresses a JOIN history_nodes n ON n.result_id = a.result_id AND n.node_id = a.node_id
       WHERE a.result_id = ? AND a.address = ?`),
@@ -385,11 +384,6 @@ export function createSelectedIndex(connection: ISqliteConnection, host: ISha256
       FROM history_nodes n JOIN subtree s ON n.node_id = s.node_id WHERE n.result_id = ?`),
     subtreeEdges: connection.prepare(sql`/* subtree-structure */ SELECT parent_node, edge_kind, edge_key, position, child_node
       FROM history_edges WHERE result_id = ? AND parent_node IN (SELECT value FROM json_each(?)) ORDER BY parent_node, position`),
-    payload: connection.prepare(sql`/* verify */ SELECT payload FROM history_results WHERE result_id = ?`),
-    allNodes: connection.prepare(sql`/* verify */ SELECT node_id, kind, scalar, array_length, own_keys, prototype, prototype_node, terminal, snapshot_fingerprint
-      FROM history_nodes WHERE result_id = ?`),
-    allEdges: connection.prepare(sql`/* verify */ SELECT parent_node, edge_kind, edge_key, position, child_node FROM history_edges WHERE result_id = ?`),
-    allAddresses: connection.prepare(sql`/* verify */ SELECT address, node_id, own, value_fingerprint FROM history_addresses WHERE result_id = ?`),
   };
 
   /**
@@ -397,9 +391,13 @@ export function createSelectedIndex(connection: ISqliteConnection, host: ISha256
    * node kind or address so corrupted metadata never becomes a Value answer.
    */
   function metadataOf(row: ISqliteRow, address: readonly IAddressSegment[]): IAddressMetadata {
+    const own = integer(row, 'own');
+    if (own !== 0 && own !== 1) {
+      throw new HistoryIntegrityError('Stored index ownership marker is not boolean');
+    }
     const metadata: IAddressMetadata = {
       nodeId: integer(row, 'node_id'),
-      own: integer(row, 'own') === 1,
+      own: own === 1,
       kind: nodeKind(row),
       arrayLength: nullableInteger(row, 'array_length'),
       ownKeys: nullableText(row, 'own_keys'),
@@ -485,43 +483,45 @@ export function createSelectedIndex(connection: ISqliteConnection, host: ISha256
     return value;
   }
 
-  /** Answer a container kind, presence, length or key-order fact from metadata alone. */
-  function metadataFact(resultId: number, operation: Exclude<IOperation, 'value'>, address: readonly IAddressSegment[]): ISelectedFact {
+  /** Acquire metadata before evaluating Value shape, so host failures stay outside shape classification. */
+  function metadataFact(resultId: number, operation: Exclude<IOperation, 'value'>, address: readonly IAddressSegment[]): () => ISelectedFact {
     const metadata = metadataAt(resultId, address);
     if (metadata === undefined) {
       const { standIn: stand, remainder } = absentRemainder(resultId, address);
-      return absoluteFact(operation, address, observe(stand, remainder, operation).fact);
+      return () => absoluteFact(operation, address, observe(stand, remainder, operation).fact);
     }
-    switch (operation) {
-      case 'container-kind':
-        return absoluteFact(operation, address, metadata.kind);
-      case 'own':
-      case 'membership':
-        if (address.length === 0) {
-          // Value rejects member operations without a member address.
-          return absoluteFact(operation, address, observe(standIn(metadata), [], operation).fact);
+    return () => {
+      switch (operation) {
+        case 'container-kind':
+          return absoluteFact(operation, address, metadata.kind);
+        case 'own':
+        case 'membership':
+          if (address.length === 0) {
+            // Value rejects member operations without a member address.
+            return absoluteFact(operation, address, observe(standIn(metadata), [], operation).fact);
+          }
+          return absoluteFact(operation, address, operation === 'own' ? metadata.own : true);
+        case 'length':
+          if (metadata.kind !== 'array') {
+            return absoluteFact(operation, address, observe(standIn(metadata), [], operation).fact);
+          }
+          return absoluteFact(operation, address, metadata.arrayLength);
+        case 'keys': {
+          if (metadata.kind !== 'record') {
+            return absoluteFact(operation, address, observe(standIn(metadata), [], operation).fact);
+          }
+          const keys = decodeStored(() => JSON.parse(metadata.ownKeys ?? '') as unknown, 'key order');
+          if (!Array.isArray(keys) || !keys.every((key) => typeof key === 'string') || new Set(keys).size !== keys.length) {
+            throw new HistoryIntegrityError('Stored key order is malformed');
+          }
+          return absoluteFact(operation, address, Object.freeze([...keys]));
         }
-        return absoluteFact(operation, address, operation === 'own' ? metadata.own : true);
-      case 'length':
-        if (metadata.kind !== 'array') {
-          return absoluteFact(operation, address, observe(standIn(metadata), [], operation).fact);
+        default: {
+          const exhaustive: never = operation;
+          return exhaustive;
         }
-        return absoluteFact(operation, address, metadata.arrayLength);
-      case 'keys': {
-        if (metadata.kind !== 'record') {
-          return absoluteFact(operation, address, observe(standIn(metadata), [], operation).fact);
-        }
-        const keys = decodeStored(() => JSON.parse(metadata.ownKeys ?? '') as unknown, 'key order');
-        if (!Array.isArray(keys) || !keys.every((key) => typeof key === 'string') || new Set(keys).size !== keys.length) {
-          throw new HistoryIntegrityError('Stored key order is malformed');
-        }
-        return absoluteFact(operation, address, Object.freeze([...keys]));
       }
-      default: {
-        const exhaustive: never = operation;
-        return exhaustive;
-      }
-    }
+    };
   }
 
   /**
@@ -580,18 +580,18 @@ export function createSelectedIndex(connection: ISqliteConnection, host: ISha256
     return decodeSnapshot(encoded);
   }
 
-  /** Evaluate a Value selection, mapping only Value's shape rejection to `incompatible`. */
-  function compatible(evaluate: () => string | undefined): ISelectedFingerprintResolution {
-    let digest: string | undefined;
+  /** Classify only Value shape evaluation; encoding and host hashing remain outside the catch. */
+  function compatible<T>(evaluate: () => T | undefined, encode: (value: T) => string): ISelectedFingerprintResolution {
+    let value: T | undefined;
     try {
-      digest = evaluate();
+      value = evaluate();
     } catch (error: unknown) {
       if (error instanceof TypeError) {
         return { kind: 'incompatible' };
       }
       throw error;
     }
-    return digest === undefined ? { kind: 'incompatible' } : { kind: 'compatible', fingerprint: digest };
+    return value === undefined ? { kind: 'incompatible' } : { kind: 'compatible', fingerprint: fingerprint(encode(value), host) };
   }
 
   const reader: ICompletedResultReader & ICompletedNavigationReader = Object.freeze({
@@ -632,7 +632,7 @@ export function createSelectedIndex(connection: ISqliteConnection, host: ISha256
       const resultId = resolve(reference);
       const address = copyAddress(request.address);
       if (request.operation !== 'value') {
-        return metadataFact(resultId, request.operation, address);
+        return metadataFact(resultId, request.operation, address)();
       }
       if (address.length === 0) {
         // Value has no member address at which a root value could be observed.
@@ -669,11 +669,10 @@ export function createSelectedIndex(connection: ISqliteConnection, host: ISha256
             return { kind: 'compatible', fingerprint: stored };
           }
           const { standIn: stand, remainder } = absentRemainder(resultId, address);
-          return compatible(() => fingerprint(encodeSelectedFact(absoluteFact('value', address, observe(stand, remainder, 'value').fact)), host));
+          return compatible(() => absoluteFact('value', address, observe(stand, remainder, 'value').fact), encodeSelectedFact);
         }
         const operation = request.operation;
-        // Storage failures inside metadataFact are integrity errors, not TypeErrors, so they propagate.
-        return compatible(() => fingerprint(encodeSelectedFact(metadataFact(resultId, operation, address)), host));
+        return compatible(metadataFact(resultId, operation, address), encodeSelectedFact);
       }
       if (request.encoding !== 'MDS1') {
         return { kind: 'incompatible' };
@@ -685,11 +684,35 @@ export function createSelectedIndex(connection: ISqliteConnection, host: ISha256
       const { standIn: stand, remainder } = absentRemainder(resultId, address);
       return compatible(() => {
         const relative = navigate(stand, remainder);
-        return relative.kind === 'scalar' ? fingerprint(encodeSnapshot(relative.selected.fact), host) : undefined;
-      });
+        return relative.kind === 'scalar' ? relative.selected : undefined;
+      }, (selected) => encodeSnapshot(selected.fact));
     },
   });
 
+  return reader;
+}
+
+/**
+ * Create the index operations over an owned connection. Exact references
+ * are resolved by the authority's `resolve`, which validates locator, store,
+ * scope, completion and stored encoding before any index row is read.
+ */
+export function createSelectedIndex(connection: ISqliteConnection, host: ISha256Capability, resolve: IResultResolver): ISelectedIndex {
+  const statements = {
+    insertNode: connection.prepare(sql`/* publish */ INSERT INTO history_nodes
+      (result_id, node_id, kind, scalar, array_length, own_keys, prototype, prototype_node, terminal, snapshot_fingerprint)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`),
+    insertEdge: connection.prepare(sql`/* publish */ INSERT INTO history_edges
+      (result_id, parent_node, edge_kind, edge_key, position, child_node) VALUES (?, ?, ?, ?, ?, ?)`),
+    insertAddress: connection.prepare(sql`/* publish */ INSERT INTO history_addresses
+      (result_id, address, node_id, own, value_fingerprint) VALUES (?, ?, ?, ?, ?)`),
+    payload: connection.prepare(sql`/* verify */ SELECT payload FROM history_results WHERE result_id = ?`),
+    allNodes: connection.prepare(sql`/* verify */ SELECT node_id, kind, scalar, array_length, own_keys, prototype, prototype_node, terminal, snapshot_fingerprint
+      FROM history_nodes WHERE result_id = ?`),
+    allEdges: connection.prepare(sql`/* verify */ SELECT parent_node, edge_kind, edge_key, position, child_node FROM history_edges WHERE result_id = ?`),
+    allAddresses: connection.prepare(sql`/* verify */ SELECT address, node_id, own, value_fingerprint FROM history_addresses WHERE result_id = ?`),
+  };
+  const reader = createSelectedIndexReader(connection, host, resolve);
   return Object.freeze({
     insert(resultId: number, rows: IIndexRows): void {
       for (const node of rows.nodes) {

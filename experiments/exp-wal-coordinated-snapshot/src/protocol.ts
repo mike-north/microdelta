@@ -1,0 +1,3 @@
+/** Finite authority ceilings bound one selected invocation; no caller can enlarge the native campaign through configuration. */
+/** Time ceilings include setup/measurement and distinguish worker ownership, per-stage work and unresolved cleanup. @internal */
+export const bounds = { busyMilliseconds: 500, stageMilliseconds: 5000, caseMilliseconds: 20000, workerMilliseconds: 25000, coordinatorMilliseconds: 480000, cleanupMilliseconds: 5000, outerMilliseconds: 510000, launches: 64, workers: 47, concurrentWorkers: 2, requests: 414, commandsPerCase: 40, commandBytes: 256, lineBytes: 8192, childOutputBytes: 131072, sourceFileBytes: 2097152, ordinarySourceBytes: 262144, hotSourceBytes: 8388608, proofBytes: 134217728 } as const;

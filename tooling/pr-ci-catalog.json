@@ -24,6 +24,7 @@
       "experiments/exp-authoring/jest.config.mjs": "290786adc8d368813c04408d50948bfa7b81685c8c6ba393b9377be9415c47f1",
       "experiments/exp-nested/jest.config.mjs": "10f10a6d511dc8290d9f49fac771e58930e5927b26b10aac15dd4d247f300881",
       "experiments/exp-read-snapshot/jest.config.mjs": "b40cc400f9586c814e8f37ac2a62016a3ae1f866adc1dd9f6295467e9d0bd5b3",
+      "experiments/exp-wal-coordinated-snapshot/jest.config.mjs": "1e89f378eb5e2f380c43b679f9564b583a5e2a0568ca41bf770d5199cbf9f932",
       "experiments/provenance-capacity/jest.config.mjs": "fcb932309ecdc627f6058dd6b2cf5d6aa78a95896dcae5bd48d85dea17de97a3",
       "fixtures/contribution-report/jest.config.mjs": "e149b7465422363ad5ae5e97465e1108d4b350efb44488bc9b6a2eeb05c181fc",
       "packages/accounting/jest.config.mjs": "b635f482542f99f3f52278132326cac8312f0d888b7bce96e4bf4250c1b61ca4",
@@ -52,12 +53,14 @@
       ".:test:exp3": "tsc -p experiments/exp-3/tsconfig.test.json && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config experiments/exp-3/jest.config.mjs --runInBand --runTestsByPath .test-build/experiments/exp-3/test/sqlite-capability.test.js && node --experimental-vm-modules ./node_modules/jest/bin/jest.js --config experiments/exp-3/jest.config.mjs --runInBand --runTestsByPath .test-build/experiments/exp-3/test/publication.test.js",
       ".:test:exp4": "tsd --typings experiments/exp-4/src/protocol.ts --files experiments/exp-4/test-d/protocol.test-d.ts && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-4/jest.config.mjs --runInBand",
       ".:test:exp8": "tsd --typings experiments/exp-8/src/protocol.ts --files experiments/exp-8/test-d/events.test-d.ts && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-8/jest.config.mjs --runInBand",
-      ".:test:experiments": "tsd --typings experiments/exp-1/src/protocol.ts --files experiments/exp-1/test-d/protocol.test-d.ts && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-1/jest.config.mjs --runInBand && npm run test:exp2 && npm run test:exp3 && npm run test:exp-nested && npm run test:exp4 && npm run test:exp8 && npm run test:exp-authoring && npm run test:provenance-capacity && npm run test:read-snapshot",
+      ".:test:experiments": "tsd --typings experiments/exp-1/src/protocol.ts --files experiments/exp-1/test-d/protocol.test-d.ts && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-1/jest.config.mjs --runInBand && npm run test:exp2 && npm run test:exp3 && npm run test:exp-nested && npm run test:exp4 && npm run test:exp8 && npm run test:exp-authoring && npm run test:provenance-capacity && npm run test:read-snapshot && npm run test:wal-coordinated-snapshot",
       ".:test:fanout-dispatch": "GAP_HUNT_REUSE_BUILD=1 node scratch/gap-hunt/scale/repro-fanout-admission.mjs",
       ".:test:provenance-capacity": "tsc -p experiments/provenance-capacity/tsconfig.test.json && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/provenance-capacity/jest.config.mjs --runInBand",
       ".:test:read-snapshot": "tsc -p experiments/exp-read-snapshot/tsconfig.test.json && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-read-snapshot/jest.config.mjs --runInBand",
       ".:test:subtree-query": "node tooling/subtree-query-gate.mjs",
       ".:test:tooling": "node --test tooling/*.test.mjs",
+      ".:test:wal-coordinated-snapshot": "tsc -p experiments/exp-wal-coordinated-snapshot/tsconfig.test.json && tsd --typings experiments/exp-wal-coordinated-snapshot/src/evidence.ts --files experiments/exp-wal-coordinated-snapshot/test-d/contracts.test-d.ts && node --experimental-vm-modules node_modules/jest/bin/jest.js --config experiments/exp-wal-coordinated-snapshot/jest.config.mjs --runInBand",
+      ".:test:wal-coordinated-snapshot:qualification": "node .test-build/experiments/exp-wal-coordinated-snapshot/node/launcher.js",
       "packages/accounting:test": "npm run test:unit && npm run test:types && npm run test:public",
       "packages/accounting:test:public": "tsc --noEmit -p tsconfig.public-consumer.json",
       "packages/accounting:test:types": "tsd",
@@ -108,6 +111,7 @@
       "experiments/exp-4/test-d/protocol.test-d.ts",
       "experiments/exp-8/test-d/events.test-d.ts",
       "experiments/exp-authoring/test-d/protocol.test-d.ts",
+      "experiments/exp-wal-coordinated-snapshot/test-d/contracts.test-d.ts",
       "fixtures/contribution-report/test-d/contracts.test-d.ts",
       "fixtures/contribution-report/test-d/reactive-cost.test-d.ts",
       "packages/accounting/test-d/accounting.test-d.ts",
@@ -155,7 +159,8 @@
   "excluded": {
     "experiments/exp-6/jest.config.mjs": "Opt-in Lean differential experiment, absent from npm test.",
     "scratch/gap-hunt/scale/context-component.jest.config.mjs": "Opt-in context scale replay, absent from npm test.",
-    ".:test:controlled-report:workload": "Opt-in full workload qualification, absent from npm test; never launched by PR CI."
+    ".:test:controlled-report:workload": "Opt-in full workload qualification, absent from npm test; never launched by PR CI.",
+    ".:test:wal-coordinated-snapshot:qualification": "Explicit root-released frozen native invocation only; absent from ordinary test/check/build and PR shards."
   },
   "groups": [
     {
@@ -297,6 +302,13 @@
       "emitted": "fixtures/contribution-report/.test-build/fixtures/contribution-report",
       "cwd": ".",
       "output": "fixtures/contribution-report/.test-build"
+    },
+    {
+      "config": "experiments/exp-wal-coordinated-snapshot/jest.config.mjs",
+      "source": "experiments/exp-wal-coordinated-snapshot/test",
+      "emitted": ".test-build/experiments/exp-wal-coordinated-snapshot/test",
+      "cwd": ".",
+      "output": ".test-build"
     }
   ],
   "types": [
@@ -447,6 +459,18 @@
         "contracts.test-d.ts"
       ],
       "shard": 1
+    },
+    {
+      "id": "types:experiments/exp-wal-coordinated-snapshot",
+      "cwd": ".",
+      "args": [
+        "node_modules/tsd/dist/cli.js",
+        "--typings",
+        "experiments/exp-wal-coordinated-snapshot/src/evidence.ts",
+        "--files",
+        "experiments/exp-wal-coordinated-snapshot/test-d/contracts.test-d.ts"
+      ],
+      "shard": 2
     }
   ],
   "compiles": [

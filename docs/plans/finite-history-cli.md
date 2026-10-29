@@ -19,7 +19,7 @@ The five named options occur exactly once, in any order, as option/value pairs a
 {"kind":"index","index":NONNEGATIVE_SAFE_INTEGER}
 ```
 
-A property key may be empty or contain punctuation, slash, dots, `__proto__` or `constructor`; it is literal data. No dotted-path/slash escape, string-to-index or implicit coercion is introduced. Reject malformed JSON, null/nonobject segments, unknown fields/discriminants, numeric strings, negative values and parsed noninteger/unsafe indices before path resolution or storage. Index validity follows the **parsed JSON number**; parsed -0 and 0 designate index 0 and the JSON echo is0. This does not merge signed-zero fact values. `[]` is structurally valid; the existing selected operation decides whether its address is meaningful. Bare-root `value` remains an owner TypeError/read failure; do not advertise a new whole-root value operation.
+A property key may be empty or contain punctuation, slash, dots, `__proto__` or `constructor`; it is literal data. No dotted-path/slash escape, string-to-index or implicit coercion is introduced. Reject malformed JSON, null/nonobject segments, unknown fields/discriminants, numeric strings, negative values and parsed noninteger/unsafe indices before path resolution or storage. Index validity follows the **parsed JSON number**; parsed -0 and 0 designate index 0 and the JSON echo is 0. This does not merge signed-zero fact values. `[]` is structurally valid; the existing selected operation decides whether its address is meaningful. Bare-root `value` remains an owner TypeError/read failure; do not advertise a new whole-root value operation.
 
 Examples use an ordinarily published retained payload with independently prepared properties, not a new fixture/result API:
 

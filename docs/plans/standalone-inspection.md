@@ -13,6 +13,13 @@ full CLI-001–004/M6 checkpoint. Its remaining alternatives and open decisions 
 not override the accepted CLI-005 contract or select starter lifetime and
 interrupt behavior.
 
+The separately supervisor-selected [finite exact-result CLI](finite-history-cli.md)
+under #311 now fixes one fact-only `read-result` command, explicit coordinated
+WAL/SHM read authority, external v1 MDS1 transport and finite exit behavior. Those
+bounded engineering choices supersede this proposal's alternatives only for that
+command. They neither settle the broader command family nor inherit CLI-005's
+stronger no-sidecar guarantee. Implementation and acceptance remain separate.
+
 The owner-selected scope is recorded by the [#167 owner decision](https://github.com/mike-north/microdelta/issues/167#issuecomment-6404318056). The concrete workflow and GitHub adapter belong to #240. The owner clarification preserves the historical workload of roughly 150,000 pull requests and their review/comment payloads, without reducing scale or defining a fixed API-request count ([#240 clarification](https://github.com/mike-north/microdelta/issues/240#issuecomment-6405525087)). Generic TEST-5's synthetic-subject qualification remains a separate gate. The first CLI introduces no reusable pagination framework.
 
 Rich history, preview, dependency/reuse explanation, resource browsing and the

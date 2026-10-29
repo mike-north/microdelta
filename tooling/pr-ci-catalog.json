@@ -117,6 +117,7 @@
       "packages/accounting/test-d/accounting.test-d.ts",
       "packages/accounting/test-d/resource-reports.test-d.ts",
       "packages/core/test-d/async-source.test-d.ts",
+      "packages/core/test-d/cli-read-result.test-d.ts",
       "packages/core/test-d/cli-workload.test-d.ts",
       "packages/core/test-d/facade.test-d.ts",
       "packages/core/test-d/history-selection.test-d.ts",

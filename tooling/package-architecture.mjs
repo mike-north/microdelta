@@ -5,7 +5,8 @@
  * does not transfer the other role's invariants or grant source access.
  */
 export const roles = Object.freeze({
-  facade: { directory: 'core', packageName: 'microdelta', kind: 'assembly', uses: ['definition', 'tracking', 'resolution', 'history', 'supervision', 'accounting', 'value', 'materialization', 'machine-node'] },
+  // Assembly consumes portable host contracts/errors alongside the selected Node adapter, without acquiring domain policy ownership.
+  facade: { directory: 'core', packageName: 'microdelta', kind: 'assembly', uses: ['definition', 'tracking', 'resolution', 'history', 'supervision', 'accounting', 'value', 'materialization', 'machine-node', 'machine'] },
   definition: { directory: 'definition', packageName: '@microdelta/definition', kind: 'context', uses: ['value'] },
   tracking: { directory: 'tracking', packageName: '@microdelta/tracking', kind: 'context', uses: ['value', 'machine'] },
   resolution: { directory: 'resolution', packageName: '@microdelta/resolution', kind: 'context', uses: ['definition', 'tracking', 'history', 'materialization'] },

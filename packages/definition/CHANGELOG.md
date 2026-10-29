@@ -1,5 +1,15 @@
 # @microdelta/definition
 
+## 0.5.0
+### Minor Changes
+
+- 871c9e2: Require Node.js 24 or later for all microdelta packages. Runtimes older than Node.js 24 are no longer supported.
+
+### Patch Changes
+
+- Updated dependencies [871c9e2]
+  - @microdelta/value@0.3.0
+
 ## 0.4.0
 ### Minor Changes
 

@@ -1,5 +1,26 @@
 # microdelta
 
+## 0.6.0
+### Minor Changes
+
+- 641758d: Add project-private alpha finite exact History selection for detached facts and fingerprints over an existing store, with a distinct coordinated readonly SQLite capability and Node implementation. Each request validates the exact result and releases its native read scope before returning.
+- d8e1956: Add a separately permissionable finite `read-result` command over exact retained History references, with coordinated WAL/SHM reading, lossless versioned fact transport and safe finite failure codes.
+- 871c9e2: Require Node.js 24 or later for all microdelta packages. Runtimes older than Node.js 24 are no longer supported.
+
+### Patch Changes
+
+- Updated dependencies [641758d]
+- Updated dependencies [871c9e2]
+  - @microdelta/history@0.5.0
+  - @microdelta/machine@0.5.0
+  - @microdelta/machine-node@0.5.0
+  - @microdelta/definition@0.5.0
+  - @microdelta/materialization@0.2.0
+  - @microdelta/resolution@0.5.0
+  - @microdelta/supervision@0.6.0
+  - @microdelta/tracking@0.3.0
+  - @microdelta/value@0.3.0
+
 ## 0.5.0
 ### Minor Changes
 

@@ -1,6 +1,10 @@
 #!/usr/bin/env node
-/** Installed command dispatch: finite observation reads and caller-owned foreground starts. @packageDocumentation */
+/** Installed command dispatch separates finite observation/exact-result reads from caller-owned foreground execution. @packageDocumentation */
 import { createNodeCommandProcess } from '@microdelta/machine-node';
+import { encodeSnapshot } from '@microdelta/value';
+
+import { _runHistoryResultRead } from './cli-read-result.js';
+import { readHistorySelection } from './history-selection.js';
 
 import { openExecutionObservationReader, createStopController } from './workspace.js';
 import type { IExecutionObservationLocator, IExecutionObservationReadResult, IObservedRun, IObservationAcknowledgment } from './workspace.js';
@@ -186,4 +190,5 @@ function observe(host: ICommandHost): void {
 /** Dispatch only explicit verbs; the executable module is never the library entry. */
 const host = createNodeCommandProcess();
 if (host.arguments[0] === 'start') { void start(host).catch(() => { host.setExitCode(1); }); }
+else if (host.arguments[0] === 'read-result') { _runHistoryResultRead(host, { read: readHistorySelection, encode: encodeSnapshot }); }
 else { observe(host); }

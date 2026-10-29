@@ -132,3 +132,8 @@ No new CLI verb, report application, renderer, recent-history retention,
 enumeration, subscription, aggregate engine or escaped lazy-view policy belongs
 here. #272 scale and #301's within-person work remain separate. This operation is
 only the selected-result access dependency of the complete inspection checkpoint.
+
+The separately selected [finite exact-result CLI](finite-history-cli.md) composes
+this accepted operation for one installed fact read. That command owns its
+distinct permission, external v1 transport and failure protocol; it does not
+change this library's lifetime or broaden the complete inspection checkpoint.

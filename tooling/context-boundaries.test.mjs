@@ -59,6 +59,21 @@ test('implemented contexts and facade follow their directed package edges', asyn
   }
 });
 
+test('finite CLI assembly consumes Machine declared errors and host types while retaining host/source boundaries', async () => {
+  const accepted = await diagnostics('packages/core', "import { SqliteReadError } from '@microdelta/machine'; import type { ICommandProcessCapability } from '@microdelta/machine';");
+  assert.deepEqual(accepted, []);
+  for (const [owner, source] of [
+    ['packages/core', "import { readFileSync } from 'node:fs';"],
+    ['packages/core', "import { SqliteReadError } from '@microdelta/machine/dist/src/index.js';"],
+    ['packages/core', "import { SqliteReadError } from '../../machine/src/index.js';"],
+    ['packages/core', "import { SqliteReadError } from '@microdelta/unknown';"],
+    ['packages/machine', "import { createMemoryStore } from 'microdelta';"],
+  ]) {
+    const messages = await diagnostics(owner, source);
+    assert.deepEqual(messages.map(message => message.ruleId), [rule], `${owner}: ${source}`);
+  }
+});
+
 test('absent context roles use the same allowed-edge policy', async () => {
   for (const [role, source, allowed] of [
     ['resolution', "import type { Store } from '@microdelta/history';", true],

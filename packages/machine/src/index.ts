@@ -203,12 +203,12 @@ export class SqliteBusyError extends Error {
 }
 
 /**
- * A host-proven finite refusal of side-effect-free SQLite inspection. Domain
- * owners interpret the result; this class carries no schema or run meaning.
+ * A host-proven refusal of SQLite inspection, including coordinated reads.
+ * Domain owners interpret the result; this class carries no schema or run meaning.
  * @alpha
  */
 export class SqliteReadError extends Error {
-  /** Why the host could not perform a read without changing the file. */
+  /** The host-evidenced reason this inspection could not proceed. */
   public readonly code: 'absent' | 'unsupported' | 'corrupt' | 'recovery-required';
 
   /** Preserve the host cause for diagnostics without exposing it in a reader protocol. */
@@ -326,6 +326,37 @@ export interface ISqliteReadStatement {
   get(...values: readonly ISqliteValue[]): ISqliteRow | undefined;
   /** Read all matching rows from a read-only statement. */
   all(...values: readonly ISqliteValue[]): readonly ISqliteRow[];
+}
+
+/**
+ * One owned, finite read transaction on an existing SQLite file. Beginning is
+ * deferred: the first actual database read anchors the snapshot. Reads require
+ * a begun scope and cannot continue after end or close. End and close are
+ * independent release actions; repeating either is harmless. A scope cannot
+ * be begun again after it ends.
+ * @alpha
+ */
+export interface ISqliteCoordinatedReadScope {
+  /** Begin a deferred transaction without anchoring its snapshot. */
+  begin(): void;
+  /** Prepare a read-only statement within the live transaction. */
+  prepare(sql: string): ISqliteReadStatement;
+  /** End the transaction and relinquish its snapshot. */
+  end(): void;
+  /** Release the native handle, including after an unsuccessful end. */
+  close(): void;
+}
+
+/**
+ * Opens existing SQLite files for coordinated, finite reads. Native WAL/SHM
+ * coordination may occur; this authority never creates or initializes a store,
+ * changes journal mode, checkpoints, or grants mutation authority. The caller
+ * owns the returned scope and must attempt both end and close.
+ * @alpha
+ */
+export interface ISqliteCoordinatedReadCapability {
+  /** Open an unbegun read scope over an existing persistent file. */
+  openSqliteCoordinatedRead(location: string): ISqliteCoordinatedReadScope;
 }
 
 /** An existing rollback-journal SQLite file opened without filesystem or configuration writes. @alpha */

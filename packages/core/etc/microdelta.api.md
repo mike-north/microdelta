@@ -54,6 +54,9 @@ import type { IForward as IForward_2 } from '@microdelta/definition';
 import type { IForwarded as IForwarded_2 } from '@microdelta/definition';
 import type { IGateEvidence as IGateEvidence_2 } from '@microdelta/resolution';
 import type { IHasOwn as IHasOwn_2 } from '@microdelta/resolution';
+import type { IHistorySelectionLocation as IHistorySelectionLocation_2 } from '@microdelta/history';
+import type { IHistorySelectionRequest as IHistorySelectionRequest_2 } from '@microdelta/history';
+import type { IHistorySelectionResult as IHistorySelectionResult_2 } from '@microdelta/history';
 import type { IIncompleteOutcomeFoldCoverage as IIncompleteOutcomeFoldCoverage_2 } from '@microdelta/resolution';
 import type { IKeyedMember as IKeyedMember_2 } from '@microdelta/definition';
 import type { IKeyedSnapshot as IKeyedSnapshot_2 } from '@microdelta/definition';
@@ -344,6 +347,15 @@ export type IGateEvidence = IGateEvidence_2;
 
 // @alpha
 export type IHasOwn = IHasOwn_2;
+
+// @alpha
+export type IHistorySelectionLocation = IHistorySelectionLocation_2;
+
+// @alpha
+export type IHistorySelectionRequest = IHistorySelectionRequest_2;
+
+// @alpha
+export type IHistorySelectionResult = IHistorySelectionResult_2;
 
 // @alpha
 export type IIncompleteOutcomeFoldCoverage = IIncompleteOutcomeFoldCoverage_2;
@@ -796,6 +808,9 @@ export const ordinaryLifecycle: readonly IOrdinaryPhase[];
 export { Outcome }
 
 export { Path }
+
+// @alpha
+export function readHistorySelection(location: IHistorySelectionLocation, request: IHistorySelectionRequest): IHistorySelectionResult;
 
 export { RecordedRead }
 

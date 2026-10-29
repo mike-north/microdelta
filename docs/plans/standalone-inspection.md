@@ -186,6 +186,12 @@ Q8–Q10 unsupported and both earlier invocations preserved as INCONCLUSIVE.
 Independent final disposition accepts that bounded PASS. This evidence does not
 select a History opener, adopt the broader inspector, or establish two passing
 runs of one candidate.
+The selected [#309 finite exact History selection](finite-history-selection.md)
+adds the next bounded library dependency: one caller-selected request with
+internally owned coordinated snapshot/release, no initialization and no escaped
+reader. Its implementation and acceptance remain separate from the experiment
+and the broader inspector. It preserves the rollback reader and CLI-005 while
+adopting only the explicitly selected coordination contract for the new capability.
 Accounting's `openDurableAccounting` is writable/initializing; usage reads need
 a narrow owner opener separate from that authority. Existing report reading
 from #166 and preview projection from #216 are useful bounded inputs, not a

@@ -272,6 +272,38 @@ export interface IHistoryScope {
 }
 
 // @alpha
+export interface IHistorySelectionLocation {
+    readonly location: string;
+    readonly logicalStore: string;
+}
+
+// @alpha
+export interface IHistorySelectionOptions extends IHistorySelectionLocation {
+    readonly sha256: ISha256Capability;
+    readonly sqlite: ISqliteCoordinatedReadCapability;
+}
+
+// @alpha
+export type IHistorySelectionRequest = {
+    readonly kind: 'fact';
+    readonly reference: ICompletedResultReference;
+    readonly request: ISelectedReadRequest;
+} | {
+    readonly kind: 'fingerprint';
+    readonly reference: ICompletedResultReference;
+    readonly request: ISelectedFingerprintRequest;
+};
+
+// @alpha
+export type IHistorySelectionResult = {
+    readonly kind: 'fact';
+    readonly selected: ISelectedFact;
+} | {
+    readonly kind: 'fingerprint';
+    readonly resolution: ISelectedFingerprintResolution;
+};
+
+// @alpha
 export interface IJournalAddress extends IHistoryScope {
     readonly collection: string;
     readonly key: string;
@@ -461,6 +493,20 @@ export interface ISqliteConnection {
 }
 
 // @alpha
+export interface ISqliteCoordinatedReadCapability {
+    openSqliteCoordinatedRead(location: string): ISqliteCoordinatedReadScope;
+}
+
+// @alpha
+export interface ISqliteCoordinatedReadScope {
+    begin(): void;
+    close(): void;
+    end(): void;
+    // Warning: (ae-forgotten-export) The symbol "ISqliteReadStatement" needs to be exported by the entry point api-surface.d.ts
+    prepare(sql: string): ISqliteReadStatement;
+}
+
+// @alpha
 export interface ISqliteOpenOptions {
     readonly creation?: 'exclusive';
     readonly journalMode: 'wal' | 'delete';
@@ -630,6 +676,9 @@ export type Outcome = {
 
 // @public
 export type Path = string;
+
+// @alpha
+export function readHistorySelection(options: IHistorySelectionOptions, presented: IHistorySelectionRequest): IHistorySelectionResult;
 
 // @public
 export type RecordedRead = {

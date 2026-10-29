@@ -70,6 +70,19 @@ export interface ISqliteConnection {
 }
 
 // @alpha
+export interface ISqliteCoordinatedReadCapability {
+    openSqliteCoordinatedRead(location: string): ISqliteCoordinatedReadScope;
+}
+
+// @alpha
+export interface ISqliteCoordinatedReadScope {
+    begin(): void;
+    close(): void;
+    end(): void;
+    prepare(sql: string): ISqliteReadStatement;
+}
+
+// @alpha
 export interface ISqliteOpenOptions {
     readonly creation?: 'exclusive';
     readonly journalMode: 'wal' | 'delete';
